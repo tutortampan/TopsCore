@@ -1,4 +1,3 @@
-import { serve } from "std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
@@ -734,7 +733,7 @@ Task (Oral Mode): Verify if the spoken STT string accurately matches the Target_
 // 9. SERVE EDGE FUNCTION
 // ==========================================
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

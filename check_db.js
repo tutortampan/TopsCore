@@ -1,22 +1,23 @@
-const url = 'https://xuiszvwfjccvucqpactf.supabase.co/rest/v1/assessments?select=id,prerequisite_id,program_id&limit=1';
-const key = 'sb_publishable_dvMkwNJpPlryF0KNiaJRfQ_-fR1WW_4';
+import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
 
-fetch(url, {
-  headers: {
-    'apikey': key,
-    'Authorization': `Bearer ${key}`
-  }
-}).then(res => res.json())
-  .then(data => {
-    if (data.error || data.message) {
-      console.error('❌ ERROR:', data.message || data.error);
-      process.exit(1);
-    } else {
-      console.log('✅ SUCCESS: Columns prerequisite_id and program_id exist!');
-      console.log(data);
-      process.exit(0);
-    }
-  }).catch(err => {
-    console.error('❌ FETCH ERROR:', err);
-    process.exit(1);
-  });
+const sbFile = fs.readFileSync('js/supabase.js', 'utf8');
+const urlMatch = sbFile.match(/const SUPABASE_URL = '(.*?)'/);
+const keyMatch = sbFile.match(/const SUPABASE_KEY = '(.*?)'/);
+
+if (!urlMatch || !keyMatch) {
+  console.log('Could not find Supabase credentials');
+  process.exit(1);
+}
+
+const supabase = createClient(urlMatch[1], keyMatch[1]);
+
+async function checkDb() {
+  const { data: levels } = await supabase.from('levels').select('*');
+  console.log('LEVELS:', levels);
+
+  const { data: classes } = await supabase.from('classes').select('*, levels(name)').order('level_id');
+  console.log('CLASSES:', classes);
+}
+
+checkDb();
