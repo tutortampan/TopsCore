@@ -9,14 +9,16 @@ import { createSpeechSession, isSpeechSupported } from './speech.js?v=4.7.5';
 import { damerauLevenshtein, normalizeAnswerText } from './grading.js?v=4.7.5';
 
 export const AI_MODULE_TYPES = {
-  POINT_AND_SPEAK: 'POINT_AND_SPEAK',
-  STORYTELLING: 'STORYTELLING',
-  CONVERSATIONAL: 'CONVERSATIONAL',
-  MULTIPLE_CHOICE: 'MULTIPLE_CHOICE',
-  READ_ALOUD: 'READ_ALOUD',
-  TURN_BASED_ROLEPLAY: 'TURN_BASED_ROLEPLAY',
+  POINT_AND_SPEAK:    'POINT_AND_SPEAK',
+  STORYTELLING:       'STORYTELLING',
+  CONVERSATIONAL:     'CONVERSATIONAL',
+  MULTIPLE_CHOICE:    'MULTIPLE_CHOICE',
+  READ_ALOUD:         'READ_ALOUD',
+  TURN_BASED_ROLEPLAY:'TURN_BASED_ROLEPLAY',
   SPEAKING_MONOLOGUE: 'SPEAKING_MONOLOGUE',
-  VOCAB_MASTERY: 'VOCAB_MASTERY'
+  VOCAB_MASTERY:      'VOCAB_MASTERY',
+  PHRASE_RECOGNITION: 'PHRASE_RECOGNITION',  // Dropdown-based phrase/idiom/expression engine
+  PAIR_STORYTELLING:  'PAIR_STORYTELLING'    // Two students record independently, linked by pair_session_id
 };
 
 /**
@@ -424,6 +426,67 @@ function runClientDeterministicFallback(payload) {
         status: match ? 'Mastered' : 'Needs Review',
         word: ctx.targetWord || '',
         student_input: t
+      };
+    }
+
+    case AI_MODULE_TYPES.PHRASE_RECOGNITION: {
+      // Dropdown-based: student selects from 10 options, we compare against accepted synonyms
+      // ctx.acceptedAnswers = array of valid English equivalents (from synonym slash notation)
+      // payload.selectedOption = the string the student picked from the dropdown
+      const selected = (payload.selectedOption || t || '').toLowerCase().trim();
+      const accepted = Array.isArray(ctx.acceptedAnswers)
+        ? ctx.acceptedAnswers.map(a => a.toLowerCase().trim())
+        : [(ctx.targetWord || '').toLowerCase().trim()];
+      const isCorrect = accepted.some(ans => selected === ans || selected.includes(ans));
+      return {
+        final_score: isCorrect ? 100 : 0,
+        status: isCorrect ? 'Correct' : 'Incorrect',
+        phrase_prompt: ctx.phrasePrompt || ctx.targetWord || '',
+        student_selected: payload.selectedOption || t,
+        accepted_answers: ctx.acceptedAnswers || []
+      };
+    }
+
+    case AI_MODULE_TYPES.PAIR_STORYTELLING: {
+      // Mode B: Each student records independently on their own device.
+      // pair_session_id links this submission to the partner's submission.
+      // Scored individually; combined report assembled server-side.
+      const words = lower.split(/\s+/).filter(Boolean);
+      const duration = payload.durationSeconds || 0;
+      const isPast = (ctx.targetTense || 'Past Simple').toLowerCase().includes('past');
+
+      // Tense consistency (same mechanic as STORYTELLING)
+      let tenseHits = 0;
+      words.forEach(w => {
+        if (isPast && (w.endsWith('ed') || ['was','were','went','had','saw','said','told','spoke'].includes(w))) tenseHits++;
+        if (!isPast && ['is','are','go','have','see','say','tell'].includes(w)) tenseHits++;
+      });
+      const tenseScore = Math.min(100, Math.max(30, tenseHits * 12));
+
+      // Duration score: full mark if >= minDurationSec
+      const minDuration = ctx.minDurationSec || 3600;
+      const durationScore = duration >= minDuration ? 100 : Math.round((duration / minDuration) * 100);
+
+      // Topic coverage: count how many source topics are mentioned in transcript
+      const sourceTopics = Array.isArray(ctx.sourceTopics) ? ctx.sourceTopics : [];
+      const coveredTopics = sourceTopics.filter(tp => lower.includes(tp.toLowerCase()));
+      const topicScore = sourceTopics.length > 0
+        ? Math.round((coveredTopics.length / sourceTopics.length) * 100)
+        : 50;
+
+      const finalScore = Math.round((tenseScore * 0.4) + (durationScore * 0.3) + (topicScore * 0.3));
+
+      return {
+        final_score:          finalScore,
+        pair_session_id:      ctx.pairSessionId || null,      // Links to partner's submission
+        partner_student_id:   ctx.partnerStudentId || null,
+        tense_score:          tenseScore,
+        duration_score:       durationScore,
+        duration_seconds:     duration,
+        topic_coverage_score: topicScore,
+        topics_covered:       coveredTopics,
+        topics_missed:        sourceTopics.filter(tp => !coveredTopics.includes(tp)),
+        transcript:           t
       };
     }
 

@@ -269,7 +269,7 @@ import { setAdminSession, getAdminSession, clearAdminSession } from '../session.
 import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=4.7.5';
 import { getSupabase } from '../supabase.js?v=4.7.5';
 import { renderStudents as _renderStudentsModule } from './student-management.js?v=4.7.5';
-import { renderClasses as _renderClassesModule } from './classes-management.js?v=4.7.5';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=4.7.5';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=4.7.5';
 import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=4.7.5';
 import { renderAssessments } from './assessment-management.js?v=4.7.5';
@@ -289,17 +289,19 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.5';
       dashboard: 'Executive Dashboard', profile: 'My Profile', schedule: 'Personal Schedule', work_records: 'Work Records', cv_generator: 'CV Generator',
       import_ai_assessments: 'Import AI Assessments',
       institutions: 'Batches', students: 'Students Roster', 'import-students': 'Import Students', 'progress-view': 'Student Progress',
-      Classes: 'Curriculum & Classes', classes: 'Curriculum & Classes', class_instances: 'Class Instances', levels: 'Levels', topics: 'Topics', questions: 'Question Bank', vocab_vault: 'Vocabulary Vault', modules: 'Modules (Core Blocks)', 'import-questions': 'Import Questions', 'export-questions': 'Export Questions',
+      Classes: 'Curriculum & Classes', classes: 'Classes', 'classes-org': 'Organization Hub', class_instances: 'Class Instances', levels: 'Levels', topics: 'Topics', questions: 'Question Bank', vocab_vault: 'Vocabulary Vault', modules: 'Modules (Core Blocks)', 'import-questions': 'Import Questions', 'export-questions': 'Export Questions',
       assessments: 'Assessments Hub', assignments: 'Assignments & Rosters', results: 'Assessment Results', recalibrator: 'Recalibration Engine', question_types: 'Validation Dictionary',
-      audit: 'Activity & Audit Logs', settings: 'Site Settings & Cost Guard', recycle: 'Recycle Bin', health: 'Data Health & Connectivity'
+      audit: 'Activity & Audit Logs', settings: 'Site Settings & Cost Guard', recycle: 'Recycle Bin', health: 'Data Health & Connectivity',
+      'class-panel': 'Class Panel'
     };
 
     // ABCD 4-Domain Mapping
     const sectionDomainMap = {
       dashboard: 'ADMIN', profile: 'ADMIN', schedule: 'ADMIN', work_records: 'ADMIN', cv_generator: 'ADMIN',
       institutions: 'BOARD', students: 'BOARD', 'import-students': 'BOARD', 'progress-view': 'BOARD',
-      Classes: 'CLASS', classes: 'CLASS', class_instances: 'CLASS', levels: 'CLASS', topics: 'CLASS', questions: 'CLASS', question_types: 'CLASS', 'import-questions': 'CLASS', 'export-questions': 'CLASS',
+      Classes: 'CLASS', classes: 'CLASS', 'classes-org': 'CLASS', class_instances: 'CLASS', levels: 'CLASS', topics: 'CLASS', questions: 'CLASS', question_types: 'CLASS', 'import-questions': 'CLASS', 'export-questions': 'CLASS',
       assessments: 'CLASS', assignments: 'CLASS', results: 'CLASS', recalibrator: 'CLASS', import_ai_assessments: 'CLASS',
+      'class-panel': 'CLASS',
       audit: 'DATA', settings: 'DATA', recycle: 'DATA', health: 'DATA', vocab_vault: 'DATA', modules: 'DATA'
     };
 
@@ -335,7 +337,6 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.5';
       'board-wordtypes': 'question_types',
       'board-import': 'import-questions',
       'board-export': 'export-questions',
-      'class-hub': 'assessments',
       'class-assignments': 'assignments',
       'class-results': 'results',
       'class-recalibrator': 'recalibrator',
@@ -404,7 +405,6 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.5';
           showConsole();
           return;
         }
-
         // 2. Secondary Check: Supabase Auth (if user provided an email address registered in Supabase)
         if (user.includes('@')) {
           try {
@@ -451,6 +451,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.5';
       document.getElementById('admin-login-screen').classList.add('hidden');
       document.getElementById('admin-console').classList.remove('hidden');
       updateAdminKpiBanner();
+      if (window.loadSidebarClasses) window.loadSidebarClasses();
       const hash = window.location.hash.substring(1);
       const targetSec = aliasSectionMap[hash] || hash;
       if (targetSec && (sectionTitles[targetSec] || targetSec === 'students')) {
@@ -464,8 +465,139 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.5';
         loadSection('assessments', true);
       }
       initConnectionBanner(); // Check live DB connection and show status banner
-      populateCPanel(); // Dynamically load Classes and Levels into the C Panel sidebar
     }
+
+    // --- SIDEBAR CLASSES LIST INJECTION ---
+    window.loadSidebarClasses = async function(autoSelectClassId = null) {
+      const container = document.getElementById('sidebar-classes-list');
+      if (!container) return;
+      
+      const classes = await adminFetchAll('classes', 'id, name, program_id', { is_active: true });
+
+      const handleSidebarClick = (item, action) => {
+        document.querySelectorAll('.admin-nav-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        action();
+      };
+
+      let html = `
+        <div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:4px;">
+      `;
+
+      if (!classes || classes.length === 0) {
+        html += `<div style="padding: 12px; color: var(--clr-text-muted); font-size: 0.8rem;">No classes found.</div>`;
+      } else {
+        const sortedClasses = classes.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        sortedClasses.forEach(cls => {
+          const isActive = window._selectedClassId === cls.id ? 'active' : '';
+          html += `
+            <div class="admin-nav-item sidebar-class-item ${isActive}" data-class-id="${cls.id}" data-class-name="${escapeHtml(cls.name)}" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-weight:500; border-radius:6px; transition:all 0.2s;">
+              <span style="font-size:1.1rem;">📘</span>
+              <span>${escapeHtml(cls.name)}</span>
+            </div>
+          `;
+        });
+      }
+
+      html += `</div>`;
+      container.innerHTML = html;
+
+      // Attach events
+      container.querySelectorAll('.sidebar-class-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          handleSidebarClick(e.currentTarget, () => {
+            window._selectedClassId = item.getAttribute('data-class-id');
+            window._selectedClassName = item.getAttribute('data-class-name');
+            window._selectedLevelId = null;
+            loadSection('class-hub');
+          });
+        });
+      });
+    };
+
+    // ── CLASS HUB (MAIN CONTENT AREA) ──
+    window.renderClassHub = async function(area) {
+      const className = window._selectedClassName || 'Unknown Class';
+      area.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Loading levels for ${escapeHtml(className)}...</p></div>`;
+      
+      try {
+        const [levels] = await Promise.all([
+          adminFetchAll('levels', 'id, name, level_number')
+        ]);
+
+        let sortedLevels = (levels || []).sort((a, b) => a.level_number - b.level_number);
+        // Ensure there is always a 'No Level' fallback
+        sortedLevels.push({ id: 'no-level', name: 'Unassigned Level' });
+
+        const breadcrumb = document.getElementById('admin-breadcrumb');
+        if (breadcrumb) {
+          breadcrumb.innerHTML = `<span style="color:var(--clr-primary); font-weight:700;">CLASS</span> <span style="color:var(--clr-border); margin:0 0.5rem;">/</span> <span style="color:#fff; font-weight:600;">${escapeHtml(className)}</span>`;
+        }
+
+        let html = `
+          <div style="padding:0.5rem 2rem 0; border-bottom:1px solid var(--clr-border); background:var(--clr-surface);">
+            <div style="display:flex; border-bottom:2px solid transparent; overflow-x:auto;">
+        `;
+
+        if (sortedLevels.length === 0) {
+          html += `</div></div><div class="empty-state" style="padding:2rem;"><p>No levels found.</p></div>`;
+          area.innerHTML = html;
+          return;
+        }
+
+        // Determine which level should be active. 
+        if (!sortedLevels.some(l => l.id == window._selectedLevelId)) {
+            window._selectedLevelId = sortedLevels[0].id;
+            window._selectedLevelName = sortedLevels[0].name;
+        }
+
+        sortedLevels.forEach(lvl => {
+           const isActive = (lvl.id == window._selectedLevelId);
+           const color = isActive ? 'var(--clr-primary)' : 'var(--clr-text-muted)';
+           const border = isActive ? 'var(--clr-primary)' : 'transparent';
+           
+           html += `
+             <div class="class-level-tab hover-bg-subtle" data-level-id="${lvl.id}" data-level-name="${escapeHtml(lvl.name)}" 
+                  style="min-width:140px; padding:0.75rem 1.5rem; text-align:center; cursor:pointer; font-size:0.9rem; font-weight:600; color:${color}; border-bottom:2px solid ${border}; margin-bottom:-1px; white-space:nowrap; transition:all 0.2s;">
+               ${escapeHtml(lvl.name)}
+             </div>
+           `;
+        });
+
+        html += `
+            </div>
+          </div>
+          <div id="class-workspace-area" style="padding:0; background:var(--clr-bg-1); min-height:60vh;">
+          </div>
+        `;
+        area.innerHTML = html;
+
+        // Attach event listeners to tabs
+        const tabs = area.querySelectorAll('.class-level-tab');
+        tabs.forEach(tab => {
+           tab.addEventListener('click', () => {
+              window._selectedLevelId = tab.dataset.levelId;
+              window._selectedLevelName = tab.dataset.levelName;
+              // Re-render Class Hub to update active tab style
+              window.renderClassHub(area);
+           });
+        });
+
+        // Render the class workspace inside the area
+        const wsArea = document.getElementById('class-workspace-area');
+        if (window._selectedClassId && typeof renderClassPanel === 'function') {
+           renderClassPanel(wsArea);
+        }
+
+      } catch (e) {
+        console.error(e);
+        area.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">Failed to load class data.</p></div>`;
+      }
+    };
+
+    setTimeout(() => { if (window.loadSidebarClasses) window.loadSidebarClasses(); }, 1500);
+
+
 
     async function renderClassDetail(area) {
       if (!window.currentClassContext) {
@@ -500,66 +632,6 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.5';
           <p class="text-muted">You can navigate to <strong>Manage Assessments</strong> or <strong>Vocab Vault</strong> from the buttons above, or use the sidebar.</p>
         </div>
       `;
-    }
-
-    async function populateCPanel() {
-      const cPanel = document.querySelector('.nav-domain-group[data-domain="class"]');
-      if (!cPanel) return;
-      try {
-        const { adminFetchAll } = await import('../api.js?v=4.7.5');
-        const [classes, levels] = await Promise.all([
-          adminFetchAll('classes', 'id, name'),
-          adminFetchAll('levels', 'id, name, level_number')
-        ]);
-        if (!classes || !levels) return;
-        
-        const staticClasses = cPanel.querySelector('.admin-nav-item[data-sub="classes"]');
-        if (staticClasses) staticClasses.remove();
-        cPanel.querySelectorAll('.dynamic-class-item').forEach(el => el.remove());
-
-        classes.sort((a,b) => (a.name||'').localeCompare(b.name||''));
-        levels.sort((a,b) => (a.level_number || 0) - (b.level_number || 0));
-
-        classes.forEach(c => {
-          levels.forEach(l => {
-            const levelLabel = l.level_number === 0 ? 'Universal' : l.name;
-            const tabName = `${c.name} ${levelLabel}`;
-            
-            const item = document.createElement('div');
-            item.className = 'admin-nav-item dynamic-class-item';
-            item.dataset.sub = 'class-detail';
-            item.dataset.cid = c.id;
-            item.dataset.lid = l.id;
-            item.dataset.cname = c.name;
-            item.dataset.lname = levelLabel;
-            item.dataset.lnum = l.level_number;
-
-            const programName = l.programs?.name || 'Global Program';
-            const instName = l.programs?.institutions?.name || 'TopsCore Institution';
-
-            // Use escapeHtml safely if it's available, otherwise fallback
-            const esc = (window.escapeHtml || (s => s))(tabName);
-            item.innerHTML = `<span class="nav-icon">📚</span>${esc}`;
-            
-            item.addEventListener('click', () => {
-              document.querySelectorAll('.admin-nav-item').forEach(i => i.classList.remove('active'));
-              item.classList.add('active');
-              window.currentClassContext = { 
-                cid: c.id, lid: l.id, 
-                cname: c.name, lname: levelLabel, 
-                lnum: l.level_number,
-                program: programName,
-                institution: instName
-              };
-              loadSection('class-detail');
-              if (window.innerWidth <= 1024) document.getElementById('sidebar-toggle')?.click();
-            });
-            cPanel.appendChild(item);
-          });
-        });
-      } catch (e) {
-        console.error('Failed to populate dynamic C panel', e);
-      }
     }
     
     window.addEventListener('popstate', (e) => {
@@ -733,18 +805,23 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.5';
       const panel = domainToPanelMap[domain] || domain.toLowerCase();
       activatePrimaryTab(panel);
 
-      // Highlight active sub-nav item (support direct key and alias)
-      document.querySelectorAll('.admin-nav-item').forEach(i => {
+      // Highlight active sub-nav item (support direct key and alias), excluding dynamic sidebar class items
+      document.querySelectorAll('.admin-nav-item:not(.sidebar-class-item)').forEach(i => {
         const sub = i.dataset.sub;
         const mappedSub = aliasSectionMap[sub] || sub;
         i.classList.toggle('active', sub === rawSection || sub === section || mappedSub === section);
       });
+      // If we navigate away from class-hub, clear the active state of all class items
+      if (rawSection !== 'class-hub') {
+        document.querySelectorAll('.sidebar-class-item').forEach(i => i.classList.remove('active'));
+      }
 
       const domainEl = document.getElementById('topbar-domain');
       if (domainEl) domainEl.textContent = domain;
       document.getElementById('topbar-title').textContent = sectionTitles[section] || section;
       const area = document.getElementById('admin-content-area');
       area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading...</p></div>';
+
 
       document.getElementById('add-record-btn').onclick = () => {
         openCrudModal(section, null);
@@ -754,7 +831,8 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.5';
       try {
         switch(section) {
           case 'institutions':        await renderUnifiedInstitutions(area); break;
-          case 'classes':            await _renderClassesModule(area); break;
+          case 'classes':             await renderClassList(area); break;
+          case 'classes-org':         await _renderClassesModule(area); break;
           case 'class_instances':     await renderClassInstances(area); break;
           case 'class-detail':        await renderClassDetail(area); break;
           case 'levels':              window.location.hash = '#classes'; break;
@@ -776,7 +854,10 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.5';
           case 'import-questions':    await renderCentralQuestionImport(area); break;
           case 'export-questions':    renderExportQuestions(area); break;
           case 'recalibrator':        await renderRecalibrator(area); break;
+          case 'assessment-hub':      window.location.hash = '#assessments'; break;
+          case 'class-hub':           await renderClassHub(area); break;
           case 'assessments':         await renderAssessments(area); break;
+          case 'class-panel':         await renderClassPanel(area); break;
           case 'import_ai_assessments': window.location.hash = '#assessments'; break;
           case 'dashboard':           await renderDashboard(area); break;
           case 'profile':             await renderAdminProfile(area); break;
@@ -804,8 +885,413 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.5';
 
     // â”€â”€ INSTITUTIONS â”€â”€
 
+    // ── CLASS NAV PANEL (secondary left panel within CLASS domain) ──
+    let _classNavLoaded = false;
+
+    async function initClassNavPanel() {
+      const list = document.getElementById('cnav-class-list');
+      if (!list) return;
+
+      // Wire fixed items only once
+      if (!_classNavLoaded) {
+        document.querySelectorAll('#cnav-fixed .cnav-item').forEach(el => {
+          el.addEventListener('click', () => {
+            setActiveCnavItem(el);
+            loadSection(el.dataset.cnav);
+          });
+        });
+      }
+
+      syncCnavActive();
+      if (_classNavLoaded) return;
+      _classNavLoaded = true;
+
+      list.innerHTML = '<div style="padding:0.5rem 1rem;font-size:0.72rem;color:var(--clr-text-muted);">Loading…</div>';
+      try {
+        const classes = await adminFetchAll('classes', 'id, name');
+        list.innerHTML = '';
+        if (!classes || !classes.length) {
+          list.innerHTML = '<div style="padding:0.5rem 1rem;font-size:0.72rem;color:var(--clr-text-muted);">No classes</div>';
+          return;
+        }
+        classes.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        classes.forEach(cls => {
+          const el = document.createElement('div');
+          el.className = 'cnav-item';
+          el.dataset.classId = cls.id;
+          el.textContent = cls.name;
+          el.addEventListener('click', () => {
+            setActiveCnavItem(el);
+            window._selectedClassId   = cls.id;
+            window._selectedClassName = cls.name;
+            loadSection('class-panel');
+          });
+          list.appendChild(el);
+        });
+        syncCnavActive();
+      } catch(e) {
+        list.innerHTML = '<div style="padding:0.5rem 1rem;font-size:0.72rem;color:#f87171;">Error loading classes</div>';
+        console.error('[initClassNavPanel]', e);
+      }
+    }
+
+    function setActiveCnavItem(el) {
+      document.querySelectorAll('.cnav-item').forEach(i => i.classList.remove('active'));
+      if (el) el.classList.add('active');
+    }
+
+    function syncCnavActive() {
+      const sec = _currentSection;
+      // Sync fixed items
+      document.querySelectorAll('#cnav-fixed .cnav-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.cnav === sec);
+      });
+      // Sync class items
+      if (sec === 'class-panel' && window._selectedClassId) {
+        document.querySelectorAll('#cnav-class-list .cnav-item').forEach(el => {
+          el.classList.toggle('active', el.dataset.classId === window._selectedClassId);
+        });
+      }
+    }
+
+    // ── CLASS LIST ── simple alphabetical list of all classes in main content area
+    async function renderClassList(area) {
+      area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading classes...</p></div>';
+      try {
+        const [rawClasses, programs] = await Promise.all([
+          adminFetchAll('classes', 'id, name, is_active, program_id, class_levels(levels(name))'),
+          adminFetchAll('programs', 'id, name, institution_id, institutions(name)')
+        ]);
+
+        const classes = (rawClasses || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        area.innerHTML = `
+          <div style="padding:1.5rem 2rem 0.5rem; border-bottom:1px solid var(--clr-border);">
+            <h2 style="margin:0 0 0.25rem; font-size:1.25rem; font-weight:700; color:var(--clr-text-1);">
+              Classes <span style="font-size:0.78rem; font-weight:400; color:var(--clr-text-muted); margin-left:0.5rem;">${classes.length} total</span>
+            </h2>
+            <p style="margin:0; font-size:0.82rem; color:var(--clr-text-muted);">Click a class to view its assessments</p>
+          </div>
+          <div style="overflow-y:auto;">
+            <table style="width:100%; border-collapse:collapse;">
+              <thead>
+                <tr style="border-bottom:2px solid var(--clr-border); background:var(--clr-surface);">
+                  <th style="text-align:left; padding:0.6rem 2rem; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--clr-text-muted);">Class Name</th>
+                  <th style="text-align:left; padding:0.6rem 1rem; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--clr-text-muted);">Program</th>
+                  <th style="text-align:center; padding:0.6rem 1rem; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--clr-text-muted); width:80px;">Status</th>
+                </tr>
+              </thead>
+              <tbody id="class-list-tbody"></tbody>
+            </table>
+          </div>
+        `;
+
+        const tbody = document.getElementById('class-list-tbody');
+        if (!classes.length) {
+          tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:3rem;color:var(--clr-text-muted);">No classes yet.</td></tr>';
+          return;
+        }
+
+        classes.forEach((cls, idx) => {
+          const prog = (programs || []).find(p => p.id === cls.program_id);
+          const progName = prog?.name || '—';
+          const instName = prog?.institutions?.name || '';
+
+          const tr = document.createElement('tr');
+          tr.style.cssText = `
+            border-bottom:1px solid var(--clr-border);
+            cursor:pointer;
+            transition:background 0.1s;
+          `;
+          tr.innerHTML = `
+            <td style="padding:0.7rem 2rem; font-size:0.9rem; font-weight:600; color:var(--clr-text);">
+              ${escapeHtml(cls.name)}
+            </td>
+            <td style="padding:0.7rem 1rem; font-size:0.8rem; color:var(--clr-text-muted);">
+              ${instName ? `<span style="color:var(--clr-text-muted);font-size:0.72rem;">${escapeHtml(instName)} · </span>` : ''}${escapeHtml(progName)}
+            </td>
+            <td style="padding:0.7rem 1rem; text-align:center;">
+              <span style="font-size:0.7rem; padding:0.15rem 0.5rem; border-radius:3px; font-weight:600;
+                ${cls.is_active
+                  ? 'background:rgba(16,185,129,0.12); color:#10b981;'
+                  : 'background:rgba(100,116,139,0.12); color:var(--clr-text-muted);'}">
+                ${cls.is_active ? 'Active' : 'Inactive'}
+              </span>
+            </td>
+          `;
+          tr.addEventListener('mouseenter', () => tr.style.background = 'var(--clr-surface)');
+          tr.addEventListener('mouseleave', () => tr.style.background = '');
+          tr.addEventListener('click', () => {
+            // Sync sidebar active state
+            document.querySelectorAll('.sidebar-class-item').forEach(el => {
+              el.classList.toggle('active', el.dataset.classId === cls.id);
+            });
+            window._selectedClassId   = cls.id;
+            window._selectedClassName = cls.name;
+            loadSection('class-panel');
+          });
+          tbody.appendChild(tr);
+        });
+
+      } catch(e) {
+        console.error('[renderClassList]', e);
+        area.innerHTML = `<div class="empty-state"><p style="color:#f87171;">Error: ${escapeHtml(e?.message || 'Unknown')}</p></div>`;
+      }
+    }
+
+    // ── ASSESSMENT HUB ──
+    async function renderAssessmentHub(area) {
+      area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading Assessment Hub...</p></div>';
+      try {
+        const [assessments, classes, results] = await Promise.all([
+          adminFetchAll('assessments', 'id, title, assessment_type, status, class_id, level_id, levels(name)'),
+          adminFetchAll('classes', 'id, name'),
+          adminFetchAll('assessment_results', 'final_score').catch(() => [])
+        ]);
+        
+        const tasks = (assessments || []).filter(a => a.assessment_category === 'TASK');
+        const tests = (assessments || []).filter(a => a.assessment_category === 'TEST');
+        
+        let passRate = "N/A";
+        if (results && results.length > 0) {
+            const passed = results.filter(r => (r.final_score || 0) >= 70).length;
+            passRate = Math.round((passed / results.length) * 100) + "%";
+        }
+
+        let tableHtml = assessments.map(a => {
+           const c = (classes||[]).find(x => x.id === a.class_id);
+           const badgeColor = a.assessment_category === 'TASK' ? 'background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);' : 'background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);';
+           return `
+             <tr style="border-bottom:1px solid var(--clr-border);">
+               <td style="padding:0.75rem 1rem;font-weight:600;color:var(--clr-text);">${escapeHtml(a.title || 'Untitled')}</td>
+               <td style="padding:0.75rem 1rem;"><span class="badge" style="${badgeColor}">${escapeHtml(a.assessment_category || 'TASK')}</span></td>
+               <td style="padding:0.75rem 1rem;color:var(--clr-text-muted);font-size:0.8rem;">${escapeHtml(c?.name || '—')}</td>
+               <td style="padding:0.75rem 1rem;color:var(--clr-text-muted);font-size:0.8rem;">${escapeHtml(a.levels?.name || '—')}</td>
+               <td style="padding:0.75rem 1rem;">
+                  ${a.modules?.name ? `<span class="badge badge-neutral">${escapeHtml(a.modules.name)}</span>` : '—'}
+               </td>
+             </tr>
+           `;
+        }).join('');
+
+        area.innerHTML = `
+          <div style="padding:1.5rem 2rem 1rem; border-bottom:1px solid var(--clr-border);">
+            <h2 style="margin:0 0 0.5rem; font-size:1.5rem;">Assessment Hub</h2>
+            <p style="margin:0; color:var(--clr-text-muted); font-size:0.85rem;">Global view of all tasks and tests across classes.</p>
+          </div>
+          
+          <div style="padding:2rem;">
+            <!-- Metric Cards -->
+            <div style="display:flex; gap:1.5rem; margin-bottom:2rem; flex-wrap:wrap;">
+              <div style="flex:1; min-width:200px; padding:1.5rem; background:var(--clr-surface); border:1px solid var(--clr-border); border-radius:12px; display:flex; align-items:center; gap:1rem;">
+                <div style="width:48px;height:48px;border-radius:50%;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#f59e0b;">📋</div>
+                <div>
+                  <div style="font-size:1.8rem; font-weight:800; color:var(--clr-text-1); line-height:1;">${tasks.length}</div>
+                  <div style="font-size:0.75rem; color:var(--clr-text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">Total Tasks</div>
+                </div>
+              </div>
+              <div style="flex:1; min-width:200px; padding:1.5rem; background:var(--clr-surface); border:1px solid var(--clr-border); border-radius:12px; display:flex; align-items:center; gap:1rem;">
+                <div style="width:48px;height:48px;border-radius:50%;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#ef4444;">🏆</div>
+                <div>
+                  <div style="font-size:1.8rem; font-weight:800; color:var(--clr-text-1); line-height:1;">${tests.length}</div>
+                  <div style="font-size:0.75rem; color:var(--clr-text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">Total Tests</div>
+                </div>
+              </div>
+              <div style="flex:1; min-width:200px; padding:1.5rem; background:var(--clr-surface); border:1px solid var(--clr-border); border-radius:12px; display:flex; align-items:center; gap:1rem;">
+                <div style="width:48px;height:48px;border-radius:50%;background:rgba(16,185,129,0.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#10b981;">📈</div>
+                <div>
+                  <div style="font-size:1.8rem; font-weight:800; color:var(--clr-text-1); line-height:1;">${passRate}</div>
+                  <div style="font-size:0.75rem; color:var(--clr-text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">Avg. Pass Rate</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Master Table -->
+            <div style="background:var(--clr-surface); border:1px solid var(--clr-border); border-radius:12px; overflow:hidden;">
+              <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                  <tr style="background:var(--clr-bg-1); border-bottom:2px solid var(--clr-border);">
+                    <th style="padding:0.75rem 1rem; text-align:left; font-size:0.75rem; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Assessment</th>
+                    <th style="padding:0.75rem 1rem; text-align:left; font-size:0.75rem; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Type</th>
+                    <th style="padding:0.75rem 1rem; text-align:left; font-size:0.75rem; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Class</th>
+                    <th style="padding:0.75rem 1rem; text-align:left; font-size:0.75rem; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Level</th>
+                    <th style="padding:0.75rem 1rem; text-align:left; font-size:0.75rem; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Module</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${tableHtml || '<tr><td colspan="5" style="padding:2rem;text-align:center;color:var(--clr-text-muted);">No assessments found</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        console.error(e);
+        area.innerHTML = `<div class="empty-state"><p style="color:#f87171;">Error loading Assessment Hub</p></div>`;
+      }
+    }
+
+
+    // ── CLASS PANEL ── (per-class view, triggered from sidebar)
+    async function renderClassPanel(area) {
+      const classId   = window._selectedClassId;
+      const className = window._selectedClassName || 'Class';
+
+      if (!classId) {
+        area.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem;">🎓</div><p>Select a class from the sidebar.</p></div>`;
+        return;
+      }
+
+      area.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Loading ${escapeHtml(className)}...</p></div>`;
+
+      try {
+        const [classRows, programs] = await Promise.all([
+          adminFetchAll('classes', '*, class_levels(levels(name))'),
+          adminFetchAll('programs', 'id, name, institution_id, institutions(name)')
+        ]);
+
+        const cls = (classRows || []).find(c => c.id === classId);
+        if (!cls) { area.innerHTML = `<div class="empty-state"><p>Class not found.</p></div>`; return; }
+
+        const prog     = (programs || []).find(p => p.id === cls.program_id);
+        const progName = prog?.name || 'Unassigned Program';
+        const instName = prog?.institutions?.name || 'TopsCore Global';
+
+        let levelNames = [];
+        if (cls.level) {
+           levelNames.push(cls.level);
+        } else if (cls.class_levels?.length) {
+           levelNames = cls.class_levels.map(cl => cl.levels?.name).filter(Boolean);
+        }
+        const levelStr = levelNames.join(', ') || 'Unassigned Level';
+
+        const isVocabClass = className.toLowerCase().includes('vocab');
+
+        area.innerHTML = `
+          <!-- Header -->
+          <div style="padding:1.5rem 2rem 0; border-bottom:1px solid var(--clr-border); background:var(--clr-surface);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <h2 style="margin:0 0 0.5rem; font-size:1.5rem; color:var(--clr-text-1);">${escapeHtml(className)}</h2>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1.5rem;">
+                  <span class="badge badge-neutral" style="font-size:0.72rem;">🏢 ${escapeHtml(instName)}</span>
+                  <span class="badge badge-neutral" style="font-size:0.72rem;">📋 ${escapeHtml(progName)}</span>
+                  <span class="badge badge-neutral" style="font-size:0.72rem;">⭐ ${escapeHtml(levelStr)}</span>
+                  <span class="badge ${cls.is_active ? 'badge-success' : 'badge-neutral'}" style="font-size:0.72rem;">${cls.is_active ? 'Active' : 'Inactive'}</span>
+                  <span class="badge badge-neutral" style="font-size:0.72rem;">🧑‍🎓 0 Students</span>
+                </div>
+              </div>
+              <div style="display:flex; gap:0.5rem;">
+                ${isVocabClass ? `
+                  <button class="btn btn-sm" id="cpanel-auto-gen-words" style="background:var(--clr-primary);color:#fff;border:1px solid var(--clr-primary);font-weight:700;" title="Auto-Generate Vocabulary Assessments">⚡ Gen Words</button>
+                  <button class="btn btn-sm" id="cpanel-auto-gen-phrases" style="background:#10b981;color:#fff;border:1px solid #10b981;font-weight:700;" title="Auto-Generate Phrases & Idioms">⚡ Gen Phrases</button>
+                ` : `
+                  <button class="btn btn-sm" id="cpanel-auto-generate-btn" style="background:var(--clr-primary);color:#fff;border:1px solid var(--clr-primary);font-weight:700;" title="Auto-Generate Vocabulary Assessments">⚡ Auto-Generate</button>
+                `}
+                <button class="btn btn-sm" id="cpanel-add-task-btn" style="background:rgba(245,158,11,0.9);color:#1a1a1a;border:1px solid rgba(245,158,11,0.4);font-weight:700;">📋 Add Task</button>
+                <button class="btn btn-sm" id="cpanel-add-test-btn" style="background:rgba(239,68,68,0.9);color:#fff;border:1px solid rgba(239,68,68,0.4);font-weight:700;">🏆 Add Test</button>
+              </div>
+            </div>
+            
+            <!-- Tabs -->
+            <div style="display:flex; gap:1.5rem; border-bottom:2px solid transparent;">
+              <div class="cpanel-tab active" data-target="tab-path" style="padding:0.75rem 0; cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--clr-primary); border-bottom:2px solid var(--clr-primary); margin-bottom:-1px;">Learning Path & Tasks</div>
+              <div class="cpanel-tab" data-target="tab-students" style="padding:0.75rem 0; cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--clr-text-muted); border-bottom:2px solid transparent; margin-bottom:-1px;">Students</div>
+              <div class="cpanel-tab" data-target="tab-gradebook" style="padding:0.75rem 0; cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--clr-text-muted); border-bottom:2px solid transparent; margin-bottom:-1px;">Gradebook</div>
+            </div>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding:2rem;">
+            <!-- Learning Path Tab -->
+            <div id="tab-path" class="cpanel-content-area" style="display:block;">
+              <div id="class-learning-path-container"></div>
+            </div>
+            
+            <!-- Students Tab -->
+            <div id="tab-students" class="cpanel-content-area" style="display:none;">
+              <div class="empty-state"><div style="font-size:2rem;margin-bottom:1rem;">🧑‍🎓</div><p>Student list will appear here.</p></div>
+            </div>
+            
+            <!-- Gradebook Tab -->
+            <div id="tab-gradebook" class="cpanel-content-area" style="display:none;">
+              <div class="empty-state"><div style="font-size:2rem;margin-bottom:1rem;">📈</div><p>Gradebook will appear here.</p></div>
+            </div>
+          </div>
+        `;
+
+        // Tab Switching Logic
+        const tabs = area.querySelectorAll('.cpanel-tab');
+        const contents = area.querySelectorAll('.cpanel-content-area');
+        tabs.forEach(tab => {
+          tab.addEventListener('click', () => {
+            tabs.forEach(t => {
+              t.classList.remove('active');
+              t.style.color = 'var(--clr-text-muted)';
+              t.style.borderBottomColor = 'transparent';
+            });
+            contents.forEach(c => c.style.display = 'none');
+            
+            tab.classList.add('active');
+            tab.style.color = 'var(--clr-primary)';
+            tab.style.borderBottomColor = 'var(--clr-primary)';
+            
+            area.querySelector('#' + tab.dataset.target).style.display = 'block';
+          });
+        });
+
+        document.getElementById('cpanel-add-task-btn')?.addEventListener('click', () => {
+          if (window.handleAddTask) window.handleAddTask(classId, className);
+        });
+        document.getElementById('cpanel-add-test-btn')?.addEventListener('click', () => {
+          if (window.handleAddTest) window.handleAddTest(classId, className);
+        });
+
+        if (isVocabClass) {
+          document.getElementById('cpanel-auto-gen-words')?.addEventListener('click', async () => {
+            if (window.handleClassAutoGenerate) window.handleClassAutoGenerate(classId, window._selectedLevelId, 'words');
+          });
+          document.getElementById('cpanel-auto-gen-phrases')?.addEventListener('click', async () => {
+            if (window.handleClassAutoGenerate) window.handleClassAutoGenerate(classId, window._selectedLevelId, 'phrases');
+          });
+        } else {
+          document.getElementById('cpanel-auto-generate-btn')?.addEventListener('click', async () => {
+            if (window.handleClassAutoGenerate) window.handleClassAutoGenerate(classId, window._selectedLevelId);
+          });
+        }
+
+        try {
+          await loadClassLearningPath(classId);
+        } catch (e) {
+           console.warn('loadClassLearningPath failed', e);
+        }
+
+      } catch (e) {
+        console.error(e);
+        area.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">Failed to load class panel.</p></div>`;
+      }
+    }
+
+        window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
+           if (!classId) return;
+           try {
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.7.5');
+              await openAutoGenerateModal({
+                 explicitClassId: classId,
+                 category: category,
+                 onComplete: (res) => {
+                    renderClassPanel(area);
+                 }
+              });
+           } catch(e) {
+              console.error(e);
+              if (window.showToast) window.showToast('Error opening generator: ' + e.message, 'error');
+           }
+        };
+
     async function renderPrograms(area) {
       const rawData = await adminFetchAll('institutions');
+
       // Enforce strict alphabetical ordering
       const data = [...rawData].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
@@ -879,7 +1365,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.5';
     // Ã¢â€â‚¬Ã¢â€â‚¬ CLASSES (Formerly Classes) Ã¢â€â‚¬Ã¢â€â‚¬
     async function renderClasses(area) {
       const [rawData, institutions, levelsData] = await Promise.all([
-        adminFetchAll('classes', '*, levels(*)'),
+        adminFetchAll('classes', '*, levels!classes_level_id_fkey(*)'),
         adminFetchAll('institutions'),
         adminFetchAll('levels', '*', { order: 'level_number', ascending: true })
       ]);

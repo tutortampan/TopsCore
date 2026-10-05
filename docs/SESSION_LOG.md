@@ -1,3 +1,130 @@
+
+## SESSION-202610041846
+
+Start: 2026-10-04 18:46
+End: 2026-10-04 18:46
+Agent: Antigravity
+
+### User Request
+MEGA DIRECTIVE: UNIFY CLASS-CENTRIC TABLE, REPURPOSE ASSESSMENTS HUB, DEPLOY & SIMULATE 8 STANDALONE TRY-OUTS
+
+### Objective
+Unify Class Hub, filter Assessments Hub, update Edge Function for Try-Out bypassing, insert 8 Try-Outs, and simulate for Siti Qori.
+
+### Work Performed
+- Edited `assessment-management.js`
+- Registered 8 Try-Outs via `register_tryouts.mjs`
+- Added bypass logic to `start-assessment` Edge Function and deployed it.
+- Created and executed `run_8_tryouts_sim.mjs` to insert 200 responses.
+- Generated `final_verification_report.md` artifact.
+
+### Commands Run
+- `npx.cmd supabase functions deploy start-assessment`
+- `node scratch/run_8_tryouts_sim.mjs`
+
+### Results
+- Try-outs successfully bypassed prerequisites. Simulation recorded 200 responses with 100% scores.
+
+### Files Changed
+- `js/admin/assessment-management.js`
+- `supabase/functions/start-assessment/index.ts`
+
+### Verification
+- Generated `final_verification_report.md`
+
+### Outstanding
+- None
+
+### Resume From
+Move to next user directive.
+
+## SESSION-20261004-1420
+
+Start: 2026-10-04 14:00
+End: 2026-10-04 14:20
+Agent: Antigravity
+
+### User Request
+"The Vocabulary Mastery tests, we are useing different type of answering... I generate new assesment, but only the phrase shows up." (from previous)
+"we need to add level to Class name, can we do that to avoid confusion"
+
+### Objective
+- Fix the logic for checking all sibling tasks for a Theme Test unlocking mechanism in `dashboard.html`.
+- Prepend class levels dynamically in `dashboard.html` for clearer UX.
+- Prevent dynamic Assessment Generator (`start-assessment` Edge Function) from ignoring `payload.answer_type`.
+
+### Work Performed
+- Edited `dashboard.html` lines 1887-1921 to specifically filter `assessments` matching `themeCode` and requiring them all to be $\ge 60\%$.
+- Edited `dashboard.html` to append `session.level_name` or `subj.levels?.name` before `subj.name` dynamically for both active and completed Classes on the Student dashboard.
+- Modified `supabase/functions/start-assessment/index.ts` to respect `assessment.payload.answer_type`, falling back to `VOCAB_TASK` string checks only when missing. 
+- Deployed Edge function using `cmd.exe /c npx supabase functions deploy start-assessment`.
+
+### Files Changed
+- `dashboard.html`
+- `supabase/functions/start-assessment/index.ts`
+
+### Outstanding
+- None related to these bugs. Architecture appears stable.
+
+## SESSION-20261004-1145
+
+Start: 2026-10-04 11:30
+End: 2026-10-04 11:50
+Agent: Antigravity
+
+### User Request
+"how is the dev list ststus? everything is checked out? or still some work to do?" -> Admin Security Review
+
+### Objective
+- Ensure admin-only routes (Vault, Blueprint, Assessment Builder) are guarded by RLS and Edge Function auth (Task 11.5).
+
+### Work Performed
+- Removed insecure local admin bypass (`isMaster`).
+- Added JWT token verification to `import-questions` and `import-students` Edge Functions.
+- Wrote a new migration (`20261004_enforce_admin_rls.sql`) to lock down admin tables so anonymous users only have SELECT permissions, while authenticated users have full access.
+
+### Files Changed
+- `d:\TopsCore\js\admin\app.js`
+- `d:\TopsCore\supabase\migrations\20261004_enforce_admin_rls.sql`
+- `d:\TopsCore\supabase\functions\import-questions\index.ts`
+- `d:\TopsCore\supabase\functions\import-students\index.ts`
+
+### Outstanding
+- Need user to verify if they have an `admin@topscore.com` account or equivalent in Supabase Auth to test.
+- Perform End-to-End student test (11.3).
+
+### Resume From
+- Perform End-to-End student test (11.3) on Vocabulary Task.
+
+## SESSION-20261004-0250
+
+Start: 2026-10-04 01:00
+End: 2026-10-04 02:50
+Agent: Antigravity
+
+### User Request
+"the default sorting is by indonesian cloumns content alpbeticallay, and then sort the contnt of word type, and topi, and theme,,, that is the default autamtic sorting of the words and phrases. do you understand? because now i feel like everytime I open the words, phrases table its neatly sorted"
+
+### Objective
+- Ensure Vocabulary Vault tables automatically sort hierarchically by Target Level -> Theme Code -> Topic Code -> Word Type -> Indonesian word.
+- Update Excel Import validation rules to ensure `Category` column strictly controls Phrase (Module 2) vs Word (Module 1) classification.
+
+### Work Performed
+- Updated `fetchVaultWords` and `exportVaultWords` queries in `api.js` to implement `.order()` chains matching the user's required 5-level sort hierarchy.
+- Hardened `sanitizeVaultRow` in `api.js` to use the `Category` column for determining `word_type` (Phrases vs Single Words).
+- Updated UI headers in `vocab-vault.js` to match Excel template expectations exactly.
+
+### Files Changed
+- `d:\TopsCore\js\api.js`
+- `d:\TopsCore\js\admin\vocab-vault.js`
+
+### Verification
+- User verified the default sorting feels "neatly sorted".
+- Database queries correctly anchor sorting, overriding implicit table ordering.
+
+### Resume From
+- Wait for user's next directive.
+
 ## SESSION-20260928-1550
 
 Start: 2026-09-28 15:30
@@ -363,3 +490,112 @@ Enforce institution/program linking on Assessment creation inside the Vocab Vaul
 
 ### Resume From
 Wait for user to manually run pending SQL scripts in Supabase and confirm UI works as expected.
+## SESSION-20261004-1522
+
+Start: 2026-10-04 15:00 UTC
+End: 2026-10-04 15:22 UTC
+Agent: Antigravity
+
+### User Request
+Address the user's report of assessment generation failure.
+
+### Objective
+Debug and fix Assessment Generation, Modal Level Leakage, and Legacy Taxonomy Heuristics.
+
+### Work Performed
+- Investigated assessment generation bug where Phrases were overwriting Vocab tasks/tests.
+- Prepending modulePrefix to shell_code in upsertDynamicAssessmentShell (js/api.js).
+- Fixed Dashboard Modal filtering to restrict by session.level_id (js/api.js, dashboard.html).
+- Eliminated legacy title parsing heuristics in js/admin/app.js and enforced strict ssessment_category.
+
+### Commands Run
+- Select-String searches.
+
+### Files Changed
+- js/api.js
+- dashboard.html
+- js/admin/app.js
+- docs/CHANGELOG.md
+- docs/CURRENT_STATE.md
+- docs/SESSION_LOG.md
+
+### Outstanding
+- None related to bugs.
+- Student Flow E2E Test (Task 11.3) remains to be performed.
+
+### Resume From
+Conduct Student Flow End-to-End Test (Task 11.3)
+## SESSION-20261004-1543
+
+Start: 2026-10-04 15:40 UTC
+End: 2026-10-04 15:43 UTC
+Agent: Antigravity
+
+### User Request
+Implement Dynamic Shell Architecture, Runtime Vault Projection & Strict Module Binding for Vocabulary assessments.
+
+### Objective
+Ensure assessments are dynamically loaded from ocabulary_vault JIT, generate utoGenerateWordsAssessments and utoGeneratePhrasesAssessments, and add Sync UI buttons. Output verification report.
+
+### Work Performed
+- Validated JIT dynamic shell instantiation in supabase/functions/start-assessment/index.ts. Confirmed options_snapshot logic correctly implements 10-option distractors for dropdown and NULL for written/speech_to_text.
+- Validated prerequisite gating on Theme Tests in start-assessment.
+- Added Sync Words & Sync Phrases buttons in classes-management.js mapped specifically to Vocabulary classes.
+- Created utoGenerateWordsAssessments and utoGeneratePhrasesAssessments wrapper functions in pi.js to trigger dynamic assessment generation per module_code category.
+- Generated the Implementation Verification Report.
+
+### Commands Run
+- Get-Date
+
+### Files Changed
+- js/admin/classes-management.js
+- js/api.js
+- docs/CURRENT_STATE.md
+- docs/SESSION_LOG.md
+
+### Outstanding
+- Student Flow E2E Test (Task 11.3) remains to be performed.
+
+### Resume From
+Conduct Student Flow End-to-End Test (Task 11.3)
+
+## SESSION-20261005-0215
+
+Start: 2026-10-05 02:11 UTC
+End: 2026-10-05 02:18 UTC
+Agent: Antigravity
+
+### User Request
+Implement Theme-Gated Prerequisites (Pilihan 2) & Curriculum-Aware UI Sorting (Saran 1)
+
+### Objective
+Enforce progression between themes (Theme A tests gate Theme B tasks), eliminate daisy-chaining within themes, and ensure the UI strictly respects the curriculum order.
+
+### Work Performed
+- Updated `js/admin/datagrid.js` to accept a custom `sortComparator` configuration option.
+- Configured `AssessmentsGrid` in `js/admin/assessment-management.js` to sort `title` and `order` columns using `display_order`, enforcing curriculum order.
+- Set default initial sorting to `order` in the `AssessmentsGrid` on render.
+- Backfilled `prerequisite_assessment_id` across 40 Level 3 assessments in the database via a custom script, locking theme progression to the previous theme's phrase test.
+- Updated `upsertDynamicAssessmentShell` in `js/api.js` to assign prerequisites at the theme level (instead of task-level daisy chaining).
+- Updated `upsertDynamicAssessmentShell` in `js/api.js` to generate valid titles based on the new standardized nomenclature.
+
+### Commands Run
+- Node scripts to patch files and run backfill against the database.
+
+### Results
+The Admin UI now accurately reflects curriculum order for assessments, and the underlying database schema and shell generation logic align with the Theme-gated progression architecture (Pilihan 2).
+
+### Files Changed
+- `js/admin/datagrid.js`
+- `js/admin/assessment-management.js`
+- `js/api.js`
+
+### Verification
+- Script executed successfully reporting 40 updated assessments.
+- UI sorting logic successfully added via code inspection.
+
+### Outstanding
+- None related to this task.
+
+### Resume From
+Move to the next task as directed by user.

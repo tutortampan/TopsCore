@@ -43,14 +43,33 @@ export async function callEdgeFunction(functionName, payload) {
   const timeoutId = setTimeout(() => controller.abort(), 25000);
 
   try {
-    const { data, error } = await sb.functions.invoke(functionName, {
-      body: payload,
-      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    const { data: sessionData } = await sb.auth.getSession();
+    const token = sessionData?.session?.access_token || SUPABASE_ANON_KEY;
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Authorization': `Bearer ${token}`,
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify(payload),
       signal: controller.signal
     });
     clearTimeout(timeoutId);
-    if (error) {
-      throw new Error(error.message || `Edge function ${functionName} failed`);
+    
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch(e) { data = { error: text }; }
+    
+    if (!res.ok) {
+      const err = new Error(data.error || `Edge function ${functionName} failed with status ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+    if (data && data.error) {
+      const err = new Error(data.error);
+      err.status = 400;
+      throw err;
     }
     return data;
   } catch (err) {

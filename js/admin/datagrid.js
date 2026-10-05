@@ -1,5 +1,5 @@
 export class DataGrid {
-  constructor({ container, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false }) {
+  constructor({ container, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false, sortComparator = null, initialSortKey = null, initialSortAsc = true }) {
     this.container = typeof container === 'string' ? document.getElementById(container) : container;
     this.rawData = data;
     this.filteredData = [...data];
@@ -9,14 +9,17 @@ export class DataGrid {
     this.currentPage = 1;
     this.searchKeys = searchKeys;
     this.emptyStateHtml = emptyStateHtml;
-    this.sortKey = null;
-    this.sortAsc = true;
+    this.sortKey = initialSortKey;
+    this.sortAsc = initialSortAsc;
     this.bulkActions = bulkActions;
+    this.customBulkActions = arguments[0].customBulkActions || [];
     this.selectedIds = new Set();
     this.onBulkAction = onBulkAction;
     this.onRowClick = onRowClick;
     this.stickyActionCol = stickyActionCol;
+    this.sortComparator = sortComparator;
     
+    if (this.sortKey) this.sortData();
     this.init();
   }
 
@@ -36,7 +39,11 @@ export class DataGrid {
         </div>
         <div class="datagrid-actions" style="display:flex; gap:0.5rem; align-items:center;">
           <span class="datagrid-count text-muted text-sm" style="margin-right:1rem;"></span>
-          ${this.bulkActions ? `<button class="btn btn-secondary btn-sm datagrid-bulk-btn hidden">Bulk Action (<span class="datagrid-bulk-count">0</span>)</button>` : ''}
+          ${this.bulkActions ? (
+             this.customBulkActions.length > 0 
+              ? this.customBulkActions.map((btn, i) => `<button class="btn btn-secondary btn-sm datagrid-custom-bulk-btn hidden" data-idx="${i}">${btn.label} (<span class="datagrid-bulk-count">0</span>)</button>`).join(' ')
+              : `<button class="btn btn-secondary btn-sm datagrid-bulk-btn hidden">Bulk Action (<span class="datagrid-bulk-count">0</span>)</button>`
+          ) : ''}
         </div>
       </div>
       <div class="table-wrap" style="overflow-x:auto;">
@@ -111,12 +118,26 @@ export class DataGrid {
     });
 
     if (this.bulkActions) {
-      const bulkBtn = this.container.querySelector('.datagrid-bulk-btn');
-      bulkBtn.addEventListener('click', () => {
-        if (this.onBulkAction) {
-          this.onBulkAction(this.getSelection());
+      if (this.customBulkActions && this.customBulkActions.length > 0) {
+        const btns = this.container.querySelectorAll('.datagrid-custom-bulk-btn');
+        btns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.idx, 10);
+            if (this.customBulkActions[idx] && this.customBulkActions[idx].onClick) {
+              this.customBulkActions[idx].onClick(this.getSelection());
+            }
+          });
+        });
+      } else {
+        const bulkBtn = this.container.querySelector('.datagrid-bulk-btn');
+        if (bulkBtn) {
+          bulkBtn.addEventListener('click', () => {
+            if (this.onBulkAction) {
+              this.onBulkAction(this.getSelection());
+            }
+          });
         }
-      });
+      }
     }
 
     this.renderHeaders();
@@ -250,6 +271,10 @@ export class DataGrid {
   sortData() {
     if (!this.sortKey) return;
     this.filteredData.sort((a, b) => {
+      if (typeof this.sortComparator === 'function') {
+        const customResult = this.sortComparator(this.sortKey, this.sortAsc ? 'asc' : 'desc', a, b);
+        if (customResult !== undefined && customResult !== null) return customResult;
+      }
       let valA = a[this.sortKey];
       let valB = b[this.sortKey];
       if (typeof valA === 'string') valA = valA.toLowerCase();
@@ -267,13 +292,27 @@ export class DataGrid {
 
   updateBulkUI() {
     if (!this.bulkActions) return;
-    const btn = this.container.querySelector('.datagrid-bulk-btn');
-    const count = this.container.querySelector('.datagrid-bulk-count');
-    if (this.selectedIds.size > 0) {
-      btn.classList.remove('hidden');
-      count.textContent = this.selectedIds.size;
+    
+    if (this.customBulkActions && this.customBulkActions.length > 0) {
+      const btns = this.container.querySelectorAll('.datagrid-custom-bulk-btn');
+      const counts = this.container.querySelectorAll('.datagrid-bulk-count');
+      if (this.selectedIds.size > 0) {
+        btns.forEach(btn => btn.classList.remove('hidden'));
+        counts.forEach(count => count.textContent = this.selectedIds.size);
+      } else {
+        btns.forEach(btn => btn.classList.add('hidden'));
+      }
     } else {
-      btn.classList.add('hidden');
+      const btn = this.container.querySelector('.datagrid-bulk-btn');
+      const count = this.container.querySelector('.datagrid-bulk-count');
+      if (btn && count) {
+        if (this.selectedIds.size > 0) {
+          btn.classList.remove('hidden');
+          count.textContent = this.selectedIds.size;
+        } else {
+          btn.classList.add('hidden');
+        }
+      }
     }
   }
 
@@ -389,6 +428,14 @@ export class DataGrid {
     }
 
     this.renderPagination(totalPages);
+  }
+
+  updateData(newData) {
+    this.rawData = newData;
+    this.filteredData = [...newData];
+    this.currentPage = 1;
+    if (this.sortKey) this.sortData();
+    this.render();
   }
 
   renderPagination(totalPages) {

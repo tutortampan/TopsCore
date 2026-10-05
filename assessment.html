@@ -14,80 +14,368 @@
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/dashboard.css" />
   <meta name="view-transition" content="same-origin" />
+  <style>
+    /* ===== SPEECH-TO-TEXT CENTERED LAYOUT ===== */
+    body.assessment-page {
+      background: linear-gradient(170deg, #021e33 0%, #032b43 30%, #01121d 100%);
+      min-height: 100vh;
+      color: #fff;
+    }
+    
+    .speech-center-layout {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: calc(100vh - 180px);
+      padding: 0 1rem 4rem;
+      gap: 0;
+    }
+
+    /* Question Card — white body, blue header */
+    .speech-question-card {
+      width: 100%;
+      max-width: 520px;
+      background: #ffffff;
+      border-radius: 16px;
+      text-align: left;
+      margin-bottom: 0.5rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      
+    }
+
+    .speech-question-number {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--clr-text-3);
+      margin-bottom: 0.5rem;
+    }
+
+    .speech-question-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+      margin-bottom: 0.75rem;
+      word-break: break-word;
+    }
+
+    /* Transcript Card (Frosted Glass) */
+    .speech-transcript-card {
+      width: 100%;
+      max-width: 520px;
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      padding: 1.5rem;
+      color: #fff;
+      margin-top: 0.5rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+    
+    .speech-transcript-box {
+      font-size: 1.05rem;
+      font-weight: 500;
+      color: #f1f5f9;
+      min-height: 52px;
+      text-align: left;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+    .speech-transcript-placeholder {
+      color: rgba(255,255,255,0.5);
+      font-style: italic;
+      font-size: 0.95rem;
+    }
+
+    /* MIC ZONE */
+    .speech-mic-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 1.5rem;
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .speech-mic-btn-lg {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: 4px solid rgba(16, 185, 129, 0.4);
+      background: linear-gradient(135deg, #10b981, #047857);
+      color: #fff;
+      font-size: 2.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+      position: relative;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .speech-mic-btn-lg:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 28px rgba(16, 185, 129, 0.6);
+    }
+    .speech-mic-btn-lg.listening {
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      border-color: rgba(239,68,68,0.4);
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+      animation: micPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes micPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+      70%  { box-shadow: 0 0 0 18px rgba(239,68,68,0); }
+      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    }
+
+    .speech-status-text {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: rgba(255,255,255,0.7);
+      text-align: center;
+      min-height: 1.4em;
+    }
+
+    /* Nav buttons row */
+    .speech-nav-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 520px;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Unanswered panel */
+    .speech-unanswered-panel {
+      width: 100%;
+      max-width: 520px;
+      background: rgba(239,68,68,0.06);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 14px;
+      padding: 0.75rem 1rem;
+      margin-top: 0.75rem;
+    }
+    .speech-unanswered-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #f87171;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .speech-unanswered-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .speech-unanswered-chip {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #fca5a5;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .speech-unanswered-chip:hover {
+      background: rgba(239,68,68,0.25);
+    }
+    .speech-all-answered-msg {
+      font-size: 0.8rem;
+      color: #34d399;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* GENERAL ASSESSMENT UI (FROSTED GLASS) */
+    .mc-option {
+      width: 100%;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      color: #fff;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-sizing: border-box;
+    }
+    .mc-option:hover {
+      background: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+    }
+    .mc-option.selected {
+      background: rgba(52, 211, 153, 0.15);
+      border-color: #34d399;
+      box-shadow: 0 0 15px rgba(52, 211, 153, 0.2);
+    }
+    .mc-letter {
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+    .mc-option.selected .mc-letter {
+      background: #34d399;
+      color: #000;
+    }
+
+    .written-input {
+      width: 100%;
+      min-height: 120px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 1.25rem;
+      color: #fff;
+      font-size: 1.1rem;
+      font-family: inherit;
+      resize: vertical;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-sizing: border-box;
+    }
+    .written-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: rgba(255,255,255,0.12);
+    }
+
+    select.form-control {
+      width: 100%;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      color: #fff;
+      font-size: 1.1rem;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-sizing: border-box;
+      appearance: none;
+    }
+    select.form-control option {
+      background: #0f172a;
+      color: #fff;
+    }
+  
+    .frosted-input:focus, .form-control:focus {
+      border-color: #34d399 !important;
+      box-shadow: 0 0 15px rgba(52, 211, 153, 0.2) !important;
+      background: rgba(255, 255, 255, 0.12) !important;
+    }
+  
+    /* FOCUS MODE CSS */
+    body.focus-mode header,
+    body.focus-mode #progress-bar-toggle,
+    body.focus-mode .bottom-nav-bar {
+      opacity: 0.15 !important;
+      pointer-events: none !important;
+    }
+    header, #progress-bar-toggle, .bottom-nav-bar {
+      transition: opacity 0.5s ease;
+    }
+  </style>
 </head>
 <body class="assessment-page notranslate" translate="no">
 
   <div id="toast-container"></div>
 
-  <!-- Top bar -->
-  <header class="assessment-topbar">
-    <div class="assessment-title-bar">
-      <div class="assessment-name-display" id="assessment-name">Loading ASSESSMENT…</div>
-      <div class="assessment-meta-display" id="assessment-meta"></div>
+  <header style="width:100%; max-width:800px; margin:0 auto; padding:15px; display:flex; flex-direction:column; gap:20px; box-sizing:border-box;">
+    <!-- Top Row: Logo & Timer -->
+    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+      <!-- LOGO WEBSITE -->
+      <div style="background:rgba(255,255,255,0.85); border-radius:12px; padding:6px 10px; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); backdrop-filter:blur(10px);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0b4c80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+        <span style="font-weight:800; font-size:1rem; color:#0b4c80; font-family:'Outfit', sans-serif;">TopsCore</span>
+      </div>
+      <!-- TIMER -->
+      <div class="assessment-timer" id="assessment-timer" style="background:rgba(255,255,255,0.85); border-radius:12px; padding:6px 10px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); backdrop-filter:blur(10px);">
+        <span style="font-size:1rem;">⏱</span>
+        <span id="timer-display" style="font-weight:800; color:#dc2626; font-size:0.85rem;">--:--</span>
+      </div>
     </div>
 
-    <!-- Real-time Sync & Buffer Status Indicator -->
-    <div class="assessment-sync-status" id="assessment-sync-status" title="Write-ahead safety buffer & server auto-sync active" style="display:inline-flex;align-items:center;gap:6px;font-size:0.75rem;font-weight:600;color:#10b981;background:rgba(16,185,129,0.1);padding:4px 10px;border-radius:20px;border:1px solid rgba(16,185,129,0.25);">
-      <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;transition:background 0.2s;"></span>
-      <span id="sync-status-text">Saved</span>
+    <!-- Student Profile (Center/Horizontal) -->
+    <div style="display:flex; align-items:center; justify-content:center; text-align:left; gap:12px; margin-top:8px;">
+      <img id="assessment-student-avatar" src="https://ui-avatars.com/api/?name=S&background=random" style="width:56px; height:56px; border-radius:50%; object-fit:cover; box-shadow:0 4px 12px rgba(0,0,0,0.15); border:2px solid #06b6d4;" />
+      <div style="display:flex; flex-direction:column;">
+        <span id="assessment-student-name" style="font-size:1.1rem; font-weight:800; color:#fff; font-family:'Outfit',sans-serif; text-shadow:0 2px 4px rgba(0,0,0,0.5); margin-bottom:2px;">-</span>
+        <span style="font-size:0.85rem; font-weight:600; color:#cbd5e1; text-shadow:0 1px 2px rgba(0,0,0,0.5);"><span id="assessment-class-name">-</span> • ID: <span id="assessment-student-id">...</span></span>
+      </div>
     </div>
-
-    <!-- Timer -->
-    <div class="assessment-timer" id="assessment-timer" role="timer" aria-live="polite">
-      &#9201; <span id="timer-display">--:--</span>
-    </div>
-
-    <!-- Drawer toggle for mobile -->
-    <button class="btn btn-secondary" id="qnav-toggle-btn" style="padding:4px 8px; font-size:1.1rem; background:rgba(255,255,255,0.05); border:1px solid var(--clr-border);" aria-label="Open questions">
-      ☰
-    </button>
   </header>
 
-  <!-- ASSESSMENT progress bar -->
-  <div class="assessment-progress-wrap">
-    <div class="assessment-progress-fill" id="assessment-progress-fill" style="width:0%"></div>
+  <!-- ASSESSMENT progress bar & Pop-up Grid -->
+  <div style="width:100%; max-width:800px; margin:0 auto; padding:0 15px 15px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; position:relative; z-index:999;">
+    <!-- Progress Bar (Clickable Toggle) -->
+    <div id="progress-bar-toggle" style="width:100%; max-width:520px; cursor:pointer; position:relative;" onclick="document.getElementById('matrix-popup').style.display = document.getElementById('matrix-popup').style.display === 'none' ? 'block' : 'none'">
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px; padding:0 4px;">
+        <span style="font-size:0.85rem; font-weight:600; color:#cbd5e1;">Progress (Tap to view grid)</span>
+        <span id="progress-text-percent" style="font-size:0.85rem; font-weight:800; color:#34d399;">0%</span>
+      </div>
+      <div class="assessment-progress-wrap" style="height:18px; border-radius:10px; background:rgba(255,255,255,0.15); overflow:hidden;">
+        <div class="assessment-progress-fill" id="assessment-progress-fill" style="width:0%; height:100%; background:linear-gradient(to right, #3b82f6, #34d399); transition:width 0.3s; border-radius:10px;"></div>
+      </div>
+    </div>
+    
+    <!-- Pop-up Question Matrix -->
+    <div id="matrix-popup" style="display:none; position:absolute; top:55px; left:50%; transform:translateX(-50%); width:90%; max-width:400px; background:rgba(15,23,42,0.98); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:15px; box-shadow:0 10px 35px rgba(0,0,0,0.7); z-index:9999;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-size:0.85rem; font-weight:700; color:#fff;">Question Matrix</span>
+        <button id="close-matrix-btn" style="background:transparent; border:none; color:#94a3b8; font-size:1.1rem; cursor:pointer;" onclick="document.getElementById('matrix-popup').style.display='none'">✕</button>
+      </div>
+      
+      <!-- GRID CONTAINER: CSS must be grid with 10 columns -->
+      <div class="q-nav-grid" id="q-nav-grid" role="navigation" aria-label="Jump to question" style="display:grid; grid-template-columns:repeat(10, 1fr); gap:6px;">
+        <!-- Filled dynamically -->
+      </div>
+      
+      <div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.1); margin-top:12px; padding-top:12px; display:flex; flex-direction:column; gap:8px;">
+        <button class="btn btn-secondary w-100 btn-sm" id="btn-sidebar-jump-unanswered" style="font-size:0.78rem;padding:8px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="document.getElementById('matrix-popup').style.display='none'">
+          🔍 Jump to Next Unanswered
+        </button>
+        <button class="btn btn-success w-100" id="global-submit-btn" style="padding:10px;font-weight:600;">
+          Submit ASSESSMENT 📋
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- ASSESSMENT body -->
-  <div class="assessment-body">
-
-    <!-- Question navigator drawer/sidebar -->
-    <aside class="q-nav-drawer" id="qNavDrawer" aria-label="Question navigator">
-      <div class="q-nav-drawer-header">
-        <h3 style="margin:0; font-size:0.9rem; font-weight:700;">Questions</h3>
-        <button id="qnav-close-btn" style="padding:4px 8px; background:transparent; border:none; color:var(--clr-text-2); font-size:1.2rem; cursor:pointer;" aria-label="Close">✕</button>
-      </div>
-      <div class="q-nav-drawer-content" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
-        <div class="q-nav-grid-wrap">
-          <div class="q-nav-grid" id="q-nav-grid" role="navigation" aria-label="Jump to question"></div>
-        </div>
-  
-        <div class="q-nav-legend">
-          <div class="q-nav-legend-item">
-            <div class="q-nav-legend-dot" style="background:rgba(16,185,129,0.3);border:1px solid var(--clr-success);"></div>
-            <span>Answered</span>
-          </div>
-          <div class="q-nav-legend-item">
-            <div class="q-nav-legend-dot" style="background:var(--clr-accent-1);border:1px solid var(--clr-accent-1);"></div>
-            <span>Current</span>
-          </div>
-          <div class="q-nav-legend-item">
-            <div class="q-nav-legend-dot" style="background:var(--clr-surface);border:1px solid var(--clr-border);"></div>
-            <span>Not answered</span>
-          </div>
-        </div>
-  
-        <div class="mt-3 pt-3" style="border-top:1px solid var(--clr-border); flex-shrink:0; display:flex; flex-direction:column; gap:8px;">
-          <button class="btn btn-secondary w-100 btn-sm" id="btn-sidebar-jump-unanswered" style="font-size:0.78rem;padding:7px 10px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:6px;">
-            🔍  Jump to Next Unanswered
-          </button>
-          <button class="btn btn-success w-100" id="global-submit-btn" style="padding:10px;font-weight:600;">
-            Submit ASSESSMENT 📋
-          </button>
-        </div>
-      </div>
-    </aside>
-
+  <div class="assessment-body" style="padding-bottom: 70px;">
     <!-- Main question area -->
     <main class="assessment-main-content" id="assessment-main" aria-live="polite">
       <div class="question-card">
@@ -111,6 +399,7 @@
     <div class="cheat-box">
       <h2 id="cheat-title" style="font-size:1.6rem;font-weight:800;color:#ffffff;margin-bottom:0.75rem;">🚨 CHEATING ATTEMPT DETECTED! 🚨</h2>
       <p style="font-size:1rem;color:rgba(255,255,255,0.9);margin-bottom:1.5rem;" id="cheat-reason">You were detected trying to leave the ASSESSMENT page or using navigation buttons!</p>
+      <div id="cheat-timer-count" style="font-size:4rem;font-weight:900;color:#fca5a5;margin-bottom:1.5rem;text-shadow:0 4px 20px rgba(0,0,0,0.5);"></div>
       <button class="btn btn-primary" id="dismiss-cheat-btn" style="background:#ffffff;color:#dc2626;font-weight:800;border:none;padding:0.75rem 2rem;font-size:1.05rem;box-shadow:0 10px 25px rgba(0,0,0,0.3);">
         Return to My ASSESSMENT
       </button>
@@ -120,7 +409,7 @@
   <!-- Submit confirm modal -->
   <div class="modal-backdrop hidden" id="submit-modal" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
     <div class="modal-box" style="max-width:480px;text-align:center;">
-      <div style="font-size:3rem;margin-bottom:var(--space-3);" id="submit-modal-icon">📋</div>
+      <div style="font-size:3rem;margin-bottom:var(--space-3);" id="submit-modal-icon">✅</div>
       <h3 id="submit-modal-title" class="mb-3">Submit ASSESSMENT?</h3>
       <div id="unanswered-warning-banner" class="hidden mb-4 p-3 rounded text-sm text-left" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#fca5a5;">
         <div class="fw-700 text-danger mb-1">⚠️  INCOMPLETE ASSESSMENT WARNING:</div>
@@ -130,21 +419,21 @@
         You have answered <strong id="answered-count">0</strong> of <strong id="total-count">0</strong> questions.
         Once submitted, you cannot change your answers.
       </p>
-      <div class="d-flex gap-3 justify-between">
-        <button class="btn btn-secondary" id="cancel-submit-btn" style="flex:1;">Keep Reviewing</button>
-        <button class="btn btn-primary" id="confirm-submit-btn" style="flex:1;">Submit ASSESSMENT</button>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button class="btn btn-primary w-100" id="confirm-submit-btn" style="padding:12px;font-size:1rem;">Submit ASSESSMENT</button>
+        <button class="btn btn-secondary w-100" id="cancel-submit-btn" style="padding:12px;font-size:1rem;">Keep Reviewing</button>
       </div>
     </div>
   </div>
 
   <script type="module">
-    import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp } from './js/api.js?v=4.7.5';
+    import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './js/api.js?v=4.7.5';
     import { evaluateAnswer } from './js/grading.js?v=4.7.5';
     import { requireStudentSession } from './js/session.js?v=4.7.5';
     import { showToast, showLoading, hideLoading, formatTime, escapeHtml as appEscapeHtml } from './js/app.js?v=4.7.5';
     import { startCountdown, isExpired } from './js/timer.js?v=4.7.5';
     import { createSpeechSession, isSpeechSupported } from './js/speech.js?v=4.7.5';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY } from './js/supabase.js?v=4.7.5';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './js/supabase.js?v=4.7.5';
 
     function escapeHtml(str) {
       if (typeof appEscapeHtml === 'function') return appEscapeHtml(str);
@@ -197,6 +486,7 @@
     let cheatInterval = null;
     let beepInterval = null;
     let audioCtx = null;
+    let securityConfig = { enabled: true, soundEnabled: true, countdownSeconds: 10 };
 
     function playBeepSound() {
       try {
@@ -237,7 +527,7 @@
     }
 
     function triggerCheatAlert(reason) {
-      if (!isAssessmentActive || cheatInterval) return;
+      if (!isAssessmentActive || cheatInterval || !securityConfig.enabled) return;
 
       logCheatingEvent(session.student_id, assessmentId, 'CHEAT_ATTEMPT', {
         reason: reason,
@@ -246,14 +536,28 @@
       });
 
       const overlay = document.getElementById('cheat-overlay');
-      const countEl = document.getElementById('cheat-countdown');
+      const countEl = document.getElementById('cheat-timer-count');
       const reasonEl = document.getElementById('cheat-reason');
 
       if (reasonEl) reasonEl.textContent = `Warning: ${reason}!`;
       overlay.style.display = 'flex';
 
-      playBeepSound();
-      beepInterval = setInterval(playBeepSound, 800);
+      if (securityConfig.soundEnabled) {
+        playBeepSound();
+        beepInterval = setInterval(playBeepSound, 800);
+      }
+
+      let secondsLeft = securityConfig.countdownSeconds;
+      if (countEl) countEl.textContent = secondsLeft;
+
+      cheatInterval = setInterval(() => {
+        secondsLeft--;
+        if (countEl) countEl.textContent = secondsLeft;
+        if (secondsLeft <= 0) {
+          clearInterval(cheatInterval);
+          doSubmit(true);
+        }
+      }, 1000);
     }
 
     function dismissCheatAlert() {
@@ -270,6 +574,7 @@
 
     // Detect switching tab or minimizing browser
     document.addEventListener('visibilitychange', () => {
+      if (!securityConfig.enabled) return;
       if (isAssessmentActive && document.hidden) {
         triggerCheatAlert('Leaving the Tab / Switching Applications');
         if (attemptData && attemptData.id && SUPABASE_URL && SUPABASE_ANON_KEY) {
@@ -281,6 +586,7 @@
 
     // Detect opening another app or losing window focus
     window.addEventListener('blur', () => {
+      if (!securityConfig.enabled) return;
       if (isAssessmentActive) {
         triggerCheatAlert('Screen lost focus / Opened another application');
       }
@@ -360,6 +666,9 @@
     async function bootAssessment() {
       showLoading('Starting ASSESSMENT…');
       try {
+        const fetchedConfig = await getSecuritySettings();
+        if (fetchedConfig) securityConfig = fetchedConfig;
+
         const result = await startASSESSMENT(session.student_id, assessmentId);
         attemptData = result.attempt;
         assessmentData = result.ASSESSMENT;
@@ -401,11 +710,6 @@
           }
         }
 
-        if (assessmentData?.module_type === 'VOCAB_MASTERY') {
-          const style = document.createElement('style');
-          style.innerHTML = '#tts-speak-btn { display: none !important; }';
-          document.head.appendChild(style);
-        }
 
         // Question order shuffle (if random)
         if (assessmentData?.question_order === 'random' && allAnswerRows.length > 1) {
@@ -450,6 +754,37 @@
             assessmentData.assessment_title || ''
           ].filter(Boolean);
           assessmentDisplayName = parts.length > 0 ? parts.join(' · ') : (assessmentData.assessment_title || 'ASSESSMENT');
+        }
+
+        try {
+          const classEl = document.getElementById('assessment-class-name');
+          if (classEl && assessmentData.classes?.name) classEl.textContent = assessmentData.classes.name;
+          const titleEl = document.getElementById('assessment-main-title');
+          if (titleEl) titleEl.textContent = assessmentData.assessment_title || assessmentData.name || assessmentDisplayName;
+        } catch(e) {}
+
+        // Fetch student info for header
+        try {
+          const nameEl = document.getElementById('assessment-student-name');
+          const avatarEl = document.getElementById('assessment-student-avatar');
+          const idEl = document.getElementById('assessment-student-id');
+          const classEl = document.getElementById('assessment-class-name');
+
+          if (nameEl) nameEl.textContent = session.student_name || 'Student';
+          if (idEl) idEl.textContent = (session.student_id || '').substring(0, 8);
+          
+          // Use class_name from session if assessmentData doesn't have it
+          if (classEl && (!assessmentData?.classes?.name) && session.class_name) {
+            classEl.textContent = session.class_name;
+          } else if (classEl && (!assessmentData?.classes?.name) && session.level_name) {
+            classEl.textContent = session.level_name;
+          }
+          
+          if (avatarEl) {
+            avatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(session.student_name || 'S')}&background=random`;
+          }
+        } catch (e) {
+          console.warn("Failed to load student profile:", e);
         }
 
         // V1: If no answer rows at all, show error
@@ -525,8 +860,10 @@
          return snap.section_id === currentSection.id;
        });
 
-       document.getElementById('assessment-name').textContent = assessmentDisplayName + ` - ${currentSection.title || `Section ${index + 1}`}`;
-       document.getElementById('assessment-meta').textContent = `${answerRows.length} Questions · ${session.student_name}`;
+       const nameEl = document.getElementById('assessment-name');
+       if (nameEl) nameEl.textContent = assessmentDisplayName + ` - ${currentSection.title || `Section ${index + 1}`}`;
+       const metaEl = document.getElementById('assessment-meta');
+       if (metaEl) metaEl.textContent = `${answerRows.length} Questions · ${session.student_name}`;
 
        buildNavGrid();
        startTimer(currentSection);
@@ -674,90 +1011,87 @@
         try { snap = JSON.parse(snap); } catch { snap = { question_text: snap, answer_type: 'written' }; }
       }
       const answerType = snap?.answer_type || row.answer_type || 'written';
-      const questionText = snap?.question_text || snap?.questionText || snap?.question || snap?.text || snap?.soal || snap?.indonesia || (typeof row.question_snapshot === 'string' ? row.question_snapshot : '') || 'Question text unavailable';
+      const questionText = snap?.question_text || snap?.questionText || snap?.question || snap?.text || snap?.soal || snap?.indonesia || row.question_text_snapshot || (typeof row.question_snapshot === 'string' ? row.question_snapshot : '') || 'Question text unavailable';
       const wordType = snap?.metadata?.word_type || snap?.metadata?.type || snap?.type || snap?.question_type || '';
       const topic = snap?.metadata?.topic || '';
+      const theme = snap?.metadata?.theme || snap?.theme || '';
       const savedAnswer = answeredMap[row.id] || '';
 
       const main = document.getElementById('assessment-main');
       main.innerHTML = '';
 
-      const card = document.createElement('div');
-      card.className = 'question-card';
-      card.innerHTML = `
-        <div class="d-flex align-center justify-between flex-wrap gap-2 mb-3">
-          <div class="question-number" style="margin-bottom:0;">Question ${idx + 1} of ${answerRows.length}</div>
-          <div class="d-flex align-center gap-2">
-            <button class="btn btn-secondary btn-sm tts-speak-btn" id="tts-speak-btn" type="button" title="Listen to pronunciation (Speech Synthesis)" style="padding:3px 8px;font-size:0.8rem;display:inline-flex;align-items:center;gap:4px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid var(--clr-border);cursor:pointer;">
-              🔉 <span style="font-size:0.75rem;font-weight:600;">Pronounce</span>
-            </button>
-            ${topic ? `<span class="badge badge-info" style="font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;padding:4px 10px;border-radius:12px;background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);">🏷️ # ${escapeHtml(topic)}</span>` : ''}
-            ${wordType ? `<span id="word-type-badge" class="badge badge-info word-type-badge" style="font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;padding:4px 10px;border-radius:12px;background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);">🏷️ # ${escapeHtml(wordType)}</span>` : ''}
+      const layout = document.createElement('div');
+      layout.className = 'speech-center-layout';
+      layout.id = 'speech-center-layout';
+      main.appendChild(layout);
+
+      const container = document.createElement('div');
+      container.style.cssText = 'width:100%; max-width:600px; margin:0.5rem auto 1rem; display:flex; flex-direction:column; gap:12px;';
+      
+      // -- BOX 1: SOAL --
+      let mainHtml = `
+        <div class="speech-question-card" style="background:rgba(255,255,255,0.05); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.1); border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.3); padding:1.25rem; display:flex; flex-direction:column; min-height:160px; box-sizing:border-box;">
+      `;
+
+      if (theme || topic) {
+        mainHtml += `
+          <div style="display:flex; justify-content:space-between; gap:1rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px; margin-bottom:0.75rem; font-size:0.85rem; font-weight:600; color:var(--clr-text-2);">
+            ${theme ? `<span>Theme: ${escapeHtml(theme)}</span>` : '<span></span>'}
+            ${topic ? `<span>Topic: ${escapeHtml(topic)}</span>` : '<span></span>'}
           </div>
-        </div>
-        <div class="question-text">${questionText}</div>
-        <div id="answer-area"></div>
-        <div class="assessment-nav-buttons">
-          <button class="btn btn-secondary" id="prev-btn" ${idx === 0 ? 'disabled' : ''}>←  Previous</button>
-          <div class="d-flex gap-3">
-            ${idx === answerRows.length - 1
-              ? (currentSectionIndex === assessmentSections.length - 1 
-                  ? `<button class="btn btn-success" id="submit-assessment-btn">Submit ASSESSMENT</button>` 
-                  : `<button class="btn btn-success" id="next-section-btn">Next Section ←’</button>`)
-              : `<button class="btn btn-primary" id="next-btn">Next ←’</button>`
-            }
+        `;
+      }
+      
+      mainHtml += `
+          <div style="flex-grow:1; display:flex; align-items:center; justify-content:center; padding:0.5rem 0;">
+            <div class="speech-question-text" style="font-size:1.6rem; font-weight:800; color:#fff; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word;">
+              ${escapeHtml(questionText)}
+            </div>
           </div>
+      `;
+
+      if (wordType) {
+        mainHtml += `
+          <div style="text-align:center; margin-top:auto; font-size:0.9rem; font-weight:700; color:var(--clr-text-2);">
+            [ Word type: <span style="color:#34d399;">${escapeHtml(wordType)}</span> ]
+          </div>
+        `;
+      }
+      
+      mainHtml += `
         </div>
       `;
-      main.appendChild(card);
 
-      // Native Browser Speech Synthesis (TTS) Pronunciation
-      document.getElementById('tts-speak-btn')?.addEventListener('click', () => {
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const cleanText = questionText.replace(/<[^>]+>/g, '').trim();
-          if (cleanText) {
-            const utter = new SpeechSynthesisUtterance(cleanText);
-            utter.lang = 'en-US';
-            utter.rate = 0.9;
-            window.speechSynthesis.speak(utter);
-          }
-        } else {
-          showToast('Speech synthesis not available in this browser.', 'info');
-        }
-      });
+      // -- BOX 2: JAWABAN (Answer Area Wrapper) --
+      mainHtml += `
+        <div id="answer-area" style="background:rgba(255,255,255,0.05); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.1); border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.3); padding:1.25rem; display:flex; flex-direction:column; min-height:160px; box-sizing:border-box; position:relative;">
+        </div>
+      `;
+      
+      // -- MIC CONTAINER (Di luar box jawaban) --
+      mainHtml += `
+        <div id="mic-container" style="display:flex; flex-direction:column; align-items:center; margin-top:0.25rem;">
+        </div>
+      `;
+      
+      container.innerHTML = mainHtml;
+      layout.appendChild(container);
 
       // Render answer area
       const answerArea = document.getElementById('answer-area');
-      if (answerType === 'multiple_choice') {
+      if (answerType === 'speech_to_text') {
+        renderSpeech(answerArea, row, savedAnswer, snap);
+      } else if (answerType === 'multiple_choice') {
         renderMC(answerArea, row, savedAnswer, snap);
-      } else if (answerType === 'dropdown') {
+      } else if (answerType === 'dropdown' || answerType === 'dropdown_10' || answerType === 'phrase_recognition') {
         renderDropdown(answerArea, row, savedAnswer, snap);
       } else if (answerType === 'written') {
         renderWritten(answerArea, row, savedAnswer, snap);
-      } else if (answerType === 'speech_to_text') {
-        renderSpeech(answerArea, row, savedAnswer, snap);
       }
 
-      // Nav buttons (desktop)
-      document.getElementById('prev-btn')?.addEventListener('click', () => {
-        saveCurrentAnswer();
-        renderQuestion(idx - 1);
-      });
-
-      document.getElementById('next-btn')?.addEventListener('click', () => {
-        saveCurrentAnswer();
-        renderQuestion(idx + 1);
-      });
-
-      document.getElementById('submit-assessment-btn')?.addEventListener('click', () => {
-        saveCurrentAnswer();
-        openSubmitModal();
-      });
-
-      document.getElementById('next-section-btn')?.addEventListener('click', () => {
-        nextSection();
-      });
+      // Ensure bottom bar is always visible
+      const bottomBar = document.querySelector('.bottom-nav-bar');
+      if (bottomBar) bottomBar.style.display = 'flex';
 
       // Bottom Nav buttons (mobile)
       const bottomPrev = document.getElementById('bottom-prev-btn');
@@ -767,24 +1101,57 @@
         bottomPrev.onclick = () => { saveCurrentAnswer(); renderQuestion(idx - 1); };
       }
       if (bottomNext) {
-        if (idx === answerRows.length - 1) {
-          if (currentSectionIndex === assessmentSections.length - 1) {
+        const isLast = (idx === answerRows.length - 1);
+        const isLastSection = (currentSectionIndex === assessmentSections.length - 1);
+        if (isLast) {
+          if (isLastSection) {
             bottomNext.textContent = 'Submit 📋';
             bottomNext.className = 'btn btn-success';
             bottomNext.onclick = () => { saveCurrentAnswer(); openSubmitModal(); };
           } else {
-            bottomNext.textContent = 'Next Sec ←’';
+            bottomNext.textContent = 'Next Sec ←\u2019';
             bottomNext.className = 'btn btn-success';
             bottomNext.onclick = () => { nextSection(); };
           }
         } else {
-          bottomNext.textContent = 'Next ←’';
+          bottomNext.textContent = 'Next ←\u2019';
           bottomNext.className = 'btn btn-primary';
           bottomNext.onclick = () => { saveCurrentAnswer(); renderQuestion(idx + 1); };
         }
       }
 
       updateNavGrid();
+    }
+
+    // —— Unanswered Panel (Speech mode) ——
+    function renderUnansweredPanel(container, currentIdx) {
+      container.innerHTML = '';
+      const unanswered = answerRows
+        .map((r, i) => ({ r, i }))
+        .filter(({ r }) => !answeredMap[r.id] || !answeredMap[r.id].trim());
+
+      if (unanswered.length === 0) {
+        container.innerHTML = `
+          <div class="speech-unanswered-panel" style="border-color:rgba(52,211,153,0.25);background:rgba(52,211,153,0.06);">
+            <div class="speech-all-answered-msg">✅ All ${answerRows.length} questions answered! Ready to submit.</div>
+          </div>`;
+        return;
+      }
+
+      const panel = document.createElement('div');
+      panel.className = 'speech-unanswered-panel';
+      panel.innerHTML = `<div class="speech-unanswered-title">⚡ ${unanswered.length} unanswered — tap to jump</div><div class="speech-unanswered-chips" id="unanswered-chips"></div>`;
+      container.appendChild(panel);
+
+      const chipsEl = panel.querySelector('#unanswered-chips');
+      unanswered.forEach(({ i }) => {
+        const chip = document.createElement('button');
+        chip.className = 'speech-unanswered-chip' + (i === currentIdx ? ' current' : '');
+        chip.textContent = i + 1;
+        chip.title = `Jump to question ${i + 1}`;
+        chip.addEventListener('click', () => { saveCurrentAnswer(); renderQuestion(i); });
+        chipsEl.appendChild(chip);
+      });
     }
 
     function parseSnapshotOptions(rawOptions) {
@@ -852,12 +1219,14 @@
       });
       const sel = document.createElement('select');
       sel.className = 'form-control';
+      sel.style.cssText = 'width:100%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:1.25rem; min-height:64px; line-height:1.5; margin-bottom:1rem; color:#fff; font-size:1.1rem; box-sizing:border-box; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); outline:none; font-family:inherit;  cursor:pointer;';
+
       sel.id = `dropdown-${row.id}`;
       sel.setAttribute('aria-label', 'Select answer');
       sel.innerHTML = '<option value="">— Select answer —</option>' +
         options.map(o => {
           const v = typeof o === 'string' ? o : o.text || o.value;
-          return `<option value="${v}" ${savedAnswer === v ? 'selected' : ''}>${v}</option>`;
+          return `<option style="background:#1e293b; color:#fff;" value="${v}" ${savedAnswer === v ? 'selected' : ''}>${v}</option>`;
         }).join('');
       sel.addEventListener('change', () => {
         answeredMap[row.id] = sel.value;
@@ -875,7 +1244,9 @@
 
     function renderWritten(area, row, savedAnswer, snap = {}) {
       const ta = document.createElement('textarea');
-      ta.className = 'written-input';
+      ta.className = 'written-input frosted-input';
+      ta.style.cssText = 'width:100%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:1rem 1.25rem; color:#fff; font-size:1.1rem; box-sizing:border-box; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); resize:vertical; min-height:100px; outline:none; font-family:inherit; transition:all 0.2s;';
+
       ta.id = `written-${row.id}`;
       ta.placeholder = 'Type your answer here…';
       ta.value = savedAnswer;
@@ -890,59 +1261,69 @@
 
     function renderSpeech(area, row, savedAnswer, snap = {}) {
       if (!isSpeechSupported()) {
-        area.innerHTML = `
-          <div class="glass-card p-5" style="border-color:rgba(245,158,11,0.3);">
-            <p class="text-warning fw-600 mb-2">⚠️  Speech Recognition Unavailable</p>
-            <p class="text-sm text-muted mb-4">Your browser doesn't support speech recognition. Please use Chrome or Edge.</p>
-            <p class="text-sm text-muted mb-3">You can type your answer instead:</p>
-          </div>
-        `;
+        const warn = document.createElement('div');
+        warn.style.cssText = 'width:100%;max-width:520px;padding:1rem;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:14px;text-align:center;margin-bottom:0.75rem;';
+        warn.innerHTML = '<p style="color:#fbbf24;font-weight:700;margin-bottom:0.5rem;">⚠️ Speech Unavailable</p><p style="color:#94a3b8;font-size:0.82rem;">Use Chrome or Edge. Type below instead:</p>';
+        area.appendChild(warn);
         renderWritten(area, row, savedAnswer);
         return;
       }
 
-      const wrapper = document.createElement('div');
-      const ta = document.createElement('textarea');
-      ta.className = 'written-input mb-4';
-      ta.id = `speech-text-${row.id}`;
-      ta.placeholder = 'Click the microphone below and speak your answer. The voice result will appear here...';
-      ta.value = savedAnswer;
-      ta.readOnly = true;
-      ta.style.cursor = 'default';
-      ta.style.background = 'rgba(255, 255, 255, 0.04)';
-      ta.setAttribute('aria-label', 'Speech to text answer display');
+      // — Top Row (Lang + Status) in Answer Box —
+      const topRow = document.createElement('div');
+      topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:0.75rem;';
+      
+      const langSelect = document.createElement('select');
+      langSelect.className = 'speech-lang-select';
+      langSelect.style.cssText = 'background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); border-radius:8px; color:#fff; padding:6px 10px; font-size:0.85rem; font-weight:600; cursor:pointer;';
+      langSelect.innerHTML = `<option value="en-US">🇺🇸 English (US)</option><option value="en-GB">🇬🇧 English (UK)</option>`;
+      langSelect.setAttribute('aria-label', 'Language selection');
+      
+      const statusEl = document.createElement('div');
+      statusEl.className = 'speech-status-text';
+      statusEl.id = `speech-status-${row.id}`;
+      statusEl.style.cssText = 'font-weight:700; font-size:0.9rem; color:var(--clr-text-2);';
+      statusEl.textContent = savedAnswer ? '✅ Answer recorded' : '● Siap Merekam';
+      if (savedAnswer) statusEl.style.color = '#34d399';
+      
+      topRow.appendChild(langSelect);
+      topRow.appendChild(statusEl);
+      area.appendChild(topRow);
 
-      const controls = document.createElement('div');
-      controls.className = 'speech-controls';
+      // — Transcript box (Jawaban) in Answer Box —
+      const transcriptBox = document.createElement('div');
+      transcriptBox.className = 'speech-transcript-box' + (savedAnswer ? ' has-answer' : '');
+      transcriptBox.id = `speech-text-${row.id}`;
+      transcriptBox.setAttribute('role', 'status');
+      transcriptBox.setAttribute('aria-live', 'polite');
+      transcriptBox.style.cssText = 'flex-grow:1; display:flex; align-items:center; justify-content:center; font-size: 1.6rem; font-weight: 700; color: #34d399; text-align: center; width: 100%; word-break: break-word; line-height: 1.3; margin-bottom: 0.5rem;';
+      
+      if (savedAnswer) {
+        transcriptBox.textContent = savedAnswer;
+      } else {
+        transcriptBox.innerHTML = '<span class="speech-transcript-placeholder" style="color:rgba(255,255,255,0.3); font-style:italic;">Jawaban...</span>';
+      }
+      area.appendChild(transcriptBox);
 
+      // — Mic Button in external container —
+      const micContainer = document.getElementById('mic-container');
       const micBtn = document.createElement('button');
-      micBtn.className = 'mic-btn';
+      micBtn.className = 'speech-mic-btn-lg';
       micBtn.id = `mic-${row.id}`;
       micBtn.setAttribute('aria-label', 'Start recording');
-      micBtn.innerHTML = '&#127908;';
-
-      const statusEl = document.createElement('div');
-      statusEl.className = 'speech-status';
-      statusEl.textContent = 'Click the mic to start speaking';
-
-      const langSelect = document.createElement('select');
-      langSelect.className = 'form-control';
-      langSelect.style.width = 'auto';
-      langSelect.style.marginLeft = 'auto';
-      langSelect.innerHTML = `
-        <option value="en-US">English (US)</option>
-        <option value="en-GB">English (UK)</option>
-      `;
-
-      controls.appendChild(micBtn);
-      controls.appendChild(statusEl);
-      controls.appendChild(langSelect);
-
-      wrapper.appendChild(ta);
-      wrapper.appendChild(controls);
-      area.appendChild(wrapper);
+      micBtn.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+      
+      const micHelpText = document.createElement('div');
+      micHelpText.style.cssText = 'margin-top:12px; font-size:0.85rem; font-weight:600; color:var(--clr-text-2);';
+      micHelpText.textContent = '[ Tekan untuk Bicara / Ulang ]';
+      
+      if (micContainer) {
+        micContainer.appendChild(micBtn);
+        micContainer.appendChild(micHelpText);
+      }
 
       let speechSessionObj = null;
+      const micSvg = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
 
       micBtn.addEventListener('click', () => {
         if (speechSessionObj?.isListening()) {
@@ -954,43 +1335,59 @@
           lang: langSelect.value,
           onStart() {
             micBtn.classList.add('listening');
-            micBtn.innerHTML = '&#9209;';
+            micBtn.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>'; // Stop icon
             micBtn.setAttribute('aria-label', 'Stop recording');
-            statusEl.textContent = '\uD83C\uDF99\uFE0F Listening... Speak clearly.';
+            statusEl.className = 'speech-status-text listening-state';
+            statusEl.textContent = '🎙️ Listening… speak clearly';
+            statusEl.style.color = '#3b82f6';
+            transcriptBox.className = 'speech-transcript-box';
+            transcriptBox.innerHTML = '<span class="speech-transcript-placeholder">Listening…</span>';
           },
           onResult(interim) {
-            statusEl.textContent = `Hearing: "${interim}"`;
+            transcriptBox.className = 'speech-transcript-box';
+            transcriptBox.textContent = interim;
+            statusEl.textContent = '🎙️ Hearing you…';
           },
           onFinal(transcript) {
-            ta.value = transcript;
+            transcriptBox.className = 'speech-transcript-box has-answer';
+            transcriptBox.textContent = transcript;
             answeredMap[row.id] = transcript;
+            // Refresh unanswered panel
+            const uPanel = document.getElementById('speech-unanswered-panel');
+            if (uPanel) renderUnansweredPanel(uPanel, currentIndex);
             updateNavGrid();
             autoSave(row.id, transcript);
           },
           onEnd() {
             micBtn.classList.remove('listening');
-            micBtn.innerHTML = '&#127908;';
+            micBtn.innerHTML = micSvg;
             micBtn.setAttribute('aria-label', 'Start recording');
-            statusEl.textContent = '\u2705 Done. Speak into the microphone again if you want to retry.';
+            const hasAns = !!answeredMap[row.id];
+            statusEl.className = 'speech-status-text' + (hasAns ? ' done-state' : '');
+            statusEl.textContent = hasAns ? '✅ Answer recorded' : '● Siap Merekam';
+            statusEl.style.color = hasAns ? '#34d399' : 'var(--clr-text-2)';
           },
           onError(msg) {
             micBtn.classList.remove('listening');
-            micBtn.innerHTML = '&#127908;';
-            statusEl.textContent = `\u26A0\uFE0F ${msg}`;
+            micBtn.innerHTML = micSvg;
+            statusEl.className = 'speech-status-text';
+            statusEl.textContent = `⚠️ ${msg}`;
+            statusEl.style.color = '#f43f5e';
             showToast(msg, 'warning');
-            
             if (msg.includes('network') || msg.includes('Network') || msg.includes('service')) {
-              ta.readOnly = false;
-              ta.style.cursor = 'text';
-              ta.style.background = 'var(--clr-surface)';
-              ta.placeholder = 'Type your answer here (fallback manual typing)...';
-              ta.focus();
-              ta.addEventListener('input', () => {
-                answeredMap[row.id] = ta.value;
+              // Fallback: make transcript box editable
+              transcriptBox.contentEditable = 'true';
+              transcriptBox.className = 'speech-transcript-box';
+              transcriptBox.textContent = answeredMap[row.id] || '';
+              transcriptBox.style.outline = '2px solid rgba(139,92,246,0.5)';
+              statusEl.textContent = '⌨️ Type your answer in the box above';
+              transcriptBox.addEventListener('input', () => {
+                const t = transcriptBox.textContent.trim();
+                answeredMap[row.id] = t;
                 updateNavGrid();
               });
-              ta.addEventListener('blur', () => autoSave(row.id, ta.value));
-              showToast('Microphone network service unavailable. Manual typing fallback unlocked.', 'info', 5000);
+              transcriptBox.addEventListener('blur', () => autoSave(row.id, transcriptBox.textContent.trim()));
+              showToast('Mic unavailable. Type your answer in the box.', 'info', 5000);
             }
           }
         });
@@ -1116,7 +1513,7 @@
         confirmBtn?.classList.remove('btn-danger');
         confirmBtn?.classList.add('btn-primary');
         if (confirmBtn) confirmBtn.textContent = 'Submit ASSESSMENT';
-        if (modalIcon) modalIcon.textContent = '📋';
+        if (modalIcon) modalIcon.textContent = '✅';
       }
 
       document.getElementById('submit-modal').classList.remove('hidden');
@@ -1221,7 +1618,38 @@
       await doSubmit(true);
     }
 
+    // Trigger voice loading early for Chrome
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+    }
+
     bootAssessment();
+  </script>
+
+  <!-- FOCUS MODE JS -->
+  <script>
+    document.addEventListener('focusin', (e) => {
+      if (e.target.matches('textarea.written-input, select.form-control, input.form-control, .frosted-input')) {
+        document.body.classList.add('focus-mode');
+      }
+    });
+    document.addEventListener('focusout', (e) => {
+      if (e.target.matches('textarea.written-input, select.form-control, input.form-control, .frosted-input')) {
+        document.body.classList.remove('focus-mode');
+      }
+    });
+    document.addEventListener('click', (e) => {
+      const micBtn = e.target.closest('.speech-mic-btn-lg');
+      if (micBtn) {
+        setTimeout(() => {
+          if (micBtn.classList.contains('listening')) {
+            document.body.classList.add('focus-mode');
+          } else {
+            document.body.classList.remove('focus-mode');
+          }
+        }, 50);
+      }
+    });
   </script>
 </body>
 </html>

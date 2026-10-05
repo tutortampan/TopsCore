@@ -805,6 +805,53 @@ export async function renderSettings(area) {
         </button>
       </div>
 
+      <!-- 1.5 Assessment Security & Anti-Cheat Engine Card -->
+      <div class="antigravity-card p-5" style="border-color:rgba(234, 179, 8, 0.3);box-shadow:0 20px 40px rgba(234, 179, 8, 0.08);">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+          <div style="font-size:1.5rem;">🛡️</div>
+          <div>
+            <h3 style="font-size:1.1rem;margin:0;color:#eab308;font-weight:700;">Assessment Security &amp; Anti-Cheat Engine</h3>
+            <div class="text-xs text-muted">Controls for exam-taking integrity</div>
+          </div>
+        </div>
+        
+        <p class="text-xs text-muted mb-3" style="line-height:1.4;">
+          Configurable anti-cheat controls to prevent tab switching and enforce exam integrity. Settings are synced dynamically to the assessment runner.
+        </p>
+
+        <div class="form-group mb-3 d-flex justify-between align-center">
+          <div>
+            <label class="form-label text-sm fw-600 mb-0">Anti-Cheat Gating</label>
+            <div class="text-xs text-muted">Enforce blur/tab-switch lock</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-anti_cheat_enabled" ${settings.anti_cheat_enabled !== 'false' ? 'checked' : ''} />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="form-group mb-3 d-flex justify-between align-center">
+          <div>
+            <label class="form-label text-sm fw-600 mb-0">Police Siren / Audio Alert</label>
+            <div class="text-xs text-muted">Play synthetic Web Audio siren</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-anti_cheat_sound" ${settings.anti_cheat_sound_enabled !== 'false' ? 'checked' : ''} />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label text-sm fw-600">Countdown Duration (Seconds)</label>
+          <input class="form-control" type="number" id="setting-anti_cheat_countdown" value="${escapeHtml(settings.anti_cheat_countdown_seconds || '10')}" min="3" max="60" />
+          <div class="text-xs text-muted mt-1">Time allowed before auto-submit on cheating (Default: 10s).</div>
+        </div>
+
+        <button class="btn btn-primary btn-sm w-100" id="btn-save-anti-cheat" style="font-weight:700;">
+          Save Security Settings
+        </button>
+      </div>
+
       <!-- 2. Secure API Key Vault Card -->
       <div class="antigravity-card p-5">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
@@ -891,6 +938,18 @@ export async function renderSettings(area) {
           Update Admin Credentials
         </button>
       </div>
+      
+      <!-- 5. Workspace Scratchpad -->
+      <div class="antigravity-card p-5">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+          <div style="font-size:1.5rem;">&#128201;</div>
+          <div>
+            <h3 style="font-size:1.1rem;margin:0;color:var(--clr-text-1);font-weight:700;">Workspace Scratchpad</h3>
+            <div class="text-xs text-muted">Jot down quick notes, queries, or reminders.</div>
+          </div>
+        </div>
+        <textarea id="admin-scratchpad" style="width: 100%; height: 160px; background: rgba(0,0,0,0.1); border: 1px solid var(--clr-border); border-radius: 8px; padding: 0.8rem; color: var(--clr-text-1); font-family: inherit; resize: none;" placeholder="Start typing..."></textarea>
+      </div>
 
     </div>
   `;
@@ -934,6 +993,28 @@ export async function renderSettings(area) {
       showToast('Cost Guard safety limits saved globally!', 'success');
     } catch (err) {
       showToast('Failed to save Cost Guard limits: ' + err.message, 'error');
+    }
+  });
+
+  // Save Anti-Cheat Settings
+  document.getElementById('btn-save-anti-cheat')?.addEventListener('click', async () => {
+    const isEnabled = document.getElementById('setting-anti_cheat_enabled').checked;
+    const isSoundEnabled = document.getElementById('setting-anti_cheat_sound').checked;
+    let countdown = document.getElementById('setting-anti_cheat_countdown').value.trim();
+    
+    // Ensure boundaries for countdown
+    if (!countdown || isNaN(countdown) || parseInt(countdown) < 3) countdown = '3';
+    if (parseInt(countdown) > 60) countdown = '60';
+
+    try {
+      await Promise.all([
+        sb.from('site_settings').upsert({ key: 'anti_cheat_enabled', value: isEnabled ? 'true' : 'false', updated_at: new Date().toISOString() }, { onConflict: 'key' }),
+        sb.from('site_settings').upsert({ key: 'anti_cheat_sound_enabled', value: isSoundEnabled ? 'true' : 'false', updated_at: new Date().toISOString() }, { onConflict: 'key' }),
+        sb.from('site_settings').upsert({ key: 'anti_cheat_countdown_seconds', value: countdown, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+      ]);
+      showToast('Assessment Security Settings saved securely!', 'success');
+    } catch (err) {
+      showToast('Failed to save security settings: ' + err.message, 'error');
     }
   });
 
@@ -985,4 +1066,15 @@ export async function renderSettings(area) {
       showToast('Custom password cleared. Default (admin123) restored.', 'info');
     }
   });
+
+  // ---------------------------------------------------------
+  // Workspace Scratchpad Persistence
+  // ---------------------------------------------------------
+  const scratchpad = document.getElementById('admin-scratchpad');
+  if (scratchpad) {
+    scratchpad.value = localStorage.getItem('topscore_admin_scratchpad') || '';
+    scratchpad.addEventListener('input', (e) => {
+      localStorage.setItem('topscore_admin_scratchpad', e.target.value);
+    });
+  }
 }

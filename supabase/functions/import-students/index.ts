@@ -27,11 +27,23 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { students, adminUserId } = await req.json();
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized: Missing authorization header" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
 
-    if (!Array.isArray(students) || students.length === 0) {
-      return new Response(JSON.stringify({ error: "No students provided for import." }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!
+    );
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    
+    if (userError || !userData.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized: Invalid token" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
@@ -39,6 +51,27 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Verify role (must be admin)
+    const { data: userRoleData } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", userData.user.id)
+      .single();
+
+    if (!userRoleData || userRoleData.role !== "admin") {
+      return new Response(JSON.stringify({ error: "Forbidden: insufficient permissions" }), { 
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+
+    const { students, adminUserId } = await req.json();
+
+    if (!Array.isArray(students) || students.length === 0) {
+      return new Response(JSON.stringify({ error: "No students provided for import." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
 
     let insertedCount = 0;
     let updatedCount = 0;

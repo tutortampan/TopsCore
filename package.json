@@ -11,6 +11,8 @@
     "serve": "^14.2.1"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
+    "jsdom": "^30.1.1",
     "puppeteer": "^25.12.0"
   }
 }

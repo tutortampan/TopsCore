@@ -8,9 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=4.7.6" />
-  <link rel="stylesheet" href="css/admin.css?v=4.7.6" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=4.7.6" />
+  <link rel="stylesheet" href="css/style.css?v=4.7.7" />
+  <link rel="stylesheet" href="css/admin.css?v=4.7.7" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=4.7.7" />
   <!-- SheetJS for Excel Import / Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=4.7.5"></script>
   <meta name="view-transition" content="same-origin" />
@@ -78,8 +78,8 @@
         <!-- DOMAIN C: Class (Curriculum & AI Assessment Engine) -->
         <div class="nav-domain-group" data-domain="class">
           <div class="nav-domain-header"><span class="domain-icon">&#9889;</span>C — Class</div>
-          <div class="admin-nav-item" data-sub="classes"><span class="nav-icon">📚</span>Classes</div>
-          <div class="admin-nav-item" data-sub="assessments"><span class="nav-icon">📝</span>Assessments</div>
+          <div class="admin-nav-item" data-sub="assessments" data-view="assessments"><span class="nav-icon">📝</span>Assessment</div>
+          <div id="sidebar-classes-list" style="display:flex; flex-direction:column; gap:0;"></div>
         </div>
 
         <!-- DOMAIN D: DATA (System Administration, Security & Health) -->
@@ -109,7 +109,9 @@
     <!-- Main Content -->
     <div class="admin-main">
 
+
       <header class="admin-topbar">
+
         <div class="d-flex align-center gap-3">
           <button class="btn btn-ghost btn-icon" id="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
           <div class="topbar-breadcrumb">
@@ -125,69 +127,11 @@
       </header>
 
       <main class="admin-content" id="admin-content-area">
-        <!-- DB Connection Status Banner -->
-        <div id="db-connection-banner" class="db-status-banner">
-          <div id="db-status-dot" class="status-dot"></div>
-          <span id="db-status-text">Checking database connection...</span>
-          <button onclick="this.parentElement.style.display='none'" class="btn-dismiss-banner" title="Dismiss">×</button>
-        </div>
-
-        <!-- ABCD Status Overview Strip -->
-        <div id="admin-kpi-banner" class="admin-kpi-strip">
-          <div class="kpi-card">
-            <div class="kpi-label">&#128188; Admin Active</div>
-            <div id="kpi-admin" class="kpi-value">-</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">&#128208; Board Students</div>
-            <div id="kpi-board" class="kpi-value">-</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">&#9889; Assessments Live</div>
-            <div id="kpi-class" class="kpi-value">-</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">&#128737;&#65039; Data Attempts</div>
-            <div id="kpi-desk" class="kpi-value">-</div>
-          </div>
-        </div>
-
-        <!-- Dynamic content rendered here -->
-        <div class="empty-state">
-          <div class="spinner"></div>
-          <p>Loading...</p>
-        </div>
-
-        <!-- Admin DOM Panels -->
-        <div id="panel-admin-schedule" class="admin-panel hidden">
-          <h2>&#128197; Personal Schedule (Agenda View)</h2>
-          <p class="text-muted">Recurring meetings synced from Class Instances</p>
-        </div>
-
-        <div id="panel-admin-cv_generator" class="admin-panel hidden">
-          <h2 style="display: flex; align-items: center; justify-content: space-between;">
-            <span>&#128196; Teaching CV Generator</span>
-            <button class="btn btn-primary btn-sm" id="btn-export-cv">&#128229; Export CV to Excel (.xlsx)</button>
-          </h2>
-          <p class="text-muted">Aggregated from completed batches and classes</p>
-          <div class="table-responsive mt-3">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Institution</th>
-                  <th>Program</th>
-                  <th>Batch</th>
-                  <th>Class / Class</th>
-                  <th>Completed Date</th>
-                </tr>
-              </thead>
-              <tbody id="cv-tbody">
-                <tr><td colspan="5" class="text-center text-muted p-4">Loading teaching history…</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <!-- loadSection renders here -->
       </main>
+
+
+
     </div>
 
   </div>
@@ -195,25 +139,6 @@
   <!-- Mobile sidebar overlay backdrop -->
   <div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
 
-  <!-- Mobile bottom tab bar -->
-  <nav class="mobile-bottom-tabs" id="mobile-bottom-tabs" aria-label="Primary navigation">
-    <button class="mobile-tab active" data-panel="admin" aria-label="Admin">
-      <span class="mobile-tab-icon">&#128188;</span>
-      <span class="mobile-tab-label">Admin</span>
-    </button>
-    <button class="mobile-tab" data-panel="board" aria-label="Board">
-      <span class="mobile-tab-icon">&#128208;</span>
-      <span class="mobile-tab-label">Board</span>
-    </button>
-    <button class="mobile-tab" data-panel="class" aria-label="Class">
-      <span class="mobile-tab-icon">&#9889;</span>
-      <span class="mobile-tab-label">Class</span>
-    </button>
-    <button class="mobile-tab" data-panel="desk" aria-label="Desk">
-      <span class="mobile-tab-icon">&#128421;&#65039;</span>
-      <span class="mobile-tab-label">Desk</span>
-    </button>
-  </nav>
 
   <!-- /// GENERIC CRUD MODAL /// -->
   <div class="modal-backdrop hidden" id="crud-modal" role="dialog" aria-modal="true" aria-labelledby="crud-modal-title">
@@ -404,10 +329,16 @@
         <input type="text" id="add-class-name" class="form-control" placeholder="e.g. Storytelling 1" required>
       </div>
       <div class="form-group" style="margin-bottom:16px;">
-        <label class="form-label">Level</label>
-        <select id="add-class-level-id" class="form-control" required>
-          <option value="">Select Level...</option>
+        <label class="form-label">Program</label>
+        <select id="add-class-program-id" class="form-control" required>
+          <option value="">Select Program...</option>
         </select>
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label class="form-label">Levels (Bisa pilih lebih dari satu)</label>
+        <div id="add-class-level-checkboxes" style="display:flex; flex-wrap:wrap; gap:10px; max-height: 120px; overflow-y: auto; padding: 10px; border: 1px solid var(--clr-border); border-radius: 6px; background: var(--clr-surface-2);">
+          <span class="text-muted text-sm">Loading levels...</span>
+        </div>
       </div>
       <div class="d-flex gap-2 justify-end mt-4">
         <button class="btn btn-ghost" onclick="document.getElementById('add-class-modal').classList.add('hidden')">Cancel</button>
@@ -417,10 +348,10 @@
   </div>
 
   <script type="module">
-    import { DataGrid } from './js/admin/datagrid.js?v=4.7.5';
+    import { DataGrid } from './js/admin/datagrid.js?v=4.8.0';
     window.DataGrid = DataGrid;
   </script>
-  <script type="module" src="js/admin/app.js?v=4.7.5"></script>
+  <script type="module" src="js/admin/app.js?v=4.8.0"></script>
 </body>
 </html>
 

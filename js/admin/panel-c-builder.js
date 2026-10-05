@@ -57,7 +57,19 @@ export const AI_MODULES = {
     name: "Speaking Performance",
     columns: ["TOPIC", "MIN_DURATION_SEC"],
     sample: { TOPIC: "Describe your hometown and its culture.", MIN_DURATION_SEC: 120 }
+  },
+  PHRASE_RECOGNITION: {
+    name: "Phrase Recognition",
+    columns: ["PHRASE_ID", "INDONESIAN_PROMPT", "ENGLISH_ANSWER", "WORD_TYPE", "OPTIONS_COUNT"],
+    sample: {
+      PHRASE_ID: "auto (from Vault)",
+      INDONESIAN_PROMPT: "sekali dayung dua tiga pulau terlampaui",
+      ENGLISH_ANSWER: "kill two birds with one stone",
+      WORD_TYPE: "Idiom",
+      OPTIONS_COUNT: 10
+    }
   }
+
 };
 
 export async function downloadAITemplate(moduleType) {

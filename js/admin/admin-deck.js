@@ -201,24 +201,6 @@ export async function renderDashboard(container) {
         
       </div>
     </div>
-    
-    <!-- BOTTOM DRAWER -->
-    <div style="display: flex; gap: 2rem; margin-top: 1.5rem; flex-wrap: wrap;">
-      <!-- Scratchpad -->
-      <div class="glass-card" style="flex: 1; min-width: 250px; padding: 1.5rem;">
-        <h3 style="margin-top:0;">&#128201; Workspace Scratchpad</h3>
-        <textarea id="admin-scratchpad" style="width: 100%; height: 120px; background: rgba(0,0,0,0.1); border: 1px solid var(--clr-border); border-radius: 8px; padding: 0.8rem; color: var(--clr-text-1); font-family: inherit; resize: none;" placeholder="Jot down quick notes here..."></textarea>
-      </div>
-      
-      <!-- Audit Logs Preview -->
-      <div class="glass-card" style="flex: 1; min-width: 250px; padding: 1.5rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h3 style="margin:0;">&#128737;&#65039; System Audit</h3>
-          <button class="btn btn-ghost btn-sm" onclick="window.loadSection('desk')">View All</button>
-        </div>
-        <div id="admin-audit-preview" class="text-muted text-sm mt-3">Loading recent events...</div>
-      </div>
-    </div>
   `;
 
   const btn = document.getElementById('btn-export-cv');
@@ -241,49 +223,7 @@ export async function renderDashboard(container) {
       );
     });
   }
-
-  // Scratchpad persistence
-  const scratchpad = document.getElementById('admin-scratchpad');
-  if (scratchpad) {
-    scratchpad.value = localStorage.getItem('topscore_admin_scratchpad') || '';
-    scratchpad.addEventListener('input', (e) => {
-      localStorage.setItem('topscore_admin_scratchpad', e.target.value);
-    });
-  }
-
-  // Live audit preview
-  (async () => {
-    const preview = document.getElementById('admin-audit-preview');
-    if (!preview) return;
-    try {
-      const sb = await getSupabase();
-      const { data, error } = await sb.from('audit_logs')
-        .select('action, entity_type, created_at, actor_role')
-        .order('created_at', { ascending: false })
-        .limit(4);
-      if (error) throw error;
-      if (!data || data.length === 0) {
-        preview.innerHTML = 'No recent system events.';
-        return;
-      }
-      let html = '<div style="display:flex;flex-direction:column;gap:0.4rem;">';
-      data.forEach(log => {
-        const time = new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        html += '<div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.05);padding-bottom:0.2rem;">'
-          + '<span style="color:var(--clr-text-2);font-size:0.8rem;">[' + time + '] ' + escHtml(log.action || '') + ' ' + escHtml(log.entity_type || '') + '</span>'
-          + '<span class="badge badge-neutral" style="font-size:0.6rem;">' + escHtml(log.actor_role || 'admin') + '</span>'
-          + '</div>';
-      });
-      html += '</div>';
-      preview.innerHTML = html;
-    } catch (err) {
-      console.warn('Could not load audit preview:', err);
-      const p = document.getElementById('admin-audit-preview');
-      if (p) p.innerHTML = 'Audit log unavailable.';
-    }
-  })();
 }
-
 // ---------------------------------------------------------------------------
 // PANEL A: SUB-VIEW 1 - MY PROFILE
 // ---------------------------------------------------------------------------

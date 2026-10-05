@@ -21,7 +21,7 @@
       width: 100%;
       padding: 12px 16px;
       border-radius: var(--radius-xl);
-      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.85));
+      background: linear-gradient(135deg, rgba(2, 30, 51, 0.7), rgba(1, 18, 29, 0.85));
       border: 1px solid rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
@@ -353,6 +353,76 @@
         display: flex !important;
       }
     }
+    .asm-modal-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.7rem 0.9rem;
+      border-radius: 8px;
+      margin-bottom: 0.4rem;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--clr-border);
+      transition: background 0.15s;
+    }
+    .asm-modal-row:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .asm-modal-info {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 0.5rem;
+      flex: 1;
+      min-width: 0;
+      align-items: center;
+    }
+    .asm-modal-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      width: 240px;
+      flex-shrink: 0;
+    }
+    @media (max-width: 640px) {
+      .asm-modal-row {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0.85rem;
+        gap: 0.6rem;
+      }
+      .asm-modal-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+      }
+      .asm-modal-info > div {
+        width: 100%;
+      }
+      .asm-modal-meta-group {
+        display: flex;
+        gap: 0.8rem;
+        align-items: center;
+      }
+      .asm-modal-actions {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 0.4rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid rgba(255,255,255,0.05);
+      }
+    }
+  
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+      20%, 40%, 60%, 80% { transform: translateX(4px); }
+    }
+    .shake-anim {
+      animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+      border-color: rgba(239, 68, 68, 0.4) !important;
+    }
   </style>
   <meta name="view-transition" content="same-origin" />
 </head>
@@ -396,39 +466,43 @@
   <main class="dashboard-content">
 
     <!-- Welcome Banner / Student Profile Showcase (Compact, Mobile-First) -->
-    <section class="welcome-banner" aria-labelledby="welcome-heading">
-      <div class="hero-compact-wrap">
-        <!-- Student Avatar (Clickable to view/change profile) -->
-        <div id="banner-avatar-container" class="banner-avatar-box" title="Click to view or change profile">
-          <span id="banner-avatar-initial">S</span>
-          <img id="banner-avatar-img" class="hidden" alt="Profile Photo" style="width:100%;height:100%;object-fit:cover;" />
-          <div class="banner-camera-badge" title="Change photo">📷</div>
-        </div>
+    <section class="welcome-banner" aria-labelledby="welcome-heading" style="display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:10px; padding:15px; text-align:center;">
+      <!-- Avatar -->
+      <div id="banner-avatar-container" class="banner-avatar-box" title="Click to view or change profile" style="margin:0;">
+        <span id="banner-avatar-initial">S</span>
+        <img id="banner-avatar-img" class="hidden" alt="Profile Photo" style="width:100%;height:100%;object-fit:cover;" />
+        <div class="banner-camera-badge" title="Change photo">📷</div>
+      </div>
 
-        <!-- Student Info & Greeting -->
-        <div class="hero-greeting-box">
-          <div class="d-flex align-center gap-2 mb-1">
-            <span class="badge badge-success session-pill">● Active</span>
-            <span class="text-xs text-muted hidden" id="stat-Assessments-done">0</span>
-            <span id="overview-Assessments-count" class="hidden">0</span>
-            <span id="overview-classes-count" class="hidden">0</span>
-            <span id="overview-mic-status" class="hidden">Ready</span>
-          </div>
-          <h1 class="welcome-name" id="welcome-heading">Hello, <span id="welcome-name" class="text-gradient">Student</span>! 👋</h1>
-          <p class="welcome-meta" id="welcome-meta">Loading your details…</p>
-        </div>
+      <!-- Name -->
+      <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:8px 12px; display:inline-flex; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+        <h1 class="welcome-name" id="welcome-heading" style="font-size:1rem; margin:0;">Hello, <span id="welcome-name" class="text-gradient">Student</span>! 👋</h1>
+      </div>
 
-        <!-- Micro Stat Cards: Grade & Score -->
-        <div class="hero-stats-strip">
-          <div class="hero-stat-pill" title="Overall Grade">
-            <span class="stat-pill-label">Grade</span>
-            <span class="stat-pill-val banner-grade-text" id="stat-overall-grade-badge">—</span>
-          </div>
-          <div class="hero-stat-pill" title="Overall Average Score">
-            <span class="stat-pill-label">Score</span>
-            <span class="stat-pill-val banner-score-text" id="stat-overall-score">0%</span>
-          </div>
-        </div>
+      <!-- Level/Meta -->
+      <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:8px 12px; display:inline-flex; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+        <p class="welcome-meta" id="welcome-meta" style="font-size:0.9rem; margin:0; color:#fff; font-weight:600;">Loading your details…</p>
+      </div>
+
+      <!-- Status -->
+      <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:8px 12px; display:inline-flex; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+        <span class="badge badge-success session-pill" style="margin:0;">● Active</span>
+        <span class="text-xs text-muted hidden" id="stat-Assessments-done">0</span>
+        <span id="overview-Assessments-count" class="hidden">0</span>
+        <span id="overview-classes-count" class="hidden">0</span>
+        <span id="overview-mic-status" class="hidden">Ready</span>
+      </div>
+
+      <!-- Grade -->
+      <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:8px 12px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+        <span style="font-size:0.85rem; font-weight:600; color:var(--clr-text-2);">Grade:</span>
+        <span class="stat-pill-val banner-grade-text" id="stat-overall-grade-badge" style="margin:0; font-size:1.1rem; line-height:1;">—</span>
+      </div>
+
+      <!-- Score -->
+      <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:8px 12px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+        <span style="font-size:0.85rem; font-weight:600; color:var(--clr-text-2);">Score:</span>
+        <span class="stat-pill-val banner-score-text" id="stat-overall-score" style="margin:0; font-size:1.1rem; line-height:1;">0%</span>
       </div>
     </section>
 
@@ -634,7 +708,7 @@
 
     <!-- Level Detail Modal -->
     <div class="modal-backdrop hidden" id="level-modal" role="dialog" aria-modal="true" aria-labelledby="level-modal-title">
-      <div class="modal-box" style="max-width:680px;">
+      <div class="modal-box" style="max-width:680px; max-height:90vh; display:flex; flex-direction:column;">
         <div class="modal-header">
           <div>
             <h3 id="level-modal-title">Class Levels</h3>
@@ -642,7 +716,7 @@
           </div>
           <button class="btn btn-ghost btn-icon" id="close-level-modal" aria-label="Close">✕</button>
         </div>
-        <div id="levels-container"></div>
+        <div id="levels-container" style="overflow-y: auto; flex: 1; min-height: 0; padding-right: 8px;"></div>
       </div>
     </div>
 
@@ -1471,7 +1545,7 @@
         const isCurrentLevel = (studentLevelId && c.level_id === studentLevelId) || (studentLevelNum && cLvlNum === studentLevelNum);
         
         // A class is active if it's explicitly unleveled (0) OR if it matches the student's valid level
-        if (cLvlNum === 0 || isCurrentLevel) {
+        if (cLvlNum == null || cLvlNum === 0 || isCurrentLevel) {
           activeClasses.push(c);
         } else if (studentLevelNum && cLvlNum < studentLevelNum) {
           completedClasses.push(c);
@@ -1503,7 +1577,7 @@
           card.setAttribute('aria-label', `Class: ${subj.name}`);
           card.innerHTML = `
             <div class="class-icon">${classIcons[idx % classIcons.length]}</div>
-            <div class="class-name">${subj.name}</div>
+            <div class="class-name">${session.level_name ? `${session.level_name} - ${subj.name}` : subj.name}</div>
             <div class="text-sm text-muted mb-3">${isCompleted ? "Completed" : "In Progress"}</div>
             <div class="score-bar-wrap">
               <div class="score-bar" style="width:${pct}%"></div>
@@ -1536,7 +1610,7 @@
           card.setAttribute('tabindex', '0');
           card.innerHTML = `
             <div class="class-icon" style="filter:grayscale(1)">${classIcons[idx % classIcons.length]}</div>
-            <div class="class-name">${subj.name}</div>
+            <div class="class-name">${subj.levels?.name || session.level_name ? `${subj.levels?.name || session.level_name} - ${subj.name}` : subj.name}</div>
             <div class="text-sm text-muted mb-3">Locked / Read-Only</div>
             <div class="score-bar-wrap">
               <div class="score-bar" style="width:100%; background:var(--clr-success);"></div>
@@ -1571,7 +1645,7 @@
 
       try {
         const Assessments = await fetchAssessmentsForStudentClass(
-          session.program_id, subj.id, session.institution_id
+          session.program_id, subj.id, session.institution_id, session.level_id
         );
 
         if (!Assessments || Assessments.length === 0) {
@@ -1641,8 +1715,17 @@
 
             let statusBadge = '';
             let actionBtn   = '';
+            let cardOpacity = '1';
+            let cardFilter = 'none';
+
             if (!prereqMet) {
-              continue; // Hide locked assessments completely
+              cardOpacity = '0.5';
+              cardFilter = 'grayscale(100%)';
+              statusBadge = `<span style="background:rgba(255,255,255,0.1);color:#a1a1aa;border:1px solid rgba(255,255,255,0.2);
+                              padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">🔒 Locked</span>`;
+              actionBtn = `<div style="text-align:right;">
+                             <span style="font-size:0.7rem;color:var(--clr-text-3);">Complete <b>${prereqTitle}</b><br>to unlock this assessment.</span>
+                           </div>`;
             } else if (inProg) {
               statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);
                               padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">&#9203; In Progress</span>`;
@@ -1668,9 +1751,18 @@
                                </div>`;
                 }
               } else {
-                actionBtn = `<button onclick="location.href='result.html?attempt_id=${best.id}'"
+                let extraAction = '';
+                if (Assessment.assessment_category === 'TRYOUT' || Assessment.assessment_category === 'TASK' || Assessment.payload?.is_standalone_tryout === true) {
+                  extraAction = `<button onclick="location.href='assessment.html?assessment_id=${Assessment.id}'"
+                                style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
+                                font-size:0.78rem;font-weight:700;cursor:pointer;margin-left:8px;">Retake</button>`;
+                }
+                actionBtn = `<div style="display:flex; align-items:center;">
+                               <button onclick="location.href='result.html?attempt_id=${best.id}'"
                                 style="background:rgba(255,255,255,0.06);color:var(--clr-text-2);border:1px solid var(--clr-border);
-                                padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">View Result</button>`;
+                                padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">View Result</button>
+                               ${extraAction}
+                             </div>`;
               }
             } else {
               statusBadge = `<span style="background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);
@@ -1683,18 +1775,27 @@
             const gradeChip = grade ? `<span style="background:${gradeColor}22;color:${gradeColor};border:1px solid ${gradeColor}44;
               padding:2px 7px;border-radius:4px;font-size:0.72rem;font-weight:800;">${grade}</span>` : '';
 
-            html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;
-                      padding:0.7rem 0.9rem;border-radius:8px;margin-bottom:0.4rem;
-                      background:rgba(255,255,255,0.025);border:1px solid var(--clr-border);
-                      transition:background 0.15s;" 
-                      onmouseover="this.style.background='rgba(255,255,255,0.05)'" 
-                      onmouseout="this.style.background='rgba(255,255,255,0.025)'">
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:0.85rem;font-weight:600;color:var(--clr-text-1);white-space:nowrap;
-                            overflow:hidden;text-overflow:ellipsis;">${Assessment.Assessment_title || Assessment.title || 'Assessment'}</div>
-                <div style="font-size:0.72rem;color:var(--clr-text-3);margin-top:2px;">${formatAnswerType(Assessment.answer_type)} · ${Assessment.time_limit_minutes || 0} min</div>
+            lvlHtml += `<div class="asm-modal-row" style="opacity:${cardOpacity}; filter:${cardFilter};" >
+
+
+
+
+
+
+              <div class="asm-modal-info">
+                <div style="font-size:0.85rem;font-weight:600;color:var(--clr-text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Assessment.Assessment_title || Assessment.title || 'Assessment'}">
+                  ${(Assessment.Assessment_title || Assessment.title || 'Assessment').replace(/^.*?-\s*\d+[a-z]{2}\s+Level\s*-\s*/i, '').replace(/Vocabulary Mastery /i, '')}
+                </div>
+                <div class="asm-modal-meta-group">
+                  <div style="font-size:0.72rem;color:var(--clr-text-3);">
+                  ${formatAnswerType(Assessment.answer_type)}
+                </div>
+                <div style="font-size:0.72rem;color:var(--clr-text-3);">
+                  ⏱️ ${Assessment.time_limit_minutes || 0} min
+                  </div>
+                </div>
               </div>
-              <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+              <div class="asm-modal-actions">
                 ${gradeChip}
                 ${statusBadge}
                 ${actionBtn}
@@ -1792,7 +1893,28 @@
         let prereqMet = true;
         let prereqTitle = '';
 
-        if (asm.prerequisites && typeof asm.prerequisites === 'object') {
+        if (asm.assessment_category === 'TEST' || asm.assessment_type === 'VOCAB_TEST' || asm.assessment_type === 'PHRASE_TEST') {
+          const themeCode = asm.payload?.theme_code;
+          if (themeCode) {
+            const siblingTasks = assessments.filter(a => 
+              (a.assessment_category === 'TASK' || a.assessment_type === 'VOCAB_TASK' || a.assessment_type === 'PHRASE_TASK') && 
+              a.payload?.theme_code === themeCode && 
+              a.level_id === asm.level_id &&
+              a.class_id === asm.class_id
+            );
+            
+            const reqScore = asm.prerequisite_min_score || 60;
+            for (const task of siblingTasks) {
+              const taskBest = bestByAssessment[task.id];
+              const taskPct = taskBest ? parseFloat(taskBest.percentage || 0) : null;
+              if (taskPct === null || taskPct < reqScore) {
+                prereqMet = false;
+                prereqTitle = `All Theme Tasks (Required: ≥${reqScore}%)`;
+                break;
+              }
+            }
+          }
+        } else if (asm.prerequisites && typeof asm.prerequisites === 'object') {
           const parents = Array.isArray(asm.prerequisites.parents) ? asm.prerequisites.parents : [];
           let totalScore = 0;
           let count = 0;
@@ -1838,8 +1960,13 @@
         let actionBtn = '';
         const isCompleted = bestAtt && ['SUBMITTED', 'AUTO_SUBMITTED'].includes(bestAtt.status);
 
-        if (!prereqMet) {
-          continue; // Hide locked assessments completely
+        const isLocked = !prereqMet;
+
+        if (isLocked) {
+          statusBadge = `<span class="badge" style="background:rgba(255,255,255,0.1);color:#a1a1aa;border:1px solid rgba(255,255,255,0.2);">🔒 Locked</span>`;
+          actionBtn = `<div style="text-align:right;">
+                         <span style="font-size:0.7rem;color:var(--clr-text-3);">Complete <b>${escapeHtml(prereqTitle)}</b><br>to unlock.</span>
+                       </div>`;
         } else if (!inWindow) {
           statusBadge = `<span class="badge" style="background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.3);">Not Yet Available</span>`;
           actionBtn = `<button class="btn btn-sm" disabled style="opacity:0.45;cursor:not-allowed;background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);">Unavailable</button>`;
@@ -1858,8 +1985,9 @@
           statusBadge = passed
             ? `<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);">\u2713 Passed</span>`
             : `<span class="badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);">Needs Improvement</span>`;
-          actionBtn = retakesAllowed && !passed
-            ? `<button class="btn btn-sm btn-primary" data-aid="${asm.id}">Retake</button>`
+          const canRetake = retakesAllowed && (!passed || asm.assessment_category === 'TASK' || asm.assessment_category === 'TRYOUT' || asm.payload?.is_standalone_tryout === true);
+          actionBtn = canRetake
+            ? `<div style="display:flex;gap:6px;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><button class="btn btn-sm btn-primary" style="padding:4px 8px;" data-aid="${asm.id}">Retake</button></div>`
             : `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);" data-aid-result="${bestAtt?.id}">View Result</button>`;
         } else {
           statusBadge = `<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);">Ready</span>`;
@@ -1873,7 +2001,7 @@
         const className = asm.classes?.name || '';
 
         cards += `
-          <div class="v1-assessment-card" data-assessment-id="${asm.id}" style="
+          <div class="v1-assessment-card" data-assessment-id="${asm.id}" ${isLocked ? 'data-locked="true"' : ''} style="
             background: var(--clr-card, rgba(30,41,59,0.8));
             border: 1px solid var(--clr-border, rgba(255,255,255,0.08));
             border-radius: 14px;
@@ -1885,6 +2013,7 @@
             gap: 1rem;
             flex-wrap: wrap;
             transition: border-color 0.2s;
+            ${isLocked ? 'opacity: 0.65; filter: grayscale(100%); cursor: not-allowed;' : ''}
           ">
             <div style="flex:1;min-width:200px;">
               <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem;">
@@ -2071,6 +2200,7 @@
             <thead>
               <tr>
                 <th>Assessment Title</th>
+                <th>Type</th>
                 <th>Class</th>
                 <th>Score</th>
                 <th>Grade</th>
@@ -2115,7 +2245,9 @@
           <tr onclick="${navLink}">
             <td>
               <div class="fw-700" style="color:var(--clr-text-1);">${escapeHtml(AssessmentTitle)}</div>
-              ${AssessmentType ? `<div class="text-xs text-muted mt-1" style="font-size:0.75rem;">${escapeHtml(AssessmentType)}</div>` : ''}
+            </td>
+            <td>
+              ${AssessmentType ? `<span class="badge badge-neutral" style="font-size:0.7rem;">${escapeHtml(AssessmentType)}</span>` : '<span class="text-muted text-xs">—</span>'}
             </td>
             <td>
               <span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(className)}</span>

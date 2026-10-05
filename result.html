@@ -24,6 +24,96 @@
       .result-grade-display { border-color: #000 !important; }
       .text-gradient { -webkit-text-fill-color: #000 !important; color: #000 !important; }
     }
+
+    /* ===== RESULT PAGE PREMIUM STYLES ===== */
+    .result-grade-display {
+      width: 64px !important;
+      height: 64px !important;
+      font-size: 2.2rem !important;
+      border-radius: 16px !important;
+      margin-bottom: 0.75rem !important;
+    }
+
+    #result-percentage {
+      font-size: clamp(2.8rem, 12vw, 5rem) !important;
+      font-weight: 900 !important;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 0.3rem !important;
+    }
+
+    #result-headline {
+      font-family: 'Outfit', sans-serif !important;
+      font-size: clamp(1.2rem, 5vw, 1.7rem) !important;
+      font-weight: 800 !important;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.4rem !important;
+    }
+
+    #result-Assessment-name {
+      font-size: 0.78rem !important;
+      font-weight: 500;
+      color: var(--clr-text-3) !important;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.6rem !important;
+      line-height: 1.5;
+    }
+
+    .result-summary-grid {
+      margin: 1rem auto 1.25rem !important;
+      gap: 10px !important;
+    }
+
+    .result-summary-item {
+      padding: 12px 8px !important;
+      border-radius: 12px !important;
+    }
+
+    .result-summary-val {
+      font-size: 1.6rem !important;
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+
+    .result-summary-lbl {
+      font-size: 0.65rem !important;
+      letter-spacing: 0.1em !important;
+    }
+
+    .result-hero {
+      background: linear-gradient(135deg, rgba(2, 30, 51, 0.7), rgba(1, 18, 29, 0.85)) !important;
+      backdrop-filter: blur(24px) !important;
+      -webkit-backdrop-filter: blur(24px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 24px !important;
+      padding: 2.5rem 1.5rem !important;
+      text-align: center;
+      margin: 1rem auto 2rem auto !important;
+      max-width: 680px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4) !important;
+    }
+
+    .answer-item {
+      border-radius: 12px !important;
+      padding: 12px 14px !important;
+      margin-bottom: 10px !important;
+      background: rgba(255, 255, 255, 0.03) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .answer-item:hover {
+      background: rgba(255, 255, 255, 0.06) !important;
+      transform: translateY(-2px);
+    }
+
+    .answer-item-header .fw-700.text-sm {
+      font-size: 0.88rem !important;
+      line-height: 1.4;
+    }
+
+    .answer-result-icon {
+      font-size: 1.1rem !important;
+    }
   </style>
 </head>
 <body class="result-page">
@@ -32,7 +122,7 @@
 
   <!-- Header -->
   <header class="dashboard-header" style="justify-content: center;">
-    <div class="dashboard-header-brand">&#127891; TOPS CORE</div>
+    <div class="dashboard-header-brand">🎓 TOPS CORE</div>
   </header>
 
   <div id="result-loading" class="empty-state" style="padding:var(--space-16);">
@@ -51,26 +141,26 @@
       <div id="result-best-score-badge" style="text-align:center;margin-bottom:0.75rem;"></div>
 
       <!-- Summary Grid -->
-      <div class="result-summary-grid">
-        <div class="result-summary-item">
-          <div class="result-summary-val text-success" id="res-correct">0</div>
-          <div class="result-summary-lbl">Correct</div>
+      <div class="result-summary-grid" style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin-bottom:1.5rem;">
+        <div class="result-summary-item" style="background:rgba(255,255,255,0.05); border-radius:12px; padding:10px 15px; display:inline-flex; align-items:center; gap:8px;">
+          <span style="font-size:0.85rem; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Correct:</span>
+          <span class="text-success" id="res-correct" style="font-size:1.2rem; font-weight:800; line-height:1;">0</span>
         </div>
-        <div class="result-summary-item">
-          <div class="result-summary-val text-warning" id="res-partial">0</div>
-          <div class="result-summary-lbl">Partial</div>
+        <div class="result-summary-item" style="background:rgba(255,255,255,0.05); border-radius:12px; padding:10px 15px; display:inline-flex; align-items:center; gap:8px;">
+          <span style="font-size:0.85rem; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Partial:</span>
+          <span class="text-warning" id="res-partial" style="font-size:1.2rem; font-weight:800; line-height:1;">0</span>
         </div>
-        <div class="result-summary-item">
-          <div class="result-summary-val text-danger" id="res-wrong">0</div>
-          <div class="result-summary-lbl">Incorrect</div>
+        <div class="result-summary-item" style="background:rgba(255,255,255,0.05); border-radius:12px; padding:10px 15px; display:inline-flex; align-items:center; gap:8px;">
+          <span style="font-size:0.85rem; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Incorrect:</span>
+          <span class="text-danger" id="res-wrong" style="font-size:1.2rem; font-weight:800; line-height:1;">0</span>
         </div>
       </div>
 
       <div class="d-flex gap-3" style="flex-direction: column; max-width: 300px; margin: 0 auto;">
-        <a href="dashboard.html" class="btn btn-primary">Back to Dashboard</a>
-        <button class="btn btn-primary" id="try-again-btn" style="background:var(--clr-success);border-color:var(--clr-success);">Try Again</button>
-        <button class="btn btn-secondary" id="toggle-answers-btn">View Answer Breakdown</button>
-        <button class="btn btn-secondary" id="print-result-btn" style="display:flex;align-items:center;justify-content:center;gap:6px;">&#128424;&#65039; Print / Save Report</button>
+        <a href="dashboard.html" class="btn btn-primary">🏠 Back to Dashboard</a>
+        <button class="btn btn-primary" id="try-again-btn" style="background:var(--clr-success);border-color:var(--clr-success);">🔄 Try Again</button>
+        <button class="btn btn-secondary" id="toggle-answers-btn">📝 View Answer Breakdown</button>
+        <button class="btn btn-secondary" id="print-result-btn" style="display:flex;align-items:center;justify-content:center;gap:6px;">🖨️ Print / Save Report</button>
       </div>
     </section>
 
@@ -100,7 +190,32 @@
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    const gradeColors = { S: '#f59e0b', A: '#10b981', B: '#3b82f6', C: '#f59e0b', D: '#ea580c', E: '#ef4444', F: '#94a3b8' };
+    const gradeColors = { S: '#fbbf24', A: '#a855f7', B: '#10b981', C: '#f97316', D: '#eab308', E: '#ea580c', F: '#ef4444' };
+
+    // Humanize raw assessment_type values from DB
+    function humanizeType(raw) {
+      if (!raw) return '';
+      const map = {
+        PHRASE_RECOGNITION: 'Phrase Recognition',
+        VOCABULARY: 'Vocabulary',
+        GRAMMAR: 'Grammar',
+        SPEAKING: 'Speaking',
+        LISTENING: 'Listening',
+        READING: 'Reading',
+        WRITING: 'Writing',
+        TASK: 'Task',
+        TEST: 'Test',
+        EXAM: 'Exam',
+        QUIZ: 'Quiz',
+      };
+      return map[raw.toUpperCase()] || raw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    // Remove leading "N. " numbering from titles (e.g. "1. Building Your..." → "Building Your...")
+    function cleanTitle(t) {
+      if (!t) return '';
+      return String(t).replace(/^\d+\.\s*/, '').trim();
+    }
 
     async function loadResult() {
       try {
@@ -125,9 +240,23 @@
         pctEl.className = `result-percentage text-grade-${grade}`;
         animateCount(pctEl, pct);
 
-        // Headline
-        const headlines = { S: '&#127942; Perfect Score!', A: '&#127775; Outstanding!', B: '&#128077; Great Work!', C: '&#9989; Good Effort!', D: '&#128218; Keep Practicing!', E: '&#128170; Keep Going!', F: '&#128259; Try Again' };
-        document.getElementById('result-headline').textContent = headlines[grade] || 'Assessment Complete!';
+        // Headline — Unicode emoji directly, textContent is safe for Unicode
+        const headlines = {
+          S: '🏆 Perfect Score!',
+          A: '✨ Outstanding!',
+          B: '👍 Great Work!',
+          C: '✅ Good Effort!',
+          D: '📚 Keep Practicing!',
+          E: '💪 Keep Going!',
+          F: '🔄 Try Again'
+        };
+        const headlineEl = document.getElementById('result-headline');
+        headlineEl.textContent = headlines[grade] || 'Assessment Complete!';
+        // Override gradient color to match grade
+        headlineEl.style.cssText = `background:none;-webkit-text-fill-color:${gradeColors[grade] || '#94a3b8'};color:${gradeColors[grade] || '#94a3b8'};`;
+
+        // Percentage: override gradient with grade color for consistency
+        pctEl.style.cssText = `background:none;-webkit-text-fill-color:${gradeColors[grade] || '#94a3b8'};color:${gradeColors[grade] || '#94a3b8'};`;
 
         // V1: title from assessments or legacy Assessments join
         const asmData  = attempt.assessments || attempt.Assessments;
@@ -137,8 +266,8 @@
           ? (String(asmData.levels.name).toLowerCase().includes('level') ? asmData.levels.name : `Level ${asmData.levels.name}`)
           : '';
         const typ  = asmData?.assessment_type || asmData?.Assessment_type || '';
-        const nameParts = [subj, lvl, typ, asmTitle].filter(Boolean);
-        document.getElementById('result-Assessment-name').textContent = nameParts.join(' &bull; ');
+        const nameParts = [subj, lvl, humanizeType(typ), cleanTitle(asmTitle)].filter(Boolean);
+        document.getElementById('result-Assessment-name').textContent = nameParts.join(' · ');
 
         // V1: Best score badge
         const assessmentId = attempt.assessment_id || attempt.Assessment_id;
@@ -148,7 +277,7 @@
         const scoreBadgeEl = document.getElementById('result-best-score-badge');
         if (scoreBadgeEl) {
           if (isBest) {
-            scoreBadgeEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px;font-size:0.78rem;font-weight:700;color:#10b981;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:3px 10px;">&#11088; Best Score</span>`;
+            scoreBadgeEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px;font-size:0.78rem;font-weight:700;color:#10b981;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:3px 10px;">⭐ Best Score</span>`;
           } else {
             scoreBadgeEl.innerHTML = `<span style="font-size:0.75rem;color:var(--clr-text-3);">Not your best score</span>`;
           }
@@ -318,10 +447,10 @@
         const isPartial = a.evaluation_result === 'minor_spelling_error';
         const isWrong   = a.evaluation_result === 'incorrect';
 
-        const resultIcon  = isCorrect ? '&#9989;' : isPartial ? '&#9888;&#65039;' : '&#10060;';
-        const resultText  = isCorrect ? 'Correct' : isPartial ? 'Minor Spelling Error' : 'Incorrect';
+        const resultIcon  = isCorrect ? '✅' : isPartial ? '⚠️' : '❌';
+        const resultText  = isCorrect ? 'Correct' : isPartial ? 'Partial' : 'Incorrect';
         const resultColor = isCorrect ? 'success' : isPartial ? 'warning' : 'danger';
-        const wordType    = snap.question_type || snap.metadata?.type || snap.type || '';
+        const wordType    = snap.question_type || snap.metadata?.type || snap.type || snap.metadata?.word_type || '';
 
         const item = document.createElement('div');
         item.className = 'answer-item';

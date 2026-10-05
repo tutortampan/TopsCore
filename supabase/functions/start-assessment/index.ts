@@ -27,10 +27,10 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // 1. Fetch Student Details
+    // 1. Fetch Student Details (join batches to get current_level_id for dynamic shell level gating)
     const { data: student } = await supabase
       .from("students")
-      .select("id, institution_id, program_id, batch_id, is_active")
+      .select("id, institution_id, program_id, batch_id, is_active, batches!batch_id(current_level_id)")
       .eq("id", student_id)
       .is("deleted_at", null)
       .single();
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
         const { data: exProgMatch } = await supabase
           .from("assessment_programs")
           .select("*")
-          .eq("Assessment_id", assessment_id)
+          .eq("assessment_id", assessment_id)
           .eq("program_id", student.program_id);
         if (exProgMatch && exProgMatch.length > 0) isEligible = true;
       }
@@ -158,13 +158,14 @@ Deno.serve(async (req) => {
     }
 
     // 5. Check Prerequisite Assessment
-    const prereqId = assessment.prerequisite_assessment_id || assessment.prerequisite_Assessment_id;
-    if (prereqId) {
+    const isStandaloneTryout = assessment.payload?.is_standalone_tryout === true;
+    const prereqId = assessment.prerequisite_assessment_id;
+    if (prereqId && !isStandaloneTryout) {
       const { data: prereqAttempts } = await supabase
         .from("attempts")
         .select("effective_score, percentage, status")
         .eq("student_id", student_id)
-        .or(`assessment_id.eq.${prereqId},Assessment_id.eq.${prereqId}`)
+        .eq("assessment_id", prereqId)
         .in("status", ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
 
       const reqScore = assessment.prerequisite_min_score || 60;
@@ -182,7 +183,7 @@ Deno.serve(async (req) => {
       .from("attempts")
       .select("*")
       .eq("student_id", student_id)
-      .or(`assessment_id.eq.${assessment_id},Assessment_id.eq.${assessment_id}`)
+      .eq("assessment_id", assessment_id)
       .in("status", ["in_progress", "IN_PROGRESS"])
       .order("created_at", { ascending: false })
       .limit(1)
@@ -203,7 +204,7 @@ Deno.serve(async (req) => {
       // Fetch saved answers for this attempt (strip answer keys for client)
       const { data: rawAnswers } = await supabase
         .from("attempt_answers")
-        .select("id, question_id, question_snapshot, topic_snapshot, word_type_snapshot, student_answer, score")
+        .select("id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score")
         .eq("attempt_id", existing.id)
         .order("created_at");
 
@@ -225,13 +226,20 @@ Deno.serve(async (req) => {
     // 7. Check Attempt Limits & Remedial Cap
     const { data: pastAttemptsData } = await supabase
       .from("attempts")
-      .select("id, status, is_remedial_unlocked, created_at")
+      .select("*")
       .eq("student_id", student_id)
-      .or(`assessment_id.eq.${assessment_id},Assessment_id.eq.${assessment_id}`)
-      .in("status", ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"])
+      .eq("assessment_id", assessment_id)
+      .in("status", ["submitted", "auto_submitted", "evaluated", "expired", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED", "EXPIRED"])
       .order("created_at", { ascending: false });
 
     const attemptCount = pastAttemptsData?.length || 0;
+
+    // TEST retake cap: max 2 retakes = max 3 attempts total (server-authoritative)
+    if (assessment.assessment_category === 'TEST' && attemptCount >= 3) {
+      return new Response(JSON.stringify({ error: "Maximum retake limit reached (2 retakes allowed)." }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
 
     if (assessment.max_attempts && attemptCount >= assessment.max_attempts) {
       return new Response(JSON.stringify({ error: "Maximum attempts reached for this assessment." }), {
@@ -247,13 +255,188 @@ Deno.serve(async (req) => {
         });
       }
     }
-
     // 8. Fetch Assessment Questions (from frozen snapshot assessment_questions)
-    let { data: snapQuestions } = await supabase
+    let snapQuestions: any = [];
+    if (assessment.payload && assessment.payload.is_dynamic_shell) {
+      
+      // Validation 1: Level Gating (use batches.current_level_id — student.level_id does not exist)
+      const studentCurrentLevelId = student.batches?.current_level_id;
+      if (!isStandaloneTryout && studentCurrentLevelId && assessment.level_id && studentCurrentLevelId !== assessment.level_id) {
+         return new Response(JSON.stringify({ error: "Level mismatch. You do not have access to this assessment's level." }), {
+           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+         });
+      }
+
+      // Validation 2: Theme Prerequisites
+      if (!isStandaloneTryout && (assessment.assessment_category === 'TEST' || assessment.assessment_type === 'VOCAB_TEST' || assessment.assessment_type === 'PHRASE_TEST')) {
+        const themeCode = assessment.payload?.theme_code;
+        if (themeCode) {
+          // Fetch all sibling tasks in this theme
+          const { data: siblingTasks } = await supabase
+            .from('assessments')
+            .select('id')
+            .eq('class_id', assessment.class_id)
+            .eq('level_id', assessment.level_id)
+            .in('assessment_category', ['TASK'])
+            .contains('payload', { theme_code: themeCode });
+
+          if (siblingTasks && siblingTasks.length > 0) {
+            const taskIds = siblingTasks.map(t => t.id);
+            const { data: siblingAttempts } = await supabase
+              .from('attempts')
+              .select('assessment_id, percentage, effective_score, is_best_score, status')
+              .eq('student_id', student_id)
+              .in('assessment_id', taskIds)
+              .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
+              
+            const reqScore = assessment.prerequisite_min_score || 60;
+            const passedTaskIds = new Set();
+            if (siblingAttempts) {
+              siblingAttempts.forEach(att => {
+                if ((att.effective_score || att.percentage || 0) >= reqScore) {
+                  passedTaskIds.add(att.assessment_id);
+                }
+              });
+            }
+
+            if (passedTaskIds.size < taskIds.length) {
+              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must score at least ${reqScore}% on ALL Theme Tasks before taking the Theme Test.` }), {
+                status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+              });
+            }
+          }
+        }
+      }
+
+      const themeCode = assessment.payload.theme_code;
+      const topicCode = assessment.payload.topic_code;
+      
+      // Resolve level UUID -> integer level_number (vocabulary_vault.target_level is INTEGER).
+      // Vault queries MUST be scoped to this level or cumulative themes would bleed across levels.
+      let levelNum = 1;
+      if (assessment.level_id) {
+        const { data: levelRec } = await supabase
+          .from('levels')
+          .select('level_number')
+          .eq('id', assessment.level_id)
+          .single();
+        if (levelRec?.level_number) levelNum = levelRec.level_number;
+      }
+
+      let query = supabase.from("vocabulary_vault").select("*").is("deleted_at", null).eq("target_level", levelNum).range(0, 4999);
+      
+      const themes = assessment.payload.themes;
+      // Cumulative Themes Logic for TESTS
+      if (themes && Array.isArray(themes) && themes.length > 0) {
+          query = query.in("theme_code", themes);
+      } else if (assessment.assessment_category === 'TEST' && themeCode) {
+          const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+          const idx = allThemes.indexOf(themeCode);
+          if (idx !== -1) {
+              const targetThemes = allThemes.slice(0, idx + 1);
+              query = query.in("theme_code", targetThemes);
+          } else {
+              query = query.eq("theme_code", themeCode);
+          }
+      } else {
+          if (themeCode) query = query.eq("theme_code", themeCode);
+          if (topicCode) query = query.eq("topic_code", topicCode);
+      }
+      
+      const { data: vaultData, error: vErr } = await query;
+      if (vErr) {
+        console.error("Failed to load vault words:", vErr);
+      }
+      
+      let vaultWords = vaultData || [];
+      const category = assessment.payload.category || 'vocab';
+      vaultWords = vaultWords.filter((w: any) => {
+         const wt = (w.word_type || '').toLowerCase();
+         const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+         return category === 'phrases' ? isPhrase : !isPhrase;
+      });
+
+      let dynamicAnswerType = assessment.payload.answer_type || ((assessment.answer_type && assessment.answer_type !== 'MULTIPLE_CHOICE') ? assessment.answer_type : null) || 'written';
+      if (!assessment.payload.answer_type && !(assessment.answer_type && assessment.answer_type !== 'MULTIPLE_CHOICE')) {
+         if (assessment.assessment_type === 'VOCAB_TASK') dynamicAnswerType = 'speech_to_text';
+         else if (assessment.assessment_type === 'VOCAB_TEST') dynamicAnswerType = 'written';
+         else if (assessment.assessment_type === 'PHRASE_TASK' || assessment.assessment_type === 'PHRASE_TEST') dynamicAnswerType = 'dropdown';
+      }
+      
+      if (vaultWords && vaultWords.length > 0) {
+        vaultWords.sort((a: any, b: any) => (a.indonesian || "").localeCompare(b.indonesian || ""));
+        
+        let distractorPool: any[] = [];
+        if (dynamicAnswerType === 'dropdown') {
+            let distractorQuery = supabase.from('vocabulary_vault')
+                .select('english, word_type')
+                .eq('target_level', levelNum)
+                .is('deleted_at', null)
+                .range(0, 4999);
+
+            const { data: allPhraseData } = await distractorQuery;
+            if (allPhraseData) {
+                const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase'];
+                const isPhraseMode = category === 'phrases' || assessment.assessment_type === 'PHRASE_TASK' || assessment.assessment_type === 'PHRASE_TEST';
+                
+                distractorPool = allPhraseData.filter((r: any) => {
+                    const wt = (r.word_type || '').toLowerCase();
+                    const isPhrase = phraseTypes.includes(wt);
+                    return isPhraseMode ? isPhrase : !isPhrase;
+                });
+            }
+        }
+
+        snapQuestions = vaultWords.map((vw: any, idx: number) => {
+             const accepted = vw.english ? vw.english.split('/').map((s: string) => s.trim()) : [];
+             let options = null;
+             
+             if (dynamicAnswerType === 'dropdown') {
+                 const correctAnswer = accepted[0] || "N/A";
+                 
+                 let others = distractorPool.filter((r: any) => {
+                     const eng = (r.english||'').split('/')[0].trim();
+                     return eng && eng !== correctAnswer && !accepted.includes(eng);
+                 });
+                 
+                 const currentType = (vw.word_type || '').toLowerCase();
+                 let homogenous = others.filter((r: any) => (r.word_type || '').toLowerCase() === currentType);
+                 let heterogenous = others.filter((r: any) => (r.word_type || '').toLowerCase() !== currentType);
+                 
+                 homogenous = homogenous.sort(() => 0.5 - Math.random());
+                 heterogenous = heterogenous.sort(() => 0.5 - Math.random());
+                 
+                 let finalDistractors = [];
+                 if (homogenous.length >= 4) {
+                     finalDistractors = homogenous.slice(0, 4);
+                 } else {
+                     finalDistractors = [...homogenous, ...heterogenous].slice(0, 4);
+                 }
+                 
+                 let stringDistractors = finalDistractors.map((r: any) => (r.english||'').split('/')[0].trim());
+                 options = [correctAnswer, ...stringDistractors].sort(() => 0.5 - Math.random());
+             }
+             
+             return {
+                 question_id: null,
+                 question_text_snapshot: vw.indonesian || "N/A",
+                 accepted_answers_snapshot: accepted,
+                 options_snapshot: options ? options : null, // Not JSON stringified to match expected array structure
+                 topic_snapshot: vw.topic || vw.topic_code || "General",
+                 word_type_snapshot: vw.word_type,
+                 display_order: idx + 1,
+                 answer_type: dynamicAnswerType
+             };
+        });
+      }
+    } else {
+      const { data } = await supabase
       .from("assessment_questions")
       .select("*")
       .eq("assessment_id", assessment_id)
       .order("display_order");
+      snapQuestions = data || [];
+    }
 
     // Fallback to legacy questions if snapshot not populated yet
     if (!snapQuestions || snapQuestions.length === 0) {
@@ -336,19 +519,29 @@ Deno.serve(async (req) => {
         options_snapshot: sq.options_snapshot || []
       },
       topic_snapshot: sq.topic_snapshot,
-      word_type_snapshot: sq.word_type_snapshot,
+      question_type_snapshot: sq.word_type_snapshot,
       accepted_answers_snapshot: sq.accepted_answers_snapshot,
       correct_answer_snapshot: Array.isArray(sq.accepted_answers_snapshot) ? sq.accepted_answers_snapshot.join(';') : String(sq.accepted_answers_snapshot || ''),
       student_answer: null,
       score: 0
     }));
 
-    const { data: insertedAnswers, error: insAnsErr } = await supabase
-      .from("attempt_answers")
-      .insert(answerInserts)
-      .select("id, question_id, question_snapshot, topic_snapshot, word_type_snapshot, student_answer, score");
-
-    if (insAnsErr) throw insAnsErr;
+    // Batch insertion in chunks of 100 (avoids Edge Function timeouts on 640-item cumulative tests)
+    const insertedAnswers: any[] = [];
+    for (let i = 0; i < answerInserts.length; i += 100) {
+      const chunk = answerInserts.slice(i, i + 100);
+      const { data: chunkRows, error: insAnsErr } = await supabase
+        .from("attempt_answers")
+        .insert(chunk)
+        .select("id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score");
+      if (insAnsErr) {
+        // Roll back the half-created attempt so a refresh does not resume a broken snapshot
+        await supabase.from("attempt_answers").delete().eq("attempt_id", newAttempt.id);
+        await supabase.from("attempts").delete().eq("id", newAttempt.id);
+        throw insAnsErr;
+      }
+      if (chunkRows) insertedAnswers.push(...chunkRows);
+    }
 
     // Return to client WITHOUT exposing accepted_answers_snapshot
     return new Response(JSON.stringify({

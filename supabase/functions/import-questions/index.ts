@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 // TOP ENGLISH CLASS — Edge Function: import-questions
 // Handles bulk question import: inserts new questions and updates existing ones.
 // Processes in parallel chunks for speed, with per-row error isolation.
@@ -23,6 +23,44 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized: Missing authorization header" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!
+    );
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    
+    if (userError || !userData.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized: Invalid token" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Verify role (must be admin)
+    const { data: userRoleData } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", userData.user.id)
+      .single();
+
+    if (!userRoleData || userRoleData.role !== "admin") {
+      return new Response(JSON.stringify({ error: "Forbidden: insufficient permissions" }), { 
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+
     const { questions, AssessmentId, adminUserId } = await req.json();
 
     if (!Array.isArray(questions) || questions.length === 0) {
@@ -36,11 +74,6 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     let insertedCount = 0;
     let updatedCount = 0;

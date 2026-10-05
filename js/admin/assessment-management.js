@@ -8,13 +8,25 @@ if (typeof window !== 'undefined') window.DataGrid = DataGrid;
 
 let AssessmentsGrid;
 
+window.updateAssessmentOrder = async (id, newOrd) => {
+  if (!id) return;
+  try {
+    await adminUpdate('assessments', id, { ord: parseInt(newOrd, 10) });
+    if (window.showToast) window.showToast('Order updated successfully', 'success');
+  } catch (e) {
+    console.error('Failed to update order', e);
+    alert('Failed to update order: ' + e.message);
+  }
+};
+
 export async function renderAssessments(area) {
-  const [rawData, allQuestions, allClasses, allLevels, allBoardClasses] = await Promise.all([
+  const [rawData, allQuestions, allClasses, allLevels, allBoardClasses, allVault] = await Promise.all([
     adminFetchAll('assessments'),
     adminFetchAll('assessment_questions', 'id, assessment_id, answer_type'),
     adminFetchAll('programs', 'id, name').catch(() => []),
     adminFetchAll('levels').catch(() => []),
-    adminFetchAll('classes').catch(() => [])
+    adminFetchAll('classes').catch(() => []),
+    adminFetchAll('vocabulary_vault', 'id, target_level, theme_code, topic_code, word_type, deleted_at').catch(() => [])
   ]);
 
   const classMap = {};
@@ -49,17 +61,20 @@ export async function renderAssessments(area) {
   });
 
   // Calculate KPI metrics (Assessments table uses status, not assessment_type)
-  const totalAssessments = data.length;
-  const publishedCount = data.filter(e => e.status === 'published').length;
-  const draftCount = data.filter(e => !e.status || e.status === 'draft' || e.status === 'unpublished').length;
+  const _norm = (v) => String(v || '').toLowerCase();
+  const liveDataRaw = data.filter(e => !e.deleted_at);
+  const liveData = liveDataRaw;
+  const totalAssessments = liveData.length;
+  const publishedCount = liveData.filter(e => _norm(e.status) === 'published').length;
+  const draftCount = liveData.filter(e => !e.status || ['draft', 'unpublished'].includes(_norm(e.status))).length;
   const totalQuestions = allQuestions.length;
 
   area.innerHTML = `
     <div class="assessment-hero">
       <div class="d-flex align-center justify-between flex-wrap gap-4">
         <div>
-          <h2 class="section-title text-gradient" style="font-size:1.75rem;">Assessments Hub (C &mdash; CLASS)</h2>
-          <p class="section-subtitle">Create, organize, publish, and inspect all online assessments</p>
+          <h2 class="section-title text-gradient" style="font-size:1.75rem;">Central Exam Operations</h2>
+          <p class="section-subtitle">Manage Try-Outs, Placement Tests, Exit Certifications, and Global Operations</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
           <button class="btn btn-primary btn-sm" onclick="window.openAssessmentGatewayModal()" id="hub-add-Assessment-wizard">+ Create Assessment</button>
@@ -93,11 +108,41 @@ export async function renderAssessments(area) {
       </div>
     </div>
     
+    <div class="d-flex gap-2 mt-4 flex-wrap" id="assessment-filters">
+      <button class="btn btn-sm btn-primary filter-btn active" data-filter="all">All Assessments (${totalAssessments})</button>
+      <button class="btn btn-sm btn-secondary filter-btn" data-filter="core">Core Curriculum (${liveData.filter(e => !e.assessment_category || ['TASK', 'TEST', 'DAILY'].includes(String(e.assessment_category).toUpperCase()) && !e.payload?.is_standalone_tryout).length})</button>
+      <button class="btn btn-sm btn-secondary filter-btn" data-filter="standalone">Standalone & Try-Outs (${liveData.filter(e => ['TRYOUT', 'PLACEMENT', 'EXIT'].includes(String(e.assessment_category).toUpperCase()) || e.payload?.is_standalone_tryout).length})</button>
+    </div>
+
     <div id="Assessments-grid-container" class="card mt-4" style="padding:1rem;"></div>
   `;
 
 
-  const gridData = data.map(r => {
+  // Dynamic shells hold NO rows in assessment_questions; project the live vault count instead.
+  const _ALL_THEMES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  const _PHRASE_TYPES = ['expression', 'idiom', 'proverb', 'phrase'];
+  const _vaultRows = (allVault || []).filter(v => !v.deleted_at);
+  const vaultCountFor = (r, lvlNumber) => {
+    const pl = r?.payload || {};
+    const wantPhrases = pl.category === 'phrases';
+    const isTest = r?.assessment_category === 'TEST';
+    let themes = null;
+    if (isTest && pl.theme_code) {
+      const idx = _ALL_THEMES.indexOf(pl.theme_code);
+      themes = idx >= 0 ? _ALL_THEMES.slice(0, idx + 1) : [pl.theme_code];
+    }
+    return _vaultRows.filter(v => {
+      if (Number(v.target_level) !== Number(lvlNumber)) return false;
+      const isPhrase = _PHRASE_TYPES.includes(_norm(v.word_type));
+      if (wantPhrases !== isPhrase) return false;
+      if (themes) return themes.includes(v.theme_code);
+      if (pl.theme_code && v.theme_code !== pl.theme_code) return false;
+      if (pl.topic_code && v.topic_code !== pl.topic_code) return false;
+      return true;
+    }).length;
+  };
+
+  const gridData = liveData.map(r => {
     const qCount = (allQuestions || []).filter(q => q?.assessment_id === r?.id).length;
     // Assessments table uses program_id; map to program name
     const programName = (r?.program_id && classMap[r.program_id]?.name) ? classMap[r.program_id].name : 'All Programs';
@@ -123,8 +168,10 @@ export async function renderAssessments(area) {
         if (typeCounts[t] > max) { max = typeCounts[t]; answerType = t; }
       }
     }
-    const timeLimit = r?.time_limit_minutes || Math.floor((r?.time_limit_seconds || 3600) / 60);
+    const timeLimit = r?.working_duration_minutes || r?.time_limit_minutes || Math.floor((r?.time_limit_seconds || 3600) / 60);
     const minScore = r?.minimum_required_score || 60;
+    const _isDyn = !!(r?.payload && r.payload.is_dynamic_shell) || r?.is_dynamic_shell === true;
+    const _vaultQ = _isDyn ? vaultCountFor(r, lvlNum) : 0;
     
     return {
       id: r?.id || '',
@@ -132,14 +179,15 @@ export async function renderAssessments(area) {
       programName,
       classBoard: boardName,
       level: levelDisplay,
-      order: r?.Assessment_order || 1,
+      order: r?.display_order ?? r?.order_index ?? 1,
       prereq: prereqTitle,
       answerType: formatAnswerType(answerType),
       questionOrder: r?.question_order === 'random' ? 'Random' : 'Seq',
       AssessmentCategory,
       timeLimit,
       minScore,
-      qCount,
+      qCount: _isDyn ? _vaultQ : qCount,
+      qIsVault: _isDyn,
       status,
       _raw: r || {}
     };
@@ -154,6 +202,43 @@ export async function renderAssessments(area) {
     pageSize: 50,
     searchKeys: ['title', 'programName', 'classBoard', 'status'],
     bulkActions: true,
+    customBulkActions: [
+      {
+        label: 'Publish Selected',
+        onClick: async (ids) => {
+          if (!confirm(`Publish ${ids.length} selected assessments?`)) return;
+          try {
+            for (const id of ids) await adminUpdate('assessments', id, { status: 'PUBLISHED' });
+            if (window.showToast) window.showToast(`Published ${ids.length} assessments`, 'success');
+            window.loadSection('assessments');
+          } catch (e) {
+            if (window.showToast) window.showToast('Error publishing: ' + e.message, 'error');
+          }
+        }
+      },
+      {
+        label: 'Unpublish Selected',
+        onClick: async (ids) => {
+          if (!confirm(`Unpublish ${ids.length} selected assessments?`)) return;
+          try {
+            for (const id of ids) await adminUpdate('assessments', id, { status: 'DRAFT' });
+            if (window.showToast) window.showToast(`Unpublished ${ids.length} assessments`, 'success');
+            window.loadSection('assessments');
+          } catch (e) {
+            if (window.showToast) window.showToast('Error unpublishing: ' + e.message, 'error');
+          }
+        }
+      }
+    ],
+    sortComparator: (sortKey, direction, a, b) => {
+      if (sortKey === 'title' || sortKey === 'TITLE' || sortKey === 'order') {
+        return direction === 'asc' 
+          ? (a.display_order ?? a.order ?? 0) - (b.display_order ?? b.order ?? 0)
+          : (b.display_order ?? b.order ?? 0) - (a.display_order ?? a.order ?? 0);
+      }
+    },
+    initialSortKey: 'order',
+    initialSortAsc: true,
     onBulkAction: async (selectedIds) => {
       const action = prompt(`Bulk Action for ${selectedIds.length} Assessments.\nOptions: delete`);
       if (action === 'delete') {
@@ -173,7 +258,7 @@ export async function renderAssessments(area) {
         <div style="display:flex; flex-direction:column; gap:1rem;">
           <div>
             <h4 style="margin:0; font-size:1.2rem;">${escapeHtml(r?.title || 'Untitled Assessment')}</h4>
-            <div class="text-muted text-sm">Status: <strong class="${statusColors[r?.status] || 'text-muted'}" style="text-transform:uppercase;">${r?.status || 'draft'}</strong></div>
+            <div class="text-muted text-sm">Status: <strong class="${statusColors[String(r?.status || '').toLowerCase()] || 'text-muted'}" style="text-transform:uppercase;">${r?.status || 'draft'}</strong></div>
           </div>
           <hr style="border-color:var(--fm-border-subtle); margin:0;">
           <div>
@@ -183,7 +268,7 @@ export async function renderAssessments(area) {
           </div>
           <div>
             <div class="text-sm text-muted mb-1">Structure</div>
-            <div class="fw-600">Type: ${escapeHtml(r?.AssessmentCategory || 'Daily')} &bull; ${r?.qCount || 0} Qs</div>
+            <div class="fw-600">Type: ${escapeHtml(r?.AssessmentCategory || 'Daily')} &bull; ${r?.qIsVault ? '&#9889; ' + (r?.qCount || 0) + ' (Vault)' : (r?.qCount || 0) + ' Qs'}</div>
             <div class="fw-600">Answer: ${formatAnswerType(r?.answerType)}</div>
           </div>
           <div>
@@ -199,64 +284,122 @@ export async function renderAssessments(area) {
       if (window.openRecordDrawer) window.openRecordDrawer('Assessment Details', body, footer);
     },
     columns: [
+      {
+        key: 'order',
+        label: 'ORD',
+        sortable: true,
+        render: (val, row) => {
+          const r = (row && typeof row === 'object') ? row : {};
+          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${r?.order || '-'}</div>`;
+        }
+      },
       { 
         key: 'title', 
-        label: 'Assessment Details', 
+        label: 'TITLE', 
         sortable: true,
         render: (val, row) => {
           const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
           const title = (typeof val === 'string' ? val : r?.title) || 'Untitled Assessment';
-          const prereqDisplay = r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
-          return `
-            <div class="fw-800" style="color:var(--clr-text-1); font-size:1rem;">${escapeHtml(title)}</div>
-            <div class="text-muted text-xs mt-1 fw-600 d-flex gap-2 flex-wrap align-center">
-              <span><span class="text-accent">PROGRAM:</span> ${escapeHtml(r?.programName || 'Unknown')}</span>
-              <span>&bull;</span>
-              <span><span class="text-accent">CLASS:</span> ${escapeHtml(r?.classBoard || 'Unknown')}</span>
-              <span>&bull;</span>
-              <span><span class="badge badge-primary" style="font-size:0.6rem; padding: 2px 6px;">LVL ${r?.level || '-'}</span></span>
-              <span><span class="badge badge-neutral" style="font-size:0.6rem; padding: 2px 6px;">ORD ${r?.order || '-'}</span></span>
-            </div>
-          `;
+          return `<div class="fw-700" style="color:var(--clr-text-1); font-size:0.85rem; white-space:normal; min-width:250px;" title="${escapeHtml(title)}">${escapeHtml(title)}</div>`;
+        }
+      },
+      {
+        key: 'programName',
+        label: 'PROGRAM',
+        sortable: true,
+        render: (val, row) => {
+          const r = (row && typeof row === 'object') ? row : {};
+          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(r?.programName || '-')}</div>`;
+        }
+      },
+      {
+        key: 'classBoard',
+        label: 'CLASS',
+        sortable: true,
+        render: (val, row) => {
+          const r = (row && typeof row === 'object') ? row : {};
+          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(r?.classBoard || '-')}</div>`;
+        }
+      },
+      {
+        key: 'level',
+        label: 'LEVEL',
+        sortable: true,
+        render: (val, row) => {
+          const r = (row && typeof row === 'object') ? row : {};
+          return `<div style="font-size:0.75rem; color:var(--clr-primary); font-weight:600; white-space:nowrap;">${r?.level ? 'LVL ' + r.level : '-'}</div>`;
         }
       },
       { 
         key: 'prereq', 
-        label: 'Prerequisite', 
+        label: 'PREREQUISITE', 
         sortable: true,
         render: (val, row) => {
           const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
           const prereqDisplay = r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
-          return prereqDisplay ? `<span class="badge badge-warning text-xs" style="white-space: normal; text-align: left;">&#9888;&#65039; ${escapeHtml(prereqDisplay)}</span>` : '<span class="text-muted text-xs">—</span>';
-        }
-      },
-      { 
-        key: 'answerType', 
-        label: 'Settings', 
-        sortable: false,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
-          const ansType = (typeof val === 'string' ? val : r?.answerType) || 'Multiple Choice';
+          if (!prereqDisplay) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
           return `
-            <div class="d-flex flex-wrap gap-1">
-              <span class="badge badge-info text-xs">${escapeHtml(ansType)}</span>
-              <span class="badge ${r?.questionOrder === 'Random' ? 'badge-primary' : 'badge-neutral'} text-xs">${r?.questionOrder === 'Random' ? '&#128256; Random' : '&rarr; Seq'}</span>
-              <span class="badge badge-neutral text-xs">${escapeHtml(r?.AssessmentCategory || 'Daily')}</span>
-            </div>
-            <div class="text-muted text-xs mt-2 fw-600">
-              &#9201;&#65039; ${r?.timeLimit || 60} min &nbsp; | &nbsp; &#127919; Pass: ${r?.minScore || 60}%
+            <div class="fw-500 text-muted" style="font-size:0.75rem; min-width: 200px; white-space: normal;" title="${escapeHtml(prereqDisplay)}">
+              <span style="color: var(--clr-warning); margin-right: 2px;">⚠️</span>${escapeHtml(prereqDisplay)}
             </div>
           `;
         }
       },
+      {
+        key: 'AssessmentCategory',
+        label: 'TYPE',
+        sortable: true,
+        render: (val, row) => {
+          const r = (row && typeof row === 'object') ? row : {};
+          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(r?.AssessmentCategory || 'Daily')}</div>`;
+        }
+      },
+      { 
+        key: 'answerType', 
+        label: 'ANSWER', 
+        sortable: true,
+        render: (val, row) => {
+          const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
+          const ansType = (typeof val === 'string' ? val : r?.answerType) || 'Multiple Choice';
+          return `<div class="fw-600 text-info" style="font-size:0.75rem; white-space:nowrap;">${escapeHtml(ansType)}</div>`;
+        }
+      },
+      {
+        key: 'questionOrder',
+        label: 'ACCESS',
+        sortable: true,
+        render: (val, row) => {
+          const r = (row && typeof row === 'object') ? row : {};
+          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${r?.questionOrder === 'Random' ? '&#128256; Rand' : '&rarr; Seq'}</div>`;
+        }
+      },
+      {
+        key: 'timeLimit',
+        label: 'DUR. (m)',
+        sortable: true,
+        render: (val, row) => {
+          const r = (row && typeof row === 'object') ? row : {};
+          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">&#9201;&#65039; ${r?.timeLimit || 60}</div>`;
+        }
+      },
+      {
+        key: 'minScore',
+        label: 'PASS (%)',
+        sortable: true,
+        render: (val, row) => {
+          const r = (row && typeof row === 'object') ? row : {};
+          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">&#127919; ${r?.minScore || 60}</div>`;
+        }
+      },
       { 
         key: 'qCount', 
-        label: 'Questions', 
+        label: 'Qs', 
         sortable: true,
         render: (val, row) => {
           const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
           const count = typeof val === 'number' ? val : (r?.qCount || 0);
-          return `<span class="badge ${count > 0 ? 'badge-info' : 'badge-danger'} fw-700">${count} Qs</span>`;
+          if (r?.qIsVault) return `<span class="fw-700 ${count > 0 ? 'text-info' : 'text-danger'}" style="font-size:0.8rem;" title="Live count projected from Vocabulary Vault">&#9889; ${count} (Vault)</span>`;
+          return `<span class="fw-700 ${count > 0 ? 'text-info' : 'text-danger'}" style="font-size:0.8rem;">${count}</span>`;
         }
       },
       { 
@@ -266,32 +409,49 @@ export async function renderAssessments(area) {
         render: (val, row) => {
           const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
           const st = (typeof val === 'string' ? val : r?.status) || 'draft';
-          return `<span class="badge ${statusColors[st] || 'badge-neutral'} fw-700" style="text-transform: uppercase;">${escapeHtml(st)}</span>`;
+          return `<span class="badge ${statusColors[String(st).toLowerCase()] || 'badge-neutral'} fw-700" style="font-size: 0.65rem; padding: 2px 6px; text-transform: uppercase;">${escapeHtml(st)}</span>`;
         }
       },
       { 
         key: 'actions', 
-        label: 'Actions', 
+        label: '', 
         sortable: false,
         render: (val, row) => {
           const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
           const id = r?.id || '';
           return `
-            <div class="d-flex gap-2 justify-end">
-              <button class="btn btn-ghost btn-sm" title="View Results" onclick="window._filterAssessmentResults='${id}'; window.loadSection('results');">&#128202; Results</button>
-              <button class="btn btn-ghost btn-sm" title="Recalibrate Assessment" onclick="window._filterRecalibrateAssessment='${id}'; window.loadSection('recalibrator');">&#9878;&#65039;</button>
-              <button class="btn btn-secondary btn-sm" onclick="window._duplicateAssessment('${id}')" title="Duplicate Assessment">Copy</button>
-              <button class="btn ${r?.status === 'published' ? 'btn-danger' : 'btn-success'} btn-sm" onclick="window._publishAssessment('${id}', '${r?.status || 'draft'}')">
-                ${r?.status === 'published' ? 'Unpublish' : 'Publish'}
+            <div class="d-flex gap-1 justify-end align-center">
+              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterAssessmentResults='${id}'; window.loadSection('results');">&#128202;</button>
+              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateAssessment='${id}'; window.loadSection('recalibrator');">&#9878;&#65039;</button>
+              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateAssessment('${id}')" title="Duplicate">Copy</button>
+              <button class="btn ${String(r?.status).toLowerCase() === 'published' ? 'btn-danger' : 'btn-success'}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishAssessment('${id}', '${r?.status || 'draft'}')">
+                ${String(r?.status).toLowerCase() === 'published' ? 'Unpub' : 'Pub'}
               </button>
-              <button class="btn btn-secondary btn-sm" onclick="window.openAssessmentBuilder('${id}')">Edit</button>
-              <button class="btn btn-secondary btn-sm" style="color: var(--clr-accent-1);" onclick="window._deleteRecord('Assessments', '${id}', '${escapeHtml(r?.title || '')}')">Del</button>
+              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openAssessmentBuilder('${id}')">Edit</button>
+              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; color: var(--clr-accent-1);" onclick="window._deleteRecord('Assessments', '${id}', '${escapeHtml(r?.title || '')}')">Del</button>
             </div>
           `;
         }
       }
     ]
   });
+
+  const filterContainer = document.getElementById('assessment-filters');
+  if (filterContainer) {
+    filterContainer.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('filter-btn')) return;
+      document.querySelectorAll('#assessment-filters .filter-btn').forEach(btn => btn.classList.remove('active'));
+      e.target.classList.add('active');
+      const filter = e.target.dataset.filter;
+      if (filter === 'all') {
+        AssessmentsGrid.updateData(gridData);
+      } else if (filter === 'core') {
+        AssessmentsGrid.updateData(gridData.filter(e => !e.AssessmentCategory || ['TASK', 'TEST', 'DAILY'].includes(String(e.AssessmentCategory).toUpperCase()) && !e._raw?.payload?.is_standalone_tryout));
+      } else if (filter === 'standalone') {
+        AssessmentsGrid.updateData(gridData.filter(e => ['TRYOUT', 'PLACEMENT', 'EXIT'].includes(String(e.AssessmentCategory).toUpperCase()) || e._raw?.payload?.is_standalone_tryout));
+      }
+    });
+  }
 }
 
 // Helpers
@@ -311,11 +471,11 @@ function formatAnswerType(type) {
 }
 
 window._publishAssessment = async (AssessmentId, currentStatus) => {
-  const newStatus = currentStatus === 'published' ? 'unpublished' : 'published';
+  const newStatus = (currentStatus || '').toUpperCase() === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';
   try {
-    await adminUpdate('Assessments', AssessmentId, { status: newStatus });
+    await adminUpdate('assessments', AssessmentId, { status: newStatus });
     showToast(`Assessment ${newStatus}.`, 'success');
-    window.loadSection('Assessments');
+    window.loadSection('assessments');
   } catch(e) { showToast(e.message, 'error'); }
 };
 

@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 // TOP ENGLISH CLASS — Edge Function: submit-Assessment (Assessment V1)
 // Server-authoritative scoring, grading, best score resolution, and usage logging.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -178,7 +178,8 @@ Deno.serve(async (req: Request) => {
     const totalQuestions = answerRows.length;
     const historyInserts: any[] = [];
 
-    // 4. Evaluate Each Question
+    // 4. Evaluate Each Question (updates run in parallel chunks of 40 to stay inside Edge time limits)
+    const pendingUpdates: any[] = [];
     for (const row of answerRows) {
       const studentAnswer = submittedMap[row.id] ?? row.student_answer ?? "";
       const validAnswers = parseValidAnswers(row);
@@ -187,28 +188,35 @@ Deno.serve(async (req: Request) => {
       totalScore += evalRes.score;
       if (evalRes.is_correct) correctCount++;
 
-      await supabase
-        .from("attempt_answers")
-        .update({
+      pendingUpdates.push({
+        id: row.id,
+        patch: {
           student_answer: studentAnswer,
           evaluation_result: evalRes.result,
           score: evalRes.score,
           is_correct: evalRes.is_correct,
           similarity_score: evalRes.similarity_score,
           answered_at: now.toISOString()
-        })
-        .eq("id", row.id);
+        }
+      });
 
       if (row.question_id) {
         historyInserts.push({
           question_id: row.question_id,
-          assessment_id: attempt.assessment_id || attempt.Assessment_id,
+          assessment_id: attempt.assessment_id,
           attempt_id: attempt.id,
           student_id: attempt.student_id,
           used_at: now.toISOString(),
           topic_name: row.topic_snapshot || "General"
         });
       }
+    }
+    for (let i = 0; i < pendingUpdates.length; i += 40) {
+      const results = await Promise.all(
+        pendingUpdates.slice(i, i + 40).map((u: any) => supabase.from("attempt_answers").update(u.patch).eq("id", u.id))
+      );
+      const failed = results.find((r: any) => r.error);
+      if (failed) throw failed.error;
     }
 
     // 5. Calculate Percentage and Grade
@@ -222,13 +230,13 @@ Deno.serve(async (req: Request) => {
     let effectivePct = roundedPct;
     let isRemedialCapApplied = false;
     if (attempt.is_remedial === true) {
-      const targetAsmId = attempt.assessment_id || attempt.Assessment_id;
+      const targetAsmId = attempt.assessment_id;
       const { data: asmForCap } = await supabase
-        .from("Assessments")
-        .select("Assessment_type")
+        .from("assessments")
+        .select("assessment_type")
         .eq("id", targetAsmId)
         .single();
-      if (asmForCap && (asmForCap.Assessment_type === "EXAM" || asmForCap.Assessment_type === "QUIZ")) {
+      if (asmForCap && (asmForCap.assessment_type === "EXAM" || asmForCap.assessment_type === "QUIZ")) {
         if (effectivePct > 70) {
           effectivePct = 70;
           isRemedialCapApplied = true;
@@ -250,7 +258,7 @@ Deno.serve(async (req: Request) => {
         percentage: roundedPct,
         grade,
         effective_score: effectivePct,
-        remedial_cap_applied: isRemedialCapApplied
+        /* remedial_cap_applied: isRemedialCapApplied */
       })
       .eq("id", attempt_id)
       .select()
@@ -259,12 +267,12 @@ Deno.serve(async (req: Request) => {
     if (updErr) throw updErr;
 
     // 7. Resolve Best Score across attempts for this student & assessment
-    const targetAssessmentId = attempt.assessment_id || attempt.Assessment_id;
+    const targetAssessmentId = attempt.assessment_id;
     const { data: allAttempts } = await supabase
       .from("attempts")
       .select("id, effective_score, percentage, created_at")
       .eq("student_id", attempt.student_id)
-      .or(`assessment_id.eq.${targetAssessmentId},Assessment_id.eq.${targetAssessmentId}`)
+      .eq("assessment_id", targetAssessmentId)
       .in("status", ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"])
       .order("effective_score", { ascending: false })
       .order("percentage", { ascending: false })
@@ -280,35 +288,92 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 7b. Auto-Leveling Logic
+    // 7b. Auto-Leveling Logic (legacy EXAM/QUIZ promotion — unchanged semantics)
     const { data: asmRec } = await supabase
       .from("assessments")
-      .select("assessment_type, class_id, classes(level_id)")
+      .select("assessment_type, assessment_category, class_id, level_id, payload, classes(level_id)")
       .eq("id", targetAssessmentId)
       .single();
 
     if (asmRec && (asmRec.assessment_type === 'EXAM' || asmRec.assessment_type === 'QUIZ') && roundedPct >= 75) {
-      // Find current level number
       if (asmRec.classes && asmRec.classes.level_id) {
          const { data: currLevel } = await supabase.from("levels").select("level_number").eq("id", asmRec.classes.level_id).single();
          if (currLevel) {
            const nextLevelNum = currLevel.level_number + 1;
-           // Find next level ID
-           const { data: nextLevel } = await supabase.from("levels").select("id").eq("level_number", nextLevelNum).single();
+           const { data: nextLevel } = await supabase.from("levels").select("id").eq("level_number", nextLevelNum).maybeSingle();
            if (nextLevel) {
-             // Grant access to next level by assigning it in student_classes or similar?
-             // Or update the student's level_id directly?
-             // Since students now have level_id column, we can update it if the new level is higher!
-             const { data: studRec } = await supabase.from("students").select("level_id").eq("id", attempt.student_id).single();
-             if (studRec) {
-                // Check if current student level is less than next level
-                const { data: studLevel } = await supabase.from("levels").select("level_number").eq("id", studRec.level_id).single();
-                if (!studLevel || studLevel.level_number < nextLevelNum) {
-                   await supabase.from("students").update({ level_id: nextLevel.id }).eq("id", attempt.student_id);
+             const { data: studRec } = await supabase.from("students").select("batch_id").eq("id", attempt.student_id).single();
+             if (studRec && studRec.batch_id) {
+                const { data: batchRec } = await supabase.from("batches").select("current_level_id").eq("id", studRec.batch_id).single();
+                if (batchRec && batchRec.current_level_id) {
+                   const { data: batchLevel } = await supabase.from("levels").select("level_number").eq("id", batchRec.current_level_id).single();
+                   if (!batchLevel || batchLevel.level_number < nextLevelNum) {
+                      await supabase.from("batches").update({ current_level_id: nextLevel.id }).eq("id", studRec.batch_id);
+                   }
                 }
              }
            }
          }
+      }
+    }
+
+    // 7c. Dynamic-shell Level Completion.
+    // The FINAL theme (highest theme_code among this class+level's TEST shells) is the graduation gate.
+    // When every final-theme TEST shell has a best score >= 60%, the student's progress record is marked
+    // 'Level Completed'. A next-level promotion happens ONLY if a higher level exists (Level 3 is terminal).
+    let levelCompleted = false;
+    if (asmRec && asmRec.assessment_category === 'TEST' && asmRec.payload && asmRec.payload.is_dynamic_shell
+        && asmRec.payload.theme_code && roundedPct >= 60 && asmRec.class_id && asmRec.level_id) {
+      const { data: levelTests } = await supabase
+        .from("assessments")
+        .select("id, payload")
+        .eq("class_id", asmRec.class_id)
+        .eq("level_id", asmRec.level_id)
+        .eq("assessment_category", "TEST")
+        .is("deleted_at", null);
+      const codes = (levelTests || []).map((t: any) => String(t.payload?.theme_code || "")).filter(Boolean).sort();
+      const finalTheme = codes.length ? codes[codes.length - 1] : null;
+      if (finalTheme && asmRec.payload.theme_code === finalTheme) {
+        const finalIds = (levelTests || []).filter((t: any) => t.payload?.theme_code === finalTheme).map((t: any) => t.id);
+        const { data: finalAttempts } = await supabase
+          .from("attempts")
+          .select("assessment_id, effective_score, percentage")
+          .eq("student_id", attempt.student_id)
+          .in("assessment_id", finalIds)
+          .in("status", ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
+        const passed = new Set<string>();
+        for (const a of (finalAttempts || [])) {
+          if ((a.effective_score ?? a.percentage ?? 0) >= 60) passed.add(a.assessment_id);
+        }
+        if (finalIds.length > 0 && passed.size === finalIds.length) {
+          const { data: lvlRow } = await supabase.from("levels").select("level_number").eq("id", asmRec.level_id).single();
+          const levelNumber = lvlRow?.level_number ?? null;
+          const { data: prog } = await supabase
+            .from("progress").select("id, highest_score")
+            .eq("student_id", attempt.student_id).eq("class_id", asmRec.class_id).maybeSingle();
+          const progPatch: any = {
+            level_status: "Level Completed",
+            level_completed_at: now.toISOString(),
+            unlocked_level: levelNumber,
+            highest_score: Math.max(Number(prog?.highest_score || 0), roundedPct),
+            updated_at: now.toISOString()
+          };
+          const progRes = prog
+            ? await supabase.from("progress").update(progPatch).eq("id", prog.id)
+            : await supabase.from("progress").insert({ student_id: attempt.student_id, class_id: asmRec.class_id, ...progPatch });
+          if (progRes.error) throw progRes.error;
+          levelCompleted = true;
+
+          if (levelNumber !== null) {
+            const { data: nextLevel } = await supabase.from("levels").select("id").eq("level_number", levelNumber + 1).maybeSingle();
+            if (nextLevel) {
+              const { data: studRec } = await supabase.from("students").select("batch_id").eq("id", attempt.student_id).single();
+              if (studRec?.batch_id) {
+                await supabase.from("batches").update({ current_level_id: nextLevel.id }).eq("id", studRec.batch_id);
+              }
+            }
+          }
+        }
       }
     }
 
@@ -324,7 +389,8 @@ Deno.serve(async (req: Request) => {
       correct_count: correctCount,
       total_questions: totalQuestions,
       percentage: roundedPct.toFixed(2),
-      grade
+      grade,
+      level_completed: levelCompleted
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
