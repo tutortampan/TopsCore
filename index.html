@@ -642,9 +642,9 @@
   </div>
 
   <script type="module">
-    import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram, verifyStudentLogin, formatStudentName } from './js/api.js?v=4.7.5';
-    import { setStudentSession, getStudentSession } from './js/session.js?v=4.7.5';
-    import { showToast, showLoading, hideLoading } from './js/app.js?v=4.7.5';
+    import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram, verifyStudentLogin, formatStudentName } from './js/api.js?v=4.7.6';
+    import { setStudentSession, getStudentSession } from './js/session.js?v=4.7.6';
+    import { showToast, showLoading, hideLoading } from './js/app.js?v=4.7.6';
 
     // ── Redirect if already logged in ──
     if (getStudentSession()) {
@@ -1092,7 +1092,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=4.7.5')
+        navigator.serviceWorker.register('sw.js?v=4.7.6')
           .then(registration => console.log('ServiceWorker registered with scope:', registration.scope))
           .catch(error => console.warn('ServiceWorker registration failed:', error));
       });

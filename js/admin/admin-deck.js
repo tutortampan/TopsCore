@@ -1,8 +1,8 @@
-import { adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, formatStudentName } from '../api.js?v=4.7.5';
-import { getSupabase } from '../supabase.js?v=4.7.5';
-import { generateExecutiveCV } from './cv-export.js?v=4.7.5';
-import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=4.7.5';
-import { showToast } from '../app.js?v=4.7.5';
+import { adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, formatStudentName } from '../api.js?v=4.7.6';
+import { getSupabase } from '../supabase.js?v=4.7.6';
+import { generateExecutiveCV } from './cv-export.js?v=4.7.6';
+import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=4.7.6';
+import { showToast } from '../app.js?v=4.7.6';
 
 function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -370,7 +370,7 @@ export async function renderAdminProfile(container) {
     overlay.classList.remove('hidden');
 
     try {
-      const { processAndCompressAvatar } = await import('../utils/avatar-engine.js?v=4.7.5');
+      const { processAndCompressAvatar } = await import('../utils/avatar-engine.js?v=4.7.6');
       const compressedDataUrl = await processAndCompressAvatar(file, 'admin');
 
       // Optimistic preview

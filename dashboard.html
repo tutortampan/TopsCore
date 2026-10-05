@@ -861,10 +861,10 @@
   </div>
 
   <script type="module">
-    import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentClass, fetchStudentAttemptsForAssessment, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, fetchAssignments, fetchAssessments, toOrdinalLevel, fetchBatches, fetchStudentLevel } from './js/api.js?v=4.7.5';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender } from './js/session.js?v=4.7.5';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout } from './js/app.js?v=4.7.5';
-    import { testMicrophoneCapability } from './js/speech.js?v=4.7.5';
+    import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentClass, fetchStudentAttemptsForAssessment, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, fetchAssignments, fetchAssessments, toOrdinalLevel, fetchBatches, fetchStudentLevel } from './js/api.js?v=4.7.6';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender } from './js/session.js?v=4.7.6';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout } from './js/app.js?v=4.7.6';
+    import { testMicrophoneCapability } from './js/speech.js?v=4.7.6';
 
 
     function escapeHtml(str) {
@@ -1016,7 +1016,7 @@
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./js/supabase.js?v=4.7.5')).getSupabase();
+          const sb = await (await import('./js/supabase.js?v=4.7.6')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).single();
           if (st?.gender) {
             currentGender = st.gender;
@@ -1292,7 +1292,7 @@
     async function checkAndPromptPhoto() {
       let photoUrl = null;
       try {
-        const sb = await (await import('./js/supabase.js?v=4.7.5')).getSupabase();
+        const sb = await (await import('./js/supabase.js?v=4.7.6')).getSupabase();
         const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).single();
         if (st && st.photo_url) {
           photoUrl = st.photo_url;
@@ -1328,7 +1328,7 @@
     async function checkAndPromptBirthday() {
       let hasBirthday = false;
       try {
-        const sb = await (await import('./js/supabase.js?v=4.7.5')).getSupabase();
+        const sb = await (await import('./js/supabase.js?v=4.7.6')).getSupabase();
         const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).single();
         if (st && st.birth_date) {
           hasBirthday = true;
@@ -1383,7 +1383,7 @@
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./js/supabase.js?v=4.7.5')).getSupabase();
+        const sb = await (await import('./js/supabase.js?v=4.7.6')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).single();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -1393,7 +1393,7 @@
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./js/session.js?v=4.7.5');
+             const { setStudentSession } = await import('./js/session.js?v=4.7.6');
              setStudentSession(session);
           }
         }
@@ -1443,7 +1443,7 @@
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./js/session.js?v=4.7.5');
+            const { setStudentSession } = await import('./js/session.js?v=4.7.6');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -2365,7 +2365,7 @@
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./js/supabase.js?v=4.7.5')).getSupabase();
+          const sb = await (await import('./js/supabase.js?v=4.7.6')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).single();
           if (st?.photo_url) applyPhotoEverywhere(st.photo_url);
           
@@ -2416,7 +2416,7 @@
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./js/supabase.js?v=4.7.5')).getSupabase();
+            const sb = await (await import('./js/supabase.js?v=4.7.6')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
             

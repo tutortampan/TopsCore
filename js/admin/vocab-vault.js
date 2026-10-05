@@ -19,9 +19,9 @@ import {
   renameVaultTopic,
   exportVaultWords,
   updateAssessmentDefinition
-} from '../api.js?v=4.7.5';
-import { showToast, showLoading, hideLoading } from '../app.js?v=4.7.5';
-import { getSupabase } from '../supabase.js?v=4.7.5';
+} from '../api.js?v=4.7.6';
+import { showToast, showLoading, hideLoading } from '../app.js?v=4.7.6';
+import { getSupabase } from '../supabase.js?v=4.7.6';
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -398,7 +398,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
   document.getElementById('btn-manual-auto-generate')?.addEventListener('click', async () => {
     try {
       const vaultLevels = [...new Set(_allWords.map(w => parseInt(w.target_level || 1, 10)))].filter(Boolean).sort();
-      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.7.5');
+      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.7.6');
       await openAutoGenerateModal({
         availableLevels: vaultLevels,
         preSelectedLevels: vaultLevels,
@@ -678,7 +678,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       // Check if any words were imported and extract levels
       const importedLevels = [...new Set(_parsedRows.map(r => parseInt(r.target_level || 1, 10)))].filter(Boolean);
       if (importedLevels.length > 0) {
-        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.7.5');
+        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.7.6');
         await openAutoGenerateModal({
           availableLevels: importedLevels,
           preSelectedLevels: importedLevels,
@@ -1507,7 +1507,7 @@ function _renderBlueprintTab(area, words) {
       const importedLevels = Array.from(levelsSet).sort((a,b)=>a-b);
       if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
       try {
-        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.7.5');
+        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.7.6');
         await openAutoGenerateModal({
           availableLevels: importedLevels,
           preSelectedLevels: importedLevels,
@@ -1643,7 +1643,7 @@ function _renderTopicManager(area, words, topics) {
         if (!newTopic || newTopic.trim() === "" || newTopic === oldTopic) return;
         
         try {
-          const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.7.5'); // unified v=4.7.4
+          const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.7.6'); // unified v=4.7.4
           showLoading();
           await renameVaultTopic(oldTopic, newTopic.trim());
           hideLoading();
@@ -1667,8 +1667,8 @@ function _renderTopicManager(area, words, topics) {
         if (!confirm(`Are you sure you want to delete ALL words in the topic "${topic}"? This cannot be undone.`)) return;
         
         try {
-          const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.7.5');
-          const { getSupabase } = await import('../supabase.js?v=4.7.5');
+          const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.7.6');
+          const { getSupabase } = await import('../supabase.js?v=4.7.6');
           showLoading("Deleting topic...");
           const sb = await getSupabase();
           const { error } = await sb.from('vocabulary_vault').update({ deleted_at: new Date().toISOString() }).eq('topic', topic);
@@ -1693,8 +1693,8 @@ function _renderTopicManager(area, words, topics) {
         const newLevel = parseInt(e.target.value, 10);
         
         // Dynamic import to avoid missing dependencies in older backup
-        const { moveVaultTopicsToLevel } = await import('../api.js?v=4.7.5');
-        const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.7.5');
+        const { moveVaultTopicsToLevel } = await import('../api.js?v=4.7.6');
+        const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.7.6');
         
         showLoading();
         try {
@@ -1729,7 +1729,7 @@ function _renderTopicManager(area, words, topics) {
       const area = document.getElementById('vault-tab-content').parentElement.parentElement;
       if (area) {
         // Trigger a fresh render by re-calling renderVocabularyVault
-        import('./vocab-vault.js?v=4.7.5').then(m => m.renderVocabularyVault(area));
+        import('./vocab-vault.js?v=4.7.6').then(m => m.renderVocabularyVault(area));
       }
     });
   });
@@ -1739,13 +1739,13 @@ function _renderTopicManager(area, words, topics) {
     if (!confirm('Second confirmation required. Type OK in the next prompt to confirm.')) return;
     const confirmText = prompt('Type RESET to confirm truncation of all vault words:');
     if (confirmText?.trim().toUpperCase() !== 'RESET') { 
-      const { showToast } = await import('../app.js?v=4.7.5');
+      const { showToast } = await import('../app.js?v=4.7.6');
       showToast('Reset cancelled.', 'info'); 
       return; 
     }
     try {
-      const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.7.5');
-      const { getSupabase } = await import('../supabase.js?v=4.7.5');
+      const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.7.6');
+      const { getSupabase } = await import('../supabase.js?v=4.7.6');
       showLoading('Resetting vault...');
       const sb = await getSupabase();
       const { error } = await sb.from('vocabulary_vault').update({ deleted_at: new Date().toISOString() }).neq('id', '00000000-0000-0000-0000-000000000000');
@@ -1759,7 +1759,7 @@ function _renderTopicManager(area, words, topics) {
         if (container) renderVocabularyVault(container);
       }
     } catch (e) {
-      const { hideLoading, showToast } = await import('../app.js?v=4.7.5');
+      const { hideLoading, showToast } = await import('../app.js?v=4.7.6');
       hideLoading();
       showToast('Reset failed: ' + e.message, 'error');
     }

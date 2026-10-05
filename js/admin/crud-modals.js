@@ -2,9 +2,9 @@ import {
   adminFetchAll, adminInsert, adminUpdate, adminSoftDelete,
   mergeDuplicateStudents, detectDuplicateStudents, mergeStudentPair,
   detectDuplicateQuestions, resequenceAssessmentQuestions, resolveDuplicateQuestionGroup, batchResolveAssessmentDuplicateQuestions
-} from '../api.js?v=4.7.5';
-import { cleanStudentName } from '../api.js?v=4.7.5';
-import { showToast, showLoading, hideLoading } from '../app.js?v=4.7.5';
+} from '../api.js?v=4.7.6';
+import { cleanStudentName } from '../api.js?v=4.7.6';
+import { showToast, showLoading, hideLoading } from '../app.js?v=4.7.6';
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';

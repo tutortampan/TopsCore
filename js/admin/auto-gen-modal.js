@@ -1,5 +1,5 @@
 export async function openAutoGenerateModal(options = {}) {
-  const { fetchInstitutions, fetchPrograms, autoGenerateAssessmentsHierarchy } = await import('../api.js?v=4.7.5');
+  const { fetchInstitutions, fetchPrograms, autoGenerateAssessmentsHierarchy } = await import('../api.js?v=4.7.6');
   const { availableLevels = [], preSelectedLevels = [], explicitClassId = null, onComplete = null } = options;
 
   // Show loading while fetching programs

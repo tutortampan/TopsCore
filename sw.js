@@ -1,4 +1,4 @@
-const CACHE_NAME = 'abcd-core-v4.7.5';
+const CACHE_NAME = 'abcd-core-v4.7.6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,9 +6,9 @@ const ASSETS_TO_CACHE = [
   './dashboard.html',
   './assessment.html',
   './result.html',
-  './css/style.css?v=4.7.5',
-  './css/admin.css?v=4.7.5',
-  './css/dashboard.css?v=4.7.5'
+  './css/style.css?v=4.7.6',
+  './css/admin.css?v=4.7.6',
+  './css/dashboard.css?v=4.7.6'
 ];
 
 self.addEventListener('install', event => {
@@ -43,7 +43,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   const isScriptOrDoc = event.request.destination === 'script' || 
                         event.request.destination === 'document' || 
-                        url.pathname.endsWith('.js?v=4.7.5') || 
+                        url.pathname.endsWith('.js?v=4.7.6') || 
                         url.pathname.endsWith('.html');
 
   if (isScriptOrDoc) {

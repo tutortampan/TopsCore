@@ -254,7 +254,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
   }, mode));
   
   document.getElementById('btn-manual-auto-generate')?.addEventListener('click', async () => {
-    const { fetchInstitutions, fetchPrograms, autoGenerateAssessmentsHierarchy } = await import('../api.js?v=4.7.5');
+    const { fetchInstitutions, fetchPrograms, autoGenerateAssessmentsHierarchy } = await import('../api.js?v=4.7.6');
     showLoading();
     try {
       const institutions = await fetchInstitutions();
@@ -574,7 +574,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       if (importedLevels.length > 0) {
         if (confirm(`Do you want to Auto-Generate the Assessment Hierarchy (Sequential Gating) for Level(s): ${importedLevels.join(', ')}?`)) {
            // Show simple prompt to get Program ID
-           const { fetchInstitutions, fetchPrograms, autoGenerateAssessmentsHierarchy } = await import('../api.js?v=4.7.5');
+           const { fetchInstitutions, fetchPrograms, autoGenerateAssessmentsHierarchy } = await import('../api.js?v=4.7.6');
            
            const institutions = await fetchInstitutions();
            if (!institutions.length) return showToast('No institutions found.', 'error');

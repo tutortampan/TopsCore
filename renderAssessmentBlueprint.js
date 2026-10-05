@@ -155,7 +155,7 @@ function _renderAssessmentBlueprint(area, words) {
   const btnGenWords = area.querySelector('#btn-blueprint-auto-gen-words');
   if (btnGenWords) {
     btnGenWords.addEventListener('click', async () => {
-      const { openAutoGenerateModal } = await import('./js/admin/auto-gen-modal.js?v=4.7.5');
+      const { openAutoGenerateModal } = await import('./js/admin/auto-gen-modal.js?v=4.7.6');
       openAutoGenerateModal({ category: 'words' });
     });
   }
@@ -163,7 +163,7 @@ function _renderAssessmentBlueprint(area, words) {
   const btnGenPhrases = area.querySelector('#btn-blueprint-auto-gen-phrases');
   if (btnGenPhrases) {
     btnGenPhrases.addEventListener('click', async () => {
-      const { openAutoGenerateModal } = await import('./js/admin/auto-gen-modal.js?v=4.7.5');
+      const { openAutoGenerateModal } = await import('./js/admin/auto-gen-modal.js?v=4.7.6');
       openAutoGenerateModal({ category: 'phrases' });
     });
   }
