@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Automated Test</title>
+</head>
+<body>
+  <h1 id="status">RUNNING...</h1>
+  <pre id="log"></pre>
+  <script type="module">
+    import { importVaultWords, autoGenerateAssessmentsHierarchy, fetchAssessments, fetchInstitutions, fetchPrograms } from './js/api.js';
+    
+    async function runTest() {
+      try {
+        const logEl = document.getElementById('log');
+        const log = (msg) => { logEl.textContent += msg + '\n'; console.log(msg); };
+        
+        log('Starting automated Excel Data Import mapping test...');
+        
+        // 1. Mock the mapped rows as if parsed from Excel
+        const mockRows = [
+          {
+            level: '1',
+            theme_code: 'TEST_TH_1',
+            theme: 'Automated Test Theme',
+            topic_code: 'TEST_TP_1',
+            topic: 'Automated Test Topic',
+            category: 'Word',
+            word_type: 'Noun',
+            indonesian: 'Kucing Uji',
+            english: 'Test Cat',
+            _isPhrase: false
+          }
+        ];
+        
+        log('Mocking importVaultWords...');
+        const importRes = await importVaultWords(mockRows, {});
+        log('Import result: ' + JSON.stringify(importRes));
+        
+        log('Generating assessment hierarchy for level 1...');
+        
+        // Let's get actual instId and progId if needed for config
+        const insts = await fetchInstitutions();
+        const instId = insts[0].id;
+        const progs = await fetchPrograms(instId);
+        const progId = progs[0].id;
+
+        const syncRes = await autoGenerateAssessmentsHierarchy([1], { programId: progId, institutionId: instId });
+        log('Sync result: ' + JSON.stringify(syncRes));
+
+        log('Fetching generated assessments for level 1...');
+        const assessments = await fetchAssessments({ program_id: progId });
+        log('Total assessments fetched: ' + assessments.length);
+        // The title format is: "INST - 1st Level - Vocabulary Mastery Test/Task - "ThemeName/TopicName""
+        // Our mock inserted: theme="Automated Test Theme", topic="Automated Test Topic"
+        const testAss = assessments.find(a => (a.name || a.title || '').includes('Automated Test'));
+        
+        if (testAss) {
+          log('SUCCESS: Real-time sync works! Found generated assessment: ' + testAss.name);
+          document.getElementById('status').textContent = 'SUCCESS';
+        } else {
+          log('FAILED: Generated assessment not found in fetch.');
+          document.getElementById('status').textContent = 'FAILED';
+        }
+
+      } catch (err) {
+        document.getElementById('status').textContent = 'ERROR';
+        document.getElementById('log').textContent += err.stack;
+      }
+    }
+    
+    runTest();
+  </script>
+</body>
+</html>

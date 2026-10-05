@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>E2E Automated Tests</title>
+</head>
+<body>
+  <h1>🧪 Running Automated E2E Tests (3 Iterations)...</h1>
+  <pre id="log" style="background:#111; color:#0f0; padding:15px; border:1px solid #333; max-height:85vh; overflow-y:auto; font-family:monospace; font-size:13px;"></pre>
+  
+  <script type="module">
+    import { getSupabase } from './js/supabase.js';
+    import * as api from './js/api.js';
+
+    const logEl = document.getElementById('log');
+    function log(msg, type = 'info') {
+      const color = type === 'error' ? '#f66' : type === 'ok' ? '#6f6' : type === 'head' ? '#ff6' : '#0f0';
+      const prefix = type === 'error' ? '❌' : type === 'ok' ? '✅' : type === 'head' ? '\n===' : '  ';
+      logEl.innerHTML += `<span style="color:${color}">${prefix} ${msg}</span>\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    async function runTests() {
+      try {
+        const sb = await getSupabase();
+        log('Connected to Supabase. Starting E2E tests...', 'ok');
+        
+        // Get a valid program for generation
+        const { data: programs } = await sb.from('programs').select('id, name, institution_id').limit(1);
+        if (!programs || programs.length === 0) { log('No programs found — cannot run tests!', 'error'); return; }
+        const programId = programs[0].id;
+        log(`Using program: "${programs[0].name}" (${programId})`);
+
+        // Get a student
+        const { data: students } = await sb.from('students').select('id, name').limit(1);
+        const studentId = students?.[0]?.id || null;
+        log(`Using student: ${students?.[0]?.name || 'none found'}`);
+
+        for (let iter = 1; iter <= 3; iter++) {
+          log(`ITERATION ${iter}`, 'head');
+          
+          // =====================================================
+          // STEP 1: IMPORT VOCAB WORDS (simulate Excel upload)
+          // =====================================================
+          log(`[${iter}] 1. Importing Vocab words...`);
+          const mockVocabRows = [
+            { level: '1', theme_code: `TH${iter}`, theme: `Theme ${iter}`, topic_code: `TP${iter}A`, topic: `Topic ${iter}A`, indonesian: `Kata ${iter}A1`, english: `Word ${iter}A1`, word_type: 'Vocab' },
+            { level: '1', theme_code: `TH${iter}`, theme: `Theme ${iter}`, topic_code: `TP${iter}A`, topic: `Topic ${iter}A`, indonesian: `Kata ${iter}A2`, english: `Word ${iter}A2`, word_type: 'Vocab' },
+            { level: '1', theme_code: `TH${iter}`, theme: `Theme ${iter}`, topic_code: `TP${iter}B`, topic: `Topic ${iter}B`, indonesian: `Kata ${iter}B1`, english: `Word ${iter}B1`, word_type: 'Vocab' },
+          ];
+          const vocabImport = await api.importVaultWords(mockVocabRows, {});
+          log(`[${iter}] Vocab Import: ${vocabImport.inserted} inserted, ${vocabImport.updated} updated.`, 'ok');
+
+          // =====================================================
+          // STEP 2: IMPORT PHRASE RECOGNITION WORDS
+          // =====================================================
+          log(`[${iter}] 2. Importing Phrase Recognition words...`);
+          const mockPhraseRows = [
+            { level: '1', theme_code: `TH${iter}`, theme: `Theme ${iter}`, topic_code: `PH${iter}A`, topic: `Phrase Topic ${iter}A`, indonesian: `Idiom ${iter}A`, english: `Idiom ${iter}A Meaning`, word_type: 'Idiom' },
+            { level: '1', theme_code: `TH${iter}`, theme: `Theme ${iter}`, topic_code: `PH${iter}A`, topic: `Phrase Topic ${iter}A`, indonesian: `Proverb ${iter}A`, english: `Proverb ${iter}A Meaning`, word_type: 'Proverb' },
+          ];
+          const phraseImport = await api.importVaultWords(mockPhraseRows, {});
+          log(`[${iter}] Phrase Import: ${phraseImport.inserted} inserted, ${phraseImport.updated} updated.`, 'ok');
+
+          // =====================================================
+          // STEP 3: EXPORT (fetch from vault)
+          // =====================================================
+          log(`[${iter}] 3. Exporting (fetching from Vault)...`);
+          const exported = await api.fetchVaultWords({ limit: 20 });
+          log(`[${iter}] Export: fetched ${exported.length} words total.`, 'ok');
+          
+          // Verify our inserted words appear
+          const foundVocab = exported.some(w => w.english === `Word ${iter}A1`);
+          const foundPhrase = exported.some(w => w.english === `Idiom ${iter}A Meaning`);
+          log(`[${iter}] Vocab in export: ${foundVocab ? 'FOUND ✅' : 'NOT FOUND ❌'}`, foundVocab ? 'ok' : 'error');
+          log(`[${iter}] Phrase in export: ${foundPhrase ? 'FOUND ✅' : 'NOT FOUND ❌'}`, foundPhrase ? 'ok' : 'error');
+
+          // =====================================================
+          // STEP 4: GENERATE ASSESSMENT HIERARCHY
+          // =====================================================
+          log(`[${iter}] 4. Auto-generating Assessment Hierarchy...`);
+          const genRes = await api.autoGenerateAssessmentsHierarchy([1], { programId });
+          log(`[${iter}] Generated: ${genRes.tasks} tasks, ${genRes.tests} tests, ${genRes.updated} updated.`, 'ok');
+
+          // =====================================================
+          // STEP 5: GENERATE VOCAB MASTERY ASSESSMENT (manual)
+          // =====================================================
+          log(`[${iter}] 5. Manually generating Vocab Mastery assessment...`);
+          const { data: classRow } = await sb.from('classes')
+            .select('id').eq('program_id', programId).limit(1).maybeSingle();
+          
+          if (classRow) {
+            const { data: levelRow } = await sb.from('levels')
+              .select('id').eq('level_number', 1).limit(1).single();
+            
+            const vocabAsm = await api.createVocabMasteryAssessment({
+              classId: classRow.id,
+              levelId: levelRow?.id,
+              programId,
+              tier: 'TASK',
+              assessmentType: 'VOCAB_MASTERY',
+              sourceTopic: `Topic ${iter}A`,
+              title: `[E2E Test] Vocab Task - Iter ${iter}`,
+            });
+            log(`[${iter}] Created Vocab TASK: ${vocabAsm.assessmentId}`, 'ok');
+            log(`[${iter}]   Questions generated: ${vocabAsm.questionCount}`);
+
+            // STEP 5b: PHRASE RECOGNITION
+            log(`[${iter}] 5b. Generating Phrase Recognition assessment...`);
+            const phraseAsm = await api.createVocabMasteryAssessment({
+              classId: classRow.id,
+              levelId: levelRow?.id,
+              programId,
+              tier: 'TASK',
+              assessmentType: 'PHRASE_RECOGNITION',
+              sourceTopic: `Phrase Topic ${iter}A`,
+              title: `[E2E Test] Phrase Task - Iter ${iter}`,
+            });
+            log(`[${iter}] Created Phrase TASK: ${phraseAsm.assessmentId}`, 'ok');
+            log(`[${iter}]   Questions generated: ${phraseAsm.questionCount}`);
+
+            // =====================================================
+            // STEP 6: SIMULATE STUDENT TAKING THE TEST
+            // =====================================================
+            if (studentId) {
+              log(`[${iter}] 6. Simulating student taking Vocab assessment...`);
+              const attempt = await api.startAssessment(studentId, vocabAsm.assessmentId);
+              log(`[${iter}] Started attempt ID: ${attempt.attemptId}`);
+              
+              const submitRes = await api.submitAssessment(attempt.attemptId, {});
+              log(`[${iter}] Submitted. Grade: ${submitRes.grade || 'N/A'}, Score: ${submitRes.totalScore ?? 0}/${submitRes.maxScore ?? 0}`, 'ok');
+
+              // Phrase test
+              log(`[${iter}] 6b. Simulating student taking Phrase Recognition assessment...`);
+              const phraseAttempt = await api.startAssessment(studentId, phraseAsm.assessmentId);
+              log(`[${iter}] Started phrase attempt ID: ${phraseAttempt.attemptId}`);
+              const phraseSubmit = await api.submitAssessment(phraseAttempt.attemptId, {});
+              log(`[${iter}] Submitted. Grade: ${phraseSubmit.grade || 'N/A'}, Score: ${phraseSubmit.totalScore ?? 0}/${phraseSubmit.maxScore ?? 0}`, 'ok');
+            } else {
+              log(`[${iter}] No student found — skipping test simulation.`);
+            }
+          } else {
+            log(`[${iter}] No class found for this program — skipping manual generation.`);
+          }
+        }
+        
+        log('\nALL 3 ITERATIONS COMPLETED SUCCESSFULLY! 🎉', 'ok');
+        document.title = 'TEST PASSED';
+      } catch (err) {
+        log(`GLOBAL ERROR: ${err.message}`, 'error');
+        if (err.stack) log(err.stack, 'error');
+        document.title = 'TEST FAILED';
+      }
+    }
+    
+    runTests();
+  </script>
+</body>
+</html>

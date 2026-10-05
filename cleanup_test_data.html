@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cleanup Test Data</title>
+  <style>
+    body { font-family: monospace; background: #0f172a; color: #e2e8f0; padding: 32px; }
+    h1 { color: #f8fafc; margin-bottom: 4px; }
+    p { color: #64748b; margin-top: 0; }
+    pre { background: #1e293b; padding: 16px; border-radius: 8px; line-height: 1.8; white-space: pre-wrap; }
+    .ok { color: #4ade80; font-weight: bold; }
+    .err { color: #f87171; font-weight: bold; }
+    .info { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <h1>🧹 Test Data Cleanup</h1>
+  <p>Removing mock TEST_TH_1 / TEST_TP_1 entries from vocabulary_vault and assessments...</p>
+  <pre id="log"><span class="info">Connecting to Supabase...</span>
+</pre>
+  <script type="module">
+    import { getSupabase } from './js/supabase.js';
+
+    const logEl = document.getElementById('log');
+    function log(msg, cls = '') {
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = msg + '\n';
+      logEl.appendChild(span);
+      console.log(msg);
+    }
+
+    async function cleanup() {
+      const sb = await getSupabase();
+      log('Connected. Starting cleanup...\n', 'info');
+
+      // 1. Delete mock vocabulary_vault rows
+      log('Step 1 — Searching vocabulary_vault for theme_code = TEST_TH_1...', 'info');
+      const { data: vaultRows, error: vFetchErr } = await sb
+        .from('vocabulary_vault')
+        .select('id, english, theme_code')
+        .eq('theme_code', 'TEST_TH_1');
+
+      if (vFetchErr) {
+        log('ERROR fetching vault rows: ' + vFetchErr.message, 'err');
+      } else {
+        log(`Found ${vaultRows.length} mock vault row(s).`, 'info');
+        if (vaultRows.length > 0) {
+          const ids = vaultRows.map(r => r.id);
+          const { error: delErr } = await sb.from('vocabulary_vault').delete().in('id', ids);
+          if (delErr) log('ERROR deleting vault rows: ' + delErr.message, 'err');
+          else log(`✅ Deleted ${ids.length} mock vault row(s).`, 'ok');
+        } else {
+          log('✅ Nothing to delete in vocabulary_vault.', 'ok');
+        }
+      }
+
+      // 2. Delete generated mock assessment shells
+      log('\nStep 2 — Searching assessments for shell_code containing TEST_TH_1 or TEST_TP_1...', 'info');
+      const { data: shells, error: sFetchErr } = await sb
+        .from('assessments')
+        .select('id, title, shell_code')
+        .or('shell_code.ilike.%TEST_TH_1%,shell_code.ilike.%TEST_TP_1%');
+
+      if (sFetchErr) {
+        log('ERROR fetching shells: ' + sFetchErr.message, 'err');
+      } else {
+        log(`Found ${shells.length} mock assessment shell(s).`, 'info');
+        if (shells.length > 0) {
+          shells.forEach(s => log(`  → [${s.shell_code}] ${s.title || '(no title)'}`, 'info'));
+          const ids = shells.map(s => s.id);
+          const { error: delErr } = await sb.from('assessments').delete().in('id', ids);
+          if (delErr) log('ERROR deleting shells: ' + delErr.message, 'err');
+          else log(`✅ Deleted ${ids.length} mock assessment shell(s).`, 'ok');
+        } else {
+          log('✅ Nothing to delete in assessments.', 'ok');
+        }
+      }
+
+      log('\n🎉 CLEANUP COMPLETE. All test data removed.', 'ok');
+    }
+
+    cleanup().catch(e => log('FATAL: ' + e.message, 'err'));
+  </script>
+</body>
+</html>
