@@ -1,8 +1,8 @@
-import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsAssessments, autoGeneratePhrasesAssessments } from '../api.js?v=4.9.8';
-import { showToast } from '../app.js?v=4.9.8';
-import { openAssessmentBuilder } from './assessment-builder.js?v=4.9.8';
-import { DataGrid } from './datagrid.js?v=4.9.8';
-import { openAssessmentBuilderModal as openVocabWizard } from './vocab-vault.js?v=4.9.8';
+import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsAssessments, autoGeneratePhrasesAssessments } from '../api.js?v=5.1.0';
+import { showToast } from '../app.js?v=5.1.0';
+import { openAssessmentBuilder } from './assessment-builder.js?v=5.1.0';
+import { DataGrid } from './datagrid.js?v=5.1.0';
+import { openAssessmentBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.1.0';
 
 // ─────────────────────────────────────────────────────────────
 // SMART CLASS-AWARE TASK / TEST ROUTERS
@@ -459,7 +459,7 @@ function renderProgramDetail(prog, inst) {
             class_id: newClass.id,
             level_id: lvlId
           }));
-          const sb = await import('../supabase.js?v=4.9.8').then(m => m.getSupabase());
+          const sb = await import('../supabase.js?v=5.1.0').then(m => m.getSupabase());
           await sb.from('class_levels').insert(classLevelsPayload);
         }
         

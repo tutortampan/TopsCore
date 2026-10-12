@@ -1,5 +1,5 @@
-import { adminFetchAll, adminUpdate } from '../api.js?v=4.9.8';
-import { showToast } from '../app.js?v=4.9.8';
+import { adminFetchAll, adminUpdate } from '../api.js?v=5.1.0';
+import { showToast } from '../app.js?v=5.1.0';
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';

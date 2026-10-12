@@ -21,8 +21,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=4.9.8" />
-  <link rel="stylesheet" href="css/dashboard.css?v=4.9.8" />
+  <link rel="stylesheet" href="css/style.css?v=5.1.0" />
+  <link rel="stylesheet" href="css/dashboard.css?v=5.1.0" />
 
   <style>
     @media print {
@@ -251,10 +251,10 @@
   </div>
 
   <script type="module">
-    import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, startAssessment, submitAssessment } from './js/api.js?v=4.9.8';
-    import { requireStudentSession } from './js/session.js?v=4.9.8';
-    import { showToast, getGrade, showLoading, hideLoading } from './js/app.js?v=4.9.8';
-    import { getSupabase } from './js/supabase.js?v=4.9.8';
+    import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, startAssessment, submitAssessment } from './js/api.js?v=5.1.0';
+    import { requireStudentSession } from './js/session.js?v=5.1.0';
+    import { showToast, getGrade, showLoading, hideLoading } from './js/app.js?v=5.1.0';
+    import { getSupabase } from './js/supabase.js?v=5.1.0';
 
     const session = requireStudentSession();
     if (!session) throw new Error('Not authenticated');

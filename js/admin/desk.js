@@ -15,10 +15,10 @@ import {
   adminHardDelete,
   clearAdminCache,
   testSupabaseConnection
-} from '../api.js?v=4.9.8';
-import { getSupabase } from '../supabase.js?v=4.9.8';
-import { showToast, showLoading, hideLoading } from '../app.js?v=4.9.8';
-import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=4.9.8';
+} from '../api.js?v=5.1.0';
+import { getSupabase } from '../supabase.js?v=5.1.0';
+import { showToast, showLoading, hideLoading } from '../app.js?v=5.1.0';
+import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=5.1.0';
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';

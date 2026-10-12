@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
-import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=4.9.8';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, parseCorrectAnswers, stripHyphens } from './grading.js?v=4.9.8';
+import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=5.1.0';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, parseCorrectAnswers, stripHyphens } from './grading.js?v=5.1.0';
 
 export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, parseCorrectAnswers, stripHyphens, callEdgeFunction };
 
@@ -395,7 +395,10 @@ export async function fetchLevels(classId) {
 
 export async function fetchStudentProgress(studentId) {
   const sb = await getSupabase();
-  const { data, error } = await sb.from('progress').select('*').eq('student_id', studentId);
+  const { data, error } = await sb
+    .from('progress')
+    .select('id, student_id, class_id, unlocked_level, highest_score, level_status, level_completed_at, updated_at')
+    .eq('student_id', studentId);
   if (error) {
     console.error('Progress fetch error:', error);
     return [];
@@ -710,6 +713,7 @@ export async function startAssessment(studentId, assessmentId) {
         },
         topic_snapshot: sq.topic_snapshot,
         accepted_answers_snapshot: sq.accepted_answers_snapshot,
+        correct_answer_snapshot: Array.isArray(sq.accepted_answers_snapshot) ? sq.accepted_answers_snapshot.join('; ') : String(sq.accepted_answers_snapshot || ''),
         student_answer: null,
         score: 0
       }));
@@ -812,7 +816,7 @@ export async function fetchAttemptResult(attemptId) {
 export async function fetchAttemptAnswers(attemptId) {
   const sb = await getSupabase();
   const { data, error } = await sb.from('attempt_answers')
-    .select('id, attempt_id, question_id, student_answer, score, evaluation_result, question_snapshot, topic_snapshot, question_type_snapshot, correct_answer_snapshot, accepted_answers_snapshot, created_at, updated_at')
+    .select('id, attempt_id, question_id, student_answer, score, evaluation_result, is_correct, question_snapshot, correct_answer_snapshot')
     .eq('attempt_id', attemptId);
   if (error) throw error;
   return data || [];
@@ -1015,7 +1019,7 @@ export async function logCheatingEvent(studentId, assessmentId, action, detail) 
 export async function fetchAssessments(filters = {}) {
   const sb = await getSupabase();
   try {
-    let query = sb.from('assessments').select('*, classes(name), levels(name, level_number)');
+    let query = sb.from('assessments').select('id, title, display_name, assessment_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_assessment_id, working_duration_minutes, schedule_mode, assessment_category, is_dynamic_shell, shell_code, max_attempts, retake_allowed, created_at, classes(name), levels(name, level_number)');
     if (filters.class_id) query = query.eq('class_id', filters.class_id);
     
     const { data, error } = await query.order('display_order', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false });
@@ -1417,7 +1421,9 @@ export async function invokeAIEvaluation(payload) {
 
 export async function fetchAssessmentResultsFromDB(filters = {}) {
   const sb = await getSupabase();
-  let query = sb.from('attempts').select('*, students(name), assessments(title, classes(name))').in('status', ['submitted', 'auto_submitted']);
+  let query = sb.from('attempts')
+    .select('id, student_id, assessment_id, score, percentage, grade, status, started_at, submitted_at, is_best_score, students(name), assessments(title, classes(name))')
+    .in('status', ['submitted', 'auto_submitted']);
   if (filters.assessment_id) query = query.eq('assessment_id', filters.assessment_id);
   if (filters.student_id) query = query.eq('student_id', filters.student_id);
   const { data, error } = await query.order('submitted_at', { ascending: false });

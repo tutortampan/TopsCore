@@ -1,4 +1,4 @@
-import { DataGrid } from './datagrid.js?v=4.9.8';
+import { DataGrid } from './datagrid.js?v=5.1.0';
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
@@ -309,25 +309,25 @@ import {
   detectDuplicateQuestions, resequenceAssessmentQuestions, resolveDuplicateQuestionGroup, batchResolveAssessmentDuplicateQuestions,
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateAssessment, applyRecalibrateAssessment, isPassing, calculatePercentage, toLevelLetter
-} from '../api.js?v=4.9.8';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=4.9.8';
-import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=4.9.8';
-import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=4.9.8';
-import { getSupabase } from '../supabase.js?v=4.9.8';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=4.9.8';
-import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=4.9.8';
-import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=4.9.8';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=4.9.8';
-import { renderAssessments } from './assessment-management.js?v=4.9.8';
-import { renderVocabularyVault } from './vocab-vault.js?v=4.9.8';
-import { renderModules } from './modules.js?v=4.9.8';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=4.9.8';
-import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=4.9.8';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, hashPin } from './crud-modals.js?v=4.9.8';
-import { renderCurriculum } from './curriculum-management.js?v=4.9.8';
-import { renderClassesHub } from './classes-hub.js?v=4.9.8';
-import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=4.9.8';
-import { openStudentFullEdit } from './student-management.js?v=4.9.8';
+} from '../api.js?v=5.1.0';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.1.0';
+import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.1.0';
+import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=5.1.0';
+import { getSupabase } from '../supabase.js?v=5.1.0';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=5.1.0';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.1.0';
+import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.1.0';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=5.1.0';
+import { renderAssessments } from './assessment-management.js?v=5.1.0';
+import { renderVocabularyVault } from './vocab-vault.js?v=5.1.0';
+import { renderModules } from './modules.js?v=5.1.0';
+import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.1.0';
+import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.1.0';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, hashPin } from './crud-modals.js?v=5.1.0';
+import { renderCurriculum } from './curriculum-management.js?v=5.1.0';
+import { renderClassesHub } from './classes-hub.js?v=5.1.0';
+import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.1.0';
+import { openStudentFullEdit } from './student-management.js?v=5.1.0';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -2012,7 +2012,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.9.8';
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.9.8');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=5.1.0');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -2790,7 +2790,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.9.8';
               btn.innerHTML = '<span class="spinner" style="width:12px;height:12px;margin-right:6px;border-width:2px;border-top-color:#fff;"></span> Authorizing...';
               
               if (typeof window.adminUnlockRemedialExam !== 'function') {
-                const api = await import('../api.js?v=4.9.8');
+                const api = await import('../api.js?v=5.1.0');
                 await api.adminUnlockRemedialExam(attId);
               } else {
                 await window.adminUnlockRemedialExam(attId);

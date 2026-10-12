@@ -18,8 +18,8 @@ import {
   adminFetchAll,
   clearAdminCache,
   reorderAssessment
-} from '../api.js?v=4.9.8';
-import { showToast, showLoading, hideLoading } from '../app.js?v=4.9.8';
+} from '../api.js?v=5.1.0';
+import { showToast, showLoading, hideLoading } from '../app.js?v=5.1.0';
 
 function escapeHtml(str) {
   return String(str || '')

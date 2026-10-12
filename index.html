@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=4.9.8" />
+  <link rel="stylesheet" href="css/style.css?v=5.1.0" />
   <style>
     /* --- One-Page Cascading Login Styles --- */
     body {
@@ -683,9 +683,9 @@
   </div>
 
   <script type="module">
-    import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram, verifyStudentLogin, formatStudentName } from './js/api.js?v=4.9.8';
-    import { setStudentSession, getStudentSession } from './js/session.js?v=4.9.8';
-    import { showToast, showLoading, hideLoading } from './js/app.js?v=4.9.8';
+    import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram, verifyStudentLogin, formatStudentName } from './js/api.js?v=5.1.0';
+    import { setStudentSession, getStudentSession } from './js/session.js?v=5.1.0';
+    import { showToast, showLoading, hideLoading } from './js/app.js?v=5.1.0';
 
     // â”€â”€ Redirect if already logged in â”€â”€
     if (getStudentSession()) {
@@ -1148,7 +1148,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=4.9.8')
+        navigator.serviceWorker.register('sw.js?v=5.1.0')
           .then(registration => console.log('ServiceWorker registered with scope:', registration.scope))
           .catch(error => console.warn('ServiceWorker registration failed:', error));
       });

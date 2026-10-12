@@ -21,9 +21,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=4.9.8" />
-  <link rel="stylesheet" href="css/dashboard.css?v=4.9.8" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=4.9.8" />
+  <link rel="stylesheet" href="css/style.css?v=5.1.0" />
+  <link rel="stylesheet" href="css/dashboard.css?v=5.1.0" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=5.1.0" />
   <style>
     /* ============================================================
        COMPACT MOBILE-FIRST STUDENT DASHBOARD STYLES
@@ -895,10 +895,10 @@
   </div>
 
   <script type="module">
-    import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentClass, fetchStudentAttemptsForAssessment, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, fetchAssignments, fetchAssessments, toOrdinalLevel, fetchBatches, fetchStudentLevel } from './js/api.js?v=4.9.8';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './js/session.js?v=4.9.8';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout } from './js/app.js?v=4.9.8';
-    import { testMicrophoneCapability } from './js/speech.js?v=4.9.8';
+    import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentClass, fetchStudentAttemptsForAssessment, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, fetchAssignments, fetchAssessments, toOrdinalLevel, fetchBatches, fetchStudentLevel } from './js/api.js?v=5.1.0';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './js/session.js?v=5.1.0';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout } from './js/app.js?v=5.1.0';
+    import { testMicrophoneCapability } from './js/speech.js?v=5.1.0';
 
 
     function escapeHtml(str) {
@@ -1028,7 +1028,7 @@
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./js/supabase.js?v=4.9.8')).getSupabase();
+          const sb = await (await import('./js/supabase.js?v=5.1.0')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).single();
           if (st?.gender) {
             currentGender = st.gender;
@@ -1312,7 +1312,7 @@
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
         try {
-          const sb = await (await import('./js/supabase.js?v=4.9.8')).getSupabase();
+          const sb = await (await import('./js/supabase.js?v=5.1.0')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).single();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
@@ -1351,7 +1351,7 @@
       let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
       if (!hasBirthday) {
         try {
-          const sb = await (await import('./js/supabase.js?v=4.9.8')).getSupabase();
+          const sb = await (await import('./js/supabase.js?v=5.1.0')).getSupabase();
           const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).single();
           if (st && st.birth_date) {
             hasBirthday = true;
@@ -1417,7 +1417,7 @@
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./js/supabase.js?v=4.9.8')).getSupabase();
+        const sb = await (await import('./js/supabase.js?v=5.1.0')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).single();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -1427,7 +1427,7 @@
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./js/session.js?v=4.9.8');
+             const { setStudentSession } = await import('./js/session.js?v=5.1.0');
              setStudentSession(session);
           }
         }
@@ -1477,7 +1477,7 @@
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./js/session.js?v=4.9.8');
+            const { setStudentSession } = await import('./js/session.js?v=5.1.0');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -2564,7 +2564,7 @@
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./js/supabase.js?v=4.9.8')).getSupabase();
+          const sb = await (await import('./js/supabase.js?v=5.1.0')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).single();
           if (st?.photo_url) applyPhotoEverywhere(st.photo_url);
           
@@ -2615,7 +2615,7 @@
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./js/supabase.js?v=4.9.8')).getSupabase();
+            const sb = await (await import('./js/supabase.js?v=5.1.0')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
             

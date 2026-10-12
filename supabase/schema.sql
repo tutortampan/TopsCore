@@ -48,7 +48,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 CREATE OR REPLACE FUNCTION "public"."auto_close_expired_attempts"("p_attempt_id" "uuid" DEFAULT NULL::"uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO "public"
-    AS $
+    AS $$
 BEGIN
   IF p_attempt_id IS NOT NULL THEN
     UPDATE public.attempts
@@ -66,7 +66,7 @@ BEGIN
       AND expires_at < NOW();
   END IF;
 END;
-$;
+$$;
 
 
 ALTER FUNCTION "public"."auto_close_expired_attempts"("p_attempt_id" "uuid") OWNER TO "postgres";

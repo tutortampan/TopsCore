@@ -24,8 +24,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=4.9.8" />
-  <link rel="stylesheet" href="css/dashboard.css?v=4.9.8" />
+  <link rel="stylesheet" href="css/style.css?v=5.1.0" />
+  <link rel="stylesheet" href="css/dashboard.css?v=5.1.0" />
   <meta name="view-transition" content="same-origin" />
   <style>
     /* ===== SPEECH-TO-TEXT CENTERED LAYOUT ===== */
@@ -557,13 +557,12 @@
   </div>
 
   <script type="module">
-    import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './js/api.js?v=5.0.3';
-    import { evaluateAnswer } from './js/grading.js?v=5.0.3';
-    import { requireStudentSession } from './js/session.js?v=5.0.3';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml as appEscapeHtml } from './js/app.js?v=5.0.3';
-    import { startCountdown, isExpired } from './js/timer.js?v=5.0.3';
-    import { createSpeechSession, isSpeechSupported } from './js/speech.js?v=5.0.3';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './js/supabase.js?v=5.0.3';
+    import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './js/api.js?v=5.1.0';
+    import { requireStudentSession } from './js/session.js?v=5.1.0';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml as appEscapeHtml } from './js/app.js?v=5.1.0';
+    import { startCountdown, isExpired } from './js/timer.js?v=5.1.0';
+    import { createSpeechSession, isSpeechSupported } from './js/speech.js?v=5.1.0';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './js/supabase.js?v=5.1.0';
 
     function escapeHtml(str) {
       if (typeof appEscapeHtml === 'function') return appEscapeHtml(str);
@@ -1250,23 +1249,42 @@
       updateNavGrid();
     }
 
+    let _navProgressTimer = null;
+    function updateProgressMetrics() {
+      const activeMap = window.answeredMap || answeredMap;
+      const answered = Object.values(activeMap).filter(v => v?.trim()).length;
+      const pct = allAnswerRows.length > 0 ? (answered / allAnswerRows.length) * 100 : 0;
+      const fillEl = document.getElementById('assessment-progress-fill');
+      if (fillEl) fillEl.style.width = pct + '%';
+      const progressTextEl = document.getElementById('progress-text-percent');
+      if (progressTextEl) progressTextEl.textContent = Math.round(pct) + '%';
+      const counterEl = document.getElementById('question-counter');
+      if (counterEl) counterEl.textContent = `${answered}/${allAnswerRows.length} answered`;
+    }
+
+    function updateActiveChipOnly(rowId, val) {
+      const activeMap = window.answeredMap || answeredMap;
+      activeMap[rowId] = val;
+      const btn = document.getElementById(`qnav-${currentIndex}`);
+      if (btn) {
+        btn.classList.toggle('answered', !!(val && val.trim()));
+      }
+      if (_navProgressTimer) clearTimeout(_navProgressTimer);
+      _navProgressTimer = setTimeout(() => {
+        _navProgressTimer = null;
+        updateProgressMetrics();
+      }, 300);
+    }
+
     function updateNavGrid() {
       const activeMap = window.answeredMap || answeredMap;
       answerRows.forEach((row, idx) => {
         const btn = document.getElementById(`qnav-${idx}`);
         if (!btn) return;
-        btn.classList.toggle('answered', !!activeMap[row.id]);
+        btn.classList.toggle('answered', !!(activeMap[row.id] && activeMap[row.id].trim()));
         btn.classList.toggle('current', idx === currentIndex);
       });
-
-      // Progress bar (global across all sections)
-      const answered = Object.values(activeMap).filter(v => v?.trim()).length;
-      const pct = allAnswerRows.length > 0 ? (answered / allAnswerRows.length) * 100 : 0;
-      document.getElementById('assessment-progress-fill').style.width = pct + '%';
-      const progressTextEl = document.getElementById('progress-text-percent');
-      if (progressTextEl) progressTextEl.textContent = Math.round(pct) + '%';
-      const counterEl = document.getElementById('question-counter');
-      if(counterEl) counterEl.textContent = `${answered}/${allAnswerRows.length} answered`;
+      updateProgressMetrics();
     }
     window.updateNavGrid = updateNavGrid;
 
@@ -1635,7 +1653,7 @@
 
       ta.addEventListener('input', () => {
         answeredMap[row.id] = ta.value;
-        updateNavGrid();
+        updateActiveChipOnly(row.id, ta.value);
         scheduleDebouncedAutoSave(row.id, ta.value, 800);
       });
       ta.addEventListener('focus', () => {

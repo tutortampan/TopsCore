@@ -3,9 +3,9 @@
  * Panel C (Class & Assessment Management) Dashboard
  * Handles Smart Auto-Naming, Assessment Duplication, Prerequisite Engine, and AI Module Templates
  */
-import { adminFetchAll, adminSoftDelete } from "../api.js?v=4.9.8";
-import { getSupabase } from "../supabase.js?v=4.9.8";
-import { showToast } from "../app.js?v=4.9.8";
+import { adminFetchAll, adminSoftDelete } from "../api.js?v=5.1.0";
+import { getSupabase } from "../supabase.js?v=5.1.0";
+import { showToast } from "../app.js?v=5.1.0";
 
 // AI Module Definitions
 export const AI_MODULES = {
@@ -423,7 +423,7 @@ export async function renderAIAssessments(area) {
       
       let editContentBtn = '';
       if (relModule?.module_type === 'LEGACY_Assessment') {
-        editContentBtn = `<button class="btn btn-outline-primary btn-sm" onclick="import('./assessment-builder.js?v=4.9.8').then(m => m.openAssessmentBuilder('${r.id}'))">Questions</button>`;
+        editContentBtn = `<button class="btn btn-outline-primary btn-sm" onclick="import('./assessment-builder.js?v=5.1.0').then(m => m.openAssessmentBuilder('${r.id}'))">Questions</button>`;
       }
 
       const className = relClass?.name || '—';
@@ -480,7 +480,7 @@ window.openAIAssessmentEditor = async (assessmentId) => {
   }
   
   if (asm.assessment_type && (asm.assessment_type.includes('VOCAB') || asm.assessment_type.includes('IDIOM'))) {
-    const { openAssessmentBuilderModal } = await import('./vocab-vault.js?v=4.9.8');
+    const { openAssessmentBuilderModal } = await import('./vocab-vault.js?v=5.1.0');
     return openAssessmentBuilderModal(null, { editAssessment: asm });
   }
   
