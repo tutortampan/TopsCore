@@ -39,6 +39,8 @@ Status: COMPLETE
     * `audit_logs`: 361 rows (100%)
   - Client SDK Connectivity: Verified live query via `@supabase/supabase-js` using publishable anon key.
   - Production Frontend Ready: [js/supabase.js](file:///d:/TopsCore/js/supabase.js) configured and connected to production cloud endpoint.
+  - Full Offline Docker Auto-Detection: Configured in [js/supabase.js](file:///d:/TopsCore/js/supabase.js) so localhost/127.0.0.1 automatically uses Docker Local (port 54321), while production deployment uses Supabase Cloud.
+  - One-Step Cloud Syncer: Created [scripts/sync_local_to_cloud.mjs](file:///d:/TopsCore/scripts/sync_local_to_cloud.mjs) for instant, collision-free synchronization of local additions to cloud.
 
 - **FULL MOBILE-VIEW E2E AUTOMATION — COMPLETE ALL LEVEL 3 ASSIGNMENTS (100% PASS)**:
   - Executed strict mobile-viewport Playwright E2E simulation against real student **"Miss Siti Qori"** (`301be589-aba1-43be-a999-aa8ddaf6c509`, Batch 131, Institution: Cake English Course, Program: Camp, PIN: 1234).
