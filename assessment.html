@@ -265,23 +265,23 @@
 
     .written-input {
       width: 100%;
-      min-height: 120px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 12px;
-      padding: 1.25rem;
+      min-height: 0;
+      background: transparent;
+      border: none;
       color: #fff;
-      font-size: 1.1rem;
+      font-size: 1.4rem;
+      font-weight: 700;
       font-family: inherit;
-      resize: vertical;
-      
-      -webkit-
+      resize: none;
+      text-align: center;
+      padding: 0;
+      margin: 0;
       box-sizing: border-box;
+      outline: none;
     }
     .written-input:focus {
       outline: none;
-      border-color: #3b82f6;
-      background: rgba(255,255,255,0.12);
+      border: none;
     }
 
     select.form-control {
@@ -1350,18 +1350,23 @@
       const vk = document.getElementById('virtual-keyboard-container');
       if (vk) vk.style.display = 'none';
 
-      if (isWrittenOrSpeech) {
-        // Middle Part: Answer Area
+      if (answerType === 'speech_to_text' || answerType === 'spoken') {
+        // Speech Mode: Answer Area + Mic Control Area
         answerArea = document.createElement('div');
         answerArea.className = 'flex-1 max-h-[180px] w-full flex flex-col justify-center p-3 rounded-2xl bg-slate-900/70 border border-slate-700/60 shadow-inner shrink-0';
         answerArea.style.cssText = 'flex:1; min-height:80px; max-height:180px; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0.75rem; background:rgba(15,23,42,0.7); border:1px solid rgba(51,65,85,0.6); border-radius:16px; box-sizing:border-box; box-shadow:inset 0 2px 4px rgba(0,0,0,0.3); flex-shrink:0; position:relative;';
         main.appendChild(answerArea);
 
-        // Bottom Part: Control Area (Mic)
         controlArea = document.createElement('div');
         controlArea.className = 'flex-1 min-h-[120px] w-full flex items-center justify-center overflow-hidden';
         controlArea.style.cssText = 'flex:1; min-height:120px; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; overflow:hidden;';
         main.appendChild(controlArea);
+      } else if (answerType === 'written') {
+        // Written Mode: Perfectly centered answer box, no phantom mic area
+        answerArea = document.createElement('div');
+        answerArea.className = 'w-full flex flex-col justify-center items-center p-4 rounded-2xl bg-slate-900/70 border border-slate-700/60 shadow-inner shrink-0';
+        answerArea.style.cssText = 'width:100%; min-height:120px; max-height:160px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1.25rem 1.5rem; background:rgba(15,23,42,0.7); border:1px solid rgba(51,65,85,0.6); border-radius:16px; box-sizing:border-box; box-shadow:inset 0 2px 4px rgba(0,0,0,0.3); flex-shrink:0; position:relative; margin:auto 0;';
+        main.appendChild(answerArea);
       } else {
         // Bottom Part: Choices (Multiple Choice / Phrase)
         answerArea = document.createElement('div');
