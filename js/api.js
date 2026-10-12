@@ -504,7 +504,7 @@ export async function startAssessment(studentId, assessmentId) {
   try {
     return await callEdgeFunction('start-assessment', { student_id: studentId, assessment_id: assessmentId });
   } catch (edgeErr) {
-    if (edgeErr.status >= 400 && edgeErr.status < 500) {
+    if (edgeErr.code === 'LOCKED_BY_TUTOR' || edgeErr.message?.includes('LOCKED_BY_TUTOR')) {
       throw edgeErr; // Re-throw business logic errors
     }
     console.warn('Edge Function start-assessment unavailable, using client DB fallback:', edgeErr.message);
