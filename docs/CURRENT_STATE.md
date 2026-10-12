@@ -1,14 +1,21 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-13 00:25 UTC+8
+Last Updated: 2026-10-13 00:50 UTC+8
 
 Current Phase: Phase 14 Production Recovery & UI Enhancement
 
-Current Task: 4 Corners Question Metadata Layout (Theme Name, Topic, Category, Type)
+Current Task: Dynamic Class Progress Calculation & Status Display Fix
 
 Status: COMPLETE
 
 ## Completed
+
+- **UI FIX: DYNAMIC CLASS PROGRESS & STATUS BAR**:
+  - Perbaiki bug typo `p.Class_id` (kapital) -> `(p.class_id || p.Class_id)`.
+  - Perbaiki pengecekan status kelulusan level: `p.level_status === 'Level Completed'`.
+  - Hitung persentase progress kelas secara dinamis berdasarkan total assessment yang diselesaikan siswa terhadap total assessment yang tersedia di kelas tersebut.
+  - Tampilkan status `"Completed"` dan 100% emerald bar saat kelas tuntas, serta persentase riil (misal `"25%"`) saat siswa sedang mengerjakan.
+  - Verifikasi otomatis via Playwright (`temp_test/test_dashboard_progress.mjs`) dengan screenshot di `audit_screenshots/ui_enhancement/04_dashboard_classes_progress.png`.
 
 - **UI ENHANCEMENT: 4 CORNERS QUESTION METADATA LAYOUT**:
   - Tampilkan **Theme Name** (bukan hanya kode Theme A, melainkan nama lengkap seperti `High-Frequency (Theme D)`, `Workplace`, dsb.) pada **sudut kiri atas (Top-Left)**.

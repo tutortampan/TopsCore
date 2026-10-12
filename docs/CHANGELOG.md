@@ -1,3 +1,29 @@
+## [2026-10-13 00:50] — Dynamic Class Progress Calculation & Status Display Fix
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 14 Production Polish & UI Bugfix  
+**Status:** PASS  
+
+### Why
+- The Class progress bar on `dashboard.html` was permanently frozen at 0% / "In Progress" regardless of student assessment activity.
+- Root causes:
+  1. `progress.filter(p => p.Class_id === subj.id)` used capitalized `Class_id`, returning undefined instead of PostgreSQL `class_id`.
+  2. `p.is_completed` checked a non-existent column instead of `p.level_status === 'Level Completed'`.
+  3. `const pct = isCompleted ? 100 : 0;` was rigid binary and didn't compute actual assessment completion ratio.
+
+### Changed
+- `dashboard.html`:
+  - Passed `assessmentsRaw` and `attempts` into `renderClasses(...)`.
+  - Computed progress percentage dynamically based on completed published assessments for the student's level in that class.
+  - Displayed "Completed" and 100% emerald bar when all assessments or level are completed, and accurate percentage (e.g. `25%`) when in progress.
+
+### Verification
+- Tested via Playwright automated browser test (`temp_test/test_dashboard_progress.mjs`).
+- Verified Miss Siti Qori's Vocabulary card displays "Completed" with 100% emerald progress bar.
+- Screenshot: `audit_screenshots/ui_enhancement/04_dashboard_classes_progress.png`.
+
+---
+
 ## [2026-10-13 00:25] — 4 Corners Question Metadata Layout (Theme Name, Topic, Category, Type)
 
 **Agent/Session:** Antigravity  

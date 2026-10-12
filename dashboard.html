@@ -1578,7 +1578,7 @@
         );
 
         hideLoading();
-        renderClasses(Classes, progress);
+        renderClasses(Classes, progress, assessmentsRaw, attempts);
 
         const myClassIds = Classes.map(c => c.id);
         const myAssessments = assessmentsRaw.filter(a => myClassIds.includes(a.class_id) || myClassIds.includes(a.Class_id));
@@ -1588,12 +1588,12 @@
         hideLoading();
         showToast('Failed to load dashboard: ' + e.message, 'error');
         // Clear loading placeholders if there's an error
-        renderClasses([], []);
+        renderClasses([], [], [], []);
         renderCompletedAssessmentsBottom([], 0);
       }
     }
 
-    function renderClasses(rawClasses, progress) {
+    function renderClasses(rawClasses, progress, allAssessments = [], allAttempts = []) {
         window._loadedClasses = rawClasses;
       const subjCountEl = document.getElementById('overview-classes-count');
       if (subjCountEl) subjCountEl.textContent = rawClasses.length;
@@ -1641,9 +1641,47 @@
         </div>`;
       } else {
         activeClasses.forEach((subj, idx) => {
-          const subjProgress = progress.filter(p => p.Class_id === subj.id);
-          const isCompleted = subjProgress.some(p => p.is_completed);
-          const pct = isCompleted ? 100 : 0;
+          const subjProgress = (progress || []).filter(p => (p.class_id || p.Class_id) === subj.id);
+          const dbCompleted = subjProgress.some(p => p.is_completed || p.level_status === 'Level Completed');
+
+          const classAssms = (allAssessments || []).filter(a => {
+            const matchClass = (a.class_id || a.Class_id) === subj.id;
+            const matchStatus = (a.status || 'PUBLISHED').toUpperCase() === 'PUBLISHED';
+            if (!matchClass || !matchStatus) return false;
+            const aLvlNum = a.levels?.level_number;
+            if (aLvlNum != null && studentLevelNum != null) {
+              return aLvlNum <= studentLevelNum;
+            }
+            return true;
+          });
+
+          let completedCount = 0;
+          if (classAssms.length > 0) {
+            const completedAssmIds = new Set(
+              (allAttempts || [])
+                .filter(att => {
+                  const s = (att.status || '').toLowerCase();
+                  return s === 'submitted' || s === 'completed' || s === 'auto_submitted';
+                })
+                .map(att => att.assessment_id || att.Assessment_id)
+                .filter(Boolean)
+            );
+            completedCount = classAssms.filter(a => completedAssmIds.has(a.id)).length;
+          }
+
+          let pct = 0;
+          if (dbCompleted) {
+            pct = 100;
+          } else if (classAssms.length > 0) {
+            pct = Math.round((completedCount / classAssms.length) * 100);
+          } else if (subjProgress.length > 0 && subjProgress[0].highest_score != null) {
+            pct = Math.min(100, Math.round(subjProgress[0].highest_score));
+          }
+
+          const isCompleted = dbCompleted || (classAssms.length > 0 && completedCount >= classAssms.length);
+          if (isCompleted) pct = 100;
+
+          const statusText = isCompleted ? "Completed" : (pct > 0 ? `${pct}%` : "In Progress");
 
           const card = document.createElement('div');
           card.className = 'class-card';
@@ -1653,7 +1691,12 @@
           card.innerHTML = `
             <div class="class-icon">${classIcons[idx % classIcons.length]}</div>
             <div class="class-name">${subj.name}</div>
-            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;"><div class="text-xs text-muted mb-0">${isCompleted ? "Completed" : "In Progress"}</div><div class="score-bar-wrap" style="width: 80px;"><div class="score-bar" style="width:${pct}%; background: var(--clr-primary, #6366f1);"></div></div></div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+              <div class="text-xs text-muted mb-0">${statusText}</div>
+              <div class="score-bar-wrap" style="width: 80px;" title="${pct}%">
+                <div class="score-bar" style="width:${pct}%; background: ${isCompleted ? 'var(--clr-success, #10b981)' : 'var(--clr-primary, #6366f1)'};"></div>
+              </div>
+            </div>
           `;
           card.addEventListener('click', () => openClassModal(subj, progress));
           card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openClassModal(subj, progress); });
