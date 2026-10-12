@@ -551,13 +551,13 @@
   </div>
 
   <script type="module">
-    import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './js/api.js?v=4.9.8';
-    import { evaluateAnswer } from './js/grading.js?v=4.9.8';
-    import { requireStudentSession } from './js/session.js?v=4.9.8';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml as appEscapeHtml } from './js/app.js?v=4.9.8';
-    import { startCountdown, isExpired } from './js/timer.js?v=4.9.8';
-    import { createSpeechSession, isSpeechSupported } from './js/speech.js?v=4.9.8';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './js/supabase.js?v=4.9.8';
+    import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './js/api.js?v=5.0.1';
+    import { evaluateAnswer } from './js/grading.js?v=5.0.1';
+    import { requireStudentSession } from './js/session.js?v=5.0.1';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml as appEscapeHtml } from './js/app.js?v=5.0.1';
+    import { startCountdown, isExpired } from './js/timer.js?v=5.0.1';
+    import { createSpeechSession, isSpeechSupported } from './js/speech.js?v=5.0.1';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './js/supabase.js?v=5.0.1';
 
     function escapeHtml(str) {
       if (typeof appEscapeHtml === 'function') return appEscapeHtml(str);
@@ -1063,28 +1063,27 @@
           return;
         }
 
-        // V1 Snapshot fallback: if no legacy sections, synthesize a default section
-        // so assessment_questions snapshot rows (which have no section_id) render correctly
+        // V1 Snapshot fallback: ensure every question has a valid section_id
         if (!assessmentSections || assessmentSections.length === 0) {
           assessmentSections = [{ id: 'default', title: assessmentData?.title || assessmentData?.assessment_title || 'Assessment', section_order: 1 }];
-          allAnswerRows.forEach(row => {
-            if (row.question_snapshot) {
-              if (typeof row.question_snapshot === 'string') {
-                try {
-                  const parsed = JSON.parse(row.question_snapshot);
-                  parsed.section_id = 'default';
-                  row.question_snapshot = parsed;
-                } catch (e) {
-                  row.question_snapshot = { section_id: 'default' };
-                }
-              } else if (typeof row.question_snapshot === 'object') {
-                row.question_snapshot.section_id = 'default';
-              }
-            } else {
-              row.question_snapshot = { section_id: 'default' };
-            }
-          });
         }
+        allAnswerRows.forEach(row => {
+          if (row.question_snapshot) {
+            if (typeof row.question_snapshot === 'string') {
+              try {
+                const parsed = JSON.parse(row.question_snapshot);
+                if (!parsed.section_id) parsed.section_id = 'default';
+                row.question_snapshot = parsed;
+              } catch (e) {
+                row.question_snapshot = { section_id: 'default' };
+              }
+            } else if (typeof row.question_snapshot === 'object') {
+              if (!row.question_snapshot.section_id) row.question_snapshot.section_id = 'default';
+            }
+          } else {
+            row.question_snapshot = { section_id: 'default' };
+          }
+        });
 
         // Figure out current section
         const savedSecIndex = parseInt(sessionStorage.getItem(`topscore_sec_${attemptData.id}`), 10);
@@ -1117,7 +1116,8 @@
          if (typeof snap === 'string') {
             try { snap = JSON.parse(snap); } catch { snap = {}; }
          }
-         return snap.section_id === currentSection.id;
+         const secId = snap?.section_id || 'default';
+         return secId === currentSection.id;
        });
 
        const nameEl = document.getElementById('assessment-name');

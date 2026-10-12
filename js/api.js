@@ -699,7 +699,8 @@ export async function startAssessment(studentId, assessmentId) {
           topic: sq.topic_snapshot,
           display_order: sq.display_order ?? (idx + 1),
           answer_type: sq.answer_type || 'written',
-          options_snapshot: sq.options_snapshot || []
+          options_snapshot: sq.options_snapshot || [],
+          section_id: 'default'
         },
         topic_snapshot: sq.topic_snapshot,
         accepted_answers_snapshot: sq.accepted_answers_snapshot,
