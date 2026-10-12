@@ -131,8 +131,8 @@ export async function fetchInstitutions(forceRefresh = false) {
         const sb = await getSupabase();
         const { data, error } = await sb.from('institutions')
           .select('id, name')
-          
-          
+          .is('deleted_at', null)
+          .eq('is_active', true)
           .order('name');
         if (error) throw error;
         if (data && data.length) list = data;
@@ -409,7 +409,7 @@ export async function fetchStudentProgress(studentId) {
 export async function fetchAssessmentsForStudentClass(programId, classId, institutionId, levelId) {
   const sb = await getSupabase();
   let query = sb.from('assessments')
-    .select('id, title, display_name, assessment_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_id, working_duration_minutes, schedule_mode, levels(id, name, level_number)')
+    .select('id, title, display_name, assessment_type, assessment_category, class_id, level_id, display_order, status, minimum_required_score, prerequisite_assessment_id, prerequisite_id, working_duration_minutes, schedule_mode, levels(id, name, level_number)')
     .eq('class_id', classId)
     .eq('status', 'PUBLISHED')
     .is('deleted_at', null)
@@ -422,7 +422,11 @@ export async function fetchAssessmentsForStudentClass(programId, classId, instit
     return [];
   }
   
-  let results = data || [];
+  let results = (data || []).map(a => ({
+    ...a,
+    prerequisite_id: a.prerequisite_assessment_id || a.prerequisite_id,
+    prerequisite_assessment_id: a.prerequisite_assessment_id || a.prerequisite_id
+  }));
   
   if (levelId) {
     const { data: lvlData } = await sb.from('levels').select('level_number').eq('id', levelId).single();
@@ -440,17 +444,22 @@ export async function fetchAssessmentsForStudentClass(programId, classId, instit
 export async function fetchAssessmentsForStudentLevel(programId, levelId, institutionId) {
   const sb = await getSupabase();
   let query = sb.from('assessments')
-    .select('id, title, display_name, assessment_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_id, working_duration_minutes, schedule_mode, levels(id, name, level_number)')
+    .select('id, title, display_name, assessment_type, assessment_category, class_id, level_id, display_order, status, minimum_required_score, prerequisite_assessment_id, prerequisite_id, working_duration_minutes, schedule_mode, levels(id, name, level_number)')
     .eq('level_id', levelId)
     .eq('status', 'PUBLISHED')
-    
     .order('title');
 
   if (institutionId) query = query.eq('institution_id', institutionId);
 
   try {
     const { data, error } = await query;
-    if (!error && data) return data;
+    if (!error && data) {
+      return data.map(a => ({
+        ...a,
+        prerequisite_id: a.prerequisite_assessment_id || a.prerequisite_id,
+        prerequisite_assessment_id: a.prerequisite_assessment_id || a.prerequisite_id
+      }));
+    }
   } catch (_) {}
   return [];
 }
@@ -507,8 +516,16 @@ export async function startAssessment(studentId, assessmentId) {
   try {
     return await callEdgeFunction('start-assessment', { student_id: studentId, assessment_id: assessmentId });
   } catch (edgeErr) {
-    if (edgeErr.code === 'LOCKED_BY_TUTOR' || edgeErr.message?.includes('LOCKED_BY_TUTOR')) {
-      throw edgeErr; // Re-throw business logic errors
+    if (
+      edgeErr.code === 'LOCKED_BY_TUTOR' ||
+      edgeErr.message?.includes('LOCKED_BY_TUTOR') ||
+      edgeErr.message?.includes('Prerequisite not completed') ||
+      edgeErr.message?.includes('PREREQUISITE') ||
+      edgeErr.message?.includes('not eligible') ||
+      edgeErr.code === 'PREREQUISITE_NOT_MET' ||
+      edgeErr.status === 403
+    ) {
+      throw edgeErr; // Re-throw authoritative business logic & prerequisite access errors
     }
     console.warn('Edge Function start-assessment unavailable, using client DB fallback:', edgeErr.message);
   }
@@ -517,10 +534,32 @@ export async function startAssessment(studentId, assessmentId) {
 
   // 1. Ambil detail assessment
   const { data: asmData, error: asmErr } = await sb.from('assessments')
-    .select('id, title, assessment_type, assessment_category, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, payload, module_id')
+    .select('id, title, assessment_type, assessment_category, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_assessment_id, prerequisite_id, payload, module_id')
     .eq('id', assessmentId)
     .single();
   if (asmErr || !asmData) throw new Error('Assessment not found.');
+
+  // Guard: Prerequisite check in client DB fallback
+  const isStandaloneTryout = asmData.payload?.is_standalone_tryout === true;
+  const prereqId = asmData.prerequisite_assessment_id || asmData.prerequisite_id;
+  if (prereqId && !isStandaloneTryout) {
+    const { data: prereqAttempts } = await sb.from('attempts')
+      .select('score, percentage, status')
+      .eq('student_id', studentId)
+      .eq('assessment_id', prereqId)
+      .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
+    
+    const reqScore = (asmData.minimum_required_score && parseFloat(asmData.minimum_required_score) > 0)
+      ? parseFloat(asmData.minimum_required_score)
+      : 60;
+    const hasPassed = prereqAttempts && prereqAttempts.some(a => (parseFloat(a.percentage || a.score || 0)) >= reqScore);
+    if (!hasPassed) {
+      const pErr = new Error(`Prerequisite not completed. You must score at least ${reqScore}% on the prerequisite assessment.`);
+      pErr.code = 'PREREQUISITE_NOT_MET';
+      pErr.status = 403;
+      throw pErr;
+    }
+  }
 
   // Guard: Do NOT insert attempt or start countdown if tutor hasn't unlocked it yet
   if (asmData.schedule_mode === 'manual' && asmData.is_unlocked === false) {
@@ -1023,7 +1062,13 @@ export async function fetchAssessments(filters = {}) {
     if (filters.class_id) query = query.eq('class_id', filters.class_id);
     
     const { data, error } = await query.order('display_order', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false });
-    if (!error && data) return data;
+    if (!error && data) {
+      return data.map(a => ({
+        ...a,
+        prerequisite_id: a.prerequisite_assessment_id || a.prerequisite_id,
+        prerequisite_assessment_id: a.prerequisite_assessment_id || a.prerequisite_id
+      }));
+    }
   } catch (err) {
     console.warn('fetchAssessments fallback notice:', err.message);
   }

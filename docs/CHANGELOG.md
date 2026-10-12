@@ -1,3 +1,42 @@
+## [2026-10-13 03:25] — Institution Entity Hygiene & Strict Prerequisite Progression
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 16 Institution Hygiene & Strict Prerequisite Progression  
+**Status:** PASS  
+
+### Why
+- The user reported two operational issues:
+  1. Login page displayed 3 institutions (`Cake English Course`, `Top Official Program`, `Tops`) when only 2 active ones should exist, with the search placeholder incorrectly stating "Search program..." in Step 1.
+  2. Student `Mr. Test` scored 7.5% (Grade F / failed) on `3rd Vocabulary A2 Words Task`, yet `3rd Vocabulary A3 Words Task` was presented with "Start Now" in the Next Assessment dashboard card instead of remaining strictly locked (`🔒 Locked`).
+- Root causes:
+  1. `fetchInstitutions()` in `js/api.js` lacked `.is('deleted_at', null).eq('is_active', true)`, returning soft-deleted institution `Tops` (`cc7d5ee4-fe8b-4d1a-a578-09ff4e65af94`). Step 1 input placeholder was hardcoded as `"Search program..."`.
+  2. Progression logic in `dashboard.html` evaluated `parseFloat(percentage) > 0`, considering any non-zero score as completed regardless of pass/fail criteria (passing threshold is $\ge 60\%$). Sequential prerequisite checks were omitted in candidate selection, and API queries failed to project `prerequisite_assessment_id`.
+
+### Changed
+- **`js/api.js`**:
+  - In `fetchInstitutions`: Added `.is('deleted_at', null).eq('is_active', true)` to eliminate soft-deleted and inactive institutions.
+  - In `fetchAssessmentsForStudentClass`, `fetchAssessmentsForStudentLevel`, and `fetchAssessments`: Explicitly projected `prerequisite_assessment_id` and normalized records so `prerequisite_assessment_id` and `prerequisite_id` consistently hold the parent prerequisite UUID.
+  - In `startAssessment`: Propagated Edge Function 403 errors instead of falling back to direct DB attempt insertion. Hardened the client DB fallback to validate that prerequisite attempts exist and scored $\ge 60\%$, rejecting with 403 `PREREQUISITE_NOT_MET` if unfulfilled.
+- **`index.html`**:
+  - Corrected Step 1 institution search input placeholder from `"Search program..."` to `"Search institution..."`.
+- **`dashboard.html`**:
+  - In `populateUpNext`: Replaced naive `parseFloat(percentage) > 0` with `isAssessmentPassed(asm)` checking $\ge 60\%$. Enforced prerequisite completion for candidates. For failed modules (like Mr. Test's A2 Words Task), the Next Assessment card displays `"Retake Now"` and badge `"Needs Improvement (7.5%)"` rather than unlocking subsequent modules.
+  - In `openClassModal`: Validated prerequisites against passed attempts ($\ge 60\%$). Unpassed prerequisites render as `🔒 LOCKED` with the prompt `"Complete [Prerequisite Title] to unlock this assessment"`. Enabled a `"Retake"` button for completed failing tasks.
+- **`TASK_LIST.md`**:
+  - Created and completed tasks `TASK-PRQ-01` through `TASK-PRQ-05`.
+- **`temp_test/test_prerequisite_gating.mjs`**:
+  - Automated Playwright E2E suite covering institution filtering, student login, Up Next card Retake rendering, class modal lock states, and direct URL navigation security blocks.
+
+### Tests
+- `node temp_test/test_prerequisite_gating.mjs`: PASS (5/5 suites passed, 100% success)
+- Screenshots captured:
+  - `audit_screenshots/test_institutions_hygiene.png`: Exactly 2 active institutions and corrected placeholder.
+  - `audit_screenshots/test_dashboard_up_next_retake.png`: Up Next card displays A2 Words Task with "Retake Now" and "Needs Improvement (7.5%)".
+  - `audit_screenshots/test_class_modal_gating.png`: Class modal renders A1 Words Passed (85%), A2 Words Failed (8%, Retake), A2 Phrases `🔒 LOCKED`, A3 Words `🔒 LOCKED`.
+  - `audit_screenshots/test_direct_url_blocked.png`: Blocked navigation to locked A3 Words Task redirects back to `/dashboard`.
+
+---
+
 ## [2026-10-13 02:30] — System Performance Streamlining & Supabase Egress Optimization
 
 **Agent/Session:** Antigravity  

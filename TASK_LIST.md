@@ -157,6 +157,55 @@
 
 ---
 
+## 🔒 INSTITUTION HYGIENE & STRICT PREREQUISITE PROGRESSION (TASK-PRQ-01 TO TASK-PRQ-05)
+
+- [x] **TASK-PRQ-01: Filter Active Institutions & Fix Search Input Placeholder**
+  - **Priority:** HIGH
+  - **Area:** Auth & Institution Entity Filtering
+  - **Files:** `js/api.js`, `index.html`
+  - **Objective:** Add `.is('deleted_at', null)` and `.eq('is_active', true)` to `fetchInstitutions()` in `js/api.js` so soft-deleted institutions (`Tops`) are excluded from student login. Correct Step 1 placeholder in `index.html` to `"Search institution..."`.
+  - **Acceptance Criteria:** Exactly 2 active institutions (`Cake English Course`, `Top Official Program`) display in student login dropdown; input placeholder displays `"Search institution..."`.
+  - **Result:** ✅ COMPLETED (Soft-deleted 'Tops' excluded; placeholder updated; verified via Playwright)
+
+- [x] **TASK-PRQ-02: Project and Normalize `prerequisite_assessment_id` in API**
+  - **Priority:** CRITICAL
+  - **Area:** Prerequisite Relationship & Data Projection
+  - **Files:** `js/api.js`
+  - **Objective:** Replace `prerequisite_id` with `prerequisite_assessment_id` in `fetchAssessmentsForStudentClass` and `fetchAssessmentsForStudentLevel`. Normalize records to expose `prerequisite_assessment_id`.
+  - **Acceptance Criteria:** Returned assessment objects retain their authoritative prerequisite parent UUIDs.
+  - **Result:** ✅ COMPLETED (`prerequisite_assessment_id` projected in assessment queries and normalized across client models)
+
+- [x] **TASK-PRQ-03: Enforce Passing Threshold ($\ge 60\%$) and Prerequisite Gating in Dashboard**
+  - **Priority:** CRITICAL
+  - **Area:** Dashboard Progression & Gating Logic
+  - **Files:** `dashboard.html`
+  - **Objective:** 
+    1. Update `populateUpNext()`: treat assessments as cleared only if `bestPercentage >= (minimum_required_score || 60)` (not $> 0$).
+    2. Enforce prerequisite check in `populateUpNext()`: candidate for Next Assessment must have its prerequisite completed with a passing score ($\ge 60\%$). If uncompleted/failed, Next Assessment must prompt to Retake the failed task, not advance to a locked module.
+    3. Update `openClassModal()` in `dashboard.html` to check `Assessment.prerequisite_assessment_id || Assessment.prerequisite_id`.
+  - **Acceptance Criteria:** Student with failing score (7.5%) on `3rd Vocabulary A2 Words Task` sees Retake prompt on A2 Words Task; `3rd Vocabulary A3 Words Task` remains locked (🔒 Locked).
+  - **Result:** ✅ COMPLETED (A2 Words prompts 'Retake Now' / 'Needs Improvement (7.5%)'; A2 Phrases & A3 Words locked)
+
+- [x] **TASK-PRQ-04: Server & Client Fallback Prerequisite Security in `startAssessment`**
+  - **Priority:** HIGH
+  - **Area:** Assessment Runner Access Control
+  - **Files:** `js/api.js`
+  - **Objective:** 
+    1. When Edge Function `start-assessment` returns a 403 prerequisite error, propagate error instead of falling back to client DB creation.
+    2. Add prerequisite validation check to client DB fallback in `startAssessment` to prevent bypass.
+  - **Acceptance Criteria:** Direct navigation to locked assessment URL fails gracefully with prerequisite warning toast.
+  - **Result:** ✅ COMPLETED (Direct navigation to locked assessment blocked with 403 PREREQUISITE_NOT_MET)
+
+- [x] **TASK-PRQ-05: Playwright Automated E2E Verification & Visual Confirmation**
+  - **Priority:** HIGH
+  - **Area:** Automated Verification & UI Regression Audit
+  - **Files:** `temp_test/test_prerequisite_gating.mjs`
+  - **Objective:** Execute automated Playwright tests confirming: (a) 2 institutions on login; (b) "Search institution..." placeholder; (c) Mr. Test dashboard displays A3 locked and A2 Words Retake prompt.
+  - **Acceptance Criteria:** 100% test pass; screenshots captured; zero visual style or layout changes.
+  - **Result:** ✅ COMPLETED (5/5 suites passed, 100% success; screenshots saved in `audit_screenshots/`)
+
+---
+
 ## 📌 PROGRESS LOG & CONTINUATION NOTES
 
 | Date & Time | Task ID | Description | Status | Agent / Notes |
@@ -181,5 +230,11 @@
 | 2026-10-13 02:19 | TASK-STR-05 | Database Query Projection Enforcement in API | ✅ COMPLETE | Replaced unprojected queries in progress, catalog, and attempt results in `js/api.js` |
 | 2026-10-13 02:20 | TASK-STR-06 | Database Schema Hygiene: Drop 14 Legacy Tables | ✅ COMPLETE | Dropped 14 zero-row legacy tables on Supabase Cloud; tables reduced to 34; PostgREST reloaded |
 | 2026-10-13 02:29 | MASTER-STR | Full Playwright E2E Verification & Visual Inspection | ✅ COMPLETE | 100% verified live via Playwright (Miss Siti Qori workflow, report card, and answer breakdown) |
+| 2026-10-13 03:20 | TASK-PRQ-01 | Filter Active Institutions & Fix Search Input Placeholder | ✅ COMPLETE | Added active/un-deleted filter to `fetchInstitutions`; updated placeholder in `index.html` |
+| 2026-10-13 03:21 | TASK-PRQ-02 | Project `prerequisite_assessment_id` in API Queries | ✅ COMPLETE | Projected and normalized prerequisite UUIDs across API assessment fetches in `js/api.js` |
+| 2026-10-13 03:22 | TASK-PRQ-03 | Enforce Passing Threshold & Prerequisite Gating in Dashboard | ✅ COMPLETE | Updated `dashboard.html` Up Next and class modal to enforce 60% passing score and prerequisite locks |
+| 2026-10-13 03:23 | TASK-PRQ-04 | Prerequisite Security in `startAssessment` API & Fallback | ✅ COMPLETE | Blocked bypass of locked assessments via runner DB fallback & Edge Function error propagation |
+| 2026-10-13 03:24 | TASK-PRQ-05 | Playwright Automated E2E Verification | ✅ COMPLETE | 5/5 assertions passed (100% success); zero visual regression; verified with screenshots |
+
 
 

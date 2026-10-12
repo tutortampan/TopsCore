@@ -1,14 +1,45 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-13 02:30 UTC+8
+Last Updated: 2026-10-13 03:25 UTC+8
 
-Current Phase: Phase 15 System Performance Streamlining & Egress Optimization
+Current Phase: Phase 16 Institution Hygiene & Strict Prerequisite Progression
 
-Current Task: TASK-STR-01 to TASK-STR-06 Streamlining Execution & Live E2E Verification
+Current Task: TASK-PRQ-01 to TASK-PRQ-05 Execution & Playwright E2E Verification
 
 Status: COMPLETE
 
 ## Completed
+
+- **INSTITUTION HYGIENE & STRICT PREREQUISITE PROGRESSION (TASK-PRQ-01 TO TASK-PRQ-05) [100% VERIFIED LIVE]**:
+  - **TASK-PRQ-01: Filter Active Institutions & Fix Search Input Placeholder**:
+    * In `js/api.js` (`fetchInstitutions`), enforced `.is('deleted_at', null).eq('is_active', true)`, cleanly filtering out soft-deleted institution records (such as `Tops` `cc7d5ee4-fe8b-4d1a-a578-09ff4e65af94`) from student login.
+    * In `index.html`, corrected the Step 1 search input placeholder from `"Search program..."` to `"Search institution..."`.
+    * Verified via Playwright: exactly 2 active institutions (`Cake English Course`, `Top Official Program`) display.
+  - **TASK-PRQ-02: Project and Normalize `prerequisite_assessment_id` in API**:
+    * In `js/api.js` (`fetchAssessmentsForStudentClass`, `fetchAssessmentsForStudentLevel`, and `fetchAssessments`), explicitly projected `assessment_category, prerequisite_assessment_id, prerequisite_id`.
+    * Normalized returned rows so `prerequisite_assessment_id` and `prerequisite_id` consistently provide the authoritative UUID of the preceding prerequisite assessment.
+  - **TASK-PRQ-03: Enforce Passing Threshold ($\ge 60\%$) and Prerequisite Gating in Dashboard**:
+    * In `dashboard.html` (`populateUpNext`):
+      - Replaced faulty `parseFloat(percentage) > 0` condition with `isAssessmentPassed(asm)` enforcing minimum passing score $\ge 60\%$ (Grade C).
+      - Added sequential prerequisite checking: candidates are only offered if their prerequisite assessment has been completed with a passing score.
+      - If a student scored poorly (e.g., Mr. Test's 7.5% / Grade F on `3rd Vocabulary A2 Words Task`), the "Next Assessment" card prompts to retake that task (`"Retake Now"`, badge `"Needs Improvement (7.5%)"`) rather than erroneously unlocking the locked subsequent module `A3 Words Task`.
+    * In `dashboard.html` (`openClassModal`):
+      - Enforced prerequisite status check: if the preceding assessment is not passed ($\ge 60\%$), locked status `🔒 LOCKED` is displayed with explicit prompt `"Complete [Prerequisite Title] to unlock this assessment"`.
+      - Provided a `"Retake"` button for completed but failing assessments, allowing students to improve their score.
+  - **TASK-PRQ-04: Prerequisite Security in `startAssessment` API & Client Fallback**:
+    * In `js/api.js` (`startAssessment`):
+      - Edge Function 403 / `Prerequisite not completed` errors are now propagated to the caller instead of silently falling back to unvalidated client database insertion.
+      - Added rigorous prerequisite validation check to the client DB fallback: queries previous attempts for `prerequisite_assessment_id || prerequisite_id` to ensure score $\ge 60\%$ before allowing attempt creation; rejects with `403 PREREQUISITE_NOT_MET` if unfulfilled.
+  - **TASK-PRQ-05: Playwright Automated E2E Verification & Visual Confirmation**:
+    * Created and executed `temp_test/test_prerequisite_gating.mjs`.
+    * All 5 suites passed (100% success):
+      1. Login institution filtering: exactly 2 institutions, placeholder is `"Search institution..."`.
+      2. Student login as `Mr. Test` (CEC -> Camp -> Batch 123 -> Test).
+      3. Up Next card correctly displays `3rd Vocabulary A2 Words Task` with `"Retake Now"` and `"Needs Improvement (7.5%)"`.
+      4. Class modal verifies A1 Words passed (85%), A2 Words failed (8%, with "Retake" button), A2 Phrases `🔒 LOCKED`, A3 Words `🔒 LOCKED`.
+      5. Direct URL navigation to locked `A3 Words Task` is blocked and safely redirected back to `/dashboard`.
+    * Verified zero visual regressions or layout modifications; pixel-perfect styles preserved.
+
 
 - **SYSTEM PERFORMANCE STREAMLINING & EGRESS OPTIMIZATION (TASK-STR-01 TO TASK-STR-06) [100% VERIFIED LIVE]**:
   - **TASK-STR-01: Pruned Attempt Answers Snapshot Bloat & Enforced Display Projections**:
@@ -364,8 +395,8 @@ Status: COMPLETE
 
 ## Tests
 
-- Last command: `node temp_test/verify_streamlined_result.mjs` & `node temp_test/test_live_online_run.mjs`
-- Last result: PASS (Live Playwright verification across 5/5 workflow steps, 100% correct score rendering, 40/40 answer cards rendered, zero UI regressions)
+- Last command: `node temp_test/test_prerequisite_gating.mjs`
+- Last result: PASS (100% success across 5/5 test suites: institution filter, login, Next Assessment card with Retake prompt, class modal lock states, direct URL security block)
 
 ## Known Issues
 
@@ -382,15 +413,10 @@ Status: COMPLETE
 ## Files Changed In Latest Step
 
 - [js/api.js](file:///d:/TopsCore/js/api.js)
-- [assessment.html](file:///d:/TopsCore/assessment.html)
-- [result.html](file:///d:/TopsCore/result.html)
 - [index.html](file:///d:/TopsCore/index.html)
 - [dashboard.html](file:///d:/TopsCore/dashboard.html)
-- [admin.html](file:///d:/TopsCore/admin.html)
-- [sw.js](file:///d:/TopsCore/sw.js)
-- [scripts/archive/ai-evaluation-engine.js](file:///d:/TopsCore/scripts/archive/ai-evaluation-engine.js)
-- [supabase/migrations/20261013000000_cleanup_legacy_tables.sql](file:///d:/TopsCore/supabase/migrations/20261013000000_cleanup_legacy_tables.sql)
 - [TASK_LIST.md](file:///d:/TopsCore/TASK_LIST.md)
+- [temp_test/test_prerequisite_gating.mjs](file:///d:/TopsCore/temp_test/test_prerequisite_gating.mjs)
 - [docs/CURRENT_STATE.md](file:///d:/TopsCore/docs/CURRENT_STATE.md)
 - [docs/CHANGELOG.md](file:///d:/TopsCore/docs/CHANGELOG.md)
 - [docs/SESSION_LOG.md](file:///d:/TopsCore/docs/SESSION_LOG.md)

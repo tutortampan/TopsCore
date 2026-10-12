@@ -1,3 +1,70 @@
+## SESSION-20261013-0325
+
+Start: 2026-10-13 02:45 UTC+8  
+End: 2026-10-13 03:25 UTC+8  
+Agent: Antigravity  
+
+### User Request
+1. "Gamabr 1, kenapa ada 3 isntitusi disna? bukankah kita hanya sepakati ada 2? gambar 2... saat ambil ujia,, saya hanya dpat skor rndah di ujian sebelumnya, tapi kenapa bisa ambil ujian lanjutan,,, seharusnya dia terkunci. perbiaki dulu kata2 ii, buat bahasa inggris,,, lalu pelajri dan buatkan rencana."
+2. "create specific task list for these,,, and proceed"
+
+### Objective
+1. Formulate a specific task list (TASK-PRQ-01 to TASK-PRQ-05) in `TASK_LIST.md` addressing:
+   - Image 1: Root cause of 3 institutions appearing instead of 2 active ones, and incorrect search placeholder text.
+   - Image 2: Root cause of subsequent assessment (A3 Words Task) being unlocked despite failing score (7.5% / Grade F) on prior task (A2 Words Task).
+2. Execute tasks TASK-PRQ-01 through TASK-PRQ-05 adhering strictly to zero UI/layout modifications.
+3. Validate fixes with automated Playwright E2E verification test suite and capture screenshots.
+
+### Work Performed
+1. **TASK-PRQ-01 (Active Institutions Filter & Search Placeholder)**:
+   - Added `.is('deleted_at', null).eq('is_active', true)` to `fetchInstitutions()` in `js/api.js`. Soft-deleted institution `Tops` (`cc7d5ee4-fe8b-4d1a-a578-09ff4e65af94`) is now excluded from the student login page.
+   - Corrected Step 1 input placeholder in `index.html` from `"Search program..."` to `"Search institution..."`.
+2. **TASK-PRQ-02 (Project & Normalize `prerequisite_assessment_id` in API)**:
+   - Projected `assessment_category, prerequisite_assessment_id, prerequisite_id` in `fetchAssessmentsForStudentClass`, `fetchAssessmentsForStudentLevel`, and `fetchAssessments` in `js/api.js`.
+   - Normalized records so both properties hold the authoritative prerequisite UUID.
+3. **TASK-PRQ-03 (Enforce Passing Threshold $\ge 60\%$ & Prerequisite Gating in Dashboard)**:
+   - Overhauled `populateUpNext()` in `dashboard.html`:
+     * Replaced loose `parseFloat(percentage) > 0` condition with `isAssessmentPassed(asm)` checking `bestPercentage >= (minimum_required_score || 60)` (Grade C).
+     * Enforced sequential prerequisite checks on candidate assessments.
+     * When a student fails an assessment (e.g. Mr. Test's 7.5% / Grade F on A2 Words Task), the Up Next card renders `"Retake Now"` and badge `"Needs Improvement (7.5%)"`, preventing unlocking of downstream assessments.
+   - Updated `openClassModal()` in `dashboard.html`:
+     * Checks if prerequisite assessment exists and whether it was passed ($\ge 60\%$).
+     * Renders `🔒 LOCKED` with prompt `"Complete [Prerequisite Title] to unlock this assessment"` if unpassed.
+     * Renders `"Retake"` button for completed but failing assessments.
+4. **TASK-PRQ-04 (Assessment Runner Prerequisite Security & DB Fallback)**:
+   - In `js/api.js` (`startAssessment`):
+     * Re-throws Edge Function 403 prerequisite errors instead of swallowing and falling back to direct DB attempt creation.
+     * Added prerequisite validation to client DB fallback checking prior attempts for $\ge 60\%$; rejects with `403 PREREQUISITE_NOT_MET` if unfulfilled.
+5. **TASK-PRQ-05 (Playwright Automated E2E Verification)**:
+   - Authored and ran `temp_test/test_prerequisite_gating.mjs`.
+   - Verified 5/5 assertions: (1) Exactly 2 active institutions and placeholder; (2) Student login as Mr. Test; (3) Up Next card prompts "Retake Now" for A2 Words; (4) Class modal locks A2 Phrases and A3 Words; (5) Direct URL navigation to locked assessment is blocked and redirected to dashboard.
+
+### Files Changed
+- `js/api.js`
+- `index.html`
+- `dashboard.html`
+- `TASK_LIST.md`
+- `temp_test/test_prerequisite_gating.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- `node temp_test/test_prerequisite_gating.mjs`: PASS (Exit code 0, 5/5 assertions passed)
+- Screenshots:
+  * `audit_screenshots/test_institutions_hygiene.png`
+  * `audit_screenshots/test_dashboard_up_next_retake.png`
+  * `audit_screenshots/test_class_modal_gating.png`
+  * `audit_screenshots/test_direct_url_blocked.png`
+
+### Outstanding
+- None. All tasks completed, documented, and verified.
+
+### Resume From
+Ready for next directive.
+
+---
+
 ## SESSION-20261013-0230
 
 Start: 2026-10-13 01:50 UTC+8  

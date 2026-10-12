@@ -1784,10 +1784,11 @@
             // Prerequisite Gating Logic
             let prereqMet = true;
             let prereqTitle = '';
-            if (Assessment.prerequisite_id) {
-               const prereqBest = bestByAssessment[Assessment.prerequisite_id];
+            const prereqId = Assessment.prerequisite_assessment_id || Assessment.prerequisite_id;
+            if (prereqId) {
+               const prereqBest = bestByAssessment[prereqId];
                const prereqPct = prereqBest ? parseFloat(prereqBest.percentage || 0) : null;
-               const pObj = Assessments.find(a => a.id === Assessment.prerequisite_id);
+               const pObj = Assessments.find(a => a.id === prereqId);
                const pMinScore = pObj ? (pObj.minimum_required_score || pObj.pass_threshold || 60) : 60;
                prereqMet = prereqPct !== null && prereqPct >= pMinScore;
                prereqTitle = pObj ? (pObj.display_name || pObj.title || pObj.name || 'Prerequisite') : 'Prerequisite Assessment';
@@ -1832,7 +1833,14 @@
                 }
               } else {
                 let extraAction = '';
-                if (Assessment.assessment_category === 'TRYOUT' || Assessment.assessment_category === 'TASK' || Assessment.payload?.is_standalone_tryout === true) {
+                if (
+                  Assessment.assessment_category === 'TRYOUT' ||
+                  Assessment.assessment_category === 'TASK' ||
+                  (Assessment.assessment_type && Assessment.assessment_type.includes('TASK')) ||
+                  (Assessment.title && Assessment.title.includes('Task')) ||
+                  Assessment.payload?.is_standalone_tryout === true ||
+                  !passed
+                ) {
                   extraAction = `<button onclick="location.href='assessment.html?assessment_id=${Assessment.id}'"
                                 style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
                                 font-size:0.78rem;font-weight:700;cursor:pointer;margin-left:8px;">Retake</button>`;
@@ -2150,34 +2158,89 @@
       const upNextContainer = document.getElementById('up-next-container');
       if (!upNextSection || !upNextContainer) return;
 
-      // Completed assessment IDs (score > 0)
-      const completedIds = new Set();
-      attempts.forEach(a => {
-        if (parseFloat(a.percentage || 0) > 0) {
-          const aid = a.assessment_id || a.Assessment_id || (a.assessments && a.assessments.id) || a.id;
-          completedIds.add(aid);
+      // Build best attempt & in-progress attempt maps per assessment
+      const bestMap = {};
+      const inProgMap = {};
+      (attempts || []).forEach(a => {
+        const aid = a.assessment_id || a.Assessment_id || (a.assessments && a.assessments.id) || a.id;
+        if (!aid) return;
+        const st = (a.status || '').toLowerCase();
+        if (st === 'in_progress') {
+          inProgMap[aid] = a;
+        } else {
+          const pct = parseFloat(a.percentage || 0);
+          if (a.is_best_score) {
+            bestMap[aid] = pct;
+          } else if (bestMap[aid] == null || pct > bestMap[aid]) {
+            bestMap[aid] = pct;
+          }
         }
       });
 
-      // Find the first uncompleted assessment that matches the student's level_number
-      // Sort by level_number, then display_order
-      let available = myAssessments.filter(a => a.status === 'PUBLISHED' && !completedIds.has(a.id));
-      
-      // Filter out assessments that exceed the student's level
-      const sessionLvlNum = parseInt(session.level_number) || 999; 
-      available = available.filter(a => {
-         const aLvlNum = a.levels?.level_number || 999;
-         return aLvlNum <= sessionLvlNum;
-      });
-      
-      available.sort((a, b) => {
-         const aLvl = a.levels?.level_number || 999;
-         const bLvl = b.levels?.level_number || 999;
-         if (aLvl !== bLvl) return aLvl - bLvl;
-         return (a.display_order || 99) - (b.display_order || 99);
+      // Helper to check if an assessment has been passed (>= passing threshold, default 60%)
+      const isAssessmentPassed = (asm) => {
+        const bestPct = bestMap[asm.id];
+        if (bestPct == null) return false;
+        const minPassing = (asm.minimum_required_score && parseFloat(asm.minimum_required_score) > 0)
+          ? parseFloat(asm.minimum_required_score)
+          : 60;
+        return bestPct >= minPassing;
+      };
+
+      // Filter eligible assessments by status and student level
+      const sessionLvlNum = parseInt(session.level_number) || 999;
+      let candidateAssessments = (myAssessments || []).filter(a => {
+        if (a.status !== 'PUBLISHED') return false;
+        const aLvlNum = a.levels?.level_number || 999;
+        return aLvlNum <= sessionLvlNum;
       });
 
-      const nextAssessment = available[0];
+      // Sort candidate assessments sequentially: level_number ascending, then display_order ascending
+      candidateAssessments.sort((a, b) => {
+        const aLvl = a.levels?.level_number || 999;
+        const bLvl = b.levels?.level_number || 999;
+        if (aLvl !== bLvl) return aLvl - bLvl;
+        return (a.display_order || 99) - (b.display_order || 99);
+      });
+
+      // Find the first unpassed assessment in the sequential learning path whose prerequisites are met
+      let nextAssessment = null;
+      let nextAssessmentState = 'start'; // 'start', 'resume', 'retake'
+      let nextAssessmentScore = null;
+
+      for (const asm of candidateAssessments) {
+        // If this assessment is already passed, student can proceed to the next one
+        if (isAssessmentPassed(asm)) {
+          continue;
+        }
+
+        // Student has NOT passed this assessment yet!
+        // Check if its prerequisite is met:
+        const prereqId = asm.prerequisite_assessment_id || asm.prerequisite_id;
+        if (prereqId) {
+          const prereqObj = candidateAssessments.find(a => a.id === prereqId) || (myAssessments || []).find(a => a.id === prereqId);
+          const prereqMinScore = prereqObj ? (prereqObj.minimum_required_score || 60) : 60;
+          const prereqScore = bestMap[prereqId];
+          const prereqPassed = prereqScore != null && prereqScore >= prereqMinScore;
+          
+          if (!prereqPassed) {
+            // Prerequisite is NOT passed! This assessment is strictly locked and cannot be Up Next.
+            continue;
+          }
+        }
+
+        // Prerequisites are met (or none)! This is the active assessment to take.
+        nextAssessment = asm;
+        if (inProgMap[asm.id]) {
+          nextAssessmentState = 'resume';
+        } else if (bestMap[asm.id] != null) {
+          nextAssessmentState = 'retake';
+          nextAssessmentScore = bestMap[asm.id];
+        } else {
+          nextAssessmentState = 'start';
+        }
+        break;
+      }
 
       if (nextAssessment) {
         upNextSection.classList.remove('hidden');
@@ -2192,15 +2255,26 @@
         
         const navLink = `sessionStorage.setItem('topscore_assessment_id','${nextAssessment.id}');window.location.href='assessment.html?assessment_id=${nextAssessment.id}&id=${nextAssessment.id}&program_id=${session.program_id}&institution_id=${session.institution_id}&class_id=${nextAssessment.class_id}'`;
 
+        let buttonLabel = 'Start Now';
+        let statusBadgeHtml = '';
+        if (nextAssessmentState === 'retake') {
+          buttonLabel = 'Retake Now';
+          statusBadgeHtml = `<span style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Needs Improvement (${nextAssessmentScore != null ? nextAssessmentScore.toFixed(1) : '0'}%)</span>`;
+        } else if (nextAssessmentState === 'resume') {
+          buttonLabel = 'Resume';
+          statusBadgeHtml = `<span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">In Progress</span>`;
+        }
+
         upNextContainer.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
             <div>
               <div style="font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 4px;">${escapeHtml(title)}</div>
               <div style="font-size: 0.8rem; color: #94a3b8; display: flex; gap: 8px; align-items: center;">
                 <span class="badge badge-primary" style="font-size: 0.65rem; padding: 2px 6px;">${escapeHtml(typeStr)}</span>
+                ${statusBadgeHtml}
               </div>
             </div>
-            <button onclick="${navLink}" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 8px; font-weight: 700; white-space: nowrap;">Start Now</button>
+            <button onclick="${navLink}" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 8px; font-weight: 700; white-space: nowrap;">${buttonLabel}</button>
           </div>
         `;
       } else {
