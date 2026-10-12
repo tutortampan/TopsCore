@@ -1,14 +1,37 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-12 16:08 UTC+8
+Last Updated: 2026-10-12 23:35 UTC+8
 
-Current Phase: Phase 13 Production Deployment & Cloud Supabase Migration
+Current Phase: Phase 14 Production Recovery & Live Verification
 
-Current Task: SUPABASE CLOUD MIGRATION (Target: oclajpyumehpojepcczg) & PRE-DEPLOY READINESS
+Current Task: PRODUCTION SYNC & BUG RECOVERY (Netlify & Supabase Cloud oclajpyumehpojepcczg)
 
 Status: COMPLETE
 
 ## Completed
+
+- **PRODUCTION SYNC & BUG RECOVERY COMPLETED (100% VERIFIED LIVE)**:
+  - **Task 1: Resolved 400 Bad Request on `vocabulary_vault`**:
+    * Identified root cause: `js/api.js` query projected `category` column (`select('id, english, indonesian, word_type, topic, topic_code, theme_code, target_level, category')`), which was missing in production Supabase Cloud project `oclajpyumehpojepcczg`.
+    * Executed schema migration adding `category VARCHAR(32) DEFAULT 'words'` to `public.vocabulary_vault`.
+    * Backfilled all 870 rows: `'phrases'` if `word_type IN ('Expression', 'Idiom', 'Proverb', 'Phrase')`, else `'words'`.
+    * Added trigger `trg_set_vocabulary_vault_category` to auto-classify all future inserts/updates.
+    * Executed `NOTIFY pgrst, 'reload schema';`.
+    * Verified query returns 200 items (40 phrases, 160 words) with 200 OK via Supabase client.
+  - **Task 2: Seed & Synchronize Questions and Dynamic Vault**:
+    * Verified production `vocabulary_vault` has all 870 rows populated across all 4 themes (A, B, C, D) and levels.
+    * Ensured phrases distractor queries return 160 phrases without error.
+  - **Task 3: Edge Function & Client Fallback Hardening**:
+    * Updated `supabase/functions/start-assessment/index.ts` with explicit CORS headers (`Access-Control-Allow-Methods`, 200 status for `OPTIONS` preflight).
+    * Enhanced `startAssessment` in `js/api.js` to catch 401/404/network errors seamlessly into the robust client DB fallback.
+    * Fixed `section_id` question mapping bug in `assessment.html`: snapshot rows missing `section_id` now default to `'default'`, ensuring `renderQuestion(0)` renders all questions properly without getting filtered out into an empty array.
+    * Added trigger `trg_ensure_attempt_answers_section_id` and backfilled 3,066 rows in `public.attempt_answers` in production DB so `section_id = 'default'` is guaranteed at the database level.
+  - **Task 4: Live Automated Verification Run**:
+    * Executed Playwright automated browser test against `https://tops-core.netlify.app/` using Miss Siti Qori's real session.
+    * Verified student login (PIN 1234), dashboard loading, assessment runner initiation, question rendering, and countdown timer.
+    * Successfully rendered both Words Task ("tangguh") and Theme D Phrases Test ("Ada banyak cara untuk mencapai tujuan yang sama.") on `https://tops-core.netlify.app/assessment.html`.
+    * Successfully submitted attempt and rendered live graded report card on `https://tops-core.netlify.app/result.html`.
+    * Captured high-resolution verification screenshots in `audit_screenshots/live_online_run/`.
 
 - **SUPABASE CLOUD PROJECT FULLY MIGRATED & VERIFIED (Target: oclajpyumehpojepcczg)**:
   - Project URL: `https://oclajpyumehpojepcczg.supabase.co`

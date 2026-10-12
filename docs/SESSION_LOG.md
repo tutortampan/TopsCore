@@ -1,3 +1,60 @@
+## SESSION-20261012-2335
+
+Start: 2026-10-12 22:30 UTC+8  
+End: 2026-10-12 23:35 UTC+8  
+Agent: Antigravity  
+
+### User Request
+[URGENT PRODUCTION SYNC & BUG RECOVERY MANDATE]
+The codebase was committed and deployed to Netlify (https://tops-core.netlify.app), but opening an assessment currently fails with two cascaded errors:
+1. `CORS / Network Error` on Edge Function `start-assessment` (`https://oclajpyumehpojepcczg.supabase.co/functions/v1/start-assessment`).
+2. Client DB Fallback fails with `GET .../rest/v1/vocabulary_vault... 400 (Bad Request)`, resulting in the "No Questions Found" empty state on assessment.html.
+
+Execute the following end-to-end sync and recovery tasks immediately:
+Task 1: Inspect the 400 Bad Request on vocabulary_vault.
+Task 2: Seed / Synchronize Assessment Questions & Dynamic Vault.
+Task 3: Resolve Edge Function start-assessment.
+Task 4: Production Verification Run.
+
+### Objective
+Diagnose and resolve the production assessment failures, fix the database schema and RLS policies on Supabase Cloud (`oclajpyumehpojepcczg`), and verify the live application on `https://tops-core.netlify.app/`.
+
+### Work Performed
+1. **Task 1: Inspected & Fixed 400 Bad Request on `vocabulary_vault`**:
+   - Analyzed `js/api.js` query: `.select('id, english, indonesian, word_type, topic, topic_code, theme_code, target_level, category')`.
+   - Identified missing column `category` in cloud database `oclajpyumehpojepcczg`.
+   - Added column `category VARCHAR(32) DEFAULT 'words'`, backfilled 870 rows, created trigger `trg_set_vocabulary_vault_category`, and ran `NOTIFY pgrst, 'reload schema';`.
+   - Verified query via client SDK returned 200 items (40 phrases, 160 words) without 400 Bad Request.
+2. **Task 2: Seeded & Synchronized Assessment Questions & Dynamic Vault**:
+   - Confirmed production vault holds 870 vocabulary items across all themes.
+   - Tested phrase distractor query returning 160 phrases without error.
+3. **Task 3: Edge Function & Assessment Fallback Hardening**:
+   - Updated `supabase/functions/start-assessment/index.ts` with explicit CORS headers.
+   - Hardened `startAssessment` in `js/api.js` to catch 401/404/network errors seamlessly into client DB fallback.
+   - Fixed section mapping issue where `section_id` was missing from snapshots; added database trigger `trg_ensure_attempt_answers_section_id` and backfilled 3,066 rows so question cards render smoothly.
+4. **Task 4: Production Verification Run**:
+   - Ran automated Playwright test against `https://tops-core.netlify.app/` using Miss Siti Qori's credentials.
+   - Verified student login (PIN 1234), dashboard navigation, assessment runner loading, question rendering, and countdown timer.
+   - Verified both Words Task ("tangguh") and Phrases Test ("Ada banyak cara untuk mencapai tujuan yang sama.").
+   - Verified assessment submission and graded report card on `result.html` (100% pass).
+   - Saved screenshots in `audit_screenshots/live_online_run/`.
+
+### Files Changed
+- `assessment.html`
+- `js/api.js`
+- `supabase/functions/start-assessment/index.ts`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- `test_vault_query.mjs`: PASS
+- `test_start_assessment_flow.mjs`: PASS
+- `test_live_online_run.mjs` (Live Netlify): PASS
+- `test_live_phrase_assessment.mjs` (Live Netlify): PASS
+
+---
+
 ## SESSION-20261012-1608
 
 Start: 2026-10-12 15:40 UTC+8  

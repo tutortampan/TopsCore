@@ -1,3 +1,45 @@
+## [2026-10-12 23:35] — Production Sync & Assessment Bug Recovery (Netlify & Supabase Cloud)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 14 Production Recovery & Live Verification  
+**Status:** PASS  
+
+### Why
+- Fix cascaded production errors preventing assessment loading on `https://tops-core.netlify.app`:
+  1. Edge Function CORS / network error.
+  2. Client DB Fallback failure `GET .../rest/v1/vocabulary_vault... 400 (Bad Request)` due to missing `category` column in production Supabase Cloud project `oclajpyumehpojepcczg`.
+  3. Question card empty/infinite spinner caused by missing `section_id` in question snapshots filtering `answerRows` to empty array.
+
+### Changed
+- `public.vocabulary_vault` (Production PostgreSQL):
+  - Added `category VARCHAR(32) DEFAULT 'words'` column.
+  - Backfilled all 870 rows with `'phrases'` or `'words'` based on `word_type`.
+  - Added trigger `trg_set_vocabulary_vault_category` to ensure future additions are automatically categorized.
+  - Reloaded PostgREST schema cache (`NOTIFY pgrst, 'reload schema'`).
+- `public.attempt_answers` (Production PostgreSQL):
+  - Backfilled 3,066 snapshot records with `section_id = 'default'`.
+  - Created trigger `trg_ensure_attempt_answers_section_id` to guarantee `section_id` in all question snapshots.
+- `assessment.html`:
+  - Updated snapshot fallback logic to unconditionally ensure `section_id = 'default'`.
+  - Updated `startSection` question filter: `const secId = snap?.section_id || 'default'; return secId === currentSection.id;`.
+  - Bumped module cache-busting version query string to `v=5.0.1`.
+- `js/api.js`:
+  - Ensured `section_id: 'default'` is set in `question_snapshot` during client DB fallback attempt creation.
+  - Hardened error handling in `startAssessment` to seamlessly fall back to client DB on 401/404/network errors.
+- `supabase/functions/start-assessment/index.ts`:
+  - Configured CORS headers with explicit `Access-Control-Allow-Methods` and 200 OK preflight `OPTIONS` response.
+
+### Verification
+- Tested exact `vocabulary_vault` query from `js/api.js`: returned 200 items without 400 Bad Request error.
+- Verified phrases distractor query returned 160 items.
+- Ran Playwright automated browser test against `https://tops-core.netlify.app/` using Miss Siti Qori's real session:
+  * PIN login (1234) and dashboard navigation succeeded.
+  * Assessment runner loaded with timer, student details, and rendered question prompts ("tangguh" and "Ada banyak cara untuk mencapai tujuan yang sama.").
+  * Full submission and graded report card on `result.html` verified with 100% pass.
+  * Screenshots captured in `audit_screenshots/live_online_run/`.
+
+---
+
 ## [2026-10-12 15:52] — Supabase Cloud Migration Preparation (Project: oclajpyumehpojepcczg)
 
 **Agent/Session:** Antigravity  
