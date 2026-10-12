@@ -588,7 +588,7 @@ export async function startAssessment(studentId, assessmentId) {
       }
       
       let query = sb.from('vocabulary_vault')
-        .select('id, english, indonesian, word_type, topic, topic_code, theme_code, target_level, category')
+        .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level, category')
         .is('deleted_at', null)
         .eq('target_level', levelNum)
         .range(0, 4999);
@@ -675,7 +675,9 @@ export async function startAssessment(studentId, assessmentId) {
                  accepted_answers_snapshot: accepted,
                  options_snapshot: optionsSnapshot,
                  topic_snapshot: vw.topic || vw.topic_code || "General",
-                 theme_snapshot: vw.theme_code || assessment.payload?.theme_code || "General",
+                 theme_snapshot: vw.theme || vw.theme_code || assessment.payload?.theme_code || "General",
+                 theme_code: vw.theme_code || assessment.payload?.theme_code,
+                 category_snapshot: vw.category || category,
                  word_type_snapshot: vw.word_type,
                  display_order: idx + 1,
                  answer_type: ansType
@@ -699,6 +701,8 @@ export async function startAssessment(studentId, assessmentId) {
           word_type: sq.word_type_snapshot,
           topic: sq.topic_snapshot,
           theme: sq.theme_snapshot || assessment.payload?.theme_code || "General",
+          theme_code: sq.theme_code || assessment.payload?.theme_code,
+          category: sq.category_snapshot || assessment.payload?.category || 'vocab',
           display_order: sq.display_order ?? (idx + 1),
           answer_type: sq.answer_type || 'written',
           options_snapshot: sq.options_snapshot || [],

@@ -1,3 +1,49 @@
+## [2026-10-13 00:25] — 4 Corners Question Metadata Layout (Theme Name, Topic, Category, Type)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 14 Production Polish & UI Enhancement  
+**Status:** PASS  
+
+### Why
+- User requested UI layout update:
+  1. Show full Theme Name rather than just the code (e.g. `High-Frequency (Theme D)`, `Workplace`, etc.).
+  2. Arrange metadata in the 4 corners of the question card:
+     - Top-Left: **Theme**
+     - Top-Right: **Topic**
+     - Center: Question text
+     - Bottom-Left (under question): **Category**
+     - Bottom-Right (under question): **Type**
+
+### Changed
+- `assessment.html`:
+  - Extracted and resolved `Theme Name` via theme mapping (`A` -> `Workplace`, `B` -> `Tourism`, `C` -> `CCU`, `D` -> `High-Frequency`) and assessment title/snapshot parsing.
+  - Implemented 4-corner layout in `topSection`:
+    - Top bar: Theme on left, Topic on right with text ellipsis.
+    - Center: Question text prompt.
+    - Bottom bar (under question): Category on left (lavender badge), Type on right (emerald badge).
+  - Adjusted question card container dimensions to `min-height: 135px; max-height: 175px;` with smooth flexbox spacing.
+  - Bumped module query strings to `v=5.0.3`.
+- `js/api.js`:
+  - Added `theme` column into `vocabulary_vault` select query.
+  - Included `category` and `theme_code` in `question_snapshot` creation.
+
+### Verification
+- Ran Playwright automated visual test (`temp_test/verify_centered_ui.mjs`):
+  - Theme D Phrases:
+    * Top-Left: `THEME: High-Frequency (Theme D)`
+    * Top-Right: `TOPIC: Cultural Experience, Travel & Modern Culture`
+    * Bottom-Left: `CATEGORY: Phrases`
+    * Bottom-Right: `TYPE: Proverb`
+  - Words Task:
+    * Top-Left: `THEME: Workplace`
+    * Top-Right: `TOPIC: Professional Identity`
+    * Bottom-Left: `CATEGORY: Words`
+    * Bottom-Right: `TYPE: Noun`
+  - Answer box placeholder `"Type here..."` confirmed dead-center.
+  - Updated screenshots in `audit_screenshots/ui_enhancement/`.
+
+---
+
 ## [2026-10-13 00:00] — Center Written Input Placeholder & Add Question Metadata Info (Theme, Topic, Type)
 
 **Agent/Session:** Antigravity  

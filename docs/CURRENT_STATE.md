@@ -1,21 +1,25 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-13 00:05 UTC+8
+Last Updated: 2026-10-13 00:25 UTC+8
 
 Current Phase: Phase 14 Production Recovery & UI Enhancement
 
-Current Task: Centered Written Placeholder & Question Info (Theme, Topic, Type)
+Current Task: 4 Corners Question Metadata Layout (Theme Name, Topic, Category, Type)
 
 Status: COMPLETE
 
 ## Completed
 
-- **UI ENHANCEMENT: CENTERED WRITTEN INPUT & QUESTION METADATA**:
-  - Posisikan placeholder `"Type here..."` dan teks ketikan tepat di tengah kotak jawaban (vertikal & horizontal) secara presisi dengan flexbox & CSS styling transparan.
-  - Hilangkan phantom 120px mic area saat mode `written`, memberikan ruang lapang 120-160px yang seimbang pada kotak jawaban.
-  - Tambahkan header info metadata soal pada kotak pertanyaan: **Theme** (Cyan badge), **Topic** (Clean white text), dan **Type** (Emerald pill badge).
+- **UI ENHANCEMENT: 4 CORNERS QUESTION METADATA LAYOUT**:
+  - Tampilkan **Theme Name** (bukan hanya kode Theme A, melainkan nama lengkap seperti `High-Frequency (Theme D)`, `Workplace`, dsb.) pada **sudut kiri atas (Top-Left)**.
+  - Tampilkan **Topic Name** pada **sudut kanan atas (Top-Right)**.
+  - Tampilkan teks pertanyaan (*Question prompt*) besar, tebal, dan terpusat di tengah card.
+  - Tampilkan **Category** (`Phrases`, `Words`, dsb.) pada **sudut kiri bawah (Bottom-Left, di bawah pertanyaan)** dengan badge lavender.
+  - Tampilkan **Type** (`Proverb`, `Noun`, `Idiom`, dsb.) pada **sudut kanan bawah (Bottom-Right, di bawah pertanyaan)** dengan badge emerald.
+  - Posisikan placeholder `"Type here..."` dan teks ketikan tetap tepat di tengah kotak jawaban (vertikal & horizontal) secara presisi dengan flexbox & styling transparan.
+  - Perbarui `js/api.js` untuk memproyeksikan kolom `theme` dari `vocabulary_vault` dan menyematkan `theme_code` serta `category` ke dalam snapshot.
+  - Bump versi script cache-busting ke `v=5.0.3`.
   - Verifikasi otomatis menggunakan Playwright dan tangkapan layar di `audit_screenshots/ui_enhancement/`.
-  - Berhasil di-commit dan di-push ke GitHub repository `origin/main` (commit `6f27bcf`).
 
 - **PRODUCTION SYNC & BUG RECOVERY COMPLETED (100% VERIFIED LIVE)**:
   - **Task 1: Resolved 400 Bad Request on `vocabulary_vault`**:

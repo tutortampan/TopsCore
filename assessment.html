@@ -557,13 +557,13 @@
   </div>
 
   <script type="module">
-    import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './js/api.js?v=5.0.2';
-    import { evaluateAnswer } from './js/grading.js?v=5.0.2';
-    import { requireStudentSession } from './js/session.js?v=5.0.2';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml as appEscapeHtml } from './js/app.js?v=5.0.2';
-    import { startCountdown, isExpired } from './js/timer.js?v=5.0.2';
-    import { createSpeechSession, isSpeechSupported } from './js/speech.js?v=5.0.2';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './js/supabase.js?v=5.0.2';
+    import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './js/api.js?v=5.0.3';
+    import { evaluateAnswer } from './js/grading.js?v=5.0.3';
+    import { requireStudentSession } from './js/session.js?v=5.0.3';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml as appEscapeHtml } from './js/app.js?v=5.0.3';
+    import { startCountdown, isExpired } from './js/timer.js?v=5.0.3';
+    import { createSpeechSession, isSpeechSupported } from './js/speech.js?v=5.0.3';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './js/supabase.js?v=5.0.3';
 
     function escapeHtml(str) {
       if (typeof appEscapeHtml === 'function') return appEscapeHtml(str);
@@ -1282,16 +1282,49 @@
       }
       const answerType = snap?.answer_type || row.answer_type || 'written';
       const questionText = snap?.question_text || snap?.questionText || snap?.question || snap?.text || snap?.soal || snap?.indonesia || row.question_text_snapshot || (typeof row.question_snapshot === 'string' ? row.question_snapshot : '') || 'Question text unavailable';
-      // Extract Theme, Topic, Type
-      let displayTheme = snap?.theme || snap?.theme_code || snap?.metadata?.theme || assessmentData?.payload?.theme_code || '';
-      if (!displayTheme && assessmentData?.title) {
-        const matchTheme = assessmentData.title.match(/Theme\s+([A-D])|Vocabulary\s+([A-D])/i);
-        if (matchTheme) displayTheme = 'Theme ' + (matchTheme[1] || matchTheme[2]).toUpperCase();
+      // Extract Theme (Name + Code), Topic, Category, and Type for 4 corners
+      const THEME_NAMES = {
+        'A': 'Workplace',
+        'B': 'Tourism',
+        'C': 'CCU',
+        'D': 'High-Frequency',
+        'TH1': 'Theme 1',
+        'TH2': 'Theme 2',
+        'TH3': 'Theme 3'
+      };
+
+      let themeCode = snap?.theme_code || snap?.metadata?.theme_code || row?.theme_code_snapshot || assessmentData?.payload?.theme_code || '';
+      let themeName = snap?.theme || snap?.metadata?.theme || row?.theme_snapshot || '';
+
+      if (themeName && themeName.length === 1 && /[A-Za-z]/.test(themeName)) {
+        if (!themeCode) themeCode = themeName.toUpperCase();
+        themeName = '';
+      } else if (/^theme\s+([A-Za-z0-9]+)$/i.test(themeName)) {
+        const m = themeName.match(/^theme\s+([A-Za-z0-9]+)$/i);
+        if (!themeCode) themeCode = m[1].toUpperCase();
+        themeName = '';
       }
-      if (displayTheme && displayTheme.length === 1) {
-        displayTheme = 'Theme ' + displayTheme.toUpperCase();
+
+      if (!themeCode && assessmentData?.title) {
+        const matchTheme = assessmentData.title.match(/Theme\s+([A-D0-9]+)/i) || assessmentData.title.match(/Vocabulary\s+([A-D0-9]+)/i);
+        if (matchTheme) themeCode = (matchTheme[1] || matchTheme[2]).toUpperCase();
       }
-      if (!displayTheme) displayTheme = 'General';
+
+      if (!themeName && themeCode && THEME_NAMES[themeCode.toUpperCase()]) {
+        themeName = THEME_NAMES[themeCode.toUpperCase()];
+      }
+
+      if (!themeName && assessmentData?.title) {
+        if (/Workplace/i.test(assessmentData.title)) { themeName = 'Workplace'; if (!themeCode) themeCode = 'A'; }
+        else if (/Tourism/i.test(assessmentData.title)) { themeName = 'Tourism'; if (!themeCode) themeCode = 'B'; }
+        else if (/CCU/i.test(assessmentData.title)) { themeName = 'CCU'; if (!themeCode) themeCode = 'C'; }
+        else if (/High-Frequency/i.test(assessmentData.title)) { themeName = 'High-Frequency'; if (!themeCode) themeCode = 'D'; }
+      }
+
+      let displayTheme = themeName || (themeCode ? ('Theme ' + themeCode) : 'General');
+      if (themeName && themeCode && !themeName.toLowerCase().includes(themeCode.toLowerCase())) {
+        displayTheme = `${themeName} (Theme ${themeCode})`;
+      }
 
       let displayTopic = snap?.topic || snap?.metadata?.topic || row?.topic_snapshot || '';
       if (!displayTopic && assessmentData?.title) {
@@ -1307,6 +1340,24 @@
         else displayType = 'Word';
       }
 
+      let displayCategory = snap?.category || snap?.metadata?.category || row?.category_snapshot || assessmentData?.payload?.category || '';
+      if (!displayCategory && assessmentData?.assessment_type) {
+        if (assessmentData.assessment_type.includes('PHRASE')) displayCategory = 'phrases';
+        else if (assessmentData.assessment_type.includes('VOCAB') || assessmentData.assessment_type.includes('WORD')) displayCategory = 'words';
+      }
+      if (!displayCategory && assessmentData?.title) {
+        if (/phrase/i.test(assessmentData.title)) displayCategory = 'phrases';
+        else if (/word|vocab/i.test(assessmentData.title)) displayCategory = 'words';
+      }
+      if (!displayCategory && displayType) {
+        const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(displayType.toLowerCase());
+        displayCategory = isPhrase ? 'phrases' : 'words';
+      }
+      if (displayCategory.toLowerCase() === 'phrases') displayCategory = 'Phrases';
+      else if (displayCategory.toLowerCase() === 'words' || displayCategory.toLowerCase() === 'vocab') displayCategory = 'Words';
+      else if (displayCategory) displayCategory = displayCategory.charAt(0).toUpperCase() + displayCategory.slice(1);
+      else displayCategory = 'Vocabulary';
+
       const savedAnswer = answeredMap[row.id] || '';
 
       const main = document.getElementById('assessment-main');
@@ -1318,27 +1369,38 @@
 
       // Top Part: Question Card (1/3)
       const topSection = document.createElement('div');
-      topSection.className = 'min-h-[125px] max-h-[155px] w-full flex flex-col justify-between p-3 rounded-2xl bg-slate-800/85 border border-slate-700/60 shadow-md shrink-0';
-      topSection.style.cssText = 'min-height:125px; max-height:155px; width:100%; display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:0.75rem 1rem; background:rgba(30,41,59,0.85); border:1px solid rgba(51,65,85,0.6); border-radius:16px; box-sizing:border-box; overflow-y:auto; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); flex-shrink:0;';
+      topSection.className = 'min-h-[135px] max-h-[175px] w-full flex flex-col justify-between p-3 rounded-2xl bg-slate-800/85 border border-slate-700/60 shadow-md shrink-0';
+      topSection.style.cssText = 'min-height:135px; max-height:175px; width:100%; display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:0.75rem 1rem; background:rgba(30,41,59,0.85); border:1px solid rgba(51,65,85,0.6); border-radius:16px; box-sizing:border-box; overflow-y:auto; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); flex-shrink:0;';
       
       let qHtml = `
-        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px; margin-bottom:8px; font-size:0.82rem; font-weight:600; color:var(--clr-text-2, #94a3b8); flex-shrink:0; box-sizing:border-box;">
-          <div style="display:flex; align-items:center; gap:5px;">
+        <!-- Top Bar: Theme (Top-Left) and Topic (Top-Right) -->
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:6px; margin-bottom:4px; font-size:0.82rem; font-weight:600; color:var(--clr-text-2, #94a3b8); flex-shrink:0; box-sizing:border-box;">
+          <div style="display:flex; align-items:center; gap:5px; max-width:48%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
             <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px;">Theme:</span>
-            <span style="color:#38bdf8; font-weight:700;">${escapeHtml(displayTheme)}</span>
+            <span style="color:#38bdf8; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
           </div>
-          <div style="display:flex; align-items:center; gap:5px; max-width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+          <div style="display:flex; align-items:center; gap:5px; max-width:48%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
             <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px;">Topic:</span>
             <span style="color:#f1f5f9; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
+          </div>
+        </div>
+
+        <!-- Center: Question Text -->
+        <div style="flex-grow:1; display:flex; align-items:center; justify-content:center; width:100%; min-height:0; padding:6px 0;">
+          <div class="speech-question-text" style="font-size:clamp(1.2rem, 3.5vw, 1.55rem); font-weight:800; color:#fff; text-align:center; line-height:1.3; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0;">
+            ${escapeHtml(questionText)}
+          </div>
+        </div>
+
+        <!-- Bottom Bar under Question: Category (Bottom-Left) and Type (Bottom-Right) -->
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; border-top:1px solid rgba(255,255,255,0.08); padding-top:6px; margin-top:4px; font-size:0.82rem; font-weight:600; color:var(--clr-text-2, #94a3b8); flex-shrink:0; box-sizing:border-box;">
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px;">Category:</span>
+            <span style="background:rgba(168,85,247,0.15); color:#c084fc; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.78rem; border:1px solid rgba(168,85,247,0.3);">${escapeHtml(displayCategory)}</span>
           </div>
           <div style="display:flex; align-items:center; gap:5px;">
             <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px;">Type:</span>
             <span style="background:rgba(52,211,153,0.15); color:#34d399; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.78rem; border:1px solid rgba(52,211,153,0.3);">${escapeHtml(displayType)}</span>
-          </div>
-        </div>
-        <div style="flex-grow:1; display:flex; align-items:center; justify-content:center; width:100%; min-height:0;">
-          <div class="speech-question-text" style="font-size:clamp(1.25rem, 3.8vw, 1.6rem); font-weight:800; color:#fff; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0;">
-            ${escapeHtml(questionText)}
           </div>
         </div>
       `;
