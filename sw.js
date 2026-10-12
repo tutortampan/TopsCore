@@ -1,4 +1,4 @@
-const CACHE_NAME = 'abcd-core-v4.9.9';
+const CACHE_NAME = 'abcd-core-v5.0.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,9 +6,9 @@ const ASSETS_TO_CACHE = [
   './dashboard.html',
   './assessment.html',
   './result.html',
-  './css/style.css?v=4.9.8',
-  './css/admin.css?v=4.9.8',
-  './css/dashboard.css?v=4.9.8'
+  './css/style.css?v=5.0.0',
+  './css/admin.css?v=5.0.0',
+  './css/dashboard.css?v=5.0.0'
 ];
 
 self.addEventListener('install', event => {
