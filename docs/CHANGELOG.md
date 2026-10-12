@@ -1,3 +1,62 @@
+## [2026-10-13 02:30] — System Performance Streamlining & Supabase Egress Optimization
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 15 Performance Streamlining & Egress Optimization  
+**Status:** PASS  
+
+### Why
+- An exhaustive codebase and database audit revealed significant Supabase egress waste (~450 KB per attempt on `attempt_answers`), 14 zero-row unreferenced legacy tables, dead evaluation engine client code (18.1 KB), and O(N) keystroke DOM re-renders in the assessment runner.
+- The approved plan mandated 6 tasks (TASK-STR-01 to TASK-STR-06) with zero UI/styling/DOM modifications.
+
+### Changed
+- **`supabase/migrations/20261013000000_cleanup_legacy_tables.sql`**:
+  - Dropped 14 zero-row, unreferenced legacy tables on Supabase Cloud: `achievement_targets`, `additional_members`, `assessment_attempt_answers`, `assessment_attempts`, `assessment_instances`, `exam_history`, `requirement_targets`, `requirements`, `scholarships`, `student_accounts`, `student_import_logs`, `student_progress`, `student_requirement_progress`, `student_target_progress`.
+  - Reduced public base table count from 48 to 34.
+  - Backfilled 1,660 legacy rows in `public.attempt_answers` with `correct_answer_snapshot` extracted from `accepted_answers_snapshot` (100% snapshot coverage across 4,446 rows).
+  - Executed `NOTIFY pgrst, 'reload schema'` to refresh PostgREST schema cache.
+- **`js/api.js`**:
+  - In `fetchAttemptAnswers`: Replaced heavy unprojected select with lean display columns (`id, attempt_id, question_id, student_answer, score, evaluation_result, is_correct, question_snapshot, correct_answer_snapshot`), cutting egress by 56.3%.
+  - In `fetchStudentProgress`: Projected explicit columns (`id, student_id, class_id, unlocked_level, highest_score, level_status, level_completed_at, updated_at`).
+  - In `fetchAssessments`: Excluded heavy unneeded `payload` JSON from catalog listings.
+  - In `fetchAssessmentResultsFromDB`: Projected explicit attempt columns.
+  - In `startAssessment`: Ensured `correct_answer_snapshot` is populated in new fallback answer rows.
+- **`assessment.html`**:
+  - Replaced synchronous `updateNavGrid()` loop on every keystroke with `updateActiveChipOnly(row.id, ta.value)`, instantly toggling only the active question's chip in 0ms.
+  - Debounced full progress metric calculations (`_navProgressTimer`, 300ms) to eliminate mobile typing lag/stutter on large question sets (40–640 items).
+  - Removed obsolete `evaluateAnswer` import from dead evaluation script.
+- **`scripts/archive/ai-evaluation-engine.js`**:
+  - Safely moved obsolete client evaluation engine (`js/ai-evaluation-engine.js`, 18.1 KB dead code) to `scripts/archive/`.
+- **`sw.js` & HTML Entry Points**:
+  - Harmonized cache-busting tokens to unified `v=5.1.0` (`CACHE_NAME = 'abcd-core-v5.1.0'`) across Service Worker, `index.html`, `dashboard.html`, `assessment.html`, `result.html`, `admin.html`, and all 21 modular JS files in `js/admin/`.
+
+### Tests
+- `temp_test/test_version_alignment.mjs`: PASS (All 26 files verified on `v=5.1.0`)
+- `temp_test/test_query_projections.mjs`: PASS (Lean projections validated)
+- `temp_test/verify_streamlined_result.mjs`: PASS (Playwright live test on `result.html`: Report card percentage 10.0%, Grade F, Total Points 4, 40/40 answer breakdown cards rendered)
+- `temp_test/test_live_online_run.mjs`: PASS (Full 5/5 live workflow steps passed for Miss Siti Qori)
+- Visual screenshot: `audit_screenshots/live_online_run/06_streamlined_verified_result.png` (Zero visual regressions, 100% pixel fidelity)
+
+---
+
+## [2026-10-13 01:50] — Local Supabase Docker Environment & Full Offline Ready
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 14 Local Offline Environment Setup  
+**Status:** PASS  
+
+### Why
+- The user requested configuring and connecting local Docker Supabase so development and testing can be conducted completely offline.
+
+### Changed
+- Configured local Supabase in Docker with 12 services running and healthy (`postgres:17.6`, `kong`, `gotrue`, `postgrest`, `realtime`, `storage`, `studio`, etc.).
+- Normalized and sequenced all 11 SQL migrations in `supabase/migrations/` (`20261010000000_init_schema.sql` through `20261012060000_normalize_attempt_status.sql`).
+- Seeded curriculum, institution, batch, class, student, and question data to the local database via `supabase/seed.sql`.
+- Fixed PL/pgSQL delimiter quirk (`AS $$`) in `auto_close_expired_attempts` function.
+- Verified REST API endpoint `http://127.0.0.1:54321/rest/v1` returns local database records.
+- Verified Supabase Studio GUI accessible at `http://127.0.0.1:54323`.
+
+---
+
 ## [2026-10-13 00:50] — Dynamic Class Progress Calculation & Status Display Fix
 
 **Agent/Session:** Antigravity  

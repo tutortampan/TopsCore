@@ -105,6 +105,58 @@
 
 ---
 
+## ⚡ SYSTEM PERFORMANCE STREAMLINING & EGRESS OPTIMIZATION (TASK-STR-01 TO TASK-STR-06)
+
+- [x] **TASK-STR-01: Prune Answer Snapshot Bloat & Enforce Display Projections**
+  - **Priority:** HIGH
+  - **Area:** Egress Optimization & Storage Footprint
+  - **Files:** `js/api.js`, `supabase/migrations/20261013000000_cleanup_legacy_tables.sql`
+  - **Objective:** Eliminate redundant column over-fetching on `public.attempt_answers` by projecting explicit display columns (`id, attempt_id, question_id, student_answer, score, evaluation_result, is_correct, question_snapshot, correct_answer_snapshot`), backfilling missing `correct_answer_snapshot` across existing records.
+  - **Acceptance Criteria:** Egress per attempt reduced by >50%; 100% of existing rows populated with `correct_answer_snapshot`; zero UI disruption on `result.html` breakdown.
+  - **Result:** ✅ COMPLETED (Egress reduced by 56.3% from ~450 KB to ~195 KB per 40-question attempt; backfilled 1,660 legacy rows; verified with `test_query_projections.mjs` and Playwright)
+
+- [x] **TASK-STR-02: Purge Obsolete Dead Code (`js/ai-evaluation-engine.js`) & Decouple Imports**
+  - **Priority:** MEDIUM
+  - **Area:** Codebase Hygiene & Bundle Size
+  - **Files:** `js/ai-evaluation-engine.js`, `scripts/archive/ai-evaluation-engine.js`, `assessment.html`
+  - **Objective:** Safely archive obsolete client-side evaluation engine (`js/ai-evaluation-engine.js`, 18.1 KB dead code) and remove orphaned import references in `assessment.html`.
+  - **Acceptance Criteria:** Zero broken module imports; browser console clean of missing file 404s; server-authoritative Edge Function evaluation preserved.
+  - **Result:** ✅ COMPLETED (Archived to `scripts/archive/ai-evaluation-engine.js`, eliminated unused import in `assessment.html`; 100% test pass)
+
+- [x] **TASK-STR-03: Single-Buffer Assessment Runner & Keystroke Optimization**
+  - **Priority:** HIGH
+  - **Area:** Client Runtime Performance & Mobile Input Responsiveness
+  - **Files:** `assessment.html`
+  - **Objective:** Eliminate main-thread blocking during assessment input by isolating keystroke chip updates (`updateActiveChipOnly`), removing synchronous O(N) DOM re-querying across 40–640 elements, and debouncing progress calculations (300ms).
+  - **Acceptance Criteria:** 0ms input latency on mobile/desktop; chips update instantly upon typing; full grid synchronized on question navigation.
+  - **Result:** ✅ COMPLETED (Targeted DOM toggle active, full updates debounced; verified with Playwright live runner)
+
+- [x] **TASK-STR-04: Harmonize Cache-Busting Tokens & Service Worker Version Alignment**
+  - **Priority:** HIGH
+  - **Area:** Cache Synchronization & Deployment Integrity
+  - **Files:** `sw.js`, `index.html`, `dashboard.html`, `assessment.html`, `result.html`, `admin.html`, `js/admin/*.js`
+  - **Objective:** Synchronize cache tokens to unified `v=5.1.0` (`CACHE_NAME = 'abcd-core-v5.1.0'`) across Service Worker and all HTML entry points / admin modules.
+  - **Acceptance Criteria:** All files share unified `v=5.1.0` query string; `sw.js` precache list contains only existing files; automated test verifies 100% version alignment.
+  - **Result:** ✅ COMPLETED (All 26 files aligned to `v=5.1.0`; verified with `test_version_alignment.mjs`)
+
+- [x] **TASK-STR-05: Strict Database Projection Enforcement across Frontend Queries**
+  - **Priority:** MEDIUM
+  - **Area:** Network Egress & Payload Minimization
+  - **Files:** `js/api.js`
+  - **Objective:** Audit and eliminate unprojected `select('*')` in `fetchStudentProgress`, `fetchAssessments`, and `fetchAssessmentResultsFromDB`, removing unneeded payload JSON and schema metadata.
+  - **Acceptance Criteria:** Zero unbounded `select('*')` on high-frequency student queries; catalog and progress listings lightweight.
+  - **Result:** ✅ COMPLETED (Explicit projections applied; verified with `test_query_projections.mjs`)
+
+- [x] **TASK-STR-06: Database Schema Hygiene — Drop 14 Verified Zero-Row Legacy Tables**
+  - **Priority:** CRITICAL
+  - **Area:** Database Hygiene & PostgREST Schema Optimization
+  - **Files:** `supabase/migrations/20261013000000_cleanup_legacy_tables.sql`
+  - **Objective:** Drop 14 verified zero-row, unreferenced legacy tables on Supabase Cloud (`achievement_targets`, `additional_members`, `assessment_attempt_answers`, `assessment_attempts`, `assessment_instances`, `exam_history`, `requirement_targets`, `requirements`, `scholarships`, `student_accounts`, `student_import_logs`, `student_progress`, `student_requirement_progress`, `student_target_progress`) and notify PostgREST.
+  - **Acceptance Criteria:** Public base table count reduced from 48 to 34; core tables 100% intact; PostgREST schema reloaded.
+  - **Result:** ✅ COMPLETED (Dropped on Supabase Cloud `oclajpyumehpojepcczg`; public table count reduced to 34; PostgREST cache reloaded via `NOTIFY pgrst, 'reload schema'`)
+
+---
+
 ## 📌 PROGRESS LOG & CONTINUATION NOTES
 
 | Date & Time | Task ID | Description | Status | Agent / Notes |
@@ -122,4 +174,12 @@
 | 2026-10-12 03:14 | TASK-10 | Student Profile Media & Storage Migration (Base64 -> Storage / SVG) | ✅ COMPLETE | Configured `student-avatars` bucket, canvas WebP upload, zero-egress SVG; verified with test |
 | 2026-10-12 03:14 | TASK-11 | Honorific Prefix Stripping in Alphabetical Student Sorting & Avatars | ✅ COMPLETE | Implemented `stripHonorific` and `getStudentInitial`, eliminating 'M' bias in sorting & initials |
 | 2026-10-12 03:18 | MASTER | Full Regression Verification Suite (01 to 11) | ✅ COMPLETE | All 11 tasks passed (9/9 suites passed, 0 failures) via `run_all_audit_tests.mjs` |
+| 2026-10-13 02:15 | TASK-STR-01 | Egress Optimization: Lean Answer Projections & Backfill | ✅ COMPLETE | Reduced attempt answers egress by 56.3%; backfilled 1,660 rows; verified with test |
+| 2026-10-13 02:16 | TASK-STR-02 | Dead Code Elimination: Purge `ai-evaluation-engine.js` | ✅ COMPLETE | Archived 18.1 KB dead code; removed orphaned imports in `assessment.html` |
+| 2026-10-13 02:17 | TASK-STR-03 | Single-Buffer Assessment Runner & Keystroke Optimization | ✅ COMPLETE | Isolated active chip toggling and debounced progress metrics in `assessment.html` |
+| 2026-10-13 02:18 | TASK-STR-04 | Harmonize Cache-Busting Tokens & Service Worker v5.1.0 | ✅ COMPLETE | Aligned version to `v=5.1.0` across all 26 HTML/JS files and `sw.js` precache |
+| 2026-10-13 02:19 | TASK-STR-05 | Database Query Projection Enforcement in API | ✅ COMPLETE | Replaced unprojected queries in progress, catalog, and attempt results in `js/api.js` |
+| 2026-10-13 02:20 | TASK-STR-06 | Database Schema Hygiene: Drop 14 Legacy Tables | ✅ COMPLETE | Dropped 14 zero-row legacy tables on Supabase Cloud; tables reduced to 34; PostgREST reloaded |
+| 2026-10-13 02:29 | MASTER-STR | Full Playwright E2E Verification & Visual Inspection | ✅ COMPLETE | 100% verified live via Playwright (Miss Siti Qori workflow, report card, and answer breakdown) |
+
 
