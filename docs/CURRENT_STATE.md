@@ -1,14 +1,21 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-12 23:35 UTC+8
+Last Updated: 2026-10-13 00:05 UTC+8
 
-Current Phase: Phase 14 Production Recovery & Live Verification
+Current Phase: Phase 14 Production Recovery & UI Enhancement
 
-Current Task: PRODUCTION SYNC & BUG RECOVERY (Netlify & Supabase Cloud oclajpyumehpojepcczg)
+Current Task: Centered Written Placeholder & Question Info (Theme, Topic, Type)
 
 Status: COMPLETE
 
 ## Completed
+
+- **UI ENHANCEMENT: CENTERED WRITTEN INPUT & QUESTION METADATA**:
+  - Posisikan placeholder `"Type here..."` dan teks ketikan tepat di tengah kotak jawaban (vertikal & horizontal) secara presisi dengan flexbox & CSS styling transparan.
+  - Hilangkan phantom 120px mic area saat mode `written`, memberikan ruang lapang 120-160px yang seimbang pada kotak jawaban.
+  - Tambahkan header info metadata soal pada kotak pertanyaan: **Theme** (Cyan badge), **Topic** (Clean white text), dan **Type** (Emerald pill badge).
+  - Verifikasi otomatis menggunakan Playwright dan tangkapan layar di `audit_screenshots/ui_enhancement/`.
+  - Berhasil di-commit dan di-push ke GitHub repository `origin/main` (commit `6f27bcf`).
 
 - **PRODUCTION SYNC & BUG RECOVERY COMPLETED (100% VERIFIED LIVE)**:
   - **Task 1: Resolved 400 Bad Request on `vocabulary_vault`**:

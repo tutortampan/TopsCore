@@ -1,3 +1,35 @@
+## [2026-10-13 00:00] — Center Written Input Placeholder & Add Question Metadata Info (Theme, Topic, Type)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 14 Production Polish & UI Enhancement  
+**Status:** PASS  
+
+### Why
+- User requested UI enhancement:
+  1. Centering placeholder "Type here..." and typed text in the exact center of the answer box horizontally and vertically.
+  2. Adding question metadata information (Theme, Topic, Type) to the question card above the prompt.
+
+### Changed
+- `assessment.html`:
+  - Centered written input container with flexbox layout (`display: flex; flex-direction: column; align-items: center; justify-content: center;`).
+  - Separated layout logic between speech (mic controls) and written mode (no phantom 120px control area), preventing textarea squishing.
+  - Made `.written-input` borderless, transparent, centered (`text-align: center`, `resize: none`, `padding: 0`).
+  - Styled placeholder `.written-input::placeholder` with italic styling and center alignment.
+  - Added question card top bar displaying `THEME`, `TOPIC`, and `TYPE` with theme-tailored badges (cyan, crisp white, emerald pill).
+  - Added graceful fallback cascade for theme, topic, and type from snapshot, row, or assessment title.
+  - Bumped script version cache-busting to `v=5.0.2`.
+- `js/api.js`:
+  - Added `theme_snapshot` and direct `theme` metadata inside `question_snapshot` when creating fallback attempts.
+
+### Verification
+- Tested with Playwright automated test (`temp_test/verify_centered_ui.mjs`):
+  - Verified placeholder `"Type here..."` is dead-center vertically and horizontally in the answer card.
+  - Verified typed text remains centered while typing.
+  - Verified Theme, Topic, and Type render accurately for both Phrases and Words tasks.
+  - Screenshots stored in `audit_screenshots/ui_enhancement/`.
+
+---
+
 ## [2026-10-12 23:35] — Production Sync & Assessment Bug Recovery (Netlify & Supabase Cloud)
 
 **Agent/Session:** Antigravity  
