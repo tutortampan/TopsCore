@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head><title>Auto Test Runner</title></head>
+<body style="margin:0; display:flex; flex-direction:column; height: 100vh;">
+  <div id="log" style="height:20vh; overflow-y:auto; font-family:monospace; background:#111; color:#0f0; padding:10px;"></div>
+  <iframe id="app" src="about:blank" style="flex:1; border:none;"></iframe>
+  <script>
+    const iframe = document.getElementById('app');
+    const logEl = document.getElementById('log');
+    let errors = [];
+    let successes = 0;
+    
+    function log(msg) {
+       logEl.innerHTML += '<div>' + msg + '</div>';
+       logEl.scrollTop = logEl.scrollHeight;
+       console.log(msg);
+    }
+    
+    async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+    
+    function getDoc() {
+       return iframe.contentDocument;
+    }
+    function getWin() {
+       return iframe.contentWindow;
+    }
+    
+    async function waitForSelector(selector, timeout=5000) {
+       let start = Date.now();
+       while(Date.now() - start < timeout) {
+          try {
+             let doc = getDoc();
+             if (doc) {
+                let el = doc.querySelector(selector);
+                if (el && el.offsetParent !== null) return el; // Check visible
+             }
+          } catch(e) {}
+          await wait(100);
+       }
+       throw new Error('Element not found or not visible: ' + selector);
+    }
+    
+    async function waitForUrl(urlIncludes, timeout=5000) {
+       let start = Date.now();
+       while(Date.now() - start < timeout) {
+          try {
+             if (getWin().location.href.includes(urlIncludes)) return true;
+          } catch(e) {}
+          await wait(100);
+       }
+       throw new Error('Did not navigate to URL including: ' + urlIncludes);
+    }
+    
+    async function runIteration(i) {
+       log('--- Iteration ' + i + ' ---');
+       try {
+           iframe.src = 'http://localhost:8080/index.html';
+           await wait(1500);
+           getWin().localStorage.clear();
+           iframe.src = 'http://localhost:8080/index.html';
+           await wait(1500);
+           
+           let doc = getDoc();
+           
+           // 1. Inst
+           let inst = await waitForSelector('#list-institution .opt-card');
+           inst.click();
+           await wait(500);
+           
+           // 2. Prog
+           let prog = await waitForSelector('#list-program .opt-card');
+           prog.click();
+           await wait(500);
+           
+           // 3. Batch
+           let batch = await waitForSelector('#list-batch .opt-card');
+           batch.click();
+           await wait(500);
+           
+           // 4. Student (Siti)
+           await waitForSelector('#list-student .opt-card');
+           let students = doc.querySelectorAll('#list-student .opt-card');
+           let found = false;
+           for(let s of students) {
+              if (s.textContent.toLowerCase().includes('siti')) {
+                 s.click();
+                 found = true;
+                 break;
+              }
+           }
+           if (!found) students[0].click(); // fallback
+           await wait(500);
+           
+           // 5. PIN
+           await waitForSelector('#pin-0');
+           doc.getElementById('pin-0').value = '1'; doc.getElementById('pin-0').dispatchEvent(new Event('input'));
+           doc.getElementById('pin-1').value = '2'; doc.getElementById('pin-1').dispatchEvent(new Event('input'));
+           doc.getElementById('pin-2').value = '3'; doc.getElementById('pin-2').dispatchEvent(new Event('input'));
+           doc.getElementById('pin-3').value = '4'; doc.getElementById('pin-3').dispatchEvent(new Event('input'));
+           doc.getElementById('login-btn').click();
+           
+           // 6. Wait for Dashboard
+           await waitForUrl('dashboard.html', 5000);
+           log('Logged in successfully!');
+           await wait(1000);
+           
+           // 7. Start Assessment
+           doc = getDoc(); // Reloaded
+           let btn = await waitForSelector('.assessment-card, .Assessment-card');
+           btn.click();
+           
+           await waitForUrl('assessment.html', 5000);
+           log('Started assessment!');
+           await wait(1000);
+           doc = getDoc();
+           
+           // Click some key on VK if written test
+           try {
+              let qInput = doc.querySelector('textarea.written-input');
+              if (qInput) {
+                  qInput.click();
+                  let k = doc.querySelector('.vk-key[data-key="a"]');
+                  if(k) k.click();
+              }
+           } catch(e) {}
+           
+           // Submit
+           let win = getWin();
+           if(typeof win.openSubmitModal === 'function') {
+               win.openSubmitModal();
+           } else {
+               let nxt = doc.getElementById('bottom-next-btn');
+               if (nxt) nxt.click();
+           }
+           
+           let confirmBtn = await waitForSelector('#confirm-submit-btn', 2000);
+           confirmBtn.click();
+           
+           // Expect Result or Dashboard
+           let startWait = Date.now();
+           let done = false;
+           while(Date.now() - startWait < 5000) {
+              let href = getWin().location.href;
+              if (href.includes('result.html') || href.includes('dashboard.html')) {
+                  done = true;
+                  break;
+              }
+              await wait(100);
+           }
+           
+           if (done) {
+               log('Assessment submitted successfully!');
+               successes++;
+           } else {
+               throw new Error('Did not return to result or dashboard after submit');
+           }
+       } catch (err) {
+           log('<span style="color:red">Error in iteration ' + i + ': ' + err.message + '</span>');
+           errors.push('Iteration ' + i + ': ' + err.message);
+       }
+    }
+    
+    async function runAll() {
+        for(let i=1; i<=10; i++) {
+           await runIteration(i);
+        }
+        log('<br>--- SUMMARY ---');
+        log('Successes: ' + successes + '/10');
+        if (errors.length > 0) {
+           log('Errors: ' + errors.length);
+           errors.forEach(e => log('<span style="color:red">' + e + '</span>'));
+        }
+        
+        // Signal completion
+        document.title = "DONE";
+    }
+    
+    // Start after small delay
+    setTimeout(runAll, 1000);
+  </script>
+</body>
+</html>

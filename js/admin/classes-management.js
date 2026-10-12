@@ -1,8 +1,8 @@
-import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsAssessments, autoGeneratePhrasesAssessments } from '../api.js?v=4.7.9';
-import { showToast } from '../app.js?v=4.7.9';
-import { openAssessmentBuilder } from './assessment-builder.js?v=4.7.9';
-import { DataGrid } from './datagrid.js?v=4.7.9';
-import { openAssessmentBuilderModal as openVocabWizard } from './vocab-vault.js?v=4.7.9';
+import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsAssessments, autoGeneratePhrasesAssessments } from '../api.js?v=4.9.8';
+import { showToast } from '../app.js?v=4.9.8';
+import { openAssessmentBuilder } from './assessment-builder.js?v=4.9.8';
+import { DataGrid } from './datagrid.js?v=4.9.8';
+import { openAssessmentBuilderModal as openVocabWizard } from './vocab-vault.js?v=4.9.8';
 
 // ─────────────────────────────────────────────────────────────
 // SMART CLASS-AWARE TASK / TEST ROUTERS
@@ -30,7 +30,7 @@ window.handleAddTask = (classId, className) => {
   switch (type) {
     case 'VOCABULARY':
       // Vocab/Phrase Task → use existing Vocab Vault wizard (tier: TASK)
-      const asmTypeTask = (className || '').toLowerCase().includes('phrase') ? 'PHRASE_RECOGNITION' : 'VOCAB_MASTERY';
+      const asmTypeTask = 'VOCAB_MASTERY';
       openVocabWizard(null, { classId, className, assessmentType: asmTypeTask, tier: 'TASK', category: 'TASK' });
       break;
     case 'BASIC_ENGLISH':
@@ -52,7 +52,7 @@ window.handleAddTest = (classId, className) => {
   switch (type) {
     case 'VOCABULARY':
       // Vocab Test → Aggregator mode (combines Task words into one Test)
-      const asmTypeTest = (className || '').toLowerCase().includes('phrase') ? 'PHRASE_RECOGNITION' : 'VOCAB_MASTERY';
+      const asmTypeTest = 'VOCAB_MASTERY';
       openVocabWizard(null, { classId, className, assessmentType: asmTypeTest, tier: 'TEST', category: 'TEST' });
       break;
     case 'BASIC_ENGLISH':
@@ -459,7 +459,7 @@ function renderProgramDetail(prog, inst) {
             class_id: newClass.id,
             level_id: lvlId
           }));
-          const sb = await import('../supabase.js?v=4.7.9').then(m => m.getSupabase());
+          const sb = await import('../supabase.js?v=4.9.8').then(m => m.getSupabase());
           await sb.from('class_levels').insert(classLevelsPayload);
         }
         
@@ -877,9 +877,10 @@ export async function loadClassLearningPath(classId) {
 
 function formatAnswerType(type) {
   switch(type) {
-    case 'speech_to_text': return '🎙️ Speech';
-    case 'dropdown': return '🔽 Drop-down';
-    case 'multiple_choice': return '🔘 Mult Choice';
+    case 'speech_to_text':
+    case 'spoken': return '🎙️ Spoken';
+    case 'multiple_choice':
+    case 'selection': return '✅ Selection';
     case 'written': return '✏️ Written';
     default: return String(type || '');
   }

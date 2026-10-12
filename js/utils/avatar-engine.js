@@ -1,9 +1,62 @@
 /**
  * avatar-engine.js
  * 
- * 3:4 Center-Crop Avatar Engine & Cache Busting.
+ * 3:4 Center-Crop Avatar Engine, Supabase Storage Uploader, Zero-Egress SVG Avatars & Cache Busting.
  */
 
+/**
+ * Strips honorific prefix ('Mr.', 'Miss', 'Mrs.', 'Ms.') from student names.
+ */
+export function stripHonorific(name) {
+  if (!name) return '';
+  return String(name).trim().replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?)\s+/i, '').trim();
+}
+
+/**
+ * Extracts true student initial ignoring honorific prefix.
+ */
+export function getStudentInitial(name) {
+  const stripped = stripHonorific(name);
+  return stripped ? stripped.charAt(0).toUpperCase() : 'S';
+}
+
+/**
+ * Generates lightweight, zero-egress styled inline SVG avatar for 3:4 aspect ratio.
+ */
+export function generateAvatarSvg(name = '', gender = '') {
+  const initial = getStudentInitial(name);
+  const g = String(gender || '').toLowerCase().trim();
+  const isMale = g === 'male' || g === 'm' || g === 'laki-laki' || g === 'l';
+  const isFemale = g === 'female' || g === 'f' || g === 'perempuan' || g === 'p';
+  
+  const bgGrad1 = isMale ? '#3b82f6' : isFemale ? '#ec4899' : '#6366f1';
+  const bgGrad2 = isMale ? '#1d4ed8' : isFemale ? '#be185d' : '#4338ca';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 320" width="240" height="320">
+  <defs>
+    <linearGradient id="avatarGrad_${initial}" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${bgGrad1}" />
+      <stop offset="100%" stop-color="${bgGrad2}" />
+    </linearGradient>
+  </defs>
+  <rect width="240" height="320" rx="16" fill="url(#avatarGrad_${initial})" />
+  <circle cx="120" cy="120" r="50" fill="rgba(255,255,255,0.2)" />
+  <path d="M 36 288 C 36 210, 204 210, 204 288 Z" fill="rgba(255,255,255,0.2)" />
+  <text x="120" y="138" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="54" font-weight="800" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initial}</text>
+</svg>`;
+}
+
+/**
+ * Returns a Data URI for the zero-egress SVG avatar.
+ */
+export function generateAvatarDataUri(name = '', gender = '') {
+  const svg = generateAvatarSvg(name, gender);
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+/**
+ * Center-crops and compresses image to 3:4 WebP (Client-side Canvas)
+ */
 export async function processAndCompressAvatar(file, type = "student") {
   return new Promise((resolve, reject) => {
     if (!file) return reject(new Error("No file provided."));
@@ -67,14 +120,98 @@ export async function processAndCompressAvatar(file, type = "student") {
 }
 
 /**
- * Cache-busting URL helper with graceful fallback to placeholder-3x4.svg
+ * Uploads student avatar as binary WebP into Supabase Storage bucket 'student-avatars',
+ * returning the public CDN URL. Falls back to compressed dataURL if storage is unavailable.
  */
-export function getBustedAvatarUrl(url) {
-  if (!url || typeof url !== 'string' || !url.trim()) return 'assets/placeholder-3x4.svg';
+export async function uploadStudentAvatar(file, studentId = null) {
+  if (!file) throw new Error("No file provided.");
+  const TARGET_WIDTH = 240;
+  const TARGET_HEIGHT = 320;
+  const QUALITY = 0.75;
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = TARGET_WIDTH;
+          canvas.height = TARGET_HEIGHT;
+          const ctx = canvas.getContext("2d");
+
+          const ratio = img.width / img.height;
+          const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
+
+          let sx, sy, sWidth, sHeight;
+          if (ratio > targetRatio) {
+            sHeight = img.height;
+            sWidth = img.height * targetRatio;
+            sx = (img.width - sWidth) / 2;
+            sy = 0;
+          } else {
+            sWidth = img.width;
+            sHeight = img.width / targetRatio;
+            sx = 0;
+            sy = (img.height - sHeight) * 0.35;
+          }
+
+          ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+
+          // Convert canvas to WebP Blob
+          const blob = await new Promise(r => canvas.toBlob(r, 'image/webp', QUALITY));
+          if (!blob) throw new Error("Canvas to WebP blob conversion failed.");
+
+          // Dynamically import Supabase client factory
+          let getSupabase;
+          try {
+            const mod = await import('../supabase.js?v=4.9.8');
+            getSupabase = mod.getSupabase;
+          } catch (_) {
+            const mod = await import('../supabase.js');
+            getSupabase = mod.getSupabase;
+          }
+
+          const sb = await getSupabase();
+          const cleanId = String(studentId || 'temp_' + Date.now()).replace(/[^a-zA-Z0-9_-]/g, '_');
+          const fileName = `student_${cleanId}_${Date.now()}.webp`;
+
+          const { error: uploadErr } = await sb.storage
+            .from('student-avatars')
+            .upload(fileName, blob, {
+              contentType: 'image/webp',
+              upsert: true
+            });
+
+          if (uploadErr) {
+            console.warn('[AvatarEngine] Supabase storage upload failed, falling back to dataUrl:', uploadErr.message);
+            const dataUrl = canvas.toDataURL('image/webp', QUALITY);
+            return resolve(dataUrl);
+          }
+
+          const { data: pubData } = sb.storage.from('student-avatars').getPublicUrl(fileName);
+          resolve(pubData.publicUrl);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.onerror = () => reject(new Error("Invalid image file."));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("File read error."));
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Cache-busting URL helper with graceful fallback to zero-egress SVG avatar.
+ */
+export function getBustedAvatarUrl(url, name = '', gender = '') {
+  if (!url || typeof url !== 'string' || !url.trim()) {
+    return generateAvatarDataUri(name, gender);
+  }
   const clean = url.trim();
   if (clean.startsWith('data:')) return clean;
   const separator = clean.includes('?') ? '&' : '?';
   return `${clean}${separator}t=${Date.now()}`;
 }
-
-

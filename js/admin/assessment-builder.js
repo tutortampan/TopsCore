@@ -1,4 +1,4 @@
-// TOPS CORE � Centralized Assessment Wizard V1
+// TOPS CORE — Centralized Assessment Wizard V1
 // Implements multi-step Evaluation & Assessment creation, topic derivation from Evaluations,
 // live question counts, inline assignments, and frozen snapshots on publish.
 import {
@@ -16,9 +16,10 @@ import {
   fetchClassInstances,
   createTopic,
   adminFetchAll,
-  clearAdminCache
-} from '../api.js?v=4.7.6';
-import { showToast, showLoading, hideLoading } from '../app.js?v=4.7.6';
+  clearAdminCache,
+  reorderAssessment
+} from '../api.js?v=4.9.8';
+import { showToast, showLoading, hideLoading } from '../app.js?v=4.9.8';
 
 function escapeHtml(str) {
   return String(str || '')
@@ -56,11 +57,9 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
           <button class="builder-tab" data-tab="tab-topics" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 700;">
             2. Topic Coverage
           </button>
-          <button class="builder-tab" data-tab="tab-assign" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 700;">
-            3. Assignment
-          </button>
+          
           <button class="builder-tab" data-tab="tab-publish" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 700;">
-            4. Review &amp; Freeze
+            3. Review &amp; Freeze
           </button>
         </div>
 
@@ -89,14 +88,55 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
                   <input type="text" class="form-control" id="wiz-title" placeholder="e.g. Vocabulary Evaluation A1 - Daily Routine" required />
                 </div>
 
-                <div class="form-group mb-3">
+                <div class="form-group form-group-full mb-3">
                   <label class="form-label">Class *</label>
                   <select class="form-control" id="wiz-class"></select>
                 </div>
 
-                <div class="form-group mb-3" id="wiz-duration-group">
-                  <label class="form-label">Working Duration (Minutes) *</label>
-                  <input type="number" class="form-control" id="wiz-duration" value="60" min="5" max="300" />
+                <div class="form-group mb-3 d-flex gap-4">
+                  <div style="flex:1;">
+                    <label class="form-label">Status</label>
+                    <select class="form-control" id="wiz-status">
+                      <option value="DRAFT">Draft (Hidden from students)</option>
+                      <option value="PUBLISHED">Published (Live)</option>
+                    </select>
+                  </div>
+                  <div style="flex:1;">
+                    <label class="form-label">Display Order (ORD)</label>
+                    <input type="number" class="form-control" id="wiz-display-order" value="999" />
+                  </div>
+                </div>
+
+                <div class="form-group mb-3 d-flex gap-4">
+                  <div style="flex:1;">
+                    <label class="form-label">Working Duration (Minutes) *</label>
+                    <input type="number" class="form-control" id="wiz-duration" value="60" min="5" max="300" />
+                  </div>
+                  <div style="flex:1;">
+                    <label class="form-label">Max Attempts (0 = Unlimited)</label>
+                    <input type="number" class="form-control" id="wiz-max-attempts" value="0" min="0" />
+                  </div>
+                  <div style="flex:1;">
+                    <label class="form-label">Pass Threshold (%)</label>
+                    <input type="number" class="form-control" id="wiz-pass-threshold" value="0" min="0" max="100" />
+                  </div>
+                </div>
+
+                <div class="form-group mb-3">
+                  <label class="form-label">Prerequisite Assessment</label>
+                  <select class="form-control" id="wiz-prereq">
+                    <option value="">None (Available immediately)</option>
+                  </select>
+                </div>
+                
+                <div class="form-group mb-3">
+                  <label class="form-label">Answer Type (Interaction Mode)</label>
+                  <select class="form-control" id="wiz-answer-type">
+                    <option value="MULTIPLE_CHOICE">Multiple Choice</option>
+                    <option value="DROPDOWN">Dropdown / Cards (Phrase)</option>
+                    <option value="WRITTEN">Written Text</option>
+                    <option value="SPEECH">Speech-to-Text</option>
+                  </select>
                 </div>
 
                 <div class="form-group mb-3">
@@ -173,61 +213,11 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
 
             <div class="d-flex justify-between mt-4">
               <button class="btn btn-secondary btn-sm" id="btn-topics-prev">← Back to Details</button>
-              <button class="btn btn-primary btn-sm" id="btn-topics-next">Next: Set Assignment →</button>
+              <button class="btn btn-primary btn-sm" id="btn-topics-next">Next: Review & Publish →</button>
             </div>
           </div>
 
           <!-- TAB 3: ASSIGNMENT -->
-          <div id="tab-assign" class="b-tab-content hidden">
-            <div class="card p-4 mb-4" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
-              <h3 style="font-size:1.1rem;margin-bottom:0.5rem;">Access &amp; Assignment (Who can take this?)</h3>
-              <p class="text-muted text-xs mb-4">You can assign this assessment immediately to a Batch or selected Students, or skip and assign later.</p>
-
-                            <div class="form-group mb-3">
-                <label class="form-label">Assignment Strategy</label>
-                <select class="form-control" id="wiz-assign-strategy" style="max-width:360px;">
-                  <option value="NONE">Assign Later (Draft or Open to Class)</option>
-                  <option value="BATCH" selected>Assign to Specific Batch (Class Instance)</option>
-                </select>
-              </div>
-
-              <div class="form-group mb-3" id="wiz-assign-batch-group">
-                <label class="form-label">Target Batch *</label>
-                <select class="form-control" id="wiz-assign-batch-select" style="max-width:360px;">
-                  <!-- Batches populated here -->
-                </select>
-              </div>
-
-              <div class="form-group mb-3" id="wiz-assign-time-group1">
-                  <label class="form-label">Availability Start (Optional)</label>
-                  <input type="datetime-local" class="form-control" id="wiz-start" style="max-width:360px;" />
-              </div>
-              <div class="form-group mb-3" id="wiz-assign-time-group2">
-                  <label class="form-label">Availability End (Optional)</label>
-                  <input type="datetime-local" class="form-control" id="wiz-end" style="max-width:360px;" />
-              </div>
-
-              <div class="form-group mb-3" id="wiz-assign-batch-group">
-                <label class="form-label">Target Batch *</label>
-                <select class="form-control" id="wiz-assign-batch-select" style="max-width:360px;">
-                  <!-- Batches populated here -->
-                </select>
-              </div>
-
-              <div class="form-group mb-3 hidden" id="wiz-assign-student-group">
-                <label class="form-label">Target Student *</label>
-                <select class="form-control" id="wiz-assign-student-select" style="max-width:360px;">
-                  <!-- Students populated here -->
-                </select>
-              </div>
-
-              <div class="d-flex justify-between mt-4">
-                <button class="btn btn-secondary btn-sm" id="btn-assign-prev">← Back to Topics</button>
-                <button class="btn btn-primary btn-sm" id="btn-assign-next">Next: Review &amp; Publish →</button>
-              </div>
-            </div>
-          </div>
-
           <!-- TAB 4: REVIEW & PUBLISH -->
           <div id="tab-publish" class="b-tab-content hidden">
             <div class="card p-4" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
@@ -235,17 +225,17 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
               
               <div class="p-4 rounded mb-4" style="background:rgba(0,0,0,0.25);border:1px solid var(--clr-border);">
                 <div class="d-flex justify-between align-center mb-3">
-                  <h4 class="m-0" id="rev-title" style="font-size:1.15rem;font-weight:700;">�</h4>
+                  <h4 class="m-0" id="rev-title" style="font-size:1.15rem;font-weight:700;">—</h4>
                   <span id="rev-type" class="badge badge-info">EVALUATION</span>
                 </div>
                 <div class="d-flex gap-4 flex-wrap text-sm mb-3">
-                  <div><strong>Class Board:</strong> <span id="rev-class">�</span></div>
+                  <div><strong>Class Board:</strong> <span id="rev-class">—</span></div>
                   <div><strong>Duration:</strong> <span id="rev-duration">60 min</span></div>
                   <div><strong>Order:</strong> <span id="rev-order">Random</span></div>
                   <div><strong>Assignment:</strong> <span id="rev-assignment" class="badge badge-neutral">Batch</span></div>
                 </div>
                 <div class="mb-3">
-                  <strong>Included Topics:</strong> <span id="rev-topics" class="text-muted">�</span>
+                  <strong>Included Topics:</strong> <span id="rev-topics" class="text-muted">—</span>
                 </div>
                 <div class="d-flex align-center gap-2 p-3 rounded" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);">
                   <div style="font-size:1.5rem;">🔒</div>
@@ -259,7 +249,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
               </div>
 
               <div class="d-flex justify-between align-center">
-                <button class="btn btn-secondary btn-sm" id="btn-publish-prev">← Back to Assignment</button>
+                <button class="btn btn-secondary btn-sm" id="btn-publish-prev">← Back to Topic Coverage</button>
                 <div class="d-flex gap-2">
                   <button class="btn btn-secondary btn-sm" id="btn-save-draft">💾 Save as Draft</button>
                   <button class="btn btn-success btn-sm" id="btn-publish-assessment">🚀 Publish &amp; Freeze Snapshot</button>
@@ -332,33 +322,36 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
 
     // Populate Classes dropdown
     const subSel = document.getElementById('wiz-class');
-    subSel.innerHTML = allClasses.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
-    if (!isEdit && initialClassId) subSel.value = initialClassId;
+    if (subSel) {
+      subSel.innerHTML = allClasses.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+      if (!isEdit && initialClassId) subSel.value = initialClassId;
+    }
 
     // Populate Prerequisite dropdown
-    const prereqSel = document.getElementById('wiz-prereq');
-    prereqSel.innerHTML = `<option value="">None (Available immediately)</option>` +
-      existingAssessments.filter(a => a.id !== assessmentId).map(a => `
-        <option value="${a.id}">${escapeHtml(a.title)} (${escapeHtml(a.assessment_type || 'EVALUATION')})</option>
-      `).join('');
-
-    // Populate Batches dropdown
-    const batchSel = document.getElementById('wiz-assign-batch-select');
-    batchSel.innerHTML = allBatches.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
-
-    // Populate Students dropdown
-    const studentSel = document.getElementById('wiz-assign-student-select');
-    studentSel.innerHTML = allStudents.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
-
-    // Toggle Assignment Mode
-    const assignStrategySel = document.getElementById('wiz-assign-strategy');
-    const batchGroup = document.getElementById('wiz-assign-batch-group');
-    const studentGroup = document.getElementById('wiz-assign-student-group');
-    assignStrategySel.onchange = () => {
-      const mode = assignStrategySel.value;
-      batchGroup.classList.toggle('hidden', mode !== 'BATCH');
-      studentGroup.classList.toggle('hidden', mode !== 'STUDENT');
+    const updatePrereqs = () => {
+      const displayOrderInput = document.getElementById('wiz-display-order');
+      const currentOrder = parseInt(displayOrderInput ? displayOrderInput.value : 999) || 999;
+      const prereqSel = document.getElementById('wiz-prereq');
+      if (!prereqSel) return;
+      const currentVal = prereqSel.value;
+      
+      prereqSel.innerHTML = `<option value="">None (Available immediately)</option>` +
+        existingAssessments
+          .filter(a => a.id !== assessmentId && subSel && a.class_id === subSel.value)
+          .sort((a,b)=>(a.display_order||999)-(b.display_order||999))
+          .map(a => {
+            const ord = a.display_order || 999;
+            const isDisabled = ord >= currentOrder;
+            return `<option value="${a.id}" ${isDisabled ? 'disabled' : ''}>[ORD ${ord}] ${escapeHtml(a.title)} (${escapeHtml(a.assessment_type || 'EVALUATION')})</option>`;
+          }).join('');
+          
+      if (prereqSel.querySelector(`option[value="${currentVal}"]`)) {
+        prereqSel.value = currentVal;
+      }
     };
+    
+    const displayOrderInputEl = document.getElementById('wiz-display-order');
+    if (displayOrderInputEl) displayOrderInputEl.addEventListener('change', updatePrereqs);
 
     // Toggle Evaluation vs Assessment UI in Tab 2
     const typeRadios = builderDiv.querySelectorAll('input[name="wiz-type"]');
@@ -366,9 +359,11 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
     const Assessmentsection = document.getElementById('wiz-Assessment-sequence-section');
 
     const updateTypeUI = () => {
-      const isAssessment = builderDiv.querySelector('input[name="wiz-type"]:checked').value === 'Assessment';
-      evalSection.classList.toggle('hidden', isAssessment);
-      Assessmentsection.classList.toggle('hidden', !isAssessment);
+      const checkedType = builderDiv.querySelector('input[name="wiz-type"]:checked');
+      if (!checkedType) return;
+      const isAssessment = checkedType.value === 'Assessment';
+      if (evalSection) evalSection.classList.toggle('hidden', isAssessment);
+      if (Assessmentsection) Assessmentsection.classList.toggle('hidden', !isAssessment);
       if (isAssessment) {
         renderAssessmentEvaluations();
       } else {
@@ -542,9 +537,36 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
         orderSel.value = ordVal === 'SEQUENTIAL' ? 'SEQUENTIAL' : 'RANDOM';
       }
 
+      const statusSel = document.getElementById('wiz-status');
+      if (statusSel) statusSel.value = editAssessment.status || 'DRAFT';
+      
+      const displayOrderInput = document.getElementById('wiz-display-order');
+      if (displayOrderInput) displayOrderInput.value = editAssessment.display_order || 999;
+      
+      const maxAttemptsInput = document.getElementById('wiz-max-attempts');
+      if (maxAttemptsInput) maxAttemptsInput.value = editAssessment.max_attempts || 0;
+      
+      const passThresholdInput = document.getElementById('wiz-pass-threshold');
+      if (passThresholdInput) passThresholdInput.value = editAssessment.minimum_required_score || 0;
+      
+      const answerTypeSel = document.getElementById('wiz-answer-type');
+      if (answerTypeSel) answerTypeSel.value = editAssessment.answer_type || 'MULTIPLE_CHOICE';
+
+      updatePrereqs();
       const prereqSelEl = document.getElementById('wiz-prereq');
       if (prereqSelEl && (editAssessment.prerequisite_assessment_id || editAssessment.prerequisite_assessment_id)) {
         prereqSelEl.value = editAssessment.prerequisite_assessment_id || editAssessment.prerequisite_assessment_id;
+      }
+      
+      // PUBLISHED Guardrails
+      if (editAssessment.status === 'PUBLISHED') {
+        if (typeRadio) typeRadio.disabled = true;
+        subSel.disabled = true;
+        answerTypeSel.disabled = true;
+        
+        // Disable structural edits on tab 2
+        document.querySelectorAll('.topic-checkbox, .eval-checkbox').forEach(cb => cb.disabled = true);
+        document.getElementById('btn-wiz-add-topic').disabled = true;
       }
 
       if (editAssessment.availability_start) {
@@ -571,8 +593,10 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
       selectedTopicIds.clear();
       selectedEvalIds.clear();
       updateTypeUI();
+      updatePrereqs();
     };
     updateTypeUI();
+    updatePrereqs();
 
     builderDiv.addEventListener('change', (e) => {
       if (e.target.classList.contains('topic-checkbox')) {
@@ -600,24 +624,38 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
       switchTab('tab-topics');
     };
 
-    // Step 2 -> Step 3
+    // Step 2 -> Step 3 (Review)
     document.getElementById('btn-topics-prev').onclick = () => switchTab('tab-details');
     document.getElementById('btn-topics-next').onclick = () => {
       if (selectedTopicIds.size === 0) {
         showToast('Please select at least one topic (or source evaluation) for this assessment.', 'warning');
         return;
       }
-      switchTab('tab-assign');
+      
+      const typeVal = builderDiv.querySelector('input[name="wiz-type"]:checked').value;
+      const title = document.getElementById('wiz-title').value;
+      const duration = document.getElementById('wiz-duration').value;
+      const order = document.getElementById('wiz-order').value;
+
+      document.getElementById('rev-title').textContent = title;
+      document.getElementById('rev-type').textContent = typeVal;
+      document.getElementById('rev-class').textContent = subSel.options[subSel.selectedIndex]?.text || '';
+      document.getElementById('rev-duration').textContent = `${duration} minutes`;
+      document.getElementById('rev-order').textContent = order;
+      document.getElementById('rev-assignment').textContent = 'Auto by Level';
+      
+      switchTab('tab-publish');
     };
 
-    // Step 3 -> Step 4 (Review)
+    // (Removed Step 3 tab logic)
+
     document.getElementById('btn-assign-prev').onclick = () => switchTab('tab-topics');
     document.getElementById('btn-assign-next').onclick = () => {
       const typeVal = builderDiv.querySelector('input[name="wiz-type"]:checked').value;
       const title = document.getElementById('wiz-title').value;
       const duration = document.getElementById('wiz-duration').value;
       const order = document.getElementById('wiz-order').value;
-      const strategy = assignStrategySel.value;
+      const strategy = 'NONE';
 
       document.getElementById('rev-title').textContent = title;
       document.getElementById('rev-type').textContent = typeVal;
@@ -647,7 +685,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
     };
 
     // Step 4 Nav
-    document.getElementById('btn-publish-prev').onclick = () => switchTab('tab-assign');
+    document.getElementById('btn-publish-prev').onclick = () => switchTab('tab-topics');
 
     // Save as Draft
     document.getElementById('btn-save-draft').onclick = async () => {
@@ -666,59 +704,57 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
       const duration = Number(document.getElementById('wiz-duration').value) || 60;
       const order = document.getElementById('wiz-order').value;
       const prereqId = document.getElementById('wiz-prereq').value || null;
-      const startVal = document.getElementById('wiz-start').value;
-      const endVal = document.getElementById('wiz-end').value;
-      const strategy = assignStrategySel.value;
-      const batchId = batchSel.value;
-      const studentId = studentSel.value;
+      
+      // New fields
+      const statusVal = document.getElementById('wiz-status').value;
+      const displayOrder = parseInt(document.getElementById('wiz-display-order').value) || 999;
+      const maxAttempts = parseInt(document.getElementById('wiz-max-attempts').value) || 0;
+      const passThreshold = parseInt(document.getElementById('wiz-pass-threshold').value) || 0;
+      const answerType = document.getElementById('wiz-answer-type').value;
+
+      const startVal = document.getElementById('wiz-start') ? document.getElementById('wiz-start').value : null;
+      const endVal = document.getElementById('wiz-end') ? document.getElementById('wiz-end').value : null;
 
       showLoading(targetStatus === 'PUBLISHED' ? 'Publishing & Freezing Snapshot...' : 'Saving Assessment Draft...');
       try {
         let asmId = createdAssessmentId;
-        if (!asmId) {
-          const newAsm = await createAssessmentDefinitionWithTopics({
+        
+        // If edit mode and published, we should not change type, class, answer_type or topics.
+        const structuralData = (editAssessment && editAssessment.status === 'PUBLISHED') ? {} : {
             class_id: ClassId,
             assessment_type: (editAssessment && editAssessment.assessment_type && !['EVALUATION', 'ASSESSMENT'].includes(editAssessment.assessment_type.toUpperCase())) ? editAssessment.assessment_type : typeVal,
-            title,
-            working_duration_minutes: duration,
-            question_order: order,
-            prerequisite_assessment_id: prereqId,
-            availability_start: startVal ? new Date(startVal).toISOString() : null,
-            availability_end: endVal ? new Date(endVal).toISOString() : null
-          }, Array.from(selectedTopicIds));
+            answer_type: answerType
+        };
+
+        const updatePayload = {
+          ...structuralData,
+          title,
+          working_duration_minutes: duration,
+          question_order: order,
+          prerequisite_assessment_id: prereqId,
+          availability_start: startVal ? new Date(startVal).toISOString() : null,
+          availability_end: endVal ? new Date(endVal).toISOString() : null,
+          status: (targetStatus === 'PUBLISHED' ? 'PUBLISHED' : statusVal),
+          max_attempts: maxAttempts,
+          minimum_required_score: passThreshold
+        };
+
+        if (!asmId) {
+          updatePayload.display_order = 999;
+          const newAsm = await createAssessmentDefinitionWithTopics(updatePayload, Array.from(selectedTopicIds));
           asmId = newAsm.id;
           createdAssessmentId = asmId;
         } else {
-          await updateAssessmentWithTopics(asmId, {
-            class_id: ClassId,
-            assessment_type: (editAssessment && editAssessment.assessment_type && !['EVALUATION', 'ASSESSMENT'].includes(editAssessment.assessment_type.toUpperCase())) ? editAssessment.assessment_type : typeVal,
-            title,
-            working_duration_minutes: duration,
-            question_order: order,
-            prerequisite_assessment_id: prereqId,
-            availability_start: startVal ? new Date(startVal).toISOString() : null,
-            availability_end: endVal ? new Date(endVal).toISOString() : null,
-            status: targetStatus
-          }, Array.from(selectedTopicIds));
+          await updateAssessmentWithTopics(
+            asmId, 
+            updatePayload, 
+            (editAssessment && editAssessment.status === 'PUBLISHED') ? null : Array.from(selectedTopicIds)
+          );
         }
 
-        // Inline Assignment if selected
-        if (strategy === 'BATCH' && batchId) {
-          await assignAssessment({
-            assessment_id: asmId,
-            challenge_instance_type: 'BATCH',
-            batch_id: batchId,
-            availability_start: startVal ? new Date(startVal).toISOString() : null,
-            availability_end: endVal ? new Date(endVal).toISOString() : null
-          });
-        } else if (strategy === 'STUDENT' && studentId) {
-          await assignAssessment({
-            assessment_id: asmId,
-            challenge_instance_type: 'STUDENT',
-            student_id: studentId,
-            availability_start: startVal ? new Date(startVal).toISOString() : null,
-            availability_end: endVal ? new Date(endVal).toISOString() : null
-          });
+        const oldOrder = editAssessment ? (editAssessment.display_order || 999) : 999;
+        if (displayOrder !== oldOrder || !editAssessment) {
+          await reorderAssessment(asmId, displayOrder, ClassId);
         }
 
         if (targetStatus === 'PUBLISHED') {

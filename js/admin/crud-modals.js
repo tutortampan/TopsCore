@@ -1,10 +1,18 @@
 import {
   adminFetchAll, adminInsert, adminUpdate, adminSoftDelete,
   mergeDuplicateStudents, detectDuplicateStudents, mergeStudentPair,
-  detectDuplicateQuestions, resequenceAssessmentQuestions, resolveDuplicateQuestionGroup, batchResolveAssessmentDuplicateQuestions
-} from '../api.js?v=4.7.6';
-import { cleanStudentName } from '../api.js?v=4.7.6';
-import { showToast, showLoading, hideLoading } from '../app.js?v=4.7.6';
+  detectDuplicateQuestions, resequenceAssessmentQuestions, resolveDuplicateQuestionGroup, batchResolveAssessmentDuplicateQuestions,
+  toLevelLetter
+} from '../api.js?v=4.9.8';
+import { cleanStudentName } from '../api.js?v=4.9.8';
+import { showToast, showLoading, hideLoading } from '../app.js?v=4.9.8';
+import { getSupabase } from '../supabase.js?v=4.9.8';
+
+function formatLevelOption(l) {
+  if (l && l.name) return l.name;
+  if (l && typeof toLevelLetter === 'function') return toLevelLetter(l.level_number);
+  return l ? `Level ${l.level_number ?? ''}` : '—';
+}
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -41,13 +49,21 @@ const formFields = {
     { id: 'proficiency_level', label: 'Proficiency Level', type: 'select', options: ['Beginner', 'Intermediate', 'Advanced', 'Expert'], required: true }
   ],
   institutions: [
-    { id: 'name', label: 'Institution Name', type: 'text', required: true },
+    { id: 'name', label: 'Institution Name', type: 'text', required: true, placeholder: 'e.g. CEC Pare' },
+    { id: 'code', label: 'Short Code', type: 'text', required: false, placeholder: 'e.g. CEC, TOP' },
+    { id: 'logo_url', label: 'Logo URL / Image Link', type: 'text', required: false, placeholder: 'https://...' },
+    { id: 'address', label: 'Address / City', type: 'textarea', required: false, placeholder: 'e.g. Jl. Brawijaya No. 10, Pare, Kediri' },
+    { id: 'phone', label: 'Phone / WhatsApp', type: 'text', required: false, placeholder: 'e.g. 08123456789' },
+    { id: 'email', label: 'Official Email', type: 'text', required: false, placeholder: 'e.g. info@cec.ac.id' },
     { id: 'is_active', label: 'Active', type: 'checkbox' },
   ],
 
   classes: [
-    { id: 'name', label: 'Class Name', type: 'text', required: true },
-    { id: 'level_id', label: 'Level', type: 'select', source: 'levels', required: true },
+    { id: 'institution_id', label: 'Institution', type: 'select', source: 'institutions', required: false, uiOnly: true },
+    { id: 'program_id', label: 'Program', type: 'select', source: 'programs', required: true, dependsOn: 'institution_id' },
+    { id: 'name', label: 'Class Name', type: 'text', required: true, placeholder: 'e.g. Vocabulary' },
+    { id: 'code', label: 'Class Code', type: 'text', required: false, placeholder: 'e.g. VOCABULARY_1, BASIC_ENGLISH_1' },
+    { id: 'level_id', label: 'Level', type: 'select', source: 'levels', required: false },
     { id: 'is_active', label: 'Active', type: 'checkbox' },
   ],
   class_instances: [
@@ -67,15 +83,19 @@ const formFields = {
     { id: 'is_active', label: 'Active', type: 'checkbox' },
   ],
   programs: [
-    { id: 'name', label: 'Program Name', type: 'text', required: true },
+    { id: 'name', label: 'Program Name', type: 'text', required: true, placeholder: 'e.g. Camp' },
+    { id: 'code', label: 'Program Code', type: 'text', required: false, placeholder: 'e.g. CAMP-01' },
     { id: 'institution_id', label: 'Institution', type: 'select', source: 'institutions', required: true },
+    { id: 'description', label: 'Description', type: 'textarea', required: false, placeholder: 'Program description or syllabus notes' },
     { id: 'is_active', label: 'Active', type: 'checkbox' },
   ],
   batches: [
-    { id: 'institution_id', label: 'Institution (filter only)', type: 'select', source: 'institutions', required: false, uiOnly: true },
+    { id: 'institution_id', label: 'Institution', type: 'select', source: 'institutions', required: false, uiOnly: true },
     { id: 'program_id', label: 'Program', type: 'select', source: 'programs', required: true, dependsOn: 'institution_id' },
-    { id: 'name', label: 'Batch Name', type: 'text', required: true, placeholder: 'e.g. Batch 2026-A' },
+    { id: 'name', label: 'Batch Name', type: 'text', required: true, placeholder: 'e.g. 133' },
     { id: 'current_level_id', label: 'Current Level', type: 'select', source: 'levels', required: false },
+    { id: 'enrollment_date', label: 'Start Date (Enrollment)', type: 'date', required: false },
+    { id: 'actual_final_date', label: 'Finish Date', type: 'date', required: false },
     { id: 'is_active', label: 'Active', type: 'checkbox' },
   ],
   students: [
@@ -93,45 +113,33 @@ const formFields = {
     { id: 'pin_hash', label: 'PIN (4 digits)', type: 'password', placeholder: '****' },
     { id: 'is_active', label: 'Active', type: 'checkbox' },
   ],
-      assessments: [
-      { id: 'institution_id', label: 'Institution', type: 'select', source: 'institutions', required: true },
-      { id: 'program_id', label: 'Program', type: 'select', source: 'programs', required: true, dependsOn: 'institution_id' },
-      { id: 'level_id', label: 'Level', type: 'select', source: 'levels', required: true, dependsOn: 'program_id' },
-      { id: 'class_id', label: 'Class', type: 'select', source: 'classes', required: true, dependsOn: 'level_id' },
-      { id: 'module_id', label: 'AI Module', type: 'select', source: 'modules', required: true },
-      { id: 'auto_name_override', label: 'Manual Name Override', type: 'checkbox' },
-      { id: 'name', label: 'Assessment Name', type: 'text', required: true },
-      { id: 'available_from', label: 'Available From', type: 'datetime-local' },
-      { id: 'available_until', label: 'Available Until', type: 'datetime-local' },
-      { id: 'time_limit_seconds', label: 'Time Limit (Seconds)', type: 'number' },
-      { id: 'prerequisite_rules', label: 'Prerequisite Rules (JSON)', type: 'textarea' },
-      { id: 'payload', label: 'Configuration Payload (JSON)', type: 'textarea' }
+          assessments: [
+      { id: 'institution_id', label: 'Institution', type: 'select', source: 'institutions', required: true, readonly: true },
+      { id: 'program_id', label: 'Program', type: 'select', source: 'programs', required: true, dependsOn: 'institution_id', readonly: true },
+      { id: 'level_id', label: 'Level', type: 'select', source: 'levels', required: true, dependsOn: 'program_id', readonly: true },
+      { id: 'class_id', label: 'Class', type: 'select', source: 'classes', required: true, dependsOn: 'level_id', readonly: true },
+      { id: 'module_id', label: 'AI Module', type: 'select', source: 'modules', required: true, readonly: true },
+      { id: 'shell_code', label: 'Shell Code / Code ID', type: 'text', required: true, readonly: true },
+      { id: 'title', label: 'Assessment Title', type: 'text', required: true, readonly: true },
+      { id: 'description', label: 'Description', type: 'textarea', readonly: true },
+      { id: 'assessment_type', label: 'Assessment Type', type: 'text', readonly: true },
+      { id: 'assessment_category', label: 'Category / Tier', type: 'text', readonly: true },
+      { id: 'status', label: 'Status', type: 'select', options: [{value:'PUBLISHED',label:'PUBLISHED'},{value:'DRAFT',label:'DRAFT'},{value:'UNPUBLISHED',label:'UNPUBLISHED'},{value:'ARCHIVED',label:'ARCHIVED'}], required: true },
+      { id: 'working_duration_minutes', label: 'Duration (Minutes)', type: 'number' },
+      { id: 'question_order', label: 'Question Order', type: 'select', options: [{ value: 'sequential', label: 'Sequential' }, { value: 'random', label: 'Random' }] },
+      { id: 'answer_type', label: 'Answer Type', type: 'select', options: [{ value: 'spoken', label: 'Spoken' }, { value: 'written', label: 'Written' }, { value: 'selection', label: 'Selection' }, { value: 'mixed', label: 'Mixed' }] },
+      { id: 'prerequisite_assessment_id', label: 'Prerequisite (Optional)', type: 'select', source: 'assessments', required: false },
+      { id: 'max_attempts', label: 'Max Attempts (blank = unlimited)', type: 'number' },
+      { id: 'minimum_required_score', label: 'Passing Score %', type: 'number' },
+      { id: 'display_order', label: 'Display Order', type: 'number' }
     ],
-    Assessments: [
-    { id: 'institution_id', label: 'Institution', type: 'select', source: 'institutions', required: true },
-    { id: 'program_id', label: 'Program (Optional / Assigned)', type: 'select', source: 'programs', required: false, dependsOn: 'institution_id' },
-    { id: 'class_id', label: 'Class', type: 'select', source: 'classes', required: false, dependsOn: 'institution_id' },
-    { id: 'assessment_type', label: 'Assessment Type', type: 'select', options: ['Task', 'Quiz', 'Exam'], required: true, defaultValue: 'Task' },
-    
-    { id: 'Assessment_order', label: 'Sequence Order', type: 'number', required: true, defaultValue: '1', placeholder: 'e.g. 1' },
-    { id: 'title', label: 'Assessment Title (Auto-Generated)', type: 'text', required: true, placeholder: 'Auto-generated as: [Institution] - [Program] - [Class] - [Level] - [Type]' },
-    { id: 'prerequisite_assessment_id', label: 'Prerequisite Assessment (Optional)', type: 'select', source: 'Assessments', required: false },
-    { id: 'minimum_required_score', label: 'Passing Score % (Default: 60%)', type: 'number', required: true, defaultValue: 60 },
-    { id: 'prerequisite_min_score', label: 'Prerequisite Min % (Default: 60%)', type: 'number', required: false, defaultValue: 60 },
-    { id: 'time_limit_minutes', label: 'Global Time Limit (minutes)', type: 'number', required: true, defaultValue: 60 },
-    { id: 'status', label: 'Assessment Status', type: 'select', options: [{value:'PUBLISHED',label:'PUBLISHED'},{value:'DRAFT',label:'DRAFT'},{value:'UNPUBLISHED',label:'UNPUBLISHED'},{value:'ARCHIVED',label:'ARCHIVED'}], required: true },
-    { id: 'question_order', label: 'Question Order', type: 'select', options: [{ value: 'sequential', label: 'Sequential' }, { value: 'random', label: 'Random' }], required: true },
-    { id: 'retake_allowed', label: 'Retake Allowed', type: 'checkbox' },
-    { id: 'max_attempts', label: 'Max Attempts (blank = unlimited)', type: 'number' },
-  ],
   questions: [
     { id: 'question_text', label: 'Question Text', type: 'textarea', required: true },
     { id: 'question_order', label: 'Order', type: 'number', required: true },
     { id: 'assessment_id', label: 'Assessment', type: 'select', source: 'Assessments', required: true },
     { id: 'answer_type', label: 'Answer Type', type: 'select', options: [
-      {value:'multiple_choice',label:'Multiple Choice'},
-      {value:'dropdown',label:'Dropdown'},
-      {value:'speech_to_text',label:'Speaking Test'},
+      {value:'selection',label:'Selection'},
+      {value:'spoken',label:'Speaking Test'},
       {value:'written',label:'Written Test'}
     ], required: true },
     { id: 'correct_answer', label: 'Correct Answer', type: 'text', required: true, placeholder: 'e.g. run / jog / sprint  (use / ; or | to separate multiple accepted answers)' },
@@ -181,7 +189,7 @@ async function openCrudModal(section, record) {
 
       for (const f of fields) {
         const group = document.createElement('div');
-        const isFull = ['title', 'question_text', 'options_json', 'name'].includes(f.id) || f.type === 'textarea';
+        const isFull = (['title', 'question_text', 'options_json'].includes(f.id) || (f.id === 'name' && _currentSection !== 'batches' && _currentSection !== 'classes') || f.type === 'textarea');
         group.className = `form-group ${isFull ? 'form-group-full' : ''}`;
 
         const label = document.createElement('label');
@@ -196,12 +204,25 @@ async function openCrudModal(section, record) {
           sel.id = `field-${f.id}`;
           sel.name = f.id;
           if (f.required) sel.required = true;
+          if (f.readonly) sel.disabled = true;
           if (f.id === 'prerequisite_assessment_id') {
             sel.innerHTML = `<option value="">None (Optional)</option>`;
             sel.disabled = false;
-
+          } else if (f.source === 'levels' || f.id === 'level_id' || f.id === 'current_level_id') {
             sel.innerHTML = `<option value="">— No Level / Optional —</option>`;
-            sel.disabled = false;
+            let opts = await adminFetchAll('levels');
+            opts = (opts || []).filter(o => !o.deleted_at);
+            opts.sort((a, b) => (Number(a.level_number) || 0) - (Number(b.level_number) || 0));
+            const targetLvl = record ? (record.current_level_id || record.level_id || null) : null;
+            opts.forEach(o => {
+              const opt = document.createElement('option');
+              opt.value = o.id;
+              opt.textContent = formatLevelOption(o);
+              if (targetLvl && o.id === targetLvl) opt.selected = true;
+              sel.appendChild(opt);
+            });
+            if (targetLvl) sel.value = targetLvl;
+            else sel.value = '';
           } else if (!f.dependsOn) {
             sel.innerHTML = `<option value="">— Select —</option>`;
             let opts = await adminFetchAll(f.source);
@@ -219,9 +240,18 @@ async function openCrudModal(section, record) {
               const opt = document.createElement('option');
               opt.value = o.id;
               opt.textContent = o.name || o.title || o.title || o.id;
-              if (record && record[f.id] === o.id) opt.selected = true;
+              if (record && (record[f.id] === o.id || (f.id === 'current_level_id' && record.level_id === o.id))) opt.selected = true;
               sel.appendChild(opt);
             });
+
+            // If field is institution_id and none selected yet, auto-select active institution or first available
+            if (f.id === 'institution_id' && !sel.value) {
+              if (window._curriculumActiveInstId && opts.some(o => o.id === window._curriculumActiveInstId)) {
+                sel.value = window._curriculumActiveInstId;
+              } else if (sel.options.length > 1) {
+                sel.value = sel.options[1].value;
+              }
+            }
           } else {
             sel.innerHTML = `<option value="">— Select Previous First —</option>`;
             sel.disabled = true;
@@ -233,6 +263,7 @@ async function openCrudModal(section, record) {
           sel.id = `field-${f.id}`;
           sel.name = f.id;
           if (f.required) sel.required = true;
+          if (f.readonly) sel.disabled = true;
           sel.innerHTML = `<option value="">— Select —</option>` + f.options.map(o => {
             const val = typeof o === 'object' ? o.value : o;
             const labelStr = typeof o === 'object' ? o.label : o;
@@ -247,6 +278,7 @@ async function openCrudModal(section, record) {
           ta.name = f.id;
           ta.rows = 2;
           if (f.required) ta.required = true;
+          if (f.readonly) ta.readOnly = true;
           if (f.placeholder) ta.placeholder = f.placeholder;
           if (record?.[f.id]) ta.value = typeof record[f.id] === 'object' ? JSON.stringify(record[f.id]) : record[f.id];
           group.appendChild(ta);
@@ -270,6 +302,7 @@ async function openCrudModal(section, record) {
           inp.id = `field-${f.id}`;
           inp.name = f.id;
           if (f.required) inp.required = true;
+          if (f.readonly) inp.readOnly = true;
           if (f.placeholder) inp.placeholder = f.placeholder;
           if (record?.[f.id] !== undefined) inp.value = record[f.id];
           else if (f.defaultValue !== undefined) inp.value = f.defaultValue;
@@ -287,7 +320,7 @@ async function openCrudModal(section, record) {
       const Classeselect = crudForm.querySelector('#field-class_id');
       const prereqSelect = crudForm.querySelector('#field-prerequisite_assessment_id') || crudForm.querySelector('#field-prerequisite_assessment_id');
       const titleInput = crudForm.querySelector('#field-title') || crudForm.querySelector('#field-name');
-      const levelSelect = crudForm.querySelector('#field-level_id');
+      const levelSelect = crudForm.querySelector('#field-level_id') || crudForm.querySelector('#field-current_level_id');
       const AssessmentTypeInput = crudForm.querySelector('#field-assessment_type') || crudForm.querySelector('#field-category');
       const orderSelect = crudForm.querySelector('#field-order_num') || crudForm.querySelector('#field-display_order');
 
@@ -350,12 +383,17 @@ async function openCrudModal(section, record) {
 
       const populateLevelsForSection = async () => {
         if (!levelSelect) return;
+        const currentVal = levelSelect.value;
+        const targetLvl = record ? (record.current_level_id || record.level_id || null) : null;
+        
         levelSelect.innerHTML = `<option value="">— No Level / Optional —</option>`;
-        levelSelect.disabled = false;
+        
+        const isLevelReadonly = fields.find(f => f.id === 'level_id' || f.id === 'current_level_id')?.readonly;
+        levelSelect.disabled = !!isLevelReadonly;
 
         try {
           const allLevels = await adminFetchAll('levels');
-          const activeLevels = allLevels.filter(l => !l.deleted_at);
+          const activeLevels = (allLevels || []).filter(l => !l.deleted_at);
 
           const seen = new Set();
           activeLevels.sort((a, b) => (Number(a.level_number) || 0) - (Number(b.level_number) || 0)).forEach(l => {
@@ -363,22 +401,101 @@ async function openCrudModal(section, record) {
               seen.add(l.id);
               const opt = document.createElement('option');
               opt.value = l.id;
-              const letter = toLevelLetter(l.level_number);
-              const displayName = l.name ? (l.name.toLowerCase().includes('level') ? l.name : `Level ${letter} (${l.name})`) : `Level ${letter}`;
-              opt.textContent = displayName;
+              const letter = typeof toLevelLetter === 'function' ? toLevelLetter(l.level_number) : (l.name || `Level ${l.level_number}`);
+              opt.textContent = formatLevelOption(l);
               opt.setAttribute('data-level-letter', letter);
               opt.setAttribute('data-level-num', l.level_number);
+
+              if (targetLvl ? (targetLvl === l.id) : (currentVal === l.id)) {
+                opt.selected = true;
+              }
 
               levelSelect.appendChild(opt);
             }
           });
+
+          // Pre-select existing level or retain selected value without forcing Level 1
+          if (targetLvl) {
+            levelSelect.value = targetLvl;
+          } else if (currentVal && Array.from(levelSelect.options).some(o => o.value === currentVal)) {
+            levelSelect.value = currentVal;
+          } else {
+            levelSelect.value = '';
+          }
         } catch (lvlErr) {
-          console.warn('Level population notice:', lvlErr);
+          console.warn('[crud-modals] Level population notice:', lvlErr);
         }
 
         updatePrereqRequirement();
         triggerAutoTitle();
       };
+
+      if (_currentSection === 'batches') {
+        const enrollInput = crudForm.querySelector('#field-enrollment_date');
+        const finalInput = crudForm.querySelector('#field-actual_final_date');
+        if (enrollInput && finalInput) {
+          // Live duration hint element placed after finish date group (keeps start and finish dates on one row!)
+          let durationHint = crudForm.querySelector('#cec-batch-duration-hint');
+          if (!durationHint) {
+            durationHint = document.createElement('div');
+            durationHint.id = 'cec-batch-duration-hint';
+            durationHint.style.gridColumn = '1 / -1';
+            durationHint.style.fontSize = '0.75rem';
+            durationHint.style.marginTop = '-6px';
+            durationHint.style.marginBottom = '4px';
+            durationHint.style.color = 'var(--fm-text-muted)';
+            finalInput.closest('.form-group')?.after(durationHint);
+          }
+
+          const calcCEC = () => {
+            const val = enrollInput.value;
+            if (!val) {
+              if (durationHint) durationHint.innerHTML = '';
+              return;
+            }
+            const parts = val.split('-');
+            if (parts.length !== 3) return;
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10);
+            const d = parseInt(parts[2], 10);
+            // Ignore incomplete partial year typing (e.g. 0002)
+            if (isNaN(y) || y < 2000 || isNaN(m) || isNaN(d)) return;
+
+            // Start Monday -> Saturday of Week 4 is Start Date + 26 days
+            const startDate = new Date(Date.UTC(y, m - 1, d));
+            const endDate = new Date(startDate.getTime() + 26 * 86400000);
+            const endY = endDate.getUTCFullYear();
+            const endM = String(endDate.getUTCMonth() + 1).padStart(2, '0');
+            const endD = String(endDate.getUTCDate()).padStart(2, '0');
+            finalInput.value = `${endY}-${endM}-${endD}`;
+
+            if (durationHint) {
+              durationHint.innerHTML = `<span style="color: #34d399; font-weight: 600;">⚡ 4 Weeks (Mon – Sat W4)</span>: Auto-calculated finish date (${endD}/${endM}/${endY})`;
+            }
+          };
+
+          enrollInput.addEventListener('input', calcCEC);
+          enrollInput.addEventListener('change', calcCEC);
+
+          finalInput.addEventListener('input', () => {
+            if (durationHint && finalInput.value) {
+              durationHint.innerHTML = `<span style="color: #818cf8;">Custom Finish Date: ${finalInput.value}</span>`;
+            }
+          });
+
+          // Run immediately on open if enrollment date is already filled
+          if (enrollInput.value) {
+            if (!finalInput.value) {
+              calcCEC();
+            } else {
+              const parts = finalInput.value.split('-');
+              if (parts.length === 3) {
+                durationHint.innerHTML = `<span style="color: #34d399; font-weight: 600;">⚡ Scheduled Batch Duration</span>: Ends on ${parts[2]}/${parts[1]}/${parts[0]}`;
+              }
+            }
+          }
+        }
+      }
 
       if (progSelect && classSelect) {
         const populateBatchesForClass = async (selectedClassId) => {
@@ -418,9 +535,14 @@ async function openCrudModal(section, record) {
             const opt = document.createElement('option');
             opt.value = c.id;
             opt.textContent = c.name;
-            if (record && record.program_id === c.id) opt.selected = true;
+            if (record && (record.program_id === c.id || record.id === c.id)) opt.selected = true;
             classSelect.appendChild(opt);
           });
+          if (record?.program_id) {
+            classSelect.value = record.program_id;
+          } else if (!classSelect.value && classSelect.options.length > 1 && _currentSection !== 'levels') {
+            classSelect.value = classSelect.options[1].value;
+          }
           if (classSelect.value) {
             await populateBatchesForClass(classSelect.value);
           }
@@ -428,15 +550,39 @@ async function openCrudModal(section, record) {
           triggerAutoTitle();
         };
 
-        const initialProgId = record?.institution_id || (record?.programs?.institution_id) || (record?.classes?.institution_id) || progSelect.value;
+        let initialProgId = record?.institution_id || (record?.programs?.institution_id) || (record?.classes?.institution_id) || progSelect.value;
+        if (!initialProgId && record?.program_id) {
+          try {
+            const allProgs = await adminFetchAll('programs');
+            const foundProg = allProgs.find(p => p.id === record.program_id);
+            if (foundProg && foundProg.institution_id) {
+              initialProgId = foundProg.institution_id;
+            }
+          } catch (err) {
+            console.warn('[crud-modals] Program lookup failed:', err);
+          }
+        }
+        if (!initialProgId && window._curriculumActiveInstId) {
+          initialProgId = window._curriculumActiveInstId;
+        }
+        if (!initialProgId && progSelect.options.length > 1) {
+          initialProgId = progSelect.options[1].value;
+        }
+
         if (initialProgId) {
           progSelect.value = initialProgId;
           await populateClassesForProgram(initialProgId);
           if (record?.program_id) {
             classSelect.value = record.program_id;
-            await populateBatchesForClass(record.program_id);
+          } else if (!classSelect.value && classSelect.options.length > 1 && _currentSection !== 'levels') {
+            classSelect.value = classSelect.options[1].value;
+          }
+          if (classSelect.value) {
+            await populateBatchesForClass(classSelect.value);
             if (record?.batch_id && batchSelect) {
               batchSelect.value = record.batch_id;
+            } else if (batchSelect && !batchSelect.value && batchSelect.options.length > 1 && _currentSection === 'students') {
+              batchSelect.value = batchSelect.options[1].value;
             }
           }
         } else {
@@ -504,6 +650,7 @@ async function openCrudModal(section, record) {
           updatePrereqRequirement();
           triggerAutoTitle();
         });
+        await populateLevelsForSection();
       }
       if (orderSelect) {
         orderSelect.addEventListener('change', () => {
@@ -595,8 +742,18 @@ function _initCrudModals() {
 
       const targetTable = (_currentSection || '').replace('-', '_');
       
-      if (_currentSection === 'students' && payload.name) {
-        payload.name = cleanStudentName(payload.name);
+      if (_currentSection === 'students') {
+        if (payload.name) payload.name = cleanStudentName(payload.name);
+        if (payload.batch_id) {
+          try {
+            const bList = await adminFetchAll('batches', 'id, program_id, programs(institution_id)');
+            const bMatch = (bList || []).find(b => b.id === payload.batch_id);
+            if (bMatch) {
+              if (bMatch.program_id) payload.program_id = bMatch.program_id;
+              if (bMatch.programs?.institution_id) payload.institution_id = bMatch.programs.institution_id;
+            }
+          } catch (e) { console.warn('Sync batch error in crud-modal:', e); }
+        }
       }
       try {
         let payloadToSave = { ...payload };
@@ -630,6 +787,19 @@ function _initCrudModals() {
               throw err;
             }
           }
+          if (targetTable === 'classes') {
+            try {
+              const sb = await getSupabase();
+              if (sb) {
+                await sb.from('class_levels').delete().eq('class_id', _editId);
+                if (payloadToSave.level_id) {
+                  await sb.from('class_levels').insert({ class_id: _editId, level_id: payloadToSave.level_id });
+                }
+              }
+            } catch (clErr) {
+              console.warn('[crud-modals] class_levels sync notice:', clErr);
+            }
+          }
           showToast('Record updated.', 'success');
         } else {
           // If manually adding a student, check if identical student already exists in same class
@@ -644,12 +814,13 @@ function _initCrudModals() {
               return;
             }
           }
+          let inserted = null;
           try {
-            await adminInsert(targetTable, payloadToSave);
+            inserted = await adminInsert(targetTable, payloadToSave);
           } catch (err) {
             if (targetTable === 'levels' && payloadToSave.program_id && (err.message?.includes('program_id') || err.message?.includes('PGRST204') || err.message?.includes('400'))) {
               delete payloadToSave.program_id;
-              await adminInsert(targetTable, payloadToSave);
+              inserted = await adminInsert(targetTable, payloadToSave);
             } else if (targetTable === 'Assessments') {
               let retried = false;
               if ('program_id' in payloadToSave && (err.message?.includes('program_id') || err.message?.includes('PGRST204') || err.message?.includes('400'))) {
@@ -665,12 +836,22 @@ function _initCrudModals() {
                 retried = true;
               }
               if (retried) {
-                await adminInsert(targetTable, payloadToSave);
+                inserted = await adminInsert(targetTable, payloadToSave);
               } else {
                 throw err;
               }
             } else {
               throw err;
+            }
+          }
+          if (targetTable === 'classes' && inserted?.id && payloadToSave.level_id) {
+            try {
+              const sb = await getSupabase();
+              if (sb) {
+                await sb.from('class_levels').insert({ class_id: inserted.id, level_id: payloadToSave.level_id });
+              }
+            } catch (clErr) {
+              console.warn('[crud-modals] class_levels sync notice:', clErr);
             }
           }
           showToast('Record added.', 'success');
@@ -692,25 +873,8 @@ function _initCrudModals() {
       await openCrudModal(section, record);
     };
 
-    let _deleteSection, _deleteId;
-    window._deleteRecord = (section, id, name) => {
-      _deleteSection = section; _deleteId = id;
-      document.getElementById('delete-modal-message').textContent = `Soft-delete "${name}"? Historical data is preserved.`;
-      document.getElementById('delete-modal').classList.remove('hidden');
-    };
+    // Note: window._deleteRecord and delete-confirm-btn are centralized with cascade safeguards in app.js
 
-    document.getElementById('delete-confirm-btn').addEventListener('click', async () => {
-      if (!_deleteSection || !_deleteId) return; // Prevent duplicate/empty listener execution
-      try {
-        await adminSoftDelete(_deleteSection, _deleteId);
-        showToast('Record deleted.', 'success');
-        document.getElementById('delete-modal').classList.add('hidden');
-        if (typeof window.loadSection === 'function') window.loadSection(_currentSection);
-        _deleteSection = null; _deleteId = null; // Clear state
-      } catch (err) {
-        showToast('Delete failed: ' + err.message, 'error');
-      }
-    });
 
     // Modal close handlers
     ['close-crud-modal','crud-cancel-btn'].forEach(id => document.getElementById(id).addEventListener('click', () => {
@@ -719,6 +883,10 @@ function _initCrudModals() {
       }
       window.isProfileDirty = false;
       crudModal.classList.add('hidden');
+      if (crudForm) {
+        crudForm.reset();
+        crudForm.innerHTML = '';
+      }
     }));
     ['delete-cancel-btn'].forEach(id => document.getElementById(id).addEventListener('click', () => document.getElementById('delete-modal').classList.add('hidden')));
 

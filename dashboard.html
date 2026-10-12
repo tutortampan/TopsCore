@@ -3,14 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function() {
+      try {
+        var raw = sessionStorage.getItem('topscore_session');
+        var sess = raw ? JSON.parse(raw) : null;
+        if (!sess || !sess.student_id) {
+          window.location.replace('index.html');
+        }
+      } catch (_) {
+        window.location.replace('index.html');
+      }
+    })();
+  </script>
   <title>Dashboard — TOPS CORE</title>
   <meta name="description" content="Your TOPS CORE learning dashboard — track progress, view Classes, and start Assessments." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=4.7.4" />
-  <link rel="stylesheet" href="css/dashboard.css?v=4.7.4" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=4.7.4" />
+  <link rel="stylesheet" href="css/style.css?v=4.9.8" />
+  <link rel="stylesheet" href="css/dashboard.css?v=4.9.8" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=4.9.8" />
   <style>
     /* ============================================================
        COMPACT MOBILE-FIRST STUDENT DASHBOARD STYLES
@@ -21,11 +34,9 @@
       width: 100%;
       padding: 12px 16px;
       border-radius: var(--radius-xl);
-      background: linear-gradient(135deg, rgba(2, 30, 51, 0.7), rgba(1, 18, 29, 0.85));
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.4);
+      background: var(--clr-bg-2);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.25);
       position: relative;
       overflow: hidden;
     }
@@ -108,7 +119,7 @@
     }
     .hero-stat-pill {
       background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 12px;
       padding: 6px 12px;
       display: flex;
@@ -424,28 +435,23 @@
       border-color: rgba(239, 68, 68, 0.4) !important;
     }
   </style>
-  <meta name="view-transition" content="same-origin" />
+
 </head>
 <body class="dashboard-page">
 
-  <div id="toast-container"></div>
 
-  <!-- Top Navigation -->
+
+  <div id="toast-container"></div>  <!-- Top Navigation -->
   <header class="dashboard-header">
     <div class="dashboard-header-brand">🎓 TOPS CORE</div>
     <div class="d-flex align-center gap-3">
-      <!-- Microphone Status Button -->
-      <button class="btn btn-ghost btn-sm d-flex align-center gap-1" id="header-mic-btn" title="Check microphone capability for speaking tests" style="padding:4px 10px;border-radius:20px;background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);">
-        <span id="header-mic-icon">🎙️</span>
-        <span id="header-mic-text" class="text-xs" style="font-weight:600;">Mic Check</span>
-      </button>
-
-      <!-- Header Avatar -->
-      <div id="header-avatar" class="header-avatar" title="View Profile" style="cursor:pointer;">
-        <span id="header-avatar-icon">👤</span>
-        <img id="header-avatar-img" class="hidden" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+      <!-- Removed redundant avatar and mic check -->
+      <!-- Restored header avatar as requested by user -->
+      <div id="header-avatar" class="header-avatar" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: var(--clr-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;">
+        <span id="header-avatar-initial">S</span>
+        <img id="header-avatar-img" class="hidden" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;" />
       </div>
-      <span id="header-student-name" class="text-muted text-sm fw-600"></span>
+
       <button class="header-action-btn header-profile-btn" id="view-profile-btn" title="View Profile" aria-label="Profile">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -459,59 +465,93 @@
           <line x1="21" y1="12" x2="9" y2="12"></line>
         </svg>
       </button>
+      </button>
     </div>
   </header>
 
   <!-- Main Content -->
   <main class="dashboard-content">
 
-    <!-- Welcome Banner / Student Profile Showcase (Compact, Mobile-First) -->
-    <section class="welcome-banner" aria-labelledby="welcome-heading" style="display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:10px; padding:15px; text-align:center;">
-      <!-- Avatar -->
-      <div id="banner-avatar-container" class="banner-avatar-box" title="Click to view or change profile" style="margin:0;">
-        <span id="banner-avatar-initial">S</span>
-        <img id="banner-avatar-img" class="hidden" alt="Profile Photo" style="width:100%;height:100%;object-fit:cover;" />
-        <div class="banner-camera-badge" title="Change photo">📷</div>
-      </div>
+    <!-- Hero Identity Bar -->
+    
+    <section class="welcome-banner card" aria-labelledby="welcome-name" style="width: 100%; max-width: 540px; margin: 0 auto; border-radius: 24px; background: #0f172a; padding: 14px 18px; color: white; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.06); position: relative; margin-bottom: 12px;">
+  
+  <!-- Nama Siswa -->
+  <h1 id="welcome-name" style="text-align: center; font-size: 1.35rem; font-weight: 800; letter-spacing: 0.025em; margin: 0 0 8px 0; font-family: var(--font-display); line-height: 1.2; color: #ffffff;">Student</h1>
 
-      <!-- Name -->
-      <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:8px 12px; display:inline-flex; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
-        <h1 class="welcome-name" id="welcome-heading" style="font-size:1rem; margin:0;">Hello, <span id="welcome-name" class="text-gradient">Student</span>! 👋</h1>
-      </div>
+  <div style="width: 100%; height: 1px; background: rgba(148, 163, 184, 0.2); margin: 8px 0; background: rgba(148, 163, 184, 0.18);"></div>
 
-      <!-- Level/Meta -->
-      <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:8px 12px; display:inline-flex; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
-        <p class="welcome-meta" id="welcome-meta" style="font-size:0.9rem; margin:0; color:#fff; font-weight:600;">Loading your details…</p>
-      </div>
+  <!-- Area Tengah: Skor, Avatar, Grade -->
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+    
+    <!-- Kotak Score -->
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #172138; border-radius: 16px; padding: 10px 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid rgba(255, 255, 255, 0.06);">
+      <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 4px;">Score</span>
+      <span id="bottom-stat-avg-score" style="font-size: 1.7rem; font-weight: 800; color: #ff7722; filter: drop-shadow(0 0 12px rgba(255, 119, 34, 0.4)); font-family: var(--font-display); line-height: 1;">0%</span>
+    </div>
 
-      <!-- Status -->
-      <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:8px 12px; display:inline-flex; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
-        <span class="badge badge-success session-pill" style="margin:0;">● Active</span>
-        <span class="text-xs text-muted hidden" id="stat-Assessments-done">0</span>
-        <span id="overview-Assessments-count" class="hidden">0</span>
-        <span id="overview-classes-count" class="hidden">0</span>
-        <span id="overview-mic-status" class="hidden">Ready</span>
+    <!-- Avatar Tengah -->
+    <div style="position: relative; flex-shrink: 0; cursor: pointer;" onclick="document.getElementById('banner-photo-input').click();">
+      <div id="banner-avatar-container" title="Click to view or change profile" style="width: 86px; height: 86px; border-radius: 50%; padding: 4px; background: linear-gradient(to top right, #ff6600, #ff8833); box-shadow: 0 0 20px rgba(255, 119, 34, 0.35); display: flex; align-items: center; justify-content: center; transition: transform 0.3s ease;">
+        <span id="banner-avatar-initial" style="font-size: 2.4rem; display: flex; align-items: center; justify-content: center; height: 100%; width: 100%; border-radius: 50%; font-family: var(--font-display); font-weight: 800; color: #ffffff; background: #1e293b;">S</span>
+        <img id="banner-avatar-img" class="hidden" alt="Profile Photo" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: #1e293b;" />
+        <input type="file" id="banner-photo-input" accept="image/*" class="hidden" />
       </div>
+    </div>
 
-      <!-- Grade -->
-      <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:8px 12px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
-        <span style="font-size:0.85rem; font-weight:600; color:var(--clr-text-2);">Grade:</span>
-        <span class="stat-pill-val banner-grade-text" id="stat-overall-grade-badge" style="margin:0; font-size:1.1rem; line-height:1;">—</span>
-      </div>
+    <!-- Kotak Grade -->
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #172138; border-radius: 16px; padding: 10px 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid rgba(255, 255, 255, 0.06);">
+      <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 4px;">Grade</span>
+      <span id="stat-overall-grade-value" style="font-size: 1.7rem; font-weight: 800; color: #ff7722; filter: drop-shadow(0 0 12px rgba(255, 119, 34, 0.4)); font-family: var(--font-display); line-height: 1;">&mdash;</span>
+    </div>
 
-      <!-- Score -->
-      <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:8px 12px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
-        <span style="font-size:0.85rem; font-weight:600; color:var(--clr-text-2);">Score:</span>
-        <span class="stat-pill-val banner-score-text" id="stat-overall-score" style="margin:0; font-size:1.1rem; line-height:1;">0%</span>
-      </div>
-    </section>
+  </div>
 
-    <!-- Classes Section (Right Under the Welcome Banner) -->
-    <section class="classes-section" aria-labelledby="classes-heading">
+  <div style="width: 100%; height: 1px; background: rgba(148, 163, 184, 0.2); margin: 8px 0; background: rgba(148, 163, 184, 0.18);"></div>
+
+  <!-- Info Footer -->
+  <div id="welcome-meta-wrapper" style="margin: 0; text-align: center; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.05em; color: #cbd5e1; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.75rem; list-style: none;">
+    <span id="meta-inst">CEC</span>
+    <span style="color: #475569;">|</span>
+    <span id="meta-prog">CAMP</span>
+    <span style="color: #475569;">|</span>
+    <span id="meta-batch">131</span>
+    <span style="color: #475569;">|</span>
+    <span id="meta-lvl" style="text-transform: uppercase;">3RD LEVEL</span>
+  </div>
+
+  <!-- Elemen Kompatibilitas JS yang Disembunyikan Penuh -->
+  <div class="hidden" style="display: none !important;">
+    <span id="welcome-heading"></span>
+    <span id="welcome-age"></span>
+    <span id="welcome-meta"></span>
+    <span id="welcome-level"></span>
+    <div id="welcome-level-panel"></div>
+    <span id="stat-overall-score">0%</span>
+    <span id="bottom-stat-best-score">0%</span>
+  </div>
+
+
+      
+      </section>
+      <!-- UP NEXT SECTION -->
+      <section id="up-next-section" class="hidden" style="margin-top: 10px; margin-bottom: 0;">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">🎯 Next Assessment</h2>
+            
+          </div>
+        </div>
+        <div id="up-next-container" style="background: var(--clr-bg-2, #0b1523); border-radius: 12px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.06); display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <section class="classes-section" aria-labelledby="classes-heading" style="margin-top: 10px; margin-bottom: 0;">
       <div class="section-header">
         <div>
-          <h2 class="section-title" id="classes-heading">📚 My Classes</h2>
-          <p class="section-subtitle">Choose a class to view levels and available Assessments</p>
+          <h2 class="section-title" id="classes-heading">📚 Classes</h2>
+          
         </div>
       </div>
 
@@ -524,45 +564,19 @@
     </section>
 
     <!-- Completed Assessments Section (Bottom of Dashboard) -->
-    <section class="completed-Assessments-section" aria-labelledby="completed-Assessments-heading">
+    <section class="completed-Assessments-section" aria-labelledby="completed-Assessments-heading" style="margin-top: 10px; margin-bottom: 0; flex: 1; min-height: 0; display: flex; flex-direction: column;">
       <div class="section-header d-flex align-center justify-between flex-wrap gap-3">
         <div>
-          <h2 class="section-title d-flex align-center gap-2" id="completed-Assessments-heading" style="margin-bottom:var(--space-1);">
-            <span>📋</span> My Completed Assessments
+          <h2 class="section-title d-flex align-center gap-2" id="completed-Assessments-heading">
+            <span>📋</span> Completed Assessments
           </h2>
-          <p class="section-subtitle">Review your past test performance, scores, and grade achievements</p>
-        </div>
-        <span class="badge badge-primary" id="bottom-completed-badge" style="font-size:0.8rem;padding:6px 12px;">0 Assessments Completed</span>
-      </div>
-
-      <!-- Completed Assessments Summary Bar -->
-      <div class="completed-summary-bar">
-        <div class="completed-summary-card glass-card">
-          <div class="completed-summary-icon">📈</div>
-          <div>
-            <div class="completed-summary-val" id="bottom-stat-total-Assessments">0</div>
-            <div class="completed-summary-lbl">Completed Assessments</div>
-          </div>
-        </div>
-        <div class="completed-summary-card glass-card">
-          <div class="completed-summary-icon">⭐ </div>
-          <div>
-            <div class="completed-summary-val" id="bottom-stat-avg-score">0%</div>
-            <div class="completed-summary-lbl">Average Score</div>
-          </div>
-        </div>
-        <div class="completed-summary-card glass-card">
-          <div class="completed-summary-icon">&#127942;</div>
-          <div>
-            <div class="completed-summary-val" id="bottom-stat-best-score">0%</div>
-            <div class="completed-summary-lbl">Highest Score</div>
-          </div>
+          
         </div>
       </div>
 
       <!-- Completed Assessments Table Container -->
-      <div class="glass-card completed-table-card mt-4">
-        <div class="table-responsive" id="completed-Assessments-container">
+      <div class="card completed-table-card mt-4" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
+        <div class="table-responsive" id="completed-Assessments-container" style="flex: 1; overflow-y: auto;">
           <div class="empty-state p-6">
             <div class="spinner"></div>
             <p>Loading your Assessment history…</p>
@@ -596,7 +610,7 @@
                 <img id="prof-photo-img" class="hidden" alt="Profile Photo" />
               </div>
               <div class="profile-avatar-camera" title="Change photo">&#128247;</div>
-              <input type="file" id="photo-file-input" accept="image/*" class="hidden" />
+              <input type="file" id="profile-modal-photo-input" accept="image/*" class="hidden" />
             </div>
 
             <div class="profile-id-details">
@@ -623,7 +637,7 @@
           </div>
 
           <!-- Compact Personal Data Card -->
-          <div class="profile-pin-card" style="margin-top: 16px; margin-bottom: 16px;">
+          <div class="profile-pin-card" style="margin-top: 10px; margin-bottom: 0; margin-bottom: 16px;">
             <div class="profile-pin-header">
               <span class="profile-pin-icon">&#128100;</span>
               <span class="profile-pin-title">Personal Data</span>
@@ -764,7 +778,7 @@
           </p>
 
           <!-- Camera Stream / Photo Preview Area -->
-          <div style="width:220px;height:220px;margin:0 auto var(--space-4);border-radius:50%;overflow:hidden;border:4px solid var(--clr-primary);position:relative;background:#050510;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+          <div style="width:220px;height:220px;margin:0 auto var(--space-4);border-radius:50%;overflow:hidden;border:4px solid var(--clr-primary);position: relative;background:#050510;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
             <video id="webcam-stream" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);"></video>
             <img id="webcam-snapshot" class="hidden" alt="Student Photo Snapshot" style="width:100%;height:100%;object-fit:cover;" />
             <canvas id="webcam-canvas" class="hidden" width="320" height="320"></canvas>
@@ -811,26 +825,26 @@
   </main>
 
   <!-- Birthday Setup Modal -->
-  <div id="birthday-setup-modal" class="modal-backdrop hidden" style="z-index: 100000; background: rgba(0,0,0,0.85); position: fixed; inset: 0;">
-    <div style="background: white; padding: 2rem; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-      <h2 style="margin-top: 0; color: #1e293b; font-size: 1.5rem; font-weight: 700;">Complete Your Profile</h2>
-      <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 1.5rem;">
+  <div id="birthday-setup-modal" class="modal-backdrop hidden" style="z-index: 100000; background: rgba(0,0,0,0.8); position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;">
+    <div style="background: #1e293b; color: #f8fafc; padding: 2rem; border-radius: 16px; max-width: 480px; width: 92%; box-shadow: 0 20px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); text-align: center;">
+      <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📅</div>
+      <h2 style="margin: 0; color: #ffffff; font-size: 1.5rem; font-weight: 800;">Complete Your Profile</h2>
+      <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.35rem; margin-bottom: 1.5rem;">
         Please enter your date of birth to continue. This is required for your student profile.
       </p>
-      <div style="margin-bottom: 1.5rem; text-align: left;">
-        <label style="display: block; font-size: 0.85rem; color: #64748b; font-weight: 600; margin-bottom: 0.5rem;">Date of Birth</label>
-        <input type="date" id="onboard-birth-date" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem;">
+      <div style="background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem; text-align: left;">
+        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; margin-bottom: 0.5rem;">Date of Birth *</label>
+        <input type="date" id="onboard-birth-date" class="form-control" style="width: 100%; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem; color-scheme: dark;" required>
       </div>
       <button id="btn-confirm-birthday-setup" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1rem; border-radius: 8px;">✓ Save &amp; Continue</button>
     </div>
   </div>
-
   <!-- Education Setup Modal (Hard Gate: Strictly max 2 latest entries: Institution & Year only) -->
-  <div id="education-setup-modal" class="modal-backdrop hidden" style="z-index: 100000; background: rgba(0,0,0,0.85); position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;">
+  <div id="education-setup-modal" class="modal-backdrop hidden" style="z-index: 100000; background: #000000; position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;">
     <div style="background: #1e293b; color: #f8fafc; padding: 2rem; border-radius: 16px; max-width: 480px; width: 92%; box-shadow: 0 20px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);">
       <div style="text-align: center; margin-bottom: 1.25rem;">
         <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎓</div>
-        <h2 style="margin: 0; color: #ffffff; font-size: 1.35rem; font-weight: 800;">Academic Background (Hard Gate)</h2>
+        <h2 style="margin: 0; color: #ffffff; font-size: 1.5rem; font-weight: 800;">Academic Background (Hard Gate)</h2>
         <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.35rem;">
           Mandatory before dashboard access. Provide up to 2 latest academic institutions and years.
         </p>
@@ -840,7 +854,17 @@
       <div style="background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem;">
         <div style="font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; margin-bottom: 0.5rem;">Entry 1: Latest Institution *</div>
         <div style="display: flex; gap: 0.75rem;">
-          <input type="text" id="onboard-edu-inst-1" class="form-control" placeholder="Institution Name (e.g. Oxford)" style="flex: 2; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;" required />
+          <select id="onboard-edu-inst-1" class="form-control" style="flex: 2; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;" required>
+            <option value="" disabled selected>Pilih Tingkat Pendidikan</option>
+            <option value="TK">TK</option>
+            <option value="SD">SD</option>
+            <option value="SMP">SMP</option>
+            <option value="SMA">SMA</option>
+            <option value="SMK">SMK</option>
+            <option value="S1">S1</option>
+            <option value="S2">S2</option>
+            <option value="S3">S3</option>
+          </select>
           <input type="number" id="onboard-edu-year-1" class="form-control" placeholder="Year (2025)" min="1970" max="2035" style="flex: 1; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;" required />
         </div>
       </div>
@@ -849,7 +873,17 @@
       <div style="background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem;">
         <div style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.5rem;">Entry 2: Prior Institution (Optional)</div>
         <div style="display: flex; gap: 0.75rem;">
-          <input type="text" id="onboard-edu-inst-2" class="form-control" placeholder="Institution Name (Optional)" style="flex: 2; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;" />
+          <select id="onboard-edu-inst-2" class="form-control" style="flex: 2; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;">
+            <option value="" disabled selected>Pilih Tingkat (Opsional)</option>
+            <option value="TK">TK</option>
+            <option value="SD">SD</option>
+            <option value="SMP">SMP</option>
+            <option value="SMA">SMA</option>
+            <option value="SMK">SMK</option>
+            <option value="S1">S1</option>
+            <option value="S2">S2</option>
+            <option value="S3">S3</option>
+          </select>
           <input type="number" id="onboard-edu-year-2" class="form-control" placeholder="Year" min="1970" max="2035" style="flex: 1; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;" />
         </div>
       </div>
@@ -861,10 +895,10 @@
   </div>
 
   <script type="module">
-    import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentClass, fetchStudentAttemptsForAssessment, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, fetchAssignments, fetchAssessments, toOrdinalLevel, fetchBatches, fetchStudentLevel } from './js/api.js?v=4.7.6';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender } from './js/session.js?v=4.7.6';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout } from './js/app.js?v=4.7.6';
-    import { testMicrophoneCapability } from './js/speech.js?v=4.7.6';
+    import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentClass, fetchStudentAttemptsForAssessment, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, fetchAssignments, fetchAssessments, toOrdinalLevel, fetchBatches, fetchStudentLevel } from './js/api.js?v=4.9.8';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './js/session.js?v=4.9.8';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout } from './js/app.js?v=4.9.8';
+    import { testMicrophoneCapability } from './js/speech.js?v=4.9.8';
 
 
     function escapeHtml(str) {
@@ -881,112 +915,90 @@
     if (!session) throw new Error('Not authenticated');
 
     // Populate header & Welcome Banner
-    document.getElementById('header-student-name').textContent = session.student_name;
-    document.getElementById('welcome-name').textContent = session.student_name;
-    document.getElementById('welcome-meta').textContent = `${session.institution_name} › ${session.program_name}${session.batch_name ? ' › ' + session.batch_name : ''}`;
+    const headerStudentNameEl = document.getElementById('header-student-name');
+    if (headerStudentNameEl) headerStudentNameEl.textContent = session.student_name;
+    const welcomeNameEl = document.getElementById('welcome-name');
+    if (welcomeNameEl) welcomeNameEl.textContent = session.student_name;
+    const elInst = document.getElementById('meta-inst');
+  const elProg = document.getElementById('meta-prog');
+  const elBatch = document.getElementById('meta-batch');
+  const elLvl = document.getElementById('meta-lvl');
+  if (elInst) elInst.textContent = session.institution_name || 'CEC';
+  
+  // Title case for program
+  const prgName = session.program_name ? session.program_name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : 'Camp';
+  if (elProg) elProg.textContent = prgName.toUpperCase();
+  
+  if (elBatch) elBatch.textContent = session.batch_name ? String(session.batch_name).replace(/[^0-9]/g, '') || session.batch_name : '131';
+  if (elLvl) elLvl.textContent = session.level_name ? (session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level') : '3rd Level';
+  
+  // Suppress old welcome-meta logic
+  const welcomeMetaEl = document.getElementById('welcome-meta');
+  if(welcomeMetaEl) welcomeMetaEl.innerHTML = '';
 
-    // Compute first initial for banner avatar placeholder
-    const cleanStudentName = (session.student_name || 'Student').replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?)\s+/i, '').trim();
-    const firstInitial = cleanStudentName.charAt(0).toUpperCase() || 'S';
-    const bannerInitialEl = document.getElementById('banner-avatar-initial');
-    if (bannerInitialEl) bannerInitialEl.textContent = firstInitial;
 
-    window.isProfileDirty = false;
-    document.getElementById('logout-btn')?.addEventListener('click', () => {
-      if (window.isProfileDirty) {
-        if (!confirm('You have unsaved changes in your profile. Are you sure you want to logout?')) {
-          return;
-        }
-      }
-      clearStudentSession();
-      window.location.href = 'index.html';
-    });
-
-    // ── Global Profile Photo Synchronization ──
+        
     function applyPhotoEverywhere(url) {
-      if (!url) return;
-      const photoImg = document.getElementById('prof-photo-img');
-      const avatarIcon = document.getElementById('avatar-icon');
-      const headerAvatarImg = document.getElementById('header-avatar-img');
-      const headerAvatarIcon = document.getElementById('header-avatar-icon');
-      const bannerImg = document.getElementById('banner-avatar-img');
-      const bannerInitial = document.getElementById('banner-avatar-initial');
-      if (photoImg) { photoImg.src = url; photoImg.classList.remove('hidden'); }
-      if (avatarIcon) avatarIcon.classList.add('hidden');
-      if (headerAvatarImg) { headerAvatarImg.src = url; headerAvatarImg.classList.remove('hidden'); }
-      if (headerAvatarIcon) headerAvatarIcon.classList.add('hidden');
-      if (bannerImg) { bannerImg.src = url; bannerImg.classList.remove('hidden'); }
-      if (bannerInitial) bannerInitial.classList.add('hidden');
-    }
+      const imgEl = document.getElementById('banner-avatar-img');
+      const initEl = document.getElementById('banner-avatar-initial');
+      if (imgEl && initEl && url) {
+        imgEl.src = url;
+        imgEl.classList.remove('hidden');
+        initEl.classList.add('hidden');
+      }
+      
+      const hdrImgEl = document.getElementById('header-avatar-img');
+      const hdrInitEl = document.getElementById('header-avatar-initial');
+      if (hdrImgEl && hdrInitEl && url) {
+        hdrImgEl.src = url;
+        hdrImgEl.classList.remove('hidden');
+        hdrInitEl.classList.add('hidden');
+      }
 
-    // Banner avatar click opens profile modal
-    document.getElementById('banner-avatar-container')?.addEventListener('click', () => {
-      applyStudentGenderUI(session.gender);
-      document.getElementById('profile-modal')?.classList.remove('hidden');
-    });
-
-    // ── Microphone Capability Detection & Header Indicator ──
-    async function updateHeaderMicStatus(res) {
-      const icon = document.getElementById('header-mic-icon');
-      const text = document.getElementById('header-mic-text');
-      const btn = document.getElementById('header-mic-btn');
-      const ovMic = document.getElementById('overview-mic-status');
-      if (res && res.ok) {
-        if (icon) icon.textContent = '✅';
-        if (text) text.textContent = 'Mic Ready';
-        if (btn) {
-          btn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
-          btn.style.background = 'rgba(16, 185, 129, 0.12)';
-          btn.title = 'Microphone verified and ready for speaking tests.';
-        }
-        if (ovMic) {
-          ovMic.textContent = 'Ready ✅';
-          ovMic.style.color = '#10b981';
-        }
-      } else {
-        if (icon) icon.textContent = '⚠️ ';
-        if (text) text.textContent = 'Mic Check';
-        if (btn) {
-          btn.style.borderColor = 'rgba(245, 158, 11, 0.5)';
-          btn.style.background = 'rgba(245, 158, 11, 0.12)';
-          btn.title = res?.message || 'Click to test microphone capability';
-        }
-        if (ovMic) {
-          ovMic.textContent = 'Check ⚠️ ';
-          ovMic.style.color = '#f59e0b';
-        }
+      const profImgEl = document.getElementById('prof-photo-img');
+      const profInitEl = document.getElementById('avatar-icon');
+      if (profImgEl && profInitEl && url) {
+        profImgEl.src = url;
+        profImgEl.classList.remove('hidden');
+        profInitEl.classList.add('hidden');
       }
     }
 
-    document.getElementById('header-mic-btn')?.addEventListener('click', async () => {
-      showLoading('Testing microphone capability…');
-      try {
-        const res = await testMicrophoneCapability();
-        hideLoading();
-        await updateHeaderMicStatus(res);
-        if (res.ok) {
-          showToast('✅ Microphone is working properly! Ready for speaking tests.', 'success');
-        } else {
-          showToast(`⚠️  ${res.message}`, 'warning', 6000);
-        }
-      } catch (err) {
-        hideLoading();
-        showToast('Microphone test error: ' + err.message, 'error');
-      }
-    });
-
-    // ── Gender & Title Synchronization ──
     function applyStudentGenderUI(g) {
-      const cleanName = (session.student_name || '').replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?)\s+/i, '').trim();
-      const formattedName = formatStudentName(cleanName, g);
-      session.student_name = formattedName;
-      session.gender = g || null;
-      updateStudentSessionGender(session.gender, formattedName);
+      const nameStr = session.student_name.trim();
+      let parts = nameStr.split(' ');
+      
+      const firstLower = (parts[0] || '').toLowerCase();
+      if (['mr.', 'mr', 'miss', 'ms.', 'ms', 'mrs.', 'mrs'].includes(firstLower)) {
+         parts.shift();
+      }
+      
+      const cleanFullName = parts.join(' ') || '';
+      let formattedName = nameStr;
+      
+      if (g === 'male') {
+        formattedName = `Mr. ${cleanFullName}`;
+      } else if (g === 'female') {
+        formattedName = `Miss ${cleanFullName}`;
+      }
 
-      document.getElementById('header-student-name').textContent = formattedName;
-      document.getElementById('welcome-name').textContent = formattedName;
+      const hdrNameEl = document.getElementById('header-student-name');
+      if (hdrNameEl) hdrNameEl.textContent = formattedName;
+      const welcNameEl = document.getElementById('welcome-name');
+      if (welcNameEl) welcNameEl.textContent = formattedName;
       const profName = document.getElementById('prof-student-name');
       if (profName) profName.textContent = formattedName;
+
+      session.gender = g;
+      session.student_name = formattedName;
+      setStudentSession(session);
+      
+      // Update initials
+      const initChar = cleanFullName ? cleanFullName.charAt(0).toUpperCase() : 'S';
+      const bInit = document.getElementById('banner-avatar-initial');
+      const hInit = document.getElementById('header-avatar-initial');
+      if (bInit) bInit.textContent = initChar;
+      if (hInit) hInit.textContent = initChar;
 
       const badge = document.getElementById('prof-gender-badge');
       if (badge) {
@@ -1016,7 +1028,7 @@
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./js/supabase.js?v=4.7.6')).getSupabase();
+          const sb = await (await import('./js/supabase.js?v=4.9.8')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).single();
           if (st?.gender) {
             currentGender = st.gender;
@@ -1139,6 +1151,13 @@
         } catch {}
         webcamStream = null;
       }
+    }
+
+    function updateHeaderMicStatus(res) {
+      const headerMic = document.getElementById('header-mic-status') || document.querySelector('.header-mic-badge');
+      if (!headerMic) return;
+      headerMic.textContent = res?.ok ? '🎤 Ready' : '🎤 Check';
+      headerMic.className = res?.ok ? 'header-mic-badge active' : 'header-mic-badge warning';
     }
 
     async function checkMicrophoneOnEntry() {
@@ -1290,15 +1309,18 @@
     });
 
     async function checkAndPromptPhoto() {
-      let photoUrl = null;
-      try {
-        const sb = await (await import('./js/supabase.js?v=4.7.6')).getSupabase();
-        const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).single();
-        if (st && st.photo_url) {
-          photoUrl = st.photo_url;
+      let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
+      if (!photoUrl) {
+        try {
+          const sb = await (await import('./js/supabase.js?v=4.9.8')).getSupabase();
+          const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).single();
+          if (st && st.photo_url) {
+            photoUrl = st.photo_url;
+            localStorage.setItem(`stu_photo_${session.student_id}`, photoUrl);
+          }
+        } catch (err) {
+          console.warn('Could not check photo status from DB:', err);
         }
-      } catch (err) {
-        console.warn('Could not check photo status from DB:', err);
       }
 
       if (photoUrl) {
@@ -1326,15 +1348,22 @@
     }
 
     async function checkAndPromptBirthday() {
-      let hasBirthday = false;
-      try {
-        const sb = await (await import('./js/supabase.js?v=4.7.6')).getSupabase();
-        const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).single();
-        if (st && st.birth_date) {
-          hasBirthday = true;
+      let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
+      if (!hasBirthday) {
+        try {
+          const sb = await (await import('./js/supabase.js?v=4.9.8')).getSupabase();
+          const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).single();
+          if (st && st.birth_date) {
+            hasBirthday = true;
+            localStorage.setItem(`stu_bd_${session.student_id}`, 'true');
+            const diff = Date.now() - new Date(st.birth_date).getTime();
+            const age = Math.abs(new Date(diff).getUTCFullYear() - 1970);
+            const ageEl = document.getElementById('welcome-age');
+            if (ageEl) ageEl.textContent = `${age} y.o. • `;
+          }
+        } catch (err) {
+          console.warn('Could not check birthday status from DB:', err);
         }
-      } catch (err) {
-        console.warn('Could not check birthday status from DB:', err);
       }
 
       if (hasBirthday) return;
@@ -1368,6 +1397,11 @@
           
           try {
             await updateStudentBirthday(session.student_id, bd);
+            const diff = Date.now() - new Date(bd).getTime();
+            const age = Math.abs(new Date(diff).getUTCFullYear() - 1970);
+            const ageEl = document.getElementById('welcome-age');
+            if (ageEl) ageEl.textContent = `${age} y.o. • `;
+            
             showToast('Birthday registered successfully!', 'success');
             doResolve();
           } catch (err) {
@@ -1383,7 +1417,7 @@
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./js/supabase.js?v=4.7.6')).getSupabase();
+        const sb = await (await import('./js/supabase.js?v=4.9.8')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).single();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -1393,7 +1427,7 @@
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./js/session.js?v=4.7.6');
+             const { setStudentSession } = await import('./js/session.js?v=4.9.8');
              setStudentSession(session);
           }
         }
@@ -1443,7 +1477,7 @@
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./js/session.js?v=4.7.6');
+            const { setStudentSession } = await import('./js/session.js?v=4.9.8');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -1474,6 +1508,43 @@
           session.level_number = studentLvl.level_number;
           session.level_name = studentLvl.level_name;
           sessionStorage.setItem('topscore_session', JSON.stringify(session));
+
+          const welcomeMetaEl = document.getElementById('welcome-meta');
+          if (welcomeMetaEl) {
+            const progName = session.program_name ? session.program_name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : '';
+  const parts = [
+    session.institution_name,
+    progName,
+              session.batch_name ? 'Batch ' + session.batch_name : null
+            ].filter(Boolean);
+            
+            welcomeMetaEl.innerHTML = '';
+            parts.forEach((part, index) => {
+              const span = document.createElement('span');
+              span.textContent = part;
+              if (index === 0) {
+                span.className = "text-xs font-bold text-slate-200 tracking-wide";
+                span.style.cssText = "font-size: 0.75rem; font-weight: 700; color: #e2e8f0; letter-spacing: 0.025em;";
+              } else {
+                span.className = "text-xs font-semibold text-slate-400 tracking-wide";
+                span.style.cssText = "font-size: 0.75rem; font-weight: 600; color: #94a3b8; letter-spacing: 0.025em;";
+              }
+              welcomeMetaEl.appendChild(span);
+              if (index < parts.length - 1) {
+                const dot = document.createElement('span');
+                dot.className = "w-1 h-1 rounded-full bg-slate-600";
+                dot.style.cssText = "width: 4px; height: 4px; border-radius: 50%; background-color: #475569; display: block; margin: 2px 0;";
+                welcomeMetaEl.appendChild(dot);
+              }
+            });
+
+          }
+          const welcomeLevelPanelEl = document.getElementById('welcome-level-panel');
+          const welcomeLevelEl = document.getElementById('welcome-level');
+          if (welcomeLevelPanelEl && welcomeLevelEl) {
+            welcomeLevelEl.textContent = session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level';
+            welcomeLevelPanelEl.classList.remove('hidden');
+          }
         }
 
         // Check for Level-Up Celebration
@@ -1496,7 +1567,7 @@
 
         const [Classes, progress, attempts, assignmentsRaw, assessmentsRaw] = await withTimeout(
           Promise.all([
-            fetchStudentClasses(session.program_id, session.institution_id, null),
+            fetchStudentClasses(session.program_id, session.institution_id, session.level_id),
             fetchStudentProgress(session.student_id),
             fetchAllStudentAttempts(session.student_id),
             Promise.resolve([]),
@@ -1516,10 +1587,14 @@
       } catch(e) {
         hideLoading();
         showToast('Failed to load dashboard: ' + e.message, 'error');
+        // Clear loading placeholders if there's an error
+        renderClasses([], []);
+        renderCompletedAssessmentsBottom([], 0);
       }
     }
 
     function renderClasses(rawClasses, progress) {
+        window._loadedClasses = rawClasses;
       const subjCountEl = document.getElementById('overview-classes-count');
       if (subjCountEl) subjCountEl.textContent = rawClasses.length;
 
@@ -1577,11 +1652,8 @@
           card.setAttribute('aria-label', `Class: ${subj.name}`);
           card.innerHTML = `
             <div class="class-icon">${classIcons[idx % classIcons.length]}</div>
-            <div class="class-name">${session.level_name ? `${session.level_name} - ${subj.name}` : subj.name}</div>
-            <div class="text-sm text-muted mb-3">${isCompleted ? "Completed" : "In Progress"}</div>
-            <div class="score-bar-wrap">
-              <div class="score-bar" style="width:${pct}%"></div>
-            </div>
+            <div class="class-name">${subj.name}</div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;"><div class="text-xs text-muted mb-0">${isCompleted ? "Completed" : "In Progress"}</div><div class="score-bar-wrap" style="width: 80px;"><div class="score-bar" style="width:${pct}%; background: var(--clr-primary, #6366f1);"></div></div></div>
           `;
           card.addEventListener('click', () => openClassModal(subj, progress));
           card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openClassModal(subj, progress); });
@@ -1589,41 +1661,6 @@
         });
       }
 
-      if (completedClasses.length > 0) {
-        const drawer = document.createElement('details');
-        drawer.style.cssText = 'grid-column:1/-1; margin-top:24px; border:1px solid rgba(255,255,255,0.1); border-radius:12px; background:rgba(255,255,255,0.02); overflow:hidden;';
-        
-        const summary = document.createElement('summary');
-        summary.style.cssText = 'padding:16px; cursor:pointer; font-weight:600; color:var(--clr-text-2); outline:none; user-select:none; display:flex; align-items:center; gap:8px;';
-        summary.innerHTML = `<span>🎓</span> Completed Milestones (Previous Levels)`;
-        drawer.appendChild(summary);
-
-        const compGrid = document.createElement('div');
-        compGrid.className = 'classes-grid';
-        compGrid.style.cssText = 'padding:16px; border-top:1px solid rgba(255,255,255,0.05); gap:16px;';
-        
-        completedClasses.forEach((subj, idx) => {
-          const card = document.createElement('div');
-          card.className = 'class-card';
-          card.style.opacity = '0.75';
-          card.setAttribute('role', 'button');
-          card.setAttribute('tabindex', '0');
-          card.innerHTML = `
-            <div class="class-icon" style="filter:grayscale(1)">${classIcons[idx % classIcons.length]}</div>
-            <div class="class-name">${subj.levels?.name || session.level_name ? `${subj.levels?.name || session.level_name} - ${subj.name}` : subj.name}</div>
-            <div class="text-sm text-muted mb-3">Locked / Read-Only</div>
-            <div class="score-bar-wrap">
-              <div class="score-bar" style="width:100%; background:var(--clr-success);"></div>
-            </div>
-          `;
-          card.addEventListener('click', () => openClassModal(subj, progress));
-          card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openClassModal(subj, progress); });
-          compGrid.appendChild(card);
-        });
-        
-        drawer.appendChild(compGrid);
-        grid.appendChild(drawer);
-      }
     }
 
     // ── openClassModal: Opens the Level Modal for a Class ──
@@ -1825,9 +1862,9 @@
 
     function formatAnswerType(atype) {
       if (!atype) return 'Written Test';
-      if (atype === 'speech_to_text') return 'Speaking Test';
+      if (atype === 'speech_to_text' || atype === 'spoken') return 'Speaking Test';
       if (atype === 'written') return 'Written Test';
-      if (atype === 'multiple_choice') return 'Multiple Choice';
+      if (atype === 'multiple_choice' || atype === 'selection') return 'Selection';
       if (atype === 'dropdown') return 'Dropdown';
       return atype.replace('_', ' ');
     }
@@ -1868,7 +1905,7 @@
         const aid = att.assessment_id || att.Assessment_id;
         if (!aid) return;
         const pct = parseFloat(att.percentage || 0);
-        if (att.status === 'IN_PROGRESS') {
+        if ((att.status || '').toUpperCase() === 'IN_PROGRESS') {
           inProgressByAssessment[aid] = att;
         }
         // Prefer is_best_score flag; fallback to highest pct
@@ -1958,7 +1995,7 @@
         // Status
         let statusBadge = '';
         let actionBtn = '';
-        const isCompleted = bestAtt && ['SUBMITTED', 'AUTO_SUBMITTED'].includes(bestAtt.status);
+        const isCompleted = bestAtt && ['SUBMITTED', 'AUTO_SUBMITTED'].includes((bestAtt.status || '').toUpperCase());
 
         const isLocked = !prereqMet;
 
@@ -1975,7 +2012,7 @@
           actionBtn = `<button class="btn btn-warning btn-sm" data-aid="${asm.id}">Resume</button>`;
         } else if (isCompleted) {
           const asmTypeCheck = asm.assessment_type || asm.Assessment_type || 'Assessment';
-          let retakesAllowed = asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.assessment_id || a.Assessment_id) === asm.id && a.status !== 'IN_PROGRESS').length));
+          let retakesAllowed = asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.assessment_id || a.Assessment_id) === asm.id && (a.status || '').toUpperCase() !== 'IN_PROGRESS').length));
           
           if (asmTypeCheck === 'EXAM' && !passed) {
              const remedialUnlocked = allAttempts.some(a => (a.assessment_id || a.Assessment_id) === asm.id && a.is_remedial_unlocked === true);
@@ -2064,6 +2101,70 @@
     }
 
     // ── Overall Stats Calculation (AGENTS.md §2.8 & §2.10) ──
+    
+    function populateUpNext(attempts, myAssessments) {
+      const upNextSection = document.getElementById('up-next-section');
+      const upNextContainer = document.getElementById('up-next-container');
+      if (!upNextSection || !upNextContainer) return;
+
+      // Completed assessment IDs (score > 0)
+      const completedIds = new Set();
+      attempts.forEach(a => {
+        if (parseFloat(a.percentage || 0) > 0) {
+          const aid = a.assessment_id || a.Assessment_id || (a.assessments && a.assessments.id) || a.id;
+          completedIds.add(aid);
+        }
+      });
+
+      // Find the first uncompleted assessment that matches the student's level_number
+      // Sort by level_number, then display_order
+      let available = myAssessments.filter(a => a.status === 'PUBLISHED' && !completedIds.has(a.id));
+      
+      // Filter out assessments that exceed the student's level
+      const sessionLvlNum = parseInt(session.level_number) || 999; 
+      available = available.filter(a => {
+         const aLvlNum = a.levels?.level_number || 999;
+         return aLvlNum <= sessionLvlNum;
+      });
+      
+      available.sort((a, b) => {
+         const aLvl = a.levels?.level_number || 999;
+         const bLvl = b.levels?.level_number || 999;
+         if (aLvl !== bLvl) return aLvl - bLvl;
+         return (a.display_order || 99) - (b.display_order || 99);
+      });
+
+      const nextAssessment = available[0];
+
+      if (nextAssessment) {
+        upNextSection.classList.remove('hidden');
+        
+        // Build card HTML
+        const classObj = window._loadedClasses?.find(c => c.id === nextAssessment.class_id) || {};
+        const className = classObj.name || nextAssessment.classes?.name || 'Class';
+        const rawType = nextAssessment.assessment_type || 'TEST';
+          const cleanType = rawType.includes('_') ? rawType.split('_').pop() : rawType;
+          const typeStr = cleanType.charAt(0).toUpperCase() + cleanType.slice(1).toLowerCase();
+        const title = nextAssessment.title || 'Untitled Assessment';
+        
+        const navLink = `sessionStorage.setItem('topscore_assessment_id','${nextAssessment.id}');window.location.href='assessment.html?assessment_id=${nextAssessment.id}&id=${nextAssessment.id}&program_id=${session.program_id}&institution_id=${session.institution_id}&class_id=${nextAssessment.class_id}'`;
+
+        upNextContainer.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div>
+              <div style="font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 4px;">${escapeHtml(title)}</div>
+              <div style="font-size: 0.8rem; color: #94a3b8; display: flex; gap: 8px; align-items: center;">
+                <span class="badge badge-primary" style="font-size: 0.65rem; padding: 2px 6px;">${escapeHtml(typeStr)}</span>
+              </div>
+            </div>
+            <button onclick="${navLink}" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 8px; font-weight: 700; white-space: nowrap;">Start Now</button>
+          </div>
+        `;
+      } else {
+        upNextSection.classList.add('hidden');
+      }
+    }
+
     async function computeOverallStats(attempts, assessments = []) {
       // Rule 2.8: Overall score is average of all takeable Assessments for student.
       // Rule 2.7: Global average strictly counts unopened/unattempted available modules as 0.
@@ -2092,17 +2193,10 @@
       });
 
       let scores = [];
-      if (availableAssms.length > 0) {
-        // Global average strictly counts unopened/unattempted available modules as 0
-        scores = availableAssms.map(a => {
-          const score = bestMap[a.id];
-          return score != null ? score : 0;
-        });
-      } else {
-        scores = Object.entries(bestMap)
-          .filter(([k]) => !k.endsWith('_locked'))
-          .map(([, v]) => v);
-      }
+      /* User requested strictly counting taken assessments */
+      scores = Object.entries(bestMap)
+        .filter(([k]) => !k.endsWith('_locked'))
+        .map(([, v]) => parseFloat(v) || 0);
 
       const completedCount = Object.keys(bestMap).filter(k => !k.endsWith('_locked')).length;
       const AssessmentsCountEl = document.getElementById('stat-Assessments-done');
@@ -2112,8 +2206,11 @@
 
       if (!scores.length) {
         document.getElementById('stat-overall-score').textContent = '0%';
-        document.getElementById('stat-overall-grade-badge').textContent = '—';
-        renderCompletedAssessmentsBottom(attempts);
+        const gradeBadgeVal = document.getElementById('stat-overall-grade-value');
+        if (gradeBadgeVal) gradeBadgeVal.textContent = '—';
+        const gb = document.getElementById('stat-overall-grade-badge'); if (gb) gb.className = 'result-grade-display grade-none';
+        renderCompletedAssessmentsBottom(attempts, 0);
+        populateUpNext(attempts, assessments);
         return;
       }
 
@@ -2125,17 +2222,58 @@
       scoreEl.textContent = `${avgPct}%`;
       scoreEl.className = `fw-800 banner-score-text text-grade-${overallGrade}`;
 
-      const gradeBadge = document.getElementById('stat-overall-grade-badge');
-      gradeBadge.textContent = overallGrade;
+      const gradeBadgeValue = document.getElementById('stat-overall-grade-value');
+      if (gradeBadgeValue) gradeBadgeValue.textContent = overallGrade;
+      
+        const gradeBadge = document.getElementById('stat-overall-grade-badge');
+        const gradePalette = { 
+      S: '#f59e0b', 
+      A: '#10b981', 
+      B: '#3b82f6', 
+      C: '#f97316', 
+      D: '#eab308', 
+      E: '#ea580c', 
+      F: '#ef4444' 
+    };
+    const targetColor = gradePalette[overallGrade] || '#ea580c';
+    
+    const hexToRgb = hex => {
+      let r = 0, g = 0, b = 0;
+      if (hex.length === 7) {
+        r = parseInt(hex.substring(1, 3), 16);
+        g = parseInt(hex.substring(3, 5), 16);
+        b = parseInt(hex.substring(5, 7), 16);
+      }
+      return `${r}, ${g}, ${b}`;
+    };
+    const rgbColor = hexToRgb(targetColor);
 
-      const gradeColors = { S: '#f59e0b', A: '#10b981', B: '#3b82f6', C: '#f59e0b', D: '#ea580c', E: '#ef4444', F: '#94a3b8' };
-      gradeBadge.style.color = gradeColors[overallGrade] || 'var(--clr-text-1)';
-
-      renderCompletedAssessmentsBottom(attempts);
+    const avatarBox = document.getElementById('banner-avatar-container');
+    if (avatarBox) {
+      avatarBox.style.background = `linear-gradient(to top right, ${targetColor}, ${targetColor})`;
+      avatarBox.style.boxShadow = `0 0 20px rgba(${rgbColor}, 0.35)`;
+    }
+    
+    const scoreVal = document.getElementById('bottom-stat-avg-score');
+    if (scoreVal) {
+      scoreVal.style.color = targetColor;
+      scoreVal.style.filter = `drop-shadow(0 0 12px rgba(${rgbColor}, 0.4))`;
+    }
+    
+    const gradeVal = document.getElementById('stat-overall-grade-value');
+    if (gradeVal) {
+      gradeVal.style.color = targetColor;
+      gradeVal.style.filter = `drop-shadow(0 0 12px rgba(${rgbColor}, 0.4))`;
+    }
+    
+      
+  
+        renderCompletedAssessmentsBottom(attempts, avgPct);
+        populateUpNext(attempts, assessments);
     }
 
     // --- Render Completed Assessments Section (Bottom of Dashboard) ---
-    function renderCompletedAssessmentsBottom(attempts) {
+    function renderCompletedAssessmentsBottom(attempts, avgPct = 0) {
       const container = document.getElementById('completed-Assessments-container');
       const badgeEl = document.getElementById('bottom-completed-badge');
       const statTotalEl = document.getElementById('bottom-stat-total-Assessments');
@@ -2177,20 +2315,41 @@
       const uniqueAssessmentsCount = Object.keys(bestAttemptsMap).length;
       let totalPctSum = 0;
       Object.values(bestAttemptsMap).forEach(pct => totalPctSum += pct);
-      const avgScore = uniqueAssessmentsCount > 0 ? (totalPctSum / uniqueAssessmentsCount).toFixed(1) : '0.0';
+      const avgScore = avgPct;
 
       if (badgeEl) badgeEl.textContent = `${uniqueAssessmentsCount} Assessment${uniqueAssessmentsCount === 1 ? '' : 's'} Completed`;
       if (statTotalEl) statTotalEl.textContent = uniqueAssessmentsCount;
       if (statAvgEl) statAvgEl.textContent = `${avgScore}%`;
       if (statBestEl) statBestEl.textContent = `${highestPct.toFixed(1)}%`;
 
-      // Sort attempts by submitted_at desc
-      const sortedAttempts = [...attempts].sort((a, b) => {
+      // Deduplicate attempts: keep the one with the highest score (or latest if tied) for each assessment
+      const uniqueAttemptsMap = new Map();
+      attempts.forEach(a => {
+        const assessmentId = a.assessment_id || a.Assessment_id || (a.assessments && a.assessments.id) || a.id;
+        const currentPct = parseFloat(a.percentage || 0);
+        if (!uniqueAttemptsMap.has(assessmentId)) {
+          uniqueAttemptsMap.set(assessmentId, a);
+        } else {
+          const existing = uniqueAttemptsMap.get(assessmentId);
+          const existingPct = parseFloat(existing.percentage || 0);
+          if (currentPct > existingPct) {
+            uniqueAttemptsMap.set(assessmentId, a);
+          } else if (currentPct === existingPct) {
+             const existingDate = existing.submitted_at ? new Date(existing.submitted_at).getTime() : 0;
+             const currentDate = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
+             if (currentDate > existingDate) {
+                 uniqueAttemptsMap.set(assessmentId, a);
+             }
+          }
+        }
+      });
+      
+      // Sort the deduplicated attempts by submitted_at desc
+      const sortedAttempts = Array.from(uniqueAttemptsMap.values()).sort((a, b) => {
         const dateA = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
         const dateB = b.submitted_at ? new Date(b.submitted_at).getTime() : 0;
         return dateB - dateA;
       });
-
       const gradeColors = { S: '#f59e0b', A: '#10b981', B: '#3b82f6', C: '#f59e0b', D: '#ea580c', E: '#ef4444', F: '#94a3b8' };
 
       // Desktop Table
@@ -2269,22 +2428,19 @@
 
         // Mobile Card
         mobileListHtml += `
-          <div class="completed-Assessment-mobile-card" onclick="${navLink}">
-            <div class="Assessment-card-header">
-              <div class="Assessment-card-title">${escapeHtml(AssessmentTitle)}</div>
-              <span class="grade-badge grade-${grade}" style="width:26px;height:26px;font-size:0.75rem;display:inline-flex;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:${gradeColor};border:1.5px solid ${gradeColor};flex-shrink:0;">${grade}</span>
+          <div class="completed-Assessment-mobile-card" onclick="${navLink}" style="padding: 8px 12px; gap: 4px; margin-bottom: 6px;">
+            <div class="Assessment-card-header" style="margin-bottom: 2px;">
+              <div class="Assessment-card-title" style="font-size: 0.9rem; line-height: 1.3;">${escapeHtml(AssessmentTitle)}</div>
+              <span class="grade-badge grade-${grade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:${gradeColor};border:1px solid ${gradeColor};flex-shrink:0;">${grade}</span>
             </div>
-            <div class="Assessment-card-badges">
-              <span class="badge badge-neutral" style="font-size:0.65rem;padding:2px 6px;">${escapeHtml(className)}</span>
-              ${AssessmentType ? `<span class="badge badge-neutral" style="font-size:0.65rem;padding:2px 6px;background:rgba(255,255,255,0.02);">${escapeHtml(AssessmentType)}</span>` : ''}
-            </div>
-            <div class="Assessment-card-footer">
-              <div style="display:flex;align-items:center;gap:8px;">
+            
+            <div class="Assessment-card-footer" style="margin-top: 0;">
+              <div style="display:flex;align-items:center;gap:8px; font-size: 0.75rem;">
                 <span style="color:var(--clr-text-3);">Score: <strong style="color:var(--clr-text-1);">${pct}%</strong></span>
                 <span style="color:var(--clr-text-3);">&bull;</span>
                 <span>${statusBadgeMobile}</span>
               </div>
-              <div style="color:var(--clr-text-4);">${escapeHtml(dateStr)}</div>
+              <div style="color:var(--clr-text-4); font-size: 0.7rem;">${escapeHtml(dateStr)}</div>
             </div>
           </div>
         `;
@@ -2365,7 +2521,7 @@
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./js/supabase.js?v=4.7.6')).getSupabase();
+          const sb = await (await import('./js/supabase.js?v=4.9.8')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).single();
           if (st?.photo_url) applyPhotoEverywhere(st.photo_url);
           
@@ -2416,7 +2572,7 @@
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./js/supabase.js?v=4.7.6')).getSupabase();
+            const sb = await (await import('./js/supabase.js?v=4.9.8')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
             
@@ -2452,12 +2608,14 @@
         });
       }
 
-      // Photo upload click handler
+      // Photo upload click handlers
       const avatarContainer = document.getElementById('avatar-container');
-      const fileInput = document.getElementById('photo-file-input');
+      const bannerInput = document.getElementById('banner-photo-input');
+      const modalInput = document.getElementById('profile-modal-photo-input');
 
-      avatarContainer.addEventListener('click', () => fileInput.click());
-      fileInput.addEventListener('change', (e) => {
+      avatarContainer.addEventListener('click', () => modalInput.click());
+      
+      const handlePhotoChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
         if (file.size > 2 * 1024 * 1024) {
@@ -2480,7 +2638,10 @@
           }
         };
         reader.readAsDataURL(file);
-      });
+      };
+      
+      if (bannerInput) bannerInput.addEventListener('change', handlePhotoChange);
+      if (modalInput) modalInput.addEventListener('change', handlePhotoChange);
 
       // Change PIN Form Handler
       const changePinForm = document.getElementById('change-pin-form');
@@ -2618,9 +2779,28 @@
       document.getElementById('level-up-overlay').classList.remove('active');
     });
 
+    // Logout
+    document.getElementById('logout-btn')?.addEventListener('click', () => {
+      if (confirm('Are you sure you want to log out?')) {
+        clearStudentSession();
+        window.location.href = '/index.html';
+      }
+    });
+
     loadDashboard();
-  </script></body>
+  </script>
+
+
+  <div id="bottom-ad-banner" class="topscore-locked-banner">
+    TopsCore &copy; 2026 | Created by Mr. Top
+  </div>
+</body>
 </html>
+
+
+
+
+
 
 
 

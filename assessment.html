@@ -3,6 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function() {
+      try {
+        var raw = sessionStorage.getItem('topscore_session');
+        var sess = raw ? JSON.parse(raw) : null;
+        if (!sess || !sess.student_id) {
+          window.location.replace('index.html');
+        }
+      } catch (_) {
+        window.location.replace('index.html');
+      }
+    })();
+  </script>
   <meta name="google" content="notranslate" />
   <meta name="googlebot" content="notranslate" />
   <meta name="robots" content="notranslate" />
@@ -11,8 +24,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
-  <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/style.css?v=4.9.8" />
+  <link rel="stylesheet" href="css/dashboard.css?v=4.9.8" />
   <meta name="view-transition" content="same-origin" />
   <style>
     /* ===== SPEECH-TO-TEXT CENTERED LAYOUT ===== */
@@ -68,10 +81,8 @@
     .speech-transcript-card {
       width: 100%;
       max-width: 520px;
-      background: rgba(255,255,255,0.08);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255,255,255,0.15);
+      background: #0f1d2d;
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 16px;
       padding: 1.5rem;
       color: #fff;
@@ -213,7 +224,7 @@
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.15);
       border-radius: 12px;
-      padding: 1rem 1.25rem;
+      padding: 0.75rem 1rem;
       margin-bottom: 0.75rem;
       color: #fff;
       font-size: 1.1rem;
@@ -222,8 +233,8 @@
       gap: 1rem;
       cursor: pointer;
       transition: all 0.2s ease;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      
+      -webkit-
       box-sizing: border-box;
     }
     .mc-option:hover {
@@ -263,8 +274,8 @@
       font-size: 1.1rem;
       font-family: inherit;
       resize: vertical;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      
+      -webkit-
       box-sizing: border-box;
     }
     .written-input:focus {
@@ -278,11 +289,11 @@
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.15);
       border-radius: 12px;
-      padding: 1rem 1.25rem;
+      padding: 0.75rem 1rem;
       color: #fff;
       font-size: 1.1rem;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      
+      -webkit-
       box-sizing: border-box;
       appearance: none;
     }
@@ -307,41 +318,126 @@
     header, #progress-bar-toggle, .bottom-nav-bar {
       transition: opacity 0.5s ease;
     }
+
+    /* Virtual Keyboard */
+    #virtual-keyboard-container { 
+      flex-shrink: 0; 
+      height: auto; 
+      padding: 8px 6px; 
+      background: rgba(10, 15, 30, 0.95); 
+      border-top: 1px solid rgba(255,255,255,0.05); 
+       
+      display: none; 
+      flex-direction: column; 
+      box-sizing: border-box; 
+      z-index: 1000; 
+      box-shadow: 0 -4px 15px rgba(0,0,0,0.3); 
+    } 
+    .vk-row { 
+      display: flex; 
+      justify-content: center; 
+      gap: 6px; 
+      margin-bottom: 6px; 
+    } 
+    .vk-row:last-child { 
+      margin-bottom: 0; 
+    } 
+    .vk-key { 
+      flex: 1; 
+      aspect-ratio: 1 / 1; 
+      max-height: 44px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      max-width: 9%; 
+      border-radius: 6px; 
+      background: rgba(255,255,255,0.08); 
+      border: 1px solid rgba(255,255,255,0.1); 
+      color: #e2e8f0; 
+      font-size: 1.15rem; 
+      font-family: inherit; 
+      font-weight: 500; 
+      cursor: pointer; 
+      -webkit-user-select: none; 
+      user-select: none; 
+      transition: all 0.1s ease; 
+    } 
+    .vk-key:active { 
+      background: rgba(255,255,255,0.25); 
+      transform: scale(0.95); 
+      border-color: rgba(255,255,255,0.3); 
+    } 
+    .vk-key.special { 
+      max-width: 15%; 
+      background: rgba(99, 102, 241, 0.2); 
+      color: #a5b4fc; 
+      font-size: 0.95rem; 
+      border-color: rgba(99, 102, 241, 0.3); 
+    } 
+    .vk-key.special:active { 
+      background: rgba(99, 102, 241, 0.4); 
+    } 
+    .vk-key.space { 
+      max-width: 45%; 
+      aspect-ratio: unset; 
+    } 
+
+    /* Anti-Cheat selection and touch callout suppression */
+    body.assessment-page,
+    .assessment-layout,
+    .assessment-main-content,
+    .speech-question-text,
+    .speech-transcript-box,
+    .mc-option,
+    .phrase-chip {
+      -webkit-user-select: none !important;
+      -moz-user-select: none !important;
+      -ms-user-select: none !important;
+      user-select: none !important;
+      -webkit-touch-callout: none !important;
+    }
+
+    .written-input {
+      -webkit-user-select: none !important;
+      user-select: none !important;
+      -webkit-touch-callout: none !important;
+    }
   </style>
 </head>
 <body class="assessment-page notranslate" translate="no">
 
+
+
   <div id="toast-container"></div>
 
-  <header style="width:100%; max-width:800px; margin:0 auto; padding:15px; display:flex; flex-direction:column; gap:20px; box-sizing:border-box;">
-    <!-- Top Row: Logo & Timer -->
-    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-      <!-- LOGO WEBSITE -->
-      <div style="background:rgba(255,255,255,0.85); border-radius:12px; padding:6px 10px; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); backdrop-filter:blur(10px);">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0b4c80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-        <span style="font-weight:800; font-size:1rem; color:#0b4c80; font-family:'Outfit', sans-serif;">TopsCore</span>
-      </div>
-      <!-- TIMER -->
-      <div class="assessment-timer" id="assessment-timer" style="background:rgba(255,255,255,0.85); border-radius:12px; padding:6px 10px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); backdrop-filter:blur(10px);">
-        <span style="font-size:1rem;">⏱</span>
-        <span id="timer-display" style="font-weight:800; color:#dc2626; font-size:0.85rem;">--:--</span>
-      </div>
+  <header class="flex items-start justify-between gap-3 w-full max-w-[800px] mx-auto p-3" style="width:100%; max-width:800px; margin:0 auto; padding:15px 12px 5px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; box-sizing:border-box;">
+    <!-- Left Element: Timer -->
+    <div class="assessment-timer shrink-0" id="assessment-timer" style="background:rgba(255,255,255,0.85); border-radius:12px; padding:6px 10px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); ">
+      <span style="font-size:1rem;">⏳</span>
+      <span id="timer-display" style="font-weight:800; color:#dc2626; font-size:0.85rem;">--:--</span>
     </div>
 
-    <!-- Student Profile (Center/Horizontal) -->
-    <div style="display:flex; align-items:center; justify-content:center; text-align:left; gap:12px; margin-top:8px;">
-      <img id="assessment-student-avatar" src="https://ui-avatars.com/api/?name=S&background=random" style="width:56px; height:56px; border-radius:50%; object-fit:cover; box-shadow:0 4px 12px rgba(0,0,0,0.15); border:2px solid #06b6d4;" />
-      <div style="display:flex; flex-direction:column;">
-        <span id="assessment-student-name" style="font-size:1.1rem; font-weight:800; color:#fff; font-family:'Outfit',sans-serif; text-shadow:0 2px 4px rgba(0,0,0,0.5); margin-bottom:2px;">-</span>
-        <span id="assessment-student-details" style="font-size:0.85rem; font-weight:600; color:#cbd5e1; text-shadow:0 1px 2px rgba(0,0,0,0.5);">Loading details...</span>
-      </div>
+    <!-- Center Element: Avatar & Data -->
+    <div class="student-profile flex-1 text-center" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 0 10px;">
+      <img id="assessment-student-avatar" src="https://ui-avatars.com/api/?name=S&background=random" style="width:55px; height:55px; border-radius:50%; object-fit:cover; border:2px solid #06b6d4; margin-bottom: 8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);" />
+      <span id="assessment-student-name" class="truncate" style="font-size:1rem; font-weight:700; color:#fff; font-family:'Outfit',sans-serif; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">-</span>
     </div>
+
+    <!-- Right Element: Give up! -->
+    <button class="shrink-0" onclick="window.openSubmitModal()" style="background:linear-gradient(135deg, #ef4444, #b91c1c); border:1px solid rgba(239,68,68,0.4); border-radius:8px; padding:6px 10px; color:#fff; font-weight:700; font-size:0.85rem; display:flex; align-items:center; gap:4px; box-shadow:0 4px 12px rgba(0,0,0,0.2); cursor:pointer;">
+      🏳️ Give up!
+    </button>
   </header>
+
+  <!-- ASSESSMENT TITLE -->
+  <div class="w-full max-w-[800px] mx-auto mb-2 px-3 text-center" style="width:100%; max-width:800px; margin:0 auto 8px; padding:0 12px; box-sizing:border-box;">
+    <h1 id="assessment-main-title" style="font-size:clamp(1.15rem, 4vw, 1.35rem); font-weight:800; color:#fff; font-family:'Outfit', sans-serif; line-height: 1.3; margin: 0 auto; text-shadow:0 2px 4px rgba(0,0,0,0.5);">Assessment Title</h1>
+  </div>
 
   <!-- ASSESSMENT progress bar & Pop-up Grid -->
   <div style="width:100%; max-width:800px; margin:0 auto; padding:0 15px 15px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; position:relative; z-index:999;">
     <!-- Progress Bar (Clickable Toggle) -->
-    <div id="progress-bar-toggle" style="width:100%; max-width:520px; cursor:pointer; position:relative;" onclick="document.getElementById('matrix-popup').style.display = document.getElementById('matrix-popup').style.display === 'none' ? 'block' : 'none'">
+    <div id="progress-bar-toggle" style="width:100%; max-width:520px; cursor:pointer; position:relative;" onclick="window.toggleMatrixPopup()">
       <div style="display:flex; justify-content:space-between; margin-bottom:4px; padding:0 4px;">
         <span style="font-size:0.85rem; font-weight:600; color:#cbd5e1;">Progress (Tap to view grid)</span>
         <span id="progress-text-percent" style="font-size:0.85rem; font-weight:800; color:#34d399;">0%</span>
@@ -352,21 +448,21 @@
     </div>
     
     <!-- Pop-up Question Matrix -->
-    <div id="matrix-popup" style="display:none; position:absolute; top:55px; left:50%; transform:translateX(-50%); width:90%; max-width:400px; background:rgba(15,23,42,0.98); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:15px; box-shadow:0 10px 35px rgba(0,0,0,0.7); z-index:9999;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+    <div id="matrix-popup" style="display:none; position:absolute; top:55px; left:50%; transform:translateX(-50%); width:95%; max-width:500px; max-height:calc(100vh - 220px);   border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:15px; box-shadow:0 10px 35px rgba(0,0,0,0.7); z-index:9999; flex-direction:column; background: #0b1523; border: 1px solid rgba(255, 255, 255, 0.18); background: #0b1523; border: 1px solid rgba(255, 255, 255, 0.18);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-shrink:0;">
         <span style="font-size:0.85rem; font-weight:700; color:#fff;">Question Matrix</span>
-        <button id="close-matrix-btn" style="background:transparent; border:none; color:#94a3b8; font-size:1.1rem; cursor:pointer;" onclick="document.getElementById('matrix-popup').style.display='none'">✕</button>
+        <button id="close-matrix-btn" style="background:transparent; border:none; color:#94a3b8; font-size:1.1rem; cursor:pointer;" onclick="window.toggleMatrixPopup(false)">✕</button>
       </div>
       
-      <!-- GRID CONTAINER: CSS must be grid with 10 columns -->
-      <div style="max-height: 40vh; overflow-y: auto; padding-right: 4px;">
-        <div class="q-nav-grid" id="q-nav-grid" role="navigation" aria-label="Jump to question" style="display:grid; grid-template-columns:repeat(10, 1fr); gap:6px;">
+      <!-- GRID CONTAINER: CSS must be responsive -->
+      <div style="flex:1; overflow-y: auto; padding-right: 4px; min-height:0;">
+        <div class="q-nav-grid" id="q-nav-grid" role="navigation" aria-label="Jump to question" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(45px, 1fr)); gap:8px;">
           <!-- Filled dynamically -->
         </div>
       </div>
       
-      <div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.1); margin-top:12px; padding-top:12px; display:flex; flex-direction:column; gap:8px;">
-        <button class="btn btn-secondary w-100 btn-sm" id="btn-sidebar-jump-unanswered" style="font-size:0.78rem;padding:8px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="document.getElementById('matrix-popup').style.display='none'">
+      <div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.1); margin-top:12px; padding-top:12px; display:flex; flex-direction:column; gap:8px; flex-shrink:0;">
+        <button class="btn btn-secondary w-100 btn-sm" id="btn-sidebar-jump-unanswered" style="font-size:0.78rem;padding:8px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="window.toggleMatrixPopup(false)">
           🔍 Jump to Next Unanswered
         </button>
         <button class="btn btn-success w-100" id="global-submit-btn" style="padding:10px;font-weight:600;">
@@ -377,7 +473,7 @@
   </div>
 
   <!-- ASSESSMENT body -->
-  <div class="assessment-body" style="padding-bottom: 70px;">
+  <div class="assessment-body" style="flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
     <!-- Main question area -->
     <main class="assessment-main-content" id="assessment-main" aria-live="polite">
       <div class="question-card">
@@ -389,17 +485,43 @@
     </main>
   </div>
 
-  <!-- Bottom Nav Bar (Mobile) -->
-  <div class="bottom-nav-bar">
-    <button class="btn btn-secondary" id="bottom-prev-btn" style="padding:6px 12px; font-size:0.85rem;" disabled>←  Prev</button>
-    <div class="bottom-nav-status" id="question-counter">0/0 answered</div>
-    <button class="btn btn-primary" id="bottom-next-btn" style="padding:6px 12px; font-size:0.85rem;">Next ←’</button>
+  <!-- Fixed Bottom Area -->
+  <div id="fixed-bottom-area" style="flex-shrink: 0; z-index: 1000; display: flex; flex-direction: column; width: 100%;">
+    
+    <!-- Virtual Keyboard -->
+    <div id="virtual-keyboard-container" style="flex-shrink: 0; height: auto; padding: 8px 6px;  border-top: 1px solid rgba(255,255,255,0.05);  display: none; flex-direction: column; box-sizing: border-box; box-shadow: 0 -4px 15px rgba(0,0,0,0.3); background: #0b1523; border: 1px solid rgba(255, 255, 255, 0.18); background: #0b1523; border: 1px solid rgba(255, 255, 255, 0.18);">
+      <div class="vk-row" style="display: flex; justify-content: center; gap: 6px; margin-bottom: 6px;">
+        <button class="vk-key" data-key="q">q</button><button class="vk-key" data-key="w">w</button><button class="vk-key" data-key="e">e</button><button class="vk-key" data-key="r">r</button><button class="vk-key" data-key="t">t</button><button class="vk-key" data-key="y">y</button><button class="vk-key" data-key="u">u</button><button class="vk-key" data-key="i">i</button><button class="vk-key" data-key="o">o</button><button class="vk-key" data-key="p">p</button>
+      </div>
+      <div class="vk-row" style="display: flex; justify-content: center; gap: 6px; margin-bottom: 6px;">
+        <button class="vk-key" data-key="a">a</button><button class="vk-key" data-key="s">s</button><button class="vk-key" data-key="d">d</button><button class="vk-key" data-key="f">f</button><button class="vk-key" data-key="g">g</button><button class="vk-key" data-key="h">h</button><button class="vk-key" data-key="j">j</button><button class="vk-key" data-key="k">k</button><button class="vk-key" data-key="l">l</button>
+      </div>
+      <div class="vk-row" style="display: flex; justify-content: center; gap: 6px; margin-bottom: 6px;">
+        <button class="vk-key" data-key="-">-</button>
+        <button class="vk-key" data-key="z">z</button><button class="vk-key" data-key="x">x</button><button class="vk-key" data-key="c">c</button><button class="vk-key" data-key="v">v</button><button class="vk-key" data-key="b">b</button><button class="vk-key" data-key="n">n</button><button class="vk-key" data-key="m">m</button>
+        <button class="vk-key special" data-key="Backspace">⌫</button>
+      </div>
+      <div class="vk-row" style="display: flex; justify-content: center; gap: 6px;">
+        <button class="vk-key special" data-key=",">,</button>
+        <button class="vk-key space" data-key=" ">Space</button>
+        <button class="vk-key special" data-key=".">.</button>
+        <button class="vk-key special" data-key="Enter">⏎</button>
+      </div>
+    </div>
+
+    <!-- Bottom Nav Bar (Mobile) -->
+    <div class="bottom-nav-bar" style="position: relative; margin-bottom: 0; padding:10px 15px; background: var(--clr-bg-1, #01121d); border-top: 1px solid var(--clr-border, rgba(255,255,255,0.05)); z-index: 1000; display:flex; align-items:center; justify-content:space-between; max-width:800px; margin:0 auto; width:100%; box-sizing:border-box;">
+      <button class="btn btn-secondary" id="bottom-prev-btn" style="padding:6px 12px; font-size:0.85rem;" disabled>&larr; Prev</button>
+      <div class="bottom-nav-status" id="question-counter" style="font-weight:700; font-size:0.9rem; color:#94a3b8; text-align:center; min-width:100px;">0/0 answered</div>
+      <button class="btn btn-primary" id="bottom-next-btn" style="padding:6px 12px; font-size:0.85rem;">Next &rarr;</button>
+    </div>
   </div>
 
   <!-- Anti-Cheat Flashing Overlay -->
   <div id="cheat-overlay" role="alertdialog" aria-modal="true" aria-labelledby="cheat-title">
     <div class="cheat-box">
-      <h2 id="cheat-title" style="font-size:1.6rem;font-weight:800;color:#ffffff;margin-bottom:0.75rem;">🚨 CHEATING ATTEMPT DETECTED! 🚨</h2>
+      <h2 id="cheat-title" style="font-size:1.6rem;font-weight:800;color:#ffffff;margin-bottom:0.5rem;">🚨 CHEATING ATTEMPT DETECTED! 🚨</h2>
+      <div id="cheat-strikes-badge" style="display:inline-block;padding:4px 14px;border-radius:20px;background:rgba(255,255,255,0.25);color:#ffffff;font-weight:800;font-size:0.95rem;margin-bottom:1rem;letter-spacing:1px;">STRIKE 1 OF 3</div>
       <p style="font-size:1rem;color:rgba(255,255,255,0.9);margin-bottom:1.5rem;" id="cheat-reason">You were detected trying to leave the ASSESSMENT page or using navigation buttons!</p>
       <div id="cheat-timer-count" style="font-size:4rem;font-weight:900;color:#fca5a5;margin-bottom:1.5rem;text-shadow:0 4px 20px rgba(0,0,0,0.5);"></div>
       <button class="btn btn-primary" id="dismiss-cheat-btn" style="background:#ffffff;color:#dc2626;font-weight:800;border:none;padding:0.75rem 2rem;font-size:1.05rem;box-shadow:0 10px 25px rgba(0,0,0,0.3);">
@@ -414,7 +536,7 @@
       <div style="font-size:3rem;margin-bottom:var(--space-3);" id="submit-modal-icon">✅</div>
       <h3 id="submit-modal-title" class="mb-3">Submit ASSESSMENT?</h3>
       <div id="unanswered-warning-banner" class="hidden mb-4 p-3 rounded text-sm text-left" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#fca5a5;">
-        <div class="fw-700 text-danger mb-1">⚠️  INCOMPLETE ASSESSMENT WARNING:</div>
+        <div class="fw-700 text-danger mb-1">⚠️ INCOMPLETE ASSESSMENT WARNING:</div>
         <p id="unanswered-warning-text" class="text-xs text-muted mb-0" style="color:rgba(255,255,255,0.9)!important;"></p>
       </div>
       <p class="text-muted text-sm mb-6" id="submit-modal-message">
@@ -429,13 +551,13 @@
   </div>
 
   <script type="module">
-    import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './js/api.js?v=4.7.6';
-    import { evaluateAnswer } from './js/grading.js?v=4.7.6';
-    import { requireStudentSession } from './js/session.js?v=4.7.6';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml as appEscapeHtml } from './js/app.js?v=4.7.6';
-    import { startCountdown, isExpired } from './js/timer.js?v=4.7.6';
-    import { createSpeechSession, isSpeechSupported } from './js/speech.js?v=4.7.6';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './js/supabase.js?v=4.7.6';
+    import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './js/api.js?v=4.9.8';
+    import { evaluateAnswer } from './js/grading.js?v=4.9.8';
+    import { requireStudentSession } from './js/session.js?v=4.9.8';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml as appEscapeHtml } from './js/app.js?v=4.9.8';
+    import { startCountdown, isExpired } from './js/timer.js?v=4.9.8';
+    import { createSpeechSession, isSpeechSupported } from './js/speech.js?v=4.9.8';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './js/supabase.js?v=4.9.8';
 
     function escapeHtml(str) {
       if (typeof appEscapeHtml === 'function') return appEscapeHtml(str);
@@ -449,12 +571,15 @@
     }
     window.escapeHtml = escapeHtml;
 
+    window.openSubmitModal = openSubmitModal;
+    
     const session = requireStudentSession();
     if (!session) throw new Error('Not authenticated');
 
     const urlParams = new URLSearchParams(window.location.search);
     // Case-insensitive assessment ID extraction — resilient across all URL param casings
-    let assessmentId = urlParams.get('assessment_id') ||
+    let assessmentId = urlParams.get('id') ||
+                       urlParams.get('assessment_id') ||
                        urlParams.get('Assessment_id') ||
                        urlParams.get('ASSESSMENT_id') ||
                        sessionStorage.getItem('topscore_assessment_id') ||
@@ -482,6 +607,7 @@
     let assessmentDisplayName = '';
     let timerController = null;
     let answeredMap = {}; // attempt_answer_id -> student_answer
+    window.answeredMap = answeredMap;
 
     // —— Anti-Cheat State & Functions ——
     let isAssessmentActive = false;
@@ -528,38 +654,62 @@
       });
     }
 
-    function triggerCheatAlert(reason) {
-      if (!isAssessmentActive || cheatInterval || !securityConfig.enabled) return;
+    let cheatStrikes = 0;
+    const MAX_STRIKES = 3;
 
+    function triggerCheatAlert(reason) {
+      if (!isAssessmentActive || !securityConfig.enabled) return;
+
+      cheatStrikes++;
       logCheatingEvent(session.student_id, assessmentId, 'CHEAT_ATTEMPT', {
         reason: reason,
+        strike: cheatStrikes,
+        max_strikes: MAX_STRIKES,
         url: location.href,
         user_agent: navigator.userAgent
       });
 
+      if (cheatStrikes >= MAX_STRIKES) {
+        dismissCheatAlert();
+        showToast('🚨 Exam terminated: 3 cheating infractions detected.', 'error', 6000);
+        doSubmit(true);
+        return;
+      }
+
       const overlay = document.getElementById('cheat-overlay');
       const countEl = document.getElementById('cheat-timer-count');
       const reasonEl = document.getElementById('cheat-reason');
+      const strikeBadge = document.getElementById('cheat-strikes-badge');
 
-      if (reasonEl) reasonEl.textContent = `Warning: ${reason}!`;
+      if (strikeBadge) {
+        strikeBadge.textContent = `STRIKE ${cheatStrikes} OF ${MAX_STRIKES}`;
+        strikeBadge.style.background = cheatStrikes === 2 ? 'rgba(239, 68, 68, 0.9)' : 'rgba(255, 255, 255, 0.25)';
+      }
+
+      if (reasonEl) {
+        reasonEl.textContent = `Warning: ${reason}! (Strike ${cheatStrikes} of ${MAX_STRIKES} — 3 strikes will automatically terminate your exam)`;
+      }
       overlay.style.display = 'flex';
 
       if (securityConfig.soundEnabled) {
         playBeepSound();
-        beepInterval = setInterval(playBeepSound, 800);
+        if (!beepInterval) beepInterval = setInterval(playBeepSound, 800);
       }
 
-      let secondsLeft = securityConfig.countdownSeconds;
-      if (countEl) countEl.textContent = secondsLeft;
-
-      cheatInterval = setInterval(() => {
-        secondsLeft--;
+      if (!cheatInterval) {
+        let secondsLeft = securityConfig.countdownSeconds;
         if (countEl) countEl.textContent = secondsLeft;
-        if (secondsLeft <= 0) {
-          clearInterval(cheatInterval);
-          doSubmit(true);
-        }
-      }, 1000);
+
+        cheatInterval = setInterval(() => {
+          secondsLeft--;
+          if (countEl) countEl.textContent = secondsLeft;
+          if (secondsLeft <= 0) {
+            clearInterval(cheatInterval);
+            cheatInterval = null;
+            doSubmit(true);
+          }
+        }, 1000);
+      }
     }
 
     function dismissCheatAlert() {
@@ -570,9 +720,78 @@
     }
 
     document.getElementById('dismiss-cheat-btn')?.addEventListener('click', dismissCheatAlert);
-    document.getElementById('cheat-overlay')?.addEventListener('click', (e) => {
-      if (e.target === document.getElementById('cheat-overlay')) dismissCheatAlert();
+
+    // Global Anti-Cheat Clipboard & Context Interception
+    document.addEventListener('copy', (e) => {
+      if (isAssessmentActive) {
+        e.preventDefault();
+        triggerCheatAlert('Clipboard Copy Attempt');
+      }
     });
+
+    document.addEventListener('cut', (e) => {
+      if (isAssessmentActive) {
+        e.preventDefault();
+        triggerCheatAlert('Clipboard Cut Attempt');
+      }
+    });
+
+    document.addEventListener('paste', (e) => {
+      if (isAssessmentActive) {
+        e.preventDefault();
+        triggerCheatAlert('Clipboard Paste Attempt');
+      }
+    });
+
+    document.addEventListener('selectstart', (e) => {
+      if (isAssessmentActive && !e.target.matches('input, textarea')) {
+        e.preventDefault();
+      }
+    });
+
+    document.addEventListener('dragstart', (e) => {
+      if (isAssessmentActive) e.preventDefault();
+    });
+
+    document.addEventListener('contextmenu', (e) => {
+      if (isAssessmentActive) {
+        e.preventDefault();
+        triggerCheatAlert('Right-Click / Context Menu');
+      }
+    });
+
+    // DevTools & Print/Save Keyboard Interception
+    window.addEventListener('keydown', (e) => {
+      if (!isAssessmentActive) return;
+
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+      const isShift = e.shiftKey;
+      const key = (e.key || '').toUpperCase();
+
+      // F12 Developer Tools
+      if (e.key === 'F12') {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerCheatAlert('DevTools Key (F12)');
+        return;
+      }
+
+      // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C (Inspect Element, Console)
+      if (isCtrlOrMeta && isShift && (key === 'I' || key === 'J' || key === 'C')) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerCheatAlert('DevTools Shortcut');
+        return;
+      }
+
+      // Ctrl+U (View Source), Ctrl+S (Save Page), Ctrl+P (Print Page)
+      if (isCtrlOrMeta && (key === 'U' || key === 'S' || key === 'P')) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerCheatAlert(`Shortcut Intercepted (${key})`);
+        return;
+      }
+    }, true);
 
     // Detect switching tab or minimizing browser
     document.addEventListener('visibilitychange', () => {
@@ -580,8 +799,17 @@
       if (isAssessmentActive && document.hidden) {
         triggerCheatAlert('Leaving the Tab / Switching Applications');
         if (attemptData && attemptData.id && SUPABASE_URL && SUPABASE_ANON_KEY) {
-          const payload = new Blob([JSON.stringify({ p_attempt_id: attemptData.id })], { type: 'application/json' });
-          navigator.sendBeacon(`${SUPABASE_URL}/rest/v1/rpc/auto_close_expired_attempts?apikey=${SUPABASE_ANON_KEY}`, payload);
+          fetch(`${SUPABASE_URL}/rest/v1/rpc/auto_close_expired_attempts`, {
+             method: 'POST',
+             headers: { 
+               'Content-Type': 'application/json',
+               'apikey': SUPABASE_ANON_KEY,
+               'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+             },
+             body: JSON.stringify({ p_attempt_id: attemptData.id }),
+             keepalive: true,
+             credentials: 'omit'
+          }).catch(e => console.error(e));
         }
       }
     });
@@ -606,9 +834,17 @@
         status: 'auto_submitted',
         answers: answeredMap
       });
-      const blob = new Blob([payload], { type: 'application/json' });
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon('/functions/v1/emergency-submit', blob);
+      if (SUPABASE_URL) {
+        fetch(`${SUPABASE_URL}/functions/v1/emergency-submit`, {
+             method: 'POST',
+             headers: { 
+               'Content-Type': 'application/json',
+               'Authorization': `Bearer ${token}`
+             },
+             body: payload,
+             keepalive: true,
+             credentials: 'omit'
+        }).catch(e => console.error(e));
       }
     }
 
@@ -676,6 +912,8 @@
         assessmentData = result.ASSESSMENT;
         assessmentSections = result.sections || [];
         allAnswerRows = result.answers || [];
+        window.attemptData = attemptData;
+        window.allAnswerRows = allAnswerRows;
 
         // Server time gate: Enforce WITA window check for schedule_mode === 'fixed'
         if (assessmentData?.schedule_mode === 'manual' && assessmentData?.is_unlocked === false) {
@@ -773,8 +1011,8 @@
 
           if (nameEl) nameEl.textContent = session.student_name || 'Student';
           
-          fetch(`${sbUrl}/rest/v1/students?id=eq.${session.student_id}&select=*,institutions(name),programs(name),batches(name),levels(name)`, {
-            headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` }
+          fetch(`${SUPABASE_URL}/rest/v1/students?id=eq.${session.student_id}&select=*,institutions(name),programs(name),batches(name),levels(name)`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
           }).then(r => r.json()).then(stuRes => {
             if (stuRes && stuRes[0]) {
               const s = stuRes[0];
@@ -1007,20 +1245,24 @@
     }
 
     function updateNavGrid() {
+      const activeMap = window.answeredMap || answeredMap;
       answerRows.forEach((row, idx) => {
         const btn = document.getElementById(`qnav-${idx}`);
         if (!btn) return;
-        btn.classList.toggle('answered', !!answeredMap[row.id]);
+        btn.classList.toggle('answered', !!activeMap[row.id]);
         btn.classList.toggle('current', idx === currentIndex);
       });
 
       // Progress bar (global across all sections)
-      const answered = Object.values(answeredMap).filter(v => v?.trim()).length;
+      const answered = Object.values(activeMap).filter(v => v?.trim()).length;
       const pct = allAnswerRows.length > 0 ? (answered / allAnswerRows.length) * 100 : 0;
       document.getElementById('assessment-progress-fill').style.width = pct + '%';
+      const progressTextEl = document.getElementById('progress-text-percent');
+      if (progressTextEl) progressTextEl.textContent = Math.round(pct) + '%';
       const counterEl = document.getElementById('question-counter');
       if(counterEl) counterEl.textContent = `${answered}/${allAnswerRows.length} answered`;
     }
+    window.updateNavGrid = updateNavGrid;
 
     // —— Render Question ——
     function renderQuestion(idx) {
@@ -1041,81 +1283,68 @@
 
       const main = document.getElementById('assessment-main');
       main.innerHTML = '';
+      main.className = 'assessment-main-content flex-1 flex flex-col gap-3 min-h-0 overflow-hidden w-full max-w-[800px] mx-auto';
+      main.style.cssText = 'flex:1; display:flex; flex-direction:column; gap:0.75rem; min-height:0; overflow:hidden; width:100%; max-width:800px; margin:0 auto;';
 
-      const layout = document.createElement('div');
-      layout.className = 'speech-center-layout';
-      layout.id = 'speech-center-layout';
-      main.appendChild(layout);
+      const isWrittenOrSpeech = (answerType === 'written' || (answerType === 'speech_to_text' || answerType === 'spoken'));
 
-      const container = document.createElement('div');
-      container.style.cssText = 'width:100%; max-width:600px; margin:0.5rem auto 1rem; display:flex; flex-direction:column; gap:12px;';
+      // Top Part: Question Card (1/3)
+      const topSection = document.createElement('div');
+      topSection.className = 'h-[135px] max-h-[140px] w-full flex items-center justify-center text-center p-3 rounded-2xl bg-slate-800/80 border border-slate-700/60 shadow-md shrink-0';
+      topSection.style.cssText = 'height:135px; max-height:140px; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0.75rem; background:rgba(30,41,59,0.8); border:1px solid rgba(51,65,85,0.6); border-radius:16px; box-sizing:border-box; overflow-y:auto; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); flex-shrink:0;';
       
-      // -- BOX 1: SOAL --
-      let mainHtml = `
-        <div class="speech-question-card" style="background:rgba(255,255,255,0.05); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.1); border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.3); padding:1.25rem; display:flex; flex-direction:column; min-height:160px; box-sizing:border-box;">
-      `;
-
+      let qHtml = '';
       if (theme || topic) {
-        mainHtml += `
-          <div style="display:flex; justify-content:space-between; gap:1rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px; margin-bottom:0.75rem; font-size:0.85rem; font-weight:600; color:var(--clr-text-2);">
-            ${theme ? `<span>Theme: ${escapeHtml(theme)}</span>` : '<span></span>'}
-            ${topic ? `<span>Topic: ${escapeHtml(topic)}</span>` : '<span></span>'}
-          </div>
-        `;
+        qHtml += `<div style="display:flex; justify-content:space-between; gap:1rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px; margin-bottom:0.75rem; font-size:0.85rem; font-weight:600; color:var(--clr-text-2); width:100%;">${theme ? `<span>Theme: ${escapeHtml(theme)}</span>` : '<span></span>'}${topic ? `<span>Topic: ${escapeHtml(topic)}</span>` : '<span></span>'}</div>`;
       }
-      
-      mainHtml += `
-          <div style="flex-grow:1; display:flex; align-items:center; justify-content:center; padding:0.5rem 0;">
-            <div class="speech-question-text" style="font-size:1.6rem; font-weight:800; color:#fff; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word;">
-              ${escapeHtml(questionText)}
-            </div>
-          </div>
-      `;
-
+      qHtml += `<div style="flex-grow:1; display:flex; align-items:center; justify-content:center; width:100%; min-height:0;"><div class="speech-question-text" style="font-size:clamp(1.4rem, 4vw, 1.6rem); font-weight:800; color:#fff; text-align:center; line-height:1.2; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0;">${escapeHtml(questionText)}</div></div>`;
       if (wordType) {
-        mainHtml += `
-          <div style="text-align:center; margin-top:auto; font-size:0.9rem; font-weight:700; color:var(--clr-text-2);">
-            [ Word type: <span style="color:#34d399;">${escapeHtml(wordType)}</span> ]
-          </div>
-        `;
+        qHtml += `<div style="text-align:center; margin-top:0.5rem; font-size:0.9rem; font-weight:700; color:var(--clr-text-2);">[ Word type: <span style="color:#34d399;">${escapeHtml(wordType)}</span> ]</div>`;
       }
-      
-      mainHtml += `
-        </div>
-      `;
+      topSection.innerHTML = qHtml;
+      main.appendChild(topSection);
 
-      // -- BOX 2: JAWABAN (Answer Area Wrapper) --
-      mainHtml += `
-        <div id="answer-area" style="background:rgba(255,255,255,0.05); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.1); border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.3); padding:1.25rem; display:flex; flex-direction:column; min-height:160px; box-sizing:border-box; position:relative;">
-        </div>
-      `;
-      
-      // -- MIC CONTAINER (Di luar box jawaban) --
-      mainHtml += `
-        <div id="mic-container" style="display:flex; flex-direction:column; align-items:center; margin-top:0.25rem;">
-        </div>
-      `;
-      
-      container.innerHTML = mainHtml;
-      layout.appendChild(container);
+      let answerArea, controlArea;
 
-      // Render answer area
-      const answerArea = document.getElementById('answer-area');
-      if (answerType === 'speech_to_text') {
-        renderSpeech(answerArea, row, savedAnswer, snap);
-      } else if (answerType === 'multiple_choice') {
+      const vk = document.getElementById('virtual-keyboard-container');
+      if (vk) vk.style.display = 'none';
+
+      if (isWrittenOrSpeech) {
+        // Middle Part: Answer Area
+        answerArea = document.createElement('div');
+        answerArea.className = 'flex-1 max-h-[180px] w-full flex flex-col justify-center p-3 rounded-2xl bg-slate-900/70 border border-slate-700/60 shadow-inner shrink-0';
+        answerArea.style.cssText = 'flex:1; min-height:80px; max-height:180px; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0.75rem; background:rgba(15,23,42,0.7); border:1px solid rgba(51,65,85,0.6); border-radius:16px; box-sizing:border-box; box-shadow:inset 0 2px 4px rgba(0,0,0,0.3); flex-shrink:0; position:relative;';
+        main.appendChild(answerArea);
+
+        // Bottom Part: Control Area (Mic)
+        controlArea = document.createElement('div');
+        controlArea.className = 'flex-1 min-h-[120px] w-full flex items-center justify-center overflow-hidden';
+        controlArea.style.cssText = 'flex:1; min-height:120px; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; overflow:hidden;';
+        main.appendChild(controlArea);
+      } else {
+        // Bottom Part: Choices (Multiple Choice / Phrase)
+        answerArea = document.createElement('div');
+        answerArea.className = 'flex-1 flex flex-col justify-between gap-2 py-1 min-h-0';
+        answerArea.style.cssText = 'flex:1; display:flex; flex-direction:column; gap:0.5rem; justify-content:space-between; padding:0.25rem 0; min-height:0; width:100%; box-sizing:border-box;';
+        main.appendChild(answerArea);
+      }
+
+      if ((answerType === 'speech_to_text' || answerType === 'spoken')) {
+        
+        renderSpeech(answerArea, controlArea, row, savedAnswer, snap);
+      } else if ((answerType === 'multiple_choice' || answerType === 'selection')) {
+        
         renderMC(answerArea, row, savedAnswer, snap);
       } else if (answerType === 'dropdown' || answerType === 'dropdown_10' || answerType === 'phrase_recognition') {
-        renderDropdown(answerArea, row, savedAnswer, snap);
+        
+        renderPhraseChips(answerArea, row, savedAnswer, snap);
       } else if (answerType === 'written') {
-        renderWritten(answerArea, row, savedAnswer, snap);
+        renderWritten(answerArea, controlArea, row, savedAnswer, snap, vk);
       }
 
-      // Ensure bottom bar is always visible
       const bottomBar = document.querySelector('.bottom-nav-bar');
       if (bottomBar) bottomBar.style.display = 'flex';
 
-      // Bottom Nav buttons (mobile)
       const bottomPrev = document.getElementById('bottom-prev-btn');
       const bottomNext = document.getElementById('bottom-next-btn');
       if (bottomPrev) {
@@ -1131,46 +1360,36 @@
             bottomNext.className = 'btn btn-success';
             bottomNext.onclick = () => { saveCurrentAnswer(); openSubmitModal(); };
           } else {
-            bottomNext.textContent = 'Next Sec ←\u2019';
+            bottomNext.textContent = 'Next Sec ➔';
             bottomNext.className = 'btn btn-success';
             bottomNext.onclick = () => { nextSection(); };
           }
         } else {
-          bottomNext.textContent = 'Next ←\u2019';
+          bottomNext.textContent = 'Next ➔';
           bottomNext.className = 'btn btn-primary';
-          bottomNext.onclick = () => { saveCurrentAnswer(); renderQuestion(idx + 1); };
+          bottomNext.onclick = () => { saveCurrentAnswer(); let targetIdx = idx + 1; while(targetIdx < answerRows.length && answeredMap[answerRows[targetIdx].id] && answeredMap[answerRows[targetIdx].id].trim()) { targetIdx++; } if(targetIdx >= answerRows.length) targetIdx = idx + 1; renderQuestion(targetIdx); };
         }
       }
-
       updateNavGrid();
     }
+    window.renderQuestion = renderQuestion;
 
-    // —— Unanswered Panel (Speech mode) ——
     function renderUnansweredPanel(container, currentIdx) {
       container.innerHTML = '';
-      const unanswered = answerRows
-        .map((r, i) => ({ r, i }))
-        .filter(({ r }) => !answeredMap[r.id] || !answeredMap[r.id].trim());
-
+      const unanswered = answerRows.map((r, i) => ({ r, i })).filter(({ r }) => !answeredMap[r.id] || !answeredMap[r.id].trim());
       if (unanswered.length === 0) {
-        container.innerHTML = `
-          <div class="speech-unanswered-panel" style="border-color:rgba(52,211,153,0.25);background:rgba(52,211,153,0.06);">
-            <div class="speech-all-answered-msg">✅ All ${answerRows.length} questions answered! Ready to submit.</div>
-          </div>`;
+        container.innerHTML = `<div class="speech-unanswered-panel" style="border-color:rgba(52,211,153,0.25);background:rgba(52,211,153,0.06);"><div class="speech-all-answered-msg">✅ All ${answerRows.length} questions answered!</div></div>`;
         return;
       }
-
       const panel = document.createElement('div');
       panel.className = 'speech-unanswered-panel';
       panel.innerHTML = `<div class="speech-unanswered-title">⚡ ${unanswered.length} unanswered — tap to jump</div><div class="speech-unanswered-chips" id="unanswered-chips"></div>`;
       container.appendChild(panel);
-
       const chipsEl = panel.querySelector('#unanswered-chips');
       unanswered.forEach(({ i }) => {
         const chip = document.createElement('button');
         chip.className = 'speech-unanswered-chip' + (i === currentIdx ? ' current' : '');
         chip.textContent = i + 1;
-        chip.title = `Jump to question ${i + 1}`;
         chip.addEventListener('click', () => { saveCurrentAnswer(); renderQuestion(i); });
         chipsEl.appendChild(chip);
       });
@@ -1187,17 +1406,24 @@
             if (Array.isArray(parsed)) return parsed;
           } catch (_) {}
         }
-        if (/[;/|]/.test(trimmed)) {
-          return trimmed.split(/[;/|]/).map(s => s.trim()).filter(Boolean);
-        }
+        if (/[;/|]/.test(trimmed)) return trimmed.split(/[;/|]/).map(s => s.trim()).filter(Boolean);
         return trimmed.split(',').map(s => s.trim()).filter(Boolean);
       }
       return [];
     }
 
-    // —— Answer type renderers ——
     function renderMC(area, row, savedAnswer, snap = {}) {
-      const options = parseSnapshotOptions(snap.options_snapshot || row.options_snapshot);
+      const rawOptions = parseSnapshotOptions(snap.options_snapshot || row.options_snapshot);
+      let options = [...rawOptions];
+      if (options.length > 5) {
+        const correctOpt = snap?.correct_answer || row.correct_answer_snapshot || row.correct_answer;
+        let correctItem = options.find(o => (typeof o === 'string' ? o : o.text || o.value) === correctOpt);
+        if (!correctItem && options.length > 0) correctItem = options[0];
+        let distractors = options.filter(o => o !== correctItem).sort(() => 0.5 - Math.random()).slice(0, 4);
+        options = correctItem ? [...distractors, correctItem] : distractors;
+      }
+      options = options.sort(() => 0.5 - Math.random());
+      
       const letters = ['A','B','C','D','E','F','G','H','I','J'];
       options.forEach((opt, i) => {
         const optText = typeof opt === 'string' ? opt : opt.text || opt.value || JSON.stringify(opt);
@@ -1206,277 +1432,217 @@
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', savedAnswer === optText ? 'true' : 'false');
         btn.setAttribute('tabindex', '0');
-        btn.innerHTML = `
-          <div class="mc-letter">${letters[i] || i+1}</div>
-          <div>${optText}</div>
-        `;
+        btn.style.cssText = 'flex:1; min-height:0; display:flex; align-items:center; gap:1rem; padding:0.5rem 1rem; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:#0f1d2d; color:#fff; cursor:pointer; overflow:hidden;';
+        if(savedAnswer === optText) btn.style.borderColor = '#34d399';
+        
+        btn.innerHTML = `<div class="mc-letter" style="background:rgba(255,255,255,0.15); border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${letters[i] || i+1}</div><div style="overflow-y:auto; max-height:100%;">${optText}</div>`;
+        
         btn.addEventListener('click', () => {
-          area.querySelectorAll('.mc-option').forEach(o => {
-            o.classList.remove('selected');
-            o.setAttribute('aria-checked', 'false');
-          });
-          btn.classList.add('selected');
-          btn.setAttribute('aria-checked', 'true');
-          answeredMap[row.id] = optText;
-          updateNavGrid();
-          autoSave(row.id, optText);
-
-          // Streamlined UI: Auto-advance to next question
-          const nextBtn = document.getElementById('next-btn') || document.getElementById('bottom-next-btn');
-          if (nextBtn && nextBtn.textContent.includes('Next')) {
-            setTimeout(() => nextBtn.click(), 400);
-          }
+          area.querySelectorAll('.mc-option').forEach(o => { o.classList.remove('selected'); o.setAttribute('aria-checked', 'false'); o.style.borderColor = 'rgba(255,255,255,0.15)'; });
+          btn.classList.add('selected'); btn.setAttribute('aria-checked', 'true'); btn.style.borderColor = '#34d399';
+          answeredMap[row.id] = optText; updateNavGrid(); autoSave(row.id, optText);
+          const nextBtn = document.getElementById('bottom-next-btn');
+          if (nextBtn && nextBtn.textContent.includes('Next')) setTimeout(() => nextBtn.click(), 400);
         });
-        btn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') btn.click(); });
         area.appendChild(btn);
       });
     }
 
-    function renderDropdown(area, row, savedAnswer, snap = {}) {
+    function renderPhraseChips(area, row, savedAnswer, snap = {}) {
       const rawOptions = parseSnapshotOptions(snap.options_snapshot || row.options_snapshot);
-      const options = [...rawOptions].sort((a, b) => {
-        const valA = String(typeof a === 'string' ? a : a.text || a.value || '');
-        const valB = String(typeof b === 'string' ? b : b.text || b.value || '');
-        return valA.localeCompare(valB);
+      let options = [...rawOptions];
+      if (options.length > 5) {
+        const correctOpt = snap?.correct_answer || row.correct_answer_snapshot || row.correct_answer;
+        let correctItem = options.find(o => (typeof o === 'string' ? o : o.text || o.value) === correctOpt);
+        if (!correctItem && options.length > 0) correctItem = options[0];
+        let distractors = options.filter(o => o !== correctItem).sort(() => 0.5 - Math.random()).slice(0, 4);
+        options = correctItem ? [...distractors, correctItem] : distractors;
+      }
+      options = options.sort(() => 0.5 - Math.random());
+      options.forEach((opt, i) => {
+        const optText = typeof opt === 'string' ? opt : opt.text || opt.value || JSON.stringify(opt);
+        const btn = document.createElement('div');
+        btn.className = `mc-option ${savedAnswer === optText ? 'selected' : ''}`;
+        btn.setAttribute('role', 'radio');
+        btn.setAttribute('aria-checked', savedAnswer === optText ? 'true' : 'false');
+        btn.style.cssText = 'flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:0.5rem 1rem; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:#0f1d2d; color:#fff; font-weight:600; font-size:1.15rem; cursor:pointer; text-align:center; overflow:hidden;';
+        if(savedAnswer === optText) btn.style.borderColor = '#34d399';
+        btn.innerHTML = `<div style="overflow-y:auto; max-height:100%;">${optText}</div>`;
+        btn.addEventListener('click', () => {
+          area.querySelectorAll('.mc-option').forEach(o => { o.classList.remove('selected'); o.setAttribute('aria-checked', 'false'); o.style.borderColor = 'rgba(255,255,255,0.15)'; });
+          btn.classList.add('selected'); btn.setAttribute('aria-checked', 'true'); btn.style.borderColor = '#34d399';
+          answeredMap[row.id] = optText; updateNavGrid(); autoSave(row.id, optText);
+          const nextBtn = document.getElementById('bottom-next-btn');
+          if (nextBtn && nextBtn.textContent.includes('Next')) setTimeout(() => nextBtn.click(), 400);
+        });
+        area.appendChild(btn);
       });
-      const sel = document.createElement('select');
-      sel.className = 'form-control';
-      sel.style.cssText = 'width:100%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:1.25rem; min-height:64px; line-height:1.5; margin-bottom:1rem; color:#fff; font-size:1.1rem; box-sizing:border-box; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); outline:none; font-family:inherit;  cursor:pointer;';
-
-      sel.id = `dropdown-${row.id}`;
-      sel.setAttribute('aria-label', 'Select answer');
-      sel.innerHTML = '<option value="">— Select answer —</option>' +
-        options.map(o => {
-          const v = typeof o === 'string' ? o : o.text || o.value;
-          return `<option style="background:#1e293b; color:#fff;" value="${v}" ${savedAnswer === v ? 'selected' : ''}>${v}</option>`;
-        }).join('');
-      sel.addEventListener('change', () => {
-        answeredMap[row.id] = sel.value;
-        updateNavGrid();
-        autoSave(row.id, sel.value);
-
-        // Streamlined UI: Auto-advance to next question
-        const nextBtn = document.getElementById('next-btn') || document.getElementById('bottom-next-btn');
-        if (nextBtn && nextBtn.textContent.includes('Next')) {
-          setTimeout(() => nextBtn.click(), 400);
-        }
-      });
-      area.appendChild(sel);
     }
 
-    function renderWritten(area, row, savedAnswer, snap = {}) {
+    function renderWritten(area, controlArea, row, savedAnswer, snap = {}, vk) {
       const ta = document.createElement('textarea');
       ta.className = 'written-input frosted-input';
-      ta.style.cssText = 'width:100%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:1rem 1.25rem; color:#fff; font-size:1.1rem; box-sizing:border-box; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); resize:vertical; min-height:100px; outline:none; font-family:inherit; transition:all 0.2s;';
-
+      ta.style.cssText = 'width:100%; height:100%; background:transparent; border:none; color:#fff; font-size:1.4rem; font-weight:700; text-align:center; resize:none; outline:none; font-family:inherit;';
       ta.id = `written-${row.id}`;
-      ta.placeholder = 'Type your answer here…';
-      ta.value = savedAnswer;
-      ta.setAttribute('aria-label', 'Written answer');
+      ta.placeholder = 'Type here...';
+      ta.value = savedAnswer || '';
+      ta.setAttribute('readonly', 'true');
+      ta.setAttribute('inputmode', 'none');
+      ta.setAttribute('autocomplete', 'off');
+      ta.setAttribute('autocorrect', 'off');
+      ta.setAttribute('autocapitalize', 'off');
+      ta.setAttribute('spellcheck', 'false');
+      ta.addEventListener('paste', e => e.preventDefault());
+      ta.addEventListener('copy', e => e.preventDefault());
+      ta.addEventListener('cut', e => e.preventDefault());
+      ta.addEventListener('contextmenu', e => e.preventDefault());
+      
+      area.appendChild(ta);
+
+      if (vk) {
+        vk.style.display = 'flex';
+        window.activeKeyboardInput = ta;
+      }
+
+
       ta.addEventListener('input', () => {
         answeredMap[row.id] = ta.value;
         updateNavGrid();
+        scheduleDebouncedAutoSave(row.id, ta.value, 800);
       });
-      ta.addEventListener('blur', () => autoSave(row.id, ta.value));
-      area.appendChild(ta);
+      ta.addEventListener('focus', () => {
+        window.activeKeyboardInput = ta;
+      });
+      ta.addEventListener('blur', () => {
+        persistLocalBuffer();
+        autoSave(row.id, ta.value);
+      });
     }
 
-    function renderSpeech(area, row, savedAnswer, snap = {}) {
+    function renderSpeech(area, controlArea, row, savedAnswer, snap = {}) {
       if (!isSpeechSupported()) {
-        const warn = document.createElement('div');
-        warn.style.cssText = 'width:100%;max-width:520px;padding:1rem;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:14px;text-align:center;margin-bottom:0.75rem;';
-        warn.innerHTML = '<p style="color:#fbbf24;font-weight:700;margin-bottom:0.5rem;">⚠️ Speech Unavailable</p><p style="color:#94a3b8;font-size:0.82rem;">Use Chrome or Edge. Type below instead:</p>';
-        area.appendChild(warn);
-        renderWritten(area, row, savedAnswer);
+        area.innerHTML = '<div style="color:#fbbf24; text-align:center;">Speech Unavailable.</div>';
+        renderWritten(area, controlArea, row, savedAnswer, snap, document.getElementById('virtual-keyboard-container'));
         return;
       }
 
-      // — Top Row (Lang + Status) in Answer Box —
       const topRow = document.createElement('div');
-      topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:0.75rem;';
-      
+      topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:0.5rem; flex-shrink:0;';
       const langSelect = document.createElement('select');
       langSelect.className = 'speech-lang-select';
-      langSelect.style.cssText = 'background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); border-radius:8px; color:#fff; padding:6px 10px; font-size:0.85rem; font-weight:600; cursor:pointer;';
-      langSelect.innerHTML = `<option value="en-US">🇺🇸 English (US)</option><option value="en-GB">🇬🇧 English (UK)</option>`;
-      langSelect.setAttribute('aria-label', 'Language selection');
-      
+      langSelect.style.cssText = 'background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; padding:4px 8px; font-size:0.8rem; outline:none;';
+      langSelect.innerHTML = `<option value="en-US">🇺🇸 EN-US</option><option value="en-GB">🇬🇧 EN-UK</option>`;
       const statusEl = document.createElement('div');
-      statusEl.className = 'speech-status-text';
-      statusEl.id = `speech-status-${row.id}`;
-      statusEl.style.cssText = 'font-weight:700; font-size:0.9rem; color:var(--clr-text-2);';
-      statusEl.textContent = savedAnswer ? '✅ Answer recorded' : '● Siap Merekam';
+      statusEl.style.cssText = 'font-weight:700; font-size:0.85rem; color:var(--clr-text-2);';
+      statusEl.textContent = savedAnswer ? '✅ Recorded' : 'Ready';
       if (savedAnswer) statusEl.style.color = '#34d399';
-      
-      topRow.appendChild(langSelect);
-      topRow.appendChild(statusEl);
+      topRow.appendChild(langSelect); topRow.appendChild(statusEl);
       area.appendChild(topRow);
 
-      // — Transcript box (Jawaban) in Answer Box —
       const transcriptBox = document.createElement('div');
-      transcriptBox.className = 'speech-transcript-box' + (savedAnswer ? ' has-answer' : '');
-      transcriptBox.id = `speech-text-${row.id}`;
-      transcriptBox.setAttribute('role', 'status');
-      transcriptBox.setAttribute('aria-live', 'polite');
-      transcriptBox.style.cssText = 'flex-grow:1; display:flex; align-items:center; justify-content:center; font-size: 1.6rem; font-weight: 700; color: #34d399; text-align: center; width: 100%; word-break: break-word; line-height: 1.3; margin-bottom: 0.5rem;';
-      
-      if (savedAnswer) {
-        transcriptBox.textContent = savedAnswer;
-      } else {
-        transcriptBox.innerHTML = '<span class="speech-transcript-placeholder" style="color:rgba(255,255,255,0.3); font-style:italic;">Jawaban...</span>';
-      }
+      transcriptBox.style.cssText = 'flex:1; display:flex; align-items:center; justify-content:center; font-size:1.6rem; font-weight:700; color:#34d399; text-align:center; width:100%; word-break:break-word; overflow-y:auto; min-height:0;';
+      if (savedAnswer) transcriptBox.textContent = savedAnswer;
+      else transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.3); font-style:italic;">Answer...</span>';
       area.appendChild(transcriptBox);
 
-      // — Mic Button in external container —
-      const micContainer = document.getElementById('mic-container');
       const micBtn = document.createElement('button');
       micBtn.className = 'speech-mic-btn-lg';
-      micBtn.id = `mic-${row.id}`;
-      micBtn.setAttribute('aria-label', 'Start recording');
+      micBtn.style.cssText = 'width:76px; height:76px; border-radius:50%; border:4px solid rgba(16,185,129,0.4); background:linear-gradient(135deg,#10b981,#047857); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.15s; outline:none;';
       micBtn.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
       
-      const micHelpText = document.createElement('div');
-      micHelpText.style.cssText = 'margin-top:12px; font-size:0.85rem; font-weight:600; color:var(--clr-text-2);';
-      micHelpText.textContent = '[ Tekan untuk Bicara / Ulang ]';
-      
-      if (micContainer) {
-        micContainer.appendChild(micBtn);
-        micContainer.appendChild(micHelpText);
-      }
+      const micHelp = document.createElement('div');
+      micHelp.style.cssText = 'margin-top:0.5rem; font-size:0.8rem; color:var(--clr-text-2); font-weight:600;';
+      micHelp.textContent = 'Tap to Speak';
+
+      controlArea.appendChild(micBtn);
+      controlArea.appendChild(micHelp);
 
       let speechSessionObj = null;
-      const micSvg = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
-
       micBtn.addEventListener('click', () => {
-        if (speechSessionObj?.isListening()) {
-          speechSessionObj.stop();
-          return;
-        }
-
+        if (speechSessionObj?.isListening()) { speechSessionObj.stop(); return; }
         speechSessionObj = createSpeechSession({
           lang: langSelect.value,
           onStart() {
-            micBtn.classList.add('listening');
-            micBtn.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>'; // Stop icon
-            micBtn.setAttribute('aria-label', 'Stop recording');
-            statusEl.className = 'speech-status-text listening-state';
-            statusEl.textContent = '🎙️ Listening… speak clearly';
+            micBtn.style.background = 'linear-gradient(135deg, #ef4444, #b91c1c)';
+            micBtn.style.borderColor = 'rgba(239,68,68,0.4)';
+            micBtn.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>';
+            statusEl.textContent = 'Listening...';
             statusEl.style.color = '#3b82f6';
-            transcriptBox.className = 'speech-transcript-box';
-            transcriptBox.innerHTML = '<span class="speech-transcript-placeholder">Listening…</span>';
+            transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.3); font-style:italic;">Listening...</span>';
           },
-          onResult(interim) {
-            transcriptBox.className = 'speech-transcript-box';
-            transcriptBox.textContent = interim;
-            statusEl.textContent = '🎙️ Hearing you…';
-          },
+          onResult(interim) { transcriptBox.textContent = interim; },
           onFinal(transcript) {
-            transcriptBox.className = 'speech-transcript-box has-answer';
             transcriptBox.textContent = transcript;
             answeredMap[row.id] = transcript;
-            // Refresh unanswered panel
-            const uPanel = document.getElementById('speech-unanswered-panel');
-            if (uPanel) renderUnansweredPanel(uPanel, currentIndex);
             updateNavGrid();
+            persistLocalBuffer();
             autoSave(row.id, transcript);
           },
           onEnd() {
-            micBtn.classList.remove('listening');
-            micBtn.innerHTML = micSvg;
-            micBtn.setAttribute('aria-label', 'Start recording');
+            micBtn.style.background = 'linear-gradient(135deg,#10b981,#047857)';
+            micBtn.style.borderColor = 'rgba(16,185,129,0.4)';
+            micBtn.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
             const hasAns = !!answeredMap[row.id];
-            statusEl.className = 'speech-status-text' + (hasAns ? ' done-state' : '');
-            statusEl.textContent = hasAns ? '✅ Answer recorded' : '● Siap Merekam';
+            statusEl.textContent = hasAns ? '✅ Recorded' : 'Ready';
             statusEl.style.color = hasAns ? '#34d399' : 'var(--clr-text-2)';
           },
           onError(msg) {
-            micBtn.classList.remove('listening');
-            micBtn.innerHTML = micSvg;
-            statusEl.className = 'speech-status-text';
+            micBtn.style.background = 'linear-gradient(135deg,#10b981,#047857)';
+            micBtn.style.borderColor = 'rgba(16,185,129,0.4)';
+            micBtn.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
             statusEl.textContent = `⚠️ ${msg}`;
             statusEl.style.color = '#f43f5e';
             showToast(msg, 'warning');
-            if (msg.includes('network') || msg.includes('Network') || msg.includes('service')) {
-              // Fallback: make transcript box editable
-              transcriptBox.contentEditable = 'true';
-              transcriptBox.className = 'speech-transcript-box';
-              transcriptBox.textContent = answeredMap[row.id] || '';
-              transcriptBox.style.outline = '2px solid rgba(139,92,246,0.5)';
-              statusEl.textContent = '⌨️ Type your answer in the box above';
-              transcriptBox.addEventListener('input', () => {
-                const t = transcriptBox.textContent.trim();
-                answeredMap[row.id] = t;
-                updateNavGrid();
-              });
-              transcriptBox.addEventListener('blur', () => autoSave(row.id, transcriptBox.textContent.trim()));
-              showToast('Mic unavailable. Type your answer in the box.', 'info', 5000);
-            }
           }
         });
-
         speechSessionObj.start();
       });
     }
 
-    // â”€â”€ Global Keyboard Shortcuts â”€â”€
-    document.addEventListener('keydown', (e) => {
-      const activeElement = document.activeElement;
-      const isTyping = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable);
+    let _persistBufferTimer = null;
+    let _autoSaveTimer = null;
 
-      // Spacebar toggles microphone if active question is Speech to Text
-      if (e.code === 'Space' && !isTyping) {
-        const micBtn = document.querySelector('.mic-btn');
-        if (micBtn) {
-          e.preventDefault();
-          micBtn.click();
-          return;
-        }
-      }
-
-      if (isTyping) return; // Don't intercept when student is typing written answers
-
-      // Question Navigation: ArrowLeft for previous, ArrowRight for next
-      if (e.key === 'ArrowLeft') {
-        const prevBtn = document.getElementById('prev-btn');
-        if (prevBtn && !prevBtn.disabled) {
-          e.preventDefault();
-          prevBtn.click();
-        }
-      } else if (e.key === 'ArrowRight') {
-        const nextBtn = document.getElementById('next-btn') || document.getElementById('next-section-btn');
-        if (nextBtn) {
-          e.preventDefault();
-          nextBtn.click();
-        }
-      }
-
-      // Multiple Choice Option Selection: A, B, C, D or 1, 2, 3, 4
-      const keyUpper = e.key.toUpperCase();
-      const mcOptions = document.querySelectorAll('.mc-option');
-      if (mcOptions.length > 0) {
-        let optIndex = -1;
-        if (keyUpper === 'A' || e.key === '1') optIndex = 0;
-        else if (keyUpper === 'B' || e.key === '2') optIndex = 1;
-        else if (keyUpper === 'C' || e.key === '3') optIndex = 2;
-        else if (keyUpper === 'D' || e.key === '4') optIndex = 3;
-
-        if (optIndex >= 0 && optIndex < mcOptions.length) {
-          e.preventDefault();
-          mcOptions[optIndex].click();
-        }
-      }
-    });
-
-    // --- Write-Ahead Buffer Persistence ---
     function persistLocalBuffer() {
-      if (attemptData?.id && answeredMap) {
+      if (_persistBufferTimer) {
+        clearTimeout(_persistBufferTimer);
+        _persistBufferTimer = null;
+      }
+      if (typeof attemptData !== 'undefined' && attemptData?.id) {
         try {
           localStorage.setItem(`topscore_local_answers_${attemptData.id}`, JSON.stringify(answeredMap));
-        } catch (_) {}
+        } catch (e) {
+          console.warn('[WriteAheadBuffer] Failed to persist answers to localStorage:', e);
+        }
       }
     }
 
-    // --- Auto-save ---
+    function scheduleDebouncedPersist(delay = 400) {
+      if (_persistBufferTimer) clearTimeout(_persistBufferTimer);
+      _persistBufferTimer = setTimeout(() => {
+        _persistBufferTimer = null;
+        if (typeof attemptData !== 'undefined' && attemptData?.id) {
+          try {
+            localStorage.setItem(`topscore_local_answers_${attemptData.id}`, JSON.stringify(answeredMap));
+          } catch (e) {
+            console.warn('[WriteAheadBuffer] Debounced persist failed:', e);
+          }
+        }
+      }, delay);
+    }
+
+    function scheduleDebouncedAutoSave(attemptAnswerId, studentAnswer, delay = 800) {
+      scheduleDebouncedPersist(400);
+      if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+      const statusText = document.getElementById('sync-status-text');
+      const syncDot = document.getElementById('sync-dot');
+      if (statusText) statusText.textContent = 'Typing…';
+      if (syncDot) syncDot.style.background = '#38bdf8';
+      _autoSaveTimer = setTimeout(() => {
+        _autoSaveTimer = null;
+        autoSave(attemptAnswerId, studentAnswer);
+      }, delay);
+    }
+
     async function autoSave(attemptAnswerId, studentAnswer) {
       persistLocalBuffer();
       const statusText = document.getElementById('sync-status-text');
@@ -1493,6 +1659,49 @@
       }
     }
 
+    // Flush local buffer before unload
+    window.addEventListener('beforeunload', () => {
+      saveCurrentAnswer();
+      persistLocalBuffer();
+    });
+
+    window.toggleMatrixPopup = function(show) {
+      const popup = document.getElementById('matrix-popup');
+      if (!popup) return;
+      const isCurrentlyShown = popup.style.display !== 'none';
+      const shouldShow = typeof show !== 'undefined' ? show : !isCurrentlyShown;
+      
+      popup.style.display = shouldShow ? 'flex' : 'none';
+      
+      const mainContent = document.getElementById('assessment-main');
+      if (mainContent) {
+        if (shouldShow) {
+          mainContent.style.pointerEvents = 'none';
+        } else {
+          mainContent.style.pointerEvents = 'auto';
+        }
+      }
+
+      const vk = document.getElementById('virtual-keyboard-container');
+      if (vk) {
+        if (shouldShow) {
+           vk.style.display = 'none';
+        } else {
+           const row = answerRows[currentIndex];
+           if (row) {
+             let snap = row.question_snapshot;
+             if (typeof snap === 'string') {
+               try { snap = JSON.parse(snap); } catch { snap = {}; }
+             }
+             const answerType = snap?.answer_type || row.answer_type || 'written';
+             if ((answerType === 'written' || answerType.includes('written')) && vk) {
+               vk.style.display = 'flex';
+             }
+           }
+        }
+      }
+    };
+
     function saveCurrentAnswer() {
       const row = answerRows[currentIndex];
       if (!row) return;
@@ -1503,9 +1712,10 @@
       persistLocalBuffer();
     }
 
-    // â”€â”€ Submit Modal â”€â”€
+    // —— Submit Modal ——
     function openSubmitModal() {
-      const answered = Object.values(answeredMap).filter(v => v?.trim()).length;
+      const activeMap = window.answeredMap || answeredMap;
+      const answered = Object.values(activeMap).filter(v => v?.trim()).length;
       const total = allAnswerRows.length;
       const unanswered = total - answered;
 
@@ -1520,7 +1730,7 @@
       if (unanswered > 0) {
         document.getElementById('unanswered-warning-banner')?.classList.remove('hidden');
         if (warningText) {
-          warningText.innerHTML = `You have <strong>${unanswered}</strong> question(s) that have not been answered! <br/><button id="btn-jump-unanswered" class="btn btn-secondary btn-sm mt-2" style="padding:4px 10px;font-size:0.75rem;font-weight:700;">🔍 Review Unanswered Questions</button>`;
+          warningText.innerHTML = `You have <strong>${unanswered}</strong> question(s) that have not been answered! <br/><button id="btn-jump-unanswered" class="btn btn-secondary btn-sm mt-2" style="padding:4px 10px;font-size:0.75rem;font-weight:700;">🔍  Review Unanswered Questions</button>`;
           document.getElementById('btn-jump-unanswered')?.addEventListener('click', () => {
             document.getElementById('submit-modal').classList.add('hidden');
             jumpToNextUnanswered();
@@ -1529,12 +1739,12 @@
         confirmBtn?.classList.remove('btn-primary');
         confirmBtn?.classList.add('btn-danger');
         if (confirmBtn) confirmBtn.textContent = `Submit Anyway (${unanswered} Unanswered)`;
-        if (modalIcon) modalIcon.textContent = '⚠️';
+        if (modalIcon) modalIcon.textContent = '⚠️ ';
       } else {
         warningBanner?.classList.add('hidden');
         confirmBtn?.classList.remove('btn-danger');
         confirmBtn?.classList.add('btn-primary');
-        if (confirmBtn) confirmBtn.textContent = 'Submit ASSESSMENT';
+        if (confirmBtn) confirmBtn.textContent = 'Submit ASSESSMENT 📋';
         if (modalIcon) modalIcon.textContent = '✅';
       }
 
@@ -1551,6 +1761,7 @@
         showToast('All questions in this section are answered! Great job!', 'success');
       }
       document.getElementById('qNavDrawer')?.classList.remove('open');
+      if (window.toggleMatrixPopup) window.toggleMatrixPopup(false);
     }
 
     document.getElementById('btn-sidebar-jump-unanswered')?.addEventListener('click', () => {
@@ -1588,10 +1799,16 @@
       }
       showLoading(isAuto ? 'Time is up. Auto-submitting the ASSESSMENT.' : 'Submitting your ASSESSMENT.');
 
+      const activeAnswers = window.answeredMap || answeredMap;
       const payload = allAnswerRows.map(row => ({
         attempt_answer_id: row.id,
-        student_answer: answeredMap[row.id] || '',
+        student_answer: (activeAnswers && activeAnswers[row.id]) || answeredMap[row.id] || '',
       }));
+
+      // Safety buffer for fallback if Edge function fails
+      try {
+        sessionStorage.setItem('topscore_fallback_payload_' + attemptData.id, JSON.stringify(payload));
+      } catch (_) {}
 
       try {
         const targetStatus = isAuto ? 'auto_submitted' : 'submitted';
@@ -1605,8 +1822,12 @@
           }
         }
         
-        // Clean up safety buffer on successful submission
-        try { localStorage.removeItem(`topscore_local_answers_${attemptData.id}`); } catch (_) {}
+        // Clean up safety buffers on successful submission
+        try { 
+          localStorage.removeItem(`topscore_local_answers_${attemptData.id}`);
+          sessionStorage.removeItem(`topscore_fallback_payload_${attemptData.id}`);
+        } catch (_) {}
+        
         hideLoading();
         sessionStorage.setItem('topscore_attempt_id', attemptData.id);
         window.location.href = 'result.html';
@@ -1614,17 +1835,18 @@
         console.error('Submit error:', e);
         hideLoading();
         if (isAuto) {
-          // Direct fallback patch in background if RPC failed
+          // Call server-authoritative auto_close RPC if primary submit failed
           try {
             const sbKey = SUPABASE_ANON_KEY;
-            await fetch(`${SUPABASE_URL}/rest/v1/attempts?id=eq.${attemptData.id}`, {
-              method: 'PATCH',
+            await fetch(`${SUPABASE_URL}/rest/v1/rpc/auto_close_expired_attempts`, {
+              method: 'POST',
               headers: {
                 'apikey': sbKey,
                 'Authorization': `Bearer ${sbKey}`,
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify({ status: 'auto_submitted', submitted_at: new Date().toISOString() })
+              body: JSON.stringify({ p_attempt_id: attemptData.id }),
+              keepalive: true
             });
           } catch (_) {}
           sessionStorage.setItem('topscore_attempt_id', attemptData.id);
@@ -1644,6 +1866,48 @@
     if ('speechSynthesis' in window) {
       window.speechSynthesis.getVoices();
     }
+
+    // Virtual Keyboard Logic
+    document.querySelectorAll('.vk-key').forEach(k => {
+      k.addEventListener('click', (e) => {
+        e.preventDefault();
+        if(!window.activeKeyboardInput) return;
+        const key = k.getAttribute('data-key');
+        if(key === 'Backspace') {
+          window.activeKeyboardInput.value = window.activeKeyboardInput.value.slice(0, -1);
+        } else if(key === 'Enter') {
+          window.activeKeyboardInput.value += '\n';
+        } else {
+          window.activeKeyboardInput.value += key;
+        }
+        window.activeKeyboardInput.dispatchEvent(new Event('input'));
+      });
+    });
+
+    // Physical Keyboard Listener (allows laptop typing while keeping textarea readonly)
+    document.addEventListener('keydown', (e) => {
+      if(!window.activeKeyboardInput) return;
+      // Do not intercept if the user is using modifier keys (like Ctrl+R, F5, etc.)
+      if(e.ctrlKey || e.altKey || e.metaKey) return;
+      
+      const vkContainer = document.getElementById('virtual-keyboard-container');
+      if (!vkContainer || vkContainer.style.display === 'none') return; // Only if written question is active
+
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        window.activeKeyboardInput.value = window.activeKeyboardInput.value.slice(0, -1);
+        window.activeKeyboardInput.dispatchEvent(new Event('input'));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        window.activeKeyboardInput.value += '\n';
+        window.activeKeyboardInput.dispatchEvent(new Event('input'));
+      } else if (e.key.length === 1) { 
+        // Single character key
+        e.preventDefault();
+        window.activeKeyboardInput.value += e.key;
+        window.activeKeyboardInput.dispatchEvent(new Event('input'));
+      }
+    });
 
     bootAssessment();
   </script>
@@ -1673,8 +1937,14 @@
       }
     });
   </script>
+
+  <div id="bottom-ad-banner" class="topscore-locked-banner">
+    TopsCore &copy; 2026 | Created by Mr. Top
+  </div>
 </body>
 </html>
+
+
 
 
 

@@ -1,23 +1,66 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate } from '../api.js?v=4.7.6';
-import { getSupabase } from '../supabase.js?v=4.7.6';
-import { getGrade, showToast } from '../app.js?v=4.7.6';
-import { processAndCompressAvatar, getBustedAvatarUrl } from '../utils/avatar-engine.js?v=4.7.6';
-import { DataGrid } from './datagrid.js?v=4.7.6';
+import { adminFetchAll, formatStudentName, cleanStudentName, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256 } from '../api.js?v=4.9.8';
+import { getSupabase } from '../supabase.js?v=4.9.8';
+import { getGrade, showToast } from '../app.js?v=4.9.8';
+import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=4.9.8';
+import { DataGrid } from './datagrid.js?v=4.9.8';
 
 let studentGrid = null;
 
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+const escapeHtml = escHtml;
+
+/**
+ * Hierarchical sort comparator for student records:
+ * 1. Active students on top, Inactive students at the bottom.
+ * 2. Alphabetical ordering: Institution -> Program -> Batch -> Level -> Name.
+ */
+export function compareStudentsHierarchical(a, b) {
+  const aActive = ((a._raw || a).is_active !== false) ? 1 : 0;
+  const bActive = ((b._raw || b).is_active !== false) ? 1 : 0;
+  if (aActive !== bActive) return bActive - aActive;
+
+  const instA = (a.instName || '').trim();
+  const instB = (b.instName || '').trim();
+  const instCmp = instA.localeCompare(instB, undefined, { sensitivity: 'base', numeric: true });
+  if (instCmp !== 0) return instCmp;
+
+  const progA = (a.progName || '').trim();
+  const progB = (b.progName || '').trim();
+  const progCmp = progA.localeCompare(progB, undefined, { sensitivity: 'base', numeric: true });
+  if (progCmp !== 0) return progCmp;
+
+  const batchA = (a.batchName || '').trim();
+  const batchB = (b.batchName || '').trim();
+  const batchCmp = batchA.localeCompare(batchB, undefined, { sensitivity: 'base', numeric: true });
+  if (batchCmp !== 0) return batchCmp;
+
+  const lvlA = (a.levelName || '').trim();
+  const lvlB = (b.levelName || '').trim();
+  const lvlCmp = lvlA.localeCompare(lvlB, undefined, { sensitivity: 'base', numeric: true });
+  if (lvlCmp !== 0) return lvlCmp;
+
+  const nameA = stripHonorific(a.displayName || a.name || a.sortName || '');
+  const nameB = stripHonorific(b.displayName || b.name || b.sortName || '');
+  return nameA.localeCompare(nameB, undefined, { sensitivity: 'base', numeric: true });
+}
+
 export async function renderStudents(area) {
-  const [rawData, allAttempts, allLevels] = await Promise.all([
-    adminFetchAll('students', '*, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)'),
-    adminFetchAll('attempts', '*, assessments(assessment_type, title, class_id)'),
-    adminFetchAll('levels')
+    const [rawData, allAttempts, allLevels, allProgress, allPrograms, allBatches] = await Promise.all([
+    adminFetchAll('students', 'id, name, gender, birth_date, photo_url, photo_status, is_active, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)'),
+    adminFetchAll('attempts', 'id, student_id, assessment_id, status, score, total_questions, percentage, created_at, is_remedial_unlocked, assessments(assessment_type, title, class_id)'),
+    adminFetchAll('levels', 'id, name, level_number'),
+    adminFetchAll('progress', 'id, student_id, class_id, level_id, status'),
+    adminFetchAll('programs', 'id, name, institution_id, is_active'),
+    adminFetchAll('batches', 'id, name, program_id, is_active, current_level_id')
   ]);
   const levelsMap = new Map();
   (allLevels || []).forEach(l => levelsMap.set(l.id, l));
 
   // Detect duplicate students within the same class
   const dupMap = new Map();
-  rawData.forEach(s => {
+  (rawData || []).forEach(s => {
     if (s.deleted_at) return;
     const key = `${s.program_id}::${(s.name || '').toLowerCase().trim()}`;
     if (!dupMap.has(key)) dupMap.set(key, []);
@@ -27,16 +70,13 @@ export async function renderStudents(area) {
   const totalDuplicates = duplicateGroups.reduce((acc, g) => acc + (g.length - 1), 0);
   
   // Format data for DataGrid
-  const gridData = rawData.filter(s => {
+  const gridData = (rawData || []).filter(s => {
     if (s.deleted_at) return false;
-    if (s.institutions && s.institutions.is_active === false) return false;
-    if (s.programs && s.programs.is_active === false) return false;
-    if (s.batches && s.batches.is_active === false) return false;
     return true;
   }).map(s => {
-    const studentAttempts = allAttempts.filter(a => a.student_id === s.id);
-    const completedAssessmentsCount = new Set(studentAttempts.filter(a => a.status === 'SUBMITTED').map(a => a.assessment_id || a.Assessment_id)).size;
-    const latestAttempt = studentAttempts.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0];
+    const studentAttempts = (allAttempts || []).filter(a => a.student_id === s.id);
+    const completedAssessmentsCount = new Set(studentAttempts.filter(a => a.status === 'SUBMITTED' || a.status === 'submitted').map(a => a.assessment_id || a.Assessment_id)).size;
+    const latestAttempt = studentAttempts.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
     
     // Overall logic from old app.js
     let overallScoreStr = '-';
@@ -45,17 +85,18 @@ export async function renderStudents(area) {
     if (completedAssessmentsCount > 0) {
       let totalMaxScore = 0;
       let totalObtained = 0;
-      studentAttempts.filter(a => a.status === 'SUBMITTED').forEach(a => {
-        totalMaxScore += (a.max_score || 0);
-        totalObtained += (a.total_score || 0);
+      studentAttempts.filter(a => a.status === 'SUBMITTED' || a.status === 'submitted').forEach(a => {
+        totalMaxScore += (a.total_questions || a.max_score || 0);
+        totalObtained += (a.score || a.total_score || 0);
       });
       if (totalMaxScore > 0) {
         const pct = Math.round((totalObtained / totalMaxScore) * 100);
         overallScoreStr = `${pct}%`;
         if (typeof getGrade === 'function') {
            const g = getGrade(pct);
-           globalGrade = g.label;
-           overallColor = g.color;
+           globalGrade = g;
+           const cMap = { 'S': '#8b5cf6', 'A': '#10b981', 'B': '#3b82f6', 'C': '#f59e0b', 'D': '#f97316', 'E': '#ef4444', 'F': '#ef4444' };
+           overallColor = cMap[g] || 'rgba(255,255,255,0.4)';
         }
       }
     }
@@ -75,25 +116,49 @@ export async function renderStudents(area) {
 
     // Determine remediation pending
     const remediationPending = studentAttempts
-      .filter(a => a.status === 'SUBMITTED' && a.assessments?.assessment_type === 'EXAM')
+      .filter(a => (a.status === 'SUBMITTED' || a.status === 'submitted') && a.assessments?.assessment_type === 'EXAM')
       .some(a => {
-        if (!a.max_score) return false;
-        const pct = Math.round((a.total_score / a.max_score) * 100);
+        const maxVal = a.total_questions || a.max_score || 0;
+        if (!maxVal) return false;
+        const pct = a.percentage != null ? parseFloat(a.percentage) : Math.round(((a.score || 0) / maxVal) * 100);
         return pct < 60 && !a.is_remedial_unlocked;
       });
 
-    const batchLevelId = s.batches?.current_level_id;
-    const batchLevel = batchLevelId ? levelsMap.get(batchLevelId) : null;
-    const levelName = batchLevel ? batchLevel.name : '—';
+    const studentProgs = (allProgress || []).filter(p => p.student_id === s.id);
+    let levelName = '—';
+    if (s.level_id) {
+      const lvlObj = levelsMap.get(s.level_id);
+      levelName = lvlObj ? lvlObj.name : '—';
+    } else {
+      const batchLevelId = s.batches?.current_level_id;
+      const batchLevel = batchLevelId ? levelsMap.get(batchLevelId) : null;
+      levelName = batchLevel ? batchLevel.name : '—';
+    }
+
+    // Detect orphaned students (batch/program/institution inactive or missing)
+    const isOrphaned = !s.program_id
+      || (s.institutions && s.institutions.is_active === false)
+      || (s.programs && s.programs.is_active === false)
+      || (s.batches && s.batches.is_active === false)
+      || (s.batch_id && !s.batches);
+
+    // Join date
+    let joinDate = '—';
+    if (s.created_at) {
+      try {
+        const d = new Date(s.created_at);
+        joinDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      } catch { joinDate = '—'; }
+    }
 
     return {
       ...s,
       displayName: cleanStudentName(s.name),
       sortName: cleanStudentName(s.name).toLowerCase(),
       ageDisplay,
-      instName: s.institutions?.name || 'N/A',
-      progName: s.programs?.name || 'N/A',
-      batchName: s.batches?.name || '-',
+      instName: s.institutions?.name || (s.institution_id ? '⚠ Unknown Institution' : '—'),
+      progName: s.programs?.name || (s.program_id ? '⚠ Unknown Program' : '—'),
+      batchName: s.batches?.name || (s.batch_id ? '⚠ Unknown Batch' : '— No Batch —'),
       levelName,
       pinDisplay: s.pin || 'NOT SET',
       completedAssessments: completedAssessmentsCount,
@@ -101,9 +166,16 @@ export async function renderStudents(area) {
       overallScoreStr,
       globalGrade,
       overallColor,
-      remediationPending
+      remediationPending,
+      isOrphaned,
+      joinDate,
+      phone: s.phone || s.phone_number || '—',
+      email: s.email || '—'
     };
   });
+
+  // Hierarchical sort comparator: Active first, then Institution -> Program -> Batch -> Level -> Name (A-Z)
+  gridData.sort(compareStudentsHierarchical);
 
   // Filter data if navigated from Batches
   const filteredGridData = window._filterBatchId
@@ -121,6 +193,9 @@ export async function renderStudents(area) {
       rosterNavBtn.insertAdjacentHTML('beforeend', `<span class="remediation-sidebar-badge badge badge-warning" style="margin-left:auto;font-size:0.7rem;padding:0.1rem 0.3rem;">${remediationPendingCount}</span>`);
     }
   }
+
+  // Abort if area is no longer attached to DOM (e.g. user navigated to another tab)
+  if (!area || !document.body.contains(area)) return;
 
   area.innerHTML = `
     <div class="section-header">
@@ -167,6 +242,22 @@ export async function renderStudents(area) {
       </div>
     ` : ''}
 
+    <div class="d-flex gap-3 mb-4" style="background:var(--fm-bg-panel, #0F172A); padding: 1rem; border-radius: 8px; border: 1px solid var(--clr-border);">
+      <div style="flex: 1;">
+        <label class="form-label" style="font-size: 0.8rem; margin-bottom: 0.2rem;">Filter by Program</label>
+        <select id="students-filter-program" class="form-input" style="padding: 0.4rem; height: auto;">
+          <option value="">All Programs</option>
+          ${(allPrograms || []).map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+        </select>
+      </div>
+      <div style="flex: 1;">
+        <label class="form-label" style="font-size: 0.8rem; margin-bottom: 0.2rem;">Filter by Batch</label>
+        <select id="students-filter-batch" class="form-input" style="padding: 0.4rem; height: auto;">
+          <option value="">All Batches</option>
+          ${(allBatches || []).map(b => `<option value="${b.id}" data-prog="${b.program_id}">${b.name}</option>`).join('')}
+        </select>
+      </div>
+    </div>
     <div id="student-grid-container" class="card" style="padding:1rem;"></div>
   `;
 
@@ -191,14 +282,14 @@ export async function renderStudents(area) {
         return;
       }
       
-      const headers = ['Student Name', 'Institution', 'Program', 'Batch', 'Current Level', 'Assessment Type', 'Score (%)', 'Status', 'Remediation Granted'];
+      const headers = ['Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Assessment Type', 'Score (%)', 'Status', 'Remediation Granted'];
       const rows = filteredGridData.map(s => {
         return {
-          'Student Name': s.displayName || s.name || '—',
           'Institution': s.instName || '—',
           'Program': s.progName || '—',
           'Batch': s.batchName || '—',
-          'Current Level': s.level_id ? (levelsMap.get(s.level_id)?.name || '—') : '—',
+          'Current Level': s.levelName || '—',
+          'Student Name': s.displayName || s.name || '—',
           'Assessment Type': s.remediationPending ? 'EXAM' : '—',
           'Score (%)': s.overallScoreStr || '—',
           'Status': s.is_active ? 'Active' : 'Inactive',
@@ -221,28 +312,63 @@ export async function renderStudents(area) {
     };
   }
   // Initialize DataGrid
+  const gridContainer = area.querySelector('#student-grid-container') || document.getElementById('student-grid-container');
+  if (!gridContainer) return;
+
   studentGrid = new DataGrid({
-    container: 'student-grid-container',
+    container: gridContainer,
     data: filteredGridData,
     pageSize: 50,
-    searchKeys: ['displayName', 'progName', 'batchName', 'pinDisplay'],
+    searchKeys: ['instName', 'progName', 'batchName', 'levelName', 'displayName', 'pinDisplay'],
+    initialSortKey: 'instName',
+    initialSortAsc: true,
+    sortComparator: (sortKey, direction, a, b) => {
+      // Active students ALWAYS on top, inactive at bottom
+      const aActive = ((a._raw || a).is_active !== false) ? 1 : 0;
+      const bActive = ((b._raw || b).is_active !== false) ? 1 : 0;
+      if (aActive !== bActive) return bActive - aActive;
+
+      // When sorting by instName, use full hierarchy
+      if (sortKey === 'instName') {
+        const cmp = compareStudentsHierarchical(a, b);
+        return direction === 'desc' ? -cmp : cmp;
+      }
+
+      // Column-specific comparison
+      let valA = a[sortKey];
+      let valB = b[sortKey];
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+      if (valA < valB) return direction === 'asc' ? -1 : 1;
+      if (valA > valB) return direction === 'asc' ? 1 : -1;
+
+      // Secondary tie-breaker: Institution -> Program -> Batch -> Level -> Name
+      return compareStudentsHierarchical(a, b);
+    },
     bulkActions: true,
     onBulkAction: async (selectedIds) => {
       // Fetch data for dropdowns
-      const [institutions, programs, batches] = await Promise.all([
-        adminFetchAll('institutions'),
-        adminFetchAll('programs'),
-        adminFetchAll('batches')
+      const [institutions, programs, batches, levels] = await Promise.all([
+        adminFetchAll('institutions', 'id, name'),
+        adminFetchAll('programs', 'id, name, institution_id'),
+        adminFetchAll('batches', 'id, name, program_id'),
+        adminFetchAll('levels', 'id, name, level_number')
       ]);
+
+      const sortFn = (a, b) => (a.name || '').localeCompare(b.name || '');
+      institutions.sort(sortFn);
+      programs.sort(sortFn);
+      batches.sort(sortFn);
+      levels.sort(sortFn);
 
       const existing = document.getElementById('bulk-action-modal');
       if (existing) existing.remove();
 
       const overlay = document.createElement('div');
       overlay.id = 'bulk-action-modal';
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.95);backdrop-filter:blur(5px);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;';
       overlay.innerHTML = `
-        <div style="background:var(--clr-surface-2,#1e2235);border:1px solid var(--clr-border);border-radius:12px;padding:2rem;width:100%;max-width:500px;">
+        <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border);border-radius:12px;padding:2rem;width:100%;max-width:500px;">
           <h3 style="margin:0 0 0.5rem;font-size:1.1rem;">Bulk Edit ${selectedIds.length} Student(s)</h3>
           <p style="color:var(--clr-text-3);font-size:0.85rem;margin:0 0 1.5rem;">Leave fields blank to keep their current values.</p>
           
@@ -319,22 +445,27 @@ export async function renderStudents(area) {
         btn.textContent = 'Saving...';
         btn.disabled = true;
 
-        const sb = (await import('../supabase.js?v=4.7.6')).getSupabase ? await (await import('../supabase.js?v=4.7.6')).getSupabase() : null;
+        const sb = (await import('../supabase.js?v=4.9.8')).getSupabase ? await (await import('../supabase.js?v=4.9.8')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); close(); return; }
 
         for (const id of selectedIds) {
-          await sb.from('students').update(updates).eq('id', id);
+          const { error } = await sb.from('students').update(updates).eq('id', id);
+          if (error) {
+             console.error('Update error on ID', id, error);
+             showToast('Failed to update student: ' + error.message, 'error');
+             return;
+          }
         }
         
         clearAdminCache('students');
         close();
         showToast(`Updated ${selectedIds.length} students.`, 'success');
-        renderStudents(area);
+        if (typeof window.loadSection === 'function') window.loadSection('students'); else renderStudents(area);
       };
 
       overlay.querySelector('#bulk-activate').onclick = async () => {
         close();
-        const sb = (await import('../supabase.js?v=4.7.6')).getSupabase ? await (await import('../supabase.js?v=4.7.6')).getSupabase() : null;
+        const sb = (await import('../supabase.js?v=4.9.8')).getSupabase ? await (await import('../supabase.js?v=4.9.8')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); return; }
         for (const id of selectedIds) await sb.from('students').update({ is_active: true }).eq('id', id);
         showToast(`Activated ${selectedIds.length} students.`, 'success');
@@ -343,7 +474,7 @@ export async function renderStudents(area) {
 
       overlay.querySelector('#bulk-deactivate').onclick = async () => {
         close();
-        const sb = (await import('../supabase.js?v=4.7.6')).getSupabase ? await (await import('../supabase.js?v=4.7.6')).getSupabase() : null;
+        const sb = (await import('../supabase.js?v=4.9.8')).getSupabase ? await (await import('../supabase.js?v=4.9.8')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); return; }
         for (const id of selectedIds) await sb.from('students').update({ is_active: false }).eq('id', id);
         showToast(`Deactivated ${selectedIds.length} students.`, 'success');
@@ -355,7 +486,7 @@ export async function renderStudents(area) {
         const confirmed = await new Promise(resolve => {
           const c = document.createElement('div');
           c.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
-          c.innerHTML = `<div style="background:var(--clr-surface-2,#1e2235);border:1px solid rgba(239,68,68,0.5);border-radius:12px;padding:2rem;max-width:380px;text-align:center;">
+          c.innerHTML = `<div style="background:var(--fm-bg-panel, #0F172A);border:1px solid rgba(239,68,68,0.5);border-radius:12px;padding:2rem;max-width:380px;text-align:center;">
             <div style="font-size:2rem;margin-bottom:0.5rem;">&#9888;&#65039;</div>
             <h3 style="color:#ef4444;margin:0 0 0.5rem;">Delete ${selectedIds.length} Students?</h3>
             <p style="color:var(--clr-text-3);font-size:0.85rem;margin-bottom:1.5rem;">This will soft-delete all selected students. Their history will be preserved.</p>
@@ -386,19 +517,50 @@ export async function renderStudents(area) {
       }
     },
     columns: [
-      // 1. Name
+      // 1. Institution
+      {
+        key: 'instName',
+        label: 'Institution',
+        sortable: true,
+        render: (row) => `<div class="text-sm fw-600">${escapeHtml(row.instName)}</div>`
+      },
+      // 2. Program
+      {
+        key: 'progName',
+        label: 'Program',
+        sortable: true,
+        render: (row) => `<div class="text-sm">${escapeHtml(row.progName)}</div>`
+      },
+      // 3. Batch
+      {
+        key: 'batchName',
+        label: 'Batch',
+        sortable: true,
+        align: 'center',
+        render: (row) => `<span class="badge" style="background:rgba(255,255,255,0.1);color:#fff;">${escapeHtml(row.batchName)}</span>`
+      },
+      // 4. Level
+      {
+        key: 'levelName',
+        label: 'Level',
+        sortable: true,
+        align: 'center',
+        render: (row) => `<span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(row.levelName)}</span>`
+      },
+      // 5. Name
       {
         key: 'sortName',
         label: 'Name',
         sortable: true,
         render: (row) => {
-          const initial = row.displayName.charAt(0).toUpperCase();
+          const initial = getStudentInitial(row.displayName || row.name);
           return `
             <div class="d-flex align-center gap-3">
-              ${row.photo_url ? `<img src="${row.photo_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">` : `<div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;">${initial}</div>`}
+              ${row.photo_url ? `<img src="${row.photo_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">` : `<img src="${generateAvatarDataUri(row.displayName || row.name, row.gender)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">`}
               <div>
                 <div class="fw-600" style="color:var(--clr-text-1);">
                   ${row.displayName}
+                  ${row.isOrphaned ? `<span class="badge badge-danger" style="margin-left:6px;font-size:0.65rem;">⚠️ Disconnected</span>` : ''}
                   ${row.remediationPending ? `<span class="badge badge-warning" style="white-space:nowrap;margin-left:8px;font-size:0.75rem;">⚠️ Remediation Pending</span>` : ''}
                 </div>
                 <div class="text-xs text-muted" style="font-family:monospace;">PIN: ${row.pinDisplay}</div>
@@ -407,7 +569,7 @@ export async function renderStudents(area) {
           `;
         }
       },
-      // 2. Age
+      // 6. Age
       {
         key: 'ageDisplay',
         label: 'Age',
@@ -415,7 +577,7 @@ export async function renderStudents(area) {
         align: 'center',
         render: (row) => `<span class="text-sm fw-600">${row.ageDisplay}</span>`
       },
-      // 3. Gender
+      // 7. Gender
       {
         key: 'gender',
         label: 'Gender',
@@ -427,37 +589,7 @@ export async function renderStudents(area) {
           ? `<span class="badge" style="background:rgba(244,114,182,0.15);color:#f472b6;border:1px solid rgba(244,114,182,0.3);font-size:0.7rem;">&#9792; Female</span>`
           : `<span class="badge badge-neutral" style="font-size:0.7rem;">&#8212; Unset</span>`
       },
-      // 4. Institution
-      {
-        key: 'instName',
-        label: 'Institution',
-        sortable: true,
-        render: (row) => `<div class="text-sm">${row.instName}</div>`
-      },
-      // 5. Program
-      {
-        key: 'progName',
-        label: 'Program',
-        sortable: true,
-        render: (row) => `<div class="fw-600 text-sm">${row.progName}</div>`
-      },
-      // 6. Batch
-      {
-        key: 'batchName',
-        label: 'Batch',
-        sortable: true,
-        align: 'center',
-        render: (row) => `<span class="badge" style="background:rgba(255,255,255,0.1);color:#fff;">${row.batchName}</span>`
-      },
-      // 6.5 Level
-      {
-        key: 'levelName',
-        label: 'Level',
-        sortable: true,
-        align: 'center',
-        render: (row) => `<span class="badge badge-neutral" style="font-size:0.75rem;">${row.levelName}</span>`
-      },
-      // 7. Progress
+      // 8. Progress
       {
         key: 'overallScoreStr',
         label: 'Progress',
@@ -468,7 +600,7 @@ export async function renderStudents(area) {
           <div class="text-xs text-muted">${row.completedAssessments} Assessments</div>
         `
       },
-      // 8. Grade
+      // 9. Grade
       {
         key: 'globalGrade',
         label: 'Grade',
@@ -476,7 +608,22 @@ export async function renderStudents(area) {
         align: 'center',
         render: (row) => row.globalGrade !== '-' ? `<span class="badge" style="background:${row.overallColor};color:#000;">${row.globalGrade}</span>` : '-'
       },
-      // 9. Status
+      // 10. Contact
+      {
+        key: 'phone',
+        label: 'Contact',
+        sortable: true,
+        render: (row) => `<div class="text-xs" style="color:var(--clr-text-2);">${escapeHtml(row.phone !== '—' ? row.phone : row.email)}</div>`
+      },
+      // 11. Joined
+      {
+        key: 'joinDate',
+        label: 'Enrolled',
+        sortable: true,
+        align: 'center',
+        render: (row) => `<span class="text-xs text-muted">${escapeHtml(row.joinDate)}</span>`
+      },
+      // 12. Status
       {
         key: 'status',
         label: 'Status',
@@ -507,17 +654,17 @@ export async function renderStudents(area) {
           printBtn.innerHTML = '&#x1F5A8;'; // printer icon
           printBtn.onclick = (e) => {
             e.stopPropagation();
-            import('./dossier_export.js?v=4.7.6').then(m => {
+            import('./dossier_export.js?v=4.9.8').then(m => {
               const edu = [{period: '2026', institution: row.instName, details: 'Enrolled in ' + row.progName}];
               const skills = ['English Proficiency'];
-              const studentAttempts = allAttempts.filter(a => a.student_id === row.id && a.status === 'SUBMITTED');
+              const studentAttempts = (allAttempts || []).filter(a => a.student_id === row.id && a.status === 'SUBMITTED');
               const assessments = studentAttempts.map(a => {
                 const pct = Math.round((a.total_score / Math.max(1, a.max_score || 1)) * 100);
                 return {
                   date: new Date(a.created_at).toLocaleDateString(),
                   title: 'Assessment Record',
                   score: pct,
-                  grade: (typeof getGrade === 'function') ? getGrade(pct).label : '-',
+                  grade: (typeof getGrade === 'function') ? getGrade(pct) : '-',
                   status: 'Completed'
                 };
               });
@@ -568,6 +715,38 @@ export async function renderStudents(area) {
       }
     ]
   });
+
+  // Bind custom filters
+  const progFilter = document.getElementById('students-filter-program');
+  const batchFilter = document.getElementById('students-filter-batch');
+  
+  if (progFilter && batchFilter) {
+    const applyFilters = () => {
+      const pid = progFilter.value;
+      const bid = batchFilter.value;
+      let newData = gridData;
+      if (pid) newData = newData.filter(s => s.program_id === pid);
+      if (bid) newData = newData.filter(s => s.batch_id === bid);
+      studentGrid.updateData(newData);
+    };
+
+    progFilter.addEventListener('change', () => {
+      const pid = progFilter.value;
+      Array.from(batchFilter.options).forEach(opt => {
+        if (opt.value === '') {
+          opt.style.display = '';
+        } else {
+          opt.style.display = (!pid || opt.getAttribute('data-prog') === pid) ? '' : 'none';
+        }
+      });
+      if (batchFilter.selectedOptions[0] && batchFilter.selectedOptions[0].style.display === 'none') {
+        batchFilter.value = '';
+      }
+      applyFilters();
+    });
+
+    batchFilter.addEventListener('change', applyFilters);
+  }
 }
 
 export function openStudentProfile(studentId, batchStudentIds = [], skipHistory = false) {
@@ -577,19 +756,19 @@ export function openStudentProfile(studentId, batchStudentIds = [], skipHistory 
 }
 
 // ---- HELPERS ----
-function escHtml(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+// escHtml is already declared at the top of this module
+  // return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// }
 
 // ---- FULL EDIT MODAL (#modal-student-full-edit) ----
 function buildFullEditModal() {
   if (document.getElementById('modal-student-full-edit')) return;
   const modal = document.createElement('div');
   modal.id = 'modal-student-full-edit';
-  modal.className = 'modal-overlay hidden';
+  modal.className = 'modal-backdrop hidden';
   modal.style.zIndex = '9999';
   modal.innerHTML = `
-    <div class="modal-box" style="max-width:680px;width:95%;max-height:90vh;overflow-y:auto;background:var(--clr-surface-2, #0f172a);border:1px solid var(--clr-border);border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.6);">
+    <div class="modal-box" style="max-width:680px;width:95%;max-height:90vh;overflow-y:auto;background:#0f172a;border:1px solid var(--clr-border);border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.6);">
       <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid var(--clr-border);">
         <h3 id="bfe-title" style="margin:0;font-size:1.15rem;font-weight:800;color:var(--clr-text-1);">Edit Student</h3>
         <button class="btn-icon" id="bfe-close" title="Close" style="background:transparent;border:none;color:var(--clr-text-2);font-size:1.2rem;cursor:pointer;">&#10005;</button>
@@ -643,16 +822,19 @@ export async function openStudentFullEdit(student, onSaved) {
   let classes = [];
   let levels = [];
   let studentProgress = [];
+  let programs = [];
   try {
-    const [bRes, cRes, lRes, pRes] = await Promise.all([
-      adminFetchAll('batches'),
-      adminFetchAll('classes'),
-      adminFetchAll('levels'),
-      adminFetchAll('progress')
+    const [bRes, cRes, lRes, pRes, prgRes] = await Promise.all([
+      adminFetchAll('batches', 'id, name, program_id, programs(institution_id)'),
+      adminFetchAll('classes', 'id, name'),
+      adminFetchAll('levels', 'id, name, level_number'),
+      adminFetchAll('progress', 'id, student_id, class_id, level_id, status'),
+      adminFetchAll('programs', 'id, name, institution_id')
     ]);
-    batches = bRes || [];
-    classes = cRes || [];
+    batches = (bRes || []).sort((a,b) => (a.name||'').localeCompare(b.name||''));
+    classes = (cRes || []).sort((a,b) => (a.name||'').localeCompare(b.name||''));
     levels = lRes || [];
+    programs = prgRes || [];
     if (student?.id) {
       studentProgress = (pRes || []).filter(p => p.student_id === student.id);
     }
@@ -663,8 +845,9 @@ export async function openStudentFullEdit(student, onSaved) {
   const initialName = draftData?.name ?? (student?.name || '');
   const initialGender = draftData?.gender ?? (student?.gender || '');
   const initialBirth = draftData?.birth_date ?? (student?.birth_date || '');
-  const initialPin = draftData?.pin ?? (student?.pin || '1234');
+  const initialPin = draftData?.pin || '';
   const initialBatchId = draftData?.batch_id ?? (student?.batch_id || '');
+  const initialLevelId = draftData?.level_id ?? (student?.level_id || '');
   const initialActive = draftData?.is_active ?? (student?.is_active !== false);
   let currentPhotoUrl = draftData?.photo_url ?? (student?.photo_url || '');
 
@@ -675,7 +858,7 @@ export async function openStudentFullEdit(student, onSaved) {
         <label class="form-label" style="display:block;margin-bottom:0.5rem;font-size:0.8rem;text-transform:uppercase;color:var(--clr-text-3);">3:4 Avatar</label>
         <div style="width:120px;height:160px;margin:0 auto;border-radius:8px;overflow:hidden;border:2px solid var(--clr-border);background:rgba(0,0,0,0.25);position:relative;">
           <img id="bfe-avatar-preview" src="${getBustedAvatarUrl(currentPhotoUrl)}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;" />
-          <div id="bfe-avatar-loading" class="hidden" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;">
+          <div id="bfe-avatar-loading" class="hidden" style="position:absolute;inset:0;background:rgba(15,23,42,0.95);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;">
             <div class="spinner" style="width:20px;height:20px;"></div>
           </div>
         </div>
@@ -719,7 +902,7 @@ export async function openStudentFullEdit(student, onSaved) {
 
         <div class="form-group">
           <label class="form-label">Personal PIN (Reset)</label>
-          <input type="text" class="form-control" id="bfe-pin" value="${escHtml(initialPin)}" placeholder="1234" autocomplete="new-password">
+          <input type="text" class="form-control" id="bfe-pin" value="${escHtml(initialPin)}" placeholder="Leave blank to keep unchanged" autocomplete="new-password">
         </div>
 
         <div class="form-group" style="grid-column:1/-1;">
@@ -731,34 +914,27 @@ export async function openStudentFullEdit(student, onSaved) {
         </div>
 
         ${(() => {
-          if (!classes || classes.length === 0) return '';
-          let html = `
+          if (!levels || levels.length === 0) return '';
+          let options = '<option value="">-- Inherit from Batch --</option>';
+          levels.forEach(lvl => {
+            options += '<option value="' + lvl.id + '" ' + (lvl.id === initialLevelId ? 'selected' : '') + '>' + escHtml(lvl.name) + '</option>';
+          });
+          return `
             <div style="grid-column:1/-1; margin-top:0.5rem; border-top:1px solid var(--clr-border); padding-top:1rem;">
               <h4 style="margin:0 0 0.75rem 0; font-size:0.95rem; display:flex; justify-content:space-between; align-items:center;">
-                <span>&#128200; Manual Level Assignment</span>
+                <span>📈 Manual Level Assignment</span>
                 <span class="badge badge-neutral" style="font-weight:normal;">Applies instantly upon save</span>
               </h4>
-              <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:1rem; background:rgba(0,0,0,0.1); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
-          `;
-          classes.forEach(cls => {
-            const prog = studentProgress.find(p => p.class_id === cls.id);
-            const currentLevelIndex = draftData?.progress?.[cls.id] ?? (prog ? prog.unlocked_level : 1);
-            let options = '';
-            levels.forEach((lvl, idx) => {
-              const lvlIdx = idx + 1;
-              options += `<option value="${lvlIdx}" ${lvlIdx == currentLevelIndex ? 'selected' : ''}>Level ${lvlIdx} - ${escHtml(lvl.name)}</option>`;
-            });
-            html += `
-              <div class="form-group mb-0">
-                <label class="form-label" style="font-size:0.75rem;">${escHtml(cls.name)}</label>
-                <select class="form-control bfe-class-progress" data-class-id="${cls.id}">
-                  ${options}
-                </select>
+              <div style="background:rgba(0,0,0,0.1); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
+                <div class="form-group mb-0">
+                  <label class="form-label">Student's Current Level</label>
+                  <select class="form-control" id="bfe-level">
+                    ${options}
+                  </select>
+                </div>
               </div>
-            `;
-          });
-          html += `</div></div>`;
-          return html;
+            </div>
+          `;
         })()}
       </div>
     </div>
@@ -767,11 +943,6 @@ export async function openStudentFullEdit(student, onSaved) {
   // Write-Ahead Buffer & Dirty Tracking
   const updateDraft = () => {
     window.isProfileDirty = true;
-    const progressMap = {};
-    document.querySelectorAll('.bfe-class-progress').forEach(sel => {
-      progressMap[sel.getAttribute('data-class-id')] = parseInt(sel.value, 10);
-    });
-
     const currentDraft = {
       name: document.getElementById('bfe-name').value,
       gender: document.getElementById('bfe-gender').value,
@@ -779,20 +950,18 @@ export async function openStudentFullEdit(student, onSaved) {
       batch_id: document.getElementById('bfe-batch').value,
       pin: document.getElementById('bfe-pin').value,
       is_active: document.getElementById('bfe-active').value === 'true',
-      photo_url: currentPhotoUrl,
-      progress: progressMap
+      level_id: document.getElementById('bfe-level')?.value || null
     };
     try {
       localStorage.setItem(draftKey, JSON.stringify(currentDraft));
     } catch (e) { /* ignore */ }
   };
 
-  ['bfe-name', 'bfe-gender', 'bfe-birth', 'bfe-batch', 'bfe-pin', 'bfe-active'].forEach(id => {
+  ['bfe-name', 'bfe-gender', 'bfe-birth', 'bfe-batch', 'bfe-level', 'bfe-pin', 'bfe-active'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', updateDraft);
     document.getElementById(id)?.addEventListener('change', updateDraft);
   });
-  document.querySelectorAll('.bfe-class-progress').forEach(sel => sel.addEventListener('change', updateDraft));
-
+  
   // Avatar Upload Listener (3:4 Center-Crop Engine)
   const avatarFileInput = document.getElementById('bfe-avatar-file');
   avatarFileInput?.addEventListener('change', async (e) => {
@@ -802,11 +971,11 @@ export async function openStudentFullEdit(student, onSaved) {
     loading?.classList.remove('hidden');
 
     try {
-      const dataUrl = await processAndCompressAvatar(file, 'student');
-      currentPhotoUrl = dataUrl;
-      document.getElementById('bfe-avatar-preview').src = dataUrl;
+      const avatarUrl = await uploadStudentAvatar(file, student?.id);
+      currentPhotoUrl = avatarUrl;
+      document.getElementById('bfe-avatar-preview').src = getBustedAvatarUrl(avatarUrl, initialName, initialGender);
       updateDraft();
-      showToast('Student avatar cropped to 3:4 WebP format.', 'success');
+      showToast('Student avatar uploaded to CDN (3:4 WebP format).', 'success');
     } catch (err) {
       showToast('Avatar processing error: ' + err.message, 'error');
     } finally {
@@ -827,16 +996,30 @@ export async function openStudentFullEdit(student, onSaved) {
     const name = document.getElementById('bfe-name').value.trim();
     if (!name) { showToast('Student name is required.', 'error'); return; }
 
+    const selectedBatchId = document.getElementById('bfe-batch').value || null;
+    let selectedProgramId = student?.program_id || null;
+    let selectedInstitutionId = student?.institution_id || null;
+    if (selectedBatchId && batches) {
+      const bObj = batches.find(b => b.id === selectedBatchId);
+      if (bObj && bObj.program_id) {
+        selectedProgramId = bObj.program_id;
+        selectedInstitutionId = bObj.programs?.institution_id || (programs || []).find(p => p.id === bObj.program_id)?.institution_id || null;
+      }
+    }
+
     const payload = {
       name,
-      gender:     document.getElementById('bfe-gender').value || null,
-      birth_date: document.getElementById('bfe-birth').value  || null,
-      batch_id:   document.getElementById('bfe-batch').value    || null,
-      is_active:  document.getElementById('bfe-active').value === 'true',
-      photo_url:  currentPhotoUrl || null,
+      gender:         document.getElementById('bfe-gender').value || null,
+      birth_date:     document.getElementById('bfe-birth').value  || null,
+      batch_id:       selectedBatchId,
+      program_id:     selectedProgramId,
+      institution_id: selectedInstitutionId,
+      level_id:       document.getElementById('bfe-level')?.value   || null,
+      is_active:      document.getElementById('bfe-active').value === 'true',
+      photo_url:      currentPhotoUrl || null,
     };
     const pinVal = document.getElementById('bfe-pin').value.trim();
-    if (pinVal) payload.pin = pinVal;
+    if (pinVal) payload.pin_hash = await sha256(pinVal);
 
     newSaveBtn.disabled = true;
     newSaveBtn.textContent = 'Saving...';
@@ -853,20 +1036,7 @@ export async function openStudentFullEdit(student, onSaved) {
         showToast('Student created successfully.', 'success');
       }
 
-      // Save manual progress assignments
-      const progressPayload = [];
-      document.querySelectorAll('.bfe-class-progress').forEach(sel => {
-        progressPayload.push({
-          student_id: finalStudentId,
-          class_id: sel.getAttribute('data-class-id'),
-          unlocked_level: parseInt(sel.value, 10)
-        });
-      });
-
-      if (progressPayload.length > 0) {
-        await sb.from('progress').upsert(progressPayload, { onConflict: 'student_id,class_id' });
-        clearAdminCache('progress');
-      }
+      
 
       window.isProfileDirty = false;
       localStorage.removeItem(draftKey);

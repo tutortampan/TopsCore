@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
-import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=4.7.6';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, parseCorrectAnswers, stripHyphens } from './grading.js?v=4.7.6';
+import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=4.9.8';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, parseCorrectAnswers, stripHyphens } from './grading.js?v=4.9.8';
 
 export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, parseCorrectAnswers, stripHyphens, callEdgeFunction };
 
@@ -19,9 +19,19 @@ const MOCK_PROGRAMS = [
   { id: '22222222-2222-2222-2222-333333333333', institution_id: '11111111-1111-1111-1111-111111111111', name: 'Class B' }
 ];
 
+export function stripHonorific(name) {
+  if (!name) return '';
+  return String(name).trim().replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?)\s+/i, '').trim();
+}
+
+export function getStudentInitial(name) {
+  const stripped = stripHonorific(name);
+  return stripped ? stripped.charAt(0).toUpperCase() : 'S';
+}
+
 export function cleanStudentName(name) {
   if (!name) return '';
-  let cleaned = String(name).trim().replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?)\s+/i, '').trim();
+  const cleaned = stripHonorific(name);
   return cleaned.toLowerCase().split(' ').map(word => {
     if (!word) return '';
     return word.charAt(0).toUpperCase() + word.slice(1);
@@ -68,7 +78,7 @@ const MOCK_STUDENTS = [
   { id: '55555555-5555-5555-5555-555555555555', institution_id: '11111111-1111-1111-1111-111111111111', program_id: '22222222-2222-2222-2222-222222222222', batch_id: 'bbbbbbbb-1111-1111-1111-111111111111', name: 'John Doe', gender: 'male', is_active: true, pin_hash: '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4' }
 ];
 
-async function sha256(str) {
+export async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
@@ -145,8 +155,7 @@ export async function fetchPrograms(institutionId, forceRefresh = false) {
         const { data, error } = await sb.from('programs')
           .select('id, name, institution_id, is_active')
           .eq('institution_id', institutionId)
-          
-          
+          .is('deleted_at', null)
           .order('name');
         if (error) throw error;
         if (data && data.length) list = data;
@@ -173,8 +182,7 @@ export async function fetchBatches(programId, forceRefresh = false) {
         const { data, error } = await sb.from('batches')
           .select('id, name, program_id, current_level_id')
           .eq('program_id', programId)
-          
-          
+          .is('deleted_at', null)
           .order('name');
         if (error) throw error;
         if (data && data.length) list = data;
@@ -194,8 +202,7 @@ export async function fetchStudentsByProgram(programId, batchId = null) {
       let query = sb.from('students')
         .select('id, name, gender, program_id, batch_id')
         .eq('program_id', programId)
-        
-        ;
+        .is('deleted_at', null);
       if (batchId) {
         query = query.eq('batch_id', batchId);
       }
@@ -208,8 +215,14 @@ export async function fetchStudentsByProgram(programId, batchId = null) {
   }
   return list.map(s => ({
     ...s,
-    name: formatStudentName(s.name, s.gender)
-  })).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    displayName: formatStudentName(s.name, s.gender),
+    name: formatStudentName(s.name, s.gender),
+    cleanName: cleanStudentName(s.name)
+  })).sort((a, b) => {
+    const nameA = cleanStudentName(a.name || a.displayName || '');
+    const nameB = cleanStudentName(b.name || b.displayName || '');
+    return nameA.localeCompare(nameB, undefined, { sensitivity: 'base', numeric: true });
+  });
 }
 
 export async function verifyStudentLogin({ institutionId, programId, batchId, studentId, pin }) {
@@ -351,7 +364,11 @@ export async function fetchStudentClasses(programId, institutionId, levelId = nu
     let query = sb.from('classes')
       .select('id, name, code, description, level_id, levels!classes_level_id_fkey(level_number)')
       .is('deleted_at', null)
-      .order('name');
+        .eq('is_active', true)
+        .order('name');
+      if (programId) query = query.eq('program_id', programId)
+        .is('deleted_at', null);
+      if (levelId) query = query.eq('level_id', levelId);
       
     // Classes do not have institution_id directly, they are global or program-specific via class_programs
     
@@ -379,14 +396,17 @@ export async function fetchLevels(classId) {
 export async function fetchStudentProgress(studentId) {
   const sb = await getSupabase();
   const { data, error } = await sb.from('progress').select('*').eq('student_id', studentId);
-  if (error) throw error;
-  return data;
+  if (error) {
+    console.error('Progress fetch error:', error);
+    return [];
+  }
+  return data || [];
 }
 
 export async function fetchAssessmentsForStudentClass(programId, classId, institutionId, levelId) {
   const sb = await getSupabase();
   let query = sb.from('assessments')
-    .select('*, levels(id, name, level_number)')
+    .select('id, title, display_name, assessment_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_id, working_duration_minutes, schedule_mode, levels(id, name, level_number)')
     .eq('class_id', classId)
     .eq('status', 'PUBLISHED')
     .is('deleted_at', null)
@@ -417,7 +437,7 @@ export async function fetchAssessmentsForStudentClass(programId, classId, instit
 export async function fetchAssessmentsForStudentLevel(programId, levelId, institutionId) {
   const sb = await getSupabase();
   let query = sb.from('assessments')
-    .select('*, levels(id, name, level_number)')
+    .select('id, title, display_name, assessment_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_id, working_duration_minutes, schedule_mode, levels(id, name, level_number)')
     .eq('level_id', levelId)
     .eq('status', 'PUBLISHED')
     
@@ -437,7 +457,7 @@ export async function fetchAllStudentAttempts(studentId) {
   const { data, error } = await sb.from('attempts')
     .select('id, assessment_id, score, percentage, grade, status, is_best_score, submitted_at, assessments(title, assessment_type, classes(name))')
     .eq('student_id', studentId)
-    .in('status', ['submitted', 'auto_submitted', 'SUBMITTED', 'AUTO_SUBMITTED'])
+    .in('status', ['submitted', 'auto_submitted'])
     .order('submitted_at', { ascending: false });
 
   if (!error) return data || [];
@@ -446,7 +466,7 @@ export async function fetchAllStudentAttempts(studentId) {
   const { data: attempts, error: attErr } = await sb.from('attempts')
     .select('id, assessment_id, score, percentage, grade, status, is_best_score, submitted_at')
     .eq('student_id', studentId)
-    .in('status', ['submitted', 'auto_submitted', 'SUBMITTED', 'AUTO_SUBMITTED'])
+    .in('status', ['submitted', 'auto_submitted'])
     .order('submitted_at', { ascending: false });
 
   if (attErr || !attempts) return [];
@@ -470,7 +490,7 @@ export async function fetchStudentAttemptsForAssessment(studentId, assessmentId)
     .select('id, status, score, percentage, grade, submitted_at')
     .eq('student_id', studentId)
     .eq('assessment_id', assessmentId)
-    .in('status', ['submitted', 'auto_submitted', 'SUBMITTED', 'AUTO_SUBMITTED'])
+    .in('status', ['submitted', 'auto_submitted'])
     .order('percentage', { ascending: false });
   if (error) throw error;
   return data || [];
@@ -493,7 +513,10 @@ export async function startAssessment(studentId, assessmentId) {
   const sb = await getSupabase();
 
   // 1. Ambil detail assessment
-  const { data: asmData, error: asmErr } = await sb.from('assessments').select('*').eq('id', assessmentId).single();
+  const { data: asmData, error: asmErr } = await sb.from('assessments')
+    .select('id, title, assessment_type, assessment_category, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, payload, module_id')
+    .eq('id', assessmentId)
+    .single();
   if (asmErr || !asmData) throw new Error('Assessment not found.');
 
   // Guard: Do NOT insert attempt or start countdown if tutor hasn't unlocked it yet
@@ -511,10 +534,10 @@ export async function startAssessment(studentId, assessmentId) {
 
   // 2. Cek apakah ada attempt in_progress yang sedang berjalan (tanpa kueri ganda)
   const { data: existingAttempts } = await sb.from('attempts')
-    .select('*')
+    .select('id, student_id, assessment_id, status, started_at, expires_at, attempt_number, is_remedial_unlocked, created_at')
     .eq('student_id', studentId)
     .eq('assessment_id', assessmentId)
-    .in('status', ['in_progress', 'IN_PROGRESS'])
+    .in('status', ['in_progress'])
     .order('created_at', { ascending: false });
 
   let attempt = existingAttempts?.[0];
@@ -564,7 +587,11 @@ export async function startAssessment(studentId, assessmentId) {
         if (levelRec?.level_number) levelNum = levelRec.level_number;
       }
       
-      let query = sb.from('vocabulary_vault').select('*').is('deleted_at', null).eq('target_level', levelNum).range(0, 4999);
+      let query = sb.from('vocabulary_vault')
+        .select('id, english, indonesian, word_type, topic, topic_code, theme_code, target_level, category')
+        .is('deleted_at', null)
+        .eq('target_level', levelNum)
+        .range(0, 4999);
       if (themes && Array.isArray(themes) && themes.length > 0) {
           query = query.in('theme_code', themes);
       } else if (assessment.assessment_category === 'TEST' && themeCode) {
@@ -598,7 +625,7 @@ export async function startAssessment(studentId, assessmentId) {
         let typeDistractorPools = {};
         const ansType = assessment.payload.answer_type || 'written';
         
-        if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'phrase_recognition') {
+        if (ansType.startsWith('dropdown') || (ansType === 'multiple_choice' || ansType === 'selection') ) {
             let allDataQuery = sb.from('vocabulary_vault').select('english, word_type').is('deleted_at', null);
             if (category === 'phrases' || assessment.assessment_type === 'PHRASE_TASK' || assessment.assessment_type === 'PHRASE_TEST') {
                 allDataQuery = allDataQuery.eq('category', 'phrases');
@@ -631,8 +658,8 @@ export async function startAssessment(studentId, assessmentId) {
              const correctAns = accepted[0] || "N/A";
              let optionsSnapshot = [];
              
-             if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'phrase_recognition') {
-                 const numDistractors = (ansType === 'dropdown_10' || ansType === 'phrase_recognition') ? 9 : 3;
+             if (ansType.startsWith('dropdown') || (ansType === 'multiple_choice' || ansType === 'selection') ) {
+                 const numDistractors = (ansType === 'dropdown_10' ) ? 9 : 4;
                  const wordType = (vw.word_type || 'Vocab').toLowerCase();
                  let sameTypePool = (typeDistractorPools[wordType] || []).filter(a => !accepted.includes(a));
                  fisherYates(sameTypePool);
@@ -656,7 +683,7 @@ export async function startAssessment(studentId, assessmentId) {
       }
     } else {
       const { data } = await sb.from('assessment_questions')
-        .select('*')
+        .select('id, question_id, question_text_snapshot, word_type_snapshot, options_snapshot, topic_snapshot, display_order, answer_type')
         .eq('assessment_id', assessmentId)
         .order('display_order');
       questions = data || [];
@@ -672,9 +699,7 @@ export async function startAssessment(studentId, assessmentId) {
           topic: sq.topic_snapshot,
           display_order: sq.display_order ?? (idx + 1),
           answer_type: sq.answer_type || 'written',
-          options_snapshot: sq.options_snapshot || [],
-          accepted_answers: sq.accepted_answers_snapshot,
-          correct_answer: Array.isArray(sq.accepted_answers_snapshot) ? sq.accepted_answers_snapshot[0] : sq.accepted_answers_snapshot
+          options_snapshot: sq.options_snapshot || []
         },
         topic_snapshot: sq.topic_snapshot,
         accepted_answers_snapshot: sq.accepted_answers_snapshot,
@@ -686,7 +711,7 @@ export async function startAssessment(studentId, assessmentId) {
     }
   }
 
-  let { data: answers } = await sb.from('attempt_answers').select('*').eq('attempt_id', attempt.id);
+  let { data: answers } = await sb.from('attempt_answers').select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score').eq('attempt_id', attempt.id);
 
   if (answers && answers.length > 0) {
     answers.sort((a, b) => {
@@ -744,95 +769,19 @@ export async function submitAssessment(attemptId, answersMap, options = {}) {
   try {
     return await callEdgeFunction('submit-assessment', { attempt_id: attemptId, answers: answersMap, status: targetStatus });
   } catch (edgeErr) {
-    console.warn('Edge Function submit-assessment unavailable, using client DB fallback:', edgeErr.message);
+    console.warn('Edge Function submit-assessment unavailable, using server RPC fallback:', edgeErr.message);
   }
 
+  // Server-authoritative fallback via PostgreSQL RPC (strictly server-side scoring & RLS compliance)
   const sb = await getSupabase();
+  const { data: rpcData, error: rpcErr } = await sb.rpc('emergency_submit_attempt', {
+    p_attempt_id: attemptId,
+    p_answers: answersMap,
+    p_status: targetStatus
+  });
 
-  if (answersMap && typeof answersMap === 'object') {
-    const saveTasks = [];
-    if (Array.isArray(answersMap)) {
-      for (const item of answersMap) {
-        if (item?.attempt_answer_id) {
-          saveTasks.push(
-            sb.from('attempt_answers').update({ student_answer: item.student_answer ?? '', updated_at: new Date().toISOString() }).eq('id', item.attempt_answer_id)
-          );
-        }
-      }
-    } else {
-      for (const [ansId, ansVal] of Object.entries(answersMap)) {
-        saveTasks.push(
-          sb.from('attempt_answers').update({ student_answer: ansVal ?? '', updated_at: new Date().toISOString() }).eq('id', ansId)
-        );
-      }
-    }
-    if (saveTasks.length > 0) await Promise.all(saveTasks);
-  }
-
-  const { data: attemptAnswers, error: fetchErr } = await sb.from('attempt_answers').select('*').eq('attempt_id', attemptId);
-  if (fetchErr) throw fetchErr;
-
-  let totalPoints = 0;
-  let correctCount = 0;
-  let maxPoints = attemptAnswers?.length || 0;
-
-  const evalTasks = [];
-  for (const a of (attemptAnswers || [])) {
-    let answerType = 'written';
-    if (a.question_snapshot) {
-      try {
-        const qSnap = typeof a.question_snapshot === 'string' ? JSON.parse(a.question_snapshot) : a.question_snapshot;
-        if (qSnap?.answer_type) answerType = qSnap.answer_type;
-      } catch (_) {}
-    }
-
-    const validKey = a.accepted_answers_snapshot || a.correct_answer_snapshot;
-    const evalRes = evaluateAnswer(a.student_answer, validKey, answerType);
-    totalPoints += evalRes.score;
-    if (evalRes.score >= 1.0) correctCount++;
-
-    const isCorrect = evalRes.score >= 1.0;
-    const simScore = evalRes.score >= 1.0 ? 1.0 : (evalRes.score === 0.5 ? 0.85 : 0);
-
-    evalTasks.push(
-      sb.from('attempt_answers').update({
-        score: evalRes.score,
-        evaluation_result: evalRes.result,
-        is_correct: isCorrect,
-        similarity_score: simScore,
-        answered_at: new Date().toISOString()
-      }).eq('id', a.id)
-    );
-  }
-  if (evalTasks.length > 0) await Promise.all(evalTasks);
-
-  const percentage = calculatePercentage(totalPoints, maxPoints);
-  const grade = calculateGrade(percentage);
-
-  const { data: updatedAttempt, error: updateErr } = await sb.from('attempts')
-    .update({
-      status: targetStatus,
-      submitted_at: new Date().toISOString(),
-      score: totalPoints,
-      correct_count: correctCount,
-      total_questions: maxPoints,
-      percentage,
-      grade,
-      effective_score: percentage
-    })
-    .eq('id', attemptId)
-    .select()
-    .single();
-
-  if (updateErr) throw updateErr;
-
-  try {
-    await recalculateBestScore(updatedAttempt.student_id, updatedAttempt.assessment_id);
-  } catch (bsErr) {
-    console.warn('Best score recalculation notice:', bsErr.message);
-  }
-
-  return { success: true, attempt: updatedAttempt };
+  if (rpcErr) throw rpcErr;
+  return rpcData;
 }
 
 // ============================================================
@@ -900,7 +849,10 @@ export async function adminFetchAll(table, select = '*', filters = {}, forceRefr
       'levels',
       'assignments',
       'user_professionals',
-      'modules'
+      'modules',
+      'class_levels',   // junction table — no deleted_at column
+      'class_meetings',
+      'class_meeting_exceptions'
     ];
     if (!noDeletedAtTables.includes(normTable)) {
       query = query.is('deleted_at', null);
@@ -911,11 +863,30 @@ export async function adminFetchAll(table, select = '*', filters = {}, forceRefr
       query = query.eq(normKey, val);
     }
     
-    let { data, error } = await query;
-    if (error) throw error;
+        // Fetch all pages to overcome 1000 row limit
+    let allData = [];
+    let from = 0;
+    const pageSize = 1000;
     
-    _adminCache.set(cacheKey, JSON.parse(JSON.stringify(data || [])));
-    return data || [];
+    // In Supabase JS v2, modifying query might not create a new object, 
+    // but .range() actually mutates the query builder if done in a chain. 
+    // Wait, .range() applies limits. We can just execute the base query with range().
+    while (true) {
+      // Supabase JS allows re-executing query object with new range?
+      // Actually, building a new query or cloning is better, but .range(start, end)
+      // returns a new builder? Wait! Supabase v2 `.range()` returns 'this', mutating it!
+      // But we can just use pagination directly on `query`.
+      
+      const { data, error } = await query.range(from, from + pageSize - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      allData = allData.concat(data);
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    
+    _adminCache.set(cacheKey, JSON.parse(JSON.stringify(allData || [])));
+    return allData || [];
   } catch (e) {
     console.warn(`adminFetchAll failed for ${table}:`, e.message);
     return [];
@@ -1004,7 +975,7 @@ export async function recalculateBestScore(studentId, assessmentId) {
     .select('id, score, percentage, created_at')
     .eq('student_id', studentId)
     .eq('assessment_id', assessmentId)
-    .in('status', ['submitted', 'auto_submitted', 'SUBMITTED', 'AUTO_SUBMITTED'])
+    .in('status', ['submitted', 'auto_submitted'])
     .order('percentage', { ascending: false })
     .order('created_at', { ascending: false });
 
@@ -1124,20 +1095,27 @@ export async function adminRestore(table, id) {
 }
 
 // --- Duplicate student detection & merge ---
-export async function detectDuplicateStudents(programId) {
+export async function detectDuplicateStudents(scope = 'same_class') {
   const sb = await getSupabase();
-  let query = sb.from('students').select('id, name, program_id, batch_id, deleted_at');
-  if (programId) query = query.eq('program_id', programId);
+  let query = sb.from('students').select('id, name, program_id, batch_id, deleted_at').is('deleted_at', null);
   const { data, error } = await query;
   if (error) throw error;
   const students = data || [];
   const groups = {};
   for (const s of students) {
-    const key = (s.name || '').trim().toLowerCase() + '|' + (s.program_id || '');
+    let key;
+    if (scope === 'same_class') {
+      key = (s.name || '').trim().toLowerCase() + '|' + (s.batch_id || '');
+    } else {
+      key = (s.name || '').trim().toLowerCase();
+    }
     if (!groups[key]) groups[key] = [];
     groups[key].push(s);
   }
-  return Object.values(groups).filter(g => g.length > 1);
+  return Object.values(groups).filter(g => g.length > 1).map(g => ({
+    name: g[0].name,
+    candidates: g
+  }));
 }
 
 export async function mergeStudentPair(keepId, removeId) {
@@ -1169,7 +1147,7 @@ export async function mergeDuplicateStudents(duplicateGroups) {
 // --- Duplicate question detection & resequencing ---
 export async function detectDuplicateQuestions(assessmentId) {
   const sb = await getSupabase();
-  let query = sb.from('questions').select('id, question_text, assessment_id, question_order');
+  let query = sb.from('questions').select('id, question_text, assessment_id');
   if (assessmentId) query = query.eq('assessment_id', assessmentId);
   const { data, error } = await query;
   if (error) throw error;
@@ -1185,12 +1163,14 @@ export async function detectDuplicateQuestions(assessmentId) {
 
 export async function resequenceAssessmentQuestions(assessmentId) {
   const sb = await getSupabase();
-  const { data, error } = await sb.from('questions').select('id').eq('assessment_id', assessmentId).order('question_order');
+  // questions table has no question_order column — resequencing is a no-op until column is added
+  const { data, error } = await sb.from('questions').select('id').eq('assessment_id', assessmentId).order('created_at');
   if (error) throw error;
-  const updates = (data || []).map((q, idx) =>
-    sb.from('questions').update({ question_order: idx + 1 }).eq('id', q.id)
-  );
-  await Promise.all(updates);
+  // No-op: question_order column not in schema yet
+  // const updates = (data || []).map((q, idx) =>
+  //   sb.from('questions').update({ question_order: idx + 1 }).eq('id', q.id)
+  // );
+  // await Promise.all(updates);
   clearAdminCache('questions');
 }
 
@@ -1219,7 +1199,7 @@ export async function previewRecalibrateAssessment(assessmentId) {
   const { data: attempts, error } = await sb.from('attempts')
     .select('id, student_id, score, percentage, grade, is_best_score')
     .eq('assessment_id', assessmentId)
-    .in('status', ['submitted', 'auto_submitted', 'SUBMITTED', 'AUTO_SUBMITTED']);
+    .in('status', ['submitted', 'auto_submitted']);
   if (error) throw error;
   return { assessmentId, attempts: attempts || [], count: (attempts || []).length };
 }
@@ -1230,7 +1210,7 @@ export async function applyRecalibrateAssessment(assessmentId) {
   const { data: attempts, error } = await sb.from('attempts')
     .select('id, student_id, score, percentage')
     .eq('assessment_id', assessmentId)
-    .in('status', ['submitted', 'auto_submitted', 'SUBMITTED', 'AUTO_SUBMITTED'])
+    .in('status', ['submitted', 'auto_submitted'])
     .order('percentage', { ascending: false });
   if (error) throw error;
   // Re-mark best scores per student
@@ -1259,7 +1239,7 @@ export async function fetchTopics(classId) {
   // Include class name join so UI can display it without a second query
   let query = sb.from('topics').select('*, classes(name)');
   if (classId) query = query.eq('class_id', classId);
-  const { data, error } = await query.order('topic_order');
+  const { data, error } = await query.order('name');
   if (error) throw error;
   return data || [];
 }
@@ -1305,7 +1285,7 @@ export async function fetchCentralQuestions(filters = {}) {
   if (filters.assessment_id) query = query.eq('assessment_id', filters.assessment_id);
   if (filters.class_id) query = query.eq('class_id', filters.class_id);
   if (filters.topic_id) query = query.eq('topic_id', filters.topic_id);
-  const { data, error } = await query.order('question_order');
+  const { data, error } = await query.order('created_at');
   if (error) throw error;
   return data || [];
 }
@@ -1335,6 +1315,18 @@ export async function fetchAssessmentDefinitions(filters = {}) {
 
 export async function createAssessmentDefinition(payload) {
   return await adminInsert('assessments', payload);
+}
+
+export async function reorderAssessment(assessmentId, newOrder, classId) {
+  const sb = await getSupabase();
+  const { data, error } = await sb.rpc('reorder_assessment', {
+    p_assessment_id: assessmentId,
+    p_new_order: parseInt(newOrder, 10),
+    p_class_id: classId || null
+  });
+  if (error) throw error;
+  clearAdminCache('assessments');
+  return data;
 }
 
 export async function createAssessmentDefinitionWithTopics(payload, topicIds = []) {
@@ -1418,7 +1410,7 @@ export async function invokeAIEvaluation(payload) {
 
 export async function fetchAssessmentResultsFromDB(filters = {}) {
   const sb = await getSupabase();
-  let query = sb.from('attempts').select('*, students(name), assessments(title, classes(name))').in('status', ['submitted', 'auto_submitted', 'SUBMITTED', 'AUTO_SUBMITTED']);
+  let query = sb.from('attempts').select('*, students(name), assessments(title, classes(name))').in('status', ['submitted', 'auto_submitted']);
   if (filters.assessment_id) query = query.eq('assessment_id', filters.assessment_id);
   if (filters.student_id) query = query.eq('student_id', filters.student_id);
   const { data, error } = await query.order('submitted_at', { ascending: false });
@@ -1451,7 +1443,7 @@ export async function getServerTimeWita() {
 export async function fetchVaultWords({ topic = null, search = null, targetLevel = null, limit = 2500, offset = 0 } = {}) {
   const sb = await getSupabase();
   let query = sb.from('vocabulary_vault')
-    .select('*')
+    .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, item_code')
     .is('deleted_at', null)
     .order('target_level', { ascending: true })
     .order('theme_code', { ascending: true })
@@ -1527,7 +1519,7 @@ export async function fetchVaultStats() {
 export async function checkVaultDuplicates(newRows) {
   const sb = await getSupabase();
   const { data: vaultData, error } = await sb.from('vocabulary_vault')
-    .select('id, theme, topic, indonesian, english, target_level, word_type')
+    .select('id, item_code, theme, topic, indonesian, english, target_level, word_type')
     .is('deleted_at', null);
   if (error) throw error;
   const vault = vaultData || [];
@@ -1607,7 +1599,8 @@ function sanitizeVaultRow(row) {
     indonesian: String(row.indonesian || '').trim().replace(/\s+/g, ' '),
     english:    canonicalEng,
     word_type:  wType,
-    target_level: parseInt(row.level || row.target_level || 1, 10) || 1
+    target_level: parseInt(row.level || row.target_level || 1, 10) || 1,
+    item_code: ic || null
   };
 }
 
@@ -1828,7 +1821,10 @@ export async function createVocabMasteryAssessment(config) {
 
   if (tier === 'TASK') {
     if (!sourceTopic) throw new Error('sourceTopic is required for TASK tier.');
-    let q = sb.from('vocabulary_vault').select('*').eq('topic', sourceTopic).is('deleted_at', null);
+    let q = sb.from('vocabulary_vault')
+      .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, item_code')
+      .eq('topic', sourceTopic)
+      .is('deleted_at', null);
     if (!isAllLevels) q = q.eq('target_level', targetLevel);
     
     if (assessmentType === 'IDIOM_PROVERB') {
@@ -1861,11 +1857,14 @@ export async function createVocabMasteryAssessment(config) {
     }
 
     // 3. Fetch words for all accumulated topics
-    let q = sb.from('vocabulary_vault').select('*').in('topic', sourceTopics).is('deleted_at', null);
+    let q = sb.from('vocabulary_vault')
+      .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, item_code')
+      .in('topic', sourceTopics)
+      .is('deleted_at', null);
     if (!isAllLevels) q = q.eq('target_level', targetLevel);
     
     // Support PHRASE_RECOGNITION filtering
-    if (assessmentType === 'IDIOM_PROVERB' || assessmentType === 'PHRASE_RECOGNITION') {
+    if (assessmentType === 'IDIOM_PROVERB' ) {
       q = q.in('word_type', ['Idiom', 'Proverb', 'Expression', 'Phrase']);
     }
 
@@ -1882,7 +1881,10 @@ export async function createVocabMasteryAssessment(config) {
       if (aq.topic_snapshot) topicsSet.add(aq.topic_snapshot);
     });
     sourceTopics = [...topicsSet];
-    let q = sb.from('vocabulary_vault').select('*').in('topic', sourceTopics).is('deleted_at', null);
+    let q = sb.from('vocabulary_vault')
+      .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, item_code')
+      .in('topic', sourceTopics)
+      .is('deleted_at', null);
     if (!isAllLevels) q = q.eq('target_level', targetLevel);
     const { data, error } = await q.order('topic').order('indonesian');
     if (error) throw error;
@@ -1922,10 +1924,10 @@ export async function createVocabMasteryAssessment(config) {
     : (tier === 'TASK' ? 'TASK' : 'TEST');
 
   let defaultAnswerType = answerType;
-  if (assessmentType === 'IDIOM_PROVERB' || assessmentType === 'PHRASE_RECOGNITION') {
+  if (assessmentType === 'IDIOM_PROVERB' ) {
       defaultAnswerType = 'phrase_recognition';
   } else if (tier === 'TASK') {
-      defaultAnswerType = 'speech_to_text';
+      defaultAnswerType = 'spoken';
   } else {
       defaultAnswerType = 'written';
   }
@@ -1994,14 +1996,14 @@ export async function createVocabMasteryAssessment(config) {
     if (isPhrase) {
       currentAnswerType = 'phrase_recognition';
     } else {
-      if (tier === 'TASK') currentAnswerType = 'speech_to_text';
+      if (tier === 'TASK') currentAnswerType = 'spoken';
       else if (tier === 'TEST' || tier === 'QUIZ' || tier === 'EXAM') currentAnswerType = 'written';
     }
     
     let optionsSnapshot = null;
     if (currentAnswerType.startsWith('dropdown') || currentAnswerType === 'phrase_recognition') {
       const correctAns = answers[0];
-      const numDistractors = (currentAnswerType === 'dropdown_10' || currentAnswerType === 'phrase_recognition') ? 9 : 3;
+      const numDistractors = (currentAnswerType === 'dropdown_10' || currentAnswerType === 'phrase_recognition') ? 9 : 4;
 
       // For IDIOM_PROVERB: prefer same-type distractors first
       const wordType = (word.word_type || 'Vocab').toLowerCase();
@@ -2144,7 +2146,7 @@ export async function fetchStudentLevel(studentId) {
 export async function exportVaultWords(mode = 'all') {
   const sb = await getSupabase();
   let query = sb.from('vocabulary_vault')
-    .select('target_level, theme_code, theme, topic_code, topic, indonesian, english, word_type, created_at')
+    .select('item_code, target_level, theme_code, theme, topic_code, topic, indonesian, english, word_type, created_at')
     .is('deleted_at', null)
     .order('target_level', { ascending: true })
     .order('theme_code', { ascending: true })
@@ -2177,6 +2179,7 @@ export async function exportVaultWords(mode = 'all') {
     const wt = (w.word_type || '').toLowerCase();
     const isPhrase = ['expression', 'idiom', 'proverb'].includes(wt);
     return {
+      'Item Code': w.item_code || '',
       Category: isPhrase ? 'Phrases' : 'Words',
       Level: w.target_level || '1',
       'Theme Code': w.theme_code || '',
@@ -2220,18 +2223,19 @@ export async function upsertDynamicAssessmentShell(config) {
     durationMinutes = 60,
     prerequisiteId = null,
     moduleId = null,
-    answerType = 'speech_to_text',
+    answerType = 'spoken',
     displayOrder = 1
   } = config;
 
-  const code = tier === 'TEST' ? `${modulePrefix}-TEST-${themeCode}` : `${modulePrefix}-TASK-${themeCode}-${topicCode}`;
+  const suffix = category === 'phrases' ? 'PHR' : 'WOR';
+  const code = tier === 'TEST' ? `${levelNum}VOCAB-${themeCode}-TEST-${suffix}` : `${levelNum}VOCAB-${themeCode}${topicCode}-${suffix}`; // e.g. 3VOCAB-A1-PHR
   
   const cleanTitle = (topicName || themeName || '').replace(/["']/g, '').trim();
   const levelLabel = toOrdinalLevel(levelNum);
   const catLabel = `${category === 'phrases' ? 'Phrases' : 'Words'} ${tier === 'TEST' ? 'Test' : 'Task'}`;
   const generatedTitle = tier === 'TEST' 
-    ? `${levelLabel} Vocabulary - ${themeCode} ${category === 'phrases' ? 'Phrases' : 'Words'} Test - ${cleanTitle}`
-    : `${levelLabel} Vocabulary - ${themeCode}${topicCode} ${category === 'phrases' ? 'Phrases' : 'Words'} Task - ${cleanTitle}`;
+    ? `${levelLabel.replace(' Level', '')} Vocabulary ${themeCode} ${category === 'phrases' ? 'Phrases' : 'Words'} Test - ${cleanTitle}`
+    : `${levelLabel.replace(' Level', '')} Vocabulary ${themeCode}${topicCode || ''} ${category === 'phrases' ? 'Phrases' : 'Words'} Task - ${cleanTitle}`.replace(/\s+/g, ' ');
 
   // Dedup by shell_code + program + level
   let q = sb.from('assessments')
@@ -2361,12 +2365,12 @@ export async function autoGenerateAssessmentsHierarchy(targetLevels, config = {}
 
     const sortedThemes = Array.from(themeMap.keys()).sort();
     let displayOrder = 1;
+    let lastTaskId = null;
 
     for (const themeCode of sortedThemes) {
       const themeData = themeMap.get(themeCode);
       const sortedTopics = Array.from(themeData.topics.keys()).sort();
       
-      let lastTaskId = null;
       let hasAnyVocab = false;
       let hasAnyPhrases = false;
 
@@ -2401,7 +2405,7 @@ export async function autoGenerateAssessmentsHierarchy(targetLevels, config = {}
              themeCode, topicCode,
              modulePrefix: 'PHRASE', category: 'phrases',
              moduleId: phraseModuleId,
-             answerType: 'dropdown',
+             answerType: 'selection',
              prerequisiteId: lastTaskId,
              displayOrder: displayOrder++
            });
@@ -2412,7 +2416,7 @@ export async function autoGenerateAssessmentsHierarchy(targetLevels, config = {}
       }
       
       if (hasAnyVocab && (!config.category || config.category === 'words')) {
-        const { action } = await upsertDynamicAssessmentShell({
+        const { assessmentId, action } = await upsertDynamicAssessmentShell({
            institutionId, programId, levelId, classId: targetClassId, levelNum,
            tier: 'TEST', themeName: themeData.name, topicName: null,
            description: `Theme Test: ${themeData.name}`,
@@ -2426,23 +2430,25 @@ export async function autoGenerateAssessmentsHierarchy(targetLevels, config = {}
         });
         if (action === 'inserted') results.tests++;
         if (action === 'updated') results.updated++;
+        lastTaskId = assessmentId;
       }
       
       if (hasAnyPhrases && (!config.category || config.category === 'phrases')) {
-        const { action } = await upsertDynamicAssessmentShell({
+        const { assessmentId, action } = await upsertDynamicAssessmentShell({
            institutionId, programId, levelId, classId: targetClassId, levelNum,
            tier: 'TEST', themeName: themeData.name, topicName: null,
            description: `Theme Test: ${themeData.name}`,
            themeCode, topicCode: null,
            modulePrefix: 'PHRASE', category: 'phrases',
            moduleId: phraseModuleId,
-           answerType: 'dropdown',
+           answerType: 'written',
            durationMinutes: (sortedThemes.indexOf(themeCode) + 1) * 60,
            prerequisiteId: lastTaskId,
            displayOrder: displayOrder++
         });
         if (action === 'inserted') results.tests++;
         if (action === 'updated') results.updated++;
+        lastTaskId = assessmentId;
       }
     }
   }
@@ -2493,3 +2499,4 @@ if (typeof window !== 'undefined') {
   window.adminUpdate = adminUpdate;
   window.adminInsert = adminInsert;
 }
+

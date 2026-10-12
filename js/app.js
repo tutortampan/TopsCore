@@ -1,4 +1,4 @@
-import { calculateGrade } from './grading.js?v=4.7.6';
+import { calculateGrade } from './grading.js?v=4.9.8';
 
 // TOPS CORE — Toast Notification System
 let toastContainer = null;
@@ -106,8 +106,25 @@ export function withTimeout(promise, ms, actionName = 'Operation') {
 // The authoritative calculation is in submit-Assessment Edge Function.
 
 /** Escape HTML special characters */
+export function fixMojibake(str) {
+  if (!str) return str;
+  // Use regex with unicode code points instead of literal bad characters
+  const bad1 = new RegExp('\u00C3\u00A2\u20AC\u00A2', 'g');
+  const bad2 = new RegExp('\u00E2\u20AC\u00A2', 'g');
+  const bad3 = new RegExp('\u00C2\u00B7', 'g');
+  const bad4 = new RegExp('\u00C3\u2014', 'g');
+  const bad5 = new RegExp('\u00E2\u20AC\u201D', 'g');
+  return String(str)
+    .replace(bad1, '•')
+    .replace(bad2, '•')
+    .replace(bad3, '·')
+    .replace(bad4, '×')
+    .replace(bad5, '—');
+}
+
 export function escapeHtml(str) {
   if (str === null || str === undefined) return '';
+  str = fixMojibake(str);
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

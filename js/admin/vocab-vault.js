@@ -19,9 +19,9 @@ import {
   renameVaultTopic,
   exportVaultWords,
   updateAssessmentDefinition
-} from '../api.js?v=4.7.6';
-import { showToast, showLoading, hideLoading } from '../app.js?v=4.7.6';
-import { getSupabase } from '../supabase.js?v=4.7.6';
+} from '../api.js?v=4.9.8';
+import { showToast, showLoading, hideLoading } from '../app.js?v=4.9.8';
+import { getSupabase } from '../supabase.js?v=4.9.8';
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -53,66 +53,55 @@ export async function renderVocabularyVault(area) {
     ]);
     hideLoading();
     
+    const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase'];
+    const wordsCount = (words || []).filter(w => !phraseTypes.includes(w.word_type)).length;
+    const phrasesCount = (words || []).filter(w => phraseTypes.includes(w.word_type)).length;
+    const topicsCount = (topics || []).length;
+
+    let activeVaultTab = 'blueprint';
+
+    const vaultTabs = [
+      { id: 'blueprint', icon: '🗺️', title: 'Blueprint', label: 'Assessment Blueprint' },
+      { id: 'topics', icon: '📑', val: topicsCount, label: 'Topic Manager' },
+      { id: 'vocab', icon: '📦', val: wordsCount, label: 'Vocabulary Words' },
+      { id: 'phrases', icon: '💬', val: phrasesCount, label: 'Phrases & Idioms' }
+    ];
+
     area.innerHTML = `
-      <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
-        <div style="background: #0f172a; border-bottom: 1px solid #334155; display: flex; gap: 8px; padding: 12px 24px; overflow-x: auto; flex-shrink: 0;">
-          <button id="vault_blueprint_tab" style="background: #4f46e5; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
-            🗺️ Vocabulary Assessment Blueprint
-          </button>
-          <button id="vault_topics_tab" style="background: transparent; color: #94a3b8; border: 1px solid transparent; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#f8fafc'" onmouseout="if(!this.classList.contains('active-tab')) this.style.color='#94a3b8'">
-            📑 Topic Manager
-          </button>
-          <button id="vault_vocab_tab" style="background: transparent; color: #94a3b8; border: 1px solid transparent; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#f8fafc'" onmouseout="if(!this.classList.contains('active-tab')) this.style.color='#94a3b8'">
-            📦 Words
-          </button>
-          <button id="vault_phrases_tab" style="background: transparent; color: #94a3b8; border: 1px solid transparent; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#f8fafc'" onmouseout="if(!this.classList.contains('active-tab')) this.style.color='#94a3b8'">
-            💬 Phrases
-          </button>
-        </div>
-        <div id="vault-tab-content" style="flex-grow: 1; overflow-y: auto; padding: 16px 0 0 0; box-sizing: border-box;">
-        </div>
+      <div>
+        ${window.buildSectionTabBar ? window.buildSectionTabBar({
+          tabs: vaultTabs,
+          activeId: activeVaultTab,
+          onSelect: 'window._switchVaultTab'
+        }) : ''}
+        <div id="vault-tab-content" style="box-sizing: border-box;"></div>
       </div>
     `;
 
     const tabContent = document.getElementById('vault-tab-content');
-    const tabWords = document.getElementById('vault_vocab_tab');
-    const tabPhrases = document.getElementById('vault_phrases_tab');
-    const tabTopics = document.getElementById('vault_topics_tab');
-    const tabBlueprint = document.getElementById('vault_blueprint_tab');
 
-    function setActiveTab(activeBtn, inactiveBtns, renderFn) {
-      if (!Array.isArray(inactiveBtns)) inactiveBtns = [inactiveBtns];
-      activeBtn.style.background = '#4f46e5';
-      activeBtn.style.color = 'white';
-      activeBtn.classList.add('active-tab');
-
-      inactiveBtns.forEach(btn => {
-        if (!btn) return;
-        btn.style.background = 'transparent';
-        btn.style.color = '#94a3b8';
-        btn.classList.remove('active-tab');
+    const renderActiveVaultView = () => {
+      document.querySelectorAll('.section-tab-bar .section-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tabId === activeVaultTab);
       });
+      tabContent.innerHTML = '';
+      if (activeVaultTab === 'blueprint') {
+        _renderBlueprintTab(tabContent, words);
+      } else if (activeVaultTab === 'topics') {
+        _renderTopicManager(tabContent, words, topics);
+      } else if (activeVaultTab === 'vocab') {
+        _renderVaultGrid(tabContent, words, topics, 'single_words');
+      } else if (activeVaultTab === 'phrases') {
+        _renderVaultGrid(tabContent, words, topics, 'phrases');
+      }
+    };
 
-      renderFn();
-    }
+    window._switchVaultTab = (tabId) => {
+      activeVaultTab = tabId;
+      renderActiveVaultView();
+    };
 
-    const allTabs = [tabWords, tabPhrases, tabTopics, tabBlueprint];
-    
-    tabWords.addEventListener('click', () => {
-      setActiveTab(tabWords, allTabs.filter(t => t !== tabWords), () => _renderVaultGrid(tabContent, words, topics, 'single_words'));
-    });
-    tabPhrases.addEventListener('click', () => {
-      setActiveTab(tabPhrases, allTabs.filter(t => t !== tabPhrases), () => _renderVaultGrid(tabContent, words, topics, 'phrases'));
-    });
-    tabTopics.addEventListener('click', () => {
-      setActiveTab(tabTopics, allTabs.filter(t => t !== tabTopics), () => _renderTopicManager(tabContent, words, topics));
-    });
-    tabBlueprint.addEventListener('click', () => {
-      setActiveTab(tabBlueprint, allTabs.filter(t => t !== tabBlueprint), () => _renderBlueprintTab(tabContent, words));
-    });
-
-    // Default to Assessment Blueprint tab
-    setActiveTab(tabBlueprint, allTabs.filter(t => t !== tabBlueprint), () => _renderBlueprintTab(tabContent, words));
+    renderActiveVaultView();
 
   } catch (e) {
     hideLoading();
@@ -232,16 +221,16 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
       return `
       <tr data-word-id="${escapeHtml(w.id)}" style="border-bottom: 1px solid rgba(30, 41, 59, 0.5);">
-        <td style="padding: 6px 12px; font-weight: 600;"><span style="background:#475569;color:#e2e8f0;font-size:10px;padding:2px 6px;border-radius:4px;">${escapeHtml(String(w.target_level || '1'))}</span></td>
-        <td style="padding: 6px 12px; font-weight: 500;"><span style="color:#f472b6;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.theme_code || '—')}</span></td>
-        <td style="padding: 6px 12px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</td>
-        <td style="padding: 6px 12px; font-weight: 500;"><span style="color:#a5b4fc;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.topic_code || '—')}</span></td>
-        <td style="padding: 6px 12px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;" title="${escapeHtml(w.topic)}">${escapeHtml(w.topic)}</td>
-        <td style="padding: 6px 12px;">
+        <td class="cell-level" style="padding: 6px 12px; font-weight: 600;"><span style="background:#475569;color:#e2e8f0;font-size:10px;padding:2px 6px;border-radius:4px;">${escapeHtml(String(w.target_level || '1'))}</span></td>
+        <td class="cell-theme-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#f472b6;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.theme_code || '—')}</span></td>
+        <td class="cell-theme" style="padding: 6px 12px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</td>
+        <td class="cell-topic-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#a5b4fc;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.topic_code || '—')}</span></td>
+        <td class="cell-topic" style="padding: 6px 12px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;" title="${escapeHtml(w.topic)}">${escapeHtml(w.topic)}</td>
+        <td class="cell-wordtype" style="padding: 6px 12px;">
           <span style="font-size:10px; padding: 2px 6px; border-radius: 4px; background: ${typeColor}20; color: ${typeColor}; border: 1px solid ${typeColor}40; display: inline-block; text-transform: capitalize; font-weight: 600;">${escapeHtml(w.word_type || 'Vocab')}</span>
         </td>
-        <td style="padding: 6px 12px; font-weight: 700; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.indonesian)}">${escapeHtml(w.indonesian)}</td>
-        <td style="padding: 6px 12px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.english)}">${escapeHtml(w.english)}</td>
+        <td class="cell-indonesian" style="padding: 6px 12px; font-weight: 700; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.indonesian)}">${escapeHtml(w.indonesian)}</td>
+        <td class="cell-english" style="padding: 6px 12px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.english)}">${escapeHtml(w.english)}</td>
         <td style="padding: 6px 12px; text-align: right; position: sticky; right: 0; background: #1e293b; border-left: 1px solid rgba(30, 41, 59, 0.5); z-index: 5;">
           <button class="btn btn-xs btn-edit-vault" data-edit-vault="${escapeHtml(w.id)}" style="background: transparent; color: #3b82f6; border: 1px solid #3b82f6; font-size: 10px; padding: 2px 6px;" title="Edit word">&#9998;</button>
           <button class="btn btn-danger btn-xs" data-del-vault="${escapeHtml(w.id)}" title="Delete word" style="font-size: 10px; padding: 2px 6px;">&#128465;</button>
@@ -281,6 +270,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
           const newIndo = tr.querySelector('.edit-indo').value.trim();
           const newEng = tr.querySelector('.edit-eng').value.trim();
           const newType = tr.querySelector('.edit-type').value;
+          const newLevel = parseInt(tr.querySelector('.edit-level')?.value || '1', 10);
 
           if (!newTopic || !newIndo || !newEng) return showToast('Please fill all required fields.', 'error');
 
@@ -294,8 +284,8 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             topic: newTopic,
             indonesian: newIndo,
             english: newEng,
-            word_type: newType
-          }).then(() => {
+            word_type: newType,
+           target_level: newLevel}).then(() => {
             showToast('Word updated successfully.', 'success');
             word.theme_code = newThemeCode || null;
             word.theme = newTheme || null;
@@ -303,7 +293,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             word.topic = newTopic;
             word.indonesian = newIndo;
             word.english = newEng;
-            word.word_type = newType;
+            word.word_type = newType; word.target_level = newLevel;
             filterAndRender();
           }).catch(e => {
             showToast('Update failed: ' + e.message, 'error');
@@ -398,7 +388,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
   document.getElementById('btn-manual-auto-generate')?.addEventListener('click', async () => {
     try {
       const vaultLevels = [...new Set(_allWords.map(w => parseInt(w.target_level || 1, 10)))].filter(Boolean).sort();
-      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.7.6');
+      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.9.8');
       await openAutoGenerateModal({
         availableLevels: vaultLevels,
         preSelectedLevels: vaultLevels,
@@ -678,7 +668,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       // Check if any words were imported and extract levels
       const importedLevels = [...new Set(_parsedRows.map(r => parseInt(r.target_level || 1, 10)))].filter(Boolean);
       if (importedLevels.length > 0) {
-        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.7.6');
+        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.9.8');
         await openAutoGenerateModal({
           availableLevels: importedLevels,
           preSelectedLevels: importedLevels,
@@ -1507,7 +1497,7 @@ function _renderBlueprintTab(area, words) {
       const importedLevels = Array.from(levelsSet).sort((a,b)=>a-b);
       if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
       try {
-        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.7.6');
+        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.9.8');
         await openAutoGenerateModal({
           availableLevels: importedLevels,
           preSelectedLevels: importedLevels,
@@ -1643,7 +1633,7 @@ function _renderTopicManager(area, words, topics) {
         if (!newTopic || newTopic.trim() === "" || newTopic === oldTopic) return;
         
         try {
-          const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.7.6'); // unified v=4.7.4
+          const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.9.8'); // unified v=4.7.12
           showLoading();
           await renameVaultTopic(oldTopic, newTopic.trim());
           hideLoading();
@@ -1667,8 +1657,8 @@ function _renderTopicManager(area, words, topics) {
         if (!confirm(`Are you sure you want to delete ALL words in the topic "${topic}"? This cannot be undone.`)) return;
         
         try {
-          const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.7.6');
-          const { getSupabase } = await import('../supabase.js?v=4.7.6');
+          const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.9.8');
+          const { getSupabase } = await import('../supabase.js?v=4.9.8');
           showLoading("Deleting topic...");
           const sb = await getSupabase();
           const { error } = await sb.from('vocabulary_vault').update({ deleted_at: new Date().toISOString() }).eq('topic', topic);
@@ -1693,8 +1683,8 @@ function _renderTopicManager(area, words, topics) {
         const newLevel = parseInt(e.target.value, 10);
         
         // Dynamic import to avoid missing dependencies in older backup
-        const { moveVaultTopicsToLevel } = await import('../api.js?v=4.7.6');
-        const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.7.6');
+        const { moveVaultTopicsToLevel } = await import('../api.js?v=4.9.8');
+        const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.9.8');
         
         showLoading();
         try {
@@ -1729,7 +1719,7 @@ function _renderTopicManager(area, words, topics) {
       const area = document.getElementById('vault-tab-content').parentElement.parentElement;
       if (area) {
         // Trigger a fresh render by re-calling renderVocabularyVault
-        import('./vocab-vault.js?v=4.7.6').then(m => m.renderVocabularyVault(area));
+        import('./vocab-vault.js?v=4.9.8').then(m => m.renderVocabularyVault(area));
       }
     });
   });
@@ -1739,13 +1729,13 @@ function _renderTopicManager(area, words, topics) {
     if (!confirm('Second confirmation required. Type OK in the next prompt to confirm.')) return;
     const confirmText = prompt('Type RESET to confirm truncation of all vault words:');
     if (confirmText?.trim().toUpperCase() !== 'RESET') { 
-      const { showToast } = await import('../app.js?v=4.7.6');
+      const { showToast } = await import('../app.js?v=4.9.8');
       showToast('Reset cancelled.', 'info'); 
       return; 
     }
     try {
-      const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.7.6');
-      const { getSupabase } = await import('../supabase.js?v=4.7.6');
+      const { showLoading, hideLoading, showToast } = await import('../app.js?v=4.9.8');
+      const { getSupabase } = await import('../supabase.js?v=4.9.8');
       showLoading('Resetting vault...');
       const sb = await getSupabase();
       const { error } = await sb.from('vocabulary_vault').update({ deleted_at: new Date().toISOString() }).neq('id', '00000000-0000-0000-0000-000000000000');
@@ -1759,7 +1749,7 @@ function _renderTopicManager(area, words, topics) {
         if (container) renderVocabularyVault(container);
       }
     } catch (e) {
-      const { hideLoading, showToast } = await import('../app.js?v=4.7.6');
+      const { hideLoading, showToast } = await import('../app.js?v=4.9.8');
       hideLoading();
       showToast('Reset failed: ' + e.message, 'error');
     }

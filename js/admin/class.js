@@ -28,11 +28,12 @@ import {
   calculatePercentage,
   formatStudentName,
   fetchClassInstanceRoster,
-  addAdditionalMember
-} from '../api.js?v=4.7.6';
-import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=4.7.6';
-import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=4.7.6';
-import { openStudentProfile } from './student-management.js?v=4.7.6';
+  addAdditionalMember,
+  toLevelLetter
+} from '../api.js?v=4.9.8';
+import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=4.9.8';
+import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=4.9.8';
+import { openStudentProfile } from './student-management.js?v=4.9.8';
 
 function escapeHtml(str) {
   return String(str || '')
@@ -1217,7 +1218,7 @@ Existing historical attempt records will NOT be modified.`;
 
       showLoading('Committing import to Question Bank...');
       try {
-        const sb = await (await import('../supabase.js?v=4.7.6')).getSupabase();
+        const sb = await (await import('../supabase.js?v=4.9.8')).getSupabase();
 
         // PHASE 1: ROBUST TOPIC PRE-FETCHING & NORMALIZATION
         const { data: dbTopics } = await sb.from('topics').select('id, name');
@@ -1426,18 +1427,7 @@ Existing historical attempt records will NOT be modified.`;
 }
 
 
-function toLevelLetter(num) {
-  const n = parseInt(num, 10);
-  if (isNaN(n) || n < 1) return num ? String(num) : 'A';
-  let result = '';
-  let curr = n;
-  while (curr > 0) {
-    let remainder = (curr - 1) % 26;
-    result = String.fromCharCode(65 + remainder) + result;
-    curr = Math.floor((curr - 1) / 26);
-  }
-  return result;
-}
+
 
 export async function renderResults(area) {
   const [rawData, allInstitutions, allPrograms, allBatches] = await Promise.all([
@@ -1798,7 +1788,7 @@ export async function renderResults(area) {
     if (remediBtn) {
       const attemptId = remediBtn.getAttribute('data-aid');
       if (confirm('Allow this student to retake this Exam as a remedial attempt?')) {
-        const { getSupabase } = await import('../supabase.js?v=4.7.6');
+        const { getSupabase } = await import('../supabase.js?v=4.9.8');
         const sb = await getSupabase();
         const { error } = await sb.from('attempts').update({ is_remedial_unlocked: true }).eq('id', attemptId);
         if (!error) {
@@ -1835,35 +1825,58 @@ export async function renderProgressView(area) {
         <div class="section-header">
           <div>
             <h2 class="section-title">Student Progress <span class="count-chip" id="prog-count-chip">Loading...</span></h2>
-            <p class="section-subtitle">Assessment progression and completion status filterable by Program, Class, and Batch</p>
+            <p class="section-subtitle">Overview of student assessment completion filterable by Program, Class, and Batch</p>
           </div>
         </div>
         <div class="p-5 text-center text-muted"><span class="loader"></span> Loading progression data...</div>
       `;
 
   try {
-    const [allStudents, allInstitutions, allPrograms, allBatches, allAssignments, allAssessments, allAttempts] = await Promise.all([
-      adminFetchAll('students', '*, batches!batch_id(name), programs!program_id(name, institution_id, institutions!institution_id(name))'),
+    const [allStudents, allInstitutions, allPrograms, allBatches, allAssignments, allAssessments, allAttempts, allLevels] = await Promise.all([
+      adminFetchAll('students', '*, batches!batch_id(name, current_level_id), programs!program_id(name, institution_id, institutions!institution_id(name)), institutions!institution_id(name)'),
       adminFetchAll('institutions'),
       adminFetchAll('programs'),
       adminFetchAll('batches'),
       adminFetchAll('assignments', 'student_id, batch_id, assessment_id'),
       adminFetchAll('assessments', 'id, title, level_id, levels(name, level_number)'),
-      adminFetchAll('attempts', '*, students!student_id(name, gender, batch_id, batches!batch_id(name), program_id, programs!program_id(name, institution_id, institutions!institution_id(name))), assessments(title, assessment_type), attempt_answers(id, evaluation_result, score)')
+      adminFetchAll('attempts', '*, students!student_id(name, gender, batch_id, batches!batch_id(name), program_id, programs!program_id(name, institution_id, institutions!institution_id(name))), assessments(title, assessment_type), attempt_answers(id, evaluation_result, score)'),
+      adminFetchAll('levels').catch(() => [])
     ]);
 
     const allData = [];
 
     // Map V1 Data
     const assessmentsMap = new Map((allAssessments || []).map(a => [a.id, a]));
+    const levelsMap = new Map((allLevels || []).map(l => [l.id, l.name]));
 
-    (allStudents || []).filter(s => !s.deleted_at).forEach(student => {
+    (allStudents || []).filter(s => {
+      if (s.deleted_at) return false;
+      const bObj = (allBatches || []).find(b => b.id === s.batch_id);
+      if (bObj && bObj.deleted_at) return false;
+      const pObj = (allPrograms || []).find(p => p.id === s.program_id);
+      if (pObj && pObj.deleted_at) return false;
+      const iObj = (allInstitutions || []).find(i => i.id === (s.institution_id || pObj?.institution_id));
+      if (iObj && iObj.deleted_at) return false;
+      return true;
+    }).forEach(student => {
       const sAssignments = (allAssignments || []).filter(a =>
         a.student_id === student.id || (a.batch_id && a.batch_id === student.batch_id)
       );
 
+      const studentBatch = allBatches.find(b => b.id === student.batch_id);
+      const studentLevelId = student.level_id || studentBatch?.current_level_id;
+      
+      // Auto-assign assessments based on Level (if batch has a level_id)
+      const levelAssesIds = studentLevelId ? (allAssessments || []).filter(a => a.level_id === studentLevelId).map(a => a.id) : [];
+
       // To avoid duplicates if both student and batch assigned
-      const assignedAssesIds = new Set(sAssignments.map(a => a.assessment_id));
+      const assignedAssesIds = new Set([...sAssignments.map(a => a.assessment_id), ...levelAssesIds]);
+
+      if (assignedAssesIds.size === 0) return; // Skip students with no assessments assigned
+
+      let completedCount = 0;
+      let inProgressCount = 0;
+      const studentDetails = [];
 
       assignedAssesIds.forEach(assessmentId => {
         const assessment = assessmentsMap.get(assessmentId);
@@ -1873,8 +1886,10 @@ export async function renderProgressView(area) {
         const isCompleted = studentAttempts.some(att => att.status === 'SUBMITTED' || att.status === 'AUTO_SUBMITTED');
         const isInProgress = studentAttempts.some(att => att.status === 'IN_PROGRESS');
 
-        allData.push({
-          student: student,
+        if (isCompleted) completedCount++;
+        else if (isInProgress) inProgressCount++;
+
+        studentDetails.push({
           assessmentTitle: assessment.title,
           levelNumber: assessment.levels?.level_number || 1,
           levelName: assessment.levels?.name || 'Unknown',
@@ -1882,16 +1897,57 @@ export async function renderProgressView(area) {
           is_in_progress: isInProgress
         });
       });
+
+      // Sort details by level then alphabetically
+      studentDetails.sort((a, b) => {
+        if (a.levelNumber !== b.levelNumber) return a.levelNumber - b.levelNumber;
+        return (a.assessmentTitle || '').localeCompare(b.assessmentTitle || '');
+      });
+
+      const instName = student.institutions?.name || student.programs?.institutions?.name || (allInstitutions.find(i => i.id === student.institution_id)?.name) || '—';
+      const progName = student.programs?.name || (allPrograms.find(p => p.id === student.program_id)?.name) || '—';
+      const batchName = student.batches?.name || studentBatch?.name || 'Unassigned';
+      const levelName = (student.level_id && levelsMap.get(student.level_id)) || (studentBatch?.current_level_id && levelsMap.get(studentBatch.current_level_id)) || '—';
+
+      allData.push({
+        student: student,
+        instName,
+        progName,
+        batchName,
+        levelName,
+        totalAssigned: assignedAssesIds.size,
+        completedCount,
+        inProgressCount,
+        details: studentDetails
+      });
     });
 
-    // Default: sort alphabetically by Student Name (A-Z)
-    allData.sort((a, b) => (a.student.name || '').localeCompare(b.student.name || ''));
+    // Hierarchical sort: Active students on top, then Institution -> Program -> Batch -> Level -> Name (A-Z)
+    allData.sort((a, b) => {
+      const aActive = a.student.is_active !== false ? 1 : 0;
+      const bActive = b.student.is_active !== false ? 1 : 0;
+      if (aActive !== bActive) return bActive - aActive;
+
+      const instCmp = (a.instName || '').localeCompare(b.instName || '', undefined, { sensitivity: 'base', numeric: true });
+      if (instCmp !== 0) return instCmp;
+
+      const progCmp = (a.progName || '').localeCompare(b.progName || '', undefined, { sensitivity: 'base', numeric: true });
+      if (progCmp !== 0) return progCmp;
+
+      const batchCmp = (a.batchName || '').localeCompare(b.batchName || '', undefined, { sensitivity: 'base', numeric: true });
+      if (batchCmp !== 0) return batchCmp;
+
+      const lvlCmp = (a.levelName || '').localeCompare(b.levelName || '', undefined, { sensitivity: 'base', numeric: true });
+      if (lvlCmp !== 0) return lvlCmp;
+
+      return (a.student.name || '').localeCompare(b.student.name || '', undefined, { sensitivity: 'base', numeric: true });
+    });
 
     area.innerHTML = `
           <div class="section-header">
             <div>
-              <h2 class="section-title">Student Progress <span class="count-chip" id="prog-count-chip">${allData.length} Records</span></h2>
-              <p class="section-subtitle">Assessment progression and completion status filterable by Program, Class, and Batch</p>
+              <h2 class="section-title">Student Progress <span class="count-chip" id="prog-count-chip">${allData.length} Students</span></h2>
+              <p class="section-subtitle">Overview of student assessment completion filterable by Program, Class, and Batch</p>
             </div>
           </div>
 
@@ -1913,8 +1969,8 @@ export async function renderProgressView(area) {
             </div>
 
             <div style="flex:1;min-width:220px;">
-              <label class="text-xs text-muted d-block mb-1">Search Student / Assessment</label>
-              <input type="text" id="prog-filter-search" class="form-control" placeholder="Type student name or assessment..." style="padding:6px 10px;font-size:0.85rem;">
+              <label class="text-xs text-muted d-block mb-1">Search Student</label>
+              <input type="text" id="prog-filter-search" class="form-control" placeholder="Type student name..." style="padding:6px 10px;font-size:0.85rem;">
             </div>
 
             <div class="d-flex align-end" style="padding-top:18px;">
@@ -1926,14 +1982,15 @@ export async function renderProgressView(area) {
             <table>
               <thead>
                 <tr>
-                  <th class="text-left">Student Name</th>
+                  <th class="text-left">Institution</th>
                   <th class="text-left">Program</th>
-                  <th class="text-left">Class</th>
                   <th class="text-left">Batch</th>
-                  <th class="text-left">Assessment</th>
                   <th class="text-center">Level</th>
-                  <th class="text-center">Status</th>
+                  <th class="text-left">Student Name</th>
+                  <th class="text-center">Assessments</th>
                   <th class="text-center">Completion</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody id="tbl-progress-body"></tbody>
@@ -1941,32 +1998,17 @@ export async function renderProgressView(area) {
           </div>
         `;
 
-    const progSelect = document.getElementById('prog-filter-prog');
     const classSelect = document.getElementById('prog-filter-class');
     const batchSelect = document.getElementById('prog-filter-batch');
     const searchInput = document.getElementById('prog-filter-search');
     const tbody = document.getElementById('tbl-progress-body');
     const countChip = document.getElementById('prog-count-chip');
 
-    const updateClassOptions = () => {
-      const pId = progSelect?.value;
-      if (!pId) return;
-      Array.from(classSelect.options).forEach((opt, idx) => {
-        if (idx === 0) return;
-        const match = !pId || opt.getAttribute('data-prog') === pId;
-        opt.style.display = match ? '' : 'none';
-      });
-      if (pId && classSelect.selectedOptions[0]?.style.display === 'none') {
-        classSelect.value = '';
-      }
-      updateBatchOptions();
-    };
-
     const updateBatchOptions = () => {
       const cId = classSelect.value;
       Array.from(batchSelect.options).forEach((opt, idx) => {
         if (idx === 0) return;
-        const match = !cId || opt.getAttribute('data-class') === cId;
+        const match = !cId || opt.getAttribute('data-class') === cId || opt.getAttribute('data-prog') === cId;
         opt.style.display = match ? '' : 'none';
       });
       if (cId && batchSelect.selectedOptions[0]?.style.display === 'none') {
@@ -1974,38 +2016,18 @@ export async function renderProgressView(area) {
       }
     };
 
-    const renderTable = () => {
-      const pId = progSelect ? progSelect.value : '';
-      const cId = classSelect.value;
-      const bId = batchSelect.value;
-      const q = searchInput.value.toLowerCase().trim();
-
-      const filtered = allData.filter(r => {
-        const studentProgId = r.student?.programs?.institutions?.id || r.student?.programs?.institution_id;
-        if (pId && studentProgId !== pId) return false;
-        if (cId && r.student?.program_id !== cId) return false;
-        if (bId && r.student?.batch_id !== bId) return false;
-        if (q) {
-          const sName = (r.student?.name || '').toLowerCase();
-          const sSubj = (r.assessmentTitle || '').toLowerCase();
-          if (!sName.includes(q) && !sSubj.includes(q)) return false;
-        }
-        return true;
-      });
-
-      countChip.textContent = `${filtered.length} of ${allData.length}`;
-
-      if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted p-5">No progression records match the selected filters.</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = filtered.map(r => `
+    window.showStudentProgressDetails = function(studentId) {
+       const rec = allData.find(d => d.student.id === studentId);
+       if (!rec) return;
+       const existing = document.getElementById('prog-details-modal');
+       if (existing) existing.remove();
+       
+       const modal = document.createElement('div');
+       modal.id = 'prog-details-modal';
+       modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.95);backdrop-filter:blur(5px);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;';
+       
+       const detailsRows = rec.details.map(r => `
             <tr>
-              <td class="fw-600" style="color:var(--clr-text-1);">${formatStudentName(r.student?.name, r.student?.gender) || '—'}</td>
-              <td class="text-muted text-sm">${escapeHtml(r.student?.programs?.institutions?.name || '—')}</td>
-              <td class="text-muted text-sm">${escapeHtml(r.student?.programs?.name || '—')}</td>
-              <td><span class="badge ${r.student?.batches?.name ? 'badge-info' : 'badge-neutral'}" style="font-size:0.75rem;">${escapeHtml(r.student?.batches?.name || 'Unassigned')}</span></td>
               <td class="fw-600 text-sm">${escapeHtml(r.assessmentTitle || '—')}</td>
               <td class="text-center"><span class="badge badge-primary">Level ${toLevelLetter(r.levelNumber)} ${escapeHtml(r.levelName || '')}</span></td>
               <td class="text-center">
@@ -2013,25 +2035,97 @@ export async function renderProgressView(area) {
                   ${r.is_completed ? '&#10004;&#65039; Completed' : r.is_in_progress ? '&#9654;&#65039; In Progress' : '&#128276; Not Started'}
                 </span>
               </td>
-              <td class="text-center">
-                <div class="progress-pill">
-                  <div class="progress-pill-fill" style="width:${r.is_completed ? 100 : r.is_in_progress ? 50 : 0}%;"></div>
-                </div>
-              </td>
             </tr>
-          `).join('');
+       `).join('');
+
+       modal.innerHTML = `
+         <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border);border-radius:12px;width:100%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+            <div style="padding:1.5rem;border-bottom:1px solid var(--clr-border);display:flex;justify-content:space-between;align-items:center;">
+              <h3 style="margin:0;">Assessment Details: ${escapeHtml(rec.student.name)}</h3>
+              <button class="btn-icon" onclick="document.getElementById('prog-details-modal').remove()" style="background:transparent;border:none;color:var(--clr-text-2);font-size:1.2rem;cursor:pointer;">&#10005;</button>
+            </div>
+            <div style="padding:1.5rem;overflow-y:auto;flex:1;">
+               <div class="d-flex gap-4 mb-4" style="background:rgba(255,255,255,0.05);padding:1rem;border-radius:8px;">
+                 <div><div class="text-xs text-muted">Assigned</div><div class="fw-700" style="font-size:1.2rem;">${rec.totalAssigned}</div></div>
+                 <div><div class="text-xs text-muted">Completed</div><div class="fw-700" style="font-size:1.2rem;color:var(--clr-success);">${rec.completedCount}</div></div>
+                 <div><div class="text-xs text-muted">In Progress</div><div class="fw-700" style="font-size:1.2rem;color:var(--clr-warning);">${rec.inProgressCount}</div></div>
+               </div>
+               <table class="table-wrap" style="width:100%;">
+                 <thead>
+                   <tr>
+                     <th class="text-left">Assessment</th>
+                     <th class="text-center">Level</th>
+                     <th class="text-center">Status</th>
+                   </tr>
+                 </thead>
+                 <tbody>${detailsRows}</tbody>
+               </table>
+            </div>
+         </div>
+       `;
+       document.body.appendChild(modal);
+       modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
     };
 
-    progSelect?.addEventListener('change', () => { updateClassOptions(); renderTable(); });
+    const renderTable = () => {
+      const cId = classSelect.value;
+      const bId = batchSelect.value;
+      const q = searchInput.value.toLowerCase().trim();
+
+      const filtered = allData.filter(r => {
+        if (cId && r.student?.program_id !== cId) return false;
+        if (bId && r.student?.batch_id !== bId) return false;
+        if (q) {
+          const sName = (r.student?.name || '').toLowerCase();
+          if (!sName.includes(q)) return false;
+        }
+        return true;
+      });
+
+      countChip.textContent = `${filtered.length} of ${allData.length} Students`;
+
+      if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted p-5">No progression records match the selected filters.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(r => {
+        const pct = r.totalAssigned > 0 ? Math.round((r.completedCount / r.totalAssigned) * 100) : 0;
+        return `
+            <tr>
+              <td class="text-muted text-sm">${escapeHtml(r.instName || '—')}</td>
+              <td class="text-muted text-sm">${escapeHtml(r.progName || '—')}</td>
+              <td><span class="badge ${r.batchName !== 'Unassigned' ? 'badge-info' : 'badge-neutral'}" style="font-size:0.75rem;">${escapeHtml(r.batchName || 'Unassigned')}</span></td>
+              <td class="text-center"><span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(r.levelName || '—')}</span></td>
+              <td class="fw-600" style="color:var(--clr-text-1);">${formatStudentName(r.student?.name, r.student?.gender) || '—'}</td>
+              <td class="text-center fw-600 text-sm">
+                <span style="color:var(--clr-success);">${r.completedCount}</span> / ${r.totalAssigned}
+              </td>
+              <td class="text-center" style="min-width:120px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div class="progress-pill" style="flex:1;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
+                    <div class="progress-pill-fill" style="height:100%;width:${pct}%; background: ${pct === 100 ? 'var(--clr-success)' : 'var(--clr-primary)'};"></div>
+                  </div>
+                  <span class="text-xs fw-700">${pct}%</span>
+                </div>
+              </td>
+              <td class="text-center"><span class="badge ${r.student?.is_active !== false ? 'badge-success' : 'badge-neutral'}" style="font-size:0.7rem;">${r.student?.is_active !== false ? 'Active' : 'Inactive'}</span></td>
+              <td class="text-right">
+                <button class="btn btn-secondary btn-sm" onclick="window.showStudentProgressDetails('${r.student.id}')">Details</button>
+              </td>
+            </tr>
+          `;
+      }).join('');
+    };
+
     classSelect.addEventListener('change', () => { updateBatchOptions(); renderTable(); });
     batchSelect.addEventListener('change', renderTable);
     searchInput.addEventListener('input', renderTable);
     document.getElementById('prog-btn-reset')?.addEventListener('click', () => {
-      if (progSelect) progSelect.value = '';
       classSelect.value = '';
       batchSelect.value = '';
       searchInput.value = '';
-      updateClassOptions();
+      updateBatchOptions();
       renderTable();
     });
 
@@ -2438,3 +2532,4 @@ export async function renderClassInstances(area) {
         </div>
       `;
 }
+

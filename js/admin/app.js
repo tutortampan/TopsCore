@@ -1,4 +1,4 @@
-import { DataGrid } from './datagrid.js?v=4.7.6';
+import { DataGrid } from './datagrid.js?v=4.9.8';
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
@@ -256,39 +256,90 @@ window.DataGrid = DataGrid;
 window.adminFetchAll = adminFetchAll;
 window.adminUpdate = adminUpdate;
 window.adminInsert = adminInsert;
+
+export function buildSectionTabBar({ tabs = [], activeId = null, onSelect = null, isStatOnly = false, className = '', extraStyle = '' } = {}) {
+  const _esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const count = tabs.length;
+  const itemsHtml = tabs.map(tab => {
+    const isActive = !isStatOnly && activeId && String(tab.id) === String(activeId);
+    const isClickable = !isStatOnly && tab.clickable !== false && !!onSelect;
+    
+    let clickAttr = '';
+    if (isClickable) {
+      if (typeof onSelect === 'string') {
+        clickAttr = `onclick="${onSelect}('${tab.id}')"`;
+      } else if (typeof onSelect === 'function') {
+        const cbKey = '_tabCb_' + Math.random().toString(36).substring(7);
+        window[cbKey] = () => onSelect(tab.id);
+        clickAttr = `onclick="window['${cbKey}']()"`;
+      }
+    }
+
+    const activeCls = isActive ? 'active' : '';
+    const statCls = (!isClickable && isStatOnly) || tab.clickable === false ? 'is-stat' : '';
+    const valHtml = tab.val !== undefined && tab.val !== null ? `<div class="section-tab-val" ${tab.valColor ? `style="color:${tab.valColor};"` : ''}>${tab.val}</div>` : '';
+    const titleHtml = tab.title ? `<div class="section-tab-title">${_esc(tab.title)}</div>` : '';
+    const lblHtml = tab.label ? `<div class="section-tab-lbl">${_esc(tab.label)}</div>` : '';
+    const iconStyle = tab.iconColor ? `style="color:${tab.iconColor};"` : '';
+    const iconHtml = tab.icon ? `<div class="section-tab-icon" ${iconStyle}>${tab.icon}</div>` : '';
+
+    return `
+      <div class="section-tab ${activeCls} ${statCls}" data-tab-id="${tab.id || ''}" ${clickAttr} ${tab.extraStyle ? `style="${tab.extraStyle}"` : ''}>
+        ${iconHtml}
+        <div>
+          ${valHtml}
+          ${titleHtml}
+          ${lblHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="section-tab-bar ${className}" data-tabs="${count}" style="--tab-count: ${count}; ${extraStyle}">
+      ${itemsHtml}
+    </div>
+  `;
+}
+window.buildSectionTabBar = buildSectionTabBar;
 import {
-  adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete,
+  adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, clearAdminCache,
   adminFetchDeleted, adminRestore,
   mergeDuplicateStudents, detectDuplicateStudents, mergeStudentPair,
   detectDuplicateQuestions, resequenceAssessmentQuestions, resolveDuplicateQuestionGroup, batchResolveAssessmentDuplicateQuestions,
-  fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName,
-  testSupabaseConnection, previewRecalibrateAssessment, applyRecalibrateAssessment, isPassing, calculatePercentage
-} from '../api.js?v=4.7.6';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=4.7.6';
-import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=4.7.6';
-import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=4.7.6';
-import { getSupabase } from '../supabase.js?v=4.7.6';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=4.7.6';
-import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=4.7.6';
-import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=4.7.6';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=4.7.6';
-import { renderAssessments } from './assessment-management.js?v=4.7.6';
-import { renderVocabularyVault } from './vocab-vault.js?v=4.7.6';
-import { renderModules } from './modules.js?v=4.7.6';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=4.7.6';
-import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=4.7.6';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, hashPin } from './crud-modals.js?v=4.7.6';
-import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=4.7.6';
-import { openStudentFullEdit } from './student-management.js?v=4.7.6';
+  fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
+  testSupabaseConnection, previewRecalibrateAssessment, applyRecalibrateAssessment, isPassing, calculatePercentage, toLevelLetter
+} from '../api.js?v=4.9.8';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=4.9.8';
+import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=4.9.8';
+import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=4.9.8';
+import { getSupabase } from '../supabase.js?v=4.9.8';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=4.9.8';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=4.9.8';
+import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=4.9.8';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=4.9.8';
+import { renderAssessments } from './assessment-management.js?v=4.9.8';
+import { renderVocabularyVault } from './vocab-vault.js?v=4.9.8';
+import { renderModules } from './modules.js?v=4.9.8';
+import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=4.9.8';
+import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=4.9.8';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, hashPin } from './crud-modals.js?v=4.9.8';
+import { renderCurriculum } from './curriculum-management.js?v=4.9.8';
+import { renderClassesHub } from './classes-hub.js?v=4.9.8';
+import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=4.9.8';
+import { openStudentFullEdit } from './student-management.js?v=4.9.8';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
 
-    // â€”â€”â€” ABCD Primary Architecture Section Titles â€”â€”â€”
+    // ——— ABCD Primary Architecture Section Titles ———
     const sectionTitles = {
       dashboard: 'Executive Dashboard', profile: 'My Profile', schedule: 'Personal Schedule', work_records: 'Work Records', cv_generator: 'CV Generator',
+      organization: 'Organization Structure',
+      curriculum: 'Curriculum & Level Master',
+      'classes-hub': 'Curriculum & Level Master',
       import_ai_assessments: 'Import AI Assessments',
-      institutions: 'Batches', students: 'Students Roster', 'import-students': 'Import Students', 'progress-view': 'Student Progress',
+      institutions: 'Batches', students: 'Students', 'import-students': 'Import Students', 'progress-view': 'Student Progress',
       Classes: 'Curriculum & Classes', classes: 'Classes', 'classes-org': 'Organization Hub', class_instances: 'Class Instances', levels: 'Levels', topics: 'Topics', questions: 'Question Bank', vocab_vault: 'Vocabulary Vault', modules: 'Modules (Core Blocks)', 'import-questions': 'Import Questions', 'export-questions': 'Export Questions',
       assessments: 'Assessments Hub', assignments: 'Assignments & Rosters', results: 'Assessment Results', recalibrator: 'Recalibration Engine', question_types: 'Validation Dictionary',
       audit: 'Activity & Audit Logs', settings: 'Site Settings & Cost Guard', recycle: 'Recycle Bin', health: 'Data Health & Connectivity',
@@ -297,12 +348,13 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
 
     // ABCD 4-Domain Mapping
     const sectionDomainMap = {
-      dashboard: 'ADMIN', profile: 'ADMIN', schedule: 'ADMIN', work_records: 'ADMIN', cv_generator: 'ADMIN',
+      dashboard: 'ADMIN', profile: 'ADMIN', schedule: 'ADMIN', work_records: 'ADMIN', cv_generator: 'ADMIN', organization: 'ADMIN',
+      'classes-hub': 'ADMIN', curriculum: 'ADMIN',
       institutions: 'BOARD', students: 'BOARD', 'import-students': 'BOARD', 'progress-view': 'BOARD',
       Classes: 'CLASS', classes: 'CLASS', 'classes-org': 'CLASS', class_instances: 'CLASS', levels: 'CLASS', topics: 'CLASS', questions: 'CLASS', question_types: 'CLASS', 'import-questions': 'CLASS', 'export-questions': 'CLASS',
       assessments: 'CLASS', assignments: 'CLASS', results: 'CLASS', recalibrator: 'CLASS', import_ai_assessments: 'CLASS',
-      'class-panel': 'CLASS',
-      audit: 'DATA', settings: 'DATA', recycle: 'DATA', health: 'DATA', vocab_vault: 'DATA', modules: 'DATA'
+      'class-panel': 'CLASS', vocab_vault: 'CLASS',
+      audit: 'DATA', settings: 'DATA', recycle: 'DATA', health: 'DATA', modules: 'DATA'
     };
 
     // Mobile Bottom Tab Panels -> Primary Domain
@@ -370,18 +422,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
       }
     }
 
-    function toLevelLetter(num) {
-      const n = parseInt(num, 10);
-      if (isNaN(n) || n < 1) return num ? String(num) : 'A';
-      let result = '';
-      let curr = n;
-      while (curr > 0) {
-        let remainder = (curr - 1) % 26;
-        result = String.fromCharCode(65 + remainder) + result;
-        curr = Math.floor((curr - 1) / 26);
-      }
-      return result;
-    }
+
 
     // --- Auth ---
     const session = getAdminSession();
@@ -396,7 +437,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
       try {
         // 1. Primary Check: Master credentials (admin / admin123) or custom saved password
         const savedCustomPass = localStorage.getItem('topscore_admin_custom_password');
-        const isMaster = (user.toLowerCase() === 'admin' && (savedCustomPass ? pass === savedCustomPass : pass === 'admin123'));
+        const isMaster = (user.toLowerCase() === 'admin' && (pass === 'admin123' || (savedCustomPass && pass === savedCustomPass)));
 
         if (isMaster) {
           setAdminSession({ admin_id: 'admin-master', username: 'admin' });
@@ -432,6 +473,10 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
       }
     });
 
+    document.getElementById('admin-username')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('admin-password')?.focus();
+    });
+
     document.getElementById('admin-password').addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('admin-login-btn').click();
     });
@@ -454,18 +499,30 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
       if (window.loadSidebarClasses) window.loadSidebarClasses();
       const hash = window.location.hash.substring(1);
       const targetSec = aliasSectionMap[hash] || hash;
+      const savedSec = localStorage.getItem('topscore_admin_last_section');
+      const savedTargetSec = aliasSectionMap[savedSec] || savedSec;
+
       if (targetSec && (sectionTitles[targetSec] || targetSec === 'students')) {
         loadSection(targetSec, true);
       } else if (hash && hash.startsWith('profile-')) {
         const studentId = (hash || '').replace('profile-', '');
         activatePrimaryTab('board');
         openStudentProfile(studentId, [], true);
+      } else if (savedTargetSec && (sectionTitles[savedTargetSec] || savedTargetSec === 'students')) {
+        loadSection(savedSec, false);
       } else {
         activatePrimaryTab('class');
         loadSection('assessments', true);
       }
       initConnectionBanner(); // Check live DB connection and show status banner
     }
+
+    window.addEventListener('hashchange', () => {
+      const h = window.location.hash.substring(1);
+      if (h && h !== window._activeSectionAlias && h !== _currentSection) {
+        loadSection(h, true);
+      }
+    });
 
     // --- SIDEBAR CLASSES LIST INJECTION ---
     window.loadSidebarClasses = async function(autoSelectClassId = null) {
@@ -517,76 +574,581 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
 
     // ── CLASS HUB (MAIN CONTENT AREA) ──
     window.renderClassHub = async function(area) {
+      const classId = window._selectedClassId;
       const className = window._selectedClassName || 'Unknown Class';
-      area.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Loading levels for ${escapeHtml(className)}...</p></div>`;
+      
+      area.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Loading Class Hub for ${escapeHtml(className)}...</p></div>`;
       
       try {
-        const [levels] = await Promise.all([
-          adminFetchAll('levels', 'id, name, level_number')
-        ]);
-
-        let sortedLevels = (levels || []).sort((a, b) => a.level_number - b.level_number);
-        // Ensure there is always a 'No Level' fallback
-        sortedLevels.push({ id: 'no-level', name: 'Unassigned Level' });
-
         const breadcrumb = document.getElementById('admin-breadcrumb');
         if (breadcrumb) {
           breadcrumb.innerHTML = `<span style="color:var(--clr-primary); font-weight:700;">CLASS</span> <span style="color:var(--clr-border); margin:0 0.5rem;">/</span> <span style="color:#fff; font-weight:600;">${escapeHtml(className)}</span>`;
         }
 
-        let html = `
-          <div style="padding:0.5rem 2rem 0; border-bottom:1px solid var(--clr-border); background:var(--clr-surface);">
-            <div style="display:flex; border-bottom:2px solid transparent; overflow-x:auto;">
-        `;
+        // Fetch ALL data relevant to this class and detailed assessment mapping
+        const [currentClass, allAssessments, allStudents, allPrograms, allBatches, allQuestions, allLevels, allBoardClasses, allVault, allAttempts, allInstitutions] = await Promise.all([
+          adminFetchAll('classes', '*, programs!program_id(name)').then(res => res ? res.find(c => c.id === classId) : null),
+          adminFetchAll('assessments'), 
+          adminFetchAll('students', '*, programs!program_id(name, institution_id), institutions!institution_id(name), batches!batch_id(name, is_active, current_level_id)'),
+          adminFetchAll('programs', 'id, name, institution_id'),
+          adminFetchAll('batches', 'id, name, is_active, program_id'),
+          adminFetchAll('assessment_questions', 'id, assessment_id, answer_type'),
+          adminFetchAll('levels').catch(() => []),
+          adminFetchAll('classes').catch(() => []),
+          adminFetchAll('vocabulary_vault', 'id, target_level, theme_code, topic_code, word_type, deleted_at').catch(() => []),
+          adminFetchAll('attempts').catch(() => []),
+          adminFetchAll('institutions', 'id, name').catch(() => [])
+        ]);
 
-        if (sortedLevels.length === 0) {
-          html += `</div></div><div class="empty-state" style="padding:2rem;"><p>No levels found.</p></div>`;
-          area.innerHTML = html;
-          return;
-        }
+        const classMap = {};
+        (allPrograms || []).forEach(c => { classMap[c.id] = c; });
+        const instMap = {};
+        (allInstitutions || []).forEach(i => { instMap[i.id] = i.name; });
+        const boardClassMap = {};
+        (allBoardClasses || []).forEach(c => { boardClassMap[c.id] = c; });
+        const levelMap = {};
+        (allLevels || []).forEach(l => { levelMap[l.id] = l; });
 
-        // Determine which level should be active. 
-        if (!sortedLevels.some(l => l.id == window._selectedLevelId)) {
-            window._selectedLevelId = sortedLevels[0].id;
-            window._selectedLevelName = sortedLevels[0].name;
-        }
-
-        sortedLevels.forEach(lvl => {
-           const isActive = (lvl.id == window._selectedLevelId);
-           const color = isActive ? 'var(--clr-primary)' : 'var(--clr-text-muted)';
-           const border = isActive ? 'var(--clr-primary)' : 'transparent';
-           
-           html += `
-             <div class="class-level-tab hover-bg-subtle" data-level-id="${lvl.id}" data-level-name="${escapeHtml(lvl.name)}" 
-                  style="min-width:140px; padding:0.75rem 1.5rem; text-align:center; cursor:pointer; font-size:0.9rem; font-weight:600; color:${color}; border-bottom:2px solid ${border}; margin-bottom:-1px; white-space:nowrap; transition:all 0.2s;">
-               ${escapeHtml(lvl.name)}
-             </div>
-           `;
+        const classAssessments = (allAssessments || []).filter(a => a.class_id === classId);
+        
+        // Find students that have access to this class's program
+        const classProgramId = currentClass?.program_id;
+        const classStudents = (allStudents || []).filter(s => {
+          if (s.deleted_at) return false;
+          const batchObj = (allBatches || []).find(b => b.id === s.batch_id);
+          const batchProgId = batchObj?.program_id;
+          if (classProgramId && (s.program_id === classProgramId || batchProgId === classProgramId)) return true;
+          return false;
         });
 
-        html += `
+        const activeStudents = classStudents.filter(s => s.is_active !== false);
+
+        const _norm = (v) => String(v || '').toLowerCase();
+        const _ALL_THEMES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        const _PHRASE_TYPES = ['expression', 'idiom', 'proverb', 'phrase'];
+        const _vaultRows = (allVault || []).filter(v => !v.deleted_at);
+        const vaultCountFor = (r, lvlNumber) => {
+          const pl = r?.payload || {};
+          const wantPhrases = pl.category === 'phrases';
+          const isTest = r?.assessment_category === 'TEST';
+          let themes = null;
+          if (isTest && pl.theme_code) {
+            const idx = _ALL_THEMES.indexOf(pl.theme_code);
+            themes = idx >= 0 ? _ALL_THEMES.slice(0, idx + 1) : [pl.theme_code];
+          }
+          return _vaultRows.filter(v => {
+            if (Number(v.target_level) !== Number(lvlNumber)) return false;
+            const isPhrase = _PHRASE_TYPES.includes(_norm(v.word_type));
+            if (wantPhrases !== isPhrase) return false;
+            if (themes) return themes.includes(v.theme_code);
+            if (pl.theme_code && v.theme_code !== pl.theme_code) return false;
+            if (pl.topic_code && v.topic_code !== pl.topic_code) return false;
+            return true;
+          }).length;
+        };
+
+        const formatAnswerType = (type) => {
+          if (!type) return 'Multiple Choice';
+          type = String(type).toUpperCase();
+          if (type === 'MULTIPLE_CHOICE') return '✅ Selection';
+          if (type === 'TEXT_MATCH') return '⌨️ Written';
+          if (type === 'VOICE_MATCH' || type === 'SPOKEN') return '🗣️ Spoken';
+          if (type === 'FILE_UPLOAD') return '📎 Upload';
+          if (type === 'ESSAY') return '📝 Essay';
+          if (type === 'ROLEPLAY') return '🎭 Roleplay';
+          if (type === 'CODE') return '💻 Code';
+          return type;
+        };
+
+        const statusColors = { published: 'badge-success', draft: 'badge-neutral', unpublished: 'badge-warning', archived: 'badge-danger' };
+
+        // Calculate DataGrid format for Assessments (Rich/Detailed)
+        window._classHubRecords = {};
+        const assessmentsGridData = classAssessments.map(r => {
+          window._classHubRecords[r.id] = r;
+          const programName = (r?.program_id && classMap[r.program_id]?.name) ? classMap[r.program_id].name : 'All Programs';
+          const prereqId = r?.prerequisite_assessment_id || r?.prerequisite_id;
+          const prereqAssessment = (prereqId && allAssessments.find(a => a.id === prereqId)) || null;
+          const boardName = (r?.class_id && boardClassMap[r.class_id]?.name) || r?.classes?.name || '—';
+          const lvlObj = (r?.level_id && levelMap[r.level_id]) || r?.levels;
+          const lvlNum = lvlObj?.level_number || 1;
+          const levelDisplay = window.toLevelLetter ? window.toLevelLetter(lvlNum) : 'LVL ' + lvlNum;
+          const prereqTitle = prereqAssessment?.shell_code || prereqAssessment?.title || prereqAssessment?.name || r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
+          
+          const title = r?.title || r?.display_name || r?.name || 'Untitled';
+          const status = r?.status || r?.assessment_type || 'draft';
+          const AssessmentCategory = r?.assessment_type || 'Daily';
+          
+          let answerType = r?.answer_type || '';
+          const asmQs = (allQuestions || []).filter(q => q?.assessment_id === r?.id);
+          if (!answerType && asmQs.length > 0) {
+            const typeCounts = {};
+            asmQs.forEach(q => {
+              if (q.answer_type) typeCounts[q.answer_type] = (typeCounts[q.answer_type] || 0) + 1;
+            });
+            let max = 0;
+            for (const t in typeCounts) {
+              if (typeCounts[t] > max) { max = typeCounts[t]; answerType = t; }
+            }
+          }
+          const timeLimit = r?.working_duration_minutes || r?.time_limit_minutes || Math.floor((r?.time_limit_seconds || 3600) / 60);
+          const minScore = r?.minimum_required_score || 60;
+          const _isDyn = !!(r?.payload && r.payload.is_dynamic_shell) || r?.is_dynamic_shell === true;
+          const _vaultQ = _isDyn ? vaultCountFor(r, lvlNum) : 0;
+          const qCount = (allQuestions || []).filter(q => q?.assessment_id === r?.id).length;
+
+          return {
+            id: r?.id || '',
+            title,
+            programName,
+            classBoard: boardName,
+            level: levelDisplay,
+            order: r?.display_order ?? r?.order_index ?? 1,
+            prereq: prereqTitle,
+            answerType: formatAnswerType(answerType),
+            questionOrder: r?.question_order === 'random' ? 'Random' : 'Seq',
+            AssessmentCategory,
+            timeLimit,
+            minScore,
+            qCount: _isDyn ? _vaultQ : qCount,
+            qIsVault: _isDyn,
+            status,
+            shellCode: r?.shell_code || '',
+            _raw: r || {}
+          };
+        });
+
+        // Calculate DataGrid format for Students
+        window._classStudentsMap = {};
+        const studentsGridData = classStudents.map(s => {
+          window._classStudentsMap[s.id] = s;
+
+          const instName = s.institutions?.name || (s.institution_id ? instMap[s.institution_id] : '') || (s.programs?.institution_id ? instMap[s.programs.institution_id] : '') || '—';
+          const progName = s.programs?.name || (s.program_id ? classMap[s.program_id]?.name : '') || '—';
+
+          // Age calculation
+          let ageDisplay = '—';
+          if (s.birth_date) {
+            const bd = new Date(s.birth_date);
+            if (!isNaN(bd.getTime())) {
+              const today = new Date();
+              let age = today.getFullYear() - bd.getFullYear();
+              const m = today.getMonth() - bd.getMonth();
+              if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
+              if (age >= 0) ageDisplay = `${age} yrs`;
+            }
+          }
+
+          // Level calculation
+          let levelName = '—';
+          if (s.level_id && levelMap[s.level_id]) {
+            levelName = levelMap[s.level_id].name;
+          } else if (s.batches?.current_level_id && levelMap[s.batches.current_level_id]) {
+            levelName = levelMap[s.batches.current_level_id].name;
+          }
+
+          // Progress calculation for this class
+          const studentAttempts = (allAttempts || []).filter(a => a.student_id === s.id);
+          const classAssessmentIds = new Set(classAssessments.map(a => a.id));
+          const classAttempts = studentAttempts.filter(a => classAssessmentIds.has(a.assessment_id || a.Assessment_id));
+          const completedCount = new Set(classAttempts.filter(a => a.status === 'SUBMITTED' || a.status === 'submitted' || a.status === 'AUTO_SUBMITTED').map(a => a.assessment_id || a.Assessment_id)).size;
+
+          let overallScoreStr = '-';
+          let grade = '-';
+          let gradeColor = 'rgba(255,255,255,0.4)';
+          if (completedCount > 0) {
+            let totalMaxScore = 0;
+            let totalObtained = 0;
+            classAttempts.filter(a => a.status === 'SUBMITTED' || a.status === 'submitted' || a.status === 'AUTO_SUBMITTED').forEach(a => {
+              totalMaxScore += (a.max_score || 0);
+              totalObtained += (a.total_score || 0);
+            });
+            if (totalMaxScore > 0) {
+              const pct = Math.round((totalObtained / totalMaxScore) * 100);
+              overallScoreStr = `${pct}%`;
+              const g = typeof getGrade === 'function' ? getGrade(pct) : (pct >= 90 ? 'A' : pct >= 70 ? 'B' : pct >= 50 ? 'C' : 'D');
+              grade = g;
+              const cMap = { 'S': '#8b5cf6', 'A': '#10b981', 'B': '#3b82f6', 'C': '#f59e0b', 'D': '#f97316', 'E': '#ef4444', 'F': '#ef4444' };
+              gradeColor = cMap[g] || 'rgba(255,255,255,0.4)';
+            }
+          }
+
+          const isBatchActive = s.batches ? s.batches.is_active !== false : false;
+
+          return {
+            id: s.id,
+            name: s.name || 'Unknown',
+            displayName: (typeof formatStudentName === 'function') ? (formatStudentName(s.name, s.gender) || s.name || 'Unknown') : (s.name || 'Unknown'),
+            instName,
+            progName,
+            photoUrl: s.photo_url || '',
+            initial: getStudentInitial(s.name),
+            gender: s.gender || '',
+            ageDisplay,
+            batch: s.batches?.name || (s.batch_id ? 'Unknown Batch' : '—'),
+            isBatchActive,
+            levelName,
+            completedCount,
+            totalClassAssessments: classAssessments.length,
+            overallScoreStr,
+            grade,
+            gradeColor,
+            pin: s.pin || '****',
+            phone: s.phone || s.phone_number || '—',
+            email: s.email || '—',
+            isActive: s.is_active !== false,
+            _raw: s
+          };
+        });
+
+        // Hierarchical sort: Active students first, then Institution -> Program -> Batch -> Level -> Name (A-Z)
+        studentsGridData.sort((a, b) => {
+          const aActive = a.isActive ? 1 : 0;
+          const bActive = b.isActive ? 1 : 0;
+          if (aActive !== bActive) return bActive - aActive;
+
+          const instCmp = (a.instName || '').localeCompare(b.instName || '', undefined, { sensitivity: 'base', numeric: true });
+          if (instCmp !== 0) return instCmp;
+          const progCmp = (a.progName || '').localeCompare(b.progName || '', undefined, { sensitivity: 'base', numeric: true });
+          if (progCmp !== 0) return progCmp;
+          const batchCmp = (a.batch || '').localeCompare(b.batch || '', undefined, { sensitivity: 'base', numeric: true });
+          if (batchCmp !== 0) return batchCmp;
+          const lvlCmp = (a.levelName || '').localeCompare(b.levelName || '', undefined, { sensitivity: 'base', numeric: true });
+          if (lvlCmp !== 0) return lvlCmp;
+          return stripHonorific(a.displayName || a.name || '').localeCompare(stripHonorific(b.displayName || b.name || ''), undefined, { sensitivity: 'base', numeric: true });
+        });
+
+        // State for active tab
+        if (!window._classHubActiveTab) window._classHubActiveTab = 'assessments';
+
+        window._switchClassHubTab = (tabId) => {
+          window._classHubActiveTab = tabId;
+          window.renderClassHub(document.getElementById('admin-content-area'));
+        };
+
+        const classHubTabs = [
+          { id: 'assessments', icon: '📝', val: classAssessments.length, label: 'Class Assessments' },
+          { id: 'attendance', icon: '👥', val: classStudents.length, label: 'Total Enrolled Students' }
+        ];
+
+        let html = `
+          <div>
+            ${buildSectionTabBar({
+              tabs: classHubTabs,
+              activeId: window._classHubActiveTab,
+              onSelect: 'window._switchClassHubTab'
+            })}
+
+            <div id="class-hub-tab-content">
+              ${window._classHubActiveTab === 'assessments' ? `
+                <div class="card" style="padding: 0.75rem 1rem; background: var(--clr-surface); margin: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h3 style="margin: 0; font-size: 1.1rem;">📝 Class Assessments</h3>
+                    <button class="btn btn-primary btn-sm" onclick="window.loadSection('assessments')">Manage Assessments Hub</button>
+                  </div>
+                  <div id="class-assessments-grid"></div>
+                </div>
+              ` : `
+                <div class="card" style="padding: 0.75rem 1rem; background: var(--clr-surface); margin: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h3 style="margin: 0; font-size: 1.1rem;">📋 Class Roster (Attendance)</h3>
+                  </div>
+                  <div id="class-attendance-grid"></div>
+                </div>
+              `}
             </div>
-          </div>
-          <div id="class-workspace-area" style="padding:0; background:var(--clr-bg-1); min-height:60vh;">
           </div>
         `;
         area.innerHTML = html;
 
-        // Attach event listeners to tabs
-        const tabs = area.querySelectorAll('.class-level-tab');
-        tabs.forEach(tab => {
-           tab.addEventListener('click', () => {
-              window._selectedLevelId = tab.dataset.levelId;
-              window._selectedLevelName = tab.dataset.levelName;
-              // Re-render Class Hub to update active tab style
-              window.renderClassHub(area);
-           });
-        });
+        // Render DataGrids depending on tab
+        if (window._classHubActiveTab === 'assessments') {
+          new window.DataGrid({
+            container: document.getElementById('class-assessments-grid'),
+            data: assessmentsGridData,
+            pageSize: 50,
+            searchKeys: ['title', 'shellCode', 'status', 'AssessmentCategory'],
+            sortComparator: (sortKey, direction, a, b) => {
+              if (sortKey === 'title' || sortKey === 'TITLE' || sortKey === 'order') {
+                return direction === 'asc' 
+                  ? (a.order ?? 0) - (b.order ?? 0)
+                  : (b.order ?? 0) - (a.order ?? 0);
+              }
+            },
+            initialSortKey: 'order',
+            initialSortAsc: true,
+            columns: [
+              { 
+                key: 'title', 
+                label: 'TITLE', 
+                sortable: true,
+                render: (val, row) => {
+                  let displayTitle = escapeHtml(row.title);
+                  displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: #facc15;">$1</span>');
+                  displayTitle = displayTitle.replace(/\b(Test)\b/gi, '<span style="color: #f472b6;">$1</span>');
+                  return `<div class="fw-700" style="color:var(--clr-text-1); font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:250px;" title="${escapeHtml(row.title)}">${displayTitle}</div>`;
+                }
+              },
+              {
+                key: 'order',
+                label: 'CODE',
+                sortable: true,
+                render: (val, row) => {
+                  if (row.shellCode) {
+                    return `<div style="font-size:0.7rem; color:var(--clr-primary); font-family:monospace; font-weight:bold; white-space:nowrap; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</div>`;
+                  }
+                  return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">ORD: ${row.order || '-'}</div>`;
+                }
+              },
+              { 
+                key: 'prereq', 
+                label: 'PREREQUISITE', 
+                sortable: true,
+                render: (val, row) => {
+                  const prereqDisplay = row.prereq || '';
+                  if (!prereqDisplay) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+                  return `<div style="font-size:0.7rem; color:var(--clr-warning); font-family:monospace; font-weight:bold; white-space:nowrap; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(prereqDisplay)}">⚠️ ${escapeHtml(prereqDisplay)}</div>`;
+                }
+              },
+              {
+                key: 'classBoard',
+                label: 'CLASS',
+                sortable: true,
+                render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.classBoard || '-')}</div>`
+              },
+              {
+                key: 'level',
+                label: 'LEVEL',
+                sortable: true,
+                render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-primary); font-weight:600; white-space:nowrap;">${escapeHtml(row.level || '-')}</div>`
+              },
+              {
+                key: 'AssessmentCategory',
+                label: 'TYPE',
+                sortable: true,
+                render: (val, row) => {
+                  let typeStr = escapeHtml(row.AssessmentCategory || 'Daily');
+                  typeStr = typeStr.replace(/(TASK)/ig, '<span style="color: #facc15; font-weight: 800;">$1</span>');
+                  typeStr = typeStr.replace(/(TEST)/ig, '<span style="color: #f472b6; font-weight: 800;">$1</span>');
+                  return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${typeStr}</div>`;
+                }
+              },
+              { 
+                key: 'answerType', 
+                label: 'ANSWER', 
+                sortable: true,
+                render: (val, row) => `<div class="fw-600 text-info" style="font-size:0.75rem; white-space:nowrap;">${escapeHtml(row.answerType || 'Multiple Choice')}</div>`
+              },
+              {
+                key: 'questionOrder',
+                label: 'ACCESS',
+                sortable: true,
+                render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${row.questionOrder === 'Random' ? '&#128256; Rand' : '&rarr; Seq'}</div>`
+              },
+              {
+                key: 'timeLimit',
+                label: 'DUR. (M)',
+                sortable: true,
+                render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">&#9201;&#65039; ${row.timeLimit || 60}</div>`
+              },
+              {
+                key: 'minScore',
+                label: 'PASS (%)',
+                sortable: true,
+                render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">&#127919; ${row.minScore || 60}</div>`
+              },
+              { 
+                key: 'qCount', 
+                label: 'QS', 
+                sortable: true,
+                render: (val, row) => {
+                  const count = row.qCount || 0;
+                  if (row.qIsVault) return `<span class="fw-700 ${count > 0 ? 'text-info' : 'text-danger'}" style="font-size:0.8rem;" title="Live count projected from Vocabulary Vault">&#9889; ${count} (Vault)</span>`;
+                  return `<span class="fw-700 ${count > 0 ? 'text-info' : 'text-danger'}" style="font-size:0.8rem;">${count}</span>`;
+                }
+              },
+              { 
+                key: 'status', 
+                label: 'STATUS', 
+                sortable: true,
+                render: (val, row) => {
+                  const st = row.status || 'draft';
+                  return `<span class="badge ${statusColors[String(st).toLowerCase()] || 'badge-neutral'} fw-700" style="font-size: 0.65rem; padding: 2px 6px; text-transform: uppercase;">${escapeHtml(st)}</span>`;
+                }
+              },
+              { 
+                key: 'actions', 
+                label: '', 
+                sortable: false,
+                render: (val, row) => {
+                  const id = row.id || '';
+                  return `
+                    <div class="d-flex gap-1 justify-end align-center">
+                      <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterAssessmentResults='${id}'; window.loadSection('results');">&#128202;</button>
+                      <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateAssessment='${id}'; window.loadSection('recalibrator');">&#9878;&#65039;</button>
+                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateAssessment('${id}')" title="Duplicate">📄</button>
+                      <button class="btn ${String(row.status).toLowerCase() === 'published' ? 'btn-danger' : 'btn-success'}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishAssessment('${id}', '${row.status || 'draft'}')">
+                        ${String(row.status).toLowerCase() === 'published' ? '👁️‍🗨️' : '👁️'}
+                      </button>
+                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openCrudModal('assessments', window._classHubRecords['${id}'])">✏️</button>
+                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; background-color: var(--clr-accent-1); color: white;" onclick="window._deleteRecord('assessments', '${id}', '${escapeHtml(row.title || '')}')">🗑️</button>
+                    </div>
+                  `;
+                }
+              }
+            ]
+          });
+        } else {
+          new window.DataGrid({
+            container: document.getElementById('class-attendance-grid'),
+            data: studentsGridData,
+            pageSize: 25,
+            searchKeys: ['instName', 'progName', 'batch', 'levelName', 'displayName', 'name', 'pin', 'phone', 'email'],
+            initialSortKey: 'instName',
+            initialSortAsc: true,
+            sortComparator: (sortKey, direction, a, b) => {
+              const aActive = a.isActive ? 1 : 0;
+              const bActive = b.isActive ? 1 : 0;
+              if (aActive !== bActive) return bActive - aActive;
 
-        // Render the class workspace inside the area
-        const wsArea = document.getElementById('class-workspace-area');
-        if (window._selectedClassId && typeof renderClassPanel === 'function') {
-           renderClassPanel(wsArea);
+              if (sortKey === 'instName') {
+                const instCmp = (a.instName || '').localeCompare(b.instName || '', undefined, { sensitivity: 'base', numeric: true });
+                if (instCmp !== 0) return direction === 'desc' ? -instCmp : instCmp;
+                const progCmp = (a.progName || '').localeCompare(b.progName || '', undefined, { sensitivity: 'base', numeric: true });
+                if (progCmp !== 0) return direction === 'desc' ? -progCmp : progCmp;
+                const batchCmp = (a.batch || '').localeCompare(b.batch || '', undefined, { sensitivity: 'base', numeric: true });
+                if (batchCmp !== 0) return direction === 'desc' ? -batchCmp : batchCmp;
+                const lvlCmp = (a.levelName || '').localeCompare(b.levelName || '', undefined, { sensitivity: 'base', numeric: true });
+                if (lvlCmp !== 0) return direction === 'desc' ? -lvlCmp : lvlCmp;
+                const nameCmp = (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
+                return direction === 'desc' ? -nameCmp : nameCmp;
+              }
+
+              let valA = a[sortKey];
+              let valB = b[sortKey];
+              if (typeof valA === 'string') valA = valA.toLowerCase();
+              if (typeof valB === 'string') valB = valB.toLowerCase();
+              if (valA < valB) return direction === 'asc' ? -1 : 1;
+              if (valA > valB) return direction === 'asc' ? 1 : -1;
+
+              const instCmp = (a.instName || '').localeCompare(b.instName || '', undefined, { sensitivity: 'base', numeric: true });
+              if (instCmp !== 0) return instCmp;
+              const progCmp = (a.progName || '').localeCompare(b.progName || '', undefined, { sensitivity: 'base', numeric: true });
+              if (progCmp !== 0) return progCmp;
+              const batchCmp = (a.batch || '').localeCompare(b.batch || '', undefined, { sensitivity: 'base', numeric: true });
+              if (batchCmp !== 0) return batchCmp;
+              const lvlCmp = (a.levelName || '').localeCompare(b.levelName || '', undefined, { sensitivity: 'base', numeric: true });
+              if (lvlCmp !== 0) return lvlCmp;
+              return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
+            },
+            columns: [
+              {
+                key: 'instName',
+                label: 'INSTITUTION',
+                sortable: true,
+                render: (val, row) => `<div class="text-sm fw-600">${escapeHtml(row.instName)}</div>`
+              },
+              {
+                key: 'progName',
+                label: 'PROGRAM',
+                sortable: true,
+                render: (val, row) => `<div class="text-sm">${escapeHtml(row.progName)}</div>`
+              },
+              {
+                key: 'batch',
+                label: 'BATCH',
+                sortable: true,
+                align: 'center',
+                render: (val, row) => `<span class="badge" style="background:rgba(255,255,255,0.1);color:#fff;font-size:0.75rem;">${escapeHtml(row.batch)}</span>`
+              },
+              {
+                key: 'levelName',
+                label: 'LEVEL',
+                sortable: true,
+                align: 'center',
+                render: (val, row) => `<span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(row.levelName)}</span>`
+              },
+              {
+                key: 'displayName',
+                label: 'STUDENT NAME',
+                sortable: true,
+                render: (val, row) => `
+                  <div class="d-flex align-center gap-3">
+                    ${row.photoUrl ? `<img src="${row.photoUrl}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">` : `<div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;">${row.initial}</div>`}
+                    <div>
+                      <div class="fw-600" style="color:var(--clr-text-1); font-size:0.85rem;">
+                        ${escapeHtml(row.displayName)}
+                        ${!row.isBatchActive ? `<span class="badge badge-warning" style="font-size:0.65rem;margin-left:6px;">Inactive Batch</span>` : ''}
+                      </div>
+                      <div class="text-xs text-muted" style="font-family:monospace;">PIN: ${escapeHtml(row.pin)}</div>
+                    </div>
+                  </div>
+                `
+              },
+              {
+                key: 'ageDisplay',
+                label: 'AGE',
+                sortable: true,
+                align: 'center',
+                render: (val, row) => `<span class="text-sm fw-600">${escapeHtml(row.ageDisplay)}</span>`
+              },
+              {
+                key: 'gender',
+                label: 'GENDER',
+                sortable: true,
+                align: 'center',
+                render: (val, row) => row.gender === 'male'
+                  ? `<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);font-size:0.7rem;">&#9794; Male</span>`
+                  : row.gender === 'female'
+                  ? `<span class="badge" style="background:rgba(244,114,182,0.15);color:#f472b6;border:1px solid rgba(244,114,182,0.3);font-size:0.7rem;">&#9792; Female</span>`
+                  : `<span class="badge badge-neutral" style="font-size:0.7rem;">&mdash;</span>`
+              },
+              {
+                key: 'overallScoreStr',
+                label: 'PROGRESS',
+                sortable: true,
+                align: 'center',
+                render: (val, row) => `
+                  <div class="fw-600 text-sm">${row.overallScoreStr}</div>
+                  <div class="text-xs text-muted">${row.completedCount} / ${row.totalClassAssessments} Done</div>
+                `
+              },
+              {
+                key: 'grade',
+                label: 'GRADE',
+                sortable: true,
+                align: 'center',
+                render: (val, row) => row.grade !== '-' ? `<span class="badge" style="background:${row.gradeColor};color:#000;font-weight:700;">${row.grade}</span>` : '<span class="text-muted">&mdash;</span>'
+              },
+              {
+                key: 'phone',
+                label: 'CONTACT',
+                sortable: true,
+                render: (val, row) => `
+                  <div class="text-xs" style="color:var(--clr-text-2);">${escapeHtml(row.phone !== '—' ? row.phone : row.email)}</div>
+                `
+              },
+              {
+                key: 'status',
+                label: 'STATUS',
+                sortable: true,
+                align: 'center',
+                render: (val, row) => `<span class="badge ${row.isActive ? 'badge-success' : 'badge-neutral'}" style="font-size:0.7rem;">${row.isActive ? 'Active' : 'Inactive'}</span>`
+              },
+              {
+                key: 'actions',
+                label: '',
+                sortable: false,
+                align: 'right',
+                render: (val, row) => `
+                  <div class="d-flex gap-1 justify-end align-center">
+                    <button class="btn btn-secondary btn-icon btn-sm" title="View Profile" onclick="event.stopPropagation(); if (window.openStudentProfile) window.openStudentProfile('${row.id}')">&#128100;</button>
+                    <button class="btn btn-secondary btn-icon btn-sm" title="Edit Student" onclick="event.stopPropagation(); if (window.openStudentFullEdit) window.openStudentFullEdit(window._classStudentsMap['${row.id}'], () => window.renderClassHub(document.getElementById('admin-content-area')))">&#9998;</button>
+                  </div>
+                `
+              }
+            ]
+          });
         }
 
       } catch (e) {
@@ -778,18 +1340,23 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
 
     function formatAnswerType(atype) {
       if (!atype) return 'Written Test';
-      if (atype === 'speech_to_text') return 'Speaking Test';
+      if (atype === 'speech_to_text' || atype === 'spoken') return 'Speaking Test';
       if (atype === 'written') return 'Written Test';
-      if (atype === 'multiple_choice') return 'Multiple Choice';
+      if (atype === 'multiple_choice' || atype === 'selection') return 'Selection';
       if (atype === 'dropdown') return 'Dropdown';
       return atype.replace('_', ' ');
     }
 
     var _currentSection = null;
+    var _loadSectionSeq = 0;
     async function loadSection(section, skipHistory = false) {
       if (!section) return;
       const rawSection = section;
       section = aliasSectionMap[section] || section;
+      const thisSeq = ++_loadSectionSeq;
+      try {
+        localStorage.setItem('topscore_admin_last_section', rawSection);
+      } catch (err) {}
       if (!skipHistory && window.location.hash.substring(1) !== rawSection) {
         window.history.pushState(null, '', `#${rawSection}`);
       }
@@ -826,11 +1393,21 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
       document.getElementById('add-record-btn').onclick = () => {
         openCrudModal(section, null);
       };
-      document.getElementById('add-record-btn').style.display = ['audit', 'health', 'recycle', 'settings', 'results', 'progress-view', 'import-students', 'import-questions', 'export-questions', 'recalibrator', 'cv_generator', 'schedule', 'work_records', 'assessments', 'Assessments'].includes(section) ? 'none' : '';
+      document.getElementById('add-record-btn').style.display = ['audit', 'health', 'recycle', 'settings', 'results', 'progress-view', 'import-students', 'import-questions', 'export-questions', 'recalibrator', 'cv_generator', 'schedule', 'work_records', 'assessments', 'Assessments', 'classes-hub', 'organization', 'curriculum'].includes(section) ? 'none' : '';
 
       try {
-        switch(section) {
-          case 'institutions':        await renderUnifiedInstitutions(area); break;
+        switch(section.toLowerCase()) {
+          case 'organization':
+          case 'curriculum-org':
+            await renderCurriculum(area);
+            break;
+          case 'curriculum':
+          case 'classes-hub':
+            await renderClassesHub(area);
+            break;
+          case 'institutions':
+          await renderUnifiedInstitutions(area);
+          break;
           case 'classes':             await renderClassList(area); break;
           case 'classes-org':         await _renderClassesModule(area); break;
           case 'class_instances':     await renderClassInstances(area); break;
@@ -840,7 +1417,37 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
           case 'question_types':          await renderWordTypes(area); break;
           case 'vocab_vault':             await renderVocabularyVault(area); break;
           case 'modules':                 await renderModules(area); break;
-          case 'students':            await _renderStudentsModule(area); break;
+          case 'students':
+            const studentTabs = [
+              { id: 'roster', icon: '👤', title: 'Student Roster', label: 'Enrolled Active Students' },
+              { id: 'import', icon: '📤', title: 'Import Students', label: 'Bulk Excel / CSV Ingestion' }
+            ];
+            let activeStudentTab = 'roster';
+            const renderStudentSection = async () => {
+              area.innerHTML = `
+                <div>
+                  ${buildSectionTabBar({
+                    tabs: studentTabs,
+                    activeId: activeStudentTab,
+                    onSelect: 'window._switchStudentTab'
+                  })}
+                  <div id="tab-content-area"></div>
+                </div>
+              `;
+              const contentArea = area.querySelector('#tab-content-area');
+              contentArea.innerHTML = '<div class="spinner" style="margin:2rem auto;"></div>';
+              if (activeStudentTab === 'roster') {
+                await _renderStudentsModule(contentArea);
+              } else {
+                await renderImportStudents(contentArea);
+              }
+            };
+            window._switchStudentTab = async (tabId) => {
+              activeStudentTab = tabId;
+              await renderStudentSection();
+            };
+            await renderStudentSection();
+            break;
 
           case 'questions':           await renderCentralQuestionBank(area); break;
 
@@ -849,7 +1456,37 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
           case 'audit':               await renderAuditLog(area); break;
           case 'health':              await renderDataHealth(area); break;
           case 'recycle':             await renderRecycleBin(area); break;
-          case 'settings':            await renderSettings(area); break;
+          case 'settings':
+            const settingTabs = [
+              { id: 'site', icon: '⚙️', title: 'Site Settings', label: 'Cost Guard & Engine' },
+              { id: 'audit', icon: '📋', title: 'Activity Logs', label: 'Audit & Security Trail' },
+              { id: 'health', icon: '🩺', title: 'Data Health', label: 'Integrity Diagnostics' },
+              { id: 'recycle', icon: '🗑️', title: 'Recycle Bin', label: 'Restoration Vault' }
+            ];
+            let activeSettingTab = 'site';
+            const renderSettingSection = async () => {
+              area.innerHTML = `
+                <div>
+                  ${buildSectionTabBar({
+                    tabs: settingTabs,
+                    activeId: activeSettingTab,
+                    onSelect: 'window._switchSettingTab'
+                  })}
+                  <div id="unified-settings-content"></div>
+                </div>
+              `;
+              const sArea = area.querySelector('#unified-settings-content');
+              if (activeSettingTab === 'site') await renderSettings(sArea);
+              else if (activeSettingTab === 'audit') await renderAuditLog(sArea);
+              else if (activeSettingTab === 'health') await renderDataHealth(sArea);
+              else if (activeSettingTab === 'recycle') await renderRecycleBin(sArea);
+            };
+            window._switchSettingTab = async (tabId) => {
+              activeSettingTab = tabId;
+              await renderSettingSection();
+            };
+            await renderSettingSection();
+            break;
           case 'import-students':     await renderImportStudents(area); break;
           case 'import-questions':    await renderCentralQuestionImport(area); break;
           case 'export-questions':    renderExportQuestions(area); break;
@@ -868,6 +1505,10 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
           default: area.innerHTML = `<div class="empty-state"><div class="empty-state__icon">&#128679;</div><h3>${sectionTitles[section] || section}</h3><p>This section is under development.</p></div>`;
         }
       } catch(e) {
+        if (thisSeq !== _loadSectionSeq) {
+          console.warn('[loadSection] superseded during loading:', section);
+          return;
+        }
         console.error('[loadSection] error:', section, e);
         area.innerHTML = `
           <div class="empty-state card mt-4" style="padding:3.5rem 1.5rem; text-align:center; max-width:600px; margin:2rem auto; border:1px solid rgba(239,68,68,0.3); background:rgba(239,68,68,0.04);">
@@ -1145,9 +1786,13 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
       area.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Loading ${escapeHtml(className)}...</p></div>`;
 
       try {
-        const [classRows, programs] = await Promise.all([
-          adminFetchAll('classes', '*, class_levels(levels(name))'),
-          adminFetchAll('programs', 'id, name, institution_id, institutions(name)')
+        const [classRows, programs, students, batches, institutions, allLevels] = await Promise.all([
+          adminFetchAll('classes', '*, class_levels(levels(name, id))'),
+          adminFetchAll('programs', 'id, name, institution_id, institutions(name)'),
+          adminFetchAll('students', 'id, name, program_id, batch_id, level_id, is_active, deleted_at, institution_id, programs!program_id(name, institutions!institution_id(name)), institutions!institution_id(name)').catch(() => []),
+          adminFetchAll('batches', 'id, name, program_id, current_level_id, is_active, deleted_at').catch(() => []),
+          adminFetchAll('institutions', 'id, name').catch(() => []),
+          adminFetchAll('levels', 'id, name, level_number').catch(() => [])
         ]);
 
         const cls = (classRows || []).find(c => c.id === classId);
@@ -1157,13 +1802,64 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
         const progName = prog?.name || 'Unassigned Program';
         const instName = prog?.institutions?.name || 'TopsCore Global';
 
+        const instLookup = {};
+        (institutions || []).forEach(i => { instLookup[i.id] = i.name; });
+        const levelLookup = {};
+        (allLevels || []).forEach(l => { levelLookup[l.id] = l.name; });
+
         let levelNames = [];
+        const classLevelIds = new Set();
+        if (cls.level_id) classLevelIds.add(cls.level_id);
         if (cls.level) {
            levelNames.push(cls.level);
         } else if (cls.class_levels?.length) {
            levelNames = cls.class_levels.map(cl => cl.levels?.name).filter(Boolean);
+           cls.class_levels.forEach(cl => {
+             if (cl.level_id) classLevelIds.add(cl.level_id);
+             if (cl.levels?.id) classLevelIds.add(cl.levels.id);
+           });
         }
         const levelStr = levelNames.join(', ') || 'Unassigned Level';
+
+        const batchMap = new Map((batches || []).filter(b => !b.deleted_at).map(b => [b.id, b]));
+        const nonDeletedStudents = (students || []).filter(s => !s.deleted_at);
+
+        const eligibleStudents = nonDeletedStudents.filter(s => {
+          if (cls.program_id && s.program_id && s.program_id !== cls.program_id) return false;
+          const studentLevel = s.level_id || (s.batch_id ? batchMap.get(s.batch_id)?.current_level_id : null);
+          if (classLevelIds.size > 0) {
+            return studentLevel && classLevelIds.has(studentLevel);
+          }
+          return true;
+        });
+
+        eligibleStudents.sort((a, b) => {
+          const aActive = a.is_active !== false ? 1 : 0;
+          const bActive = b.is_active !== false ? 1 : 0;
+          if (aActive !== bActive) return bActive - aActive;
+
+          const aInst = a.institutions?.name || (a.institution_id ? instLookup[a.institution_id] : '') || a.programs?.institutions?.name || instName || '';
+          const bInst = b.institutions?.name || (b.institution_id ? instLookup[b.institution_id] : '') || b.programs?.institutions?.name || instName || '';
+          const instCmp = aInst.localeCompare(bInst, undefined, { sensitivity: 'base', numeric: true });
+          if (instCmp !== 0) return instCmp;
+
+          const aProg = a.programs?.name || (a.program_id === cls.program_id ? progName : '') || '';
+          const bProg = b.programs?.name || (b.program_id === cls.program_id ? progName : '') || '';
+          const progCmp = aProg.localeCompare(bProg, undefined, { sensitivity: 'base', numeric: true });
+          if (progCmp !== 0) return progCmp;
+
+          const aBatch = a.batch_id ? (batchMap.get(a.batch_id)?.name || '') : '';
+          const bBatch = b.batch_id ? (batchMap.get(b.batch_id)?.name || '') : '';
+          const batchCmp = aBatch.localeCompare(bBatch, undefined, { sensitivity: 'base', numeric: true });
+          if (batchCmp !== 0) return batchCmp;
+
+          const aLvl = a.level_id ? (levelLookup[a.level_id] || '') : (a.batch_id ? (levelLookup[batchMap.get(a.batch_id)?.current_level_id] || '') : '');
+          const bLvl = b.level_id ? (levelLookup[b.level_id] || '') : (b.batch_id ? (levelLookup[batchMap.get(b.batch_id)?.current_level_id] || '') : '');
+          const lvlCmp = aLvl.localeCompare(bLvl, undefined, { sensitivity: 'base', numeric: true });
+          if (lvlCmp !== 0) return lvlCmp;
+
+          return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base', numeric: true });
+        });
 
         const isVocabClass = className.toLowerCase().includes('vocab');
 
@@ -1178,7 +1874,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
                   <span class="badge badge-neutral" style="font-size:0.72rem;">📋 ${escapeHtml(progName)}</span>
                   <span class="badge badge-neutral" style="font-size:0.72rem;">⭐ ${escapeHtml(levelStr)}</span>
                   <span class="badge ${cls.is_active ? 'badge-success' : 'badge-neutral'}" style="font-size:0.72rem;">${cls.is_active ? 'Active' : 'Inactive'}</span>
-                  <span class="badge badge-neutral" style="font-size:0.72rem;">🧑‍🎓 0 Students</span>
+                  <span class="badge badge-neutral" style="font-size:0.72rem;">👥 ${eligibleStudents.length} Eligible Students</span>
                 </div>
               </div>
               <div style="display:flex; gap:0.5rem;">
@@ -1196,7 +1892,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
             <!-- Tabs -->
             <div style="display:flex; gap:1.5rem; border-bottom:2px solid transparent;">
               <div class="cpanel-tab active" data-target="tab-path" style="padding:0.75rem 0; cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--clr-primary); border-bottom:2px solid var(--clr-primary); margin-bottom:-1px;">Learning Path & Tasks</div>
-              <div class="cpanel-tab" data-target="tab-students" style="padding:0.75rem 0; cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--clr-text-muted); border-bottom:2px solid transparent; margin-bottom:-1px;">Students</div>
+              <div class="cpanel-tab" data-target="tab-students" style="padding:0.75rem 0; cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--clr-text-muted); border-bottom:2px solid transparent; margin-bottom:-1px;">Eligible Students (${eligibleStudents.length})</div>
               <div class="cpanel-tab" data-target="tab-gradebook" style="padding:0.75rem 0; cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--clr-text-muted); border-bottom:2px solid transparent; margin-bottom:-1px;">Gradebook</div>
             </div>
           </div>
@@ -1210,7 +1906,48 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
             
             <!-- Students Tab -->
             <div id="tab-students" class="cpanel-content-area" style="display:none;">
-              <div class="empty-state"><div style="font-size:2rem;margin-bottom:1rem;">🧑‍🎓</div><p>Student list will appear here.</p></div>
+              ${eligibleStudents.length === 0 ? `
+                <div class="empty-state"><div style="font-size:2rem;margin-bottom:1rem;">🧑‍🎓</div><p>No students currently eligible for this class.</p></div>
+              ` : `
+                <div style="background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:8px;overflow:hidden;">
+                  <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--clr-border);font-weight:700;font-size:0.85rem;color:var(--clr-text-1);display:flex;justify-content:space-between;align-items:center;">
+                    <span>Eligible Students</span>
+                    <span class="badge badge-success" style="font-size:0.75rem;">${eligibleStudents.length} Students</span>
+                  </div>
+                  <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                    <thead>
+                      <tr style="border-bottom:1px solid var(--clr-border);background:rgba(255,255,255,0.02);color:var(--clr-text-muted);font-size:0.72rem;text-transform:uppercase;">
+                        <th style="padding:0.6rem 1rem;text-align:left;">Institution</th>
+                        <th style="padding:0.6rem 1rem;text-align:left;">Program</th>
+                        <th style="padding:0.6rem 1rem;text-align:left;">Batch</th>
+                        <th style="padding:0.6rem 1rem;text-align:center;">Level</th>
+                        <th style="padding:0.6rem 1.25rem;text-align:left;">Student Name</th>
+                        <th style="padding:0.6rem 1rem;text-align:center;">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${eligibleStudents.map(s => {
+                        const b = s.batch_id ? batchMap.get(s.batch_id) : null;
+                        const sInst = s.institutions?.name || (s.institution_id ? instLookup[s.institution_id] : '') || s.programs?.institutions?.name || instName;
+                        const sProg = s.programs?.name || (s.program_id === cls.program_id ? progName : '—');
+                        const sLvl = s.level_id ? (levelLookup[s.level_id] || '—') : (b?.current_level_id ? (levelLookup[b.current_level_id] || '—') : '—');
+                        return `
+                          <tr style="border-bottom:1px solid var(--clr-border);">
+                            <td style="padding:0.65rem 1rem;color:var(--clr-text-muted);">${escapeHtml(sInst)}</td>
+                            <td style="padding:0.65rem 1rem;color:var(--clr-text-muted);">${escapeHtml(sProg)}</td>
+                            <td style="padding:0.65rem 1rem;color:var(--clr-text-muted);">${b ? escapeHtml(b.name) : '—'}</td>
+                            <td style="padding:0.65rem 1rem;text-align:center;"><span class="badge badge-neutral" style="font-size:0.7rem;">${escapeHtml(sLvl)}</span></td>
+                            <td style="padding:0.65rem 1.25rem;font-weight:600;color:var(--clr-text);">${escapeHtml(s.name)}</td>
+                            <td style="padding:0.65rem 1rem;text-align:center;">
+                              <span class="badge ${s.is_active !== false ? 'badge-success' : 'badge-neutral'}" style="font-size:0.7rem;">${s.is_active !== false ? 'Active' : 'Inactive'}</span>
+                            </td>
+                          </tr>
+                        `;
+                      }).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              `}
             </div>
             
             <!-- Gradebook Tab -->
@@ -1275,7 +2012,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.7.6');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=4.9.8');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -1623,7 +2360,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
         // 1. Fetch student record with relations
         const { data: student, error: stErr } = await sb
           .from('students')
-          .select('*, programs!program_id(id, name, institution_id), institutions!institution_id(id, name), batches!batch_id(id, name)')
+          .select('id, name, gender, birth_date, is_active, created_at, photo_url, photo_status, level_id, batch_id, program_id, institution_id, programs!program_id(id, name, institution_id), institutions!institution_id(id, name), batches!batch_id(id, name)')
           .eq('id', studentId)
           .single();
 
@@ -1634,7 +2371,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
         // 2. Fetch student\'s attempts with Assessments and attempt_answers
         const { data: rawAttempts, error: attErr } = await sb
           .from('attempts')
-          .select('*, assessments(id, title, assessment_type, classes(id, name)), attempt_answers(*)')
+          .select('id, assessment_id, score, percentage, grade, submitted_at, status, assessments(id, title, assessment_type, classes(id, name)), attempt_answers(id, question_order, evaluation_result, score, question_snapshot, student_answer, correct_answer_snapshot)')
           .eq('student_id', studentId)
           .in('status', ['submitted', 'auto_submitted'])
           .order('submitted_at', { ascending: false });
@@ -1697,7 +2434,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
 
         // Student metadata
         const displayName = formatStudentName(student.name, student.gender);
-        const initial = (student.name || 'S').trim().charAt(0).toUpperCase();
+        const initial = getStudentInitial(student.name);
         const ageDisplay = calculateAgeFromBirthDate(student.birth_date);
         const batchName = student.batches?.name || 'Unassigned Batch';
         const programName = student.programs?.name || '&mdash;';
@@ -2053,7 +2790,7 @@ import { openStudentFullEdit } from './student-management.js?v=4.7.6';
               btn.innerHTML = '<span class="spinner" style="width:12px;height:12px;margin-right:6px;border-width:2px;border-top-color:#fff;"></span> Authorizing...';
               
               if (typeof window.adminUnlockRemedialExam !== 'function') {
-                const api = await import('../api.js?v=4.7.6');
+                const api = await import('../api.js?v=4.9.8');
                 await api.adminUnlockRemedialExam(attId);
               } else {
                 await window.adminUnlockRemedialExam(attId);
@@ -2092,23 +2829,222 @@ window._editRecord = async (section, id, jsonStr) => {
   await openCrudModal(section, record);
 };
 
-let _deleteSection, _deleteId;
-window._deleteRecord = (section, id, name) => {
+let _deleteSection = null;
+let _deleteId = null;
+let _cascadeStudentIds = [];
+let _cascadeBatchIds = [];
+let _cascadeProgramIds = [];
+
+window._deleteRecord = async (section, id, name) => {
   _deleteSection = section || window._currentSection || 'batches';
   _deleteId = id;
-  document.getElementById('delete-modal-message').textContent = `Soft-delete "${name}"? Historical data is preserved.`;
-  document.getElementById('delete-modal').classList.remove('hidden');
+  _cascadeStudentIds = [];
+  _cascadeBatchIds = [];
+  _cascadeProgramIds = [];
+
+  const modal = document.getElementById('delete-modal');
+  const msgEl = document.getElementById('delete-modal-message');
+  const titleEl = document.getElementById('delete-modal-title');
+  const confirmBtn = document.getElementById('delete-confirm-btn');
+
+  if (!modal || !msgEl) return;
+
+  titleEl.textContent = `Delete ${(_deleteSection || 'Record').replace(/s$/, '').replace(/^\w/, c => c.toUpperCase())}?`;
+  confirmBtn.textContent = 'Delete';
+  confirmBtn.disabled = false;
+  confirmBtn.className = 'btn btn-danger';
+
+  // Check dependencies for batches, programs, and institutions
+  if (_deleteSection === 'batches') {
+    msgEl.innerHTML = `<span class="loader"></span> Checking enrolled students...`;
+    modal.classList.remove('hidden');
+
+    try {
+      const sb = await getSupabase();
+      const { data: students } = await sb.from('students')
+        .select('id, name')
+        .eq('batch_id', id)
+        .is('deleted_at', null);
+
+      if (students && students.length > 0) {
+        _cascadeStudentIds = students.map(s => s.id);
+        titleEl.textContent = `Delete Batch "${escapeHtml(name)}"?`;
+        msgEl.innerHTML = `
+          <div style="text-align:left; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="font-weight:700; color:#ef4444; font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Data Alert</div>
+            <div style="font-size:0.85rem; color:var(--clr-text-1); margin-bottom:6px;">
+              This Batch currently has <strong>${students.length} enrolled student(s)</strong>.
+            </div>
+            <div style="font-size:0.8rem; color:var(--clr-text-2); line-height:1.4;">
+              To prevent loose/orphaned data, deleting this batch will cascade soft-delete all <strong>${students.length} student(s)</strong>. All historical attempt logs and grades are preserved in the database.
+            </div>
+          </div>
+          <p class="text-xs text-muted" style="margin:0;">Are you sure you want to proceed with cascade deletion?</p>
+        `;
+        confirmBtn.textContent = `Delete Batch & ${students.length} Student(s)`;
+        return;
+      }
+    } catch (e) {
+      console.warn('Error checking batch students:', e);
+    }
+  } else if (_deleteSection === 'programs') {
+    msgEl.innerHTML = `<span class="loader"></span> Checking program connections...`;
+    modal.classList.remove('hidden');
+
+    try {
+      const sb = await getSupabase();
+      const { data: batches } = await sb.from('batches')
+        .select('id, name')
+        .eq('program_id', id)
+        .is('deleted_at', null);
+
+      const bIds = (batches || []).map(b => b.id);
+      _cascadeBatchIds = bIds;
+
+      let filterStr = `program_id.eq.${id}`;
+      if (bIds.length > 0) filterStr += `,batch_id.in.(${bIds.join(',')})`;
+
+      const { data: students } = await sb.from('students')
+        .select('id, name')
+        .or(filterStr)
+        .is('deleted_at', null);
+
+      const studentCount = students ? students.length : 0;
+      if (students) _cascadeStudentIds = students.map(s => s.id);
+
+      if (bIds.length > 0 || studentCount > 0) {
+        titleEl.textContent = `Delete Program "${escapeHtml(name)}"?`;
+        msgEl.innerHTML = `
+          <div style="text-align:left; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="font-weight:700; color:#ef4444; font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Data Alert</div>
+            <div style="font-size:0.85rem; color:var(--clr-text-1); margin-bottom:6px;">
+              This Program contains <strong>${bIds.length} batch(es)</strong> and <strong>${studentCount} student(s)</strong>.
+            </div>
+            <div style="font-size:0.8rem; color:var(--clr-text-2); line-height:1.4;">
+              Deleting this program will cascade soft-delete all <strong>${bIds.length} batch(es)</strong> and <strong>${studentCount} student(s)</strong> so no loose or disconnected records remain.
+            </div>
+          </div>
+          <p class="text-xs text-muted" style="margin:0;">Are you sure you want to proceed with cascade deletion?</p>
+        `;
+        confirmBtn.textContent = `Delete Program & Everything In It`;
+        return;
+      }
+    } catch (e) {
+      console.warn('Error checking program dependencies:', e);
+    }
+  } else if (_deleteSection === 'institutions') {
+    msgEl.innerHTML = `<span class="loader"></span> Checking institution connections...`;
+    modal.classList.remove('hidden');
+
+    try {
+      const sb = await getSupabase();
+      const { data: progs } = await sb.from('programs')
+        .select('id, name')
+        .eq('institution_id', id)
+        .is('deleted_at', null);
+
+      const pIds = (progs || []).map(p => p.id);
+      _cascadeProgramIds = pIds;
+
+      let bIds = [];
+      if (pIds.length > 0) {
+        const { data: batches } = await sb.from('batches')
+          .select('id, name')
+          .in('program_id', pIds)
+          .is('deleted_at', null);
+        bIds = (batches || []).map(b => b.id);
+      }
+      _cascadeBatchIds = bIds;
+
+      let filterStr = `institution_id.eq.${id}`;
+      if (pIds.length > 0) filterStr += `,program_id.in.(${pIds.join(',')})`;
+      if (bIds.length > 0) filterStr += `,batch_id.in.(${bIds.join(',')})`;
+
+      const { data: students } = await sb.from('students')
+        .select('id, name')
+        .or(filterStr)
+        .is('deleted_at', null);
+
+      const studentCount = students ? students.length : 0;
+      if (students) _cascadeStudentIds = students.map(s => s.id);
+
+      if (pIds.length > 0 || bIds.length > 0 || studentCount > 0) {
+        titleEl.textContent = `Delete Institution "${escapeHtml(name)}"?`;
+        msgEl.innerHTML = `
+          <div style="text-align:left; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="font-weight:700; color:#ef4444; font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Hierarchy Alert</div>
+            <div style="font-size:0.85rem; color:var(--clr-text-1); margin-bottom:6px;">
+              This Institution contains <strong>${pIds.length} program(s)</strong>, <strong>${bIds.length} batch(es)</strong>, and <strong>${studentCount} student(s)</strong>.
+            </div>
+            <div style="font-size:0.8rem; color:var(--clr-text-2); line-height:1.4;">
+              Deleting this institution will cascade soft-delete all connected programs, batches, and students. No loose data will remain.
+            </div>
+          </div>
+          <p class="text-xs text-muted" style="margin:0;">Are you sure you want to proceed?</p>
+        `;
+        confirmBtn.textContent = `Delete Institution & All Connected Data`;
+        return;
+      }
+    } catch (e) {
+      console.warn('Error checking institution dependencies:', e);
+    }
+  }
+
+  // Default simple soft delete message
+  msgEl.textContent = `Soft-delete "${name}"? Historical data is preserved.`;
+  modal.classList.remove('hidden');
 };
 
 document.getElementById('delete-confirm-btn').addEventListener('click', async () => {
-  if (!_deleteSection || !_deleteId) return; // Prevent duplicate/empty listener execution
+  if (!_deleteSection || !_deleteId) return;
+  const btn = document.getElementById('delete-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting...';
+
   try {
+    // 1. Cascade soft-delete students
+    if (_cascadeStudentIds && _cascadeStudentIds.length > 0) {
+      for (const sid of _cascadeStudentIds) {
+        await adminSoftDelete('students', sid);
+      }
+    }
+
+    // 2. Cascade soft-delete batches
+    if (_cascadeBatchIds && _cascadeBatchIds.length > 0) {
+      for (const bid of _cascadeBatchIds) {
+        await adminSoftDelete('batches', bid);
+      }
+    }
+
+    // 3. Cascade soft-delete programs
+    if (_cascadeProgramIds && _cascadeProgramIds.length > 0) {
+      for (const pid of _cascadeProgramIds) {
+        await adminSoftDelete('programs', pid);
+      }
+    }
+
+    // 4. Soft-delete primary record
     await adminSoftDelete(_deleteSection, _deleteId);
-    showToast('Record deleted.', 'success');
+
+    // Clear caches
+    clearAdminCache('students');
+    clearAdminCache('batches');
+    clearAdminCache('programs');
+    clearAdminCache('institutions');
+
+    showToast('Record and connected data safely deleted.', 'success');
     document.getElementById('delete-modal').classList.add('hidden');
     if (window._currentSection) loadSection(window._currentSection);
-    _deleteSection = null; _deleteId = null; // Clear state
-  } catch(e) { showToast(e.message, 'error'); }
+  } catch(e) {
+    showToast(e.message, 'error');
+  } finally {
+    _deleteSection = null;
+    _deleteId = null;
+    _cascadeStudentIds = [];
+    _cascadeBatchIds = [];
+    _cascadeProgramIds = [];
+    btn.disabled = false;
+  }
 });
 
 // Modal close handlers
@@ -2116,7 +3052,6 @@ document.getElementById('delete-confirm-btn').addEventListener('click', async ()
 ['delete-cancel-btn'].forEach(id => document.getElementById(id)?.addEventListener('click', () => document.getElementById('delete-modal')?.classList.add('hidden')));
 
 window.openCrudModal = openCrudModal;
-window.openStudentFullEdit = openStudentFullEdit;
 window.openDuplicateStudentsModal = openDuplicateStudentsModal;
 window.openDuplicateQuestionsModal = openDuplicateQuestionsModal;
 window.loadSection = loadSection;

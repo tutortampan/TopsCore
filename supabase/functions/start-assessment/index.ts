@@ -208,9 +208,28 @@ Deno.serve(async (req) => {
         .eq("attempt_id", existing.id)
         .order("created_at");
 
+      const sanitizedResumedAnswers = (rawAnswers || []).map((a: any) => {
+        const snap = typeof a.question_snapshot === "string"
+          ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })()
+          : (a.question_snapshot ? { ...a.question_snapshot } : {});
+        delete snap.correct_answer;
+        delete snap.accepted_answers;
+        delete snap.accepted_answers_snapshot;
+        delete snap.correct_answer_snapshot;
+        return {
+          id: a.id,
+          question_id: a.question_id,
+          question_snapshot: snap,
+          topic_snapshot: a.topic_snapshot,
+          question_type_snapshot: a.question_type_snapshot,
+          student_answer: a.student_answer,
+          score: a.score
+        };
+      });
+
       return new Response(JSON.stringify({
         attempt: existing,
-        answers: rawAnswers || [],
+        answers: sanitizedResumedAnswers,
         resumed: true,
         assessment: {
           id: assessment.id,
@@ -419,6 +438,7 @@ Deno.serve(async (req) => {
              
              return {
                  question_id: null,
+                 item_code: vw.item_code || null,
                  question_text_snapshot: vw.indonesian || "N/A",
                  accepted_answers_snapshot: accepted,
                  options_snapshot: options ? options : null, // Not JSON stringified to match expected array structure
@@ -511,6 +531,7 @@ Deno.serve(async (req) => {
       attempt_id: newAttempt.id,
       question_id: sq.question_id || null,
       question_snapshot: {
+        item_code: sq.item_code || null,
         question_text: sq.question_text_snapshot,
         word_type: sq.word_type_snapshot,
         topic: sq.topic_snapshot,
@@ -544,9 +565,28 @@ Deno.serve(async (req) => {
     }
 
     // Return to client WITHOUT exposing accepted_answers_snapshot
+    const sanitizedNewAnswers = (insertedAnswers || []).map((a: any) => {
+      const snap = typeof a.question_snapshot === "string"
+        ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })()
+        : (a.question_snapshot ? { ...a.question_snapshot } : {});
+      delete snap.correct_answer;
+      delete snap.accepted_answers;
+      delete snap.accepted_answers_snapshot;
+      delete snap.correct_answer_snapshot;
+      return {
+        id: a.id,
+        question_id: a.question_id,
+        question_snapshot: snap,
+        topic_snapshot: a.topic_snapshot,
+        question_type_snapshot: a.question_type_snapshot,
+        student_answer: a.student_answer,
+        score: a.score
+      };
+    });
+
     return new Response(JSON.stringify({
       attempt: newAttempt,
-      answers: insertedAnswers || [],
+      answers: sanitizedNewAnswers,
       resumed: false,
       assessment: {
         id: assessment.id,

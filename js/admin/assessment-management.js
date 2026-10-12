@@ -1,9 +1,9 @@
-import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '../api.js?v=4.7.6';
-import { openAssessmentBuilder } from './assessment-builder.js?v=4.7.6';
-import { openAssessmentBuilderModal as openVocabWizard } from './vocab-vault.js?v=4.7.6';
-import { showToast, showLoading, hideLoading } from '../app.js?v=4.7.6';
-import { getSupabase } from '../supabase.js?v=4.7.6';
-import { DataGrid } from './datagrid.js?v=4.7.6';
+import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '../api.js?v=4.9.8';
+import { openAssessmentBuilder } from './assessment-builder.js?v=4.9.8';
+import { openAssessmentBuilderModal as openVocabWizard } from './vocab-vault.js?v=4.9.8';
+import { showToast, showLoading, hideLoading } from '../app.js?v=4.9.8';
+import { getSupabase } from '../supabase.js?v=4.9.8';
+import { DataGrid } from './datagrid.js?v=4.9.8';
 if (typeof window !== 'undefined') window.DataGrid = DataGrid;
 
 let AssessmentsGrid;
@@ -69,52 +69,48 @@ export async function renderAssessments(area) {
   const draftCount = liveData.filter(e => !e.status || ['draft', 'unpublished'].includes(_norm(e.status))).length;
   const totalQuestions = allQuestions.length;
 
+  window._assessmentFilterTab = window._assessmentFilterTab || 'all';
+
   area.innerHTML = `
-    <div class="assessment-hero">
-      <div class="d-flex align-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 class="section-title text-gradient" style="font-size:1.75rem;">Central Exam Operations</h2>
-          <p class="section-subtitle">Manage Try-Outs, Placement Tests, Exit Certifications, and Global Operations</p>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-          <button class="btn btn-primary btn-sm" onclick="window.openAssessmentGatewayModal()" id="hub-add-Assessment-wizard">+ Create Assessment</button>
-          <button class="btn btn-secondary btn-sm" id="hub-btn-assignments" onclick="window.loadSection('class-assignments')">&#128101; Cohorts &amp; Assignments</button>
-          <button class="btn btn-secondary btn-sm" id="hub-btn-results" onclick="window.loadSection('results')">&#128202; Results</button>
-          <button class="btn btn-warning btn-sm" id="hub-btn-recalibrate" onclick="window.loadSection('recalibrator')" style="font-weight:700;">&#9889; Recalibrate</button>
-          <button class="btn btn-secondary btn-sm" onclick="window.loadSection('import-questions')">&#128229; Import Questions</button>
-          <button class="btn btn-secondary btn-sm" onclick="window.loadSection('export-questions')">&#128228; Export Questions</button>
-          <button class="btn btn-secondary btn-sm" onclick="window.loadSection('vocab_vault')">&#128214; Vocab Vault</button>
-          <button class="btn btn-sm" id="hub-btn-open-session" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);font-weight:700;" title="Open a live QUIZ/EXAM session for a class">&#128275; Open Session</button>
+    <div>
+      ${window.buildSectionTabBar ? window.buildSectionTabBar({
+        tabs: [
+          { id: 'all', icon: '📋', val: totalAssessments, label: 'Total Assessments' },
+          { id: 'published', icon: '🟢', val: publishedCount, label: 'Published Assessments', valColor: 'var(--clr-success, #4ade80)' },
+          { id: 'draft', icon: '🔧', val: draftCount, label: 'Draft / Inactive', valColor: 'var(--clr-warning, #fbbf24)' },
+          { id: 'questions', icon: '❓', val: totalQuestions, label: 'Questions in Bank', valColor: 'var(--clr-accent-1)' }
+        ],
+        activeId: window._assessmentFilterTab,
+        onSelect: 'window._switchAssessmentFilterTab'
+      }) : ''}
+
+      <div class="card" style="padding: 0.75rem 1rem; background: var(--clr-surface); margin: 0 0 0.75rem 0;">
+        <div class="d-flex align-center justify-between flex-wrap gap-2">
+          <div>
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700;">📝 Central Exam Operations</h3>
+            <p class="text-xs text-muted" style="margin: 2px 0 0 0;">Manage Try-Outs, Placement Tests, Exit Certifications, and Global Operations</p>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-primary btn-sm" onclick="window.openCrudModal('assessments', null)" id="hub-add-Assessment-wizard">+ Create Assessment</button>
+            <button class="btn btn-secondary btn-sm" id="hub-btn-assignments" onclick="window.loadSection('class-assignments')">&#128101; Cohorts &amp; Assignments</button>
+            <button class="btn btn-secondary btn-sm" id="hub-btn-results" onclick="window.loadSection('results')">&#128202; Results</button>
+            <button class="btn btn-warning btn-sm" id="hub-btn-recalibrate" onclick="window.loadSection('recalibrator')" style="font-weight:700;">&#9889; Recalibrate</button>
+            <button class="btn btn-secondary btn-sm" onclick="window.loadSection('import-questions')">&#128229; Import Questions</button>
+            <button class="btn btn-secondary btn-sm" onclick="window.loadSection('export-questions')">&#128228; Export Questions</button>
+            <button class="btn btn-secondary btn-sm" onclick="window.loadSection('vocab_vault')">&#128214; Vocab Vault</button>
+            <button class="btn btn-sm" id="hub-btn-open-session" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);font-weight:700;" title="Open a live QUIZ/EXAM session for a class">&#128275; Open Session</button>
+          </div>
         </div>
       </div>
-
-      <div class="kpi-grid mt-4">
-        <div class="kpi-card">
-          <div class="kpi-icon">&#128203;</div>
-          <div><div class="kpi-val">${totalAssessments}</div><div class="kpi-lbl">Total Assessments</div></div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-icon" style="color:var(--clr-success,#4ade80);">&#128994;</div>
-          <div><div class="kpi-val" style="color:var(--clr-success,#4ade80);">${publishedCount}</div><div class="kpi-lbl">Published Assessments</div></div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-icon" style="color:var(--clr-warning,#fbbf24);">&#128679;</div>
-          <div><div class="kpi-val" style="color:var(--clr-warning,#fbbf24);">${draftCount}</div><div class="kpi-lbl">Draft / Inactive</div></div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-icon" style="color:var(--clr-accent-1);">&#10067;</div>
-          <div><div class="kpi-val">${totalQuestions}</div><div class="kpi-lbl">Questions in Bank</div></div>
-        </div>
+      
+      <div class="d-flex gap-2 mb-3 flex-wrap" id="assessment-filters">
+        <button class="btn btn-sm btn-primary filter-btn active" data-filter="all">All Assessments (${totalAssessments})</button>
+        <button class="btn btn-sm btn-secondary filter-btn" data-filter="core">Core Curriculum (${liveData.filter(e => !e.assessment_category || ['TASK', 'TEST', 'DAILY'].includes(String(e.assessment_category).toUpperCase()) && !e.payload?.is_standalone_tryout).length})</button>
+        <button class="btn btn-sm btn-secondary filter-btn" data-filter="standalone">Standalone & Try-Outs (${liveData.filter(e => ['TRYOUT', 'PLACEMENT', 'EXIT'].includes(String(e.assessment_category).toUpperCase()) || e.payload?.is_standalone_tryout).length})</button>
       </div>
-    </div>
-    
-    <div class="d-flex gap-2 mt-4 flex-wrap" id="assessment-filters">
-      <button class="btn btn-sm btn-primary filter-btn active" data-filter="all">All Assessments (${totalAssessments})</button>
-      <button class="btn btn-sm btn-secondary filter-btn" data-filter="core">Core Curriculum (${liveData.filter(e => !e.assessment_category || ['TASK', 'TEST', 'DAILY'].includes(String(e.assessment_category).toUpperCase()) && !e.payload?.is_standalone_tryout).length})</button>
-      <button class="btn btn-sm btn-secondary filter-btn" data-filter="standalone">Standalone & Try-Outs (${liveData.filter(e => ['TRYOUT', 'PLACEMENT', 'EXIT'].includes(String(e.assessment_category).toUpperCase()) || e.payload?.is_standalone_tryout).length})</button>
-    </div>
 
-    <div id="Assessments-grid-container" class="card mt-4" style="padding:1rem;"></div>
+      <div id="Assessments-grid-container" class="card" style="padding:1rem;"></div>
+    </div>
   `;
 
 
@@ -142,16 +138,20 @@ export async function renderAssessments(area) {
     }).length;
   };
 
+  window._aRecords = {};
+  liveData.forEach(r => window._aRecords[r.id] = r);
+
   const gridData = liveData.map(r => {
     const qCount = (allQuestions || []).filter(q => q?.assessment_id === r?.id).length;
     // Assessments table uses program_id; map to program name
     const programName = (r?.program_id && classMap[r.program_id]?.name) ? classMap[r.program_id].name : 'All Programs';
-    const prereqAssessment = (r?.prerequisite_assessment_id && AssessmentMap[r.prerequisite_assessment_id]) ? AssessmentMap[r.prerequisite_assessment_id] : null;
+    const prereqId = r?.prerequisite_assessment_id || r?.prerequisite_id;
+    const prereqAssessment = (prereqId && AssessmentMap[prereqId]) ? AssessmentMap[prereqId] : null;
     const boardName = (r?.class_id && boardClassMap[r.class_id]?.name) || r?.classes?.name || '—';
     const lvlObj = (r?.level_id && levelMap[r.level_id]) || r?.levels;
     const lvlNum = lvlObj?.level_number || 1;
     const levelDisplay = window.toLevelLetter ? window.toLevelLetter(lvlNum) : lvlNum;
-    const prereqTitle = prereqAssessment?.title || prereqAssessment?.name || r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
+    const prereqTitle = prereqAssessment?.shell_code || prereqAssessment?.title || prereqAssessment?.name || r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
     // Assessments table: title, status, assessment_type, answer_type, time_limit_minutes, minimum_required_score
     const title = r?.title || r?.display_name || r?.name || 'Untitled';
     const status = r?.status || r?.assessment_type || 'draft';
@@ -189,6 +189,7 @@ export async function renderAssessments(area) {
       qCount: _isDyn ? _vaultQ : qCount,
       qIsVault: _isDyn,
       status,
+      shellCode: r?.shell_code || '',
       _raw: r || {}
     };
   });
@@ -226,6 +227,19 @@ export async function renderAssessments(area) {
             window.loadSection('assessments');
           } catch (e) {
             if (window.showToast) window.showToast('Error unpublishing: ' + e.message, 'error');
+          }
+        }
+      },
+      {
+        label: 'Delete Selected',
+        onClick: async (ids) => {
+          if (!confirm(`Are you sure you want to PERMANENTLY delete ${ids.length} selected assessments?`)) return;
+          try {
+            for (const id of ids) await adminSoftDelete('assessments', id);
+            if (window.showToast) window.showToast(`Deleted ${ids.length} assessments`, 'success');
+            window.loadSection('assessments');
+          } catch (e) {
+            if (window.showToast) window.showToast('Error deleting: ' + e.message, 'error');
           }
         }
       }
@@ -284,65 +298,20 @@ export async function renderAssessments(area) {
       if (window.openRecordDrawer) window.openRecordDrawer('Assessment Details', body, footer);
     },
     columns: [
-      {
-        key: 'order',
-        label: 'ORD',
-        sortable: true,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : {};
-          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${r?.order || '-'}</div>`;
-        }
-      },
       { 
         key: 'title', 
         label: 'TITLE', 
         sortable: true,
+        width: '32%',
         render: (val, row) => {
           const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
           const title = (typeof val === 'string' ? val : r?.title) || 'Untitled Assessment';
-          return `<div class="fw-700" style="color:var(--clr-text-1); font-size:0.85rem; white-space:normal; min-width:250px;" title="${escapeHtml(title)}">${escapeHtml(title)}</div>`;
-        }
-      },
-      {
-        key: 'programName',
-        label: 'PROGRAM',
-        sortable: true,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : {};
-          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(r?.programName || '-')}</div>`;
-        }
-      },
-      {
-        key: 'classBoard',
-        label: 'CLASS',
-        sortable: true,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : {};
-          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(r?.classBoard || '-')}</div>`;
-        }
-      },
-      {
-        key: 'level',
-        label: 'LEVEL',
-        sortable: true,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : {};
-          return `<div style="font-size:0.75rem; color:var(--clr-primary); font-weight:600; white-space:nowrap;">${r?.level ? 'LVL ' + r.level : '-'}</div>`;
-        }
-      },
-      { 
-        key: 'prereq', 
-        label: 'PREREQUISITE', 
-        sortable: true,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
-          const prereqDisplay = r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
-          if (!prereqDisplay) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
-          return `
-            <div class="fw-500 text-muted" style="font-size:0.75rem; min-width: 200px; white-space: normal;" title="${escapeHtml(prereqDisplay)}">
-              <span style="color: var(--clr-warning); margin-right: 2px;">⚠️</span>${escapeHtml(prereqDisplay)}
-            </div>
-          `;
+          let displayTitle = escapeHtml(title);
+          // Highlight Task in Yellow, Test in Pink for immediate visual clarity
+          displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: #facc15;">$1</span>');
+          displayTitle = displayTitle.replace(/\b(Test)\b/gi, '<span style="color: #f472b6;">$1</span>');
+          
+          return `<div class="fw-700" style="color:var(--clr-text-1); font-size:0.85rem; line-height:1.35; word-break:break-word;" title="${escapeHtml(title)}">${displayTitle}</div>`;
         }
       },
       {
@@ -351,26 +320,11 @@ export async function renderAssessments(area) {
         sortable: true,
         render: (val, row) => {
           const r = (row && typeof row === 'object') ? row : {};
-          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(r?.AssessmentCategory || 'Daily')}</div>`;
-        }
-      },
-      { 
-        key: 'answerType', 
-        label: 'ANSWER', 
-        sortable: true,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
-          const ansType = (typeof val === 'string' ? val : r?.answerType) || 'Multiple Choice';
-          return `<div class="fw-600 text-info" style="font-size:0.75rem; white-space:nowrap;">${escapeHtml(ansType)}</div>`;
-        }
-      },
-      {
-        key: 'questionOrder',
-        label: 'ACCESS',
-        sortable: true,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : {};
-          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${r?.questionOrder === 'Random' ? '&#128256; Rand' : '&rarr; Seq'}</div>`;
+          let typeStr = escapeHtml(r?.AssessmentCategory || 'Daily');
+          // Highlight TASK and TEST in the TYPE column as well
+          typeStr = typeStr.replace(/(TASK)/ig, '<span style="color: #facc15; font-weight: 800;">$1</span>');
+          typeStr = typeStr.replace(/(TEST)/ig, '<span style="color: #f472b6; font-weight: 800;">$1</span>');
+          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${typeStr}</div>`;
         }
       },
       {
@@ -423,12 +377,12 @@ export async function renderAssessments(area) {
             <div class="d-flex gap-1 justify-end align-center">
               <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterAssessmentResults='${id}'; window.loadSection('results');">&#128202;</button>
               <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateAssessment='${id}'; window.loadSection('recalibrator');">&#9878;&#65039;</button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateAssessment('${id}')" title="Duplicate">Copy</button>
+              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateAssessment('${id}')" title="Duplicate">📄</button>
               <button class="btn ${String(r?.status).toLowerCase() === 'published' ? 'btn-danger' : 'btn-success'}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishAssessment('${id}', '${r?.status || 'draft'}')">
-                ${String(r?.status).toLowerCase() === 'published' ? 'Unpub' : 'Pub'}
+                ${String(r?.status).toLowerCase() === 'published' ? '👁️‍🗨️' : '👁️'}
               </button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openAssessmentBuilder('${id}')">Edit</button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; color: var(--clr-accent-1);" onclick="window._deleteRecord('Assessments', '${id}', '${escapeHtml(r?.title || '')}')">Del</button>
+              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openCrudModal('assessments', window._aRecords['${id}'])">✏️</button>
+              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; background-color: var(--clr-accent-1); color: white;" onclick="window._deleteRecord('assessments', '${id}', '${escapeHtml(r?.title || '')}')">🗑️</button>
             </div>
           `;
         }
@@ -452,6 +406,24 @@ export async function renderAssessments(area) {
       }
     });
   }
+
+  window._switchAssessmentFilterTab = (tabId) => {
+    window._assessmentFilterTab = tabId;
+    if (tabId === 'questions') {
+      window.loadSection('questions');
+      return;
+    }
+    document.querySelectorAll('.section-tab-bar .section-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tabId === tabId);
+    });
+    if (tabId === 'all') {
+      AssessmentsGrid.updateData(gridData);
+    } else if (tabId === 'published') {
+      AssessmentsGrid.updateData(gridData.filter(e => String(e.status).toLowerCase() === 'published'));
+    } else if (tabId === 'draft') {
+      AssessmentsGrid.updateData(gridData.filter(e => !e.status || ['draft', 'unpublished'].includes(String(e.status).toLowerCase())));
+    }
+  };
 }
 
 // Helpers
@@ -462,9 +434,11 @@ function escapeHtml(unsafe) {
 
 function formatAnswerType(type) {
   switch(type) {
-    case 'speech_to_text': return '\uD83C\uDF99\uFE0F Speech';
-    case 'dropdown': return '\uD83D\uDD3D Drop-down';
-    case 'multiple_choice': return '\uD83D\uDD18 Mult Choice';
+    case 'speech_to_text':
+    case 'spoken': return '🎙️ Spoken';
+    
+    case 'multiple_choice':
+    case 'selection': return '✅ Selection';
     case 'written': return '\u270F\uFE0F Written';
     default: return String(type);
   }
@@ -487,11 +461,16 @@ window._duplicateAssessment = async (AssessmentId) => {
     const sb = await getSupabase();
     
     // 1. Fetch original Assessment
-    const { data: rec, error: recErr } = await sb.from('Assessments').select('*').eq('id', AssessmentId).single();
+    const { data: rec, error: recErr } = await sb.from('assessments')
+      .select('title, display_name, assessment_type, module_id, class_id, level_id, institution_id, working_duration_minutes, passing_score, instructions, status, settings, total_questions, dynamic_template, remedial_instructions, prerequisite_modules, unlock_conditions')
+      .eq('id', AssessmentId)
+      .single();
     if (recErr) throw new Error(recErr.message);
 
     // 2. Fetch original questions
-    const { data: questions, error: qErr } = await sb.from('questions').select('*').eq('assessment_id', AssessmentId);
+    const { data: questions, error: qErr } = await sb.from('questions')
+      .select('topic_id, question_text, question_type, points, correct_answer, accepted_answers, options, explanation, media_url, order_index, difficulty, metadata')
+      .eq('assessment_id', AssessmentId);
     if (qErr) throw new Error(qErr.message);
 
     // 3. Duplicate Assessment
@@ -635,8 +614,8 @@ export async function renderQuestions(area) {
         const r = row || (typeof val === 'object' ? val : {}) || {};
         return `
           <div class="d-flex gap-2 justify-end">
-            <button class="btn btn-secondary btn-sm" onclick="window.openCrudModal('questions', window._qRecords['${r.id}'])">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="window._deleteRecord('questions', '${r.id}', 'Question #${r.order || ''}')">Del</button>
+            <button class="btn btn-secondary btn-sm" onclick="window.openCrudModal('questions', window._qRecords['${r.id}'])">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="window._deleteRecord('questions', '${r.id}', 'Question #${r.order || ''}')">🗑️</button>
           </div>
         `;
       }}
@@ -786,7 +765,7 @@ export async function renderResults(area) {
  * Sets session_unlocked_at and session_expires_at on the Assessments record.
  */
 async function openSessionModal() {
-  const { getSupabase } = await import('../supabase.js?v=4.7.6');
+  const { getSupabase } = await import('../supabase.js?v=4.9.8');
   const sb = await getSupabase();
   const { data: assessments, error } = await sb
     .from('Assessments')

@@ -1,6 +1,10 @@
 export class DataGrid {
   constructor({ container, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false, sortComparator = null, initialSortKey = null, initialSortAsc = true }) {
     this.container = typeof container === 'string' ? document.getElementById(container) : container;
+    if (!this.container) {
+      console.warn('[DataGrid] Container element not found or not in DOM:', container);
+      return;
+    }
     this.rawData = data;
     this.filteredData = [...data];
     // Add default hidden property if not present
@@ -24,6 +28,7 @@ export class DataGrid {
   }
 
   init() {
+    if (!this.container) return;
     this.container.innerHTML = `
       <div class="datagrid-toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; gap:1rem; flex-wrap:wrap;">
         <div class="datagrid-search" style="flex:1; min-width:200px; display:flex; gap:0.5rem; align-items:center;">

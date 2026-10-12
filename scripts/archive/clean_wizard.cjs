@@ -1,0 +1,10 @@
+const fs = require('fs');
+let c = fs.readFileSync('js/admin/assessment-builder.js', 'utf8');
+c = c.replace(/<button class="builder-tab" data-tab="tab-assign"[\s\S]*?3\. Assignment\s*<\/button>/g, '');
+c = c.replace(/<div id="tab-assign" class="b-tab-content hidden">[\s\S]*?<!-- TAB 4: REVIEW & PUBLISH -->/g, '<!-- TAB 4: REVIEW & PUBLISH -->');
+c = c.replace(/Next: Set Assignment →/g, 'Next: Review & Publish →');
+c = c.replace(/← Back to Assignment/g, '← Back to Topic Coverage');
+c = c.replace(/3\. Assignment/, '');
+c = c.replace(/4\. Review &amp; Freeze/, '3. Review &amp; Freeze');
+fs.writeFileSync('js/admin/assessment-builder.js', c);
+console.log('Removed tab-assign HTML');

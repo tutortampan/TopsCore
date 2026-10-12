@@ -18,7 +18,7 @@ export async function renderModules(area) {
     { id: 'm6', name: 'Turn-based Roleplay', type: 'Realtime WebSockets', desc: 'Simulated real-world scenarios requiring immediate contextual responses.', status: 'Active', icon: '🎭', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nReal-world scenario simulation via WebSockets.' },
     { id: 'm7', name: 'Speaking Performance', type: '5 Pillars', desc: 'Comprehensive grading on Fluency, Pronunciation, Vocabulary, Grammar, and Comprehension.', status: 'Active', icon: '📊', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nEvaluate based on 5 Pillars: Fluency, Pronunciation, Vocabulary, Grammar, Comprehension.' },
     { id: 'm8', name: 'Vocabulary Mastery', type: 'Written/Oral', desc: 'Rigorous testing of target lexicon including spelling, meaning, and usage.', status: 'Active', icon: '🧠', directive: 'Direct English Only.\\nFor vocabulary-style written evaluation, normalize at minimum: leading/trailing whitespace, repeated spaces, case, unnecessary punctuation.\\nRequired result labels: Correct, Minor Spelling Error, Incorrect.\\nDefault tolerance: 0 errors -> 1pt, 1-2 errors -> 0.5pt, 3+ errors -> 0pt.' }
-  ];
+  ].sort((a, b) => a.name.localeCompare(b.name));
 
   area.innerHTML = `
     <div style="display: flex; flex-direction: column; height: calc(100vh - 100px); padding: 24px; box-sizing: border-box; overflow-y: auto;">
@@ -33,7 +33,7 @@ export async function renderModules(area) {
       
       <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
         ${modules.map(mod => `
-          <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s;" 
+          <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; height: 100%; min-height: 260px; transition: transform 0.2s, box-shadow 0.2s;" 
                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(0, 0, 0, 0.3)'" 
                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">

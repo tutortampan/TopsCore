@@ -279,9 +279,9 @@ Required result labels:
 - `Incorrect`
 
 Default tolerance:
-- 0 errors â†’ full point
-- 1â€“2 errors â†’ half point
-- 3+ errors â†’ zero
+- 0 errors → full point
+- 1â€“2 errors → half point
+- 3+ errors → zero
 
 The tolerance engine must be deterministic, tested, and server-authoritative.
 
@@ -1455,11 +1455,11 @@ Do not make camera permission failure equal to authentication failure. Provide a
 At minimum:
 
 ```text
-index.html            â†’ login
-admin.html             â†’ admin shell/dashboard entry
-Dashboard              â†’ student overview
-exam.html              â†’ attempt runner
-result.html            â†’ result detail
+index.html            → login
+admin.html             → admin shell/dashboard entry
+Dashboard              → student overview
+exam.html              → attempt runner
+result.html            → result detail
 ```
 
 Existing project files may be retained/adapted, but each page must have one clear responsibility.
@@ -1549,7 +1549,7 @@ Do not sacrifice exam usability for decorative UI.
 The AI agent MUST explicitly test for:
 
 1. IDOR / ownership bypass
-2. Student â†’ Admin privilege escalation
+2. Student → Admin privilege escalation
 3. Student accessing another student's result
 4. Client score manipulation
 5. Client timer manipulation
@@ -1635,30 +1635,30 @@ Minimum critical journeys:
 
 ```text
 login
- â†’ select subject
- â†’ view level
- â†’ start exam
- â†’ answer
- â†’ refresh
- â†’ resume
- â†’ submit
- â†’ result
- â†’ progress
+ → select subject
+ → view level
+ → start exam
+ → answer
+ → refresh
+ → resume
+ → submit
+ → result
+ → progress
 ```
 
 ### Admin
 
 ```text
 login
- â†’ create PROGRAM
- â†’ create student
- â†’ import students
- â†’ create exam
- â†’ assign exam to PROGRAM
- â†’ download question format
- â†’ upload questions
- â†’ validate/preview
- â†’ publish exam
+ → create PROGRAM
+ → create student
+ → import students
+ → create exam
+ → assign exam to PROGRAM
+ → download question format
+ → upload questions
+ → validate/preview
+ → publish exam
 ```
 
 ## 21.4 Regression principle

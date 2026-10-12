@@ -1,5 +1,5 @@
 /* ============================================================
-   TopsCore � Global Design System
+   TopsCore — Global Design System
    Dark mode, glassmorphism, micro-animations
    ============================================================ */
 
@@ -15,8 +15,8 @@
   --clr-bg-2: #121c35;
   --clr-bg-3: #1a2540;
 
-  --clr-surface: rgba(255, 255, 255, 0.035);
-  --clr-surface-hover: rgba(255, 255, 255, 0.06);
+  --clr-surface: #121c35;
+  --clr-surface-hover: #1a2540;
   --clr-border: rgba(255, 255, 255, 0.08);
   --clr-border-strong: rgba(255, 255, 255, 0.15);
 
@@ -24,7 +24,7 @@
   --clr-accent-1: #6366f1;   /* indigo */
   --clr-accent-2: #8b5cf6;   /* violet */
   --clr-accent-3: #06b6d4;   /* cyan */
-  --clr-primary: #6366f1;    /* alias for accent-1 � used by pill filters, progress bars, admin highlights */
+  --clr-primary: #6366f1;    /* alias for accent-1 — used by pill filters, progress bars, admin highlights */
   --grad-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
   --grad-glow: radial-gradient(ellipse at top, rgba(99,102,241,0.25) 0%, transparent 70%);
 
@@ -112,16 +112,9 @@ body {
   min-height: 100dvh;
 }
 
-/* Animated background mesh */
+/* Animated background mesh (Disabled for matte finish) */
 body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(6,182,212,0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(99,102,241,0.08) 0%, transparent 60%);
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 
 body > * { position: relative; z-index: 1; }
@@ -153,11 +146,9 @@ a:hover { color: var(--clr-accent-3); }
    ============================================================ */
 .glass-card {
   background: var(--clr-surface);
-  backdrop-filter: blur(16px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
   border: 1px solid var(--clr-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
   transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
 }
 
@@ -370,8 +361,7 @@ select.form-control { cursor: pointer; }
 
 .loading-overlay {
   position: fixed; inset: 0; z-index: var(--z-loading, 500);
-  background: rgba(6,11,24,0.85);
-  backdrop-filter: blur(8px);
+  background: rgba(6,11,24,0.95);
   display: flex; align-items: center; justify-content: center;
   flex-direction: column; gap: var(--space-4);
 }
@@ -396,7 +386,7 @@ select.form-control { cursor: pointer; }
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-md);
-  backdrop-filter: blur(20px);
+  background: var(--clr-bg-2);
   border: 1px solid var(--clr-border);
   box-shadow: var(--shadow-lg);
   min-width: 280px;
@@ -428,8 +418,7 @@ select.form-control { cursor: pointer; }
    ============================================================ */
 .modal-backdrop {
   position: fixed; inset: 0; z-index: var(--z-modal);
-  background: rgba(6,11,24,0.85);
-  backdrop-filter: blur(12px);
+  background: rgba(6,11,24,0.95);
   display: flex; align-items: center; justify-content: center;
   padding: var(--space-4);
   animation: fade-in 0.2s ease;
@@ -438,12 +427,10 @@ select.form-control { cursor: pointer; }
 .modal-backdrop.hidden { display: none; }
 
 .modal-box {
-  background: linear-gradient(135deg, rgba(2, 30, 51, 0.7), rgba(1, 18, 29, 0.85));
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--clr-bg-2);
+  border: 1px solid var(--clr-border);
   border-radius: var(--radius-xl);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.5), var(--shadow-glow);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
   padding: var(--space-6) var(--space-8);
   width: 100%;
   max-width: 720px;
@@ -555,23 +542,22 @@ textarea.form-control {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
 }
 
 thead th {
   padding: var(--space-4) var(--space-5);
   text-align: left;
-  font-size: 0.72rem;
+  font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--clr-text-1);
-  background: rgba(15, 23, 42, 0.95);
+  background: var(--clr-bg-3);
   border-bottom: 1px solid var(--clr-border-strong);
   position: sticky;
   top: 0;
   z-index: 10;
-  backdrop-filter: blur(8px);
 }
 
 tbody td {
@@ -579,7 +565,7 @@ tbody td {
   border-bottom: 1px solid rgba(255,255,255,0.03);
   color: var(--clr-text-2);
   vertical-align: middle;
-  font-size: 0.92rem;
+  font-size: 1.05rem;
 }
 
 tbody tr {
@@ -834,8 +820,8 @@ tbody tr:last-child td { border-bottom: none; }
    RESPONSIVE
    ============================================================ */
 @media (max-width: 768px) {
-  .container { padding-inline: var(--space-4); }
-  .modal-box { padding: var(--space-6); }
+  .container { padding-inline: var(--space-2); }
+  .modal-box { padding: var(--space-4); }
   #toast-container { right: var(--space-4); left: var(--space-4); }
   .toast { min-width: unset; max-width: 100%; }
 }
@@ -861,4 +847,84 @@ tbody tr:last-child td { border-bottom: none; }
 @keyframes fade-out {
   from { opacity: 1; transform: translateY(0); }
   to { opacity: 0; transform: translateY(-10px); }
+}
+
+
+/* Global Banner Padding */
+
+
+
+/* ============================================================
+   GLOBAL BANNER LAYOUT FIXES
+   Overrides fixed 100vh viewports to make room for the 50px fixed banner
+   ============================================================ */
+#admin-console.admin-layout,
+.admin-sidebar,
+.admin-main,
+.dashboard-page,
+.result-page {
+  height: calc(100vh - 50px) !important;
+  height: calc(100dvh - 50px) !important;
+}
+
+.login-page, .auth-page { min-height: calc(100vh - 50px) !important; min-height: calc(100dvh - 50px) !important; }
+/* TopsCore Banner */
+body {
+  padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.topscore-locked-banner {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  background-color: #000000 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #94a3b8 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  font-family: 'Outfit', sans-serif !important;
+  z-index: 99999 !important; /* Highest layer */
+  pointer-events: none !important;
+  box-sizing: border-box !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  transform: translateZ(0); /* Hardware accelerated */
+}
+
+/* Ensure assessment-page body doesn't conflict */
+body.assessment-page {
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+}
+
+
+
+
+/* Micro-animations */
+.btn, .mc-option, .select-option-card {
+  transition: transform 0.15s ease-out, background-color 0.15s ease-out, opacity 0.15s ease-out !important;
+}
+.btn:active, .select-option-card:active {
+  transform: scale(0.96) !important;
+}
+
+
+
+/* Micro-animations */
+.btn, .mc-option, .select-option-card {
+  transition: transform 0.15s ease-out, background-color 0.15s ease-out, opacity 0.15s ease-out !important;
+}
+.btn:active, .select-option-card:active {
+  transform: scale(0.96) !important;
 }

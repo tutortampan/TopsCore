@@ -1,31 +1,44 @@
 // TOPS CORE — Supabase Configuration & Client Init
-// Replace SUPABASE_URL and SUPABASE_ANON_KEY with your project credentials.
+export const SUPABASE_CLOUD_URL = 'https://oclajpyumehpojepcczg.supabase.co';
+export const SUPABASE_CLOUD_ANON_KEY = 'sb_publishable_L9T-SJpuAqK5291UEVhKMg_i7lvWFGB';
 
-export const SUPABASE_URL = window.__ENV__?.SUPABASE_URL || 'https://xuiszvwfjccvucqpactf.supabase.co';
-export const SUPABASE_ANON_KEY = window.__ENV__?.SUPABASE_ANON_KEY || 'sb_publishable_dvMkwNJpPlryF0KNiaJRfQ_-fR1WW_4';
+export const SUPABASE_URL = (typeof window !== 'undefined' && window.__ENV__?.SUPABASE_URL)
+  || (typeof window !== 'undefined' && window.__ENV__?.USE_LOCAL ? 'http://127.0.0.1:54321' : SUPABASE_CLOUD_URL);
+
+export const SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.__ENV__?.SUPABASE_ANON_KEY)
+  || (typeof window !== 'undefined' && window.__ENV__?.USE_LOCAL
+    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+    : SUPABASE_CLOUD_ANON_KEY);
 
 // Import Supabase JS from CDN (ES Module compatible)
 let _supabase = null;
 let _initPromise = null;
 
 export async function getSupabase() {
-  if (window.supabaseClient) return window.supabaseClient;
+  if (typeof window !== 'undefined' && window.supabaseClient) return window.supabaseClient;
   if (_supabase) return _supabase;
   if (_initPromise) return _initPromise;
 
   _initPromise = (async () => {
     try {
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      if (!window.supabaseClient) {
-        window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: false
-          }
-        });
+      let createClient;
+      if (typeof process !== 'undefined' && process.versions?.node) {
+        const mod = await import('@supabase/supabase-js');
+        createClient = mod.createClient;
+      } else {
+        const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/+esm');
+        createClient = mod.createClient;
       }
-      _supabase = window.supabaseClient;
+      _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: false
+        }
+      });
+      if (typeof window !== 'undefined') {
+        window.supabaseClient = _supabase;
+      }
       return _supabase;
     } catch (err) {
       _initPromise = null; // Reset on failure so subsequent attempts can retry

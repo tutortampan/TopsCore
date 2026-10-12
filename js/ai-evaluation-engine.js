@@ -4,9 +4,9 @@
  * Supports: All 8 Assessment Modules, Stateless Web Speech STT, Realtime Roleplay, and Fallback Evaluation
  */
 
-import { getSupabase } from './supabase.js?v=4.7.6';
-import { createSpeechSession, isSpeechSupported } from './speech.js?v=4.7.6';
-import { damerauLevenshtein, normalizeAnswerText } from './grading.js?v=4.7.6';
+import { getSupabase } from './supabase.js?v=4.9.8';
+import { createSpeechSession, isSpeechSupported } from './speech.js?v=4.9.8';
+import { damerauLevenshtein, normalizeAnswerText } from './grading.js?v=4.9.8';
 
 export const AI_MODULE_TYPES = {
   POINT_AND_SPEAK:    'POINT_AND_SPEAK',
@@ -17,8 +17,7 @@ export const AI_MODULE_TYPES = {
   TURN_BASED_ROLEPLAY:'TURN_BASED_ROLEPLAY',
   SPEAKING_MONOLOGUE: 'SPEAKING_MONOLOGUE',
   VOCAB_MASTERY:      'VOCAB_MASTERY',
-  PHRASE_RECOGNITION: 'PHRASE_RECOGNITION',  // Dropdown-based phrase/idiom/expression engine
-  PAIR_STORYTELLING:  'PAIR_STORYTELLING'    // Two students record independently, linked by pair_session_id
+    PAIR_STORYTELLING:  'PAIR_STORYTELLING'    // Two students record independently, linked by pair_session_id
 };
 
 /**

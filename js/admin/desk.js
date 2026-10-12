@@ -15,10 +15,10 @@ import {
   adminHardDelete,
   clearAdminCache,
   testSupabaseConnection
-} from '../api.js?v=4.7.6';
-import { getSupabase } from '../supabase.js?v=4.7.6';
-import { showToast, showLoading, hideLoading } from '../app.js?v=4.7.6';
-import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=4.7.6';
+} from '../api.js?v=4.9.8';
+import { getSupabase } from '../supabase.js?v=4.9.8';
+import { showToast, showLoading, hideLoading } from '../app.js?v=4.9.8';
+import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=4.9.8';
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -363,7 +363,7 @@ export async function renderAuditLog(area) {
       const sb = await getSupabase();
       const { data, error } = await sb
         .from('audit_logs')
-        .select('*')
+        .select('id, created_at, actor_role, actor_user_id, action, entity_type, entity_id, old_value, new_value')
         .order('created_at', { ascending: false })
         .limit(150);
 
@@ -618,9 +618,9 @@ export async function renderDataHealth(container) {
   const loadEntityCounts = async () => {
     try {
       const [students, Assessments, attempts] = await Promise.all([
-        adminFetchAll('students').catch(() => []),
-        adminFetchAll('assessments').catch(() => []),
-        adminFetchAll('attempts').catch(() => [])
+        adminFetchAll('students', 'id, deleted_at').catch(() => []),
+        adminFetchAll('assessments', 'id, deleted_at').catch(() => []),
+        adminFetchAll('attempts', 'id').catch(() => [])
       ]);
 
       const activeStds = (students || []).filter(s => !s.deleted_at).length;

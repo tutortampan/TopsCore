@@ -1,10 +1,9 @@
-import { adminFetchAll, adminInsert, adminUpdate, formatStudentName, cleanStudentName, clearAdminCache } from '../api.js?v=4.7.6';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=4.7.6';
-import { showToast, showLoading, hideLoading, updateLoadingProgress } from '../app.js?v=4.7.6';
-import { callEdgeFunction, getSupabase } from '../supabase.js?v=4.7.6';
-import { downloadAITemplate, AI_MODULES } from './panel-c-builder.js?v=4.7.6';
+import { adminFetchAll, adminInsert, adminUpdate, formatStudentName, cleanStudentName, clearAdminCache, toLevelLetter } from '../api.js?v=4.9.8';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=4.9.8';
+import { showToast, showLoading, hideLoading, updateLoadingProgress } from '../app.js?v=4.9.8';
+import { callEdgeFunction, getSupabase } from '../supabase.js?v=4.9.8';
+import { downloadAITemplate, AI_MODULES } from './panel-c-builder.js?v=4.9.8';
 
-const toLevelLetter = (level) => { return String.fromCharCode(64 + parseInt(level || 1)) || 'A'; };
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -178,11 +177,12 @@ function calculateAgeFromBirthDate(birthDateStr) {
                     <thead>
                       <tr>
                         <th class="text-center" style="width:5%;">#</th>
-                        <th class="text-left" style="width:30%;">Student Name</th>
-                        <th class="text-left" style="width:18%;">Institution</th>
-                        <th class="text-left" style="width:18%;">Program</th>
+                        <th class="text-left" style="width:20%;">Institution</th>
+                        <th class="text-left" style="width:20%;">Program</th>
                         <th class="text-left" style="width:15%;">Batch</th>
-                        <th class="text-center" style="width:14%;">Status</th>
+                        <th class="text-center" style="width:12%;">Level</th>
+                        <th class="text-left" style="width:18%;">Student Name</th>
+                        <th class="text-center" style="width:10%;">Status</th>
                       </tr>
                     </thead>
                     <tbody id="tbl-preview-students"></tbody>
@@ -268,10 +268,19 @@ function calculateAgeFromBirthDate(birthDateStr) {
         }
 
         updateBatchDropdown(classSelect.value);
+        const fileInput = document.getElementById('import-students-file');
+        if (fileInput && fileInput.files.length > 0) fileInput.dispatchEvent(new Event('change'));
       });
 
       classSelect?.addEventListener('change', () => {
         updateBatchDropdown(classSelect.value);
+        const fileInput = document.getElementById('import-students-file');
+        if (fileInput && fileInput.files.length > 0) fileInput.dispatchEvent(new Event('change'));
+      });
+
+      batchSelect?.addEventListener('change', () => {
+        const fileInput = document.getElementById('import-students-file');
+        if (fileInput && fileInput.files.length > 0) fileInput.dispatchEvent(new Event('change'));
       });
 
       // Streamlined UI: Auto-select Program if only 1 exists
@@ -321,7 +330,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
             // Fetch existing students to detect and merge duplicate names in the same class
             let existingStudents = [];
             try {
-              existingStudents = await adminFetchAll('students');
+              existingStudents = await adminFetchAll('students', 'id, name, program_id, deleted_at');
             } catch (err) {
               console.warn('Could not fetch existing students for deduplication:', err);
             }
@@ -482,7 +491,10 @@ function calculateAgeFromBirthDate(birthDateStr) {
               let isExisting = false;
               let existingId = null;
 
-              if (!finalClassId) {
+              if (!finalProgId) {
+                status = 'error';
+                statusMsg = 'No Program Assigned';
+              } else if (!finalClassId) {
                 status = 'error';
                 statusMsg = 'No Class Assigned';
               } else if (existingDbStudent) {
@@ -544,6 +556,27 @@ function calculateAgeFromBirthDate(birthDateStr) {
         wrap.classList.remove('hidden');
         tbody.innerHTML = '';
 
+        // Hierarchical sort: Valid/Merge first, then Institution -> Program -> Batch -> Level -> Name (A-Z)
+        parsedStudentsState.sort((a, b) => {
+          const aValid = a.status !== 'error' ? 1 : 0;
+          const bValid = b.status !== 'error' ? 1 : 0;
+          if (aValid !== bValid) return bValid - aValid;
+
+          const instCmp = (a.institutionName || '').localeCompare(b.institutionName || '', undefined, { sensitivity: 'base', numeric: true });
+          if (instCmp !== 0) return instCmp;
+
+          const progCmp = (a.programName || '').localeCompare(b.programName || '', undefined, { sensitivity: 'base', numeric: true });
+          if (progCmp !== 0) return progCmp;
+
+          const batchCmp = (a.batchName || '').localeCompare(b.batchName || '', undefined, { sensitivity: 'base', numeric: true });
+          if (batchCmp !== 0) return batchCmp;
+
+          const lvlCmp = (a.levelName || '').localeCompare(b.levelName || '', undefined, { sensitivity: 'base', numeric: true });
+          if (lvlCmp !== 0) return lvlCmp;
+
+          return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base', numeric: true });
+        });
+
         let newCount = 0;
         let mergeCount = 0;
 
@@ -575,16 +608,17 @@ function calculateAgeFromBirthDate(birthDateStr) {
 
             tr.innerHTML = `
               <td class="text-center text-muted fw-700">${i + 1}</td>
-              <td class="fw-600">${escapeHtml(s.name)}</td>
-              <td class="text-muted text-sm">${escapeHtml(s.institutionName)}</td>
-              <td class="fw-600 text-sm">${escapeHtml(s.programName)}</td>
+              <td class="text-muted text-sm">${escapeHtml(s.institutionName || '—')}</td>
+              <td class="fw-600 text-sm">${escapeHtml(s.programName || '—')}</td>
               <td class="text-sm fw-600" style="color:var(--clr-accent-1);">${escapeHtml(s.batchName || '—')}</td>
+              <td class="text-center"><span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(s.levelName || '—')}</span></td>
+              <td class="fw-600">${escapeHtml(s.name)}</td>
               <td class="text-center">${badgeHtml}</td>
             `;
             tbody.appendChild(tr);
           } else if (i === LIMIT) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="6" class="text-center text-muted fw-600 py-3" style="font-size: 0.85rem;">... and ${parsedStudentsState.length - LIMIT} more rows.</td>`;
+            tr.innerHTML = `<td colspan="7" class="text-center text-muted fw-600 py-3" style="font-size: 0.85rem;">... and ${parsedStudentsState.length - LIMIT} more rows.</td>`;
             tbody.appendChild(tr);
           }
         });
@@ -638,14 +672,14 @@ function calculateAgeFromBirthDate(birthDateStr) {
                 resolvedBatchId = batchCreateCache[cacheKey];
               } else {
                 // Check DB first
-                const { data: existingBatch } = await sb.from('batches')
+                const { data: existingBatch, error: existingBatchErr } = await sb.from('batches')
                   .select('id').eq('program_id', s.programId)
                   .ilike('name', s.batchName.trim()).maybeSingle();
                 if (existingBatch) {
                   resolvedBatchId = existingBatch.id;
                 } else {
                   // Create new batch
-                  const { data: newBatch } = await sb.from('batches').insert({
+                  const { data: newBatch, error: newBatchErr } = await sb.from('batches').insert({
                     program_id: s.programId,
                     name: s.batchName.trim(),
                     is_active: true
@@ -664,7 +698,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
 
             if (s.isExisting && s.existingId) {
               // Update existing student
-              await sb.from('students').update({
+              const { error: updateErr } = await sb.from('students').update({
                 institution_id: s.institutionId || null,
                 program_id: s.programId || null,
                 batch_id: resolvedBatchId,
@@ -676,10 +710,14 @@ function calculateAgeFromBirthDate(birthDateStr) {
                 deleted_at: null,
                 updated_at: new Date().toISOString()
               }).eq('id', s.existingId);
+              
+              if (updateErr) {
+                throw new Error('Update failed for ' + formattedName + ': ' + updateErr.message);
+              }
               updatedCount++;
             } else {
               // Insert new student
-              const { data: newStudent } = await sb.from('students').insert({
+              const { data: newStudent, error: newStudentErr } = await sb.from('students').insert({
                 name: formattedName,
                 institution_id: s.institutionId || null,
                 program_id: s.programId || null,
@@ -689,6 +727,10 @@ function calculateAgeFromBirthDate(birthDateStr) {
                 pin_hash: pinHash,
                 is_active: true
               }).select('id').single();
+              
+              if (newStudentErr) {
+                throw new Error('Insert failed for ' + formattedName + ': ' + newStudentErr.message);
+              }
               insertedCount++;
               if (newStudent) s.existingId = newStudent.id;
             }
@@ -757,8 +799,8 @@ function calculateAgeFromBirthDate(birthDateStr) {
                   <label class="form-label">2. Assessment Type (Answer Method)</label>
                   <select class="form-control" id="import-Assessment-type-select">
                     <option value="written">Written (Type)</option>
-                    <option value="speech_to_text">Speech to Text (Suara)</option>
-                    <option value="multiple_choice">Multiple Choice</option>
+                    <option value="spoken">Spoken (Suara)</option>
+                    <option value="selection">Selection</option>
                     <option value="dropdown">Drop-down</option>
                   </select>
                 </div>
@@ -858,7 +900,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
             { PROGRAM: 'CEC', CLASS: 'Camp', Class: 'Vocab', LEVEL: '3rd Step', TITLE: 'Practice 1', WEEK: '1', DAY: '1', TYPE: '1 - VERB', NO: 8, QUESTION: 'MENUNJUKKAN', ANSWER: 'DEMONSTRATE' }
           ]
         },
-        speech_to_text: {
+        spoken: {
           title: 'FORMAT KOLOM EXCEL SPEECH TO TEXT (SUARA US/UK)',
           desc: 'Students answer by speaking a sentence via microphone. Requires 11 standard columns:',
           columns: 'PROGRAM | CLASS | Class | LEVEL | TITLE | WEEK | DAY | TYPE | NO | QUESTION | ANSWER',
@@ -869,7 +911,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
             { PROGRAM: 'CEC', CLASS: 'Camp', Class: 'Vocab', LEVEL: '3rd Step', TITLE: 'Practice 1', WEEK: '1', DAY: '1', TYPE: '1 - VERB', NO: 4, QUESTION: 'MENINGKATKAN', ANSWER: 'IMPROVE' }
           ]
         },
-        multiple_choice: {
+        selection: {
           title: 'FORMAT KOLOM EXCEL MULTIPLE CHOICE (PILIHAN GANDA)',
           desc: 'Students select one answer from multiple choices (A, B, C, D). Requires 4 separate option columns:',
           columns: 'PROGRAM | CLASS | Class | LEVEL | TITLE | WEEK | DAY | TYPE | NO | QUESTION | ANSWER | OPTION A | OPTION B | OPTION C | OPTION D',
@@ -953,8 +995,8 @@ function calculateAgeFromBirthDate(birthDateStr) {
 
       // Quick template download buttons
       document.getElementById('dl-tmpl-written')?.addEventListener('click', () => downloadTemplateForType('written'));
-      document.getElementById('dl-tmpl-speech')?.addEventListener('click', () => downloadTemplateForType('speech_to_text'));
-      document.getElementById('dl-tmpl-mc')?.addEventListener('click', () => downloadTemplateForType('multiple_choice'));
+      document.getElementById('dl-tmpl-speech')?.addEventListener('click', () => downloadTemplateForType('spoken'));
+      document.getElementById('dl-tmpl-mc')?.addEventListener('click', () => downloadTemplateForType('selection'));
             document.getElementById('dl-tmpl-dropdown')?.addEventListener('click', () => downloadTemplateForType('dropdown'));
       
       document.querySelectorAll('.dl-ai-tmpl').forEach(btn => {
@@ -1283,7 +1325,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
       showLoading('Loading assessments for export…');
       let assessments = [];
       try {
-        assessments = await adminFetchAll('assessments');
+        assessments = await adminFetchAll('assessments', 'id, title, assessment_type, class_id, level_id');
       } catch (err) {
         console.warn('Export assessments fetch warning:', err);
       } finally {

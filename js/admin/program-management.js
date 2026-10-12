@@ -1,6 +1,6 @@
-import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete } from '../api.js?v=4.7.6';
-import { showToast } from '../app.js?v=4.7.6';
-import { DataGrid } from './datagrid.js?v=4.7.6';
+import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, clearAdminCache } from '../api.js?v=4.9.8';
+import { showToast } from '../app.js?v=4.9.8';
+import { DataGrid } from './datagrid.js?v=4.9.8';
 
 window.makeTableResizable = function(table, storageKey) {
   const cols = table.querySelectorAll('th');
@@ -50,82 +50,7 @@ window.makeTableResizable = function(table, storageKey) {
   });
 };
 
-window.openChangeLevelModal = async (batchId, currentLevelId) => {
-  try {
-    const levels = await window.adminFetchAll('levels');
-    
-    let optionsHtml = levels.map(l => 
-      `<option value="${l.id}" ${l.id === currentLevelId ? 'selected' : ''}>${escapeHtml(l.name)}</option>`
-    ).join('');
 
-    const modalHtml = `
-      <div id="changeLevelModal" class="modal-overlay" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">
-        <div class="modal-content card" style="min-width: 350px; background: var(--fm-bg-card);">
-          <div class="modal-header d-flex justify-between align-center mb-3">
-            <h3 class="fw-700 m-0 text-md">Change Level</h3>
-            <button class="btn btn-ghost btn-xs text-muted" onclick="document.getElementById('changeLevelModal').remove()" style="font-size: 1.25rem;">&times;</button>
-          </div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label class="form-label text-xs fw-600">Select Level</label>
-              <select id="newLevelSelect" class="form-control">
-                ${optionsHtml}
-              </select>
-            </div>
-            <div class="d-flex justify-end gap-2 mt-4">
-              <button class="btn btn-secondary" onclick="document.getElementById('changeLevelModal').remove()">Cancel</button>
-              <button class="btn btn-primary" id="confirmLevelBtn">Save Changes</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
-    document.getElementById('confirmLevelBtn').onclick = async () => {
-      const selectedLevelId = document.getElementById('newLevelSelect').value;
-      const btn = document.getElementById('confirmLevelBtn');
-      btn.disabled = true;
-      btn.innerText = 'Saving...';
-      
-      try {
-        const { getSupabase } = await import('../supabase.js?v=4.7.6');
-        const sb = await getSupabase();
-        
-        // Update batch
-        const { error: batchErr } = await sb.from('batches').update({ current_level_id: selectedLevelId }).eq('id', batchId);
-        if (batchErr) throw batchErr;
-        
-        // Update students
-        const { error: stuErr } = await sb.from('students').update({ level_id: selectedLevelId }).eq('batch_id', batchId);
-        if (stuErr) throw stuErr;
-        
-        // Clear cache and refresh
-        if (window.clearAdminCache) {
-          window.clearAdminCache('batches');
-          window.clearAdminCache('students');
-        }
-        
-        document.getElementById('changeLevelModal').remove();
-        if (window.showToast) window.showToast('Level updated successfully.', 'success');
-        
-        // Refresh UI
-        if (window.loadSection) {
-          window.loadSection('programs');
-        }
-      } catch (e) {
-        console.error('Error changing level:', e);
-        if (window.showToast) window.showToast('Failed to update level.', 'error');
-        btn.disabled = false;
-        btn.innerText = 'Save Changes';
-      }
-    };
-  } catch (err) {
-    console.error('Failed to load levels:', err);
-    if (window.showToast) window.showToast('Failed to load levels.', 'error');
-  }
-};
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -274,7 +199,7 @@ export async function renderClasses(area) {
 export async function renderBatches(area) {
   const [rawData, allStudents] = await Promise.all([
     adminFetchAll('batches', '*, programs!program_id(name, institution_id, institutions!institution_id(name))'),
-    adminFetchAll('students')
+    adminFetchAll('students', 'id, is_active, batch_id')
   ]);
 
   // Sort by Program (A-Z), Class (A-Z), Batch Name (A-Z)
@@ -478,22 +403,7 @@ export async function renderUnifiedInstitutions(area) {
       </div>
     </div>
     
-    <!-- Master Action Ribbon -->
-    <div class="card p-3 mb-4 d-flex justify-between align-center" style="background: var(--clr-surface-alt); border: 1px solid var(--clr-border);">
-       <div>
-          <h3 style="margin: 0; color: var(--clr-text-1);">Hierarchy Control</h3>
-          <div class="text-xs text-muted mt-1">Manage global architecture entities</div>
-       </div>
-       <div class="d-flex flex-wrap gap-2">
-          <button class="btn btn-secondary btn-sm" onclick="if (window.openCrudModal) window.openCrudModal('institutions', null); else window._addRecord('institutions');">➕ Add Institution</button>
-          <button class="btn btn-secondary btn-sm" onclick="if (window.openCrudModal) window.openCrudModal('programs', null); else window._addRecord('programs');">➕ Add Program</button>
-          <button class="btn btn-secondary btn-sm" onclick="if (window.openCrudModal) window.openCrudModal('levels', null); else window._addRecord('levels');">➕ Add Level</button>
-          <button class="btn btn-secondary btn-sm" onclick="if (window.openCrudModal) window.openCrudModal('classes', null); else window._addRecord('classes');">➕ Add Class</button>
-          <button class="btn btn-primary btn-sm" onclick="if (window.openCrudModal) window.openCrudModal('batches', null); else window._addRecord('batches');">➕ Add Batch</button>
-       </div>
-    </div>
   `;
-
   hierarchy.forEach((inst, instIdx) => {
     html += `
       <div class="card mb-4" style="padding:0; overflow-x: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
@@ -520,7 +430,15 @@ export async function renderUnifiedInstitutions(area) {
     if (inst.programs.length === 0) {
       html += `
         <tr class="level-row">
-          <td rowspan="2" style="font-weight: 600;">${escapeHtml(inst.name)}</td>
+          <td rowspan="2" style="font-weight: 600;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span>${escapeHtml(inst.name)}</span>
+            <div style="display:flex; gap:4px; opacity:0.7;">
+              <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst.raw))})' title="Edit">✏️</button>
+              <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("institutions", "${inst.id}", "${escapeHtml(inst.name)}")' title="Delete">🗑️</button>
+            </div>
+          </div>
+        </td>
           <td rowspan="2" style="color: var(--fm-text-muted);">—</td>
           <td rowspan="2" style="color: var(--fm-text-muted); text-align: center;">—</td>
           <td style="border-bottom: none;">LEVEL: <span class="badge badge-neutral">No Batches</span></td>
@@ -536,9 +454,23 @@ export async function renderUnifiedInstitutions(area) {
         if (prog.batches.length === 0) {
           html += `
             <tr class="level-row">
-              ${isFirstInstRow ? `<td rowspan="${inst.rowspan}" style="font-weight: 600;">${escapeHtml(inst.name)}</td>` : ''}
+              ${isFirstInstRow ? `<td rowspan="${inst.rowspan}" style="font-weight: 600;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span>${escapeHtml(inst.name)}</span>
+              <div style="display:flex; gap:4px; opacity:0.7;">
+                <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst.raw))})' title="Edit">✏️</button>
+                <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("institutions", "${inst.id}", "${escapeHtml(inst.name)}")' title="Delete">🗑️</button>
+              </div>
+            </div>
+          </td>` : ''}
               <td rowspan="2">
-                <div class="fw-600">${escapeHtml(prog.name)}</div>
+                <div class="fw-600" style="display:flex; justify-content:space-between; align-items:center;">
+              <span>${escapeHtml(prog.name)}</span>
+              <div style="display:flex; gap:4px; opacity:0.7;">
+                <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("programs", "${prog.id}", ${JSON.stringify(JSON.stringify(prog.raw))})' title="Edit">✏️</button>
+                <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("programs", "${prog.id}", "${escapeHtml(prog.name)}")' title="Delete">🗑️</button>
+              </div>
+            </div>
               </td>
               <td rowspan="2" style="color: var(--fm-text-muted); text-align: center;">—</td>
               <td style="border-bottom: none;">LEVEL: <span class="badge badge-neutral">No Batches</span></td>
@@ -557,9 +489,23 @@ export async function renderUnifiedInstitutions(area) {
 
           html += `
             <tr class="level-row">
-              ${isFirstInstRow ? `<td rowspan="${inst.rowspan}" style="font-weight: 600;">${escapeHtml(inst.name)}</td>` : ''}
+              ${isFirstInstRow ? `<td rowspan="${inst.rowspan}" style="font-weight: 600;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span>${escapeHtml(inst.name)}</span>
+                  <div style="display:flex; gap:4px; opacity:0.7;">
+                    <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst.raw))})' title="Edit">✏️</button>
+                    <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("institutions", "${inst.id}", "${escapeHtml(inst.name)}")' title="Delete">🗑️</button>
+                  </div>
+                </div>
+              </td>` : ''}
               ${isFirstProgRow ? `<td rowspan="${prog.rowspan}">
-                <div class="fw-600">${escapeHtml(prog.name)}</div>
+                <div class="fw-600" style="display:flex; justify-content:space-between; align-items:center;">
+                  <span>${escapeHtml(prog.name)}</span>
+                  <div style="display:flex; gap:4px; opacity:0.7;">
+                    <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("programs", "${prog.id}", ${JSON.stringify(JSON.stringify(prog.raw))})' title="Edit">✏️</button>
+                    <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("programs", "${prog.id}", "${escapeHtml(prog.name)}")' title="Delete">🗑️</button>
+                  </div>
+                </div>
               </td>` : ''}
               <td rowspan="2" style="text-align: center;">
                 <div class="fw-600">${escapeHtml(batch.name)}</div>
@@ -581,6 +527,8 @@ export async function renderUnifiedInstitutions(area) {
                   <div class="matrix-actions-row">
                      <button class="btn btn-ghost btn-xs text-success" onclick="window.openStudentFullEdit({ batch_id: '${batch.id}' })">+ Add Student</button>
                      <button class="btn btn-ghost btn-xs text-primary" onclick="window._filterBatchId='${batch.id}'; window.loadSection('import-students')">📥 Import</button>
+                     <button class="btn btn-ghost btn-xs text-secondary" onclick='window._editRecord("batches", "${batch.id}", ${JSON.stringify(JSON.stringify(batch.raw))})' title="Edit Batch">✏️ Edit</button>
+                     <button class="btn btn-ghost btn-xs text-danger" onclick='window._deleteRecord("batches", "${batch.id}", "${escapeHtml(batch.name)}")' title="Delete Batch">🗑️ Delete</button>
                   </div>
                 </div>
               </td>
@@ -611,10 +559,11 @@ export async function renderUnifiedInstitutions(area) {
 window.openChangeLevelModal = async function(batchId, currentLevelId) {
   const levels = await adminFetchAll('levels', 'id, name, level_number');
   if (!levels || levels.length === 0) {
-    return alert('No levels defined in the system. Create them first.');
+    if (window.showToast) window.showToast('No levels defined in the system. Create them first.', 'error');
+    return;
   }
   
-  levels.sort((a,b) => (a.level_number || 0) - (b.level_number || 0));
+  levels.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
   
   let selectHtml = '<select id="level-select" class="form-control mb-4" style="width:100%; padding: 8px;">';
   selectHtml += '<option value="">-- No Level --</option>';
@@ -631,31 +580,71 @@ window.openChangeLevelModal = async function(batchId, currentLevelId) {
   selectHtml += '</select>';
 
   const overlay = document.createElement('div');
-  overlay.className = 'modal-backdrop';
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '10000';
+  overlay.style.position = 'fixed';
+  overlay.style.top = '0';
+  overlay.style.left = '0';
+  overlay.style.width = '100vw';
+  overlay.style.height = '100vh';
+  overlay.style.background = 'rgba(15,23,42,0.95)';
+  overlay.style.backdropFilter = 'blur(5px)';
   overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
   overlay.innerHTML = `
-    <div class="modal-content" style="max-width: 400px; width: 100%; padding: 24px; background: var(--fm-bg-card); border-radius: 8px;">
-      <h3 style="margin-bottom: 16px;">Change Batch Level</h3>
-      ${selectHtml}
-      <div style="display: flex; gap: 8px; justify-content: flex-end;">
-        <button class="btn btn-outline" id="cancel-level-btn">Cancel</button>
-        <button class="btn btn-primary" id="save-level-btn">Save</button>
+    <div class="modal-content card" style="min-width: 350px; background: var(--fm-bg-card);">
+      <div class="modal-header d-flex justify-between align-center mb-3">
+        <h3 class="fw-700 m-0 text-md">Change Batch Level</h3>
+        <button class="btn btn-ghost btn-xs text-muted" id="cancel-level-btn-x" style="font-size: 1.25rem;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label text-xs fw-600">Select Level</label>
+          ${selectHtml}
+        </div>
+        <div class="d-flex justify-end gap-2 mt-4">
+          <button class="btn btn-secondary" id="cancel-level-btn">Cancel</button>
+          <button class="btn btn-primary" id="save-level-btn">Save Changes</button>
+        </div>
       </div>
     </div>
   `;
   
   document.body.appendChild(overlay);
   
-  document.getElementById('cancel-level-btn').onclick = () => overlay.remove();
+  const closeOverlay = () => overlay.remove();
+  document.getElementById('cancel-level-btn').onclick = closeOverlay;
+  document.getElementById('cancel-level-btn-x').onclick = closeOverlay;
+  
   document.getElementById('save-level-btn').onclick = async () => {
     const newLevelId = document.getElementById('level-select').value;
-    overlay.remove();
-    if (newLevelId !== currentLevelId) {
-      const res = await adminUpdate('batches', batchId, { current_level_id: newLevelId || null });
-      if (res) {
-        showToast('Batch level updated successfully.', 'success');
-        window.loadSection('batches');
+    const btn = document.getElementById('save-level-btn');
+    btn.disabled = true;
+    btn.innerText = 'Saving...';
+    try {
+      if (newLevelId !== currentLevelId) {
+        const { getSupabase } = await import('../supabase.js?v=4.9.8');
+        const sb = await getSupabase();
+        
+        // Update batch
+        const { error: batchErr } = await sb.from('batches').update({ current_level_id: newLevelId || null }).eq('id', batchId);
+        if (batchErr) throw batchErr;
+        
+        
+
+        clearAdminCache('batches');
+        clearAdminCache('students');
+        
+        if (window.showToast) window.showToast('Batch and student levels updated successfully.', 'success');
+        if (window.loadSection) window.loadSection('institutions');
       }
+      closeOverlay();
+    } catch (e) {
+      console.error('Error changing level:', e);
+      if (window.showToast) window.showToast('Failed to update level.', 'error');
+      btn.disabled = false;
+      btn.innerText = 'Save Changes';
     }
   };
 };

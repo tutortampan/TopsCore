@@ -7,7 +7,17 @@ desktop.ini
 *.ini
 scratch/
 
-# Supabase CLI binaries
+# Supabase CLI binaries & local cache
 .supabase-cli/
 supabase.exe
 supabase-go.exe
+supabase/.temp/
+supabase/.branches/
+supabase/migrations_bak/
+
+# Audit, screenshots, and test dumps
+audit_screenshots/
+temp_test/
+test-results/
+playwright-report/
+deploy_new_supabase.sql

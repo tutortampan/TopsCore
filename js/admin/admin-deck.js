@@ -1,8 +1,8 @@
-import { adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, formatStudentName } from '../api.js?v=4.7.6';
-import { getSupabase } from '../supabase.js?v=4.7.6';
-import { generateExecutiveCV } from './cv-export.js?v=4.7.6';
-import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=4.7.6';
-import { showToast } from '../app.js?v=4.7.6';
+import { adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, formatStudentName } from '../api.js?v=4.9.8';
+import { getSupabase } from '../supabase.js?v=4.9.8';
+import { generateExecutiveCV } from './cv-export.js?v=4.9.8';
+import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=4.9.8';
+import { showToast } from '../app.js?v=4.9.8';
 
 function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -47,27 +47,50 @@ export async function renderDashboard(container) {
   const instsHtml = sortedInstitutions.map(inst => {
     const instProgs = programs.filter(p => p.institution_id === inst.id).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     return `
-      <div class="glass-card" style="padding:1rem; margin-bottom:1rem;">
+      <div class="glass-card" style="padding:1rem; margin-bottom:1rem; border-left: 4px solid var(--clr-primary);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-           <h3 style="margin:0; font-size:1.1rem;">&#x1F3E2; ${escHtml(inst.name)}</h3>
+           <h3 style="margin:0; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+             ${inst.logo_url ? `<img src="${inst.logo_url}" style="width:24px;height:24px;object-fit:contain;border-radius:4px;">` : '🏢'}
+             ${escHtml(inst.name)}
+           </h3>
            <div style="display:flex; align-items:center; gap:0.5rem;">
              <span class="badge ${inst.is_active !== false ? 'badge-success' : 'badge-neutral'}">${inst.is_active !== false ? 'Active' : 'Inactive'}</span>
-             <button class="btn btn-ghost btn-xs" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst))})' title="Edit Institution" style="padding:0 0.4rem; height:auto; min-height:0;">✏️</button>
+             <button class="btn btn-ghost btn-xs" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst))})' title="Edit Institution" style="padding:0 0.4rem; height:auto; min-height:0;">✏️ Edit</button>
+             <button class="btn btn-ghost btn-xs text-danger" onclick="window._deleteRecord('institutions', '${inst.id}', '${escHtml(inst.name)}')" title="Delete Institution" style="padding:0 0.4rem; height:auto; min-height:0;">🗑️ Delete</button>
+             <button class="btn btn-ghost btn-xs text-info" onclick="window.openCrudModal('programs', { institution_id: '${inst.id}' })" title="Add Program" style="padding:0 0.4rem; height:auto; min-height:0;">➕ Program</button>
            </div>
         </div>
-        <h4 style="margin:0 0 .5rem 0; font-size:.8rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--fm-text-muted);">Programs</h4>
-        <div style="display:flex; flex-direction:column; gap:.25rem;">
+        
+        <div style="display:flex; flex-direction:column; gap:.5rem;">
           ${instProgs.length === 0 ? '<div class="text-muted text-sm">No programs.</div>' : instProgs.map(p => {
              const progBatches = batches.filter(b => b.program_id === p.id).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+             const progClasses = classes.filter(c => c.program_id === p.id).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
              return `
-             <div style="display:flex; justify-content:space-between; background:rgba(255,255,255,0.02); padding:.4rem; border-radius:6px; border:1px solid var(--clr-border);">
-                <div>
-                   <div class="fw-600 text-sm">${escHtml(p.name)}</div>
-                   <div class="text-xs text-muted">${progBatches.length} Batches &bull; ${progBatches.map(b=> `<span style="cursor:pointer; text-decoration:underline;" onclick='window.openCrudModal("batches", ${JSON.stringify(b).replace(/'/g, "&#39;")})' title="Edit Batch">${escHtml(b.name)}</span>`).join(', ')}</div>
+             <div style="display:flex; flex-direction:column; background:rgba(255,255,255,0.02); padding:.6rem; border-radius:6px; border:1px solid var(--clr-border);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem;">
+                  <div class="fw-700 text-sm" style="color:var(--clr-accent-1);">${escHtml(p.name)}</div>
+                  <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span class="badge ${p.is_active !== false ? 'badge-success' : 'badge-neutral'}">${p.is_active !== false ? 'Active' : 'Inactive'}</span>
+                    <button class="btn btn-ghost btn-xs" onclick='window._editRecord("programs", "${p.id}", ${JSON.stringify(JSON.stringify(p))})' title="Edit Program" style="padding:0 0.4rem; height:auto; min-height:0;">✏️ Edit</button>
+                    <button class="btn btn-ghost btn-xs text-danger" onclick="window._deleteRecord('programs', '${p.id}', '${escHtml(p.name)}')" title="Delete Program" style="padding:0 0.4rem; height:auto; min-height:0;">🗑️ Delete</button>
+                    <button class="btn btn-ghost btn-xs text-success" onclick="window.openCrudModal('classes', { program_id: '${p.id}' })" title="Add Class" style="padding:0 0.4rem; height:auto; min-height:0;">➕ Class</button>
+                    <button class="btn btn-ghost btn-xs text-warning" onclick="window.openCrudModal('batches', { program_id: '${p.id}' })" title="Add Batch" style="padding:0 0.4rem; height:auto; min-height:0;">➕ Batch</button>
+                  </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                  <span class="badge ${p.is_active !== false ? 'badge-success' : 'badge-neutral'}">${p.is_active !== false ? 'Active' : 'Inactive'}</span>
-                  <button class="btn btn-ghost btn-xs" onclick='window._editRecord("programs", "${p.id}", ${JSON.stringify(JSON.stringify(p))})' title="Edit Program" style="padding:0 0.4rem; height:auto; min-height:0;">✏️</button>
+                
+                <div style="display:flex; gap:1rem; flex-wrap:wrap; font-size:0.8rem;">
+                  <div style="flex:1; min-width:150px;">
+                    <div style="text-transform:uppercase; font-size:0.7rem; color:var(--fm-text-muted); margin-bottom:0.2rem; font-weight:700;">Classes (${progClasses.length})</div>
+                    <div style="color:var(--clr-text-2);">
+                      ${progClasses.length > 0 ? progClasses.map(c => `<span style="cursor:pointer; text-decoration:underline;" onclick='window.openCrudModal("classes", ${JSON.stringify(c).replace(/'/g, "&#39;")})'>${escHtml(c.name)}</span>`).join(', ') : '<span class="text-muted">None</span>'}
+                    </div>
+                  </div>
+                  <div style="flex:1; min-width:150px;">
+                    <div style="text-transform:uppercase; font-size:0.7rem; color:var(--fm-text-muted); margin-bottom:0.2rem; font-weight:700;">Batches (${progBatches.length})</div>
+                    <div style="color:var(--clr-text-2);">
+                      ${progBatches.length > 0 ? progBatches.map(b => `<span style="cursor:pointer; text-decoration:underline;" onclick='window.openCrudModal("batches", ${JSON.stringify(b).replace(/'/g, "&#39;")})'>${escHtml(b.name)}</span>`).join(', ') : '<span class="text-muted">None</span>'}
+                    </div>
+                  </div>
                 </div>
              </div>
              `;
@@ -131,7 +154,10 @@ export async function renderDashboard(container) {
         
         <!-- Organization Hierarchy -->
         <div id="board-inst-panels" style="display:flex; flex-direction:column;">
-          <h3 style="margin:0 0 1rem 0; font-size:1.2rem; font-weight:800; position: sticky; top: 0; z-index: 10; padding-bottom: 0.5rem; background: var(--fm-bg);">Organization Hierarchy</h3>
+          <div style="display:flex; justify-content:space-between; align-items:center; position: sticky; top: 0; z-index: 10; padding-bottom: 0.5rem; background: var(--fm-bg); margin-bottom: 1rem;">
+            <h3 style="margin:0; font-size:1.2rem; font-weight:800;">Organization Hierarchy</h3>
+            <button class="btn btn-primary btn-sm" onclick="window.openCrudModal('institutions', null)">➕ Add Institution</button>
+          </div>
           ${instsHtml || '<p class="text-muted">No institutions available.</p>'}
         </div>
 
@@ -370,7 +396,7 @@ export async function renderAdminProfile(container) {
     overlay.classList.remove('hidden');
 
     try {
-      const { processAndCompressAvatar } = await import('../utils/avatar-engine.js?v=4.7.6');
+      const { processAndCompressAvatar } = await import('../utils/avatar-engine.js?v=4.9.8');
       const compressedDataUrl = await processAndCompressAvatar(file, 'admin');
 
       // Optimistic preview
