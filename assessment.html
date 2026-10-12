@@ -402,6 +402,12 @@
       user-select: none !important;
       -webkit-touch-callout: none !important;
     }
+    .written-input::placeholder {
+      color: rgba(255, 255, 255, 0.35) !important;
+      text-align: center !important;
+      font-style: italic;
+      font-weight: 500;
+    }
   </style>
 </head>
 <body class="assessment-page notranslate" translate="no">
@@ -551,13 +557,13 @@
   </div>
 
   <script type="module">
-    import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './js/api.js?v=5.0.1';
-    import { evaluateAnswer } from './js/grading.js?v=5.0.1';
-    import { requireStudentSession } from './js/session.js?v=5.0.1';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml as appEscapeHtml } from './js/app.js?v=5.0.1';
-    import { startCountdown, isExpired } from './js/timer.js?v=5.0.1';
-    import { createSpeechSession, isSpeechSupported } from './js/speech.js?v=5.0.1';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './js/supabase.js?v=5.0.1';
+    import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './js/api.js?v=5.0.2';
+    import { evaluateAnswer } from './js/grading.js?v=5.0.2';
+    import { requireStudentSession } from './js/session.js?v=5.0.2';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml as appEscapeHtml } from './js/app.js?v=5.0.2';
+    import { startCountdown, isExpired } from './js/timer.js?v=5.0.2';
+    import { createSpeechSession, isSpeechSupported } from './js/speech.js?v=5.0.2';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './js/supabase.js?v=5.0.2';
 
     function escapeHtml(str) {
       if (typeof appEscapeHtml === 'function') return appEscapeHtml(str);
@@ -1276,9 +1282,31 @@
       }
       const answerType = snap?.answer_type || row.answer_type || 'written';
       const questionText = snap?.question_text || snap?.questionText || snap?.question || snap?.text || snap?.soal || snap?.indonesia || row.question_text_snapshot || (typeof row.question_snapshot === 'string' ? row.question_snapshot : '') || 'Question text unavailable';
-      const wordType = snap?.metadata?.word_type || snap?.metadata?.type || snap?.type || snap?.question_type || '';
-      const topic = snap?.metadata?.topic || '';
-      const theme = snap?.metadata?.theme || snap?.theme || '';
+      // Extract Theme, Topic, Type
+      let displayTheme = snap?.theme || snap?.theme_code || snap?.metadata?.theme || assessmentData?.payload?.theme_code || '';
+      if (!displayTheme && assessmentData?.title) {
+        const matchTheme = assessmentData.title.match(/Theme\s+([A-D])|Vocabulary\s+([A-D])/i);
+        if (matchTheme) displayTheme = 'Theme ' + (matchTheme[1] || matchTheme[2]).toUpperCase();
+      }
+      if (displayTheme && displayTheme.length === 1) {
+        displayTheme = 'Theme ' + displayTheme.toUpperCase();
+      }
+      if (!displayTheme) displayTheme = 'General';
+
+      let displayTopic = snap?.topic || snap?.metadata?.topic || row?.topic_snapshot || '';
+      if (!displayTopic && assessmentData?.title) {
+        const parts = assessmentData.title.split('-');
+        if (parts.length > 1) displayTopic = parts.slice(1).join('-').trim();
+      }
+      if (!displayTopic) displayTopic = 'Vocabulary Mastery';
+
+      let displayType = snap?.word_type || snap?.metadata?.word_type || snap?.metadata?.type || snap?.type || row?.word_type_snapshot || snap?.question_type || row?.question_type_snapshot || '';
+      if (!displayType) {
+        const cat = assessmentData?.payload?.category || '';
+        if (cat === 'phrases' || assessmentData?.title?.toLowerCase().includes('phrase')) displayType = 'Phrase';
+        else displayType = 'Word';
+      }
+
       const savedAnswer = answeredMap[row.id] || '';
 
       const main = document.getElementById('assessment-main');
@@ -1290,17 +1318,30 @@
 
       // Top Part: Question Card (1/3)
       const topSection = document.createElement('div');
-      topSection.className = 'h-[135px] max-h-[140px] w-full flex items-center justify-center text-center p-3 rounded-2xl bg-slate-800/80 border border-slate-700/60 shadow-md shrink-0';
-      topSection.style.cssText = 'height:135px; max-height:140px; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0.75rem; background:rgba(30,41,59,0.8); border:1px solid rgba(51,65,85,0.6); border-radius:16px; box-sizing:border-box; overflow-y:auto; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); flex-shrink:0;';
+      topSection.className = 'min-h-[125px] max-h-[155px] w-full flex flex-col justify-between p-3 rounded-2xl bg-slate-800/85 border border-slate-700/60 shadow-md shrink-0';
+      topSection.style.cssText = 'min-height:125px; max-height:155px; width:100%; display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:0.75rem 1rem; background:rgba(30,41,59,0.85); border:1px solid rgba(51,65,85,0.6); border-radius:16px; box-sizing:border-box; overflow-y:auto; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); flex-shrink:0;';
       
-      let qHtml = '';
-      if (theme || topic) {
-        qHtml += `<div style="display:flex; justify-content:space-between; gap:1rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px; margin-bottom:0.75rem; font-size:0.85rem; font-weight:600; color:var(--clr-text-2); width:100%;">${theme ? `<span>Theme: ${escapeHtml(theme)}</span>` : '<span></span>'}${topic ? `<span>Topic: ${escapeHtml(topic)}</span>` : '<span></span>'}</div>`;
-      }
-      qHtml += `<div style="flex-grow:1; display:flex; align-items:center; justify-content:center; width:100%; min-height:0;"><div class="speech-question-text" style="font-size:clamp(1.4rem, 4vw, 1.6rem); font-weight:800; color:#fff; text-align:center; line-height:1.2; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0;">${escapeHtml(questionText)}</div></div>`;
-      if (wordType) {
-        qHtml += `<div style="text-align:center; margin-top:0.5rem; font-size:0.9rem; font-weight:700; color:var(--clr-text-2);">[ Word type: <span style="color:#34d399;">${escapeHtml(wordType)}</span> ]</div>`;
-      }
+      let qHtml = `
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px; margin-bottom:8px; font-size:0.82rem; font-weight:600; color:var(--clr-text-2, #94a3b8); flex-shrink:0; box-sizing:border-box;">
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px;">Theme:</span>
+            <span style="color:#38bdf8; font-weight:700;">${escapeHtml(displayTheme)}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:5px; max-width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px;">Topic:</span>
+            <span style="color:#f1f5f9; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px;">Type:</span>
+            <span style="background:rgba(52,211,153,0.15); color:#34d399; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.78rem; border:1px solid rgba(52,211,153,0.3);">${escapeHtml(displayType)}</span>
+          </div>
+        </div>
+        <div style="flex-grow:1; display:flex; align-items:center; justify-content:center; width:100%; min-height:0;">
+          <div class="speech-question-text" style="font-size:clamp(1.25rem, 3.8vw, 1.6rem); font-weight:800; color:#fff; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0;">
+            ${escapeHtml(questionText)}
+          </div>
+        </div>
+      `;
       topSection.innerHTML = qHtml;
       main.appendChild(topSection);
 
@@ -1480,12 +1521,20 @@
     }
 
     function renderWritten(area, controlArea, row, savedAnswer, snap = {}, vk) {
+      area.innerHTML = '';
+      area.style.display = 'flex';
+      area.style.flexDirection = 'column';
+      area.style.alignItems = 'center';
+      area.style.justifyContent = 'center';
+      area.style.cursor = 'text';
+
       const ta = document.createElement('textarea');
       ta.className = 'written-input frosted-input';
-      ta.style.cssText = 'width:100%; height:100%; background:transparent; border:none; color:#fff; font-size:1.4rem; font-weight:700; text-align:center; resize:none; outline:none; font-family:inherit;';
+      ta.style.cssText = 'width:100%; max-height:140px; background:transparent; border:none; color:#fff; font-size:clamp(1.25rem, 3.8vw, 1.6rem); font-weight:700; text-align:center; resize:none; outline:none; font-family:inherit; padding:0; margin:auto; line-height:1.4; display:block; overflow-y:auto; box-sizing:border-box;';
       ta.id = `written-${row.id}`;
       ta.placeholder = 'Type here...';
       ta.value = savedAnswer || '';
+      ta.rows = 1;
       ta.setAttribute('readonly', 'true');
       ta.setAttribute('inputmode', 'none');
       ta.setAttribute('autocomplete', 'off');
@@ -1497,7 +1546,19 @@
       ta.addEventListener('cut', e => e.preventDefault());
       ta.addEventListener('contextmenu', e => e.preventDefault());
       
+      const adjustHeight = () => {
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
+      };
+      ta.addEventListener('input', adjustHeight);
+
       area.appendChild(ta);
+      setTimeout(adjustHeight, 0);
+
+      area.addEventListener('click', () => {
+        ta.focus();
+        window.activeKeyboardInput = ta;
+      });
 
       if (vk) {
         vk.style.display = 'flex';
