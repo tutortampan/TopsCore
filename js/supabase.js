@@ -2,11 +2,22 @@
 export const SUPABASE_CLOUD_URL = 'https://oclajpyumehpojepcczg.supabase.co';
 export const SUPABASE_CLOUD_ANON_KEY = 'sb_publishable_L9T-SJpuAqK5291UEVhKMg_i7lvWFGB';
 
+// Auto-detect environment: localhost / 127.0.0.1 defaults to Docker Local (Full Offline)
+const isLocalHostname = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname === ''
+);
+
+export const USE_LOCAL = (typeof window !== 'undefined' && typeof window.__ENV__?.USE_LOCAL === 'boolean')
+  ? window.__ENV__.USE_LOCAL
+  : isLocalHostname;
+
 export const SUPABASE_URL = (typeof window !== 'undefined' && window.__ENV__?.SUPABASE_URL)
-  || (typeof window !== 'undefined' && window.__ENV__?.USE_LOCAL ? 'http://127.0.0.1:54321' : SUPABASE_CLOUD_URL);
+  || (USE_LOCAL ? 'http://127.0.0.1:54321' : SUPABASE_CLOUD_URL);
 
 export const SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.__ENV__?.SUPABASE_ANON_KEY)
-  || (typeof window !== 'undefined' && window.__ENV__?.USE_LOCAL
+  || (USE_LOCAL
     ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
     : SUPABASE_CLOUD_ANON_KEY);
 
