@@ -891,24 +891,38 @@
       }
     }, true);
 
+    // Screen Wake Lock API — keeps participant's screen awake during active assessment
+    let wakeLockSentinel = null;
+    async function requestScreenWakeLock() {
+      try {
+        if ('wakeLock' in navigator && !wakeLockSentinel) {
+          wakeLockSentinel = await navigator.wakeLock.request('screen');
+          wakeLockSentinel.addEventListener('release', () => {
+            wakeLockSentinel = null;
+          });
+          console.log('[WakeLock] Screen Wake Lock acquired.');
+        }
+      } catch (err) {
+        console.warn('[WakeLock] Could not acquire screen wake lock:', err);
+      }
+    }
+
+    function releaseScreenWakeLock() {
+      if (wakeLockSentinel) {
+        try { wakeLockSentinel.release(); } catch (_) {}
+        wakeLockSentinel = null;
+        console.log('[WakeLock] Screen Wake Lock released.');
+      }
+    }
+
     // Detect switching tab or minimizing browser
     document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && isAssessmentActive) {
+        requestScreenWakeLock();
+      }
       if (!securityConfig.enabled) return;
       if (isAssessmentActive && document.hidden) {
         triggerCheatAlert('Leaving the Tab / Switching Applications');
-        if (attemptData && attemptData.id && SUPABASE_URL && SUPABASE_ANON_KEY) {
-          fetch(`${SUPABASE_URL}/rest/v1/rpc/auto_close_expired_attempts`, {
-             method: 'POST',
-             headers: { 
-               'Content-Type': 'application/json',
-               'apikey': SUPABASE_ANON_KEY,
-               'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-             },
-             body: JSON.stringify({ p_attempt_id: attemptData.id }),
-             keepalive: true,
-             credentials: 'omit'
-          }).catch(e => console.error(e));
-        }
       }
     });
 
@@ -1198,8 +1212,9 @@
         hideLoading();
         startSection(currentSectionIndex);
 
-        // Activate Anti-Cheat System
+        // Activate Anti-Cheat System & Screen Wake Lock
         isAssessmentActive = true;
+        requestScreenWakeLock();
         lockHistory();
       } catch(e) {
         hideLoading();
@@ -2063,6 +2078,7 @@
 
     async function doSubmit(isAuto = false) {
       isAssessmentActive = false; // Disable anti-cheat alerts on submission
+      releaseScreenWakeLock();
       timerController?.stop();
       saveCurrentAnswer();
       if (attemptData?.id) {

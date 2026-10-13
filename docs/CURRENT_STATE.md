@@ -1,14 +1,27 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-13 13:05 UTC+8
+Last Updated: 2026-10-13 17:05 UTC+8
 
-Current Phase: Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes
+Current Phase: Phase 20 Assessment Resiliency & Grading Integrity
 
-Current Task: [PIXEL-PERFECT WIREFRAME BLUEPRINT (412x810) ACROSS ALL 3 MODES: MCQ, KEYBOARD, SPEECH]
+Current Task: Screen Wake Lock, 0-Score Rescore Fix & Student Progression Gating
 
 Status: COMPLETE
 
 ## Completed
+
+- **Screen Wake Lock & Sudden Submit Prevention**:
+  - Activated `navigator.wakeLock.request('screen')` in `assessment.html` on exam start and visibility re-acquisition.
+  - Removed premature server `auto_close_expired_attempts` trigger from `visibilitychange` event which previously killed student exams whenever mobile screen dimmed.
+  - Safe release of wake lock on exam submission.
+
+- **0-Score Auto-Submit Rescoring**:
+  - Rescored all 31 attempts from 2026-10-13 where answers were saved but scores were left 0.00 by auto-close.
+  - Restored passing scores (Ari Wahyu Darma 100% Grade S, Asti Ananta 85% Grade B, Aunul Fikri 60% Grade C).
+
+- **Aunul Fikri Yasir Progression Resolution**:
+  - Cleared dangling in-progress expired attempts.
+  - Restored passing score (60% Grade C) for A1 Phrases Task, automatically unlocking Task 3 on student dashboard.
 
 - **EXACT PIXEL-PERFECT WIREFRAME BLUEPRINT (412x810) IMPLEMENTATION [100% VERIFIED]**:
   - **Budget Breakdown (Sum = Exactly 810px)**:

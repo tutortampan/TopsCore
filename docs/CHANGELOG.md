@@ -1,3 +1,33 @@
+## [2026-10-13 17:05] â€” Screen Wake Lock, 0-Score Rescore Fix & Student Progression Gating
+
+**Agent/Session:** Antigravity  
+**Phase:** Assessment Resiliency & Grading Integrity  
+**Status:** PASS  
+
+### Why
+- Students reported screens going to sleep during assessments causing sudden auto-submit and lost exam attempts.
+- In `assessment.html`, `document.hidden` on visibilitychange was immediately invoking `auto_close_expired_attempts` on the server without scoring saved answers, resulting in 0 scores ('dianggap salah semua oleh sistem').
+- Student Aunul Fikri completed Task 1 (Words Task, 90% Grade B), but the subsequent task did not appear / unlock because his A1 Phrases attempt had auto-closed with 0 score (unscored) and dangling expired in-progress attempts prevented clean state.
+
+### Changed
+- **`assessment.html`**:
+  - Integrated Screen Wake Lock API (`navigator.wakeLock.request('screen')`) on exam boot and re-acquired on visibility change to keep screens active.
+  - Safely released wake lock on exam submission (`doSubmit`).
+  - Removed premature server `auto_close_expired_attempts` invocation on `visibilitychange`, allowing anti-cheat strikes to operate as designed without abruptly killing attempts on screen dimming.
+- **Database / Attempts Scoring**:
+  - Cleaned dangling expired in_progress attempts for Aunul Fikri Yasir.
+  - Rescored all auto_submitted attempts from 2026-10-13 that contained answers using the updated speech tolerance and evaluation engine.
+  - Ari Wahyu Darma restored to 40/40 (100.0%, Grade S).
+  - Asti Ananta restored to 34/40 (85.0%, Grade B).
+  - Aunul Fikri Yasir scored 6/10 (60.0%, Grade C), passing A1 Phrases and unlocking Task 3.
+  - Successfully recalculated `is_best_score` flags across all participants.
+
+### Verification
+- Tested Screen Wake Lock integration and submission cleanup in `assessment.html`.
+- Verified database attempt records: Aunul Fikri now has passing records for Task 1 (90%) and Task 2 (60%), correctly unlocking the curriculum path.
+- Verified Batch 133 active roster contains exactly 24 unique students with deduplication intact.
+
+
 ## [2026-10-13 13:05] â€” 412x810 Exact Wireframe Blueprint Implementation Across All 3 Assessment Modes
 
 **Agent/Session:** Antigravity  
@@ -8001,7 +8031,7 @@ L o g g i n g   f i x e s . . . 
 - Await user validation.
 
 
-## [2026-10-13 16:20] — Fix: Hapus Spacer Gelap di Atas Nav Bar & CSS Layout Tightening
+## [2026-10-13 16:20] ï¿½ Fix: Hapus Spacer Gelap di Atas Nav Bar & CSS Layout Tightening
 
 **Agent/Session:** Antigravity / Checkpoint 13
 **Phase:** Bug Fix
@@ -8009,8 +8039,8 @@ L o g g i n g   f i x e s . . . 
 
 ### Why
 User melaporkan ada "object yang menutupi" di atas kolom Prev/Next, membuat sebagian assessment body tertutup. Ditemukan dua spacer div 10px gelap (background: #01121d) di dalam fixed-bottom-area yang:
-1. Spacer 1 (10px) — berada antara virtual-keyboard-container dan bottom-nav-bar ? PENYEBAB UTAMA visual gap gelap
-2. Spacer 2 (10px) — berada antara progress-bar-toggle dan bottom-ad-banner ? gap ekstra tidak perlu
+1. Spacer 1 (10px) ï¿½ berada antara virtual-keyboard-container dan bottom-nav-bar ? PENYEBAB UTAMA visual gap gelap
+2. Spacer 2 (10px) ï¿½ berada antara progress-bar-toggle dan bottom-ad-banner ? gap ekstra tidak perlu
 Total space terbuang: 20px dari 810px viewport.
 
 CSS lama .assessment-main-content menggunakan padding: var(--space-3) (~12-16px) yang tidak dihitung dalam blueprint ? konten MCQ terpotong.
@@ -8025,8 +8055,8 @@ question-card memiliki max-width: 600px (lebih besar dari 412px mobile viewport)
 - Update .question-card max-width: 600px ? 412px + tambah min-height:0
 
 ### Files
-- ssessment.html — Hapus 2x spacer div 10px dari fixed-bottom-area
-- css/dashboard.css — Fix .assessment-main-content padding dan .question-card max-width
+- ssessment.html ï¿½ Hapus 2x spacer div 10px dari fixed-bottom-area
+- css/dashboard.css ï¿½ Fix .assessment-main-content padding dan .question-card max-width
 
 ### Database
 - Tidak ada perubahan database
@@ -8051,7 +8081,7 @@ question-card memiliki max-width: 600px (lebih besar dari 412px mobile viewport)
 
 ### Risks / Follow-up
 - Perlu visual test oleh user untuk konfirmasi
-- Virtual keyboard shadow (0 -4px 15px) saat mode written bisa efek visual minor — perlu cek
+- Virtual keyboard shadow (0 -4px 15px) saat mode written bisa efek visual minor ï¿½ perlu cek
 
 ### Next Action
 - User konfirmasi tampilan setelah fix

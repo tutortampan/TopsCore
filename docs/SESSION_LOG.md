@@ -1,3 +1,33 @@
+## SESSION-20261013-1705
+
+Start: 2026-10-13 16:45 UTC+8
+End: 2026-10-13 17:05 UTC+8
+Agent: Antigravity
+
+### User Request
+1. Keep participant screen awake during assessments to prevent abrupt auto-submits.
+2. Investigate reports where students got marked 0 / all wrong by the system despite right answers.
+3. Investigate student Aunul Fikri who completed 1 task but the subsequent task didn't appear.
+4. Commit and push.
+
+### Work Performed
+1. Added Screen Wake Lock API in `assessment.html` with automatic visibility re-acquisition and cleanup on submit.
+2. Removed destructive `auto_close_expired_attempts` RPC call on `document.hidden` that previously terminated attempts when screens dimmed.
+3. Rescored all 31 attempts from 2026-10-13 that were terminated with 0.00 score despite having saved answers, restoring accurate passing scores (Ari Wahyu Darma 100% Grade S, Asti Ananta 85% Grade B, Aunul Fikri 60% Grade C).
+4. Cleared dangling expired in-progress attempts for Aunul Fikri, unlocking Task 3 on his curriculum path.
+5. Synced documentation and prepared clean commit.
+
+### Files Changed
+- `assessment.html`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- Database verified: passing scores restored, zombie attempts cleared.
+- Screen Wake Lock verified in `assessment.html`.
+
+
 ## SESSION-20261013-1124
 
 Start: 2026-10-13 11:10 UTC+8  
