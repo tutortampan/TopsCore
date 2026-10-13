@@ -32,17 +32,35 @@ function damerauLevenshtein(a: string, b: string): number {
   return dp[la][lb];
 }
 
-function normalizeText(text: string): string {
+function cleanPunctuationAndSymbols(text: string): string {
   if (!text) return "";
   return text
     .toLowerCase()
     .trim()
+    .replace(/[()\[\]{}\-–—_.,;:!?'"`~*&^%$#@+\\/]/g, " ")
     .replace(/\s+/g, " ")
-    .replace(/[-\s]/g, " ")
-    .replace(/[^\w\s']/g, "")
     .replace(/\bi'm\b/g, "i am")
     .replace(/\bcan't\b/g, "cannot")
-    .replace(/\bdon't\b/g, "do not");
+    .replace(/\bdon't\b/g, "do not")
+    .trim();
+}
+
+function stripAllPunctuationAndSpaces(text: string): string {
+  if (!text) return "";
+  return text.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function expandAnswerVariants(raw: string): string[] {
+  if (!raw) return [];
+  const variants = new Set<string>();
+  variants.add(raw);
+  if (raw.includes("(") && raw.includes(")")) {
+    const withoutParens = raw.replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+    if (withoutParens) variants.add(withoutParens);
+    const strippedParens = raw.replace(/[()]/g, " ").replace(/\s+/g, " ").trim();
+    if (strippedParens) variants.add(strippedParens);
+  }
+  return Array.from(variants);
 }
 
 function parseValidAnswers(row: any): string[] {
@@ -54,12 +72,29 @@ function parseValidAnswers(row: any): string[] {
   } else if (row.correct_answer_snapshot) {
     list = String(row.correct_answer_snapshot).split(/[;/|]/);
   }
-  return list.map(s => s.trim()).filter(Boolean);
+
+  const allVariants: string[] = [];
+  for (const item of list) {
+    const parts = String(item).split(/[;/|]/);
+    for (const p of parts) {
+      const trimmed = p.trim();
+      if (trimmed) {
+        expandAnswerVariants(trimmed).forEach(v => allVariants.push(v));
+      }
+    }
+  }
+  return allVariants;
 }
 
-function evaluateStudentAnswer(studentAnswer: string, validAnswers: string[]): { result: string; score: number; is_correct: boolean; similarity_score: number } {
-  const normalizedStudent = normalizeText(studentAnswer);
-  if (!normalizedStudent) {
+function evaluateStudentAnswer(
+  studentAnswer: string,
+  validAnswers: string[],
+  isSpeech: boolean = false
+): { result: string; score: number; is_correct: boolean; similarity_score: number } {
+  const normStudent = cleanPunctuationAndSymbols(studentAnswer);
+  const compactStudent = stripAllPunctuationAndSpaces(studentAnswer);
+
+  if (!normStudent && !compactStudent) {
     return { result: "incorrect", score: 0.0, is_correct: false, similarity_score: 0 };
   }
 
@@ -68,30 +103,45 @@ function evaluateStudentAnswer(studentAnswer: string, validAnswers: string[]): {
   let bestSimilarity = 0.0;
 
   for (const valid of validAnswers) {
-    const normalizedCorrect = normalizeText(valid);
-    if (!normalizedCorrect) continue;
+    const normCorrect = cleanPunctuationAndSymbols(valid);
+    const compactCorrect = stripAllPunctuationAndSpaces(valid);
+    if (!normCorrect && !compactCorrect) continue;
 
-    if (normalizedStudent === normalizedCorrect) {
+    // 1. Direct match with punctuation stripped & collapsed spaces
+    if (normStudent === normCorrect || compactStudent === compactCorrect) {
       return { result: "correct", score: 1.0, is_correct: true, similarity_score: 1.0 };
     }
 
-    // Hyphen tolerance match (e.g. checkin vs check-in)
-    if (normalizedStudent.replace(/[-\s]/g, '') === normalizedCorrect.replace(/[-\s]/g, '')) {
-      return { result: "correct", score: 1.0, is_correct: true, similarity_score: 1.0 };
-    }
+    const distNorm = damerauLevenshtein(normStudent, normCorrect);
+    const distCompact = damerauLevenshtein(compactStudent, compactCorrect);
+    const dist = Math.min(distNorm, distCompact);
 
-    const dist = damerauLevenshtein(normalizedStudent, normalizedCorrect);
-    const maxLen = Math.max(normalizedStudent.length, normalizedCorrect.length);
-    const minLen = Math.min(normalizedStudent.length, normalizedCorrect.length);
+    const maxLen = Math.max(normStudent.length, normCorrect.length);
+    const minLen = Math.min(normStudent.length, normCorrect.length);
     const similarity = maxLen > 0 ? (maxLen - dist) / maxLen : 0;
 
     if (similarity > bestSimilarity) bestSimilarity = similarity;
 
-    // Tolerance: safeguard short words: length <= 2 requires exact match; length 3 allows dist 1; length >= 4 allows dist <= 2
-    const isAllowedTypo = (minLen >= 4 && dist <= 2) || (minLen === 3 && dist === 1);
-    if (isAllowedTypo && bestScore < 0.5) {
-      bestResult = "minor_spelling_error";
-      bestScore = 0.5;
+    // Leeway for 1 or 2 letters:
+    // Short word safeguards: length <= 2 requires exact match; length 3 allows dist <= 1; length >= 4 allows dist <= 2
+    const isWithin2Letters = (minLen >= 4 && dist <= 2) || (minLen === 3 && dist <= 1) || (minLen > 0 && dist <= 1 && distNorm <= 1);
+
+    if (isWithin2Letters) {
+      if (isSpeech) {
+        // FOR SPEECH: Full leeway of 1-2 letters & undetected punctuation is treated as CORRECT (1.0 pt)
+        return {
+          result: "correct",
+          score: 1.0,
+          is_correct: true,
+          similarity_score: Math.max(bestSimilarity, 0.95)
+        };
+      } else {
+        // FOR WRITTEN: standard minor spelling error (0.5 pt)
+        if (bestScore < 0.5) {
+          bestResult = "minor_spelling_error";
+          bestScore = 0.5;
+        }
+      }
     }
   }
 
@@ -182,8 +232,11 @@ Deno.serve(async (req: Request) => {
     const pendingUpdates: any[] = [];
     for (const row of answerRows) {
       const studentAnswer = submittedMap[row.id] ?? row.student_answer ?? "";
-      const validAnswers = parseValidAnswers(row);
-      const evalRes = evaluateStudentAnswer(studentAnswer, validAnswers);
+      const isSpeech = row.question_snapshot?.answer_type === "speech_to_text" || 
+                       row.question_snapshot?.answer_type === "spoken" ||
+                       row.question_type_snapshot === "speech_to_text" ||
+                       row.question_type_snapshot === "spoken";
+      const evalRes = evaluateStudentAnswer(studentAnswer, validAnswers, isSpeech);
 
       totalScore += evalRes.score;
       if (evalRes.is_correct) correctCount++;

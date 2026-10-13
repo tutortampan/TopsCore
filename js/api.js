@@ -46,6 +46,12 @@ export function formatStudentName(name, gender) {
   return clean;
 }
 
+export function normalizeStudentNameForMatch(name) {
+  if (!name) return '';
+  const stripped = stripHonorific(name);
+  return stripped.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
 /**
  * Konversi nomor level menjadi teks ordinal baku:
  * 1 -> 1st Level, 2 -> 2nd Level, 3 -> 3rd Level, 4 -> 4th Level, dst.

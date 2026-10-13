@@ -1,4 +1,4 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256 } from '../api.js?v=5.1.0';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256 } from '../api.js?v=5.1.0';
 import { getSupabase } from '../supabase.js?v=5.1.0';
 import { getGrade, showToast } from '../app.js?v=5.1.0';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=5.1.0';
@@ -58,11 +58,12 @@ export async function renderStudents(area) {
   const levelsMap = new Map();
   (allLevels || []).forEach(l => levelsMap.set(l.id, l));
 
-  // Detect duplicate students within the same class
+  // Detect duplicate students within the same class (normalized by stripping honorifics & whitespace)
   const dupMap = new Map();
   (rawData || []).forEach(s => {
     if (s.deleted_at) return;
-    const key = `${s.program_id}::${(s.name || '').toLowerCase().trim()}`;
+    const norm = normalizeStudentNameForMatch(s.name);
+    const key = `${s.program_id}::${norm}`;
     if (!dupMap.has(key)) dupMap.set(key, []);
     dupMap.get(key).push(s);
   });
@@ -1031,6 +1032,19 @@ export async function openStudentFullEdit(student, onSaved) {
         await adminUpdate('students', finalStudentId, payload);
         showToast('Student updated successfully.', 'success');
       } else {
+        // Pre-check for duplicate student in the same program
+        const normNew = normalizeStudentNameForMatch(name);
+        let dupQ = sb.from('students').select('id, name').is('deleted_at', null);
+        if (selectedProgramId) dupQ = dupQ.eq('program_id', selectedProgramId);
+        const { data: existingRows } = await dupQ;
+        const dupMatch = (existingRows || []).find(r => normalizeStudentNameForMatch(r.name) === normNew);
+        if (dupMatch) {
+          showToast(`Student "${dupMatch.name}" already exists in this program. Cannot add duplicate.`, 'warning');
+          newSaveBtn.disabled = false;
+          newSaveBtn.textContent = 'Save Changes';
+          return;
+        }
+
         const created = await adminInsert('students', payload);
         finalStudentId = created.id;
         showToast('Student created successfully.', 'success');

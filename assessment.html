@@ -31,18 +31,95 @@
     /* ===== SPEECH-TO-TEXT CENTERED LAYOUT ===== */
     body.assessment-page {
       background: linear-gradient(170deg, #021e33 0%, #032b43 30%, #01121d 100%);
-      min-height: 100vh;
+      height: 100vh !important;
+      height: 100dvh !important;
+      min-height: 100dvh !important;
+      max-height: 100dvh !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      padding-bottom: 0 !important;
       color: #fff;
+      box-sizing: border-box !important;
     }
-    
-    .speech-center-layout {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      min-height: calc(100vh - 180px);
-      padding: 0 1rem 4rem;
-      gap: 0;
+
+    body.assessment-page #toast-container {
+      position: static !important;
+      top: auto !important;
+      right: auto !important;
+      left: auto !important;
+      bottom: auto !important;
+      width: 100% !important;
+      max-width: 412px !important;
+      height: 27px !important;
+      min-height: 27px !important;
+      max-height: 27px !important;
+      margin: 0 auto !important;
+      padding: 0 8px !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      z-index: 9999 !important;
+      pointer-events: none !important;
+      flex-shrink: 0 !important;
+    }
+    body.assessment-page #toast-container .toast,
+    body.assessment-page .toast {
+      position: static !important;
+      margin: 0 !important;
+      padding: 2px 10px !important;
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      border-radius: 6px !important;
+      height: 23px !important;
+      min-height: 23px !important;
+      max-height: 23px !important;
+      line-height: 1 !important;
+      backdrop-filter: blur(10px) !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;
+      pointer-events: auto !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      animation: none !important;
+      white-space: nowrap !important;
+      text-overflow: ellipsis !important;
+      overflow: hidden !important;
+      max-width: 396px !important;
+    }
+    body.assessment-page .toast.hiding {
+      opacity: 0 !important;
+      transition: opacity 0.2s ease-out !important;
+    }
+
+    /* Dedicated Slim Bottom Banner (~28px) */
+    body.assessment-page .topscore-locked-banner {
+      position: static !important;
+      width: 100% !important;
+      max-width: 400px !important;
+      margin: 0 auto !important;
+      height: 28px !important;
+      min-height: 28px !important;
+      max-height: 28px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: #010e17 !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+      padding: 0 !important;
+      padding-bottom: max(2px, env(safe-area-inset-bottom, 0px)) !important;
+      box-sizing: border-box !important;
+      font-size: 10px !important;
+      font-weight: 600 !important;
+      color: #64748b !important;
+      letter-spacing: 0.04em !important;
+      flex-shrink: 0 !important;
+      z-index: 100 !important;
+      pointer-events: auto !important;
     }
 
     /* Question Card — white body, blue header */
@@ -118,21 +195,22 @@
     }
 
     .speech-mic-btn-lg {
-      width: 76px;
-      height: 76px;
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
-      border: 4px solid rgba(16, 185, 129, 0.4);
+      border: 3px solid rgba(16, 185, 129, 0.4);
       background: linear-gradient(135deg, #10b981, #047857);
       color: #fff;
-      font-size: 2.2rem;
+      font-size: 1.8rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
       transition: transform 0.15s, box-shadow 0.15s;
       position: relative;
       -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
     }
     .speech-mic-btn-lg:hover {
       transform: scale(1.05);
@@ -224,38 +302,39 @@
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.15);
       border-radius: 12px;
-      padding: 0.75rem 1rem;
-      margin-bottom: 0.75rem;
+      padding: 10px 14px;
+      margin-bottom: 8px;
       color: #fff;
-      font-size: 1.1rem;
+      font-size: 15px;
+      font-weight: 500;
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 12px;
       cursor: pointer;
       transition: all 0.2s ease;
-      
-      -webkit-
+      -webkit-tap-highlight-color: transparent;
       box-sizing: border-box;
+      min-height: 48px;
     }
     .mc-option:hover {
       background: rgba(255,255,255,0.15);
-      transform: translateY(-2px);
+      transform: translateY(-1px);
     }
     .mc-option.selected {
       background: rgba(52, 211, 153, 0.15);
       border-color: #34d399;
-      box-shadow: 0 0 15px rgba(52, 211, 153, 0.2);
+      box-shadow: 0 0 12px rgba(52, 211, 153, 0.2);
     }
     .mc-letter {
       background: rgba(255,255,255,0.15);
       border-radius: 50%;
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 0.9rem;
+      font-size: 14px;
       flex-shrink: 0;
     }
     .mc-option.selected .mc-letter {
@@ -292,9 +371,8 @@
       padding: 0.75rem 1rem;
       color: #fff;
       font-size: 1.1rem;
-      
-      -webkit-
       box-sizing: border-box;
+      -webkit-appearance: none;
       appearance: none;
     }
     select.form-control option {
@@ -336,8 +414,8 @@
     .vk-row { 
       display: flex; 
       justify-content: center; 
-      gap: 6px; 
-      margin-bottom: 6px; 
+      gap: 4px; 
+      margin-bottom: 4px; 
     } 
     .vk-row:last-child { 
       margin-bottom: 0; 
@@ -345,7 +423,7 @@
     .vk-key { 
       flex: 1; 
       aspect-ratio: 1 / 1; 
-      max-height: 44px; 
+      max-height: 36px; 
       display: flex; 
       align-items: center; 
       justify-content: center; 
@@ -354,7 +432,7 @@
       background: rgba(255,255,255,0.08); 
       border: 1px solid rgba(255,255,255,0.1); 
       color: #e2e8f0; 
-      font-size: 1.15rem; 
+      font-size: 1.05rem; 
       font-family: inherit; 
       font-weight: 500; 
       cursor: pointer; 
@@ -414,72 +492,44 @@
 
 
 
-  <div id="toast-container"></div>
-
-  <header class="flex items-start justify-between gap-3 w-full max-w-[800px] mx-auto p-3" style="width:100%; max-width:800px; margin:0 auto; padding:15px 12px 5px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; box-sizing:border-box;">
-    <!-- Left Element: Timer -->
-    <div class="assessment-timer shrink-0" id="assessment-timer" style="background:rgba(255,255,255,0.85); border-radius:12px; padding:6px 10px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); ">
-      <span style="font-size:1rem;">⏳</span>
-      <span id="timer-display" style="font-weight:800; color:#dc2626; font-size:0.85rem;">--:--</span>
-    </div>
-
-    <!-- Center Element: Avatar & Data -->
-    <div class="student-profile flex-1 text-center" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 0 10px;">
-      <img id="assessment-student-avatar" src="https://ui-avatars.com/api/?name=S&background=random" style="width:55px; height:55px; border-radius:50%; object-fit:cover; border:2px solid #06b6d4; margin-bottom: 8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);" />
-      <span id="assessment-student-name" class="truncate" style="font-size:1rem; font-weight:700; color:#fff; font-family:'Outfit',sans-serif; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">-</span>
-    </div>
-
-    <!-- Right Element: Give up! -->
-    <button class="shrink-0" onclick="window.openSubmitModal()" style="background:linear-gradient(135deg, #ef4444, #b91c1c); border:1px solid rgba(239,68,68,0.4); border-radius:8px; padding:6px 10px; color:#fff; font-weight:700; font-size:0.85rem; display:flex; align-items:center; gap:4px; box-shadow:0 4px 12px rgba(0,0,0,0.2); cursor:pointer;">
-      🏳️ Give up!
-    </button>
-  </header>
-
-  <!-- ASSESSMENT TITLE -->
-  <div class="w-full max-w-[800px] mx-auto mb-2 px-3 text-center" style="width:100%; max-width:800px; margin:0 auto 8px; padding:0 12px; box-sizing:border-box;">
-    <h1 id="assessment-main-title" style="font-size:clamp(1.15rem, 4vw, 1.35rem); font-weight:800; color:#fff; font-family:'Outfit', sans-serif; line-height: 1.3; margin: 0 auto; text-shadow:0 2px 4px rgba(0,0,0,0.5);">Assessment Title</h1>
-  </div>
-
-  <!-- ASSESSMENT progress bar & Pop-up Grid -->
-  <div style="width:100%; max-width:800px; margin:0 auto; padding:0 15px 15px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; position:relative; z-index:999;">
-    <!-- Progress Bar (Clickable Toggle) -->
-    <div id="progress-bar-toggle" style="width:100%; max-width:520px; cursor:pointer; position:relative;" onclick="window.toggleMatrixPopup()">
-      <div style="display:flex; justify-content:space-between; margin-bottom:4px; padding:0 4px;">
-        <span style="font-size:0.85rem; font-weight:600; color:#cbd5e1;">Progress (Tap to view grid)</span>
-        <span id="progress-text-percent" style="font-size:0.85rem; font-weight:800; color:#34d399;">0%</span>
+  <header style="width:100%; max-width:412px; margin:0 auto; padding:10px 10px 0 10px; display:flex; flex-direction:column; box-sizing:border-box; flex-shrink:0;">
+    <!-- Top Row (71px height): Flag & Give Up on Left, 71x71 Photo in Center, Countdown Timer on Right -->
+    <div style="width:100%; height:71px; min-height:71px; max-height:71px; display:flex; justify-content:space-between; align-items:center; box-sizing:border-box;">
+      <!-- Left: Flag & Give Up Button (Red, [🚩 Give up!]) -->
+      <div style="flex:1; display:flex; align-items:center; justify-content:flex-start;">
+        <button id="giveup-btn" onclick="window.openSubmitModal()" style="background:#dc2626; border:1px solid #ef4444; border-radius:8px; padding:6px 12px; color:#ffffff; font-weight:700; font-size:12px; display:inline-flex; align-items:center; gap:5px; cursor:pointer; line-height:1; height:36px; box-shadow:0 2px 6px rgba(0,0,0,0.3); -webkit-tap-highlight-color:transparent; transition:all 0.15s ease;" title="Give up / End Assessment">
+          <span style="font-size:14px;">🚩</span>
+          <span>Give up!</span>
+        </button>
       </div>
-      <div class="assessment-progress-wrap" style="height:18px; border-radius:10px; background:rgba(255,255,255,0.15); overflow:hidden;">
-        <div class="assessment-progress-fill" id="assessment-progress-fill" style="width:0%; height:100%; background:linear-gradient(to right, #3b82f6, #34d399); transition:width 0.3s; border-radius:10px;"></div>
+
+      <!-- Center: Student Avatar Photo (71x71px) -->
+      <div style="flex-shrink:0; display:flex; align-items:center; justify-content:center; width:71px; height:71px;">
+        <img id="assessment-student-avatar" src="https://ui-avatars.com/api/?name=S&background=random" alt="Student" style="width:71px; height:71px; min-width:71px; min-height:71px; border-radius:12px; object-fit:cover; border:2.5px solid #06b6d4; box-shadow:0 0 12px rgba(6,182,212,0.4);" />
+        <span id="assessment-student-name" style="display:none;">-</span>
+        <span id="assessment-student-details" style="display:none;"></span>
       </div>
-    </div>
-    
-    <!-- Pop-up Question Matrix -->
-    <div id="matrix-popup" style="display:none; position:absolute; top:55px; left:50%; transform:translateX(-50%); width:95%; max-width:500px; max-height:calc(100vh - 220px);   border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:15px; box-shadow:0 10px 35px rgba(0,0,0,0.7); z-index:9999; flex-direction:column; background: #0b1523; border: 1px solid rgba(255, 255, 255, 0.18); background: #0b1523; border: 1px solid rgba(255, 255, 255, 0.18);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-shrink:0;">
-        <span style="font-size:0.85rem; font-weight:700; color:#fff;">Question Matrix</span>
-        <button id="close-matrix-btn" style="background:transparent; border:none; color:#94a3b8; font-size:1.1rem; cursor:pointer;" onclick="window.toggleMatrixPopup(false)">✕</button>
-      </div>
-      
-      <!-- GRID CONTAINER: CSS must be responsive -->
-      <div style="flex:1; overflow-y: auto; padding-right: 4px; min-height:0;">
-        <div class="q-nav-grid" id="q-nav-grid" role="navigation" aria-label="Jump to question" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(45px, 1fr)); gap:8px;">
-          <!-- Filled dynamically -->
+
+      <!-- Right: Countdown Timer Badge (18:02) -->
+      <div style="flex:1; display:flex; align-items:center; justify-content:flex-end;">
+        <div class="assessment-timer shrink-0" id="assessment-timer" style="background:rgba(15,23,42,0.92); border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:4px 10px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 2px 6px rgba(0,0,0,0.3); height:36px; box-sizing:border-box;">
+          <span style="font-size:13px;">⌛</span>
+          <span id="timer-display" style="font-weight:800; color:#ef4444; font-size:13px; font-family:monospace; line-height:1; letter-spacing:0.04em;">18:02</span>
         </div>
       </div>
-      
-      <div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.1); margin-top:12px; padding-top:12px; display:flex; flex-direction:column; gap:8px; flex-shrink:0;">
-        <button class="btn btn-secondary w-100 btn-sm" id="btn-sidebar-jump-unanswered" style="font-size:0.78rem;padding:8px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="window.toggleMatrixPopup(false)">
-          🔍 Jump to Next Unanswered
-        </button>
-        <button class="btn btn-success w-100" id="global-submit-btn" style="padding:10px;font-weight:600;">
-          Submit ASSESSMENT 📋
-        </button>
-      </div>
     </div>
-  </div>
+
+    <!-- ASSESSMENT TITLE 54 px -->
+    <div style="width:100%; height:54px; min-height:54px; max-height:54px; margin-top:0; display:flex; align-items:center; justify-content:center; text-align:center; background:#12263f; border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:0 8px; box-sizing:border-box; overflow:hidden;">
+      <h1 id="assessment-main-title" style="font-size:14px; font-weight:700; color:#f8fafc; font-family:'Outfit', sans-serif; line-height:1.25; margin:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; max-width:100%; letter-spacing:0.01em;" title="Assessment Title">ASSESSMENT TITLE</h1>
+    </div>
+  </header>
+
+  <!-- Toast Slot (27px) -->
+  <div id="toast-container" style="width:100%; max-width:412px; margin:0 auto; height:27px; min-height:27px; max-height:27px; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:9999; flex-shrink:0; box-sizing:border-box;"></div>
 
   <!-- ASSESSMENT body -->
-  <div class="assessment-body" style="flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
+  <div class="assessment-body" style="flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden; position:relative;">
     <!-- Main question area -->
     <main class="assessment-main-content" id="assessment-main" aria-live="polite">
       <div class="question-card">
@@ -492,22 +542,22 @@
   </div>
 
   <!-- Fixed Bottom Area -->
-  <div id="fixed-bottom-area" style="flex-shrink: 0; z-index: 1000; display: flex; flex-direction: column; width: 100%;">
+  <div id="fixed-bottom-area" style="flex-shrink: 0; z-index: 1000; display: flex; flex-direction: column; width: 100%; max-width: 412px; margin: 0 auto;">
     
-    <!-- Virtual Keyboard -->
-    <div id="virtual-keyboard-container" style="flex-shrink: 0; height: auto; padding: 8px 6px;  border-top: 1px solid rgba(255,255,255,0.05);  display: none; flex-direction: column; box-sizing: border-box; box-shadow: 0 -4px 15px rgba(0,0,0,0.3); background: #0b1523; border: 1px solid rgba(255, 255, 255, 0.18); background: #0b1523; border: 1px solid rgba(255, 255, 255, 0.18);">
-      <div class="vk-row" style="display: flex; justify-content: center; gap: 6px; margin-bottom: 6px;">
+    <!-- Virtual Keyboard (135x400) -->
+    <div id="virtual-keyboard-container" style="flex-shrink: 0; width: 100%; max-width: 412px; margin: 0 auto; height: 135px; min-height: 135px; max-height: 135px; padding: 2px 4px; border-top: 1px solid rgba(255,255,255,0.08); display: none; flex-direction: column; justify-content: space-between; box-sizing: border-box; box-shadow: 0 -4px 15px rgba(0,0,0,0.3); background: #0b1523;">
+      <div class="vk-row" style="display: flex; justify-content: center; gap: 3px; margin-bottom: 2px;">
         <button class="vk-key" data-key="q">q</button><button class="vk-key" data-key="w">w</button><button class="vk-key" data-key="e">e</button><button class="vk-key" data-key="r">r</button><button class="vk-key" data-key="t">t</button><button class="vk-key" data-key="y">y</button><button class="vk-key" data-key="u">u</button><button class="vk-key" data-key="i">i</button><button class="vk-key" data-key="o">o</button><button class="vk-key" data-key="p">p</button>
       </div>
-      <div class="vk-row" style="display: flex; justify-content: center; gap: 6px; margin-bottom: 6px;">
+      <div class="vk-row" style="display: flex; justify-content: center; gap: 3px; margin-bottom: 2px;">
         <button class="vk-key" data-key="a">a</button><button class="vk-key" data-key="s">s</button><button class="vk-key" data-key="d">d</button><button class="vk-key" data-key="f">f</button><button class="vk-key" data-key="g">g</button><button class="vk-key" data-key="h">h</button><button class="vk-key" data-key="j">j</button><button class="vk-key" data-key="k">k</button><button class="vk-key" data-key="l">l</button>
       </div>
-      <div class="vk-row" style="display: flex; justify-content: center; gap: 6px; margin-bottom: 6px;">
+      <div class="vk-row" style="display: flex; justify-content: center; gap: 3px; margin-bottom: 2px;">
         <button class="vk-key" data-key="-">-</button>
         <button class="vk-key" data-key="z">z</button><button class="vk-key" data-key="x">x</button><button class="vk-key" data-key="c">c</button><button class="vk-key" data-key="v">v</button><button class="vk-key" data-key="b">b</button><button class="vk-key" data-key="n">n</button><button class="vk-key" data-key="m">m</button>
         <button class="vk-key special" data-key="Backspace">⌫</button>
       </div>
-      <div class="vk-row" style="display: flex; justify-content: center; gap: 6px;">
+      <div class="vk-row" style="display: flex; justify-content: center; gap: 3px;">
         <button class="vk-key special" data-key=",">,</button>
         <button class="vk-key space" data-key=" ">Space</button>
         <button class="vk-key special" data-key=".">.</button>
@@ -515,11 +565,54 @@
       </div>
     </div>
 
-    <!-- Bottom Nav Bar (Mobile) -->
-    <div class="bottom-nav-bar" style="position: relative; margin-bottom: 0; padding:10px 15px; background: var(--clr-bg-1, #01121d); border-top: 1px solid var(--clr-border, rgba(255,255,255,0.05)); z-index: 1000; display:flex; align-items:center; justify-content:space-between; max-width:800px; margin:0 auto; width:100%; box-sizing:border-box;">
-      <button class="btn btn-secondary" id="bottom-prev-btn" style="padding:6px 12px; font-size:0.85rem;" disabled>&larr; Prev</button>
-      <div class="bottom-nav-status" id="question-counter" style="font-weight:700; font-size:0.9rem; color:#94a3b8; text-align:center; min-width:100px;">0/0 answered</div>
-      <button class="btn btn-primary" id="bottom-next-btn" style="padding:6px 12px; font-size:0.85rem;">Next &rarr;</button>
+    <!-- Bottom Nav Bar (54px) -->
+    <div class="bottom-nav-bar" style="position: relative; margin: 0 auto; padding: 0 10px; background: var(--clr-bg-1, #01121d); border-top: 1px solid var(--clr-border, rgba(255,255,255,0.08)); z-index: 100; display:flex; align-items:center; justify-content:space-between; max-width:412px; width:100%; box-sizing:border-box; height:54px; min-height:54px; max-height:54px; flex-shrink:0;">
+      <button class="btn btn-secondary" id="bottom-prev-btn" style="height:38px; min-width:76px; padding:0 12px; font-size:13.5px; font-weight:700; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;" disabled>&larr; Prev</button>
+      
+      <!-- 0/40 Answered (54px) -->
+      <div class="bottom-nav-status" id="question-counter" onclick="window.toggleMatrixPopup()" style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:150px; height:54px; cursor:pointer; line-height:1.2; -webkit-tap-highlight-color:transparent; box-sizing:border-box;" title="Tap to view question grid">
+        <span id="question-counter-text" style="font-weight:700; font-size:13.5px; color:#f1f5f9;">0/0 Answered</span>
+        <span style="font-size:10px; font-weight:600; color:#38bdf8; display:flex; align-items:center; gap:2px; margin-top:2px;">🔍 Tap to Open Matrix</span>
+      </div>
+
+      <button class="btn btn-primary" id="bottom-next-btn" style="height:38px; min-width:76px; padding:0 12px; font-size:13.5px; font-weight:700; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;">Next &rarr;</button>
+    </div>
+
+    <!-- PROGRESS LINE (27px Docked) -->
+    <div id="progress-bar-toggle" style="width:100%; max-width:412px; margin:0 auto; height:27px; min-height:27px; max-height:27px; display:flex; align-items:center; justify-content:center; padding:0 12px; box-sizing:border-box; cursor:pointer; flex-shrink:0; background:#01121d; border-top:1px solid rgba(255,255,255,0.06);" onclick="window.toggleMatrixPopup()" title="Tap to view question grid">
+      <div style="width:100%; height:4px; background:rgba(255,255,255,0.12); border-radius:2px; overflow:hidden;">
+        <div class="assessment-progress-fill" id="assessment-progress-fill" style="width:0%; height:100%; background:linear-gradient(to right, #3b82f6, #34d399); transition:width 0.3s;"></div>
+      </div>
+      <span id="progress-text-percent" style="display:none;">0%</span>
+    </div>
+
+    <!-- banner TopsCore (28px) -->
+    <div id="bottom-ad-banner" class="topscore-locked-banner" style="width:100%; max-width:412px; margin:0 auto; height:28px !important; min-height:28px !important; max-height:28px !important; position:static !important; display:flex !important; align-items:center; justify-content:center; background:#010e17 !important; border-top:1px solid rgba(255,255,255,0.05) !important; padding:0 !important; padding-bottom:max(2px, env(safe-area-inset-bottom, 0px)) !important; box-sizing:border-box !important; flex-shrink:0; z-index:100; font-size:10px !important; font-weight:600 !important; color:#64748b !important; letter-spacing:0.04em;">
+      TopsCore &copy; 2026 | Created by Mr. Top
+    </div>
+  </div>
+
+  <!-- Centered Modal Question Matrix -->
+  <div id="matrix-popup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:92%; max-width:480px; max-height:80vh; max-height:80dvh; border:1px solid rgba(255,255,255,0.2); border-radius:16px; padding:15px; box-shadow:0 12px 40px rgba(0,0,0,0.85); z-index:99999; flex-direction:column; background:#0b1523; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-shrink:0;">
+      <span style="font-size:0.88rem; font-weight:700; color:#fff;">Question Matrix</span>
+      <button id="close-matrix-btn" style="background:transparent; border:none; color:#94a3b8; font-size:1.1rem; cursor:pointer;" onclick="window.toggleMatrixPopup(false)">✕</button>
+    </div>
+    
+    <!-- GRID CONTAINER -->
+    <div style="flex:1; overflow-y:auto; padding-right:4px; min-height:0;">
+      <div class="q-nav-grid" id="q-nav-grid" role="navigation" aria-label="Jump to question" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(36px, 1fr)); gap:6px;">
+        <!-- Filled dynamically -->
+      </div>
+    </div>
+    
+    <div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.1); margin-top:12px; padding-top:12px; display:flex; flex-direction:column; gap:8px; flex-shrink:0;">
+      <button class="btn btn-secondary w-100 btn-sm" id="btn-sidebar-jump-unanswered" style="font-size:0.78rem;padding:8px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="window.toggleMatrixPopup(false)">
+        🔍 Jump to Next Unanswered
+      </button>
+      <button class="btn btn-success w-100" id="global-submit-btn" style="padding:10px;font-weight:600;">
+        Submit ASSESSMENT 📋
+      </button>
     </div>
   </div>
 
@@ -537,8 +630,8 @@
   </div>
 
   <!-- Submit confirm modal -->
-  <div class="modal-backdrop hidden" id="submit-modal" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
-    <div class="modal-box" style="max-width:480px;text-align:center;">
+  <div class="modal-backdrop hidden" id="submit-modal" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title" style="z-index: 99999 !important; background: rgba(2, 6, 23, 0.88); backdrop-filter: blur(8px);">
+    <div class="modal-box" style="max-width:480px; text-align:center; background:#0f1d2d !important; border:1px solid rgba(255,255,255,0.18); box-shadow:0 16px 48px rgba(0,0,0,0.85);">
       <div style="font-size:3rem;margin-bottom:var(--space-3);" id="submit-modal-icon">✅</div>
       <h3 id="submit-modal-title" class="mb-3">Submit ASSESSMENT?</h3>
       <div id="unanswered-warning-banner" class="hidden mb-4 p-3 rounded text-sm text-left" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#fca5a5;">
@@ -1005,7 +1098,7 @@
           const classEl = document.getElementById('assessment-class-name');
           if (classEl && assessmentData.classes?.name) classEl.textContent = assessmentData.classes.name;
           const titleEl = document.getElementById('assessment-main-title');
-          if (titleEl) titleEl.textContent = assessmentData.assessment_title || assessmentData.name || assessmentDisplayName;
+          if (titleEl) titleEl.textContent = assessmentData.title || assessmentData.assessment_title || assessmentData.name || assessmentDisplayName;
         } catch(e) {}
 
         // Fetch student info for header
@@ -1015,6 +1108,10 @@
           const detailsEl = document.getElementById('assessment-student-details');
 
           if (nameEl) nameEl.textContent = session.student_name || 'Student';
+          if (detailsEl) {
+            const fallbackParts = [session.batch_name ? `Batch ${session.batch_name}` : '', session.program_name].filter(Boolean);
+            detailsEl.textContent = fallbackParts.length ? fallbackParts.join(' • ') : 'Cake English Course';
+          }
           
           fetch(`${SUPABASE_URL}/rest/v1/students?id=eq.${session.student_id}&select=*,institutions(name),programs(name),batches(name),levels(name)`, {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
@@ -1240,8 +1337,8 @@
         btn.addEventListener('click', () => {
           saveCurrentAnswer();
           renderQuestion(idx);
-          if (window.innerWidth <= 768) {
-            document.getElementById('qNavDrawer')?.classList.remove('open');
+          if (typeof window.toggleMatrixPopup === 'function') {
+            window.toggleMatrixPopup(false);
           }
         });
         grid.appendChild(btn);
@@ -1258,8 +1355,13 @@
       if (fillEl) fillEl.style.width = pct + '%';
       const progressTextEl = document.getElementById('progress-text-percent');
       if (progressTextEl) progressTextEl.textContent = Math.round(pct) + '%';
-      const counterEl = document.getElementById('question-counter');
-      if (counterEl) counterEl.textContent = `${answered}/${allAnswerRows.length} answered`;
+      const counterTextEl = document.getElementById('question-counter-text');
+      if (counterTextEl) {
+        counterTextEl.textContent = `${answered}/${allAnswerRows.length} Answered`;
+      } else {
+        const counterEl = document.getElementById('question-counter');
+        if (counterEl) counterEl.textContent = `${answered}/${allAnswerRows.length} answered`;
+      }
     }
 
     function updateActiveChipOnly(rowId, val) {
@@ -1380,45 +1482,43 @@
 
       const main = document.getElementById('assessment-main');
       main.innerHTML = '';
-      main.className = 'assessment-main-content flex-1 flex flex-col gap-3 min-h-0 overflow-hidden w-full max-w-[800px] mx-auto';
-      main.style.cssText = 'flex:1; display:flex; flex-direction:column; gap:0.75rem; min-height:0; overflow:hidden; width:100%; max-width:800px; margin:0 auto;';
+      main.className = 'assessment-main-content flex-1 flex flex-col items-center min-h-0 w-full max-w-[412px] mx-auto';
+      main.style.cssText = 'flex:1; display:flex; flex-direction:column; justify-content:flex-start; align-items:center; gap:3px; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; width:100%; max-width:412px; margin:0 auto; padding:0 6px; box-sizing:border-box;';
 
       const isWrittenOrSpeech = (answerType === 'written' || (answerType === 'speech_to_text' || answerType === 'spoken'));
 
-      // Top Part: Question Card (1/3)
+      // Question Box (162x400) + Metadata (Theme 27px, Topic 27px, Category 27px, Type 27px) -> Total 216px
       const topSection = document.createElement('div');
-      topSection.className = 'min-h-[135px] max-h-[175px] w-full flex flex-col justify-between p-3 rounded-2xl bg-slate-800/85 border border-slate-700/60 shadow-md shrink-0';
-      topSection.style.cssText = 'min-height:135px; max-height:175px; width:100%; display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:0.75rem 1rem; background:rgba(30,41,59,0.85); border:1px solid rgba(51,65,85,0.6); border-radius:16px; box-sizing:border-box; overflow-y:auto; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); flex-shrink:0;';
-      
-      let qHtml = `
-        <!-- Top Bar: Theme (Top-Left) and Topic (Top-Right) -->
-        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:6px; margin-bottom:4px; font-size:0.82rem; font-weight:600; color:var(--clr-text-2, #94a3b8); flex-shrink:0; box-sizing:border-box;">
-          <div style="display:flex; align-items:center; gap:5px; max-width:48%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-            <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px;">Theme:</span>
-            <span style="color:#38bdf8; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
-          </div>
-          <div style="display:flex; align-items:center; gap:5px; max-width:48%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-            <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px;">Topic:</span>
-            <span style="color:#f1f5f9; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
-          </div>
-        </div>
+      topSection.className = 'w-full flex flex-col rounded-2xl bg-slate-800/85 border border-slate-700/60 shadow-lg shrink-0';
+      topSection.style.cssText = 'width:100%; max-width:400px; height:216px; min-height:216px; max-height:216px; margin:0 auto; display:flex; flex-direction:column; background:rgba(30,41,59,0.9); border:1px solid rgba(51,65,85,0.6); border-radius:16px; box-sizing:border-box; box-shadow:0 4px 16px rgba(0,0,0,0.25); flex-shrink:0; overflow:hidden;';
 
-        <!-- Center: Question Text -->
-        <div style="flex-grow:1; display:flex; align-items:center; justify-content:center; width:100%; min-height:0; padding:6px 0;">
-          <div class="speech-question-text" style="font-size:clamp(1.2rem, 3.5vw, 1.55rem); font-weight:800; color:#fff; text-align:center; line-height:1.3; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0;">
+      let qHtml = `
+        <!-- Question Box (162px) -->
+        <div style="width:100%; height:162px; min-height:162px; max-height:162px; display:flex; align-items:center; justify-content:center; padding:10px 16px; box-sizing:border-box; text-align:center;">
+          <div class="speech-question-text" style="font-size:clamp(17px, 4.3vw, 20px); font-weight:800; color:#fff; text-align:center; line-height:1.3; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0;">
             ${escapeHtml(questionText)}
           </div>
         </div>
 
-        <!-- Bottom Bar under Question: Category (Bottom-Left) and Type (Bottom-Right) -->
-        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; border-top:1px solid rgba(255,255,255,0.08); padding-top:6px; margin-top:4px; font-size:0.82rem; font-weight:600; color:var(--clr-text-2, #94a3b8); flex-shrink:0; box-sizing:border-box;">
-          <div style="display:flex; align-items:center; gap:5px;">
-            <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px;">Category:</span>
-            <span style="background:rgba(168,85,247,0.15); color:#c084fc; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.78rem; border:1px solid rgba(168,85,247,0.3);">${escapeHtml(displayCategory)}</span>
+        <!-- Metadata Table (2x2 Grid): Theme (27px) | Category (27px), Topic (27px) | Type (27px) -> 54px -->
+        <div style="width:100%; height:54px; min-height:54px; max-height:54px; border-top:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; box-sizing:border-box; font-size:12px; font-weight:700;">
+          <!-- Row 1: Theme (27px) | Cathegory (27px) -->
+          <div style="display:flex; width:100%; height:27px; min-height:27px; max-height:27px; border-bottom:1px solid rgba(255,255,255,0.06); box-sizing:border-box;">
+            <div style="width:50%; height:27px; display:flex; align-items:center; justify-content:center; padding:0 8px; border-right:1px solid rgba(255,255,255,0.06); box-sizing:border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <span style="color:#38bdf8; font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
+            </div>
+            <div style="width:50%; height:27px; display:flex; align-items:center; justify-content:center; padding:0 8px; box-sizing:border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <span style="background:rgba(168,85,247,0.18); color:#c084fc; padding:1px 8px; border-radius:5px; font-size:11px; border:1px solid rgba(168,85,247,0.35); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(displayCategory)}</span>
+            </div>
           </div>
-          <div style="display:flex; align-items:center; gap:5px;">
-            <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px;">Type:</span>
-            <span style="background:rgba(52,211,153,0.15); color:#34d399; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.78rem; border:1px solid rgba(52,211,153,0.3);">${escapeHtml(displayType)}</span>
+          <!-- Row 2: Topic (27px) | Type (27px) -->
+          <div style="display:flex; width:100%; height:27px; min-height:27px; max-height:27px; box-sizing:border-box;">
+            <div style="width:50%; height:27px; display:flex; align-items:center; justify-content:center; padding:0 8px; border-right:1px solid rgba(255,255,255,0.06); box-sizing:border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <span style="color:#cbd5e1; font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
+            </div>
+            <div style="width:50%; height:27px; display:flex; align-items:center; justify-content:center; padding:0 8px; box-sizing:border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <span style="background:rgba(52,211,153,0.18); color:#34d399; padding:1px 8px; border-radius:5px; font-size:11px; border:1px solid rgba(52,211,153,0.35); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(displayType)}</span>
+            </div>
           </div>
         </div>
       `;
@@ -1431,27 +1531,27 @@
       if (vk) vk.style.display = 'none';
 
       if (answerType === 'speech_to_text' || answerType === 'spoken') {
-        // Speech Mode: Answer Area + Mic Control Area
+        // Mode 1: Answer box (162x400) + MIC (135x400)
         answerArea = document.createElement('div');
-        answerArea.className = 'flex-1 max-h-[180px] w-full flex flex-col justify-center p-3 rounded-2xl bg-slate-900/70 border border-slate-700/60 shadow-inner shrink-0';
-        answerArea.style.cssText = 'flex:1; min-height:80px; max-height:180px; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0.75rem; background:rgba(15,23,42,0.7); border:1px solid rgba(51,65,85,0.6); border-radius:16px; box-sizing:border-box; box-shadow:inset 0 2px 4px rgba(0,0,0,0.3); flex-shrink:0; position:relative;';
+        answerArea.className = 'w-full flex flex-col justify-between rounded-2xl bg-slate-900/70 border border-slate-700/60 shadow-inner shrink-0';
+        answerArea.style.cssText = 'height:162px; min-height:162px; max-height:162px; width:100%; max-width:400px; margin:0 auto; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:10px 14px; background:rgba(15,23,42,0.75); border:1px solid rgba(51,65,85,0.6); border-radius:14px; box-sizing:border-box; box-shadow:inset 0 2px 4px rgba(0,0,0,0.3); flex-shrink:0; position:relative;';
         main.appendChild(answerArea);
 
         controlArea = document.createElement('div');
-        controlArea.className = 'flex-1 min-h-[120px] w-full flex items-center justify-center overflow-hidden';
-        controlArea.style.cssText = 'flex:1; min-height:120px; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; overflow:hidden;';
+        controlArea.className = 'w-full flex flex-col items-center justify-center shrink-0';
+        controlArea.style.cssText = 'width:100%; max-width:400px; height:135px; min-height:135px; max-height:135px; margin:0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; flex-shrink:0;';
         main.appendChild(controlArea);
       } else if (answerType === 'written') {
-        // Written Mode: Perfectly centered answer box, no phantom mic area
+        // Mode 2: Answer box (162x400) + keyboard (135x400 in fixed-bottom-area)
         answerArea = document.createElement('div');
-        answerArea.className = 'w-full flex flex-col justify-center items-center p-4 rounded-2xl bg-slate-900/70 border border-slate-700/60 shadow-inner shrink-0';
-        answerArea.style.cssText = 'width:100%; min-height:120px; max-height:160px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1.25rem 1.5rem; background:rgba(15,23,42,0.7); border:1px solid rgba(51,65,85,0.6); border-radius:16px; box-sizing:border-box; box-shadow:inset 0 2px 4px rgba(0,0,0,0.3); flex-shrink:0; position:relative; margin:auto 0;';
+        answerArea.className = 'w-full flex flex-col justify-center items-center rounded-2xl bg-slate-900/70 border border-slate-700/60 shadow-inner shrink-0';
+        answerArea.style.cssText = 'width:100%; max-width:400px; margin:0 auto; height:162px; min-height:162px; max-height:162px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px 14px; background:rgba(15,23,42,0.75); border:1px solid rgba(51,65,85,0.6); border-radius:14px; box-sizing:border-box; box-shadow:inset 0 2px 4px rgba(0,0,0,0.3); flex-shrink:0; position:relative;';
         main.appendChild(answerArea);
       } else {
-        // Bottom Part: Choices (Multiple Choice / Phrase)
+        // Mode 3: options (297x400)
         answerArea = document.createElement('div');
-        answerArea.className = 'flex-1 flex flex-col justify-between gap-2 py-1 min-h-0';
-        answerArea.style.cssText = 'flex:1; display:flex; flex-direction:column; gap:0.5rem; justify-content:space-between; padding:0.25rem 0; min-height:0; width:100%; box-sizing:border-box;';
+        answerArea.className = 'flex flex-col justify-start shrink-0';
+        answerArea.style.cssText = 'height:297px; min-height:297px; max-height:297px; width:100%; max-width:400px; margin:0 auto; display:flex; flex-direction:column; justify-content:flex-start; padding:2px 0; overflow-y:auto; -webkit-overflow-scrolling:touch; box-sizing:border-box; flex-shrink:0;';
         main.appendChild(answerArea);
       }
 
@@ -1558,10 +1658,10 @@
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', savedAnswer === optText ? 'true' : 'false');
         btn.setAttribute('tabindex', '0');
-        btn.style.cssText = 'flex:1; min-height:0; display:flex; align-items:center; gap:1rem; padding:0.5rem 1rem; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:#0f1d2d; color:#fff; cursor:pointer; overflow:hidden;';
+        btn.style.cssText = 'min-height:48px; display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:#0f1d2d; color:#fff; cursor:pointer; font-size:15px; font-weight:500; box-sizing:border-box; margin-bottom:8px;';
         if(savedAnswer === optText) btn.style.borderColor = '#34d399';
         
-        btn.innerHTML = `<div class="mc-letter" style="background:rgba(255,255,255,0.15); border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${letters[i] || i+1}</div><div style="overflow-y:auto; max-height:100%;">${optText}</div>`;
+        btn.innerHTML = `<div class="mc-letter" style="background:rgba(255,255,255,0.15); border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13.5px; font-weight:700;">${letters[i] || i+1}</div><div style="flex:1; white-space:normal; word-break:break-word; line-height:1.35; text-align:left;">${optText}</div>`;
         
         btn.addEventListener('click', () => {
           area.querySelectorAll('.mc-option').forEach(o => { o.classList.remove('selected'); o.setAttribute('aria-checked', 'false'); o.style.borderColor = 'rgba(255,255,255,0.15)'; });
@@ -1591,9 +1691,9 @@
         btn.className = `mc-option ${savedAnswer === optText ? 'selected' : ''}`;
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', savedAnswer === optText ? 'true' : 'false');
-        btn.style.cssText = 'flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:0.5rem 1rem; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:#0f1d2d; color:#fff; font-weight:600; font-size:1.15rem; cursor:pointer; text-align:center; overflow:hidden;';
+        btn.style.cssText = 'min-height:48px; display:flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:#0f1d2d; color:#fff; font-weight:600; font-size:15px; cursor:pointer; text-align:center; box-sizing:border-box; margin-bottom:8px;';
         if(savedAnswer === optText) btn.style.borderColor = '#34d399';
-        btn.innerHTML = `<div style="overflow-y:auto; max-height:100%;">${optText}</div>`;
+        btn.innerHTML = `<div style="flex:1; white-space:normal; word-break:break-word; line-height:1.35;">${optText}</div>`;
         btn.addEventListener('click', () => {
           area.querySelectorAll('.mc-option').forEach(o => { o.classList.remove('selected'); o.setAttribute('aria-checked', 'false'); o.style.borderColor = 'rgba(255,255,255,0.15)'; });
           btn.classList.add('selected'); btn.setAttribute('aria-checked', 'true'); btn.style.borderColor = '#34d399';
@@ -1615,7 +1715,7 @@
 
       const ta = document.createElement('textarea');
       ta.className = 'written-input frosted-input';
-      ta.style.cssText = 'width:100%; max-height:140px; background:transparent; border:none; color:#fff; font-size:clamp(1.25rem, 3.8vw, 1.6rem); font-weight:700; text-align:center; resize:none; outline:none; font-family:inherit; padding:0; margin:auto; line-height:1.4; display:block; overflow-y:auto; box-sizing:border-box;';
+      ta.style.cssText = 'width:100%; min-height:48px; max-height:85px; background:transparent; border:none; color:#fff; font-size:24px; font-weight:700; text-align:center; resize:none; outline:none; font-family:inherit; padding:4px 0; margin:auto; line-height:1.3; display:block; overflow-y:auto; box-sizing:border-box;';
       ta.id = `written-${row.id}`;
       ta.placeholder = 'Type here...';
       ta.value = savedAnswer || '';
@@ -1633,12 +1733,37 @@
       
       const adjustHeight = () => {
         ta.style.height = 'auto';
-        ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
+        ta.style.height = Math.min(ta.scrollHeight, 80) + 'px';
       };
       ta.addEventListener('input', adjustHeight);
 
       area.appendChild(ta);
       setTimeout(adjustHeight, 0);
+
+      const vkToggleBtn = document.createElement('button');
+      vkToggleBtn.id = 'toggle-vk-btn';
+      vkToggleBtn.type = 'button';
+      vkToggleBtn.style.cssText = 'background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:3px 10px; color:#94a3b8; font-size:11.5px; font-weight:600; cursor:pointer; margin-top:6px; display:inline-flex; align-items:center; gap:5px; transition:all 0.15s;';
+      vkToggleBtn.innerHTML = '⌨️ On-screen Keyboard: <span id="vk-status-label" style="color:#34d399; font-weight:700;">ON</span>';
+      vkToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (vk) {
+          const isHidden = (vk.style.display === 'none');
+          if (isHidden) {
+            vk.style.display = 'flex';
+            ta.setAttribute('readonly', 'true');
+            const label = document.getElementById('vk-status-label');
+            if (label) { label.textContent = 'ON'; label.style.color = '#34d399'; }
+          } else {
+            vk.style.display = 'none';
+            ta.removeAttribute('readonly');
+            ta.focus();
+            const label = document.getElementById('vk-status-label');
+            if (label) { label.textContent = 'OFF (Physical)'; label.style.color = '#94a3b8'; }
+          }
+        }
+      });
+      area.appendChild(vkToggleBtn);
 
       area.addEventListener('click', () => {
         ta.focus();
@@ -1673,31 +1798,31 @@
       }
 
       const topRow = document.createElement('div');
-      topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:0.5rem; flex-shrink:0;';
+      topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:0.15rem; flex-shrink:0;';
       const langSelect = document.createElement('select');
       langSelect.className = 'speech-lang-select';
-      langSelect.style.cssText = 'background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; padding:4px 8px; font-size:0.8rem; outline:none;';
+      langSelect.style.cssText = 'background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.12); border-radius:6px; color:#fff; padding:2px 6px; font-size:0.72rem; outline:none;';
       langSelect.innerHTML = `<option value="en-US">🇺🇸 EN-US</option><option value="en-GB">🇬🇧 EN-UK</option>`;
       const statusEl = document.createElement('div');
-      statusEl.style.cssText = 'font-weight:700; font-size:0.85rem; color:var(--clr-text-2);';
+      statusEl.style.cssText = 'font-weight:700; font-size:0.75rem; color:var(--clr-text-2);';
       statusEl.textContent = savedAnswer ? '✅ Recorded' : 'Ready';
       if (savedAnswer) statusEl.style.color = '#34d399';
       topRow.appendChild(langSelect); topRow.appendChild(statusEl);
       area.appendChild(topRow);
 
       const transcriptBox = document.createElement('div');
-      transcriptBox.style.cssText = 'flex:1; display:flex; align-items:center; justify-content:center; font-size:1.6rem; font-weight:700; color:#34d399; text-align:center; width:100%; word-break:break-word; overflow-y:auto; min-height:0;';
+      transcriptBox.style.cssText = 'flex:1; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; color:#34d399; text-align:center; width:100%; word-break:break-word; min-height:38px;';
       if (savedAnswer) transcriptBox.textContent = savedAnswer;
       else transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.3); font-style:italic;">Answer...</span>';
       area.appendChild(transcriptBox);
 
       const micBtn = document.createElement('button');
       micBtn.className = 'speech-mic-btn-lg';
-      micBtn.style.cssText = 'width:76px; height:76px; border-radius:50%; border:4px solid rgba(16,185,129,0.4); background:linear-gradient(135deg,#10b981,#047857); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.15s; outline:none;';
-      micBtn.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+      micBtn.style.cssText = 'width:64px; height:64px; border-radius:50%; border:3px solid rgba(16,185,129,0.45); background:linear-gradient(135deg,#10b981,#047857); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.15s; outline:none; box-shadow:0 0 20px rgba(16,185,129,0.5); flex-shrink:0;';
+      micBtn.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
       
       const micHelp = document.createElement('div');
-      micHelp.style.cssText = 'margin-top:0.5rem; font-size:0.8rem; color:var(--clr-text-2); font-weight:600;';
+      micHelp.style.cssText = 'margin-top:6px; font-size:13px; color:var(--clr-text-2); font-weight:700;';
       micHelp.textContent = 'Tap to Speak';
 
       controlArea.appendChild(micBtn);
@@ -1711,7 +1836,7 @@
           onStart() {
             micBtn.style.background = 'linear-gradient(135deg, #ef4444, #b91c1c)';
             micBtn.style.borderColor = 'rgba(239,68,68,0.4)';
-            micBtn.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>';
+            micBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>';
             statusEl.textContent = 'Listening...';
             statusEl.style.color = '#3b82f6';
             transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.3); font-style:italic;">Listening...</span>';
@@ -1727,7 +1852,7 @@
           onEnd() {
             micBtn.style.background = 'linear-gradient(135deg,#10b981,#047857)';
             micBtn.style.borderColor = 'rgba(16,185,129,0.4)';
-            micBtn.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+            micBtn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
             const hasAns = !!answeredMap[row.id];
             statusEl.textContent = hasAns ? '✅ Recorded' : 'Ready';
             statusEl.style.color = hasAns ? '#34d399' : 'var(--clr-text-2)';
@@ -1735,7 +1860,7 @@
           onError(msg) {
             micBtn.style.background = 'linear-gradient(135deg,#10b981,#047857)';
             micBtn.style.borderColor = 'rgba(16,185,129,0.4)';
-            micBtn.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+            micBtn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
             statusEl.textContent = `⚠️ ${msg}`;
             statusEl.style.color = '#f43f5e';
             showToast(msg, 'warning');
@@ -2083,10 +2208,6 @@
       }
     });
   </script>
-
-  <div id="bottom-ad-banner" class="topscore-locked-banner">
-    TopsCore &copy; 2026 | Created by Mr. Top
-  </div>
 </body>
 </html>
 

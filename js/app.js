@@ -20,7 +20,7 @@ function getContainer() {
  * @param {'success'|'error'|'info'|'warning'} type
  * @param {number} duration ms
  */
-export function showToast(message, type = 'info', duration = 3500) {
+export function showToast(message, type = 'info', duration = 3000) {
   const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;

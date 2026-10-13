@@ -115,8 +115,22 @@ Deno.serve(async (req) => {
         resolvedBatchId = batchMap.get(key) || null;
       }
 
-      const formattedName = formatStudentName(s.name, s.gender);
-      const isExisting = s.isExisting && s.existingId;
+      let existingTargetId = (s.isExisting && s.existingId) ? s.existingId : null;
+      if (!existingTargetId && s.programId) {
+        const cleanRaw = (s.name || "").replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?)\s+/i, "").toLowerCase().trim();
+        const { data: dbMatches } = await supabase.from("students")
+          .select("id, name")
+          .eq("program_id", s.programId)
+          .is("deleted_at", null);
+        const found = (dbMatches || []).find((m: any) => 
+          (m.name || "").replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?)\s+/i, "").toLowerCase().trim() === cleanRaw
+        );
+        if (found) {
+          existingTargetId = found.id;
+        }
+      }
+
+      const isExisting = !!existingTargetId;
       const targetPin = s.pin || '1234';
 
       let pinHash = undefined;
@@ -139,7 +153,7 @@ Deno.serve(async (req) => {
         };
         if (pinHash) payload.pin_hash = pinHash;
         
-        await supabase.from("students").update(payload).eq("id", s.existingId);
+        await supabase.from("students").update(payload).eq("id", existingTargetId);
         updatedCount++;
       } else {
         if (!pinHash) pinHash = await sha256('1234');

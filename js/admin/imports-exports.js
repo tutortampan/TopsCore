@@ -1,4 +1,4 @@
-import { adminFetchAll, adminInsert, adminUpdate, formatStudentName, cleanStudentName, clearAdminCache, toLevelLetter } from '../api.js?v=5.1.0';
+import { adminFetchAll, adminInsert, adminUpdate, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, clearAdminCache, toLevelLetter } from '../api.js?v=5.1.0';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.1.0';
 import { showToast, showLoading, hideLoading, updateLoadingProgress } from '../app.js?v=5.1.0';
 import { callEdgeFunction, getSupabase } from '../supabase.js?v=5.1.0';
@@ -337,9 +337,13 @@ function calculateAgeFromBirthDate(birthDateStr) {
             const existingStudentsMap = new Map();
             (existingStudents || []).forEach(s => {
               if (s && !s.deleted_at) {
-                const key = `${(s.name || '').toLowerCase().trim()}::${s.program_id}`;
-                if (!existingStudentsMap.has(key)) {
-                  existingStudentsMap.set(key, s);
+                const normName = normalizeStudentNameForMatch(s.name);
+                const keyWithProg = `${normName}::${s.program_id}`;
+                if (!existingStudentsMap.has(keyWithProg)) {
+                  existingStudentsMap.set(keyWithProg, s);
+                }
+                if (!existingStudentsMap.has(normName)) {
+                  existingStudentsMap.set(normName, s);
                 }
               }
             });
@@ -463,12 +467,13 @@ function calculateAgeFromBirthDate(birthDateStr) {
                 }
               }
 
-              const batchKey = `${name.toLowerCase()}::${finalClassId}`;
+              const normName = normalizeStudentNameForMatch(name);
+              const batchKey = `${normName}::${finalClassId}`;
 
-              if (batchMap.has(batchKey)) {
+              if (batchMap.has(batchKey) || (finalClassId && batchMap.has(normName))) {
                 // Intra-batch duplicate in file: merge into existing entry in batch
                 duplicateMergedInFileCount++;
-                const existingBatchItem = batchMap.get(batchKey);
+                const existingBatchItem = batchMap.get(batchKey) || batchMap.get(normName);
                 if (!existingBatchItem.birthDate && birthDate) {
                   existingBatchItem.birthDate = birthDate;
                   existingBatchItem.ageDisplay = ageDisplay;
@@ -485,7 +490,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
               }
 
               // Check if student already in database
-              const existingDbStudent = existingStudentsMap.get(batchKey);
+              const existingDbStudent = existingStudentsMap.get(batchKey) || (finalClassId ? existingStudentsMap.get(normName) : null);
               let status = 'valid';
               let statusMsg = '&#10024; New Student';
               let isExisting = false;

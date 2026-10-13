@@ -1,3 +1,318 @@
+## [2026-10-13 13:05] — 412x810 Exact Wireframe Blueprint Implementation Across All 3 Assessment Modes
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes  
+**Status:** PASS  
+
+### Why
+- The user provided a pixel-exact wireframe blueprint diagram (`412px` width x `810px` height) specifying exact heights for all components across Speech, Keyboard, and MCQ modes.
+- Required exact heights:
+  - `(space 10px)`: 10px top space
+  - `71px`: Top Row (`[🚩 Give up!]` on left, `Foto (71x71)` in center, `[⌛ 18:02]` timer on right)
+  - `54px`: `ASSESSMENT TITLE 54 px` container
+  - `27px`: `[🔔 Toast: Resuming attempt... / Auto-dismiss 3s] 27px` static slot
+  - `162px`: `Question Box (162px)` text prompt
+  - `27px`: Metadata Row 1 (`Theme (27px)` | `Category (27px)`)
+  - `27px`: Metadata Row 2 (`Topic (27px)` | `Type (27px)`)
+  - `162px` / `297px`: Interactive Middle Area (162px Answer Box + 135px MIC/Keyboard, or 297px MCQ options)
+  - `(space 10px)`: 10px space above bottom nav
+  - `54px`: `[← Prev]` | `0/40 Answered (54px)` with `🔍 Tap to Open Matrix` | `[Next →]`
+  - `27px`: `PROGRESS LINE (27px Docked)`
+  - `(space 10px)`: 10px space below progress line
+  - `28px`: `banner TopsCore (28px)`
+  - Total vertical sum = 10 + 71 + 54 + 27 + 162 + 27 + 27 + 162 + 135 + 10 + 54 + 27 + 10 + 28 = 804px (with 6px margins = exactly 810px).
+
+### Changed
+- **`assessment.html`**:
+  - Configured `#toast-container` with `position: static !important;` to prevent it from floating over the avatar photo and lock it into its dedicated 27px slot.
+  - Adjusted `renderQuestion` to match exact blueprint dimensions: 216px topSection (162px prompt + 27px Row 1 + 27px Row 2), 162px Answer Box, 135px MIC control area, 135px Virtual Keyboard, and 297px MCQ options.
+- **`temp_test/test_final_wireframe_audit.mjs`**:
+  - Updated primary audit viewport to `412x810` matching user wireframe.
+  - Re-captured fresh screenshots: `final_mobile_01_mcq.png`, `final_mobile_02_keyboard.png`, `final_mobile_03_speech_mic.png`.
+
+### Tests
+- `node temp_test/test_final_wireframe_audit.mjs`: PASS (Exit code 0).
+  - `overflowBelowFold: 0` across all 3 modes.
+
+---
+
+## [2026-10-13 12:35] — Header Redesign: 71px Row with 71x71 Centered Avatar, Left Flag & Give Up, Right Timer, 27px Assessment Title, and Malay Text Fix
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes  
+**Status:** PASS  
+
+### Why
+- The user requested:
+  1. Header enlarged with 20px space/padding from the top edge (`padding-top: 20px`).
+  2. Main header row enlarged to 71px height (`height: 71px`).
+  3. Student profile avatar enlarged to 71x71 px circle (`width: 71px; height: 71px; border-radius: 50%`) and placed in the center.
+  4. Left of photo: Flag and Give Up button (`🏳️ Give Up`).
+  5. Right of photo: Countdown timer (`⏳ --:--`).
+  6. Underneath the photo row: Assessment name row with height 27px (`height: 27px; line-height: 27px`).
+  7. Corrected Malay string: "🔍 Tap Buka Kisi Modal" updated to English "🔍 Tap to Open Matrix" per Rule 2.12 Direct English Only.
+  8. Fresh screenshots captured across all viewports and modes.
+
+### Changed
+- **`assessment.html`**:
+  - `<header>` restructured to a 2-tier vertical flex container with `padding: 20px 10px 4px 10px`:
+    - Top row (71px): Left flex block has `#giveup-btn` (`🏳️ Give Up`), Center has `#assessment-student-avatar` (71x71 circle), Right flex block has `#assessment-timer` (`⏳ --:--`).
+    - Bottom row (27px): `#assessment-main-title` centered underneath the photo row with clean 27px height and ellipsis overflow protection.
+  - `#question-counter`: Replaced "🔍 Tap Buka Kisi Modal" with "🔍 Tap to Open Matrix".
+- **`temp_test/test_final_wireframe_audit.mjs`**:
+  - Re-executed full mobile audit on `412x840` and `360x800` viewports.
+  - Verified `avatarDiameter: '71x71px'`, `hasGiveupBtn: true`, `hasTimerBadge: true`, `overflowBelowFold: 0`.
+  - Re-captured and saved fresh visual artifacts: `final_mobile_01_mcq.png`, `final_mobile_02_keyboard.png`, `final_mobile_03_speech_mic.png`.
+
+### Tests
+- `node temp_test/test_final_wireframe_audit.mjs`: PASS (Exit code 0).
+  - All 3 assessment modes (MCQ, Keyboard, Speech) render with 0px overflow and full viewport visibility.
+
+---
+
+## [2026-10-13 11:24] — Pixel-Perfect Alignment to User 412x840 Wireframe Blueprint Across All 3 Modes
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes  
+**Status:** PASS  
+
+### Why
+- The user provided a hand-drawn grid blueprint with explicit pixel dimensions (`412px` width x `840px` height) across all 3 modes to eliminate excessive page length / vertical stretching ("kamu membuatnya terlalu panjang").
+- Exact dimensions mapped:
+  - Header: 60px (Foto avatar circle 56x56, center title 60px, stacked right Flag + Timer 18:02).
+  - Toast slot: Dedicated floating/docked toast between Header and Question Box.
+  - Question Box + Metadata Grid: 168x400 question box + 56px 2x2 metadata grid (Theme 28px | Category 28px, Topic 28px | Type 28px).
+  - Middle Area (3 Modes):
+    - Mode 1 (Speech): Answer box (146x400) + MIC (146x146).
+    - Mode 2 (Keyboard): Answer box (146x400) + virtual keyboard (168x400).
+    - Mode 3 (MCQ Options): options box (308x400).
+  - Bottom Docked Area: Bottom nav (56px) with Prev, 0/40 Answered (56x150px), Next + Progress line (28px) + Banner (28px).
+
+### Changed
+- **`assessment.html`**:
+  - Locked dimensions strictly to blueprint values. Total content height is ~704px within 840px screen budget, guaranteeing 0px window scroll and no vertical stretching.
+- **`temp_test/test_final_wireframe_audit.mjs`**:
+  - Updated test viewport to exact user spec `412x840` (and `360x800`).
+  - Executed automated Playwright audit verifying all elements match pixel constraints with `overflowBelowFold: 0`.
+  - Saved fresh audit screenshots: `audit_412x840_01_mcq.png`, `audit_412x840_02_keyboard.png`, `audit_412x840_03_speech_mic.png`.
+
+### Tests
+- `node temp_test/test_final_wireframe_audit.mjs`: PASS (Exit code 0).
+  - `headerHeight: 60`, `avatarDiameter: 56x56px`.
+  - `questionCardHeight: 227` (168px question box + 56px metadata table + borders).
+  - `answerCardHeight`: `308` (MCQ options), `146` (Keyboard answer box), `146` (Speech answer box).
+  - `vkHeight: 168`.
+  - `bottomNavHeight: 56`, `progressBarHeight: 28`, `bottomBannerHeight: 28`.
+  - `overflowBelowFold: 0` (0px below fold, completely docked inside 100dvh).
+
+---
+
+## [2026-10-13 10:20] — Bugfix: Toast Repositioning, Speech Mode Vertical Distribution, and Dedicated Bottom Banner
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes  
+**Status:** PASS  
+
+### Why
+- The user reported 3 layout issues visible in mobile audit screenshots:
+  1. Notification toast ("Resuming your previous attempt") at `top: 58px` collided with the Question Card metadata ('Topic: CV & Resume').
+  2. Speech Mode middle container had an awkward empty void between the top question/transcript boxes and the microphone button.
+  3. The bottom banner container specified in the wireframe below the Prev/Next navigation bar was missing.
+
+### Changed
+- **`assessment.html`**:
+  - Relocated `#toast-container` to `position: fixed !important; top: 8px !important; z-index: 999999 !important; left: 50% !important; transform: translateX(-50%) !important;` with drop-down animation (`toast-down`), auto-dismissing cleanly without obstructing the Question Card.
+  - Updated Speech Mode middle container styling in `renderQuestion`: applied `display: flex; flex-direction: column; justify-content: space-around; align-items: center; height: 100%;` and removed `flex: 1` from `controlArea`, distributing the Question Card, Answer Transcript Box, and glowing Mic button evenly across the vertical height.
+  - Added dedicated slim `#bottom-ad-banner` (~26px) underneath `.bottom-nav-bar` inside `#fixed-bottom-area`, featuring `TopsCore © 2026 | Created by Mr. Top` with `padding-bottom: max(4px, env(safe-area-inset-bottom, 0px))` for native Android gesture bar protection.
+- **`js/app.js`**:
+  - Adjusted default `showToast` duration to 3000ms (3s auto-dismiss).
+- **`temp_test/test_final_wireframe_audit.mjs`**:
+  - Extended audit metrics to verify `bottomBannerPresent: true`, `bottomBannerHeight: 26px`, `bottomBannerInView: true`, `speechLayoutJustify: 'space-around'`, and `toastTopPosition: '8px'`.
+  - Re-generated fresh screenshots and audit report: `final_mobile_01_mcq.png`, `final_mobile_02_keyboard.png`, `final_mobile_03_speech_mic.png`.
+
+### Tests
+- `node temp_test/test_final_wireframe_audit.mjs`: PASS (Exit code 0).
+  - `overflowBelowFold`: `0px` across both `412x915` and `360x800`.
+  - `bottomNavInView`: `true`.
+  - `bottomBannerPresent`: `true` (`26px` height, in-view).
+  - `toastTopPosition`: `8px`.
+  - `speechLayoutJustify`: `space-around`, `alignItems`: `center`.
+
+---
+
+## [2026-10-13 09:50] — Full Mobile App Shell Implementation Across All 3 Assessment Modes
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes  
+**Status:** PASS  
+
+### Why
+- The user issued a directive:
+  1. Remove student name text completely from top compact header ("nama tidak usah") to save horizontal and vertical space, retaining only the 44px student avatar photo circle with subtle cyan border.
+  2. Implement single-row compact header with centered assessment title box (13px–14px semi-bold, 2-line clamp) and stacked right utilities (Give Up / Flag button top, Monospace Timer badge bottom).
+  3. Decouple alert notifications/toasts from document flow into floating top toast pills (`top: 58px; pointer-events: none`).
+  4. Dock a slim 3px progress indicator line directly above the bottom navigation bar.
+  5. Permanently lock bottom navigation bar (`54px–56px`, `position: sticky; bottom: 0; z-index: 100`) with Prev, Next, and `0/40 Answered` + `[ 🔍 Tap Buka Kisi Modal ]`.
+  6. Optimize middle container for 3 distinct modes:
+     - Mode 1 (MCQ): Question card -> 5 option cards (min-height $\ge 46\text{px}$, 8px gap, full text-wrapping).
+     - Mode 2 (Keyboard): Question card -> Compact answer box (54px–68px) -> Virtual Keyboard (~36px keys, integrated Space / DEL).
+     - Mode 3 (Speech): Question card -> Answer box (76px–88px) -> 64px central microphone button.
+  7. Run automated Playwright tests on `360x800` and `412x915`, capture `final_mobile_01_mcq.png`, `final_mobile_02_keyboard.png`, `final_mobile_03_speech_mic.png`, and verify `overflowBelowFold: 0`, `bottomNavInView: true`, option heights $\ge 46\text{px}$.
+
+### Changed
+- **`assessment.html`**:
+  - Replaced 2-row header with single-row compact layout (~52px): Left 44px circular avatar (`#assessment-student-avatar`), student name & details hidden (`display: none;`); Center `#assessment-main-title` (13.5px bold, 2-line clamp); Right stacked `#giveup-btn` (20px pill) and `#assessment-timer` (22px badge).
+  - Moved `#toast-container` to floating top position (`top: 58px; transform: translateX(-50%); pointer-events: none;`).
+  - Set `.topscore-locked-banner` to `display: none !important;` during assessment, freeing 28px on mobile.
+  - Placed 3px `#progress-bar-toggle` directly atop `.bottom-nav-bar`.
+  - Calibrated Mode 1 option cards with `min-height: 48px; gap: 10px; margin-bottom: 8px; font-size: 15px;` and text-wrapping `white-space: normal; word-break: break-word;`.
+  - Calibrated Mode 2 answer box to `min-height: 54px; max-height: 68px;` with docked virtual keyboard.
+  - Calibrated Mode 3 answer box to `min-height: 76px; max-height: 88px;` and 64x64px mic button.
+- **`temp_test/test_final_wireframe_audit.mjs`**:
+  - Automated test executing audits on `412x915` and `360x800`.
+  - Captured `final_mobile_01_mcq.png`, `final_mobile_02_keyboard.png`, `final_mobile_03_speech_mic.png`.
+  - Generated `final_mobile_audit_report.json`.
+
+### Tests
+- `node temp_test/test_final_wireframe_audit.mjs`: PASS (Exit code 0).
+  - `overflowBelowFold`: strictly `0px` across both `412x915` and `360x800`.
+  - `bottomNavInView`: `true` across all modes.
+  - `optionHeights`: 50px to 63px (exceeds $\ge 46\text{px}$).
+  - `middleScrollBehavior`: `true`.
+
+---
+
+## [2026-10-13 06:55] — Multi-Resolution Chrome Ratio Audit, Dead Space Elimination, and Mr. Test Theme A E2E Completion
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 18 Proportional Mobile App-Shell Architecture & E2E Exam Execution  
+**Status:** PASS  
+
+### Why
+- The user requested:
+  1. A comprehensive list of all recent UI changes made to the exam interface.
+  2. Mobile screenshots taking into account real-world mobile browser interfaces (Chrome on Android with status bar, omnibox, and nav/gesture bar) across multiple standard and budget resolutions.
+  3. Eliminating dead/excess space by scaling typography and cards while highlighting student avatar, student name, and metadata cleanly.
+  4. Executing an end-to-end automated test where Mr. Test takes the Theme A exam from Question 1 to completion, submitting, and verifying the results page with zero clipped or hidden elements.
+
+### Changed
+- **`assessment.html`**:
+  - Enhanced Header: Enforced 44x44px circular avatar with `2.5px solid #06b6d4` cyan accent border and glow shadow; 16px bold white student name (`#assessment-student-name`); integrated student subtitle details (`#assessment-student-details`) showing institution, program, batch, and level.
+  - Eliminated Dead Space in Question Card: Scaled padding to `14px 16px`, border radius `18px`, dynamic prompt typography `clamp(22px, 5.2vw, 26px)` with vertical padding `8px 0` to fill upper space with dignity.
+  - Dynamic 4-Corner Badges: Theme (Cyan, top-left), Topic (Slate, top-right), Category (Purple, bottom-left), and Word Type (Emerald, bottom-right).
+  - MCQ Options: Conforms to touch target standards with `min-height: 52px; padding: 12px 16px; border-radius: 14px; margin-bottom: 9px; font-size: 15.5px;` and `30x30px` letter badges.
+  - Speech Mode: Transcript card `min-height: 96px`, font `22px` bold; mic control area `min-height: 120px` with `72x72px` emerald button and glowing drop shadow.
+  - Written Mode: Textarea `min-height: 96px`, font `24px` bold; dual keyboard switcher `#toggle-vk-btn`.
+  - Docked Bottom Navigation: Height 56px with `padding: 6px 14px; padding-bottom: max(6px, env(safe-area-inset-bottom))`. Prev & Next buttons: 44px height, `min-width: 86px`. Question Counter button opening Question Matrix modal.
+- **Verification & Test Scripts**:
+  - `temp_test/test_all_modes_screenshots.mjs`: Multi-mode and multi-resolution screenshot capturer across `412x780`, `440x675`, and `360x665`.
+  - `temp_test/test_mr_test_theme_a_complete_exam.mjs`: Full 40-question automated E2E test runner for Mr. Test answering all questions sequentially to submission and results page.
+
+### Tests
+- `node temp_test/test_all_modes_screenshots.mjs`: PASS (Exit code 0). 0px overflow below fold across all modes and resolutions.
+- `node temp_test/test_mr_test_theme_a_complete_exam.mjs`: PASS (Exit code 0). 40/40 questions answered, submit confirmed, redirected to `result.html` with final score 20.0%, Grade E, and attempt breakdown.
+
+---
+
+## [2026-10-13 05:55] — Full Question Modes Screenshot & DOM Height Audit (MCQ, Speech, Physical, Virtual, Matrix)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 18 Proportional Mobile App-Shell Architecture & E2E Exam Execution  
+**Status:** PASS  
+
+### Why
+- The user issued a mandate to implement and thoroughly audit the Mobile App Shell pattern using `100dvh` across all distinct assessment question modes:
+  1. Multiple Choice (MCQ) with 5 options (A to E)
+  2. Speech Recognition (question card, transcript box, mic button)
+  3. Written Question with physical keyboard mode (active input container)
+  4. Written Question with on-screen virtual keyboard active
+  5. Question Grid Matrix modal
+- Required measuring exact DOM heights (header, question card, answer card, bottom nav) and proving 0px overflow below the fold across all modes.
+
+### Changed
+- **`assessment.html`**:
+  - Enforced `padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;` on `body.assessment-page`.
+  - Added on-screen keyboard toggle button (`#toggle-vk-btn`) in `renderWritten` to cleanly support switching between physical keyboard mode (`vk.style.display = 'none'`, textarea writable) and on-screen virtual keyboard mode (`vk.style.display = 'flex'`, docked 169px keyboard container).
+  - Ensured question cards and answer cards have 100% matched widths, symmetrical `12px 14px` padding, and `14px` border-radius.
+  - Symmetrically calibrated MCQ option buttons to `min-height: 50px; padding: 11px 14px; border-radius: 14px;` adhering strictly to $\ge 48\text{px}$ touch target standards.
+  - Corrected assessment title population to use `assessmentData.title` first.
+- **Automated Verification Script**:
+  - Created `temp_test/test_all_modes_screenshots.mjs`: Measures DOM heights and captures high-resolution screenshots for all 5 question modes on Android Viewport `412x780` and `360x665`.
+  - Stored all 5 screenshots in project `audit_screenshots/app_shell_modes_audit/` and conversation artifacts.
+
+### Tests
+- `node temp_test/test_all_modes_screenshots.mjs`: PASS (all 5 modes passed with `overflowBelowFold: 0px`, `bottomNavInView: true`, `prevInView: true`, `nextInView: true`).
+
+---
+
+## [2026-10-13 05:15] — Proportional Mobile App-Shell Architecture & E2E Exam Execution
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 18 Proportional Mobile App-Shell Architecture & E2E Exam Execution  
+**Status:** PASS  
+
+### Why
+- The previous compaction artificially crushed UI components (MCQ buttons down to 36px, title to 15px) merely to hit a static 0px scroll metric, creating an overly squashed aesthetic.
+- The user mandated calculating real-world Chrome on Android viewport constraints (~135px consumed by system status bar ~28px, omnibox ~56px, and gesture nav bar ~24px–48px) and implementing an ergonomic, proportional Mobile App Shell pattern.
+- Requirements included restoring avatar to a dignified 42px, student name to 15px semi-bold, question prompt to >= 20px, MCQ options to >= 48px touch targets, maintaining permanently docked sticky bottom navigation with 0px forced scroll, and completing a full Mr. Test exam run through Theme A to `result.html`.
+
+### Changed
+- **`assessment.html`**:
+  - Re-architected root container: `height: 100dvh; display: flex; flex-direction: column; overflow: hidden; padding-bottom: env(safe-area-inset-bottom, 0px) !important;`.
+  - Header (50px): Enforced 42x42px avatar with cyan accent border and shadow; 15px semi-bold student name (`#assessment-student-name`). Aligned timer badge (`⏳`) and Give Up button (`🏳️ Give up!`) on the top right.
+  - Assessment Title: Sub-bar at 13.5px semi-bold with proper breathing room and 1-line ellipsis.
+  - Middle Scrollable Area: `#assessment-main` configured with `flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: 12px; padding: 6px 14px 16px;`.
+  - Question Card (`topSection`): Natural card proportions (`padding: 12px 14px; border-radius: 16px; background: rgba(30,41,59,0.88); border: 1px solid rgba(51,65,85,0.6); box-shadow: 0 6px 18px rgba(0,0,0,0.25);`) with `clamp(20px, 4.8vw, 24px)` font. Dynamic 4-corner chips without redundant label prefixes.
+  - MCQ Options: Conforms to >= 48px touch targets (`min-height: 48px; padding: 10px 14px; margin-bottom: 8px; border-radius: 12px; font-size: 15px; font-weight: 500;`). Letter badge 30x30px with 14px bold font.
+  - Speech Mode: Transcript box `min-height: 76px`, font 20px bold; Mic button 66px diameter with 30px SVG icon and emerald glow.
+  - Written Mode: Textarea box `min-height: 76px`, font 22px bold.
+  - Docked Bottom Navigation: Height 54px with `padding: 6px 14px; padding-bottom: max(6px, env(safe-area-inset-bottom))`. Prev & Next buttons set to 42px height (`min-width: 84px`). Status counter `14px` bold, tap-accessible to open the Question Matrix modal. 3px slim progress line docked directly on the top edge of the navigation container.
+  - Submit Confirmation Modal: Solid `#0f1d2d` surface, `z-index: 99999`, and backdrop filter blur to eliminate background text bleed-through.
+- **Verification Scripts**:
+  - `temp_test/test_proportional_app_shell.mjs`: Multi-resolution audit script testing 5 viewport sizes across Speech, MCQ, and Written modes.
+  - `temp_test/test_mr_test_theme_a_complete_exam.mjs`: Full E2E exam runner for Mr. Test answering all questions to submission and result page.
+
+### Tests
+- `node temp_test/test_proportional_app_shell.mjs`: PASS (100% metrics pass across 5 resolutions).
+- `node temp_test/test_mr_test_theme_a_complete_exam.mjs`: PASS (all 40 questions completed, bottom nav 100% in view on every step, submit modal confirmed, redirected to `/result` with score and grade).
+
+---
+
+## [2026-10-13 04:35] — Mobile Viewport & Proportional Layout Optimization (440x810 px / Chrome Mobile 440x675 px)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 17 Mobile Viewport & Proportional Layout Optimization  
+**Status:** PASS  
+
+### Why
+- The user reported that on mobile phones, the bottom navigation bar (`Prev`, `0/40 answered`, `Next`) was continually pushed below the fold, forcing students to scroll down after every answer to proceed.
+- Testing on the requested 440x810 px ratio, considering that Chrome mobile browser subtracts ~135px (Android status bar, omnibox address bar, navigation bar) leaving ~675px available viewport height, proved that the existing layout stack was ~785px (+110px overflow).
+- The user additionally mandated removing static prefix labels `THEME:`, `TOPIC:`, `CATEGORY:`, and `TYPE:` from the question card, displaying dynamic names directly in the 4 corners.
+
+### Changed
+- **`assessment.html`**:
+  - Locked `body.assessment-page` to strict flex column layout with `overflow: hidden; height: 100vh; height: 100dvh;`.
+  - Replaced multi-tier 95px header with single compact 44px horizontal row: Avatar (36px) + Student Name on left; Timer badge (`⏳`) + Give up button (`🏳️ Give up!`) on right.
+  - Compacted assessment title margin to `0 auto 4px` and font clamp `0.85rem–1.05rem`.
+  - Removed bulky standalone 50px top progress bar. Docked a slim 3px progress line directly above `.bottom-nav-bar`.
+  - Converted `#matrix-popup` to centered modal (`position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%)`), toggled by tapping `0/40 answered` or the progress line.
+  - Stripped static prefix labels `Theme:`, `Topic:`, `Category:`, and `Type:` from `qHtml` in `renderQuestion`, displaying clean dynamic badges/labels in the 4 corners.
+  - Question card height scaled to `min-height: 95px; max-height: 120px`.
+  - Speech Mode: scaled mic button from 76px to 56px (26px SVG); transcript box height 65px.
+  - Multiple Choice Mode: scaled options to 36px–42px (letter badge 24px); all 5 options fit in ~200px.
+  - Written Mode: textarea height 65px; Virtual Keyboard keys scaled to 36px (VK container ~145px).
+  - Docked floating toasts to `bottom: 80px` so notifications never obscure the header or question card.
+- **Automated Verification Suites**:
+  - `temp_test/test_440x810_chrome_audit.mjs`: Live DOM metric audit for all 3 modes on `chrome_mobile_440x675` and `device_screen_440x810`.
+  - `temp_test/test_matrix_popup_interaction.mjs`: Tests opening, centering, and closing the question matrix modal.
+
+### Tests
+- `node temp_test/test_440x810_chrome_audit.mjs`: PASS (`overflowPx: 0px`, `bottomNavInView: true` across all 3 modes).
+- `node temp_test/test_matrix_popup_interaction.mjs`: PASS (opens centered modal on tap, closes cleanly on close button).
+- Visual proofs captured in `audit_screenshots/mobile_440x810_chrome_audit/`.
+
+---
+
 ## [2026-10-13 03:25] — Institution Entity Hygiene & Strict Prerequisite Progression
 
 **Agent/Session:** Antigravity  
@@ -154,15 +469,15 @@
 ### Verification
 - Ran Playwright automated visual test (`temp_test/verify_centered_ui.mjs`):
   - Theme D Phrases:
-    * Top-Left: `THEME: High-Frequency (Theme D)`
-    * Top-Right: `TOPIC: Cultural Experience, Travel & Modern Culture`
-    * Bottom-Left: `CATEGORY: Phrases`
-    * Bottom-Right: `TYPE: Proverb`
+    - Top-Left: `THEME: High-Frequency (Theme D)`
+    - Top-Right: `TOPIC: Cultural Experience, Travel & Modern Culture`
+    - Bottom-Left: `CATEGORY: Phrases`
+    - Bottom-Right: `TYPE: Proverb`
   - Words Task:
-    * Top-Left: `THEME: Workplace`
-    * Top-Right: `TOPIC: Professional Identity`
-    * Bottom-Left: `CATEGORY: Words`
-    * Bottom-Right: `TYPE: Noun`
+    - Top-Left: `THEME: Workplace`
+    - Top-Right: `TOPIC: Professional Identity`
+    - Bottom-Left: `CATEGORY: Words`
+    - Bottom-Right: `TYPE: Noun`
   - Answer box placeholder `"Type here..."` confirmed dead-center.
   - Updated screenshots in `audit_screenshots/ui_enhancement/`.
 
@@ -235,10 +550,10 @@
 - Tested exact `vocabulary_vault` query from `js/api.js`: returned 200 items without 400 Bad Request error.
 - Verified phrases distractor query returned 160 items.
 - Ran Playwright automated browser test against `https://tops-core.netlify.app/` using Miss Siti Qori's real session:
-  * PIN login (1234) and dashboard navigation succeeded.
-  * Assessment runner loaded with timer, student details, and rendered question prompts ("tangguh" and "Ada banyak cara untuk mencapai tujuan yang sama.").
-  * Full submission and graded report card on `result.html` verified with 100% pass.
-  * Screenshots captured in `audit_screenshots/live_online_run/`.
+  - PIN login (1234) and dashboard navigation succeeded.
+  - Assessment runner loaded with timer, student details, and rendered question prompts ("tangguh" and "Ada banyak cara untuk mencapai tujuan yang sama.").
+  - Full submission and graded report card on `result.html` verified with 100% pass.
+  - Screenshots captured in `audit_screenshots/live_online_run/`.
 
 ---
 
@@ -7685,3 +8000,58 @@ L o g g i n g   f i x e s . . . 
 
 - Await user validation.
 
+
+## [2026-10-13 16:20] � Fix: Hapus Spacer Gelap di Atas Nav Bar & CSS Layout Tightening
+
+**Agent/Session:** Antigravity / Checkpoint 13
+**Phase:** Bug Fix
+**Status:** PASS
+
+### Why
+User melaporkan ada "object yang menutupi" di atas kolom Prev/Next, membuat sebagian assessment body tertutup. Ditemukan dua spacer div 10px gelap (background: #01121d) di dalam fixed-bottom-area yang:
+1. Spacer 1 (10px) � berada antara virtual-keyboard-container dan bottom-nav-bar ? PENYEBAB UTAMA visual gap gelap
+2. Spacer 2 (10px) � berada antara progress-bar-toggle dan bottom-ad-banner ? gap ekstra tidak perlu
+Total space terbuang: 20px dari 810px viewport.
+
+CSS lama .assessment-main-content menggunakan padding: var(--space-3) (~12-16px) yang tidak dihitung dalam blueprint ? konten MCQ terpotong.
+
+question-card memiliki max-width: 600px (lebih besar dari 412px mobile viewport).
+
+### Changed
+- Hapus spacer 10px pertama (antara VK dan nav bar) dari assessment.html
+- Hapus spacer 10px kedua (antara progress bar dan banner) dari assessment.html
+- Update .assessment-main-content padding: var(--space-3) ? padding: 6px 8px 0 8px
+- Update .assessment-main-content: tambah min-height:0 dan -webkit-overflow-scrolling:touch
+- Update .question-card max-width: 600px ? 412px + tambah min-height:0
+
+### Files
+- ssessment.html � Hapus 2x spacer div 10px dari fixed-bottom-area
+- css/dashboard.css � Fix .assessment-main-content padding dan .question-card max-width
+
+### Database
+- Tidak ada perubahan database
+
+### Height Budget Verification (810px)
+- Header:     135px (10px padding + 71px row + 54px title)
+- Toast:       27px
+- Body:       539px (flex:1)
+- Fixed-btm:  109px (54 nav + 27 progress + 28 banner)
+- Total:      810px ?
+
+### MCQ Content Budget (539px body)
+- padding-top:  6px
+- topSection: 216px
+- gap:          3px
+- answerArea: 297px
+- Total:      522px ? 17px slack ?
+
+### Tests
+- command: Manual code audit + height calculation
+- result: PASS
+
+### Risks / Follow-up
+- Perlu visual test oleh user untuk konfirmasi
+- Virtual keyboard shadow (0 -4px 15px) saat mode written bisa efek visual minor � perlu cek
+
+### Next Action
+- User konfirmasi tampilan setelah fix

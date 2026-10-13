@@ -32,15 +32,34 @@ export function damerauLevenshtein(a, b) {
  * - collapse multiple whitespace to single space
  * - normalize contractions (e.g. i'm -> i am)
  */
-export function normalizeAnswerText(text) {
+/**
+ * Normalize answer text and strip punctuation:
+ * - trim & lowercase
+ * - collapse multiple whitespace to single space
+ * - strip symbols/punctuation like (), [], {}, -, --, _, ., ,, ;, :, !, ?, ', ", etc.
+ * - normalize contractions (e.g. i'm -> i am)
+ */
+export function cleanPunctuationAndSymbols(text) {
   return String(text ?? '')
     .toLowerCase()
     .trim()
+    .replace(/[()\[\]{}\-–—_.,;:!?'"`~*&^%$#@+\\/]/g, ' ')
     .replace(/\s+/g, ' ')
-    .replace(/[.,?!"']+$/, '')
-    .replace(/[^\w\s'-]/g, '')
     .replace(/\bi'm\b/g, 'i am')
+    .replace(/\bcan't\b/g, 'cannot')
+    .replace(/\bdon't\b/g, 'do not')
     .trim();
+}
+
+export function normalizeAnswerText(text) {
+  return cleanPunctuationAndSymbols(text);
+}
+
+/**
+ * Strip all punctuation and spaces for compact comparison:
+ */
+export function stripAllPunctuationAndSpaces(text) {
+  return String(text ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 /**
@@ -48,7 +67,25 @@ export function normalizeAnswerText(text) {
  * e.g. "check-in" -> "checkin", "part-time" -> "parttime"
  */
 export function stripHyphens(text) {
-  return String(text ?? '').replace(/[-\s]/g, '').trim();
+  return stripAllPunctuationAndSpaces(text);
+}
+
+/**
+ * Expand variants from strings with parentheses:
+ * e.g. "look (up)" -> ["look (up)", "look up", "look"]
+ */
+export function expandAnswerVariants(raw) {
+  if (!raw) return [];
+  const str = String(raw).trim();
+  const variants = new Set();
+  variants.add(str);
+  if (str.includes('(') && str.includes(')')) {
+    const withoutParens = str.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+    if (withoutParens) variants.add(withoutParens);
+    const strippedParens = str.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (strippedParens) variants.add(strippedParens);
+  }
+  return Array.from(variants);
 }
 
 /**
@@ -59,10 +96,15 @@ export function stripHyphens(text) {
 export function parseCorrectAnswers(rawAnswer) {
   if (rawAnswer === null || rawAnswer === undefined) return [];
   const list = Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer];
-  return list
+  const allVariants = [];
+  list
     .flatMap(s => String(s).split(/[;|/]/))
     .map(s => s.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .forEach(item => {
+      expandAnswerVariants(item).forEach(v => allVariants.push(v));
+    });
+  return allVariants;
 }
 
 /**
@@ -71,47 +113,52 @@ export function parseCorrectAnswers(rawAnswer) {
  *
  * @param {string} studentAnswer
  * @param {string|string[]} rawCorrectAnswer
- * @param {string} answerType ('written' | 'speech_to_text' | 'dropdown' | 'multiple_choice')
+ * @param {string} answerType ('written' | 'speech_to_text' | 'spoken' | 'dropdown' | 'multiple_choice')
  * @returns {{ result: 'correct'|'minor_spelling_error'|'incorrect', score: number, matchedAnswer: string }}
  */
 export function evaluateAnswer(studentAnswer, rawCorrectAnswer, answerType = 'written') {
-  const normStudent = normalizeAnswerText(studentAnswer);
+  const normStudent = cleanPunctuationAndSymbols(studentAnswer);
+  const compactStudent = stripAllPunctuationAndSpaces(studentAnswer);
   const possibleAnswers = parseCorrectAnswers(rawCorrectAnswer);
 
   if (possibleAnswers.length === 0) {
-    // If no correct answer was defined in DB
     return { result: normStudent ? 'correct' : 'incorrect', score: normStudent ? 1.0 : 0.0, matchedAnswer: '' };
   }
 
-  if (!normStudent) {
+  if (!normStudent && !compactStudent) {
     return { result: 'incorrect', score: 0.0, matchedAnswer: possibleAnswers[0] };
   }
 
+  const isSpeech = (answerType === 'speech_to_text' || answerType === 'spoken');
   let bestResult = { result: 'incorrect', score: 0.0, matchedAnswer: possibleAnswers[0] };
 
   for (const opt of possibleAnswers) {
-    const normOpt = normalizeAnswerText(opt);
+    const normOpt = cleanPunctuationAndSymbols(opt);
+    const compactOpt = stripAllPunctuationAndSpaces(opt);
+    if (!normOpt && !compactOpt) continue;
 
-    // 1. Direct Exact Match (Normalized)
-    if (normStudent === normOpt) {
+    // 1. Direct Match with Punctuation & Spacing Normalization
+    if (normStudent === normOpt || compactStudent === compactOpt) {
       return { result: 'correct', score: 1.0, matchedAnswer: opt };
     }
 
-    // 2. Hyphen Tolerance Match (Phase 11)
-    // When student omits or adds hyphens (e.g. checkin vs check-in), it is NOT a spelling error.
-    if (stripHyphens(normStudent) === stripHyphens(normOpt)) {
-      return { result: 'correct', score: 1.0, matchedAnswer: opt };
-    }
+    // 2. Edit distance (Damerau-Levenshtein)
+    const distNorm = damerauLevenshtein(normStudent, normOpt);
+    const distCompact = damerauLevenshtein(compactStudent, compactOpt);
+    const dist = Math.min(distNorm, distCompact);
+    const minLen = Math.min(normStudent.length, normOpt.length);
 
-    // 3. Written or Speech tolerance: Damerau-Levenshtein distance <= 2 -> minor_spelling_error
-    // Safeguard short words: length <= 2 requires exact match; length 3 allows dist 1; length >= 4 allows dist <= 2
-    if (answerType === 'written' || (answerType === 'speech_to_text' || answerType === 'spoken')) {
-      const dist = damerauLevenshtein(normStudent, normOpt);
-      const minLen = Math.min(normStudent.length, normOpt.length);
-      const isAllowedTypo = (minLen >= 4 && dist <= 2) || (minLen === 3 && dist === 1);
+    const isWithin2Letters = (minLen >= 4 && dist <= 2) || (minLen === 3 && dist <= 1) || (minLen > 0 && dist <= 1 && distNorm <= 1);
 
-      if (isAllowedTypo && bestResult.score < 0.5) {
-        bestResult = { result: 'minor_spelling_error', score: 0.5, matchedAnswer: opt };
+    if (isWithin2Letters) {
+      if (isSpeech) {
+        // FOR SPEECH: Full leeway of 1 or 2 letters & undetected punctuation is treated as CORRECT (1.0 pt)
+        return { result: 'correct', score: 1.0, matchedAnswer: opt };
+      } else {
+        // FOR WRITTEN: standard minor spelling error (0.5 pt)
+        if (bestResult.score < 0.5) {
+          bestResult = { result: 'minor_spelling_error', score: 0.5, matchedAnswer: opt };
+        }
       }
     }
   }

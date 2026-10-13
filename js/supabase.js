@@ -11,7 +11,7 @@ const isLocalHostname = typeof window !== 'undefined' && (
 
 export const USE_LOCAL = (typeof window !== 'undefined' && typeof window.__ENV__?.USE_LOCAL === 'boolean')
   ? window.__ENV__.USE_LOCAL
-  : isLocalHostname;
+  : (typeof localStorage !== 'undefined' && localStorage.getItem('topscore_use_local') === 'true');
 
 export const SUPABASE_URL = (typeof window !== 'undefined' && window.__ENV__?.SUPABASE_URL)
   || (USE_LOCAL ? 'http://127.0.0.1:54321' : SUPABASE_CLOUD_URL);
@@ -33,12 +33,31 @@ export async function getSupabase() {
   _initPromise = (async () => {
     try {
       let createClient;
-      if (typeof process !== 'undefined' && process.versions?.node) {
+      if (typeof window !== 'undefined' && window.supabase?.createClient) {
+        createClient = window.supabase.createClient;
+      } else if (typeof process !== 'undefined' && process.versions?.node) {
         const mod = await import('@supabase/supabase-js');
         createClient = mod.createClient;
       } else {
-        const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/+esm');
-        createClient = mod.createClient;
+        // Full Offline Mode: Load local vendor first before external CDN
+        try {
+          if (typeof document !== 'undefined') {
+            await new Promise((resolve, reject) => {
+              if (window.supabase?.createClient) return resolve();
+              const s = document.createElement('script');
+              s.src = './js/vendor/supabase.js';
+              s.onload = () => resolve();
+              s.onerror = (e) => reject(e);
+              document.head.appendChild(s);
+            });
+            createClient = window.supabase?.createClient;
+          }
+        } catch (_) {}
+
+        if (!createClient) {
+          const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/+esm');
+          createClient = mod.createClient;
+        }
       }
       _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: {
