@@ -30,19 +30,13 @@ import {
   fetchClassInstanceRoster,
   addAdditionalMember,
   toLevelLetter
-} from '../api.js?v=5.1.0';
-import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=5.1.0';
-import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=5.1.0';
-import { openStudentProfile } from './student-management.js?v=5.1.0';
+} from '../api.js?v=5.2.2';
+import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=5.2.2';
+import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=5.2.2';
+import { openStudentProfile } from './student-management.js?v=5.2.2';
+import { generateAvatarDataUri } from '../utils/avatar-engine.js?v=5.2.2';
 
-function escapeHtml(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+// escapeHtml / escHtml imported canonically
 
 // ============================================================
 // 1. TOPICS MANAGEMENT
@@ -1218,7 +1212,7 @@ Existing historical attempt records will NOT be modified.`;
 
       showLoading('Committing import to Question Bank...');
       try {
-        const sb = await (await import('../supabase.js?v=5.1.0')).getSupabase();
+        const sb = await (await import('../supabase.js?v=5.2.2')).getSupabase();
 
         // PHASE 1: ROBUST TOPIC PRE-FETCHING & NORMALIZATION
         const { data: dbTopics } = await sb.from('topics').select('id, name');
@@ -1431,7 +1425,7 @@ Existing historical attempt records will NOT be modified.`;
 
 export async function renderResults(area) {
   const [rawData, allInstitutions, allPrograms, allBatches] = await Promise.all([
-    adminFetchAll('attempts', '*, students(name, gender, batch_id, batches(name), program_id, programs(name, institution_id, institutions(name))), assessments(id, title, assessment_type), attempt_answers(id, evaluation_result, score)'),
+    adminFetchAll('attempts', '*, students(name, gender, batch_id, batches(name), program_id, programs(name, institution_id, institutions(name))), assessments(id, title, assessment_type, prerequisite_assessment_id, prerequisite_min_score, shell_code), attempt_answers(id, evaluation_result, score)'),
     adminFetchAll('institutions'),
     adminFetchAll('programs'),
     adminFetchAll('batches')
@@ -1613,7 +1607,7 @@ export async function renderResults(area) {
       container: 'results-grid-container',
       data: deduplicated,
       pageSize: 20,
-      searchKeys: ['students.name', 'assessments.title', 'assessments.assessment_type', 'students.programs.name', 'students.programs.institutions.name'],
+      searchKeys: ['students.name', 'assessments.title', 'assessments.shell_code', 'assessments.assessment_type', 'students.programs.name', 'students.programs.institutions.name'],
       columns: [
         { key: 'students.name', label: 'Student Name', sortable: true, render: (v, r) => `<span class="fw-600" style="color:var(--clr-text-1);">${formatStudentName(r.students?.name, r.students?.gender) || '&mdash;'}</span>` },
         { key: 'students.programs.institutions.name', label: 'Program', sortable: true, render: (v, r) => `<span class="text-muted text-sm">${escapeHtml(r.students?.programs?.institutions?.name || '&mdash;')}</span>` },
@@ -1622,7 +1616,8 @@ export async function renderResults(area) {
         {
           key: 'assessments.title', label: 'Assessment Title', sortable: true, render: (v, r) => {
             const def = r.assessments || {};
-            return `<span class="text-sm fw-600">${def.assessment_type ? escapeHtml(def.assessment_type) + ' &mdash; ' : ''}${escapeHtml(def.title || '&mdash;')}</span>`;
+            const codeBadge = def.shell_code ? `<span class="badge" style="font-family:monospace;font-size:0.7rem;background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);margin-right:6px;padding:2px 5px;">${escapeHtml(def.shell_code)}</span>` : '';
+            return `<div class="d-flex align-items-center flex-wrap gap-1">${codeBadge}<span class="text-sm fw-600">${def.assessment_type ? escapeHtml(def.assessment_type) + ' &mdash; ' : ''}${escapeHtml(def.title || '&mdash;')}</span></div>`;
           }
         },
         {
@@ -1788,7 +1783,7 @@ export async function renderResults(area) {
     if (remediBtn) {
       const attemptId = remediBtn.getAttribute('data-aid');
       if (confirm('Allow this student to retake this Exam as a remedial attempt?')) {
-        const { getSupabase } = await import('../supabase.js?v=5.1.0');
+        const { getSupabase } = await import('../supabase.js?v=5.2.2');
         const sb = await getSupabase();
         const { error } = await sb.from('attempts').update({ is_remedial_unlocked: true }).eq('id', attemptId);
         if (!error) {
@@ -1833,13 +1828,13 @@ export async function renderProgressView(area) {
 
   try {
     const [allStudents, allInstitutions, allPrograms, allBatches, allAssignments, allAssessments, allAttempts, allLevels] = await Promise.all([
-      adminFetchAll('students', '*, batches!batch_id(name, current_level_id), programs!program_id(name, institution_id, institutions!institution_id(name)), institutions!institution_id(name)'),
+      adminFetchAll('students', '*, batches!batch_id(name, current_level_id, is_active), programs!program_id(name, institution_id, institutions!institution_id(name)), institutions!institution_id(name)'),
       adminFetchAll('institutions'),
       adminFetchAll('programs'),
       adminFetchAll('batches'),
       adminFetchAll('assignments', 'student_id, batch_id, assessment_id'),
       adminFetchAll('assessments', 'id, title, level_id, levels(name, level_number)'),
-      adminFetchAll('attempts', '*, students!student_id(name, gender, batch_id, batches!batch_id(name), program_id, programs!program_id(name, institution_id, institutions!institution_id(name))), assessments(title, assessment_type), attempt_answers(id, evaluation_result, score)'),
+      adminFetchAll('attempts', 'id, student_id, assessment_id, status, score, total_questions, percentage, grade, created_at, submitted_at'),
       adminFetchAll('levels').catch(() => [])
     ]);
 
@@ -1848,6 +1843,14 @@ export async function renderProgressView(area) {
     // Map V1 Data
     const assessmentsMap = new Map((allAssessments || []).map(a => [a.id, a]));
     const levelsMap = new Map((allLevels || []).map(l => [l.id, l.name]));
+
+    // Map attempts by student_id for efficient lookup
+    const attemptsByStudent = new Map();
+    (allAttempts || []).forEach(att => {
+      if (!att.student_id) return;
+      if (!attemptsByStudent.has(att.student_id)) attemptsByStudent.set(att.student_id, []);
+      attemptsByStudent.get(att.student_id).push(att);
+    });
 
     (allStudents || []).filter(s => {
       if (s.deleted_at) return false;
@@ -1874,6 +1877,13 @@ export async function renderProgressView(area) {
 
       if (assignedAssesIds.size === 0) return; // Skip students with no assessments assigned
 
+      const sAttempts = attemptsByStudent.get(student.id) || [];
+      const sAttemptsByAsm = new Map();
+      sAttempts.forEach(att => {
+        if (!sAttemptsByAsm.has(att.assessment_id)) sAttemptsByAsm.set(att.assessment_id, []);
+        sAttemptsByAsm.get(att.assessment_id).push(att);
+      });
+
       let completedCount = 0;
       let inProgressCount = 0;
       const studentDetails = [];
@@ -1882,9 +1892,15 @@ export async function renderProgressView(area) {
         const assessment = assessmentsMap.get(assessmentId);
         if (!assessment) return;
 
-        const studentAttempts = (allAttempts || []).filter(att => att.student_id === student.id && att.assessment_id === assessmentId);
-        const isCompleted = studentAttempts.some(att => att.status === 'SUBMITTED' || att.status === 'AUTO_SUBMITTED');
-        const isInProgress = studentAttempts.some(att => att.status === 'IN_PROGRESS');
+        const asmAtts = sAttemptsByAsm.get(assessmentId) || [];
+        const isCompleted = asmAtts.some(att => {
+          const st = String(att.status || '').toLowerCase();
+          return ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
+        });
+        const isInProgress = !isCompleted && asmAtts.some(att => {
+          const st = String(att.status || '').toLowerCase();
+          return st === 'in_progress';
+        });
 
         if (isCompleted) completedCount++;
         else if (isInProgress) inProgressCount++;
@@ -1897,6 +1913,66 @@ export async function renderProgressView(area) {
           is_in_progress: isInProgress
         });
       });
+
+      // Calculate authoritative global grade & score across completed assessments (Rule 2.8 & 2.10)
+      let totalScoreObtained = 0;
+      let totalMaxPossible = 0;
+      let completedScoredCount = 0;
+      let sumPercentages = 0;
+
+      assignedAssesIds.forEach(asmId => {
+        const asmAtts = sAttemptsByAsm.get(asmId) || [];
+        const validAtts = asmAtts.filter(att => {
+          const st = String(att.status || '').toLowerCase();
+          return ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
+        });
+        if (validAtts.length > 0) {
+          let bestScore = -1;
+          let bestTotalQ = 10;
+          let bestPct = 0;
+          validAtts.forEach(att => {
+            const sc = Number(att.score ?? 0);
+            const tq = Number(att.total_questions || 10);
+            const pct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
+            if (sc > bestScore || bestScore === -1) {
+              bestScore = sc;
+              bestTotalQ = tq;
+              bestPct = pct;
+            }
+          });
+          totalScoreObtained += Math.max(0, bestScore);
+          totalMaxPossible += bestTotalQ;
+          sumPercentages += bestPct;
+          completedScoredCount++;
+        }
+      });
+
+      // Student Score (%) & Grade: Calculated ONLY from taken/unlocked assessments.
+      // Formula: average_score = sum(best_percentage_on_taken) / count(taken_assessments)
+      const overallPct = completedScoredCount > 0 
+        ? Math.round(sumPercentages / completedScoredCount) 
+        : 0;
+      const overallScoreStr = completedScoredCount > 0 ? `${overallPct}%` : '—';
+      const globalGrade = completedScoredCount > 0 && typeof getGrade === 'function' ? getGrade(overallPct) : '—';
+      const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#0ea5e9', 'C': '#c7c18c', 'D': '#f97316', 'E': '#f43f5e', 'F': '#ef4444' };
+      const gradeColor = cMap[globalGrade] || 'rgba(255,255,255,0.4)';
+
+      // Calculate age from birth_date
+      let ageDisplay = '—';
+      if (student.birth_date) {
+        const bd = new Date(student.birth_date);
+        if (!isNaN(bd.getTime())) {
+          const today = new Date();
+          let age = today.getFullYear() - bd.getFullYear();
+          const m = today.getMonth() - bd.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
+          if (age && age > 0) ageDisplay = `${age} yrs`;
+        }
+      }
+
+      const isBatchActive = studentBatch ? studentBatch.is_active !== false : (student.batches ? student.batches.is_active !== false : true);
+      const pinDisplay = student.pin || 'NOT SET';
+      const displayName = formatStudentName(student.name, student.gender);
 
       // Sort details by level then alphabetically
       studentDetails.sort((a, b) => {
@@ -1914,19 +1990,35 @@ export async function renderProgressView(area) {
         instName,
         progName,
         batchName,
+        isBatchActive,
         levelName,
+        displayName,
+        pinDisplay,
+        ageDisplay,
+        gender: student.gender || '',
+        photoUrl: student.photo_url || '',
         totalAssigned: assignedAssesIds.size,
         completedCount,
         inProgressCount,
+        totalScoreObtained,
+        totalMaxPossible,
+        overallPct,
+        overallScoreStr,
+        globalGrade,
+        gradeColor,
         details: studentDetails
       });
     });
 
-    // Hierarchical sort: Active students on top, then Institution -> Program -> Batch -> Level -> Name (A-Z)
+    // Hierarchical sort: Active students on top, then Active Batches first -> Institution -> Program -> Batch -> Level -> Name (A-Z)
     allData.sort((a, b) => {
       const aActive = a.student.is_active !== false ? 1 : 0;
       const bActive = b.student.is_active !== false ? 1 : 0;
       if (aActive !== bActive) return bActive - aActive;
+
+      const aBatchAct = a.isBatchActive ? 1 : 0;
+      const bBatchAct = b.isBatchActive ? 1 : 0;
+      if (aBatchAct !== bBatchAct) return bBatchAct - aBatchAct;
 
       const instCmp = (a.instName || '').localeCompare(b.instName || '', undefined, { sensitivity: 'base', numeric: true });
       if (instCmp !== 0) return instCmp;
@@ -1940,20 +2032,31 @@ export async function renderProgressView(area) {
       const lvlCmp = (a.levelName || '').localeCompare(b.levelName || '', undefined, { sensitivity: 'base', numeric: true });
       if (lvlCmp !== 0) return lvlCmp;
 
-      return (a.student.name || '').localeCompare(b.student.name || '', undefined, { sensitivity: 'base', numeric: true });
+      if (b.completedCount !== a.completedCount) return b.completedCount - a.completedCount;
+
+      return (a.displayName || a.student?.name || '').localeCompare(b.displayName || b.student?.name || '', undefined, { sensitivity: 'base', numeric: true });
     });
 
     area.innerHTML = `
           <div class="section-header">
             <div>
               <h2 class="section-title">Student Progress <span class="count-chip" id="prog-count-chip">${allData.length} Students</span></h2>
-              <p class="section-subtitle">Overview of student assessment completion filterable by Program, Class, and Batch</p>
+              <p class="section-subtitle">Overview of student assessment completion, global scores, and grades filterable by Batch, Program, and Status</p>
             </div>
           </div>
 
           <div class="d-flex align-center gap-3 flex-wrap p-3 mb-4 rounded" style="background:var(--clr-surface-2); border:1px solid var(--clr-border);">
             <div style="min-width:180px;">
-              <label class="text-xs text-muted d-block mb-1">Filter Class</label>
+              <label class="text-xs text-muted d-block mb-1">Batch Status</label>
+              <select id="prog-filter-batch-status" class="form-control" style="padding:6px 10px;font-size:0.85rem;">
+                <option value="active" selected>Active Batches (Ongoing)</option>
+                <option value="all">All Batches (Include Past)</option>
+                <option value="inactive">Inactive / Past Batches Only</option>
+              </select>
+            </div>
+
+            <div style="min-width:180px;">
+              <label class="text-xs text-muted d-block mb-1">Filter Program</label>
               <select id="prog-filter-class" class="form-control" style="padding:6px 10px;font-size:0.85rem;">
                 <option value="">&mdash; All Programs &mdash;</option>
                 ${(allPrograms || []).filter(c => !c.deleted_at).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(c => `<option value="${c.id}" data-inst="${c.institution_id}">${escapeHtml(c.name)}</option>`).join('')}
@@ -1964,13 +2067,13 @@ export async function renderProgressView(area) {
               <label class="text-xs text-muted d-block mb-1">Filter Batch (Group)</label>
               <select id="prog-filter-batch" class="form-control" style="padding:6px 10px;font-size:0.85rem;">
                 <option value="">&mdash; All Batches &mdash;</option>
-                ${(allBatches || []).filter(b => !b.deleted_at).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(b => `<option value="${b.id}" data-prog="${b.program_id}">${escapeHtml(b.name)}</option>`).join('')}
+                ${(allBatches || []).filter(b => !b.deleted_at).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(b => `<option value="${b.id}" data-prog="${b.program_id}" data-active="${b.is_active !== false ? 'true' : 'false'}">${escapeHtml(b.name)}${b.is_active === false ? ' (Past/Inactive)' : ''}</option>`).join('')}
               </select>
             </div>
 
             <div style="flex:1;min-width:220px;">
               <label class="text-xs text-muted d-block mb-1">Search Student</label>
-              <input type="text" id="prog-filter-search" class="form-control" placeholder="Type student name..." style="padding:6px 10px;font-size:0.85rem;">
+              <input type="text" id="prog-filter-search" class="form-control" placeholder="Search by name, PIN..." style="padding:6px 10px;font-size:0.85rem;">
             </div>
 
             <div class="d-flex align-end" style="padding-top:18px;">
@@ -1982,15 +2085,19 @@ export async function renderProgressView(area) {
             <table>
               <thead>
                 <tr>
-                  <th class="text-left">Institution</th>
-                  <th class="text-left">Program</th>
-                  <th class="text-left">Batch</th>
-                  <th class="text-center">Level</th>
-                  <th class="text-left">Student Name</th>
-                  <th class="text-center">Assessments</th>
-                  <th class="text-center">Completion</th>
-                  <th class="text-center">Status</th>
-                  <th class="text-right">Actions</th>
+                  <th class="text-left" style="width:110px;">Institution</th>
+                  <th class="text-left" style="width:90px;">Program</th>
+                  <th class="text-center" style="width:75px;">Batch</th>
+                  <th class="text-center" style="width:85px;">Level</th>
+                  <th class="text-left" style="min-width:180px;">Student Name</th>
+                  <th class="text-center" style="width:65px;">Age</th>
+                  <th class="text-center" style="width:80px;">Gender</th>
+                  <th class="text-center" style="width:95px;">Assessments</th>
+                  <th class="text-center" style="width:70px;">Score</th>
+                  <th class="text-center" style="width:65px;">Grade</th>
+                  <th class="text-center" style="width:130px;">Completion</th>
+                  <th class="text-center" style="width:75px;">Status</th>
+                  <th class="text-right" style="width:110px;">Actions</th>
                 </tr>
               </thead>
               <tbody id="tbl-progress-body"></tbody>
@@ -1998,6 +2105,7 @@ export async function renderProgressView(area) {
           </div>
         `;
 
+    const batchStatusSelect = document.getElementById('prog-filter-batch-status');
     const classSelect = document.getElementById('prog-filter-class');
     const batchSelect = document.getElementById('prog-filter-batch');
     const searchInput = document.getElementById('prog-filter-search');
@@ -2006,12 +2114,17 @@ export async function renderProgressView(area) {
 
     const updateBatchOptions = () => {
       const cId = classSelect.value;
+      const bStatus = batchStatusSelect.value;
       Array.from(batchSelect.options).forEach((opt, idx) => {
         if (idx === 0) return;
-        const match = !cId || opt.getAttribute('data-class') === cId || opt.getAttribute('data-prog') === cId;
-        opt.style.display = match ? '' : 'none';
+        const progMatch = !cId || opt.getAttribute('data-prog') === cId || opt.getAttribute('data-class') === cId;
+        const isActive = opt.getAttribute('data-active') === 'true';
+        let statusMatch = true;
+        if (bStatus === 'active') statusMatch = isActive;
+        else if (bStatus === 'inactive') statusMatch = !isActive;
+        opt.style.display = (progMatch && statusMatch) ? '' : 'none';
       });
-      if (cId && batchSelect.selectedOptions[0]?.style.display === 'none') {
+      if (batchSelect.selectedOptions[0]?.style.display === 'none') {
         batchSelect.value = '';
       }
     };
@@ -2041,7 +2154,7 @@ export async function renderProgressView(area) {
        modal.innerHTML = `
          <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border);border-radius:12px;width:100%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,0.5);">
             <div style="padding:1.5rem;border-bottom:1px solid var(--clr-border);display:flex;justify-content:space-between;align-items:center;">
-              <h3 style="margin:0;">Assessment Details: ${escapeHtml(rec.student.name)}</h3>
+              <h3 style="margin:0;">Assessment Details: ${escapeHtml(rec.displayName || rec.student.name)}</h3>
               <button class="btn-icon" onclick="document.getElementById('prog-details-modal').remove()" style="background:transparent;border:none;color:var(--clr-text-2);font-size:1.2rem;cursor:pointer;">&#10005;</button>
             </div>
             <div style="padding:1.5rem;overflow-y:auto;flex:1;">
@@ -2049,6 +2162,8 @@ export async function renderProgressView(area) {
                  <div><div class="text-xs text-muted">Assigned</div><div class="fw-700" style="font-size:1.2rem;">${rec.totalAssigned}</div></div>
                  <div><div class="text-xs text-muted">Completed</div><div class="fw-700" style="font-size:1.2rem;color:var(--clr-success);">${rec.completedCount}</div></div>
                  <div><div class="text-xs text-muted">In Progress</div><div class="fw-700" style="font-size:1.2rem;color:var(--clr-warning);">${rec.inProgressCount}</div></div>
+                 <div><div class="text-xs text-muted">Overall Score</div><div class="fw-700" style="font-size:1.2rem;color:var(--clr-text-1);">${rec.overallScoreStr}</div></div>
+                 <div><div class="text-xs text-muted">Global Grade</div><div><span class="badge" style="background:${rec.gradeColor};color:#000;font-weight:800;font-size:0.85rem;padding:2px 8px;">${rec.globalGrade}</span></div></div>
                </div>
                <table class="table-wrap" style="width:100%;">
                  <thead>
@@ -2068,16 +2183,21 @@ export async function renderProgressView(area) {
     };
 
     const renderTable = () => {
+      const bStatus = batchStatusSelect.value;
       const cId = classSelect.value;
       const bId = batchSelect.value;
       const q = searchInput.value.toLowerCase().trim();
 
       const filtered = allData.filter(r => {
+        if (bStatus === 'active' && !r.isBatchActive) return false;
+        if (bStatus === 'inactive' && r.isBatchActive) return false;
         if (cId && r.student?.program_id !== cId) return false;
         if (bId && r.student?.batch_id !== bId) return false;
         if (q) {
           const sName = (r.student?.name || '').toLowerCase();
-          if (!sName.includes(q)) return false;
+          const dName = (r.displayName || '').toLowerCase();
+          const sPin = String(r.student?.pin || '').toLowerCase();
+          if (!sName.includes(q) && !dName.includes(q) && !sPin.includes(q)) return false;
         }
         return true;
       });
@@ -2085,7 +2205,7 @@ export async function renderProgressView(area) {
       countChip.textContent = `${filtered.length} of ${allData.length} Students`;
 
       if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted p-5">No progression records match the selected filters.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted p-5">No progression records match the selected filters.</td></tr>';
         return;
       }
 
@@ -2093,35 +2213,74 @@ export async function renderProgressView(area) {
         const pct = r.totalAssigned > 0 ? Math.round((r.completedCount / r.totalAssigned) * 100) : 0;
         return `
             <tr>
-              <td class="text-muted text-sm">${escapeHtml(r.instName || '—')}</td>
-              <td class="text-muted text-sm">${escapeHtml(r.progName || '—')}</td>
-              <td><span class="badge ${r.batchName !== 'Unassigned' ? 'badge-info' : 'badge-neutral'}" style="font-size:0.75rem;">${escapeHtml(r.batchName || 'Unassigned')}</span></td>
-              <td class="text-center"><span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(r.levelName || '—')}</span></td>
-              <td class="fw-600" style="color:var(--clr-text-1);">${formatStudentName(r.student?.name, r.student?.gender) || '—'}</td>
-              <td class="text-center fw-600 text-sm">
-                <span style="color:var(--clr-success);">${r.completedCount}</span> / ${r.totalAssigned}
-              </td>
-              <td class="text-center" style="min-width:120px;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <div class="progress-pill" style="flex:1;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
-                    <div class="progress-pill-fill" style="height:100%;width:${pct}%; background: ${pct === 100 ? 'var(--clr-success)' : 'var(--clr-primary)'};"></div>
+              <td class="text-muted text-xs" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px;" title="${escapeHtml(r.instName || '—')}">${escapeHtml(r.instName || '—')}</td>
+              <td class="text-muted text-xs" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:90px;" title="${escapeHtml(r.progName || '—')}">${escapeHtml(r.progName || '—')}</td>
+              <td class="text-center"><span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-weight:700; font-size:0.75rem; padding:2px 8px; border-radius:10px;">${escapeHtml(r.batchName || '—')}</span></td>
+              <td class="text-center"><span class="badge badge-neutral" style="font-size:0.72rem;">${escapeHtml(r.levelName || '—')}</span></td>
+              <td>
+                <div class="d-flex align-center gap-3">
+                  ${r.photoUrl 
+                    ? `<img src="${r.photoUrl}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">` 
+                    : `<img src="${generateAvatarDataUri(r.displayName || r.student?.name, r.gender)}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">`
+                  }
+                  <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px;">
+                    <div class="fw-600" style="color:var(--clr-text-1); cursor:pointer; font-size:0.85rem;" onclick="window.openStudentProfile('${r.student.id}')" title="Click to view student profile">
+                      ${escapeHtml(r.displayName)}
+                    </div>
+                    <div class="text-xs text-muted" style="font-family:monospace; font-size:0.68rem;">PIN: ${escapeHtml(r.pinDisplay)}</div>
                   </div>
-                  <span class="text-xs fw-700">${pct}%</span>
                 </div>
               </td>
-              <td class="text-center"><span class="badge ${r.student?.is_active !== false ? 'badge-success' : 'badge-neutral'}" style="font-size:0.7rem;">${r.student?.is_active !== false ? 'Active' : 'Inactive'}</span></td>
+              <td class="text-center"><span class="text-xs fw-600" style="color:var(--clr-text-2);">${r.ageDisplay}</span></td>
+              <td class="text-center">
+                ${r.gender === 'male' 
+                  ? `<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);font-size:0.68rem;padding:2px 6px;">&#9794; Male</span>`
+                  : r.gender === 'female'
+                  ? `<span class="badge" style="background:rgba(244,114,182,0.15);color:#f472b6;border:1px solid rgba(244,114,182,0.3);font-size:0.68rem;padding:2px 6px;">&#9792; Female</span>`
+                  : `<span class="badge badge-neutral" style="font-size:0.68rem;padding:2px 6px;">&mdash;</span>`
+                }
+              </td>
+              <td class="text-center fw-600 text-sm">
+                <span style="color:var(--clr-success); font-weight:700;">${r.completedCount}</span> / <span class="text-muted" style="font-size:0.75rem;">${r.totalAssigned}</span>
+              </td>
+              <td class="text-center">
+                <span class="fw-700 text-xs" style="color:${r.gradeColor}; font-size:0.8rem; ${r.globalGrade === 'S' ? 'filter:drop-shadow(0 0 6px rgba(251,191,36,0.6)); font-weight:900;' : ''}">${r.overallScoreStr}</span>
+              </td>
+              <td class="text-center">
+                ${r.globalGrade !== '—' 
+                  ? (r.globalGrade === 'S'
+                    ? `<span class="badge" style="background:linear-gradient(135deg, #fef08a, #fbbf24, #d97706);color:#1e1b4b;font-weight:900;font-size:0.72rem;padding:2px 7px;box-shadow:0 0 10px rgba(245,158,11,0.7);border:1px solid #fde68a;">S</span>`
+                    : `<span class="badge" style="background:${r.gradeColor};color:#000;font-weight:800;font-size:0.72rem;padding:2px 7px;">${r.globalGrade}</span>`
+                  ) 
+                  : '<span class="text-muted" style="font-size:0.75rem;">&mdash;</span>'
+                }
+              </td>
+              <td class="text-center" style="min-width:110px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <div class="progress-pill" style="flex:1;height:7px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
+                    <div class="progress-pill-fill" style="height:100%;width:${pct}%; background: ${pct === 100 ? 'var(--clr-success)' : 'var(--clr-primary)'};"></div>
+                  </div>
+                  <span class="text-xs fw-700" style="font-size:0.72rem;">${pct}%</span>
+                </div>
+              </td>
+              <td class="text-center"><span class="badge ${r.student?.is_active !== false ? 'badge-success' : 'badge-neutral'}" style="font-size:0.68rem;padding:2px 6px;">${r.student?.is_active !== false ? 'Active' : 'Inactive'}</span></td>
               <td class="text-right">
-                <button class="btn btn-secondary btn-sm" onclick="window.showStudentProgressDetails('${r.student.id}')">Details</button>
+                <div class="d-flex gap-1 justify-end align-center">
+                  <button class="btn btn-secondary btn-icon btn-sm" onclick="window.openStudentProfile('${r.student.id}')" title="View Profile" style="padding:3px 6px; font-size:0.75rem;">&#128100;</button>
+                  <button class="btn btn-secondary btn-sm" onclick="window.showStudentProgressDetails('${r.student.id}')" title="View Details" style="padding:3px 8px; font-size:0.75rem;">Details</button>
+                </div>
               </td>
             </tr>
           `;
       }).join('');
     };
 
+    batchStatusSelect.addEventListener('change', () => { updateBatchOptions(); renderTable(); });
     classSelect.addEventListener('change', () => { updateBatchOptions(); renderTable(); });
     batchSelect.addEventListener('change', renderTable);
     searchInput.addEventListener('input', renderTable);
     document.getElementById('prog-btn-reset')?.addEventListener('click', () => {
+      batchStatusSelect.value = 'active';
       classSelect.value = '';
       batchSelect.value = '';
       searchInput.value = '';
@@ -2129,6 +2288,7 @@ export async function renderProgressView(area) {
       renderTable();
     });
 
+    updateBatchOptions();
     renderTable();
 
   } catch (err) {
@@ -2188,268 +2348,12 @@ window.viewClassInstanceRoster = async function (classInstanceId) {
 };
 
 // ============================================================
-// Assessment RECALIBRATOR
+// Assessment RECALIBRATOR (Relocated to Domain D — Data Health)
 // ============================================================
 
 export async function renderRecalibrator(area) {
-  showLoading('Loading Assessments for recalibration&hellip;');
-  const allAssessments = await adminFetchAll('assessments');
-  hideLoading();
-  const activeAssessments = allAssessments.filter(e => !e.deleted_at).sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-
-  area.innerHTML = `
-        <div class="section-header">
-          <div>
-            <h2 class="section-title text-gradient" style="font-size:1.6rem;">&#9889; Assessment Recalibrator</h2>
-            <p class="section-subtitle">
-              Recalculate historical submitted student attempts after updating questions, adding multiple correct answers (separated by <code>;</code> or <code>|</code>), or enabling hyphen tolerance.
-            </p>
-          </div>
-        </div>
-
-        <div class="glass-card p-6 mb-6">
-          <div class="d-flex align-center gap-4 flex-wrap">
-            <div style="flex: 1; min-width: 280px;">
-              <label class="form-label">Select Target Assessment</label>
-              <select class="form-control" id="recalibrator-Assessment-select">
-                <option value="">&mdash; Choose an Assessment to Recalibrate &mdash;</option>
-                ${activeAssessments.map(e => `<option value="${e.id}">[${escapeHtml(e.assessment_type || 'Assessment')}] ${escapeHtml(e.title || e.display_name || e.id)}</option>`).join('')}
-              </select>
-            </div>
-            <div style="display: flex; gap: 12px; align-items: flex-end; padding-top: 20px;">
-              <button class="btn btn-primary" id="btn-preview-recal" disabled>&#128269; Preview Recalibration</button>
-              <button class="btn btn-success" id="btn-apply-recal" disabled style="background:linear-gradient(135deg,#10b981,#059669);font-weight:700;">&#9889; Apply Recalibration</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Metrics Overview Panel -->
-        <div id="recal-metrics-panel" class="hidden mb-6">
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
-            <div class="glass-card p-4 text-center">
-              <div class="text-xs text-muted mb-1">Total Questions</div>
-              <div class="fw-700" style="font-size:1.6rem;" id="recal-metric-questions">0</div>
-            </div>
-            <div class="glass-card p-4 text-center">
-              <div class="text-xs text-muted mb-1">Submitted Attempts</div>
-              <div class="fw-700" style="font-size:1.6rem;" id="recal-metric-attempts">0</div>
-            </div>
-            <div class="glass-card p-4 text-center" style="border-left: 4px solid var(--clr-primary, #6366f1);">
-              <div class="text-xs text-muted mb-1">Affected Attempts</div>
-              <div class="fw-700" style="font-size:1.6rem; color:var(--clr-primary, #a78bfa);" id="recal-metric-affected">0</div>
-            </div>
-            <div class="glass-card p-4 text-center" style="border-left: 4px solid #10b981;">
-              <div class="text-xs text-muted mb-1">Status: FAIL &rarr; PASS</div>
-              <div class="fw-700" style="font-size:1.6rem; color: #10b981;" id="recal-metric-fail-pass">0</div>
-            </div>
-            <div class="glass-card p-4 text-center" style="border-left: 4px solid #f43f5e;">
-              <div class="text-xs text-muted mb-1">Status: PASS &rarr; FAIL</div>
-              <div class="fw-700" style="font-size:1.6rem; color: #f43f5e;" id="recal-metric-pass-fail">0</div>
-            </div>
-            <div class="glass-card p-4 text-center" style="border-left: 4px solid #38bdf8;">
-              <div class="text-xs text-muted mb-1">Score Increases</div>
-              <div class="fw-700" style="font-size:1.6rem; color: #38bdf8;" id="recal-metric-increases">0</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Preview Results Table -->
-        <div id="recal-results-wrap" class="hidden">
-          <div class="glass-card p-6">
-            <div class="d-flex align-center justify-between flex-wrap gap-3 mb-4">
-              <div>
-                <h3 class="fw-700 text-lg">Recalibration Preview</h3>
-                <p class="text-sm text-muted">Review exactly what will change for each student before applying.</p>
-              </div>
-              <div class="d-flex align-center gap-2">
-                <label class="text-xs text-muted">Filter:</label>
-                <select class="form-control" id="recal-filter-view" style="width: auto; padding: 4px 10px; font-size: 0.85rem;">
-                  <option value="affected">Affected Students Only</option>
-                  <option value="all">All Students</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="table-wrap">
-              <table style="width:100%;">
-                <thead>
-                  <tr>
-                    <th class="text-left">Student Name</th>
-                    <th class="text-left">Class</th>
-                    <th class="text-center">Old Score</th>
-                    <th class="text-center">New Score</th>
-                    <th class="text-center">Old %</th>
-                    <th class="text-center">New %</th>
-                    <th class="text-center">Old Grade</th>
-                    <th class="text-center">New Grade</th>
-                    <th class="text-center">Status Change</th>
-                    <th class="text-center">Answers Changed</th>
-                  </tr>
-                </thead>
-                <tbody id="recal-table-body"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Confirmation Modal for Recalibration -->
-        <div class="modal-backdrop hidden" id="recal-confirm-modal" role="dialog" aria-modal="true">
-          <div class="modal-box" style="max-width: 480px; text-align: center;">
-            <div style="font-size: 2.8rem; margin-bottom: 1rem;">&#9889;</div>
-            <h3 class="mb-2">Confirm Assessment Recalibration?</h3>
-            <p class="text-muted text-sm mb-4" id="recal-modal-desc">
-              This will safely update historical submitted scores, percentages, grades, and student progression using the authoritative grading engine.
-            </p>
-            <div class="p-4 rounded text-left text-xs mb-6" style="background: rgba(255,255,255,0.04); border: 1px solid var(--clr-border);">
-              <div class="mb-1">&bull; <b>Affected Attempts:</b> <span id="modal-affected-count" class="fw-700 text-primary">0</span></div>
-              <div class="mb-1">&bull; <b>Status Transitions:</b> <span id="modal-status-changes" class="fw-700">0</span></div>
-              <div>&bull; <b>Audit Trail:</b> An audit log entry will be permanently recorded.</div>
-            </div>
-            <div class="d-flex gap-3 justify-between">
-              <button class="btn btn-secondary" id="btn-recal-cancel" style="flex:1;">Cancel</button>
-              <button class="btn btn-primary" id="btn-recal-confirm-run" style="flex:1; background: linear-gradient(135deg,#10b981,#059669); border:none;">&#9989; Yes, Apply Changes</button>
-            </div>
-          </div>
-        </div>
-      `;
-
-  let currentPreviewData = null;
-  const Assessmentselect = document.getElementById('recalibrator-Assessment-select');
-  const btnPreview = document.getElementById('btn-preview-recal');
-  const btnApply = document.getElementById('btn-apply-recal');
-  const metricsPanel = document.getElementById('recal-metrics-panel');
-  const resultsWrap = document.getElementById('recal-results-wrap');
-  const tableBody = document.getElementById('recal-table-body');
-  const filterSelect = document.getElementById('recal-filter-view');
-  const confirmModal = document.getElementById('recal-confirm-modal');
-
-  Assessmentselect.addEventListener('change', () => {
-    const val = Assessmentselect.value;
-    btnPreview.disabled = !val;
-    btnApply.disabled = true;
-    metricsPanel.classList.add('hidden');
-    resultsWrap.classList.add('hidden');
-    currentPreviewData = null;
-  });
-
-  if (window._filterRecalibrateAssessment) {
-    Assessmentselect.value = window._filterRecalibrateAssessment;
-    window._filterRecalibrateAssessment = null;
-    btnPreview.disabled = !Assessmentselect.value;
-  }
-
-  const renderPreviewRows = () => {
-    if (!currentPreviewData) return;
-    const mode = filterSelect.value;
-    const list = mode === 'affected'
-      ? currentPreviewData.attemptsDiff.filter(a => a.isAffected)
-      : currentPreviewData.attemptsDiff;
-
-    tableBody.innerHTML = '';
-    if (!list.length) {
-      tableBody.innerHTML = `<tr><td colspan="10" class="text-center text-muted p-4">No ${mode === 'affected' ? 'affected ' : ''}student attempts found.</td></tr>`;
-      return;
-    }
-
-    list.forEach(item => {
-      const isScoreUp = item.newPercentage > item.oldPercentage;
-      const isScoreDown = item.newPercentage < item.oldPercentage;
-      const isStatusPass = item.oldStatus === 'FAIL' && item.newStatus === 'PASS';
-      const isStatusFail = item.oldStatus === 'PASS' && item.newStatus === 'FAIL';
-
-      let statusBadge = '<span class="badge badge-neutral">No Change</span>';
-      if (isStatusPass) {
-        statusBadge = '<span class="badge badge-success fw-700">FAIL &rarr; PASS &#10024;</span>';
-      } else if (isStatusFail) {
-        statusBadge = '<span class="badge badge-danger fw-700">PASS &rarr; FAIL &#9888;&#65039;</span>';
-      } else if (item.isAffected) {
-        statusBadge = isScoreUp ? '<span class="badge badge-info">+ Score Up</span>' : '<span class="badge badge-warning">- Score Down</span>';
-      }
-
-      const changedAnswersCount = item.questions.filter(q => q.isAffected).length;
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-            <td class="fw-600">${escapeHtml(item.studentName)}</td>
-            <td class="text-muted text-sm">${escapeHtml(item.programName)}</td>
-            <td class="text-center text-muted">${item.oldScore}</td>
-            <td class="text-center fw-700 ${isScoreUp ? 'text-success' : isScoreDown ? 'text-danger' : ''}">${item.newScore}</td>
-            <td class="text-center text-muted">${item.oldPercentage}%</td>
-            <td class="text-center fw-700 ${isScoreUp ? 'text-success' : isScoreDown ? 'text-danger' : ''}">${item.newPercentage}%</td>
-            <td class="text-center"><span class="grade-badge grade-${item.oldGrade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;">${item.oldGrade}</span></td>
-            <td class="text-center"><span class="grade-badge grade-${item.newGrade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;">${item.newGrade}</span></td>
-            <td class="text-center">${statusBadge}</td>
-            <td class="text-center"><span class="badge ${changedAnswersCount > 0 ? 'badge-primary' : 'badge-neutral'}">${changedAnswersCount} q</span></td>
-          `;
-      tableBody.appendChild(tr);
-    });
-  };
-
-  filterSelect.addEventListener('change', renderPreviewRows);
-
-  btnPreview.addEventListener('click', async () => {
-    const AssessmentId = Assessmentselect.value;
-    if (!AssessmentId) return;
-
-    showLoading('Calculating recalibration preview across all attempts...');
-    try {
-      currentPreviewData = await previewRecalibrateAssessment(AssessmentId);
-      hideLoading();
-
-      // Update metrics
-      document.getElementById('recal-metric-questions').textContent = currentPreviewData.totalQuestions;
-      document.getElementById('recal-metric-attempts').textContent = currentPreviewData.totalAttempts;
-      document.getElementById('recal-metric-affected').textContent = currentPreviewData.affectedAttemptsCount;
-      document.getElementById('recal-metric-fail-pass').textContent = currentPreviewData.failToPassCount;
-      document.getElementById('recal-metric-pass-fail').textContent = currentPreviewData.passToFailCount;
-      document.getElementById('recal-metric-increases').textContent = currentPreviewData.scoreIncreaseCount;
-
-      metricsPanel.classList.remove('hidden');
-      resultsWrap.classList.remove('hidden');
-      renderPreviewRows();
-
-      if (currentPreviewData.affectedAttemptsCount > 0) {
-        btnApply.disabled = false;
-        showToast(`Found ${currentPreviewData.affectedAttemptsCount} attempts that can be recalibrated.`, 'info');
-      } else {
-        btnApply.disabled = true;
-        showToast('All attempts already match the latest question definitions and grading engine.', 'success');
-      }
-    } catch (err) {
-      hideLoading();
-      showToast('Preview error: ' + err.message, 'error');
-    }
-  });
-
-  btnApply.addEventListener('click', () => {
-    if (!currentPreviewData || currentPreviewData.affectedAttemptsCount === 0) return;
-    document.getElementById('modal-affected-count').textContent = currentPreviewData.affectedAttemptsCount;
-    document.getElementById('modal-status-changes').textContent = (currentPreviewData.failToPassCount + currentPreviewData.passToFailCount);
-    confirmModal.classList.remove('hidden');
-  });
-
-  document.getElementById('btn-recal-cancel')?.addEventListener('click', () => {
-    confirmModal.classList.add('hidden');
-  });
-
-  document.getElementById('btn-recal-confirm-run')?.addEventListener('click', async () => {
-    confirmModal.classList.add('hidden');
-    const AssessmentId = Assessmentselect.value;
-    if (!AssessmentId) return;
-
-    showLoading('Applying recalibration to historical student results...');
-    try {
-      const res = await applyRecalibrateAssessment(AssessmentId);
-      hideLoading();
-      showToast(`Successfully recalibrated ${res.updatedAttemptsCount} attempts!`, 'success');
-      btnApply.disabled = true;
-      // Refresh preview
-      btnPreview.click();
-    } catch (err) {
-      hideLoading();
-      showToast('Failed to apply recalibration: ' + err.message, 'error');
-    }
-  });
+  window.location.hash = '#health';
+  if (window.loadSection) return window.loadSection('health');
 }
 
 // ============================================================

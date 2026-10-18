@@ -1,4 +1,4 @@
-import { calculateGrade } from './grading.js?v=5.1.0';
+import { calculateGrade } from './grading.js?v=5.2.2';
 
 // TOPS CORE — Toast Notification System
 let toastContainer = null;
@@ -131,6 +131,11 @@ export function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+export const escHtml = escapeHtml;
+if (typeof window !== 'undefined') {
+  window.escapeHtml = escapeHtml;
+  window.escHtml = escapeHtml;
 }
 
 /** Display-only grade lookup — mirrors AGENTS.md §2.10 */

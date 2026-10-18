@@ -1,19 +1,11 @@
-import { adminFetchAll, adminInsert, adminUpdate, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, clearAdminCache, toLevelLetter } from '../api.js?v=5.1.0';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.1.0';
-import { showToast, showLoading, hideLoading, updateLoadingProgress } from '../app.js?v=5.1.0';
-import { callEdgeFunction, getSupabase } from '../supabase.js?v=5.1.0';
-import { downloadAITemplate, AI_MODULES } from './panel-c-builder.js?v=5.1.0';
+import { adminFetchAll, adminInsert, adminUpdate, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, clearAdminCache, toLevelLetter } from '../api.js?v=5.2.2';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.2.2';
+import { showToast, showLoading, hideLoading, updateLoadingProgress } from '../app.js?v=5.2.2';
+import { callEdgeFunction, getSupabase } from '../supabase.js?v=5.2.2';
+import { downloadAITemplate, AI_MODULES } from './panel-c-builder.js?v=5.2.2';
 
 
-function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+// escapeHtml / escHtml imported canonically
 
 async function hashPin(pin) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
@@ -47,7 +39,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
     age--;
   }
-  return age >= 0 ? `${age} yrs` : '—';
+  return (age && age > 0) ? `${age} yrs` : '—';
 }
 
     async function renderImportStudents(area) {
@@ -96,6 +88,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
             </div>
             <div class="d-flex gap-2">
               <button class="btn btn-secondary btn-sm" id="btn-back-to-students">Back to Students</button>
+              <button class="btn btn-success btn-sm" id="btn-export-students-csv">📊 Export CSV</button>
               <button class="btn btn-primary btn-sm" id="btn-dl-student-template">📥 Download Student Template (.xlsx)</button>
             </div>
           </div>
@@ -196,7 +189,22 @@ function calculateAgeFromBirthDate(birthDateStr) {
       `;
 
       // Back button
-      document.getElementById('btn-back-to-students')?.addEventListener('click', () => loadSection('students'));
+      document.getElementById('btn-back-to-students')?.addEventListener('click', () => {
+        if (typeof window._switchStudentTab === 'function') {
+          window._switchStudentTab('roster');
+        } else if (typeof loadSection === 'function') {
+          loadSection('students');
+        }
+      });
+
+      // Export Student Gradebook CSV / Excel
+      document.getElementById('btn-export-students-csv')?.addEventListener('click', async () => {
+        if (typeof window.exportStudentsGradebook === 'function') {
+          await window.exportStudentsGradebook();
+        } else {
+          showToast('Gradebook export is preparing...', 'info');
+        }
+      });
 
       // Download Student Template
       document.getElementById('btn-dl-student-template')?.addEventListener('click', () => {

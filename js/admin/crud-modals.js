@@ -3,10 +3,10 @@ import {
   mergeDuplicateStudents, detectDuplicateStudents, mergeStudentPair,
   detectDuplicateQuestions, resequenceAssessmentQuestions, resolveDuplicateQuestionGroup, batchResolveAssessmentDuplicateQuestions,
   toLevelLetter
-} from '../api.js?v=5.1.0';
-import { cleanStudentName } from '../api.js?v=5.1.0';
-import { showToast, showLoading, hideLoading } from '../app.js?v=5.1.0';
-import { getSupabase } from '../supabase.js?v=5.1.0';
+} from '../api.js?v=5.2.2';
+import { cleanStudentName } from '../api.js?v=5.2.2';
+import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.2.2';
+import { getSupabase } from '../supabase.js?v=5.2.2';
 
 function formatLevelOption(l) {
   if (l && l.name) return l.name;
@@ -14,15 +14,7 @@ function formatLevelOption(l) {
   return l ? `Level ${l.level_number ?? ''}` : '—';
 }
 
-function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+// escapeHtml imported from app.js
 
 async function hashPin(pin) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
@@ -867,11 +859,7 @@ function _initCrudModals() {
     });
 
 
-    // Global edit/delete handlers
-    window._editRecord = async (section, id, jsonStr) => {
-      const record = JSON.parse(jsonStr);
-      await openCrudModal(section, record);
-    };
+    // Note: window._editRecord is centralized in app.js
 
     // Note: window._deleteRecord and delete-confirm-btn are centralized with cascade safeguards in app.js
 
@@ -962,7 +950,7 @@ function _initDuplicateModals() {
     dupQModal?.classList.add('hidden');
   });
 
-  document.getElementById('dup-q-Assessment-select')?.addEventListener('change', () => loadDuplicateQuestions());
+  document.getElementById('dup-q-assessment-select')?.addEventListener('change', () => loadDuplicateQuestions());
 
   document.querySelectorAll('.dup-q-tab-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
@@ -973,13 +961,13 @@ function _initDuplicateModals() {
       const target = e.currentTarget;
       target.classList.remove('btn-secondary');
       target.classList.add('btn-primary');
-      currentDupQTab = target.dataset.qtab || 'same_Assessment';
+      currentDupQTab = target.dataset.qtab || 'same_assessment';
       await loadDuplicateQuestions();
     });
   });
 
   const batchCleanQuestionsHandler = async () => {
-    const dupQAssessmentselect = document.getElementById('dup-q-Assessment-select');
+    const dupQAssessmentselect = document.getElementById('dup-q-assessment-select');
     const AssessmentId = dupQAssessmentselect?.value || null;
     if (!AssessmentId) {
       showToast('Please select a specific Assessment from the filter above to perform Batch Auto-Resolve.', 'warning');
@@ -1000,8 +988,7 @@ function _initDuplicateModals() {
     }
   };
 
-  document.getElementById('btn-batch-clean-Assessment-questions')?.addEventListener('click', batchCleanQuestionsHandler);
-  document.getElementById('btn-resolve-all-visible-questions')?.addEventListener('click', batchCleanQuestionsHandler);
+  document.getElementById('btn-batch-clean-assessment-questions')?.addEventListener('click', batchCleanQuestionsHandler);
 }
 
 // --- STUDENT DUPLICATE LOADER ---
@@ -1100,7 +1087,7 @@ async function loadDuplicateStudents(scope = 'same_class') {
 // --- QUESTION DUPLICATE LOADER ---
 async function loadDuplicateQuestions() {
   const dupQContent = document.getElementById('dup-questions-content');
-  const dupQAssessmentselect = document.getElementById('dup-q-Assessment-select');
+  const dupQAssessmentselect = document.getElementById('dup-q-assessment-select');
   if (!dupQContent) return;
 
   dupQContent.innerHTML = '<div class="empty-state p-6 text-center"><div class="spinner"></div><p>Scanning for duplicate questions...</p></div>';
@@ -1117,7 +1104,7 @@ async function loadDuplicateQuestions() {
     if (crossCountEl) crossCountEl.textContent = (data.crossAssessmentDuplicates || []).length;
 
     // View tab 1: SAME Assessment DUPLICATES
-    if (currentDupQTab === 'same_Assessment') {
+    if (currentDupQTab === 'same_assessment' || currentDupQTab === 'same_Assessment') {
       if (!data.sameAssessmentDuplicates || data.sameAssessmentDuplicates.length === 0) {
         dupQContent.innerHTML = '<div class="empty-state p-6 text-center"><p>✅ No duplicate questions found in this assessment scope.</p></div>';
         return;
@@ -1299,7 +1286,7 @@ async function loadDuplicateQuestions() {
 
 // --- POPULATE Assessment SELECT IN QUESTIONS MODAL ---
 async function initDuplicateQuestionsSelect() {
-  const dupQAssessmentselect = document.getElementById('dup-q-Assessment-select');
+  const dupQAssessmentselect = document.getElementById('dup-q-assessment-select');
   if (!dupQAssessmentselect) return;
   try {
     const Assessments = await adminFetchAll('assessments', 'id, title, status');

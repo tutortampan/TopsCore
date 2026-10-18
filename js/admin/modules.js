@@ -33,7 +33,7 @@ export async function renderModules(area) {
       
       <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
         ${modules.map(mod => `
-          <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; height: 100%; min-height: 260px; transition: transform 0.2s, box-shadow 0.2s;" 
+          <div class="module-card card" style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; height: 100%; min-height: 260px; transition: transform 0.2s, box-shadow 0.2s;" 
                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(0, 0, 0, 0.3)'" 
                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">

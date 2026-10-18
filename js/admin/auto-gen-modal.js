@@ -1,5 +1,5 @@
 export async function openAutoGenerateModal(options = {}) {
-  const { fetchInstitutions, fetchPrograms, autoGenerateAssessmentsHierarchy } = await import('../api.js?v=5.1.0');
+  const { fetchInstitutions, fetchPrograms, autoGenerateAssessmentsHierarchy, escapeHtml, escHtml } = await import('../api.js?v=5.2.2');
   const { availableLevels = [], preSelectedLevels = [], explicitClassId = null, onComplete = null } = options;
 
   // Show loading while fetching programs
@@ -91,15 +91,7 @@ export async function openAutoGenerateModal(options = {}) {
       }
     };
     
-    function escapeHtml(str) {
-      if (str === null || str === undefined) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
+    // escapeHtml imported from api.js
   } catch (err) {
     if (loading.parentNode) loading.remove();
     console.error(err);

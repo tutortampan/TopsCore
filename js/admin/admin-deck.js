@@ -1,12 +1,10 @@
-import { adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, formatStudentName } from '../api.js?v=5.1.0';
-import { getSupabase } from '../supabase.js?v=5.1.0';
-import { generateExecutiveCV } from './cv-export.js?v=5.1.0';
-import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=5.1.0';
-import { showToast } from '../app.js?v=5.1.0';
+import { adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, formatStudentName } from '../api.js?v=5.2.2';
+import { getSupabase } from '../supabase.js?v=5.2.2';
+import { generateExecutiveCV } from './cv-export.js?v=5.2.2';
+import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=5.2.2';
+import { showToast, escapeHtml, escHtml } from '../app.js?v=5.2.2';
 
-function escHtml(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+// escapeHtml / escHtml imported canonically
 
 async function ensureProfessionalProfile() {
   const records = []; // Deprecated user_professionals
@@ -21,8 +19,8 @@ export async function renderDashboard(container) {
   
   // Fetch metrics for the dashboard (Merged Board & Admin)
   const [students, classes, classMeetings, programs, batches, institutions] = await Promise.all([
-    adminFetchAll('students'),
-    adminFetchAll('classes'),
+    adminFetchAll('students', 'id, is_active, deleted_at'),
+    adminFetchAll('classes', 'id, is_active, deleted_at'),
     adminFetchAll('class_meetings', '*, class_instances(classes(name))'),
     adminFetchAll('programs'),
     adminFetchAll('batches'),
@@ -394,13 +392,18 @@ export async function renderAdminProfile(container) {
 
     const overlay = document.getElementById('avatar-loading-overlay');
     overlay.classList.remove('hidden');
+    const previewEl = document.getElementById('admin-avatar-preview');
+    if (previewEl) {
+      previewEl.src = '';
+      previewEl.removeAttribute('src');
+    }
 
     try {
-      const { processAndCompressAvatar } = await import('../utils/avatar-engine.js?v=5.1.0');
+      const { processAndCompressAvatar } = await import('../utils/avatar-engine.js?v=5.2.2');
       const compressedDataUrl = await processAndCompressAvatar(file, 'admin');
 
       // Optimistic preview
-      document.getElementById('admin-avatar-preview').src = compressedDataUrl;
+      if (previewEl) previewEl.src = compressedDataUrl;
 
       // Save directly to profile
       if (profile && profile.id) {

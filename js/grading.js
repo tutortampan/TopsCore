@@ -211,6 +211,136 @@ export function calculateGrade(percentage) {
   return 'F';
 }
 
+/**
+ * Authoritative Student Overall Score & Grade (AGENTS.md §2.8 & §2.10)
+ * Evaluates strictly across taken/unlocked assessments.
+ * Unopened/locked assessments do NOT penalize or drag down student score.
+ * 
+ * Formula: average_score = sum(best_percentage_on_taken) / count(taken_assessments)
+ * Grade: getGrade(average_score)
+ * 
+ * @param {Array<number>} takenPercentages Array of best percentages on completed/taken assessments
+ * @returns {{ averageScore: number, grade: string, count: number }}
+ */
+export function calculateOverallStudentScore(takenPercentages = []) {
+  if (!Array.isArray(takenPercentages) || takenPercentages.length === 0) {
+    return { averageScore: 0, grade: '—', count: 0 };
+  }
+  const validPcts = takenPercentages.map(p => Number(p) || 0);
+  const sum = validPcts.reduce((acc, curr) => acc + curr, 0);
+  const averageScore = Math.round(sum / validPcts.length);
+  const grade = calculateGrade(averageScore);
+  return { averageScore, grade, count: validPcts.length };
+}
+
+/**
+ * Authoritative Grade & Score Palette (Option 1: Golden Champion Theme)
+ * Consistent across Dashboard, Result, and Admin.
+ */
+export const GRADE_PALETTE = {
+  S: {
+    symbol: '⭐',
+    color: '#fbbf24',       // Primary Gold Champion (100%)
+    dark: '#d97706',        // Deep Gold
+    light: '#fef08a',       // Shimmer Highlight
+    rgb: '251, 191, 36',
+    glow: 'rgba(245, 158, 11, 0.85)',
+    name: 'Gold Champion',
+    sparkle: true
+  },
+  A: {
+    symbol: 'A',
+    color: '#10b981',       // Hijau (Emerald Green, 91-99%)
+    dark: '#059669',
+    light: '#6ee7b7',
+    rgb: '16, 185, 129',
+    glow: 'rgba(16, 185, 129, 0.45)',
+    name: 'Emerald Master',
+    sparkle: false
+  },
+  B: {
+    symbol: 'B',
+    color: '#0ea5e9',       // Biru (Sky Blue, 71-90%)
+    dark: '#0284c7',
+    light: '#7dd3fc',
+    rgb: '14, 165, 233',
+    glow: 'rgba(14, 165, 233, 0.45)',
+    name: 'Sky Blue',
+    sparkle: false
+  },
+  C: {
+    symbol: 'C',
+    color: '#eab308',       // Kuning (Warm Yellow, 51-70%)
+    dark: '#ca8a04',
+    light: '#fef08a',
+    rgb: '234, 179, 8',
+    glow: 'rgba(234, 179, 8, 0.45)',
+    name: 'Warm Yellow',
+    sparkle: false
+  },
+  D: {
+    symbol: 'D',
+    color: '#f97316',       // Jingga (Flame Orange, 31-50%)
+    dark: '#ea580c',
+    light: '#fdba74',
+    rgb: '249, 115, 22',
+    glow: 'rgba(249, 115, 22, 0.45)',
+    name: 'Flame Orange',
+    sparkle: false
+  },
+  E: {
+    symbol: 'E',
+    color: '#ef4444',       // Merah (Crimson Alert, 11-30%)
+    dark: '#dc2626',
+    light: '#fca5a5',
+    rgb: '239, 68, 68',
+    glow: 'rgba(239, 68, 68, 0.45)',
+    name: 'Crimson Alert',
+    sparkle: false
+  },
+  F: {
+    symbol: 'F',
+    color: '#64748b',       // Abu-abu Netral (Neutral Slate, 0-10%)
+    dark: '#475569',
+    light: '#94a3b8',
+    rgb: '100, 116, 139',
+    glow: 'rgba(100, 116, 139, 0.3)',
+    name: 'Neutral Slate',
+    sparkle: false
+  }
+};
+
+export function getGradeColor(grade) {
+  const g = String(grade || '').toUpperCase();
+  return GRADE_PALETTE[g]?.color || '#94a3b8';
+}
+
+export function getScoreColor(percentage) {
+  const grade = calculateGrade(percentage);
+  return getGradeColor(grade);
+}
+
+export function getGradeSymbol(grade, percentage = null) {
+  if (percentage !== null && Number(percentage) >= 100) return '⭐';
+  const g = String(grade || '').toUpperCase();
+  if (g === 'S') return '⭐';
+  return GRADE_PALETTE[g]?.symbol || g || '—';
+}
+
+export function getGradeTheme(grade) {
+  const g = String(grade || '').toUpperCase();
+  return GRADE_PALETTE[g] || {
+    symbol: g || '—',
+    color: '#94a3b8',
+    dark: '#64748b',
+    light: '#cbd5e1',
+    rgb: '148, 163, 184',
+    glow: 'rgba(148, 163, 184, 0.25)',
+    name: 'Standard',
+    sparkle: false
+  };
+}
+
 /** Alias for normalizeAnswerText */
 export function normalizeWrittenAnswer(text) {
   return normalizeAnswerText(text);
@@ -245,4 +375,5 @@ export function recalculateAttempt(answers, passingThreshold = 60) {
     answers: evaluatedAnswers
   };
 }
+
 

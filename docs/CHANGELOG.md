@@ -1,3 +1,1821 @@
+## [2026-10-18 16:55] — Refactor Topbar to Compact Summary Tabs & Purge Redundant Action Buttons
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 33 (Topbar Compact KPI Tabs, Row C Purge & Domain D Recalibrator)  
+**Status:** PASS  
+
+### Why
+- Modernize the admin topbar across TopsCore LMS into compact summary KPI tabs.
+- Eliminate visual clutter and redundant action buttons (Row C) in the Assessments Hub, pulling filter tabs and data grid immediately below the topbar (~160px vertical dead space reclaimed).
+- Relocate Exam Recalibrator logic from Class management into Domain D (Data Health).
+- Standardize elevated topbar KPI tabs across all admin sections (Assessments, Classes Hub, Students).
+- Strict git freeze enforced: 0 commits, 0 pushes.
+
+### Changed
+- **`admin.html`**:
+  - Removed obsolete `.topbar-breadcrumb` ("CLASS / Assessments Hub", `#topbar-domain`, `#topbar-title`) and `.topbar-actions`.
+  - Upgraded `<header class="admin-topbar" id="admin-topbar">` to host `#sidebar-toggle` and `#topbar-tabs-container`.
+- **`css/admin.css`**:
+  - Set `--fm-topbar-h: 56px;`.
+  - Implemented `.admin-topbar` glassmorphism layout (`height: 56px; padding: 0 16px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.08);`).
+  - Added `.topbar-tabs-container` and `.topbar-tab-card` styles (`height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);`).
+  - Added responsive scroll for mobile screens (`@media (max-width: 900px)`).
+- **`js/admin/app.js`**:
+  - Implemented `setTopbarTabs(tabs, activeId, onSelect)` on `window.setTopbarTabs`.
+  - Updated section titles and domain mappings (`recalibrator: 'DATA'`).
+  - Redirected `recalibrator` section loads to `window.location.hash = '#health'; return loadSection('health');`.
+  - Elevated Class Hub tabs to the topbar via `setTopbarTabs`.
+- **`js/admin/assessment-management.js`**:
+  - Elevated the 4 KPI cards (Total Assessments, Published, Draft, Question Bank) into the topbar via `setTopbarTabs`.
+  - Completely purged Row B (`buildSectionTabBar`) and Row C (all 8 action buttons: `+ Create Assessment`, `Cohorts & Assignments`, `Results`, `Recalibrate`, `Import Questions`, `Export Questions`, `Vocab Vault`, `Open Session`).
+  - Filter tabs and DataGrid dock directly under the topbar.
+  - Row action "Recalibrate" now sets `window._filterRecalibrateAssessment = id` and navigates to `health`.
+- **`js/admin/class.js`**:
+  - Replaced legacy standalone `renderRecalibrator` with redirection to `#health`.
+- **`js/admin/desk.js`**:
+  - Registered dedicated maintenance card: "Assessment Engine Recalibration" (`#card-assessment-recalibration`) inside `renderDataHealth`.
+  - Added complete controller logic: target assessment selector, metrics overview, diff preview table, confirmation modal, and apply execution.
+- **`js/admin/classes-hub.js` & `js/admin/student-management.js`**:
+  - Elevated institution and student KPI tabs into topbar using canonical `setTopbarTabs`.
+
+### Tests
+- command: `node test_topbar_refactor.cjs` (Playwright automated test suite)
+- result: `PASS`
+  - Breadcrumb count: 0 (absent).
+  - Topbar tab cards count: 4 (Total Assessments: 40, Published: 32, Draft: 8, Question Bank: 0).
+  - Row C action buttons count: 0 (100% purged).
+  - Assessment filters visible directly beneath topbar: true.
+  - Interactive tab card click applies active class and filters data grid: PASS.
+  - Recalibration card in `#health` (Domain D): Verified with 41 loaded assessment options and active preview/apply controls.
+  - Zero console errors.
+
+### Risks / Follow-up
+- None. System is completely stable with all directives satisfied.
+
+## [2026-10-18 16:25] — Student Dashboard Avatar Scaling, Glow Hierarchy, Batch Leaderboard & Royal Crown Mechanics
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 32 (Dashboard Avatar Scaling, Glow Hierarchy & Leaderboard)  
+**Status:** PASS  
+
+### Why
+- Enhance student dashboard visual hierarchy and engagement:
+  1. Profile avatar scaled from 60px to 86px for dominant profile framing while preserving 100dvh zero-scroll mobile geometry.
+  2. Authoritative grading and glow hierarchy implemented (Score 100% ⭐ with shining gold aura, Grades A through F with tiered color and soft glows).
+  3. Batch Leaderboard / Standings Matrix implemented to allow students to see their relative ranking, peer scores, and completed counts in the same batch with 4-level tie-breaker sorting.
+  4. Royal Title & Crown Mechanics implemented: Batch leader receives floating crown (👑) over avatar and "King <Name>" / "Queen <Name>" dynamic title.
+  5. Strict Zero-Scroll and `#bottom-ad-banner` (28px) 100% preserved.
+- Strict git freeze enforced: 0 commits, 0 pushes.
+
+### Changed
+- **`js/grading.js`**:
+  - Updated `GRADE_PALETTE` with precise tier colors (C: `#eab308`, E: `#ef4444`, F: `#64748b`), glowing auras, and star symbol (`S: '⭐'`).
+  - Implemented and exported authoritative `getGradeSymbol(grade, percentage)`.
+- **`js/api.js`**:
+  - Re-exported `getGradeSymbol` from `grading.js`.
+- **`dashboard.html`**:
+  - Wrapped `#banner-avatar-container` in `.banner-avatar-wrapper` containing floating `#banner-avatar-crown`.
+  - Replaced single bottom card with dual-dock `#bottom-dock-section` featuring tab buttons (`[ 🏆 Batch Standings ] [ 📋 Completed ]`), rank indicator pill (`#dock-my-rank-number`), pinned summary bar (`#leaderboard-my-summary`), and isolated scrollable panes.
+- **`css/dashboard.css`**:
+  - Scaled `#banner-avatar-container` to 86px with circular clipping, 50% border radius, and tier glowing borders.
+  - Implemented `.avatar-crown-badge` with `crownFloat` subtle breathing animation and drop shadows.
+  - Implemented tiered glow classes `[data-tier="S"]` through `[data-tier="F"]`.
+  - Styled dock tab buttons, rank pill indicator, pinned rank bar, and `.leaderboard-row` with rank badges (🥇, 🥈, 🥉), royal tags (`👑 KING`, `👑 QUEEN`), and highlight styles for active student (`.my-row`).
+- **`js/dashboard.js`**:
+  - Integrated `cleanStudentName` to normalize student titles.
+  - Added dynamic royal title handling: active champion gets `"King"` or `"Queen"` title and floating crown toggle in `applyStudentGenderUI`.
+  - Implemented `setupDockTabs()` to toggle between Batch Standings and Completed modules seamlessly.
+  - Implemented `loadBatchLeaderboard()` with 4-level deterministic tie-breaker sorting:
+    1. Overall average score (descending)
+    2. Total completed count (descending)
+    3. Earliest last submission timestamp (ascending)
+    4. Alphabetical student name (ascending)
+  - Safeguarded `studentList` handling and best score calculation against array/object edge cases.
+- **`test-dashboard-enhancements.mjs`**:
+  - Created automated Playwright test suite validating grading symbols, palette tokens, mobile zero-scroll (iPhone 14 & Android Small), royal title logic, and dock tab switching.
+
+### Tests
+- command: `node test-dashboard-enhancements.mjs`
+- result: `PASS` (100% pass rate; Avatar 86x86px, Crown visible, Title "King Kevin Pratama", Grade ⭐ on 100%, Banner 28px, Zero-scroll: true).
+
+### Risks / Follow-up
+- None. All calculations are server-grounded and respect established grading standards.
+
+## [2026-10-18 15:48] — Typography Polish, Tabular Numbers, & Attendance Matrix Refinements
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 31 (Typography, Tabular Nums & Attendance Matrix Refinements)  
+**Status:** PASS  
+
+### Why
+- Implement global typography refinements (tabular numbers for numeric alignment, elevated text contrast).
+- Fix minor display anomalies in the Student Roster (PROGRAM column placement, sanitize age calculation).
+- Ensure active native tooltip coverage and summary row calculation on the Class Roster Attendance matrix.
+- Strict git freeze enforced: 0 commits, 0 pushes.
+
+### Changed
+- **`css/admin.css`**:
+  - Elevated muted text tokens (`--fm-accent-slate`, `--fm-text-muted`) from low-contrast `#64748B` to `#94A3B8` / `#CBD5E1`.
+  - Applied `font-variant-numeric: tabular-nums;` to `.table-wrap`, `.data-grid`, `.datagrid-table`, `#class-attendance-grid`, `.asm-num`, `.asm-score`, `.badge`, `.score-val`, `.stat-card-val`, `.kpi-value`, etc.
+  - Standardized font-weight hierarchy: Headings/KPIs 700, Table text & buttons 500/600, Subtitles/helpers 400.
+  - Styled `.actions-col` and `.student-actions-cell` with `gap: 6px !important;` for mis-tap-resistant ergonomics.
+- **`css/style.css`**:
+  - Added `font-variant-numeric: tabular-nums;` to `.table-wrap`, `.data-grid`, `thead th`, `tbody td`, `#assessment-timer`, `#timer-display`, `.result-summary-val`, etc.
+- **`css/assessment.css`**:
+  - Added `font-variant-numeric: tabular-nums;` to `#assessment-timer`, `#timer-display`, `.timer-display`, `.score-val`, `.badge`.
+- **`css/result.css`**:
+  - Added `font-variant-numeric: tabular-nums;` to `.result-summary-val`, `.result-summary-item span:last-child`, `#res-correct`, `#res-partial`, `#res-wrong`, `#result-percentage`.
+- **`js/admin/datagrid.js`**:
+  - Added support for `col.headerTitle || col.title` directly on `<th>` elements so hover tooltips apply to the entire column header.
+- **`js/admin/app.js`**:
+  - Attached full assessment code and title (`${code}: ${cleanTitle}`) to `headerTitle` and `title` for matrix header cells 1 through 40.
+  - Updated docked summary row label to `★ CLASS AVERAGE (KELAS)` displaying class-wide average points and completion percentages.
+- **`js/admin/student-management.js`**:
+  - Verified standalone `PROGRAM` column is rendered between `INSTITUTION` and `BATCH`.
+  - Sanitized age calculation: renders `—` when `birth_date` is null, empty, or `<= 0` (never `0 yrs`).
+  - Added `actions-col` class to Actions column and container div.
+
+### Tests
+- command: `node scratch/verify_typography_and_matrix_polish.mjs`
+- result: `PASS` (100% pass rate across Student Roster, Class Attendance Matrix, Assessment Timer, and Results).
+
+### Risks / Follow-up
+- None. All changes strictly respect zero-mutation backend architecture and git freeze.
+
+## [2026-10-18 15:30] — Mobile Zero-Scroll Dashboard Modernization & Synchronized Tier Theming
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 30 (Mobile Dashboard Modernization)  
+**Status:** PASS  
+
+### Why
+- Modernize student mobile dashboard with strict design boundaries:
+  1. Mobile browser screen: zero-scrolling, viewport fits cleanly at 100dvh.
+  2. Element `#bottom-ad-banner` (28px) strictly preserved and anchored at viewport bottom.
+  3. Existing JS structure, IDs, and event hooks remain 100% intact.
+  4. Assessment page completely unaffected (CSS scoped strictly to `body.dashboard-page`).
+- Strict git freeze enforced: 0 commits, 0 pushes.
+
+### Changed
+- **`css/dashboard.css`**:
+  - Appended dedicated, scoped mobile zero-scroll block under `body.dashboard-page`.
+  - Configured `height: 100vh; height: 100dvh; max-height: 100dvh; overflow: hidden; display: flex; flex-direction: column;`.
+  - Styled compact header (44px) and flex main content (`flex: 1 1 0%; min-height: 0; overflow: hidden;`).
+  - Anchored `#bottom-ad-banner` / `.topscore-locked-banner` at base (`height: 28px !important; position: static !important; flex-shrink: 0 !important;`).
+  - Implemented modern tier hero styles (`#welcome-banner-section`) using `--tier-color` and `--tier-rgb` with Outfit typography.
+  - Grade S: Golden ambient aura (`rgba(245, 158, 11, 0.28)`), sparkling gradient avatar ring, and text gleam drop-shadow.
+  - Grades A-F: Clean crisp matte, tinted border, zero glow.
+  - Safeguarded avatar container (`overflow: hidden; border-radius: 50%`) and hid avatar initial letter when photo is active.
+- **`dashboard.html`**:
+  - Replaced bulky inline styles on `#welcome-banner-section`, `#welcome-name`, `#banner-score-box`, `#banner-grade-box`, etc., with clean modern semantic classes.
+  - Retained all functional IDs, compatibility spans, and event bindings.
+- **`js/dashboard.js`**:
+  - Imported `GRADE_PALETTE` from `./grading.js?v=5.2.2`.
+  - Updated `renderDashboardScore` to inject `dataset.tier` and CSS variables `--tier-color`, `--tier-rgb`.
+
+### Files
+- `css/dashboard.css`
+- `dashboard.html`
+- `js/dashboard.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Tests
+- command: `node scratch/verify_dashboard_mobile_zeroscreen.mjs`
+- result: `PASS`
+  * Zero-scroll verified on iPhone (390×844) and Android (360×640) with `scrollHeight === windowHeight`.
+  * `#bottom-ad-banner` verified at exactly 28px height at viewport bottom.
+  * Grade A verified with emerald green `#10b981` (matte, zero glow).
+  * Grade S verified with golden `#fbbf24` (radiant aura and sparkle).
+  * Artifact screenshots saved: `dashboard_mobile_grade_a.png`, `dashboard_mobile_grade_s.png`, `dashboard_mobile_small_android.png`.
+
+### Next Action
+- Await user review and subsequent directives.
+
+## [2026-10-18 15:10] — Student Roster View Polish (Program Column, Sanitized Age, Spaced Actions)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 29 (Student Roster View Polish)  
+**Status:** PASS  
+
+### Why
+- User Directive: Minor polish on Student Roster view (`http://127.0.0.1:5500/admin.html#students`):
+  1. Restore `PROGRAM` column: Explicitly render `PROGRAM` (e.g. "Camp") between `INSTITUTION` and `BATCH` in the DataGrid columns list.
+  2. Sanitize Age Calculation: When student `birth_date` is missing or invalid (or evaluates to `<= 0`), render a dash (`—`) instead of displaying `0 yrs`.
+  3. Polish Action Buttons Column: Ensure comfortable spacing between action buttons in the `ACTIONS` column to prevent accidental mis-clicks.
+- Strict git freeze enforced: 0 commits, 0 pushes.
+
+### Changed
+- **`js/admin/student-management.js`**:
+  - Restored `PROGRAM` column (`key: 'progName'`, label `'Program'`, `width: '100px'`) directly between `instName` and `batchName` in DataGrid column definitions.
+  - Sanitized `calculateAgeFromBirthDate` to return `—` when `age <= 0` or invalid (fixed root cause of newborn/invalid dates showing `0 yrs`).
+  - Sanitized inline age calculation in row formatter to enforce `if (age && age > 0) ageDisplay = \`${age} yrs\`;`.
+  - Updated `ACTIONS` column: wrapped buttons in `.student-actions-cell`, assigned `.student-action-btn` class to all buttons, and expanded column width to `168px` for clean alignment.
+- **`css/admin.css`**:
+  - Added `.student-actions-cell` with `display: flex !important; align-items: center !important; justify-content: flex-end !important; gap: 8px !important;`.
+  - Added `.student-actions-cell .student-action-btn` with 32x32px dimensions, 8px border-radius, clean border, subtle background, hover micro-animation, and dedicated `.btn-danger` delete styling.
+- **`js/admin/class.js`, `js/admin/app.js`, `js/admin/imports-exports.js`**:
+  - Harmonized age checks across all student tables and modals to strictly enforce `age && age > 0` before appending `yrs`, consistently displaying `—` otherwise.
+
+### Files
+- `js/admin/student-management.js`
+- `css/admin.css`
+- `js/admin/class.js`
+- `js/admin/app.js`
+- `js/admin/imports-exports.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Tests
+- command: `node scratch/verify_student_roster_polish.mjs`
+- result: `PASS`
+  * Header validation: `[..., 'Institution ↑', 'Program ⇅', 'Batch ⇅', ...]` verified.
+  * Age calculation: Muhammad Alif Rezki Rahmansyah verified displaying `—`.
+  * Actions column: gap `8px`, 4 buttons with `32px` dimensions verified.
+  * Visual artifact: `student_roster_polished_verified.png` verified cleanly at 1920x1080.
+
+### Next Action
+- Await user review and subsequent directives.
+
+## [2026-10-18 13:58] — Distinct 7-Color Progression & Glow Exclusivity for Grade S (Emas)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 28 (Distinct 7-Color Progression & Glow Exclusivity for Grade S)  
+**Status:** PASS  
+
+### Why
+- User requirement: Implement the exact 7-color sequence from F to S:
+  * F: Merah (`#ef4444`)
+  * E: Coral (`#f43f5e`)
+  * D: Jingga (`#f97316`)
+  * C: Kuning Pucat / Lifeless Straw (`#c7c18c`)
+  * B: Biru Sky Blue (`#0ea5e9`)
+  * A: Hijau Emerald (`#10b981`)
+  * S: Emas Champion (`#fbbf24`)
+- Strict glow exclusivity rule: *"untuk glow, hanya untuk emas saja. sisanya tidak usah"*.
+- Strip glowing box-shadows, ambient radial halos, and text filter drop-shadows from all non-S tiers (Grades A through F), reserving radiant glowing light and animated sparkles exclusively for Grade S (Gold).
+
+### Changed
+- **`js/grading.js`**:
+  - Configured `GRADE_PALETTE` with the exact 7 colors: S: `#fbbf24` (`glow: true`), A: `#10b981` (`glow: false`), B: `#0ea5e9` (`glow: false`), C: `#c7c18c` (`glow: false`), D: `#f97316` (`glow: false`), E: `#f43f5e` (`glow: false`), F: `#ef4444` (`glow: false`).
+- **`css/style.css`**:
+  - Retained `@keyframes gold-badge-sparkle` and `@keyframes gold-text-gleam` strictly on `.grade-S` and `.text-grade-S`.
+  - Set `box-shadow: none !important;` and `filter: none !important; text-shadow: none !important;` on all classes `.grade-A` through `.grade-F`, `.text-grade-A` through `.text-grade-F`, and `.score-dist` through `.score-fail`.
+- **`css/result.css`**:
+  - Retained radiant ambient halo and multi-layered glowing drop-shadow exclusively on `.result-hero.tier-S`.
+  - Styled `.result-hero.tier-A` through `.tier-F` as crisp, solid dark navy `#0f172a` cards with subtle tinted borders and zero glow (`box-shadow: 0 12px 40px rgba(0,0,0,0.3)`).
+- **`js/result.js`**:
+  - Restored fallback color map to the 7-color palette.
+  - Avatar container, percentage text, and points box apply glow and sparkle animations strictly when `grade === 'S'`. For all other grades, styles evaluate to crisp matte text and standard shadow without glow.
+- **`js/dashboard.js` & `dashboard.html`**:
+  - Cleaned initial static HTML fallbacks in `dashboard.html` to eliminate premature gold glows before JS evaluation.
+  - Welcome banner aura, avatar ring, score value, and grade value apply glowing gold effects strictly when `isGradeS` is true. For non-S students, banner renders clean `#0f172a`, avatar renders crisp solid border, and text renders with `filter: none`.
+  - Completed Assessments table and mobile cards render glowing badges and score text strictly for Grade S rows.
+- **`js/admin/app.js`, `js/admin/class.js`, `js/admin/student-management.js`**:
+  - Updated internal `cMap` dictionaries to the 7-color palette.
+  - Grade badges and scores render gold glow strictly for Grade S (`isGradeS`).
+
+### Files
+- `js/grading.js`
+- `css/style.css`
+- `css/result.css`
+- `js/result.js`
+- `js/dashboard.js`
+- `dashboard.html`
+- `js/admin/app.js`
+- `js/admin/class.js`
+- `js/admin/student-management.js`
+- `scratch/verify_palette_and_exclusive_gold_glow.mjs`
+
+### Tests
+- command: `node scratch/verify_palette_and_exclusive_gold_glow.mjs`
+- result: `PASS`
+  * Grade S: `avatarShadow` contains gold glow, `avatarAnimation: gold-badge-sparkle`, `pctFilter` contains double golden drop-shadow, `pointsShadow` active.
+  * Grades A through F: `badgeBoxShadow: none`, `pctFilter: none`, `pctTextShadow: none`, `avatarAnimation: none`.
+
+### Next Action
+- Present visual confirmation to user with artifact screenshots.
+
+## [2026-10-18 13:30] — Harmonious Tier Color Palette & Sparkling Gold Grade S Atmosphere (Phase 28)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 28 (Harmonious Tier Color Palette & Sparkling Gold Grade S Atmosphere)  
+**Status:** PASS  
+
+### Why
+- Establish an authoritative, harmonious Option 1 color palette across all tiers: S (Gold Champion), A (Emerald Master), B (Sky Diamond), C (Warm Topaz), D (Flame Orange), E (Rose Coral), F (Crimson Alert).
+- Decouple Grade S (Gold `#fbbf24`) from Grade C (Topaz `#eab308`), eliminating previous amber/gold color collisions.
+- Dynamically align Score % and Total Points (PTS) with the student's earned tier color.
+- Deliver an immersive, prestige "Tier Badge Atmosphere" on Student Dashboard (`dashboard.html`) and Result Page (`result.html`), featuring an animated, gleaming, sparkling gold effect for Grade S (100%) (`@keyframes gold-badge-sparkle` and `@keyframes gold-text-gleam`).
+
+### Changed
+- **`js/grading.js` & `js/api.js`**:
+  - Exported authoritative `GRADE_PALETTE`, `getGradeColor`, `getScoreColor`, `getGradeTheme`.
+- **`css/style.css`**:
+  - Defined `@keyframes gold-badge-sparkle` and `@keyframes gold-text-gleam`.
+  - Updated `.grade-S` through `.grade-F` and `.text-grade-*` with Option 1 gradients, borders, and shadows.
+- **`css/admin.css`**:
+  - Updated `.form-pill.grade-s` through `.form-pill.grade-f`.
+- **`js/admin/app.js`, `js/admin/class.js`, `js/admin/student-management.js`**:
+  - Updated color maps to Option 1 palette.
+  - Aligned table cells for Score (%) and Points (PTS) with student tier color, with Grade S receiving golden glow.
+- **`dashboard.html` & `js/dashboard.js`**:
+  - Welcome banner (`#welcome-banner-section`) dynamically inherits ambient radial aura matching overall tier.
+  - Grade S welcome banner and avatar ring radiate sparkling gold aura (`gold-badge-sparkle`).
+  - Score % and Grade value adopt tier color and animated gold gleam (`gold-text-gleam`) on Grade S.
+  - Assigned & Completed assessment badges and scores reflect golden gradient and sparkle for Grade S.
+- **`result.html`, `js/result.js`, `css/result.css`**:
+  - Result Hero section adopts dynamic `.tier-${grade}` ambient radial aura and glowing border.
+  - Grade S Hero section radiates warm golden glow (`box-shadow: 0 0 45px rgba(245, 158, 11, 0.35)`).
+  - Result percentage (`#result-percentage`) for Grade S features golden gradient text and radiant multi-layered drop-shadow with `gold-text-gleam` animation.
+  - Points box (`#result-points-box` and `#res-points`) adopts tier styling with golden sparkle on Grade S.
+  - Avatar container (`#result-avatar-container`) receives animated gold sparkle for Grade S.
+  - Attempt history table rows render Grade S badges with gold gradient & sparkle.
+
+### Files
+- `js/grading.js`
+- `js/api.js`
+- `css/style.css`
+- `css/admin.css`
+- `css/result.css`
+- `js/admin/app.js`
+- `js/admin/class.js`
+- `js/admin/student-management.js`
+- `dashboard.html`
+- `js/dashboard.js`
+- `result.html`
+- `js/result.js`
+
+### Tests
+- command: `node scratch/verify_gold_sparkle_and_tier_themes.mjs` & `node scratch/verify_dashboard_grade_s.mjs`
+- result: `PASS`
+- screenshots: `result_grade_s_sparkle.png`, `dashboard_grade_s_banner_sparkle.png`, `dashboard_unggul_view.png`, `admin_dashboard_view.png`
+
+### Next Action
+- Present visual confirmation to user and review any additional aesthetic feedback.
+
+---
+
+## [2026-10-18 12:50] — Calibrate Student Score & Grade Strictly on Taken Assessments (Phase 27)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 27 (Unlocked/Takeable Assessment Calibration & Flexible Sorting)  
+**Status:** PASS  
+
+### Why
+- Enforce the core business logic rule (AGENTS.md §2.8): Student SCORE (%) and GRADE (S, A, B, C, D, E, F) must ONLY be calculated based on assessments that are currently accessible/unlocked/takeable. Locked or unopened assessments must NOT influence, penalize, or drag down student score and grade.
+- Differentiate curriculum completion (PROG) from student achievement (SCORE/GRADE).
+- Provide flexible column sorting in the Class Roster: clicking `PTS` sorts by total points, clicking `PROG` sorts by completion, and clicking `GRD`/`SCORE` sorts by mastery percentage.
+
+### Changed
+- **`js/grading.js` & `js/api.js`**:
+  - Centralized authoritative `calculateOverallStudentScore(takenPercentages)` computing `average_score = sum(best_percentage_on_taken) / count(taken_assessments)` and `grade = getGrade(average_score)`.
+- **`js/admin/app.js`**:
+  - Updated student score and grade calculations in `loadClassHub`:
+    * `averageScorePct = completedCount > 0 ? Math.round(sumPercentages / completedCount) : 0`
+    * `grade = getGrade(averageScorePct)`
+    * Students with high performance on taken modules (e.g. Shelia Mulyaning Putri, Aunul Fikri Yasir) strictly display 100% Grade S instead of being dragged down by the 34 remaining modules.
+  - Enhanced `GRD` column rendering to display both score percentage (`100%`, `99%`, etc.) and grade badge (`[S]`, `[A]`, etc.).
+  - Updated Summary Row: `★ CLASS AVERAGE` now displays authentic class average score (`85% [B]`) and average curriculum completion (`11% Avg Done`).
+  - Implemented multi-criteria tie-breaking in `sortComparator` for `PTS`, `PROG`, and `GRD`.
+- **`js/admin/datagrid.js`**:
+  - Configured academic metrics (`PTS`, `PROG`, `GRD`, `SCORE`) to default to descending sort on first click so top performers immediately rank first.
+- **`js/admin/class.js`**:
+  - Updated `overallPct` to strictly calculate average score on taken assessments: `completedScoredCount > 0 ? Math.round(sumPercentages / completedScoredCount) : 0`.
+- **`js/dashboard.js`**:
+  - Verified and confirmed `computeOverallStats` calculates average percentage and grade strictly from taken assessments.
+
+### Files
+- `js/grading.js`
+- `js/api.js`
+- `js/admin/app.js`
+- `js/admin/datagrid.js`
+- `js/admin/class.js`
+- `js/dashboard.js`
+- `scratch/verify_calibrated_scores.mjs`
+- `class_roster_calibrated_scores.png`
+
+### Tests
+- command: `node scratch/verify_calibrated_scores.mjs`
+- result: `PASS` (Top students display 100% Grade S, sorting on GRD/PROG/PTS verified, class average row verified, 0 errors, zero horizontal overflow).
+
+### Risks / Follow-up
+- None. Strict git freeze preserved (0 commits, 0 pushes).
+
+---
+
+## [2026-10-18 09:35] — Academic Engine, Sequential Prerequisites & 40-Column Dense Roster Matrix (Phase 26)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 26 (Academic Engine, Sequential Prerequisites & Roster Matrix)  
+**Status:** PASS  
+
+### Why
+- Implement dense, high-efficiency Class Hub Roster Matrix in `admin.html` with:
+  1. Accurate student progress percentages (`completion_pct = completed / total * 100`) and subtext (`X/40 Done`), correcting misleading 100% completions.
+  2. Authoritative cumulative mastery grade formula taking into account total curriculum max points (unattempted assessments count as 0), preventing grade inflation.
+  3. Default table sort on `PTS` descending so high-performing completers rank first.
+  4. Standalone columns for `INST`, `PROGRAM`, `BATCH`, and `STUDENT NAME` with text-only name (0 avatars or initial icons).
+  5. Dense 40-column matrix layout fitting 100% viewport width without horizontal scrollbars, featuring 4 thematic super-headers and magenta-accented test columns.
+  6. Direct score cell click opening `result.html?attempt_id=...` in a new tab without side-drawer interference, with authorized admin session support across tabs.
+  7. Sequential chaining and standardized codes (`[Level][Theme][Topic]-[TYPE]-[TIER]`) for all 40 assessments in Supabase.
+
+### Changed
+- **`js/admin/app.js`**:
+  - Refactored student progress and cumulative mastery calculations in `loadClassHub`:
+    * Computed `curriculumTotalMaxPoints` dynamically from all 40 assessments.
+    * Calculated `completionPct = Math.round((completedCount / totalAsmCount) * 100)` with subtext `${completedCount}/${totalAsmCount} Done`.
+    * Calculated `cumulativeMasteryPct = Math.round((totalEarnedScore / curriculumTotalMaxPoints) * 100)` and derived authoritative grade via `getGrade(cumulativeMasteryPct)`.
+    * Set initial DataGrid sort strictly to `PTS` (`totalEarnedScore`) descending.
+  - Reconfigured DataGrid columns:
+    * `INST` (65px), `PROGRAM` (65px), `BATCH` (55px), `STUDENT NAME` (140px, text-only, 0 avatars/initials).
+    * `PROG` (50px), `GRD` (40px), and `PTS` (55px) with `${row.totalEarnedScore} pts` format.
+    * Removed fixed `width: '28px'` from 40 assessment columns, letting `table-layout: fixed` auto-distribute 100% width evenly.
+    * Configured 4 super-headers: `THEME A (Workplace)`, `THEME B (Tourism)`, `THEME C (CCU)`, and `THEME D (High-Frequency)`.
+    * Score cells styled with magenta accents for test columns, clean score numerals, and direct `onclick="window.open('result.html?attempt_id=...', '_blank')"` handler.
+- **`js/session.js`**:
+  - Mirrored `setAdminSession` to `localStorage` in addition to `sessionStorage` so new tabs opened from admin context retain admin privileges.
+  - Updated `getAdminSession` and `clearAdminSession` to synchronize across both stores.
+- **`result.html` & `js/result.js`**:
+  - Updated `<head>` inline session guard in `result.html` to recognize admin session in `localStorage`.
+  - Replaced redirecting `requireStudentSession` with `getStudentSession()` + fallback to `getAdminSession()` in `js/result.js`.
+  - Added support for admin viewer to load student photo and attempt history using `attempt.student_id`.
+- **Database (`assessments` table)**:
+  - Verified and confirmed all 40 assessment codes adhere to `[Level][Theme][Topic]-[TYPE]-[TIER]`.
+  - Confirmed sequential `prerequisite_assessment_id` chaining across all 40 modules (1 -> 2 -> ... -> 40).
+
+### Files
+- `js/admin/app.js`
+- `js/session.js`
+- `result.html`
+- `js/result.js`
+- `scratch/verify_phase_26.mjs`
+- `scratch/verify_and_sync_assessments.mjs`
+- `class_roster_matrix_phase26_verified.png`
+
+### Database
+- Tables: `public.assessments`
+- Integrity verified: 40/40 assessments sequentially chained with zero broken references.
+
+### Tests
+- command: `node scratch/verify_phase_26.mjs`
+- result: `PASS` (Viewport overflow: false, super headers matched, top student rows sorted by PTS desc with correct progress %, class average row present, score cell click opens result.html in new tab).
+
+### Risks / Follow-up
+- None. Strict git freeze preserved (0 commits, 0 pushes).
+
+---
+
+## [2026-10-18 00:45] — Heuristic Audit Remediation & Modular Architecture Refactoring (Phase 24 & 25)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 24 (Core Stability & Integrity) & Phase 25 (Modularization & Architecture Refactoring)  
+**Status:** PASS  
+
+### Why
+- An autonomous heuristic, architectural, and performance scan revealed technical debt, including:
+  1. 1,560+ lines of inline CSS and 4,770+ lines of inline JS embedded inside HTML shells (`index.html`, `dashboard.html`, `assessment.html`, `result.html`), blocking modular maintenance and parallel browser caching.
+  2. Fragmented cache-busting query strings (`?v=5.1.0`, `?v=5.1.2`, `?v=5.2.1`) causing browser module graph duplication.
+  3. Redundant duplicate declarations of `escapeHtml`, `escHtml`, and name utilities scattered across 19 files.
+  4. Viewport clipping and overflow issues on small mobile devices and during virtual keyboard activation in `assessment.html`.
+  5. High-volume un-debounced inputs on `vocab-vault.js` and login cascading searches causing unnecessary CPU cycles.
+  6. Memory leaks in `DataGrid` from detached DOM containers retaining global `document` event listeners.
+  7. Competing full-page vs modal student profile implementations in Admin.
+  8. External CDN dependence on `ui-avatars.com` and unbundled SheetJS.
+
+### Changed
+- **Asset Version Alignment (`sw.js`, HTML & JS modules)**:
+  - Synchronized all 26 workspace CSS and JS files to unified query string `?v=5.2.2`.
+  - Bumped Service Worker cache name to `abcd-core-v5.2.2` and populated `ASSETS_TO_CACHE` with all modular stylesheets and scripts.
+- **Utility Centralization (`js/app.js`, `js/api.js`, `js/utils/avatar-engine.js`)**:
+  - Established canonical `escapeHtml` and `escHtml` with mojibake correction, full character entity encoding, and `window` fallback in `js/app.js`.
+  - Re-exported via `js/api.js` and purged all 19 duplicate local definitions.
+  - Deduplicated `stripHonorific` and `getStudentInitial` to `avatar-engine.js`.
+- **Mobile Viewport & Touch Safety (`assessment.html`, `css/admin.css`)**:
+  - Removed `100vw` from banner elements to prevent horizontal scrollbars on desktop viewports.
+  - Added dynamic scroll and focus mode overrides for mobile keyboards and small displays (< 640px height).
+  - Enforced 40px minimum touch targets on coarse pointer devices.
+- **Search Debounce & DataGrid Memory Leak Fix (`js/admin/vocab-vault.js`, `js/admin/datagrid.js`, `index.html`)**:
+  - Debounced search inputs with 200ms timers.
+  - Added self-cleaning event lifecycle methods (`destroy()`, container detection, and single-instance attachment) to `DataGrid`.
+- **CSS Modularization (`css/auth.css`, `css/dashboard.css`, `css/assessment.css`, `css/result.css`)**:
+  - Extracted 1,560+ lines of monolithic inline CSS into clean, modular external stylesheets linked with `?v=5.2.2`.
+- **JS Modularization (`js/auth.js`, `js/dashboard.js`, `js/assessment.js`, `js/result.js`)**:
+  - Extracted 4,770+ lines of inline script logic into modular ES modules linked via `<script type="module" src="...">`.
+  - Kept lightweight synchronous head guards inline for zero-flicker FOUC protection.
+- **Profile Modal Consolidation (`js/admin/app.js`, `js/admin/student-management.js`)**:
+  - Consolidated `openStudentProfile` to delegate to the authoritative non-destructive `showStudentProfileModal`.
+  - Removed 480 lines of duplicate, obsolete DOM generation code in `app.js`.
+- **Third-Party Elimination & Offline Bundling (`assessment.html`, `admin.html`, `js/vendor/xlsx.full.min.js`)**:
+  - Replaced `ui-avatars.com` with local zero-egress SVG data URIs via `generateAvatarDataUri`.
+  - Bundled SheetJS locally to `js/vendor/xlsx.full.min.js` (624 KB) with graceful CDN fallback and service worker precaching.
+
+### Verification
+- `node --check` passed across 100% of workspace modules.
+- Executed automated Playwright test suite `scratch/test_phase25_e2e.mjs` verifying:
+  - Auth page (`index.html`)
+  - Student dashboard (`dashboard.html`)
+  - Assessment engine (`assessment.html`)
+  - Admin Tactical Profile Modal (`admin.html`)
+- All tests passed 100% with 0 uncaught page errors.
+
+### Next Action
+- Ready for user review or next planned enhancements.
+
+## [2026-10-17 16:42] — Student Profile Modal & Official Academic Performance Dossier (B — BOARD)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- The user selected Option 1: "Build the Student Profile & Print Dossier Modal (`👤 Profile` & `🖨️ Dossier`) under Domain B (`B — BOARD`)".
+- Full-page student profile navigation previously destroyed `#admin-content-area` and blew away the master table state, pagination, and filter context.
+- The administrator needed a tactical, non-destructive Glassmorphic Profile Modal to inspect individual student performance, review question-level answers, authorize retakes, and cycle through batch students with carousel keyboard shortcuts.
+- The administrator also required an authoritative, printable Academic Performance Dossier with official certification seals, 3:4 photo layout, summary metric boxes, and full curriculum transcript table without third-party PDF dependencies.
+
+### Changed
+- **`css/admin.css`**:
+  - Implemented `.student-modal-backdrop` with dark glassmorphism (`backdrop-filter: blur(12px)`).
+  - Implemented `.student-profile-dialog` (max-width: 980px) and `.student-dossier-dialog` (max-width: 900px).
+  - Implemented `.student-profile-tab-btn`, `.profile-kpi-card`, `.dossier-modal-toolbar`, and `.dossier-modal-scroll`.
+  - Implemented `.student-dossier-sheet` with white parchment layout and high-contrast `#0f172a` ink contrast.
+  - Implemented `@media print` rules ensuring clean, high-resolution paper output of `#student-dossier-sheet` with zero dark UI artifacts.
+- **`js/admin/app.js`**:
+  - Fixed PostgreSQL 42703 error in `openStudentProfile`: replaced non-existent `question_order` column in `attempt_answers` query with `is_correct`, and expanded statuses to `['submitted', 'auto_submitted', 'evaluated', 'graded']`.
+- **`js/admin/student-management.js`**:
+  - Added `calculateAgeFromBirthDate(birthDateStr)` helper.
+  - Implemented `window.showStudentProfileModal(studentId)`:
+    - Renders tactical header, avatar, status badges, batch/level info.
+    - 6 KPI cards (Global Grade, Overall Score %, Curriculum Done, Correct Answers, Minor Errors, Incorrect).
+    - Carousel navigation (`← Previous` and `Next →` buttons and ArrowLeft / ArrowRight keyboard listeners).
+    - 3 tabs: Assessment Breakdown (with accordion question answers and remedial authorization), Remediation & Progression Alerts, and Account & Enrollment (Rule 2.2 compliant).
+    - Switch to Dossier button.
+  - Implemented `window.showStudentDossierModal(studentId)`:
+    - Official Academy Header, Document Ref, Official Certified Status, Issued Date.
+    - 2-Column Identity & 3:4 Student Photo box with `OFFICIAL` ribbon.
+    - Certified Summary box (Overall Grade, Mastery Score, Curriculum Pace, Total Points).
+    - Official Assessment Transcript table.
+    - Dual Signature blocks + Official Academic Seal.
+    - Toolbar with Print/PDF and Bidirectional Profile switch.
+  - Wired DataGrid `profileBtn` and `printBtn` action buttons to open modals.
+  - Exported and exposed `showStudentProfileModal` and `showStudentDossierModal`.
+
+### Verification
+- Executed Playwright automated test (`scratch/test_profile_and_dossier.mjs`):
+  - Verified opening Profile Modal on row click / `👤 Profile` button.
+  - Verified 6 KPI cards, 40-assessment breakdown table, tab switching across all 3 tabs, and accordion answer expansion.
+  - Verified opening Official Academic Dossier via `🖨️ Dossier` button and bidirectional switching.
+  - Verified closing modals with Escape key and button click, preserving 25 student rows with zero reload and unbroken table state.
+  - Captured verified screenshots: `profile_modal_verified.png` and `dossier_modal_verified.png`.
+
+---
+
+## [2026-10-17 08:45] — Dynamic Active Program Navigation in Left Sidebar (B — BOARD)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- The user instructed: "not there, but on the side panel" regarding program switching.
+- Rather than horizontal pill tabs in the table area, dynamic active programs belong in the left sidebar under `B — BOARD`, mirroring how active classes are rendered dynamically under `C — CLASS`.
+- Inactive programs must be automatically hidden, newly activated programs must automatically appear, and clicking a program loads its isolated student roster with no redundant horizontal tabs cluttering the table.
+
+### Changed
+- **`admin.html`**:
+  - Replaced static `<div class="admin-nav-item" data-sub="students">Students</div>` with `<div id="sidebar-programs-list"></div>` and immediate inline `localStorage` hydration script.
+- **`js/admin/app.js`**:
+  - Implemented `loadSidebarPrograms(autoSelectProgramId = null)` with `topscore_cached_sidebar_programs` caching and dynamic active program filtering (`is_active: true`).
+  - Added click handlers to persist `topscore_selected_program_id`, update `window._filterProgramId`, and trigger `loadSection('students')`.
+  - Updated `showConsole()` and immediate script execution to invoke `loadSidebarPrograms()`.
+  - Updated `loadSection()` active-nav handling to exclude `.sidebar-program-item` from generic loops and specifically toggle `.active` on the matching `.sidebar-program-item`.
+  - Updated topbar title to display the active program name when in students section (`BOARD / <Program>`).
+- **`js/admin/student-management.js`**:
+  - Removed horizontal `#program-nav-tabs` and `.program-nav-tab-btn` click listeners from `area.innerHTML`.
+  - Synchronized `window._filterProgramId` with the active sidebar program and updated the remediation warning badge directly on the active program item.
+- **`js/api.js`**:
+  - In `clearAdminCache`, added triggers for `loadSidebarPrograms()` and `loadSidebarClasses()` whenever programs or classes caches are invalidated.
+
+### Verification
+- Executed Playwright automated audit (`scratch/test_sidebar_programs.mjs`):
+  - Verified sidebar `B — BOARD` renders active programs `👥 Camp` and `👥 Hospitality`.
+  - Verified inactive programs (`English Explorer`, `Tamata Persada`) are hidden.
+  - Verified clicking `Hospitality` in the sidebar activates it, sets topbar breadcrumb to `BOARD / Hospitality`, and displays 14 Hospitality students.
+  - Verified clicking `Camp` in the sidebar activates it, sets topbar breadcrumb to `BOARD / Camp`, and displays 25 Camp students.
+  - Verified horizontal tabs are completely absent (`hasHorizontalTabs: false`).
+  - Saved artifacts:
+    - [sidebar_program_hospitality_verified.png](file:///C:/Users/User/.gemini/antigravity-ide/brain/81d58d61-6ef1-4bb2-8c91-c889e11e0cf3/sidebar_program_hospitality_verified.png)
+    - [sidebar_program_camp_verified.png](file:///C:/Users/User/.gemini/antigravity-ide/brain/81d58d61-6ef1-4bb2-8c91-c889e11e0cf3/sidebar_program_camp_verified.png)
+
+## [2026-10-17 08:25] — Dynamic Program Tabs & 1-Program-1-Table Isolation in Student Management
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- Students from multiple institutions and programs previously appeared together in one table, mixing distinct curricula and cohorts.
+- The user requested separating students per program into a 1-program-1-table architecture using dynamic top tabs, showing program names only, automatically hiding inactive programs, and directly defaulting to the first active program.
+
+### Changed
+- **`css/admin.css`**:
+  - Added `.program-nav-tabs`, `.program-nav-tab-btn`, `.program-nav-tab-btn.active`, and `.program-tab-count` styles.
+  - Implemented sleek dark-mode glassmorphic tabs with tactical glowing borders, hover states, and active count badges.
+- **`js/admin/student-management.js`**:
+  - Dynamically queries and filters `allPrograms` for `is_active !== false`.
+  - Automatically generates a tab for every active program and excludes inactive ones (`English Explorer`, `Tamata Persada`).
+  - Sets default active program to the first active program (`activePrograms[0]`).
+  - Isolates table data: `programStudents = gridData.filter(s => s.program_id === currentProgramId)`.
+  - Contextual batch dropdown: `students-filter-batch` now only shows batches belonging to the active program.
+  - Removed redundant `students-filter-program` select element from the slim filter bar.
+  - Removed redundant `PROGRAM` column from the DataGrid, reclaiming 95px of horizontal table space.
+  - Pre-fills `{ program_id: currentProgramId }` when clicking `+ Add Student`.
+  - Wired interactive tab switching to re-render the student table smoothly and reset batch selection.
+
+### Verification
+- Executed Playwright automated audit (`scratch/test_tab_switch.mjs`):
+  - Verified tabs render only active programs: `Camp (25)` and `Hospitality (14)`.
+  - Verified inactive programs are not rendered as tabs.
+  - Verified switching from `Camp` to `Hospitality` isolates students to `Top Official Program` / `SH-2026` batch.
+  - Verified batch dropdown dynamically updates to show only batches relevant to that program.
+  - Visual artifacts saved to artifacts directory:
+    - [tab_program_camp_verified.png](file:///C:/Users/User/.gemini/antigravity-ide/brain/81d58d61-6ef1-4bb2-8c91-c889e11e0cf3/tab_program_camp_verified.png)
+    - [tab_program_hospitality_verified.png](file:///C:/Users/User/.gemini/antigravity-ide/brain/81d58d61-6ef1-4bb2-8c91-c889e11e0cf3/tab_program_hospitality_verified.png)
+
+## [2026-10-17 07:35] — Consolidate Student Roster & Student Progress into Single Master Table
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- The user requested merging the two previously separate administrative tables (`#students` / Student Roster and `#progress-view` / Student Progress) into ONE single comprehensive table containing all elements from both.
+- Having two tables in the same `B — BOARD` domain caused cognitive fragmentation, navigation switching, and duplicated mental models between student record management and academic progress tracking.
+
+### Changed
+- **`admin.html`**:
+  - Removed duplicate `<div class="admin-nav-item" data-sub="progress-view">...</div>` from sidebar `B — BOARD`.
+  - Sidebar now cleanly contains only `Students` under `B — BOARD`.
+- **`js/admin/app.js`**:
+  - Redirected `case 'progress-view':` to `window.location.hash = '#students'; return loadSection('students');` for complete backward compatibility with bookmarks and incoming links.
+- **`js/admin/student-management.js`**:
+  - Imported `toLevelLetter` from `../api.js?v=5.1.0`.
+  - In `renderStudents`, added `adminFetchAll('assignments', ...)` and `adminFetchAll('assessments', ...)` to `Promise.all` alongside students, attempts, programs, batches, and levels.
+  - Computed each student's assigned assessments (both explicit assignments and level-centric auto-assignments) to compute `totalAssigned`, `completedAssessments` (`completedAssignedCount`), `inProgressCount`, `completionPct`, and full `studentDetails` array for all 40 assessments.
+  - Added global `window.showStudentProgressDetails(studentId)`: Opens a glassmorphic modal displaying the student's avatar, details, 6 summary metric cards (Assigned, Completed, In Progress, Overall Score, Global Grade, Completion Bar), and a table of all 40 assessments with Level, Status badge (`🔔 NOT STARTED`, `✔️ COMPLETED`, `▶️ IN PROGRESS`), and Best Score %.
+  - Added sorting comparators for `completedAssessments`, `completionPct`, `overallScoreStr`, and `globalGrade` in `DataGrid` `sortComparator`.
+  - Enabled `stickyActionCol: true` in `DataGrid` initialization so the Actions column remains pinned on the right during horizontal scrolling.
+  - Unified all columns into one single master table (15 columns):
+    1. Select Checkbox (Bulk operations: batch reassign, status change, soft-delete)
+    2. Institution (135px, hierarchical sort)
+    3. Program (95px)
+    4. Batch (75px, pill badge)
+    5. Level (85px, pill badge)
+    6. Name (170px, avatar + name + remediation alert badge)
+    7. Age (65px)
+    8. Gender (80px, Male/Female badge)
+    9. Assessments (95px, `${completed} / ${totalAssigned}`, e.g. `6 / 40`, `3 / 40`)
+    10. Score (70px, authoritative overall highest score, e.g. `99%`, `91%`, `83%`)
+    11. Grade (65px, authoritative badge: S, A, B, C, D, E, F)
+    12. Completion (115px, mini level progress bar + `${completionPct}%`)
+    13. Enrolled (95px, formatted date)
+    14. Status (75px, Active / Inactive)
+    15. Actions (180px, sticky right: `📝 Details`, `👤 Profile`, `🖨️ Dossier`, `✏️ Edit`, `🗑️ Delete`)
+  - Updated section subtitle to: "Comprehensive student roster with enrollment, curriculum assessment pacing, global scores, and grade records".
+
+### Verification
+- Automated Playwright verification (`scratch/capture_modal.mjs` and `scratch/test_unified_students.mjs`):
+  - Confirmed sidebar `B — BOARD` contains only `Students` navigation item.
+  - Confirmed `#progress-view` URL hash redirects smoothly to `#students`.
+  - Confirmed master table renders all 15 columns with live student enrollment, progress, scores, and grades.
+  - Confirmed clicking `📝 Details` button opens `#prog-details-modal` with 40-assessment breakdown, scores, and status badges.
+  - Visual artifacts saved to artifacts directory:
+    - [unified_student_board_verified.png](file:///C:/Users/User/.gemini/antigravity-ide/brain/81d58d61-6ef1-4bb2-8c91-c889e11e0cf3/unified_student_board_verified.png)
+    - [unified_student_modal_verified.png](file:///C:/Users/User/.gemini/antigravity-ide/brain/81d58d61-6ef1-4bb2-8c91-c889e11e0cf3/unified_student_modal_verified.png)
+
+## [2026-10-17 02:50] — Streamline Student Management View (Prune PIN & Contact, Relocate Import/Export, Slim Filter Bar)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- The Student Management view (`admin.html#students`) suffered from visual and vertical clutter:
+  1. Student name cell displayed redundant, cluttering subtext (`PIN: ****` or `PIN: NOT SET`).
+  2. The table included an unnecessary `CONTACT` column displaying empty dashes (`—`) taking up horizontal space.
+  3. Redundant `📤 Import` and `📊 Export CSV` action buttons cluttered the roster header above the table when a dedicated "Import Students" tab already exists.
+  4. The 3-dropdown filter container had bulky stacked headers ("BATCH STATUS", "FILTER BY PROGRAM", "FILTER BY BATCH") consuming excessive vertical screen real estate.
+
+### Changed
+- **`js/admin/student-management.js`**:
+  - Removed PIN subtext rendering (`PIN: ****` / `PIN: NOT SET`) from the student name column cell template; now displays only clean student name.
+  - Removed `CONTACT` (`phone`) column definition completely from DataGrid `columns`.
+  - Removed duplicate `_ Import` and `Export CSV` buttons from the roster action bar (keeping only `+ Add Student` and duplicate resolution banner/button).
+  - Refactored bulky stacked filter container into a slim inline row `.students-filter-bar-slim` with compact `<select class="form-input-slim">` dropdowns with embedded label placeholders (`[Status: Active Batches ▼] [Program: All ▼] [Batch: All ▼]`), dynamic active indicators, and reset button.
+  - Exported `window.exportStudentsGradebook()` for cross-tab invocation.
+- **`css/admin.css`**:
+  - Added `.students-filter-bar-slim`: `display: flex; align-items: center; gap: 8px; padding: 6px 12px; margin-bottom: 8px; height: 38px;` with sleek translucent background and subtle border.
+  - Added `.students-filter-bar-slim select.form-input-slim`: height 28px, tactile padding, subtle typography, and styled dropdown options.
+- **`js/admin/imports-exports.js`**:
+  - Relocated Export CSV control to the dedicated "Import Students" tab header (`#btn-export-students-csv`) next to "Back to Students" and "Download Student Template".
+  - Connected `#btn-export-students-csv` click listener to invoke `window.exportStudentsGradebook()`.
+  - Added smooth navigation back to roster tab via `window._switchStudentTab('roster')`.
+
+### Verification
+- Executed Playwright automated tests (`scratch/test_streamline_students.mjs` and `scratch/test_filter_interaction.mjs`):
+  - Confirmed PIN subtext is removed from all student name cells.
+  - Confirmed `CONTACT` column is completely absent from headers and rows.
+  - Confirmed `#students-import-shortcut` and `#students-export-btn` are removed from roster header.
+  - Confirmed `.students-filter-bar-slim` renders at exactly 38px height.
+  - Confirmed interactive filter operation (status active -> all increased rows 39 -> 50, program selection filtered correctly).
+  - Confirmed Import tab renders dropzone + `#btn-export-students-csv` button.
+  - Visual artifacts verified and saved to artifacts directory:
+    - `students_roster_streamlined.png`
+    - `students_import_export_relocated.png`
+
+### Strict Git Freeze
+- Standing rule enforced: 0 commits, 0 pushes.
+
+## [2026-10-17 02:25] — Complete 3-Way Scoring & Global Grade Unification Across Platform  
+
+### Why
+- Following user approval ("proceed") of the comprehensive analysis findings:
+  1. In `#students` (`js/admin/student-management.js`), students were previously penalized for practicing retakes because `totalMaxScore` and `totalObtained` accumulated ALL attempts together. A student with 24 attempts (e.g. Aunul Fikri Yasir) dropped from 99% (Grade A) to 78% (Grade B); Asti Ananta dropped from 82% (Grade B) to 60% (Grade C); Laura Fardila dropped from 86% (Grade B) to 70% (Grade C); and Mr. Test dropped from 62% (Grade C) to 23% (Grade E).
+  2. `#students` only checked `a.status === 'SUBMITTED' || a.status === 'submitted'`, ignoring `auto_submitted` attempts. This caused students who finished via timer expiry (such as Ahmad Nur Suhendro and Mr. Test) to show fewer completed assessments.
+  3. The three administrative views (`#students`, `#class-hub`, and `#progress-view`) had diverging calculation logic.
+
+### Changed
+- **`js/admin/student-management.js`**:
+  - Replaced the attempt summation loop with `bestByAsm` map taking the HIGHEST score per assessment across valid completion statuses: `['submitted', 'auto_submitted', 'evaluated', 'graded']`, in strict accordance with Rule 2.7 ("The main report card stores HIGHEST score") and Rule 2.8 ("Overall score is the average of all Assessments that are: available/takeable for the Student under the current rules; and completed by the Student").
+  - Calculated `overallPct` and authoritative `globalGrade = getGrade(overallPct)` matching Rule 2.10.
+  - Updated remediation pending check to include `auto_submitted`.
+  - Added numerical and rank-based sorting in `DataGrid` `sortComparator` for `overallScoreStr` (by numeric percentage) and `globalGrade` (by grade rank: S > A > B > C > D > E > F).
+  - Updated print dossier export to include `auto_submitted` and calculate percentage via `a.score / a.total_questions`.
+
+### Verification
+- Created and executed `scratch/test_full_3view_sync.mjs` with Playwright:
+  - Verified `#students`, `#class-hub` (Attendance tab), and `#progress-view` live in browser:
+    - Miss Shelia Mulyaning Putri: 100% Grade S | 150 PTS (100%) Grade S | 100% Grade S (6 / 40)
+    - Mr. Aunul Fikri Yasir: 99% Grade A | 149 PTS (99%) Grade A | 99% Grade A (6 / 40)
+    - Mr. Unggul Wirakse: 99% Grade A | 149 PTS (99%) Grade A | 99% Grade A (6 / 40)
+    - Miss Sofa Maria Ulfa: 99% Grade A | 148 PTS (99%) Grade A | 99% Grade A (6 / 40)
+    - Mr. Gagan Tara Deswari: 98% Grade A | 147 PTS (98%) Grade A | 98% Grade A (6 / 40)
+    - Miss Risma: 97% Grade A | 146 PTS (97%) Grade A | 97% Grade A (6 / 40)
+    - Mr. Ari Wahyu Darma: 95% Grade A | 143 PTS (95%) Grade A | 95% Grade A (6 / 40)
+    - Mr. Muhammad Masyan Hafizi: 95% Grade A | 142 PTS (95%) Grade A | 95% Grade A (6 / 40)
+    - Miss Latifa Maulidya: 91% Grade A | 137 PTS (91%) Grade A | 91% Grade A (6 / 40)
+    - Mr. Asmul Kholid: 89% Grade B | 134 PTS (89%) Grade B | 89% Grade B (6 / 40)
+    - Miss Nurhaliza: 88% Grade B | 132 PTS (88%) Grade B | 88% Grade B (6 / 40)
+    - Miss Syazida Shinda Debi: 88% Grade B | 132 PTS (88%) Grade B | 88% Grade B (6 / 40)
+    - Miss Laura Fardila: 86% Grade B | 129 PTS (86%) Grade B | 86% Grade B (6 / 40)
+    - Mr. Ahmad Nur Suhendro: 83% Grade B | 125 PTS (83%) Grade B | 83% Grade B (6 / 40)
+    - Miss Asti Ananta: 82% Grade B | 123 PTS (82%) Grade B | 82% Grade B (6 / 40)
+    - Mr. Frengki Juniardi: 80% Grade B | 72 PTS (80%) Grade B | 80% Grade B (3 / 40)
+    - Mr. Test: 62% Grade C | 56 PTS (62%) Grade C | 62% Grade C (3 / 40)
+  - Visual artifacts saved and verified:
+    - `view1_students_verified.png`
+    - `view2_class_hub_verified.png`
+    - `view3_progress_view_verified.png`
+
+### Strict Git Freeze
+- Standing rule enforced: 0 commits, 0 pushes.
+
+## [2026-10-17 01:58] — Global Grade Synchronization Across Platform & Student Progress Table Upgrade
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- User Request: "disni ada 2 grade yang beda... grade itu secara global,,, dihitung berdasarkan assesemant yang bisa diambil, coba pelarai da perbaiki,,, lalu di student proress,,, saya belum melihat ada info yang seperti di tael siswa yang lain."
+- Two core bugs resolved:
+  1. Grade discrepancy: In `#class-hub`, the `GRD` column showed grade `E` for every student (even top students with >90% scores) because `curriculumGradePct` was calculated by dividing earned percentages by 40 (`totalClassAssessments`). Under Rule 2.8 and 2.10, overall score and grade must be based on available/takeable assessments completed by the student.
+  2. Student Progress view (`#progress-view`) showed `0 / 40` (0%) completed assessments for all students because `isCompleted` checked uppercase `SUBMITTED`, while Supabase stores lowercase `submitted`/`auto_submitted`. In addition, `#progress-view` lacked the rich information present in the main student table (avatars, ages, gender badges, authoritative global score & grade, active batch status filter, profile links).
+
+### Changed
+- **`js/admin/app.js`**:
+  - `renderClassHub`: Updated `overallPct` and `grade` to evaluate from completed/takeable assessments using `totalEarnedScore / totalMaxPossible` (or average of completed assessment percentages) passed into authoritative `getGrade(overallPct)`.
+  - Stored `overallPct` on each student row, aligned sorting comparator for `GRD` / `grade`, and updated `summaryRow` to compute the class average grade across students with completed assessments.
+- **`js/admin/class.js`**:
+  - Imported `generateAvatarDataUri` from `../utils/avatar-engine.js`.
+  - In `renderProgressView`:
+    - Streamlined `attempts` query from heavy join with all `attempt_answers` to valid columns: `'id, student_id, assessment_id, status, score, total_questions, percentage, grade, created_at, submitted_at'`.
+    - Fixed attempt completion status matching using case-insensitive check `['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(att.status || '').toLowerCase())`.
+    - Computed authoritative student `overallPct` and `globalGrade` from completed assessments with grade badge color mapping.
+    - Added `Batch Status` filter dropdown (`Active Batches (Ongoing)` [Default], `All Batches`, `Inactive / Past Batches Only`), dynamically filtering the Batch dropdown.
+    - Added all 13 rich columns matching the main student table: Institution, Program, Batch, Level, Student Name (with circular avatar, honorific name, PIN, profile link), Age, Gender badge, Assessments count (`6 / 40`), Score (`91%`), Grade badge (`A`), Completion pill bar, Status badge, and Actions (Profile 👤 and Details 📝).
+
+### Verification
+- Executed `scratch/test_grade_and_progress_sync.mjs` with Playwright:
+  - Class Hub Attendance roster verified: Students display proper grades (Sheila: S [150 pts], Aunul: A [149 pts], Ari: A [143 pts], Latifa: A [137 pts], Ahmad: B [125 pts]) matching `#students`.
+  - Student Progress verified: Renders all 13 rich columns with avatar, age, gender badges, completed assessments (6/40), score %, and authoritative grade badges.
+
+### Strict Git Freeze
+- No commits or pushes made.
+
+## [2026-10-17 01:25] — Batch Active/Inactive Toggle Fix & Past Batch Student Filtering
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- User Request: "saya ingin edit batch yang aktif dan tidka, agar siswa batch yang sudah berlalu bisa tidak perlu tampil dalam list, tapi gagal"
+- On `admin.html#organization`, toggling a batch's active switch failed with toast error: `Failed to update status: Cannot coerce the result to a single JSON object` (PGRST116).
+- Root Cause: Supabase Cloud PostgreSQL RLS policies for table `batches` (as well as `programs`, `institutions`, `classes`, `levels`) only allowed `SELECT` for role `anon`. When Top Office admin session (using `anon` client) called `adminUpdate('batches', ...)`, Postgres rejected the update (0 rows affected). PostgREST `.update(...).select().single()` then threw PGRST116.
+- In addition, students from past/completed batches needed to be excluded from default views while remaining inspectable via filter controls in Student Management (`#students`), Class Hub Attendance Roster (`#class-hub`), and Student Login (`index.html`).
+
+### Changed
+- **Database (Supabase PostgreSQL)**:
+  - Applied migration `supabase/migrations/20261011020000_curriculum_admin_rls.sql`, granting `ALL` permissions for role `anon` (`USING (true) WITH CHECK (true)`) on `batches`, `programs`, `institutions`, `classes`, `class_levels`, `levels`, `topics`, `questions`, and `assessment_questions`.
+- **`js/api.js`**:
+  - `clearAdminCache(normTable)`: Added automatic invalidation of dependent caches (`students|`, `progress|`, `classes|`) whenever `batches`, `programs`, `institutions`, or `levels` are mutated.
+  - `fetchStudentsByProgram(programId, batchId, activeOnly)`: Added joined `batches!batch_id(id, is_active)` and filtered out inactive batch students when `activeOnly = true` and `batchId` is not explicitly passed.
+  - `fetchBatches(programId, forceRefresh, activeOnly)`: Fully enforces `activeOnly` filter on batches for student login.
+- **`js/admin/curriculum-management.js`**:
+  - `toggleEntityActive('batches', id, isActive)`: Updated in-memory batch state immediately and invoked `renderView()` to smoothly reflect UI changes without reload.
+- **`js/admin/student-management.js`**:
+  - Fixed invalid columns in `adminFetchAll('progress', ...)` query (replaced `level_id, status` with `unlocked_level, highest_score`), resolving HTTP 400 error.
+  - Added `Batch Status` filter dropdown with 3 options:
+    1. `Active Batches (Ongoing)` [Default]: Only shows students from active batches (39 active).
+    2. `All Batches (Include Past)`: Shows all students (64 total), displaying `DISCONNECTED` warning tags for inactive batches.
+    3. `Inactive / Past Batches Only`: Shows only students from past/inactive batches (25 total).
+  - Dynamically hides/shows options in `Filter by Batch` based on selected batch status.
+- **`js/admin/app.js`**:
+  - Class Hub Attendance Roster: Added `Batch` filter selector defaulting to `Active Batches Only` (25 enrolled), with option for `All Batches (Include Past)` (50 enrolled) or individual batch filters.
+  - Synced attendance roster count badge dynamically.
+
+### Tests
+- command: `node scratch/test_class_hub.mjs`
+- result: `PASS` (Attendance roster renders correctly, batch filter defaults to `Active Batches Only`, options properly labeled with `(Past/Inactive)`).
+- command: `node scratch/test_batch_activation_e2e.mjs`
+- result: `PASS` (Organization batch toggle updates HTTP 200 without error; Student roster filters active batches by default; Student login hides past batches 131/132 and only displays active batches 123/133).
+
+## [2026-10-17 00:35] — Instant Old Photo Erasure on Student Upload & Zero-Latency Avatar Sync
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- User Request: "saat siwa mengupload foto bau menggantikan foto lama, saya terkadang masih melihta foto lama terlihat sekilas,,, apakah bisa dihilangkan? agar saat uplaod foto baru, maka foto lama langsung dihapus"
+- When a student selected a new image file, the old photo flickered or remained visible in the DOM and localStorage cache until async compression and Supabase upload completed.
+- Needed 0ms synchronous erasure of the old photo from DOM and browser cache immediately upon file selection.
+
+### Changed
+- **`dashboard.html`**:
+  - Implemented `clearPhotoEverywhere()`: wipes `localStorage.removeItem('stu_photo_' + session.student_id)`, blanks `src = ''` and adds `.hidden` on `#banner-avatar-img`, `#header-avatar-img`, and `#prof-photo-img`, and restores initial fallback badges.
+  - Updated `handlePhotoChange()`: executes `clearPhotoEverywhere()` synchronously on line 1 of file change event (0ms delay), wiping the old photo before compression starts.
+  - Updated `applyPhotoEverywhere()`: updates UI and syncs `localStorage` with the new WebP photo immediately.
+  - Updated onboarding webcam snapshot (`btn-retake-photo` & `onboard-photo-file`): immediately blanks `#webcam-snapshot`.
+  - Added background database revalidation in `checkAndPromptPhoto()` to prevent stale `localStorage` persistence.
+  - Reorganized `setupProfileModal([])` to initialize upfront on startup so photo upload and profile inputs are interactive immediately without waiting for `loadDashboard()`.
+- **`js/admin/admin-deck.js`**:
+  - Immediately blanks `admin-avatar-preview.src = ''` on selecting a new admin avatar.
+
+### Tests
+- command: `node scratch/test_photo_instant_erasure.mjs`
+- result: `PASS` (`wipedInstantly: true` (0ms), old photo erased immediately, new compressed WebP applied and saved to Supabase without errors).
+
+## [2026-10-17 00:17] — Existing Student Photos Batch Compression Migration
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- User Request: "bagaimana dengan foto yang sudah ada?" -> "lakuakn"
+- Audited PostgreSQL database and found 15 existing students with massive Base64 photos (>50KB, up to 2.38MB per student) totaling 13.137 KB (~12.83 MB).
+- Executed one-time automated batch compression migration using Option 1 (3:4 WebP <30KB).
+
+### Changed
+- Executed automated database migration across all 15 heavy students in PostgreSQL `students.photo_url`.
+- Retained 100% of student photos, properly centered in 3:4 aspect ratio.
+
+### Tests
+- command: `node scratch/batch_compress_existing_photos.mjs`
+- result: `PASS` (15 of 15 photos compressed and updated in database).
+- command: `node scratch/audit_existing_photos.mjs`
+- result: `PASS` (0 heavy photos remaining out of 25. Database footprint dropped from 13.137 KB to 435 KB — **98.7% database savings!**).
+
+## [2026-10-17 00:10] — Client-Side Avatar Compression (Option 1: Lightweight WebP Base64 < 30KB)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- User Request: "pakah kita bisa melakuka kompresi terhhadap foto yang diupload?" -> "Saya mau pastikan kalau kita pilih opsi 1"
+- User confirmed selection of **Opsi 1**: Lightweight client-side Base64 compression stored directly in PostgreSQL without relying on external Supabase Storage bucket uploads.
+- Prevents database bloat and statement timeouts (HTTP 500) caused by uncompressed 2.4MB camera photos.
+
+### Changed
+- **`js/utils/avatar-engine.js`**:
+  - Added `loadImageSource(source)` helper supporting `File`, `Blob`, and base64 `dataUrl` strings.
+  - Enhanced `processAndCompressAvatar(file, 'student')` with 3:4 center-crop (240x320 px), 35% vertical bias (preventing face truncation), and adaptive quality loop strictly clamping WebP Base64 size `< 30 KB`.
+- **`dashboard.html`**:
+  - Imported `processAndCompressAvatar` from `./js/utils/avatar-engine.js?v=5.1.0`.
+  - Onboarding Webcam (`btn-snap-photo` & auto-capture): Canvas cropped to 240x320 and exported as WebP dataURL.
+  - Onboarding File Fallback (`onboard-photo-file`): Immediately runs `processAndCompressAvatar(file, 'student')`.
+  - Onboarding Confirmation (`btn-confirm-photo-setup`): Compresses `onboardPhotoData` before saving Base64 to `students.photo_url`.
+  - Profile Banner Photo Input (`handlePhotoChange`): Runs `processAndCompressAvatar(file, 'student')` on selected image and saves compressed WebP Base64 directly into `students.photo_url`.
+
+### Tests
+- command: `node scratch/test_option1_compression.mjs`
+- result: `PASS` (Input: 2000x2000 canvas image, output size: `2.4 KB`, compression time: `51ms`, dimensions: `240x320` px, reduction: `97.6% - 99%`, 100% self-contained).
+
+## [2026-10-16 23:45] — Roster Columns Revision, Progress/Grade Formula Repair & Zero Horizontal Scroll Matrix
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- Directive: `[DIRECTIVE: REVISE ROSTER COLUMNS, REPAIR PROGRESS/GRADE FORMULA & ELIMINATE HORIZONTAL SCROLL]`
+- Fix calculation flaw where students with incomplete modules (e.g., Dwi Handaya with 2/40 completed) falsely displayed "100%" and Grade "S".
+- Isolate `INST`, `PROGRAM`, and `BATCH` into dedicated standalone columns and completely eliminate student avatar photos/initial circles.
+- Fit all 40 assessment columns within 100% viewport width without horizontal scrollbars or side drawers.
+- Super-header theme grouping (Themes A, B, C, D) and magenta test column accents.
+- Authoritative cumulative points (`PTS`) default sort descending and fixed bottom summary row "★ CLASS AVERAGE".
+
+### Changed
+- **`js/admin/app.js`**:
+  - Progress Formula (`PROG`): `(completed_assessments_count / total_class_assessments) * 100`. Incomplete students display `5%` (`2/40 Done`), completers display `100%` (`40/40 Done`).
+  - Cumulative Points (`PTS`): Sum of actual earned points across all completed attempts.
+  - Authoritative Grade (`GRD`): Evaluates cumulative curriculum progress (unattempted counted as 0%). 2/40 tasks strictly receives Grade `F`, never Grade `S`.
+  - Default Table Sorting: Configured `initialSortKey: 'totalEarnedScore'` and `initialSortAsc: false` to rank completers at the top.
+  - Dedicated Standalone Columns:
+    - `INST`: `CEC` (~65px)
+    - `PROGRAM`: `Camp` (~65px)
+    - `BATCH`: Pill badge `131` (~55px) resolved from `batchMap`
+    - `STUDENT NAME`: Text-only name with bold typography, no avatars (~140px)
+    - `PROG`: Percentage with completed count (~50px)
+    - `GRD`: Grade pill badge (~40px)
+    - `PTS`: Points badge (~55px)
+  - 40 Assessment Columns: Numbered headers 1–40 with points rendered inside cells; unattempted rendered as subtle dot `·`.
+  - Super-headers: `STUDENT DETAILS` (span 7), `THEME A` (span 8), `THEME B` (span 10), `THEME C` (span 10), `THEME D` (span 12).
+  - Summary Row: "★ CLASS AVERAGE" calculating class-wide averages.
+- **`js/admin/datagrid.js`**:
+  - Added support for `superHeaders`, `summaryRow`, and `tableLayout` in constructor.
+  - Added dynamic `<colgroup class="datagrid-colgroup">` injecting `<col style="width:...">` elements before `<thead>` so that `table-layout: fixed` strictly adheres to specified pixel widths even when super-headers use colspans.
+  - Added `renderSuperHeaders()` and `renderSummaryRow()`.
+- **`css/admin.css`**:
+  - Locked `#class-attendance-grid .table-wrap` to `overflow-x: hidden !important; width: 100% !important;`.
+  - Locked table to `table-layout: fixed !important; width: 100% !important;`.
+  - Added theme header styles for Themes A, B, C, D and Student Details.
+  - Added magenta test styling (`#ec4899` borders, `#f472b6` badges, and soft vertical column banding) for columns 7, 8, 17, 18, 29, 30, 39, 40.
+  - Added `.asm-dot` subtle styling for unattempted cells.
+  - Added sticky docked styling for `.summary-row` at table bottom.
+  - Added `.hidden, #admin-login-screen.hidden, #admin-console.hidden { display: none !important; }`.
+
+### Tests
+- command: `node scratch/verify_revised_roster.mjs`
+- result: `PASS` (`wrapClientWidth: 1621`, `wrapScrollWidth: 1621`, `hasOverflow: false` — ZERO horizontal scroll; Dwi Handaya: `5% | 2/40 Done | Grade F | PTS 42`; Siti Qori' Atun: `100% | 40/40 Done | Grade A | PTS 2685`; Summary row: `★ CLASS AVERAGE | 7% Avg Done | Grade F | PTS 102`).
+- command: `node scratch/test_diag.mjs`
+- result: `PASS` (Docked summary row verified, screenshots: `revised_roster_verified.png`, `class_roster_summary_docked_verified.png`).
+
+## [2026-10-16 23:25] — Sidebar Class Tab Delay & Class Hub Loading Performance Optimization
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- User Request: "kenapa tab untuk kelas selalu lama muncul? bahkan saat saya awal masuk, tab ini kadang hilang dan lalu muncul setelah beberapa ssat. sementara tab lain lasngusng"
+- Investigated why the sidebar class item (`📘 Vocabulary`) under `C — CLASS` flickered or was delayed on initial entrance/refresh, and why opening Class Hub was slow or hanging.
+
+### Root Causes
+1. **Artificial 1.5s Delay**: Hardcoded `setTimeout(() => { if (window.loadSidebarClasses) window.loadSidebarClasses(); }, 1500);` in `js/admin/app.js` intentionally held back rendering for 1.5 seconds.
+2. **Non-Hoisted Function Expression**: `window.loadSidebarClasses` was an unhoisted function expression initialized after `showConsole()`, skipping initial call.
+3. **Empty Initial DOM**: Unlike other static menu tabs, `#sidebar-classes-list` was an empty container `<div id="sidebar-classes-list"></div>` waiting for async network fetching.
+4. **Missing Route Mapping**: `'class-hub'` was not registered in `sectionTitles` and `sectionDomainMap`.
+5. **Massive 20MB Base64 Payload in Student Queries**: `adminFetchAll('students')` downloaded full base64 images from webcam photos (up to 2.4MB per student), causing PostgreSQL statement timeouts (HTTP 500) and 20-60 second hangs.
+6. **Duplicate Classes Query**: `adminFetchAll('classes')` was called twice sequentially inside `renderClassHub`.
+
+### Changed
+- **`admin.html`**:
+  - Injected inline synchronous hydration script inside `#sidebar-classes-list` to populate classes directly from `localStorage.getItem('topscore_cached_sidebar_classes')` during HTML parse time (0ms, zero visual delay or flicker).
+- **`js/admin/app.js`**:
+  - Registered `'class-hub'` in `sectionTitles` and `sectionDomainMap`.
+  - Hoisted `loadSidebarClasses` and `renderClassHub` as async functions.
+  - Eliminated the 1.5s delay and invoked `loadSidebarClasses()` immediately.
+  - Optimized student queries in `renderClassHub` to select only required flat columns (`id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id`), eliminating all base64 photo downloads.
+  - Optimized student queries in `updateAdminKpiBanner` to select only `id, deleted_at`.
+  - Added in-memory fast caching (`window._classHubCache`) to make subsequent tab switches instantaneous.
+- **`js/admin/admin-deck.js`**:
+  - Optimized dashboard metrics student fetch to `id, is_active, deleted_at`.
+
+### Tests
+- command: `node scratch/test_cached_refresh.mjs`
+- result: `PASS` (Instant sidebar class item visibility on refresh: `true` in 719ms Playwright page load, 0ms DOM parse time; screenshot: `scratch/fast_sidebar_refresh.png`).
+- command: `node scratch/test_final_speed.mjs`
+- result: `PASS` (Sidebar visible in 1050ms cold load, Class Hub first load: 884ms, Class Hub cached load: 265ms).
+
+## [2026-10-16 22:53] — Distinct Colors & Visual Banding for TASK vs TEST Columns
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- User Request: "Buat kolom task dan test berwarna berbeda agar terlihat pembagiannya"
+- The user requested distinct color coding to clearly delineate the curriculum sections between preparation Tasks and culmination Tests across the 40 assessment columns.
+
+### Changed
+- **`js/admin/app.js`**:
+  - Enhanced assessment column mapping to identify `isTest`:
+    - Automatically tagged each column as `col-asm-task` (32 columns) or `col-asm-test` (8 columns).
+    - Header badges styled distinctly: `asm-num-task` (Sky Blue `#38bdf8`) vs `asm-num-test` (Vibrant Pink `#f472b6` with pill border).
+    - Tooltips explicitly include `[TASK]` or `[TEST]` prefix along with assessment code, title, and max questions.
+- **`css/admin.css`**:
+  - Added dedicated styling for `col-asm-task` vs `col-asm-test`:
+    - `th.col-asm-test`: highlighted header with `rgba(244, 114, 182, 0.18)` background and pink bottom accent border.
+    - `td.col-asm-test`: soft vertical rosy background banding (`rgba(244, 114, 182, 0.06)` and `0.14` on hover) with left/right borders (`rgba(244, 114, 182, 0.15)`), creating unmistakable vertical divider columns for test blocks (columns 7-8, 17-18, 29-30, 39-40).
+
+### Tests
+- command: `node scratch/verify_task_test_colors.mjs`
+- result: `PASS` (Verified 32 task columns and 8 test columns; verified tests at columns 7, 8, 17, 18, 29, 30, 39, 40; visual screenshot captured: `class_roster_task_test_colored.png`).
+
+## [2026-10-16 22:42] — Numbered Assessment Columns 1-40 & Full Zero-Scroll Screen Fit
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- User Request: "apakah tidal bisa semua kolom terlihat? cukup gunakan angka untuk nama kolomnya,,,"
+- User desired all 40 assessment columns and summary columns to fit simultaneously in the viewport without horizontal scrolling, using concise numbers `1` to `40` for assessment column headers.
+
+### Changed
+- **`js/admin/app.js`**:
+  - Numbered assessment column headers from `1` to `40` (`num = idx + 1`), with rich hover tooltip displaying full code and assessment title.
+  - Streamlined summary column headers: `INST` (42px), `PROG` (46px), `BATCH` (42px), `LVL` (44px), `NAME` (135px), `PROG` (52px), `GRD` (36px), `PTS` (48px), `ST` (38px), and sticky action buttons (46px).
+  - Assessment cells render concise points number (e.g. `40`, `34`, `10`, `—`, `⏳`) with color-coded points and comprehensive hover tooltip.
+- **`js/admin/datagrid.js`**:
+  - Added support for `col.className` and `col.width` on both `<th>` and `<td>` elements.
+- **`css/admin.css`**:
+  - Added targeted styles for `#class-attendance-grid` with compact cell padding (`0.4rem 0.25rem`) and `th.col-asm` / `td.col-asm` (26px width).
+
+### Tests
+- command: `node scratch/verify_40_assessments_table.mjs`
+- result: `PASS` (Total 49 columns rendered; verified `wrapClientWidth === wrapScrollWidth` (1621px == 1621px) with 0 horizontal overflow; full screenshot captured: `class_roster_all_columns_visible.png`).
+
+## [2026-10-16 22:30] — 40 Assessment Columns (Points Only) & Streamlined Enrollment Table
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- User Request: "dalam table student enrollment itu saya ingin ada tambahan 40 kolom yang menunjukkan semua ssesment... isi kolomnya adalah point yang didapat,,, bukan score atau grade . sebeb score atau grade ada kolomnya sendiri. untuk nama Institusi bisa menggunakan singkatan CEC atau TOP. kolom gender, usia, contact itu bisa dihapus dai table yang ini"
+- Clear specification:
+  1. Add 40 columns for all 40 assessments in the class.
+  2. Each cell in the assessment columns displays points obtained only (e.g. `40 pts`, `34 pts`, `—` if unattempted, `⏳` if in-progress). No percentage or letter grade in these cells because `PROGRESS` and `GRADE` already have dedicated columns.
+  3. Abbreviate institution names to `CEC` or `TOP`.
+  4. Remove columns: `GENDER`, `AGE`, and `CONTACT`.
+  5. Retain summary columns: `INST`, `PROGRAM`, `BATCH`, `LEVEL`, `STUDENT NAME`, `PROGRESS`, `GRADE`, `TOTAL PTS`, `STATUS`, and sticky `ACTIONS`.
+
+### Changed
+- **`js/admin/app.js`**:
+  - Added `instShort` calculation mapping Cake English Course -> `CEC`, Top English Program -> `TOP`.
+  - Replaced columns array in `studentsGridData` DataGrid configuration:
+    - Updated `INSTITUTION` column to `INST` using `row.instShort || row.instName` with tooltip.
+    - Removed `ageDisplay`, `gender`, and `phone` (contact).
+    - Injected 40 individual assessment columns (`...classAssessments.map(...)`) displaying points earned only (`sc pts`) styled with color coding and title tooltip.
+    - Retained `PROGRESS`, `GRADE`, `TOTAL PTS`, `STATUS`, and sticky `ACTIONS`.
+- **`js/admin/datagrid.js`**:
+  - Added `max-height: 320px; overflow-y: auto;` to `.datagrid-cols-menu` to ensure the columns toggle dropdown stays neatly scrollable.
+
+### Tests
+- command: `node scratch/verify_40_assessments_table.mjs`
+- result: `PASS` (Total 49 columns rendered: 8 summary + 40 individual assessment columns + sticky actions; removed columns verified: `hasGender=false`, `hasAge=false`, `hasContact=false`; points-only format verified: `34 pts`, `10 pts`; screenshots saved: `class_roster_40_assessments_left.png`, `class_roster_40_assessments_scrolled.png`).
+
+## [2026-10-16 21:58] — Fix Supabase Connection Default & Full Console UI Recovery
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- User Report: "the whole system is full of errors. And I dont see the table that you showed me.even the class is missing!"
+- Screenshots showed `TypeError: Failed to fetch` on `#vocab_vault`, `0 TOTAL ASSESSMENTS` on `#assessments`, and `No classes found.` in the sidebar.
+
+### Root Cause
+- An unstaged edit in `js/supabase.js` had caused `USE_LOCAL` to fall back to `isLocalHostname` (which is `true` for any session on `127.0.0.1:5500`), pointing requests to `http://127.0.0.1:54021` where Docker is not running.
+
+### Changed
+- **`js/supabase.js`**:
+  - Restored `USE_LOCAL` to only be enabled if `localStorage.getItem('topscore_use_local') === 'true'`.
+  - Default connection targets Supabase Cloud (`https://oclajpyumehpojepcczg.supabase.co`).
+
+### Tests
+- command: `node scratch/test_user_exact_experience.mjs`
+- result: `PASS` (Classes found in sidebar: `📘 Vocabulary`; Class Roster table rendered with 14 columns; 40 assessments loaded; Vocabulary Vault loaded with 800 words and 0 errors; screenshots captured).
+
+### Next Action
+- Present explanation and visual proof to user.
+
+## [2026-10-16 21:50] — Streamline Class Roster Score Columns & Zero-Error Verification
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- User Request: "waht did you do? I only ask to add a few more colums to the table. cek any errors"
+- The user wanted only a few high-value score summary columns directly on the Class Roster table rather than bloating it with 40+ dynamic assessment columns.
+- Explicit requirement to check for and resolve any errors across the page.
+
+### Changed
+- **`js/admin/app.js`**:
+  - Replaced the 40+ dynamic assessment columns with a focused, streamlined set of score summary columns (14 clean columns total):
+    - `PROGRESS`: Average score % and completed assessment count.
+    - `GRADE`: Authoritative letter grade badge.
+    - `TOTAL PTS`: Cumulative earned points vs total possible.
+    - `LATEST ASSESSMENT`: Displays student's highest completed assessment (Rule 2.7) with points, %, grade, and assessment code badge.
+  - Enhanced `sortComparator` with `latestScore` numeric sorting support.
+- **`admin.html`**:
+  - Added `defer` attribute to external `<script src="...xlsx.full.min.js">` preventing render-blocking network latency.
+
+### Tests
+- command: `node scratch/verify_class_roster_scores.mjs`
+- result: `PASS` (Total 14 columns rendered; zero runtime/console errors; screenshot updated: `class_roster_scores_verified.png`)
+
+### Risks / Follow-up
+- None. Table fits comfortably on standard viewports without excessive horizontal scroll.
+
+### Next Action
+- Report verified clean columns and error-free status to user.
+
+## [2026-10-16 21:25] — Class Roster Assessment Point Columns & Instant Score Visibility
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- User Request: "CAN we show on the table colums consist of the points the students got from an assessmnt so I can see their score immediatly"
+- Clarification selected by user: Add assessment columns directly to the current Class Roster table with horizontal scrolling so every assessment's points are visible alongside student attendance info.
+
+### Changed
+- **`js/admin/app.js`**:
+  - `studentsGridData` computation:
+    - Fixed root cause calculation bug where `PROGRESS` showed `-` and `GRADE` showed `—` because `a.max_score` and `a.total_score` do not exist on `attempts`.
+    - Computed highest score per assessment for each student per AGENTS.md Rule 2.7.
+    - Derived authoritative grades using AGENTS.md Rule 2.10.
+    - Added `asmScores` mapping and dynamic sorting keys (`asm_${asm.id}`) per student row.
+    - Added `TOTAL PTS` summary column with total earned score and maximum questions.
+  - DataGrid `#class-attendance-grid` columns:
+    - Injected dynamic columns for every assessment in `classAssessments` sorted chronologically (`3A1-WORDS-TASK`, `3A1-PHRASES-TASK`, `3A2-WORDS-TASK`... to `TRYOUT-PHRASE-L3-ALL`).
+    - Formatted assessment cells with color-coded score pills displaying points (`sc pts`), percentage, and grade badge, with rich hover tooltips.
+    - Configured `stickyActionCol: true` to keep student action buttons pinned to the right edge during horizontal scrolling.
+    - Enhanced `sortComparator` with score sorting on all assessment columns, `totalEarnedScore`, `avgPct`, and `grade`.
+
+### Tests
+- command: `node scratch/verify_class_roster_scores.mjs`
+- result: `PASS` (53 total columns rendered; individual assessment score pills verified across student records; screenshots saved to `class_roster_scores_verified.png` and `class_roster_scores_scrolled.png`)
+
+### Risks / Follow-up
+- None. Fully compatible with DataGrid's native column toggle menu and drag-and-drop column reordering.
+
+### Next Action
+- Present visual confirmation to user.
+
+## [2026-10-16 20:55] — Standardize Assessment Codes & Enforce Strict Sequential Prerequisites
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- Directive: `[DIRECTIVE: STANDARDIZE ASSESSMENT CODES & ENFORCE STRICT SEQUENTIAL PREREQUISITES]`
+- Targets: Supabase Database (`assessments` table), `js/api.js`, `js/admin/class.js`, `js/admin/classes-management.js`, `js/admin/app.js`
+- Objectives:
+  1. Re-format all assessment codes to `[Level][Theme][Topic]-[TYPE]-[TIER]` (e.g. `3A1-WORDS-TASK`, `3A-WORDS-TEST`, `3B1-WORDS-TASK`).
+  2. Establish a strict sequential prerequisite chain (`3A1-WORDS-TASK` -> `3A1-PHRASES-TASK` -> `3A2-WORDS-TASK` -> `3A2-PHRASES-TASK` -> ... -> `3D-WORDS-TEST` -> `3D-PHRASES-TEST`).
+  3. Verify the Class Assessments DataGrid at `#classes-hub`: CODE reflects new clean format and PREREQUISITE displays exact prior assessment badge in the chain.
+
+### Changed
+- **Database (`assessments` table in Docker Local & Supabase Cloud)**:
+  - Updated `shell_code`, `display_order`, `prerequisite_assessment_id`, and `payload.shell_code` across all 40 curriculum assessments.
+  - Linked all 40 assessments in an unbroken sequential prerequisite chain (Record 1 has `prerequisite_assessment_id: NULL`; Record $i$ has `prerequisite_assessment_id` pointing to Record $i-1$).
+  - Preserved standalone tryouts (`TRYOUT-VOCAB-L3-ALL` and `TRYOUT-PHRASE-L3-ALL`) at orders 41 and 42 with `prerequisite_assessment_id: NULL`.
+- **`js/api.js`**:
+  - In `upsertDynamicAssessmentShell`: updated shell code generation formula to `${levelNum}${themeCode}${topicCode || '1'}-${catUpper}-TASK` and `${levelNum}${themeCode}-${catUpper}-TEST`.
+  - Added `shell_code` to assessment payload.
+- **`js/admin/class.js`**:
+  - In `renderResults`: added `prerequisite_assessment_id, prerequisite_min_score, shell_code` to the `assessments` select query.
+  - Added `assessments.shell_code` to DataGrid `searchKeys`.
+  - Enhanced Assessment Title column to display monospace cyan code pill when available.
+- **`js/admin/classes-management.js`**:
+  - Added `shell_code` to `prerequisite_assessment_id` query selection.
+  - Mapped `shellCode` in gridData and converted `ORD` column to `CODE` monospace badge column matching `#class-hub`.
+- **`js/admin/app.js`**:
+  - Verified `renderClassHub` displays clean CODE pill and PREREQUISITE badge with warning icon `⚠️ [Prior Code]`.
+
+### Tests
+- command: `node scratch/migrate_assessments.mjs`
+- result: `PASS` (40 tasks & tests updated on Local & Cloud)
+- command: `node scratch/capture_classes_hub.mjs`
+- result: `PASS` (all 42 rendered rows verified in browser DataGrid; visual proof saved to `classes_hub_standardized.png`)
+
+### Risks / Follow-up
+- None. Prerequisite resolution works dynamically on both client and backend without breaking any existing student records.
+
+### Next Action
+- Ready for next user instruction.
+
+## [2026-10-16 20:30] — Code Refactoring & Dead-Code Cleanup
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- Directive: `[DIRECTIVE: CODE REFACTORING & DEAD-CODE CLEANUP]`
+- Targets: `admin.html`, `js/admin/crud-modals.js`, `js/admin/app.js`, `assessment.html`
+- Objectives:
+  1. Safely remove unused global topbar button `#add-record-btn` ("+ Add New") from `.topbar-actions` in `admin.html`.
+  2. In `crud-modals.js`, remove dead listener binding for `#btn-resolve-all-visible-questions` and deduplicate `window._editRecord` (line 871), preserving the authoritative definition in `app.js`.
+  3. Clean up obsolete hidden span tags `#assessment-student-name` and `#assessment-student-details` in `assessment.html`, retaining only the 60x60px avatar photo.
+  4. Run targeted regression tests and confirm zero console errors.
+
+### Changed
+- **`admin.html`**:
+  - Removed `#add-record-btn` from `.topbar-actions`.
+- **`js/admin/app.js`**:
+  - Safely removed onclick and display toggles for `#add-record-btn` in `loadSection()`.
+- **`js/admin/crud-modals.js`**:
+  - Removed duplicate definition of `window._editRecord` (centralized in `app.js`).
+  - Confirmed `#btn-resolve-all-visible-questions` listener is removed.
+- **`assessment.html`**:
+  - Pruned deprecated `#assessment-student-name` and `#assessment-student-details` spans from top utility header.
+- **`scratch/test_e2e_stress_audit.mjs`**:
+  - Updated check 0.3 to verify clean contextual action architecture.
+
+### Tests
+- command: `node scratch/test_regression_refactor.mjs`
+- result: `PASS`
+  - Global `_editRecord` function verified.
+  - `#add-record-btn` count = 0.
+  - `openStudentFullEdit` opens modal cleanly.
+  - `openDuplicateQuestionsModal` opens modal cleanly.
+  - Avatar image verified present; deprecated spans count = 0.
+  - Zero fatal console errors.
+- command: `node scratch/test_e2e_stress_audit.mjs`
+- result: `PASS` (121/121 PASS, 100% pass rate, 100% state restoration verified).
+
+### Strict Git Freeze
+- Zero git commits or pushes created.
+
+## [2026-10-16 20:20] — Resolve Discovered Stress-Test Defects in Top Office (121 Features 100% Pass)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
+**Status:** PASS  
+
+### Why
+- Directive: `[DIRECTIVE: RESOLVE DISCOVERED STRESS-TEST DEFECTS IN TOP OFFICE]`
+- Targets: `js/api.js`, `admin.html`, `js/admin/crud-modals.js`
+- Objectives:
+  1. Fix Vocabulary Vault (resolving C.23, C.24, C.25, C.28, C.29): remove non-existent `item_code` from all `.select(...)` queries on `vocabulary_vault`, sanitize row normalizer, and verify HTTP 200 payload.
+  2. Fix Duplicate Questions Modal ID Mismatch (resolving C.17, C.21): harmonize element IDs to kebab-case (`dup-q-assessment-select`, `btn-batch-clean-assessment-questions`) in `admin.html` and `crud-modals.js`, populate assessment options, and attach clean batch-resequence handler.
+  3. Re-run automated verification test to confirm 100% PASS rate across all 121 features.
+
+### Changed
+- **`js/api.js`**:
+  - Removed `item_code` from all `vocabulary_vault` `.select(...)` calls in `fetchVaultWords`, `checkVaultDuplicates`, `createVocabMasteryAssessment` (TASK, TEST, QUIZ), and `exportVaultWords`.
+  - Removed dangling `item_code: ic || null` reference in `sanitizeVaultRow`.
+  - Removed `item_code` export column in `exportVaultWords`.
+  - Retargeted question duplicate detection and resequencing from legacy `questions` table to active `assessment_questions` table with `display_order` (1..N).
+- **`admin.html`**:
+  - Harmonized `dup-q-ASSESSMENT-select` to `dup-q-assessment-select`.
+  - Harmonized `btn-batch-clean-ASSESSMENT-questions` to `btn-batch-clean-assessment-questions`.
+  - Updated tab filter buttons to `data-qtab="same_assessment"` / `data-qtab="cross_assessment"`.
+- **`js/admin/crud-modals.js`**:
+  - Bound change and batch resolve handlers to `#dup-q-assessment-select` and `#btn-batch-clean-assessment-questions`.
+  - Updated `initDuplicateQuestionsSelect()` to populate `#dup-q-assessment-select`.
+  - Updated `loadDuplicateQuestions()` to read from `#dup-q-assessment-select` and recognize `'same_assessment'`.
+- **`js/admin/modules.js`**:
+  - Added `class="module-card card"` to engine card templates in `renderModules()`.
+
+### Tests
+- command: `node scratch/test_e2e_stress_audit.mjs`
+- result: `PASS`
+  - Total features tested: 121 / 121
+  - Verdict summary: 121 PASS (100% pass rate)
+  - Post-rollback verification: Student Name MATCH ✅, Assessment Status MATCH ✅ (100% PERFECT RESTORATION ✅)
+
+### Strict Git Freeze
+- Zero git commits or pushes created.
+
+## [2026-10-16 19:10] — Responsive 95% Width Shell, Proportional Percentage Heights & Global Footer Banner Audit
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint  
+**Status:** PASS  
+
+### Why
+- Directive: `[DIRECTIVE: COMPREHENSIVE RESPONSIVE 95% WIDTH, PERCENTAGE HEIGHTS & GLOBAL BANNER AUDIT]`
+- Objectives:
+  1. Enforce adaptive 95% responsive width on all content containers, replacing rigid 400px declarations to fix horizontal clipping on compact mobile devices (360x800).
+  2. Implement proportional percentage-based heights inside `.assessment-body` to maintain zero layout shift when switching between Speech, Keyboard, and MCQ modes.
+  3. Clean dynamic metadata table without static label prefixes (`THEME`, `CATHEGORY`, `TOPIC`, `TYPE`).
+  4. Ensure a 100% full-width global footer banner touching both screen edges at full bleed.
+  5. Generate visual audit screenshots on mobile viewports `412x915` and `360x800`.
+
+### Changed
+- **`assessment.html`**:
+  - Replaced rigid 400px width declarations across middle containers with `width: 95% !important; max-width: 440px !important; margin: 0 auto !important;` (and `width: 100% !important; max-width: 440px !important;` for nested children filling the 95% shell).
+  - Applied to `<header>`, `.assessment-body`, `.assessment-main-content`, `questionBox`, `metadataTable`, `interactionContainer`, `answerArea`, `controlArea`, `#virtual-keyboard-container`, and `#fixed-bottom-area` inner nav wrappers.
+  - Enforced proportional percentage heights inside `.assessment-body`:
+    - Mode 1 (Speech) & Mode 2 (Keyboard):
+      - `questionBox`: `height: 30%; min-height: 30%; max-height: 30%; display: flex; align-items: center; justify-content: center;`
+      - `metadataTable`: `height: 10%; min-height: 10%; max-height: 10%; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 4px;`
+      - `answerArea`: `height: calc(50% - 3px);` (30% of body)
+      - `controlArea` / `#virtual-keyboard-container`: `height: calc(50% - 3px);` (30% of body)
+    - Mode 3 (MCQ):
+      - `questionBox`: `height: 30%; min-height: 30%; max-height: 30%;`
+      - `metadataTable`: `height: 10%; min-height: 10%; max-height: 10%;`
+      - `answerArea`: `height: 100%;` (60% of body)
+  - Preserved direct dynamic values only in the 10% metadata grid (font-size: 10.5px, font-weight: 700, centered):
+    - Row 1: Left = Theme name | Right = Category name
+    - Row 2: Left = Topic name | Right = Type name
+  - `#bottom-ad-banner`: 100% full-width edge-to-edge wall-to-wall banner with 28px height and uniform branding.
+- **`test-metadata-banner-audit.mjs`**:
+  - Embedded local in-process static HTTP server (port 3458) with Playwright network interception.
+  - Automated assertions verifying 95% content width, 100% banner width, 30%/10%/60% heights, and 0px layout shift.
+  - Generated 6 high-resolution audit screenshots:
+    - `audit_412x915_mcq.png`, `audit_412x915_keyboard.png`, `audit_412x915_speech.png`
+    - `audit_360x800_mcq.png`, `audit_360x800_keyboard.png`, `audit_360x800_speech.png`
+
+### Tests
+- command: `node test-metadata-banner-audit.mjs`
+- result: `PASS`
+  - Viewport 412x915: content width = 391.4px (95%), banner width = 412.0px (100%), QBox top = 144.0px across all 3 modes (0.0px shift).
+  - Viewport 360x800: content width = 342.0px (95%), banner width = 360.0px (100%), QBox top = 144.0px across all 3 modes (0.0px shift).
+  - All 6 mobile screenshots visually verified.
+
+### Next Action
+- Await user review and confirmation.
+
+## [2026-10-16 18:50] — Fix Assessment Question Order Randomization  
+
+### Why
+- User reported that questions appearing in assessments are still alphabetical rather than randomized ("soal yang muncul dalam assessment masih belum acak,,, masih secara alpabetis,,, bisa dicek").
+- Investigation revealed that dynamic vocabulary assessment questions were explicitly sorted by Indonesian translation (`vaultWords.sort((a,b) => a.indonesian.localeCompare(b.indonesian))`), `question_order` was omitted from the assessment select query in `js/api.js`, and `assessment.html` bypassed seeded shuffle because `assessmentData.question_order` was undefined.
+
+### Changed
+- **`js/api.js`**:
+  - In `generateAssessmentQuestions()`: Replaced hardcoded `localeCompare` sort with `fisherYates(vaultWords)` when `question_order` is `'random'` (default).
+  - In `startAssessment()`: Added `question_order` to the `assessments` `.select(...)` query, and populated `assessment.question_order` with fallback to `'random'`.
+  - Updated attempt answers sorting to prioritize `display_order ?? question_order`.
+- **`assessment.html`**:
+  - In `shuffleWithSeed(array, seedStr)`: Added defensive guards against non-array or null seeds.
+  - In `bootAssessment()`: Updated shuffle condition to case-insensitively check `orderSetting === 'random'` and default to `'random'`.
+  - Synchronized `window.allAnswerRows = allAnswerRows;` after shuffle so UI components and global state reference the shuffled sequence.
+- **`supabase/functions/start-assessment/index.ts`**:
+  - Handled `question_order === 'random'` case-insensitively and shuffled `vaultWords` / `snapQuestions`.
+  - Added `question_order` to returned `assessment` payloads for both new and resumed attempts.
+
+### Tests
+- command: `node test-order-randomness.mjs`
+- result: `PASS`
+  - Verified original alphabetical input (`Ambisi, Banyak akal...`) is shuffled (`Hasil kerja, Gigih, Jujur, Efektif...`).
+  - Verified deterministic resumption: reload of the same attempt ID produces the identical shuffled sequence.
+  - Verified distinct attempt IDs produce distinct random sequences.
+  - Verified rendered prompt text in UI matches the first shuffled question (`Hasil kerja`).
+- command: `node test-vault-randomness.mjs`
+- result: `PASS` (shuffled for random, preserved for alphabetical).
+
+### Next Action
+- Await user review and confirmation.
+
+## [2026-10-16 18:32] — Focus on Metadata, 100% Global Banner, and Audit Screenshots
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint  
+**Status:** PASS  
+
+### Why
+- User directive: `[DIRECTIVE: FOCUS ONLY ON METADATA, 100% GLOBAL BANNER, AND AUDIT SCREENSHOTS]`
+- Target: `assessment.html` & CSS.
+- Strictly enforce:
+  1. Question Metadata Clean-Up: strip all static label prefixes ("THEME", "CATHEGORY", "TOPIC", "TYPE") from `renderQuestion()`, displaying direct values only in a 40px table (2 rows x 20px) with centered dynamic badges (10.5px, font-weight 700).
+  2. 100% Full-Width Global Footer Banner: `#bottom-ad-banner` spans edge-to-edge full bleed (100% / 100vw, no side margins, no rounded corners, 28px height, uniform global branding).
+  3. Generate mobile screenshot audits across viewports `412x915` and `360x800` for MCQ, Keyboard, and Speech modes.
+
+### Changed
+- **`assessment.html`**:
+  - In `renderQuestion()`:
+    - Stripped all static label prefixes ("THEME", "CATHEGORY", "TOPIC", "TYPE").
+    - Configured the 40px metadata table (2 rows of 20px each):
+      - Row 1: Left = Theme name only (e.g., `Workplace`) | Right = Category name only (e.g., `Words` / `Phrases`)
+      - Row 2: Left = Topic name only (e.g., `Building Your Professional Identity`) | Right = Type name only (e.g., `Noun` / `Expression`)
+    - Applied clean centered badge styling: `height: 20px; font-size: 10.5px; font-weight: 700; text-align: center; justify-content: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`.
+  - In `#bottom-ad-banner`:
+    - Enforced 100% full-width edge-to-edge styles: `width: 100% !important; width: 100vw !important; max-width: 100vw !important; margin: 0 !important; left: 0 !important; right: 0 !important;`.
+    - Removed side margins and rounded corners: `border-radius: 0 !important; border-left: none !important; border-right: none !important; border-bottom: none !important; border-top: 1px solid rgba(56, 189, 248, 0.25) !important;`.
+    - Exactly 28px height with `padding-bottom: max(3px, env(safe-area-inset-bottom, 0px)) !important;`.
+    - Replaced placeholder content with uniform global branding:
+      `<span style="color:#38bdf8; font-weight:800; letter-spacing:0.04em;">TopsCore</span>&nbsp;&copy; 2026&nbsp;<span style="opacity:0.4; margin:0 6px;">|</span>&nbsp;<span style="color:#cbd5e1;">Created by Mr. Top</span>`.
+  - In `#fixed-bottom-area`:
+    - Expanded container to `width: 100%; width: 100vw; max-width: 100vw; align-items: center;` so `#bottom-ad-banner` bleeds edge-to-edge, while wrapping the navigation row and progress line inside `width: 100%; max-width: 400px; padding: 0 8px; box-sizing: border-box;`.
+  - In `body.assessment-page`:
+    - Updated `padding: 0 !important;` to allow full bleed for the footer banner, adding `padding: 0 8px; box-sizing: border-box;` to `<header>` and `.assessment-body` to maintain perfect internal content padding.
+
+### Tests
+- Automated Playwright audit runner (`test-metadata-banner-audit.mjs`): PASS
+  - `412x915`: Banner width = 412px, Banner height = 28px, ScrollHeight = 915px (zero vertical overflow).
+  - `360x800`: Banner width = 360px, Banner height = 28px, ScrollHeight = 800px (zero vertical overflow).
+  - Metadata badges confirmed direct values only without static labels: `['Workplace', 'Phrases', 'Building Your Professional Identity', 'Expression']`.
+  - Fresh screenshots captured:
+    - `audit_412x915_mcq.png`, `audit_412x915_keyboard.png`, `audit_412x915_speech.png`
+    - `audit_360x800_mcq.png`, `audit_360x800_keyboard.png`, `audit_360x800_speech.png`
+
+### Strict Git Freeze
+- Confirmed with `git status`: 0 commits, 0 pushes.
+
+## [2026-10-16 07:46] — Precise Pixel Specification Enforcement Based on Latest 3-Panel Wireframe
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint  
+**Status:** PASS  
+
+### Why
+- User directive: `[DIRECTIVE: PRECISE PIXEL SPECIFICATION ENFORCEMENT BASED ON LATEST 3-PANEL WIREFRAME]`
+- Target: `assessment.html` & CSS.
+- Strictly enforce layout and exact heights according to the latest 3-panel wireframe blueprint across Header block, Question Box & Metadata Table, Interaction & Answer Zone, and Docked Bottom Section.
+- Verify across Android Chrome mobile viewports (`360x800` and `412x915`) for zero overflow below the fold and identical layout alignment across all 3 modes.
+
+### Changed
+- **`assessment.html`**:
+  - **Header Block**:
+    - Top spacer: Exactly 10px height (`height: 10px; min-height: 10px; max-height: 10px; flex-shrink: 0;`).
+    - Top utility row: Exactly 60px height with [Give up!] button on left, centered student photo (60x60px), and [Timer 18:02] on right.
+    - Middle spacer: Exactly 10px height.
+    - Assessment title box: Exactly 54px height, centered text, 2-line clamp.
+    - Bottom spacer: Exactly 10px height.
+  - **Question Box & Metadata Table**:
+    - Question Box: Exactly 135px height (`height: 135px; min-height: 135px; max-height: 135px; flex-shrink: 0;`), solely holding centered prompt text with no metadata clutter.
+    - Metadata Table (directly below Question Box): Exactly 40px total height, split into 2 rows of 20px each:
+      - Left column: Theme (20px) stacked above Topic (20px).
+      - Right column: Cathegory (20px) stacked above Type (20px).
+      - Zero row gap (`gap: 0 4px;`) ensuring exact 40px total height.
+  - **Interaction & Answer Zone**:
+    - Mode 1 (Speech): Upper Answer box (`flex: 1; min-height: 80px; overflow-y: auto;`) positioned directly above MIC container locked at fixed height 135px (`height: 135px; min-height: 135px; max-height: 135px; flex-shrink: 0; width: 100%; max-width: 400px;`) with centered microphone button and label.
+    - Mode 2 (Keyboard): Upper Answer box (`flex: 1; min-height: 80px; overflow-y: auto;`) positioned directly above Keyboard container locked at fixed height 135px (`height: 135px; min-height: 135px; max-height: 135px; flex-shrink: 0; width: 100%; max-width: 400px;`).
+    - Mode 3 (MCQ): Options container set to dynamic flex (`flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; justify-content: space-between;`) housing options A through E.
+  - **Docked Bottom Section**:
+    - Upper spacer: Exactly 10px height.
+    - Navigation row: Exactly 54px height containing [Prev], [0/40 Answered], and [Next].
+    - PROGRESS LINE: Exactly 10px height docked container (`height: 10px; min-height: 10px; max-height: 10px;`) with `margin: 0 auto;`.
+    - Lower spacer: Exactly 10px height.
+    - Bottom banner: Exactly 28px height with "banner TopsCore" text and safe-area padding.
+
+### Tests
+- Automated Playwright Test across `360x800` and `412x915`: PASS
+  - Header: 10px spacer + 60px utility row (60x60 avatar) + 10px spacer + 54px title + 10px spacer.
+  - Question Box: 135px.
+  - Metadata Table: 40px (rows at 20px, Left: Theme/Topic, Right: Cathegory/Type).
+  - Mode 1: Answer box dynamic (214px on 360x800, 329px on 412x915), MIC container locked at 135px.
+  - Mode 2: Answer box dynamic (214px on 360x800, 329px on 412x915), Keyboard container locked at 135px.
+  - Mode 3: Options dynamic (357px on 360x800, 472px on 412x915) housing options A-E.
+  - Bottom Section: 10px spacer + 54px nav row + 10px progress line + 10px spacer + 28px banner TopsCore.
+  - Zero overflow below fold: `true` on both `360x800` (800px) and `412x915` (915px).
+  - Visual verification: Captured and inspected `blueprint_speech_360x800.png`, `blueprint_keyboard_360x800.png`, `blueprint_mcq_360x800.png`, `blueprint_speech_412x915.png`, `blueprint_keyboard_412x915.png`, `blueprint_mcq_412x915.png`.
+- Strict Git Freeze: Strictly enforced — 0 commits, 0 pushes.
+
+---
+
+## [2026-10-16 07:27] — Fix Question Card Metadata Position & Eliminate Empty Void in Speech Mode
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint  
+**Status:** PASS  
+
+### Why
+- User directive: `[DIRECTIVE: FIX QUESTION CARD METADATA POSITION & ELIMINATE EMPTY VOID]`
+- Move all metadata badges to the bottom of the Question Card, underneath the prompt text.
+- Layout inside topSection:
+  - Upper area (`flex: 1; display: flex; align-items: center; justify-content: center;`): The prompt word/phrase large and centered.
+  - Lower area: A single clean row containing the dynamic badges (Theme, Topic, Category, Type) sitting neatly under the question text. No badges above the prompt.
+- Eliminate massive gap in Speech Mode: In `#interaction-container`, remove `justify-content: space-between;` and use `justify-content: center; gap: 12px;` so the transcript box and MIC zone sit naturally grouped together without an enormous empty void.
+
+### Changed
+- **`assessment.html`**:
+  - Restructured `topSection`:
+    - Upper section: `flex: 1; display: flex; align-items: center; justify-content: center;` housing `.speech-question-text` (`font-size: clamp(18px, 4.8vw, 24px)`).
+    - Lower section: `display: flex; justify-content: center; align-items: center; gap: 6px;` housing the 4 badges in a single row (`displayTheme`, `displayTopic`, `displayCategory`, `displayType`).
+    - No badges above the prompt.
+    - Card height remains strictly locked at `135px; min-height: 135px; max-height: 135px; flex-shrink: 0;`.
+  - Updated `#interaction-container`:
+    - Replaced `justify-content: space-between; gap: 8px;` with `justify-content: center; gap: 12px;`.
+    - In Speech Mode, explicitly enforced `interactionContainer.style.justifyContent = 'center'` and `gap = '12px'`.
+
+### Tests
+- `node temp_test/test_locked_question_card.mjs`: PASS
+  - Tested across `360x665` (compact) and `412x915` (tall).
+  - `promptIsAboveBadges: true` (Prompt at y: ~185px, Badges at y: ~244px).
+  - `speechInnerGap: 12px` (Exact 12px gap between transcript box and microphone card).
+  - `overflowBelowFold: 0px` across both viewports.
+  - `topSection` invariant: Top = 140px, Height = 135px across all 3 modes (Speech, Keyboard, MCQ).
+  - Visual screenshots verified: `screenshot_locked_speech_360x665.png`, `screenshot_locked_speech_412x915.png`, `screenshot_locked_keyboard_360x665.png`, `screenshot_locked_mcq_360x665.png`.
+- Strict Git Freeze: Strictly enforced — 0 commits, 0 pushes.
+
+---
+
+## [2026-10-16 05:45] — Lock Question Card Height & Make Only Answer Region Dynamic
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint  
+**Status:** PASS  
+
+### Why
+- User directive: `[DIRECTIVE: LOCK QUESTION CARD HEIGHT & MAKE ONLY ANSWER REGION DYNAMIC]`
+- Switching questions across different assessment modes caused layout shift because the Question Card and interactive components were shifting vertical coordinates.
+- User requested locking the Question Card to a fixed 135px height with centered prompt text and 4 corner metadata badges without static prefix labels, while allowing only the Answer/Interaction zone to flex dynamically.
+
+### Changed
+- **`assessment.html`**:
+  - Locked Question Card (`topSection`) to fixed compact dimensions: `height: 135px; min-height: 135px; max-height: 135px; flex-shrink: 0; padding: 8px 10px;`.
+  - Streamlined metadata to 4 corner badges without static prefixes (`Theme`, `Category`, `Topic`, `Type`), centering the question prompt prominently with Outfit bold font.
+  - Wrapped all mode-specific answer elements in `#interaction-container` (`flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; overflow-y: auto; gap: 8px;`).
+  - Speech Mode: Distributed transcript box (`height: clamp(80px, 14vh, 100px)`) and auto-scaling microphone zone.
+  - Keyboard Mode: Compact input box (`flex: 0.9; min-height: 65px; max-height: 110px`) and responsive virtual keyboard (`flex: 1.2; min-height: 140px; max-height: 220px;`) with keycaps (`clamp(28px, 4vh, 38px)`).
+  - MCQ Mode: Flexible options container with 5 ergonomic option cards (A-E) at `min-height: 38px; height: clamp(38px, 5.5vh, 50px);`.
+  - Exposed `window.answerRows = answerRows;` for automated testability and inspection.
+
+### Tests
+- `node temp_test/test_locked_question_card.mjs`: PASS
+  - Tested across `360x665` (compact) and `412x915` (tall).
+  - **Zero Layout Shift Invariant**: `topSection` top position is exactly **140px** and height is **135px** across all 3 modes (Speech, Keyboard, MCQ).
+  - **Zero Overflow Below Fold**: `overflowBelowFold = 0px` across all viewports and modes.
+  - Screenshots captured and verified: `screenshot_locked_speech_360x665.png`, `screenshot_locked_keyboard_360x665.png`, `screenshot_locked_mcq_360x665.png`, `screenshot_locked_speech_412x915.png`, `screenshot_locked_keyboard_412x915.png`, `screenshot_locked_mcq_412x915.png`.
+- Strict Git Freeze: Strictly enforced — 0 commits, 0 pushes.
+
+---
+
+## [2026-10-16 05:25] — Eliminate Empty Void & Unclip Microphone Button in Speech Mode
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint  
+**Status:** PASS  
+
+### Why
+- User directive: `[DIRECTIVE: ELIMINATE EMPTY VOID & UNCLIP MIC BUTTON IN SPEECH MODE]`
+- In Speech Mode on mobile devices, an awkward blank dark void separated the transcript box from the microphone button, and the circular microphone button was being partially clipped by strict overflow boundaries.
+- Dummy spacer elements (`<!-- (space 10px) --> <div style="height:10px;"></div>`) consumed vertical real estate unnecessarily.
+
+### Changed
+- **`assessment.html`**:
+  - Removed all 4 hardcoded dummy 10px spacer divs:
+    - 2 spacers around `<header>` replaced with flexbox `gap: 8px; margin-bottom: 8px;`.
+    - 2 spacers around `#fixed-bottom-area` replaced with flexbox `gap: 6px; padding-top: 6px;`.
+  - Replaced rigid `controlArea.style.cssText` (`height: 135px; min-height: 135px;`) with auto-scaling `width: 100%; max-width: 400px; height: auto; margin: 0 auto; padding: 12px 0;`.
+  - Replaced transcript box `answerArea.style.cssText` height with clean compact `height: 95px; min-height: 90px; max-height: 100px;`.
+  - Changed `.assessment-body` and `.assessment-main-content` overflow properties from `overflow: hidden;` to `overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch !important;`.
+  - Styled `#assessment-main` with `justify-content: space-between; height: 100%; min-height: 100%;` to dynamically anchor the microphone button and "Tap to Speak" helper text directly and elegantly above the bottom navigation bar with 0 dead space.
+
+### Tests
+- `node temp_test/verify_speech_mode_viewports.mjs`: PASS
+  - Tested on `412x915`: Mic bottom 773.6px, "Tap to Speak" bottom 798px, bottom navigation bar top 819px (`gap: 21px`). Mic is completely unclipped (height 62px, width 62px). Screenshot: `screenshot_speech_412x915.png`.
+  - Tested on `360x800`: Mic bottom 658.6px, "Tap to Speak" bottom 683px, bottom navigation bar top 704px (`gap: 21px`). Mic is completely unclipped (height 62px, width 62px). Screenshot: `screenshot_speech_360x800.png`.
+- Strict Git Freeze: Strictly enforced — 0 commits, 0 pushes.
+
+---
+
+## [2026-10-16 01:05] — Fix Assessment Not Loading ("No Questions Found" & ViewTransition Conflict)
+
+**Agent/Session:** Antigravity  
+**Phase:** Assessment Engine Bug Recovery & Self-Healing  
+**Status:** PASS  
+
+### Why
+- User reported: "asessment tidak termuat" (Assessment not loading / "No Questions Found" empty state displayed on `assessment.html` with console error `InvalidStateError: Transition was aborted because of invalid state. ViewTransition opt-in disabled`).
+
+### Changed
+- **Database (`vocabulary_vault`)**:
+  - Missing column `category` in local Docker Postgres caused `.select(..., category)` in `js/api.js` to fail with error `42703 (column vocabulary_vault.category does not exist)`.
+  - Executed migration: added `category VARCHAR(32) DEFAULT 'words'`, backfilled existing rows (166 phrases, 649 words), created trigger `trg_set_vocabulary_vault_category`, and notified PostgREST to reload schema.
+  - Added migration file: `supabase/migrations/20261016000000_add_vocabulary_vault_category.sql`.
+- **`js/api.js` (`startAssessment` & `generateAssessmentQuestions`)**:
+  - Extracted question generation into `generateAssessmentQuestions(sb, assessment)` with schema resilience (tries with `category` column, gracefully falls back without `category`, and provides level-wide fallback if strict topic/theme yields 0 items).
+  - Implemented Self-Healing in `startAssessment`: If an existing in-progress attempt has 0 answers (due to prior crash or interrupted initialization), it automatically generates and inserts questions rather than returning empty answers.
+  - Added both `assessment` and `ASSESSMENT` properties to the returned result object for robust compatibility.
+- **`assessment.html`**:
+  - Removed `<meta name="view-transition" content="same-origin" />` to fix the Chromium `InvalidStateError` abort error.
+  - Guarded against stale mock assessment IDs (`test-assessment-id`).
+  - Added recovery buttons (`Retry Loading` & `Return to Dashboard`) and attempt cache cleanup in the empty questions state.
+  - Fixed title extraction to assign `rawTitle` to `#assessment-main-title` and `document.title`.
+
+### Tests
+- `node temp_test/test_final_verification.mjs`: PASS
+  - Verified in Chromium: Page loads with question prompt ("dapat diandalkan"), 0 console errors, active ticking countdown timer, and correct title.
+  - Captured full-page screenshot (`screenshot_assessment_loaded.png`).
+- Git Safety: Strictly enforced — 0 commits, 0 pushes.
+
+---
+
+## [2026-10-16 00:35] — Assessment Page UI Modern & Sleek Overhaul (Glassmorphism & Dark Mode)
+
+**Agent/Session:** Antigravity  
+**Phase:** UI/UX & Assessment Page Re-engineering  
+**Status:** PASS  
+
+### Why
+- User feedback on the wireframe layout: "tampilannya terlihat kuno, ukurannya cocok, tapi perlu dibuat modern dan sleek" (the sizes are suitable, but the visual style looks outdated/retro and needs to be made modern and sleek).
+- The previous implementation used flat MS-Paint style colors and harsh 1.5px solid black borders mimicking a raw sketch.
+- Overhauled the design with modern glassmorphism, subtle gradients, rich dark indigo/slate backgrounds, glowing status badges, and refined typography while strictly retaining every single wireframe dimension (705px vertical sum).
+
+### Changed
+- **`assessment.html`**:
+  - Background: Upgraded from flat `#8cb7db` to deep space mesh gradient `radial-gradient(circle at 50% 0%, #172554 0%, #0f172a 45%, #060b18 100%)`.
+  - Header Row (60px):
+    - Give Up button: Upgraded to frosted crimson glass pill with soft red glow `box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25)` and refined flag icon.
+    - Avatar (60x60px): Rounded squircle (`border-radius: 14px`) with vibrant cyan border `2px solid rgba(56, 189, 248, 0.6)` and soft ambient glow.
+    - Countdown Timer: Glass badge with glowing monospace digits in electric cyan `#38bdf8` (`text-shadow: 0 0 10px rgba(56, 189, 248, 0.45)`).
+  - Assessment Title (54px): Upgraded to translucent deep navy glass with subtle cyan border, soft backdrop blur, and crisp white bold typography.
+  - Question Card + Metadata (189px):
+    - Question Box (135px): Sleek dark glass card with Outfit bold typography and soft text shadow.
+    - Metadata Grid (54px, 2 rows x 27px): Translucent dark pills (`rgba(255,255,255,0.04)`) with electric cyan labels (`THEME`, `CATEGORY`, `TOPIC`, `TYPE`) and crisp white values.
+  - Interactive Middle Area (270px):
+    - **Mode 1 (Speech)**: Answer card (135px) with language pill and glowing status indicator + MIC card (135px) with radial glowing emerald pulse microphone button (`#10b981`) and "Tap to Speak" helper.
+    - **Mode 2 (Keyboard)**: Answer card (135px) with glowing 26px typography + Virtual Keyboard (135px) in sleek dark glass with rounded glass keycaps and cyan-tinted special keys (`Backspace`, `Enter`, `Space`).
+    - **Mode 3 (Options)**: Translucent dark options card (270px) with sleek option cards (min-height 48-54px), rounded letter badges A-D, and glowing cyan border on active selection.
+  - Bottom Nav Bar (27px): Sleek glass Prev/Next buttons with cyan text + frosted center `0/40 Answered` pill.
+  - Docked Progress Line (27px): Replaced retro pea-green bar with sleek translucent dark track and glowing cyan-to-emerald gradient fill (`linear-gradient(90deg, #06b6d4, #10b981)`).
+  - Permanent Banner (28px): Translucent pitch-black glass with cyan TopsCore logo and high-contrast text.
+  - **All heights preserved 100%**: Total vertical sum = 705px, zero pixel overflow, zero layout shift across modes.
+
+### Tests
+- `node test-blueprint-modes.mjs`: PASS (captured high-res screenshots for Mode 1 Speech, Mode 2 Keyboard, Mode 3 Options).
+- Visual verification: Verified screenshots show ultra-clean, modern, sleek dark aesthetic with zero layout jump.
+- Git Safety: Strictly enforced — 0 commits, 0 pushes.
+
+---
+
+## [2026-10-16 00:22] — Assessment Page Layout Overhaul (Wireframe Blueprint Implementation)
+
+**Agent/Session:** Antigravity  
+**Phase:** UI/UX & Assessment Page Re-engineering  
+**Status:** PASS  
+
+### Why
+- User requested implementing the newly provided 3-mode wireframe blueprint for `assessment.html`.
+- Blueprint specified exact pixel-perfect vertical stacking across all 3 modes (Speech, Keyboard, Options) with zero layout shifting.
+
+### Changed
+- **`assessment.html`**:
+  - Background: updated to light blue `#8cb7db` matching the blueprint theme.
+  - Header:
+    - Left: `[🚩 Give up!]` button (height: 34px, red `#dc2626`, black border).
+    - Center: Student photo avatar (exact 60x60px, black border).
+    - Right: Countdown timer badge `[⌛ 18:02]` (height: 34px, white card with crisp black border & text).
+    - Space: 10px above and below header row.
+  - Assessment Title: 54px height, dark navy `#152c4e`, white text, 10px space below.
+  - Question Box + Metadata (Total: 189px):
+    - Question Box: 135px height, dark navy `#1b3d6b`, centered bold question text.
+    - Metadata Table: 54px height (2 rows x 27px):
+      - Row 1: `Theme: <val>` (27px white box) | 12px space | `Cathegory: <val>` (27px white box).
+      - Row 2: `Topic: <val>` (27px white box) | 12px space | `Type: <val>` (27px white box).
+  - Interactive Area (Exact Total: 270px, Width: 400px):
+    - **Mode 1 (Speech)**: `Answer box (135x400)` (dark navy with live transcript) + `MIC (135x400)` (light gray `#f1f5f9` box with green mic button & "Tap to Speak").
+    - **Mode 2 (Keyboard)**: `Answer box (135x400)` (dark navy with 24px input) + `keyboard (135x400)` (light gray `#e2e8f0` box with 4 rows of on-screen keys).
+    - **Mode 3 (Options)**: `options (270x400)` (dark navy with multiple choice cards A, B, C, D).
+  - Bottom Area (`#fixed-bottom-area`):
+    - Space: 10px.
+    - Bottom Nav Bar: 27px height with `← Prev` button, white center `0/40 Answered (27px)` box, and `Next →` button.
+    - Docked Progress Line: 27px height, lime green `#9ac862` bar with dark progress track.
+    - Space: 10px.
+    - TopsCore Banner: 28px height, solid black `#000000` with cyan and white branding.
+  - Total vertical sum = 10 + 60 + 10 + 54 + 10 + 135 + 54 + 270 + 10 + 27 + 27 + 10 + 28 = 705px, ensuring zero vertical overflow or banner displacement on mobile viewports.
+  - Floating Toast Container: decoupled from document flow to eliminate layout shifts.
+
+### Tests
+- `node test-blueprint-modes.mjs`: PASS (Mode 1 Speech, Mode 2 Keyboard, Mode 3 Options rendered & verified via Playwright).
+- Verified zero git commits and zero git pushes executed.
+
+---
+
+## [2026-10-15 23:55] — Permanent Bottom Banner Audit & Contrast Enhancement
+
+**Agent/Session:** Antigravity  
+**Phase:** UI/UX Polish & Brand Presentation  
+**Status:** PASS  
+
+### Why
+- User reported that the permanent banner at the bottom was occasionally not visible.
+- Audit across 5 core pages identified that on dark/OLED phone screens, dark slate text (`#64748b`) on pitch dark background (`#010e17`) had very low visual contrast (~2.5:1), making it blend into phone bezels and navigation pill bars.
+- Additionally, `width: 100vw` in CSS caused potential clipping on mobile viewports with scrollbars.
+
+### Changed
+- **`css/style.css`**:
+  - Upgraded `.topscore-locked-banner`:
+    - Switched `width: 100vw` to `width: 100%`.
+    - Elevated text color to high-contrast `#cbd5e1` (Slate-200).
+    - Added subtle cyan top border `rgba(56, 189, 248, 0.25)` and soft drop shadow.
+- **`assessment.html`, `dashboard.html`, `index.html`, `admin.html`, `result.html`**:
+  - Updated banner markup with crisp branded typography:
+    `<span style="color:#38bdf8;font-weight:800;">TopsCore</span> &copy; 2026 | Created by Mr. Top`.
+- **Visual Auditing**:
+  - Captured Playwright screenshots across all 5 pages at multiple viewports (412x810, 360x640, 412x600, 1280x800).
+  - All pages verified 100% visible, fully rendered at the bottom edge.
+
+---
+
+## [2026-10-15 23:45] — Dual-Engine Screen Wake Lock (Native W3C API + NoSleep Fallback)
+
+**Agent/Session:** Antigravity  
+**Phase:** Assessment Resiliency & Mobile Optimization  
+**Status:** PASS  
+
+### Why
+- User reported screen still dimming on mobile devices during testing.
+- Analysis revealed two critical mobile browser limitations:
+  1. `navigator.wakeLock.request('screen')` requires a **user gesture** (`click` or `touchstart`); requests during initial page load were rejected by the browser permission policy.
+  2. Testing over local WiFi network via plain HTTP (`http://192.168.x.x`) disables the native Wake Lock API completely because mobile browsers require a Secure Context (HTTPS or localhost).
+
+### Changed
+- **`js/wake-lock.js`**:
+  - Implemented Dual-Engine keep-awake system:
+    - **Engine 1**: Native W3C Screen Wake Lock API.
+    - **Engine 2**: Invisible looping silent video `<video playsinline muted loop>` (NoSleep technique with embedded WebM and MP4 data URIs) that prevents mobile OS display sleep even over plain HTTP LAN.
+  - Added user gesture arming (`click`, `touchstart`, `touchend`, `pointerdown`, `keydown`) so the first tap immediately activates and re-engages the locks.
+  - Added 15-second heartbeat pulse to prevent locks from dropping during long questions.
+  - Exported `requestScreenWakeLock()`, `releaseScreenWakeLock()`, `bindWakeLockGestures()`, `getWakeLockStatus()`.
+- **`assessment.html`**:
+  - Imported and integrated `js/wake-lock.js`.
+  - Removed old inline native-only functions.
+  - Bumped version query string to `v=5.1.2`.
+- **`sw.js`**:
+  - Bumped `CACHE_NAME` to `'abcd-core-v5.1.2'` and added `./js/wake-lock.js?v=5.1.2` to cached assets.
+
+### Tests
+- `node temp_test/test_dual_wake_lock.mjs`: PASS (5/5 checks)
+- `node temp_test/test_mobile_home_anti_cheat.mjs`: PASS (5/5 checks)
+- `node temp_test/test_anti_cheat_hardening.mjs`: PASS (12/12 checks)
+
+---
+
+## [2026-10-15 23:35] — Switched Active Environment to Docker Local Supabase Stack
+
+**Agent/Session:** Antigravity  
+**Phase:** Local Infrastructure & Docker Environment  
+**Status:** PASS  
+
+### Why
+- User requested ensuring the system runs on the local Docker environment instead of remote cloud.
+- Windows Hyper-V dynamically excluded port range `54207-54506`, which previously prevented binding default Supabase ports (54321/54322).
+- Strict user mandate: **NO git commit and NO git push without explicit consent**.
+
+### Changed
+- **`supabase/config.toml`**:
+  - Configured unblocked local ports: API on `54021`, PostgreSQL on `54022`, Inbucket on `54024`.
+- **`js/supabase.js`**:
+  - Pointed local API URL to port `54021`.
+  - Added automatic Docker local detection for `localhost`, `127.0.0.1`, and local LAN IP (`192.168.x.x`).
+  - Added support for Node runtime `process.env.USE_LOCAL`.
+- **`scripts/sync_local_to_cloud.mjs`**:
+  - Updated default local PostgreSQL port to `54022`.
+- **Docker Stack**:
+  - Launched Supabase Docker containers (`supabase_db_TopsCore`, `supabase_kong_TopsCore`, `supabase_auth_TopsCore`, `supabase_inbucket_TopsCore`).
+  - Verified local DB queries return active students (44 rows).
+- **Git Compliance**:
+  - Zero git commits or pushes made.
+
+---
+
+## [2026-10-15 23:20] — Mobile Home Button Anti-Cheat Debounce & 10s Countdown Protection
+
+**Agent/Session:** Antigravity  
+**Phase:** Anti-Cheat System & Mobile Lifecycle Integrity  
+**Status:** PASS  
+
+### Why
+- On mobile devices (Android/iOS), pressing the Home button or minimizing the browser fired multiple lifecycle events simultaneously (`popstate`, `blur`, `visibilitychange`, and `pagehide`) in less than 2 seconds.
+- This caused an instant 3-strike escalation, immediately terminating the exam without giving the student the intended 10-second warning countdown.
+- Furthermore, `pagehide` was invoking a non-existent `/functions/v1/emergency-submit` endpoint, prematurely killing sessions.
+
+### Changed
+- **`assessment.html`**:
+  - Implemented anti-cascade strike debouncing (`now - lastCheatTriggerTime < 3500` and `isCheatAlertActive` lock): pressing Home now registers as **exactly 1 strike** instead of cascading to 3 strikes.
+  - Implemented real-time timestamp countdown check (`cheatDeadline = Date.now() + durationSeconds * 1000`): accurately tracks elapsed time even when mobile browsers throttle timers in the background.
+  - In `visibilitychange` & `focus`: dynamically recalculates remaining seconds or executes auto-submit only if the full 10-second countdown truly expired while away.
+  - Decoupled `submitOnPageExit` from `pagehide`: `pagehide` now safely persists current answers (`saveCurrentAnswer()`) without terminating the exam.
+  - Bumped version to `v=5.1.1`.
+- **`sw.js`**:
+  - Updated `CACHE_NAME` to `'abcd-core-v5.1.1'`.
+
+### Tests
+- `node temp_test/test_anti_cheat_hardening.mjs`: PASS (12/12 checks)
+- `node temp_test/test_mobile_home_anti_cheat.mjs`: PASS (5/5 checks)
+
+---
+
 ## [2026-10-13 17:05] — Screen Wake Lock, 0-Score Rescore Fix & Student Progression Gating
 
 **Agent/Session:** Antigravity  

@@ -1,10 +1,14 @@
 export class DataGrid {
-  constructor({ container, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false, sortComparator = null, initialSortKey = null, initialSortAsc = true }) {
+  constructor({ container, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false, sortComparator = null, initialSortKey = null, initialSortAsc = true, superHeaders = null, summaryRow = null, tableLayout = null }) {
     this.container = typeof container === 'string' ? document.getElementById(container) : container;
     if (!this.container) {
       console.warn('[DataGrid] Container element not found or not in DOM:', container);
       return;
     }
+    if (this.container._datagridInstance && typeof this.container._datagridInstance.destroy === 'function') {
+      this.container._datagridInstance.destroy();
+    }
+    this.container._datagridInstance = this;
     this.rawData = data;
     this.filteredData = [...data];
     // Add default hidden property if not present
@@ -22,6 +26,9 @@ export class DataGrid {
     this.onRowClick = onRowClick;
     this.stickyActionCol = stickyActionCol;
     this.sortComparator = sortComparator;
+    this.superHeaders = superHeaders;
+    this.summaryRow = summaryRow;
+    this.tableLayout = tableLayout;
     
     if (this.sortKey) this.sortData();
     this.init();
@@ -38,7 +45,7 @@ export class DataGrid {
           </div>
           <div class="datagrid-columns-dropdown" style="position:relative;">
             <button class="btn btn-secondary btn-sm datagrid-cols-btn" style="height:100%;">Columns</button>
-            <div class="datagrid-cols-menu hidden" style="position:absolute; top:100%; left:0; background:var(--clr-bg-2); border:1px solid var(--clr-border); padding:0.5rem; border-radius:8px; z-index:100; min-width:150px; box-shadow:0 10px 20px rgba(0,0,0,0.3);">
+            <div class="datagrid-cols-menu hidden" style="position:absolute; top:100%; left:0; background:var(--clr-bg-2); border:1px solid var(--clr-border); padding:0.5rem; border-radius:8px; z-index:100; min-width:180px; max-height:320px; overflow-y:auto; box-shadow:0 10px 20px rgba(0,0,0,0.3);">
             </div>
           </div>
         </div>
@@ -51,19 +58,23 @@ export class DataGrid {
           ) : ''}
         </div>
       </div>
-      <div class="table-wrap" style="overflow-x:auto;">
-        <table class="datagrid-table" style="width:100%; position:relative;">
+      <div class="table-wrap" style="${this.tableLayout === 'fixed' ? 'overflow-x:hidden;' : 'overflow-x:auto;'}">
+        <table class="datagrid-table" style="width:100%; position:relative; ${this.tableLayout ? `table-layout:${this.tableLayout};` : ''}">
+          <colgroup class="datagrid-colgroup"></colgroup>
           <thead class="datagrid-thead">
           </thead>
           <tbody class="datagrid-tbody"></tbody>
+          <tfoot class="datagrid-tfoot"></tfoot>
         </table>
       </div>
       <div class="datagrid-pagination" style="display:flex; justify-content:center; align-items:center; gap:0.5rem; margin-top:1rem;">
       </div>
     `;
 
+    this.colgroup = this.container.querySelector('.datagrid-colgroup');
     this.thead = this.container.querySelector('.datagrid-thead');
     this.tbody = this.container.querySelector('.datagrid-tbody');
+    this.tfoot = this.container.querySelector('.datagrid-tfoot');
     this.searchInput = this.container.querySelector('.datagrid-search-input');
     this.searchClearBtn = this.container.querySelector('.datagrid-search-clear');
     this.paginationContainer = this.container.querySelector('.datagrid-pagination');
@@ -95,6 +106,10 @@ export class DataGrid {
 
       // Quick keyboard shortcut: Ctrl+K or Cmd+K focuses search
       this._keyHandler = (e) => {
+        if (!document.body.contains(this.container)) {
+          this.destroy();
+          return;
+        }
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
           if (document.body.contains(this.searchInput)) {
             e.preventDefault();
@@ -116,11 +131,17 @@ export class DataGrid {
     });
 
     // Hide menu when clicking outside
-    document.addEventListener('click', (e) => {
+    this._docClickHandler = (e) => {
+      if (!document.body.contains(this.container)) {
+        this.destroy();
+        return;
+      }
+      if (!this.colsBtn || !this.colsMenu) return;
       if (!this.colsBtn.contains(e.target) && !this.colsMenu.contains(e.target)) {
         this.colsMenu.classList.add('hidden');
       }
-    });
+    };
+    document.addEventListener('click', this._docClickHandler);
 
     if (this.bulkActions) {
       if (this.customBulkActions && this.customBulkActions.length > 0) {
@@ -169,6 +190,32 @@ export class DataGrid {
 
     // Render <thead>
     const visibleCols = this.columns.filter(c => !c.hidden);
+    if (this.colgroup) {
+      let colgroupHtml = '';
+      if (this.bulkActions) {
+        colgroupHtml += '<col style="width:40px;">';
+      }
+      visibleCols.forEach(col => {
+        colgroupHtml += `<col style="${col.width ? `width:${col.width};` : ''}">`;
+      });
+      this.colgroup.innerHTML = colgroupHtml;
+    }
+
+    let superHtml = '';
+    if (this.superHeaders && this.superHeaders.length > 0) {
+      superHtml = '<tr class="datagrid-super-header-row">';
+      if (this.bulkActions) {
+        superHtml += '<th style="background:var(--clr-bg-2);"></th>';
+      }
+      this.superHeaders.forEach(sh => {
+        const colSpanAttr = sh.colSpan ? ` colspan="${sh.colSpan}"` : '';
+        const cls = sh.className ? ` class="${sh.className}"` : '';
+        const st = sh.style ? ` style="${sh.style}"` : '';
+        superHtml += `<th${colSpanAttr}${cls}${st}>${sh.label}</th>`;
+      });
+      superHtml += '</tr>';
+    }
+
     let html = '<tr>';
     if (this.bulkActions) {
       html += `<th style="width:40px; text-align:center; position:sticky; left:0; z-index:10; background:var(--clr-bg-2);"><input type="checkbox" class="datagrid-select-all" /></th>`;
@@ -177,18 +224,22 @@ export class DataGrid {
     visibleCols.forEach((col, visibleIdx) => {
       const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
       const stickyStyle = isStickyRight ? 'position:sticky; right:0; z-index:10; background:var(--clr-bg-2);' : '';
+      const widthStyle = col.width ? `width:${col.width}; max-width:${col.width};` : '';
+      const customClass = col.className ? ` ${col.className}` : '';
+      const rawTitle = col.headerTitle || col.title;
+      const titleAttr = rawTitle ? ` title="${String(rawTitle).replace(/"/g, '&quot;')}"` : '';
       html += `
-        <th class="${col.align ? `text-${col.align}` : 'text-left'} ${col.sortable ? 'datagrid-sortable' : ''}" 
+        <th class="${col.align ? `text-${col.align}` : 'text-left'} ${col.sortable ? 'datagrid-sortable' : ''}${customClass}" 
             data-key="${col.key || ''}" 
             data-idx="${this.columns.indexOf(col)}"
-            draggable="true"
-            style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${col.width ? `width:${col.width};` : ''} ${stickyStyle}">
+            draggable="true"${titleAttr}
+            style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle}">
           ${col.label} ${col.sortable ? `<span class="sort-icon">${this.sortKey === col.key ? (this.sortAsc ? '↑' : '↓') : '⇅'}</span>` : ''}
         </th>
       `;
     });
     html += '</tr>';
-    this.thead.innerHTML = html;
+    this.thead.innerHTML = superHtml + html;
 
     // Attach Sorting
     this.thead.querySelectorAll('.datagrid-sortable').forEach(th => {
@@ -199,7 +250,8 @@ export class DataGrid {
           this.sortAsc = !this.sortAsc;
         } else {
           this.sortKey = key;
-          this.sortAsc = true;
+          const descFirstKeys = ['totalEarnedScore', 'PTS', 'progressPct', 'PROG', 'grade', 'GRD', 'SCORE', 'averageScorePct'];
+          this.sortAsc = descFirstKeys.includes(key) ? false : true;
         }
         this.sortData();
         this.renderHeaders();
@@ -376,6 +428,11 @@ export class DataGrid {
       visibleCols.forEach((col, visibleIdx) => {
         const td = document.createElement('td');
         if (col.align) td.classList.add(`text-${col.align}`);
+        if (col.className) td.className += ' ' + col.className;
+        if (col.width) {
+          td.style.width = col.width;
+          td.style.maxWidth = col.width;
+        }
         
         const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
         if (isStickyRight) {
@@ -432,6 +489,16 @@ export class DataGrid {
       this.selectAllCb.checked = pageData.length > 0 && pageData.every(r => this.selectedIds.has(String(r.id)));
     }
 
+    if (this.summaryRow && this.tfoot) {
+      if (typeof this.summaryRow === 'function') {
+        this.tfoot.innerHTML = this.summaryRow(visibleCols, this.filteredData, pageData);
+      } else if (typeof this.summaryRow === 'string') {
+        this.tfoot.innerHTML = this.summaryRow;
+      }
+    } else if (this.tfoot) {
+      this.tfoot.innerHTML = '';
+    }
+
     this.renderPagination(totalPages);
   }
 
@@ -477,4 +544,19 @@ export class DataGrid {
     this.paginationContainer.appendChild(createBtn('›', this.currentPage + 1, this.currentPage === totalPages));
     this.paginationContainer.appendChild(createBtn('»', totalPages, this.currentPage === totalPages));
   }
+
+  destroy() {
+    if (this._keyHandler) {
+      document.removeEventListener('keydown', this._keyHandler);
+      this._keyHandler = null;
+    }
+    if (this._docClickHandler) {
+      document.removeEventListener('click', this._docClickHandler);
+      this._docClickHandler = null;
+    }
+    if (this.container && this.container._datagridInstance === this) {
+      delete this.container._datagridInstance;
+    }
+  }
+
 }

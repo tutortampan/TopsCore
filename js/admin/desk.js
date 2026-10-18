@@ -14,21 +14,15 @@ import {
   adminRestore,
   adminHardDelete,
   clearAdminCache,
-  testSupabaseConnection
-} from '../api.js?v=5.1.0';
-import { getSupabase } from '../supabase.js?v=5.1.0';
-import { showToast, showLoading, hideLoading } from '../app.js?v=5.1.0';
-import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=5.1.0';
+  testSupabaseConnection,
+  previewRecalibrateAssessment,
+  applyRecalibrateAssessment
+} from '../api.js?v=5.2.2';
+import { getSupabase } from '../supabase.js?v=5.2.2';
+import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.2.2';
+import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=5.2.2';
 
-function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+// escapeHtml / escHtml imported canonically
 
 // ============================================================
 // MODULE 1: RECYCLE BIN (CENTRALIZED DATA RECOVERY & GATED PURGE)
@@ -576,6 +570,118 @@ export async function renderDataHealth(container) {
       </div>
 
     </div>
+
+    <!-- Dedicated Maintenance Card: Assessment Engine Recalibration -->
+    <div class="antigravity-card p-5 mt-4" id="card-assessment-recalibration" style="border: 1px solid rgba(245, 158, 11, 0.25);">
+      <div class="d-flex justify-between align-center flex-wrap gap-2 mb-3">
+        <div class="d-flex align-center gap-3">
+          <div style="font-size: 1.8rem; background: rgba(245, 158, 11, 0.12); padding: 0.5rem; border-radius: 10px; line-height: 1;">⚡</div>
+          <div>
+            <h3 style="font-weight: 700; margin: 0 0 2px 0; font-size: 1.15rem;">Assessment Engine Recalibration</h3>
+            <p class="text-xs text-muted" style="margin: 0;">
+              Recalculate historical submitted student attempts after updating questions, adding multiple correct answers (separated by <code>;</code> or <code>|</code>), or enabling hyphen tolerance
+            </p>
+          </div>
+        </div>
+        <span class="badge badge-warning" style="font-weight: 700; font-size: 0.75rem;">Domain D Maintenance</span>
+      </div>
+
+      <div class="d-flex align-center gap-3 flex-wrap mt-3" style="background: rgba(255, 255, 255, 0.02); padding: 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
+        <div style="flex: 1; min-width: 260px;">
+          <label class="form-label text-xs fw-700 text-muted mb-1" style="display: block;">Select Target Assessment</label>
+          <select class="form-control" id="recalibrator-Assessment-select" style="height: 38px;">
+            <option value="">&mdash; Choose an Assessment to Recalibrate &mdash;</option>
+          </select>
+        </div>
+        <div class="d-flex gap-2 align-end" style="padding-top: 18px;">
+          <button class="btn btn-primary" id="btn-preview-recal" disabled style="height: 38px;">🔍 Preview Recalibration</button>
+          <button class="btn btn-success" id="btn-apply-recal" disabled style="height: 38px; background: linear-gradient(135deg, #10b981, #059669); font-weight: 700;">⚡ Apply Recalibration</button>
+        </div>
+      </div>
+
+      <!-- Metrics Overview Panel -->
+      <div id="recal-metrics-panel" class="hidden mt-4">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+          <div class="glass-card p-3 text-center">
+            <div class="text-xs text-muted mb-1">Total Questions</div>
+            <div class="fw-700" style="font-size: 1.4rem;" id="recal-metric-questions">0</div>
+          </div>
+          <div class="glass-card p-3 text-center">
+            <div class="text-xs text-muted mb-1">Submitted Attempts</div>
+            <div class="fw-700" style="font-size: 1.4rem;" id="recal-metric-attempts">0</div>
+          </div>
+          <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--clr-primary, #6366f1);">
+            <div class="text-xs text-muted mb-1">Affected Attempts</div>
+            <div class="fw-700" style="font-size: 1.4rem; color: var(--clr-primary, #a78bfa);" id="recal-metric-affected">0</div>
+          </div>
+          <div class="glass-card p-3 text-center" style="border-left: 3px solid #10b981;">
+            <div class="text-xs text-muted mb-1">Status: FAIL &rarr; PASS</div>
+            <div class="fw-700" style="font-size: 1.4rem; color: #10b981;" id="recal-metric-fail-pass">0</div>
+          </div>
+          <div class="glass-card p-3 text-center" style="border-left: 3px solid #f43f5e;">
+            <div class="text-xs text-muted mb-1">Status: PASS &rarr; FAIL</div>
+            <div class="fw-700" style="font-size: 1.4rem; color: #f43f5e;" id="recal-metric-pass-fail">0</div>
+          </div>
+          <div class="glass-card p-3 text-center" style="border-left: 3px solid #38bdf8;">
+            <div class="text-xs text-muted mb-1">Score Increases</div>
+            <div class="fw-700" style="font-size: 1.4rem; color: #38bdf8;" id="recal-metric-increases">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview Results Table -->
+      <div id="recal-results-wrap" class="hidden mt-4">
+        <div class="d-flex align-center justify-between flex-wrap gap-2 mb-3">
+          <div class="fw-700 text-sm">Attempt Preview Changes</div>
+          <div class="d-flex align-center gap-2">
+            <label class="text-xs text-muted">Filter:</label>
+            <select class="form-control" id="recal-filter-view" style="width: auto; padding: 3px 8px; font-size: 0.8rem; height: 30px;">
+              <option value="affected">Affected Students Only</option>
+              <option value="all">All Students</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap" style="max-height: 360px; overflow-y: auto;">
+          <table style="width: 100%;">
+            <thead>
+              <tr>
+                <th class="text-left">Student Name</th>
+                <th class="text-left">Program</th>
+                <th class="text-center">Old Score</th>
+                <th class="text-center">New Score</th>
+                <th class="text-center">Old %</th>
+                <th class="text-center">New %</th>
+                <th class="text-center">Old Grade</th>
+                <th class="text-center">New Grade</th>
+                <th class="text-center">Status Change</th>
+                <th class="text-center">Answers Changed</th>
+              </tr>
+            </thead>
+            <tbody id="recal-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal for Recalibration -->
+    <div class="modal-backdrop hidden" id="recal-confirm-modal" role="dialog" aria-modal="true">
+      <div class="modal-box" style="max-width: 480px; text-align: center;">
+        <div style="font-size: 2.8rem; margin-bottom: 1rem;">⚡</div>
+        <h3 class="mb-2">Confirm Assessment Recalibration?</h3>
+        <p class="text-muted text-sm mb-4">
+          This will safely update historical submitted scores, percentages, grades, and student progression using the authoritative grading engine.
+        </p>
+        <div class="p-4 rounded text-left text-xs mb-6" style="background: rgba(255,255,255,0.04); border: 1px solid var(--clr-border);">
+          <div class="mb-1">&bull; <b>Affected Attempts:</b> <span id="modal-affected-count" class="fw-700 text-primary">0</span></div>
+          <div class="mb-1">&bull; <b>Status Transitions:</b> <span id="modal-status-changes" class="fw-700">0</span></div>
+          <div>&bull; <b>Audit Trail:</b> An audit log entry will be permanently recorded.</div>
+        </div>
+        <div class="d-flex gap-3 justify-between">
+          <button class="btn btn-secondary" id="btn-recal-cancel" style="flex:1;">Cancel</button>
+          <button class="btn btn-primary" id="btn-recal-confirm-run" style="flex:1; background: linear-gradient(135deg,#10b981,#059669); border:none;">✅ Yes, Apply Changes</button>
+        </div>
+      </div>
+    </div>
   `;
 
   // Measure Latency & Heartbeat
@@ -748,6 +854,170 @@ export async function renderDataHealth(container) {
       hideLoading();
     }
   });
+
+  // --- Assessment Engine Recalibration Controller ---
+  (async () => {
+    try {
+      const allAssessments = await adminFetchAll('assessments');
+      const activeAssessments = (allAssessments || []).filter(e => !e.deleted_at).sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      const asmSelect = document.getElementById('recalibrator-Assessment-select');
+      if (asmSelect) {
+        asmSelect.innerHTML = '<option value="">&mdash; Choose an Assessment to Recalibrate &mdash;</option>' +
+          activeAssessments.map(e => `<option value="${e.id}">[${escapeHtml(e.assessment_type || 'Assessment')}] ${escapeHtml(e.title || e.display_name || e.id)}</option>`).join('');
+      }
+
+      let currentPreviewData = null;
+      const btnPreview = document.getElementById('btn-preview-recal');
+      const btnApply = document.getElementById('btn-apply-recal');
+      const metricsPanel = document.getElementById('recal-metrics-panel');
+      const resultsWrap = document.getElementById('recal-results-wrap');
+      const tableBody = document.getElementById('recal-table-body');
+      const filterSelect = document.getElementById('recal-filter-view');
+      const confirmModal = document.getElementById('recal-confirm-modal');
+
+      if (asmSelect && btnPreview && btnApply) {
+        asmSelect.addEventListener('change', () => {
+          const val = asmSelect.value;
+          btnPreview.disabled = !val;
+          btnApply.disabled = true;
+          if (metricsPanel) metricsPanel.classList.add('hidden');
+          if (resultsWrap) resultsWrap.classList.add('hidden');
+          currentPreviewData = null;
+        });
+
+        const renderPreviewRows = () => {
+          if (!currentPreviewData || !tableBody) return;
+          const mode = filterSelect ? filterSelect.value : 'affected';
+          const list = mode === 'affected'
+            ? currentPreviewData.attemptsDiff.filter(a => a.isAffected)
+            : currentPreviewData.attemptsDiff;
+
+          tableBody.innerHTML = '';
+          if (!list.length) {
+            tableBody.innerHTML = `<tr><td colspan="10" class="text-center text-muted p-4">No ${mode === 'affected' ? 'affected ' : ''}student attempts found.</td></tr>`;
+            return;
+          }
+
+          list.forEach(item => {
+            const isScoreUp = item.newPercentage > item.oldPercentage;
+            const isScoreDown = item.newPercentage < item.oldPercentage;
+            const isStatusPass = item.oldStatus === 'FAIL' && item.newStatus === 'PASS';
+            const isStatusFail = item.oldStatus === 'PASS' && item.newStatus === 'FAIL';
+
+            let statusBadge = '<span class="badge badge-neutral">No Change</span>';
+            if (isStatusPass) {
+              statusBadge = '<span class="badge badge-success fw-700">FAIL &rarr; PASS ✨</span>';
+            } else if (isStatusFail) {
+              statusBadge = '<span class="badge badge-danger fw-700">PASS &rarr; FAIL ⚠️</span>';
+            } else if (item.isAffected) {
+              statusBadge = isScoreUp ? '<span class="badge badge-info">+ Score Up</span>' : '<span class="badge badge-warning">- Score Down</span>';
+            }
+
+            const changedAnswersCount = item.questions ? item.questions.filter(q => q.isAffected).length : 0;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="fw-600">${escapeHtml(item.studentName)}</td>
+              <td class="text-muted text-sm">${escapeHtml(item.programName)}</td>
+              <td class="text-center text-muted">${item.oldScore}</td>
+              <td class="text-center fw-700 ${isScoreUp ? 'text-success' : isScoreDown ? 'text-danger' : ''}">${item.newScore}</td>
+              <td class="text-center text-muted">${item.oldPercentage}%</td>
+              <td class="text-center fw-700 ${isScoreUp ? 'text-success' : isScoreDown ? 'text-danger' : ''}">${item.newPercentage}%</td>
+              <td class="text-center"><span class="grade-badge grade-${item.oldGrade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;">${item.oldGrade}</span></td>
+              <td class="text-center"><span class="grade-badge grade-${item.newGrade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;">${item.newGrade}</span></td>
+              <td class="text-center">${statusBadge}</td>
+              <td class="text-center"><span class="badge ${changedAnswersCount > 0 ? 'badge-primary' : 'badge-neutral'}">${changedAnswersCount} q</span></td>
+            `;
+            tableBody.appendChild(tr);
+          });
+        };
+
+        if (filterSelect) filterSelect.addEventListener('change', renderPreviewRows);
+
+        btnPreview.addEventListener('click', async () => {
+          const asmId = asmSelect.value;
+          if (!asmId) return;
+
+          showLoading('Calculating recalibration preview across all attempts...');
+          try {
+            currentPreviewData = await previewRecalibrateAssessment(asmId);
+            hideLoading();
+
+            const qEl = document.getElementById('recal-metric-questions');
+            const attEl = document.getElementById('recal-metric-attempts');
+            const affEl = document.getElementById('recal-metric-affected');
+            const fpEl = document.getElementById('recal-metric-fail-pass');
+            const pfEl = document.getElementById('recal-metric-pass-fail');
+            const incEl = document.getElementById('recal-metric-increases');
+
+            if (qEl) qEl.textContent = currentPreviewData.totalQuestions;
+            if (attEl) attEl.textContent = currentPreviewData.totalAttempts;
+            if (affEl) affEl.textContent = currentPreviewData.affectedAttemptsCount;
+            if (fpEl) fpEl.textContent = currentPreviewData.failToPassCount;
+            if (pfEl) pfEl.textContent = currentPreviewData.passToFailCount;
+            if (incEl) incEl.textContent = currentPreviewData.scoreIncreaseCount;
+
+            if (metricsPanel) metricsPanel.classList.remove('hidden');
+            if (resultsWrap) resultsWrap.classList.remove('hidden');
+            renderPreviewRows();
+
+            if (currentPreviewData.affectedAttemptsCount > 0) {
+              btnApply.disabled = false;
+              showToast(`Found ${currentPreviewData.affectedAttemptsCount} attempts that can be recalibrated.`, 'info');
+            } else {
+              btnApply.disabled = true;
+              showToast('All attempts already match the latest question definitions and grading engine.', 'success');
+            }
+          } catch (err) {
+            hideLoading();
+            showToast('Preview error: ' + err.message, 'error');
+          }
+        });
+
+        btnApply.addEventListener('click', () => {
+          if (!currentPreviewData || currentPreviewData.affectedAttemptsCount === 0) return;
+          const affCountEl = document.getElementById('modal-affected-count');
+          const statChangeEl = document.getElementById('modal-status-changes');
+          if (affCountEl) affCountEl.textContent = currentPreviewData.affectedAttemptsCount;
+          if (statChangeEl) statChangeEl.textContent = (currentPreviewData.failToPassCount + currentPreviewData.passToFailCount);
+          if (confirmModal) confirmModal.classList.remove('hidden');
+        });
+
+        document.getElementById('btn-recal-cancel')?.addEventListener('click', () => {
+          if (confirmModal) confirmModal.classList.add('hidden');
+        });
+
+        document.getElementById('btn-recal-confirm-run')?.addEventListener('click', async () => {
+          if (confirmModal) confirmModal.classList.add('hidden');
+          const asmId = asmSelect.value;
+          if (!asmId) return;
+
+          showLoading('Applying recalibration to historical student results...');
+          try {
+            const res = await applyRecalibrateAssessment(asmId);
+            hideLoading();
+            showToast(`Successfully recalibrated ${res.updatedAttemptsCount} attempts!`, 'success');
+            btnApply.disabled = true;
+            btnPreview.click();
+          } catch (err) {
+            hideLoading();
+            showToast('Failed to apply recalibration: ' + err.message, 'error');
+          }
+        });
+
+        // Pre-selection if navigated from an assessment row
+        if (window._filterRecalibrateAssessment) {
+          asmSelect.value = window._filterRecalibrateAssessment;
+          window._filterRecalibrateAssessment = null;
+          btnPreview.disabled = !asmSelect.value;
+          document.getElementById('card-assessment-recalibration')?.scrollIntoView({ behavior: 'smooth' });
+          if (!btnPreview.disabled) btnPreview.click();
+        }
+      }
+    } catch(err) {
+      console.warn('Could not initialize Assessment Recalibrator in Data Health:', err);
+    }
+  })();
 }
 
 

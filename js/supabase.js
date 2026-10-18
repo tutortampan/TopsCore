@@ -2,10 +2,12 @@
 export const SUPABASE_CLOUD_URL = 'https://oclajpyumehpojepcczg.supabase.co';
 export const SUPABASE_CLOUD_ANON_KEY = 'sb_publishable_L9T-SJpuAqK5291UEVhKMg_i7lvWFGB';
 
-// Auto-detect environment: localhost / 127.0.0.1 defaults to Docker Local (Full Offline)
+// Auto-detect environment: localhost / 127.0.0.1 / LAN defaults to Docker Local (Full Offline)
 const isLocalHostname = typeof window !== 'undefined' && (
   window.location.hostname === 'localhost' ||
   window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.startsWith('192.168.') ||
+  window.location.hostname.startsWith('10.') ||
   window.location.hostname === ''
 );
 

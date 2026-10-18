@@ -1,4 +1,5 @@
-import { DataGrid } from './datagrid.js?v=5.1.0';
+import { DataGrid } from './datagrid.js?v=5.2.2';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade } from '../app.js?v=5.2.2';
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
@@ -302,6 +303,45 @@ export function buildSectionTabBar({ tabs = [], activeId = null, onSelect = null
   `;
 }
 window.buildSectionTabBar = buildSectionTabBar;
+
+export function setTopbarTabs(tabs = [], activeId = null, onSelect = null) {
+  const container = document.getElementById('topbar-tabs-container');
+  if (!container) return;
+  if (!tabs || tabs.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  const _esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  container.innerHTML = tabs.map(tab => {
+    const isActive = activeId && String(tab.id) === String(activeId);
+    const isClickable = tab.clickable !== false && !!onSelect;
+    let clickAttr = '';
+    if (isClickable) {
+      if (typeof onSelect === 'string') {
+        clickAttr = `onclick="${onSelect}('${tab.id}')"`;
+      } else if (typeof onSelect === 'function') {
+        const cbKey = '_topbarCb_' + Math.random().toString(36).substring(7);
+        window[cbKey] = () => onSelect(tab.id);
+        clickAttr = `onclick="window['${cbKey}']()"`;
+      }
+    }
+    const activeCls = isActive ? 'active' : '';
+    const statCls = !isClickable ? 'is-stat' : '';
+    const valColor = tab.valColor ? `style="color:${tab.valColor};"` : '';
+    const label = tab.label || tab.title || '';
+    const icon = tab.icon || '';
+    return `
+      <div class="topbar-tab-card ${activeCls} ${statCls}" data-tab-id="${tab.id || ''}" ${clickAttr} title="${_esc(label)}">
+        <div class="topbar-tab-left">
+          ${icon ? `<span class="topbar-tab-icon">${icon}</span>` : ''}
+          <span class="topbar-tab-label">${_esc(label)}</span>
+        </div>
+        <div class="topbar-tab-val" ${valColor}>${tab.val ?? 0}</div>
+      </div>
+    `;
+  }).join('');
+}
+window.setTopbarTabs = setTopbarTabs;
 import {
   adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, clearAdminCache,
   adminFetchDeleted, adminRestore,
@@ -309,25 +349,24 @@ import {
   detectDuplicateQuestions, resequenceAssessmentQuestions, resolveDuplicateQuestionGroup, batchResolveAssessmentDuplicateQuestions,
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateAssessment, applyRecalibrateAssessment, isPassing, calculatePercentage, toLevelLetter
-} from '../api.js?v=5.1.0';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.1.0';
-import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.1.0';
-import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=5.1.0';
-import { getSupabase } from '../supabase.js?v=5.1.0';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=5.1.0';
-import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.1.0';
-import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.1.0';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=5.1.0';
-import { renderAssessments } from './assessment-management.js?v=5.1.0';
-import { renderVocabularyVault } from './vocab-vault.js?v=5.1.0';
-import { renderModules } from './modules.js?v=5.1.0';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.1.0';
-import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.1.0';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, hashPin } from './crud-modals.js?v=5.1.0';
-import { renderCurriculum } from './curriculum-management.js?v=5.1.0';
-import { renderClassesHub } from './classes-hub.js?v=5.1.0';
-import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.1.0';
-import { openStudentFullEdit } from './student-management.js?v=5.1.0';
+} from '../api.js?v=5.2.2';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.2.2';
+import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.2.2';
+import { getSupabase } from '../supabase.js?v=5.2.2';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=5.2.2';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.2.2';
+import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.2.2';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=5.2.2';
+import { renderAssessments } from './assessment-management.js?v=5.2.2';
+import { renderVocabularyVault } from './vocab-vault.js?v=5.2.2';
+import { renderModules } from './modules.js?v=5.2.2';
+import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.2.2';
+import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.2.2';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, hashPin } from './crud-modals.js?v=5.2.2';
+import { renderCurriculum } from './curriculum-management.js?v=5.2.2';
+import { renderClassesHub } from './classes-hub.js?v=5.2.2';
+import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.2.2';
+import { openStudentFullEdit } from './student-management.js?v=5.2.2';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -338,10 +377,11 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
       organization: 'Organization Structure',
       curriculum: 'Curriculum & Level Master',
       'classes-hub': 'Curriculum & Level Master',
+      'class-hub': 'Class Hub',
       import_ai_assessments: 'Import AI Assessments',
       institutions: 'Batches', students: 'Students', 'import-students': 'Import Students', 'progress-view': 'Student Progress',
       Classes: 'Curriculum & Classes', classes: 'Classes', 'classes-org': 'Organization Hub', class_instances: 'Class Instances', levels: 'Levels', topics: 'Topics', questions: 'Question Bank', vocab_vault: 'Vocabulary Vault', modules: 'Modules (Core Blocks)', 'import-questions': 'Import Questions', 'export-questions': 'Export Questions',
-      assessments: 'Assessments Hub', assignments: 'Assignments & Rosters', results: 'Assessment Results', recalibrator: 'Recalibration Engine', question_types: 'Validation Dictionary',
+      assessments: 'Assessments Hub', assignments: 'Assignments & Rosters', results: 'Assessment Results', recalibrator: 'Assessment Engine Recalibration', question_types: 'Validation Dictionary',
       audit: 'Activity & Audit Logs', settings: 'Site Settings & Cost Guard', recycle: 'Recycle Bin', health: 'Data Health & Connectivity',
       'class-panel': 'Class Panel'
     };
@@ -352,9 +392,9 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
       'classes-hub': 'ADMIN', curriculum: 'ADMIN',
       institutions: 'BOARD', students: 'BOARD', 'import-students': 'BOARD', 'progress-view': 'BOARD',
       Classes: 'CLASS', classes: 'CLASS', 'classes-org': 'CLASS', class_instances: 'CLASS', levels: 'CLASS', topics: 'CLASS', questions: 'CLASS', question_types: 'CLASS', 'import-questions': 'CLASS', 'export-questions': 'CLASS',
-      assessments: 'CLASS', assignments: 'CLASS', results: 'CLASS', recalibrator: 'CLASS', import_ai_assessments: 'CLASS',
-      'class-panel': 'CLASS', vocab_vault: 'CLASS',
-      audit: 'DATA', settings: 'DATA', recycle: 'DATA', health: 'DATA', modules: 'DATA'
+      assessments: 'CLASS', assignments: 'CLASS', results: 'CLASS', import_ai_assessments: 'CLASS',
+      'class-panel': 'CLASS', 'class-hub': 'CLASS', vocab_vault: 'CLASS',
+      audit: 'DATA', settings: 'DATA', recycle: 'DATA', health: 'DATA', recalibrator: 'DATA', modules: 'DATA'
     };
 
     // Mobile Bottom Tab Panels -> Primary Domain
@@ -405,9 +445,9 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
     async function updateAdminKpiBanner() {
       try {
         const [stds, asms, atts, profs] = await Promise.all([
-          adminFetchAll('students'),
-          adminFetchAll('assessments'),
-          adminFetchAll('attempts')
+          adminFetchAll('students', 'id, deleted_at'),
+          adminFetchAll('assessments', 'id, status, deleted_at'),
+          adminFetchAll('attempts', 'id')
         ]);
         const kpiAcad = document.getElementById('kpi-board');
         if (kpiAcad) kpiAcad.textContent = stds.filter(s => !s.deleted_at).length;
@@ -497,6 +537,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
       document.getElementById('admin-console').classList.remove('hidden');
       updateAdminKpiBanner();
       if (window.loadSidebarClasses) window.loadSidebarClasses();
+      if (window.loadSidebarPrograms) window.loadSidebarPrograms();
       const hash = window.location.hash.substring(1);
       const targetSec = aliasSectionMap[hash] || hash;
       const savedSec = localStorage.getItem('topscore_admin_last_section');
@@ -524,12 +565,106 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
       }
     });
 
+    // --- SIDEBAR PROGRAMS LIST INJECTION (DOMAIN B) ---
+    async function loadSidebarPrograms(autoSelectProgramId = null) {
+      const container = document.getElementById('sidebar-programs-list');
+      if (!container) return;
+
+      const handleSidebarClick = (item, action) => {
+        document.querySelectorAll('.admin-nav-item:not(.sidebar-class-item)').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        action();
+      };
+
+      const bindEvents = () => {
+        container.querySelectorAll('.sidebar-program-item').forEach(item => {
+          if (item._hasClickBound) return;
+          item._hasClickBound = true;
+          item.addEventListener('click', (e) => {
+            handleSidebarClick(e.currentTarget, () => {
+              const pid = item.getAttribute('data-program-id');
+              const pname = item.getAttribute('data-program-name');
+              window._filterProgramId = pid;
+              window._selectedProgramName = pname;
+              window._filterBatchId = null; // Reset batch selection when switching program
+              try {
+                localStorage.setItem('topscore_selected_program_id', pid);
+                localStorage.setItem('topscore_selected_program_name', pname);
+              } catch(err) {}
+              loadSection('students');
+            });
+          });
+        });
+      };
+
+      const renderPrograms = (programs) => {
+        const activeList = (programs || []).filter(p => p.is_active !== false);
+        const sortedPrograms = activeList.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        const activeId = autoSelectProgramId || window._filterProgramId || localStorage.getItem('topscore_selected_program_id') || sortedPrograms[0]?.id;
+
+        let html = `<div class="sidebar-program-group" style="display:flex; flex-direction:column; gap:4px;">`;
+        if (sortedPrograms.length === 0) {
+          html += `<div style="padding: 12px; color: var(--clr-text-muted); font-size: 0.8rem;">No active programs.</div>`;
+        } else {
+          sortedPrograms.forEach(prog => {
+            const isActive = (activeId === prog.id && (_currentSection === 'students' || window._activeSectionAlias === 'students')) ? 'active' : '';
+            html += `
+              <div class="admin-nav-item sidebar-program-item ${isActive}" data-program-id="${prog.id}" data-program-name="${escapeHtml(prog.name)}" data-sub="students" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-weight:500; border-radius:6px; transition:all 0.2s;">
+                <span style="font-size:1.1rem;">👥</span>
+                <span>${escapeHtml(prog.name)}</span>
+              </div>
+            `;
+          });
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+        bindEvents();
+
+        if (!window._filterProgramId && sortedPrograms.length > 0) {
+          const selProg = sortedPrograms.find(p => p.id === activeId) || sortedPrograms[0];
+          window._filterProgramId = selProg.id;
+          window._selectedProgramName = selProg.name;
+          try {
+            localStorage.setItem('topscore_selected_program_id', selProg.id);
+            localStorage.setItem('topscore_selected_program_name', selProg.name);
+          } catch(err) {}
+        }
+      };
+
+      // 1. If DOM already has items from HTML pre-render, just bind clicks immediately
+      if (container.firstElementChild) {
+        bindEvents();
+      } else {
+        // Hydrate from localStorage cache
+        try {
+          const cached = JSON.parse(localStorage.getItem('topscore_cached_sidebar_programs') || '[]');
+          if (Array.isArray(cached) && cached.length > 0) {
+            renderPrograms(cached);
+          }
+        } catch(e) {}
+      }
+
+      // 2. Fetch fresh programs from server (stale-while-revalidate)
+      try {
+        const programs = await adminFetchAll('programs', 'id, name, is_active, institution_id', { is_active: true });
+        if (programs && programs.length > 0) {
+          try {
+            localStorage.setItem('topscore_cached_sidebar_programs', JSON.stringify(programs));
+          } catch(err) {}
+          renderPrograms(programs);
+        }
+      } catch(err) {
+        console.warn('[loadSidebarPrograms] server fetch failed, using cache:', err);
+      }
+    }
+    window.loadSidebarPrograms = loadSidebarPrograms;
+    // Call immediately to hydrate sidebar programs with zero delay
+    loadSidebarPrograms();
+
     // --- SIDEBAR CLASSES LIST INJECTION ---
-    window.loadSidebarClasses = async function(autoSelectClassId = null) {
+    async function loadSidebarClasses(autoSelectClassId = null) {
       const container = document.getElementById('sidebar-classes-list');
       if (!container) return;
-      
-      const classes = await adminFetchAll('classes', 'id, name, program_id', { is_active: true });
 
       const handleSidebarClick = (item, action) => {
         document.querySelectorAll('.admin-nav-item').forEach(i => i.classList.remove('active'));
@@ -537,47 +672,106 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
         action();
       };
 
-      let html = `
-        <div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:4px;">
-      `;
-
-      if (!classes || classes.length === 0) {
-        html += `<div style="padding: 12px; color: var(--clr-text-muted); font-size: 0.8rem;">No classes found.</div>`;
-      } else {
-        const sortedClasses = classes.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        sortedClasses.forEach(cls => {
-          const isActive = window._selectedClassId === cls.id ? 'active' : '';
-          html += `
-            <div class="admin-nav-item sidebar-class-item ${isActive}" data-class-id="${cls.id}" data-class-name="${escapeHtml(cls.name)}" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-weight:500; border-radius:6px; transition:all 0.2s;">
-              <span style="font-size:1.1rem;">📘</span>
-              <span>${escapeHtml(cls.name)}</span>
-            </div>
-          `;
-        });
-      }
-
-      html += `</div>`;
-      container.innerHTML = html;
-
-      // Attach events
-      container.querySelectorAll('.sidebar-class-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-          handleSidebarClick(e.currentTarget, () => {
-            window._selectedClassId = item.getAttribute('data-class-id');
-            window._selectedClassName = item.getAttribute('data-class-name');
-            window._selectedLevelId = null;
-            loadSection('class-hub');
+      const bindEvents = () => {
+        container.querySelectorAll('.sidebar-class-item').forEach(item => {
+          if (item._hasClickBound) return;
+          item._hasClickBound = true;
+          item.addEventListener('click', (e) => {
+            handleSidebarClick(e.currentTarget, () => {
+              const cid = item.getAttribute('data-class-id');
+              const cname = item.getAttribute('data-class-name');
+              window._selectedClassId = cid;
+              window._selectedClassName = cname;
+              try {
+                localStorage.setItem('topscore_selected_class_id', cid);
+                localStorage.setItem('topscore_selected_class_name', cname);
+              } catch(err) {}
+              window._selectedLevelId = null;
+              loadSection('class-hub');
+            });
           });
         });
-      });
+      };
+
+      const renderClasses = (classes) => {
+        const sortedClasses = (classes || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        const activeId = window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || sortedClasses[0]?.id;
+        
+        let html = `<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:4px;">`;
+        if (sortedClasses.length === 0) {
+          html += `<div style="padding: 12px; color: var(--clr-text-muted); font-size: 0.8rem;">No classes found.</div>`;
+        } else {
+          sortedClasses.forEach(cls => {
+            const isActive = activeId === cls.id ? 'active' : '';
+            html += `
+              <div class="admin-nav-item sidebar-class-item ${isActive}" data-class-id="${cls.id}" data-class-name="${escapeHtml(cls.name)}" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-weight:500; border-radius:6px; transition:all 0.2s;">
+                <span style="font-size:1.1rem;">📘</span>
+                <span>${escapeHtml(cls.name)}</span>
+              </div>
+            `;
+          });
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+        bindEvents();
+
+        if (!window._selectedClassId && sortedClasses.length > 0) {
+          const selCls = sortedClasses.find(c => c.id === activeId) || sortedClasses[0];
+          window._selectedClassId = selCls.id;
+          window._selectedClassName = selCls.name;
+          try {
+            localStorage.setItem('topscore_selected_class_id', selCls.id);
+            localStorage.setItem('topscore_selected_class_name', selCls.name);
+          } catch(err) {}
+        }
+      };
+
+      // 1. If DOM already has items from HTML pre-render, just bind clicks immediately
+      if (container.firstElementChild) {
+        bindEvents();
+      } else {
+        // Hydrate from localStorage cache
+        try {
+          const cached = JSON.parse(localStorage.getItem('topscore_cached_sidebar_classes') || '[]');
+          if (Array.isArray(cached) && cached.length > 0) {
+            renderClasses(cached);
+          }
+        } catch(e) {}
+      }
+
+      // 2. Fetch fresh classes from server (stale-while-revalidate)
+      try {
+        const classes = await adminFetchAll('classes', 'id, name, program_id', { is_active: true });
+        if (classes && classes.length > 0) {
+          try {
+            localStorage.setItem('topscore_cached_sidebar_classes', JSON.stringify(classes));
+          } catch(err) {}
+          renderClasses(classes);
+        }
+      } catch(err) {
+        console.warn('[loadSidebarClasses] server fetch failed, using cache:', err);
+      }
     };
+    window.loadSidebarClasses = loadSidebarClasses;
+    // Call immediately to hydrate sidebar classes with zero delay
+    loadSidebarClasses();
+
+    window._classHubCache = window._classHubCache || {};
 
     // ── CLASS HUB (MAIN CONTENT AREA) ──
-    window.renderClassHub = async function(area) {
-      const classId = window._selectedClassId;
-      const className = window._selectedClassName || 'Unknown Class';
-      
-      area.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Loading Class Hub for ${escapeHtml(className)}...</p></div>`;
+    async function renderClassHub(area) {
+      window.renderClassHub = renderClassHub;
+      window._classHubCache = window._classHubCache || {};
+
+      if (!window._selectedClassId) {
+        try {
+          window._selectedClassId = localStorage.getItem('topscore_selected_class_id');
+          window._selectedClassName = localStorage.getItem('topscore_selected_class_name') || 'Vocabulary';
+        } catch(e) {}
+      }
+
+      let classId = window._selectedClassId;
+      let className = window._selectedClassName || 'Vocabulary';
       
       try {
         const breadcrumb = document.getElementById('admin-breadcrumb');
@@ -585,27 +779,49 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
           breadcrumb.innerHTML = `<span style="color:var(--clr-primary); font-weight:700;">CLASS</span> <span style="color:var(--clr-border); margin:0 0.5rem;">/</span> <span style="color:#fff; font-weight:600;">${escapeHtml(className)}</span>`;
         }
 
+        // Fast in-memory check: if already showing or recently loaded, avoid full wipe spinner
+        const cached = classId ? window._classHubCache[classId] : null;
+        const isFresh = cached && (Date.now() - cached.timestamp < 45000);
+        if (!isFresh && (!area.querySelector('#class-attendance-grid') || area.dataset.currentClassId !== classId)) {
+          area.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Loading Class Hub for ${escapeHtml(className)}...</p></div>`;
+        }
+        area.dataset.currentClassId = classId || '';
+
         // Fetch ALL data relevant to this class and detailed assessment mapping
-        const [currentClass, allAssessments, allStudents, allPrograms, allBatches, allQuestions, allLevels, allBoardClasses, allVault, allAttempts, allInstitutions] = await Promise.all([
-          adminFetchAll('classes', '*, programs!program_id(name)').then(res => res ? res.find(c => c.id === classId) : null),
-          adminFetchAll('assessments'), 
-          adminFetchAll('students', '*, programs!program_id(name, institution_id), institutions!institution_id(name), batches!batch_id(name, is_active, current_level_id)'),
-          adminFetchAll('programs', 'id, name, institution_id'),
-          adminFetchAll('batches', 'id, name, is_active, program_id'),
-          adminFetchAll('assessment_questions', 'id, assessment_id, answer_type'),
+        // OPTIMIZATION: Flat students query without heavy nested joins (prevents 500 statement timeouts)
+        const [allClasses, allAssessments, allStudents, allPrograms, allBatches, allQuestions, allLevels, allVault, allAttempts, allInstitutions] = await Promise.all([
+          adminFetchAll('classes', 'id, name, program_id').catch(() => []),
+          adminFetchAll('assessments').catch(() => []), 
+          adminFetchAll('students', 'id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id').catch(() => []),
+          adminFetchAll('programs', 'id, name, institution_id').catch(() => []),
+          adminFetchAll('batches', 'id, name, is_active, program_id, current_level_id').catch(() => []),
+          adminFetchAll('assessment_questions', 'id, assessment_id, answer_type').catch(() => []),
           adminFetchAll('levels').catch(() => []),
-          adminFetchAll('classes').catch(() => []),
           adminFetchAll('vocabulary_vault', 'id, target_level, theme_code, topic_code, word_type, deleted_at').catch(() => []),
           adminFetchAll('attempts').catch(() => []),
           adminFetchAll('institutions', 'id, name').catch(() => [])
         ]);
 
+        if (!classId && allClasses && allClasses.length > 0) {
+          const sorted = allClasses.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+          window._selectedClassId = sorted[0].id;
+          window._selectedClassName = sorted[0].name;
+          classId = window._selectedClassId;
+          className = window._selectedClassName;
+          try {
+            localStorage.setItem('topscore_selected_class_id', classId);
+            localStorage.setItem('topscore_selected_class_name', className);
+          } catch(e) {}
+        }
+
+        const currentClass = (allClasses || []).find(c => c.id === classId) || null;
+        const boardClassMap = {};
+        (allClasses || []).forEach(c => { boardClassMap[c.id] = c; });
+
         const classMap = {};
         (allPrograms || []).forEach(c => { classMap[c.id] = c; });
         const instMap = {};
         (allInstitutions || []).forEach(i => { instMap[i.id] = i.name; });
-        const boardClassMap = {};
-        (allBoardClasses || []).forEach(c => { boardClassMap[c.id] = c; });
         const levelMap = {};
         (allLevels || []).forEach(l => { levelMap[l.id] = l; });
 
@@ -613,6 +829,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
         
         // Find students that have access to this class's program
         const classProgramId = currentClass?.program_id;
+        const programBatches = (allBatches || []).filter(b => b.program_id === classProgramId);
         const classStudents = (allStudents || []).filter(s => {
           if (s.deleted_at) return false;
           const batchObj = (allBatches || []).find(b => b.id === s.batch_id);
@@ -718,12 +935,36 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
           };
         });
 
+        // Sort classAssessments sequentially by display_order / order_index
+        classAssessments.sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
+
+        // Calculate total possible points in curriculum across all 40 assessments for cumulative mastery
+        let curriculumTotalMaxPoints = 0;
+        classAssessments.forEach(asm => {
+          const q = Number(asm.total_questions || (asm.is_dynamic_shell || asm.payload?.is_dynamic_shell ? (asm.assessment_category === 'TEST' ? 40 : 10) : 10));
+          curriculumTotalMaxPoints += q;
+        });
+        if (curriculumTotalMaxPoints === 0) curriculumTotalMaxPoints = (classAssessments.length || 40) * 10;
+
         // Calculate DataGrid format for Students
         window._classStudentsMap = {};
+        const batchMap = {};
+        (allBatches || []).forEach(b => { batchMap[b.id] = b; });
+
         const studentsGridData = classStudents.map(s => {
           window._classStudentsMap[s.id] = s;
 
-          const instName = s.institutions?.name || (s.institution_id ? instMap[s.institution_id] : '') || (s.programs?.institution_id ? instMap[s.programs.institution_id] : '') || '—';
+          const batchObj = batchMap[s.batch_id];
+          const instName = s.institutions?.name || (s.institution_id ? instMap[s.institution_id] : '') || (s.program_id && classMap[s.program_id]?.institution_id ? instMap[classMap[s.program_id].institution_id] : '') || (s.programs?.institution_id ? instMap[s.programs.institution_id] : '') || '—';
+          let instShort = instName;
+          const normInst = instName.toLowerCase();
+          if (normInst.includes('cake')) instShort = 'CEC';
+          else if (normInst.includes('top')) instShort = 'TOP';
+          else if (instName.length > 5) {
+            const parts = instName.replace(/[^a-zA-Z0-9 ]/g, '').split(/\s+/).filter(Boolean);
+            if (parts.length > 1) instShort = parts.map(p => p[0].toUpperCase()).join('');
+            else instShort = instName.slice(0, 4).toUpperCase();
+          }
           const progName = s.programs?.name || (s.program_id ? classMap[s.program_id]?.name : '') || '—';
 
           // Age calculation
@@ -735,7 +976,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
               let age = today.getFullYear() - bd.getFullYear();
               const m = today.getMonth() - bd.getMonth();
               if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
-              if (age >= 0) ageDisplay = `${age} yrs`;
+              if (age && age > 0) ageDisplay = `${age} yrs`;
             }
           }
 
@@ -743,34 +984,125 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
           let levelName = '—';
           if (s.level_id && levelMap[s.level_id]) {
             levelName = levelMap[s.level_id].name;
+          } else if (batchObj?.current_level_id && levelMap[batchObj.current_level_id]) {
+            levelName = levelMap[batchObj.current_level_id].name;
           } else if (s.batches?.current_level_id && levelMap[s.batches.current_level_id]) {
             levelName = levelMap[s.batches.current_level_id].name;
           }
 
-          // Progress calculation for this class
+          // Attempts and Progress calculation for this class
           const studentAttempts = (allAttempts || []).filter(a => a.student_id === s.id);
           const classAssessmentIds = new Set(classAssessments.map(a => a.id));
           const classAttempts = studentAttempts.filter(a => classAssessmentIds.has(a.assessment_id || a.Assessment_id));
-          const completedCount = new Set(classAttempts.filter(a => a.status === 'SUBMITTED' || a.status === 'submitted' || a.status === 'AUTO_SUBMITTED').map(a => a.assessment_id || a.Assessment_id)).size;
+          
+          // Map best attempt per assessment (Rule 2.7: report card stores HIGHEST score)
+          const asmScores = {};
+          const rowScoreSortVals = {};
 
-          let overallScoreStr = '-';
-          let grade = '-';
+          let completedCount = 0;
+          let totalEarnedScore = 0;
+          let totalMaxPossible = 0;
+          let sumPercentages = 0;
+
+          classAssessments.forEach(asm => {
+            const atts = classAttempts.filter(a => (a.assessment_id || a.Assessment_id) === asm.id);
+            let bestAtt = null;
+            if (atts.length > 0) {
+              const submittedAtts = atts.filter(a => {
+                const st = String(a.status || '').toLowerCase();
+                return ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
+              });
+              if (submittedAtts.length > 0) {
+                submittedAtts.sort((x, y) => {
+                  const scoreX = Number(x.score ?? x.percentage ?? -1);
+                  const scoreY = Number(y.score ?? y.percentage ?? -1);
+                  return scoreY - scoreX;
+                });
+                bestAtt = submittedAtts[0];
+              } else {
+                bestAtt = atts[0];
+              }
+            }
+
+            asmScores[asm.id] = bestAtt;
+            rowScoreSortVals[`asm_${asm.id}`] = bestAtt && bestAtt.score != null ? Number(bestAtt.score) : -1;
+
+            if (bestAtt) {
+              const st = String(bestAtt.status || '').toLowerCase();
+              if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
+                completedCount++;
+                const earned = Number(bestAtt.score ?? 0);
+                const totalQ = Number(bestAtt.total_questions || (asm.is_dynamic_shell || asm.payload?.is_dynamic_shell ? (asm.assessment_category === 'TEST' ? 40 : 10) : 10));
+                totalEarnedScore += earned;
+                totalMaxPossible += totalQ;
+                const pct = bestAtt.percentage != null ? Number(bestAtt.percentage) : (totalQ > 0 ? (earned / totalQ) * 100 : 0);
+                sumPercentages += pct;
+              }
+            }
+          });
+
+          const totalClassAssessments = classAssessments.length || 40;
+          // Progress Calculation (PROG):
+          // completion_percentage = (completed_assessments_count / total_class_assessments) * 100
+          const progressPct = totalClassAssessments > 0 ? Math.round((completedCount / totalClassAssessments) * 100) : 0;
+          const progressStr = `${progressPct}%`;
+
+          // Student Score (%) & Grade (GRD):
+          // Calculated ONLY on taken/unlocked assessments. Locked/unopened assessments do NOT drag down score.
+          // Formula: average_score = sum(best_percentage_on_taken) / count(taken_assessments)
+          // Grade: getGrade(average_score)
+          const averageScorePct = completedCount > 0
+            ? Math.round(sumPercentages / completedCount)
+            : 0;
+          const overallPct = averageScorePct;
+          const curriculumGradePct = averageScorePct;
+
+          let grade = '—';
           let gradeColor = 'rgba(255,255,255,0.4)';
           if (completedCount > 0) {
-            let totalMaxScore = 0;
-            let totalObtained = 0;
-            classAttempts.filter(a => a.status === 'SUBMITTED' || a.status === 'submitted' || a.status === 'AUTO_SUBMITTED').forEach(a => {
-              totalMaxScore += (a.max_score || 0);
-              totalObtained += (a.total_score || 0);
+            const g = typeof getGrade === 'function' ? getGrade(averageScorePct) : (
+              averageScorePct >= 100 ? 'S' :
+              averageScorePct >= 91 ? 'A' :
+              averageScorePct >= 71 ? 'B' :
+              averageScorePct >= 51 ? 'C' :
+              averageScorePct >= 31 ? 'D' :
+              averageScorePct >= 11 ? 'E' : 'F'
+            );
+            grade = g;
+            const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#0ea5e9', 'C': '#c7c18c', 'D': '#f97316', 'E': '#f43f5e', 'F': '#ef4444' };
+            gradeColor = cMap[g] || 'rgba(255,255,255,0.4)';
+          }
+
+          // Find latest submitted assessment
+          let latestAsm = null;
+          let latestScore = -1;
+          const submittedAtts = classAttempts.filter(a => {
+            const st = String(a.status || '').toLowerCase();
+            return ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
+          });
+          if (submittedAtts.length > 0) {
+            submittedAtts.sort((x, y) => {
+              const diff = Number(y.score ?? 0) - Number(x.score ?? 0);
+              if (diff !== 0) return diff;
+              return new Date(y.submitted_at || y.created_at || 0) - new Date(x.submitted_at || x.created_at || 0);
             });
-            if (totalMaxScore > 0) {
-              const pct = Math.round((totalObtained / totalMaxScore) * 100);
-              overallScoreStr = `${pct}%`;
-              const g = typeof getGrade === 'function' ? getGrade(pct) : (pct >= 90 ? 'A' : pct >= 70 ? 'B' : pct >= 50 ? 'C' : 'D');
-              grade = g;
-              const cMap = { 'S': '#8b5cf6', 'A': '#10b981', 'B': '#3b82f6', 'C': '#f59e0b', 'D': '#f97316', 'E': '#ef4444', 'F': '#ef4444' };
-              gradeColor = cMap[g] || 'rgba(255,255,255,0.4)';
-            }
+            const la = submittedAtts[0];
+            const asm = classAssessments.find(a => a.id === (la.assessment_id || la.Assessment_id));
+            const code = asm?.shell_code || asm?.title || 'Task';
+            const sc = la.score != null ? Number(la.score) : 0;
+            const totalQ = Number(la.total_questions || (asm?.is_dynamic_shell || asm?.payload?.is_dynamic_shell ? (asm?.assessment_category === 'TEST' ? 40 : 10) : 10));
+            const pct = Math.round(la.percentage != null ? Number(la.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0));
+            const g = la.grade || (typeof getGrade === 'function' ? getGrade(pct) : (pct >= 90 ? 'S' : pct >= 70 ? 'B' : pct >= 50 ? 'C' : 'D'));
+            latestScore = sc;
+            latestAsm = {
+              title: asm?.title || code,
+              code,
+              score: sc,
+              total: totalQ,
+              pct,
+              grade: g,
+              status: la.status
+            };
           }
 
           const isBatchActive = s.batches ? s.batches.is_active !== false : false;
@@ -780,42 +1112,57 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
             name: s.name || 'Unknown',
             displayName: (typeof formatStudentName === 'function') ? (formatStudentName(s.name, s.gender) || s.name || 'Unknown') : (s.name || 'Unknown'),
             instName,
+            instShort,
             progName,
             photoUrl: s.photo_url || '',
             initial: getStudentInitial(s.name),
             gender: s.gender || '',
             ageDisplay,
-            batch: s.batches?.name || (s.batch_id ? 'Unknown Batch' : '—'),
+            batch: batchObj?.name || s.batches?.name || (s.batch_id ? batchMap[s.batch_id]?.name : '') || '—',
             isBatchActive,
             levelName,
             completedCount,
-            totalClassAssessments: classAssessments.length,
-            overallScoreStr,
+            totalClassAssessments,
+            progressPct,
+            progressStr,
+            averageScorePct,
+            curriculumGradePct,
+            overallPct,
+            totalEarnedScore,
+            totalMaxPossible,
             grade,
             gradeColor,
+            latestAsm,
+            latestScore,
+            asmScores,
             pin: s.pin || '****',
             phone: s.phone || s.phone_number || '—',
             email: s.email || '—',
             isActive: s.is_active !== false,
+            ...rowScoreSortVals,
             _raw: s
           };
         });
 
-        // Hierarchical sort: Active students first, then Institution -> Program -> Batch -> Level -> Name (A-Z)
+        // Default sort: PTS descending (highest total points first), ensuring students who completed the curriculum rank at the top
         studentsGridData.sort((a, b) => {
           const aActive = a.isActive ? 1 : 0;
           const bActive = b.isActive ? 1 : 0;
           if (aActive !== bActive) return bActive - aActive;
 
-          const instCmp = (a.instName || '').localeCompare(b.instName || '', undefined, { sensitivity: 'base', numeric: true });
-          if (instCmp !== 0) return instCmp;
-          const progCmp = (a.progName || '').localeCompare(b.progName || '', undefined, { sensitivity: 'base', numeric: true });
-          if (progCmp !== 0) return progCmp;
-          const batchCmp = (a.batch || '').localeCompare(b.batch || '', undefined, { sensitivity: 'base', numeric: true });
-          if (batchCmp !== 0) return batchCmp;
-          const lvlCmp = (a.levelName || '').localeCompare(b.levelName || '', undefined, { sensitivity: 'base', numeric: true });
-          if (lvlCmp !== 0) return lvlCmp;
-          return stripHonorific(a.displayName || a.name || '').localeCompare(stripHonorific(b.displayName || b.name || ''), undefined, { sensitivity: 'base', numeric: true });
+          const ptsA = Number(a.totalEarnedScore ?? 0);
+          const ptsB = Number(b.totalEarnedScore ?? 0);
+          if (ptsA !== ptsB) return ptsB - ptsA;
+
+          const scoreA = Number(a.averageScorePct ?? 0);
+          const scoreB = Number(b.averageScorePct ?? 0);
+          if (scoreA !== scoreB) return scoreB - scoreA;
+
+          const progA = Number(a.progressPct ?? 0);
+          const progB = Number(b.progressPct ?? 0);
+          if (progA !== progB) return progB - progA;
+
+          return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
         });
 
         // State for active tab
@@ -831,14 +1178,12 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
           { id: 'attendance', icon: '👥', val: classStudents.length, label: 'Total Enrolled Students' }
         ];
 
+        if (window.setTopbarTabs) {
+          window.setTopbarTabs(classHubTabs, window._classHubActiveTab, 'window._switchClassHubTab');
+        }
+
         let html = `
           <div>
-            ${buildSectionTabBar({
-              tabs: classHubTabs,
-              activeId: window._classHubActiveTab,
-              onSelect: 'window._switchClassHubTab'
-            })}
-
             <div id="class-hub-tab-content">
               ${window._classHubActiveTab === 'assessments' ? `
                 <div class="card" style="padding: 0.75rem 1rem; background: var(--clr-surface); margin: 0;">
@@ -850,8 +1195,19 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
                 </div>
               ` : `
                 <div class="card" style="padding: 0.75rem 1rem; background: var(--clr-surface); margin: 0;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0; font-size: 1.1rem;">📋 Class Roster (Attendance)</h3>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <h3 style="margin: 0; font-size: 1.1rem;">📋 Class Roster (Attendance)</h3>
+                      <span id="class-roster-count-badge" class="badge" style="background: rgba(56,189,248,0.12); color: #38bdf8; font-size: 0.75rem;"></span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <label style="font-size: 0.75rem; color: var(--clr-text-2); margin: 0;">Batch:</label>
+                      <select id="class-roster-batch-filter" class="form-input" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; height: auto; width: auto; min-width: 170px;">
+                        <option value="active" ${(!window._classRosterBatchFilter || window._classRosterBatchFilter === 'active') ? 'selected' : ''}>Active Batches Only</option>
+                        <option value="all" ${window._classRosterBatchFilter === 'all' ? 'selected' : ''}>All Batches (Include Past)</option>
+                        ${programBatches.map(b => `<option value="${b.id}" ${window._classRosterBatchFilter === b.id ? 'selected' : ''}>${escapeHtml(b.name)}${b.is_active === false ? ' (Past/Inactive)' : ''}</option>`).join('')}
+                      </select>
+                    </div>
                   </div>
                   <div id="class-attendance-grid"></div>
                 </div>
@@ -985,7 +1341,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
                   return `
                     <div class="d-flex gap-1 justify-end align-center">
                       <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterAssessmentResults='${id}'; window.loadSection('results');">&#128202;</button>
-                      <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateAssessment='${id}'; window.loadSection('recalibrator');">&#9878;&#65039;</button>
+                      <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateAssessment='${id}'; window.loadSection('health');">&#9878;&#65039;</button>
                       <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateAssessment('${id}')" title="Duplicate">📄</button>
                       <button class="btn ${String(row.status).toLowerCase() === 'published' ? 'btn-danger' : 'btn-success'}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishAssessment('${id}', '${row.status || 'draft'}')">
                         ${String(row.status).toLowerCase() === 'published' ? '👁️‍🗨️' : '👁️'}
@@ -999,27 +1355,183 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
             ]
           });
         } else {
-          new window.DataGrid({
+          const rosterBatchFilter = window._classRosterBatchFilter || 'active';
+          const filterRosterData = (data, filterVal) => {
+            if (filterVal === 'active') {
+              return data.filter(s => {
+                const b = batchMap[s._raw?.batch_id];
+                return b ? b.is_active !== false : true;
+              });
+            } else if (filterVal === 'all') {
+              return data;
+            } else {
+              return data.filter(s => s._raw?.batch_id === filterVal);
+            }
+          };
+
+          const initialRosterData = filterRosterData(studentsGridData, rosterBatchFilter);
+
+          const attendanceGridInstance = new window.DataGrid({
             container: document.getElementById('class-attendance-grid'),
-            data: studentsGridData,
-            pageSize: 25,
-            searchKeys: ['instName', 'progName', 'batch', 'levelName', 'displayName', 'name', 'pin', 'phone', 'email'],
-            initialSortKey: 'instName',
-            initialSortAsc: true,
+            data: initialRosterData,
+            pageSize: 50,
+            stickyActionCol: false,
+            tableLayout: 'fixed',
+            searchKeys: ['instName', 'instShort', 'progName', 'batch', 'displayName', 'name', 'pin'],
+            initialSortKey: 'totalEarnedScore',
+            initialSortAsc: false,
+            superHeaders: [
+              { label: 'STUDENT DETAILS', colSpan: 7, className: 'super-hdr super-hdr-student' },
+              { label: 'THEME A (Workplace)', colSpan: 8, className: 'super-hdr super-hdr-theme super-hdr-theme-a' },
+              { label: 'THEME B (Tourism)', colSpan: 10, className: 'super-hdr-theme super-hdr-theme-b' },
+              { label: 'THEME C (CCU)', colSpan: 10, className: 'super-hdr-theme super-hdr-theme-c' },
+              { label: 'THEME D (High-Frequency)', colSpan: 12, className: 'super-hdr-theme super-hdr-theme-d' }
+            ],
+            summaryRow: (visibleCols, filteredData) => {
+              const totalStudents = filteredData.length;
+              if (totalStudents === 0) return '';
+
+              // Calculate class averages
+              const avgProg = Math.round(filteredData.reduce((acc, s) => acc + (s.progressPct || 0), 0) / totalStudents);
+              const avgPts = Math.round(filteredData.reduce((acc, s) => acc + (s.totalEarnedScore || 0), 0) / totalStudents);
+              const completedStudents = filteredData.filter(s => (s.completedCount || 0) > 0);
+              const avgScore = completedStudents.length > 0 
+                ? Math.round(completedStudents.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / completedStudents.length) 
+                : 0;
+              const avgGrade = completedStudents.length > 0 && typeof getGrade === 'function' ? getGrade(avgScore) : '—';
+              const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#0ea5e9', 'C': '#c7c18c', 'D': '#f97316', 'E': '#f43f5e', 'F': '#ef4444' };
+              const avgGradeColor = cMap[avgGrade] || '#94a3b8';
+              const isAvgGradeS = avgGrade === 'S';
+              const avgBadgeStyle = isAvgGradeS
+                ? `background:linear-gradient(135deg, #fef08a, #fbbf24, #d97706); color:#1e1b4b; font-weight:900; font-size:0.65rem; padding:0 5px; line-height:1.2; box-shadow:0 0 10px rgba(245,158,11,0.7); border:1px solid #fde68a;`
+                : `background:${avgGradeColor}; color:#000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
+
+              let cellsHtml = '';
+              visibleCols.forEach(col => {
+                if (col.key === 'instName') {
+                  cellsHtml += `<td class="text-center" style="font-weight:800; color:#facc15; font-size:0.75rem;">★</td>`;
+                } else if (col.key === 'progName' || col.key === 'batch') {
+                  cellsHtml += `<td class="text-center" style="color:#94a3b8; font-size:0.7rem;">—</td>`;
+                } else if (col.key === 'displayName') {
+                  cellsHtml += `<td style="font-weight:800; color:#facc15; font-size:0.75rem; white-space:nowrap; text-transform:uppercase; letter-spacing:0.02em;">★ CLASS AVERAGE (KELAS)</td>`;
+                } else if (col.key === 'progressPct') {
+                  cellsHtml += `
+                    <td class="text-center">
+                      <div class="fw-700 text-xs" style="color:#facc15; font-size:0.75rem;">${avgProg}%</div>
+                      <div style="font-size:0.55rem; color:#94a3b8; white-space:nowrap;">Avg Done</div>
+                    </td>
+                  `;
+                } else if (col.key === 'grade') {
+                  cellsHtml += `
+                    <td class="text-center">
+                      <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; line-height:1.1; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(251,191,36,0.6));' : ''}">${avgScore}%</div>
+                      <span class="badge" style="${avgBadgeStyle}">${avgGrade}</span>
+                    </td>
+                  `;
+                } else if (col.key === 'totalEarnedScore') {
+                  cellsHtml += `
+                    <td class="text-center">
+                      <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(251,191,36,0.6));' : ''}">${avgPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
+                    </td>
+                  `;
+                } else if (col.key && col.key.startsWith('asm_')) {
+                  const asmId = col.key.replace('asm_', '');
+                  let count = 0;
+                  let scoreSum = 0;
+                  filteredData.forEach(s => {
+                    const att = s.asmScores?.[asmId];
+                    if (att && ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(att.status || '').toLowerCase())) {
+                      count++;
+                      scoreSum += Number(att.score ?? 0);
+                    }
+                  });
+                  const isTest = col.className && col.className.includes('col-asm-test');
+                  if (count > 0) {
+                    const avgSc = (scoreSum / count).toFixed(1).replace(/\.0$/, '');
+                    cellsHtml += `
+                      <td class="text-center ${col.className || ''}" style="${isTest ? 'background:rgba(244,114,182,0.12);' : ''}">
+                        <span style="color:#facc15; font-weight:700; font-size:0.72rem; font-family:monospace;" title="Avg: ${avgSc} pts (${count} students)">${avgSc}</span>
+                      </td>
+                    `;
+                  } else {
+                    cellsHtml += `
+                      <td class="text-center ${col.className || ''}" style="${isTest ? 'background:rgba(244,114,182,0.12);' : ''}">
+                        <span style="color:rgba(255,255,255,0.22); font-weight:800; font-size:0.85rem; line-height:1;">&middot;</span>
+                      </td>
+                    `;
+                  }
+                } else {
+                  cellsHtml += `<td></td>`;
+                }
+              });
+
+              return `<tr class="datagrid-summary-row">${cellsHtml}</tr>`;
+            },
             sortComparator: (sortKey, direction, a, b) => {
               const aActive = a.isActive ? 1 : 0;
               const bActive = b.isActive ? 1 : 0;
               if (aActive !== bActive) return bActive - aActive;
 
+              if (sortKey === 'totalEarnedScore' || sortKey === 'PTS') {
+                const sA = Number(a.totalEarnedScore ?? 0);
+                const sB = Number(b.totalEarnedScore ?? 0);
+                if (sA !== sB) return direction === 'asc' ? sA - sB : sB - sA;
+                const scoreA = Number(a.averageScorePct ?? 0);
+                const scoreB = Number(b.averageScorePct ?? 0);
+                if (scoreA !== scoreB) return scoreB - scoreA;
+                const pA = Number(a.progressPct ?? 0);
+                const pB = Number(b.progressPct ?? 0);
+                if (pA !== pB) return pB - pA;
+              }
+
+              if (sortKey === 'progressPct' || sortKey === 'PROG') {
+                const pA = Number(a.progressPct ?? 0);
+                const pB = Number(b.progressPct ?? 0);
+                if (pA !== pB) return direction === 'asc' ? pA - pB : pB - pA;
+                const sA = Number(a.totalEarnedScore ?? 0);
+                const sB = Number(b.totalEarnedScore ?? 0);
+                if (sA !== sB) return sB - sA;
+                const scoreA = Number(a.averageScorePct ?? 0);
+                const scoreB = Number(b.averageScorePct ?? 0);
+                if (scoreA !== scoreB) return scoreB - scoreA;
+              }
+
+              if (sortKey === 'grade' || sortKey === 'GRD' || sortKey === 'SCORE' || sortKey === 'averageScorePct') {
+                const gA = Number(a.averageScorePct ?? 0);
+                const gB = Number(b.averageScorePct ?? 0);
+                if (gA !== gB) return direction === 'asc' ? gA - gB : gB - gA;
+                const sA = Number(a.totalEarnedScore ?? 0);
+                const sB = Number(b.totalEarnedScore ?? 0);
+                if (sA !== sB) return sB - sA;
+                const pA = Number(a.progressPct ?? 0);
+                const pB = Number(b.progressPct ?? 0);
+                if (pA !== pB) return pB - pA;
+              }
+
+              if (sortKey && sortKey.startsWith('asm_')) {
+                const scoreA = Number(a[sortKey] ?? -1);
+                const scoreB = Number(b[sortKey] ?? -1);
+                if (scoreA !== scoreB) {
+                  return direction === 'asc' ? scoreA - scoreB : scoreB - scoreA;
+                }
+              }
+
               if (sortKey === 'instName') {
                 const instCmp = (a.instName || '').localeCompare(b.instName || '', undefined, { sensitivity: 'base', numeric: true });
                 if (instCmp !== 0) return direction === 'desc' ? -instCmp : instCmp;
+              }
+
+              if (sortKey === 'progName') {
                 const progCmp = (a.progName || '').localeCompare(b.progName || '', undefined, { sensitivity: 'base', numeric: true });
                 if (progCmp !== 0) return direction === 'desc' ? -progCmp : progCmp;
+              }
+
+              if (sortKey === 'batch') {
                 const batchCmp = (a.batch || '').localeCompare(b.batch || '', undefined, { sensitivity: 'base', numeric: true });
                 if (batchCmp !== 0) return direction === 'desc' ? -batchCmp : batchCmp;
-                const lvlCmp = (a.levelName || '').localeCompare(b.levelName || '', undefined, { sensitivity: 'base', numeric: true });
-                if (lvlCmp !== 0) return direction === 'desc' ? -lvlCmp : lvlCmp;
+              }
+
+              if (sortKey === 'displayName') {
                 const nameCmp = (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
                 return direction === 'desc' ? -nameCmp : nameCmp;
               }
@@ -1030,134 +1542,158 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
               if (typeof valB === 'string') valB = valB.toLowerCase();
               if (valA < valB) return direction === 'asc' ? -1 : 1;
               if (valA > valB) return direction === 'asc' ? 1 : -1;
-
-              const instCmp = (a.instName || '').localeCompare(b.instName || '', undefined, { sensitivity: 'base', numeric: true });
-              if (instCmp !== 0) return instCmp;
-              const progCmp = (a.progName || '').localeCompare(b.progName || '', undefined, { sensitivity: 'base', numeric: true });
-              if (progCmp !== 0) return progCmp;
-              const batchCmp = (a.batch || '').localeCompare(b.batch || '', undefined, { sensitivity: 'base', numeric: true });
-              if (batchCmp !== 0) return batchCmp;
-              const lvlCmp = (a.levelName || '').localeCompare(b.levelName || '', undefined, { sensitivity: 'base', numeric: true });
-              if (lvlCmp !== 0) return lvlCmp;
-              return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
+              return 0;
             },
             columns: [
               {
                 key: 'instName',
-                label: 'INSTITUTION',
+                label: 'INST',
                 sortable: true,
-                render: (val, row) => `<div class="text-sm fw-600">${escapeHtml(row.instName)}</div>`
+                align: 'center',
+                width: '65px',
+                render: (val, row) => `<span class="badge" style="background:rgba(255,255,255,0.08); font-weight:700; font-family:monospace; font-size:0.7rem; padding:2px 6px;" title="${escapeHtml(row.instName)}">${escapeHtml(row.instShort || row.instName)}</span>`
               },
               {
                 key: 'progName',
                 label: 'PROGRAM',
                 sortable: true,
-                render: (val, row) => `<div class="text-sm">${escapeHtml(row.progName)}</div>`
+                align: 'center',
+                width: '65px',
+                render: (val, row) => `<div class="text-xs" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60px;" title="${escapeHtml(row.progName)}">${escapeHtml(row.progName)}</div>`
               },
               {
                 key: 'batch',
                 label: 'BATCH',
                 sortable: true,
                 align: 'center',
-                render: (val, row) => `<span class="badge" style="background:rgba(255,255,255,0.1);color:#fff;font-size:0.75rem;">${escapeHtml(row.batch)}</span>`
-              },
-              {
-                key: 'levelName',
-                label: 'LEVEL',
-                sortable: true,
-                align: 'center',
-                render: (val, row) => `<span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(row.levelName)}</span>`
+                width: '55px',
+                render: (val, row) => `<span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-weight:700; font-size:0.7rem; padding:2px 6px; border-radius:10px;">${escapeHtml(row.batch)}</span>`
               },
               {
                 key: 'displayName',
                 label: 'STUDENT NAME',
                 sortable: true,
+                width: '140px',
                 render: (val, row) => `
-                  <div class="d-flex align-center gap-3">
-                    ${row.photoUrl ? `<img src="${row.photoUrl}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">` : `<div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;">${row.initial}</div>`}
-                    <div>
-                      <div class="fw-600" style="color:var(--clr-text-1); font-size:0.85rem;">
-                        ${escapeHtml(row.displayName)}
-                        ${!row.isBatchActive ? `<span class="badge badge-warning" style="font-size:0.65rem;margin-left:6px;">Inactive Batch</span>` : ''}
-                      </div>
-                      <div class="text-xs text-muted" style="font-family:monospace;">PIN: ${escapeHtml(row.pin)}</div>
-                    </div>
+                  <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:135px;" title="${escapeHtml(row.displayName)}&#10;PIN: ${escapeHtml(row.pin)}">
+                    <span class="fw-600 text-xs" style="color:var(--clr-text-1); font-size:0.78rem;">
+                      ${escapeHtml(row.displayName)}
+                    </span>
                   </div>
                 `
               },
               {
-                key: 'ageDisplay',
-                label: 'AGE',
+                key: 'progressPct',
+                label: 'PROG',
                 sortable: true,
                 align: 'center',
-                render: (val, row) => `<span class="text-sm fw-600">${escapeHtml(row.ageDisplay)}</span>`
-              },
-              {
-                key: 'gender',
-                label: 'GENDER',
-                sortable: true,
-                align: 'center',
-                render: (val, row) => row.gender === 'male'
-                  ? `<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);font-size:0.7rem;">&#9794; Male</span>`
-                  : row.gender === 'female'
-                  ? `<span class="badge" style="background:rgba(244,114,182,0.15);color:#f472b6;border:1px solid rgba(244,114,182,0.3);font-size:0.7rem;">&#9792; Female</span>`
-                  : `<span class="badge badge-neutral" style="font-size:0.7rem;">&mdash;</span>`
-              },
-              {
-                key: 'overallScoreStr',
-                label: 'PROGRESS',
-                sortable: true,
-                align: 'center',
+                width: '50px',
                 render: (val, row) => `
-                  <div class="fw-600 text-sm">${row.overallScoreStr}</div>
-                  <div class="text-xs text-muted">${row.completedCount} / ${row.totalClassAssessments} Done</div>
+                  <div class="fw-700 text-xs" style="color:var(--clr-text-1); font-size:0.75rem;">${row.progressPct}%</div>
+                  <div style="font-size:0.58rem; color:#94a3b8; white-space:nowrap;">${row.completedCount}/${row.totalClassAssessments} Done</div>
                 `
               },
               {
                 key: 'grade',
-                label: 'GRADE',
+                label: 'GRD',
                 sortable: true,
                 align: 'center',
-                render: (val, row) => row.grade !== '-' ? `<span class="badge" style="background:${row.gradeColor};color:#000;font-weight:700;">${row.grade}</span>` : '<span class="text-muted">&mdash;</span>'
+                width: '40px',
+                render: (val, row) => {
+                  if (row.grade === '—' || row.grade === '-') return '<span class="text-muted" style="font-size:0.75rem;">&mdash;</span>';
+                  const isGradeS = row.grade === 'S';
+                  const badgeStyle = isGradeS
+                    ? `background:linear-gradient(135deg, #fef08a, #fbbf24, #d97706); color:#1e1b4b; font-weight:900; font-size:0.65rem; padding:0 5px; line-height:1.2; box-shadow:0 0 10px rgba(245,158,11,0.7); border:1px solid #fde68a;`
+                    : `background:${row.gradeColor}; color:#000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
+                  return `
+                    <div class="fw-700 text-xs" style="color:${row.gradeColor}; font-size:0.75rem; line-height:1.1; ${isGradeS ? 'font-weight:900; filter:drop-shadow(0 0 6px rgba(251,191,36,0.6));' : ''}">${row.averageScorePct}%</div>
+                    <span class="badge" style="${badgeStyle}">${row.grade}</span>
+                  `;
+                }
               },
               {
-                key: 'phone',
-                label: 'CONTACT',
-                sortable: true,
-                render: (val, row) => `
-                  <div class="text-xs" style="color:var(--clr-text-2);">${escapeHtml(row.phone !== '—' ? row.phone : row.email)}</div>
-                `
-              },
-              {
-                key: 'status',
-                label: 'STATUS',
+                key: 'totalEarnedScore',
+                label: 'PTS',
                 sortable: true,
                 align: 'center',
-                render: (val, row) => `<span class="badge ${row.isActive ? 'badge-success' : 'badge-neutral'}" style="font-size:0.7rem;">${row.isActive ? 'Active' : 'Inactive'}</span>`
+                width: '55px',
+                render: (val, row) => {
+                  const isGradeS = row.grade === 'S';
+                  const ptsColor = (row.grade !== '—' && row.gradeColor) ? row.gradeColor : 'var(--clr-text-1)';
+                  return `
+                    <div class="fw-700 text-xs" style="color:${ptsColor}; font-size:0.75rem; ${isGradeS ? 'font-weight:900; filter:drop-shadow(0 0 6px rgba(251,191,36,0.6));' : ''}">${row.totalEarnedScore} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
+                  `;
+                }
               },
-              {
-                key: 'actions',
-                label: '',
-                sortable: false,
-                align: 'right',
-                render: (val, row) => `
-                  <div class="d-flex gap-1 justify-end align-center">
-                    <button class="btn btn-secondary btn-icon btn-sm" title="View Profile" onclick="event.stopPropagation(); if (window.openStudentProfile) window.openStudentProfile('${row.id}')">&#128100;</button>
-                    <button class="btn btn-secondary btn-icon btn-sm" title="Edit Student" onclick="event.stopPropagation(); if (window.openStudentFullEdit) window.openStudentFullEdit(window._classStudentsMap['${row.id}'], () => window.renderClassHub(document.getElementById('admin-content-area')))">&#9998;</button>
-                  </div>
-                `
-              }
+              ...classAssessments.map((asm, idx) => {
+                const num = idx + 1;
+                const testColNumbers = [7, 8, 17, 18, 29, 30, 39, 40];
+                const isTest = testColNumbers.includes(num) || asm.assessment_category === 'TEST' || asm.payload?.assessment_category === 'TEST' || /\bTEST\b/i.test(asm.title || '') || /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '');
+                const code = asm.payload?.shell_code || asm.shell_code || asm.title;
+                const colClass = isTest ? 'col-asm col-asm-test' : 'col-asm col-asm-task';
+                const tag = isTest ? 'TEST' : 'TASK';
+                const cleanTitle = asm.title || asm.name || code || 'Assessment';
+                const headerTooltip = (code && cleanTitle && !cleanTitle.toLowerCase().startsWith(code.toLowerCase()))
+                  ? `${code}: ${cleanTitle}`
+                  : cleanTitle;
+                return {
+                  key: `asm_${asm.id}`,
+                  className: colClass,
+                  headerTitle: headerTooltip,
+                  title: headerTooltip,
+                  label: `<span class="asm-num ${isTest ? 'asm-num-test' : 'asm-num-task'}" title="${escapeHtml(headerTooltip)}">${num}</span>`,
+                  sortable: false,
+                  align: 'center',
+                  render: (val, row) => {
+                    const att = row.asmScores?.[asm.id];
+                    if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                    const st = String(att.status || '').toLowerCase();
+                    if (st === 'in_progress') return `<span style="color:#eab308; font-size:0.65rem;" title="In Progress">⏳</span>`;
+                    if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                    const sc = att.score != null ? Number(att.score) : 0;
+                    const totalQ = Number(att.total_questions || (asm.is_dynamic_shell || asm.payload?.is_dynamic_shell ? (asm.assessment_category === 'TEST' ? 40 : 10) : 10));
+                    const pct = totalQ > 0 ? (sc / totalQ) * 100 : (att.percentage != null ? Number(att.percentage) : 0);
+                    const isHigh = pct >= 80;
+                    const isMid = pct >= 60;
+                    const color = isTest ? '#f472b6' : (isHigh ? '#34d399' : isMid ? '#60a5fa' : (sc > 0 ? '#f59e0b' : '#ef4444'));
+                    const attId = att.id || att.attempt_id;
+                    const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}', '_blank'); event.stopPropagation();"` : '';
+                    const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+                    return `
+                      <span class="asm-score ${isTest ? 'asm-score-test' : 'asm-score-task'}" 
+                            style="color:${color}; ${cursorStyle}" 
+                            ${clickAttr}
+                            title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${sc}/${totalQ} pts (${Math.round(pct)}%)&#10;Click to open result in new tab">
+                        ${sc}
+                      </span>
+                    `;
+                  }
+                };
+              })
             ]
           });
+
+          const countBadge = document.getElementById('class-roster-count-badge');
+          if (countBadge) countBadge.textContent = `${initialRosterData.length} Enrolled`;
+
+          const batchFilterSelect = document.getElementById('class-roster-batch-filter');
+          if (batchFilterSelect && attendanceGridInstance) {
+            batchFilterSelect.addEventListener('change', (e) => {
+              window._classRosterBatchFilter = e.target.value;
+              const filtered = filterRosterData(studentsGridData, window._classRosterBatchFilter);
+              attendanceGridInstance.updateData(filtered);
+              if (countBadge) countBadge.textContent = `${filtered.length} Enrolled`;
+            });
+          }
         }
+        window._classHubCache[classId] = { timestamp: Date.now() };
 
       } catch (e) {
-        console.error(e);
-        area.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">Failed to load class data.</p></div>`;
+        console.error('[renderClassHub error]:', e);
+        area.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">Failed to load class data: ${escapeHtml(e?.message || 'Unknown error')}</p></div>`;
       }
-    };
-
-    setTimeout(() => { if (window.loadSidebarClasses) window.loadSidebarClasses(); }, 1500);
+    }
+    window.renderClassHub = renderClassHub;
 
 
 
@@ -1270,14 +1806,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
     });
 
     // Ã¢â€â‚¬Ã¢â€â‚¬ Global String & HTML Utilities Ã¢â€â‚¬Ã¢â€â‚¬
-    function escapeHtml(str) {
-      return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
+    // escapeHtml / escHtml imported canonically
 
     function getRowVal(row, possibleKeys) {
       if (!row || typeof row !== 'object') return '';
@@ -1372,8 +1901,8 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
       const panel = domainToPanelMap[domain] || domain.toLowerCase();
       activatePrimaryTab(panel);
 
-      // Highlight active sub-nav item (support direct key and alias), excluding dynamic sidebar class items
-      document.querySelectorAll('.admin-nav-item:not(.sidebar-class-item)').forEach(i => {
+      // Highlight active sub-nav item (support direct key and alias), excluding dynamic sidebar class and program items
+      document.querySelectorAll('.admin-nav-item:not(.sidebar-class-item):not(.sidebar-program-item)').forEach(i => {
         const sub = i.dataset.sub;
         const mappedSub = aliasSectionMap[sub] || sub;
         i.classList.toggle('active', sub === rawSection || sub === section || mappedSub === section);
@@ -1381,19 +1910,37 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
       // If we navigate away from class-hub, clear the active state of all class items
       if (rawSection !== 'class-hub') {
         document.querySelectorAll('.sidebar-class-item').forEach(i => i.classList.remove('active'));
+      } else {
+        const selId = window._selectedClassId;
+        document.querySelectorAll('.sidebar-class-item').forEach(i => {
+          i.classList.toggle('active', !selId || i.getAttribute('data-class-id') === selId);
+        });
       }
 
-      const domainEl = document.getElementById('topbar-domain');
-      if (domainEl) domainEl.textContent = domain;
-      document.getElementById('topbar-title').textContent = sectionTitles[section] || section;
+      // If we navigate away from students, clear the active state of all program items
+      if (rawSection !== 'students') {
+        document.querySelectorAll('.sidebar-program-item').forEach(i => i.classList.remove('active'));
+      } else {
+        const selProgId = window._filterProgramId || localStorage.getItem('topscore_selected_program_id');
+        document.querySelectorAll('.sidebar-program-item').forEach(i => {
+          i.classList.toggle('active', !selProgId || i.getAttribute('data-program-id') === selProgId);
+        });
+      }
+
+      // Reset topbar container with default section title (or views will elevate their KPI tabs)
+      const topbarTabsEl = document.getElementById('topbar-tabs-container');
+      if (topbarTabsEl) {
+        const secTitle = (rawSection === 'students' && window._selectedProgramName) 
+          ? window._selectedProgramName 
+          : (sectionTitles[section] || section);
+        topbarTabsEl.innerHTML = `<div class="topbar-default-title" id="topbar-title">${secTitle}</div>`;
+      }
       const area = document.getElementById('admin-content-area');
       area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading...</p></div>';
 
 
-      document.getElementById('add-record-btn').onclick = () => {
-        openCrudModal(section, null);
-      };
-      document.getElementById('add-record-btn').style.display = ['audit', 'health', 'recycle', 'settings', 'results', 'progress-view', 'import-students', 'import-questions', 'export-questions', 'recalibrator', 'cv_generator', 'schedule', 'work_records', 'assessments', 'Assessments', 'classes-hub', 'organization', 'curriculum'].includes(section) ? 'none' : '';
+      const addRecBtn = document.getElementById('add-record-btn');
+      if (addRecBtn) addRecBtn.style.display = 'none';
 
       try {
         switch(section.toLowerCase()) {
@@ -1452,7 +1999,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
           case 'questions':           await renderCentralQuestionBank(area); break;
 
           case 'results':             await renderResults(area); break;
-          case 'progress-view':       await renderProgressView(area); break;
+          case 'progress-view':       window.location.hash = '#students'; return loadSection('students');
           case 'audit':               await renderAuditLog(area); break;
           case 'health':              await renderDataHealth(area); break;
           case 'recycle':             await renderRecycleBin(area); break;
@@ -1490,7 +2037,9 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
           case 'import-students':     await renderImportStudents(area); break;
           case 'import-questions':    await renderCentralQuestionImport(area); break;
           case 'export-questions':    renderExportQuestions(area); break;
-          case 'recalibrator':        await renderRecalibrator(area); break;
+          case 'recalibrator':
+            window.location.hash = '#health';
+            return loadSection('health');
           case 'assessment-hub':      window.location.hash = '#assessments'; break;
           case 'class-hub':           await renderClassHub(area); break;
           case 'assessments':         await renderAssessments(area); break;
@@ -1505,6 +2054,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
           default: area.innerHTML = `<div class="empty-state"><div class="empty-state__icon">&#128679;</div><h3>${sectionTitles[section] || section}</h3><p>This section is under development.</p></div>`;
         }
       } catch(e) {
+        console.error('[loadSection] CAUGHT ERROR:', e);
         if (thisSeq !== _loadSectionSeq) {
           console.warn('[loadSection] superseded during loading:', section);
           return;
@@ -2012,7 +2562,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=5.1.0');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=5.2.2');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -2151,7 +2701,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('questions')">&#10067; Question Bank</button>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('question_types')">&#128284; Validation Dictionary</button>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('class_instances')">&#128197; Class Instances</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('recalibrator')">&#9889; Recalibrator</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('health')">&#9889; Recalibrator</button>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('import-questions')">&#128229; Import Questions</button>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('export-questions')">&#128228; Export Questions</button>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('import_ai_assessments')">&#129302; Import AI Assessments</button>
@@ -2333,493 +2883,22 @@ import { openStudentFullEdit } from './student-management.js?v=5.1.0';
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
-      return age >= 0 ? `${age} yrs` : 'â€”';
+      return (age && age > 0) ? `${age} yrs` : '—';
     }
 
 
     // Ã¢â€â‚¬Ã¢â€â‚¬ INDIVIDUAL STUDENT PROFILE (Detailed Progress, Correct/Incorrect Counts, Batch Navigation) Ã¢â€â‚¬Ã¢â€â‚¬
+    // ─── INDIVIDUAL STUDENT PROFILE (Consolidated Modal Delegator) ───
     async function openStudentProfile(studentId, batchStudentIds = [], skipHistory = false) {
-      window.openStudentProfile = openStudentProfile;
-      if (!skipHistory) {
-         const hashState = `profile-${studentId}`;
-         if (window.location.hash.substring(1) !== hashState) {
-            window.history.pushState({ batchStudentIds }, '', `#${hashState}`);
-         }
+      if (typeof window.showStudentProfileModal === 'function') {
+        return window.showStudentProfileModal(studentId);
       }
-      if (typeof window._cleanupProfileView === 'function') {
-        window._cleanupProfileView();
-        window._cleanupProfileView = null;
-      }
-
-      const area = document.getElementById('admin-content-area');
-      area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading student profile &amp; question answer history...</p></div>';
-
-      try {
-        const sb = await getSupabase();
-
-        // 1. Fetch student record with relations
-        const { data: student, error: stErr } = await sb
-          .from('students')
-          .select('id, name, gender, birth_date, is_active, created_at, photo_url, photo_status, level_id, batch_id, program_id, institution_id, programs!program_id(id, name, institution_id), institutions!institution_id(id, name), batches!batch_id(id, name)')
-          .eq('id', studentId)
-          .single();
-
-        if (stErr || !student) {
-          throw new Error(stErr?.message || 'Student record not found.');
-        }
-
-        // 2. Fetch student\'s attempts with Assessments and attempt_answers
-        const { data: rawAttempts, error: attErr } = await sb
-          .from('attempts')
-          .select('id, assessment_id, score, percentage, grade, submitted_at, status, assessments(id, title, assessment_type, classes(id, name)), attempt_answers(id, question_order, evaluation_result, score, question_snapshot, student_answer, correct_answer_snapshot)')
-          .eq('student_id', studentId)
-          .in('status', ['submitted', 'auto_submitted'])
-          .order('submitted_at', { ascending: false });
-
-        if (attErr) {
-          console.warn('Could not fetch student attempts:', attErr);
-        }
-
-        const allAttempts = rawAttempts || [];
-
-        // 3. Identify highest-scoring attempt per unique Assessment
-        const bestAttemptMap = new Map();
-        allAttempts.forEach(att => {
-          const pct = parseFloat(att.percentage || att.score || 0);
-          const existing = bestAttemptMap.get(att.assessment_id);
-          if (!existing || pct > parseFloat(existing.percentage || existing.score || 0)) {
-            bestAttemptMap.set(att.assessment_id, att);
-          }
-        });
-
-        const bestAttempts = Array.from(bestAttemptMap.values());
-        const bestAttemptIds = new Set(bestAttempts.map(a => a.id));
-
-        // 4. Compute KPIs (Best attempt per Assessment only â€” per agreement)
-        let totalCorrect = 0;
-        let totalMinor = 0;
-        let totalIncorrect = 0;
-        let totalQuestionsAnswered = 0;
-
-        bestAttempts.forEach(att => {
-          const answers = att.attempt_answers || [];
-          totalQuestionsAnswered += answers.length;
-          answers.forEach(ans => {
-            const evalRes = (ans.evaluation_result || '').toLowerCase();
-            const scoreVal = parseFloat(ans.score || 0);
-            if (evalRes === 'correct' || scoreVal >= 1) {
-              totalCorrect++;
-            } else if (evalRes.includes('minor') || (scoreVal > 0 && scoreVal < 1)) {
-              totalMinor++;
-            } else {
-              totalIncorrect++;
-            }
-          });
-        });
-
-        const avgScore = bestAttempts.length > 0
-          ? bestAttempts.reduce((sum, a) => sum + parseFloat(a.percentage || a.score || 0), 0) / bestAttempts.length
-          : 0;
-        const globalGrade = bestAttempts.length > 0 ? getGrade(Math.round(avgScore)) : 'â€”';
-        const gradeColors = { S: '#f59e0b', A: '#10b981', B: '#3b82f6', C: '#f59e0b', D: '#ea580c', E: '#ef4444', F: '#94a3b8' };
-        const gradeColor = gradeColors[globalGrade] || 'var(--clr-text-1)';
-
-        // 5. Navigation variables within batch
-        const currentIdx = batchStudentIds.indexOf(studentId);
-        const hasPrev = currentIdx > 0;
-        const hasNext = currentIdx >= 0 && currentIdx < batchStudentIds.length - 1;
-        const prevId = hasPrev ? batchStudentIds[currentIdx - 1] : null;
-        const nextId = hasNext ? batchStudentIds[currentIdx + 1] : null;
-        const positionText = batchStudentIds.length > 0 ? `${currentIdx + 1} of ${batchStudentIds.length}` : '';
-
-        // Student metadata
-        const displayName = formatStudentName(student.name, student.gender);
-        const initial = getStudentInitial(student.name);
-        const ageDisplay = calculateAgeFromBirthDate(student.birth_date);
-        const batchName = student.batches?.name || 'Unassigned Batch';
-        const programName = student.programs?.name || '&mdash;';
-        const institutionName = student.institutions?.name || student.programs?.institutions?.name || '&mdash;';
-
-        area.innerHTML = `
-          <div class="student-profile-view animate-fade-in" style="display:flex; flex-direction:column; gap:20px;">
-            <!-- Top Navigation Bar -->
-            <div class="d-flex align-center justify-between flex-wrap gap-3 p-4 rounded" style="background:rgba(255,255,255,0.03); border:1px solid var(--clr-border);">
-              <div class="d-flex align-center gap-3">
-                <button class="btn btn-secondary btn-sm" id="btn-back-to-students" style="display:inline-flex; align-items:center; gap:6px;">
-                  <span>&larr;</span> Back to Students
-                </button>
-                <div class="d-flex align-center gap-2">
-                  <span class="badge badge-info" style="font-size:0.8rem;">&#128101; Batch: ${escapeHtml(batchName)}</span>
-                </div>
-              </div>
-
-              <!-- Next / Prev Controls -->
-              ${batchStudentIds.length > 0 ? `
-                <div class="d-flex align-center gap-2">
-                  <button class="btn btn-secondary btn-sm" id="btn-prev-student" ${!hasPrev ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} title="Previous Student (ArrowLeft)">
-                    &larr; Previous
-                  </button>
-                  <span class="text-xs fw-700 text-muted" style="padding:0 6px;">${positionText}</span>
-                  <button class="btn btn-secondary btn-sm" id="btn-next-student" ${!hasNext ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} title="Next Student (ArrowRight)">
-                    Next &rarr;
-                  </button>
-                </div>
-              ` : ''}
-            </div>
-
-            <!-- Top Hero Grid: Left Showcase Widget (Diagram) + Right Metadata Card -->
-            <div style="display:grid; grid-template-columns: 386px 1fr; gap:20px; align-items:stretch;">
-              <!-- Left: Student Showcase & Name Widget (Matches Diagram 100%) -->
-              <div style="display:flex; flex-direction:column; gap:16px; width:100%; max-width:386px;">
-                <!-- Top Row: Photo on left, 2 stacked boxes on right -->
-                <div style="display:flex; gap:16px; align-items:center; width:100%;">
-                  <!-- Large Squircle Student Photo -->
-                  <div style="
-                    width:230px; height:230px; flex-shrink:0; border-radius:28px; overflow:hidden;
-                    background: linear-gradient(135deg, var(--clr-primary, #6366f1), var(--clr-accent-1, #ec4899));
-                    display:flex; align-items:center; justify-content:center;
-                    font-size:5.5rem; font-weight:800; color:#fff;
-                    border:3.5px solid var(--clr-accent-1, #ec4899);
-                    box-shadow: 0 0 0 6px rgba(99,102,241,0.22), 0 16px 40px rgba(0,0,0,0.5);
-                  ">
-                    ${student.photo_url ? `<img src="${student.photo_url}" alt="Student Photo" style="width:100%;height:100%;object-fit:cover;" />` : `<span>${escapeHtml(initial)}</span>`}
-                  </div>
-
-                  <!-- 2 Stacked Rounded Boxes: Top = Grade, Bottom = Score -->
-                  <div style="display:flex; flex-direction:column; justify-content:space-between; height:230px; gap:14px; width:140px; flex-shrink:0;">
-                    <!-- Top Box: Grade Only -->
-                    <div class="glass-card" style="width:100%; flex:1; border-radius:20px; display:flex; align-items:center; justify-content:center; padding:10px; text-align:center;" title="Global Grade">
-                      <div class="fw-800" style="font-size:3.8rem; line-height:1; font-family:var(--font-display); color:${gradeColor};">${globalGrade}</div>
-                    </div>
-                    <!-- Bottom Box: Score Only -->
-                    <div class="glass-card" style="width:100%; flex:1; border-radius:20px; display:flex; align-items:center; justify-content:center; padding:10px; text-align:center;" title="Average Score">
-                      <div class="fw-800" style="font-size:2.2rem; line-height:1; color:var(--clr-accent-1, #a78bfa); font-family:var(--font-display);">${avgScore.toFixed(1)}%</div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Bottom Row: Student Name & Active Badge Card (Uniform Width 386px!) -->
-                <div class="glass-card" style="border-radius:20px; padding:16px 20px; box-sizing:border-box;">
-                  <div class="d-flex align-center justify-between gap-2 mb-1">
-                    <span class="badge ${student.is_active ? 'badge-success' : 'badge-danger'}">${student.is_active ? 'Active Student' : 'Inactive'}</span>
-                    <span class="text-xs text-muted">ID: <code style="font-size:0.75rem;">${escapeHtml(student.id.substring(0, 8))}...</code></span>
-                  </div>
-                  <h2 style="font-size:1.35rem; font-weight:800; margin:0 0 2px; color:var(--clr-text-1);">${escapeHtml(displayName)}</h2>
-                  <p class="text-xs text-muted" style="margin:0;">&#128101; Batch: <strong>${escapeHtml(batchName)}</strong></p>
-                </div>
-              </div>
-
-              <!-- Right: Detailed Enrollment & Academic Record Card -->
-              <div class="glass-card p-5" style="border-radius:24px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
-                <div>
-                  <div class="d-flex align-center justify-between mb-3 flex-wrap gap-2">
-                    <div>
-                      <h3 style="font-size:1.15rem; font-weight:800; margin:0; color:var(--clr-text-1);">&#127891; Student Enrollment &amp; Demographics</h3>
-                      <p class="text-xs text-muted" style="margin:2px 0 0;">Official class registration and student profile data</p>
-                    </div>
-                    <button class="btn btn-secondary btn-sm" id="btn-edit-current-student" style="display:inline-flex; align-items:center; gap:6px;">
-                      &#9999;&#65039; Edit Student
-                    </button>
-                  </div>
-
-                  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-top:16px;">
-                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--clr-border); border-radius:14px; padding:12px 14px;">
-                      <div class="text-xs text-muted" style="font-weight:600; text-transform:uppercase;">&#127963; Program</div>
-                      <div class="fw-700 text-sm mt-1" style="color:var(--clr-text-1);">${escapeHtml(institutionName)}</div>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--clr-border); border-radius:14px; padding:12px 14px;">
-                      <div class="text-xs text-muted" style="font-weight:600; text-transform:uppercase;">&#127979; Class</div>
-                      <div class="fw-700 text-sm mt-1" style="color:var(--clr-text-1);">${escapeHtml(programName)}</div>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--clr-border); border-radius:14px; padding:12px 14px;">
-                      <div class="text-xs text-muted" style="font-weight:600; text-transform:uppercase;">&#128100; Gender</div>
-                      <div class="fw-700 text-sm mt-1" style="text-transform:capitalize; color:var(--clr-text-1);">${escapeHtml(student.gender || '&mdash;')}</div>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--clr-border); border-radius:14px; padding:12px 14px;">
-                      <div class="text-xs text-muted" style="font-weight:600; text-transform:uppercase;">&#127874; Age / Birth Date</div>
-                      <div class="fw-700 text-sm mt-1" style="color:var(--clr-text-1);">${ageDisplay} <span class="text-xs text-muted fw-400">(${escapeHtml(student.birth_date || '&mdash;')})</span></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--clr-border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                  <span class="text-xs text-muted">Created: ${student.created_at ? new Date(student.created_at).toLocaleDateString() : 'â€”'}</span>
-                  <span class="badge badge-neutral" style="font-size:0.75rem;">Account Status: ${student.is_active ? 'Active' : 'Inactive'}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Detailed Answer Stats: Assessments, Correct, Incorrect -->
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
-              <div class="glass-card p-4 text-center">
-                <div class="text-xs text-muted mb-1" style="font-weight:700; letter-spacing:0.05em;">Assessments COMPLETED</div>
-                <div class="fw-800" style="font-size:2rem; color:var(--clr-text-1);">${bestAttempts.length}</div>
-                <div class="text-xs text-muted mt-1">${allAttempts.length} total attempt${allAttempts.length === 1 ? '' : 's'}</div>
-              </div>
-              <div class="glass-card p-4 text-center" style="border-top:3px solid #10b981;">
-                <div class="text-xs text-muted mb-1" style="font-weight:700; letter-spacing:0.05em; color:#10b981;">&#9989; CORRECT ANSWERS</div>
-                <div class="fw-800" style="font-size:2rem; color:#10b981;">${totalCorrect}</div>
-                <div class="text-xs text-muted mt-1">From best attempts</div>
-              </div>
-              <div class="glass-card p-4 text-center" style="border-top:3px solid #ef4444;">
-                <div class="text-xs text-muted mb-1" style="font-weight:700; letter-spacing:0.05em; color:#ef4444;">&#10060; INCORRECT ANSWERS</div>
-                <div class="fw-800" style="font-size:2rem; color:#ef4444;">${totalIncorrect}</div>
-                <div class="text-xs text-muted mt-1">${totalMinor > 0 ? `+ ${totalMinor} minor error${totalMinor === 1 ? '' : 's'}` : '0 minor errors'}</div>
-              </div>
-            </div>
-
-            <!-- Detailed Assessment Breakdown -->
-            <div class="glass-card p-5">
-              <div class="d-flex align-center justify-between mb-3 flex-wrap gap-2">
-                <div>
-                  <h3 style="font-size:1.15rem; font-weight:700; margin:0;">&#128203; Assessment Performance &amp; Question History</h3>
-                  <p class="text-xs text-muted">Click any Assessment row below to inspect question-level answers and correct vs. incorrect breakdown</p>
-                </div>
-                <span class="badge badge-neutral">${allAttempts.length} Attempt${allAttempts.length === 1 ? '' : 's'} Logged</span>
-              </div>
-
-              ${allAttempts.length === 0 ? `
-                <div class="empty-state p-6 text-center">
-                  <div style="font-size:2.5rem; margin-bottom:8px;">&#128221;</div>
-                  <h4 style="font-weight:700;">No Assessments Taken Yet</h4>
-                  <p class="text-xs text-muted">This student hasn't completed or submitted any Assessments yet.</p>
-                </div>
-              ` : `
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Assessment Title</th>
-                        <th>Class</th>
-                        <th class="text-center">Score</th>
-                        <th class="text-center">Grade</th>
-                        <th class="text-center">&#9989; Correct</th>
-                        <th class="text-center">&#9888;&#65039; Half</th>
-                        <th class="text-center">&#10060; Incorrect</th>
-                        <th class="text-center">Submitted At</th>
-                        <th class="text-center" style="width:110px;">Details</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${allAttempts.map((att) => {
-                        const isBest = bestAttemptIds.has(att.id);
-                        const answers = att.attempt_answers || [];
-                        let attCorrect = 0, attMinor = 0, attIncorrect = 0;
-                        answers.forEach(a => {
-                          const res = (a.evaluation_result || '').toLowerCase();
-                          const sc = parseFloat(a.score || 0);
-                          if (res === 'correct' || sc >= 1) attCorrect++;
-                          else if (res.includes('minor') || (sc > 0 && sc < 1)) attMinor++;
-                          else attIncorrect++;
-                        });
-                        const pct = parseFloat(att.percentage || att.score || 0).toFixed(1);
-                        const grade = att.grade || getGrade(Math.round(pct));
-                        const AssessmentTitle = att.assessments?.title || 'Assessment';
-                        const ClassName = att.assessments?.classes?.name || '&mdash;';
-                        const submitDate = att.submitted_at ? new Date(att.submitted_at).toLocaleString() : '&mdash;';
-                        const rowId = `att-row-${att.id}`;
-                        const detailId = `att-detail-${att.id}`;
-
-                        return `
-                          <tr id="${rowId}" class="clickable-attempt-row" data-att-id="${att.id}" style="cursor:pointer; transition:background 0.15s;">
-                            <td class="fw-600">
-                              <div class="d-flex align-center gap-2">
-                                <span class="toggle-arrow" id="arrow-${att.id}" style="font-size:0.75rem; color:var(--clr-text-muted); transition:transform 0.2s;">&#9654;</span>
-                                <span>${escapeHtml(AssessmentTitle)}</span>
-                                ${isBest ? `<span class="badge badge-success" style="font-size:0.65rem;" title="Highest score attempt for this Assessment">&#11088; Best</span>` : ''}
-                              </div>
-                            </td>
-                            <td class="text-sm text-muted">${escapeHtml(ClassName)}</td>
-                            <td class="text-center fw-700 text-grade-${grade}">${pct}%</td>
-                            <td class="text-center"><span class="grade-badge grade-${grade}" style="width:26px; height:26px; font-size:0.75rem; display:inline-flex;">${grade}</span></td>
-                            <td class="text-center"><span class="badge badge-success" style="font-size:0.75rem;">${attCorrect}</span></td>
-                            <td class="text-center"><span class="badge badge-warning" style="font-size:0.75rem;">${attMinor}</span></td>
-                            <td class="text-center"><span class="badge badge-danger" style="font-size:0.75rem;">${attIncorrect}</span></td>
-                            <td class="text-center text-xs text-muted">${submitDate}</td>
-                            <td class="text-center">
-                              <button class="btn btn-ghost btn-sm" style="font-size:0.75rem; padding:2px 8px;">
-                                View Answers
-                              </button>
-                            </td>
-                          </tr>
-
-                          <!-- Accordion Detail Row for Questions -->
-                          <tr id="${detailId}" class="hidden" style="background:rgba(0,0,0,0.25);">
-                            <td colspan="8" style="padding:16px 20px;">
-                              <div style="border-left:3px solid var(--clr-primary, #6366f1); padding-left:14px;">
-                                <div class="d-flex align-center justify-between flex-wrap gap-3 mb-3">
-                                  <h4 class="text-sm fw-700" style="color:var(--clr-text-1); margin:0;">
-                                    Questions &amp; Answers Breakdown (${answers.length} Questions)
-                                  </h4>
-                                  ${(att.assessments?.assessment_type === 'EXAM' && parseFloat(att.percentage || att.score || 0) < 60 && !att.is_remedial_unlocked) ? `
-                                    <button class="btn btn-primary btn-sm remedial-override-btn" data-attempt-id="${att.id}" style="background:var(--clr-accent-1);border:none;">
-                                      🔓 Allow Remedial Retake
-                                    </button>
-                                  ` : ''}
-                                  ${att.is_remedial_unlocked ? `<span class="badge badge-success" style="font-size:0.7rem;">🔓 Remedial Authorized</span>` : ''}
-                                </div>
-
-                                ${answers.length === 0 ? `
-                                  <p class="text-xs text-muted">No individual question snapshot records stored for this attempt.</p>
-                                ` : `
-                                  <div style="display:flex; flex-direction:column; gap:10px;">
-                                    ${[...answers].sort((a, b) => (a.question_order || 0) - (b.question_order || 0)).map((ans, qIdx) => {
-                                      const evalRes = (ans.evaluation_result || 'Unknown').toLowerCase();
-                                      const sc = parseFloat(ans.score || 0);
-                                      let statusBadge = '<span class="badge badge-danger">&#10060; Incorrect (0 pt)</span>';
-                                      if (evalRes === 'correct' || sc >= 1) {
-                                        statusBadge = '<span class="badge badge-success">&#9989; Correct (+1 pt)</span>';
-                                      } else if (evalRes.includes('minor') || (sc > 0 && sc < 1)) {
-                                        statusBadge = '<span class="badge badge-warning">&#9888;&#65039; Minor Error (+0.5 pt)</span>';
-                                      }
-                                      
-                                      const qText = ans.question_snapshot || `Question #${qIdx + 1}`;
-                                      const studentAns = ans.student_answer || '(No Answer)';
-                                      const correctAns = ans.correct_answer_snapshot || '&mdash;';
-
-                                      return `
-                                        <div style="padding:10px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px;">
-                                          <div class="d-flex align-center justify-between flex-wrap gap-2 mb-2">
-                                            <div class="fw-700 text-sm" style="color:var(--clr-text-1);">
-                                              <span class="text-muted mr-1">Q${qIdx + 1}.</span> ${escapeHtml(qText)}
-                                            </div>
-                                            <div>${statusBadge}</div>
-                                          </div>
-                                          <div class="d-flex gap-4 flex-wrap text-xs" style="margin-top:6px;">
-                                            <div>
-                                              <span class="text-muted">Student Answer:</span>
-                                              <span class="fw-600" style="color:${evalRes === 'correct' ? '#10b981' : '#f87171'}; margin-left:4px;">
-                                                ${escapeHtml(studentAns)}
-                                              </span>
-                                            </div>
-                                            <div>
-                                              <span class="text-muted">Correct Answer:</span>
-                                              <span class="fw-600 text-success" style="margin-left:4px;">
-                                                ${escapeHtml(correctAns)}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      `;
-                                    }).join('')}
-                                  </div>
-                                `}
-                              </div>
-                            </td>
-                          </tr>
-                        `;
-                      }).join('')}
-                    </tbody>
-                  </table>
-                </div>
-              `}
-            </div>
-          </div>
-        `;
-
-        // Cleanup listener helper
-        const cleanup = () => {
-          window.removeEventListener('keydown', onKeyDown);
-          window._cleanupProfileView = null;
-        };
-        window._cleanupProfileView = cleanup;
-
-        // Wire Back button
-        document.getElementById('btn-back-to-students')?.addEventListener('click', () => {
-          cleanup();
-          loadSection('students');
-        });
-
-        // Wire Previous / Next buttons
-        document.getElementById('btn-prev-student')?.addEventListener('click', () => {
-          if (hasPrev) {
-            cleanup();
-            openStudentProfile(prevId, batchStudentIds);
-          }
-        });
-        document.getElementById('btn-next-student')?.addEventListener('click', () => {
-          if (hasNext) {
-            cleanup();
-            openStudentProfile(nextId, batchStudentIds);
-          }
-        });
-
-        // Keyboard navigation (ArrowLeft & ArrowRight)
-        function onKeyDown(e) {
-          if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)) return;
-          if (e.key === 'ArrowLeft' && hasPrev) {
-            e.preventDefault();
-            cleanup();
-            openStudentProfile(prevId, batchStudentIds);
-          } else if (e.key === 'ArrowRight' && hasNext) {
-            e.preventDefault();
-            cleanup();
-            openStudentProfile(nextId, batchStudentIds);
-          }
-        }
-        window.addEventListener('keydown', onKeyDown);
-
-        // Wire Edit Student button
-        document.getElementById('btn-edit-current-student')?.addEventListener('click', () => {
-          openCrudModal('students', student);
-        });
-
-        // Accordion row expansion for question breakdown
-        area.querySelectorAll('.clickable-attempt-row').forEach(row => {
-          row.addEventListener('click', () => {
-            const attId = row.dataset.attId;
-            const detailRow = document.getElementById(`att-detail-${attId}`);
-            const arrow = document.getElementById(`arrow-${attId}`);
-            if (detailRow) {
-              const isNowHidden = detailRow.classList.toggle('hidden');
-              if (arrow) arrow.textContent = isNowHidden ? '\u25B6\uFE0F' : '\u25BC';
-            }
-          });
-        });
-
-        // Wire Remedial Override buttons
-        area.querySelectorAll('.remedial-override-btn').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-            e.stopPropagation(); // Prevent accordion toggle
-            const attId = btn.dataset.attemptId;
-            if (!attId) return;
-            if (!confirm('Authorize a remedial retake for this failed EXAM? This action cannot be undone.')) return;
-            
-            try {
-              btn.disabled = true;
-              btn.innerHTML = '<span class="spinner" style="width:12px;height:12px;margin-right:6px;border-width:2px;border-top-color:#fff;"></span> Authorizing...';
-              
-              if (typeof window.adminUnlockRemedialExam !== 'function') {
-                const api = await import('../api.js?v=5.1.0');
-                await api.adminUnlockRemedialExam(attId);
-              } else {
-                await window.adminUnlockRemedialExam(attId);
-              }
-              
-              showToast('Remedial retake authorized.', 'success');
-              openStudentProfile(studentId, batchStudentIds, true);
-            } catch (err) {
-              btn.disabled = false;
-              btn.textContent = '🔓 Allow Remedial Retake';
-              showToast(err.message, 'error');
-            }
-          });
-        });
-
-      } catch(err) {
-        console.error('Failed to render student profile:', err);
-        area.innerHTML = `
-          <div class="empty-state p-6 text-center">
-            <div style="font-size:2.5rem; margin-bottom:8px;">&#9888;&#65039;</div>
-            <h4 class="text-danger">Failed to load student profile</h4>
-            <p class="text-xs text-muted mb-4">${escapeHtml(err.message)}</p>
-            <button class="btn btn-secondary btn-sm" id="btn-err-back">&larr; Back to Students</button>
-          </div>
-        `;
-        document.getElementById('btn-err-back')?.addEventListener('click', () => loadSection('students'));
+      const sm = await import('./student-management.js?v=5.2.2');
+      if (typeof sm.showStudentProfileModal === 'function') {
+        return sm.showStudentProfileModal(studentId);
       }
     }
-
+    window.openStudentProfile = openStudentProfile;
     // --- Assessment MANAGEMENT HUB (Restored & Elevated) ---
 
 

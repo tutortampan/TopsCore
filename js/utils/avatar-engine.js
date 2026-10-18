@@ -57,66 +57,88 @@ export function generateAvatarDataUri(name = '', gender = '') {
 /**
  * Center-crops and compresses image to 3:4 WebP (Client-side Canvas)
  */
-export async function processAndCompressAvatar(file, type = "student") {
+/**
+ * Helper to load an image from either a File/Blob or a dataURL/URL string.
+ */
+function loadImageSource(source) {
   return new Promise((resolve, reject) => {
-    if (!file) return reject(new Error("No file provided."));
-    const isStudent = type === "student";
-    const TARGET_WIDTH = isStudent ? 240 : 300;
-    const TARGET_HEIGHT = isStudent ? 320 : 400;
-    const MAX_SIZE_KB = isStudent ? 30 : 80;
-    const QUALITY = isStudent ? 0.75 : 0.85;
+    if (!source) return reject(new Error("No image source provided."));
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Invalid image source or format."));
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = TARGET_WIDTH;
-        canvas.height = TARGET_HEIGHT;
-        const ctx = canvas.getContext("2d");
-
-        const ratio = img.width / img.height;
-        const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
-
-        let sx, sy, sWidth, sHeight;
-
-        if (ratio > targetRatio) {
-          // Too wide: Crop left and right equally
-          sHeight = img.height;
-          sWidth = img.height * targetRatio;
-          sx = (img.width - sWidth) / 2;
-          sy = 0;
-        } else {
-          // Too tall: Apply proportional vertical crop (35% top bias, 65% bottom bias)
-          sWidth = img.width;
-          sHeight = img.width / targetRatio;
-          sx = 0;
-          sy = (img.height - sHeight) * 0.35;
-        }
-
-        ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
-
-        // Attempt WebP, fallback to JPEG
-        let format = "image/webp";
-        let currentQuality = QUALITY;
-        let dataUrl = canvas.toDataURL(format, currentQuality);
-        let sizeKB = (dataUrl.length * 0.75) / 1024;
-
-        // Adaptive compression if size exceeds limit
-        while (sizeKB > MAX_SIZE_KB && currentQuality > 0.3) {
-          currentQuality -= 0.1;
-          dataUrl = canvas.toDataURL(format, currentQuality);
-          sizeKB = (dataUrl.length * 0.75) / 1024;
-        }
-
-        resolve(dataUrl);
+    if (typeof source === "string") {
+      img.src = source;
+    } else if (source instanceof Blob) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target.result;
       };
-      img.onerror = () => reject(new Error("Invalid image file."));
-      img.src = e.target.result;
-    };
-    reader.onerror = () => reject(new Error("File read error."));
-    reader.readAsDataURL(file);
+      reader.onerror = () => reject(new Error("File read error."));
+      reader.readAsDataURL(source);
+    } else {
+      reject(new Error("Unsupported image source type. Expected File, Blob, or string."));
+    }
   });
+}
+
+/**
+ * Center-crops and compresses image to 3:4 WebP (Client-side Canvas)
+ */
+export async function processAndCompressAvatar(file, type = "student") {
+  if (!file) throw new Error("No file provided.");
+  const isStudent = type === "student";
+  const TARGET_WIDTH = isStudent ? 240 : 300;
+  const TARGET_HEIGHT = isStudent ? 320 : 400;
+  const MAX_SIZE_KB = isStudent ? 30 : 80;
+  const QUALITY = isStudent ? 0.75 : 0.85;
+
+  const img = await loadImageSource(file);
+  const canvas = document.createElement("canvas");
+  canvas.width = TARGET_WIDTH;
+  canvas.height = TARGET_HEIGHT;
+  const ctx = canvas.getContext("2d");
+
+  const ratio = img.width / img.height;
+  const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
+
+  let sx, sy, sWidth, sHeight;
+
+  if (ratio > targetRatio) {
+    // Too wide: Crop left and right equally
+    sHeight = img.height;
+    sWidth = img.height * targetRatio;
+    sx = (img.width - sWidth) / 2;
+    sy = 0;
+  } else {
+    // Too tall: Apply proportional vertical crop (35% top bias, 65% bottom bias)
+    sWidth = img.width;
+    sHeight = img.width / targetRatio;
+    sx = 0;
+    sy = (img.height - sHeight) * 0.35;
+  }
+
+  ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+
+  // Attempt WebP, fallback to JPEG if browser doesn't support WebP canvas export
+  let format = "image/webp";
+  let currentQuality = QUALITY;
+  let dataUrl = canvas.toDataURL(format, currentQuality);
+  if (!dataUrl.startsWith("data:image/webp")) {
+    format = "image/jpeg";
+    dataUrl = canvas.toDataURL(format, currentQuality);
+  }
+  let sizeKB = (dataUrl.length * 0.75) / 1024;
+
+  // Adaptive compression if size exceeds limit
+  while (sizeKB > MAX_SIZE_KB && currentQuality > 0.3) {
+    currentQuality -= 0.1;
+    dataUrl = canvas.toDataURL(format, currentQuality);
+    sizeKB = (dataUrl.length * 0.75) / 1024;
+  }
+
+  return dataUrl;
 }
 
 /**
@@ -128,79 +150,73 @@ export async function uploadStudentAvatar(file, studentId = null) {
   const TARGET_WIDTH = 240;
   const TARGET_HEIGHT = 320;
   const QUALITY = 0.75;
+  const MAX_SIZE_KB = 30;
 
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = async () => {
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = TARGET_WIDTH;
-          canvas.height = TARGET_HEIGHT;
-          const ctx = canvas.getContext("2d");
+  const img = await loadImageSource(file);
+  const canvas = document.createElement("canvas");
+  canvas.width = TARGET_WIDTH;
+  canvas.height = TARGET_HEIGHT;
+  const ctx = canvas.getContext("2d");
 
-          const ratio = img.width / img.height;
-          const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
+  const ratio = img.width / img.height;
+  const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
 
-          let sx, sy, sWidth, sHeight;
-          if (ratio > targetRatio) {
-            sHeight = img.height;
-            sWidth = img.height * targetRatio;
-            sx = (img.width - sWidth) / 2;
-            sy = 0;
-          } else {
-            sWidth = img.width;
-            sHeight = img.width / targetRatio;
-            sx = 0;
-            sy = (img.height - sHeight) * 0.35;
-          }
+  let sx, sy, sWidth, sHeight;
+  if (ratio > targetRatio) {
+    sHeight = img.height;
+    sWidth = img.height * targetRatio;
+    sx = (img.width - sWidth) / 2;
+    sy = 0;
+  } else {
+    sWidth = img.width;
+    sHeight = img.width / targetRatio;
+    sx = 0;
+    sy = (img.height - sHeight) * 0.35;
+  }
 
-          ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+  ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
 
-          // Convert canvas to WebP Blob
-          const blob = await new Promise(r => canvas.toBlob(r, 'image/webp', QUALITY));
-          if (!blob) throw new Error("Canvas to WebP blob conversion failed.");
+  // Convert canvas to WebP Blob
+  let blob = await new Promise(r => canvas.toBlob(r, 'image/webp', QUALITY));
+  if (!blob) {
+    // Fallback to jpeg blob if webp blob creation unsupported
+    blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', QUALITY));
+  }
 
-          // Dynamically import Supabase client factory
-          let getSupabase;
-          try {
-            const mod = await import('../supabase.js?v=5.1.0');
-            getSupabase = mod.getSupabase;
-          } catch (_) {
-            const mod = await import('../supabase.js');
-            getSupabase = mod.getSupabase;
-          }
+  // Attempt upload to Supabase Storage 'student-avatars'
+  try {
+    let getSupabase;
+    try {
+      const mod = await import('../supabase.js?v=5.2.2');
+      getSupabase = mod.getSupabase;
+    } catch (_) {
+      const mod = await import('../supabase.js');
+      getSupabase = mod.getSupabase;
+    }
 
-          const sb = await getSupabase();
-          const cleanId = String(studentId || 'temp_' + Date.now()).replace(/[^a-zA-Z0-9_-]/g, '_');
-          const fileName = `student_${cleanId}_${Date.now()}.webp`;
+    const sb = await getSupabase();
+    const cleanId = String(studentId || 'temp_' + Date.now()).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const ext = blob?.type === 'image/jpeg' ? 'jpeg' : 'webp';
+    const fileName = `student_${cleanId}_${Date.now()}.${ext}`;
 
-          const { error: uploadErr } = await sb.storage
-            .from('student-avatars')
-            .upload(fileName, blob, {
-              contentType: 'image/webp',
-              upsert: true
-            });
+    const { error: uploadErr } = await sb.storage
+      .from('student-avatars')
+      .upload(fileName, blob, {
+        contentType: blob?.type || 'image/webp',
+        upsert: true
+      });
 
-          if (uploadErr) {
-            console.warn('[AvatarEngine] Supabase storage upload failed, falling back to dataUrl:', uploadErr.message);
-            const dataUrl = canvas.toDataURL('image/webp', QUALITY);
-            return resolve(dataUrl);
-          }
+    if (uploadErr) {
+      console.warn('[AvatarEngine] Supabase storage upload failed, falling back to compressed dataUrl:', uploadErr.message);
+      return await processAndCompressAvatar(file, 'student');
+    }
 
-          const { data: pubData } = sb.storage.from('student-avatars').getPublicUrl(fileName);
-          resolve(pubData.publicUrl);
-        } catch (err) {
-          reject(err);
-        }
-      };
-      img.onerror = () => reject(new Error("Invalid image file."));
-      img.src = e.target.result;
-    };
-    reader.onerror = () => reject(new Error("File read error."));
-    reader.readAsDataURL(file);
-  });
+    const { data: pubData } = sb.storage.from('student-avatars').getPublicUrl(fileName);
+    return pubData.publicUrl;
+  } catch (err) {
+    console.warn('[AvatarEngine] Storage error, falling back to compressed dataUrl:', err);
+    return await processAndCompressAvatar(file, 'student');
+  }
 }
 
 /**

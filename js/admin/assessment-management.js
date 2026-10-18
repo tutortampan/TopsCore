@@ -1,9 +1,9 @@
-import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '../api.js?v=5.1.0';
-import { openAssessmentBuilder } from './assessment-builder.js?v=5.1.0';
-import { openAssessmentBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.1.0';
-import { showToast, showLoading, hideLoading } from '../app.js?v=5.1.0';
-import { getSupabase } from '../supabase.js?v=5.1.0';
-import { DataGrid } from './datagrid.js?v=5.1.0';
+import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '../api.js?v=5.2.2';
+import { openAssessmentBuilder } from './assessment-builder.js?v=5.2.2';
+import { openAssessmentBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.2.2';
+import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.2.2';
+import { getSupabase } from '../supabase.js?v=5.2.2';
+import { DataGrid } from './datagrid.js?v=5.2.2';
 if (typeof window !== 'undefined') window.DataGrid = DataGrid;
 
 let AssessmentsGrid;
@@ -71,38 +71,19 @@ export async function renderAssessments(area) {
 
   window._assessmentFilterTab = window._assessmentFilterTab || 'all';
 
+  const assessmentTabs = [
+    { id: 'all', icon: '📋', val: totalAssessments, label: 'Total Assessments' },
+    { id: 'published', icon: '🟢', val: publishedCount, label: 'Published Assessments', valColor: 'var(--clr-success, #4ade80)' },
+    { id: 'draft', icon: '🔧', val: draftCount, label: 'Draft / Inactive', valColor: 'var(--clr-warning, #fbbf24)' },
+    { id: 'questions', icon: '❓', val: totalQuestions, label: 'Questions in Bank', valColor: 'var(--clr-accent-1)' }
+  ];
+
+  if (window.setTopbarTabs) {
+    window.setTopbarTabs(assessmentTabs, window._assessmentFilterTab, 'window._switchAssessmentFilterTab');
+  }
+
   area.innerHTML = `
     <div>
-      ${window.buildSectionTabBar ? window.buildSectionTabBar({
-        tabs: [
-          { id: 'all', icon: '📋', val: totalAssessments, label: 'Total Assessments' },
-          { id: 'published', icon: '🟢', val: publishedCount, label: 'Published Assessments', valColor: 'var(--clr-success, #4ade80)' },
-          { id: 'draft', icon: '🔧', val: draftCount, label: 'Draft / Inactive', valColor: 'var(--clr-warning, #fbbf24)' },
-          { id: 'questions', icon: '❓', val: totalQuestions, label: 'Questions in Bank', valColor: 'var(--clr-accent-1)' }
-        ],
-        activeId: window._assessmentFilterTab,
-        onSelect: 'window._switchAssessmentFilterTab'
-      }) : ''}
-
-      <div class="card" style="padding: 0.75rem 1rem; background: var(--clr-surface); margin: 0 0 0.75rem 0;">
-        <div class="d-flex align-center justify-between flex-wrap gap-2">
-          <div>
-            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700;">📝 Central Exam Operations</h3>
-            <p class="text-xs text-muted" style="margin: 2px 0 0 0;">Manage Try-Outs, Placement Tests, Exit Certifications, and Global Operations</p>
-          </div>
-          <div class="d-flex gap-2 flex-wrap">
-            <button class="btn btn-primary btn-sm" onclick="window.openCrudModal('assessments', null)" id="hub-add-Assessment-wizard">+ Create Assessment</button>
-            <button class="btn btn-secondary btn-sm" id="hub-btn-assignments" onclick="window.loadSection('class-assignments')">&#128101; Cohorts &amp; Assignments</button>
-            <button class="btn btn-secondary btn-sm" id="hub-btn-results" onclick="window.loadSection('results')">&#128202; Results</button>
-            <button class="btn btn-warning btn-sm" id="hub-btn-recalibrate" onclick="window.loadSection('recalibrator')" style="font-weight:700;">&#9889; Recalibrate</button>
-            <button class="btn btn-secondary btn-sm" onclick="window.loadSection('import-questions')">&#128229; Import Questions</button>
-            <button class="btn btn-secondary btn-sm" onclick="window.loadSection('export-questions')">&#128228; Export Questions</button>
-            <button class="btn btn-secondary btn-sm" onclick="window.loadSection('vocab_vault')">&#128214; Vocab Vault</button>
-            <button class="btn btn-sm" id="hub-btn-open-session" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);font-weight:700;" title="Open a live QUIZ/EXAM session for a class">&#128275; Open Session</button>
-          </div>
-        </div>
-      </div>
-      
       <div class="d-flex gap-2 mb-3 flex-wrap" id="assessment-filters">
         <button class="btn btn-sm btn-primary filter-btn active" data-filter="all">All Assessments (${totalAssessments})</button>
         <button class="btn btn-sm btn-secondary filter-btn" data-filter="core">Core Curriculum (${liveData.filter(e => !e.assessment_category || ['TASK', 'TEST', 'DAILY'].includes(String(e.assessment_category).toUpperCase()) && !e.payload?.is_standalone_tryout).length})</button>
@@ -376,7 +357,7 @@ export async function renderAssessments(area) {
           return `
             <div class="d-flex gap-1 justify-end align-center">
               <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterAssessmentResults='${id}'; window.loadSection('results');">&#128202;</button>
-              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateAssessment='${id}'; window.loadSection('recalibrator');">&#9878;&#65039;</button>
+              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateAssessment='${id}'; window.loadSection('health');">&#9878;&#65039;</button>
               <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateAssessment('${id}')" title="Duplicate">📄</button>
               <button class="btn ${String(r?.status).toLowerCase() === 'published' ? 'btn-danger' : 'btn-success'}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishAssessment('${id}', '${r?.status || 'draft'}')">
                 ${String(r?.status).toLowerCase() === 'published' ? '👁️‍🗨️' : '👁️'}
@@ -413,7 +394,7 @@ export async function renderAssessments(area) {
       window.loadSection('questions');
       return;
     }
-    document.querySelectorAll('.section-tab-bar .section-tab').forEach(t => {
+    document.querySelectorAll('.topbar-tab-card, .section-tab-bar .section-tab').forEach(t => {
       t.classList.toggle('active', t.dataset.tabId === tabId);
     });
     if (tabId === 'all') {
@@ -427,10 +408,7 @@ export async function renderAssessments(area) {
 }
 
 // Helpers
-function escapeHtml(unsafe) {
-  if (!unsafe) return '';
-  return String(unsafe).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
+// escapeHtml / escHtml imported canonically
 
 function formatAnswerType(type) {
   switch(type) {
@@ -753,11 +731,6 @@ export async function renderResults(area) {
     ]
   });
 }
-  // Wire up Open Session button after grid renders
-  setTimeout(() => {
-    const btn = document.getElementById('hub-btn-open-session');
-    if (btn) btn.addEventListener('click', openSessionModal);
-  }, 100);
 
 /**
  * Open Session Modal - Tutor Live Control (AGENTS.md §2 - Assessment Timing)
@@ -765,7 +738,7 @@ export async function renderResults(area) {
  * Sets session_unlocked_at and session_expires_at on the Assessments record.
  */
 async function openSessionModal() {
-  const { getSupabase } = await import('../supabase.js?v=5.1.0');
+  const { getSupabase } = await import('../supabase.js?v=5.2.2');
   const sb = await getSupabase();
   const { data: assessments, error } = await sb
     .from('Assessments')

@@ -18,17 +18,8 @@ import {
   adminFetchAll,
   clearAdminCache,
   reorderAssessment
-} from '../api.js?v=5.1.0';
-import { showToast, showLoading, hideLoading } from '../app.js?v=5.1.0';
-
-function escapeHtml(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+} from '../api.js?v=5.2.2';
+import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.2.2';
 
 export async function openAssessmentBuilder(assessmentId = null, initialClassId = null) {
   const isEdit = !!assessmentId;

@@ -558,6 +558,7 @@ thead th {
   position: sticky;
   top: 0;
   z-index: 10;
+  font-variant-numeric: tabular-nums;
 }
 
 tbody td {
@@ -566,6 +567,7 @@ tbody td {
   color: var(--clr-text-2);
   vertical-align: middle;
   font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
 }
 
 tbody tr {
@@ -618,67 +620,100 @@ tbody tr:last-child td { border-bottom: none; }
 }
 .grade-badge:hover { transform: scale(1.08); }
 
-/* S: Gold */
+/* S: Sparkling Gold Champion (Tier S - 100%) */
+@keyframes gold-badge-sparkle {
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.6), 0 0 32px rgba(251, 191, 36, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.85);
+    filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.5));
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(245, 158, 11, 0.95), 0 0 52px rgba(251, 191, 36, 0.7), inset 0 1px 4px rgba(255, 255, 255, 1);
+    filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.95));
+  }
+}
+@keyframes gold-text-gleam {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 18px rgba(251, 191, 36, 1)) drop-shadow(0 0 28px rgba(245, 158, 11, 0.75));
+  }
+}
+
 .grade-S {
-  background: linear-gradient(135deg, #f59e0b, #fbbf24);
-  color: #1e1b4b;
+  background: linear-gradient(135deg, #fef08a 0%, #fbbf24 45%, #d97706 100%) !important;
+  color: #1e1b4b !important;
   font-weight: 900;
-  box-shadow: 0 0 16px rgba(245,158,11,0.6), inset 0 1px 1px rgba(255,255,255,0.7);
-  border: 2px solid #fde68a;
+  border: 2px solid #fde68a !important;
+  animation: gold-badge-sparkle 2.2s infinite ease-in-out;
 }
-.text-grade-S { color: #fbbf24 !important; }
+.text-grade-S {
+  color: #fbbf24 !important;
+  animation: gold-text-gleam 2.2s infinite ease-in-out;
+}
 
-/* A: Purple */
+/* A: Hijau (Emerald Master 91-99%) - Crisp, No Glow */
 .grade-A {
-  background: linear-gradient(135deg, #9333ea, #a855f7);
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(168,85,247,0.45);
-  border: 1px solid rgba(216,180,254,0.5);
+  background: rgba(16, 185, 129, 0.16) !important;
+  color: #10b981 !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.6) !important;
+  box-shadow: none !important;
 }
-.text-grade-A { color: #a855f7 !important; }
+.text-grade-A { color: #10b981 !important; filter: none !important; text-shadow: none !important; }
 
-/* B: Green */
+/* B: Biru (Sky Blue 71-90%) - Crisp, No Glow */
 .grade-B {
-  background: linear-gradient(135deg, #059669, #10b981);
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(16,185,129,0.4);
-  border: 1px solid rgba(167,243,208,0.5);
+  background: rgba(14, 165, 233, 0.16) !important;
+  color: #0ea5e9 !important;
+  border: 1.5px solid rgba(14, 165, 233, 0.6) !important;
+  box-shadow: none !important;
 }
-.text-grade-B { color: #10b981 !important; }
+.text-grade-B { color: #0ea5e9 !important; filter: none !important; text-shadow: none !important; }
 
-/* C: Orange */
+/* C: Kuning (Pale Lifeless Straw 51-70%) - Flat, Matte, No Glow */
 .grade-C {
-  background: linear-gradient(135deg, #ea580c, #f97316);
-  color: #ffffff;
+  background: rgba(199, 193, 140, 0.12) !important;
+  color: #c7c18c !important;
+  border: 1.5px solid rgba(199, 193, 140, 0.35) !important;
+  box-shadow: none !important;
 }
-.text-grade-C { color: #f97316 !important; }
+.text-grade-C { color: #c7c18c !important; filter: none !important; text-shadow: none !important; }
 
-/* D: Yellow */
+/* D: Jingga (Flame Orange 31-50%) - Crisp, No Glow */
 .grade-D {
-  background: linear-gradient(135deg, #ca8a04, #eab308);
-  color: #ffffff;
+  background: rgba(249, 115, 22, 0.16) !important;
+  color: #f97316 !important;
+  border: 1.5px solid rgba(249, 115, 22, 0.6) !important;
+  box-shadow: none !important;
 }
-.text-grade-D { color: #eab308 !important; }
+.text-grade-D { color: #f97316 !important; filter: none !important; text-shadow: none !important; }
 
-/* E: Orange (Darker) */
+/* E: Coral (Rose Coral 11-30%) - Crisp, No Glow */
 .grade-E {
-  background: linear-gradient(135deg, #c2410c, #ea580c);
-  color: #ffffff;
+  background: rgba(244, 63, 94, 0.16) !important;
+  color: #f43f5e !important;
+  border: 1.5px solid rgba(244, 63, 94, 0.6) !important;
+  box-shadow: none !important;
 }
-.text-grade-E { color: #ea580c !important; }
+.text-grade-E { color: #f43f5e !important; filter: none !important; text-shadow: none !important; }
 
-/* F: Red */
+/* F: Merah (Crimson Danger 0-10%) - Crisp, No Glow */
 .grade-F {
-  background: linear-gradient(135deg, #b91c1c, #ef4444);
-  color: #ffffff;
+  background: rgba(239, 68, 68, 0.16) !important;
+  color: #ef4444 !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.6) !important;
+  box-shadow: none !important;
 }
-.text-grade-F { color: #ef4444 !important; }
+.text-grade-F { color: #ef4444 !important; filter: none !important; text-shadow: none !important; }
 
-/* Score text colors */
-.score-high { color: #34d399 !important; font-weight: 700; } /* >= 90% */
-.score-pass { color: #38bdf8 !important; font-weight: 700; } /* >= 60% */
-.score-warn { color: #fbbf24 !important; font-weight: 700; } /* 50-59% */
-.score-fail { color: #f87171 !important; font-weight: 700; } /* < 50% */
+/* Score text colors - Glow ONLY on Grade S */
+.score-high { color: #fbbf24 !important; font-weight: 700; filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.7)); } /* 100% S */
+.score-dist { color: #10b981 !important; font-weight: 700; filter: none !important; } /* 91-99% A */
+.score-pass { color: #0ea5e9 !important; font-weight: 700; filter: none !important; } /* 71-90% B */
+.score-warn { color: #c7c18c !important; font-weight: 700; filter: none !important; } /* 51-70% C */
+.score-remed { color: #f97316 !important; font-weight: 700; filter: none !important; } /* 31-50% D */
+.score-poor { color: #f43f5e !important; font-weight: 700; filter: none !important; } /* 11-30% E */
+.score-fail { color: #ef4444 !important; font-weight: 700; filter: none !important; } /* < 11% F */
 
 /* ============================================================
    SCORE BAR
@@ -878,19 +913,21 @@ body {
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  width: 100vw !important;
+  width: 100% !important;
   height: 38px !important;
   min-height: 38px !important;
   max-height: 38px !important;
-  background-color: #000000 !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-  color: #94a3b8 !important;
+  background-color: #030a12 !important;
+  border-top: 1px solid rgba(56, 189, 248, 0.25) !important;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.6) !important;
+  color: #cbd5e1 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   font-size: 0.75rem !important;
   font-weight: 600 !important;
   font-family: 'Outfit', sans-serif !important;
+  letter-spacing: 0.04em !important;
   z-index: 99999 !important; /* Highest layer */
   pointer-events: none !important;
   box-sizing: border-box !important;
@@ -928,3 +965,53 @@ body.assessment-page {
 .btn:active, .select-option-card:active {
   transform: scale(0.96) !important;
 }
+
+/* ============================================================
+   TABULAR NUMBERS & TYPOGRAPHY POLISH
+   ============================================================ */
+.tabular-nums,
+.table-wrap,
+.table-wrap th,
+.table-wrap td,
+.data-grid,
+.data-grid th,
+.data-grid td,
+.datagrid-table,
+.datagrid-table th,
+.datagrid-table td,
+#assessment-timer,
+#timer-display,
+.timer-display,
+.result-summary-val,
+.result-summary-item span:last-child,
+#res-correct,
+#res-partial,
+#res-wrong,
+.badge,
+.score-badge,
+.score-pill,
+.stat-card-value,
+.matrix-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Font-Weight Hierarchy & Contrast */
+.card-header h3,
+.card-title,
+.primary-kpi {
+  font-weight: 700;
+}
+
+.table-text,
+.btn,
+.action-btn {
+  font-weight: 500;
+}
+
+.subtitle,
+.helper-desc,
+.text-muted {
+  font-weight: 400;
+  color: var(--clr-text-3, #94a3b8);
+}
+

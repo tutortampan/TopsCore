@@ -1,15 +1,5 @@
-import { adminFetchAll, adminUpdate } from '../api.js?v=5.1.0';
-import { showToast } from '../app.js?v=5.1.0';
-
-function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+import { adminFetchAll, adminUpdate } from '../api.js?v=5.2.2';
+import { showToast, escapeHtml, escHtml } from '../app.js?v=5.2.2';
 
 export async function renderClassesHub(area) {
   area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading Classes Hub...</p></div>';
@@ -136,20 +126,20 @@ export async function renderClassesHub(area) {
     const renderView = () => {
       const activeInstFilter = window._classesHubActiveInst || 'all';
 
-      const instTabsHtml = window.buildSectionTabBar ? window.buildSectionTabBar({
-        tabs: [
-          { id: 'all', icon: '🌐', title: 'All Institutions', val: activeClasses.length, label: 'Classes' },
-          ...activeInsts.map(inst => {
-            const cnt = activeClasses.filter(c => {
-              const prog = progMap.get(c.program_id);
-              return (prog && prog.institution_id === inst.id) || (c.institution_id === inst.id);
-            }).length;
-            return { id: inst.id, icon: '🏢', title: inst.name, val: cnt, label: cnt === 1 ? 'Class' : 'Classes' };
-          })
-        ],
-        activeId: activeInstFilter,
-        onSelect: 'window.switchClassesHubInst'
-      }) : '';
+      const instTabs = [
+        { id: 'all', icon: '🌐', label: 'All Institutions', val: activeClasses.length },
+        ...activeInsts.map(inst => {
+          const cnt = activeClasses.filter(c => {
+            const prog = progMap.get(c.program_id);
+            return (prog && prog.institution_id === inst.id) || (c.institution_id === inst.id);
+          }).length;
+          return { id: inst.id, icon: '🏢', label: inst.name, val: cnt };
+        })
+      ];
+
+      if (window.setTopbarTabs) {
+        window.setTopbarTabs(instTabs, activeInstFilter, 'window.switchClassesHubInst');
+      }
 
       const filteredClasses = activeInstFilter === 'all'
         ? activeClasses
@@ -317,7 +307,6 @@ export async function renderClassesHub(area) {
       }
 
       area.innerHTML = '<div>' +
-        instTabsHtml +
         '<div class="hub-toolbar mb-3">' +
           '<div class="hub-toolbar-search">' +
             '<span style="color:var(--fm-text-muted);font-size:0.9rem;">🔍</span>' +

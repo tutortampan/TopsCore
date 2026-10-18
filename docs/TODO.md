@@ -18,11 +18,19 @@
 
 ---
 
-## ðŸš€ MASTER DEV TASK LIST (TOPSCORE SYSTEM)
+## 🚀 MASTER DEV TASK LIST (TOPSCORE SYSTEM)
+
+### ✅ PHASE 32: STUDENT DASHBOARD AVATAR SCALING, GLOW HIERARCHY & BATCH STANDINGS (SELESAI)
+- [x] 1. Penskalaan visual avatar dashboard dari 60px ke 86px dominan dengan clipping melingkar dan glow borders tanpa merusak layout vertikal.
+- [x] 2. Skema grading & glow hierarchy lengkap: 100% menggunakan simbol Bintang Bersinar (⭐) dengan golden glow aura, Grade A–F dengan tiered colors dan soft glow.
+- [x] 3. Batch Leaderboard / Standings Matrix dual-dock tab (`[ 🏆 Batch Standings ] [ 📋 Completed ]`) dengan rank indicator pill (`RANK #1`) dan 4-level tie-breaker sorting.
+- [x] 4. Royal Title & Crown Mechanics: Batch champion mendapatkan floating crown (👑) di atas avatar dan dynamic title `King <Name>` / `Queen <Name>` real-time.
+- [x] 5. Preservasi 100% zero-scroll mobile geometry (`100dvh`) dan `#bottom-ad-banner` (28px) di dasar layar.
+- [x] 6. Verifikasi otomatis Playwright pada iPhone 14 (390x844) dan Android Small (360x640) lulus 100%.
 
 ---
 
-## ðŸ“œ GRAND ROADMAP (PHASE 1 - 11)
+## 📜 GRAND ROADMAP (PHASE 1 - 11)
 
 ## âœ… PHASE 1-3: SYSTEM RESCUE & DATABASE HYGIENE (SELESAI)
 
@@ -107,4 +115,67 @@ Detailed tracker maintained in [TASK_LIST.md](file:///d:/TopsCore/TASK_LIST.md):
 - [x] TASK-10 | Student Profile Media & Storage Migration (Base64 -> Storage / SVG) | MEDIUM | depends: none | criteria: WebP storage bucket upload and zero-egress SVG avatars
 - [x] TASK-11 | Honorific Prefix Stripping in Alphabetical Student Sorting & Avatars | HIGH | depends: none | criteria: true alphabetical sorting by personal names
 
+---
+
+## ⚡ PHASE 24: HEURISTIC AUDIT REMEDIATION — CORE STABILITY & INTEGRITY
+
+- [x] **TASK-24-01** | Unified Asset Versioning Alignment (?v=5.2.2) & Service Worker Cache Fix | HIGH | depends: none | criteria: All HTML/JS imports aligned to ?v=5.2.2; sw.js precache matched & covers modular scripts
+- [x] **TASK-24-02** | Centralize & Deduplicate `escapeHtml` / `escHtml` and Name Utilities | HIGH | depends: none | criteria: Single source in js/app.js & avatar-engine.js; 19 redundant copies removed
+- [x] **TASK-24-03** | Mobile Viewport Truncation & Touch Target Safety (`assessment.html`) | HIGH | depends: none | criteria: .assessment-main-content allows vertical scroll on screens <640px/focus; 100vw removed
+- [x] **TASK-24-04** | API Error Handling & Submission Fallback Reliability | HIGH | depends: none | criteria: No blank catch (_) blocks in api.js; assessment.html stops premature redirect on submit failure
+- [x] **TASK-24-05** | High-Volume Search Input Debounce & DataGrid Memory Leak Fix | MEDIUM | depends: none | criteria: 200ms debounce on vocab-vault & index searches; datagrid.js cleans up keydown listener
+
+---
+
+## 📦 PHASE 25: MODULARIZATION & ARCHITECTURE REFACTORING
+
+- [x] **TASK-25-01** | Extract Monolithic CSS from HTML Shells (index, dashboard, assessment, result) | MEDIUM | depends: TASK-24-01 | criteria: 1,560+ lines of inline CSS extracted to modular external stylesheets
+  - [x] 25.1.1: Extract `index.html` inline `<style>` (504 lines) to `css/auth.css` & link via `css/auth.css?v=5.2.2`.
+  - [x] 25.1.2: Merge `dashboard.html` inline `<style>` (411 lines) into `css/dashboard.css` & link via `css/dashboard.css?v=5.2.2`.
+  - [x] 25.1.3: Extract `assessment.html` inline `<style>` (542 lines) to `css/assessment.css` & link via `css/assessment.css?v=5.2.2`.
+  - [x] 25.1.4: Extract `result.html` inline `<style>` (142 lines) to `css/result.css` & link via `css/result.css?v=5.2.2`.
+  - [x] 25.1.5: Register `css/auth.css`, `css/assessment.css`, and `css/result.css` in `sw.js` cache manifest.
+- [x] **TASK-25-02** | Extract Monolithic JS from HTML Shells (index, dashboard, assessment, result) | MEDIUM | depends: TASK-24-01, TASK-24-02 | criteria: 4,770+ lines of inline JS extracted to js/auth.js, js/dashboard.js, js/assessment.js, js/result.js
+  - [x] 25.2.1: Extract `index.html` module script (462 lines) to `js/auth.js` & link via `./js/auth.js?v=5.2.2`. Keep head guard inline.
+  - [x] 25.2.2: Extract `dashboard.html` module script (2,125 lines) to `js/dashboard.js` & link via `./js/dashboard.js?v=5.2.2`. Keep head guard inline.
+  - [x] 25.2.3: Extract `assessment.html` module scripts (1,628 lines) to `js/assessment.js` & link via `./js/assessment.js?v=5.2.2`. Keep head guard inline.
+  - [x] 25.2.4: Extract `result.html` module script (476 lines) to `js/result.js` & link via `./js/result.js?v=5.2.2`. Keep head guard inline.
+  - [x] 25.2.5: Register extracted scripts in `sw.js` precache & verify syntax with `node --check`.
+- [x] **TASK-25-03** | Consolidate Competing Student Profile Modals in Admin | MEDIUM | depends: TASK-24-02 | criteria: Single authoritative student profile modal in js/admin/student-management.js
+  - [x] 25.3.1: Delegate `openStudentProfile` to `showStudentProfileModal` in `js/admin/app.js` and `js/admin/class.js`.
+  - [x] 25.3.2: Verify zero regression across all table profile triggers (`B — BOARD`, `C — CLASS`, Class Hub, and Assessment details).
+- [x] **TASK-25-04** | Offline CDN Fallbacks & Third-Party Elimination | LOW | depends: none | criteria: Local SheetJS fallback; ui-avatars.com replaced with local SVG data URIs
+  - [x] 25.4.1: Replace external `ui-avatars.com` image endpoints in `assessment.html` / `js/assessment.js` with local SVG data URIs via `createInitialsSvgDataUri`.
+  - [x] 25.4.2: Bundle SheetJS locally in `js/vendor/xlsx.full.min.js`, configure local loader with CDN fallback, and add to `sw.js`.
+- [x] **TASK-25-05** | Automated E2E Regression Verification & Continuation State Sync | MEDIUM | depends: TASK-25-01..TASK-25-04 | criteria: All pages render with 0 errors; state files updated
+
+---
+
+## 🎓 PHASE 26: ACADEMIC ENGINE, SEQUENTIAL PREREQUISITES & ROSTER MATRIX
+
+- [x] **TASK-26-01** | Fix Student Progress Calculation & Cumulative Mastery Grade Formula | HIGH | depends: none | criteria: `completion_pct = (completed_assessments_count / total_class_assessments) * 100`; authoritative cumulative mastery grade (unattempted count as 0); default sort `PTS` descending
+- [x] **TASK-26-02** | Standalone Student Info Columns & Text-Only Identity | MEDIUM | depends: none | criteria: Dedicated columns `INST` (~65px), `PROGRAM` (~65px), `BATCH` (~55px), `STUDENT NAME` (~140px, text-only, 0 avatars/initials); compact `PROG` (~50px), `GRD` (~40px), `PTS` (~55px)
+- [x] **TASK-26-03** | 40-Column Dense Assessment Matrix (Zero Horizontal Scrollbar) | CRITICAL | depends: TASK-26-01, TASK-26-02 | criteria: `table-layout: fixed; width: 100%; overflow-x: hidden !important;`; remaining width evenly distributed across 1..40; 4 super-headers; magenta accents on Test columns (7, 8, 17, 18, 29, 30, 39, 40); clean "pts" formatting; "★ CLASS AVERAGE" summary row; score cell click opens `result.html?attempt_id=...` in new tab
+- [x] **TASK-26-04** | Standardize Assessment Codes & Sequential Prerequisites | HIGH | depends: none | criteria: Code format `[Level][Theme][Topic]-[TYPE]-[TIER]`; sequential `prerequisite_assessment_id` chain (1 -> 2 -> ... -> 40) in DB
+- [x] **TASK-26-05** | Playwright Automated Matrix Verification & Screenshot Validation | HIGH | depends: TASK-26-01..TASK-26-04 | criteria: Automated test verifies zero horizontal overflow, score cell new tab opening, and outputs `class_roster_matrix_phase26_verified.png`
+
+---
+
+## 🎯 PHASE 27: UNLOCKED/TAKEABLE ASSESSMENT CALIBRATION & FLEXIBLE SORTING
+
+- [x] **TASK-27-01** | Calibrate Student Score (%) & Grade (GRD) Strictly on Taken/Unlocked Modules | CRITICAL | depends: none | criteria: Student Score = `sum(best_percentage_on_taken) / count(taken_assessments)`; Grade = `getGrade(average_score)`; locked/unopened assessments strictly excluded from score denominator
+- [x] **TASK-27-02** | Differentiate Progress (PROG) vs Student Score/Grade | HIGH | depends: TASK-27-01 | criteria: PROG reflects completion (`completed_count / total_class_assessments * 100`, e.g. "15% 6/40 Done"); GRD displays score % and grade badge (e.g. "100% S")
+- [x] **TASK-27-03** | Flexible Multi-Criteria Column Sorting in Class Roster | HIGH | depends: TASK-27-01 | criteria: Clicking PTS sorts by total cumulative points; clicking PROG sorts by curriculum completion; clicking GRD sorts by mastery percentage; default first-click sort direction is descending for academic performance metrics
+- [x] **TASK-27-04** | Authoritative Grading Engine Synchronization (`api.js`, `class.js`, `dashboard.js`, `app.js`) | HIGH | depends: TASK-27-01 | criteria: Centralized `calculateOverallStudentScore` exported in `api.js` & `grading.js`; synchronized across class roster, dashboard banner, and class reports
+- [x] **TASK-27-05** | Automated Playwright Verification & Screenshot Validation | HIGH | depends: TASK-27-01..TASK-27-04 | criteria: Verified that student with perfect scores on taken assessments displays 100% Grade S without being dragged down by locked modules; screenshot `class_roster_calibrated_scores.png`
+
+---
+
+## 🎯 PHASE 31: TYPOGRAPHY POLISH, TABULAR NUMS & MATRIX REFINEMENTS
+
+- [x] **TASK-31-01** | Tabular Numbers for Data Grids, Timers & Metrics | HIGH | depends: none | criteria: `font-variant-numeric: tabular-nums;` applied across `.table-wrap`, `.data-grid`, `.datagrid-table`, `#class-attendance-grid`, `#assessment-timer`, `#timer-display`, `.result-summary-val`, `.badge`, `.score-val`, `.matrix-cell`
+- [x] **TASK-31-02** | Font-Weight Hierarchy & Contrast Elevation | MEDIUM | depends: none | criteria: Elevate muted text tokens from `#64748B` to `#94A3B8` / `#CBD5E1`; Headings/KPIs 700, Tables/Buttons 500/600, Subtitles/helpers 400
+- [x] **TASK-31-03** | Student Roster PROGRAM Column & Age Sanitization | HIGH | depends: none | criteria: Standalone PROGRAM column rendered between INSTITUTION and BATCH; `birth_date` null/0 renders `—` (0 standalone "0 yrs"); `.actions-col` enforces `gap: 6px;`
+- [x] **TASK-31-04** | Class Roster Attendance Matrix Native Tooltips & Summary Row | HIGH | depends: none | criteria: 40 assessment header cells equipped with active native `title` tooltips; docked summary row `★ CLASS AVERAGE (KELAS)` displays class-wide completion and average points
+- [x] **TASK-31-05** | Playwright Desktop Verification (1600x900) & Strict Git Freeze | HIGH | depends: TASK-31-01..TASK-31-04 | criteria: 100% PASS rate across all verified views; 0 commits, 0 pushes
 

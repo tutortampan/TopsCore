@@ -80,16 +80,18 @@ export function requireStudentSession(redirectTo = '/index.html') {
 
 // Admin session
 export function setAdminSession(data) {
-  sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({
+  const payload = JSON.stringify({
     admin_id: data.admin_id || 'admin',
     role: 'admin',
     authenticated_at: new Date().toISOString(),
-  }));
+  });
+  try { sessionStorage.setItem(ADMIN_SESSION_KEY, payload); } catch (_) {}
+  try { localStorage.setItem(ADMIN_SESSION_KEY, payload); } catch (_) {}
 }
 
 export function getAdminSession() {
   try {
-    const raw = sessionStorage.getItem(ADMIN_SESSION_KEY);
+    const raw = sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -97,7 +99,8 @@ export function getAdminSession() {
 }
 
 export function clearAdminSession() {
-  sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  try { sessionStorage.removeItem(ADMIN_SESSION_KEY); } catch (_) {}
+  try { localStorage.removeItem(ADMIN_SESSION_KEY); } catch (_) {}
 }
 
 export function requireAdminSession(redirectTo = '/admin.html') {

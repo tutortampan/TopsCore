@@ -166,3 +166,104 @@ All assessment creation must pass through a centralized Single-Door Workflow ins
 - Assessment builder UI is locked from modifying scope and tier during editing.
 
 ---
+
+## DECISION-012 — Harmonious Tier Color Palette & Sparkling Gold Grade S Atmosphere
+
+Date: 2026-10-18
+Status: ACCEPTED
+
+### Context
+In previous releases, Grade S (100%) and Grade C (51-70%) shared ambiguous amber/gold color tones (`#f59e0b` / `#d97706`), causing visual collision and diminishing the prestige of achieving a perfect 100% score. Additionally, student scores (%) and total points (PTS) were rendered in generic colors that did not convey the student's earned achievement tier.
+
+### Decision
+1. Adopt **Option 1 Harmonious Tier Palette**:
+   - **S (100%)**: Gold Champion (`#fbbf24`, shimmer `#fef08a`, glow `rgba(245, 158, 11, 0.65)`)
+   - **A (91–99%)**: Emerald Master (`#10b981`, glow `rgba(16, 185, 129, 0.45)`)
+   - **B (71–90%)**: Sky Diamond (`#06b6d4`, glow `rgba(6, 182, 212, 0.45)`)
+   - **C (51–70%)**: Warm Topaz (`#eab308`, glow `rgba(234, 179, 8, 0.35)`) — separated from S
+   - **D (31–50%)**: Flame Orange (`#f97316`, glow `rgba(249, 115, 22, 0.35)`)
+   - **E (11–30%)**: Rose Coral (`#f43f5e`, glow `rgba(244, 63, 94, 0.35)`)
+   - **F (0–10%)**: Crimson Alert (`#ef4444`, glow `rgba(239, 68, 68, 0.35)`)
+2. Synchronize Score (%) and Total Points (PTS) text and badge styling across the entire system (Admin Roster, Student Dashboard, and Result Page) with the student's tier color.
+3. Deliver a dynamic "Tier Badge Atmosphere" on Student Dashboard (`dashboard.html`) and Result Page (`result.html`) with ambient radial aura and glowing borders matching the tier.
+4. For Grade S (100%), implement prestige sparkling gold animations (`@keyframes gold-badge-sparkle` & `@keyframes gold-text-gleam`) featuring pulsing gold gradients and radiant multi-layered drop shadows.
+
+### Consequences
+- Centralized `GRADE_PALETTE`, `getGradeColor`, and `getGradeTheme` in `js/grading.js` and `js/api.js`.
+- Distinct, prestigious visual atmosphere where achieving Grade S feels like earning a champion's trophy badge.
+- Zero color collisions between S and C.
+
+---
+
+## DECISION-013 — Student Dashboard Avatar Scaling, Royal Title Mechanics, Glow Hierarchy, and Dual-Tab Dock Standings
+
+Date: 2026-10-18
+Status: ACCEPTED
+
+### Context
+Student dashboard engagement required visual dominance for student avatars, clear visual recognition for 100% scores (Grade S), healthy peer competition within the batch, and prestige gamification mechanics while maintaining a strict mobile zero-scroll budget (`100dvh`) and preserving `#bottom-ad-banner` (28px).
+
+### Decision
+1. **Visual Avatar Scaling**:
+   - Enlarge `#banner-avatar-container` from 60px to 86px with 50% border radius, circular clipping, and tier glowing borders.
+   - Wrap in `.banner-avatar-wrapper` with relative positioning to host floating crown.
+2. **Grading & Glow Hierarchy**:
+   - Grade S (100%): Shining star (`⭐`) with radiant golden glow (`rgba(245, 158, 11, 0.85)`).
+   - Grade A (91–99%): Emerald green (`#10b981`) with soft emerald glow.
+   - Grade B (71–90%): Sky blue (`#06b6d4`) with soft cyan glow.
+   - Grade C (51–70%): Warm yellow (`#eab308`) with soft amber glow.
+   - Grade D (31–50%): Flame orange (`#f97316`) with soft orange glow.
+   - Grade E (11–30%): Crimson red (`#ef4444`) with soft red glow.
+   - Grade F (0–10%): Neutral slate (`#64748b`) with minimal glow.
+   - Export authoritative `getGradeSymbol(grade, percentage)` from `js/grading.js`.
+3. **Royal Title & Crown Mechanics**:
+   - The student with the highest average score (> 0%) in the active batch earns the batch championship.
+   - Dynamic royal title prefix: `"King <Name>"` for male, `"Queen <Name>"` for female (replaces `"Mr."` / `"Miss"`).
+   - Floating crown badge (`👑`) appears directly above the avatar with breathing animation.
+   - Titles update in real-time when another student overtakes the lead.
+4. **Dual-Tab Dock & Batch Standings Matrix**:
+   - Replace single bottom container with dual-tab dock (`[ 🏆 Batch Standings ] [ 📋 Completed ]`) and rank badge indicator (`RANK #1`).
+   - 4-level deterministic tie-breaker sorting:
+     1. Overall score (descending)
+     2. Completed assessments count (descending)
+     3. Earliest last submission timestamp (ascending)
+     4. Alphabetical student name (ascending)
+   - Isolate inner scrolling within `#dock-pane-standings` with hidden scrollbars, guaranteeing zero outer viewport scrolling.
+
+### Consequences
+- Heightened gamification and peer motivation.
+- 100% preservation of `100dvh` zero-scroll mobile geometry and 28px bottom ad banner.
+- Authoritative grading rules remain centralized in `js/grading.js`.
+
+---
+
+## DECISION-014 — Global Elevated Topbar Summary Tabs, Row C Action Button Purge & Data Health Recalibrator
+
+Date: 2026-10-18
+Status: ACCEPTED
+
+### Context
+In the TopsCore LMS admin console, the Assessments Hub header suffered from redundant vertical rows:
+1. Row A had static breadcrumb text ("CLASS / Assessments Hub") consuming vertical space.
+2. Row B had duplicated KPI metric cards (Total, Published, Draft, Question Bank).
+3. Row C had 8 action buttons, many obsolete (e.g., "+ Create Assessment", as assessments are generated dynamically from class syllabus blueprints, or buttons navigating to separate sub-sections like Cohorts, Vocab Vault, and Question imports/exports).
+This wasted ~160px of vertical viewport height, pushing filter tabs and the main assessment DataGrid below the fold.
+
+### Decision
+1. **Global Elevated Topbar Summary Tabs**:
+   - Standardize `<header class="admin-topbar" id="admin-topbar">` to 56px height, glassmorphic backdrop (`rgba(15, 23, 42, 0.75)`, `backdrop-filter: blur(12px)`), retaining the responsive sidebar toggle (`#sidebar-toggle`) on the left and dynamic `#topbar-tabs-container`.
+   - Implement `window.setTopbarTabs(tabs, activeId, onSelect)` to elevate summary cards / category tabs directly into the topbar across all admin sections (Assessments Hub, Curriculum/Classes Hub, Student Management).
+   - Render tab cards as sleek pills/boxes (`flex: 1; height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);`).
+2. **Purge Row C & Redundant Action Buttons**:
+   - Completely remove the button strip containing `+ Create Assessment`, `Cohorts & Assignments`, `Results`, `Recalibrate`, `Import Questions`, `Export Questions`, `Vocab Vault`, and `Open Session`.
+   - Remove Row B in-page KPI cards.
+   - Dock `#assessment-filters` and the DataGrid immediately beneath the topbar, reclaiming all vertical dead space.
+3. **Relocate Exam Recalibrator to Domain D (Data Health)**:
+   - Move the recalibration controller logic to Domain D -> Data Health (`admin.html#health`) under a dedicated maintenance card: "Assessment Engine Recalibration" (`#card-assessment-recalibration`).
+   - Wire grid row actions to set `window._filterRecalibrateAssessment` and route to `#health` with smooth scrolling and auto-preview.
+
+### Consequences
+- Clean, uncluttered admin interface with modern glassmorphism.
+- 160px+ of vertical space reclaimed across all displays.
+- Recalibration logic centralized in its proper domain (Domain D Data Health & Maintenance).
+

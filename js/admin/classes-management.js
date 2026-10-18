@@ -1,8 +1,8 @@
-import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsAssessments, autoGeneratePhrasesAssessments } from '../api.js?v=5.1.0';
-import { showToast } from '../app.js?v=5.1.0';
-import { openAssessmentBuilder } from './assessment-builder.js?v=5.1.0';
-import { DataGrid } from './datagrid.js?v=5.1.0';
-import { openAssessmentBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.1.0';
+import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsAssessments, autoGeneratePhrasesAssessments } from '../api.js?v=5.2.2';
+import { showToast, escapeHtml, escHtml } from '../app.js?v=5.2.2';
+import { openAssessmentBuilder } from './assessment-builder.js?v=5.2.2';
+import { DataGrid } from './datagrid.js?v=5.2.2';
+import { openAssessmentBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.2.2';
 
 // ─────────────────────────────────────────────────────────────
 // SMART CLASS-AWARE TASK / TEST ROUTERS
@@ -459,7 +459,7 @@ function renderProgramDetail(prog, inst) {
             class_id: newClass.id,
             level_id: lvlId
           }));
-          const sb = await import('../supabase.js?v=5.1.0').then(m => m.getSupabase());
+          const sb = await import('../supabase.js?v=5.2.2').then(m => m.getSupabase());
           await sb.from('class_levels').insert(classLevelsPayload);
         }
         
@@ -650,7 +650,7 @@ export async function loadClassLearningPath(classId) {
     if (window._selectedLevelId && window._selectedLevelId !== 'no-level') {
         filters.level_id = window._selectedLevelId;
     }
-    const assessmentsRaw = await adminFetchAll('assessments', '*, prerequisite_assessment_id(id, name, title), levels!level_id(id, name)', filters);
+    const assessmentsRaw = await adminFetchAll('assessments', '*, prerequisite_assessment_id(id, name, title, shell_code), levels!level_id(id, name)', filters);
     const assessments = assessmentsRaw.sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
     
     if (!assessments || assessments.length === 0) {
@@ -712,7 +712,8 @@ export async function loadClassLearningPath(classId) {
         id: r.id,
         title: r.title,
         order: r.display_order ?? r.order_index ?? r.order ?? (idx + 1),
-        prereq: r.prerequisite_assessment_id ? (r.prerequisite_assessment_id.title || r.prerequisite_assessment_id.name || 'Yes') : '',
+        shellCode: r.shell_code || '',
+        prereq: r.prerequisite_assessment_id ? (r.prerequisite_assessment_id.shell_code || r.prerequisite_assessment_id.title || r.prerequisite_assessment_id.name || 'Yes') : '',
         type: r.assessment_type || 'STANDARD',
         level: r.levels?.name || '—',
         access: r.question_order === 'fixed' ? 'Fixed' : 'Rand',
@@ -775,8 +776,13 @@ export async function loadClassLearningPath(classId) {
       },
       columns: [
         {
-          key: 'order', label: 'ORD', sortable: true,
-          render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${row.order}</div>`
+          key: 'order', label: 'CODE', sortable: true,
+          render: (val, row) => {
+            if (row.shellCode) {
+              return `<div style="font-size:0.7rem; color:var(--clr-primary); font-family:monospace; font-weight:bold; white-space:nowrap; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</div>`;
+            }
+            return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${row.order}</div>`;
+          }
         },
         { 
           key: 'title', label: 'TITLE', sortable: true,
@@ -886,10 +892,7 @@ function formatAnswerType(type) {
   }
 }
 
-function escapeHtml(unsafe) {
-  if (!unsafe) return '';
-  return String(unsafe).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
+// escapeHtml / escHtml imported canonically
 
 window._toggleClassAssessmentPublish = async (AssessmentId, currentStatus) => {
   const newStatus = (currentStatus || '').toUpperCase() === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';

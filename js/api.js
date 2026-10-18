@@ -1,9 +1,11 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
-import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=5.1.0';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, parseCorrectAnswers, stripHyphens } from './grading.js?v=5.1.0';
+import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=5.2.2';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme } from './grading.js?v=5.2.2';
+import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=5.2.2';
+import { escapeHtml, escHtml } from './app.js?v=5.2.2';
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, parseCorrectAnswers, stripHyphens, callEdgeFunction };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -18,16 +20,6 @@ const MOCK_PROGRAMS = [
   { id: '22222222-2222-2222-2222-222222222222', institution_id: '11111111-1111-1111-1111-111111111111', name: 'Class A' },
   { id: '22222222-2222-2222-2222-333333333333', institution_id: '11111111-1111-1111-1111-111111111111', name: 'Class B' }
 ];
-
-export function stripHonorific(name) {
-  if (!name) return '';
-  return String(name).trim().replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?)\s+/i, '').trim();
-}
-
-export function getStudentInitial(name) {
-  const stripped = stripHonorific(name);
-  return stripped ? stripped.charAt(0).toUpperCase() : 'S';
-}
 
 export function cleanStudentName(name) {
   if (!name) return '';
@@ -173,11 +165,11 @@ export async function fetchPrograms(institutionId, forceRefresh = false) {
   });
 }
 
-export async function fetchBatches(programId, forceRefresh = false) {
-  const cacheKey = `batches_${programId}`;
+export async function fetchBatches(programId, forceRefresh = false, activeOnly = true) {
+  const cacheKey = `batches_${programId}_${activeOnly}`;
   if (forceRefresh) clearApiCache(cacheKey);
   return withCache(cacheKey, async () => {
-    let list = MOCK_BATCHES.filter(b => b.program_id === programId);
+    let list = MOCK_BATCHES.filter(b => b.program_id === programId && (!activeOnly || b.is_active !== false));
     if (!isPlaceholderUrl()) {
       if (!programId || programId === 'undefined') {
         console.warn('Cannot fetch batches: programId is undefined');
@@ -185,11 +177,14 @@ export async function fetchBatches(programId, forceRefresh = false) {
       }
       try {
         const sb = await getSupabase();
-        const { data, error } = await sb.from('batches')
-          .select('id, name, program_id, current_level_id')
+        let query = sb.from('batches')
+          .select('id, name, program_id, current_level_id, is_active')
           .eq('program_id', programId)
-          .is('deleted_at', null)
-          .order('name');
+          .is('deleted_at', null);
+        if (activeOnly) {
+          query = query.eq('is_active', true);
+        }
+        const { data, error } = await query.order('name');
         if (error) throw error;
         if (data && data.length) list = data;
       } catch (e) {
@@ -200,21 +195,28 @@ export async function fetchBatches(programId, forceRefresh = false) {
   });
 }
 
-export async function fetchStudentsByProgram(programId, batchId = null) {
-  let list = MOCK_STUDENTS.filter(s => s.program_id === programId && (!batchId || s.batch_id === batchId));
+export async function fetchStudentsByProgram(programId, batchId = null, activeOnly = true) {
+  let list = MOCK_STUDENTS.filter(s => s.program_id === programId && (!batchId || s.batch_id === batchId) && (!activeOnly || s.is_active !== false));
   if (!isPlaceholderUrl()) {
     try {
       const sb = await getSupabase();
       let query = sb.from('students')
-        .select('id, name, gender, program_id, batch_id')
+        .select('id, name, gender, program_id, batch_id, is_active, batches!batch_id(id, is_active)')
         .eq('program_id', programId)
         .is('deleted_at', null);
+      if (activeOnly) {
+        query = query.eq('is_active', true);
+      }
       if (batchId) {
         query = query.eq('batch_id', batchId);
       }
       const { data, error } = await query.order('name');
       if (error) throw error;
-      if (data && data.length) list = data;
+      if (data && data.length) {
+        list = (activeOnly && !batchId)
+          ? data.filter(s => !s.batches || s.batches.is_active !== false)
+          : data;
+      }
     } catch (e) {
       console.warn('Supabase fetch students failed, falling back to mock data:', e.message);
     }
@@ -518,6 +520,186 @@ export async function fetchStudentAttemptsForAssessment(studentId, assessmentId)
 // ASSESSMENT EXECUTION (RUNNER)
 // ============================================================
 
+export async function generateAssessmentQuestions(sb, assessment) {
+  let questions = [];
+  if (assessment.payload && assessment.payload.is_dynamic_shell) {
+    const themeCode = assessment.payload.theme_code;
+    const topicCode = assessment.payload.topic_code;
+    const themes = assessment.payload.themes;
+    
+    let levelNum = 1;
+    if (assessment.level_id) {
+      const { data: levelRec } = await sb.from('levels').select('level_number').eq('id', assessment.level_id).single();
+      if (levelRec?.level_number) levelNum = levelRec.level_number;
+    }
+    
+    // Resilient vocabulary query: try with category column first, fallback without category column
+    let vaultData = null;
+    try {
+      let query = sb.from('vocabulary_vault')
+        .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level, category')
+        .is('deleted_at', null)
+        .eq('target_level', levelNum)
+        .range(0, 4999);
+      if (themes && Array.isArray(themes) && themes.length > 0) {
+        query = query.in('theme_code', themes);
+      } else if (assessment.assessment_category === 'TEST' && themeCode) {
+        const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        const idx = allThemes.indexOf(themeCode);
+        if (idx !== -1) {
+          const targetThemes = allThemes.slice(0, idx + 1);
+          query = query.in('theme_code', targetThemes);
+        } else {
+          query = query.eq('theme_code', themeCode);
+        }
+      } else {
+        if (themeCode) query = query.eq('theme_code', themeCode);
+        if (topicCode) query = query.eq('topic_code', topicCode);
+      }
+      const res = await query;
+      if (!res.error && res.data && res.data.length > 0) {
+        vaultData = res.data;
+      }
+    } catch (_) {}
+
+    if (!vaultData || vaultData.length === 0) {
+      // Fallback query without category column (resilient across DB schemas)
+      let queryNoCat = sb.from('vocabulary_vault')
+        .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level')
+        .is('deleted_at', null)
+        .eq('target_level', levelNum)
+        .range(0, 4999);
+      if (themes && Array.isArray(themes) && themes.length > 0) {
+        queryNoCat = queryNoCat.in('theme_code', themes);
+      } else if (assessment.assessment_category === 'TEST' && themeCode) {
+        const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        const idx = allThemes.indexOf(themeCode);
+        if (idx !== -1) {
+          queryNoCat = queryNoCat.in('theme_code', allThemes.slice(0, idx + 1));
+        } else {
+          queryNoCat = queryNoCat.eq('theme_code', themeCode);
+        }
+      } else {
+        if (themeCode) queryNoCat = queryNoCat.eq('theme_code', themeCode);
+        if (topicCode) queryNoCat = queryNoCat.eq('topic_code', topicCode);
+      }
+      const res2 = await queryNoCat;
+      if (!res2.error && res2.data) {
+        vaultData = res2.data.map(w => {
+          const wt = (w.word_type || '').toLowerCase();
+          const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+          return { ...w, category: isPhrase ? 'phrases' : 'words' };
+        });
+      }
+    }
+
+    let vaultWords = vaultData || [];
+    const category = assessment.payload.category || 'vocab';
+    vaultWords = vaultWords.filter(w => {
+      const wt = (w.word_type || '').toLowerCase();
+      const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+      return category === 'phrases' ? isPhrase : !isPhrase;
+    });
+
+    // Secondary Safety Fallback: If strict theme/topic yielded 0 words, fallback to general words for this level
+    if (vaultWords.length === 0) {
+      console.warn(`[Vault Fallback] 0 words for theme ${themeCode}/topic ${topicCode}, pulling general level ${levelNum} vault items.`);
+      const { data: generalVault } = await sb.from('vocabulary_vault')
+        .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level')
+        .is('deleted_at', null)
+        .eq('target_level', levelNum)
+        .limit(100);
+      if (generalVault && generalVault.length > 0) {
+        vaultWords = generalVault.filter(w => {
+          const wt = (w.word_type || '').toLowerCase();
+          const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+          return category === 'phrases' ? isPhrase : !isPhrase;
+        });
+      }
+    }
+
+    if (vaultWords && vaultWords.length > 0) {
+      const fisherYates = (arr) => {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      };
+
+      const orderSetting = String(assessment.question_order || assessment.payload?.question_order || 'random').toLowerCase();
+      if (orderSetting === 'random') {
+        fisherYates(vaultWords);
+      } else {
+        vaultWords.sort((a, b) => (a.indonesian || '').localeCompare(b.indonesian || ''));
+      }
+      
+      let allEnglishAnswers = [];
+      let typeDistractorPools = {};
+      const ansType = assessment.payload.answer_type || 'written';
+      
+      if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
+        let allDataQuery = sb.from('vocabulary_vault').select('english, word_type').is('deleted_at', null);
+        const { data: allData } = await allDataQuery;
+        if (allData) {
+          const isTargetPhrase = (category === 'phrases' || assessment.assessment_type === 'PHRASE_TASK' || assessment.assessment_type === 'PHRASE_TEST');
+          const filteredAllData = allData.filter(r => {
+            const wt = (r.word_type || '').toLowerCase();
+            const isP = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+            return isTargetPhrase ? isP : !isP;
+          });
+          allEnglishAnswers = filteredAllData.map(r => (r.english || '').split('/')[0].trim()).filter(Boolean);
+          filteredAllData.forEach(r => {
+            const wt = (r.word_type || 'Vocab').toLowerCase();
+            const eng = (r.english || '').split('/')[0].trim();
+            if (!eng) return;
+            if (!typeDistractorPools[wt]) typeDistractorPools[wt] = [];
+            typeDistractorPools[wt].push(eng);
+          });
+        }
+      }
+
+      questions = vaultWords.map((vw, idx) => {
+        const accepted = vw.english ? vw.english.split('/').map(s => s.trim()) : [];
+        const correctAns = accepted[0] || 'N/A';
+        let optionsSnapshot = [];
+        
+        if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
+          const numDistractors = (ansType === 'dropdown_10') ? 9 : 4;
+          const wordType = (vw.word_type || 'Vocab').toLowerCase();
+          let sameTypePool = (typeDistractorPools[wordType] || []).filter(a => !accepted.includes(a));
+          fisherYates(sameTypePool);
+          const globalPool = allEnglishAnswers.filter(a => !accepted.includes(a) && !sameTypePool.includes(a));
+          fisherYates(globalPool);
+          const distractors = [...sameTypePool, ...globalPool].slice(0, numDistractors);
+          optionsSnapshot = fisherYates([correctAns, ...distractors]);
+        }
+
+        return {
+          question_id: vw.id,
+          question_text_snapshot: vw.indonesian || 'N/A',
+          accepted_answers_snapshot: accepted,
+          options_snapshot: optionsSnapshot,
+          topic_snapshot: vw.topic || vw.topic_code || 'General',
+          theme_snapshot: vw.theme || vw.theme_code || assessment.payload?.theme_code || 'General',
+          theme_code: vw.theme_code || assessment.payload?.theme_code,
+          category_snapshot: vw.category || category,
+          word_type_snapshot: vw.word_type,
+          display_order: idx + 1,
+          answer_type: ansType
+        };
+      });
+    }
+  } else {
+    const { data } = await sb.from('assessment_questions')
+      .select('id, question_id, question_text_snapshot, word_type_snapshot, options_snapshot, topic_snapshot, display_order, answer_type')
+      .eq('assessment_id', assessment.id)
+      .order('display_order');
+    questions = data || [];
+  }
+  return questions;
+}
+
 export async function startAssessment(studentId, assessmentId) {
   try {
     return await callEdgeFunction('start-assessment', { student_id: studentId, assessment_id: assessmentId });
@@ -540,7 +722,7 @@ export async function startAssessment(studentId, assessmentId) {
 
   // 1. Ambil detail assessment
   const { data: asmData, error: asmErr } = await sb.from('assessments')
-    .select('id, title, assessment_type, assessment_category, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_assessment_id, prerequisite_id, payload, module_id')
+    .select('id, title, assessment_type, assessment_category, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_assessment_id, prerequisite_id, payload, module_id, question_order')
     .eq('id', assessmentId)
     .single();
   if (asmErr || !asmData) throw new Error('Assessment not found.');
@@ -577,6 +759,7 @@ export async function startAssessment(studentId, assessmentId) {
   const assessment = {
     ...asmData,
     name: asmData.title || asmData.name,
+    question_order: asmData.question_order || asmData.payload?.question_order || 'random',
     time_limit_minutes: asmData.working_duration_minutes || asmData.time_limit_minutes || 60
   };
 
@@ -621,125 +804,15 @@ export async function startAssessment(studentId, assessmentId) {
 
     if (createErr) throw createErr;
     attempt = newAttempt;
+  }
 
-    // Masukkan butir soal snapshot
-    let questions = [];
-    if (assessment.payload && assessment.payload.is_dynamic_shell) {
-      const themeCode = assessment.payload.theme_code;
-      const topicCode = assessment.payload.topic_code;
-      const themes = assessment.payload.themes;
-      
-      let levelNum = 1;
-      if (assessment.level_id) {
-        const { data: levelRec } = await sb.from('levels').select('level_number').eq('id', assessment.level_id).single();
-        if (levelRec?.level_number) levelNum = levelRec.level_number;
-      }
-      
-      let query = sb.from('vocabulary_vault')
-        .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level, category')
-        .is('deleted_at', null)
-        .eq('target_level', levelNum)
-        .range(0, 4999);
-      if (themes && Array.isArray(themes) && themes.length > 0) {
-          query = query.in('theme_code', themes);
-      } else if (assessment.assessment_category === 'TEST' && themeCode) {
-          const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-          const idx = allThemes.indexOf(themeCode);
-          if (idx !== -1) {
-              const targetThemes = allThemes.slice(0, idx + 1);
-              query = query.in('theme_code', targetThemes);
-          } else {
-              query = query.eq('theme_code', themeCode);
-          }
-      } else {
-          if (themeCode) query = query.eq('theme_code', themeCode);
-          if (topicCode) query = query.eq('topic_code', topicCode);
-      }
-      
-      let { data: vaultData } = await query;
-      let vaultWords = vaultData || [];
-      
-      const category = assessment.payload.category || 'vocab';
-      vaultWords = vaultWords.filter(w => {
-         const wt = (w.word_type || '').toLowerCase();
-         const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
-         return category === 'phrases' ? isPhrase : !isPhrase;
-      });
+  // 3. Ambil jawaban attempt atau self-heal jika attempt belum memiliki butir soal
+  let { data: answers } = await sb.from('attempt_answers')
+    .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score')
+    .eq('attempt_id', attempt.id);
 
-      if (vaultWords && vaultWords.length > 0) {
-        vaultWords.sort((a, b) => (a.indonesian || "").localeCompare(b.indonesian || ""));
-        
-        let allEnglishAnswers = [];
-        let typeDistractorPools = {};
-        const ansType = assessment.payload.answer_type || 'written';
-        
-        if (ansType.startsWith('dropdown') || (ansType === 'multiple_choice' || ansType === 'selection') ) {
-            let allDataQuery = sb.from('vocabulary_vault').select('english, word_type').is('deleted_at', null);
-            if (category === 'phrases' || assessment.assessment_type === 'PHRASE_TASK' || assessment.assessment_type === 'PHRASE_TEST') {
-                allDataQuery = allDataQuery.eq('category', 'phrases');
-            } else if (category === 'words' || category === 'vocab' || assessment.assessment_type === 'VOCAB_TASK' || assessment.assessment_type === 'VOCAB_TEST') {
-                allDataQuery = allDataQuery.eq('category', 'words');
-            }
-            const { data: allData } = await allDataQuery;
-            if (allData) {
-                allEnglishAnswers = allData.map(r => (r.english||'').split('/')[0].trim()).filter(Boolean);
-                allData.forEach(r => {
-                    const wt = (r.word_type || 'Vocab').toLowerCase();
-                    const eng = (r.english||'').split('/')[0].trim();
-                    if (!eng) return;
-                    if (!typeDistractorPools[wt]) typeDistractorPools[wt] = [];
-                    typeDistractorPools[wt].push(eng);
-                });
-            }
-        }
-        
-        const fisherYates = (arr) => {
-          for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
-          }
-          return arr;
-        };
-
-        questions = vaultWords.map((vw, idx) => {
-             const accepted = vw.english ? vw.english.split('/').map(s => s.trim()) : [];
-             const correctAns = accepted[0] || "N/A";
-             let optionsSnapshot = [];
-             
-             if (ansType.startsWith('dropdown') || (ansType === 'multiple_choice' || ansType === 'selection') ) {
-                 const numDistractors = (ansType === 'dropdown_10' ) ? 9 : 4;
-                 const wordType = (vw.word_type || 'Vocab').toLowerCase();
-                 let sameTypePool = (typeDistractorPools[wordType] || []).filter(a => !accepted.includes(a));
-                 fisherYates(sameTypePool);
-                 const globalPool = allEnglishAnswers.filter(a => !accepted.includes(a) && !sameTypePool.includes(a));
-                 fisherYates(globalPool);
-                 const distractors = [...sameTypePool, ...globalPool].slice(0, numDistractors);
-                 optionsSnapshot = fisherYates([correctAns, ...distractors]);
-             }
-
-             return {
-                 question_id: vw.id,
-                 question_text_snapshot: vw.indonesian || "N/A",
-                 accepted_answers_snapshot: accepted,
-                 options_snapshot: optionsSnapshot,
-                 topic_snapshot: vw.topic || vw.topic_code || "General",
-                 theme_snapshot: vw.theme || vw.theme_code || assessment.payload?.theme_code || "General",
-                 theme_code: vw.theme_code || assessment.payload?.theme_code,
-                 category_snapshot: vw.category || category,
-                 word_type_snapshot: vw.word_type,
-                 display_order: idx + 1,
-                 answer_type: ansType
-             };
-        });
-      }
-    } else {
-      const { data } = await sb.from('assessment_questions')
-        .select('id, question_id, question_text_snapshot, word_type_snapshot, options_snapshot, topic_snapshot, display_order, answer_type')
-        .eq('assessment_id', assessmentId)
-        .order('display_order');
-      questions = data || [];
-    }
-
+  if (!answers || answers.length === 0) {
+    const questions = await generateAssessmentQuestions(sb, assessment);
     if (questions && questions.length > 0) {
       const answerRows = questions.map((sq, idx) => ({
         attempt_id: attempt.id,
@@ -763,16 +836,21 @@ export async function startAssessment(studentId, assessmentId) {
         score: 0
       }));
       const { error: ansInsertErr } = await sb.from('attempt_answers').insert(answerRows);
-      if (ansInsertErr) console.error('Failed to insert attempt answers:', ansInsertErr);
+      if (ansInsertErr) {
+        console.error('Failed to insert attempt answers:', ansInsertErr);
+      } else {
+        const { data: refetched } = await sb.from('attempt_answers')
+          .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score')
+          .eq('attempt_id', attempt.id);
+        answers = refetched || [];
+      }
     }
   }
 
-  let { data: answers } = await sb.from('attempt_answers').select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score').eq('attempt_id', attempt.id);
-
   if (answers && answers.length > 0) {
     answers.sort((a, b) => {
-      const orderA = a.question_snapshot?.question_order;
-      const orderB = b.question_snapshot?.question_order;
+      const orderA = a.question_snapshot?.display_order ?? a.question_snapshot?.question_order;
+      const orderB = b.question_snapshot?.display_order ?? b.question_snapshot?.question_order;
       if (orderA != null && orderB != null) return orderA - orderB;
       return new Date(a.created_at) - new Date(b.created_at);
     });
@@ -802,8 +880,9 @@ export async function startAssessment(studentId, assessmentId) {
   return {
     success: true,
     attempt: attempt,
+    assessment: assessment,
     ASSESSMENT: assessment,
-    sections: [{ id: 'default', title: assessment.name || 'Assessment', section_order: 1 }],
+    sections: [{ id: 'default', title: assessment.name || assessment.title || 'Assessment', section_order: 1 }],
     answers: sanitizedAnswers,
     resumed: !!existingAttempts?.[0]
   };
@@ -879,8 +958,27 @@ export function clearAdminCache(table = null) {
     for (const key of _adminCache.keys()) {
       if (key.startsWith(normTable + '|')) _adminCache.delete(key);
     }
+    // Cross-table dependencies: if batches, programs, institutions or levels change,
+    // clear students and progress caches which embed these related records
+    if (['batches', 'programs', 'institutions', 'levels'].includes(normTable)) {
+      for (const key of _adminCache.keys()) {
+        if (key.startsWith('students|') || key.startsWith('progress|') || key.startsWith('classes|')) {
+          _adminCache.delete(key);
+        }
+      }
+    }
+    if (normTable === 'programs' && typeof window !== 'undefined' && typeof window.loadSidebarPrograms === 'function') {
+      window.loadSidebarPrograms();
+    }
+    if (normTable === 'classes' && typeof window !== 'undefined' && typeof window.loadSidebarClasses === 'function') {
+      window.loadSidebarClasses();
+    }
   } else {
     _adminCache.clear();
+    if (typeof window !== 'undefined') {
+      if (typeof window.loadSidebarPrograms === 'function') window.loadSidebarPrograms();
+      if (typeof window.loadSidebarClasses === 'function') window.loadSidebarClasses();
+    }
   }
 }
 
@@ -1209,50 +1307,118 @@ export async function mergeDuplicateStudents(duplicateGroups) {
 // --- Duplicate question detection & resequencing ---
 export async function detectDuplicateQuestions(assessmentId) {
   const sb = await getSupabase();
-  let query = sb.from('questions').select('id, question_text, assessment_id');
+  let query = sb.from('assessment_questions')
+    .select('id, question_text_snapshot, assessment_id, display_order, options_snapshot, accepted_answers_snapshot, answer_type, created_at, assessments!assessment_id(id, title)')
+    .is('deleted_at', null);
   if (assessmentId) query = query.eq('assessment_id', assessmentId);
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) {
+    console.warn('detectDuplicateQuestions query error:', error.message);
+    return {
+      totalSameAssessmentDupCount: 0,
+      sameAssessmentDuplicates: [],
+      sameAssessmentOrderConflicts: [],
+      crossAssessmentDuplicates: []
+    };
+  }
   const questions = data || [];
   const groups = {};
   for (const q of questions) {
-    const key = (q.question_text || '').trim().toLowerCase() + '|' + (q.assessment_id || '');
+    const text = (q.question_text_snapshot || '').trim().toLowerCase();
+    if (!text) continue;
+    const key = text + '|' + (q.assessment_id || '');
     if (!groups[key]) groups[key] = [];
-    groups[key].push(q);
+    groups[key].push({
+      id: q.id,
+      assessment_id: q.assessment_id,
+      question_order: q.display_order,
+      display_order: q.display_order,
+      answer_type: q.answer_type || 'written',
+      answersCount: 0,
+      created_at: q.created_at,
+      question_text: q.question_text_snapshot,
+      options_json: q.options_snapshot,
+      correct_answer: Array.isArray(q.accepted_answers_snapshot) ? q.accepted_answers_snapshot[0] : (q.accepted_answers_snapshot || ''),
+      assessments: q.assessments
+    });
   }
-  return Object.values(groups).filter(g => g.length > 1);
+
+  const sameAssessmentDuplicates = Object.values(groups)
+    .filter(g => g.length > 1)
+    .map(g => ({
+      recommendedPrimaryId: g[0].id,
+      AssessmentTitle: g[0].assessments?.title || 'Assessment',
+      assessmentTitle: g[0].assessments?.title || 'Assessment',
+      AssessmentId: g[0].assessment_id,
+      assessmentId: g[0].assessment_id,
+      candidates: g
+    }));
+
+  return {
+    totalSameAssessmentDupCount: sameAssessmentDuplicates.length,
+    sameAssessmentDuplicates,
+    sameAssessmentOrderConflicts: [],
+    crossAssessmentDuplicates: []
+  };
 }
 
 export async function resequenceAssessmentQuestions(assessmentId) {
   const sb = await getSupabase();
-  // questions table has no question_order column — resequencing is a no-op until column is added
-  const { data, error } = await sb.from('questions').select('id').eq('assessment_id', assessmentId).order('created_at');
+  const { data, error } = await sb.from('assessment_questions')
+    .select('id, display_order')
+    .eq('assessment_id', assessmentId)
+    .is('deleted_at', null)
+    .order('display_order', { ascending: true })
+    .order('created_at', { ascending: true });
   if (error) throw error;
-  // No-op: question_order column not in schema yet
-  // const updates = (data || []).map((q, idx) =>
-  //   sb.from('questions').update({ question_order: idx + 1 }).eq('id', q.id)
-  // );
-  // await Promise.all(updates);
-  clearAdminCache('questions');
+  const updates = (data || []).map((q, idx) =>
+    sb.from('assessment_questions').update({ display_order: idx + 1 }).eq('id', q.id)
+  );
+  await Promise.all(updates);
+  clearAdminCache('assessment_questions');
 }
 
-export async function resolveDuplicateQuestionGroup(group, keepId) {
+export async function resolveDuplicateQuestionGroup(groupOrPrimaryId, keepIdOrDuplicateId) {
   const sb = await getSupabase();
-  const toDelete = (group || []).filter(q => q.id !== keepId);
-  for (const q of toDelete) {
-    await sb.from('questions').update({ deleted_at: new Date().toISOString() }).eq('id', q.id);
+  if (Array.isArray(groupOrPrimaryId)) {
+    const keepId = keepIdOrDuplicateId;
+    const toDelete = groupOrPrimaryId.filter(q => q.id !== keepId);
+    for (const q of toDelete) {
+      await sb.from('assessment_questions').update({ deleted_at: new Date().toISOString() }).eq('id', q.id);
+    }
+  } else {
+    const primaryId = groupOrPrimaryId;
+    const duplicateId = keepIdOrDuplicateId;
+    try {
+      await sb.from('attempt_answers').update({ question_id: primaryId }).eq('question_id', duplicateId);
+    } catch (e) {
+      console.warn('Could not repoint attempt answers:', e.message);
+    }
+    await sb.from('assessment_questions').update({ deleted_at: new Date().toISOString() }).eq('id', duplicateId);
   }
-  clearAdminCache('questions');
+  clearAdminCache('assessment_questions');
 }
 
 export async function batchResolveAssessmentDuplicateQuestions(assessmentId) {
-  const groups = await detectDuplicateQuestions(assessmentId);
+  const data = await detectDuplicateQuestions(assessmentId);
+  const groups = data.sameAssessmentDuplicates || (Array.isArray(data) ? data : []);
+  let repointedCount = 0;
   for (const group of groups) {
-    const keep = group[0];
-    await resolveDuplicateQuestionGroup(group, keep.id);
+    const primaryId = group.recommendedPrimaryId || (group.candidates && group.candidates[0]?.id);
+    if (!primaryId || !group.candidates) continue;
+    for (const cand of group.candidates) {
+      if (cand.id !== primaryId) {
+        await resolveDuplicateQuestionGroup(primaryId, cand.id);
+        repointedCount++;
+      }
+    }
   }
   if (assessmentId) await resequenceAssessmentQuestions(assessmentId);
-  return { resolved: groups.length };
+  return {
+    resolved: groups.length,
+    groupsResolved: groups.length,
+    totalRepointedAnswers: repointedCount
+  };
 }
 
 // --- Recalibration engine ---
@@ -1507,7 +1673,7 @@ export async function getServerTimeWita() {
 export async function fetchVaultWords({ topic = null, search = null, targetLevel = null, limit = 2500, offset = 0 } = {}) {
   const sb = await getSupabase();
   let query = sb.from('vocabulary_vault')
-    .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, item_code')
+    .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code')
     .is('deleted_at', null)
     .order('target_level', { ascending: true })
     .order('theme_code', { ascending: true })
@@ -1583,7 +1749,7 @@ export async function fetchVaultStats() {
 export async function checkVaultDuplicates(newRows) {
   const sb = await getSupabase();
   const { data: vaultData, error } = await sb.from('vocabulary_vault')
-    .select('id, item_code, theme, topic, indonesian, english, target_level, word_type')
+    .select('id, theme, topic, indonesian, english, target_level, word_type')
     .is('deleted_at', null);
   if (error) throw error;
   const vault = vaultData || [];
@@ -1663,8 +1829,7 @@ function sanitizeVaultRow(row) {
     indonesian: String(row.indonesian || '').trim().replace(/\s+/g, ' '),
     english:    canonicalEng,
     word_type:  wType,
-    target_level: parseInt(row.level || row.target_level || 1, 10) || 1,
-    item_code: ic || null
+    target_level: parseInt(row.level || row.target_level || 1, 10) || 1
   };
 }
 
@@ -1886,7 +2051,7 @@ export async function createVocabMasteryAssessment(config) {
   if (tier === 'TASK') {
     if (!sourceTopic) throw new Error('sourceTopic is required for TASK tier.');
     let q = sb.from('vocabulary_vault')
-      .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, item_code')
+      .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code')
       .eq('topic', sourceTopic)
       .is('deleted_at', null);
     if (!isAllLevels) q = q.eq('target_level', targetLevel);
@@ -1922,7 +2087,7 @@ export async function createVocabMasteryAssessment(config) {
 
     // 3. Fetch words for all accumulated topics
     let q = sb.from('vocabulary_vault')
-      .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, item_code')
+      .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code')
       .in('topic', sourceTopics)
       .is('deleted_at', null);
     if (!isAllLevels) q = q.eq('target_level', targetLevel);
@@ -1946,7 +2111,7 @@ export async function createVocabMasteryAssessment(config) {
     });
     sourceTopics = [...topicsSet];
     let q = sb.from('vocabulary_vault')
-      .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, item_code')
+      .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code')
       .in('topic', sourceTopics)
       .is('deleted_at', null);
     if (!isAllLevels) q = q.eq('target_level', targetLevel);
@@ -2210,7 +2375,7 @@ export async function fetchStudentLevel(studentId) {
 export async function exportVaultWords(mode = 'all') {
   const sb = await getSupabase();
   let query = sb.from('vocabulary_vault')
-    .select('item_code, target_level, theme_code, theme, topic_code, topic, indonesian, english, word_type, created_at')
+    .select('target_level, theme_code, theme, topic_code, topic, indonesian, english, word_type, created_at')
     .is('deleted_at', null)
     .order('target_level', { ascending: true })
     .order('theme_code', { ascending: true })
@@ -2243,7 +2408,6 @@ export async function exportVaultWords(mode = 'all') {
     const wt = (w.word_type || '').toLowerCase();
     const isPhrase = ['expression', 'idiom', 'proverb'].includes(wt);
     return {
-      'Item Code': w.item_code || '',
       Category: isPhrase ? 'Phrases' : 'Words',
       Level: w.target_level || '1',
       'Theme Code': w.theme_code || '',
@@ -2291,8 +2455,10 @@ export async function upsertDynamicAssessmentShell(config) {
     displayOrder = 1
   } = config;
 
-  const suffix = category === 'phrases' ? 'PHR' : 'WOR';
-  const code = tier === 'TEST' ? `${levelNum}VOCAB-${themeCode}-TEST-${suffix}` : `${levelNum}VOCAB-${themeCode}${topicCode}-${suffix}`; // e.g. 3VOCAB-A1-PHR
+  const catUpper = (category === 'phrases' || category === 'phrase') ? 'PHRASES' : 'WORDS';
+  const code = tier === 'TEST' 
+    ? `${levelNum}${themeCode}-${catUpper}-TEST` 
+    : `${levelNum}${themeCode}${topicCode || '1'}-${catUpper}-TASK`; // e.g. 3A1-WORDS-TASK, 3A-WORDS-TEST
   
   const cleanTitle = (topicName || themeName || '').replace(/["']/g, '').trim();
   const levelLabel = toOrdinalLevel(levelNum);
@@ -2327,7 +2493,7 @@ export async function upsertDynamicAssessmentShell(config) {
     answer_type:                answerType,
     is_dynamic_shell:           true,
     display_order:              displayOrder,
-    payload:                    { is_dynamic_shell: true, theme_code: themeCode, topic_code: topicCode || null, category: category, answer_type: answerType },
+    payload:                    { is_dynamic_shell: true, theme_code: themeCode, topic_code: topicCode || null, category: category, answer_type: answerType, shell_code: code },
     created_by:                 'Auto-Generator',
     updated_at:                 new Date().toISOString()
   };

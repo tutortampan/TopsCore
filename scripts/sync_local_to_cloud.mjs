@@ -13,8 +13,8 @@ const CLOUD_CONFIG = {
 
 // Local Docker Supabase Credentials
 const LOCAL_CONFIG = {
-  host: '127.0.0.1',
-  port: 54322,
+  host: process.env.LOCAL_DB_HOST || '127.0.0.1',
+  port: parseInt(process.env.LOCAL_DB_PORT || '54022', 10),
   user: 'postgres',
   password: 'postgres',
   database: 'postgres'
@@ -25,7 +25,7 @@ async function syncLocalToCloud() {
   
   const local = new Client(LOCAL_CONFIG);
   await local.connect();
-  console.log('[1/4] Connected to Local Docker PostgreSQL (port 54322)');
+  console.log(`[1/4] Connected to Local Docker PostgreSQL (port ${LOCAL_CONFIG.port})`);
 
   const remote = new Client(CLOUD_CONFIG);
   await remote.connect();

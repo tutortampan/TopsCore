@@ -238,7 +238,8 @@ Deno.serve(async (req) => {
           id: assessment.id,
           title: assessment.title,
           assessment_type: assessment.assessment_type,
-          working_duration_minutes: assessment.working_duration_minutes
+          working_duration_minutes: assessment.working_duration_minutes,
+          question_order: assessment.question_order || assessment.payload?.question_order || 'random'
         }
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -386,7 +387,12 @@ Deno.serve(async (req) => {
       }
       
       if (vaultWords && vaultWords.length > 0) {
-        vaultWords.sort((a: any, b: any) => (a.indonesian || "").localeCompare(b.indonesian || ""));
+        const orderSetting = String(assessment.question_order || assessment.payload?.question_order || 'random').toLowerCase();
+        if (orderSetting === 'random') {
+          vaultWords.sort(() => Math.random() - 0.5);
+        } else {
+          vaultWords.sort((a: any, b: any) => (a.indonesian || "").localeCompare(b.indonesian || ""));
+        }
         
         let distractorPool: any[] = [];
         if (dynamicAnswerType === 'dropdown') {
@@ -487,7 +493,7 @@ Deno.serve(async (req) => {
     }
 
     // Randomize order if configured
-    if (assessment.question_order === 'RANDOM') {
+    if (String(assessment.question_order || assessment.payload?.question_order || 'random').toLowerCase() === 'random') {
       snapQuestions.sort(() => Math.random() - 0.5);
     }
 
@@ -595,7 +601,8 @@ Deno.serve(async (req) => {
         id: assessment.id,
         title: assessment.title,
         assessment_type: assessment.assessment_type,
-        working_duration_minutes: durationMinutes
+        working_duration_minutes: durationMinutes,
+        question_order: assessment.question_order || assessment.payload?.question_order || 'random'
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }

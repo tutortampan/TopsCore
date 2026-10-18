@@ -1,0 +1,191 @@
+/* ============================================================
+   TopsCore — css/result.css
+   ============================================================ */
+
+@media print {
+      body { background: #ffffff !important; color: #000000 !important; }
+      .dashboard-header, .btn, #try-again-btn, #toggle-answers-btn, #print-result-btn, a[href="dashboard.html"], #toast-container {
+        display: none !important;
+      }
+      .result-page { padding: 0 !important; }
+      .result-hero { padding: 1.5rem 0 !important; box-shadow: none !important; border: 1px solid #e2e8f0 !important; background: #f8fafc !important; }
+      .answers-list { display: block !important; }
+      .answer-card { break-inside: avoid; border: 1px solid #cbd5e1 !important; color: #0f172a !important; background: #fff !important; margin-bottom: 12px !important; }
+      .result-grade-display { border-color: #000 !important; }
+      .text-gradient { -webkit-text-fill-color: #000 !important; color: #000 !important; }
+    }
+
+    /* ===== RESULT PAGE PREMIUM STYLES ===== */
+    .result-grade-display {
+      width: 64px !important;
+      height: 64px !important;
+      font-size: 2.2rem !important;
+      border-radius: 16px !important;
+      margin-bottom: 0.75rem !important;
+    }
+
+    #result-percentage {
+      font-size: 3.5rem !important;
+      font-weight: 900 !important;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 1rem !important;
+    }
+
+    #result-headline {
+      font-family: 'Outfit', sans-serif !important;
+      font-size: clamp(1.2rem, 5vw, 1.7rem) !important;
+      font-weight: 800 !important;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.4rem !important;
+    }
+
+    #result-Assessment-name-container {
+      background: #0e1f38;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 0 auto 1.5rem auto !important;
+      max-width: 90%;
+    }
+    #result-Assessment-name {
+      font-size: 0.875rem !important;
+      font-weight: 900 !important;
+      color: #ffffff !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.05em !important;
+      margin: 0 !important;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .result-summary-grid {
+      margin: 1rem auto 1.25rem !important;
+      gap: 10px !important;
+    }
+
+    .result-summary-item {
+      padding: 12px 8px !important;
+      border-radius: 12px !important;
+    }
+
+    .result-summary-val {
+      font-size: 1.6rem !important;
+      line-height: 1;
+      margin-bottom: 3px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .result-summary-item span:last-child,
+    #res-correct,
+    #res-partial,
+    #res-wrong,
+    #result-percentage {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .result-summary-lbl {
+      font-size: 0.65rem !important;
+      letter-spacing: 0.1em !important;
+    }
+
+    .result-hero {
+      background: var(--clr-surface) !important;
+      border: 1px solid var(--clr-border) !important;
+      border-radius: 24px !important;
+      padding: clamp(1.25rem, 4vw, 2.5rem) clamp(0.75rem, 4vw, 1.5rem) !important;
+      text-align: center;
+      margin: 1rem auto 2rem auto !important;
+      width: calc(100% - 16px) !important;
+      max-width: 680px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2) !important;
+      transition: all 0.4s ease;
+    }
+
+    /* Dynamic Tier Atmosphere for Result Hero - Glow ONLY on Tier S */
+    .result-hero.tier-S {
+      background: radial-gradient(ellipse 90% 60% at 50% 0%, rgba(245, 158, 11, 0.22), transparent 75%), #0f172a !important;
+      border: 2px solid rgba(251, 191, 36, 0.5) !important;
+      box-shadow: 0 0 45px rgba(245, 158, 11, 0.35), 0 0 15px rgba(251, 191, 36, 0.25), 0 20px 50px rgba(0,0,0,0.5) !important;
+    }
+    .result-hero.tier-A {
+      background: #0f172a !important;
+      border: 1.5px solid rgba(16, 185, 129, 0.45) !important;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3) !important;
+    }
+    .result-hero.tier-B {
+      background: #0f172a !important;
+      border: 1.5px solid rgba(14, 165, 233, 0.45) !important;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3) !important;
+    }
+    .result-hero.tier-C {
+      background: #0f172a !important;
+      border: 1.5px solid rgba(199, 193, 140, 0.3) !important;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3) !important;
+    }
+    .result-hero.tier-D {
+      background: #0f172a !important;
+      border: 1.5px solid rgba(249, 115, 22, 0.4) !important;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3) !important;
+    }
+    .result-hero.tier-E {
+      background: #0f172a !important;
+      border: 1.5px solid rgba(244, 63, 94, 0.4) !important;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3) !important;
+    }
+    .result-hero.tier-F {
+      background: #0f172a !important;
+      border: 1.5px solid rgba(239, 68, 68, 0.4) !important;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3) !important;
+    }
+
+    .answer-item {
+      border-radius: 12px !important;
+      padding: 12px 14px !important;
+      margin-bottom: 10px !important;
+      background: rgba(255, 255, 255, 0.03) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .answer-item:hover {
+      background: rgba(255, 255, 255, 0.06) !important;
+      transform: translateY(-2px);
+    }
+
+    .answer-item-header .fw-700.text-sm {
+      font-size: 0.88rem !important;
+      line-height: 1.4;
+    }
+
+    .answer-result-icon {
+      font-size: 1.1rem !important;
+    }
+
+    .ans-filter-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 6px 14px;
+      color: #94a3b8;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .ans-filter-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #f8fafc;
+    }
+    .ans-filter-btn.active {
+      background: var(--clr-primary, #38bdf8);
+      border-color: var(--clr-primary, #38bdf8);
+      color: #020617;
+    }
+
+    .answer-row-compact {
+      transition: background 0.2s, transform 0.2s;
+    }
+    .answer-row-compact:hover {
+      background: rgba(255, 255, 255, 0.06) !important;
+      transform: translateY(-2px);
+    }

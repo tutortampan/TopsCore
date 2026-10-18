@@ -1,15 +1,30 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256 } from '../api.js?v=5.1.0';
-import { getSupabase } from '../supabase.js?v=5.1.0';
-import { getGrade, showToast } from '../app.js?v=5.1.0';
-import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=5.1.0';
-import { DataGrid } from './datagrid.js?v=5.1.0';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter } from '../api.js?v=5.2.2';
+import { getSupabase } from '../supabase.js?v=5.2.2';
+import { getGrade, showToast } from '../app.js?v=5.2.2';
+import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=5.2.2';
+import { DataGrid } from './datagrid.js?v=5.2.2';
 
 let studentGrid = null;
 
-function escHtml(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// escapeHtml / escHtml imported canonically
+
+
+function calculateAgeFromBirthDate(birthDateStr) {
+  if (!birthDateStr) return '—';
+  try {
+    const dob = new Date(birthDateStr);
+    if (isNaN(dob.getTime())) return '—';
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const m = now.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) {
+      age--;
+    }
+    return (age && age > 0) ? `${age} yrs` : '—';
+  } catch {
+    return '—';
+  }
 }
-const escapeHtml = escHtml;
 
 /**
  * Hierarchical sort comparator for student records:
@@ -47,16 +62,27 @@ export function compareStudentsHierarchical(a, b) {
 }
 
 export async function renderStudents(area) {
-    const [rawData, allAttempts, allLevels, allProgress, allPrograms, allBatches] = await Promise.all([
+    const [rawData, allAttempts, allLevels, allProgress, allPrograms, allBatches, allAssignments, allAssessments] = await Promise.all([
     adminFetchAll('students', 'id, name, gender, birth_date, photo_url, photo_status, is_active, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)'),
     adminFetchAll('attempts', 'id, student_id, assessment_id, status, score, total_questions, percentage, created_at, is_remedial_unlocked, assessments(assessment_type, title, class_id)'),
     adminFetchAll('levels', 'id, name, level_number'),
-    adminFetchAll('progress', 'id, student_id, class_id, level_id, status'),
+    adminFetchAll('progress', 'id, student_id, class_id, unlocked_level, highest_score'),
     adminFetchAll('programs', 'id, name, institution_id, is_active'),
-    adminFetchAll('batches', 'id, name, program_id, is_active, current_level_id')
+    adminFetchAll('batches', 'id, name, program_id, is_active, current_level_id'),
+    adminFetchAll('assignments', 'student_id, batch_id, assessment_id').catch(() => []),
+    adminFetchAll('assessments', 'id, title, level_id, levels(name, level_number)').catch(() => [])
   ]);
   const levelsMap = new Map();
   (allLevels || []).forEach(l => levelsMap.set(l.id, l));
+
+  const assessmentsMap = new Map((allAssessments || []).map(a => [a.id, a]));
+
+  const attemptsByStudent = new Map();
+  (allAttempts || []).forEach(att => {
+    if (!att.student_id) return;
+    if (!attemptsByStudent.has(att.student_id)) attemptsByStudent.set(att.student_id, []);
+    attemptsByStudent.get(att.student_id).push(att);
+  });
 
   // Detect duplicate students within the same class (normalized by stripping honorifics & whitespace)
   const dupMap = new Map();
@@ -75,30 +101,144 @@ export async function renderStudents(area) {
     if (s.deleted_at) return false;
     return true;
   }).map(s => {
-    const studentAttempts = (allAttempts || []).filter(a => a.student_id === s.id);
-    const completedAssessmentsCount = new Set(studentAttempts.filter(a => a.status === 'SUBMITTED' || a.status === 'submitted').map(a => a.assessment_id || a.Assessment_id)).size;
+    const studentAttempts = attemptsByStudent.get(s.id) || [];
+    const validStatuses = ['submitted', 'auto_submitted', 'evaluated', 'graded'];
+
+    // Map curriculum assignments & level-centric assessments (Rule 2.5 & 2.7)
+    const sAssignments = (allAssignments || []).filter(a =>
+      a.student_id === s.id || (a.batch_id && a.batch_id === s.batch_id)
+    );
+    const studentBatch = (allBatches || []).find(b => b.id === s.batch_id);
+    const studentLevelId = s.level_id || studentBatch?.current_level_id;
+    const levelAssesIds = studentLevelId ? (allAssessments || []).filter(a => a.level_id === studentLevelId).map(a => a.id) : [];
+    const assignedAssesIds = new Set([...sAssignments.map(a => a.assessment_id), ...levelAssesIds]);
+    const totalAssigned = assignedAssesIds.size || 40;
+
+    const sAttemptsByAsm = new Map();
+    studentAttempts.forEach(att => {
+      const asmId = att.assessment_id || att.Assessment_id;
+      if (!asmId) return;
+      if (!sAttemptsByAsm.has(asmId)) sAttemptsByAsm.set(asmId, []);
+      sAttemptsByAsm.get(asmId).push(att);
+    });
+
+    let completedAssignedCount = 0;
+    let inProgressCount = 0;
+    const studentDetails = [];
+
+    assignedAssesIds.forEach(assessmentId => {
+      const assessment = assessmentsMap.get(assessmentId);
+      if (!assessment) return;
+
+      const asmAtts = sAttemptsByAsm.get(assessmentId) || [];
+      const isCompleted = asmAtts.some(att => {
+        const st = String(att.status || '').toLowerCase();
+        return validStatuses.includes(st);
+      });
+      const isInProgress = !isCompleted && asmAtts.some(att => {
+        const st = String(att.status || '').toLowerCase();
+        return st === 'in_progress';
+      });
+
+      if (isCompleted) completedAssignedCount++;
+      else if (isInProgress) inProgressCount++;
+
+      let bestScore = null;
+      let bestPct = null;
+      if (isCompleted) {
+        asmAtts.forEach(att => {
+          const st = String(att.status || '').toLowerCase();
+          if (validStatuses.includes(st)) {
+            const sc = Number(att.score ?? 0);
+            const tq = Number(att.total_questions || att.max_score || 10);
+            const pct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
+            if (bestPct === null || pct > bestPct) {
+              bestScore = sc;
+              bestPct = Math.round(pct);
+            }
+          }
+        });
+      }
+
+      studentDetails.push({
+        assessmentId,
+        assessmentTitle: assessment.title,
+        levelNumber: assessment.levels?.level_number || 1,
+        levelName: assessment.levels?.name || 'Unknown',
+        is_completed: isCompleted,
+        is_in_progress: isInProgress,
+        bestScore,
+        bestPct
+      });
+    });
+
+    studentDetails.sort((a, b) => {
+      if (a.levelNumber !== b.levelNumber) return a.levelNumber - b.levelNumber;
+      return (a.assessmentTitle || '').localeCompare(b.assessmentTitle || '');
+    });
+
+    // Group valid attempts by assessment_id and find highest score (Rule 2.7 & 2.8)
+    const bestByAsm = new Map();
+    studentAttempts.forEach(a => {
+      const st = String(a.status || '').toLowerCase();
+      if (!validStatuses.includes(st)) return;
+      const asmId = a.assessment_id || a.Assessment_id;
+      if (!asmId) return;
+
+      const sc = Number(a.score ?? 0);
+      const tq = Number(a.total_questions || a.max_score || 10);
+      const pct = a.percentage != null ? Number(a.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
+
+      if (!bestByAsm.has(asmId)) {
+        bestByAsm.set(asmId, { score: sc, totalQuestions: tq, percentage: pct, attempt: a });
+      } else {
+        const existing = bestByAsm.get(asmId);
+        if (sc > existing.score) {
+          bestByAsm.set(asmId, { score: sc, totalQuestions: tq, percentage: pct, attempt: a });
+        }
+      }
+    });
+
+    const completedAssessmentsCount = Math.max(bestByAsm.size, completedAssignedCount);
+    const completionPct = totalAssigned > 0 ? Math.round((completedAssessmentsCount / totalAssigned) * 100) : 0;
     const latestAttempt = studentAttempts.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
     
-    // Overall logic from old app.js
-    let overallScoreStr = '-';
-    let globalGrade = '-';
+    // Authoritative global grade & score across completed assessments (Rule 2.8 & 2.10)
+    let overallScoreStr = '—';
+    let globalGrade = '—';
     let overallColor = 'rgba(255,255,255,0.4)';
-    if (completedAssessmentsCount > 0) {
+    let overallPct = -1;
+
+    if (bestByAsm.size > 0) {
       let totalMaxScore = 0;
       let totalObtained = 0;
-      studentAttempts.filter(a => a.status === 'SUBMITTED' || a.status === 'submitted').forEach(a => {
-        totalMaxScore += (a.total_questions || a.max_score || 0);
-        totalObtained += (a.score || a.total_score || 0);
+      let sumPercentages = 0;
+
+      bestByAsm.forEach(best => {
+        totalMaxScore += best.totalQuestions;
+        totalObtained += Math.max(0, best.score);
+        sumPercentages += best.percentage;
       });
+
       if (totalMaxScore > 0) {
-        const pct = Math.round((totalObtained / totalMaxScore) * 100);
-        overallScoreStr = `${pct}%`;
-        if (typeof getGrade === 'function') {
-           const g = getGrade(pct);
-           globalGrade = g;
-           const cMap = { 'S': '#8b5cf6', 'A': '#10b981', 'B': '#3b82f6', 'C': '#f59e0b', 'D': '#f97316', 'E': '#ef4444', 'F': '#ef4444' };
-           overallColor = cMap[g] || 'rgba(255,255,255,0.4)';
-        }
+        overallPct = Math.round((totalObtained / totalMaxScore) * 100);
+      } else if (bestByAsm.size > 0) {
+        overallPct = Math.round(sumPercentages / bestByAsm.size);
+      }
+
+      if (overallPct >= 0) {
+        overallScoreStr = `${overallPct}%`;
+        const g = typeof getGrade === 'function' ? getGrade(overallPct) : (
+          overallPct >= 100 ? 'S' :
+          overallPct >= 91 ? 'A' :
+          overallPct >= 71 ? 'B' :
+          overallPct >= 51 ? 'C' :
+          overallPct >= 31 ? 'D' :
+          overallPct >= 11 ? 'E' : 'F'
+        );
+        globalGrade = g;
+        const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#0ea5e9', 'C': '#c7c18c', 'D': '#f97316', 'E': '#f43f5e', 'F': '#ef4444' };
+        overallColor = cMap[g] || 'rgba(255,255,255,0.4)';
       }
     }
 
@@ -111,13 +251,16 @@ export async function renderStudents(area) {
         let age = today.getFullYear() - bd.getFullYear();
         const m = today.getMonth() - bd.getMonth();
         if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
-        if (age >= 0) ageDisplay = `${age} yrs`;
+        if (age && age > 0) ageDisplay = `${age} yrs`;
       }
     }
 
     // Determine remediation pending
     const remediationPending = studentAttempts
-      .filter(a => (a.status === 'SUBMITTED' || a.status === 'submitted') && a.assessments?.assessment_type === 'EXAM')
+      .filter(a => {
+        const st = String(a.status || '').toLowerCase();
+        return validStatuses.includes(st) && a.assessments?.assessment_type === 'EXAM';
+      })
       .some(a => {
         const maxVal = a.total_questions || a.max_score || 0;
         if (!maxVal) return false;
@@ -162,9 +305,14 @@ export async function renderStudents(area) {
       batchName: s.batches?.name || (s.batch_id ? '⚠ Unknown Batch' : '— No Batch —'),
       levelName,
       pinDisplay: s.pin || 'NOT SET',
+      totalAssigned,
       completedAssessments: completedAssessmentsCount,
+      inProgressCount,
+      completionPct,
+      details: studentDetails,
       latestActivity: latestAttempt ? new Date(latestAttempt.created_at).toLocaleDateString() : 'Never',
       overallScoreStr,
+      overallPct,
       globalGrade,
       overallColor,
       remediationPending,
@@ -178,15 +326,65 @@ export async function renderStudents(area) {
   // Hierarchical sort comparator: Active first, then Institution -> Program -> Batch -> Level -> Name (A-Z)
   gridData.sort(compareStudentsHierarchical);
 
-  // Filter data if navigated from Batches
-  const filteredGridData = window._filterBatchId
-    ? gridData.filter(s => s.batch_id === window._filterBatchId)
-    : gridData;
+  // 1 Program 1 Table: Dynamic Active Programs (Auto-show when active, auto-hide when inactive)
+  const activePrograms = (allPrograms || []).filter(p => p.is_active !== false);
+  activePrograms.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+  // If filtered by batch, auto-detect program
+  if (window._filterBatchId && allBatches) {
+    const matchedBatch = allBatches.find(b => b.id === window._filterBatchId);
+    if (matchedBatch && matchedBatch.program_id) {
+      window._filterProgramId = matchedBatch.program_id;
+    }
+  }
+
+  // Ensure current active program is selected (defaults to selected or 1st active program; no "All Programs" tab)
+  let currentProgram = activePrograms.find(p => p.id === window._filterProgramId);
+  if (!currentProgram && activePrograms.length > 0) {
+    const savedProgId = localStorage.getItem('topscore_selected_program_id');
+    currentProgram = activePrograms.find(p => p.id === savedProgId) || activePrograms[0];
+    window._filterProgramId = currentProgram.id;
+  }
+  const currentProgramId = currentProgram ? currentProgram.id : null;
+  window._selectedProgramName = currentProgram ? currentProgram.name : '';
+  if (currentProgramId) {
+    try {
+      localStorage.setItem('topscore_selected_program_id', currentProgramId);
+      localStorage.setItem('topscore_selected_program_name', window._selectedProgramName);
+    } catch(e) {}
+  }
+
+  // Synchronize sidebar active state for program items
+  document.querySelectorAll('.sidebar-program-item').forEach(i => {
+    i.classList.toggle('active', i.getAttribute('data-program-id') === currentProgramId);
+  });
+  const topbarTitle = document.getElementById('topbar-title');
+  if (topbarTitle && window._selectedProgramName) {
+    topbarTitle.textContent = window._selectedProgramName;
+  }
+
+  // Filter students strictly by active program
+  const programStudents = currentProgramId ? gridData.filter(s => s.program_id === currentProgramId) : gridData;
+
+  // Filter data if navigated from Batches or batch status
+  const currentBatchStatus = window._filterBatchStatus || (window._filterBatchId ? 'all' : 'active');
+  const filteredGridData = programStudents.filter(s => {
+    if (window._filterBatchId && s.batch_id !== window._filterBatchId) return false;
+    if (currentBatchStatus === 'active') {
+      return s.batches ? s.batches.is_active !== false : true;
+    } else if (currentBatchStatus === 'inactive') {
+      return s.batches ? s.batches.is_active === false : false;
+    }
+    return true;
+  });
+
+  // Batches belonging to current active program
+  const programBatches = (allBatches || []).filter(b => b.program_id === currentProgramId);
 
   const remediationPendingCount = filteredGridData.filter(s => s.remediationPending).length;
 
   // Update sidebar badge
-  const rosterNavBtn = document.querySelector('.admin-nav-item[data-sub="students"]');
+  const rosterNavBtn = document.querySelector(`.sidebar-program-item[data-program-id="${currentProgramId}"]`) || document.querySelector('.admin-nav-item[data-sub="students"]');
   if (rosterNavBtn) {
     const existingBadge = rosterNavBtn.querySelector('.remediation-sidebar-badge');
     if (existingBadge) existingBadge.remove();
@@ -195,21 +393,28 @@ export async function renderStudents(area) {
     }
   }
 
-  // Abort if area is no longer attached to DOM (e.g. user navigated to another tab)
-  if (!area || !document.body.contains(area)) return;
+  // Elevate Student KPI tabs to topbar
+  if (window.setTopbarTabs) {
+    const activeCount = programStudents.filter(s => s.batches ? s.batches.is_active !== false : true).length;
+    const totalAttemptCount = programStudents.reduce((sum, s) => sum + (s.completedAssessments || 0), 0);
+    window.setTopbarTabs([
+      { id: 'enrolled', icon: '👥', label: `${window._selectedProgramName || 'Program'} Students`, val: programStudents.length },
+      { id: 'active', icon: '🟢', label: 'Active Students', val: activeCount, valColor: 'var(--clr-success, #4ade80)' },
+      { id: 'completed', icon: '📝', label: 'Completed Modules', val: totalAttemptCount, valColor: 'var(--clr-accent-1, #38bdf8)' },
+      { id: 'remediation', icon: '⚠️', label: 'Need Remediation', val: remediationPendingCount, valColor: remediationPendingCount > 0 ? 'var(--clr-warning, #fbbf24)' : '' }
+    ], null, null);
+  }
 
   area.innerHTML = `
     <div class="section-header">
       <div>
-        <h2 class="section-title">Students <span class="count-chip">${filteredGridData.length} Active</span>
+        <h2 class="section-title">Students — ${escapeHtml(currentProgram ? currentProgram.name : 'Roster')} <span class="count-chip">${filteredGridData.length} ${currentBatchStatus === 'active' ? 'Active' : 'Total'}</span>
         ${remediationPendingCount > 0 ? `<span class="badge badge-warning" style="margin-left:8px; font-size: 0.9rem;">⚠️ ${remediationPendingCount} Awaiting Remediation</span>` : ''}
         </h2>
-        <p class="section-subtitle">Manage enrolled students with Batch, Overall Score & Global Grade</p>
+        <p class="section-subtitle">Student roster for <strong>${escapeHtml(currentProgram ? currentProgram.name : 'Program')}</strong> with enrollment, curriculum assessment pacing, global scores, and grade records</p>
       </div>
       <div class="d-flex gap-2">
-        ${totalDuplicates > 0 ? `<button class="btn btn-warning btn-sm" id="students-merge-shortcut" style="font-weight:700;">&#9888;&#65039; Resolve Duplicates (${totalDuplicates})</button>` : ''}
-        <button class="btn btn-secondary btn-sm" id="students-import-shortcut">📤 Import</button>
-        <button class="btn btn-success btn-sm" id="students-export-btn">📊 Export CSV</button>
+        ${totalDuplicates > 0 ? `<button class="btn btn-warning btn-sm" id="students-merge-shortcut" style="font-weight:700;">⚠️ Resolve Duplicates (${totalDuplicates})</button>` : ''}
         <button class="btn btn-primary btn-sm" id="students-add-shortcut">+ Add Student</button>
       </div>
     </div>
@@ -220,7 +425,7 @@ export async function renderStudents(area) {
           <span style="font-size:1.2rem;">&#128101;</span>
           <span>Filtered by Batch: <strong>${window._filterBatchName || 'Selected Batch'}</strong> (${filteredGridData.length} students)</span>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="window._filterBatchId=null; window._filterBatchName=null; window.loadSection('students');" style="text-decoration:underline;color:#93c5fd;">
+        <button class="btn btn-ghost btn-sm" onclick="window._filterBatchId=null; window._filterBatchName=null; window._filterBatchStatus='all'; window.loadSection('students');" style="text-decoration:underline;color:#93c5fd;">
           Show All Batches
         </button>
       </div>
@@ -243,28 +448,30 @@ export async function renderStudents(area) {
       </div>
     ` : ''}
 
-    <div class="d-flex gap-3 mb-4" style="background:var(--fm-bg-panel, #0F172A); padding: 1rem; border-radius: 8px; border: 1px solid var(--clr-border);">
-      <div style="flex: 1;">
-        <label class="form-label" style="font-size: 0.8rem; margin-bottom: 0.2rem;">Filter by Program</label>
-        <select id="students-filter-program" class="form-input" style="padding: 0.4rem; height: auto;">
-          <option value="">All Programs</option>
-          ${(allPrograms || []).map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
-        </select>
-      </div>
-      <div style="flex: 1;">
-        <label class="form-label" style="font-size: 0.8rem; margin-bottom: 0.2rem;">Filter by Batch</label>
-        <select id="students-filter-batch" class="form-input" style="padding: 0.4rem; height: auto;">
-          <option value="">All Batches</option>
-          ${(allBatches || []).map(b => `<option value="${b.id}" data-prog="${b.program_id}">${b.name}</option>`).join('')}
-        </select>
-      </div>
+    <div class="students-filter-bar-slim">
+      <span style="font-size: 0.75rem; color: var(--fm-text-secondary, #94a3b8); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; gap: 4px; margin-right: 4px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--fm-accent-tactical, #6366f1);"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+        Filters:
+      </span>
+      <select id="students-filter-batch-status" class="form-input-slim">
+        <option value="active" ${currentBatchStatus === 'active' ? 'selected' : ''}>Status: Active Batches</option>
+        <option value="all" ${currentBatchStatus === 'all' ? 'selected' : ''}>Status: All Batches</option>
+        <option value="inactive" ${currentBatchStatus === 'inactive' ? 'selected' : ''}>Status: Inactive / Past</option>
+      </select>
+      <select id="students-filter-batch" class="form-input-slim">
+        <option value="">Batch: All</option>
+        ${(programBatches || []).map(b => `<option value="${b.id}" data-active="${b.is_active !== false}" ${window._filterBatchId === b.id ? 'selected' : ''}>Batch: ${escapeHtml(b.name)}${b.is_active === false ? ' (Past)' : ''}</option>`).join('')}
+      </select>
+      ${(currentBatchStatus !== 'active' || window._filterBatchId) ? `
+        <button id="students-filter-reset" class="btn btn-ghost btn-sm" style="padding: 2px 8px; height: 26px; font-size: 0.72rem; color: var(--fm-text-secondary, #94a3b8); margin-left: auto;" title="Reset filters">✕ Reset</button>
+      ` : ''}
     </div>
     <div id="student-grid-container" class="card" style="padding:1rem;"></div>
   `;
 
   // Bind Buttons
   const addBtn = document.getElementById('students-add-shortcut');
-  if (addBtn) addBtn.onclick = () => window.openStudentFullEdit(null, () => window.loadSection('students'));
+  if (addBtn) addBtn.onclick = () => window.openStudentFullEdit({ program_id: currentProgramId }, () => window.loadSection('students'));
   
   const mergeBtn = document.getElementById('students-merge-shortcut');
   if (mergeBtn) mergeBtn.onclick = () => { if (window.openDuplicateStudentsModal) window.openDuplicateStudentsModal(); };
@@ -272,46 +479,922 @@ export async function renderStudents(area) {
   const mergeBannerBtn = document.getElementById('btn-banner-merge-duplicates');
   if (mergeBannerBtn) mergeBannerBtn.onclick = () => { if (window.openDuplicateStudentsModal) window.openDuplicateStudentsModal(); };
   
-  const importBtn = document.getElementById('students-import-shortcut');
-  if (importBtn) importBtn.onclick = () => window.loadSection('import-students');
-  
-  const exportBtn = document.getElementById('students-export-btn');
-  if (exportBtn) {
-    exportBtn.onclick = () => {
-      if (!filteredGridData || !filteredGridData.length) {
-        showToast('No students to export.', 'info');
-        return;
-      }
-      
-      const headers = ['Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Assessment Type', 'Score (%)', 'Status', 'Remediation Granted'];
-      const rows = filteredGridData.map(s => {
-        return {
-          'Institution': s.instName || '—',
-          'Program': s.progName || '—',
-          'Batch': s.batchName || '—',
-          'Current Level': s.levelName || '—',
-          'Student Name': s.displayName || s.name || '—',
-          'Assessment Type': s.remediationPending ? 'EXAM' : '—',
-          'Score (%)': s.overallScoreStr || '—',
-          'Status': s.is_active ? 'Active' : 'Inactive',
-          'Remediation Granted': s.remediationPending ? 'No' : (s.overallScoreStr !== '—' ? 'Yes/NA' : '—')
-        };
-      });
-      
+  // Global Export Function (callable from dedicated Import Students tab)
+  window.exportStudentsGradebook = () => {
+    if (!filteredGridData || !filteredGridData.length) {
+      showToast('No students to export.', 'info');
+      return;
+    }
+    
+    const headers = ['Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Assessment Type', 'Score (%)', 'Grade', 'Status', 'Remediation Granted'];
+    const rows = filteredGridData.map(s => {
+      return {
+        'Institution': s.instName || '—',
+        'Program': s.progName || '—',
+        'Batch': s.batchName || '—',
+        'Current Level': s.levelName || '—',
+        'Student Name': s.displayName || s.name || '—',
+        'Assessment Type': s.remediationPending ? 'EXAM' : '—',
+        'Score (%)': s.overallScoreStr || '—',
+        'Grade': s.globalGrade || '—',
+        'Status': s.is_active ? 'Active' : 'Inactive',
+        'Remediation Granted': s.remediationPending ? 'No' : (s.overallScoreStr !== '—' ? 'Yes/NA' : '—')
+      };
+    });
+    
+    try {
+      const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+      ws['!cols'] = [
+        { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 15 }
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Gradebook");
+      XLSX.writeFile(wb, "Gradebook_Export.xlsx");
+      showToast('Exported student gradebook successfully!', 'success');
+    } catch (err) {
+      console.error("Export error:", err);
+      showToast('Export failed. Make sure the XLSX library is loaded.', 'error');
+    }
+  };
+
+  // Detailed Modal for Curriculum Breakdown (40 Assessments Pacing)
+  window.showStudentProgressDetails = function(studentId) {
+    const rec = (filteredGridData || gridData || []).find(d => d.id === studentId);
+    if (!rec) return;
+    const existing = document.getElementById('prog-details-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'prog-details-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.92);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;';
+
+    const detailsRows = (rec.details || []).map(r => `
+      <tr>
+        <td class="fw-600 text-sm" style="color:var(--clr-text-1);">${escapeHtml(r.assessmentTitle || '—')}</td>
+        <td class="text-center">
+          <span class="badge badge-primary" style="font-size:0.75rem;">
+            ${escapeHtml(r.levelName || (typeof toLevelLetter === 'function' ? toLevelLetter(r.levelNumber) : `Level ${r.levelNumber}`))}
+          </span>
+        </td>
+        <td class="text-center">
+          <span class="badge ${r.is_completed ? 'badge-success' : r.is_in_progress ? 'badge-warning' : 'badge-neutral'}" style="font-size:0.75rem;padding:3px 8px;">
+            ${r.is_completed ? '&#10004;&#65039; Completed' : r.is_in_progress ? '&#9654;&#65039; In Progress' : '&#128276; Not Started'}
+          </span>
+        </td>
+        <td class="text-center">
+          <span class="fw-700 text-sm" style="color:${r.bestPct != null ? (r.bestPct >= 71 ? '#10b981' : r.bestPct >= 51 ? '#f59e0b' : '#ef4444') : 'var(--clr-text-3)'};">
+            ${r.bestPct != null ? `${r.bestPct}%` : '—'}
+          </span>
+        </td>
+      </tr>
+    `).join('');
+
+    modal.innerHTML = `
+      <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border);border-radius:14px;width:100%;max-width:760px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 40px rgba(0,0,0,0.6);overflow:hidden;">
+        <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--clr-border);display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.02);">
+          <div class="d-flex align-center gap-3">
+            ${rec.photo_url 
+              ? `<img src="${rec.photo_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">` 
+              : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">`
+            }
+            <div>
+              <h3 style="margin:0;font-size:1.15rem;color:var(--clr-text-1);">${escapeHtml(rec.displayName || rec.name)}</h3>
+              <div class="text-xs text-muted" style="margin-top:2px;">
+                ${escapeHtml(rec.instName)} &bull; ${escapeHtml(rec.progName)} &bull; Batch ${escapeHtml(rec.batchName)} &bull; ${escapeHtml(rec.levelName)}
+              </div>
+            </div>
+          </div>
+          <button class="btn-icon" id="btn-close-prog-details" style="background:rgba(255,255,255,0.05);border:none;color:var(--clr-text-2);font-size:1.1rem;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">&#10005;</button>
+        </div>
+        <div style="padding:1.25rem 1.5rem;overflow-y:auto;flex:1;">
+          <div class="d-flex gap-3 mb-4 flex-wrap" style="background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);padding:0.9rem 1.2rem;border-radius:10px;">
+            <div style="flex:1;min-width:90px;">
+              <div class="text-xs text-muted">Assigned</div>
+              <div class="fw-700" style="font-size:1.25rem;color:var(--clr-text-1);">${rec.totalAssigned}</div>
+            </div>
+            <div style="flex:1;min-width:90px;">
+              <div class="text-xs text-muted">Completed</div>
+              <div class="fw-700" style="font-size:1.25rem;color:var(--clr-success);">${rec.completedAssessments}</div>
+            </div>
+            <div style="flex:1;min-width:90px;">
+              <div class="text-xs text-muted">In Progress</div>
+              <div class="fw-700" style="font-size:1.25rem;color:var(--clr-warning);">${rec.inProgressCount || 0}</div>
+            </div>
+            <div style="flex:1;min-width:100px;">
+              <div class="text-xs text-muted">Overall Score</div>
+              <div class="fw-700" style="font-size:1.25rem;color:var(--clr-text-1);">${rec.overallScoreStr}</div>
+            </div>
+            <div style="flex:1;min-width:90px;">
+              <div class="text-xs text-muted">Global Grade</div>
+              <div style="margin-top:2px;">
+                <span class="badge" style="${rec.globalGrade === 'S' ? 'background:linear-gradient(135deg, #fef08a, #fbbf24, #d97706);color:#1e1b4b;font-weight:900;box-shadow:0 0 10px rgba(245,158,11,0.7);border:1px solid #fde68a;' : `background:${rec.overallColor};color:#000;font-weight:800;`}font-size:0.85rem;padding:3px 10px;">${rec.globalGrade}</span>
+              </div>
+            </div>
+            <div style="flex:1.2;min-width:120px;">
+              <div class="text-xs text-muted mb-1">Completion</div>
+              <div class="d-flex align-center gap-2">
+                <div style="flex:1;background:rgba(255,255,255,0.1);height:8px;border-radius:4px;overflow:hidden;">
+                  <div style="width:${rec.completionPct}%;background:var(--fm-accent-tactical, #6366f1);height:100%;border-radius:4px;"></div>
+                </div>
+                <span class="text-xs fw-700" style="color:var(--clr-text-1);">${rec.completionPct}%</span>
+              </div>
+            </div>
+          </div>
+          <table class="table-wrap" style="width:100%;">
+            <thead>
+              <tr>
+                <th class="text-left" style="padding:8px 12px;">Assessment Title</th>
+                <th class="text-center" style="padding:8px 12px;width:140px;">Level</th>
+                <th class="text-center" style="padding:8px 12px;width:130px;">Status</th>
+                <th class="text-center" style="padding:8px 12px;width:100px;">Best Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${detailsRows || '<tr><td colspan="4" class="text-center text-muted p-4">No assessments assigned.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#btn-close-prog-details').onclick = () => modal.remove();
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // MODAL 1: INTERACTIVE STUDENT PROFILE MODAL (TACTICAL FM WORKSTATION)
+  // ─────────────────────────────────────────────────────────────
+  window.showStudentProfileModal = async function(studentId) {
+    const list = filteredGridData || gridData || [];
+    let rec = list.find(d => d.id === studentId);
+
+    // Fallback query if called outside current filtered table
+    if (!rec) {
       try {
-        const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
-        ws['!cols'] = [
-          { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 15 }
-        ];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Gradebook");
-        XLSX.writeFile(wb, "Gradebook_Export.xlsx");
+        const sb = await getSupabase();
+        const { data: st } = await sb.from('students')
+          .select('id, name, gender, birth_date, is_active, photo_url, level_id, batch_id, program_id, institution_id, programs!program_id(name), institutions!institution_id(name), batches!batch_id(name), levels!level_id(name)')
+          .eq('id', studentId)
+          .single();
+        if (st) {
+          rec = {
+            id: st.id,
+            name: st.name,
+            displayName: cleanStudentName(st.name),
+            gender: st.gender,
+            birth_date: st.birth_date,
+            ageDisplay: calculateAgeFromBirthDate(st.birth_date),
+            is_active: st.is_active,
+            photo_url: st.photo_url,
+            instName: st.institutions?.name || '—',
+            progName: st.programs?.name || '—',
+            batchName: st.batches?.name || '—',
+            levelName: st.levels?.name || '—',
+            overallScoreStr: '—',
+            globalGrade: '—',
+            completedAssessments: 0,
+            totalAssigned: 40,
+            completionPct: 0,
+            details: []
+          };
+        }
       } catch (err) {
-        console.error("Export error:", err);
-        showToast('Export failed. Make sure the XLSX library is loaded.', 'error');
+        console.warn('Fallback student fetch failed:', err);
+      }
+    }
+    if (!rec) return;
+
+    // Carousel navigation indices
+    const currentIdx = list.findIndex(d => d.id === studentId);
+    const hasPrev = currentIdx > 0;
+    const hasNext = currentIdx >= 0 && currentIdx < list.length - 1;
+    const prevId = hasPrev ? list[currentIdx - 1].id : null;
+    const nextId = hasNext ? list[currentIdx + 1].id : null;
+    const positionText = list.length > 0 ? `${currentIdx + 1} of ${list.length}` : '';
+
+    // Remove existing profile/dossier modals if any
+    const existingP = document.getElementById('student-profile-modal');
+    if (existingP) existingP.remove();
+    const existingD = document.getElementById('student-dossier-modal');
+    if (existingD) existingD.remove();
+
+    const backdrop = document.createElement('div');
+    backdrop.id = 'student-profile-modal';
+    backdrop.className = 'student-modal-backdrop animate-fade-in';
+    backdrop.style.cssText = 'position:fixed !important;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(9,13,22,0.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;box-sizing:border-box;margin:0;';
+    document.body.style.overflow = 'hidden';
+
+    const genderIcon = (rec.gender || '').toLowerCase().startsWith('m') ? '♂️' : '♀️';
+    const photoContent = rec.photo_url
+      ? `<img src="${rec.photo_url}" alt="Student Photo" style="width:100%;height:100%;object-fit:cover;">`
+      : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:100%;height:100%;object-fit:cover;">`;
+
+    backdrop.innerHTML = `
+      <div class="student-profile-dialog">
+        <!-- Header -->
+        <div style="padding: 1.15rem 1.5rem; border-bottom: 1px solid var(--fm-border-subtle, rgba(255,255,255,0.08)); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); gap: 12px; flex-wrap: wrap;">
+          <div class="d-flex align-center gap-3">
+            <div style="width: 56px; height: 56px; border-radius: 14px; overflow: hidden; border: 2px solid var(--fm-accent-tactical, #6366f1); box-shadow: 0 4px 12px rgba(0,0,0,0.4); flex-shrink: 0; background: #1e293b; display: flex; align-items: center; justify-content: center;">
+              ${photoContent}
+            </div>
+            <div>
+              <div class="d-flex align-center gap-2 flex-wrap">
+                <h3 style="margin: 0; font-size: 1.2rem; color: var(--fm-text-primary, #f8fafc); font-weight: 800;">${escapeHtml(rec.displayName || rec.name)}</h3>
+                <span class="badge ${rec.is_active !== false ? 'badge-success' : 'badge-neutral'}" style="font-size: 0.7rem;">${rec.is_active !== false ? 'Active' : 'Inactive'}</span>
+                <span class="badge badge-info" style="font-size: 0.7rem;">${genderIcon} ${escapeHtml(rec.gender || '—')}</span>
+              </div>
+              <div class="text-xs text-muted" style="margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span>🏛️ ${escapeHtml(rec.instName)}</span> &bull; 
+                <span>👥 ${escapeHtml(rec.progName)}</span> &bull; 
+                <span>🏷️ Batch ${escapeHtml(rec.batchName)}</span> &bull; 
+                <span>⭐ ${escapeHtml(rec.levelName)}</span> &bull;
+                <span>🎂 ${escapeHtml(rec.ageDisplay || '—')}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carousel & Actions -->
+          <div class="d-flex align-center gap-2">
+            ${list.length > 1 ? `
+              <div class="d-flex align-center gap-1" style="margin-right: 6px;">
+                <button class="btn btn-secondary btn-sm" id="btn-modal-prev-student" ${!hasPrev ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} title="Previous Student (ArrowLeft)">←</button>
+                <span class="text-xs text-muted" style="padding: 0 4px; font-weight: 700;">${positionText}</span>
+                <button class="btn btn-secondary btn-sm" id="btn-modal-next-student" ${!hasNext ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} title="Next Student (ArrowRight)">→</button>
+              </div>
+            ` : ''}
+            <button class="btn btn-secondary btn-sm" id="btn-profile-open-dossier" style="display:inline-flex;align-items:center;gap:5px;font-weight:600;" title="Open Official Academic Dossier">
+              <span>🖨️</span> Dossier
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-profile-edit-student" style="display:inline-flex;align-items:center;gap:5px;font-weight:600;" title="Edit Student">
+              <span>✏️</span> Edit
+            </button>
+            <button class="btn-icon" id="btn-close-profile-modal" style="background:rgba(255,255,255,0.06);border:none;color:var(--clr-text-2);font-size:1.1rem;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">✕</button>
+          </div>
+        </div>
+
+        <!-- 6 Tactical KPI Cards -->
+        <div style="padding: 0.9rem 1.5rem; display: flex; gap: 10px; flex-wrap: wrap; background: rgba(0,0,0,0.15);">
+          <div class="profile-kpi-card" style="border-left: 3px solid var(--fm-accent-tactical, #6366f1);">
+            <div class="profile-kpi-label">Global Grade</div>
+            <div class="profile-kpi-val" style="color: ${rec.overallColor || '#38bdf8'};">${rec.globalGrade || '—'}</div>
+          </div>
+          <div class="profile-kpi-card">
+            <div class="profile-kpi-label">Overall Score</div>
+            <div class="profile-kpi-val" style="color: ${rec.overallColor || 'var(--fm-text-primary, #f8fafc)'}; ${rec.globalGrade === 'S' ? 'filter:drop-shadow(0 0 8px rgba(251,191,36,0.6)); font-weight:900;' : ''}">${rec.overallScoreStr || '—'}</div>
+          </div>
+          <div class="profile-kpi-card">
+            <div class="profile-kpi-label">Curriculum Done</div>
+            <div class="profile-kpi-val" style="color: #38bdf8; font-size: 1.15rem;">
+              ${rec.completedAssessments || 0} / ${rec.totalAssigned || 40}
+              <span style="font-size: 0.75rem; color: var(--fm-text-muted); font-weight: 600;">(${rec.completionPct || 0}%)</span>
+            </div>
+          </div>
+          <div class="profile-kpi-card" style="border-left: 3px solid #10b981;">
+            <div class="profile-kpi-label" style="color: #10b981;">Correct Answers</div>
+            <div class="profile-kpi-val" id="profile-stat-correct" style="color: #10b981;">...</div>
+          </div>
+          <div class="profile-kpi-card" style="border-left: 3px solid #f59e0b;">
+            <div class="profile-kpi-label" style="color: #f59e0b;">Minor Errors</div>
+            <div class="profile-kpi-val" id="profile-stat-minor" style="color: #f59e0b;">...</div>
+          </div>
+          <div class="profile-kpi-card" style="border-left: 3px solid #ef4444;">
+            <div class="profile-kpi-label" style="color: #ef4444;">Incorrect</div>
+            <div class="profile-kpi-val" id="profile-stat-wrong" style="color: #ef4444;">...</div>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div style="display: flex; gap: 4px; padding: 0 1.5rem; border-bottom: 1px solid var(--fm-border-subtle, rgba(255,255,255,0.08)); background: rgba(0,0,0,0.08);">
+          <button class="student-profile-tab-btn active" data-tab="assessments">📝 Assessment Breakdown (${(rec.details || []).length || 40})</button>
+          <button class="student-profile-tab-btn" data-tab="remediation">⚠️ Remediation & Progression</button>
+          <button class="student-profile-tab-btn" data-tab="account">🔑 Account & Enrollment</button>
+        </div>
+
+        <!-- Tab Body -->
+        <div style="padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1;" id="profile-tab-body">
+          <div class="empty-state" style="padding: 2rem;"><div class="spinner"></div><p style="margin-top:8px;">Loading assessment history...</p></div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+
+    // Fetch attempts asynchronously for question-level inspection
+    let studentAttempts = [];
+    try {
+      const sb = await getSupabase();
+      const { data: atts } = await sb.from('attempts')
+        .select('id, assessment_id, score, total_questions, percentage, grade, submitted_at, status, is_remedial_unlocked, assessments(id, title, assessment_type, classes(id, name)), attempt_answers(id, is_correct, evaluation_result, score, question_snapshot, student_answer, correct_answer_snapshot)')
+        .eq('student_id', studentId)
+        .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
+        .order('submitted_at', { ascending: false });
+      studentAttempts = atts || [];
+    } catch (err) {
+      console.warn('Error fetching attempts for profile modal:', err);
+    }
+
+    // Accuracy calculations
+    let totalCorrect = 0;
+    let totalMinor = 0;
+    let totalIncorrect = 0;
+    studentAttempts.forEach(att => {
+      (att.attempt_answers || []).forEach(ans => {
+        const res = (ans.evaluation_result || '').toLowerCase();
+        if (res === 'correct' || ans.is_correct || ans.score >= 1) totalCorrect++;
+        else if (res.includes('minor') || (ans.score > 0 && ans.score < 1)) totalMinor++;
+        else totalIncorrect++;
+      });
+    });
+
+    const statCorrectEl = backdrop.querySelector('#profile-stat-correct');
+    const statMinorEl = backdrop.querySelector('#profile-stat-minor');
+    const statWrongEl = backdrop.querySelector('#profile-stat-wrong');
+    if (statCorrectEl) statCorrectEl.textContent = totalCorrect;
+    if (statMinorEl) statMinorEl.textContent = totalMinor;
+    if (statWrongEl) statWrongEl.textContent = totalIncorrect;
+
+    // Render Tab Function
+    const renderTab = (tabName) => {
+      const tabBody = backdrop.querySelector('#profile-tab-body');
+      if (!tabBody) return;
+
+      if (tabName === 'assessments') {
+        const details = rec.details || [];
+        const rows = details.map(d => {
+          const matchingAttempts = studentAttempts.filter(a => a.assessment_id === d.assessment_id);
+          const latestAtt = matchingAttempts[0];
+          const hasAnswers = latestAtt && latestAtt.attempt_answers && latestAtt.attempt_answers.length > 0;
+          const attId = latestAtt ? latestAtt.id : null;
+
+          return `
+            <tr class="${hasAnswers ? 'clickable-attempt-row' : ''}" data-att-id="${attId || ''}" style="${hasAnswers ? 'cursor:pointer;' : ''}">
+              <td class="fw-600">
+                <div class="d-flex align-center gap-2">
+                  ${hasAnswers ? `<span class="toggle-arrow" id="modal-arrow-${attId}" style="font-size:0.7rem; color:var(--clr-text-muted); transition:transform 0.2s;">▶</span>` : '<span style="display:inline-block;width:12px;"></span>'}
+                  <span>${escapeHtml(d.assessmentTitle || '—')}</span>
+                </div>
+              </td>
+              <td class="text-center">
+                <span class="badge badge-primary" style="font-size:0.75rem;">
+                  ${escapeHtml(d.levelName || `Level ${d.levelNumber || '3'}`)}
+                </span>
+              </td>
+              <td class="text-center">
+                <span class="badge ${d.is_completed ? 'badge-success' : d.is_in_progress ? 'badge-warning' : 'badge-neutral'}" style="font-size:0.75rem;padding:3px 8px;">
+                  ${d.is_completed ? '✔️ Completed' : d.is_in_progress ? '▶️ In Progress' : '🔔 Not Started'}
+                </span>
+              </td>
+              <td class="text-center">
+                <span class="fw-700 text-sm" style="color:${d.bestPct != null ? (d.bestPct >= 71 ? '#10b981' : d.bestPct >= 51 ? '#f59e0b' : '#ef4444') : 'var(--clr-text-3)'};">
+                  ${d.bestPct != null ? `${d.bestPct}%` : '—'}
+                </span>
+              </td>
+              <td class="text-center text-xs text-muted">
+                ${matchingAttempts.length > 0 ? `${matchingAttempts.length} attempt${matchingAttempts.length > 1 ? 's' : ''}` : '—'}
+              </td>
+            </tr>
+            ${hasAnswers ? `
+              <tr id="modal-detail-${attId}" class="hidden" style="background:rgba(0,0,0,0.3);">
+                <td colspan="5" style="padding:12px 16px;">
+                  <div style="border-left:3px solid var(--fm-accent-tactical, #6366f1); padding-left:12px;">
+                    <div class="d-flex align-center justify-between mb-2">
+                      <div class="fw-700 text-xs" style="color:var(--fm-text-primary, #f8fafc); text-transform:uppercase;">
+                        Questions &amp; Answers Review (${latestAtt.attempt_answers.length} items)
+                      </div>
+                      ${(d.bestPct != null && d.bestPct < 70 && !latestAtt.is_remedial_unlocked) ? `
+                        <button class="btn btn-warning btn-sm btn-modal-remedial" data-att-id="${attId}" style="padding:2px 8px;font-size:0.75rem;">
+                          🔓 Authorize Remedial
+                        </button>
+                      ` : ''}
+                      ${latestAtt.is_remedial_unlocked ? `<span class="badge badge-success" style="font-size:0.7rem;">🔓 Remedial Authorized</span>` : ''}
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; padding-right:4px;">
+                      ${latestAtt.attempt_answers.map((ans, qIdx) => {
+                        const evalRes = (ans.evaluation_result || '').toLowerCase();
+                        const sc = parseFloat(ans.score || 0);
+                        let badge = '<span class="badge badge-danger" style="font-size:0.7rem;">❌ Incorrect (0 pt)</span>';
+                        if (evalRes === 'correct' || ans.is_correct || sc >= 1) {
+                          badge = '<span class="badge badge-success" style="font-size:0.7rem;">✅ Correct (+1 pt)</span>';
+                        } else if (evalRes.includes('minor') || (sc > 0 && sc < 1)) {
+                          badge = '<span class="badge badge-warning" style="font-size:0.7rem;">⚠️ Minor (+0.5 pt)</span>';
+                        }
+                        const qPrompt = ans.question_snapshot || `Question #${qIdx + 1}`;
+                        const sAns = ans.student_answer || '(No Answer)';
+                        const cAns = ans.correct_answer_snapshot || '—';
+
+                        return `
+                          <div style="padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; font-size:0.8rem;">
+                            <div class="d-flex align-center justify-between gap-2 mb-1">
+                              <div><strong>Q${qIdx + 1}.</strong> ${escapeHtml(qPrompt)}</div>
+                              <div>${badge}</div>
+                            </div>
+                            <div class="text-xs" style="color:var(--fm-text-secondary, #94a3b8);">
+                              <span>Given: <code style="color:#f8fafc;">${escapeHtml(sAns)}</code></span>
+                              <span style="margin-left:12px;">Accepted: <code style="color:#10b981;">${escapeHtml(cAns)}</code></span>
+                            </div>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            ` : ''}
+          `;
+        }).join('');
+
+        tabBody.innerHTML = `
+          <table class="table-wrap" style="width:100%;">
+            <thead>
+              <tr>
+                <th class="text-left" style="padding:8px 12px;">Assessment Title</th>
+                <th class="text-center" style="padding:8px 12px;width:120px;">Level</th>
+                <th class="text-center" style="padding:8px 12px;width:120px;">Status</th>
+                <th class="text-center" style="padding:8px 12px;width:90px;">Best Score</th>
+                <th class="text-center" style="padding:8px 12px;width:90px;">Attempts</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows || '<tr><td colspan="5" class="text-center text-muted p-4">No assessments assigned.</td></tr>'}
+            </tbody>
+          </table>
+        `;
+
+        // Bind Accordion clicks
+        tabBody.querySelectorAll('.clickable-attempt-row').forEach(tr => {
+          tr.onclick = () => {
+            const attId = tr.dataset.attId;
+            const detailRow = tabBody.querySelector(`#modal-detail-${attId}`);
+            const arrow = tabBody.querySelector(`#modal-arrow-${attId}`);
+            if (detailRow) {
+              const isHidden = detailRow.classList.toggle('hidden');
+              if (arrow) arrow.textContent = isHidden ? '▶' : '▼';
+            }
+          };
+        });
+
+        // Bind Remedial Authorize clicks
+        tabBody.querySelectorAll('.btn-modal-remedial').forEach(btn => {
+          btn.onclick = async (e) => {
+            e.stopPropagation();
+            const attId = btn.dataset.attId;
+            if (!confirm('Authorize a remedial retake for this assessment?')) return;
+            try {
+              const sb = await getSupabase();
+              await sb.from('attempts').update({ is_remedial_unlocked: true }).eq('id', attId);
+              showToast('Remedial retake authorized.', 'success');
+              btn.replaceWith(document.createRange().createContextualFragment('<span class="badge badge-success" style="font-size:0.7rem;">🔓 Remedial Authorized</span>'));
+            } catch(err) {
+              showToast('Failed to authorize remedial.', 'error');
+            }
+          };
+        });
+
+      } else if (tabName === 'remediation') {
+        const failedAssessments = (rec.details || []).filter(d => d.bestPct != null && d.bestPct < 70);
+        tabBody.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div style="padding:14px 18px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid var(--fm-border-subtle, rgba(255,255,255,0.08));">
+              <div class="fw-700 text-sm mb-1" style="color:var(--fm-text-primary, #f8fafc);">Curriculum Progression Status</div>
+              <p class="text-xs text-muted" style="margin:0;">
+                Current Level: <strong>${escapeHtml(rec.levelName)}</strong> &bull; Completed: <strong>${rec.completedAssessments} of ${rec.totalAssigned}</strong> (${rec.completionPct}%)
+              </p>
+            </div>
+
+            ${failedAssessments.length > 0 ? `
+              <div style="padding:14px 18px; border-radius:10px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25);">
+                <div class="fw-700 text-sm mb-2" style="color:#fbbf24;">⚠️ Remediation Alerts (${failedAssessments.length} Modules Below 70%)</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  ${failedAssessments.map(fa => `
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(0,0,0,0.2); border-radius:6px;">
+                      <div>
+                        <div class="fw-600 text-sm" style="color:#f8fafc;">${escapeHtml(fa.assessmentTitle)}</div>
+                        <div class="text-xs text-muted">Current Best: <strong style="color:#ef4444;">${fa.bestPct}%</strong> (Passing requirement: 70%)</div>
+                      </div>
+                      <button class="btn btn-warning btn-sm" onclick="showToast('Remedial retake permitted for ${escapeHtml(fa.assessmentTitle)}', 'info')">
+                        Authorize Retake
+                      </button>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : `
+              <div style="padding:24px; text-align:center; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:10px;">
+                <div style="font-size:2rem; margin-bottom:4px;">🎉</div>
+                <div class="fw-700" style="color:#10b981;">No Remediation Required</div>
+                <div class="text-xs text-muted" style="margin-top:4px;">All attempted assessments meet or exceed academic passing criteria.</div>
+              </div>
+            `}
+          </div>
+        `;
+      } else if (tabName === 'account') {
+        tabBody.innerHTML = `
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div style="padding:14px 18px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid var(--fm-border-subtle, rgba(255,255,255,0.08));">
+              <div class="fw-700 text-xs text-muted uppercase mb-2">Student Authentication</div>
+              <div style="margin-bottom:8px;">
+                <div class="text-xs text-muted">PIN Security Status:</div>
+                <div class="fw-700 text-sm" style="color:#10b981;">✔️ Configured (4-digit PIN)</div>
+              </div>
+              <div>
+                <div class="text-xs text-muted">Account Status:</div>
+                <div class="fw-700 text-sm">${rec.is_active !== false ? 'Active Academic Access' : 'Suspended / Inactive'}</div>
+              </div>
+            </div>
+
+            <div style="padding:14px 18px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid var(--fm-border-subtle, rgba(255,255,255,0.08));">
+              <div class="fw-700 text-xs text-muted uppercase mb-2">Academy Enrollment</div>
+              <div style="margin-bottom:8px;">
+                <div class="text-xs text-muted">Institution &amp; Program:</div>
+                <div class="fw-600 text-sm">${escapeHtml(rec.instName)} &bull; ${escapeHtml(rec.progName)}</div>
+              </div>
+              <div style="margin-bottom:8px;">
+                <div class="text-xs text-muted">Cohort Batch:</div>
+                <div class="fw-600 text-sm">Batch ${escapeHtml(rec.batchName)} (${escapeHtml(rec.levelName)})</div>
+              </div>
+              <div>
+                <div class="text-xs text-muted">Enrolled Date:</div>
+                <div class="fw-600 text-sm">${escapeHtml(rec.joinDate || '—')}</div>
+              </div>
+            </div>
+          </div>
+        `;
       }
     };
-  }
+
+    renderTab('assessments');
+
+    // Tab buttons event listeners
+    backdrop.querySelectorAll('.student-profile-tab-btn').forEach(btn => {
+      btn.onclick = () => {
+        backdrop.querySelectorAll('.student-profile-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderTab(btn.dataset.tab);
+      };
+    });
+
+    // Close button
+    const cleanupKeys = () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+    const closeBtn = backdrop.querySelector('#btn-close-profile-modal');
+    if (closeBtn) closeBtn.onclick = () => { backdrop.remove(); cleanupKeys(); };
+    backdrop.onclick = (e) => { if (e.target === backdrop) { backdrop.remove(); cleanupKeys(); } };
+
+    // Keyboard navigation
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        backdrop.remove();
+        cleanupKeys();
+      } else if (e.key === 'ArrowLeft' && hasPrev) {
+        e.preventDefault();
+        backdrop.remove();
+        cleanupKeys();
+        window.showStudentProfileModal(prevId);
+      } else if (e.key === 'ArrowRight' && hasNext) {
+        e.preventDefault();
+        backdrop.remove();
+        cleanupKeys();
+        window.showStudentProfileModal(nextId);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+
+    // Carousel buttons
+    const prevBtn = backdrop.querySelector('#btn-modal-prev-student');
+    if (prevBtn && hasPrev) {
+      prevBtn.onclick = () => { backdrop.remove(); cleanupKeys(); window.showStudentProfileModal(prevId); };
+    }
+    const nextBtn = backdrop.querySelector('#btn-modal-next-student');
+    if (nextBtn && hasNext) {
+      nextBtn.onclick = () => { backdrop.remove(); cleanupKeys(); window.showStudentProfileModal(nextId); };
+    }
+
+    // Switch to Dossier button
+    const openDossierBtn = backdrop.querySelector('#btn-profile-open-dossier');
+    if (openDossierBtn) {
+      openDossierBtn.onclick = () => {
+        backdrop.remove();
+        cleanupKeys();
+        window.showStudentDossierModal(studentId);
+      };
+    }
+
+    // Edit Student button
+    const editStudentBtn = backdrop.querySelector('#btn-profile-edit-student');
+    if (editStudentBtn) {
+      editStudentBtn.onclick = () => {
+        if (typeof window.openStudentFullEdit === 'function') {
+          window.openStudentFullEdit(rec._raw || rec, () => renderStudents(area));
+        }
+      };
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // MODAL 2: OFFICIAL ACADEMIC DOSSIER & CERTIFIED TRANSCRIPT
+  // ─────────────────────────────────────────────────────────────
+  window.showStudentDossierModal = async function(studentId) {
+    const list = filteredGridData || gridData || [];
+    let rec = list.find(d => d.id === studentId);
+    if (!rec) {
+      try {
+        const sb = await getSupabase();
+        const { data: st } = await sb.from('students')
+          .select('id, name, gender, birth_date, is_active, photo_url, level_id, batch_id, program_id, institution_id, programs!program_id(name), institutions!institution_id(name), batches!batch_id(name), levels!level_id(name)')
+          .eq('id', studentId)
+          .single();
+        if (st) {
+          rec = {
+            id: st.id,
+            name: st.name,
+            displayName: cleanStudentName(st.name),
+            gender: st.gender,
+            birth_date: st.birth_date,
+            ageDisplay: calculateAgeFromBirthDate(st.birth_date),
+            is_active: st.is_active,
+            photo_url: st.photo_url,
+            instName: st.institutions?.name || '—',
+            progName: st.programs?.name || '—',
+            batchName: st.batches?.name || '—',
+            levelName: st.levels?.name || '—',
+            overallScoreStr: '—',
+            globalGrade: '—',
+            completedAssessments: 0,
+            totalAssigned: 40,
+            completionPct: 0,
+            details: []
+          };
+        }
+      } catch (err) {
+        console.warn('Fallback student fetch for dossier failed:', err);
+      }
+    }
+    if (!rec) return;
+
+    // Remove existing if open
+    const existingP = document.getElementById('student-profile-modal');
+    if (existingP) existingP.remove();
+    const existingD = document.getElementById('student-dossier-modal');
+    if (existingD) existingD.remove();
+
+    const backdrop = document.createElement('div');
+    backdrop.id = 'student-dossier-modal';
+    backdrop.className = 'student-modal-backdrop animate-fade-in';
+    backdrop.style.cssText = 'position:fixed !important;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(9,13,22,0.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;box-sizing:border-box;margin:0;';
+    document.body.style.overflow = 'hidden';
+
+    // Fetch attempts for transcript table (stateless & low-egress)
+    let studentAttempts = [];
+    try {
+      const sb = await getSupabase();
+      const { data: atts } = await sb.from('attempts')
+        .select('id, assessment_id, score, total_questions, percentage, grade, submitted_at, status, assessments(id, title, assessment_type)')
+        .eq('student_id', studentId)
+        .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
+        .order('submitted_at', { ascending: true });
+      studentAttempts = atts || [];
+    } catch(err) {
+      console.warn('Error fetching attempts for dossier:', err);
+    }
+
+    // Best attempt per assessment
+    const bestByAsm = new Map();
+    studentAttempts.forEach(att => {
+      const pct = parseFloat(att.percentage || att.score || 0);
+      const prev = bestByAsm.get(att.assessment_id);
+      if (!prev || pct > parseFloat(prev.percentage || prev.score || 0)) {
+        bestByAsm.set(att.assessment_id, att);
+      }
+    });
+    const completedRecords = Array.from(bestByAsm.values());
+    const totalCorrect = completedRecords.reduce((sum, att) => sum + (Number(att.score) || 0), 0);
+
+    const docRef = `TC-DOS-${studentId.substring(0, 8).toUpperCase()}`;
+    const generationDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    const transcriptRows = completedRecords.map((att, idx) => {
+      const title = att.assessments?.title || 'Curriculum Assessment';
+      const type = att.assessments?.assessment_type || 'TASK';
+      const maxQ = att.total_questions || 40;
+      const pts = att.score != null ? att.score : '—';
+      const pct = att.percentage != null ? Math.round(Number(att.percentage)) : Math.round(((att.score || 0) / maxQ) * 100);
+      const grade = att.grade || ((typeof getGrade === 'function') ? getGrade(pct) : '—');
+      const dateStr = att.submitted_at ? new Date(att.submitted_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+      return `
+        <tr>
+          <td style="text-align:center;font-weight:600;color:#64748b;">${idx + 1}</td>
+          <td style="font-weight:600;">${escapeHtml(title)}</td>
+          <td style="text-align:center;"><span style="font-size:0.7rem;padding:2px 6px;border-radius:4px;background:#f1f5f9;font-weight:700;">${escapeHtml(type)}</span></td>
+          <td style="text-align:center;color:#475569;font-size:0.78rem;">${dateStr}</td>
+          <td style="text-align:center;font-weight:600;">${pts} / ${maxQ}</td>
+          <td style="text-align:center;font-weight:700;color:#0f172a;">${pct}%</td>
+          <td style="text-align:center;"><strong style="font-size:0.9rem;">${grade}</strong></td>
+        </tr>
+      `;
+    }).join('');
+
+    backdrop.innerHTML = `
+      <div class="student-dossier-dialog">
+        <!-- Control Toolbar -->
+        <div class="dossier-modal-toolbar">
+          <div class="d-flex align-center gap-2">
+            <span style="font-size:1.2rem;">🖨️</span>
+            <div>
+              <div class="fw-700 text-sm" style="color:var(--fm-text-primary, #f8fafc);">Official Student Dossier</div>
+              <div class="text-xs text-muted">Certified Academic Transcript &amp; Verification Document</div>
+            </div>
+          </div>
+          <div class="d-flex align-center gap-2">
+            <button class="btn btn-primary btn-sm" id="btn-print-dossier-sheet" style="display:inline-flex;align-items:center;gap:6px;font-weight:700;">
+              <span>🖨️</span> Print / Save as PDF
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-dossier-to-profile" style="display:inline-flex;align-items:center;gap:6px;">
+              <span>👤</span> View Profile
+            </button>
+            <button class="btn-icon" id="btn-close-dossier-modal" style="background:rgba(255,255,255,0.06);border:none;color:var(--clr-text-2);font-size:1.1rem;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">✕</button>
+          </div>
+        </div>
+
+        <!-- Scrollable Document Area -->
+        <div class="dossier-modal-scroll">
+          <div id="student-dossier-sheet" class="student-dossier-sheet">
+            <!-- Academy Official Header -->
+            <div style="text-align:center;border-bottom:2px solid #0f172a;padding-bottom:12px;margin-bottom:18px;">
+              <div style="font-size:1.3rem;font-weight:900;letter-spacing:0.04em;color:#0f172a;text-transform:uppercase;">
+                🛡️ TOPS CORE ACADEMIC ADMINISTRATION
+              </div>
+              <div style="font-size:0.85rem;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">
+                CENTRAL ENGLISH ASSESSMENT &amp; CERTIFICATION BOARD
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:0.72rem;color:#64748b;font-weight:600;border-top:1px solid #e2e8f0;padding-top:6px;">
+                <span>DOCUMENT REF: <strong>${docRef}</strong></span>
+                <span>STATUS: <strong style="color:#059669;">OFFICIAL &amp; CERTIFIED</strong></span>
+                <span>ISSUED: <strong>${generationDate}</strong></span>
+              </div>
+            </div>
+
+            <!-- Student Identity & Photo Grid -->
+            <div style="display:grid;grid-template-columns:1fr 130px;gap:20px;align-items:start;margin-bottom:20px;">
+              <div>
+                <table style="width:100%;font-size:0.85rem;line-height:1.65;">
+                  <tr>
+                    <td style="width:130px;color:#64748b;font-weight:600;">Student Full Name:</td>
+                    <td style="font-weight:800;font-size:1.05rem;color:#0f172a;">${escapeHtml(rec.displayName || rec.name)}</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#64748b;font-weight:600;">Date of Birth / Age:</td>
+                    <td style="font-weight:600;">${escapeHtml(rec.birth_date || '—')} (${escapeHtml(rec.ageDisplay || '—')}) &bull; ${escapeHtml(rec.gender || '—')}</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#64748b;font-weight:600;">Institution:</td>
+                    <td style="font-weight:600;">${escapeHtml(rec.instName)}</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#64748b;font-weight:600;">Academic Program:</td>
+                    <td style="font-weight:600;">${escapeHtml(rec.progName)}</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#64748b;font-weight:600;">Batch &amp; Level:</td>
+                    <td style="font-weight:600;">Batch ${escapeHtml(rec.batchName)} &bull; ${escapeHtml(rec.levelName)}</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#64748b;font-weight:600;">Enrollment Date:</td>
+                    <td style="font-weight:600;">${escapeHtml(rec.joinDate || '—')}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- 3:4 Student Photo Box -->
+              <div style="width:125px;height:166px;border:2px solid #cbd5e1;border-radius:6px;overflow:hidden;background:#f8fafc;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 6px rgba(0,0,0,0.05);position:relative;">
+                ${rec.photo_url 
+                  ? `<img src="${rec.photo_url}" style="width:100%;height:100%;object-fit:cover;">` 
+                  : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:100%;height:100%;object-fit:cover;">`
+                }
+                <div style="position:absolute;bottom:0;inset-inline:0;background:rgba(15,23,42,0.8);color:#fff;font-size:0.6rem;text-align:center;padding:2px 0;font-weight:700;letter-spacing:0.04em;">
+                  OFFICIAL
+                </div>
+              </div>
+            </div>
+
+            <!-- Certified Summary Box -->
+            <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;padding:12px 16px;margin-bottom:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center;">
+              <div>
+                <div style="font-size:0.65rem;font-weight:700;color:#64748b;text-transform:uppercase;">Overall Grade</div>
+                <div style="font-size:1.6rem;font-weight:900;color:#0f172a;line-height:1.1;">${rec.globalGrade || '—'}</div>
+              </div>
+              <div>
+                <div style="font-size:0.65rem;font-weight:700;color:#64748b;text-transform:uppercase;">Mastery Score</div>
+                <div style="font-size:1.35rem;font-weight:900;color:#0f172a;line-height:1.2;">${rec.overallScoreStr || '—'}</div>
+              </div>
+              <div>
+                <div style="font-size:0.65rem;font-weight:700;color:#64748b;text-transform:uppercase;">Curriculum Pace</div>
+                <div style="font-size:1.15rem;font-weight:800;color:#0f172a;line-height:1.3;">
+                  ${rec.completedAssessments || 0} / ${rec.totalAssigned || 40}
+                  <span style="font-size:0.75rem;color:#64748b;font-weight:600;">(${rec.completionPct || 0}%)</span>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:0.65rem;font-weight:700;color:#64748b;text-transform:uppercase;">Total Points</div>
+                <div style="font-size:1.15rem;font-weight:800;color:#059669;line-height:1.3;">
+                  ${totalCorrect} <span style="font-size:0.75rem;color:#64748b;font-weight:600;">pts</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Assessment Transcript Section -->
+            <div style="margin-bottom:20px;">
+              <div style="font-size:0.85rem;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;border-left:4px solid #0f172a;padding-left:8px;margin-bottom:8px;">
+                Official Assessment Transcript &amp; Module History
+              </div>
+              <table class="dossier-table">
+                <thead>
+                  <tr>
+                    <th style="width:30px;text-align:center;">#</th>
+                    <th>Assessment Title</th>
+                    <th style="width:70px;text-align:center;">Type</th>
+                    <th style="width:95px;text-align:center;">Date</th>
+                    <th style="width:85px;text-align:center;">Points</th>
+                    <th style="width:65px;text-align:center;">Score</th>
+                    <th style="width:55px;text-align:center;">Grade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${transcriptRows || '<tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">No completed assessments recorded.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Signatures & Authentication Stamp Block -->
+            <div style="display:grid;grid-template-columns:1fr 140px 1fr;gap:20px;align-items:center;padding-top:16px;border-top:1px dashed #cbd5e1;margin-top:16px;">
+              <div style="text-align:center;">
+                <div style="font-size:0.72rem;color:#64748b;margin-bottom:40px;">Lead Academic Instructor:</div>
+                <div style="border-bottom:1px solid #0f172a;width:80%;margin:0 auto 4px;"></div>
+                <div style="font-size:0.78rem;font-weight:700;">Academic Operations Officer</div>
+              </div>
+
+              <!-- Official Seal Stamp -->
+              <div style="border:2px dashed #94a3b8;border-radius:50%;width:84px;height:84px;margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4px;color:#64748b;">
+                <span style="font-size:1.05rem;">🛡️</span>
+                <span style="font-size:0.52rem;font-weight:800;letter-spacing:0.05em;line-height:1.1;">TOP OFFICE<br>ACADEMIC<br>SEAL</span>
+              </div>
+
+              <div style="text-align:center;">
+                <div style="font-size:0.72rem;color:#64748b;margin-bottom:40px;">Director of Academic Board:</div>
+                <div style="border-bottom:1px solid #0f172a;width:80%;margin:0 auto 4px;"></div>
+                <div style="font-size:0.78rem;font-weight:700;">Head of Academic Board</div>
+              </div>
+            </div>
+
+            <!-- Official Footer Notice -->
+            <div style="text-align:center;margin-top:16px;font-size:0.62rem;color:#94a3b8;line-height:1.4;">
+              This dossier is an authoritative evaluation record generated by TopsCore LMS.<br>
+              Valid without wet signature if verification code matches the central registry.
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+
+    // Event wiring
+    const cleanupDossier = () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+
+    const closeBtn = backdrop.querySelector('#btn-close-dossier-modal');
+    if (closeBtn) closeBtn.onclick = () => { backdrop.remove(); cleanupDossier(); };
+    backdrop.onclick = (e) => { if (e.target === backdrop) { backdrop.remove(); cleanupDossier(); } };
+
+    const toProfileBtn = backdrop.querySelector('#btn-dossier-to-profile');
+    if (toProfileBtn) {
+      toProfileBtn.onclick = () => {
+        backdrop.remove();
+        cleanupDossier();
+        window.showStudentProfileModal(studentId);
+      };
+    }
+
+    const printBtn = backdrop.querySelector('#btn-print-dossier-sheet');
+    if (printBtn) {
+      printBtn.onclick = () => {
+        window.print();
+      };
+    }
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        backdrop.remove();
+        cleanupDossier();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+  };
+
   // Initialize DataGrid
   const gridContainer = area.querySelector('#student-grid-container') || document.getElementById('student-grid-container');
   if (!gridContainer) return;
@@ -323,6 +1406,7 @@ export async function renderStudents(area) {
     searchKeys: ['instName', 'progName', 'batchName', 'levelName', 'displayName', 'pinDisplay'],
     initialSortKey: 'instName',
     initialSortAsc: true,
+    stickyActionCol: true,
     sortComparator: (sortKey, direction, a, b) => {
       // Active students ALWAYS on top, inactive at bottom
       const aActive = ((a._raw || a).is_active !== false) ? 1 : 0;
@@ -336,6 +1420,25 @@ export async function renderStudents(area) {
       }
 
       // Column-specific comparison
+      if (sortKey === 'completedAssessments') {
+        const scA = a.completedAssessments ?? 0;
+        const scB = b.completedAssessments ?? 0;
+        if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
+      } else if (sortKey === 'completionPct') {
+        const scA = a.completionPct ?? 0;
+        const scB = b.completionPct ?? 0;
+        if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
+      } else if (sortKey === 'overallScoreStr') {
+        const scA = a.overallPct ?? -1;
+        const scB = b.overallPct ?? -1;
+        if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
+      } else if (sortKey === 'globalGrade') {
+        const rank = { 'S': 7, 'A': 6, 'B': 5, 'C': 4, 'D': 3, 'E': 2, 'F': 1 };
+        const rA = rank[a.globalGrade] || 0;
+        const rB = rank[b.globalGrade] || 0;
+        if (rA !== rB) return direction === 'asc' ? rA - rB : rB - rA;
+      }
+
       let valA = a[sortKey];
       let valB = b[sortKey];
       if (typeof valA === 'string') valA = valA.toLowerCase();
@@ -446,7 +1549,7 @@ export async function renderStudents(area) {
         btn.textContent = 'Saving...';
         btn.disabled = true;
 
-        const sb = (await import('../supabase.js?v=5.1.0')).getSupabase ? await (await import('../supabase.js?v=5.1.0')).getSupabase() : null;
+        const sb = (await import('../supabase.js?v=5.2.2')).getSupabase ? await (await import('../supabase.js?v=5.2.2')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); close(); return; }
 
         for (const id of selectedIds) {
@@ -466,7 +1569,7 @@ export async function renderStudents(area) {
 
       overlay.querySelector('#bulk-activate').onclick = async () => {
         close();
-        const sb = (await import('../supabase.js?v=5.1.0')).getSupabase ? await (await import('../supabase.js?v=5.1.0')).getSupabase() : null;
+        const sb = (await import('../supabase.js?v=5.2.2')).getSupabase ? await (await import('../supabase.js?v=5.2.2')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); return; }
         for (const id of selectedIds) await sb.from('students').update({ is_active: true }).eq('id', id);
         showToast(`Activated ${selectedIds.length} students.`, 'success');
@@ -475,7 +1578,7 @@ export async function renderStudents(area) {
 
       overlay.querySelector('#bulk-deactivate').onclick = async () => {
         close();
-        const sb = (await import('../supabase.js?v=5.1.0')).getSupabase ? await (await import('../supabase.js?v=5.1.0')).getSupabase() : null;
+        const sb = (await import('../supabase.js?v=5.2.2')).getSupabase ? await (await import('../supabase.js?v=5.2.2')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); return; }
         for (const id of selectedIds) await sb.from('students').update({ is_active: false }).eq('id', id);
         showToast(`Deactivated ${selectedIds.length} students.`, 'success');
@@ -507,12 +1610,14 @@ export async function renderStudents(area) {
       };
     },
     onRowClick: (row) => {
-      if (row.remediationPending && typeof window.openStudentProfile === 'function') {
-        window.openStudentProfile(row.id);
+      if (row.remediationPending && typeof window.showStudentProfileModal === 'function') {
+        window.showStudentProfileModal(row.id);
         return;
       }
       if (typeof window.openStudentFullEdit === 'function') {
         window.openStudentFullEdit(row, () => renderStudents(area));
+      } else if (typeof window.showStudentProfileModal === 'function') {
+        window.showStudentProfileModal(row.id);
       } else if (typeof window.openStudentProfile === 'function') {
         window.openStudentProfile(row.id);
       }
@@ -523,14 +1628,16 @@ export async function renderStudents(area) {
         key: 'instName',
         label: 'Institution',
         sortable: true,
-        render: (row) => `<div class="text-sm fw-600">${escapeHtml(row.instName)}</div>`
+        width: '135px',
+        render: (row) => `<div class="text-sm fw-600" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;" title="${escapeHtml(row.instName)}">${escapeHtml(row.instName)}</div>`
       },
       // 2. Program
       {
         key: 'progName',
         label: 'Program',
         sortable: true,
-        render: (row) => `<div class="text-sm">${escapeHtml(row.progName)}</div>`
+        width: '100px',
+        render: (row) => `<div class="text-sm fw-600" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:95px;color:var(--clr-text-2, #cbd5e1);" title="${escapeHtml(row.progName)}">${escapeHtml(row.progName)}</div>`
       },
       // 3. Batch
       {
@@ -538,7 +1645,8 @@ export async function renderStudents(area) {
         label: 'Batch',
         sortable: true,
         align: 'center',
-        render: (row) => `<span class="badge" style="background:rgba(255,255,255,0.1);color:#fff;">${escapeHtml(row.batchName)}</span>`
+        width: '75px',
+        render: (row) => `<span class="badge" style="background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.25);font-weight:700;font-size:0.75rem;padding:2px 8px;border-radius:10px;">${escapeHtml(row.batchName)}</span>`
       },
       // 4. Level
       {
@@ -546,6 +1654,7 @@ export async function renderStudents(area) {
         label: 'Level',
         sortable: true,
         align: 'center',
+        width: '85px',
         render: (row) => `<span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(row.levelName)}</span>`
       },
       // 5. Name
@@ -553,18 +1662,17 @@ export async function renderStudents(area) {
         key: 'sortName',
         label: 'Name',
         sortable: true,
+        width: '170px',
         render: (row) => {
-          const initial = getStudentInitial(row.displayName || row.name);
           return `
             <div class="d-flex align-center gap-3">
-              ${row.photo_url ? `<img src="${row.photo_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">` : `<img src="${generateAvatarDataUri(row.displayName || row.name, row.gender)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">`}
+              ${row.photo_url ? `<img src="${row.photo_url}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">` : `<img src="${generateAvatarDataUri(row.displayName || row.name, row.gender)}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">`}
               <div>
                 <div class="fw-600" style="color:var(--clr-text-1);">
                   ${row.displayName}
                   ${row.isOrphaned ? `<span class="badge badge-danger" style="margin-left:6px;font-size:0.65rem;">⚠️ Disconnected</span>` : ''}
                   ${row.remediationPending ? `<span class="badge badge-warning" style="white-space:nowrap;margin-left:8px;font-size:0.75rem;">⚠️ Remediation Pending</span>` : ''}
                 </div>
-                <div class="text-xs text-muted" style="font-family:monospace;">PIN: ${row.pinDisplay}</div>
               </div>
             </div>
           `;
@@ -576,6 +1684,7 @@ export async function renderStudents(area) {
         label: 'Age',
         sortable: true,
         align: 'center',
+        width: '65px',
         render: (row) => `<span class="text-sm fw-600">${row.ageDisplay}</span>`
       },
       // 7. Gender
@@ -584,110 +1693,121 @@ export async function renderStudents(area) {
         label: 'Gender',
         sortable: true,
         align: 'center',
+        width: '80px',
         render: (row) => row.gender === 'male'
           ? `<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);font-size:0.7rem;">&#9794; Male</span>`
           : row.gender === 'female'
           ? `<span class="badge" style="background:rgba(244,114,182,0.15);color:#f472b6;border:1px solid rgba(244,114,182,0.3);font-size:0.7rem;">&#9792; Female</span>`
           : `<span class="badge badge-neutral" style="font-size:0.7rem;">&#8212; Unset</span>`
       },
-      // 8. Progress
+      // 8. Assessments (Completed / Assigned)
       {
-        key: 'overallScoreStr',
-        label: 'Progress',
+        key: 'completedAssessments',
+        label: 'Assessments',
         sortable: true,
         align: 'center',
+        width: '95px',
         render: (row) => `
-          <div class="fw-600">${row.overallScoreStr}</div>
-          <div class="text-xs text-muted">${row.completedAssessments} Assessments</div>
+          <div class="fw-700" style="font-size:0.9rem;color:var(--clr-text-1);">
+            ${row.completedAssessments} <span class="text-xs text-muted" style="font-weight:400;">/ ${row.totalAssigned}</span>
+          </div>
         `
       },
-      // 9. Grade
+      // 9. Score (Overall %)
+      {
+        key: 'overallScoreStr',
+        label: 'Score',
+        sortable: true,
+        align: 'center',
+        width: '70px',
+        render: (row) => `<span class="fw-700" style="font-size:0.92rem;color:var(--clr-text-1);">${row.overallScoreStr}</span>`
+      },
+      // 10. Grade
       {
         key: 'globalGrade',
         label: 'Grade',
         sortable: true,
         align: 'center',
-        render: (row) => row.globalGrade !== '-' ? `<span class="badge" style="background:${row.overallColor};color:#000;">${row.globalGrade}</span>` : '-'
+        width: '65px',
+        render: (row) => row.globalGrade !== '-' && row.globalGrade !== '—' 
+          ? (row.globalGrade === 'S'
+            ? `<span class="badge" style="background:linear-gradient(135deg, #fef08a, #fbbf24, #d97706);color:#1e1b4b;font-weight:900;font-size:0.8rem;padding:2px 8px;box-shadow:0 0 10px rgba(245,158,11,0.7);border:1px solid #fde68a;">S</span>`
+            : `<span class="badge" style="background:${row.overallColor};color:#000;font-weight:800;font-size:0.8rem;padding:2px 8px;">${row.globalGrade}</span>`
+          )
+          : '—'
       },
-      // 10. Contact
+      // 11. Completion (Level Progress Bar)
       {
-        key: 'phone',
-        label: 'Contact',
+        key: 'completionPct',
+        label: 'Completion',
         sortable: true,
-        render: (row) => `<div class="text-xs" style="color:var(--clr-text-2);">${escapeHtml(row.phone !== '—' ? row.phone : row.email)}</div>`
+        align: 'center',
+        width: '115px',
+        render: (row) => `
+          <div class="d-flex align-center gap-2 justify-center" style="min-width:105px;">
+            <div style="flex:1;max-width:65px;background:rgba(255,255,255,0.1);height:6px;border-radius:3px;overflow:hidden;">
+              <div style="width:${row.completionPct}%;background:var(--fm-accent-tactical, #6366f1);height:100%;border-radius:3px;"></div>
+            </div>
+            <span class="text-xs fw-600" style="color:var(--clr-text-2);min-width:28px;">${row.completionPct}%</span>
+          </div>
+        `
       },
-      // 11. Joined
+
+      // 12. Joined
       {
         key: 'joinDate',
         label: 'Enrolled',
         sortable: true,
         align: 'center',
+        width: '95px',
         render: (row) => `<span class="text-xs text-muted">${escapeHtml(row.joinDate)}</span>`
       },
-      // 12. Status
+      // 13. Status
       {
         key: 'status',
         label: 'Status',
         sortable: true,
         align: 'center',
+        width: '75px',
         render: (val, row) => `<span class="badge ${((row._raw || row).is_active !== false) ? 'badge-success' : 'badge-neutral'}">${((row._raw || row).is_active !== false) ? 'Active' : 'Inactive'}</span>`
       },
 
       {
         label: 'Actions',
+        className: 'actions-col',
         align: 'right',
+        width: '168px',
         render: (row) => {
           const div = document.createElement('div');
-          div.className = 'd-flex gap-2 justify-end';
-          
-          const profileBtn = document.createElement('button');
-          profileBtn.className = 'btn btn-secondary btn-icon btn-sm';
-          profileBtn.title = 'View Profile';
-          profileBtn.innerHTML = '&#128100;';
-          profileBtn.onclick = (e) => {
-             e.stopPropagation();
-             if(typeof window.openStudentProfile === 'function') window.openStudentProfile(row.id);
+          div.className = 'student-actions-cell actions-col';
+
+          const detailsBtn = document.createElement('button');
+          detailsBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn';
+          detailsBtn.title = 'Assessment Details (40 Modules Breakdown)';
+          detailsBtn.innerHTML = '📝';
+          detailsBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (typeof window.showStudentProgressDetails === 'function') {
+              window.showStudentProgressDetails(row.id);
+            }
           };
           
-          const printBtn = document.createElement('button');
-          printBtn.className = 'btn btn-secondary btn-icon btn-sm';
-          printBtn.title = 'Print Dossier';
-          printBtn.innerHTML = '&#x1F5A8;'; // printer icon
-          printBtn.onclick = (e) => {
+          const profileBtn = document.createElement('button');
+          profileBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn';
+          profileBtn.title = 'View Student Profile (Interactive Dashboard)';
+          profileBtn.innerHTML = '&#128100;';
+          profileBtn.onclick = (e) => {
             e.stopPropagation();
-            import('./dossier_export.js?v=5.1.0').then(m => {
-              const edu = [{period: '2026', institution: row.instName, details: 'Enrolled in ' + row.progName}];
-              const skills = ['English Proficiency'];
-              const studentAttempts = (allAttempts || []).filter(a => a.student_id === row.id && a.status === 'SUBMITTED');
-              const assessments = studentAttempts.map(a => {
-                const pct = Math.round((a.total_score / Math.max(1, a.max_score || 1)) * 100);
-                return {
-                  date: new Date(a.created_at).toLocaleDateString(),
-                  title: 'Assessment Record',
-                  score: pct,
-                  grade: (typeof getGrade === 'function') ? getGrade(pct) : '-',
-                  status: 'Completed'
-                };
-              });
-              const sData = {
-                name: row.name,
-                birth_date: row.birth_date,
-                gender: row.gender,
-                institution_name: row.instName,
-                program_name: row.progName,
-                batch_name: row.batchName,
-                is_active: row.is_active,
-                photo_url: row.photo_url
-              };
-              m.exportStudentDossier(sData, edu, skills, assessments);
-            }).catch(err => {
-              showToast('Failed to load dossier export module.', 'error');
-              console.error(err);
-            });
+            if (typeof window.showStudentProfileModal === 'function') {
+              window.showStudentProfileModal(row.id);
+            } else if (typeof window.openStudentProfile === 'function') {
+              window.openStudentProfile(row.id);
+            }
           };
 
           const editBtn = document.createElement('button');
-          editBtn.className = 'btn btn-secondary btn-icon btn-sm';
+          editBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn';
+          editBtn.title = 'Edit Student';
           editBtn.innerHTML = '✏️';
           editBtn.onclick = (e) => {
             e.stopPropagation();
@@ -700,15 +1820,16 @@ export async function renderStudents(area) {
           };
           
           const delBtn = document.createElement('button');
-          delBtn.className = 'btn btn-danger btn-icon btn-sm';
+          delBtn.className = 'btn btn-danger btn-icon btn-sm student-action-btn';
+          delBtn.title = 'Delete Student';
           delBtn.innerHTML = '&#128465;';
           delBtn.onclick = (e) => {
              e.stopPropagation();
              if (window._deleteRecord) window._deleteRecord('students', row.id, row.displayName);
           };
           
+          div.appendChild(detailsBtn);
           div.appendChild(profileBtn);
-          div.appendChild(printBtn);
           div.appendChild(editBtn);
           div.appendChild(delBtn);
           return div;
@@ -718,26 +1839,39 @@ export async function renderStudents(area) {
   });
 
   // Bind custom filters
-  const progFilter = document.getElementById('students-filter-program');
+  const statusFilter = document.getElementById('students-filter-batch-status');
   const batchFilter = document.getElementById('students-filter-batch');
   
-  if (progFilter && batchFilter) {
+  if (statusFilter && batchFilter) {
     const applyFilters = () => {
-      const pid = progFilter.value;
+      const bStatus = statusFilter.value;
       const bid = batchFilter.value;
-      let newData = gridData;
-      if (pid) newData = newData.filter(s => s.program_id === pid);
+      window._filterBatchStatus = bStatus;
+      window._filterBatchId = bid || null;
+
+      let newData = programStudents;
       if (bid) newData = newData.filter(s => s.batch_id === bid);
+      if (bStatus === 'active') {
+        newData = newData.filter(s => s.batches ? s.batches.is_active !== false : true);
+      } else if (bStatus === 'inactive') {
+        newData = newData.filter(s => s.batches ? s.batches.is_active === false : false);
+      }
       studentGrid.updateData(newData);
+      const countEl = document.querySelector('.section-title .count-chip');
+      if (countEl) countEl.textContent = `${newData.length} ${bStatus === 'active' ? 'Active' : 'Total'}`;
     };
 
-    progFilter.addEventListener('change', () => {
-      const pid = progFilter.value;
+    statusFilter.addEventListener('change', () => {
+      const bStatus = statusFilter.value;
       Array.from(batchFilter.options).forEach(opt => {
-        if (opt.value === '') {
-          opt.style.display = '';
+        if (!opt.value) return;
+        const isActive = opt.getAttribute('data-active') === 'true';
+        if (bStatus === 'active' && !isActive) {
+          opt.style.display = 'none';
+        } else if (bStatus === 'inactive' && isActive) {
+          opt.style.display = 'none';
         } else {
-          opt.style.display = (!pid || opt.getAttribute('data-prog') === pid) ? '' : 'none';
+          opt.style.display = '';
         }
       });
       if (batchFilter.selectedOptions[0] && batchFilter.selectedOptions[0].style.display === 'none') {
@@ -747,6 +1881,15 @@ export async function renderStudents(area) {
     });
 
     batchFilter.addEventListener('change', applyFilters);
+
+    const resetBtn = document.getElementById('students-filter-reset');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        statusFilter.value = 'active';
+        batchFilter.value = '';
+        applyFilters();
+      });
+    }
   }
 }
 
@@ -1069,5 +2212,17 @@ export async function openStudentFullEdit(student, onSaved) {
 
 // Expose globally
 window.openStudentFullEdit = openStudentFullEdit;
+
+export async function showStudentProfileModal(studentId) {
+  if (typeof window.showStudentProfileModal === 'function') {
+    return window.showStudentProfileModal(studentId);
+  }
+}
+
+export async function showStudentDossierModal(studentId) {
+  if (typeof window.showStudentDossierModal === 'function') {
+    return window.showStudentDossierModal(studentId);
+  }
+}
 
 

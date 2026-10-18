@@ -1,16 +1,6 @@
-import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete } from '../api.js?v=5.1.0';
-import { openCrudModal } from './crud-modals.js?v=5.1.0';
-import { showToast } from '../app.js?v=5.1.0';
-
-function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete } from '../api.js?v=5.2.2';
+import { openCrudModal } from './crud-modals.js?v=5.2.2';
+import { showToast, escapeHtml, escHtml } from '../app.js?v=5.2.2';
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -185,9 +175,20 @@ export async function renderCurriculum(area) {
       try {
         await adminUpdate(table, id, { is_active: isActive });
         showToast('Status updated successfully.', 'success');
+        if (table === 'batches') {
+          const b = activeBatches.find(x => x.id === id);
+          if (b) b.is_active = isActive;
+        } else if (table === 'programs') {
+          const p = activeProgs.find(x => x.id === id);
+          if (p) p.is_active = isActive;
+        } else if (table === 'institutions') {
+          const inst = activeInsts.find(x => x.id === id);
+          if (inst) inst.is_active = isActive;
+        }
         if (table === 'classes' && window.loadSidebarClasses) {
           window.loadSidebarClasses();
         }
+        renderView();
       } catch (err) {
         console.error('[CurriculumHub] toggleEntityActive failed:', table, id, err);
         showToast(`Failed to update status: ${err?.message || err}`, 'error');

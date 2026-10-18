@@ -8,11 +8,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=5.1.0" />
-  <link rel="stylesheet" href="css/admin.css?v=5.1.0" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=5.1.0" />
+  <link rel="stylesheet" href="css/style.css?v=5.2.2" />
+  <link rel="stylesheet" href="css/admin.css?v=5.2.2" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=5.2.2" />
   <!-- SheetJS for Excel Import / Export -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=5.1.0"></script>
+  <script src="./js/vendor/xlsx.full.min.js?v=5.2.2" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=5.2.2';"></script>
 
 </head>
 <body>
@@ -69,14 +69,55 @@
         <!-- DOMAIN B: Board (Registry & Roster) -->
         <div class="nav-domain-group" data-domain="board">
           <div class="nav-domain-header"><span class="domain-icon">&#128208;</span>B &mdash; Board</div>
-          <div class="admin-nav-item" data-sub="students"><span class="nav-icon">&#128101;</span>Students</div>
-          <div class="admin-nav-item" data-sub="progress-view"><span class="nav-icon">&#128200;</span>Student Progress</div>
+          <div id="sidebar-programs-list"></div>
+          <script>
+            (function() {
+              try {
+                var raw = localStorage.getItem('topscore_cached_sidebar_programs');
+                if (raw) {
+                  var list = JSON.parse(raw);
+                  if (Array.isArray(list) && list.length > 0) {
+                    var selId = localStorage.getItem('topscore_selected_program_id') || list[0].id;
+                    var h = '<div class="sidebar-program-group" style="display:flex; flex-direction:column; gap:4px;">';
+                    list.forEach(function(prog) {
+                      var isActive = (selId === prog.id) ? 'active' : '';
+                      h += '<div class="admin-nav-item sidebar-program-item ' + isActive + '" data-program-id="' + prog.id + '" data-program-name="' + (prog.name || '').replace(/"/g, '&quot;') + '" data-sub="students" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-weight:500; border-radius:6px; transition:all 0.2s;"><span style="font-size:1.1rem;">👥</span><span>' + (prog.name || '') + '</span></div>';
+                    });
+                    h += '</div>';
+                    var el = document.getElementById('sidebar-programs-list');
+                    if (el) el.innerHTML = h;
+                  }
+                }
+              } catch(e) {}
+            })();
+          </script>
         </div>
 
         <!-- DOMAIN C: Class (Curriculum & AI Assessment Engine) -->
         <div class="nav-domain-group" data-domain="class">
           <div class="nav-domain-header"><span class="domain-icon">&#9889;</span>C &mdash; Class</div>
           <div id="sidebar-classes-list"></div>
+          <script>
+            (function() {
+              try {
+                var raw = localStorage.getItem('topscore_cached_sidebar_classes');
+                if (raw) {
+                  var list = JSON.parse(raw);
+                  if (Array.isArray(list) && list.length > 0) {
+                    var selId = localStorage.getItem('topscore_selected_class_id') || list[0].id;
+                    var h = '<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:4px;">';
+                    list.forEach(function(cls) {
+                      var isActive = (selId === cls.id) ? 'active' : '';
+                      h += '<div class="admin-nav-item sidebar-class-item ' + isActive + '" data-class-id="' + cls.id + '" data-class-name="' + (cls.name || '').replace(/"/g, '&quot;') + '" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-weight:500; border-radius:6px; transition:all 0.2s;"><span style="font-size:1.1rem;">📘</span><span>' + (cls.name || '') + '</span></div>';
+                    });
+                    h += '</div>';
+                    var el = document.getElementById('sidebar-classes-list');
+                    if (el) el.innerHTML = h;
+                  }
+                }
+              } catch(e) {}
+            })();
+          </script>
           <div class="admin-nav-item" data-sub="assessments" data-view="assessments"><span class="nav-icon">&#128221;</span>Assessment</div>
           <div class="admin-nav-item" data-sub="vocab_vault"><span class="nav-icon">&#128214;</span>Vocabulary Vault</div>
         </div>
@@ -105,19 +146,10 @@
     <div class="admin-main">
 
 
-      <header class="admin-topbar">
-
-        <div class="d-flex align-center gap-3">
-          <button class="btn btn-ghost btn-icon" id="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
-          <div class="topbar-breadcrumb">
-            <span class="breadcrumb-domain" id="topbar-domain">ADMIN</span>
-            <span class="breadcrumb-sep">/</span>
-            <span class="breadcrumb-page" id="topbar-title">My Profile</span>
-          </div>
-        </div>
-
-        <div class="topbar-actions">
-          <button class="btn btn-primary btn-sm" id="add-record-btn">+ Add New</button>
+      <header class="admin-topbar" id="admin-topbar">
+        <button class="btn btn-ghost btn-icon" id="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+        <div class="topbar-tabs-container" id="topbar-tabs-container">
+          <!-- Elevated sleek summary KPI tabs render dynamically here -->
         </div>
       </header>
 
@@ -214,24 +246,24 @@
         <div class="d-flex align-center gap-3 flex-wrap" style="flex:1;">
           <div style="min-width:240px; flex:1;">
             <label class="text-xs text-muted d-block mb-1">Filter by ASSESSMENT</label>
-            <select id="dup-q-ASSESSMENT-select" class="form-control" style="font-size:0.85rem; padding:6px 10px;">
+            <select id="dup-q-assessment-select" class="form-control" style="font-size:0.85rem; padding:6px 10px;">
               <option value="">— All ASSESSMENTs —</option>
             </select>
           </div>
           <div class="d-flex gap-2" style="padding-top:16px;">
-            <button class="btn btn-primary btn-sm dup-q-tab-btn" data-qtab="same_ASSESSMENT" id="tab-btn-q-same">
+            <button class="btn btn-primary btn-sm dup-q-tab-btn" data-qtab="same_assessment" id="tab-btn-q-same">
               &#9888;&#65039; Same-ASSESSMENT Duplicates (<span id="dup-q-same-count">0</span>)
             </button>
             <button class="btn btn-secondary btn-sm dup-q-tab-btn" data-qtab="order_conflicts" id="tab-btn-q-order">
               &#128290; Order Conflicts (<span id="dup-q-order-count">0</span>)
             </button>
-            <button class="btn btn-secondary btn-sm dup-q-tab-btn" data-qtab="cross_ASSESSMENT" id="tab-btn-q-cross">
+            <button class="btn btn-secondary btn-sm dup-q-tab-btn" data-qtab="cross_assessment" id="tab-btn-q-cross">
               &#127760; Cross-ASSESSMENT Duplicates (<span id="dup-q-cross-count">0</span>)
             </button>
           </div>
         </div>
         <div class="d-flex align-end" style="padding-top:16px;">
-          <button class="btn btn-danger btn-sm" id="btn-batch-clean-ASSESSMENT-questions" style="font-weight:700; white-space:nowrap;">
+          <button class="btn btn-danger btn-sm" id="btn-batch-clean-assessment-questions" style="font-weight:700; white-space:nowrap;">
             &#9889; Clean All &amp; Resequence (1..N)
           </button>
         </div>
@@ -349,15 +381,15 @@
   }
 </script>
 <script type="module">
-    import { DataGrid } from './js/admin/datagrid.js?v=5.1.0';
+    import { DataGrid } from './js/admin/datagrid.js?v=5.2.2';
     window.DataGrid = DataGrid;
   </script>
-  <script type="module" src="js/admin/app.js?v=5.1.0"></script>
+  <script type="module" src="js/admin/app.js?v=5.2.2"></script>
 
 
 
   <div id="bottom-ad-banner" class="topscore-locked-banner">
-    TopsCore &copy; 2026 | Created by Mr. Top
+    <span style="color:#38bdf8; font-weight:800; letter-spacing:0.04em;">TopsCore</span>&nbsp;&copy; 2026&nbsp;<span style="opacity:0.4; margin:0 6px;">|</span>&nbsp;<span style="color:#cbd5e1;">Created by Mr. Top</span>
   </div>
 </body>
 </html>
