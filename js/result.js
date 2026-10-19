@@ -328,11 +328,14 @@ if (!session) {
         }
       }
 
+      const maxPct = attempts.length > 0 ? Math.max(...attempts.map(x => parseFloat(x.percentage || 0))) : 0;
+      const bestAttempt = attempts.find(x => parseFloat(x.percentage || 0) === maxPct);
+
       const rows = attempts.map(a => {
         const apct = parseFloat(a.percentage || 0).toFixed(1);
         const ag   = a.grade || getGrade(parseFloat(apct));
         const isThis = a.id === currentAttemptId;
-        const isBestRow = a.is_best_score;
+        const isBestRow = (a.is_best_score && parseFloat(a.percentage || 0) === maxPct) || (maxPct > 0 && a.id === bestAttempt?.id);
         const dateStr = a.submitted_at ? new Date(a.submitted_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
         const aTheme = (typeof getGradeTheme === 'function' ? getGradeTheme(ag) : null) || GRADE_PALETTE[ag] || GRADE_PALETTE.F;
         const isGradeS = ag === 'S';

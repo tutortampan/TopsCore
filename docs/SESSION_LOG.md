@@ -1,3 +1,131 @@
+## SESSION-20261019-1645
+
+Start: 2026-10-19 16:00 UTC+8  
+End: 2026-10-19 16:45 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"why the number of assesemnts are diffrent? I edited one of the assesement, the A words test, from written to spoken, and its suddenly missing,, when I gnerate the assesement again it shows in assesment hub, but not in the class assesemnt,,, analyze, and fix"
+Followed by:
+"push commit"
+
+### Objective
+1. Diagnose why Assessment Hub showed 41 assessments while Class Assessments Hub showed 39.
+2. Identify why editing the A Words Test from written to spoken made it disappear from Class Hub.
+3. Identify why re-generating assessments created an assessment visible in Assessment Hub but missing in Class Hub.
+4. Implement code fixes in `js/admin/crud-modals.js`, `js/api.js`, and `js/admin/vocab-vault.js`.
+5. Reconcile the database by removing the duplicate assessment and restoring the original assessment to Vocabulary Class.
+6. Verify both admin views via Playwright.
+7. Stage, commit, and push changes as authorized by user.
+
+### Work Performed
+1. **Diagnosis & Root Cause Identification**:
+   - Querying the database showed 41 total assessments.
+   - Exactly 39 had `class_id = 'ab33498a-90e6-44b7-83f4-5765f964543e'` (Vocabulary Class).
+   - Exactly 2 had `class_id = null`:
+     * `b95f4826-ca8c-4d3f-9b46-3ff7ec092a80`: Original A Words Test with 9 student attempts, edited to `spoken`.
+     * `1d32de2f-9c1a-4dc3-b249-fcdf4e592f35`: Duplicate A Words Test with 0 attempts, created by re-generating.
+   - In `js/admin/crud-modals.js`: `populateClassesForProgram` filtered classes by `s.institution_id === selectedProgId`. Because `classes.institution_id` is null in the database (classes link to `program_id`), `filteredClasses` was empty, leaving `#field-class_id` with empty value `""`. Saving the modal sent `class_id: null` to Supabase, which caused the assessment to vanish from `#class-hub`.
+   - In `js/api.js`: `upsertDynamicAssessmentShell` searched by `.eq('class_id', classId)`. Because the existing shell had `class_id: null`, it found no match and inserted a duplicate shell, inflating Assessment Hub to 41 records.
+2. **Implementation Fixes**:
+   - `js/admin/crud-modals.js`: Fixed class filtering to check `program_id` and existing `record.class_id`. Added readonly & foreign-key protection so `class_id`, `program_id`, etc. are never wiped out to null on edit.
+   - `js/api.js`: Replaced narrow `class_id` matching with canonical `(shell_code, program_id, level_id)` dedup; preserved custom user answer types (`effectiveAnswerType`).
+   - `js/admin/vocab-vault.js`: Passed `explicitClassId` to `openAutoGenerateModal`.
+3. **Database Reconciliation**:
+   - Deleted duplicate `1d32de2f-9c1a-4dc3-b249-fcdf4e592f35` (0 attempts).
+   - Restored original `b95f4826-ca8c-4d3f-9b46-3ff7ec092a80` to Vocabulary Class with `answer_type: 'spoken'`.
+   - Database confirmed: Exactly 40 live assessments, all 40 belonging to Vocabulary Class, 0 null class assessments.
+4. **Automated Verification**:
+   - Playwright test verified Class Hub (`admin.html#class-hub`) displays 40 records with A Words Test.
+   - Playwright test verified Assessment Hub (`admin.html#assessments`) displays 40 records with exactly 1 A Words Test.
+
+### Outstanding
+None. Ready to commit and push.
+
+## SESSION-20261019-1600
+
+Start: 2026-10-19 14:55 UTC+8  
+End: 2026-10-19 16:00 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"a student finished the A2 task, get B, but still asked to retake, what happened? and some student already get A, when he retok the test he gets E and the system ask him to retake,,, analyze the problem, and make plan to fix it!"
+Followed by:
+"Cek all eliglble student. and proceed"
+
+### Objective
+1. Identify exact root cause why students scoring Grade B/A are prompted to retake with "Needs Improvement (30.0%)" and "Retake Now".
+2. Audit all eligible students across Supabase Cloud to find all corrupted or desynced attempt records.
+3. Fix frontend score evaluation (`js/dashboard.js`, `js/result.js`) and backend Edge Function (`supabase/functions/submit-assessment/index.ts`).
+4. Execute database recalibration in Supabase Cloud.
+5. Verify progression and scores for student "King Test" and all students.
+6. Strictly honor git freeze (0 commits, 0 pushes).
+
+### Work Performed
+1. **Root Cause Analysis**:
+   - Discovered PostgREST `NULLS FIRST` sorting bug in `submit-assessment`: ordering by `effective_score DESC` placed rows with `effective_score: null` first, incorrectly marking 0% auto-submitted attempts as `is_best_score: true` and demoting true 90%/85% attempts to `false`.
+   - Discovered loop overwrite in `js/dashboard.js` (`populateUpNext`): attempts processed newest-first meant the 90% attempt was set, then the 0% attempt with `is_best_score: true` reset `bestMap` to 0%, and a subsequent 30% attempt overwrote it with 30%, showing "Needs Improvement (30.0%)".
+   - Discovered `_locked` mechanism in `computeOverallStats` and `loadBatchLeaderboard` locked student leaderboard score to 62% instead of 92%.
+2. **Frontend Enforcements**:
+   - `populateUpNext`: Strict mathematical `bestMap[aid] = Math.max(previousBest, pct)`.
+   - `computeOverallStats`: Calculated overall average strictly using true highest percentages.
+   - `loadBatchLeaderboard`: Standings calculated strictly from highest scores.
+   - `renderClassesOverview` & `renderAssessmentsGrid`: Highest score selection with latest date tie-breaking.
+3. **Backend & API Fixes**:
+   - `submit-assessment/index.ts`: In-memory sorting `Number(a.percentage ?? a.effective_score ?? 0)` descending and `created_at` descending.
+   - `js/api.js`: In-memory sorting in `recalculateBestScore` and `applyRecalibrateAssessment`.
+   - `js/result.js`: Dynamic highest percentage detection in history table.
+4. **Cloud Database Audit & Recalibration**:
+   - Scanned all 156 student-assessment groups across 93 students and 327 attempts in Supabase Cloud.
+   - Fixed 13 corrupted pairs (26 attempt rows updated).
+   - Re-audited: verified 0 remaining corrupted records.
+5. **Verification**:
+   - Verified student "King Test": A2 Words Task resolves to 90% (Grade B, PASSED), overall score 92% (Grade A).
+   - Verified Up Next progression: A1 Words (85% PASSED), A1 Phrases (100% PASSED), A2 Words (90% PASSED) -> Up Next cleanly advances to `3rd Vocabulary A2 Phrases Task - CV & Resume` (Start Now).
+
+### Outstanding
+None. Both issues resolved, tested, and database recalibrated.
+
+### Resume From
+Strict git freeze active. Ready for user testing.
+
+## SESSION-20261019-1455  
+
+### User Request
+"Ketika siswa menjawab asesmen yang menggunakan input keyboard, soal pertama keyboardnya muncul tapi pada soal kedua keyboardnya hilang. Coba dicek."
+(When a student answers an assessment that uses keyboard input, on the first question the keyboard appears, but on the second question the keyboard disappears. Please check.)
+
+### Objective
+1. Investigate and identify why the virtual keyboard disappears on question 2 during assessments with keyboard input.
+2. Fix the DOM lifecycle and parking mechanism for `#virtual-keyboard-container` in `js/assessment.js`.
+3. Ensure input handling (virtual keyboard key clicks, mousedown focus retention, and physical typing) continues functioning across all questions.
+4. Verify multi-question transitions (Q1 -> Q2 -> Q3 -> back to Q2) via automated test suites.
+
+### Work Performed
+1. **Root Cause Analysis in `js/assessment.js`**:
+   - On Question 1, `#virtual-keyboard-container` was appended into `interactionContainer` inside `#assessment-main`.
+   - On navigating to Question 2, `renderQuestion(1)` executed `main.innerHTML = ''` while the keyboard container was still inside `main`, obliterating it from the DOM.
+   - The rescue logic `if (vk.parentElement !== document.body) document.body.appendChild(vk);` was positioned 50 lines too late (at line 931, after line 881 `main.innerHTML = ''`), causing `document.getElementById('virtual-keyboard-container')` to evaluate to `null`.
+   - Physical keyboard listener also broke because `!vkContainer` evaluated to true.
+2. **Implementation in `js/assessment.js`**:
+   - Added canonical `getVirtualKeyboard()` provider ensuring the element is retrieved or created in `document.body`.
+   - Moved safe parking logic to execute strictly BEFORE `main.innerHTML = ''`, moving `#virtual-keyboard-container` back to `document.body` before the question area is cleared.
+   - Replaced static per-key click listeners with delegated `document.addEventListener('click', ...)` and `document.addEventListener('mousedown', ...)` (with `e.preventDefault()` to prevent textarea blur/focus loss).
+   - Updated physical `keydown` listener, drawer toggling, and speech fallback to use `getVirtualKeyboard()`.
+3. **Verification**:
+   - Created and executed `scratch/verify_keyboard_node.mjs` unit test suite simulating multi-question transitions:
+     - Question 1 (Written): PASS (Keyboard attached and active)
+     - Question 2 (Written): PASS (Keyboard preserved and attached)
+     - Question 3 (Written): PASS (Keyboard active)
+     - Backward Navigation (Q3 -> Q2): PASS (Keyboard preserved and attached)
+   - Verified syntax using `node --check js/assessment.js` (0 errors).
+
+### Outstanding
+None. The virtual keyboard now persists reliably across all question transitions.
+
+### Resume From
+Production-ready state. Strict git freeze honored.
+
 ## SESSION-20261018-1655
 
 Start: 2026-10-18 16:35 UTC+8  

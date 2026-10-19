@@ -1,3 +1,117 @@
+## [2026-10-19 16:40] — Fix Assessment Count Discrepancy, Edit Modal Class Wiping & Auto-Gen Dedup
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 36 (Fix Assessment Count Discrepancy, Edit Modal Class Wiping & Auto-Gen Dedup)  
+**Status:** PASS  
+
+### Why
+- The user reported: "why the number of assesemnts are diffrent? I edited one of the assesement, the A words test, from written to spoken, and its suddenly missing,, when I gnerate the assesement again it shows in assesment hub, but not in the class assesemnt,,, analyze, and fix"
+- Root Cause Analysis:
+  1. **Edit Modal Class Wiping Bug (`js/admin/crud-modals.js`)**:
+     - When editing an assessment in `openCrudModal`, `#field-class_id` was populated via `classes.filter(s => s.institution_id === selectedProgId)` where `selectedProgId` was the institution ID.
+     - However, in PostgreSQL, classes link to `program_id`, while `classes.institution_id` is `null`. As a result, `filteredClasses` was empty, and `#field-class_id` had no options and an empty string value `""`.
+     - When saving the edit modal (e.g. changing `answer_type` from `written` to `spoken`), `crud-modals.js` submitted `class_id: null`, wiping out the assessment's `class_id` in Supabase.
+     - Because `#class-hub` filters assessments by `a.class_id === classId`, the assessment suddenly vanished from Class Hub (dropping count from 40 to 39).
+  2. **Auto-Generator Shell Duplication (`js/api.js`)**:
+     - When the user clicked Auto-Gen to restore the missing assessment, `upsertDynamicAssessmentShell` searched for existing assessments using `.eq('class_id', classId)`.
+     - Because the original assessment (`b95f4826-ca8c-4d3f-9b46-3ff7ec092a80`) had its `class_id` wiped to `null`, the dedup check did not find it and created a brand-new duplicate assessment (`1d32de2f-9c1a-4dc3-b249-fcdf4e592f35`).
+     - This increased the Assessment Hub total to 41, while Class Hub still showed 39 (a discrepancy of 2).
+
+### Changed
+- **`js/admin/crud-modals.js`**:
+  - Fixed `populateClassesForProgram`: Correctly filters classes by `currentProgramId` (`s.program_id === currentProgramId`), `selectedProgId`, or existing `record.class_id`, ensuring `#field-class_id` is always properly populated and pre-selected.
+  - Added readonly and edit protection: When editing a record, readonly fields and structural foreign keys (`class_id`, `program_id`, `level_id`, `institution_id`) are never overwritten with `null` if the input is disabled or unselected.
+- **`js/api.js`**:
+  - In `upsertDynamicAssessmentShell`: Replaced narrow `class_id` matching with canonical curriculum hierarchy dedup `(shell_code, program_id, level_id)`. Existing shells are now updated and repaired (setting `class_id: classId`) rather than generating duplicate assessment records.
+  - Preserved customized user settings: If an assessment's `answer_type` was customized (e.g. to `spoken`), auto-gen updates retain `effectiveAnswerType` instead of reverting it.
+  - Fallback in `autoGenerateAssessmentsHierarchy`: Added program-level class fallback if no `%Vocab%` class is explicitly named.
+- **`js/admin/vocab-vault.js`**:
+  - Ensured `explicitClassId` (`window._selectedClassId` or local storage) is passed to `openAutoGenerateModal` across all generator entry points.
+- **Database Reconciliation**:
+  - Deleted orphaned duplicate assessment `1d32de2f-9c1a-4dc3-b249-fcdf4e592f35` (0 attempts, 0 questions).
+  - Restored original assessment `b95f4826-ca8c-4d3f-9b46-3ff7ec092a80` (has 9 student attempts) with `class_id = 'ab33498a-90e6-44b7-83f4-5765f964543e'` (Vocabulary Class) and confirmed `answer_type: 'spoken'`.
+  - Re-audited database: Exactly 40 live assessments, all 40 belonging to Vocabulary Class, 0 null class assessments.
+
+### Tests
+- command: `node -e "import('./js/supabase.js').then(async m => { ... })"`
+- result: `PASS` (Total = 40, in Vocab Class = 40, null class = 0).
+- command: `node scratch/verify_admin_views.mjs`
+- result: `PASS`
+  - Class Assessments Hub (`admin.html#class-hub`): 40 records rendered, `3rd Vocabulary A Words Test - Workplace` present.
+  - Assessments Hub (`admin.html#assessments`): 40 records rendered, exactly 1 `3rd Vocabulary A Words Test - Workplace`.
+
+## [2026-10-19 16:00] — Fix Best Score Demotion, Up Next False Failure & Batch Leaderboard Deflation
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 35 (Fix Best Score Demotion, Up Next False Failure & Batch Leaderboard Deflation)  
+**Status:** PASS  
+
+### Why
+- Students who completed tasks and achieved Grade B (e.g. King Test with 90%) or Grade A were prompted with "Needs Improvement (30.0%)" and "Retake Now" instead of advancing in the learning path.
+- In addition, students who scored Grade A (e.g. 92.5%) and later retook an assessment and scored Grade E (e.g. 22.5%) were treated as failed, having their best score overwritten by lower/zero attempts.
+- Root causes:
+  1. PostgREST `NULLS FIRST` Bug: `submit-assessment` Edge Function queried attempts sorted by `.order("effective_score", { ascending: false })`. In PostgreSQL/PostgREST, descending sorts default to `NULLS FIRST`. Attempts auto-submitted with `effective_score: null` (score 0%) were sorted first, setting `is_best_score = true` on 0% attempts and demoting true 90%/85% attempts to `false`.
+  2. Frontend Loop Overwrite: In `js/dashboard.js` (`populateUpNext`), attempts are processed newest-first. The loop encountered the 90% attempt first, then an old 0% attempt with `is_best_score: true` wiped out 90% and reset `bestMap` to 0%, after which a 30% attempt overwrote 0%, leaving `bestMap` at 30.0%.
+  3. Leaderboard Lock: In `computeOverallStats` and `loadBatchLeaderboard`, setting `_locked` on `is_best_score` locked averages to 0%, deflating King Test's leaderboard score from 92% down to 62%.
+- Strict git freeze enforced: 0 commits, 0 pushes.
+
+### Changed
+- **`js/dashboard.js`**:
+  - `populateUpNext`: Enforced mathematical `bestMap[aid] = Math.max(previousBest, pct)` across all valid submitted attempts, eliminating vulnerability to stale boolean flags.
+  - `computeOverallStats`: Removed `_locked` lockouts; student overall score strictly averages true highest percentages per assessment.
+  - `loadBatchLeaderboard`: Standings computed strictly from highest percentage per student per assessment, restoring King Test to 92% (Grade A).
+  - `renderClassesOverview` & `renderAssessmentsGrid`: Best attempt selected using `pct > bestPct` (breaking ties by latest `submitted_at`), preventing demotions.
+- **`supabase/functions/submit-assessment/index.ts`**:
+  - In-memory sorting for `allAttempts` using `Number(a.percentage ?? a.effective_score ?? 0)` descending and `created_at` descending, completely eliminating PostgREST `NULLS FIRST` sorting corruption.
+- **`js/api.js`**:
+  - In-memory sorting in `recalculateBestScore` and `applyRecalibrateAssessment`.
+- **`js/result.js`**:
+  - Enhanced history table and best score badge to dynamically resolve highest score mathematically.
+- **Database Recalibration**:
+  - Audited 156 student-assessment pairs across Supabase Cloud.
+  - Recalibrated all 13 corrupted student-assessment records (26 attempt rows updated). Audit confirmed 0 remaining corrupted records.
+
+### Tests
+- command: `node scratch/verify_king_test.mjs`
+- result: `PASS`
+  - A2 Words Task best score: 90% (Grade B)
+  - Passed status: YES (PASSED)
+  - True overall score: 92% (Grade A)
+  - Best attempt in DB: `afac72af-49e8-4314-81e1-a970e86f74b1` (`is_best_score: true`)
+- command: `node scratch/test_up_next.mjs`
+- result: `PASS`
+  - Learning path: A1 Words (85%) PASSED, A1 Phrases (100%) PASSED, A2 Words (90%) PASSED.
+  - Up Next dynamically advanced to next unpassed module: `3rd Vocabulary A2 Phrases Task - CV & Resume` (Start Now).
+- command: `node scratch/audit_students.mjs`
+- result: `PASS` (156 pairs audited, 0 corrupted records).
+
+## [2026-10-19 14:55] — Fix Virtual Keyboard Lifecycle & Multi-Question Persistence  
+
+### Why
+- When students answered assessments requiring keyboard input, the virtual keyboard appeared on question 1, but disappeared on question 2 and all subsequent questions.
+- Root cause: In `renderQuestion(0)`, `#virtual-keyboard-container` was appended into `interactionContainer` inside `#assessment-main`. When navigating to question 2, `renderQuestion(1)` called `main.innerHTML = ''`, which wiped out all children of `main` including the virtual keyboard element. The subsequent rescue logic was placed 50 lines too late (after `main.innerHTML = ''`), causing `document.getElementById('virtual-keyboard-container')` to return `null`.
+- Physical keyboard typing was also blocked on question 2 because `keydown` listener checked `!vkContainer` which evaluated to true.
+- Strict git freeze enforced: 0 commits, 0 pushes.
+
+### Changed
+- **`js/assessment.js`**:
+  - Implemented `getVirtualKeyboard()`: Authoritative getter that safely retrieves or creates `#virtual-keyboard-container` in `document.body`.
+  - Moved virtual keyboard parking logic to execute BEFORE `main.innerHTML = ''`: Before the question area is cleared, the keyboard container is safely parked back into `document.body` (`document.body.appendChild(vk)`), preventing it from ever being destroyed during question transitions.
+  - Replaced inline element query listeners on `.vk-key` with delegated `document.addEventListener('click', ...)` and `document.addEventListener('mousedown', ...)` (with `e.preventDefault()` to prevent textarea blur/focus loss).
+  - Updated physical `keydown` listener to use `getVirtualKeyboard()` so laptop/physical keyboard typing remains fully active on Question 2, Question 3, and throughout the entire assessment.
+  - Updated `toggleUnansweredDrawer` and `renderSpeech` fallback to use `getVirtualKeyboard()`.
+
+### Tests
+- command: `node scratch/verify_keyboard_node.mjs`
+- result: `PASS`
+  - getVirtualKeyboard function defined: PASS
+  - Parking logic execution order before innerHTML wipe: PASS
+  - Question 1 (Written): Virtual keyboard active and attached to `interactionContainer`: PASS
+  - Question 2 (Written): Virtual keyboard preserved, active and attached: PASS
+  - Question 3 (Written): Virtual keyboard active: PASS
+  - Navigation back (Question 3 -> Question 2): Virtual keyboard preserved and attached: PASS
+  - Zero syntax errors (`node --check js/assessment.js` passed).
+
 ## [2026-10-18 16:55] — Refactor Topbar to Compact Summary Tabs & Purge Redundant Action Buttons
 
 **Agent/Session:** Antigravity  

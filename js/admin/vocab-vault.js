@@ -389,6 +389,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       await openAutoGenerateModal({
         availableLevels: vaultLevels,
         preSelectedLevels: vaultLevels,
+        explicitClassId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
         onComplete: (res) => {
            // Success handled by modal
         }
@@ -669,6 +670,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
         await openAutoGenerateModal({
           availableLevels: importedLevels,
           preSelectedLevels: importedLevels,
+          explicitClassId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
           onComplete: (res) => {
              // Success handled by modal
           }
@@ -1498,6 +1500,7 @@ function _renderBlueprintTab(area, words) {
         await openAutoGenerateModal({
           availableLevels: importedLevels,
           preSelectedLevels: importedLevels,
+          explicitClassId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
           onComplete: (res) => {
              // Success handled by modal
           }

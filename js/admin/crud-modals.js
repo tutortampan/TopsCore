@@ -598,13 +598,20 @@ async function openCrudModal(section, record) {
       if (progSelect && Classeselect) {
         const populateClassesForProgram = async (selectedProgId) => {
           Classeselect.innerHTML = `<option value="">— Select Class —</option>`;
-          if (!selectedProgId) {
+          const currentProgramId = classSelect?.value || record?.program_id;
+          if (!selectedProgId && !currentProgramId && !record?.class_id) {
             Classeselect.disabled = true;
             return;
           }
           Classeselect.disabled = false;
           const allClasses = await adminFetchAll('classes');
-          const filteredClasses = allClasses.filter(s => s.institution_id === selectedProgId && !s.deleted_at);
+          const filteredClasses = allClasses.filter(s => {
+            if (s.deleted_at) return false;
+            if (currentProgramId && s.program_id === currentProgramId) return true;
+            if (selectedProgId && s.institution_id === selectedProgId) return true;
+            if (record && record.class_id === s.id) return true;
+            return false;
+          });
           filteredClasses.sort((a, b) => (a.name || '').localeCompare(b.name || '')).forEach(s => {
             const opt = document.createElement('option');
             opt.value = s.id;
@@ -612,18 +619,16 @@ async function openCrudModal(section, record) {
             if (record && record.class_id === s.id) opt.selected = true;
             Classeselect.appendChild(opt);
           });
+          if (record && record.class_id) {
+            Classeselect.value = record.class_id;
+          }
           await populateLevelsForSection();
           triggerAutoTitle();
         };
 
         const initialProgIdForClass = record?.institution_id || (record?.classes?.institution_id) || progSelect?.value;
         if (Classeselect) {
-          if (initialProgIdForClass) {
-            await populateClassesForProgram(initialProgIdForClass);
-          } else {
-            Classeselect.disabled = true;
-            Classeselect.innerHTML = `<option value="">— Select Program First —</option>`;
-          }
+          await populateClassesForProgram(initialProgIdForClass);
           Classeselect.addEventListener('change', async () => {
             await populateLevelsForSection();
             triggerAutoTitle();
@@ -633,6 +638,11 @@ async function openCrudModal(section, record) {
         if (progSelect) {
           progSelect.addEventListener('change', async (e) => {
             await populateClassesForProgram(e.target.value);
+          });
+        }
+        if (classSelect) {
+          classSelect.addEventListener('change', async () => {
+            await populateClassesForProgram(progSelect?.value);
           });
         }
       }
@@ -720,6 +730,12 @@ function _initCrudModals() {
         else if (f.type === 'password' && _editId && !el.value) continue; // Don't overwrite PIN if empty on edit
         else if (f.type === 'password' && el.value) {
           payload[f.id] = await hashPin(el.value);
+        }
+        else if (f.readonly && _editId && record?.[f.id] !== undefined) {
+          payload[f.id] = record[f.id];
+        }
+        else if (_editId && !el.value && record?.[f.id] !== undefined && (f.id === 'class_id' || f.id === 'program_id' || f.id === 'level_id' || f.id === 'institution_id')) {
+          payload[f.id] = record[f.id];
         }
         else payload[f.id] = el.value || null;
       }

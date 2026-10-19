@@ -332,6 +332,13 @@ Deno.serve(async (req: Request) => {
       .order("created_at", { ascending: false });
 
     if (allAttempts && allAttempts.length > 0) {
+      // Safe in-memory sorting: avoids PostgREST 'NULLS FIRST' bug where null effective_score was picked over high scores
+      allAttempts.sort((a: any, b: any) => {
+        const scoreA = Number(a.percentage ?? a.effective_score ?? 0);
+        const scoreB = Number(b.percentage ?? b.effective_score ?? 0);
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
       const bestId = allAttempts[0].id;
       for (const a of allAttempts) {
         await supabase

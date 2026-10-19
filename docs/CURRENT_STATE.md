@@ -1,17 +1,72 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-18 16:55 UTC+8
+Last Updated: 2026-10-19 16:40 UTC+8
 
-Current Phase: Phase 33 Refactor Topbar to Compact Summary Tabs & Purge Redundant Action Buttons Complete
+Current Phase: Phase 36 Fix Assessment Count Discrepancy, Edit Modal Class Wiping & Auto-Gen Dedup Complete
 
-Current Task: ALL PHASE 33 DIRECTIVES VERIFIED 100%
+Current Task: ALL PHASE 36 DIRECTIVES VERIFIED 100%
 
 Status: COMPLETE
 
 ## In Progress
-- None (All Phase 33 topbar refactor, action button purging, and Domain D recalibrator relocation verified 100%).
+- None (Phase 36 assessment count discrepancy, modal class wiping, auto-gen dedup, and database reconciliation verified 100%).
 
 ## Completed
+
+- **Phase 36: Fix Assessment Count Discrepancy, Edit Modal Class Wiping & Auto-Gen Dedup [100% VERIFIED]**:
+  - **1. Root Cause Identification**:
+    * Edit Modal (`js/admin/crud-modals.js`): `#field-class_id` was populated via `classes.filter(s => s.institution_id === selectedProgId)` where `selectedProgId` was institution ID. In PostgreSQL, classes link to `program_id`, while `classes.institution_id` is null. `filteredClasses` was empty, leaving `#field-class_id` with an empty string. Saving the modal (e.g. changing answer_type to spoken) overwrote `class_id` with `null` in the DB, causing the assessment to immediately disappear from `#class-hub`.
+    * Auto-Gen Duplicate Creation (`js/api.js`): Running Auto-Gen searched for existing assessments using `.eq('class_id', classId)`. Because the original assessment's `class_id` was null, dedup failed to match and inserted an unneeded duplicate assessment (`1d32de2f...`), inflating Assessment Hub to 41 records while Class Hub showed 39.
+  - **2. Full Solution Implementation**:
+    * Fixed `js/admin/crud-modals.js`: Correctly filters classes by `currentProgramId` (`s.program_id === currentProgramId`), `selectedProgId`, or existing `record.class_id`, ensuring `#field-class_id` is always properly populated and pre-selected.
+    * Added readonly and foreign-key protection: When editing a record, readonly fields and structural foreign keys (`class_id`, `program_id`, `level_id`, `institution_id`) are never overwritten with `null` if the input is disabled or unselected.
+    * Fixed `js/api.js`: Replaced narrow `class_id` matching in `upsertDynamicAssessmentShell` with canonical curriculum hierarchy dedup `(shell_code, program_id, level_id)`. Existing shells are updated and repaired (setting `class_id: classId`) rather than generating duplicate assessment records. Preserved custom user answer types (`effectiveAnswerType`).
+    * Fixed `js/admin/vocab-vault.js`: Ensured `explicitClassId` (`window._selectedClassId` or local storage) is passed to `openAutoGenerateModal` across all generator triggers.
+  - **3. Database Reconciliation & UI Verification**:
+    * Deleted orphaned duplicate assessment `1d32de2f-9c1a-4dc3-b249-fcdf4e592f35` (0 attempts, 0 questions).
+    * Restored original assessment `b95f4826-ca8c-4d3f-9b46-3ff7ec092a80` (has 9 student attempts) with `class_id = 'ab33498a-90e6-44b7-83f4-5765f964543e'` (Vocabulary Class) and confirmed `answer_type: 'spoken'`.
+    * Re-audited database: Exactly 40 live assessments, all 40 belonging to Vocabulary Class, 0 null class assessments.
+    * Playwright verification passed 100%: Class Hub (`#class-hub`) displays 40 records with A Words Test present; Assessment Hub (`#assessments`) displays 40 records with exactly 1 A Words Test.
+
+- **Phase 35: Fix Best Score Demotion, Up Next False Failure & Batch Leaderboard Deflation [100% VERIFIED]**:
+  - **1. Root Cause Identification & PostgREST Sorting Fix**:
+    * Discovered that `submit-assessment` Edge Function queried attempts sorted by `.order("effective_score", { ascending: false })`. In PostgreSQL/PostgREST, descending sorts default to `NULLS FIRST`.
+    * Any historical attempt with `effective_score: null` (score 0%) was sorted first and erroneously assigned `is_best_score = true`, demoting real 90%/85% attempts to `false`.
+    * Implemented in-memory sorting in `supabase/functions/submit-assessment/index.ts` using `Number(a.percentage ?? a.effective_score ?? 0)` descending and `created_at` descending, completely eliminating the PostgREST `NULLS FIRST` vulnerability.
+  - **2. Frontend Mathematical Highest-Score Enforcement (`js/dashboard.js`)**:
+    * `populateUpNext`: Switched to strict mathematical `bestMap[aid] = Math.max(previousBest, pct)` for all valid submitted attempts. Eliminates loop overwrite bugs where an old 0% attempt reset the score and prompted false "Needs Improvement (30.0%)" retakes.
+    * `computeOverallStats`: Removed `_locked` lockout; student overall score strictly averages true highest percentages per assessment.
+    * `loadBatchLeaderboard`: Standings computed strictly from highest percentage per student per assessment, restoring King Test to 92% (Grade A).
+    * `renderClassesOverview` & `renderAssessmentsGrid`: Best attempt selected using `pct > bestPct` (breaking ties by latest `submitted_at`), preventing demotions.
+  - **3. API & Results Display Modernization**:
+    * Updated `recalculateBestScore` and `applyRecalibrateAssessment` in `js/api.js` to sort in-memory by percentage descending.
+    * Updated `js/result.js` history table and best-score badge to dynamically identify the highest scoring attempt mathematically.
+  - **4. Cloud Database Recalibration & Zero-Defect Audit**:
+    * Audited all 156 student-assessment pairs across Supabase Cloud.
+    * Repaired all 13 corrupted student-assessment records (26 attempt rows updated).
+    * Re-audited database: confirmed 0 remaining corrupted records across all students.
+    * Verified student "King Test": A2 Words Task resolves to 90% (Grade B, Passed), overall score 92% (Grade A), and Up Next advances to `3rd Vocabulary A2 Phrases Task - CV & Resume` (Start Now).
+  - **Strict Git Freeze Enforced**: 0 commits, 0 pushes.
+
+- **Phase 34: Fix Assessment Virtual Keyboard Lifecycle & Multi-Question Persistence [100% VERIFIED]**:
+  - **1. Root Cause Identification**:
+    * In `js/assessment.js` (`renderQuestion`), `#virtual-keyboard-container` was parked into `interactionContainer` inside `#assessment-main` on Question 1.
+    * When moving to Question 2, `main.innerHTML = ''` ran while `#virtual-keyboard-container` was still inside `main`, obliterating the keyboard DOM element.
+    * The rescue logic (`if (vk.parentElement !== document.body) document.body.appendChild(vk);`) was placed 50 lines too late (at line 931, after line 881 `main.innerHTML = ''`), causing `document.getElementById('virtual-keyboard-container')` to return `null`.
+    * Physical keyboard typing was also disabled because `keydown` listener checked `!vkContainer` which evaluated to true.
+  - **2. Safe Parking & Authoritative Getter Implementation**:
+    * Implemented `getVirtualKeyboard()`: Guarantees `#virtual-keyboard-container` is retrieved or created in `document.body`.
+    * Moved parking logic to execute strictly BEFORE `main.innerHTML = ''`: Before `#assessment-main` is cleared, the keyboard container is safely parked back into `document.body` (`document.body.appendChild(vk)`), preventing it from ever being destroyed during question transitions.
+    * Upgraded event handling: Replaced static per-key listeners with delegated `document.addEventListener('click', ...)` and `mousedown` listeners (preventing textarea blur).
+    * Updated physical keyboard `keydown` listener, `toggleUnansweredDrawer`, and speech fallback to use `getVirtualKeyboard()`.
+  - **3. Automated Verification**:
+    * Unit test suite `scratch/verify_keyboard_node.mjs` executed and passed 100%:
+      - Question 1 (Written): Keyboard attached and visible (`display: flex`).
+      - Question 2 (Written): Keyboard preserved, attached, and visible (`display: flex`).
+      - Question 3 (Written): Keyboard preserved, attached, and visible (`display: flex`).
+      - Backward navigation (Q3 -> Q2): Keyboard preserved and attached (`display: flex`).
+    * Zero syntax errors (`node --check js/assessment.js` passed).
+  - **Strict Git Freeze Enforced**: 0 commits, 0 pushes.
 
 - **Phase 33: Refactor Topbar to Compact Summary Tabs & Purge Redundant Action Buttons [100% VERIFIED]**:
   - **1. Topbar Modern Sleek Tab Integration (Global Shell)**:

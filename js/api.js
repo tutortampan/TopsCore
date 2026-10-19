@@ -1135,6 +1135,14 @@ export async function recalculateBestScore(studentId, assessmentId) {
 
   if (error || !attempts || !attempts.length) return null;
 
+  // Safe in-memory sort by percentage DESC, then created_at DESC
+  attempts.sort((a, b) => {
+    const scoreA = Number(a.percentage || 0);
+    const scoreB = Number(b.percentage || 0);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+  });
+
   const bestAttemptId = attempts[0].id;
   for (const a of attempts) {
     await sb.from('attempts').update({ is_best_score: a.id === bestAttemptId }).eq('id', a.id);
@@ -1442,8 +1450,14 @@ export async function applyRecalibrateAssessment(assessmentId) {
     .order('percentage', { ascending: false });
   if (error) throw error;
   // Re-mark best scores per student
+  const sorted = [...(attempts || [])].sort((a, b) => {
+    const scoreA = Number(a.percentage || 0);
+    const scoreB = Number(b.percentage || 0);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return (b.id > a.id ? 1 : -1);
+  });
   const bestByStudent = {};
-  for (const att of (attempts || [])) {
+  for (const att of sorted) {
     if (!bestByStudent[att.student_id]) bestByStudent[att.student_id] = att.id;
   }
   const updates = (attempts || []).map(att =>
@@ -2467,19 +2481,22 @@ export async function upsertDynamicAssessmentShell(config) {
     ? `${levelLabel.replace(' Level', '')} Vocabulary ${themeCode} ${category === 'phrases' ? 'Phrases' : 'Words'} Test - ${cleanTitle}`
     : `${levelLabel.replace(' Level', '')} Vocabulary ${themeCode}${topicCode || ''} ${category === 'phrases' ? 'Phrases' : 'Words'} Task - ${cleanTitle}`.replace(/\s+/g, ' ');
 
-  // Dedup by shell_code + program + level
-  let q = sb.from('assessments')
-    .select('id')
+  // Dedup by shell_code + program + level (unique structural key in hierarchy)
+  const { data: existing } = await sb.from('assessments')
+    .select('id, class_id, answer_type, payload')
     .eq('shell_code', code)
     .eq('program_id', programId)
-    .eq('level_id', levelId);
-  if (classId) q = q.eq('class_id', classId);
-  const { data: existing } = await q.maybeSingle();
+    .eq('level_id', levelId)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  // If existing record was customized by user (e.g. changed to spoken), preserve it
+  const effectiveAnswerType = (existing && existing.answer_type) ? existing.answer_type : answerType;
 
   const asmData = {
     institution_id:             institutionId,
     program_id:                 programId,
-    class_id:                   classId,
+    class_id:                   classId || (existing ? existing.class_id : null),
     level_id:                   levelId,
     module_id:                  moduleId,
     assessment_type:            modulePrefix + '_' + tier,
@@ -2490,10 +2507,10 @@ export async function upsertDynamicAssessmentShell(config) {
     status:                     'PUBLISHED',
     working_duration_minutes:   durationMinutes,
     prerequisite_assessment_id: prerequisiteId,
-    answer_type:                answerType,
+    answer_type:                effectiveAnswerType,
     is_dynamic_shell:           true,
     display_order:              displayOrder,
-    payload:                    { is_dynamic_shell: true, theme_code: themeCode, topic_code: topicCode || null, category: category, answer_type: answerType, shell_code: code },
+    payload:                    { ...(existing?.payload || {}), is_dynamic_shell: true, theme_code: themeCode, topic_code: topicCode || null, category: category, answer_type: effectiveAnswerType, shell_code: code },
     created_by:                 'Auto-Generator',
     updated_at:                 new Date().toISOString()
   };
@@ -2558,6 +2575,14 @@ export async function autoGenerateAssessmentsHierarchy(targetLevels, config = {}
         .is('deleted_at', null);
         
       targetClassId = (classDataList && classDataList.length > 0) ? classDataList[0].id : null;
+      if (!targetClassId) {
+        const { data: anyClasses } = await sb.from('classes')
+          .select('id')
+          .eq('program_id', programId)
+          .is('deleted_at', null)
+          .limit(1);
+        targetClassId = (anyClasses && anyClasses.length > 0) ? anyClasses[0].id : null;
+      }
     }
 
     // We NO LONGER purge. We use UPSERT to preserve student submissions.

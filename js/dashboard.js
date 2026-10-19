@@ -989,8 +989,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           const pct = parseFloat(att.percentage || 0);
           const st  = (att.status || '').toLowerCase();
           if (st === 'in_progress') { inProgByAssessment[eid] = att; continue; }
-          if (!bestByAssessment[eid] || (att.is_best_score) || pct > parseFloat(bestByAssessment[eid].percentage || 0)) {
-            if (!bestByAssessment[eid]?.is_best_score) bestByAssessment[eid] = att;
+          if (!bestByAssessment[eid] || pct > parseFloat(bestByAssessment[eid].percentage || 0) || (pct === parseFloat(bestByAssessment[eid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByAssessment[eid].submitted_at || 0))) {
+            bestByAssessment[eid] = att;
           }
         }
 
@@ -1185,11 +1185,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         if ((att.status || '').toUpperCase() === 'IN_PROGRESS') {
           inProgressByAssessment[aid] = att;
         }
-        // Prefer is_best_score flag; fallback to highest pct
-        if (att.is_best_score) {
+        // AGENTS.md §2.7: Report card stores strictly HIGHEST score across attempts
+        if (!bestByAssessment[aid] || pct > parseFloat(bestByAssessment[aid].percentage || 0) || (pct === parseFloat(bestByAssessment[aid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByAssessment[aid].submitted_at || 0))) {
           bestByAssessment[aid] = att;
-        } else if (!bestByAssessment[aid] || pct > parseFloat(bestByAssessment[aid].percentage || 0)) {
-          if (!bestByAssessment[aid]?.is_best_score) bestByAssessment[aid] = att;
         }
       });
 
@@ -1398,9 +1396,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           inProgMap[aid] = a;
         } else {
           const pct = parseFloat(a.percentage || 0);
-          if (a.is_best_score) {
-            bestMap[aid] = pct;
-          } else if (bestMap[aid] == null || pct > bestMap[aid]) {
+          if (bestMap[aid] == null || pct > bestMap[aid]) {
             bestMap[aid] = pct;
           }
         }
@@ -1520,15 +1516,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         const uniqueKey = att.assessment_instance_id || att.assessment_id || att.Assessment_id;
         if (!uniqueKey) return;
         const pct = parseFloat(att.percentage || 0);
-        if (att.is_best_score) {
-          if (bestMap[uniqueKey] == null || pct >= bestMap[uniqueKey]) {
-            bestMap[uniqueKey] = pct;
-          }
-          bestMap[uniqueKey + '_locked'] = true;
-        } else if (bestMap[uniqueKey] == null || pct > bestMap[uniqueKey]) {
-          if (!Object.hasOwn(bestMap, uniqueKey + '_locked')) {
-            bestMap[uniqueKey] = pct;
-          }
+        if (bestMap[uniqueKey] == null || pct > bestMap[uniqueKey]) {
+          bestMap[uniqueKey] = pct;
         }
       });
 
@@ -1945,14 +1934,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             const key = att.assessment_id;
             if (!key) return;
             const pct = parseFloat(att.percentage || 0);
-            if (att.is_best_score) {
+            if (bestMap[key] == null || pct > bestMap[key]) {
               bestMap[key] = pct;
-            } else if (bestMap[key] == null || pct > bestMap[key]) {
-              if (!Object.hasOwn(bestMap, key + '_locked')) {
-                bestMap[key] = pct;
-              }
             }
-            if (att.is_best_score) bestMap[key + '_locked'] = true;
 
             if (att.submitted_at) {
               if (!lastSubmittedAt || new Date(att.submitted_at) > new Date(lastSubmittedAt)) {

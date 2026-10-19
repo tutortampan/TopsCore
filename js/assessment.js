@@ -787,6 +787,38 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     }
     window.updateNavGrid = updateNavGrid;
 
+    // —— Safe Virtual Keyboard Anchor / Provider ——
+    function getVirtualKeyboard() {
+      let vk = document.getElementById('virtual-keyboard-container');
+      if (!vk) {
+        vk = document.createElement('div');
+        vk.id = 'virtual-keyboard-container';
+        vk.style.display = 'none';
+        vk.innerHTML = `
+          <div class="vk-row">
+            <button class="vk-key" data-key="q">q</button><button class="vk-key" data-key="w">w</button><button class="vk-key" data-key="e">e</button><button class="vk-key" data-key="r">r</button><button class="vk-key" data-key="t">t</button><button class="vk-key" data-key="y">y</button><button class="vk-key" data-key="u">u</button><button class="vk-key" data-key="i">i</button><button class="vk-key" data-key="o">o</button><button class="vk-key" data-key="p">p</button>
+          </div>
+          <div class="vk-row">
+            <button class="vk-key" data-key="a">a</button><button class="vk-key" data-key="s">s</button><button class="vk-key" data-key="d">d</button><button class="vk-key" data-key="f">f</button><button class="vk-key" data-key="g">g</button><button class="vk-key" data-key="h">h</button><button class="vk-key" data-key="j">j</button><button class="vk-key" data-key="k">k</button><button class="vk-key" data-key="l">l</button>
+          </div>
+          <div class="vk-row">
+            <button class="vk-key" data-key="-">-</button>
+            <button class="vk-key" data-key="z">z</button><button class="vk-key" data-key="x">x</button><button class="vk-key" data-key="c">c</button><button class="vk-key" data-key="v">v</button><button class="vk-key" data-key="b">b</button><button class="vk-key" data-key="n">n</button><button class="vk-key" data-key="m">m</button>
+            <button class="vk-key special" data-key="Backspace">⌫</button>
+          </div>
+          <div class="vk-row">
+            <button class="vk-key special" data-key=",">,</button>
+            <button class="vk-key space" data-key=" ">Space</button>
+            <button class="vk-key special" data-key=".">.</button>
+            <button class="vk-key special" data-key="Enter">⏎</button>
+          </div>
+        `;
+        document.body.appendChild(vk);
+      }
+      return vk;
+    }
+    window.getVirtualKeyboard = getVirtualKeyboard;
+
     // —— Render Question ——
     function renderQuestion(idx) {
       currentIndex = idx;
@@ -877,6 +909,16 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
       const savedAnswer = answeredMap[row.id] || '';
 
+      // CRITICAL FIX: Safely park virtual keyboard in document.body BEFORE clearing main,
+      // preventing it from being destroyed when main.innerHTML = '' runs.
+      const vk = getVirtualKeyboard();
+      if (vk) {
+        vk.style.display = 'none';
+        if (vk.parentElement && vk.parentElement !== document.body) {
+          document.body.appendChild(vk);
+        }
+      }
+
       const main = document.getElementById('assessment-main');
       main.innerHTML = '';
       main.className = 'assessment-main-content flex-1 flex flex-col items-center min-h-0 w-full mx-auto';
@@ -927,14 +969,6 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       main.appendChild(interactionContainer);
 
       let answerArea, controlArea;
-
-      const vk = document.getElementById('virtual-keyboard-container');
-      if (vk) {
-        vk.style.display = 'none';
-        if (vk.parentElement !== document.body) {
-          document.body.appendChild(vk);
-        }
-      }
 
       if (answerType === 'speech_to_text' || answerType === 'spoken') {
         // Mode 1: Speech Mode
@@ -1206,7 +1240,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     function renderSpeech(area, controlArea, row, savedAnswer, snap = {}) {
       if (!isSpeechSupported()) {
         area.innerHTML = '<div style="color:#fbbf24; text-align:center; font-size:14px; font-weight:700;">Speech Unavailable</div>';
-        renderWritten(area, controlArea, row, savedAnswer, snap, document.getElementById('virtual-keyboard-container'));
+        renderWritten(area, controlArea, row, savedAnswer, snap, getVirtualKeyboard());
         return;
       }
 
@@ -1369,7 +1403,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         }
       }
 
-      const vk = document.getElementById('virtual-keyboard-container');
+      const vk = getVirtualKeyboard();
       if (vk) {
         if (shouldShow) {
            vk.style.display = 'none';
@@ -1563,21 +1597,27 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       window.speechSynthesis.getVoices();
     }
 
-    // Virtual Keyboard Logic
-    document.querySelectorAll('.vk-key').forEach(k => {
-      k.addEventListener('click', (e) => {
-        e.preventDefault();
-        if(!window.activeKeyboardInput) return;
-        const key = k.getAttribute('data-key');
-        if(key === 'Backspace') {
-          window.activeKeyboardInput.value = window.activeKeyboardInput.value.slice(0, -1);
-        } else if(key === 'Enter') {
-          window.activeKeyboardInput.value += '\n';
-        } else {
-          window.activeKeyboardInput.value += key;
-        }
-        window.activeKeyboardInput.dispatchEvent(new Event('input'));
-      });
+    // Virtual Keyboard Logic (Delegated event listener ensures keys always work even when re-parented)
+    document.addEventListener('click', (e) => {
+      const k = e.target.closest('.vk-key');
+      if (!k) return;
+      e.preventDefault();
+      if (!window.activeKeyboardInput) return;
+      const key = k.getAttribute('data-key');
+      if (key === 'Backspace') {
+        window.activeKeyboardInput.value = window.activeKeyboardInput.value.slice(0, -1);
+      } else if (key === 'Enter') {
+        window.activeKeyboardInput.value += '\n';
+      } else {
+        window.activeKeyboardInput.value += key;
+      }
+      window.activeKeyboardInput.dispatchEvent(new Event('input'));
+    });
+
+    document.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.vk-key')) {
+        e.preventDefault(); // Prevents input from losing focus on key click
+      }
     });
 
     // Physical Keyboard Listener (allows laptop typing while keeping textarea readonly)
@@ -1586,7 +1626,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       // Do not intercept if the user is using modifier keys (like Ctrl+R, F5, etc.)
       if(e.ctrlKey || e.altKey || e.metaKey) return;
       
-      const vkContainer = document.getElementById('virtual-keyboard-container');
+      const vkContainer = getVirtualKeyboard();
       if (!vkContainer || vkContainer.style.display === 'none') return; // Only if written question is active
 
       if (e.key === 'Backspace') {
