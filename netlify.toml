@@ -1,6 +1,12 @@
 # Netlify Configuration for Top English Class Platform
 [build]
   publish = "."
+  command = "echo 'Static deploy ready'"
+
+[build.environment]
+  NODE_ENV = "production"
+  PUPPETEER_SKIP_DOWNLOAD = "true"
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
 
 [[headers]]
   for = "/*"
