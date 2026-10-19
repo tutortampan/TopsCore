@@ -1,3 +1,39 @@
+## [2026-10-19 19:25] — Service Worker Network-First CSS & Cache Invalidation to v5.3.2
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 41 (Service Worker Cache Invalidation & Keyboard CSS Syntax Fix)  
+**Status:** PASS  
+
+### Why
+- The user reported: *"masih begini kelihatannya"* with screenshot showing the old cramped 34px keyboard layout with ~70px dead space below `, Space . ↵`.
+- Investigation revealed the exact root causes of why the updated 58.3px keys and 22-8-22-48 ratio were not appearing on the user's device:
+  1. **Service Worker Cache-First Lock (`sw.js`)**: `sw.js` cached all assets under `abcd-core-v5.2.2`. Its `fetch` handler checked `isScriptOrDoc` only for scripts and HTML, treating `.css` as static assets with a **Cache-First** strategy. As a result, `assessment.css` was served from the offline cache indefinitely without hitting the network.
+  2. **CSS Syntax Error in `css/assessment.css`**: `#virtual-keyboard-container` was opened at line 448 without a closing brace before `.vk-row {`, placing `.vk-row` and `.vk-key` inside the ID block with an extra closing brace at the bottom. In browsers without native CSS nesting, the entire block was discarded by the parser.
+  3. **Asset Version Misalignment**: `assessment.html` (line 206) still referenced `assessment.js?v=5.2.2`, and `index.html` registered `sw.js?v=5.2.2`.
+  4. **Netlify Header Stale Cache**: `netlify.toml` specified `public, max-age=3600` for `/css/*` and `/js/*`.
+
+### Changed
+- **`sw.js`**:
+  - Bumped `CACHE_NAME` to `'abcd-core-v5.3.2'`.
+  - Added `event.request.destination === 'style' || url.pathname.endsWith('.css')` to `isScriptOrDoc` so that all stylesheets are served **Network-First** and never stale.
+  - Bumped all cached assets in `ASSETS_TO_CACHE` to `?v=5.3.2`.
+- **`css/assessment.css`**:
+  - Closed `#virtual-keyboard-container` cleanly with `}` before `.vk-row`.
+  - Removed duplicate `}` after `.vk-key.space`.
+- **`assessment.html`, `dashboard.html`, `index.html`, `result.html`**:
+  - Bumped all CSS and JS references to `?v=5.3.2`.
+  - Added proactive `serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()))` on `assessment.html` and `index.html` to instantly force browser SW updates on page load.
+- **`netlify.toml`**:
+  - Changed `/css/*` and `/js/*` headers to `Cache-Control = "no-cache, must-revalidate"`.
+
+### Tests
+- command: `node scratch/check_keyboard_ratio.mjs`
+  - result: `PASS` (Keys: 58.27px tall, 30.1px wide; QBox: 21.4%, Meta: 7.6%, Answer: 21.4%, Keyboard: 47.3%; 0 dead space).
+- command: `node scratch/test_police_siren_cheat.mjs`
+  - result: `PASS` (Red flashing overlay, police siren synthesizer, 10s countdown, 3-strike warning limit).
+
+---
+
 ## [2026-10-19 18:55] — Assessment Body Direct 22-8-22-48 Ratio & 58px Virtual Keyboard Keys
 
 **Agent/Session:** Antigravity  

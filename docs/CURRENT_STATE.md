@@ -1,17 +1,24 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-19 18:55 UTC+8
+Last Updated: 2026-10-19 19:28 UTC+8
 
-Current Phase: Phase 40 Assessment Body Direct 22-8-22-48 Ratio & 58px Virtual Keyboard Keys Complete
+Current Phase: Phase 41 Service Worker Network-First CSS & Cache Invalidation Complete
 
-Current Task: ALL PHASE 40 DIRECTIVES VERIFIED 100%
+Current Task: ALL PHASE 41 DIRECTIVES VERIFIED 100%
 
 Status: COMPLETE
 
 ## In Progress
-- None (Phase 40 Virtual Keyboard 22-8-22-48 Direct Layout verified 100%).
+- None (Phase 41 Service Worker Cache Invalidation & Keyboard CSS Syntax Fix verified 100%).
 
 ## Completed
+
+- **Phase 41: Service Worker Network-First CSS & Cache Invalidation to v5.3.2 [100% VERIFIED]**:
+  - Diagnosed user screenshot showing old 34px buttons: Root cause was Service Worker `sw.js` caching `assessment.css` Cache-First under `abcd-core-v5.2.2`, plus CSS syntax error in `css/assessment.css` (unclosed brace).
+  - Repaired `css/assessment.css` structure so `#virtual-keyboard-container` is closed properly and `.vk-row` / `.vk-key` are top-level selectors.
+  - Updated `sw.js` to `abcd-core-v5.3.2`, added Network-First for `.css`, and bumped all asset URLs to `v=5.3.2`.
+  - Added proactive service worker update triggers in `assessment.html` and `index.html`.
+  - Verified with Playwright tests (`scratch/check_keyboard_ratio.mjs` and `scratch/test_police_siren_cheat.mjs`).
 
 - **Phase 40: Assessment Body Direct 22-8-22-48 Ratio & 58px Virtual Keyboard Keys [100% VERIFIED]**:
   - **1. User Context & Root Cause Analysis**:

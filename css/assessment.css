@@ -465,7 +465,9 @@
       box-sizing: border-box !important; 
       z-index: 1000; 
       flex-shrink: 0 !important;
-       .vk-row { 
+    }
+
+    .vk-row { 
       display: flex !important; 
       justify-content: center !important; 
       gap: 3px !important; 
@@ -516,10 +518,10 @@
     } 
     .vk-key.space { 
       flex: 4 1 0 !important; 
-      font-size: clamp(13px, 3.4vw, 15px) !important;
+      font-size: clamp(13px, 3.4vw, 15px) !important; 
       letter-spacing: 0.06em !important;
       font-weight: 700 !important;
-    }   } 
+    } 
 
     /* Anti-Cheat selection and touch callout suppression */
     body.assessment-page,

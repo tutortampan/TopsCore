@@ -1,4 +1,4 @@
-const CACHE_NAME = 'abcd-core-v5.2.2';
+const CACHE_NAME = 'abcd-core-v5.3.2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,24 +6,24 @@ const ASSETS_TO_CACHE = [
   './dashboard.html',
   './assessment.html',
   './result.html',
-  './css/style.css?v=5.2.2',
-  './css/admin.css?v=5.2.2',
-  './css/dashboard.css?v=5.2.2',
-  './css/auth.css?v=5.2.2',
-  './css/assessment.css?v=5.2.2',
-  './css/result.css?v=5.2.2',
-  './css/components/avatars.css?v=5.2.2',
-  './js/app.js?v=5.2.2',
-  './js/api.js?v=5.2.2',
-  './js/auth.js?v=5.2.2',
-  './js/dashboard.js?v=5.2.2',
-  './js/assessment.js?v=5.2.2',
-  './js/result.js?v=5.2.2',
-  './js/session.js?v=5.2.2',
-  './js/supabase.js?v=5.2.2',
+  './css/style.css?v=5.3.2',
+  './css/admin.css?v=5.3.2',
+  './css/dashboard.css?v=5.3.2',
+  './css/auth.css?v=5.3.2',
+  './css/assessment.css?v=5.3.2',
+  './css/result.css?v=5.3.2',
+  './css/components/avatars.css?v=5.3.2',
+  './js/app.js?v=5.3.2',
+  './js/api.js?v=5.3.2',
+  './js/auth.js?v=5.3.2',
+  './js/dashboard.js?v=5.3.2',
+  './js/assessment.js?v=5.3.2',
+  './js/result.js?v=5.3.2',
+  './js/session.js?v=5.3.2',
+  './js/supabase.js?v=5.3.2',
   './js/vendor/supabase.js',
-  './js/vendor/xlsx.full.min.js?v=5.2.2',
-  './js/wake-lock.js?v=5.2.2'
+  './js/vendor/xlsx.full.min.js?v=5.3.2',
+  './js/wake-lock.js?v=5.3.2'
 ];
 
 self.addEventListener('install', event => {
@@ -58,7 +58,9 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   const isScriptOrDoc = event.request.destination === 'script' || 
                         event.request.destination === 'document' || 
+                        event.request.destination === 'style' ||
                         url.pathname.endsWith('.js') || 
+                        url.pathname.endsWith('.css') || 
                         url.pathname.endsWith('.html');
 
   if (isScriptOrDoc) {
