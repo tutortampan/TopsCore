@@ -1,3 +1,40 @@
+## [2026-10-19 17:40] — Assessment Virtual Keyboard 22-8-22-48 Ergonomic Ratio Scaling
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 37 (Assessment Virtual Keyboard Ergonomic Scaling)  
+**Status:** PASS  
+
+### Why
+- The user reported: "there are compalints abaout the keyboard being too small,,, do you have any suggestions? should we make the keyboard float? or we change the ratio? now its 30-10-30-30 for the assesment body,,, lets discuss"
+- Followed by user proposal: "opsi A kalau 22-8-22-48 bagaimana?" and directive: "iya lakukan".
+- The previous 30 - 10 - 30 - 30 layout constrained the virtual keyboard to only 30% of total height, yielding keys of ~24px height on mobile viewports. This led to mis-taps and touch fatigue.
+
+### Changed
+- **`css/assessment.css`**:
+  - `#virtual-keyboard-container`: Height updated to `calc(68.6% - 2px) !important;` (48% of total viewport body).
+  - `.vk-row`: Scaled with `flex: 1`, `gap: 4px`, `max-height: 25%`.
+  - `.vk-key`: Height increased from `clamp(22px, 4.5vh, 28px)` to **`clamp(34px, 5.8vh, 46px)`** (almost 2x taller!). Font size increased to **`clamp(13px, 3.2vw, 15px); font-weight: 700;`** with enhanced active tap state feedback (`transform: scale(0.93)`).
+  - `.vk-key.special` and `.vk-key.space`: Scaled proportionally for easy thumb reach.
+- **`js/assessment.js`**:
+  - Dynamically calculated layout based on `isWritten = (answerType === 'written')`.
+  - `questionBox`: Height set to 22% for written questions (30% for other modes). Font size scaled to `clamp(18px, 4.4vw, 24px)`.
+  - `metadataTable`: Height set to 8% for written questions (10% for other modes) with `font-size: 10px` and `3px` gap to prevent text clipping.
+  - `interactionContainer`: Height set to `calc(70% - 6px)` for written questions (`calc(60% - 8px)` for other modes).
+  - `answerArea`: Upper 31.4% of interaction container (= 22% of body).
+  - `controlArea` (`#virtual-keyboard-container`): Lower 68.6% of interaction container (= 48% of body).
+  - Preserved existing 30 - 10 - 60 ratios for Multiple Choice and Speech assessment modes.
+
+### Tests
+- command: `node scratch/test_keyboard_ratio.mjs`
+- result: `PASS`
+  - iPhone 14 (390x844): Question 22.0% (129px), Meta 8.0% (47px), Answer 21.1% (124px), Keyboard 47.0% (276px), Key height: 46px, Key width: 32px.
+  - Galaxy S20 (360x780): Question 22.0% (115px), Meta 8.0% (42px), Answer 21.0% (110px), Keyboard 46.9% (246px), Key height: 45px, Key width: 29px.
+  - Virtual Keyboard typing test: "hello" typed smoothly into textarea.
+- command: `node scratch/verify_other_modes.mjs`
+- result: `PASS` (Multiple Choice & Speech modes verified at exact 30 - 10 - 60 ratio with 0 regressions).
+
+---
+
 ## [2026-10-19 16:40] — Fix Assessment Count Discrepancy, Edit Modal Class Wiping & Auto-Gen Dedup
 
 **Agent/Session:** Antigravity  

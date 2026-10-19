@@ -1,3 +1,59 @@
+## SESSION-20261019-1740
+
+Start: 2026-10-19 17:15 UTC+8  
+End: 2026-10-19 17:40 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"there are compalints abaout the keyboard being too small,,, do you have any suggestions? should we make the keyboard float? or we change the ratio? now its 30-10-30-30 for the assesment body,,, lets discuss"  
+Followed by:  
+"opsi A kalau 22-8-22-48 bagaimana?"  
+Followed by:  
+"iya lakukan"  
+
+### Objective
+1. Rescale the assessment body specifically for written questions from 30 - 10 - 30 - 30 to 22 - 8 - 22 - 48 (Question 22%, Meta 8%, Answer 22%, Virtual Keyboard 48%).
+2. Significantly increase virtual keyboard key height and touch target size (from ~24px to 45px–46px) to eliminate mis-taps.
+3. Preserve existing 30 - 10 - 60 ratios for Multiple Choice and Speech assessment modes.
+4. Test and verify on mobile viewports (iPhone 14 and Galaxy S20).
+
+### Work Performed
+1. **CSS Updates (`css/assessment.css`)**:
+   - Rescaled `#virtual-keyboard-container` to `calc(68.6% - 2px)` of interaction container (= 48% of total viewport body).
+   - Increased `.vk-key` height from `clamp(22px, 4.5vh, 28px)` to `clamp(34px, 5.8vh, 46px)` with font `clamp(13px, 3.2vw, 15px)` bold.
+   - Enhanced tactile feedback with `active` transform scaling and bright cyan accents.
+2. **JavaScript Layout Updates (`js/assessment.js`)**:
+   - Dynamically applied `isWritten` logic in `renderQuestion`:
+     * Question box: 22% (vs 30% for other modes).
+     * Metadata table: 8% (vs 10% for other modes) with `font-size: 10px` and `3px` gap.
+     * Interaction container: 70% (vs 60% for other modes).
+     * Answer area: 31.4% of interaction container (= 22% of body).
+     * Virtual keyboard: 68.6% of interaction container (= 48% of body).
+3. **Automated Verification**:
+   - `scratch/test_keyboard_ratio.mjs`:
+     * iPhone 14 (390x844): Question 22.0% (129px), Meta 8.0% (47px), Answer 21.1% (124px), Keyboard 47.0% (276px), Key 46px height.
+     * Galaxy S20 (360x780): Question 22.0% (115px), Meta 8.0% (42px), Answer 21.0% (110px), Keyboard 46.9% (246px), Key 45px height.
+     * Typing input verified: "hello" typed smoothly via virtual keyboard keys into textarea.
+   - `scratch/verify_other_modes.mjs`:
+     * Multiple Choice and Speech modes retain exact 30 - 10 - 60 ratios with 0 regressions.
+
+### Files Changed
+- `css/assessment.css`
+- `js/assessment.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- `scratch/test_keyboard_ratio.mjs` PASS
+- `scratch/verify_other_modes.mjs` PASS
+- Verified visual screenshots: `scratch/screenshot_keyboard_iphone_14.png`, `scratch/screenshot_keyboard_galaxy_s20.png`
+
+### Resume From
+Ready for user review or deployment.
+
+---
+
 ## SESSION-20261019-1645
 
 Start: 2026-10-19 16:00 UTC+8  

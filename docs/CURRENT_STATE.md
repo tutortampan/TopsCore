@@ -1,17 +1,45 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-19 16:40 UTC+8
+Last Updated: 2026-10-19 17:40 UTC+8
 
-Current Phase: Phase 36 Fix Assessment Count Discrepancy, Edit Modal Class Wiping & Auto-Gen Dedup Complete
+Current Phase: Phase 37 Assessment Virtual Keyboard 22-8-22-48 Ergonomic Ratio Scaling Complete
 
-Current Task: ALL PHASE 36 DIRECTIVES VERIFIED 100%
+Current Task: ALL PHASE 37 DIRECTIVES VERIFIED 100%
 
 Status: COMPLETE
 
 ## In Progress
-- None (Phase 36 assessment count discrepancy, modal class wiping, auto-gen dedup, and database reconciliation verified 100%).
+- None (Phase 37 Virtual Keyboard Ergonomic Ratio Scaling verified 100%).
 
 ## Completed
+
+- **Phase 37: Assessment Virtual Keyboard 22-8-22-48 Ergonomic Ratio Scaling [100% VERIFIED]**:
+  - **1. User Problem & Context**:
+    * Assessment testers and students complained that virtual keyboard buttons on mobile devices were too small and cramped (originally ~24px height), making tapping difficult and causing mis-taps.
+    * User requested evaluating layout options and specifically agreed upon **Ratio Option A: 22 - 8 - 22 - 48** (Question Box: 22%, Metadata: 8%, Answer Box: 22%, Virtual Keyboard: 48%).
+  - **2. Full Solution Implementation**:
+    * Modified `css/assessment.css`:
+      - `#virtual-keyboard-container`: Set height to `calc(68.6% - 2px) !important;` (48% of total viewport body).
+      - `.vk-row`: Scaled with `flex: 1`, `gap: 4px`, `max-height: 25%`.
+      - `.vk-key`: Increased key height from `clamp(22px, 4.5vh, 28px)` to **`clamp(34px, 5.8vh, 46px)`** (almost 2x taller!). Increased font size to **`clamp(13px, 3.2vw, 15px); font-weight: 700;`** with enhanced active tap state feedback.
+      - `.vk-key.special` and `.vk-key.space`: Scaled proportionally for easy thumb reach.
+    * Modified `js/assessment.js`:
+      - Dynamically calculated layout based on `isWritten = (answerType === 'written')`.
+      - `questionBox`: Height set to 22% for written questions (30% for other modes). Font size scaled to `clamp(18px, 4.4vw, 24px)` to preserve full readability of long phrases.
+      - `metadataTable`: Height set to 8% for written questions (10% for other modes) with `font-size: 10px` and `3px` gap to prevent text clipping.
+      - `interactionContainer`: Height set to `calc(70% - 6px)` for written questions (`calc(60% - 8px)` for other modes).
+      - `answerArea`: Upper 31.4% of interaction container (= 22% of body).
+      - `controlArea` (`#virtual-keyboard-container`): Lower 68.6% of interaction container (= 48% of body).
+      - Preserved existing 30 - 10 - 60 ratios for Multiple Choice and Speech assessment modes.
+  - **3. Cross-Viewport Automated Verification**:
+    * Tested on iPhone 14 (390 x 844) and Galaxy S20 (360 x 780) via Playwright (`scratch/test_keyboard_ratio.mjs`):
+      - iPhone 14: Question Box 22.0% (129px), Meta 8.0% (47px), Answer 21.1% (124px), Keyboard 47.0% (276px), Key height: 46px, Key width: 32px.
+      - Galaxy S20: Question Box 22.0% (115px), Meta 8.0% (42px), Answer 21.0% (110px), Keyboard 46.9% (246px), Key height: 45px, Key width: 29px.
+      - Full typing input tested: "hello" typed smoothly via virtual keyboard clicks into textarea.
+    * Regression verification on MCQ and Speech modes (`scratch/verify_other_modes.mjs`):
+      - Both retain exact 30.0% question box, 10.0% metadata, 58.6% interaction area with 0 regressions.
+    * Visual screenshots confirmed: `scratch/screenshot_keyboard_iphone_14.png`, `scratch/screenshot_keyboard_galaxy_s20.png`.
+
 
 - **Phase 36: Fix Assessment Count Discrepancy, Edit Modal Class Wiping & Auto-Gen Dedup [100% VERIFIED]**:
   - **1. Root Cause Identification**:

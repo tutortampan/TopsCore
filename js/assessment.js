@@ -924,48 +924,51 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       main.className = 'assessment-main-content flex-1 flex flex-col items-center min-h-0 w-full mx-auto';
       main.style.cssText = 'flex:1; display:flex; flex-direction:column; justify-content:flex-start; align-items:center; min-height:100%; height:100%; max-height:100%; overflow:hidden; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:0; box-sizing:border-box;';
 
-      const isWrittenOrSpeech = (answerType === 'written' || (answerType === 'speech_to_text' || answerType === 'spoken'));
+      const isWritten = (answerType === 'written');
 
-      // 1. Question Box: Exactly 30% percentage height, centered prompt text
+      // 1. Question Box: Exactly 22% for written mode (22-8-22-48 ratio), 30% for other modes
       const questionBox = document.createElement('div');
       questionBox.className = 'w-full flex flex-col shrink-0';
-      questionBox.style.cssText = 'width:100% !important; max-width:440px !important; height:30%; min-height:30%; max-height:30%; margin:0 auto !important; display:flex; align-items:center; justify-content:center; text-align:center; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); box-sizing:border-box; flex-shrink:0; padding:8px 14px; overflow:hidden;';
+      const qBoxH = isWritten ? '22%' : '30%';
+      questionBox.style.cssText = `width:100% !important; max-width:440px !important; height:${qBoxH}; min-height:${qBoxH}; max-height:${qBoxH}; margin:0 auto !important; display:flex; align-items:center; justify-content:center; text-align:center; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); box-sizing:border-box; flex-shrink:0; padding:6px 14px; overflow:hidden;`;
       questionBox.innerHTML = `
-        <div class="speech-question-text" style="font-size:clamp(20px, 5vw, 26px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
+        <div class="speech-question-text" style="font-size:${isWritten ? 'clamp(18px, 4.4vw, 24px)' : 'clamp(20px, 5vw, 26px)'}; font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
           ${escapeHtml(questionText)}
         </div>
       `;
       main.appendChild(questionBox);
 
-      // 2. Metadata Table: Exactly 10% percentage height, 2 rows x 2 cols (direct dynamic values only)
+      // 2. Metadata Table: Exactly 8% for written mode, 10% for other modes (direct dynamic values only)
       const metadataTable = document.createElement('div');
       metadataTable.className = 'w-full shrink-0 metadata-table';
-      metadataTable.style.cssText = 'width:100% !important; max-width:440px !important; height:10%; min-height:10%; max-height:10%; margin:4px auto 0 !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:4px; box-sizing:border-box; flex-shrink:0;';
+      const metaH = isWritten ? '8%' : '10%';
+      metadataTable.style.cssText = `width:100% !important; max-width:440px !important; height:${metaH}; min-height:${metaH}; max-height:${metaH}; margin:3px auto 0 !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; box-sizing:border-box; flex-shrink:0;`;
       metadataTable.innerHTML = `
         <!-- Row 1 Left: Theme name only -->
         <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-          <span style="color:#38bdf8; font-size:10.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
+          <span style="color:#38bdf8; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
         </div>
         <!-- Row 1 Right: Category name only -->
         <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-          <span style="color:#34d399; font-size:10.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayCategory)}">${escapeHtml(displayCategory)}</span>
+          <span style="color:#34d399; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayCategory)}">${escapeHtml(displayCategory)}</span>
         </div>
         <!-- Row 2 Left: Topic name only -->
         <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-          <span style="color:#f8fafc; font-size:10.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
+          <span style="color:#f8fafc; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
         </div>
         <!-- Row 2 Right: Type name only -->
         <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-          <span style="color:#cbd5e1; font-size:10.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayType)}">${escapeHtml(displayType)}</span>
+          <span style="color:#cbd5e1; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayType)}">${escapeHtml(displayType)}</span>
         </div>
       `;
       main.appendChild(metadataTable);
 
-      // 3. Flexible Answer & Interaction Zone Container (60% remaining height)
+      // 3. Flexible Answer & Interaction Zone Container (70% for written, 60% for other modes)
+      const interH = isWritten ? 'calc(70% - 6px)' : 'calc(60% - 8px)';
       const interactionContainer = document.createElement('div');
       interactionContainer.id = 'interaction-container';
       interactionContainer.className = 'w-full flex-1 flex flex-col min-h-0';
-      interactionContainer.style.cssText = 'height:calc(60% - 8px); min-height:calc(60% - 8px); max-height:calc(60% - 8px); width:100% !important; max-width:440px !important; margin:4px auto 0 !important; display:flex; flex-direction:column; overflow:hidden; gap:6px; box-sizing:border-box; flex-shrink:0;';
+      interactionContainer.style.cssText = `height:${interH}; min-height:${interH}; max-height:${interH}; width:100% !important; max-width:440px !important; margin:3px auto 0 !important; display:flex; flex-direction:column; overflow:hidden; gap:5px; box-sizing:border-box; flex-shrink:0;`;
       main.appendChild(interactionContainer);
 
       let answerArea, controlArea;
@@ -984,14 +987,14 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         controlArea.style.cssText = 'height:calc(50% - 3px); min-height:calc(50% - 3px); max-height:calc(50% - 3px); flex-shrink:0; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:6px 0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(10, 16, 30, 0.85) 100%); border:1px solid rgba(255, 255, 255, 0.08); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35); backdrop-filter:blur(14px); box-sizing:border-box;';
         interactionContainer.appendChild(controlArea);
       } else if (answerType === 'written') {
-        // Mode 2: Keyboard Mode
-        // Upper: Answer box (30% total height, 50% of interactionContainer)
+        // Mode 2: Keyboard Mode (22-8-22-48 Ratio)
+        // Upper: Answer box (22% total height = 31.4% of interactionContainer)
         answerArea = document.createElement('div');
         answerArea.className = 'w-full flex flex-col justify-center items-center';
-        answerArea.style.cssText = 'height:calc(50% - 3px); min-height:calc(50% - 3px); max-height:calc(50% - 3px); overflow-y:auto; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 14px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); box-sizing:border-box; position:relative;';
+        answerArea.style.cssText = 'height:calc(31.4% - 3px); min-height:calc(31.4% - 3px); max-height:calc(31.4% - 3px); overflow-y:auto; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:12px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); box-sizing:border-box; position:relative; flex-shrink:0;';
         interactionContainer.appendChild(answerArea);
 
-        // Lower: Keyboard container (30% total height, 50% of interactionContainer)
+        // Lower: Keyboard container (48% total height = 68.6% of interactionContainer)
         if (vk) {
           vk.style.display = 'flex';
           interactionContainer.appendChild(vk);
