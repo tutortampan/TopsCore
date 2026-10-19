@@ -24,9 +24,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=5.2.2" />
-  <link rel="stylesheet" href="css/dashboard.css?v=5.2.2" />
-  <link rel="stylesheet" href="css/assessment.css?v=5.2.2" />
+  <link rel="stylesheet" href="css/style.css?v=5.3.0" />
+  <link rel="stylesheet" href="css/dashboard.css?v=5.3.0" />
+  <link rel="stylesheet" href="css/assessment.css?v=5.3.0" />
 </head>
 <body class="assessment-page notranslate" translate="no">
 
@@ -172,9 +172,12 @@
     <div class="cheat-box">
       <h2 id="cheat-title" style="font-size:1.6rem;font-weight:800;color:#ffffff;margin-bottom:0.5rem;">🚨 CHEATING ATTEMPT DETECTED! 🚨</h2>
       <div id="cheat-strikes-badge" style="display:inline-block;padding:4px 14px;border-radius:20px;background:rgba(255,255,255,0.25);color:#ffffff;font-weight:800;font-size:0.95rem;margin-bottom:1rem;letter-spacing:1px;">STRIKE 1 OF 3</div>
-      <p style="font-size:1rem;color:rgba(255,255,255,0.9);margin-bottom:1.5rem;" id="cheat-reason">You were detected trying to leave the ASSESSMENT page or using navigation buttons!</p>
-      <div id="cheat-timer-count" style="font-size:4rem;font-weight:900;color:#fca5a5;margin-bottom:1.5rem;text-shadow:0 4px 20px rgba(0,0,0,0.5);"></div>
-      <button class="btn btn-primary" id="dismiss-cheat-btn" style="background:#ffffff;color:#dc2626;font-weight:800;border:none;padding:0.75rem 2rem;font-size:1.05rem;box-shadow:0 10px 25px rgba(0,0,0,0.3);">
+      <p style="font-size:1rem;color:rgba(255,255,255,0.95);margin-bottom:1.25rem;line-height:1.4;" id="cheat-reason">You were detected trying to leave the ASSESSMENT page or using navigation buttons!</p>
+      <div class="cheat-countdown-circle">
+        <span id="cheat-timer-count">10</span>
+      </div>
+      <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.85);margin-bottom:1.5rem;font-weight:700;">Seconds to Auto-Submit</div>
+      <button type="button" class="btn btn-primary" id="dismiss-cheat-btn" style="background:#ffffff;color:#dc2626;font-weight:800;border:none;padding:0.75rem 1.25rem;font-size:1rem;box-shadow:0 10px 25px rgba(0,0,0,0.3);cursor:pointer;border-radius:10px;width:100%;max-width:340px;">
         Return to My ASSESSMENT
       </button>
     </div>

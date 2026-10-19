@@ -65,14 +65,32 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     let answeredMap = {}; // attempt_answer_id -> student_answer
     window.answeredMap = answeredMap;
 
-    // —— Anti-Cheat State & Functions ——
+    // —— Anti-Cheat State & Police Siren Audio ——
     let isAssessmentActive = false;
     let cheatInterval = null;
-    let beepInterval = null;
     let audioCtx = null;
+    let sirenOsc = null;
+    let sirenGain = null;
     let securityConfig = { enabled: true, soundEnabled: true, countdownSeconds: 10 };
 
-    function playBeepSound() {
+    // Mobile Audio Unlock on first interaction
+    const unlockAudio = () => {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      } catch (_) {}
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+    };
+    document.addEventListener('click', unlockAudio, { once: true, passive: true });
+    document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
+
+    function startPoliceSiren() {
+      if (!securityConfig.soundEnabled) return;
       try {
         if (!audioCtx) {
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -80,19 +98,52 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         if (audioCtx.state === 'suspended') {
           audioCtx.resume();
         }
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(950, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.35);
-      } catch(e) {
-        console.warn('Audio play failed:', e);
+        stopPoliceSiren();
+
+        sirenOsc = audioCtx.createOscillator();
+        sirenGain = audioCtx.createGain();
+        sirenOsc.type = 'sawtooth';
+
+        const now = audioCtx.currentTime;
+        sirenGain.gain.setValueAtTime(0.35, now);
+
+        // Police Siren wail between 650Hz and 1250Hz in repeating cycles
+        sirenOsc.frequency.setValueAtTime(650, now);
+        const cycle = 0.5;
+        for (let i = 0; i < 40; i++) {
+          const t = now + (i * cycle * 2);
+          sirenOsc.frequency.linearRampToValueAtTime(1250, t + cycle);
+          sirenOsc.frequency.linearRampToValueAtTime(650, t + cycle * 2);
+        }
+
+        sirenOsc.connect(sirenGain);
+        sirenGain.connect(audioCtx.destination);
+        sirenOsc.start();
+
+        // Phone haptic vibration alert matching siren wail
+        if (navigator.vibrate) {
+          try { navigator.vibrate([300, 150, 300, 150, 300, 150, 600]); } catch (_) {}
+        }
+      } catch (e) {
+        console.warn('Police siren audio error:', e);
       }
+    }
+
+    function stopPoliceSiren() {
+      try {
+        if (sirenOsc) {
+          sirenOsc.stop();
+          sirenOsc.disconnect();
+          sirenOsc = null;
+        }
+        if (sirenGain) {
+          sirenGain.disconnect();
+          sirenGain = null;
+        }
+        if (navigator.vibrate) {
+          try { navigator.vibrate(0); } catch (_) {}
+        }
+      } catch (_) {}
     }
 
     // Intercept Back / Return Button
@@ -105,7 +156,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
           for (let i = 0; i < 3; i++) {
             history.pushState({ ASSESSMENTLocked: true, step: i }, '', location.href);
           }
-          triggerCheatAlert('Browser Navigation / Back Button Pressed');
+          triggerCheatAlert('Return button pressed / Navigation attempted');
         }
       });
     }
@@ -120,8 +171,8 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       if (!isAssessmentActive || !securityConfig.enabled) return;
 
       const now = Date.now();
-      // Cooldown & Active Guard: Prevent multi-event cascade (e.g. popstate + blur + visibilitychange firing in 1s on Home button)
-      if (isCheatAlertActive || (now - lastCheatTriggerTime < 3500)) {
+      // Cooldown & Active Guard: Prevent multi-event cascade (e.g. popstate + blur + visibilitychange firing in 1s on side panel or return button)
+      if (isCheatAlertActive || (now - lastCheatTriggerTime < 2500)) {
         return;
       }
       lastCheatTriggerTime = now;
@@ -136,32 +187,58 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         user_agent: navigator.userAgent
       });
 
-      if (cheatStrikes >= MAX_STRIKES) {
-        dismissCheatAlert();
-        showToast('🚨 Exam terminated: 3 cheating infractions detected.', 'error', 6000);
-        doSubmit(true);
-        return;
-      }
+      // Safely buffer and persist answers immediately
+      saveCurrentAnswer();
 
       const overlay = document.getElementById('cheat-overlay');
       const countEl = document.getElementById('cheat-timer-count');
       const reasonEl = document.getElementById('cheat-reason');
       const strikeBadge = document.getElementById('cheat-strikes-badge');
+      const dismissBtn = document.getElementById('dismiss-cheat-btn');
 
+      // Check if 3 warnings limit is exceeded (auto-submit on violation after 3 warnings)
+      if (cheatStrikes > MAX_STRIKES) {
+        if (strikeBadge) {
+          strikeBadge.textContent = `LIMIT EXCEEDED (${MAX_STRIKES}/${MAX_STRIKES})`;
+          strikeBadge.style.background = '#dc2626';
+        }
+        if (reasonEl) {
+          reasonEl.textContent = `🚨 ASSESSMENT TERMINATED: Maximum warning limit (${MAX_STRIKES} warnings) exceeded!`;
+        }
+        if (countEl) countEl.textContent = '0';
+        if (dismissBtn) dismissBtn.style.display = 'none';
+        if (overlay) overlay.style.display = 'flex';
+        startPoliceSiren();
+        showToast('🚨 Exam terminated: Warning limit (3 strikes) exceeded.', 'error', 6000);
+        setTimeout(() => {
+          stopPoliceSiren();
+          dismissCheatAlert();
+          doSubmit(true);
+        }, 1500);
+        return;
+      }
+
+      // Display warning for Strike 1, 2, or 3 (3 is Final Warning)
+      const isFinalWarning = (cheatStrikes === MAX_STRIKES);
       if (strikeBadge) {
-        strikeBadge.textContent = `STRIKE ${cheatStrikes} OF ${MAX_STRIKES}`;
-        strikeBadge.style.background = cheatStrikes === 2 ? 'rgba(239, 68, 68, 0.9)' : 'rgba(255, 255, 255, 0.25)';
+        strikeBadge.textContent = isFinalWarning ? `STRIKE ${cheatStrikes} OF ${MAX_STRIKES} (FINAL WARNING)` : `STRIKE ${cheatStrikes} OF ${MAX_STRIKES}`;
+        strikeBadge.style.background = isFinalWarning ? '#dc2626' : (cheatStrikes === 2 ? '#ea580c' : 'rgba(255, 255, 255, 0.25)');
       }
 
       if (reasonEl) {
-        reasonEl.textContent = `Warning: ${reason}! (Strike ${cheatStrikes} of ${MAX_STRIKES} — 3 strikes will automatically terminate your exam)`;
+        reasonEl.textContent = isFinalWarning
+          ? `⚠️ FINAL WARNING: ${reason}! You have reached the maximum limit of 3 warnings. Any further navigation or countdown reaching 0 will terminate your exam!`
+          : `Warning: ${reason}! (Strike ${cheatStrikes} of ${MAX_STRIKES} — Warning limit is 3 times. Reaching 0 or exceeding 3 warnings will auto-submit)`;
       }
+
+      if (dismissBtn) {
+        dismissBtn.style.display = 'inline-block';
+        dismissBtn.textContent = isFinalWarning ? 'Return to My ASSESSMENT (Final)' : 'Return to My ASSESSMENT';
+      }
+
       if (overlay) overlay.style.display = 'flex';
 
-      if (securityConfig.soundEnabled) {
-        playBeepSound();
-        if (!beepInterval) beepInterval = setInterval(playBeepSound, 800);
-      }
+      startPoliceSiren();
 
       const durationSeconds = securityConfig.countdownSeconds || 10;
       cheatDeadline = Date.now() + (durationSeconds * 1000);
@@ -175,8 +252,9 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
           clearInterval(cheatInterval);
           cheatInterval = null;
           isCheatAlertActive = false;
+          stopPoliceSiren();
           dismissCheatAlert();
-          showToast('🚨 Exam terminated: Warning countdown expired.', 'error', 6000);
+          showToast('🚨 Exam terminated: Warning countdown reached 0.', 'error', 6000);
           doSubmit(true);
         }
       }, 500);
@@ -184,14 +262,34 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
     function dismissCheatAlert() {
       if (cheatInterval) { clearInterval(cheatInterval); cheatInterval = null; }
-      if (beepInterval) { clearInterval(beepInterval); beepInterval = null; }
+      stopPoliceSiren();
       isCheatAlertActive = false;
       cheatDeadline = 0;
       const overlay = document.getElementById('cheat-overlay');
       if (overlay) overlay.style.display = 'none';
+      const dismissBtn = document.getElementById('dismiss-cheat-btn');
+      if (dismissBtn) dismissBtn.style.display = 'inline-block';
+      if (window.activeKeyboardInput) {
+        try { window.activeKeyboardInput.focus(); } catch (_) {}
+      }
     }
 
-    document.getElementById('dismiss-cheat-btn')?.addEventListener('click', dismissCheatAlert);
+    document.getElementById('dismiss-cheat-btn')?.addEventListener('click', (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      dismissCheatAlert();
+    });
+    document.getElementById('cheat-overlay')?.addEventListener('click', (e) => {
+      if (e.target === document.getElementById('cheat-overlay')) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        dismissCheatAlert();
+      }
+    });
 
     // Global Anti-Cheat Clipboard & Context Interception
     document.addEventListener('copy', (e) => {
@@ -271,16 +369,23 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && isAssessmentActive) {
         requestScreenWakeLock();
-        // Check if countdown expired while the browser was in background/minimized
+        saveCurrentAnswer();
+
         if (isCheatAlertActive && cheatDeadline > 0) {
           if (Date.now() >= cheatDeadline) {
+            stopPoliceSiren();
             dismissCheatAlert();
-            showToast('🚨 Exam terminated: Warning countdown expired.', 'error', 6000);
+            showToast('🚨 Exam terminated: Warning countdown expired while away.', 'error', 6000);
             doSubmit(true);
             return;
           } else {
-            // Still within countdown window: refresh UI
-            const remaining = Math.max(1, Math.ceil((cheatDeadline - Date.now()) / 1000));
+            if (audioCtx && audioCtx.state === 'suspended') {
+              audioCtx.resume();
+            }
+            if (!sirenOsc) {
+              startPoliceSiren();
+            }
+            const remaining = Math.max(0, Math.ceil((cheatDeadline - Date.now()) / 1000));
             const countEl = document.getElementById('cheat-timer-count');
             if (countEl) countEl.textContent = remaining;
           }
@@ -288,29 +393,37 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       }
       if (!securityConfig.enabled) return;
       if (isAssessmentActive && document.hidden) {
-        triggerCheatAlert('Leaving the Tab / Switching Applications');
+        triggerCheatAlert('Leaving the tab / Minimizing browser');
       }
     });
 
     window.addEventListener('focus', () => {
-      if (isAssessmentActive && isCheatAlertActive && cheatDeadline > 0) {
-        if (Date.now() >= cheatDeadline) {
-          dismissCheatAlert();
-          showToast('🚨 Exam terminated: Warning countdown expired.', 'error', 6000);
-          doSubmit(true);
-        } else {
-          const remaining = Math.max(1, Math.ceil((cheatDeadline - Date.now()) / 1000));
-          const countEl = document.getElementById('cheat-timer-count');
-          if (countEl) countEl.textContent = remaining;
+      if (isAssessmentActive) {
+        saveCurrentAnswer();
+        if (isCheatAlertActive && cheatDeadline > 0) {
+          if (Date.now() >= cheatDeadline) {
+            stopPoliceSiren();
+            dismissCheatAlert();
+            showToast('🚨 Exam terminated: Warning countdown expired while away.', 'error', 6000);
+            doSubmit(true);
+            return;
+          } else {
+            if (audioCtx && audioCtx.state === 'suspended') {
+              audioCtx.resume();
+            }
+            if (!sirenOsc) {
+              startPoliceSiren();
+            }
+          }
         }
       }
     });
 
-    // Detect opening another app or losing window focus
+    // Detect opening another app, side panel, or losing window focus
     window.addEventListener('blur', () => {
       if (!securityConfig.enabled) return;
       if (isAssessmentActive) {
-        triggerCheatAlert('Screen lost focus / Opened another application');
+        triggerCheatAlert('Screen lost focus / Side panel or external app opened');
       }
     });
 
@@ -922,14 +1035,14 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       const main = document.getElementById('assessment-main');
       main.innerHTML = '';
       main.className = 'assessment-main-content flex-1 flex flex-col items-center min-h-0 w-full mx-auto';
-      main.style.cssText = 'flex:1; display:flex; flex-direction:column; justify-content:flex-start; align-items:center; min-height:100%; height:100%; max-height:100%; overflow:hidden; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:0; box-sizing:border-box;';
+      main.style.cssText = 'flex:1; display:flex; flex-direction:column; justify-content:space-between; align-items:center; min-height:100%; height:100%; max-height:100%; overflow:hidden; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:0; box-sizing:border-box; gap:4px;';
 
       const isWritten = (answerType === 'written');
 
       // 1. Question Box: Exactly 22% for written mode (22-8-22-48 ratio), 30% for other modes
       const questionBox = document.createElement('div');
       questionBox.className = 'w-full flex flex-col shrink-0';
-      const qBoxH = isWritten ? '22%' : '30%';
+      const qBoxH = isWritten ? 'calc(22% - 3px)' : 'calc(30% - 3px)';
       questionBox.style.cssText = `width:100% !important; max-width:440px !important; height:${qBoxH}; min-height:${qBoxH}; max-height:${qBoxH}; margin:0 auto !important; display:flex; align-items:center; justify-content:center; text-align:center; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); box-sizing:border-box; flex-shrink:0; padding:6px 14px; overflow:hidden;`;
       questionBox.innerHTML = `
         <div class="speech-question-text" style="font-size:${isWritten ? 'clamp(18px, 4.4vw, 24px)' : 'clamp(20px, 5vw, 26px)'}; font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
@@ -941,8 +1054,8 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       // 2. Metadata Table: Exactly 8% for written mode, 10% for other modes (direct dynamic values only)
       const metadataTable = document.createElement('div');
       metadataTable.className = 'w-full shrink-0 metadata-table';
-      const metaH = isWritten ? '8%' : '10%';
-      metadataTable.style.cssText = `width:100% !important; max-width:440px !important; height:${metaH}; min-height:${metaH}; max-height:${metaH}; margin:3px auto 0 !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; box-sizing:border-box; flex-shrink:0;`;
+      const metaH = isWritten ? 'calc(8% - 2px)' : 'calc(10% - 2px)';
+      metadataTable.style.cssText = `width:100% !important; max-width:440px !important; height:${metaH}; min-height:${metaH}; max-height:${metaH}; margin:0 auto !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; box-sizing:border-box; flex-shrink:0;`;
       metadataTable.innerHTML = `
         <!-- Row 1 Left: Theme name only -->
         <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
@@ -963,59 +1076,61 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       `;
       main.appendChild(metadataTable);
 
-      // 3. Flexible Answer & Interaction Zone Container (70% for written, 60% for other modes)
-      const interH = isWritten ? 'calc(70% - 6px)' : 'calc(60% - 8px)';
-      const interactionContainer = document.createElement('div');
-      interactionContainer.id = 'interaction-container';
-      interactionContainer.className = 'w-full flex-1 flex flex-col min-h-0';
-      interactionContainer.style.cssText = `height:${interH}; min-height:${interH}; max-height:${interH}; width:100% !important; max-width:440px !important; margin:3px auto 0 !important; display:flex; flex-direction:column; overflow:hidden; gap:5px; box-sizing:border-box; flex-shrink:0;`;
-      main.appendChild(interactionContainer);
-
       let answerArea, controlArea;
 
-      if (answerType === 'speech_to_text' || answerType === 'spoken') {
-        // Mode 1: Speech Mode
-        // Upper: Answer box (30% total height, 50% of interactionContainer)
+      if (isWritten) {
+        // Direct Child 3: Answer Box (Exactly 22% of assessment body)
         answerArea = document.createElement('div');
-        answerArea.className = 'w-full flex flex-col justify-between';
-        answerArea.style.cssText = 'height:calc(50% - 3px); min-height:calc(50% - 3px); max-height:calc(50% - 3px); overflow-y:auto; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:8px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); box-sizing:border-box; position:relative;';
-        interactionContainer.appendChild(answerArea);
+        answerArea.id = 'answer-container-written';
+        answerArea.className = 'w-full flex flex-col justify-center items-center shrink-0';
+        answerArea.style.cssText = 'height:calc(22% - 3px); min-height:calc(22% - 3px); max-height:calc(22% - 3px); width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:12px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); box-sizing:border-box; position:relative; flex-shrink:0; overflow:hidden;';
+        main.appendChild(answerArea);
 
-        // Lower: MIC container (30% total height, 50% of interactionContainer)
-        controlArea = document.createElement('div');
-        controlArea.className = 'w-full flex flex-col items-center justify-center shrink-0';
-        controlArea.style.cssText = 'height:calc(50% - 3px); min-height:calc(50% - 3px); max-height:calc(50% - 3px); flex-shrink:0; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:6px 0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(10, 16, 30, 0.85) 100%); border:1px solid rgba(255, 255, 255, 0.08); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35); backdrop-filter:blur(14px); box-sizing:border-box;';
-        interactionContainer.appendChild(controlArea);
-      } else if (answerType === 'written') {
-        // Mode 2: Keyboard Mode (22-8-22-48 Ratio)
-        // Upper: Answer box (22% total height = 31.4% of interactionContainer)
-        answerArea = document.createElement('div');
-        answerArea.className = 'w-full flex flex-col justify-center items-center';
-        answerArea.style.cssText = 'height:calc(31.4% - 3px); min-height:calc(31.4% - 3px); max-height:calc(31.4% - 3px); overflow-y:auto; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:12px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); box-sizing:border-box; position:relative; flex-shrink:0;';
-        interactionContainer.appendChild(answerArea);
-
-        // Lower: Keyboard container (48% total height = 68.6% of interactionContainer)
+        // Direct Child 4: Virtual Keyboard (Exactly 48% of assessment body)
         if (vk) {
           vk.style.display = 'flex';
-          interactionContainer.appendChild(vk);
+          vk.style.cssText = 'height:calc(48% - 4px) !important; min-height:calc(48% - 4px) !important; max-height:calc(48% - 4px) !important; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; padding:5px 6px !important; box-sizing:border-box !important; flex-shrink:0 !important; gap:4px !important;';
+          main.appendChild(vk);
           controlArea = vk;
         }
-      } else {
-        // Mode 3: MCQ Mode (Options container: 60% total height, 100% of interactionContainer)
-        answerArea = document.createElement('div');
-        answerArea.className = 'w-full flex-1 flex flex-col';
-        answerArea.style.cssText = 'height:100%; min-height:100%; max-height:100%; overflow-y:auto; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; justify-content:space-between; gap:clamp(4px, 0.8vh, 8px); padding:6px 8px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(255, 255, 255, 0.12); border-radius:14px; -webkit-overflow-scrolling:touch; box-sizing:border-box; box-shadow:0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(16px);';
-        interactionContainer.appendChild(answerArea);
-      }
 
-      if ((answerType === 'speech_to_text' || answerType === 'spoken')) {
-        renderSpeech(answerArea, controlArea, row, savedAnswer, snap);
-      } else if ((answerType === 'multiple_choice' || answerType === 'selection')) {
-        renderMC(answerArea, row, savedAnswer, snap);
-      } else if (answerType === 'dropdown' || answerType === 'dropdown_10' || answerType === 'phrase_recognition') {
-        renderPhraseChips(answerArea, row, savedAnswer, snap);
-      } else if (answerType === 'written') {
         renderWritten(answerArea, controlArea, row, savedAnswer, snap, vk);
+      } else {
+        // Speech & MCQ mode: keep interactionContainer for speech/MCQ
+        const interH = 'calc(60% - 7px)';
+        const interactionContainer = document.createElement('div');
+        interactionContainer.id = 'interaction-container';
+        interactionContainer.className = 'w-full flex-1 flex flex-col min-h-0';
+        interactionContainer.style.cssText = `height:${interH}; min-height:${interH}; max-height:${interH}; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; overflow:hidden; gap:5px; box-sizing:border-box; flex-shrink:0;`;
+        main.appendChild(interactionContainer);
+
+        if (answerType === 'speech_to_text' || answerType === 'spoken') {
+          answerArea = document.createElement('div');
+          answerArea.className = 'w-full flex flex-col justify-between';
+          answerArea.style.cssText = 'height:calc(50% - 3px); min-height:calc(50% - 3px); max-height:calc(50% - 3px); overflow-y:auto; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:8px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); box-sizing:border-box; position:relative;';
+          interactionContainer.appendChild(answerArea);
+
+          controlArea = document.createElement('div');
+          controlArea.className = 'w-full flex flex-col items-center justify-center shrink-0';
+          controlArea.style.cssText = 'height:calc(50% - 3px); min-height:calc(50% - 3px); max-height:calc(50% - 3px); flex-shrink:0; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:6px 0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(10, 16, 30, 0.85) 100%); border:1px solid rgba(255, 255, 255, 0.08); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35); backdrop-filter:blur(14px); box-sizing:border-box;';
+          interactionContainer.appendChild(controlArea);
+
+          renderSpeech(answerArea, controlArea, row, savedAnswer, snap);
+        } else if (answerType === 'multiple_choice' || answerType === 'selection') {
+          answerArea = document.createElement('div');
+          answerArea.className = 'w-full flex-1 flex flex-col';
+          answerArea.style.cssText = 'height:100%; min-height:100%; max-height:100%; overflow-y:auto; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; justify-content:space-between; gap:clamp(4px, 0.8vh, 8px); padding:6px 8px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(255, 255, 255, 0.12); border-radius:14px; -webkit-overflow-scrolling:touch; box-sizing:border-box; box-shadow:0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(16px);';
+          interactionContainer.appendChild(answerArea);
+
+          renderMC(answerArea, row, savedAnswer, snap);
+        } else {
+          answerArea = document.createElement('div');
+          answerArea.className = 'w-full flex-1 flex flex-col';
+          answerArea.style.cssText = 'height:100%; min-height:100%; max-height:100%; overflow-y:auto; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; justify-content:space-between; gap:clamp(4px, 0.8vh, 8px); padding:6px 8px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(255, 255, 255, 0.12); border-radius:14px; -webkit-overflow-scrolling:touch; box-sizing:border-box; box-shadow:0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(16px);';
+          interactionContainer.appendChild(answerArea);
+
+          renderPhraseChips(answerArea, row, savedAnswer, snap);
+        }
       }
 
       const bottomBar = document.querySelector('.bottom-nav-bar');

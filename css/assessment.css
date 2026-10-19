@@ -448,11 +448,11 @@
     #virtual-keyboard-container { 
       width: 100% !important;
       max-width: 440px !important;
-      height: calc(68.6% - 2px) !important;
-      min-height: calc(68.6% - 2px) !important;
-      max-height: calc(68.6% - 2px) !important;
+      height: calc(48% - 4px) !important;
+      min-height: calc(48% - 4px) !important;
+      max-height: calc(48% - 4px) !important;
       margin: 0 auto !important;
-      padding: 6px 6px !important; 
+      padding: 5px 6px !important; 
       background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%) !important; 
       border: 1px solid rgba(255, 255, 255, 0.14) !important; 
       border-radius: 12px !important;
@@ -460,62 +460,66 @@
       backdrop-filter: blur(12px) !important;
       display: none; 
       flex-direction: column !important; 
-      justify-content: space-evenly !important;
+      justify-content: space-between !important;
+      gap: 4px !important;
       box-sizing: border-box !important; 
       z-index: 1000; 
       flex-shrink: 0 !important;
-    } 
-    .vk-row { 
-      display: flex; 
-      justify-content: center; 
-      gap: 4px; 
-      margin-bottom: 0; 
-      width: 100%;
-      align-items: center;
-      flex: 1;
-      max-height: 25%;
+       .vk-row { 
+      display: flex !important; 
+      justify-content: center !important; 
+      gap: 3px !important; 
+      margin-bottom: 0 !important; 
+      width: 100% !important;
+      align-items: stretch !important;
+      flex: 1 1 0 !important;
+      height: calc(25% - 3px) !important;
+      min-height: 0 !important;
+      max-height: none !important;
     } 
     .vk-key { 
-      flex: 1; 
-      height: clamp(34px, 5.8vh, 46px);
-      max-height: clamp(34px, 5.8vh, 46px); 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      max-width: 9.5%; 
-      border-radius: 7px; 
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 100%); 
-      border: 1px solid rgba(255, 255, 255, 0.14); 
-      color: #ffffff; 
-      font-size: clamp(13px, 3.2vw, 15px); 
-      font-family: 'Inter', sans-serif; 
-      font-weight: 700; 
-      cursor: pointer; 
-      -webkit-user-select: none; 
-      user-select: none; 
-      transition: all 0.1s ease; 
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+      flex: 1 1 0 !important; 
+      height: 100% !important;
+      min-height: 0 !important;
+      max-height: none !important; 
+      display: flex !important; 
+      align-items: center !important; 
+      justify-content: center !important; 
+      border-radius: 8px !important; 
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%) !important; 
+      border: 1px solid rgba(255, 255, 255, 0.16) !important; 
+      color: #ffffff !important; 
+      font-size: clamp(16px, 4.4vw, 21px) !important; 
+      font-family: 'Inter', -apple-system, sans-serif !important; 
+      font-weight: 800 !important; 
+      cursor: pointer !important; 
+      -webkit-user-select: none !important; 
+      user-select: none !important; 
+      transition: transform 0.08s ease, background 0.08s ease !important; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.22) !important;
+      padding: 0 !important;
     } 
     .vk-key:active { 
-      background: rgba(56, 189, 248, 0.45); 
-      border-color: #38bdf8;
-      transform: scale(0.93); 
+      background: rgba(56, 189, 248, 0.55) !important; 
+      border-color: #38bdf8 !important;
+      transform: scale(0.92) !important; 
     } 
     .vk-key.special { 
-      max-width: 14%; 
-      background: linear-gradient(180deg, rgba(56, 189, 248, 0.25) 0%, rgba(56, 189, 248, 0.12) 100%); 
-      color: #38bdf8; 
-      font-size: clamp(13px, 3.2vw, 16px); 
-      border-color: rgba(56, 189, 248, 0.35); 
+      flex: 1.3 1 0 !important; 
+      background: linear-gradient(180deg, rgba(56, 189, 248, 0.3) 0%, rgba(56, 189, 248, 0.15) 100%) !important; 
+      color: #38bdf8 !important; 
+      font-size: clamp(15px, 4vw, 19px) !important; 
+      border-color: rgba(56, 189, 248, 0.4) !important; 
     } 
     .vk-key.special:active { 
-      background: rgba(56, 189, 248, 0.5); 
+      background: rgba(56, 189, 248, 0.6) !important; 
     } 
     .vk-key.space { 
-      max-width: 44%; 
-      font-size: clamp(11px, 2.7vw, 13px);
-      letter-spacing: 0.05em;
-    } 
+      flex: 4 1 0 !important; 
+      font-size: clamp(13px, 3.4vw, 15px) !important;
+      letter-spacing: 0.06em !important;
+      font-weight: 700 !important;
+    }   } 
 
     /* Anti-Cheat selection and touch callout suppression */
     body.assessment-page,

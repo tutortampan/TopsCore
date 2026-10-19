@@ -1,17 +1,108 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-19 17:40 UTC+8
+Last Updated: 2026-10-19 18:55 UTC+8
 
-Current Phase: Phase 37 Assessment Virtual Keyboard 22-8-22-48 Ergonomic Ratio Scaling Complete
+Current Phase: Phase 40 Assessment Body Direct 22-8-22-48 Ratio & 58px Virtual Keyboard Keys Complete
 
-Current Task: ALL PHASE 37 DIRECTIVES VERIFIED 100%
+Current Task: ALL PHASE 40 DIRECTIVES VERIFIED 100%
 
 Status: COMPLETE
 
 ## In Progress
-- None (Phase 37 Virtual Keyboard Ergonomic Ratio Scaling verified 100%).
+- None (Phase 40 Virtual Keyboard 22-8-22-48 Direct Layout verified 100%).
 
 ## Completed
+
+- **Phase 40: Assessment Body Direct 22-8-22-48 Ratio & 58px Virtual Keyboard Keys [100% VERIFIED]**:
+  - **1. User Context & Root Cause Analysis**:
+    * User reported: *"this is how the keyboard look like,,, the size is different than what we discussed,,, the height of keyboard is supposed to be 48% of the assesment body. the ratio that we agreed upon was 22-8-22-48 in percentage to the assesment body size . pelase check again"*.
+    * User added: *"the button are too small, its not comfortable for typing"*.
+    * Root Cause: On the live deployed site (`tops-core.netlify.app`), the previous code nested the keyboard inside an intermediate container with dead space below it, and capped key heights at `clamp(34px, 5.8vh, 46px)` with `max-width: 9.5%`. Furthermore, recent local changes had not yet been pushed to git/Netlify.
+  - **2. Full Solution Implementation**:
+    * **Direct 22-8-22-48 Assessment Body Architecture (`js/assessment.js`)**:
+      - Eliminated intermediate nested container in written mode.
+      - Rendered 4 direct children in `assessment-main`:
+        1. Question Box: `calc(22% - 3px)` (21.4% computed)
+        2. Metadata Table: `calc(8% - 2px)` (7.6% computed)
+        3. Answer Box (`#answer-container-written`): `calc(22% - 3px)` (21.4% computed)
+        4. Virtual Keyboard (`#virtual-keyboard-container`): `calc(48% - 4px)` (47.3% computed)
+      - Used `gap: 4px` and `justify-content: space-between` to fill 100% of the viewport body with 0 dead space.
+    * **Virtual Keyboard & Key Expansion (`css/assessment.css`)**:
+      - `#virtual-keyboard-container`: Strict 48% height (`calc(48% - 4px) !important;`).
+      - `.vk-row`: `flex: 1 1 0; height: calc(25% - 3px); align-items: stretch !important; gap: 3px;`.
+      - `.vk-key`: Height set to `100% !important;` with `max-height: none !important;` and `max-width: none !important; flex: 1 1 0;`.
+      - Key height increased from 34px to **58.3px** (+71% taller).
+      - Key width increased to **30.1px** with 3px gaps.
+      - Key font size enlarged to **`clamp(16px, 4.4vw, 21px); font-weight: 800;`** for comfortable thumb typing.
+  - **3. Cross-Scenario Automated Verification (`scratch/check_keyboard_ratio.mjs` & `test_police_siren_cheat.mjs`)**:
+    * All metrics verified: Question 21.4%, Metadata 7.6%, Answer 21.4%, Keyboard 47.3% (= 48% allocated).
+    * Anti-Cheat tests continue to pass 100% with siren and 10s countdown.
+    * Screenshot verified: `scratch/screenshot_test_current_metrics.png`.
+
+- **Phase 39: Red Flashing Anti-Cheat Warning with Mobile Police Siren, Countdown Timer, & 3-Strike Limit [100% VERIFIED]**:
+  - **1. User Mandate & Clarification**:
+    * User explicitly clarified: *"kita perjelas lagi,,, warning sign maksud saya adalah yang berwarna merah itu, dengan hitung mundur , dan auto submit saat mencapai 0, serta batas perinagatan 3 kali. bunyinya pada hp juga pakai sisrine polisi. dan ingat flashing red!"*.
+    * Requirement: When student presses return button (`popstate`) or triggers blur/side panel, display the exact red flashing anti-cheat screen with police siren audio on mobile, a 10s countdown to auto-submit, and a 3-warning limit before termination.
+  - **2. Full Solution Implementation**:
+    * **Red Flashing Overlay (`css/dashboard.css` & `assessment.html`)**:
+      - `#cheat-overlay` styled with `background: rgba(220, 38, 38, 0.95)`, `backdrop-filter: blur(16px)`, and `animation: cheat-red-flash 0.4s ease-in-out infinite alternate !important`.
+      - Flashes intensely between dark crimson `#881313` and emergency red `#ef4444`.
+      - `.cheat-countdown-circle` with glowing border displaying `#cheat-timer-count` and `"SECONDS TO AUTO-SUBMIT"`.
+      - Cleanly formatted `#dismiss-cheat-btn` ("Return to My ASSESSMENT") fitting mobile viewports without horizontal overflow.
+    * **Web Audio Police Siren Synthesizer (`js/assessment.js`)**:
+      - `startPoliceSiren()` and `stopPoliceSiren()` with `sawtooth` oscillator sweeping 650Hz–1250Hz in repeating 1s wail cycles.
+      - Mobile audio unlocked on first interaction (`click` / `touchstart`).
+      - Mobile haptic vibration (`navigator.vibrate([300, 150, 300, 150, 300, 150, 600])`) matching the siren wail.
+    * **3-Warning Limit & Strikes Progression**:
+      - Strike 1: `STRIKE 1 OF 3` (Warning 1).
+      - Strike 2: `STRIKE 2 OF 3` (Warning 2).
+      - Strike 3: `STRIKE 3 OF 3 (FINAL WARNING)`.
+      - Violation 4 (Limit Exceeded): Shows `LIMIT EXCEEDED (3/3)` and auto-submits.
+    * **Countdown & Auto-Submit**:
+      - 10s countdown timer auto-submits (`doSubmit(true)`) if it reaches 0.
+      - If student taps `"Return to My ASSESSMENT"`, countdown and siren stop, overlay hides, and exam resumes with 0 answer loss.
+      - If student leaves app for >10s, `visibilitychange`/`focus` auto-submits on return; if <10s, countdown resumes.
+  - **3. Cross-Scenario Automated Verification (`scratch/test_police_siren_cheat.mjs`)**:
+    * All tests passed with exit code 0:
+      - Strike 1 (return button / popstate): Red flashing background verified, `STRIKE 1 OF 3` badge verified, countdown ticking verified, dismissed cleanly.
+      - Strike 2 (blur / side panel): `STRIKE 2 OF 3` verified, dismissed cleanly.
+      - Strike 3 (blur): `STRIKE 3 OF 3 (FINAL WARNING)` and custom button text verified.
+      - Violation 4 (exceeded 3 warnings): `LIMIT EXCEEDED (3/3)` verified, auto-submit called successfully (`submit-assessment`).
+    * Screenshots verified: `scratch/screenshot_cheat_red_strike1.png`, `scratch/screenshot_cheat_red_strike3.png`.
+
+- **Phase 38: Return Button & Side Panel Warning Sign (Zero Auto-Submit) [100% VERIFIED]**:
+  - **1. User Problem & Context**:
+    * User reported: *"when my student push the return button or accidentally push side panel, show the wraning sign intead of auto submit"*.
+    * Previously, when a student on a mobile phone pressed the hardware/gesture return button (`popstate`) or accidentally pulled down an edge/side panel (e.g. Samsung Edge Panel, Android multi-tasking edge swipe, triggering `window.blur` or `visibilitychange`), the system treated it as a cheating infraction with a 10-second countdown or 3-strike kill switch.
+    * If the countdown elapsed (or expired while minimized/unfocused) or strikes reached 3, it terminated the exam and called `doSubmit(true)`, prematurely locking the student out with an incomplete score.
+  - **2. Full Solution Implementation**:
+    * **Eliminated All Punitive Auto-Submissions**:
+      - Completely removed `doSubmit(true)` from `triggerCheatAlert` (no strike termination).
+      - Completely removed countdown death timer (`cheatInterval` auto-submit removed).
+      - Completely removed auto-submit on `visibilitychange` (no termination upon returning from background/minimized).
+      - Completely removed auto-submit on `window.focus` (no termination upon window refocus).
+      - Auto-submission (`doSubmit(true)`) is now strictly reserved for the official exam timer expiration (`time_limit_seconds` reaching 00:00) and explicit user submission.
+    * **Modern Warning Sign Modal (`assessment.html` & `css/dashboard.css`)**:
+      - Replaced the aggressive red strobe box with an authoritative, modern dark glass warning modal featuring an amber warning icon `⚠️`, title `ASSESSMENT WARNING`, warning badge `ATTENTION REQUIRED`, clear explanatory copy, and a large, high-contrast action button: `[Return to My ASSESSMENT ➔]`.
+      - Ensured `#dismiss-cheat-btn` has `type="button"` and `preventDefault()` / `stopPropagation()` to prevent any accidental navigation or form submit.
+      - Added backdrop dismissal (`#cheat-overlay` click).
+    * **Preserved Anti-Cheat Tracking & Answer Persistence (`js/assessment.js`)**:
+      - Maintained `lockHistory()` (`history.pushState`) to prevent the browser from actually exiting the assessment page on return button press.
+      - Maintained `logCheatingEvent` audit logging (`NAV_WARNING` action) so teachers can inspect student distraction/navigation attempts in audit logs.
+      - Added instant buffer persistence (`saveCurrentAnswer()`, `persistLocalBuffer()`) when warning triggers or when window refocuses, ensuring 0 answers are lost.
+      - Tapping `[Return to My ASSESSMENT]` safely dismisses the warning overlay and refocuses the active keyboard input so the student immediately continues their exam.
+  - **3. Cross-Scenario Automated Verification (`scratch/test_warning_sign.mjs`)**:
+    * Verified Return Button simulation (`popstate`):
+      - Warning overlay appears immediately (`isVisible: true`).
+      - Shows `ASSESSMENT WARNING` and `Return button pressed / Navigation attempted. Please stay on the assessment screen to complete your questions. Your answers are saved.`
+      - Tapping `[Return to My ASSESSMENT]` smoothly dismisses the overlay.
+      - Typed answer (`"hello"`) is 100% preserved.
+      - `submitAssessment` was NOT called (`submitCalled: false`).
+    * Verified Accidental Side Panel simulation (`blur`):
+      - Warning overlay appears immediately with `Screen lost focus / Side panel or external app opened...`
+      - Waited 3+ seconds past what was previously a countdown: `submitAssessment` was NOT called (`submitCalled: false`).
+      - Dismissed overlay and continued answering: typed additional letter `'s'` -> `"hellos"`!
+    * Screenshots verified: `scratch/screenshot_warning_return_button.png`, `scratch/screenshot_warning_side_panel.png`.
 
 - **Phase 37: Assessment Virtual Keyboard 22-8-22-48 Ergonomic Ratio Scaling [100% VERIFIED]**:
   - **1. User Problem & Context**:

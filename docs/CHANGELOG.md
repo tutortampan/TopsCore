@@ -1,3 +1,130 @@
+## [2026-10-19 18:55] — Assessment Body Direct 22-8-22-48 Ratio & 58px Virtual Keyboard Keys
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 40 (Virtual Keyboard 22-8-22-48 Direct Layout & Key Expansion)  
+**Status:** PASS  
+
+### Why
+- The user reported:
+  *"this is how the keyboard look like,,, the size is different than what we discussed,,, the height of keyboard is supposed to be 48% of the assesment body. the ratio that we agreed upon was 22-8-22-48 in percentage to the assesment body size . pelase check again"*
+  *"the button are too small, its not comfortable for typing"*
+- Investigation of the uploaded screenshot revealed two critical causes:
+  1. The deployed Netlify site (`tops-core.netlify.app`) was still running old code where keys were artificially clamped (`max-height: clamp(34px, 5.8vh, 46px)`) and the keyboard was nested inside an intermediate container with ~60px of dead space below it.
+  2. The keys had `max-width: 9.5%` restricting key width to 29px.
+
+### Changed
+- **`css/assessment.css`**:
+  - `#virtual-keyboard-container`: Set `height: calc(48% - 4px) !important; min-height: calc(48% - 4px) !important; max-height: calc(48% - 4px) !important;` to strictly claim 48% of the assessment body.
+  - `.vk-row`: Updated to `align-items: stretch !important; flex: 1 1 0; height: calc(25% - 3px); gap: 3px;` so all 4 rows evenly divide the 48% container height.
+  - `.vk-key`: Removed artificial `max-height` clamp and set `height: 100% !important;` and `flex: 1 1 0;`. Removed `max-width: 9.5%` so keys expand to use all available width.
+  - Increased font size to **`clamp(16px, 4.4vw, 21px); font-weight: 800;`** for thumb typing comfort.
+  - `.vk-key.special` (Backspace, Enter): `flex: 1.3 1 0;`.
+  - `.vk-key.space`: `flex: 4 1 0; font-size: clamp(13px, 3.4vw, 15px);`.
+- **`js/assessment.js`**:
+  - Refactored `renderQuestion` in written mode to make Question Box, Metadata Table, Answer Box, and Virtual Keyboard **4 direct children** of `assessment-main`:
+    1. Question Box: `calc(22% - 3px)` (21.4% computed)
+    2. Metadata Table: `calc(8% - 2px)` (7.6% computed)
+    3. Answer Box (`#answer-container-written`): `calc(22% - 3px)` (21.4% computed)
+    4. Virtual Keyboard (`#virtual-keyboard-container`): `calc(48% - 4px)` (47.3% computed)
+  - `main.style.cssText`: `justify-content: space-between; gap: 4px;` ensuring 100% of assessment body is filled with 0 dead space.
+
+### Tests
+- command: `node scratch/check_keyboard_ratio.mjs`
+- result: `PASS`
+  - Body height: 544px
+  - Question Box: 116.67px (21.4%)
+  - Metadata Table: 41.52px (7.6%)
+  - Answer Area: 116.67px (21.4%)
+  - Virtual Keyboard: 257.11px (47.3% = ~48%)
+  - Key height: **58.27px** (increased from 34px, +71% taller!)
+  - Key width: **30.1px** (increased from 29px)
+  - Screenshot verified: `scratch/screenshot_test_current_metrics.png` (copied to artifact directory).
+
+---
+
+## [2026-10-19 18:30] — Red Flashing Anti-Cheat Warning with Police Siren, Countdown Timer, & 3-Strike Limit
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 39 (Red Flashing Anti-Cheat Warning, Mobile Police Siren, & 3 Strikes)  
+**Status:** PASS  
+
+### Why
+- The user clarified and mandated the exact anti-cheat warning behavior:
+  *"kita perjelas lagi,,, warning sign maksud saya adalah yang berwarna merah itu, dengan hitung mundur , dan auto submit saat mencapai 0, serta batas perinagatan 3 kali. bunyinya pada hp juga pakai sisrine polisi. dan ingat flashing red!"*
+- When a student presses the return button or accidentally opens a side panel, instead of immediate silent auto-submission or a mild amber sign, the system now displays the full red flashing anti-cheat screen with police siren audio on mobile/desktop, a 10s countdown to auto-submit, and a 3-warning limit.
+
+### Changed
+- **`assessment.html`**:
+  - Restored `#cheat-overlay` as the prominent red anti-cheat screen (`🚨 CHEATING ATTEMPT DETECTED! 🚨`).
+  - Added `#cheat-strikes-badge` (`STRIKE X OF 3`), `#cheat-reason`, and `.cheat-countdown-circle` with `#cheat-timer-count` and `"SECONDS TO AUTO-SUBMIT"`.
+  - Added mobile-optimized button `#dismiss-cheat-btn` with `type="button"` and `max-width: 340px`.
+- **`css/dashboard.css`**:
+  - `#cheat-overlay`: `background: rgba(220, 38, 38, 0.95)`, `backdrop-filter: blur(16px)`, `animation: cheat-red-flash 0.4s ease-in-out infinite alternate !important`.
+  - `@keyframes cheat-red-flash`: Flashes intensely between dark crimson `#881313` and emergency red `#ef4444` with glowing pulsing insets.
+  - `.cheat-countdown-circle`: 100px glowing circular badge centered above action button.
+- **`js/assessment.js`**:
+  - **Mobile Police Siren Synthesizer**: Implemented `startPoliceSiren()` and `stopPoliceSiren()` using Web Audio API (`sawtooth` oscillator with repeating linear frequency ramps between 650Hz and 1250Hz).
+  - Added `unlockAudio` on first user interaction (`click` / `touchstart`) to ensure sound plays cleanly without mobile autoplay blocks.
+  - Added phone haptic vibration (`navigator.vibrate`) pulsing with the police siren.
+  - **3-Warning Limit & Strikes Progression**:
+    - Strike 1: `STRIKE 1 OF 3` (Warning 1)
+    - Strike 2: `STRIKE 2 OF 3` (Warning 2)
+    - Strike 3: `STRIKE 3 OF 3 (FINAL WARNING)`
+    - Violation 4 (Limit Exceeded): Displays `LIMIT EXCEEDED (3/3)` and auto-submits.
+  - **10s Countdown & Auto-Submit**:
+    - Real-time countdown from 10 down to 0. Auto-submits immediately if timer reaches 0.
+  - **Dismiss & Safe Buffer**:
+    - Clicking `"Return to My ASSESSMENT"` stops siren, clears countdown, and resumes exam seamlessly with 0 answer loss.
+  - **Away Timer Validation**:
+    - `visibilitychange` and `focus` check if `cheatDeadline` expired while away in another app; auto-submits if exceeded, or resumes siren if still active.
+
+### Tests
+- command: `node scratch/test_police_siren_cheat.mjs`
+- result: `PASS`
+  - Strike 1 (popstate / return button): Verified red flashing background (`cheat-red-flash`), `STRIKE 1 OF 3`, countdown active, dismissed cleanly.
+  - Strike 2 (blur / side panel): Verified `STRIKE 2 OF 3`, dismissed cleanly.
+  - Strike 3: Verified `STRIKE 3 OF 3 (FINAL WARNING)` and button text.
+  - Violation 4: Verified `LIMIT EXCEEDED (3/3)`, auto-submit triggered (`submit-assessment` called).
+  - Screenshots confirmed: `scratch/screenshot_cheat_red_strike1.png`, `scratch/screenshot_cheat_red_strike3.png`.
+
+---
+
+## [2026-10-19 18:10] — Return Button & Side Panel Warning Sign (Zero Auto-Submit)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 38 (Return Button & Side Panel Warning Sign)  
+**Status:** PASS  
+
+### Why
+- The user reported: *"when my student push the return button or accidentally push side panel, show the wraning sign intead of auto submit"*.
+- In previous versions, pressing the return button or opening a side panel (Samsung Edge panel, Android edge swipe, blur) triggered cheating strikes and a 10-second countdown. If strikes reached 3 or the countdown expired, the exam was forcibly auto-submitted (`doSubmit(true)`), causing students to lose their exams and receive incomplete scores.
+
+### Changed
+- **`assessment.html`**:
+  - Replaced the old red flashing strobe overlay with an authoritative warning sign modal featuring a prominent warning icon `⚠️`, clear copy (`ASSESSMENT WARNING`), an `ATTENTION REQUIRED` badge, and an action button: `[Return to My ASSESSMENT ➔]`.
+  - Added explicit `type="button"` to `#dismiss-cheat-btn` to prevent accidental form submissions.
+- **`css/dashboard.css`**:
+  - Restyled `#cheat-overlay` and `.cheat-box` with modern dark slate glass, amber border accents (`rgba(245, 158, 11, 0.6)`), and a smooth entrance animation. Removed aggressive red flashing.
+- **`js/assessment.js`**:
+  - **Eliminated All Punitive Auto-Submissions**:
+    - Removed `doSubmit(true)` upon reaching strike limits.
+    - Removed countdown death timer auto-submit.
+    - Removed background timeout auto-submit from `visibilitychange` and `focus`.
+    - Auto-submission (`doSubmit(true)`) is now exclusively restricted to official exam timer expiration (`time_limit_seconds` reaching 00:00).
+  - Updated `triggerCheatAlert` to display the warning sign modal with context-aware reasons (e.g. *"Return button pressed / Navigation attempted"*, *"Screen lost focus / Side panel or external app opened"*).
+  - Maintained `lockHistory()` (`history.pushState`) to prevent accidental browser back-navigation.
+  - Added instant answer buffer persistence (`saveCurrentAnswer()`, `persistLocalBuffer()`) when warning triggers and on focus gain, guaranteeing 0 answer loss.
+  - Updated `dismissCheatAlert()` to safely dismiss the overlay and refocus the active keyboard input so students can seamlessly continue typing.
+
+### Tests
+- command: `node scratch/test_warning_sign.mjs`
+- result: `PASS`
+  - Return button simulation (`popstate`): Warning modal displayed, `submitAssessment` was NOT called, answers preserved (`"hello"`), dismissed cleanly.
+  - Side panel simulation (`blur`): Warning modal displayed, zero auto-submit after 3+ seconds wait, dismissed cleanly, typing continued (`"hellos"`).
+  - Screenshots confirmed: `scratch/screenshot_warning_return_button.png`, `scratch/screenshot_warning_side_panel.png`.
+
+---
+
 ## [2026-10-19 17:40] — Assessment Virtual Keyboard 22-8-22-48 Ergonomic Ratio Scaling
 
 **Agent/Session:** Antigravity  
