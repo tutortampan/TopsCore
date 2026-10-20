@@ -30,11 +30,11 @@ import {
   fetchClassInstanceRoster,
   addAdditionalMember,
   toLevelLetter
-} from '../api.js?v=5.2.2';
-import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=5.2.2';
-import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=5.2.2';
-import { openStudentProfile } from './student-management.js?v=5.2.2';
-import { generateAvatarDataUri } from '../utils/avatar-engine.js?v=5.2.2';
+} from '../api.js?v=5.3.2';
+import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=5.3.2';
+import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=5.3.2';
+import { openStudentProfile } from './student-management.js?v=5.3.2';
+import { generateAvatarDataUri } from '../utils/avatar-engine.js?v=5.3.2';
 
 // escapeHtml / escHtml imported canonically
 
@@ -774,7 +774,7 @@ export async function renderAssignments(area) {
     `;
 
     document.getElementById('btn-assign-assessment').onclick = () => {
-      openAssignmentModal({ definitions, batches, classInsts, classes }, async () => {
+      openAssignmentModal({ definitions, batches: (batches || []).filter(b => !b.deleted_at && b.is_active !== false), classInsts, classes }, async () => {
         await renderAssignments(area);
       });
     };
@@ -857,7 +857,7 @@ function openAssignmentModal({ definitions, batches, classInsts, classes }, onSa
         <div class="form-group mb-3" id="asgn-batch-group">
           <label class="form-label">Select Batch *</label>
           <select class="form-control" id="asgn-batch-id">
-            ${batches.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('')}
+            ${(batches || []).filter(b => !b.deleted_at && b.is_active !== false).map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('')}
           </select>
           <small class="text-muted text-xs">Note: A Class Instance must exist for the selected Batch and the Assessment's Class.</small>
         </div>
@@ -1212,7 +1212,7 @@ Existing historical attempt records will NOT be modified.`;
 
       showLoading('Committing import to Question Bank...');
       try {
-        const sb = await (await import('../supabase.js?v=5.2.2')).getSupabase();
+        const sb = await (await import('../supabase.js?v=5.3.2')).getSupabase();
 
         // PHASE 1: ROBUST TOPIC PRE-FETCHING & NORMALIZATION
         const { data: dbTopics } = await sb.from('topics').select('id, name');
@@ -1783,7 +1783,7 @@ export async function renderResults(area) {
     if (remediBtn) {
       const attemptId = remediBtn.getAttribute('data-aid');
       if (confirm('Allow this student to retake this Exam as a remedial attempt?')) {
-        const { getSupabase } = await import('../supabase.js?v=5.2.2');
+        const { getSupabase } = await import('../supabase.js?v=5.3.2');
         const sb = await getSupabase();
         const { error } = await sb.from('attempts').update({ is_remedial_unlocked: true }).eq('id', attemptId);
         if (!error) {

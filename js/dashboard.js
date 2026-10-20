@@ -3,12 +3,12 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentClass, fetchStudentAttemptsForAssessment, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchAssessments, toOrdinalLevel, fetchBatches, fetchStudentLevel } from './api.js?v=5.2.2';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=5.2.2';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=5.2.2';
-    import { testMicrophoneCapability } from './speech.js?v=5.2.2';
-    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=5.2.2';
-    import { GRADE_PALETTE, getGradeSymbol } from './grading.js?v=5.2.2';
+import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentClass, fetchStudentAttemptsForAssessment, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchAssessments, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=5.3.2';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=5.3.2';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=5.3.2';
+    import { testMicrophoneCapability } from './speech.js?v=5.3.2';
+    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=5.3.2';
+    import { GRADE_PALETTE, getGradeSymbol } from './grading.js?v=5.3.2';
 
     window._isBatchChampion = false;
 
@@ -95,15 +95,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
     }
 
     function applyStudentGenderUI(g) {
-      const nameStr = (session.student_name || '').trim();
-      let parts = nameStr.split(' ');
+      const nameStr = (session.student_name || session.name || session.full_name || '').trim();
+      let parts = nameStr.split(/\s+/).filter(Boolean);
       
       const firstLower = (parts[0] || '').toLowerCase();
       if (['mr.', 'mr', 'miss', 'ms.', 'ms', 'mrs.', 'mrs', 'king', 'queen'].includes(firstLower)) {
          parts.shift();
       }
       
-      const cleanFullName = parts.join(' ') || nameStr;
+      const cleanFullName = parts.join(' ').trim() || nameStr;
       let formattedName = cleanFullName;
       
       const isLeader = Boolean(window._isBatchChampion);
@@ -174,7 +174,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./supabase.js?v=5.2.2')).getSupabase();
+          const sb = await (await import('./supabase.js?v=5.3.2')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).single();
           if (st?.gender) {
             currentGender = st.gender;
@@ -520,7 +520,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
         try {
-          const sb = await (await import('./supabase.js?v=5.2.2')).getSupabase();
+          const sb = await (await import('./supabase.js?v=5.3.2')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).single();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
@@ -539,7 +539,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         // Background sync: memastikan localStorage selalu sinkron dengan database terbaru
         (async () => {
           try {
-            const sb = await (await import('./supabase.js?v=5.2.2')).getSupabase();
+            const sb = await (await import('./supabase.js?v=5.3.2')).getSupabase();
             const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).single();
             if (st && st.photo_url !== photoUrl) {
               if (st.photo_url) {
@@ -574,7 +574,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
       if (!hasBirthday) {
         try {
-          const sb = await (await import('./supabase.js?v=5.2.2')).getSupabase();
+          const sb = await (await import('./supabase.js?v=5.3.2')).getSupabase();
           const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).single();
           if (st && st.birth_date) {
             hasBirthday = true;
@@ -640,7 +640,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./supabase.js?v=5.2.2')).getSupabase();
+        const sb = await (await import('./supabase.js?v=5.3.2')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).single();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -650,7 +650,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./session.js?v=5.2.2');
+             const { setStudentSession } = await import('./session.js?v=5.3.2');
              setStudentSession(session);
           }
         }
@@ -700,7 +700,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./session.js?v=5.2.2');
+            const { setStudentSession } = await import('./session.js?v=5.3.2');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -802,6 +802,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
         hideLoading();
         renderClasses(Classes, progress, assessmentsRaw, attempts);
+        await renderNextAssignmentHero(assessmentsRaw, attempts, Classes);
 
         const myClassIds = Classes.map(c => c.id);
         const myAssessments = assessmentsRaw.filter(a => myClassIds.includes(a.class_id) || myClassIds.includes(a.Class_id));
@@ -816,6 +817,190 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         renderCompletedAssessmentsBottom([], 0);
         await loadBatchLeaderboard().catch(() => {});
         setupProfileModal([]);
+      }
+    }
+
+    async function renderNextAssignmentHero(allAssessments = [], attempts = [], classes = []) {
+      const section = document.getElementById('up-next-section');
+      const container = document.getElementById('up-next-container');
+      if (!section || !container) return;
+
+      section.classList.remove('hidden');
+
+      const classMap = Object.fromEntries((classes || []).map(c => [c.id, c]));
+      const myClassIds = new Set((classes || []).map(c => c.id));
+
+      const bestMap = {};
+      (attempts || []).forEach(a => {
+        const aid = a.assessment_id;
+        const pct = parseFloat(a.percentage || 0);
+        if (bestMap[aid] == null || pct > bestMap[aid]) {
+          bestMap[aid] = pct;
+        }
+      });
+
+      const published = (allAssessments || []).filter(a => {
+        if (a.deleted_at) return false;
+        const status = (a.status || '').toUpperCase();
+        if (status !== 'PUBLISHED' && status !== 'ACTIVE') return false;
+        return myClassIds.has(a.class_id);
+      });
+
+      published.sort((a, b) => {
+        const ordA = a.display_order ?? 999;
+        const ordB = b.display_order ?? 999;
+        if (ordA !== ordB) return ordA - ordB;
+        return (a.title || '').localeCompare(b.title || '');
+      });
+
+      const isPassed = (asm) => {
+        const score = bestMap[asm.id];
+        if (score == null) return false;
+        const req = asm.minimum_required_score || 60;
+        return score >= req;
+      };
+
+      const nextAsm = published.find(a => !isPassed(a));
+
+      if (!nextAsm) {
+        container.innerHTML = `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:2px 0;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.5rem;">🏆</span>
+              <div>
+                <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:#34d399; font-weight:700;">Level Mastery Achieved</div>
+                <div style="font-size:0.95rem; font-weight:700; color:#f8fafc;">All Tasks & Tests Completed!</div>
+              </div>
+            </div>
+            <span style="font-size:0.8rem; padding:4px 10px; background:rgba(52,211,153,0.15); color:#34d399; border-radius:6px; font-weight:700; border:1px solid rgba(52,211,153,0.3);">
+              PASSED 100%
+            </span>
+          </div>
+        `;
+        return;
+      }
+
+      const className = classMap[nextAsm.class_id]?.name || 'Class Module';
+      const isTest = (nextAsm.assessment_category || '').toUpperCase() === 'TEST' ||
+                     (nextAsm.assessment_type || '').toUpperCase().includes('TEST') ||
+                     (nextAsm.title || '').toUpperCase().includes('TEST');
+
+      if (!isTest) {
+        const hasAttempted = bestMap[nextAsm.id] != null;
+        const score = hasAttempted ? `${bestMap[nextAsm.id]}%` : '';
+        const btnText = hasAttempted ? '🔄 Retake Task' : '🚀 Start Task';
+
+        container.innerHTML = `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 200px;">
+              <span style="font-size:1.4rem; flex-shrink:0;">🎯</span>
+              <div style="min-width:0;">
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+                  <span style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--clr-accent-1, #38bdf8); font-weight:700;">
+                    Daily Task
+                  </span>
+                  <span style="color:rgba(255,255,255,0.2);">&bull;</span>
+                  <span style="font-size:0.75rem; color:var(--clr-text-secondary, #94a3b8);">${escapeHtml(className)}</span>
+                </div>
+                <div style="font-size:0.92rem; font-weight:700; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                  ${escapeHtml(nextAsm.title || 'Untitled Task')}
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:8px;">
+              ${hasAttempted ? `<span style="font-size:0.75rem; padding:3px 8px; border-radius:4px; background:rgba(239,68,68,0.15); color:#f87171; font-weight:700;">Score: ${score}</span>` : ''}
+              <button class="btn btn-primary btn-sm" onclick="window.location.href='assessment.html?id=${nextAsm.id}'" style="padding:7px 14px; font-weight:700; font-size:0.85rem; border-radius:6px; white-space:nowrap;">
+                ${btnText}
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        const activeSession = await fetchActiveTestSession(nextAsm.id, session.batch_id).catch(() => null);
+        const isUnlocked = activeSession?.is_unlocked === true;
+        const isWhitelisted = !activeSession?.allowed_student_ids || 
+                              activeSession.allowed_student_ids.length === 0 || 
+                              activeSession.allowed_student_ids.includes(session.student_id);
+
+        if (isUnlocked && isWhitelisted) {
+          const remMin = activeSession.remaining_minutes || 30;
+          container.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border-left:3px solid #10b981; padding-left:10px;">
+              <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 200px;">
+                <span style="font-size:1.5rem; flex-shrink:0;">🟢</span>
+                <div style="min-width:0;">
+                  <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+                    <span style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:#34d399; font-weight:800;">
+                      Official Test &bull; Session Active
+                    </span>
+                    <span style="font-size:0.75rem; color:#94a3b8;">&bull; ${escapeHtml(className)}</span>
+                  </div>
+                  <div style="font-size:0.95rem; font-weight:800; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    ${escapeHtml(nextAsm.title || 'Official Exam')}
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:6px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.4);">
+                  ⏰ ${remMin}m left
+                </span>
+                <button class="btn btn-primary btn-sm" onclick="window.location.href='assessment.html?id=${nextAsm.id}'" style="background:#10b981; border-color:#059669; font-weight:800; padding:7px 16px; font-size:0.85rem; border-radius:6px; box-shadow:0 0 12px rgba(16,185,129,0.4);">
+                  🚀 Start Test
+                </button>
+              </div>
+            </div>
+          `;
+        } else if (isUnlocked && !isWhitelisted) {
+          container.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border-left:3px solid #ef4444; padding-left:10px;">
+              <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 200px;">
+                <span style="font-size:1.4rem; flex-shrink:0;">🚫</span>
+                <div style="min-width:0;">
+                  <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:#f87171; font-weight:800;">
+                    Official Test Session
+                  </div>
+                  <div style="font-size:0.92rem; font-weight:700; color:#f8fafc;">
+                    ${escapeHtml(nextAsm.title || 'Official Exam')}
+                  </div>
+                  <div class="text-xs text-muted" style="margin-top:2px;">
+                    You are not on today's room attendance list. Please confirm with your tutor.
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-secondary btn-sm" disabled style="opacity:0.5; font-size:0.8rem;">
+                Not Eligible
+              </button>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border-left:3px solid #f59e0b; padding-left:10px;">
+              <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 200px;">
+                <span style="font-size:1.4rem; flex-shrink:0;">🔒</span>
+                <div style="min-width:0;">
+                  <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+                    <span style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:#fbbf24; font-weight:800;">
+                      Ready for Test
+                    </span>
+                    <span style="font-size:0.75rem; color:#94a3b8;">&bull; ${escapeHtml(className)}</span>
+                  </div>
+                  <div style="font-size:0.92rem; font-weight:700; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    ${escapeHtml(nextAsm.title || 'Official Exam')}
+                  </div>
+                  <div class="text-xs text-muted" style="margin-top:2px;">
+                    Tasks completed! Waiting for tutor to unlock test session in class.
+                  </div>
+                </div>
+              </div>
+
+              <span style="font-size:0.75rem; font-weight:700; padding:5px 10px; border-radius:6px; background:rgba(245,158,11,0.12); color:#fbbf24; border:1px solid rgba(245,158,11,0.3);">
+                🔒 Waiting for Tutor
+              </span>
+            </div>
+          `;
+        }
       }
     }
 
@@ -845,10 +1030,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         const cLvlNum = c.levels?.level_number;
         const isCurrentLevel = (studentLevelId && c.level_id === studentLevelId) || (studentLevelNum && cLvlNum === studentLevelNum);
         
-        // A class is active if it's explicitly unleveled (0) OR if it matches the student's valid level
-        if (cLvlNum == null || cLvlNum === 0 || isCurrentLevel) {
+        // A class is active if it matches the student's valid level
+        // Level 0 is under Level 1, so if student is at Level 1, 2, or 3, Level 0 is completed/past, not active
+        if (isCurrentLevel || (cLvlNum == null && studentLevelNum === 0)) {
           activeClasses.push(c);
-        } else if (studentLevelNum && cLvlNum < studentLevelNum) {
+        } else if (studentLevelNum != null && cLvlNum != null && cLvlNum < studentLevelNum) {
           completedClasses.push(c);
         }
       });
@@ -871,6 +1057,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           const dbCompleted = subjProgress.some(p => p.is_completed || p.level_status === 'Level Completed');
 
           const classAssms = (allAssessments || []).filter(a => {
+            if (a.deleted_at) return false;
             const matchClass = (a.class_id || a.Class_id) === subj.id;
             const matchStatus = (a.status || 'PUBLISHED').toUpperCase() === 'PUBLISHED';
             if (!matchClass || !matchStatus) return false;
@@ -1059,17 +1246,22 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
                 }
               } else {
                 let extraAction = '';
+                const isAsmPublished = ((Assessment.status || 'PUBLISHED').toUpperCase() === 'PUBLISHED' || (Assessment.status || '').toUpperCase() === 'ACTIVE');
                 if (
-                  Assessment.assessment_category === 'TRYOUT' ||
-                  Assessment.assessment_category === 'TASK' ||
-                  (Assessment.assessment_type && Assessment.assessment_type.includes('TASK')) ||
-                  (Assessment.title && Assessment.title.includes('Task')) ||
-                  Assessment.payload?.is_standalone_tryout === true ||
-                  !passed
+                  isAsmPublished && (
+                    Assessment.assessment_category === 'TRYOUT' ||
+                    Assessment.assessment_category === 'TASK' ||
+                    (Assessment.assessment_type && Assessment.assessment_type.includes('TASK')) ||
+                    (Assessment.title && Assessment.title.includes('Task')) ||
+                    Assessment.payload?.is_standalone_tryout === true ||
+                    !passed
+                  )
                 ) {
                   extraAction = `<button onclick="location.href='assessment.html?assessment_id=${Assessment.id}'"
                                 style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
                                 font-size:0.78rem;font-weight:700;cursor:pointer;margin-left:8px;">Retake</button>`;
+                } else if (!isAsmPublished) {
+                  extraAction = `<span style="font-size:0.7rem; color:#94a3b8; margin-left:8px; font-style:italic;">(Draft)</span>`;
                 }
                 actionBtn = `<div style="display:flex; align-items:center;">
                                <button onclick="location.href='result.html?attempt_id=${best.id}'"
@@ -1381,140 +1573,24 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
     // ── Overall Stats Calculation (AGENTS.md §2.8 & §2.10) ──
     
     function populateUpNext(attempts, myAssessments) {
-      const upNextSection = document.getElementById('up-next-section');
-      const upNextContainer = document.getElementById('up-next-container');
-      if (!upNextSection || !upNextContainer) return;
-
-      // Build best attempt & in-progress attempt maps per assessment
-      const bestMap = {};
-      const inProgMap = {};
-      (attempts || []).forEach(a => {
-        const aid = a.assessment_id || a.Assessment_id || (a.assessments && a.assessments.id) || a.id;
-        if (!aid) return;
-        const st = (a.status || '').toLowerCase();
-        if (st === 'in_progress') {
-          inProgMap[aid] = a;
-        } else {
-          const pct = parseFloat(a.percentage || 0);
-          if (bestMap[aid] == null || pct > bestMap[aid]) {
-            bestMap[aid] = pct;
-          }
-        }
-      });
-
-      // Helper to check if an assessment has been passed (>= passing threshold, default 60%)
-      const isAssessmentPassed = (asm) => {
-        const bestPct = bestMap[asm.id];
-        if (bestPct == null) return false;
-        const minPassing = (asm.minimum_required_score && parseFloat(asm.minimum_required_score) > 0)
-          ? parseFloat(asm.minimum_required_score)
-          : 60;
-        return bestPct >= minPassing;
-      };
-
-      // Filter eligible assessments by status and student level
-      const sessionLvlNum = parseInt(session.level_number) || 999;
-      let candidateAssessments = (myAssessments || []).filter(a => {
-        if (a.status !== 'PUBLISHED') return false;
-        const aLvlNum = a.levels?.level_number || 999;
-        return aLvlNum <= sessionLvlNum;
-      });
-
-      // Sort candidate assessments sequentially: level_number ascending, then display_order ascending
-      candidateAssessments.sort((a, b) => {
-        const aLvl = a.levels?.level_number || 999;
-        const bLvl = b.levels?.level_number || 999;
-        if (aLvl !== bLvl) return aLvl - bLvl;
-        return (a.display_order || 99) - (b.display_order || 99);
-      });
-
-      // Find the first unpassed assessment in the sequential learning path whose prerequisites are met
-      let nextAssessment = null;
-      let nextAssessmentState = 'start'; // 'start', 'resume', 'retake'
-      let nextAssessmentScore = null;
-
-      for (const asm of candidateAssessments) {
-        // If this assessment is already passed, student can proceed to the next one
-        if (isAssessmentPassed(asm)) {
-          continue;
-        }
-
-        // Student has NOT passed this assessment yet!
-        // Check if its prerequisite is met:
-        const prereqId = asm.prerequisite_assessment_id || asm.prerequisite_id;
-        if (prereqId) {
-          const prereqObj = candidateAssessments.find(a => a.id === prereqId) || (myAssessments || []).find(a => a.id === prereqId);
-          const prereqMinScore = prereqObj ? (prereqObj.minimum_required_score || 60) : 60;
-          const prereqScore = bestMap[prereqId];
-          const prereqPassed = prereqScore != null && prereqScore >= prereqMinScore;
-          
-          if (!prereqPassed) {
-            // Prerequisite is NOT passed! This assessment is strictly locked and cannot be Up Next.
-            continue;
-          }
-        }
-
-        // Prerequisites are met (or none)! This is the active assessment to take.
-        nextAssessment = asm;
-        if (inProgMap[asm.id]) {
-          nextAssessmentState = 'resume';
-        } else if (bestMap[asm.id] != null) {
-          nextAssessmentState = 'retake';
-          nextAssessmentScore = bestMap[asm.id];
-        } else {
-          nextAssessmentState = 'start';
-        }
-        break;
-      }
-
-      if (nextAssessment) {
-        upNextSection.classList.remove('hidden');
-        
-        // Build card HTML
-        const classObj = window._loadedClasses?.find(c => c.id === nextAssessment.class_id) || {};
-        const className = classObj.name || nextAssessment.classes?.name || 'Class';
-        const rawType = nextAssessment.assessment_type || 'TEST';
-          const cleanType = rawType.includes('_') ? rawType.split('_').pop() : rawType;
-          const typeStr = cleanType.charAt(0).toUpperCase() + cleanType.slice(1).toLowerCase();
-        const title = nextAssessment.title || 'Untitled Assessment';
-        
-        const navLink = `sessionStorage.setItem('topscore_assessment_id','${nextAssessment.id}');window.location.href='assessment.html?assessment_id=${nextAssessment.id}&id=${nextAssessment.id}&program_id=${session.program_id}&institution_id=${session.institution_id}&class_id=${nextAssessment.class_id}'`;
-
-        let buttonLabel = 'Start Now';
-        let statusBadgeHtml = '';
-        if (nextAssessmentState === 'retake') {
-          buttonLabel = 'Retake Now';
-          statusBadgeHtml = `<span style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Needs Improvement (${nextAssessmentScore != null ? nextAssessmentScore.toFixed(1) : '0'}%)</span>`;
-        } else if (nextAssessmentState === 'resume') {
-          buttonLabel = 'Resume';
-          statusBadgeHtml = `<span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">In Progress</span>`;
-        }
-
-        upNextContainer.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-            <div>
-              <div style="font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 4px;">${escapeHtml(title)}</div>
-              <div style="font-size: 0.8rem; color: #94a3b8; display: flex; gap: 8px; align-items: center;">
-                <span class="badge badge-primary" style="font-size: 0.65rem; padding: 2px 6px;">${escapeHtml(typeStr)}</span>
-                ${statusBadgeHtml}
-              </div>
-            </div>
-            <button onclick="${navLink}" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.8rem; border-radius: 8px; font-weight: 700; white-space: nowrap;">${buttonLabel}</button>
-          </div>
-        `;
-      } else {
-        upNextSection.classList.add('hidden');
-      }
+      renderNextAssignmentHero(myAssessments, attempts, window._loadedClasses);
     }
 
     async function computeOverallStats(attempts, assessments = []) {
       // Rule 2.8: Overall score is average of all takeable Assessments for student.
       // Rule 2.7: Global average strictly counts unopened/unattempted available modules as 0.
       // Best score per assessment is preserved across attempts.
+      // Soft-deleted or unavailable assessments must NOT enter calculation.
+      const activeAsmMap = new Map((assessments || []).map(a => [a.id, a]));
       const bestMap = {};
       attempts.forEach(att => {
+        if (att.assessments && att.assessments.deleted_at) return;
         const uniqueKey = att.assessment_instance_id || att.assessment_id || att.Assessment_id;
         if (!uniqueKey) return;
+        if (activeAsmMap.size > 0) {
+          const asm = activeAsmMap.get(uniqueKey);
+          if (!asm || asm.deleted_at) return;
+        }
         const pct = parseFloat(att.percentage || 0);
         if (bestMap[uniqueKey] == null || pct > bestMap[uniqueKey]) {
           bestMap[uniqueKey] = pct;
@@ -1658,7 +1734,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       const statAvgEl = document.getElementById('bottom-stat-avg-score');
       const statBestEl = document.getElementById('bottom-stat-best-score');
 
-      if (!attempts || !attempts.length) {
+      // Filter out attempts on soft-deleted or merged assessments
+      const validAttempts = (attempts || []).filter(att => {
+        if (att.assessments && att.assessments.deleted_at) return false;
+        return true;
+      });
+
+      if (!validAttempts || !validAttempts.length) {
         if (badgeEl) badgeEl.textContent = '0 Assessments Completed';
         if (statTotalEl) statTotalEl.textContent = '0';
         if (statAvgEl) statAvgEl.textContent = '0%';
@@ -1666,7 +1748,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         if (container) {
           container.innerHTML = `
             <div class="empty-state p-8 text-center" style="padding: 40px 20px;">
-              <div class="empty-state__icon" style="font-size:2.5rem;margin-bottom:12px;">📈</div>
+              <div class="empty-state__icon" style="font-size:2.5rem;margin-bottom:12px;">📈 </div>
               <h3 class="fw-700 text-base mb-1" style="color:var(--clr-text-1);">No Completed Assessments yet</h3>
               <p class="text-sm text-muted" style="max-width:440px;margin:0 auto;">
                 Pick a Class above to start taking your assigned English assessments. Your scores, grades, and completion records will appear here.
@@ -1681,7 +1763,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       const bestAttemptsMap = {};
       let highestPct = 0;
 
-      attempts.forEach(att => {
+      validAttempts.forEach(att => {
         const pct = parseFloat(att.percentage || 0);
         if (pct > highestPct) highestPct = pct;
         const aid = att.assessment_id || att.Assessment_id;
@@ -1702,7 +1784,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
       // Deduplicate attempts: keep the one with the highest score (or latest if tied) for each assessment
       const uniqueAttemptsMap = new Map();
-      attempts.forEach(a => {
+      validAttempts.forEach(a => {
         const assessmentId = a.assessment_id || a.Assessment_id || (a.assessments && a.assessments.id) || a.id;
         const currentPct = parseFloat(a.percentage || 0);
         if (!uniqueAttemptsMap.has(assessmentId)) {
@@ -1895,7 +1977,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       }
 
       try {
-        const sb = await (await import('./supabase.js?v=5.2.2')).getSupabase();
+        const sb = await (await import('./supabase.js?v=5.3.2')).getSupabase();
         
         // 1. Fetch active students in the same batch
         const { data: students, error: stuErr } = await sb
@@ -1920,13 +2002,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         // 2. Fetch all submitted attempts for batch students
         const { data: attempts, error: attErr } = await sb
           .from('attempts')
-          .select('id, student_id, assessment_id, percentage, is_best_score, status, submitted_at')
+          .select('id, student_id, assessment_id, percentage, is_best_score, status, submitted_at, assessments(deleted_at)')
           .in('student_id', studentIds)
           .in('status', ['submitted', 'auto_submitted']);
 
         // 3. Compute best scores & overall averages per student
         const studentStats = studentList.map(st => {
-          const stAtts = (attempts || []).filter(a => a.student_id === st.id);
+          const stAtts = (attempts || []).filter(a => a.student_id === st.id && !(a.assessments && a.assessments.deleted_at));
           const bestMap = {};
           let lastSubmittedAt = null;
 
@@ -2136,10 +2218,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       const tbody = document.getElementById('tbl-profile-history');
       if (tbody) {
         tbody.innerHTML = '';
-        if (!attempts || !attempts.length) {
+        const validAttempts = (attempts || []).filter(a => !(a.assessments && a.assessments.deleted_at));
+        if (!validAttempts || !validAttempts.length) {
           tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted p-4">No Completed Assessments yet.</td></tr>';
         } else {
-          attempts.forEach(a => {
+          validAttempts.forEach(a => {
             const tr = document.createElement('tr');
             const title = a.Assessments ? `${a.Assessments.Assessment_type || ''} — ${a.Assessments.Assessment_title || 'Assessment'}` : 'Assessment';
             const pct = parseFloat(a.percentage || 0).toFixed(1);
@@ -2189,7 +2272,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./supabase.js?v=5.2.2')).getSupabase();
+          const sb = await (await import('./supabase.js?v=5.3.2')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).single();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
@@ -2244,7 +2327,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./supabase.js?v=5.2.2')).getSupabase();
+            const sb = await (await import('./supabase.js?v=5.3.2')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
             

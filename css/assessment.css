@@ -43,12 +43,19 @@
       min-height: 0 !important;
       height: 100% !important;
       max-height: 100% !important;
-      overflow-y: auto !important;
-      -webkit-overflow-scrolling: touch !important;
+      overflow: hidden !important;
+      overflow-y: hidden !important;
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
       width: 100% !important;
       max-width: 440px !important;
       margin: 0 auto !important;
       box-sizing: border-box !important;
+    }
+    body.assessment-page .assessment-main-content::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
     }
 
     @media (max-height: 640px) {
@@ -66,18 +73,6 @@
       }
     }
 
-    body.focus-mode {
-      height: auto !important;
-      min-height: 100dvh !important;
-      max-height: none !important;
-      overflow-y: auto !important;
-      -webkit-overflow-scrolling: touch !important;
-    }
-    body.focus-mode .assessment-body {
-      height: auto !important;
-      max-height: none !important;
-      overflow: visible !important;
-    }
 
     /* Floating Toast Container (does not consume layout height) */
     body.assessment-page #toast-container {
@@ -390,24 +385,29 @@
     }
 
     .written-input {
-      width: 100%;
-      min-height: 0;
-      background: transparent;
-      border: none;
-      color: #fff;
-      font-size: 1.4rem;
-      font-weight: 700;
-      font-family: inherit;
-      resize: none;
-      text-align: center;
-      padding: 0;
-      margin: 0;
-      box-sizing: border-box;
-      outline: none;
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      background: transparent !important;
+      border: none !important;
+      color: #fff !important;
+      font-size: clamp(20px, 5vw, 28px) !important;
+      font-weight: 800 !important;
+      font-family: 'Outfit', sans-serif !important;
+      resize: none !important;
+      text-align: center !important;
+      padding: 0 !important;
+      margin: auto !important;
+      box-sizing: border-box !important;
+      outline: none !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      text-shadow: 0 2px 10px rgba(56,189,248,0.3) !important;
     }
     .written-input:focus {
-      outline: none;
-      border: none;
+      outline: none !important;
+      border: none !important;
     }
 
     select.form-control {
@@ -432,95 +432,227 @@
       box-shadow: 0 0 15px rgba(52, 211, 153, 0.2) !important;
       background: rgba(255, 255, 255, 0.12) !important;
     }
-  
-    /* FOCUS MODE CSS */
-    body.focus-mode header,
-    body.focus-mode #progress-bar-toggle,
-    body.focus-mode .bottom-nav-bar {
-      opacity: 0.15 !important;
-      pointer-events: none !important;
-    }
-    header, #progress-bar-toggle, .bottom-nav-bar {
-      transition: opacity 0.5s ease;
+
+    /* Group Upper Content Area (Strict 3 : 3 : 1 Proportional Space Distribution) */
+    #question-interaction-group {
+      width: 100% !important;
+      max-width: 440px !important;
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      gap: 6px !important;
+      overflow: hidden !important;
+      margin: 0 auto !important;
+      box-sizing: border-box !important;
     }
 
-    /* Virtual Keyboard (Modern Sleek Dark Glass - 22-8-22-48 Ratio Ergonomic Scaling) */
+    #question-interaction-group .question-box-prompt {
+      flex: 3 1 0 !important;
+      min-height: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      text-align: center !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+      padding: 6px 14px !important;
+      background: linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.14) !important;
+      border-radius: 14px !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+      backdrop-filter: blur(16px) !important;
+    }
+
+    #question-interaction-group .question-box-prompt .speech-question-text {
+      font-size: clamp(18px, 4.5vw, 26px) !important;
+      line-height: 1.25 !important;
+      font-weight: 800 !important;
+      color: #f8fafc !important;
+      text-align: center !important;
+      font-family: 'Outfit', sans-serif !important;
+      width: 100% !important;
+      word-break: break-word !important;
+      margin: 0 !important;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.5) !important;
+    }
+
+    #question-interaction-group .metadata-grid {
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      grid-template-rows: 1fr 1fr !important;
+      gap: 3px !important;
+      align-items: center !important;
+      box-sizing: border-box !important;
+      margin: 0 auto !important;
+      width: 100% !important;
+    }
+
+    #question-interaction-group #answer-container-written {
+      flex: 3 1 0 !important;
+      min-height: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      align-items: center !important;
+      overflow-y: auto !important;
+      box-sizing: border-box !important;
+      padding: 4px 12px !important;
+      background: linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%) !important;
+      border: 1px solid rgba(56, 189, 248, 0.2) !important;
+      border-radius: 12px !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+      backdrop-filter: blur(14px) !important;
+      position: relative !important;
+      width: 100% !important;
+    }
+
+    /* Virtual Keyboard (Authentic 1:1 Native Gboard Dark Replica - Priority Lock) */
     #virtual-keyboard-container { 
       width: 100% !important;
       max-width: 440px !important;
-      height: calc(48% - 4px) !important;
-      min-height: calc(48% - 4px) !important;
-      max-height: calc(48% - 4px) !important;
+      flex-shrink: 0 !important;
+      height: auto !important;
+      max-height: 210px !important;
       margin: 0 auto !important;
-      padding: 5px 6px !important; 
-      background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%) !important; 
-      border: 1px solid rgba(255, 255, 255, 0.14) !important; 
+      padding: 6px 4px !important; 
+      background: #1e293b !important; 
+      border: 1px solid rgba(255, 255, 255, 0.1) !important; 
       border-radius: 12px !important;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
-      backdrop-filter: blur(12px) !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
       display: none; 
       flex-direction: column !important; 
       justify-content: space-between !important;
       gap: 4px !important;
       box-sizing: border-box !important; 
       z-index: 1000; 
-      flex-shrink: 0 !important;
+      overflow: hidden !important;
     }
 
     .vk-row { 
       display: flex !important; 
       justify-content: center !important; 
-      gap: 3px !important; 
-      margin-bottom: 0 !important; 
+      gap: 4px !important; 
+      margin: 0 !important; 
       width: 100% !important;
       align-items: stretch !important;
       flex: 1 1 0 !important;
-      height: calc(25% - 3px) !important;
-      min-height: 0 !important;
-      max-height: none !important;
+      box-sizing: border-box !important;
     } 
+
+    .vk-row-1 .vk-key {
+      flex: 1 1 0 !important;
+      max-width: 9.6% !important;
+    }
+
+    .vk-row-2 {
+      padding: 0 4.5% !important;
+    }
+    .vk-row-2 .vk-key {
+      flex: 1 1 0 !important;
+    }
+
+    .vk-row-3 .vk-key:not(.special) {
+      flex: 1 1 0 !important;
+      max-width: 9.6% !important;
+    }
+
     .vk-key { 
       flex: 1 1 0 !important; 
-      height: 100% !important;
+      height: clamp(36px, 5vh, 42px) !important;
       min-height: 0 !important;
-      max-height: none !important; 
       display: flex !important; 
       align-items: center !important; 
       justify-content: center !important; 
-      border-radius: 8px !important; 
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%) !important; 
-      border: 1px solid rgba(255, 255, 255, 0.16) !important; 
-      color: #ffffff !important; 
-      font-size: clamp(16px, 4.4vw, 21px) !important; 
-      font-family: 'Inter', -apple-system, sans-serif !important; 
-      font-weight: 800 !important; 
+      border-radius: 6px !important; 
+      background: #334155 !important; 
+      border: 1px solid #475569 !important; 
+      color: #f8fafc !important; 
+      font-size: 15px !important; 
+      font-family: 'Inter', sans-serif !important; 
+      font-weight: 600 !important; 
+      text-transform: uppercase !important;
       cursor: pointer !important; 
       -webkit-user-select: none !important; 
       user-select: none !important; 
-      transition: transform 0.08s ease, background 0.08s ease !important; 
-      box-shadow: 0 2px 5px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.22) !important;
+      transition: transform 0.06s ease, background 0.06s ease !important; 
+      box-shadow: 0 2px 0 #0f172a !important;
       padding: 0 !important;
+      box-sizing: border-box !important;
     } 
+
     .vk-key:active { 
-      background: rgba(56, 189, 248, 0.55) !important; 
-      border-color: #38bdf8 !important;
-      transform: scale(0.92) !important; 
+      transform: scale(0.93) !important; 
+      background: #475569 !important; 
     } 
+
     .vk-key.special { 
-      flex: 1.3 1 0 !important; 
-      background: linear-gradient(180deg, rgba(56, 189, 248, 0.3) 0%, rgba(56, 189, 248, 0.15) 100%) !important; 
-      color: #38bdf8 !important; 
-      font-size: clamp(15px, 4vw, 19px) !important; 
-      border-color: rgba(56, 189, 248, 0.4) !important; 
+      background: #263347 !important; 
+      border: 1px solid #334155 !important;
+      color: #94a3b8 !important; 
+      font-size: 13px !important; 
+      font-weight: 700 !important; 
+      text-transform: none !important;
     } 
-    .vk-key.special:active { 
-      background: rgba(56, 189, 248, 0.6) !important; 
-    } 
-    .vk-key.space { 
-      flex: 4 1 0 !important; 
-      font-size: clamp(13px, 3.4vw, 15px) !important; 
-      letter-spacing: 0.06em !important;
+
+    .vk-key.vk-shift {
+      flex: 0 0 13% !important;
+      width: 13% !important;
+      font-size: 16px !important;
+    }
+
+    .vk-key.vk-shift.active {
+      background: #0284c7 !important;
+      border-color: #38bdf8 !important;
+      color: #ffffff !important;
+    }
+
+    .vk-key.vk-backspace {
+      flex: 0 0 13% !important;
+      width: 13% !important;
+      font-size: 16px !important;
+    }
+
+    .vk-key.vk-mode {
+      flex: 0 0 14% !important;
+      width: 14% !important;
+    }
+
+    .vk-key.vk-comma,
+    .vk-key.vk-dot {
+      flex: 0 0 9.5% !important;
+      width: 9.5% !important;
+      font-size: 16px !important;
       font-weight: 700 !important;
+      text-transform: none !important;
+    }
+
+    .vk-key.space { 
+      flex: 1 1 auto !important; 
+      font-size: 12px !important; 
+      letter-spacing: 0.04em !important;
+      font-weight: 600 !important;
+      text-transform: none !important;
+    } 
+
+    .vk-key.vk-enter {
+      flex: 0 0 15% !important;
+      width: 15% !important;
+      background: linear-gradient(135deg, #0284c7, #0369a1) !important; 
+      border: 1px solid #38bdf8 !important; 
+      color: #ffffff !important; 
+      font-size: 16px !important;
+      font-weight: 700 !important;
+      box-shadow: 0 2px 0 #0369a1 !important;
+      text-transform: none !important;
+    }
+
+    .vk-key.vk-enter:active {
+      transform: scale(0.93) !important;
+      background: #0284c7 !important;
     } 
 
     /* Anti-Cheat selection and touch callout suppression */

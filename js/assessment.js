@@ -1,16 +1,16 @@
-import { generateAvatarDataUri } from './utils/avatar-engine.js?v=5.2.2';
+import { generateAvatarDataUri } from './utils/avatar-engine.js?v=5.3.2';
 /**
  * TopsCore — Assessment Engine Module
  * Extracted from assessment.html
  */
 
-import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=5.2.2';
-    import { requireStudentSession } from './session.js?v=5.2.2';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=5.2.2';
-    import { startCountdown, isExpired } from './timer.js?v=5.2.2';
-    import { createSpeechSession, isSpeechSupported } from './speech.js?v=5.2.2';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=5.2.2';
-    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=5.2.2';
+import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=5.3.2';
+    import { requireStudentSession } from './session.js?v=5.3.2';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=5.3.2';
+    import { startCountdown, isExpired } from './timer.js?v=5.3.2';
+    import { createSpeechSession, isSpeechSupported } from './speech.js?v=5.3.2';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=5.3.2';
+    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=5.3.2';
 
     // Arm wake lock gestures on first interaction
     bindWakeLockGestures();
@@ -503,6 +503,23 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         window.attemptData = attemptData;
         window.allAnswerRows = allAnswerRows;
 
+        // Status check: do not start if assessment has been soft-deleted or unpublished/drafted
+        const asmStatus = String(assessmentData?.status || 'PUBLISHED').toUpperCase();
+        if (assessmentData?.deleted_at || (asmStatus !== 'PUBLISHED' && asmStatus !== 'ACTIVE')) {
+          const main = document.getElementById('assessment-main');
+          if (main) {
+            main.innerHTML = `
+              <div class="glass-panel text-center p-5 mx-auto" style="max-width:500px;margin-top:10vh;">
+                <h2 class="fw-800 text-xl mb-3" style="color:#f87171;">🔒 Assessment Unavailable</h2>
+                <p class="text-sm" style="color:var(--clr-text-2);">This assessment is unavailable or has been archived by your tutor. Retakes are not available.</p>
+                <button class="btn btn-primary mt-4" onclick="window.location.href='dashboard.html'">Return to Dashboard</button>
+              </div>
+            `;
+          }
+          hideLoading();
+          return;
+        }
+
         // Server time gate: Enforce WITA window check for schedule_mode === 'fixed'
         if (assessmentData?.schedule_mode === 'manual' && assessmentData?.is_unlocked === false) {
           const main = document.getElementById('assessment-main');
@@ -542,7 +559,17 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         // Question order shuffle (if random, default in TopsCore)
         const orderSetting = String(assessmentData?.question_order || assessmentData?.payload?.question_order || 'random').toLowerCase();
         if (orderSetting === 'random' && allAnswerRows.length > 1) {
-          allAnswerRows = shuffleWithSeed(allAnswerRows, attemptData?.id || assessmentId);
+          const hasTwoSections = allAnswerRows.some(r => r.question_snapshot?.test_section === 'words') &&
+                                allAnswerRows.some(r => r.question_snapshot?.test_section === 'phrases');
+          if (hasTwoSections) {
+            const wordRows = allAnswerRows.filter(r => r.question_snapshot?.test_section !== 'phrases');
+            const phraseRows = allAnswerRows.filter(r => r.question_snapshot?.test_section === 'phrases');
+            const shuffledWords = shuffleWithSeed(wordRows, (attemptData?.id || assessmentId) + '_words');
+            const shuffledPhrases = shuffleWithSeed(phraseRows, (attemptData?.id || assessmentId) + '_phrases');
+            allAnswerRows = [...shuffledWords, ...shuffledPhrases];
+          } else {
+            allAnswerRows = shuffleWithSeed(allAnswerRows, attemptData?.id || assessmentId);
+          }
           window.allAnswerRows = allAnswerRows;
         }
 
@@ -900,34 +927,70 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     }
     window.updateNavGrid = updateNavGrid;
 
-    // —— Safe Virtual Keyboard Anchor / Provider ——
+    // —— Safe Virtual Keyboard Anchor / Provider (Gboard 1:1 Layout) ——
+    let isShifted = false;
+    let isSymbolMode = false;
+
+    function renderKeyboardKeys() {
+      const vk = document.getElementById('virtual-keyboard-container');
+      if (!vk) return;
+      if (isSymbolMode) {
+        vk.innerHTML = `
+          <div class="vk-row vk-row-1">
+            <button class="vk-key" data-key="1">1</button><button class="vk-key" data-key="2">2</button><button class="vk-key" data-key="3">3</button><button class="vk-key" data-key="4">4</button><button class="vk-key" data-key="5">5</button><button class="vk-key" data-key="6">6</button><button class="vk-key" data-key="7">7</button><button class="vk-key" data-key="8">8</button><button class="vk-key" data-key="9">9</button><button class="vk-key" data-key="0">0</button>
+          </div>
+          <div class="vk-row vk-row-2">
+            <button class="vk-key" data-key="@">@</button><button class="vk-key" data-key="#">#</button><button class="vk-key" data-key="$">$</button><button class="vk-key" data-key="%">%</button><button class="vk-key" data-key="&">&</button><button class="vk-key" data-key="-">-</button><button class="vk-key" data-key="+">+</button><button class="vk-key" data-key="(">(</button><button class="vk-key" data-key=")">)</button>
+          </div>
+          <div class="vk-row vk-row-3">
+            <button class="vk-key special vk-shift" data-key="Shift" title="Shift">⇧</button>
+            <button class="vk-key" data-key="*">*</button><button class="vk-key" data-key="&quot;">"</button><button class="vk-key" data-key="'">'</button><button class="vk-key" data-key=":">:</button><button class="vk-key" data-key=";">;</button><button class="vk-key" data-key="!">!</button><button class="vk-key" data-key="?">?</button>
+            <button class="vk-key special vk-backspace" data-key="Backspace" title="Backspace">⌫</button>
+          </div>
+          <div class="vk-row vk-row-4">
+            <button class="vk-key special vk-mode" data-key="ABC">ABC</button>
+            <button class="vk-key vk-comma" data-key=",">,</button>
+            <button class="vk-key space" data-key=" ">Space</button>
+            <button class="vk-key vk-dot" data-key=".">.</button>
+            <button class="vk-key special vk-enter" data-key="Enter">↵</button>
+          </div>
+        `;
+      } else {
+        const letters = isShifted
+          ? ['Q','W','E','R','T','Y','U','I','O','P','A','S','D','F','G','H','J','K','L','Z','X','C','V','B','N','M']
+          : ['q','w','e','r','t','y','u','i','o','p','a','s','d','f','g','h','j','k','l','z','x','c','v','b','n','m'];
+        vk.innerHTML = `
+          <div class="vk-row vk-row-1">
+            <button class="vk-key" data-key="${letters[0]}">${letters[0]}</button><button class="vk-key" data-key="${letters[1]}">${letters[1]}</button><button class="vk-key" data-key="${letters[2]}">${letters[2]}</button><button class="vk-key" data-key="${letters[3]}">${letters[3]}</button><button class="vk-key" data-key="${letters[4]}">${letters[4]}</button><button class="vk-key" data-key="${letters[5]}">${letters[5]}</button><button class="vk-key" data-key="${letters[6]}">${letters[6]}</button><button class="vk-key" data-key="${letters[7]}">${letters[7]}</button><button class="vk-key" data-key="${letters[8]}">${letters[8]}</button><button class="vk-key" data-key="${letters[9]}">${letters[9]}</button>
+          </div>
+          <div class="vk-row vk-row-2">
+            <button class="vk-key" data-key="${letters[10]}">${letters[10]}</button><button class="vk-key" data-key="${letters[11]}">${letters[11]}</button><button class="vk-key" data-key="${letters[12]}">${letters[12]}</button><button class="vk-key" data-key="${letters[13]}">${letters[13]}</button><button class="vk-key" data-key="${letters[14]}">${letters[14]}</button><button class="vk-key" data-key="${letters[15]}">${letters[15]}</button><button class="vk-key" data-key="${letters[16]}">${letters[16]}</button><button class="vk-key" data-key="${letters[17]}">${letters[17]}</button><button class="vk-key" data-key="${letters[18]}">${letters[18]}</button>
+          </div>
+          <div class="vk-row vk-row-3">
+            <button class="vk-key special vk-shift ${isShifted ? 'active' : ''}" data-key="Shift" title="Shift">⇧</button>
+            <button class="vk-key" data-key="${letters[19]}">${letters[19]}</button><button class="vk-key" data-key="${letters[20]}">${letters[20]}</button><button class="vk-key" data-key="${letters[21]}">${letters[21]}</button><button class="vk-key" data-key="${letters[22]}">${letters[22]}</button><button class="vk-key" data-key="${letters[23]}">${letters[23]}</button><button class="vk-key" data-key="${letters[24]}">${letters[24]}</button><button class="vk-key" data-key="${letters[25]}">${letters[25]}</button>
+            <button class="vk-key special vk-backspace" data-key="Backspace" title="Backspace">⌫</button>
+          </div>
+          <div class="vk-row vk-row-4">
+            <button class="vk-key special vk-mode" data-key="?123">?123</button>
+            <button class="vk-key vk-comma" data-key=",">,</button>
+            <button class="vk-key space" data-key=" ">Space</button>
+            <button class="vk-key vk-dot" data-key=".">.</button>
+            <button class="vk-key special vk-enter" data-key="Enter">↵</button>
+          </div>
+        `;
+      }
+    }
+
     function getVirtualKeyboard() {
       let vk = document.getElementById('virtual-keyboard-container');
       if (!vk) {
         vk = document.createElement('div');
         vk.id = 'virtual-keyboard-container';
         vk.style.display = 'none';
-        vk.innerHTML = `
-          <div class="vk-row">
-            <button class="vk-key" data-key="q">q</button><button class="vk-key" data-key="w">w</button><button class="vk-key" data-key="e">e</button><button class="vk-key" data-key="r">r</button><button class="vk-key" data-key="t">t</button><button class="vk-key" data-key="y">y</button><button class="vk-key" data-key="u">u</button><button class="vk-key" data-key="i">i</button><button class="vk-key" data-key="o">o</button><button class="vk-key" data-key="p">p</button>
-          </div>
-          <div class="vk-row">
-            <button class="vk-key" data-key="a">a</button><button class="vk-key" data-key="s">s</button><button class="vk-key" data-key="d">d</button><button class="vk-key" data-key="f">f</button><button class="vk-key" data-key="g">g</button><button class="vk-key" data-key="h">h</button><button class="vk-key" data-key="j">j</button><button class="vk-key" data-key="k">k</button><button class="vk-key" data-key="l">l</button>
-          </div>
-          <div class="vk-row">
-            <button class="vk-key" data-key="-">-</button>
-            <button class="vk-key" data-key="z">z</button><button class="vk-key" data-key="x">x</button><button class="vk-key" data-key="c">c</button><button class="vk-key" data-key="v">v</button><button class="vk-key" data-key="b">b</button><button class="vk-key" data-key="n">n</button><button class="vk-key" data-key="m">m</button>
-            <button class="vk-key special" data-key="Backspace">⌫</button>
-          </div>
-          <div class="vk-row">
-            <button class="vk-key special" data-key=",">,</button>
-            <button class="vk-key space" data-key=" ">Space</button>
-            <button class="vk-key special" data-key=".">.</button>
-            <button class="vk-key special" data-key="Enter">⏎</button>
-          </div>
-        `;
         document.body.appendChild(vk);
       }
+      renderKeyboardKeys();
       return vk;
     }
     window.getVirtualKeyboard = getVirtualKeyboard;
@@ -1015,7 +1078,13 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(displayType.toLowerCase());
         displayCategory = isPhrase ? 'phrases' : 'words';
       }
-      if (displayCategory.toLowerCase() === 'phrases') displayCategory = 'Phrases';
+      if (snap?.section_label) {
+        displayCategory = snap.section_label;
+      } else if (snap?.test_section === 'phrases') {
+        displayCategory = 'Part 2: Phrases';
+      } else if (snap?.test_section === 'words') {
+        displayCategory = 'Part 1: Words';
+      } else if (displayCategory.toLowerCase() === 'phrases') displayCategory = 'Phrases';
       else if (displayCategory.toLowerCase() === 'words' || displayCategory.toLowerCase() === 'vocab') displayCategory = 'Words';
       else if (displayCategory) displayCategory = displayCategory.charAt(0).toUpperCase() + displayCategory.slice(1);
       else displayCategory = 'Vocabulary';
@@ -1035,67 +1104,101 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       const main = document.getElementById('assessment-main');
       main.innerHTML = '';
       main.className = 'assessment-main-content flex-1 flex flex-col items-center min-h-0 w-full mx-auto';
-      main.style.cssText = 'flex:1; display:flex; flex-direction:column; justify-content:space-between; align-items:center; min-height:100%; height:100%; max-height:100%; overflow:hidden; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:0; box-sizing:border-box; gap:4px;';
+      main.style.cssText = 'flex:1; display:flex; flex-direction:column; justify-content:flex-start; align-items:center; min-height:100%; height:100%; max-height:100%; overflow:hidden; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:0; box-sizing:border-box; gap:6px;';
 
       const isWritten = (answerType === 'written');
-
-      // 1. Question Box: Exactly 22% for written mode (22-8-22-48 ratio), 30% for other modes
-      const questionBox = document.createElement('div');
-      questionBox.className = 'w-full flex flex-col shrink-0';
-      const qBoxH = isWritten ? 'calc(22% - 3px)' : 'calc(30% - 3px)';
-      questionBox.style.cssText = `width:100% !important; max-width:440px !important; height:${qBoxH}; min-height:${qBoxH}; max-height:${qBoxH}; margin:0 auto !important; display:flex; align-items:center; justify-content:center; text-align:center; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); box-sizing:border-box; flex-shrink:0; padding:6px 14px; overflow:hidden;`;
-      questionBox.innerHTML = `
-        <div class="speech-question-text" style="font-size:${isWritten ? 'clamp(18px, 4.4vw, 24px)' : 'clamp(20px, 5vw, 26px)'}; font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
-          ${escapeHtml(questionText)}
-        </div>
-      `;
-      main.appendChild(questionBox);
-
-      // 2. Metadata Table: Exactly 8% for written mode, 10% for other modes (direct dynamic values only)
-      const metadataTable = document.createElement('div');
-      metadataTable.className = 'w-full shrink-0 metadata-table';
-      const metaH = isWritten ? 'calc(8% - 2px)' : 'calc(10% - 2px)';
-      metadataTable.style.cssText = `width:100% !important; max-width:440px !important; height:${metaH}; min-height:${metaH}; max-height:${metaH}; margin:0 auto !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; box-sizing:border-box; flex-shrink:0;`;
-      metadataTable.innerHTML = `
-        <!-- Row 1 Left: Theme name only -->
-        <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-          <span style="color:#38bdf8; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
-        </div>
-        <!-- Row 1 Right: Category name only -->
-        <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-          <span style="color:#34d399; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayCategory)}">${escapeHtml(displayCategory)}</span>
-        </div>
-        <!-- Row 2 Left: Topic name only -->
-        <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-          <span style="color:#f8fafc; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
-        </div>
-        <!-- Row 2 Right: Type name only -->
-        <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-          <span style="color:#cbd5e1; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayType)}">${escapeHtml(displayType)}</span>
-        </div>
-      `;
-      main.appendChild(metadataTable);
 
       let answerArea, controlArea;
 
       if (isWritten) {
-        // Direct Child 3: Answer Box (Exactly 22% of assessment body)
+        // Upper Content Area taking 100% of remaining body height above locked keyboard
+        const upperGroup = document.createElement('div');
+        upperGroup.id = 'question-interaction-group';
+        upperGroup.style.cssText = 'flex:1; min-height:0; display:flex; flex-direction:column; justify-content:space-between; gap:6px; overflow:hidden; width:100% !important; max-width:440px !important; margin:0 auto !important; box-sizing:border-box;';
+
+        // 1. Question Box (3 units)
+        const questionBox = document.createElement('div');
+        questionBox.className = 'w-full flex flex-col shrink-0 question-box-prompt';
+        questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3; min-height:0; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px);';
+        questionBox.innerHTML = `
+          <div class="speech-question-text" style="font-size:clamp(18px, 4.5vw, 26px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
+            ${escapeHtml(questionText)}
+          </div>
+        `;
+        upperGroup.appendChild(questionBox);
+
+        // 2. Metadata Grid (1 unit = 1/3 of Question Box and Answer Box)
+        const metadataTable = document.createElement('div');
+        metadataTable.className = 'w-full shrink-0 metadata-grid';
+        metadataTable.style.cssText = 'width:100% !important; max-width:440px !important; flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; align-items:center; box-sizing:border-box; margin:0 auto !important;';
+        metadataTable.innerHTML = `
+          <!-- Row 1 Left: Theme name only -->
+          <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
+            <span style="color:#38bdf8; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
+          </div>
+          <!-- Row 1 Right: Category name only -->
+          <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
+            <span style="color:#34d399; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayCategory)}">${escapeHtml(displayCategory)}</span>
+          </div>
+          <!-- Row 2 Left: Topic name only -->
+          <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
+            <span style="color:#f8fafc; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
+          </div>
+          <!-- Row 2 Right: Type name only -->
+          <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
+            <span style="color:#cbd5e1; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayType)}">${escapeHtml(displayType)}</span>
+          </div>
+        `;
+        upperGroup.appendChild(metadataTable);
+
+        // 3. Answer Box (3 units = equal to Question Box)
         answerArea = document.createElement('div');
         answerArea.id = 'answer-container-written';
         answerArea.className = 'w-full flex flex-col justify-center items-center shrink-0';
-        answerArea.style.cssText = 'height:calc(22% - 3px); min-height:calc(22% - 3px); max-height:calc(22% - 3px); width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:12px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); box-sizing:border-box; position:relative; flex-shrink:0; overflow:hidden;';
-        main.appendChild(answerArea);
+        answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3; min-height:0; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow-y:auto; box-sizing:border-box; padding:4px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:12px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); position:relative;';
+        upperGroup.appendChild(answerArea);
 
-        // Direct Child 4: Virtual Keyboard (Exactly 48% of assessment body)
+        main.appendChild(upperGroup);
+
+        // Child 2 of main: Virtual Keyboard Container (locked priority anchor)
         if (vk) {
           vk.style.display = 'flex';
-          vk.style.cssText = 'height:calc(48% - 4px) !important; min-height:calc(48% - 4px) !important; max-height:calc(48% - 4px) !important; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; padding:5px 6px !important; box-sizing:border-box !important; flex-shrink:0 !important; gap:4px !important;';
+          vk.style.cssText = 'flex-shrink:0 !important; height:auto !important; max-height:210px !important; margin:0 auto !important; box-sizing:border-box !important; width:100% !important; max-width:440px !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; padding:6px 4px !important; gap:4px !important; overflow:hidden !important;';
           main.appendChild(vk);
           controlArea = vk;
         }
 
         renderWritten(answerArea, controlArea, row, savedAnswer, snap, vk);
       } else {
+        // Speech & MCQ mode: preserve existing layouts
+        const questionBox = document.createElement('div');
+        questionBox.className = 'w-full flex flex-col shrink-0';
+        questionBox.style.cssText = `width:100% !important; max-width:440px !important; height:calc(30% - 3px); min-height:80px; max-height:120px; flex:0 0 auto; margin:0 auto !important; display:flex; align-items:center; justify-content:center; text-align:center; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); box-sizing:border-box; flex-shrink:0; padding:6px 14px; overflow:hidden;`;
+        questionBox.innerHTML = `
+          <div class="speech-question-text" style="font-size:clamp(20px, 5vw, 26px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
+            ${escapeHtml(questionText)}
+          </div>
+        `;
+        main.appendChild(questionBox);
+
+        const metadataTable = document.createElement('div');
+        metadataTable.className = 'w-full shrink-0 metadata-table';
+        metadataTable.style.cssText = `width:100% !important; max-width:440px !important; height:calc(10% - 2px); min-height:calc(10% - 2px); max-height:calc(10% - 2px); margin:0 auto !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; box-sizing:border-box; flex-shrink:0;`;
+        metadataTable.innerHTML = `
+          <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
+            <span style="color:#38bdf8; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
+          </div>
+          <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
+            <span style="color:#34d399; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayCategory)}">${escapeHtml(displayCategory)}</span>
+          </div>
+          <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
+            <span style="color:#f8fafc; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
+          </div>
+          <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
+            <span style="color:#cbd5e1; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayType)}">${escapeHtml(displayType)}</span>
+          </div>
+        `;
+        main.appendChild(metadataTable);
         // Speech & MCQ mode: keep interactionContainer for speech/MCQ
         const interH = 'calc(60% - 7px)';
         const interactionContainer = document.createElement('div');
@@ -1316,7 +1419,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
       const ta = document.createElement('textarea');
       ta.className = 'written-input';
-      ta.style.cssText = 'width:100%; min-height:45px; max-height:65px; background:transparent; border:none; color:#ffffff; font-size:clamp(20px, 5vw, 26px); font-weight:800; text-align:center; resize:none; outline:none; font-family:\'Outfit\',sans-serif; padding:2px 0; margin:auto; line-height:1.25; display:block; overflow-y:auto; box-sizing:border-box; text-shadow:0 2px 10px rgba(56,189,248,0.3);';
+      ta.style.cssText = 'width:100%; height:100%; min-height:0; background:transparent; border:none; color:#ffffff; font-size:clamp(20px, 5vw, 28px); font-weight:800; text-align:center; resize:none; outline:none; font-family:\'Outfit\',sans-serif; padding:4px 0; margin:auto; line-height:1.25; display:flex; align-items:center; justify-content:center; box-sizing:border-box; text-shadow:0 2px 10px rgba(56,189,248,0.3);';
       ta.id = `written-${row.id}`;
       ta.placeholder = 'Type here...';
       ta.value = savedAnswer || '';
@@ -1722,12 +1825,31 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       e.preventDefault();
       if (!window.activeKeyboardInput) return;
       const key = k.getAttribute('data-key');
+      if (key === 'Shift') {
+        isShifted = !isShifted;
+        renderKeyboardKeys();
+        return;
+      }
+      if (key === '?123') {
+        isSymbolMode = true;
+        renderKeyboardKeys();
+        return;
+      }
+      if (key === 'ABC') {
+        isSymbolMode = false;
+        renderKeyboardKeys();
+        return;
+      }
       if (key === 'Backspace') {
         window.activeKeyboardInput.value = window.activeKeyboardInput.value.slice(0, -1);
       } else if (key === 'Enter') {
         window.activeKeyboardInput.value += '\n';
       } else {
         window.activeKeyboardInput.value += key;
+        if (isShifted) {
+          isShifted = false;
+          renderKeyboardKeys();
+        }
       }
       window.activeKeyboardInput.dispatchEvent(new Event('input'));
     });
@@ -1764,27 +1886,3 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     });
 
     bootAssessment();
-
-// --- Mobile Viewport Keyboard Handler ---
-document.addEventListener('focusin', (e) => {
-      if (e.target.matches('textarea.written-input, select.form-control, input.form-control, .frosted-input')) {
-        document.body.classList.add('focus-mode');
-      }
-    });
-    document.addEventListener('focusout', (e) => {
-      if (e.target.matches('textarea.written-input, select.form-control, input.form-control, .frosted-input')) {
-        document.body.classList.remove('focus-mode');
-      }
-    });
-    document.addEventListener('click', (e) => {
-      const micBtn = e.target.closest('.speech-mic-btn-lg');
-      if (micBtn) {
-        setTimeout(() => {
-          if (micBtn.classList.contains('listening')) {
-            document.body.classList.add('focus-mode');
-          } else {
-            document.body.classList.remove('focus-mode');
-          }
-        }, 50);
-      }
-    });

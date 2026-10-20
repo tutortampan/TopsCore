@@ -1,8 +1,8 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter } from '../api.js?v=5.2.2';
-import { getSupabase } from '../supabase.js?v=5.2.2';
-import { getGrade, showToast } from '../app.js?v=5.2.2';
-import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=5.2.2';
-import { DataGrid } from './datagrid.js?v=5.2.2';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter } from '../api.js?v=5.3.2';
+import { getSupabase } from '../supabase.js?v=5.3.2';
+import { getGrade, showToast } from '../app.js?v=5.3.2';
+import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=5.3.2';
+import { DataGrid } from './datagrid.js?v=5.3.2';
 
 let studentGrid = null;
 
@@ -459,8 +459,10 @@ export async function renderStudents(area) {
         <option value="inactive" ${currentBatchStatus === 'inactive' ? 'selected' : ''}>Status: Inactive / Past</option>
       </select>
       <select id="students-filter-batch" class="form-input-slim">
-        <option value="">Batch: All</option>
-        ${(programBatches || []).map(b => `<option value="${b.id}" data-active="${b.is_active !== false}" ${window._filterBatchId === b.id ? 'selected' : ''}>Batch: ${escapeHtml(b.name)}${b.is_active === false ? ' (Past)' : ''}</option>`).join('')}
+        <option value="">Batch: All Active</option>
+        ${(programBatches || [])
+          .filter(b => currentBatchStatus === 'all' ? true : (currentBatchStatus === 'inactive' ? b.is_active === false : b.is_active !== false))
+          .map(b => `<option value="${b.id}" data-active="${b.is_active !== false}" ${window._filterBatchId === b.id ? 'selected' : ''}>Batch: ${escapeHtml(b.name)}${b.is_active === false ? ' (Past)' : ''}</option>`).join('')}
       </select>
       ${(currentBatchStatus !== 'active' || window._filterBatchId) ? `
         <button id="students-filter-reset" class="btn btn-ghost btn-sm" style="padding: 2px 8px; height: 26px; font-size: 0.72rem; color: var(--fm-text-secondary, #94a3b8); margin-left: auto;" title="Reset filters">✕ Reset</button>
@@ -1455,14 +1457,14 @@ export async function renderStudents(area) {
       const [institutions, programs, batches, levels] = await Promise.all([
         adminFetchAll('institutions', 'id, name'),
         adminFetchAll('programs', 'id, name, institution_id'),
-        adminFetchAll('batches', 'id, name, program_id'),
+        adminFetchAll('batches', 'id, name, program_id, is_active, deleted_at'),
         adminFetchAll('levels', 'id, name, level_number')
       ]);
 
       const sortFn = (a, b) => (a.name || '').localeCompare(b.name || '');
       institutions.sort(sortFn);
       programs.sort(sortFn);
-      batches.sort(sortFn);
+      const activeBatches = (batches || []).filter(b => !b.deleted_at && b.is_active !== false).sort(sortFn);
       levels.sort(sortFn);
 
       const existing = document.getElementById('bulk-action-modal');
@@ -1495,7 +1497,7 @@ export async function renderStudents(area) {
               <label class="form-label" style="display:block;margin-bottom:0.25rem;">Batch</label>
               <select id="bulk-batch" class="form-input">
                 <option value="">-- No Change --</option>
-                ${batches.map(b => `<option value="${b.id}">${b.name}</option>`).join('')}
+                ${activeBatches.map(b => `<option value="${b.id}">${b.name}</option>`).join('')}
               </select>
             </div>
             <div>
@@ -1549,7 +1551,7 @@ export async function renderStudents(area) {
         btn.textContent = 'Saving...';
         btn.disabled = true;
 
-        const sb = (await import('../supabase.js?v=5.2.2')).getSupabase ? await (await import('../supabase.js?v=5.2.2')).getSupabase() : null;
+        const sb = (await import('../supabase.js?v=5.3.2')).getSupabase ? await (await import('../supabase.js?v=5.3.2')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); close(); return; }
 
         for (const id of selectedIds) {
@@ -1569,7 +1571,7 @@ export async function renderStudents(area) {
 
       overlay.querySelector('#bulk-activate').onclick = async () => {
         close();
-        const sb = (await import('../supabase.js?v=5.2.2')).getSupabase ? await (await import('../supabase.js?v=5.2.2')).getSupabase() : null;
+        const sb = (await import('../supabase.js?v=5.3.2')).getSupabase ? await (await import('../supabase.js?v=5.3.2')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); return; }
         for (const id of selectedIds) await sb.from('students').update({ is_active: true }).eq('id', id);
         showToast(`Activated ${selectedIds.length} students.`, 'success');
@@ -1578,7 +1580,7 @@ export async function renderStudents(area) {
 
       overlay.querySelector('#bulk-deactivate').onclick = async () => {
         close();
-        const sb = (await import('../supabase.js?v=5.2.2')).getSupabase ? await (await import('../supabase.js?v=5.2.2')).getSupabase() : null;
+        const sb = (await import('../supabase.js?v=5.3.2')).getSupabase ? await (await import('../supabase.js?v=5.3.2')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); return; }
         for (const id of selectedIds) await sb.from('students').update({ is_active: false }).eq('id', id);
         showToast(`Deactivated ${selectedIds.length} students.`, 'success');
@@ -1969,13 +1971,13 @@ export async function openStudentFullEdit(student, onSaved) {
   let programs = [];
   try {
     const [bRes, cRes, lRes, pRes, prgRes] = await Promise.all([
-      adminFetchAll('batches', 'id, name, program_id, programs(institution_id)'),
+      adminFetchAll('batches', 'id, name, program_id, is_active, deleted_at, programs(institution_id)'),
       adminFetchAll('classes', 'id, name'),
       adminFetchAll('levels', 'id, name, level_number'),
       adminFetchAll('progress', 'id, student_id, class_id, level_id, status'),
       adminFetchAll('programs', 'id, name, institution_id')
     ]);
-    batches = (bRes || []).sort((a,b) => (a.name||'').localeCompare(b.name||''));
+    batches = (bRes || []).filter(b => !b.deleted_at && b.is_active !== false).sort((a,b) => (a.name||'').localeCompare(b.name||''));
     classes = (cRes || []).sort((a,b) => (a.name||'').localeCompare(b.name||''));
     levels = lRes || [];
     programs = prgRes || [];

@@ -111,6 +111,19 @@
   </div>
 
   <script type="module" src="./js/result.js?v=5.3.2"></script>
+  <!-- Service Worker Registration for PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js?v=5.3.2')
+          .then(registration => {
+            registration.update();
+            console.log('ServiceWorker registered and updated with scope:', registration.scope);
+          })
+          .catch(error => console.warn('ServiceWorker registration failed:', error));
+      });
+    }
+  </script>
 
 
 

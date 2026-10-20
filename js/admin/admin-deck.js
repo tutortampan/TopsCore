@@ -1,8 +1,8 @@
-import { adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, formatStudentName } from '../api.js?v=5.2.2';
-import { getSupabase } from '../supabase.js?v=5.2.2';
-import { generateExecutiveCV } from './cv-export.js?v=5.2.2';
-import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=5.2.2';
-import { showToast, escapeHtml, escHtml } from '../app.js?v=5.2.2';
+import { adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, formatStudentName } from '../api.js?v=5.3.2';
+import { getSupabase } from '../supabase.js?v=5.3.2';
+import { generateExecutiveCV } from './cv-export.js?v=5.3.2';
+import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=5.3.2';
+import { showToast, escapeHtml, escHtml } from '../app.js?v=5.3.2';
 
 // escapeHtml / escHtml imported canonically
 
@@ -399,7 +399,7 @@ export async function renderAdminProfile(container) {
     }
 
     try {
-      const { processAndCompressAvatar } = await import('../utils/avatar-engine.js?v=5.2.2');
+      const { processAndCompressAvatar } = await import('../utils/avatar-engine.js?v=5.3.2');
       const compressedDataUrl = await processAndCompressAvatar(file, 'admin');
 
       // Optimistic preview

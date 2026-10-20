@@ -1,8 +1,8 @@
-import { adminFetchAll, adminInsert, adminUpdate, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, clearAdminCache, toLevelLetter } from '../api.js?v=5.2.2';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.2.2';
-import { showToast, showLoading, hideLoading, updateLoadingProgress } from '../app.js?v=5.2.2';
-import { callEdgeFunction, getSupabase } from '../supabase.js?v=5.2.2';
-import { downloadAITemplate, AI_MODULES } from './panel-c-builder.js?v=5.2.2';
+import { adminFetchAll, adminInsert, adminUpdate, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, clearAdminCache, toLevelLetter } from '../api.js?v=5.3.2';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.3.2';
+import { showToast, showLoading, hideLoading, updateLoadingProgress } from '../app.js?v=5.3.2';
+import { callEdgeFunction, getSupabase } from '../supabase.js?v=5.3.2';
+import { downloadAITemplate, AI_MODULES } from './panel-c-builder.js?v=5.3.2';
 
 
 // escapeHtml / escHtml imported canonically

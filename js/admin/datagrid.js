@@ -29,6 +29,7 @@ export class DataGrid {
     this.superHeaders = superHeaders;
     this.summaryRow = summaryRow;
     this.tableLayout = tableLayout;
+    this.hideToolbar = arguments[0].hideToolbar || false;
     
     if (this.sortKey) this.sortData();
     this.init();
@@ -37,7 +38,7 @@ export class DataGrid {
   init() {
     if (!this.container) return;
     this.container.innerHTML = `
-      <div class="datagrid-toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; gap:1rem; flex-wrap:wrap;">
+      <div class="datagrid-toolbar" style="${this.hideToolbar ? 'display:none;' : 'display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; gap:1rem; flex-wrap:wrap;'}">
         <div class="datagrid-search" style="flex:1; min-width:200px; display:flex; gap:0.5rem; align-items:center;">
           <div class="datagrid-search-wrap" style="position:relative; max-width:320px; width:100%;">
             <input type="text" class="form-control datagrid-search-input" placeholder="Search... (Ctrl+K)" style="width:100%; padding-right:2rem;" />
@@ -67,7 +68,7 @@ export class DataGrid {
           <tfoot class="datagrid-tfoot"></tfoot>
         </table>
       </div>
-      <div class="datagrid-pagination" style="display:flex; justify-content:center; align-items:center; gap:0.5rem; margin-top:1rem;">
+      <div class="datagrid-pagination" style="${this.hideToolbar ? 'display:none;' : 'display:flex; justify-content:center; align-items:center; gap:0.5rem; margin-top:1rem;'}">
       </div>
     `;
 

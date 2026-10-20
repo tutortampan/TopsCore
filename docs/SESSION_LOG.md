@@ -1,3 +1,573 @@
+## SESSION-20261020-0825
+
+Start: 2026-10-20 08:05 UTC+8  
+End: 2026-10-20 08:25 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"only list active batch in the dropdown, or any dropdown! inactive, means INACTIVE. and we need to talk about level 0, it means its not all level but means that its under level one so dont show them in the level 1, 2, or 3. they are under it."  
+Accompanied by screenshot of the Live Session Controller modal in `admin.html`.
+
+### Objective
+1. Enforce strict filtering of inactive batches across all operational batch dropdowns (Live Session Controller, student management modals, class assignment).
+2. Fix Level 0 semantics:
+   - Rename `level_number: 0` in `levels` table from "All Levels" to "Level 0" (Pre-Level / Foundation under Level 1).
+   - Ensure Level 0 batches/students are never shown or matched to Level 1, 2, or 3 tests/classes ("dont show them in the level 1, 2, or 3. they are under it").
+   - Fix `js/api.js` line 2142 (remove `if (lvlData.level_number === 0) isAllLevels = true;`).
+   - Fix `js/dashboard.js` line 1034 (ensure Level 0 classes do not appear as active for Level 1, 2, or 3 students).
+3. Verify with Playwright test on Live Session Controller and full E2E audit.
+4. Maintain strict git freeze (0 commits, 0 pushes).
+
+### Work Performed
+1. **Database Schema & Seed Update**:
+   - Updated Supabase PostgreSQL `levels` table: `id = 'b70a0ea2-785d-4291-9adf-a4cbd7a2c9a2'`, `name = 'Level 0'`, `description = 'Pre-Level / Foundation (Under Level 1)'`.
+   - Updated `supabase_deploy/02_curriculum_and_students.sql` and `supabase/data.sql`.
+2. **Live Session Controller Hardening (`js/admin/assessment-access.js`)**:
+   - Filtered `_cachedBatches` to strictly `b.is_active !== false && !b.deleted_at`.
+   - Added level boundary check: If test targets Level 1, 2, or 3, exclude batches where `bLevelNum === 0`.
+   - Replaced fallback `'All Levels'` with `'Level 0'`.
+   - Updated label to "1. TARGET ACTIVE BATCH".
+3. **Student & Class Management Dropdown Audit**:
+   - Filtered inactive batches from Single Student Edit Modal and Bulk Batch Edit Modal in `js/admin/student-management.js`.
+   - Filtered inactive batches from Class Assignment Modal in `js/admin/class.js`.
+4. **API & Dashboard Logic**:
+   - Removed `isAllLevels = true` for Level 0 in `js/api.js`.
+   - Adjusted `js/dashboard.js` so Level 0 classes do not display under Level 1, 2, or 3.
+   - Updated Vocabulary Vault Level 0 label in `js/admin/vocab-vault.js`.
+5. **Verification**:
+   - Executed Playwright test `scratch/verify_live_session_dropdown.mjs`:
+     * Confirmed `#session-batch-select` contains ONLY active batches (`Batch 123`, `Batch 133`).
+     * Confirmed `Batch 131`, `Batch 132`, `Batch TP-2026` (inactive) and `Batch SH-2026` (Level 0) are 100% excluded from `3D-Vocabulary Test`.
+     * Confirmed 0 occurrences of "Inactive", 0 occurrences of "All Levels".
+     * Captured verified screenshot: `screenshot_live_session_active_batches_only.png`.
+   - Executed `scratch/full_e2e_system_audit.mjs`: 17/17 passed, 0 failures, 0 console errors.
+   - Strict Git Freeze maintained: 0 commits, 0 pushes.
+
+### Outstanding
+None.
+
+### Resume From
+Ready for user feedback.
+
+## SESSION-20261020-0805
+
+Start: 2026-10-20 07:44 UTC+8  
+End: 2026-10-20 08:05 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"dalam nilai ini ada yang dapat nilai rendah, yaitu 10, 9, tapi seahrusnya dia dapat lebih dalam task,,, sebab dia sudah menyelesaikan task berikutnya,,, mungkin ada kesalahan saat penghitungan, coba dicek ulag"
+Accompanied by a screenshot of the Class Attendance Matrix (Route C) in `admin.html` showing Miss Nurhaliza (9), Miss Asti Ananta (10), and Mr. Ahmad Nur Suhendro (10) in Task 1.
+
+### Objective
+1. Investigate and diagnose why Task 1 scores for Miss Nurhaliza, Miss Asti Ananta, and Mr. Ahmad Nur Suhendro displayed low scores (9, 10 out of 50 points) despite having completed subsequent tasks and tests.
+2. Determine whether the discrepancy was caused by legacy unmerged Words (40 questions) + Phrases (10 questions) attempts, omission of `auto_submitted` status in previous migration scripts, or an `is_best_score` selection bug.
+3. Recalibrate and update the affected student attempts in Supabase PostgreSQL to their true unified scores.
+4. Harden the frontend best-attempt selection in `js/admin/app.js` so that `markedBest` cannot override an attempt with a strictly higher score or percentage.
+5. Verify via comprehensive database diagnostics, Batch 133 audits, Playwright visual screenshot capture, and the 17/17 full E2E system audit.
+
+### Work Performed
+1. **Root Cause Analysis (`scratch/inspect_attempts.mjs`, `scratch/check_overwritten_attempts.mjs`)**:
+   - Examined `attempt_answers` for Miss Nurhaliza, Miss Asti Ananta, and Mr. Ahmad Nur Suhendro.
+   - Proved that their 9 and 10 attempts contained only 10 questions (Phrases), where they scored 9/10 (90%) and 10/10 (100%).
+   - Discovered that on their Words tasks (40 questions), they scored 35/40 (87.5%), 34/40 (85%), and 31/40 (77.5%) with `status = 'auto_submitted'`.
+   - Identified that `scratch/recalibrate_task_points_50.mjs` had queried `.eq('status', 'submitted')`, thereby missing all `auto_submitted` 40-word attempts. The script then set `total_questions = 50`, `score = 9` (18%) or `score = 10` (20%), and assigned `is_best_score: true`.
+2. **Server Database Recalibration (`scratch/execute_score_recalibration.mjs`, `scratch/execute_remaining_recalibration.mjs`)**:
+   - Combined Words + Phrases into the unified 50-point task:
+     * Miss Nurhaliza (3A1): 35 + 9 = **44/50** (88% B), PTS: **216.5 pts**, Average: **90% B**.
+     * Miss Asti Ananta (3A1): 34 + 10 = **44/50** (88% B).
+     * Miss Asti Ananta (3A2): 32 + 8.5 = **40.5/50** (81% B), PTS: **202 pts**, Average: **80% B**.
+     * Mr. Ahmad Nur Suhendro (3A1): 31 + 10 = **41/50** (82% B), PTS: **123 pts**, Average: **90% B**.
+     * Mr. Ari Wahyu Darma (3A3): 40 + 9.5 = **49.5/50** (99% A), PTS: **141.5 pts**, Average: **97% A**.
+     * Miss Siti Qori' Atun Hizbaeni (Batch 131): Corrected stale `is_best_score` on 3C (120/120) and 3D (160/160) Vocab Tests.
+   - Demoted inferior attempts to `is_best_score: false`.
+3. **Frontend Hardening (`js/admin/app.js`)**:
+   - Hardened `bestAtt` selection in `renderClassHub()`: sorted `submittedAtts` by score, percentage, and date; verified `markedBest` cannot override an attempt with higher points or percentage.
+4. **Migration Script Hardening (`scratch/recalibrate_task_points_50.mjs`)**:
+   - Added `.in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])` and maxExistingScore guard.
+5. **Verification**:
+   - `scratch/diagnose_all_scores.mjs`: 0 suspicious cases across 422 attempts.
+   - `scratch/audit_batch133_scores.mjs`: All 42 Batch 133 students verified with 0 anomalies.
+   - `scratch/capture_recalibrated_matrix.mjs`: Verified matrix rendering and saved `screenshot_matrix_recalibrated_fixed.png`.
+   - `scratch/full_e2e_system_audit.mjs`: 17/17 PASSED, 0 failures, 0 console errors.
+   - Strict Git Freeze maintained: 0 commits, 0 pushes.
+
+### Outstanding
+None.
+
+### Resume From
+Ready for next user directive.
+
+## SESSION-20261020-0727
+
+Start: 2026-10-20 01:50 UTC+8  
+End: 2026-10-20 07:27 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"here are some assesment that is not availble anymore,,, analyze whats wrong there,,, and otherthings if there is any"
+Followed by "proceed".
+
+### Objective
+1. Diagnose why soft-deleted/merged assessments (e.g., `3rd Vocabulary A1 Phrases Task - Professional Identity`) appear on the student dashboard.
+2. Resolve the API leak in `js/api.js` (`fetchAssessments`, `fetchAssessmentsForStudentLevel`, `fetchAllStudentAttempts`).
+3. Restore the Hero Daily Task in `js/dashboard.js` to point to the active assessment (`3A-Vocabulary Test - Workplace`).
+4. Restore overall score and grade calculation per AGENTS.md §2.8 from 56% (Grade C) to 70% (Grade C/B).
+5. Recalibrate Vocabulary class progress bar from 13% to 20%.
+6. Clean up the Completed bottom list and Batch Leaderboard to exclude soft-deleted assessments.
+7. Verify with automated Playwright visual testing and full E2E system audit (17/17 pass) while honoring strict git freeze (0 commits, 0 pushes).
+
+### Work Performed
+1. **Root Cause Analysis (`scratch/diagnose_dashboard_issues.mjs`)**:
+   - Discovered that `fetchAssessments` in `js/api.js` did not request `deleted_at` and did not filter `.is('deleted_at', null)`.
+   - 20 soft-deleted assessments were returned with `deleted_at: undefined`.
+   - `renderNextAssignmentHero` failed its `if (a.deleted_at)` check and sorted `"3rd..."` before `"3A..."`, picking it as King Test's Daily Task.
+   - `computeOverallStats` averaged the 0% score from the deleted task, dropping the student's score from 70% to 56%.
+   - `renderClasses` counted 40 assessments instead of 20, deflating the progress bar to 13%.
+   - `loadBatchLeaderboard` also counted 5 completed and 56% for the student.
+2. **API Data Layer Fixes (`js/api.js`)**:
+   - Updated `fetchAssessments` and `fetchAssessmentsForStudentLevel` to select `deleted_at` and filter `.is('deleted_at', null)`.
+   - Updated `fetchAllStudentAttempts` to join `assessments(..., deleted_at, status)` so attempt records carry soft-delete metadata.
+3. **Student Dashboard Fixes (`js/dashboard.js`)**:
+   - `renderNextAssignmentHero`: Soft-deleted assessments are excluded. King Test's Daily Task now points to `3A-Vocabulary Test - Workplace`.
+   - `computeOverallStats`: Soft-deleted and unavailable assessments excluded per AGENTS.md §2.8. Overall score restored to 70%.
+   - `renderClasses`: Excluded soft-deleted assessments from `classAssms` denominator. Vocabulary progress restored to 20%.
+   - `renderCompletedAssessmentsBottom`: Filtered attempts using `validAttempts`, removing defunct 0% card.
+   - `loadBatchLeaderboard`: Joined `assessments(deleted_at)` and excluded soft-deleted attempts; leaderboard now displays 4 completed and 70% C.
+   - `setupProfileModal`: Filtered soft-deleted attempts from profile history modal table.
+4. **Verification**:
+   - Verified active overall score = 70%, next task = `3A-Vocabulary Test - Workplace`, completed list = 4 active tasks.
+   - Playwright visual capture (`scratch/capture_dashboard_fixed.mjs`): Captured `screenshot_dashboard_king_test_fixed.png` confirming all dashboard components.
+   - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 passed with 0 failures and 0 console errors.
+   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
+
+### Files Changed
+- `js/api.js`
+- `js/dashboard.js`
+- `scratch/diagnose_dashboard_issues.mjs`
+- `scratch/capture_dashboard_fixed.mjs`
+- `docs/TODO.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+## SESSION-20261020-0146
+
+Start: 2026-10-20 01:36 UTC+8  
+End: 2026-10-20 01:46 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"e need to be able to sort it alphbatically"
+
+### Objective
+1. Sort the student presence & attendance whitelist in the Live Session Controller modal alphabetically (A → Z) by default.
+2. Provide an interactive sort toggle button (`🔤 A → Z` / `🔤 Z → A`) in the modal whitelist header.
+3. Add a real-time instant search input (`🔍 Filter student...`) in the modal whitelist header with full checkbox state preservation.
+4. Naturally sort batches inside `<optgroup>` options alphanumerically.
+5. Provide alphabetical sorting on the Tests Assessment table with sort selector and clickable headers.
+6. Verify with automated Playwright visual testing and full E2E system audit (17/17 pass) while honoring strict git freeze (0 commits, 0 pushes).
+
+### Work Performed
+1. **Alphabetical Student Whitelist & Controls (`js/admin/assessment-access.js`)**:
+   - Enrolled students now sort alphabetically (A → Z) by name by default.
+   - Added `#btn-sort-students` toggle button to alternate between `A → Z` and `Z → A`.
+   - Added `#session-student-search` input to filter students dynamically.
+   - Used `_checkedStudentIds` set to preserve student selection status during sorting and searching.
+2. **Batches Alphanumeric Sorting (`js/admin/assessment-access.js`)**:
+   - Sorted batches using `localeCompare(..., { numeric: true })` within related and other batch groups.
+3. **Tests Table Alphabetical Sorting (`js/admin/assessment-access.js`)**:
+   - Initialized `tests` array with alphabetical sorting by title.
+   - Added `#access-sort-select` dropdown and clickable `.th-sortable` column headers.
+4. **Verification**:
+   - Playwright test (`scratch/test_alphabetical_sort.mjs`): All 24 students sorted alphabetically A-Z by default (Miss Asti Ananta first, Suharto last). Toggle sort and search filter verified. Saved screenshot `screenshot_whitelist_sorted_az.png`.
+   - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 passed with 0 failures and 0 console errors.
+   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
+
+### Files Changed
+- `js/admin/assessment-access.js`
+- `scratch/test_alphabetical_sort.mjs`
+- `docs/TODO.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Resume From
+Awaiting next user instruction.
+
+## SESSION-20261020-0130
+
+Start: 2026-10-20 01:19 UTC+8  
+End: 2026-10-20 01:30 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"disini belum muncul batch terkait," (with attached screenshot of Live Session Controller modal in Assessment Access with empty batch dropdown and 0 students).
+
+### Objective
+1. Identify and fix root cause preventing batches from loading in Assessment Access Live Session Controller modal.
+2. Group batches into smart categories (`🎯 Related Batches (<Class> • <Level>)` and `Other Batches`).
+3. Display enriched batch metadata (active student count, program name, level name).
+4. Auto-select the direct matching batch (`Batch 133`) upon opening the modal and automatically populate the 24 student checkboxes.
+5. Verify with automated Playwright visual testing and full E2E system audit (17/17 pass) while honoring strict git freeze (0 commits, 0 pushes).
+
+### Work Performed
+1. **Root Cause Analysis & Fix (`js/admin/assessment-access.js`)**:
+   - Discovered `adminFetchAll('batches', 'id, name, program_id, current_level_id, is_active, status')` requested non-existent column `status`.
+   - PostgreSQL error `42703: column batches.status does not exist` caused `.catch(() => [])` to silently return `[]`.
+   - Fixed columns to `id, name, program_id, current_level_id, is_active, deleted_at`.
+   - Added `adminFetchAll('programs', 'id, name, institution_id')` to `Promise.all` and created `programMap`.
+   - Updated `classes` query to fetch `level_id`.
+2. **Smart Categorization & Formatting (`js/admin/assessment-access.js`)**:
+   - Correlated test's `level_id` and class `program_id` to batches.
+   - Built `<optgroup>` for `🎯 Related Batches` (Batch 133, Batch 123) and `Other Batches` (Batch SH-2026, Batch TP-2026).
+   - Formatted batch labels with active student count, program name, and level metadata.
+3. **Auto-Selection & Student Checklist Population (`js/admin/assessment-access.js`)**:
+   - Auto-selects the primary matching related active batch upon opening the modal.
+   - Dispatched `change` event automatically to load all 24 student checkboxes into the presence checklist.
+   - Supported preserving active session `allowed_student_ids` when re-opening an active session.
+4. **Verification**:
+   - Playwright test (`scratch/test_assessment_access_modal.mjs`): Batch 133 auto-selected with related optgroup and 24 student checkboxes populated. Captured screenshot `screenshot_assessment_access_batches_fixed.png`.
+   - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 passed with 0 failures and 0 console errors.
+   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
+
+### Files Changed
+- `js/admin/assessment-access.js`
+- `scratch/test_assessment_access_modal.mjs`
+- `docs/TODO.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Resume From
+Awaiting next user instruction.
+
+## SESSION-20261020-0115
+
+Start: 2026-10-20 01:05 UTC+8  
+End: 2026-10-20 01:15 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"bagian atas ini tidak perlu ada, usahakan  dalam tabl tidak ahda vertcal scrolling, busat semua siswa kelihatan di tabel secara dinamis ukurannya sesuai layar yang dipakai" (with screenshot cropping the card header & datagrid toolbar).
+
+### Objective
+1. Remove the top card header (`Class Roster (Attendance)` and batch filter) and DataGrid toolbar (Search input, Columns dropdown, records count).
+2. Eliminate all vertical scrolling so the table fits the viewport cleanly without any vertical scrollbar.
+3. Dynamically scale row heights, font sizes, and paddings based on viewport height so that all 25 students are visible simultaneously on any screen.
+4. Verify with Playwright visual testing and full E2E audit (17/17 pass) while honoring strict git freeze (0 commits, 0 pushes).
+
+### Work Performed
+1. **Header & Toolbar Removal (`js/admin/app.js`, `js/admin/datagrid.js`, `css/admin.css`)**:
+   - Replaced card header markup in attendance tab with clean zero-padding container.
+   - Added `hideToolbar: true` to `DataGrid` and suppressed `.datagrid-toolbar` and `.datagrid-pagination`.
+2. **Dynamic Viewport Scaling (`js/admin/app.js`, `css/admin.css`)**:
+   - Implemented `fitMatrixToScreen()` subtracting topbar and bottom 38px banner (`window.innerHeight - rect.top - bannerHeight - 6`).
+   - Dynamically updates `--matrix-row-height`, `--matrix-font-size`, `--matrix-badge-font`, and `--matrix-cell-padding`.
+   - Attached resize listener and RAF to auto-adjust when resizing the window or zooming.
+   - Made `PROG` column single line compact (`${row.progressPct}%` with tooltip).
+3. **Strict Zero Vertical Scroll (`css/admin.css`)**:
+   - Set `.admin-content:has(#class-attendance-grid)` to `height: calc(100vh - 56px - 38px)` and `overflow: hidden !important;`.
+   - Metrics verified: `adminContentHasScroll: false`, `tableWrapHasScroll: false`.
+   - All 25 students and summary row (★ CLASS AVERAGE) are 100% visible on screen simultaneously.
+4. **Verification**:
+   - Playwright test (`scratch/test_attendance_matrix_layout.mjs`) verified zero scrollbars and captured screenshot.
+   - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 passed.
+   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
+
+### Files Changed
+- `js/admin/app.js`
+- `js/admin/datagrid.js`
+- `css/admin.css`
+- `scratch/test_attendance_matrix_layout.mjs`
+- `docs/TODO.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Resume From
+Awaiting next user instruction.
+
+## SESSION-20261020-0105
+
+Start: 2026-10-20 00:54 UTC+8  
+End: 2026-10-20 01:05 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"ada kolom grd, itu isinya cukup grade sjs, kolom Score isinya score, jangan disatukan."
+
+### Objective
+1. Split the unified `GRD` cell in Class Attendance Matrix into two independent columns:
+   - `SCORE`: displays average percentage score (e.g. `96%`).
+   - `GRD`: displays purely the grade badge (e.g. `[ A ]`, `[ S ]`).
+2. Expand `STUDENT DETAILS` super-header `colSpan` from 7 to 8.
+3. Update `summaryRow` to display separate average score percentage and average grade badge.
+4. Verify with Playwright visual testing and full E2E audit (17/17 pass) while honoring strict git freeze (0 commits, 0 pushes).
+
+### Work Performed
+1. **SuperHeaders Colspan Expansion (`js/admin/app.js`)**:
+   - Expanded `STUDENT DETAILS` `colSpan` from 7 to 8.
+2. **Column Definitions Split (`js/admin/app.js`)**:
+   - Added column `{ key: 'averageScorePct', label: 'SCORE', width: '45px', render: ... }` displaying `${row.averageScorePct}%`.
+   - Modified column `{ key: 'grade', label: 'GRD', width: '35px', render: ... }` displaying `<span class="badge" style="${badgeStyle}">${row.grade}</span>`.
+   - Column order: `INST`, `PROGRAM`, `BATCH`, `STUDENT NAME`, `PROG`, `SCORE`, `GRD`, `PTS`.
+3. **Summary Row Alignment (`js/admin/app.js`)**:
+   - Updated `summaryRow` to render `${avgScore}%` under `SCORE` and `<span class="badge" style="${avgBadgeStyle}">${avgGrade}</span>` under `GRD`.
+4. **Verification**:
+   - `scratch/test_attendance_matrix_layout.mjs`: Playwright verified 8 columns under `STUDENT DETAILS`, separate values (`score: '96%'`, `grd: 'A'`), summary row `{ score: '78%', grd: 'B' }`, and captured screenshot.
+   - `scratch/full_e2e_system_audit.mjs`: 17/17 passed with 0 failures and 0 console errors.
+   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
+
+### Files Changed
+- `js/admin/app.js`
+- `scratch/test_attendance_matrix_layout.mjs`
+- `docs/TODO.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Resume From
+Awaiting next user instruction.
+
+## SESSION-20261020-0035
+
+Start: 2026-10-20 00:25 UTC+8  
+End: 2026-10-20 00:35 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"1. yang aktif saja,,, sekalian,,, tolong cek ulang point pada kolom task. nilai point dari words dan pharse yang harus dihitung jadi satu... seharusnya makksimal nilinya 50. tapi itu smapi 100"
+
+### Objective
+1. Filter the topbar tab counter to active enrolled students only (25 students).
+2. Recalibrate all task attempts so maximum score is 50 points (Words 40 questions + Phrases 10 questions = 50 points max).
+3. Repair secondary attempts in the database.
+4. Verify with Playwright and maintain strict git freeze (0 commits, 0 pushes).
+
+### Work Performed
+1. **Topbar Tab Alignment (`js/admin/app.js`)**:
+   - Filtered counter to active batch students (`activeBatchStudents.length` = 25).
+   - Tab displays `Active Enrolled Students: 25`.
+2. **Database Recalibration (`scratch/recalibrate_task_points_50.mjs`)**:
+   - Recalibrated all 82 student task pairs in Supabase Cloud:
+     * Words: max 40 pts
+     * Phrases: max 10 pts
+     * Combined: max 50 pts
+     * Unggul: Task 1: `49/50`, Task 2: `50/50`, Task 3: `50/50`, Test: `101.5/120` -> PTS: `250.5 pts`.
+     * Asmul: Task 1: `47/50`, Task 2: `43/50`, Task 3: `42/50`, Test: `116.5/120` -> PTS: `248.5 pts`.
+     * Wardatul: Task 1: `46/50`, Task 2: `50/50`, Task 3: `47/50`, Test: `102/120` -> PTS: `245 pts`.
+     * Masyan: Task 1: `46/50`, Task 2: `44/50`, Task 3: `50/50`, Test: `101.5/120` -> PTS: `241.5 pts`.
+   - Repaired 62 secondary attempts with scores > 50 in Supabase.
+3. **Frontend Fallback & Best Attempt Selection (`js/admin/app.js`)**:
+   - `totalQ` fallback updated to 50 for tasks and 120 for tests.
+   - Prioritized `is_best_score: true` when selecting `bestAtt`.
+4. **Verification**:
+   - `scratch/test_attendance_matrix_layout.mjs`: Playwright verified points and PTS.
+   - `scratch/full_e2e_system_audit.mjs`: 17/17 passed.
+   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
+
+### Files Changed
+- `js/admin/app.js`
+- `scratch/recalibrate_task_points_50.mjs`
+- `docs/TODO.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+---
+
+## SESSION-20261020-0020
+
+Start: 2026-10-20 00:13 UTC+8  
+End: 2026-10-20 00:20 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"disini yang tampil adalah score dalam kolom 1-20,,, saya mau yang muncul adalah poin, bukan score"
+
+### Objective
+1. Switch display in columns 1–20 from percentage score (`Math.round(pct)`) to raw earned points (`poin`, e.g., `101.5` on Column 4 Test).
+2. Align `PTS` column to represent cumulative earned points ($99 + 100 + 100 + 101.5 = 400.5\text{ pts}$) with single decimal precision formatting.
+3. Keep `GRD` column as student overall percentage score and grade letter (`96% A`).
+4. Update summary row column averages to average points.
+5. Verify via Playwright and maintain strict git freeze (0 commits, 0 pushes).
+
+### Work Performed
+1. **`js/admin/app.js` Assessment Columns**:
+   - Updated cell renderer to display `displayVal = (sc % 1 !== 0) ? sc.toFixed(1) : sc`.
+   - Tooltip updated: `Points: ${displayVal}/${totalQ} pts (${Math.round(pct)}%)`.
+2. **`js/admin/app.js` PTS & Sorting**:
+   - `totalEarnedScore` and `rowScoreSortVals` sum and sort by raw earned points `rawEarned`.
+   - PTS cell formatted to display decimal when non-integer (`400.5 pts`).
+   - Summary row class average computes average points (`pts`).
+3. **Verification**:
+   - `scratch/test_attendance_matrix_layout.mjs`: Playwright verified Unggul shows `400.5 pts` and Column 4 `101.5`.
+   - `scratch/full_e2e_system_audit.mjs`: 17/17 passed.
+   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
+
+### Files Changed
+- `js/admin/app.js`
+- `docs/TODO.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+---
+
+## SESSION-20261020-0010
+
+Start: 2026-10-19 23:56 UTC+8  
+End: 2026-10-20 00:10 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"fix this" (with screenshot of Class Roster (Attendance) in `admin.html#class-hub`)
+
+### Objective
+1. Fix Theme SuperHeaders colspans in the attendance matrix to match the 20 unified assessment columns.
+2. Fix erroneous TEST column highlighting (columns 7, 8, 17, 18 had pink borders and banding due to old hardcoded col numbers).
+3. Standardize assessment cell score display and student total PTS calculation to percentage scale so Column 4 does not display raw point values (e.g., `101.5`), and total PTS does not exceed 400 for 4 completed modules.
+4. Verify with automated Playwright browser tests and full E2E audit.
+5. Maintain strict git freeze (0 commits, 0 pushes).
+
+### Work Performed
+1. **`js/admin/app.js` SuperHeaders**:
+   - Replaced static `colSpan: 8, 10, 10, 12` with dynamic theme assessment counts from `classAssessments`.
+   - Theme A: 4 columns, Theme B: 5 columns, Theme C: 6 columns, Theme D: 5 columns (Total = 20 columns).
+2. **`js/admin/app.js` Test Highlighting**:
+   - Removed `testColNumbers = [7, 8, 17, 18, 29, 30, 39, 40]`.
+   - Applied dynamic test detection (`isTest`), highlighting only columns 4, 9, 15, and 20 as Tests (`.col-asm-test`, pink). Columns 7, 8, 17, 18 styled as Tasks (`.col-asm-task`, cyan).
+3. **`js/admin/app.js` Score & PTS Normalization**:
+   - Normalized cell display value to `Math.round(pct)` (0–100 scale), with raw points retained in hover tooltip (`${displayVal}% (${sc}/${totalQ} pts)`).
+   - Normalized `rowScoreSortVals` and `totalEarnedScore` to sum percentage points: Unggul's PTS is `384 pts` ($99+100+100+85$), matching his 96% Grade A.
+   - Standardized summary row class average to percentage scale.
+4. **Verification**:
+   - `scratch/test_attendance_matrix_layout.mjs`: SuperHeaders, assessment columns, and top students verified via Playwright. Screenshot saved.
+   - `scratch/full_e2e_system_audit.mjs`: 17/17 checks passed, 0 failures, 0 console errors.
+   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
+
+### Files Changed
+- `js/admin/app.js`
+- `scratch/test_attendance_matrix_layout.mjs`
+- `docs/TODO.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+---
+
+## SESSION-20261019-2355
+
+Start: 2026-10-19 23:40 UTC+8  
+End: 2026-10-19 23:55 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"kalau begitu gabungkan juga task words dn pharse jadi 1, bagaimana? apakah bisa kita atur itu dalam autogenerate?"  
+"nama task dan test menjadi 3A1-Vocabulary Task  , Words dan Pharses jadi Vocabulary saja namanya. KODENYA JADI "3A1 Vocab Task". Tipe jawaban untuk task adalah sopoken, untuk test adalah written,,, tapi bisa dirubah apabila tutoar menginginkan. Untuk nilai siswa yang sudah ada,,, di merge menjadi 1 untuk task dengan topic yang sama."
+
+### Objective
+1. Unify auto-generator to create 1 unified Vocab Task per topic and 1 unified Vocab Test per theme.
+2. Standardize shell code to `${levelNum}${themeCode}${topicCode} Vocab Task` and `${levelNum}${themeCode} Vocab Test`.
+3. Standardize titles to `${levelNum}${themeCode}${topicCode}-Vocabulary Task - [Topic]` and `${levelNum}${themeCode}-Vocabulary Test - [Theme]`.
+4. Configure default answer types: `'spoken'` for Task, `'written'` for Test (with tutor override privilege).
+5. Merge existing student scores for tasks sharing the same topic: average words and phrases scores ($(P_w + P_p) / 2$), recalculate grades per centralized grading table, and consolidate into primary unified assessments without data loss.
+6. Rebuild linear prerequisite chain across all assessments.
+7. Verify all systems and ensure strict git freeze (0 commits, 0 pushes).
+
+### Work Performed
+1. **Auto-Generator Updates (`js/api.js`)**:
+   - Updated `upsertDynamicAssessmentShell`:
+     * Generates shell codes matching `3A1 Vocab Task` and `3A Vocab Test`.
+     * Generates titles matching `3A1-Vocabulary Task - [Topic]` and `3A-Vocabulary Test - [Theme]`.
+     * Applies default answer types: `'spoken'` for Task, `'written'` for Test, preserving tutor modifications.
+     * Updated deduplication to update legacy records in place.
+   - Updated `autoGenerateAssessmentsHierarchy`:
+     * Generates 1 unified task per topic (combining words & phrases) and 1 unified test per theme in default/unified mode.
+2. **Database Migration & Score Merge (`scratch/execute_merge_migration.mjs`)**:
+   - Consolidated 20 assessment groups (16 Tasks + 4 Tests) in Supabase.
+   - Reassigned 117 attempts from secondary phrase shells to primary unified shells.
+   - Merged and recalibrated 85 student scores with singular `is_best_score: true` (0 duplicate best score pairs).
+   - Soft-deleted 20 legacy companion phrase shells (`deleted_at = now()`).
+3. **Linear Prerequisite Chain**:
+   - Linked all 20 Level 3 assessments in clean order: `3A1 Vocab Task` -> `3A2 Vocab Task` -> `3A3 Vocab Task` -> `3A Vocab Test` -> `3B1 Vocab Task` ... -> `3D Vocab Test`.
+4. **Verification**:
+   - `scratch/test_phase47_e2e.mjs`: 9/9 passed.
+   - `scratch/full_e2e_system_audit.mjs`: 17/17 passed, 0 failures, 0 console errors.
+   - `node --check`: 100% clean across all JavaScript files.
+   - Strict git freeze maintained: 0 commits, 0 pushes. All changes remain local.
+
+### Files Changed
+- `js/api.js`
+- `scratch/execute_merge_migration.mjs`
+- `docs/TODO.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+---
+
+## SESSION-20261019-2335
+
+Start: 2026-10-19 22:45 UTC+8  
+End: 2026-10-19 23:35 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"1. sepertinya bagus,,, daftar nama diambil dari nama peserta yang enrolled dalam kelas itu. jadi batch yang active saja yang masuk absen. nanti saat akan ujian, tutor menentukan pembukaan kunci secara manual, dan penutupan secara manual maupuan otomatis, dengan membuka lalu menentukan berapa lama waktunya dia terbuka. untuk test nanti waktunya otomatis menyesuaikan dengn berapa lama waktu yang dialokasikan oleh tutor saat memebuka kunci, jadi tidak otomatis saat generate assesment.  
+2. Saat ini sepertinya sudah ada panel yang berisi next assignment. coba cek.  
+3. Assessment session controller ini ditempatkandi assesment Hub atau dimana? coba pikirkan.  
+4. Saya berfikir untuk menyatukan test words dan Phrase jadi 1 assessment test. tapi usrustan acaknya tetap yang word duluan, lalu pharse belakangan dimana masing2 diacak sesuai dengan giliran masing2... semua words duluan, secara acak, baru pharse secara acak. apakah bisa dipahami? coba berikan pendapat"  
+"Okay, sekarang buat sebat 'task list' yang 'BARU' isinya adalah hal2 ini saja. lalu proceed"  
+"coontinue"
+
+### Objective
+1. Implement Test vs. Task locking mechanism with tutor manual unlock, dynamic duration override, and student attendance whitelist.
+2. Build dedicated Admin Panel "Assessment Access" under Domain C in `admin.html`.
+3. Design persistent, always-visible Student Dashboard Hero ("Next Assignment / Test Arena") with 4 reactive states.
+4. Implement Unified Words & Phrases Test with two-stage independent shuffling.
+5. Verify complete implementation end-to-end with automated Playwright tests.
+
+### Work Performed
+1. **Database & API Layer (`js/api.js`)**:
+   - Built session state model stored in `assessments.payload.test_session`.
+   - Added `fetchActiveTestSession`, `openTestSession`, `closeTestSession`, and `checkStudentTestAccess`.
+   - Wired dynamic session duration into `startAssessment`, clamping attempt duration to session auto-close timestamp.
+2. **Dedicated Admin Panel "Assessment Access" (`admin.html`, `js/admin/assessment-access.js`, `js/admin/app.js`)**:
+   - Added nav item `🔐 Assessment Access` under Domain C.
+   - Built assessment table showing exclusively `TEST` category items across all classes.
+   - Built "Live Test Session Controller" modal with active enrolled batch selector, dynamic minutes input, attendance checklist (`[ Select All ]` / `[ Deselect All ]`), and Unlock/Lock action buttons.
+3. **Student Dashboard Persistent Guided Hero (`dashboard.html`, `js/dashboard.js`)**:
+   - Unhidden and refactored `#up-next-section` in `dashboard.html` into a persistent hero container.
+   - Built `renderNextAssignmentHero` handling 4 states: Daily Task (`[ Start Task ]`), Waiting for Tutor (`Ready for Test`), Test in Session (`⏰ Xm left` + `[ Start Test ]`), and Next Milestone transition.
+   - Replaced legacy `populateUpNext` with unified delegation to `renderNextAssignmentHero`.
+4. **Unified Words & Phrases Test Two-Stage Shuffling (`js/api.js`, `js/assessment.js`)**:
+   - Updated question generator in `js/api.js` to partition words and phrases, shuffle each pool independently with Fisher-Yates, and assign section metadata (`Part 1: Words`, `Part 2: Phrases`).
+   - Updated client-side `shuffleWithSeed` in `js/assessment.js` to preserve section partition.
+   - Question interaction UI displays clear section label badge.
+5. **Testing & Verification**:
+   - Ran `scratch/test_phase47_e2e.mjs`: 9/9 passed.
+   - Ran `scratch/full_e2e_system_audit.mjs`: 17/17 passed, 0 failures, 0 console errors.
+   - Verified JavaScript syntax: 100% clean (`node --check` passed).
+   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
+
+### Files Changed
+- `js/api.js`
+- `js/assessment.js`
+- `admin.html`
+- `js/admin/app.js`
+- `js/admin/assessment-access.js`
+- `dashboard.html`
+- `js/dashboard.js`
+- `docs/TODO.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+- `scratch/test_phase47_e2e.mjs`
+
+---
+
 ## SESSION-20261019-1855
 
 Start: 2026-10-19 18:35 UTC+8  

@@ -1,4 +1,4 @@
-﻿SET session_replication_role = replica;
+SET session_replication_role = replica;
 SET session_replication_role = replica;
 
 --
@@ -198,7 +198,7 @@ INSERT INTO "public"."institutions" ("id", "name", "map_location", "is_active", 
 --
 
 INSERT INTO "public"."levels" ("id", "level_number", "name", "description", "created_at") VALUES
-	('b70a0ea2-785d-4291-9adf-a4cbd7a2c9a2', 0, 'All Levels', 'Placement Test / Daily Drill / Comprehensive Pool', '2026-09-25 18:44:51.709674+00'),
+	('b70a0ea2-785d-4291-9adf-a4cbd7a2c9a2', 0, 'Level 0', 'Pre-Level / Foundation (Under Level 1)', '2026-09-25 18:44:51.709674+00'),
 	('100120f3-ab12-4589-99da-cf65d11436b1', 1, '1st Level', 'Basic and Foundational', '2026-09-25 18:44:51.709674+00'),
 	('9936683a-5b4a-4796-bb5d-a7fd8ecf0b71', 2, '2nd Level', 'Intermediate', '2026-09-25 18:44:51.709674+00'),
 	('51589e1a-d96e-496e-92a3-d9d350483555', 3, '3rd Level', 'Advanced', '2026-09-25 18:44:51.709674+00');

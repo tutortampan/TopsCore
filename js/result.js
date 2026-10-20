@@ -3,10 +3,10 @@
  * Extracted from result.html
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, startAssessment, submitAssessment, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme } from './api.js?v=5.2.2';
-import { getStudentSession, getAdminSession } from './session.js?v=5.2.2';
-import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=5.2.2';
-import { getSupabase } from './supabase.js?v=5.2.2';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, startAssessment, submitAssessment, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme } from './api.js?v=5.3.2';
+import { getStudentSession, getAdminSession } from './session.js?v=5.3.2';
+import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=5.3.2';
+import { getSupabase } from './supabase.js?v=5.3.2';
 
 let session = getStudentSession();
 if (!session) {
@@ -275,7 +275,23 @@ if (!session) {
 
         // Wire up Try Again button with V1 assessment_id
         const tryAgainBtn = document.getElementById('try-again-btn');
-        if (asmData?.assessment_type === 'EXAM') {
+        const asmStatus = (asmData?.status || 'PUBLISHED').toUpperCase();
+        const isPublished = (asmStatus === 'PUBLISHED' || asmStatus === 'ACTIVE');
+
+        if (!isPublished) {
+          const parent = tryAgainBtn.parentElement;
+          tryAgainBtn.remove();
+          parent.insertAdjacentHTML('beforeend', `
+            <div class="security-policy-card" style="margin-top:1.5rem; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:1rem; color:#f87171; text-align:center;">
+              <div style="font-weight:700; font-size:0.85rem; text-transform:uppercase; margin-bottom:0.4rem; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
+                <span>🔒</span> Retake Unavailable
+              </div>
+              <p style="font-size:0.8rem; margin:0; line-height:1.4; color:#cbd5e1;">
+                This assessment is currently in Draft or has been closed by your tutor. Retakes are not permitted at this time.
+              </p>
+            </div>
+          `);
+        } else if (asmData?.assessment_type === 'EXAM') {
           const parent = tryAgainBtn.parentElement;
           tryAgainBtn.remove();
           parent.insertAdjacentHTML('beforeend', `

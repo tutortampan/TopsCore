@@ -8,11 +8,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=5.2.2" />
-  <link rel="stylesheet" href="css/admin.css?v=5.2.2" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=5.2.2" />
+  <link rel="stylesheet" href="css/style.css?v=5.3.2" />
+  <link rel="stylesheet" href="css/admin.css?v=5.3.2" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=5.3.2" />
   <!-- SheetJS for Excel Import / Export -->
-  <script src="./js/vendor/xlsx.full.min.js?v=5.2.2" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=5.2.2';"></script>
+  <script src="./js/vendor/xlsx.full.min.js?v=5.3.2" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=5.3.2';"></script>
 
 </head>
 <body>
@@ -119,6 +119,7 @@
             })();
           </script>
           <div class="admin-nav-item" data-sub="assessments" data-view="assessments"><span class="nav-icon">&#128221;</span>Assessment</div>
+          <div class="admin-nav-item" data-sub="assessment-access" data-view="assessment-access"><span class="nav-icon">🔐</span>Assessment Access</div>
           <div class="admin-nav-item" data-sub="vocab_vault"><span class="nav-icon">&#128214;</span>Vocabulary Vault</div>
         </div>
 
@@ -381,10 +382,22 @@
   }
 </script>
 <script type="module">
-    import { DataGrid } from './js/admin/datagrid.js?v=5.2.2';
+    import { DataGrid } from './js/admin/datagrid.js?v=5.3.2';
     window.DataGrid = DataGrid;
   </script>
-  <script type="module" src="js/admin/app.js?v=5.2.2"></script>
+  <script type="module" src="js/admin/app.js?v=5.3.2"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js?v=5.3.2')
+          .then(registration => {
+            registration.update();
+            console.log('ServiceWorker registered and updated with scope:', registration.scope);
+          })
+          .catch(error => console.warn('ServiceWorker registration failed:', error));
+      });
+    }
+  </script>
 
 
 

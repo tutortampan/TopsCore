@@ -119,16 +119,10 @@
         <span id="bottom-stat-best-score">0%</span>
       </div>
     </section>
-      <!-- UP NEXT SECTION -->
-      <section id="up-next-section" class="hidden" style="margin-top: 10px; margin-bottom: 0;">
-        <div class="section-header">
-          <div>
-            <h2 class="section-title">🎯 Next Assessment</h2>
-            
-          </div>
-        </div>
-        <div id="up-next-container" style="background: var(--clr-bg-2, #0b1523); border-radius: 12px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.06); display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-          <!-- Populated by JS -->
+      <!-- UP NEXT SECTION (Dynamic Guided Hero: Daily Task -> Ready for Test -> Start Test) -->
+      <section id="up-next-section" style="margin-top: 6px; margin-bottom: 0; flex-shrink: 0;">
+        <div id="up-next-container" style="background: var(--clr-surface-1, #0f172a); border-radius: 10px; padding: 10px 14px; border: 1px solid var(--clr-border, rgba(255, 255, 255, 0.08)); box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
+          <!-- Populated dynamically by renderNextAssignmentHero -->
         </div>
       </section>
 
@@ -510,6 +504,19 @@
   </div>
 
   <script type="module" src="./js/dashboard.js?v=5.3.2"></script>
+  <!-- Service Worker Registration for PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js?v=5.3.2')
+          .then(registration => {
+            registration.update();
+            console.log('ServiceWorker registered and updated with scope:', registration.scope);
+          })
+          .catch(error => console.warn('ServiceWorker registration failed:', error));
+      });
+    }
+  </script>
 
 
   <div id="bottom-ad-banner" class="topscore-locked-banner">

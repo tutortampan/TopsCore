@@ -3175,32 +3175,100 @@ tr.deleted-row td {
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* Compact styling for Class Attendance / Roster to fit 40 assessment columns on screen */
+/* ============================================================
+   ZERO-SCROLL DYNAMIC RESPONSIVE CLASS ATTENDANCE MATRIX
+   ============================================================ */
+.admin-content:has(#class-attendance-grid) {
+  padding: 2px 6px 0 6px !important;
+  overflow: hidden !important;
+  height: calc(100vh - 56px - 38px) !important;
+  box-sizing: border-box;
+}
+
+#class-attendance-container {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#class-attendance-grid {
+  flex: 1;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  --matrix-row-height: 28px;
+  --matrix-font-size: 0.75rem;
+  --matrix-badge-font: 0.65rem;
+  --matrix-cell-padding: 2px 2px;
+}
+
+#class-attendance-grid .datagrid-toolbar,
+#class-attendance-grid .datagrid-pagination {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 0 !important;
+}
+
 #class-attendance-grid .table-wrap {
-  overflow-x: hidden !important;
+  flex: 1 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important; /* STRICT ZERO VERTICAL AND HORIZONTAL SCROLL */
   width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 #class-attendance-grid table.datagrid-table {
   table-layout: fixed !important;
   width: 100% !important;
+  height: 100% !important;
+  border-collapse: collapse !important;
+}
+
+#class-attendance-grid tbody {
+  display: table-row-group;
+}
+
+#class-attendance-grid tbody tr {
+  height: var(--matrix-row-height, 28px);
+  max-height: var(--matrix-row-height, 28px);
+}
+
+#class-attendance-grid tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+#class-attendance-grid tbody td {
+  height: var(--matrix-row-height, 28px);
+  padding: var(--matrix-cell-padding, 2px 2px) !important;
+  font-size: var(--matrix-font-size, 0.75rem);
+  vertical-align: middle;
+  line-height: 1.1;
+  box-sizing: border-box;
 }
 
 #class-attendance-grid .table-wrap th,
 #class-attendance-grid .table-wrap td {
-  padding: 0.35rem 0.2rem;
   box-sizing: border-box;
 }
 
 /* Super Headers (Themes A, B, C, D) */
 #class-attendance-grid th.super-hdr {
-  font-size: 0.68rem;
+  font-size: var(--matrix-badge-font, 0.65rem);
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 0.35rem 0.2rem !important;
+  padding: 2px 2px !important;
   text-align: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  line-height: 1.1;
+  height: 20px;
 }
 
 #class-attendance-grid th.super-hdr-student {
@@ -3236,34 +3304,42 @@ tr.deleted-row td {
   border-top: 2px solid #34d399;
 }
 
+#class-attendance-grid .datagrid-thead tr:not(.datagrid-super-header-row) th {
+  padding: 2px 2px !important;
+  font-size: var(--matrix-badge-font, 0.68rem);
+  line-height: 1.1;
+  height: 22px;
+}
+
 #class-attendance-grid th.col-asm,
 #class-attendance-grid td.col-asm {
-  padding: 0.3rem 0.05rem !important;
+  padding: var(--matrix-cell-padding, 2px 1px) !important;
   text-align: center !important;
 }
 
 /* Base number & score */
 #class-attendance-grid th.col-asm .asm-num {
-  font-size: 0.72rem;
+  font-size: var(--matrix-badge-font, 0.7rem);
   font-weight: 800;
   font-family: monospace;
   display: inline-block;
   cursor: help;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 #class-attendance-grid td.col-asm .asm-score {
-  font-size: 0.76rem;
+  font-size: var(--matrix-font-size, 0.76rem);
   font-weight: 700;
   font-family: monospace;
   display: inline-block;
   cursor: help;
+  line-height: 1.1;
 }
 
 #class-attendance-grid .asm-dot {
   color: rgba(255, 255, 255, 0.22);
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: var(--matrix-font-size, 0.76rem);
   line-height: 1;
   display: inline-block;
 }
@@ -3307,13 +3383,17 @@ tr.deleted-row td {
   z-index: 10;
   background: #0f172a !important;
   box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.6);
+  height: 24px;
 }
 
 #class-attendance-grid tr.datagrid-summary-row td {
   background: #0f172a !important;
   border-top: 2px solid rgba(56, 189, 248, 0.6) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-  padding: 0.45rem 0.2rem !important;
+  padding: 2px 2px !important;
+  font-size: var(--matrix-font-size, 0.75rem);
+  line-height: 1.1;
+  vertical-align: middle;
 }
 
 /* ============================================================
