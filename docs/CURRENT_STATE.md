@@ -2,15 +2,15 @@
 
 Last Updated: 2026-10-20 08:25 UTC+8
 
-Current Phase: Phase 58 Strict Active-Only Batch Dropdowns & Level 0 Semantics ("Under Level 1") (Local Only - Strict Git Freeze)
+Current Phase: Phase 58 Strict Active-Only Batch Dropdowns & Level 0 Semantics ("Under Level 1") (Committed & Pushed to Remote)
 
-Current Task: ALL PHASE 58 TASKS COMPLETED & VERIFIED
+Current Task: ALL PHASE 58 TASKS COMPLETED, COMMITTED & PUSHED
 
 Status: COMPLETE
 
 ## Completed
 
-- **Phase 58: Strict Active-Only Batch Dropdowns & Level 0 Semantics ("Under Level 1") [100% VERIFIED LOCALLY - NO COMMIT/PUSH]**:
+- **Phase 58: Strict Active-Only Batch Dropdowns & Level 0 Semantics ("Under Level 1") [COMMITTED & PUSHED TO REMOTE]**:
   - **1. Strict Active-Only Batch Dropdown Enforcement ("Inactive Means INACTIVE")**:
     * **Live Session Controller (`js/admin/assessment-access.js`)**:
       - Filtered `_cachedBatches` to strictly non-deleted AND active batches: `b.is_active !== false && !b.deleted_at`.
@@ -42,7 +42,7 @@ Status: COMPLETE
       - Captured verified screenshot: `screenshot_live_session_active_batches_only.png`.
     * **Full E2E System Audit (`scratch/full_e2e_system_audit.mjs`)**:
       - 17/17 checks PASSED, 0 failures, 0 console errors.
-    * **Strict Git Freeze Maintained**: 0 commits, 0 pushes. All changes remain strictly local.
+    * **Git Push**: Committed as `459a521` and pushed to `origin/main`.
 
 - **Phase 57: Legacy Task 1 Words/Phrases Merge Recalibration & Attendance Matrix Score Restoration [100% VERIFIED LOCALLY - NO COMMIT/PUSH]**:
   - **1. Root Cause Identification for Low Task 1 Scores (9, 10 vs 50 pts)**:
