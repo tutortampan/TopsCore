@@ -1478,21 +1478,38 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           statusBadge = `<span class="badge" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);">\u25BA In Progress</span>`;
           actionBtn = `<button class="btn btn-warning btn-sm" data-aid="${asm.id}">Resume</button>`;
         } else if (isCompleted) {
-          const asmTypeCheck = asm.assessment_type || asm.Assessment_type || 'Assessment';
+          const isAsmTest = (asm.assessment_category || '').toUpperCase() === 'TEST' ||
+                            (asm.assessment_type || '').toUpperCase() === 'EXAM' ||
+                            (asm.assessment_type || '').toUpperCase().includes('TEST') ||
+                            (asm.title || '').toUpperCase().includes('TEST');
+
+          const session = asm.payload?.test_session;
+          const isSessionUnlocked = session?.status === 'UNLOCKED' && (!session.auto_close_at || new Date(session.auto_close_at) > new Date());
+
           let retakesAllowed = asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.assessment_id || a.Assessment_id) === asm.id && (a.status || '').toUpperCase() !== 'IN_PROGRESS').length));
           
-          if (asmTypeCheck === 'EXAM' && !passed) {
-             const remedialUnlocked = allAttempts.some(a => (a.assessment_id || a.Assessment_id) === asm.id && a.is_remedial_unlocked === true);
-             if (!remedialUnlocked) retakesAllowed = false;
+          if (isAsmTest) {
+            // For formal Tests: Never allow retake if already passed; if not passed, only allow if session is unlocked by Tutor
+            if (passed) {
+              retakesAllowed = false;
+            } else {
+              retakesAllowed = retakesAllowed && isSessionUnlocked;
+            }
           }
 
           statusBadge = passed
-            ? `<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);">\u2713 Passed</span>`
+            ? `<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);">✓ Passed</span>`
             : `<span class="badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);">Needs Improvement</span>`;
-          const canRetake = retakesAllowed && (!passed || asm.assessment_category === 'TASK' || asm.assessment_category === 'TRYOUT' || asm.payload?.is_standalone_tryout === true);
-          actionBtn = canRetake
-            ? `<div style="display:flex;gap:6px;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><button class="btn btn-sm btn-primary" style="padding:4px 8px;" data-aid="${asm.id}">Retake</button></div>`
-            : `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);" data-aid-result="${bestAtt?.id}">View Result</button>`;
+
+          const canRetake = retakesAllowed && (!isAsmTest || !passed);
+
+          if (canRetake) {
+            actionBtn = `<div style="display:flex;gap:6px;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><button class="btn btn-sm btn-primary" style="padding:4px 8px;" data-aid="${asm.id}">Retake</button></div>`;
+          } else if (isAsmTest && !passed && !isSessionUnlocked) {
+            actionBtn = `<div style="display:flex;gap:6px;align-items:center;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><span style="font-size:0.7rem;color:#f59e0b;font-weight:700;padding:3px 6px;border-radius:4px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);">🔒 Locked</span></div>`;
+          } else {
+            actionBtn = `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);" data-aid-result="${bestAtt?.id}">View Result</button>`;
+          }
         } else {
           statusBadge = `<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);">Ready</span>`;
           actionBtn = `<button class="btn btn-primary btn-sm" data-aid="${asm.id}">Start</button>`;

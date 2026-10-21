@@ -8,132 +8,153 @@
       try {
         var raw = sessionStorage.getItem('topscore_session');
         var adminRaw = sessionStorage.getItem('topscore_admin_session') || localStorage.getItem('topscore_admin_session');
-        if (adminRaw) return; // Admin authorized
+        if (adminRaw) return;
         var sess = raw ? JSON.parse(raw) : null;
-        if (!sess || !sess.student_id) {
-          window.location.replace('index.html');
-        }
-      } catch (_) {
-        window.location.replace('index.html');
-      }
+        if (!sess || !sess.student_id) { window.location.replace('index.html'); }
+      } catch (_) { window.location.replace('index.html'); }
     })();
   </script>
-  <title>Result — TOPS CORE</title>
+  <title>Result - TOPS CORE</title>
   <meta name="description" content="View your Assessment results and answer breakdown on TOPS CORE." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Outfit:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=5.3.2" />
   <link rel="stylesheet" href="css/dashboard.css?v=5.3.2" />
-  <link rel="stylesheet" href="css/result.css?v=5.3.2" />
+  <link rel="stylesheet" href="css/result.css?v=5.4.1" />
 </head>
 <body class="result-page">
 
-
-
+  <canvas id="bg-particle-canvas" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0; opacity:0.35;"></canvas>
   <div id="toast-container"></div>
 
-  <!-- Header -->
-  <header class="dashboard-header" style="justify-content: center;">
-    <div class="dashboard-header-brand">🎓 TOPS CORE</div>
+  <header class="dashboard-header" style="justify-content: center; position: relative; z-index: 10;">
+    <div class="dashboard-header-brand">&#127891; TOPS CORE</div>
   </header>
 
-  <div id="result-loading" class="empty-state" style="padding:var(--space-16);">
+  <canvas id="confetti-canvas" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999;"></canvas>
+
+  <div id="result-loading" class="empty-state" style="position:relative; z-index:5; padding:var(--space-16);">
     <div class="spinner"></div>
     <p>Loading your results...</p>
   </div>
 
-  <div id="result-content" class="hidden">
-
-    <!-- Result Hero -->
+  <div id="result-content" class="hidden" style="position:relative; z-index:5;">
     <section class="result-hero" id="result-hero-section">
-      <div style="display:flex; justify-content:center; align-items:center; gap: clamp(1rem, 3vw, 1.5rem); margin-bottom: 1rem;">
-        <!-- Photo -->
-        <div id="result-avatar-container" style="width: clamp(64px, 15vw, 80px); height: clamp(64px, 15vw, 80px); min-width: 64px; flex-shrink: 0; border-radius: 20px; overflow: hidden; background: linear-gradient(135deg, var(--clr-primary, #6366f1), var(--clr-accent-1, #ec4899)); display: flex; align-items: center; justify-content: center; font-size: clamp(1.5rem, 5vw, 2rem); font-weight: 800; color: #fff; border: 3px solid var(--clr-accent-1, #ec4899); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25), 0 8px 24px rgba(0,0,0,0.4); transition: all 0.4s ease;">
-          <span id="result-avatar-initial">S</span>
-          <img id="result-avatar-img" class="hidden" alt="Profile Photo" style="width:100%;height:100%;object-fit:cover;" />
-        </div>
 
-        <!-- Grade -->
-        <div class="result-grade-display grade-S" id="result-grade-badge" style="margin-bottom: 0 !important; width: clamp(64px, 15vw, 80px) !important; height: clamp(64px, 15vw, 80px) !important; min-width: 64px !important; flex-shrink: 0 !important; font-size: clamp(2rem, 8vw, 2.8rem) !important; border-radius: 20px !important;">—</div>
+      <div id="result-Assessment-name-container" class="result-meta-title-bar" style="opacity:0; animation: result-fade-up 0.4s 0.08s ease forwards;">
+        <span id="result-Assessment-name"></span>
+        <span id="result-best-score-badge"></span>
       </div>
 
-      <div class="result-percentage" id="result-percentage">0%</div>
-      <!-- Headline removed per spec -->
-      <div id="result-Assessment-name-container" style="max-width: 100%;">
-        <div id="result-Assessment-name"></div>
-      </div>
-      <div id="result-best-score-badge" style="text-align:center;margin-bottom:0.75rem;"></div>
+      <!-- Hero Trio Row: Photo, Score, and Grade Side-by-Side ("Berderet") -->
+      <div class="result-hero-trio-row" id="result-hero-trio-row" style="opacity:0; animation: result-fade-up 0.45s 0.14s ease forwards;">
+        <!-- 1. Student Portrait Stage -->
+        <div class="result-portrait-stage">
+          <div id="result-crown-badge" class="result-crown-badge hidden" title="Batch Champion">&#128081;</div>
+          <div class="result-score-ring-wrapper" id="result-score-ring-wrapper">
+            <svg class="result-score-ring-svg" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+              <circle class="ring-track" cx="55" cy="55" r="50" />
+              <circle class="ring-progress" id="ring-progress-circle" cx="55" cy="55" r="50" />
+            </svg>
+            <div id="result-avatar-container" class="result-avatar-circle">
+              <span id="result-avatar-initial">S</span>
+              <img id="result-avatar-img" class="hidden" alt="Profile Photo" />
+            </div>
+          </div>
+          <div class="result-student-name-label" id="result-student-name-label"></div>
+        </div>
 
-      <!-- Total Points -->
-      <div style="text-align:center; margin-bottom:1rem;">
-        <div id="result-points-box" style="display:inline-flex; align-items:center; gap:8px; background:rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); border-radius:12px; padding:10px 15px; transition: all 0.4s ease;">
-          <span style="font-size:0.85rem; color:rgba(255,255,255,0.8); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Total Points:</span>
-          <span id="res-points" style="font-size:1.2rem; font-weight:800; line-height:1; color: #818cf8; transition: all 0.4s ease;">0</span>
+        <!-- 2. Score Stage -->
+        <div class="result-score-stage">
+          <div class="result-percentage" id="result-percentage">0%</div>
+        </div>
+
+        <!-- 3. Modern Gold Star Accent (★ Vector Badge) -->
+        <div class="result-stamp-stage">
+          <div id="result-grade-stamp" class="result-grade-stamp pure-stamp" title="Certified Achievement">
+            <span id="result-grade-badge" class="stamp-grade-symbol">
+              <svg class="star-accent-vector" width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="starGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FDE047" />
+                    <stop offset="100%" stop-color="#EAB308" />
+                  </linearGradient>
+                </defs>
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGoldGrad)" />
+              </svg>
+            </span>
+          </div>
         </div>
       </div>
 
-      <!-- Summary Grid -->
-      <div class="result-summary-grid" style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:1.5rem;">
-        <div class="result-summary-item" style="background:#0e1f38; border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 12px; display:inline-flex; align-items:center; gap:6px;">
-          <span style="font-size:0.75rem; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1px; font-weight:800;">Correct:</span>
-          <span class="text-success" id="res-correct" style="font-size:1.1rem; font-weight:900; line-height:1;">0</span>
+      <!-- 4. Stacked Breakdown Metrics with Semantic Colors (Linear / Apple Glassmorphic Design) -->
+      <div class="result-stats-stacked-list" id="result-metrics-bar" style="opacity:0; animation: result-fade-up 0.4s 0.28s ease forwards;">
+        <!-- Row 1: Total Points -->
+        <div class="stat-stacked-row stat-points" id="result-points-box" title="Total Points Earned">
+          <span class="stat-row-label">Points</span>
+          <span class="stat-row-value stat-val-points" id="res-points">0 PTS</span>
+          <div id="result-rank-badge" class="result-rank-badge hidden"></div>
         </div>
-        <div class="result-summary-item" style="background:#0e1f38; border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 12px; display:inline-flex; align-items:center; gap:6px;">
-          <span style="font-size:0.75rem; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1px; font-weight:800;">Partial:</span>
-          <span class="text-warning" id="res-partial" style="font-size:1.1rem; font-weight:900; line-height:1;">0</span>
+        <!-- Row 2: Correct (Green / Hijau) -->
+        <div class="stat-stacked-row stat-correct summary-clickable" id="card-filter-correct" title="Click to view correct answers">
+          <span class="stat-row-label stat-lbl-correct">Correct</span>
+          <span class="stat-row-value stat-val-correct" id="res-correct">0</span>
         </div>
-        <div class="result-summary-item" style="background:#0e1f38; border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 12px; display:inline-flex; align-items:center; gap:6px;">
-          <span style="font-size:0.75rem; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1px; font-weight:800;">Incorrect:</span>
-          <span class="text-danger" id="res-wrong" style="font-size:1.1rem; font-weight:900; line-height:1;">0</span>
+        <!-- Row 3: Partial (Yellow / Kuning) -->
+        <div class="stat-stacked-row stat-partial summary-clickable" id="card-filter-partial" title="Click to view partial answers">
+          <span class="stat-row-label stat-lbl-partial">Partial</span>
+          <span class="stat-row-value stat-val-partial" id="res-partial">0</span>
+        </div>
+        <!-- Row 4: Incorrect (Red / Merah) -->
+        <div class="stat-stacked-row stat-wrong summary-clickable" id="card-filter-wrong" title="Click to view incorrect answers">
+          <span class="stat-row-label stat-lbl-wrong">Incorrect</span>
+          <span class="stat-row-value stat-val-wrong" id="res-wrong">0</span>
         </div>
       </div>
 
-      <div class="d-flex gap-3" style="flex-direction: column; max-width: 320px; margin: 0 auto;">
-        <!-- Primary -->
-        <button class="btn btn-primary" id="try-again-btn" style="background: var(--clr-primary, #6366f1); border:none; padding: 14px; font-weight: 800; font-size: 1rem; border-radius: 8px; letter-spacing: 0.5px; width: 100%; color: #fff;">Try Again</button>
-        <!-- Secondary -->
-        <button class="btn btn-secondary" id="toggle-answers-btn" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 14px; font-weight: 700; font-size: 0.95rem; border-radius: 8px; width: 100%;">View Answer Breakdown</button>
-        <!-- Tertiary -->
-        <div style="display: flex; gap: 12px; width: 100%; margin-top: 4px;">
-          <a href="dashboard.html" class="btn btn-ghost" style="flex:1; background:transparent; color:#94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; border:none; text-align: center; text-decoration: none;">Back</a>
-          <button class="btn btn-ghost" id="print-result-btn" style="flex:1; background:transparent; color:#94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; border:none; text-align: center;">Print</button>
-        </div>
+      <!-- Hidden compatibility hooks (no additional comment text) -->
+      <div id="result-points-row" class="hidden" style="display:none !important;"></div>
+      <div id="result-motivation-msg" class="hidden" style="display:none !important;"></div>
+      <div id="result-attempt-meta" class="hidden" style="display:none !important;"></div>
+
+      <div class="result-action-buttons-wrap" style="display:flex; flex-direction:column; gap:8px; max-width:380px; width:100%; margin:8px auto 0 auto; opacity:0; animation: result-fade-up 0.4s 0.45s ease forwards;">
+        <div id="smart-next-action-container"></div>
+        <button class="btn btn-primary hidden" id="try-again-btn" style="display:none !important;">Try Again</button>
+        <a href="dashboard.html" class="btn btn-dashboard-primary" id="back-dashboard-btn">&larr; Back to Dashboard</a>
+        <button class="btn btn-breakdown-ghost" id="toggle-answers-btn">View Answer Breakdown</button>
       </div>
     </section>
 
-    <!-- Answers Breakdown -->
-    <section class="answers-list hidden" id="answers-section" aria-label="Answer breakdown">
-      <h2 class="text-center mb-6 fw-700">Answer Breakdown</h2>
-      <div id="answers-list-container"></div>
-    </section>
-
+    <div class="answers-modal-backdrop hidden" id="answers-section" role="dialog" aria-modal="true" aria-label="Answer Breakdown Modal">
+      <div class="answers-modal-card">
+        <div class="answers-modal-header">
+          <div class="answers-modal-title-wrap">
+            <h2 class="answers-modal-title">&#128203; Answer Breakdown</h2>
+            <span class="answers-modal-subtitle" id="modal-answers-count-label">Review your detailed question responses</span>
+          </div>
+          <button class="answers-modal-close-btn" id="close-answers-modal-btn" type="button" aria-label="Close">&#10005;</button>
+        </div>
+        <div class="answers-modal-scroll-body">
+          <div id="answers-list-container"></div>
+        </div>
+        <div class="answers-modal-footer">
+          <button class="btn btn-secondary answers-modal-done-btn" id="done-answers-modal-btn" type="button">Close Breakdown</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <script type="module" src="./js/result.js?v=5.3.2"></script>
-  <!-- Service Worker Registration for PWA -->
+  <script type="module" src="./js/result.js?v=5.4.1"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=5.3.2')
-          .then(registration => {
-            registration.update();
-            console.log('ServiceWorker registered and updated with scope:', registration.scope);
-          })
-          .catch(error => console.warn('ServiceWorker registration failed:', error));
+        navigator.serviceWorker.register('sw.js?v=5.3.2').then(r => r.update()).catch(e => console.warn('SW:', e));
       });
     }
   </script>
-
-
-
   <div id="bottom-ad-banner" class="topscore-locked-banner">
-    <span style="color:#38bdf8; font-weight:800; letter-spacing:0.04em;">TopsCore</span>&nbsp;&copy; 2026&nbsp;<span style="opacity:0.4; margin:0 6px;">|</span>&nbsp;<span style="color:#cbd5e1;">Created by Mr. Top</span>
+    <span style="color:#38bdf8; font-weight:800;">TopsCore</span>&nbsp;&copy; 2026&nbsp;<span style="opacity:0.4; margin:0 6px;">|</span>&nbsp;<span style="color:#cbd5e1;">Created by Mr. Top</span>
   </div>
 </body>
 </html>
-
-
-
-
-

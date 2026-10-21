@@ -847,6 +847,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
         const _vaultRows = (allVault || []).filter(v => !v.deleted_at);
         const vaultCountFor = (r, lvlNumber) => {
           const pl = r?.payload || {};
+          const isUnified = pl.category === 'unified' || pl.is_unified === true || pl.is_unified_test === true || r?.assessment_type === 'UNIFIED_TEST';
           const wantPhrases = pl.category === 'phrases';
           const isTest = r?.assessment_category === 'TEST';
           let themes = null;
@@ -857,7 +858,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
           return _vaultRows.filter(v => {
             if (Number(v.target_level) !== Number(lvlNumber)) return false;
             const isPhrase = _PHRASE_TYPES.includes(_norm(v.word_type));
-            if (wantPhrases !== isPhrase) return false;
+            if (!isUnified && wantPhrases !== isPhrase) return false;
             if (themes) return themes.includes(v.theme_code);
             if (pl.theme_code && v.theme_code !== pl.theme_code) return false;
             if (pl.topic_code && v.topic_code !== pl.topic_code) return false;
@@ -939,13 +940,13 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
         // Sort classAssessments sequentially by display_order / order_index
         classAssessments.sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
 
-        // Calculate total possible points in curriculum across all 40 assessments for cumulative mastery
+        // Calculate total possible points in curriculum across all assessments for cumulative mastery
         let curriculumTotalMaxPoints = 0;
         classAssessments.forEach(asm => {
-          const q = Number(asm.total_questions || (asm.is_dynamic_shell || asm.payload?.is_dynamic_shell ? (asm.assessment_category === 'TEST' ? 40 : 10) : 10));
+          const q = Number(asm.total_questions || (asm.is_dynamic_shell || asm.payload?.is_dynamic_shell ? vaultCountFor(asm, (levelMap[asm.level_id]?.level_number || 1)) : 50));
           curriculumTotalMaxPoints += q;
         });
-        if (curriculumTotalMaxPoints === 0) curriculumTotalMaxPoints = (classAssessments.length || 40) * 10;
+        if (curriculumTotalMaxPoints === 0) curriculumTotalMaxPoints = (classAssessments.length || 20) * 50;
 
         // Calculate DataGrid format for Students
         window._classStudentsMap = {};
@@ -1035,7 +1036,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
             }
 
             asmScores[asm.id] = bestAtt;
-            const totalQ = Number(bestAtt?.total_questions || (asm.is_dynamic_shell || asm.payload?.is_dynamic_shell ? (asm.assessment_category === 'TEST' ? 120 : 50) : 50));
+            const totalQ = Number(bestAtt?.total_questions || (asm.is_dynamic_shell || asm.payload?.is_dynamic_shell ? vaultCountFor(asm, (levelMap[asm.level_id]?.level_number || 1)) : 50));
             const rawEarned = bestAtt?.score != null ? Number(bestAtt.score) : 0;
             const pctVal = bestAtt ? (bestAtt.percentage != null ? Number(bestAtt.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
             rowScoreSortVals[`asm_${asm.id}`] = bestAtt ? rawEarned : -1;
@@ -1100,7 +1101,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
             const asm = classAssessments.find(a => a.id === (la.assessment_id || la.Assessment_id));
             const code = asm?.shell_code || asm?.title || 'Task';
             const sc = la.score != null ? Number(la.score) : 0;
-            const totalQ = Number(la.total_questions || (asm?.is_dynamic_shell || asm?.payload?.is_dynamic_shell ? (asm?.assessment_category === 'TEST' ? 40 : 10) : 10));
+            const totalQ = Number(la.total_questions || (asm?.is_dynamic_shell || asm?.payload?.is_dynamic_shell ? vaultCountFor(asm, (levelMap[asm?.level_id]?.level_number || 1)) : 50));
             const pct = Math.round(la.percentage != null ? Number(la.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0));
             const g = la.grade || (typeof getGrade === 'function' ? getGrade(pct) : (pct >= 90 ? 'S' : pct >= 70 ? 'B' : pct >= 50 ? 'C' : 'D'));
             latestScore = sc;

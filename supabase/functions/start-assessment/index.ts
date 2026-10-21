@@ -373,11 +373,52 @@ Deno.serve(async (req) => {
       
       let vaultWords = vaultData || [];
       const category = assessment.payload.category || 'vocab';
-      vaultWords = vaultWords.filter((w: any) => {
-         const wt = (w.word_type || '').toLowerCase();
-         const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
-         return category === 'phrases' ? isPhrase : !isPhrase;
-      });
+      const isUnified = category === 'all' || 
+                        category === 'unified' || 
+                        assessment.payload?.is_unified === true || 
+                        assessment.payload?.is_unified_test === true ||
+                        assessment.assessment_type === 'UNIFIED_TEST';
+
+      const orderSetting = String(assessment.question_order || assessment.payload?.question_order || 'random').toLowerCase();
+
+      if (isUnified) {
+        // TWO-STAGE SHUFFLING:
+        // Stage 1: Words only (shuffled independently)
+        let wordsPool = vaultWords.filter((w: any) => {
+          const wt = (w.word_type || '').toLowerCase();
+          return !['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+        });
+        // Stage 2: Phrases only (shuffled independently)
+        let phrasesPool = vaultWords.filter((w: any) => {
+          const wt = (w.word_type || '').toLowerCase();
+          return ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+        });
+
+        if (orderSetting === 'random') {
+          wordsPool.sort(() => Math.random() - 0.5);
+          phrasesPool.sort(() => Math.random() - 0.5);
+        } else {
+          wordsPool.sort((a: any, b: any) => (a.indonesian || "").localeCompare(b.indonesian || ""));
+          phrasesPool.sort((a: any, b: any) => (a.indonesian || "").localeCompare(b.indonesian || ""));
+        }
+
+        const taggedWords = wordsPool.map((w: any) => ({ ...w, test_section: 'words', section_label: 'Part 1: Words' }));
+        const taggedPhrases = phrasesPool.map((p: any) => ({ ...p, test_section: 'phrases', section_label: 'Part 2: Phrases' }));
+
+        vaultWords = [...taggedWords, ...taggedPhrases];
+      } else {
+        vaultWords = vaultWords.filter((w: any) => {
+           const wt = (w.word_type || '').toLowerCase();
+           const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+           return category === 'phrases' ? isPhrase : !isPhrase;
+        });
+
+        if (orderSetting === 'random') {
+          vaultWords.sort(() => Math.random() - 0.5);
+        } else {
+          vaultWords.sort((a: any, b: any) => (a.indonesian || "").localeCompare(b.indonesian || ""));
+        }
+      }
 
       let dynamicAnswerType = assessment.payload.answer_type || ((assessment.answer_type && assessment.answer_type !== 'MULTIPLE_CHOICE') ? assessment.answer_type : null) || 'written';
       if (!assessment.payload.answer_type && !(assessment.answer_type && assessment.answer_type !== 'MULTIPLE_CHOICE')) {
@@ -387,13 +428,6 @@ Deno.serve(async (req) => {
       }
       
       if (vaultWords && vaultWords.length > 0) {
-        const orderSetting = String(assessment.question_order || assessment.payload?.question_order || 'random').toLowerCase();
-        if (orderSetting === 'random') {
-          vaultWords.sort(() => Math.random() - 0.5);
-        } else {
-          vaultWords.sort((a: any, b: any) => (a.indonesian || "").localeCompare(b.indonesian || ""));
-        }
-        
         let distractorPool: any[] = [];
         if (dynamicAnswerType === 'dropdown') {
             let distractorQuery = supabase.from('vocabulary_vault')
@@ -454,7 +488,9 @@ Deno.serve(async (req) => {
                  topic_snapshot: vw.topic || vw.topic_code || "General",
                  word_type_snapshot: vw.word_type,
                  display_order: idx + 1,
-                 answer_type: dynamicAnswerType
+                 answer_type: dynamicAnswerType,
+                 test_section: vw.test_section || null,
+                 section_label: vw.section_label || null
              };
         });
       }
@@ -492,8 +528,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Randomize order if configured
-    if (String(assessment.question_order || assessment.payload?.question_order || 'random').toLowerCase() === 'random') {
+    // Randomize order if configured (only if not already partitioned in unified two-stage shuffle)
+    if (!isUnified && String(assessment.question_order || assessment.payload?.question_order || 'random').toLowerCase() === 'random') {
       snapQuestions.sort(() => Math.random() - 0.5);
     }
 
@@ -546,7 +582,9 @@ Deno.serve(async (req) => {
         topic: sq.topic_snapshot,
         display_order: sq.display_order,
         answer_type: sq.answer_type || 'written',
-        options_snapshot: sq.options_snapshot || []
+        options_snapshot: sq.options_snapshot || [],
+        test_section: sq.test_section || null,
+        section_label: sq.section_label || null
       },
       topic_snapshot: sq.topic_snapshot,
       question_type_snapshot: sq.word_type_snapshot,
