@@ -41,7 +41,7 @@ if (!session) {
       return 'incorrect';
     }
 
-    const gradeColors = { S: '#fbbf24', A: '#10b981', B: '#0ea5e9', C: '#c7c18c', D: '#f97316', E: '#f43f5e', F: '#ef4444' };
+    const gradeColors = { S: '#fbbf24', A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', E: '#ef4444', F: '#ef4444' };
 
     // Humanize raw assessment_type values from DB
     function humanizeType(raw) {
@@ -80,13 +80,13 @@ if (!session) {
 
       // Color palette per grade
       const palettes = {
-        S: ['#fbbf24', '#fef08a', '#f59e0b', '#ffffff'],
+        S: ['#fbbf24', '#fef08a', '#f59e0b', '#ffd700'],
         A: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
-        B: ['#38bdf8', '#0ea5e9', '#7dd3fc', '#e0f2fe'],
-        C: ['#a78bfa', '#8b5cf6', '#c4b5fd', '#ede9fe'],
-        D: ['#fb923c', '#f97316', '#fdba74', '#fff7ed'],
-        E: ['#f87171', '#ef4444', '#fca5a5', '#fee2e2'],
-        F: ['#f87171', '#ef4444', '#9f1239', '#be185d'],
+        B: ['#84cc16', '#a3e635', '#bef264', '#d9f99d'],
+        C: ['#eab308', '#fde047', '#fef08a', '#fef9c3'],
+        D: ['#f97316', '#fb923c', '#fdba74', '#fff7ed'],
+        E: ['#ef4444', '#f87171', '#fca5a5', '#fee2e2'],
+        F: ['#ef4444', '#f87171', '#fca5a5', '#fee2e2'],
       };
       const colors = palettes[grade] || palettes.B;
 
@@ -588,25 +588,29 @@ if (!session) {
           }
         }
 
-        // Modern Gold Star Accent (★ Vector Badge)
+        // Modern Gold Star Accent (★ Vector Badge for S / Star 100%, Letter for A-E)
         const gradeBadge = document.getElementById('result-grade-badge');
         if (gradeBadge) {
-          gradeBadge.innerHTML = `
-            <svg class="star-accent-vector" width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="starGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#FDE047" />
-                  <stop offset="100%" stop-color="#EAB308" />
-                </linearGradient>
-              </defs>
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGoldGrad)" />
-            </svg>
-          `;
+          if (grade === 'S') {
+            gradeBadge.innerHTML = `
+              <svg class="star-accent-vector" width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="starGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FDE047" />
+                    <stop offset="100%" stop-color="#EAB308" />
+                  </linearGradient>
+                </defs>
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGoldGrad)" />
+              </svg>
+            `;
+          } else {
+            gradeBadge.textContent = grade;
+          }
         }
 
         const gradeStamp = document.getElementById('result-grade-stamp');
         if (gradeStamp) {
-          gradeStamp.className = `result-grade-stamp pure-stamp grade-S`;
+          gradeStamp.className = `result-grade-stamp pure-stamp grade-${grade}`;
         }
 
         // Percentage (animated count up) under photo

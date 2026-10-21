@@ -1073,14 +1073,13 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
           if (completedCount > 0) {
             const g = typeof getGrade === 'function' ? getGrade(averageScorePct) : (
               averageScorePct >= 100 ? 'S' :
-              averageScorePct >= 91 ? 'A' :
-              averageScorePct >= 71 ? 'B' :
-              averageScorePct >= 51 ? 'C' :
-              averageScorePct >= 31 ? 'D' :
-              averageScorePct >= 11 ? 'E' : 'F'
+              averageScorePct >= 80 ? 'A' :
+              averageScorePct >= 60 ? 'B' :
+              averageScorePct >= 40 ? 'C' :
+              averageScorePct >= 20 ? 'D' : 'E'
             );
             grade = g;
-            const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#0ea5e9', 'C': '#c7c18c', 'D': '#f97316', 'E': '#f43f5e', 'F': '#ef4444' };
+            const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#84cc16', 'C': '#eab308', 'D': '#f97316', 'E': '#ef4444', 'F': '#ef4444' };
             gradeColor = cMap[g] || 'rgba(255,255,255,0.4)';
           }
 
@@ -1435,7 +1434,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
                 ? Math.round(completedStudents.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / completedStudents.length) 
                 : 0;
               const avgGrade = completedStudents.length > 0 && typeof getGrade === 'function' ? getGrade(avgScore) : '—';
-              const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#0ea5e9', 'C': '#c7c18c', 'D': '#f97316', 'E': '#f43f5e', 'F': '#ef4444' };
+              const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#84cc16', 'C': '#eab308', 'D': '#f97316', 'E': '#ef4444', 'F': '#ef4444' };
               const avgGradeColor = cMap[avgGrade] || '#94a3b8';
               const isAvgGradeS = avgGrade === 'S';
               const avgBadgeStyle = isAvgGradeS
@@ -1466,7 +1465,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
                 } else if (col.key === 'grade') {
                   cellsHtml += `
                     <td class="text-center">
-                      <span class="badge" style="${avgBadgeStyle}">${avgGrade}</span>
+                      <span class="badge" style="${avgBadgeStyle}">${isAvgGradeS ? '⭐' : avgGrade}</span>
                     </td>
                   `;
                 } else if (col.key === 'totalEarnedScore') {
@@ -1661,7 +1660,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
                     ? `background:linear-gradient(135deg, #fef08a, #fbbf24, #d97706); color:#1e1b4b; font-weight:900; font-size:0.65rem; padding:0 5px; line-height:1.2; box-shadow:0 0 10px rgba(245,158,11,0.7); border:1px solid #fde68a;`
                     : `background:${row.gradeColor}; color:#000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
                   return `
-                    <span class="badge" style="${badgeStyle}">${row.grade}</span>
+                    <span class="badge" style="${badgeStyle}">${isGradeS ? '⭐' : row.grade}</span>
                   `;
                 }
               },

@@ -1645,7 +1645,8 @@ export async function renderResults(area) {
             const rawPct = parseFloat(r.percentage || 0);
             const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 70;
             const displayGrade = isRemedialCapped ? 'C' : (r.grade || getGrade(rawPct));
-            return `<div class="text-center"><span class="grade-badge grade-${displayGrade}" style="width:30px;height:30px;font-size:0.85rem;">${displayGrade}</span></div>`;
+            const gradeSymbol = (displayGrade === 'S' || (!isRemedialCapped && rawPct >= 100)) ? '⭐' : displayGrade;
+            return `<div class="text-center"><span class="grade-badge grade-${displayGrade}" style="width:30px;height:30px;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${gradeSymbol}</span></div>`;
           }
         },
         {
@@ -1954,7 +1955,7 @@ export async function renderProgressView(area) {
         : 0;
       const overallScoreStr = completedScoredCount > 0 ? `${overallPct}%` : '—';
       const globalGrade = completedScoredCount > 0 && typeof getGrade === 'function' ? getGrade(overallPct) : '—';
-      const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#0ea5e9', 'C': '#c7c18c', 'D': '#f97316', 'E': '#f43f5e', 'F': '#ef4444' };
+      const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#84cc16', 'C': '#eab308', 'D': '#f97316', 'E': '#ef4444', 'F': '#ef4444' };
       const gradeColor = cMap[globalGrade] || 'rgba(255,255,255,0.4)';
 
       // Calculate age from birth_date

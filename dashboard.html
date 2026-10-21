@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=5.3.2" />
-  <link rel="stylesheet" href="css/dashboard.css?v=5.3.2" />
+  <link rel="stylesheet" href="css/dashboard.css?v=5.3.5" />
   <link rel="stylesheet" href="css/components/avatars.css?v=5.3.2" />
   
 
@@ -65,8 +65,16 @@
     <!-- Hero Identity Bar -->
     
     <section id="welcome-banner-section" class="welcome-banner card" aria-labelledby="welcome-name">
-      <!-- Nama Siswa -->
-      <h1 id="welcome-name">Student</h1>
+      <!-- Info Header (Institution, Program, Batch, Level) -->
+      <div id="welcome-meta-wrapper">
+        <span id="meta-inst">CEC</span>
+        <span class="meta-sep">|</span>
+        <span id="meta-prog">CAMP</span>
+        <span class="meta-sep">|</span>
+        <span id="meta-batch">131</span>
+        <span class="meta-sep">|</span>
+        <span id="meta-lvl">3RD LEVEL</span>
+      </div>
 
       <div class="hero-divider"></div>
 
@@ -95,18 +103,10 @@
         </div>
       </div>
 
-      <div class="hero-divider"></div>
+      <div class="hero-divider hero-name-divider"></div>
 
-      <!-- Info Footer -->
-      <div id="welcome-meta-wrapper">
-        <span id="meta-inst">CEC</span>
-        <span class="meta-sep">|</span>
-        <span id="meta-prog">CAMP</span>
-        <span class="meta-sep">|</span>
-        <span id="meta-batch">131</span>
-        <span class="meta-sep">|</span>
-        <span id="meta-lvl">3RD LEVEL</span>
-      </div>
+      <!-- Nama Siswa (di bawah foto) -->
+      <h1 id="welcome-name">Student</h1>
 
       <!-- Elemen Kompatibilitas JS yang Disembunyikan Penuh -->
       <div class="hidden" style="display: none !important;">
@@ -503,7 +503,7 @@
     </div>
   </div>
 
-  <script type="module" src="./js/dashboard.js?v=5.3.2"></script>
+  <script type="module" src="./js/dashboard.js?v=5.3.5"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {

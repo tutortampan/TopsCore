@@ -915,19 +915,21 @@ export async function renderDataHealth(container) {
 
             const changedAnswersCount = item.questions ? item.questions.filter(q => q.isAffected).length : 0;
 
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td class="fw-600">${escapeHtml(item.studentName)}</td>
-              <td class="text-muted text-sm">${escapeHtml(item.programName)}</td>
-              <td class="text-center text-muted">${item.oldScore}</td>
-              <td class="text-center fw-700 ${isScoreUp ? 'text-success' : isScoreDown ? 'text-danger' : ''}">${item.newScore}</td>
-              <td class="text-center text-muted">${item.oldPercentage}%</td>
-              <td class="text-center fw-700 ${isScoreUp ? 'text-success' : isScoreDown ? 'text-danger' : ''}">${item.newPercentage}%</td>
-              <td class="text-center"><span class="grade-badge grade-${item.oldGrade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;">${item.oldGrade}</span></td>
-              <td class="text-center"><span class="grade-badge grade-${item.newGrade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;">${item.newGrade}</span></td>
-              <td class="text-center">${statusBadge}</td>
-              <td class="text-center"><span class="badge ${changedAnswersCount > 0 ? 'badge-primary' : 'badge-neutral'}">${changedAnswersCount} q</span></td>
-            `;
+              const oldSymbol = (item.oldGrade === 'S' || parseFloat(item.oldPercentage) >= 100) ? '⭐' : item.oldGrade;
+              const newSymbol = (item.newGrade === 'S' || parseFloat(item.newPercentage) >= 100) ? '⭐' : item.newGrade;
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td class="fw-600">${escapeHtml(item.studentName)}</td>
+                <td class="text-muted text-sm">${escapeHtml(item.programName)}</td>
+                <td class="text-center text-muted">${item.oldScore}</td>
+                <td class="text-center fw-700 ${isScoreUp ? 'text-success' : isScoreDown ? 'text-danger' : ''}">${item.newScore}</td>
+                <td class="text-center text-muted">${item.oldPercentage}%</td>
+                <td class="text-center fw-700 ${isScoreUp ? 'text-success' : isScoreDown ? 'text-danger' : ''}">${item.newPercentage}%</td>
+                <td class="text-center"><span class="grade-badge grade-${item.oldGrade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${oldSymbol}</span></td>
+                <td class="text-center"><span class="grade-badge grade-${item.newGrade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${newSymbol}</span></td>
+                <td class="text-center">${statusBadge}</td>
+                <td class="text-center"><span class="badge ${changedAnswersCount > 0 ? 'badge-primary' : 'badge-neutral'}">${changedAnswersCount} q</span></td>
+              `;
             tableBody.appendChild(tr);
           });
         };

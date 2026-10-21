@@ -48,7 +48,7 @@ async function run() {
   const server = await createStaticServer(PORT);
   console.log(`Local test server running at http://127.0.0.1:${PORT}`);
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   let hasErrors = false;
 
   try {
@@ -56,15 +56,29 @@ async function run() {
     console.log('\n--- 1. Testing js/grading.js ---');
     const { calculateGrade, getGradeSymbol, GRADE_PALETTE } = await import('./js/grading.js');
     
-    console.log('Grade S (100%):', calculateGrade(100), 'Symbol:', getGradeSymbol('S', 100), 'Expected: ⭐');
-    if (getGradeSymbol('S', 100) !== '⭐') throw new Error('100% symbol must be ⭐');
-    
-    console.log('Grade A (95%):', calculateGrade(95), 'Symbol:', getGradeSymbol('A', 95), 'Expected: A');
-    console.log('Grade C Palette Color:', GRADE_PALETTE.C.color, 'Expected: #eab308');
-    if (GRADE_PALETTE.C.color !== '#eab308') throw new Error('Grade C must be warm yellow #eab308');
+    // Boundary checks for exact 20-point tiers
+    console.log('\n--- Exhaustive Boundary Verification ---');
+    const boundaries = [
+      { score: 100, expected: 'S', symbol: '⭐' },
+      { score: 99, expected: 'A', symbol: 'A' },
+      { score: 80, expected: 'A', symbol: 'A' },
+      { score: 79, expected: 'B', symbol: 'B' },
+      { score: 60, expected: 'B', symbol: 'B' },
+      { score: 59, expected: 'C', symbol: 'C' },
+      { score: 40, expected: 'C', symbol: 'C' },
+      { score: 39, expected: 'D', symbol: 'D' },
+      { score: 20, expected: 'D', symbol: 'D' },
+      { score: 19, expected: 'E', symbol: 'E' },
+      { score: 0, expected: 'E', symbol: 'E' }
+    ];
 
-    console.log('Grade F Palette Color:', GRADE_PALETTE.F.color, 'Expected: #64748b');
-    if (GRADE_PALETTE.F.color !== '#64748b') throw new Error('Grade F must be neutral slate #64748b');
+    for (const b of boundaries) {
+      const g = calculateGrade(b.score);
+      const sym = getGradeSymbol(g, b.score);
+      console.log(`Score ${b.score}% -> Grade: ${g} (Symbol: ${sym}) | Expected: ${b.expected} (${b.symbol})`);
+      if (g !== b.expected) throw new Error(`Boundary test failed for ${b.score}%: got ${g}, expected ${b.expected}`);
+      if (sym !== b.symbol) throw new Error(`Boundary symbol failed for ${b.score}%: got ${sym}, expected ${b.symbol}`);
+    }
 
     // 2. Test Mobile Viewport Zero-Scroll & Layout
     console.log('\n--- 2. Testing Mobile Viewports (390x844 & 360x640) ---');
@@ -324,6 +338,8 @@ async function run() {
 
       await btnCompleted.click();
       await page.waitForTimeout(200);
+      const completedScreenPath = path.join(__dirname, `audit_screenshots/dashboard_completed_${vp.name.replace(/[^a-z0-9]/gi, '_')}.png`);
+      await page.screenshot({ path: completedScreenPath });
       let isCompletedVisible = await paneCompleted.isVisible();
       let isStandingsHidden = !(await paneStandings.isVisible());
       console.log(`[${vp.name}] Tab switch to Completed: Completed Visible=${isCompletedVisible}, Standings Hidden=${isStandingsHidden}`);

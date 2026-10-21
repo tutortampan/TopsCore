@@ -1,14 +1,50 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-21 14:38 UTC+8
+Last Updated: 2026-10-21 15:45 UTC+8
 
-Current Phase: Phase 70 Horizontal Hero Trio & Stacked Semantic Color Metrics (COMMITTED & PUSHED TO REMOTE)
+Current Phase: Phase 71 Dashboard Hero Identity Bar Calibration & 20-Point Grade Hierarchy (E to Star ⭐) [COMMITTED & PUSHED]
 
-Current Task: ALL PHASE 70 TASKS COMPLETED, COMMITTED & PUSHED TO ORIGIN/MAIN
+Current Task: ALL PHASE 71 TASKS COMPLETED, RECHECKED, AND PUSHED TO REMOTE
 
 Status: COMPLETE
 
 ## Completed
+
+- **Phase 71: Dashboard Hero Identity Bar Calibration & System-Wide Grade S Star (⭐) Audit & Reorganized Grade Hierarchy [STRICT NO COMMIT/PUSH]**:
+  - **Reorganized Grade Spectrum (E 0-19, D 20-39, C 40-59, B 60-79, A 80-99, Star ⭐ 100)**:
+    - Reorganized grade tiers to start from **E** with exact 20-point brackets (no active Grade F):
+      - **Star ⭐ (S)**: `100%` | **Emas Asli Berkilau** (`#fbbf24`, RGB `251, 191, 36`, Shimmer Gold `linear-gradient`, drop shadow glow)
+      - **A**: `80–99%` | **Hijau** (`#10b981`, RGB `16, 185, 129`, Emerald Green)
+      - **B**: `60–79%` | **Antara Kuning & Hijau / Lime** (`#84cc16`, RGB `132, 204, 22`)
+      - **C**: `40–59%` | **Kuning** (`#eab308`, RGB `234, 179, 8`, Warm Sun Yellow)
+      - **D**: `20–39%` | **Oranye** (`#f97316`, RGB `249, 115, 22`, Flame Orange)
+      - **E**: `0–19%` | **Merah** (`#ef4444`, RGB `239, 68, 68`, Crimson Red)
+      - **F (Legacy Fallback)**: Mapped to Grade E / Merah (`#ef4444`) for historical stability.
+    - Updated `calculateGrade()` in `js/grading.js`, `supabase/functions/submit-assessment/index.ts`, `supabase/schema.sql`, `supabase_deploy/01_schema_and_functions.sql`, and `AGENTS.md`.
+    - Synchronized `GRADE_PALETTE`, `cMap`, and `gradeColors` across `js/grading.js`, `js/dashboard.js`, `js/result.js`, `js/admin/app.js`, `js/admin/class.js`, `js/admin/student-management.js`.
+    - Synchronized CSS stylesheets `css/style.css`, `css/dashboard.css`, `css/admin.css`, and `css/result.css`.
+  - **Metadata Row on Top of Photo**: Relocated `#welcome-meta-wrapper` (`CEC | CAMP | 131 | 3rd Level`) in `dashboard.html` to sit on the very top of the card where the name used to be, separated from the metrics row by a sleek divider line.
+  - **Student Name Positioned Under Photo**: Relocated `#welcome-name` in `dashboard.html` to sit directly beneath `.hero-metrics-row` (Score box, Avatar with crown, Grade box), eliminating collision between crown badge (`👑`) and student name.
+  - **Distinct Separator Line Between Photo and Name (`.hero-name-divider`)**: Added a luminous, clearly visible divider between `.hero-metrics-row` and `#welcome-name` using a gradient line (`linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb), 0.6) 80%, transparent 100%)`) with dynamic glow (`box-shadow: 0 0 10px rgba(var(--tier-rgb), 0.4)`), establishing unmistakable visual compartmentalization.
+  - **Visual Hierarchy Flow**:
+    1. Info Header: `CEC | CAMP | 131 | 3rd Level` (`#welcome-meta-wrapper`)
+    2. Subtle Header Divider Line (`.hero-divider`)
+    3. Hero Trio Row: `Score 100%` | `Avatar + Crown 👑` | `Grade ⭐` (`.hero-metrics-row`)
+    4. Luminous Name Separator Line (`.hero-divider.hero-name-divider`)
+    5. Student Name: `[Nama Siswa]` (`#welcome-name`)
+  - **Optimized Hero Header Spacing**: Tuned `#welcome-banner-section` padding to `10px 14px 10px 14px !important;`, `#welcome-meta-wrapper + .hero-divider` margin to `4px 0 10px 0 !important;` (providing crown breathing room), `.hero-name-divider` margin to `9px 0 6px 0 !important;`, and `#welcome-name` margins to `2px 0 0 0 !important;` in `css/dashboard.css`.
+  - **System-Wide Grade S to Star (⭐) Standardization**:
+    - **Dashboard Completed Assessments (Desktop Table)**: Replaced raw text `${grade}` with `getGradeSymbol(grade, pct)` in `js/dashboard.js`, ensuring 100% / Grade S displays the shining gold star `⭐`.
+    - **Dashboard Completed Assessments (Mobile Cards)**: Updated mobile card `.grade-badge` to render `getGradeSymbol(grade, pct)`.
+    - **Dashboard Profile Modal History**: Updated profile attempt history rows in `js/dashboard.js` to render `getGradeSymbol(grade, pct)`.
+    - **Admin Class Hub Roster & Class Average**: Updated roster row badge and class average badge in `js/admin/app.js` to render `⭐` for Grade S (`isAvgGradeS ? '⭐' : avgGrade`, `isGradeS ? '⭐' : row.grade`).
+    - **Admin Class Gradebook Column**: Updated `js/admin/class.js` to render `⭐` for Grade S.
+    - **Admin Audit Log Score Recalibration Preview**: Updated `js/admin/desk.js` to render `⭐` for Grade S.
+    - **Admin Assessment Management**: Updated `js/admin/assessment-management.js` drawer and datagrid column to render `⭐` for Grade S.
+    - **Centralized Export**: Re-exported `getGradeSymbol` from `js/app.js`.
+  - **Automated Verification**: Ran `node test-dashboard-enhancements.mjs` verifying zero-scroll across iPhone 14 (390x844) and Android Small (360x640), 100% pass rate, and captured visual screenshots.
+  - **Cache Busting**: Version bumped `dashboard.html`, `dashboard.css`, `dashboard.js`, `app.js`, `api.js`, `grading.js` to `v=5.3.5`.
+  - **Git Rules**: Git freeze strictly maintained — 0 commits, 0 pushes.
 
 - **Phase 70: Horizontal Hero Trio & Stacked Semantic Color Metrics [COMMITTED & PUSHED TO REMOTE]**:
   - **Horizontal Hero Trio ("Berderet")**: Grouped Student Portrait (Avatar with golden ambient halo ring), Score (`100.0%` in crisp `#F8FAFC`), and Gold Star Badge (`★` SVG vector with `#FDE047` to `#EAB308` gradient) side-by-side in `.result-hero-trio-row` (`display: flex; flex-direction: row; align-items: center; justify-content: center; gap: clamp(10px, 3.5vw, 24px);`).

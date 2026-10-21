@@ -8,7 +8,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=5.3.2';
     import { testMicrophoneCapability } from './speech.js?v=5.3.2';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=5.3.2';
-    import { GRADE_PALETTE, getGradeSymbol } from './grading.js?v=5.3.2';
+    import { GRADE_PALETTE, getGradeSymbol } from './grading.js?v=5.3.5';
 
     window._isBatchChampion = false;
 
@@ -1191,7 +1191,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             const bestPct   = best ? parseFloat(best.percentage || 0) : null;
             const passed    = bestPct !== null && bestPct >= (Assessment.minimum_required_score || Assessment.pass_threshold || 60);
             const grade     = bestPct !== null ? getGrade(bestPct) : null;
-            const gradeColors = { S: '#fbbf24', A: '#10b981', B: '#0ea5e9', C: '#c7c18c', D: '#f97316', E: '#f43f5e', F: '#ef4444' };
+            const gradeColors = { S: '#fbbf24', A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', E: '#ef4444', F: '#ef4444' };
             const gradeColor  = grade ? (gradeColors[grade] || '#94a3b8') : null;
 
             // Prerequisite Gating Logic
@@ -1279,7 +1279,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             }
 
             const gradeChip = grade ? `<span style="background:${gradeColor}22;color:${gradeColor};border:1px solid ${gradeColor}44;
-              padding:2px 7px;border-radius:4px;font-size:0.72rem;font-weight:800;">${grade}</span>` : '';
+              padding:2px 7px;border-radius:4px;font-size:0.72rem;font-weight:800;">${getGradeSymbol(grade)}</span>` : '';
 
             lvlHtml += `<div class="asm-modal-row" style="opacity:${cardOpacity}; filter:${cardFilter};" >
 
@@ -1383,7 +1383,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         }
       });
 
-      const gradeColors = { S: '#fbbf24', A: '#10b981', B: '#0ea5e9', C: '#c7c18c', D: '#f97316', E: '#f43f5e', F: '#ef4444' };
+      const gradeColors = { S: '#fbbf24', A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', E: '#ef4444', F: '#ef4444' };
 
       let cards = '';
       for (const asm of assessments) {
@@ -1556,8 +1556,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
                   <div style="font-size:0.7rem;color:var(--clr-text-3);">Best Score</div>
                 </div>
                 ${grade === 'S'
-                  ? `<div class="grade-S" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;box-shadow:0 0 12px rgba(245,158,11,0.7);">S</div>`
-                  : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#64748b'};color:${gradeColors[grade] || '#64748b'};">${grade}</div>`
+                  ? `<div class="grade-S" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(245,158,11,0.7);">⭐</div>`
+                  : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#64748b'};color:${gradeColors[grade] || '#64748b'};">${getGradeSymbol(grade)}</div>`
                 }
               ` : ''}
               ${actionBtn}
@@ -1827,7 +1827,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         const dateB = b.submitted_at ? new Date(b.submitted_at).getTime() : 0;
         return dateB - dateA;
       });
-      const gradeColors = { S: '#fbbf24', A: '#10b981', B: '#0ea5e9', C: '#c7c18c', D: '#f97316', E: '#f43f5e', F: '#ef4444' };
+      const gradeColors = { S: '#fbbf24', A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', E: '#ef4444', F: '#ef4444' };
 
       // Desktop Table
       let tableHtml = `
@@ -1859,6 +1859,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         const className = AssessmentObj.classes?.name || 'General English';
         const pct = parseFloat(a.percentage || 0).toFixed(1);
         const grade = a.grade || getGrade(pct);
+        const displayGrade = getGradeSymbol(grade, pct);
         const gradeColor = gradeColors[grade] || 'var(--clr-text-1)';
         const dateStr = a.submitted_at ? new Date(a.submitted_at).toLocaleDateString(undefined, {
           year: 'numeric',
@@ -1868,10 +1869,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         const isPassed = parseFloat(pct) >= 60;
         const statusBadgeDesktop = isPassed
           ? `<span class="badge badge-success" style="font-size:0.75rem;padding:3px 8px;">✓ Passed</span>`
-          : `<span class="badge badge-warning" style="font-size:0.75rem;padding:3px 8px;">⚠️ Retake Needed</span>`;
+          : `<span class="badge badge-warning" style="font-size:0.75rem;padding:3px 8px;">⚠️  Retake Needed</span>`;
         const statusBadgeMobile = isPassed
           ? `<span style="color:#10b981;font-weight:700;">✓ Passed</span>`
-          : `<span style="color:#f59e0b;font-weight:700;">⚠️ Retake</span>`;
+          : `<span style="color:#f59e0b;font-weight:700;">⚠️  Retake</span>`;
 
         const attemptId = escapeHtml(a.id);
         const navLink = `window.location.href='result.html?attempt_id=${attemptId}'`;
@@ -1892,7 +1893,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
               <span class="fw-700 text-grade-${grade}" style="font-size:1rem; ${grade === 'S' ? 'filter:drop-shadow(0 0 6px rgba(251,191,36,0.6)); font-weight:900;' : ''}">${pct}%</span>
             </td>
             <td>
-              <span class="grade-badge grade-${grade}" style="width:28px;height:28px;font-size:0.82rem;display:inline-flex;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${grade === 'S' ? '' : `color:#fff;border:1.5px solid ${gradeColor};`}">${grade}</span>
+              <span class="grade-badge grade-${grade}" style="width:28px;height:28px;font-size:0.82rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${grade === 'S' ? '' : `color:#fff;border:1.5px solid ${gradeColor};`}">${displayGrade}</span>
             </td>
             <td class="text-muted text-sm">
               ${escapeHtml(dateStr)}
@@ -1908,7 +1909,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           <div class="completed-Assessment-mobile-card" onclick="${navLink}" style="padding: 8px 12px; gap: 4px; margin-bottom: 6px;">
             <div class="Assessment-card-header" style="margin-bottom: 2px;">
               <div class="Assessment-card-title" style="font-size: 0.9rem; line-height: 1.3;">${escapeHtml(AssessmentTitle)}</div>
-              <span class="grade-badge grade-${grade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${grade === 'S' ? '' : `color:#fff;border:1px solid ${gradeColor};`} flex-shrink:0;">${grade}</span>
+              <span class="grade-badge grade-${grade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${grade === 'S' ? '' : `color:#fff;border:1px solid ${gradeColor};`} flex-shrink:0;">${displayGrade}</span>
             </div>
             
             <div class="Assessment-card-footer" style="margin-top: 0;">
@@ -2244,11 +2245,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             const title = a.Assessments ? `${a.Assessments.Assessment_type || ''} — ${a.Assessments.Assessment_title || 'Assessment'}` : 'Assessment';
             const pct = parseFloat(a.percentage || 0).toFixed(1);
             const grade = a.grade || getGrade(pct);
+            const displayGrade = getGradeSymbol(grade, pct);
 
             tr.innerHTML = `
               <td class="fw-600">${title}</td>
               <td class="fw-700 text-grade-${grade}">${pct}%</td>
-              <td><span class="grade-badge grade-${grade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;">${grade}</span></td>
+              <td><span class="grade-badge grade-${grade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${displayGrade}</span></td>
               <td class="text-muted text-sm">${a.submitted_at ? new Date(a.submitted_at).toLocaleDateString() : '—'}</td>
             `;
             tbody.appendChild(tr);

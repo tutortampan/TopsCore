@@ -230,15 +230,14 @@ Answer evaluation MUST preserve question-level score and evaluation result.
 
 Centralized authoritative grading:
 
-| Percentage | Grade |
-|---:|:---:|
-| 0â€“10 | F |
-| 11â€“30 | E |
-| 31â€“50 | D |
-| 51â€“70 | C |
-| 71â€“90 | B |
-| 91â€“99 | A |
-| 100 | S |
+| Percentage | Grade | Symbol / Visual |
+|---:|:---:|:---:|
+| 0–19 | E | Merah (`#ef4444`) |
+| 20–39 | D | Oranye (`#f97316`) |
+| 40–59 | C | Kuning (`#eab308`) |
+| 60–79 | B | Lime / Kuning-Hijau (`#84cc16`) |
+| 80–99 | A | Hijau (`#10b981`) |
+| 100 | Star (S) | ⭐ Emas Asli Berkilau (`#fbbf24`) |
 
 No frontend page may independently implement a competing grading algorithm.
 

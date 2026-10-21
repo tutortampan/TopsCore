@@ -2278,7 +2278,7 @@ body.dashboard-page #welcome-banner-section {
   max-width: 100% !important;
   margin: 0 0 2px 0 !important;
   border-radius: 18px !important;
-  padding: 10px 14px !important;
+  padding: 10px 14px 10px 14px !important;
   background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.12), transparent 75%), #0f172a !important;
   border: 1px solid rgba(var(--tier-rgb), 0.25) !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
@@ -2301,15 +2301,30 @@ body.dashboard-page #welcome-name {
   letter-spacing: -0.01em !important;
   text-align: center !important;
   color: #ffffff !important;
-  margin: 0 0 4px 0 !important;
+  margin: 2px 0 0 0 !important;
   line-height: 1.15 !important;
 }
 
 body.dashboard-page .hero-divider {
   width: 100% !important;
   height: 1px !important;
-  background: rgba(148, 163, 184, 0.15) !important;
-  margin: 5px 0 !important;
+  background: rgba(148, 163, 184, 0.25) !important;
+  margin: 6px 0 !important;
+}
+
+body.dashboard-page #welcome-meta-wrapper + .hero-divider {
+  margin: 4px 0 10px 0 !important;
+  background: linear-gradient(90deg, transparent 0%, rgba(148, 163, 184, 0.35) 25%, rgba(148, 163, 184, 0.35) 75%, transparent 100%) !important;
+}
+
+body.dashboard-page .hero-metrics-row + .hero-divider,
+body.dashboard-page .hero-name-divider {
+  display: block !important;
+  width: 100% !important;
+  height: 1px !important;
+  margin: 9px 0 6px 0 !important;
+  background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb, 251, 191, 36), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb, 251, 191, 36), 0.6) 80%, transparent 100%) !important;
+  box-shadow: 0 0 10px rgba(var(--tier-rgb, 251, 191, 36), 0.4) !important;
 }
 
 body.dashboard-page .hero-metrics-row {
@@ -2373,7 +2388,7 @@ body.dashboard-page #welcome-banner-section[data-tier="A"] #stat-overall-grade-v
 
 body.dashboard-page #welcome-banner-section[data-tier="B"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="B"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(14, 165, 233, 0.55)) !important;
+  filter: drop-shadow(0 0 10px rgba(132, 204, 22, 0.55)) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="C"] #bottom-stat-avg-score,
@@ -2393,7 +2408,7 @@ body.dashboard-page #welcome-banner-section[data-tier="E"] #stat-overall-grade-v
 
 body.dashboard-page #welcome-banner-section[data-tier="F"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="F"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 6px rgba(100, 116, 139, 0.35)) !important;
+  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.55)) !important;
 }
 
 /* Enlarged Avatar & Crown Anchor */
@@ -2468,7 +2483,7 @@ body.dashboard-page #welcome-banner-section[data-tier="A"] #banner-avatar-contai
   box-shadow: 0 0 18px rgba(16, 185, 129, 0.5) !important;
 }
 body.dashboard-page #welcome-banner-section[data-tier="B"] #banner-avatar-container {
-  box-shadow: 0 0 18px rgba(14, 165, 233, 0.5) !important;
+  box-shadow: 0 0 18px rgba(132, 204, 22, 0.5) !important;
 }
 body.dashboard-page #welcome-banner-section[data-tier="C"] #banner-avatar-container {
   box-shadow: 0 0 18px rgba(234, 179, 8, 0.5) !important;
@@ -2480,7 +2495,7 @@ body.dashboard-page #welcome-banner-section[data-tier="E"] #banner-avatar-contai
   box-shadow: 0 0 18px rgba(239, 68, 68, 0.5) !important;
 }
 body.dashboard-page #welcome-banner-section[data-tier="F"] #banner-avatar-container {
-  box-shadow: 0 0 10px rgba(100, 116, 139, 0.35) !important;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.5) !important;
 }
 
 body.dashboard-page #banner-avatar-initial {

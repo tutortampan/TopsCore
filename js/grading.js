@@ -198,17 +198,16 @@ export function isPrerequisiteMet(studentBestPercentage, requiredPercentage = 60
 }
 
 /**
- * Centralized Grade Engine (AGENTS.md §2.10)
+ * Centralized Grade Engine (Reorganized: E, D, C, B, A, Star ⭐)
  */
 export function calculateGrade(percentage) {
   const pct = Math.round(Number(percentage) || 0);
   if (pct >= 100) return 'S';
-  if (pct >= 91) return 'A';
-  if (pct >= 71) return 'B';
-  if (pct >= 51) return 'C';
-  if (pct >= 31) return 'D';
-  if (pct >= 11) return 'E';
-  return 'F';
+  if (pct >= 80) return 'A';
+  if (pct >= 60) return 'B';
+  if (pct >= 40) return 'C';
+  if (pct >= 20) return 'D';
+  return 'E';
 }
 
 /**
@@ -234,78 +233,78 @@ export function calculateOverallStudentScore(takenPercentages = []) {
 }
 
 /**
- * Authoritative Grade & Score Palette (Option 1: Golden Champion Theme)
- * Consistent across Dashboard, Result, and Admin.
+ * Authoritative Grade & Score Palette
+ * Order: E 0-19 (Merah), D 20-39 (Oranye), C 40-59 (Kuning), B 60-79 (Lime), A 80-99 (Hijau), Star ⭐ 100 (Emas Asli Berkilau)
  */
 export const GRADE_PALETTE = {
   S: {
     symbol: '⭐',
-    color: '#fbbf24',       // Primary Gold Champion (100%)
+    color: '#fbbf24',       // Emas Asli Berkilau (Gold Champion, 100%)
     dark: '#d97706',        // Deep Gold
     light: '#fef08a',       // Shimmer Highlight
     rgb: '251, 191, 36',
-    glow: 'rgba(245, 158, 11, 0.85)',
-    name: 'Gold Champion',
+    glow: 'rgba(245, 158, 11, 0.95)',
+    name: 'Emas Asli Berkilau (Gold Champion)',
     sparkle: true
   },
   A: {
     symbol: 'A',
-    color: '#10b981',       // Hijau (Emerald Green, 91-99%)
+    color: '#10b981',       // Hijau (Emerald Green, 80-99%)
     dark: '#059669',
     light: '#6ee7b7',
     rgb: '16, 185, 129',
     glow: 'rgba(16, 185, 129, 0.45)',
-    name: 'Emerald Master',
+    name: 'Hijau (Emerald Green)',
     sparkle: false
   },
   B: {
     symbol: 'B',
-    color: '#0ea5e9',       // Biru (Sky Blue, 71-90%)
-    dark: '#0284c7',
-    light: '#7dd3fc',
-    rgb: '14, 165, 233',
-    glow: 'rgba(14, 165, 233, 0.45)',
-    name: 'Sky Blue',
+    color: '#84cc16',       // Antara Kuning dan Hijau (Lime / Yellow-Green, 60-79%)
+    dark: '#65a30d',
+    light: '#bef264',
+    rgb: '132, 204, 22',
+    glow: 'rgba(132, 204, 22, 0.45)',
+    name: 'Lime (Kuning-Hijau)',
     sparkle: false
   },
   C: {
     symbol: 'C',
-    color: '#eab308',       // Kuning (Warm Yellow, 51-70%)
+    color: '#eab308',       // Kuning (Warm Sun Yellow, 40-59%)
     dark: '#ca8a04',
     light: '#fef08a',
     rgb: '234, 179, 8',
     glow: 'rgba(234, 179, 8, 0.45)',
-    name: 'Warm Yellow',
+    name: 'Kuning (Warm Yellow)',
     sparkle: false
   },
   D: {
     symbol: 'D',
-    color: '#f97316',       // Jingga (Flame Orange, 31-50%)
+    color: '#f97316',       // Oranye (Flame Orange, 20-39%)
     dark: '#ea580c',
     light: '#fdba74',
     rgb: '249, 115, 22',
     glow: 'rgba(249, 115, 22, 0.45)',
-    name: 'Flame Orange',
+    name: 'Oranye (Flame Orange)',
     sparkle: false
   },
   E: {
     symbol: 'E',
-    color: '#ef4444',       // Merah (Crimson Alert, 11-30%)
+    color: '#ef4444',       // Merah (Crimson Red, 0-19%)
     dark: '#dc2626',
     light: '#fca5a5',
     rgb: '239, 68, 68',
     glow: 'rgba(239, 68, 68, 0.45)',
-    name: 'Crimson Alert',
+    name: 'Merah (Crimson Alert)',
     sparkle: false
   },
   F: {
-    symbol: 'F',
-    color: '#64748b',       // Abu-abu Netral (Neutral Slate, 0-10%)
-    dark: '#475569',
-    light: '#94a3b8',
-    rgb: '100, 116, 139',
-    glow: 'rgba(100, 116, 139, 0.3)',
-    name: 'Neutral Slate',
+    symbol: 'E',            // Legacy Alias to E (Merah)
+    color: '#ef4444',
+    dark: '#dc2626',
+    light: '#fca5a5',
+    rgb: '239, 68, 68',
+    glow: 'rgba(239, 68, 68, 0.45)',
+    name: 'Merah (Legacy Fallback)',
     sparkle: false
   }
 };

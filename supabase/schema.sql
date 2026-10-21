@@ -3422,21 +3422,19 @@ BEGIN
     END IF;
   END IF;
 
-  -- Centralized authoritative grade mapping (§2.10)
+  -- Centralized authoritative grade mapping (§2.10: E 0-19, D 20-39, C 40-59, B 60-79, A 80-99, Star 100)
   IF v_effective_score >= 100 THEN
     v_grade := 'S';
-  ELSIF v_effective_score >= 91 THEN
+  ELSIF v_effective_score >= 80 THEN
     v_grade := 'A';
-  ELSIF v_effective_score >= 71 THEN
+  ELSIF v_effective_score >= 60 THEN
     v_grade := 'B';
-  ELSIF v_effective_score >= 51 THEN
+  ELSIF v_effective_score >= 40 THEN
     v_grade := 'C';
-  ELSIF v_effective_score >= 31 THEN
+  ELSIF v_effective_score >= 20 THEN
     v_grade := 'D';
-  ELSIF v_effective_score >= 11 THEN
-    v_grade := 'E';
   ELSE
-    v_grade := 'F';
+    v_grade := 'E';
   END IF;
 
   -- 6. Update Attempt

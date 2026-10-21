@@ -155,12 +155,11 @@ function evaluateStudentAnswer(
 
 function calculateGrade(pct: number): string {
   if (pct >= 100) return "S";
-  if (pct >= 91) return "A";
-  if (pct >= 71) return "B";
-  if (pct >= 51) return "C";
-  if (pct >= 31) return "D";
-  if (pct >= 11) return "E";
-  return "F";
+  if (pct >= 80) return "A";
+  if (pct >= 60) return "B";
+  if (pct >= 40) return "C";
+  if (pct >= 20) return "D";
+  return "E";
 }
 
 Deno.serve(async (req: Request) => {

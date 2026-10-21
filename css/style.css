@@ -652,7 +652,7 @@ tbody tr:last-child td { border-bottom: none; }
   animation: gold-text-gleam 2.2s infinite ease-in-out;
 }
 
-/* A: Hijau (Emerald Master 91-99%) - Crisp, No Glow */
+/* A: Hijau (Emerald Green 91-99%) - Crisp, No Glow */
 .grade-A {
   background: rgba(16, 185, 129, 0.16) !important;
   color: #10b981 !important;
@@ -661,25 +661,25 @@ tbody tr:last-child td { border-bottom: none; }
 }
 .text-grade-A { color: #10b981 !important; filter: none !important; text-shadow: none !important; }
 
-/* B: Biru (Sky Blue 71-90%) - Crisp, No Glow */
+/* B: Lime / Kuning-Hijau (71-90%) - Crisp, No Glow */
 .grade-B {
-  background: rgba(14, 165, 233, 0.16) !important;
-  color: #0ea5e9 !important;
-  border: 1.5px solid rgba(14, 165, 233, 0.6) !important;
+  background: rgba(132, 204, 22, 0.16) !important;
+  color: #84cc16 !important;
+  border: 1.5px solid rgba(132, 204, 22, 0.6) !important;
   box-shadow: none !important;
 }
-.text-grade-B { color: #0ea5e9 !important; filter: none !important; text-shadow: none !important; }
+.text-grade-B { color: #84cc16 !important; filter: none !important; text-shadow: none !important; }
 
-/* C: Kuning (Pale Lifeless Straw 51-70%) - Flat, Matte, No Glow */
+/* C: Kuning (Warm Sun Yellow 51-70%) - Flat, Matte, No Glow */
 .grade-C {
-  background: rgba(199, 193, 140, 0.12) !important;
-  color: #c7c18c !important;
-  border: 1.5px solid rgba(199, 193, 140, 0.35) !important;
+  background: rgba(234, 179, 8, 0.16) !important;
+  color: #eab308 !important;
+  border: 1.5px solid rgba(234, 179, 8, 0.6) !important;
   box-shadow: none !important;
 }
-.text-grade-C { color: #c7c18c !important; filter: none !important; text-shadow: none !important; }
+.text-grade-C { color: #eab308 !important; filter: none !important; text-shadow: none !important; }
 
-/* D: Jingga (Flame Orange 31-50%) - Crisp, No Glow */
+/* D: Oranye (Flame Orange 31-50%) - Crisp, No Glow */
 .grade-D {
   background: rgba(249, 115, 22, 0.16) !important;
   color: #f97316 !important;
@@ -688,16 +688,16 @@ tbody tr:last-child td { border-bottom: none; }
 }
 .text-grade-D { color: #f97316 !important; filter: none !important; text-shadow: none !important; }
 
-/* E: Coral (Rose Coral 11-30%) - Crisp, No Glow */
+/* E: Merah (Crimson Danger 0-30%) - Crisp, No Glow */
 .grade-E {
-  background: rgba(244, 63, 94, 0.16) !important;
-  color: #f43f5e !important;
-  border: 1.5px solid rgba(244, 63, 94, 0.6) !important;
+  background: rgba(239, 68, 68, 0.16) !important;
+  color: #ef4444 !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.6) !important;
   box-shadow: none !important;
 }
-.text-grade-E { color: #f43f5e !important; filter: none !important; text-shadow: none !important; }
+.text-grade-E { color: #ef4444 !important; filter: none !important; text-shadow: none !important; }
 
-/* F: Merah (Crimson Danger 0-10%) - Crisp, No Glow */
+/* F: Merah (Legacy Fallback) - Crisp, No Glow */
 .grade-F {
   background: rgba(239, 68, 68, 0.16) !important;
   color: #ef4444 !important;
@@ -706,14 +706,14 @@ tbody tr:last-child td { border-bottom: none; }
 }
 .text-grade-F { color: #ef4444 !important; filter: none !important; text-shadow: none !important; }
 
-/* Score text colors - Glow ONLY on Grade S */
-.score-high { color: #fbbf24 !important; font-weight: 700; filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.7)); } /* 100% S */
-.score-dist { color: #10b981 !important; font-weight: 700; filter: none !important; } /* 91-99% A */
-.score-pass { color: #0ea5e9 !important; font-weight: 700; filter: none !important; } /* 71-90% B */
-.score-warn { color: #c7c18c !important; font-weight: 700; filter: none !important; } /* 51-70% C */
-.score-remed { color: #f97316 !important; font-weight: 700; filter: none !important; } /* 31-50% D */
-.score-poor { color: #f43f5e !important; font-weight: 700; filter: none !important; } /* 11-30% E */
-.score-fail { color: #ef4444 !important; font-weight: 700; filter: none !important; } /* < 11% F */
+/* Score text colors - Glow ONLY on Grade S / Star */
+.score-high { color: #fbbf24 !important; font-weight: 700; filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.7)); } /* 100% Star ⭐ */
+.score-dist { color: #10b981 !important; font-weight: 700; filter: none !important; } /* 80-99% A */
+.score-pass { color: #84cc16 !important; font-weight: 700; filter: none !important; } /* 60-79% B */
+.score-warn { color: #eab308 !important; font-weight: 700; filter: none !important; } /* 40-59% C */
+.score-remed { color: #f97316 !important; font-weight: 700; filter: none !important; } /* 20-39% D */
+.score-poor { color: #ef4444 !important; font-weight: 700; filter: none !important; } /* 0-19% E */
+.score-fail { color: #ef4444 !important; font-weight: 700; filter: none !important; } /* Legacy Fallback */
 
 /* ============================================================
    SCORE BAR

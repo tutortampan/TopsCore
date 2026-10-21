@@ -687,7 +687,7 @@ export async function renderResults(area) {
           </div>
           <div>
             <div class="text-sm text-muted mb-1">Performance</div>
-            <div class="fw-600" style="font-size:1.5rem;">${row.score}% <span class="badge badge-primary text-sm ml-2">${escapeHtml(row.grade)}</span></div>
+            <div class="fw-600" style="font-size:1.5rem;">${row.score}% <span class="badge badge-primary text-sm ml-2">${escapeHtml((row.grade === 'S' || parseFloat(row.score) >= 100) ? '⭐' : row.grade)}</span></div>
           </div>
           <div class="d-flex gap-2">
              <div class="p-2 rounded text-center" style="background:rgba(74,222,128,0.1);flex:1;">
@@ -722,7 +722,7 @@ export async function renderResults(area) {
       { key: 'batch', label: 'Batch', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
       { key: 'AssessmentTitle', label: 'Assessment', sortable: true, render: (val) => `<div class="fw-600">${escapeHtml(val)}</div>` },
       { key: 'score', label: 'Score', sortable: true, render: (val) => `<div class="text-center fw-800">${val}%</div>` },
-      { key: 'grade', label: 'Grade', sortable: true, render: (val) => `<div class="text-center"><span class="badge badge-primary fw-800">${escapeHtml(val)}</span></div>` },
+      { key: 'grade', label: 'Grade', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge badge-primary fw-800">${escapeHtml((val === 'S' || parseFloat(row?.score) >= 100) ? '⭐' : val)}</span></div>` },
       { key: 'correct', label: 'Correct', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-success' : 'badge-neutral'}">${val}</span></div>` },
       { key: 'minor', label: 'Half', sortable: true, render: (val) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-warning' : 'badge-neutral'}">${val}</span></div>` },
       { key: 'wrong', label: 'Incorrect', sortable: true, render: (val) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-danger' : 'badge-neutral'}">${val}</span></div>` },

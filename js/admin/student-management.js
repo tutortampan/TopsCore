@@ -230,14 +230,13 @@ export async function renderStudents(area) {
         overallScoreStr = `${overallPct}%`;
         const g = typeof getGrade === 'function' ? getGrade(overallPct) : (
           overallPct >= 100 ? 'S' :
-          overallPct >= 91 ? 'A' :
-          overallPct >= 71 ? 'B' :
-          overallPct >= 51 ? 'C' :
-          overallPct >= 31 ? 'D' :
-          overallPct >= 11 ? 'E' : 'F'
+          overallPct >= 80 ? 'A' :
+          overallPct >= 60 ? 'B' :
+          overallPct >= 40 ? 'C' :
+          overallPct >= 20 ? 'D' : 'E'
         );
         globalGrade = g;
-        const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#0ea5e9', 'C': '#c7c18c', 'D': '#f97316', 'E': '#f43f5e', 'F': '#ef4444' };
+        const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#84cc16', 'C': '#eab308', 'D': '#f97316', 'E': '#ef4444', 'F': '#ef4444' };
         overallColor = cMap[g] || 'rgba(255,255,255,0.4)';
       }
     }
@@ -544,7 +543,7 @@ export async function renderStudents(area) {
           </span>
         </td>
         <td class="text-center">
-          <span class="fw-700 text-sm" style="color:${r.bestPct != null ? (r.bestPct >= 71 ? '#10b981' : r.bestPct >= 51 ? '#f59e0b' : '#ef4444') : 'var(--clr-text-3)'};">
+          <span class="fw-700 text-sm" style="color:${r.bestPct != null ? (r.bestPct >= 80 ? '#10b981' : r.bestPct >= 60 ? '#84cc16' : r.bestPct >= 40 ? '#eab308' : r.bestPct >= 20 ? '#f97316' : '#ef4444') : 'var(--clr-text-3)'};">
             ${r.bestPct != null ? `${r.bestPct}%` : '—'}
           </span>
         </td>
@@ -847,7 +846,7 @@ export async function renderStudents(area) {
                 </span>
               </td>
               <td class="text-center">
-                <span class="fw-700 text-sm" style="color:${d.bestPct != null ? (d.bestPct >= 71 ? '#10b981' : d.bestPct >= 51 ? '#f59e0b' : '#ef4444') : 'var(--clr-text-3)'};">
+                <span class="fw-700 text-sm" style="color:${d.bestPct != null ? (d.bestPct >= 80 ? '#10b981' : d.bestPct >= 60 ? '#84cc16' : d.bestPct >= 40 ? '#eab308' : d.bestPct >= 20 ? '#f97316' : '#ef4444') : 'var(--clr-text-3)'};">
                   ${d.bestPct != null ? `${d.bestPct}%` : '—'}
                 </span>
               </td>

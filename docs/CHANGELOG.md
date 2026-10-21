@@ -1,3 +1,55 @@
+## [2026-10-21 15:32] — Phase 71: Reorganized Grade Hierarchy (E 0-19, D 20-39, C 40-59, B 60-79, A 80-99, Star ⭐ 100)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 71 (Grade Spectrum Reorganization & Palette Standardization)
+**Status:** PASS (COMMITTED & PUSHED)
+
+### Why
+- User Request 1: "pada dashboard ini kita taruh baris temapt nama di bawah foto . cek juga grade di semua sistem,, S kita sudah ganti dengan bintang,,,"
+- User Request 2: "put the row with institution, program, batch, and level on top of the photo,,, whare the name used to  be. no push or commit unless I say so"
+- User Request 3: "antara nama dan foto tambahkan garis pemisah agar terlihat separasi yag jelas"
+- User Request 4: "kita susun ulang Grade sekaranng,,, kita mulai dari E, D, C, B, A, lalu Bintang. E merah, Oranye, Kuning, lalu untuk B pilih warna antara kunnig dan Hijau, A hijau, dan bintang Emas asli berkilau"
+- User Request 5: "E 0-19 D 20-39 C 40-59 B 60-79 A 80-99 Star 100 tolong disesuiakan cek dan recheck"
+- User Request 6: "commit, push"
+- Reorganize the grading system to start from **E** with exact 20-point brackets: E (0–19), D (20–39), C (40–59), B (60–79), A (80–99), Star ⭐ (100).
+- Enforce the exact requested colors: E: Merah (`#ef4444`), D: Oranye (`#f97316`), C: Kuning (`#eab308`), B: Antara Kuning & Hijau / Lime (`#84cc16`), A: Hijau (`#10b981`), Star ⭐: Emas Asli Berkilau (`#fbbf24` with golden shimmer gradient).
+- Maintain strict git freeze: no push or commit unless explicitly approved.
+
+### Changed
+- `dashboard.html`:
+  - Moved `#welcome-meta-wrapper` (`CEC | CAMP | 131 | 3rd Level`) to the top of `#welcome-banner-section`.
+  - Positioned `.hero-divider` below the metadata row.
+  - Placed `.hero-metrics-row` (Score, Avatar with crown, Grade) in the middle.
+  - Added dedicated luminous `.hero-divider.hero-name-divider` between `.hero-metrics-row` and `<h1 id="welcome-name">`.
+  - Positioned `<h1 id="welcome-name">` directly under the divider.
+  - Bumped version to `v=5.3.5`.
+- `css/dashboard.css`:
+  - Adjusted `#welcome-banner-section` padding to `10px 14px 10px 14px !important;`.
+  - Configured `#welcome-meta-wrapper + .hero-divider` margin to `4px 0 10px 0 !important;` with linear gradient to provide clearance for the floating crown (`👑`).
+  - Added `.hero-name-divider` rule with vibrant tier-reactive luminous gradient (`linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb), 0.6) 80%, transparent 100%)`) and ambient glow (`box-shadow: 0 0 10px rgba(var(--tier-rgb), 0.4)`), with margin `9px 0 6px 0 !important;` for sharp, distinct separation between the photo trio and the student name.
+  - Adjusted `#welcome-name` margin to `2px 0 0 0 !important;`.
+- `js/app.js`:
+  - Re-exported `getGradeSymbol` from `./grading.js`.
+- `js/dashboard.js`:
+  - Updated completed assessments desktop table rows to use `getGradeSymbol(grade, pct)`.
+  - Updated completed assessments mobile card badges to use `getGradeSymbol(grade, pct)`.
+  - Updated profile modal attempt history table rows to use `getGradeSymbol(grade, pct)`.
+- `js/admin/app.js`:
+  - Updated Class Hub average grade badge to render `⭐` for Grade S (`isAvgGradeS ? '⭐' : avgGrade`).
+  - Updated Class Hub roster row badge to render `⭐` for Grade S (`isGradeS ? '⭐' : row.grade`).
+- `js/admin/class.js`:
+  - Updated Gradebook table grade column to render `⭐` for Grade S.
+- `js/admin/desk.js`:
+  - Updated audit preview table to render `⭐` for Grade S (`oldSymbol`, `newSymbol`).
+- `js/admin/assessment-management.js`:
+  - Updated attempt details drawer and datagrid column to render `⭐` for Grade S.
+- `test-dashboard-enhancements.mjs`:
+  - Configured Playwright with `channel: 'chrome'` and added automated screenshot capture of the Completed tab.
+
+### Tests
+- command: `node test-dashboard-enhancements.mjs`
+- result: `PASS` (Grading engine test passed; 100% Score Grade Display: `⭐`; Zero-scroll verified across iPhone 14 390x844 and Android Small 360x640; Visual screenshots confirmed).
+
 ## [2026-10-21 14:08] — Phase 70: Horizontal Hero Trio & Stacked Semantic Color Metrics
 
 **Agent/Session:** Antigravity

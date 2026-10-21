@@ -1,4 +1,4 @@
-import { calculateGrade } from './grading.js?v=5.3.2';
+import { calculateGrade, getGradeSymbol } from './grading.js?v=5.3.5';
 
 // TOPS CORE — Toast Notification System
 let toastContainer = null;
@@ -142,6 +142,8 @@ if (typeof window !== 'undefined') {
 export function getGrade(pct) {
   return calculateGrade(pct);
 }
+
+export { getGradeSymbol };
 
 /** Format seconds to MM:SS */
 export function formatTime(totalSeconds) {
