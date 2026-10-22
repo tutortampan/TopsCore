@@ -529,9 +529,9 @@ if (!session) {
 
         // Fetch user photo + FEATURE 3: student name label
         let studentFullName = session.student_name || 'Student';
+        const targetStudentId = attempt.student_id || session.student_id;
         try {
           const supabase = await getSupabase();
-          const targetStudentId = attempt.student_id || session.student_id;
           if (targetStudentId) {
             const { data: st } = await supabase.from('students').select('name, photo_url, batch_id').eq('id', targetStudentId).single();
             if (st) {

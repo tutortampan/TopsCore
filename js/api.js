@@ -957,12 +957,21 @@ export async function startAssessment(studentId, assessmentId) {
     };
   });
 
+  const hasWordsAndPhrases = sanitizedAnswers.some(a => a.question_snapshot?.test_section === 'words') &&
+                             sanitizedAnswers.some(a => a.question_snapshot?.test_section === 'phrases');
+  const sections = hasWordsAndPhrases
+    ? [
+        { id: 'words', title: 'Part 1: Words', section_order: 1 },
+        { id: 'phrases', title: 'Part 2: Phrases', section_order: 2 }
+      ]
+    : [{ id: 'default', title: assessment.name || assessment.title || 'Assessment', section_order: 1 }];
+
   return {
     success: true,
     attempt: attempt,
     assessment: assessment,
     ASSESSMENT: assessment,
-    sections: [{ id: 'default', title: assessment.name || assessment.title || 'Assessment', section_order: 1 }],
+    sections: sections,
     answers: sanitizedAnswers,
     resumed: !!existingAttempts?.[0]
   };

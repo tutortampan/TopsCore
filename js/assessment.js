@@ -749,18 +749,26 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
        sessionStorage.setItem(`topscore_sec_${attemptData.id}`, index);
        const currentSection = assessmentSections[index];
 
-       answerRows = allAnswerRows.filter(row => {
-         let snap = row.question_snapshot;
-         if (typeof snap === 'string') {
-            try { snap = JSON.parse(snap); } catch { snap = {}; }
+       if (!assessmentSections || assessmentSections.length <= 1 || currentSection?.id === 'default') {
+         answerRows = allAnswerRows;
+       } else {
+         answerRows = allAnswerRows.filter(row => {
+           let snap = row.question_snapshot;
+           if (typeof snap === 'string') {
+              try { snap = JSON.parse(snap); } catch { snap = {}; }
+           }
+           const secId = snap?.section_id || 'default';
+           return secId === currentSection.id;
+         });
+         // Safety: If filtering by section produced 0 questions while allAnswerRows has questions, never strand student on empty state
+         if (answerRows.length === 0 && allAnswerRows.length > 0) {
+           answerRows = allAnswerRows;
          }
-         const secId = snap?.section_id || 'default';
-         return secId === currentSection.id;
-       });
+       }
        window.answerRows = answerRows;
 
        const nameEl = document.getElementById('assessment-name');
-       if (nameEl) nameEl.textContent = assessmentDisplayName + ` - ${currentSection.title || `Section ${index + 1}`}`;
+       if (nameEl) nameEl.textContent = assessmentDisplayName + (assessmentSections.length > 1 ? ` - ${currentSection?.title || `Section ${index + 1}`}` : '');
        const metaEl = document.getElementById('assessment-meta');
        if (metaEl) metaEl.textContent = `${answerRows.length} Questions · ${session.student_name}`;
 
@@ -998,8 +1006,26 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     // —— Render Question ——
     function renderQuestion(idx) {
       currentIndex = idx;
-      const row = answerRows[idx];
-      if (!row) return;
+      let row = answerRows[idx];
+      if (!row && allAnswerRows && allAnswerRows.length > 0) {
+        answerRows = allAnswerRows;
+        row = answerRows[idx] || answerRows[0];
+        currentIndex = 0;
+      }
+      if (!row) {
+        const main = document.getElementById('assessment-main');
+        if (main) {
+          main.innerHTML = `
+            <div class="question-card text-center" style="padding:2.5rem 1.5rem;text-align:center;width:100%;max-width:380px;margin:auto;">
+              <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+              <h3 style="font-size:1.3rem;font-weight:700;margin-bottom:0.75rem;">Question Unavailable</h3>
+              <p class="text-muted" style="font-size:0.88rem;margin-bottom:1.5rem;">Could not load question item. Please return to dashboard or retry.</p>
+              <button class="btn btn-primary" onclick="window.location.href='dashboard.html'">Return to Dashboard</button>
+            </div>
+          `;
+        }
+        return;
+      }
 
       let snap = row.question_snapshot;
       if (typeof snap === 'string') {
