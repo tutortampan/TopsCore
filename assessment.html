@@ -24,9 +24,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=5.4.2" />
-  <link rel="stylesheet" href="css/dashboard.css?v=5.4.2" />
-  <link rel="stylesheet" href="css/assessment.css?v=5.4.2" />
+  <link rel="stylesheet" href="css/style.css?v=5.4.3" />
+  <link rel="stylesheet" href="css/dashboard.css?v=5.4.3" />
+  <link rel="stylesheet" href="css/assessment.css?v=5.4.3" />
 </head>
 <body class="assessment-page notranslate" translate="no">
 
@@ -170,44 +170,72 @@
 
   <!-- Anti-Cheat Flashing Overlay -->
   <div id="cheat-overlay" role="alertdialog" aria-modal="true" aria-labelledby="cheat-title">
-    <div class="cheat-box">
-      <h2 id="cheat-title" style="font-size:1.6rem;font-weight:800;color:#ffffff;margin-bottom:0.5rem;">🚨 CHEATING ATTEMPT DETECTED! 🚨</h2>
-      <div id="cheat-strikes-badge" style="display:inline-block;padding:4px 14px;border-radius:20px;background:rgba(255,255,255,0.25);color:#ffffff;font-weight:800;font-size:0.95rem;margin-bottom:1rem;letter-spacing:1px;">STRIKE 1 OF 3</div>
-      <p style="font-size:1rem;color:rgba(255,255,255,0.95);margin-bottom:1.25rem;line-height:1.4;" id="cheat-reason">You were detected trying to leave the ASSESSMENT page or using navigation buttons!</p>
-      <div class="cheat-countdown-circle">
-        <span id="cheat-timer-count">10</span>
+    <div class="cheat-box" style="border: 2px solid #dc2626; box-shadow: 0 0 45px rgba(220, 38, 38, 0.75); background: rgba(15, 6, 6, 0.95);">
+      <h2 id="cheat-title" style="font-size:1.6rem;font-weight:800;color:#ffffff;margin-bottom:0.5rem;text-shadow: 0 0 20px rgba(220, 38, 38, 0.9);">🚨 CHEATING ATTEMPT DETECTED! 🚨</h2>
+      <div id="cheat-strikes-badge" style="display:inline-block;padding:6px 16px;border-radius:20px;background:#dc2626;color:#ffffff;font-weight:800;font-size:0.95rem;margin-bottom:1rem;letter-spacing:1px;box-shadow:0 0 20px rgba(220,38,38,0.95);border:2px solid #ffffff;">🚨 STRIKE 1 OF 10</div>
+      <p style="font-size:1rem;color:rgba(255,255,255,0.95);margin-bottom:1.25rem;line-height:1.4;" id="cheat-reason">🚨 You were detected trying to leave the ASSESSMENT page or using navigation buttons!</p>
+      <div class="cheat-countdown-circle" style="border: 4px solid #dc2626; background: rgba(220, 38, 38, 0.35); box-shadow: 0 0 30px rgba(220, 38, 38, 0.75);">
+        <span id="cheat-timer-count" style="color:#ffffff; text-shadow:0 0 20px rgba(255,255,255,0.9);">10</span>
       </div>
-      <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.85);margin-bottom:1.5rem;font-weight:700;">Seconds to Auto-Submit</div>
-      <button type="button" class="btn btn-primary" id="dismiss-cheat-btn" style="background:#ffffff;color:#dc2626;font-weight:800;border:none;padding:0.75rem 1.25rem;font-size:1rem;box-shadow:0 10px 25px rgba(0,0,0,0.3);cursor:pointer;border-radius:10px;width:100%;max-width:340px;">
+      <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1.5px;color:#fca5a5;margin-bottom:1.5rem;font-weight:700;">Seconds to Auto-Submit</div>
+      <button type="button" class="btn btn-primary" id="dismiss-cheat-btn" style="background:#dc2626;color:#ffffff;font-weight:800;border:2px solid #ffffff;padding:0.75rem 1.25rem;font-size:1rem;box-shadow:0 0 25px rgba(220,38,38,0.85);cursor:pointer;border-radius:10px;width:100%;max-width:340px;">
         Return to My ASSESSMENT
       </button>
     </div>
   </div>
 
   <!-- Submit confirm modal -->
-  <div class="modal-backdrop hidden" id="submit-modal" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title" style="z-index: 99999 !important; background: rgba(2, 6, 23, 0.88); backdrop-filter: blur(8px);">
-    <div class="modal-box" style="max-width:480px; text-align:center; background:#0f1d2d !important; border:1px solid rgba(255,255,255,0.18); box-shadow:0 16px 48px rgba(0,0,0,0.85);">
-      <div style="font-size:3rem;margin-bottom:var(--space-3);" id="submit-modal-icon">✅</div>
-      <h3 id="submit-modal-title" class="mb-3">Submit ASSESSMENT?</h3>
-      <div id="unanswered-warning-banner" class="hidden mb-4 p-3 rounded text-sm text-left" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#fca5a5;">
-        <div class="fw-700 text-danger mb-1">⚠️ INCOMPLETE ASSESSMENT WARNING:</div>
-        <p id="unanswered-warning-text" class="text-xs text-muted mb-0" style="color:rgba(255,255,255,0.9)!important;"></p>
+  <div class="modal-backdrop hidden" id="submit-modal" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title" style="z-index: 99999 !important; background: rgba(2, 6, 23, 0.88); backdrop-filter: blur(10px);">
+    <div class="modal-box" id="submit-modal-box" style="max-width:480px; width:92%; text-align:center; background:#0c1524 !important; border:1px solid rgba(255,255,255,0.18); border-radius:18px; padding:24px; box-shadow:0 16px 48px rgba(0,0,0,0.85); box-sizing:border-box;">
+      <div style="font-size:3.2rem; margin-bottom:12px; line-height:1;" id="submit-modal-icon">✅</div>
+      <h3 id="submit-modal-title" style="font-size:1.4rem; font-weight:800; color:#ffffff; margin-bottom:12px; font-family:'Outfit', sans-serif;">Submit ASSESSMENT?</h3>
+      
+      <!-- Incomplete Warning Alert Banner (RED ALERT) -->
+      <div id="unanswered-warning-banner" class="hidden" style="margin-bottom:16px; padding:14px; border-radius:12px; background:rgba(220, 38, 38, 0.16); border:2px solid #dc2626; box-shadow:0 0 20px rgba(220, 38, 38, 0.35); text-align:center;">
+        <div style="font-size:0.95rem; font-weight:900; color:#fca5a5; letter-spacing:0.5px; margin-bottom:6px; text-transform:uppercase;" id="unanswered-warning-heading">
+          🚨 WARNING: INCOMPLETE ASSESSMENT!
+        </div>
+        <div id="unanswered-warning-text" style="font-size:0.92rem; color:#ffffff; line-height:1.45; font-weight:600;">
+          You still have <strong id="unanswered-count-badge" style="color:#f87171; font-size:1.1rem; font-weight:900;">0</strong> unanswered question(s)!
+        </div>
+        <div style="font-size:0.8rem; color:#fca5a5; margin-top:6px; font-weight:600;">
+          ⚠️ Any blank question will receive 0 points.
+        </div>
       </div>
-      <p class="text-muted text-sm mb-6" id="submit-modal-message">
-        You have answered <strong id="answered-count">0</strong> of <strong id="total-count">0</strong> questions.
-        Once submitted, you cannot change your answers.
+
+      <p style="font-size:0.95rem; color:#cbd5e1; margin-bottom:20px; line-height:1.5;" id="submit-modal-message">
+        You have answered <strong id="answered-count" style="color:#38bdf8; font-size:1.05rem;">0</strong> of <strong id="total-count" style="color:#ffffff; font-size:1.05rem;">0</strong> questions.
+        <span id="submit-modal-subtext" style="display:block; font-size:0.82rem; color:#94a3b8; margin-top:4px;">Once submitted, answers cannot be modified.</span>
       </p>
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <button class="btn btn-primary w-100" id="confirm-submit-btn" style="padding:12px;font-size:1rem;">Submit ASSESSMENT</button>
-        <button class="btn btn-secondary w-100" id="cancel-submit-btn" style="padding:12px;font-size:1rem;">Keep Reviewing</button>
+
+      <div style="display:flex; flex-direction:column; gap:10px;" id="submit-modal-actions">
+        <!-- 1. Safe Action when Incomplete: Jump & Complete (Shown when unanswered > 0) -->
+        <button type="button" class="btn w-100" id="btn-jump-incomplete-action" style="display:none; padding:13px; font-size:0.98rem; font-weight:800; border-radius:10px; cursor:pointer; background:#0284c7; color:#ffffff; border:2px solid rgba(255, 255, 255, 0.35); box-shadow:0 6px 20px rgba(2, 132, 199, 0.55); align-items:center; justify-content:center; gap:8px;">
+          🔍 Review & Answer Questions ➔
+        </button>
+
+        <!-- 2. Danger Action when Incomplete: Submit with 0 penalty (Shown when unanswered > 0) -->
+        <button type="button" class="btn w-100" id="danger-submit-btn" style="display:none; padding:12px; font-size:0.92rem; font-weight:800; border-radius:10px; cursor:pointer; background:#dc2626; color:#ffffff; border:2px solid #ffffff; box-shadow:0 4px 16px rgba(220, 38, 38, 0.5);">
+          ⚠️ Submit Anyway (Blank Questions = 0 Points)
+        </button>
+
+        <!-- 3. Normal Submit Button (Shown ONLY when all questions answered: unanswered === 0) -->
+        <button type="button" class="btn btn-primary w-100" id="confirm-submit-btn" style="padding:13px; font-size:0.98rem; font-weight:800; border-radius:10px; cursor:pointer; background:#059669; color:#ffffff; border:1px solid rgba(52, 211, 153, 0.5); box-shadow:0 4px 20px rgba(16, 185, 129, 0.45); display:flex; align-items:center; justify-content:center; gap:8px;">
+          Submit ASSESSMENT 📋
+        </button>
+
+        <!-- 4. Keep Reviewing button -->
+        <button type="button" class="btn btn-secondary w-100" id="cancel-submit-btn" style="padding:11px; font-size:0.9rem; font-weight:700; border-radius:10px; cursor:pointer; background:rgba(30, 41, 59, 0.7); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1;">
+          Return to Current Question
+        </button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="./js/assessment.js?v=5.4.2"></script>
+  <script type="module" src="./js/assessment.js?v=5.4.3"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=5.4.2')
+      navigator.serviceWorker.register('sw.js?v=5.4.3')
         .then(registration => registration.update())
         .catch(err => console.warn('SW registration failed:', err));
     }

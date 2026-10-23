@@ -1,14 +1,37 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-23 05:10 UTC+8
+Last Updated: 2026-10-23 12:48 UTC+8
 
-Current Phase: Phase 72 Assessment Loading Spinner Freeze & Section ID Fallback Remediation [COMMITTED & PUSHED]
+Current Phase: Phase 73 Question Matrix Multi-Section Unification & 10 Red Strikes Anti-Cheat [LOCAL ONLY - GIT FREEZE]
 
-Current Task: Assessment spinner freeze resolved, verified, and pushed to production
+Current Task: Standing order: STRICT FREEZE on commit and push. All operations strictly local.
+
+> **STRICT RULE IN FORCE:** DO NOT COMMIT OR PUSH TO GIT. All work must remain strictly in the local workspace.
 
 Status: COMPLETE
 
 ## Completed
+
+- **Phase 73: Question Matrix Multi-Section Unification & 10 Red Strikes Anti-Cheat [LOCAL ONLY - GIT FREEZE]**:
+  - **1. Multi-Section Question Matrix (Daftar Pertanyaan)**:
+    - **`js/assessment.js` (`buildNavGrid`)**: When an assessment has multiple sections (e.g. 3A2 with 40 Words + 10 Phrases, or 3B1 with 25 Words + 25 Phrases), the Question Matrix modal displays ALL 50 questions across all sections grouped cleanly with section headers (`Part 1: Words (40 Questions) [ACTIVE]` and `Part 2: Phrases (10 Questions)`), per-section answered counters (`0/40 answered`), and continuous 1..50 numbering.
+    - **Cross-Section Instant Navigation**: Clicking question 45 while in the Words section immediately transitions to Part 2 (Phrases) via `startSection(secIdx, localIdx)` and renders Question 45.
+    - **Continuous Backward Navigation**: In `bottomPrev`, tapping `← Prev` on Question 1 of Part 2 smoothly transitions back to Question 40 of Part 1.
+    - **Global Unanswered Jump**: `jumpToNextUnanswered()` searches across all 50 questions across all sections.
+  - **2. Anti-Cheat 10 Red Warning Strikes ("PERINGATAN MERAH SEMUA")**:
+    - **Strike Limit**: Increased `MAX_STRIKES` from 3 to **10 warnings** to accommodate accidental mobile button taps/swipes.
+    - **All Warnings Red Theme**: All strikes (Strike 1 through Strike 10) are styled in high-visibility emergency red (`#dc2626`), eliminating legacy white/orange intermediate tiers:
+      - Strike badge: `🚨 STRIKE X OF 10` in `#dc2626` with red glow (`box-shadow: 0 0 20px rgba(220, 38, 38, 0.95)`).
+      - Warning text: `🚨 WARNING (STRIKE X OF 10): ...` in `#ffffff` on `#dc2626` accent.
+      - Countdown circle: 10-second circle styled with `border: 4px solid #dc2626` and red glow.
+      - Return button: `#dc2626` urgent red with solid white font.
+      - Over 10 strikes (Strike 11): Displays `🚨 LIMIT EXCEEDED (10/10)` and auto-submits exam.
+  - **3. Verification**:
+    - Full Playwright automated verification (`scratch/verify_matrix_cheat_10.mjs`):
+      - Verified Question Matrix displays all 50 questions (1..50) with section headers and progress chips.
+      - Verified cross-section navigation between Part 1 and Part 2.
+      - Verified all 10 strikes render with `#dc2626` red badge, button, and sirens.
+      - Screenshots captured: `screenshot_question_matrix_50.png`, `screenshot_cheat_strike_1_red.png`, `screenshot_cheat_strike_10_red.png`.
 
 - **Phase 72: Assessment Loading Spinner Freeze & Section ID Fallback Remediation [COMMITTED & PUSHED]**:
   - **1. Root Cause of Online Assessment Spinner Freeze**:

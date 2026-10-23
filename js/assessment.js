@@ -162,7 +162,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     }
 
     let cheatStrikes = 0;
-    const MAX_STRIKES = 3;
+    const MAX_STRIKES = 10;
     let isCheatAlertActive = false;
     let cheatDeadline = 0;
     let lastCheatTriggerTime = 0;
@@ -196,20 +196,24 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       const strikeBadge = document.getElementById('cheat-strikes-badge');
       const dismissBtn = document.getElementById('dismiss-cheat-btn');
 
-      // Check if 3 warnings limit is exceeded (auto-submit on violation after 3 warnings)
+      // Check if 10 warnings limit is exceeded (auto-submit on violation after 10 warnings)
       if (cheatStrikes > MAX_STRIKES) {
         if (strikeBadge) {
-          strikeBadge.textContent = `LIMIT EXCEEDED (${MAX_STRIKES}/${MAX_STRIKES})`;
+          strikeBadge.textContent = `🚨 LIMIT EXCEEDED (${MAX_STRIKES}/${MAX_STRIKES})`;
           strikeBadge.style.background = '#dc2626';
+          strikeBadge.style.color = '#ffffff';
+          strikeBadge.style.boxShadow = '0 0 20px rgba(220, 38, 38, 0.95)';
+          strikeBadge.style.border = '2px solid #ffffff';
         }
         if (reasonEl) {
+          reasonEl.style.color = '#ffffff';
           reasonEl.textContent = `🚨 ASSESSMENT TERMINATED: Maximum warning limit (${MAX_STRIKES} warnings) exceeded!`;
         }
         if (countEl) countEl.textContent = '0';
         if (dismissBtn) dismissBtn.style.display = 'none';
         if (overlay) overlay.style.display = 'flex';
         startPoliceSiren();
-        showToast('🚨 Exam terminated: Warning limit (3 strikes) exceeded.', 'error', 6000);
+        showToast(`🚨 Exam terminated: Warning limit (${MAX_STRIKES} strikes) exceeded.`, 'error', 6000);
         setTimeout(() => {
           stopPoliceSiren();
           dismissCheatAlert();
@@ -218,22 +222,30 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         return;
       }
 
-      // Display warning for Strike 1, 2, or 3 (3 is Final Warning)
+      // Display warning for Strike 1 to 10 (PERINGATAN MERAH SEMUA)
       const isFinalWarning = (cheatStrikes === MAX_STRIKES);
       if (strikeBadge) {
-        strikeBadge.textContent = isFinalWarning ? `STRIKE ${cheatStrikes} OF ${MAX_STRIKES} (FINAL WARNING)` : `STRIKE ${cheatStrikes} OF ${MAX_STRIKES}`;
-        strikeBadge.style.background = isFinalWarning ? '#dc2626' : (cheatStrikes === 2 ? '#ea580c' : 'rgba(255, 255, 255, 0.25)');
+        strikeBadge.textContent = isFinalWarning ? `🚨 STRIKE ${cheatStrikes} OF ${MAX_STRIKES} (FINAL WARNING)` : `🚨 STRIKE ${cheatStrikes} OF ${MAX_STRIKES}`;
+        strikeBadge.style.background = '#dc2626'; // Merah semua untuk strike 1-10!
+        strikeBadge.style.color = '#ffffff';
+        strikeBadge.style.boxShadow = '0 0 20px rgba(220, 38, 38, 0.95)';
+        strikeBadge.style.border = '2px solid #ffffff';
       }
 
       if (reasonEl) {
+        reasonEl.style.color = '#ffffff';
         reasonEl.textContent = isFinalWarning
-          ? `⚠️ FINAL WARNING: ${reason}! You have reached the maximum limit of 3 warnings. Any further navigation or countdown reaching 0 will terminate your exam!`
-          : `Warning: ${reason}! (Strike ${cheatStrikes} of ${MAX_STRIKES} — Warning limit is 3 times. Reaching 0 or exceeding 3 warnings will auto-submit)`;
+          ? `🚨 FINAL WARNING: ${reason}! You have reached the maximum limit of ${MAX_STRIKES} warnings. Any further navigation or countdown reaching 0 will terminate your exam!`
+          : `🚨 WARNING (STRIKE ${cheatStrikes} OF ${MAX_STRIKES}): ${reason}! (Reaching 0 or exceeding ${MAX_STRIKES} warnings will auto-submit your assessment)`;
       }
 
       if (dismissBtn) {
         dismissBtn.style.display = 'inline-block';
-        dismissBtn.textContent = isFinalWarning ? 'Return to My ASSESSMENT (Final)' : 'Return to My ASSESSMENT';
+        dismissBtn.style.background = '#dc2626';
+        dismissBtn.style.color = '#ffffff';
+        dismissBtn.style.border = '2px solid #ffffff';
+        dismissBtn.style.boxShadow = '0 0 25px rgba(220, 38, 38, 0.85)';
+        dismissBtn.textContent = isFinalWarning ? 'Return to My ASSESSMENT (Final Warning)' : 'Return to My ASSESSMENT';
       }
 
       if (overlay) overlay.style.display = 'flex';
@@ -744,7 +756,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       }
     }
 
-    function startSection(index) {
+    function startSection(index, initialIdx = 0) {
        currentSectionIndex = index;
        sessionStorage.setItem(`topscore_sec_${attemptData.id}`, index);
        const currentSection = assessmentSections[index];
@@ -767,14 +779,22 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
        }
        window.answerRows = answerRows;
 
-       const nameEl = document.getElementById('assessment-name');
+       const nameEl = document.getElementById('assessment-main-title') || document.getElementById('assessment-name');
        if (nameEl) nameEl.textContent = assessmentDisplayName + (assessmentSections.length > 1 ? ` - ${currentSection?.title || `Section ${index + 1}`}` : '');
        const metaEl = document.getElementById('assessment-meta');
-       if (metaEl) metaEl.textContent = `${answerRows.length} Questions · ${session.student_name}`;
+       if (metaEl) metaEl.textContent = `${allAnswerRows.length} Questions · ${session.student_name}`;
 
        buildNavGrid();
        startTimer(currentSection);
-       renderQuestion(0);
+
+       let targetIdx = initialIdx;
+       if (targetIdx < 0) {
+         targetIdx = answerRows.length + targetIdx; // -1 becomes answerRows.length - 1
+       }
+       if (targetIdx < 0 || targetIdx >= answerRows.length) {
+         targetIdx = 0;
+       }
+       renderQuestion(targetIdx);
     }
 
     // —— Timer ——
@@ -862,32 +882,121 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
        }
     }
 
-    // —— Build Nav Grid ——
+    // —— Build Nav Grid (Display All Questions & Group by Section) ——
     function buildNavGrid() {
       const grid = document.getElementById('q-nav-grid');
+      if (!grid) return;
       grid.innerHTML = '';
-      if (answerRows.length > 30) {
-        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(28px, 1fr))';
-        grid.style.gap = '4px';
-      } else {
-        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(32px, 1fr))';
-        grid.style.gap = '5px';
+
+      const matrixTitle = document.getElementById('matrix-popup-title') || document.querySelector('#matrix-popup span');
+      if (matrixTitle) {
+        matrixTitle.textContent = `Question Matrix (${allAnswerRows.length} Questions)`;
       }
-      answerRows.forEach((_, idx) => {
-        const btn = document.createElement('button');
-        btn.className = 'q-nav-btn';
-        btn.id = `qnav-${idx}`;
-        btn.textContent = idx + 1;
-        btn.setAttribute('aria-label', `Question ${idx + 1}`);
-        btn.addEventListener('click', () => {
-          saveCurrentAnswer();
-          renderQuestion(idx);
-          if (typeof window.toggleMatrixPopup === 'function') {
-            window.toggleMatrixPopup(false);
-          }
+
+      const isMultiSection = assessmentSections && assessmentSections.length > 1;
+
+      if (!isMultiSection) {
+        // Single continuous grid
+        grid.style.display = 'grid';
+        if (allAnswerRows.length > 30) {
+          grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(28px, 1fr))';
+          grid.style.gap = '4px';
+        } else {
+          grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(32px, 1fr))';
+          grid.style.gap = '5px';
+        }
+
+        allAnswerRows.forEach((row, globalIdx) => {
+          const btn = document.createElement('button');
+          btn.className = 'q-nav-btn';
+          btn.id = `qnav-row-${row.id}`;
+          btn.dataset.rowId = row.id;
+          btn.dataset.globalIdx = globalIdx;
+          btn.textContent = globalIdx + 1;
+          btn.setAttribute('aria-label', `Question ${globalIdx + 1}`);
+          btn.addEventListener('click', () => {
+            saveCurrentAnswer();
+            renderQuestion(globalIdx);
+            if (typeof window.toggleMatrixPopup === 'function') {
+              window.toggleMatrixPopup(false);
+            }
+          });
+          grid.appendChild(btn);
         });
-        grid.appendChild(btn);
-      });
+      } else {
+        // Multi-section layout: Group by Section
+        grid.style.display = 'flex';
+        grid.style.flexDirection = 'column';
+        grid.style.gap = '12px';
+
+        let globalCounter = 0;
+
+        assessmentSections.forEach((sec, secIdx) => {
+          const secRows = allAnswerRows.filter(row => {
+            let snap = row.question_snapshot;
+            if (typeof snap === 'string') {
+              try { snap = JSON.parse(snap); } catch { snap = {}; }
+            }
+            return (snap?.section_id || 'default') === sec.id;
+          });
+
+          const secBlock = document.createElement('div');
+          secBlock.className = 'matrix-sec-block';
+          secBlock.style.cssText = (secIdx === currentSectionIndex)
+            ? 'background:rgba(56, 189, 248, 0.08); border:1px solid rgba(56, 189, 248, 0.4); border-radius:10px; padding:8px 10px 10px 10px;'
+            : 'background:rgba(15, 23, 42, 0.6); border:1px solid rgba(255, 255, 255, 0.08); border-radius:10px; padding:8px 10px 10px 10px;';
+
+          const secHeader = document.createElement('div');
+          secHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid rgba(255, 255, 255, 0.08);';
+
+          const titleSpan = document.createElement('span');
+          titleSpan.style.cssText = `font-size:0.82rem; font-weight:800; color:${(secIdx === currentSectionIndex) ? '#38bdf8' : '#e2e8f0'}; letter-spacing:0.3px; display:inline-flex; align-items:center; gap:6px;`;
+          const activeTag = (secIdx === currentSectionIndex) ? '<span style="font-size:0.65rem;background:#0284c7;color:#ffffff;padding:2px 6px;border-radius:4px;font-weight:700;">ACTIVE</span>' : '';
+          titleSpan.innerHTML = `${sec.title || `Section ${secIdx + 1}`} (${secRows.length} Questions) ${activeTag}`;
+
+          const progressSpan = document.createElement('span');
+          progressSpan.id = `matrix-sec-count-${secIdx}`;
+          progressSpan.style.cssText = 'font-size:0.74rem; color:#94a3b8; font-weight:600;';
+
+          secHeader.appendChild(titleSpan);
+          secHeader.appendChild(progressSpan);
+          secBlock.appendChild(secHeader);
+
+          const subGrid = document.createElement('div');
+          subGrid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(32px, 1fr)); gap:5px;';
+
+          secRows.forEach((row, localIdx) => {
+            const thisGlobalIdx = globalCounter++;
+            const btn = document.createElement('button');
+            btn.className = 'q-nav-btn';
+            btn.id = `qnav-row-${row.id}`;
+            btn.dataset.rowId = row.id;
+            btn.dataset.secIdx = secIdx;
+            btn.dataset.localIdx = localIdx;
+            btn.dataset.globalIdx = thisGlobalIdx;
+            btn.textContent = thisGlobalIdx + 1; // Continuous 1..50
+            btn.setAttribute('aria-label', `Question ${thisGlobalIdx + 1}`);
+
+            btn.addEventListener('click', () => {
+              saveCurrentAnswer();
+              if (currentSectionIndex !== secIdx) {
+                startSection(secIdx, localIdx);
+              } else {
+                renderQuestion(localIdx);
+              }
+              if (typeof window.toggleMatrixPopup === 'function') {
+                window.toggleMatrixPopup(false);
+              }
+            });
+
+            subGrid.appendChild(btn);
+          });
+
+          secBlock.appendChild(subGrid);
+          grid.appendChild(secBlock);
+        });
+      }
+
       updateNavGrid();
     }
 
@@ -912,7 +1021,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     function updateActiveChipOnly(rowId, val) {
       const activeMap = window.answeredMap || answeredMap;
       activeMap[rowId] = val;
-      const btn = document.getElementById(`qnav-${currentIndex}`);
+      const btn = document.getElementById(`qnav-row-${rowId}`) || document.getElementById(`qnav-${currentIndex}`);
       if (btn) {
         btn.classList.toggle('answered', !!(val && val.trim()));
       }
@@ -925,12 +1034,46 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
     function updateNavGrid() {
       const activeMap = window.answeredMap || answeredMap;
-      answerRows.forEach((row, idx) => {
-        const btn = document.getElementById(`qnav-${idx}`);
-        if (!btn) return;
-        btn.classList.toggle('answered', !!(activeMap[row.id] && activeMap[row.id].trim()));
-        btn.classList.toggle('current', idx === currentIndex);
-      });
+
+      // Update all buttons by data-row-id
+      const allButtons = document.querySelectorAll('.q-nav-btn[data-row-id]');
+      if (allButtons.length > 0) {
+        allButtons.forEach(btn => {
+          const rowId = btn.dataset.rowId;
+          if (!rowId) return;
+          const isAnswered = !!(activeMap[rowId] && activeMap[rowId].trim());
+          btn.classList.toggle('answered', isAnswered);
+
+          const isCurrent = (rowId === answerRows[currentIndex]?.id);
+          btn.classList.toggle('current', isCurrent);
+        });
+      } else {
+        answerRows.forEach((row, idx) => {
+          const btn = document.getElementById(`qnav-${idx}`);
+          if (!btn) return;
+          btn.classList.toggle('answered', !!(activeMap[row.id] && activeMap[row.id].trim()));
+          btn.classList.toggle('current', idx === currentIndex);
+        });
+      }
+
+      // Update per-section answered counters
+      if (assessmentSections && assessmentSections.length > 1) {
+        assessmentSections.forEach((sec, secIdx) => {
+          const secRows = allAnswerRows.filter(row => {
+            let snap = row.question_snapshot;
+            if (typeof snap === 'string') {
+              try { snap = JSON.parse(snap); } catch { snap = {}; }
+            }
+            return (snap?.section_id || 'default') === sec.id;
+          });
+          const secAnswered = secRows.filter(r => !!(activeMap[r.id] && activeMap[r.id].trim())).length;
+          const countEl = document.getElementById(`matrix-sec-count-${secIdx}`);
+          if (countEl) {
+            countEl.textContent = `${secAnswered}/${secRows.length} answered`;
+          }
+        });
+      }
+
       updateProgressMetrics();
     }
     window.updateNavGrid = updateNavGrid;
@@ -1268,8 +1411,17 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       const bottomPrev = document.getElementById('bottom-prev-btn');
       const bottomNext = document.getElementById('bottom-next-btn');
       if (bottomPrev) {
-        bottomPrev.disabled = idx === 0;
-        bottomPrev.onclick = () => { saveCurrentAnswer(); renderQuestion(idx - 1); };
+        const canGoPrev = (idx > 0) || (currentSectionIndex > 0);
+        bottomPrev.disabled = !canGoPrev;
+        bottomPrev.onclick = () => {
+          saveCurrentAnswer();
+          if (idx > 0) {
+            renderQuestion(idx - 1);
+          } else if (currentSectionIndex > 0) {
+            // Smoothly jump back to the last question of previous section
+            startSection(currentSectionIndex - 1, -1);
+          }
+        };
       }
       if (bottomNext) {
         const isLast = (idx === answerRows.length - 1);
@@ -1683,51 +1835,139 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     // —— Submit Modal ——
     function openSubmitModal() {
       const activeMap = window.answeredMap || answeredMap;
-      const answered = Object.values(activeMap).filter(v => v?.trim()).length;
+      const answered = allAnswerRows.filter(r => !!(activeMap[r.id] && activeMap[r.id].trim())).length;
       const total = allAnswerRows.length;
       const unanswered = total - answered;
 
-      document.getElementById('answered-count').textContent = answered;
-      document.getElementById('total-count').textContent = total;
+      const answeredCountEl = document.getElementById('answered-count');
+      const totalCountEl = document.getElementById('total-count');
+      if (answeredCountEl) answeredCountEl.textContent = answered;
+      if (totalCountEl) totalCountEl.textContent = total;
 
+      const modalBox = document.getElementById('submit-modal-box') || document.querySelector('#submit-modal .modal-box');
       const warningBanner = document.getElementById('unanswered-warning-banner');
-      const warningText = document.getElementById('unanswered-warning-text');
-      const confirmBtn = document.getElementById('confirm-submit-btn');
+      const warningHeading = document.getElementById('unanswered-warning-heading');
+      const unansweredBadge = document.getElementById('unanswered-count-badge');
       const modalIcon = document.getElementById('submit-modal-icon');
+      const modalTitle = document.getElementById('submit-modal-title');
+      const jumpIncompleteBtn = document.getElementById('btn-jump-incomplete-action');
+      const dangerSubmitBtn = document.getElementById('danger-submit-btn');
+      const confirmSubmitBtn = document.getElementById('confirm-submit-btn');
 
       if (unanswered > 0) {
-        document.getElementById('unanswered-warning-banner')?.classList.remove('hidden');
-        if (warningText) {
-          warningText.innerHTML = `You have <strong>${unanswered}</strong> question(s) that have not been answered! <br/><button id="btn-jump-unanswered" class="btn btn-secondary btn-sm mt-2" style="padding:4px 10px;font-size:0.75rem;font-weight:700;">🔍  Review Unanswered Questions</button>`;
-          document.getElementById('btn-jump-unanswered')?.addEventListener('click', () => {
-            document.getElementById('submit-modal').classList.add('hidden');
-            jumpToNextUnanswered();
-          });
+        // Red Emergency Warning State ("PERINGATAN MERAH SEMUA")
+        if (modalBox) {
+          modalBox.style.border = '2px solid #dc2626';
+          modalBox.style.boxShadow = '0 0 50px rgba(220, 38, 38, 0.45), 0 20px 50px rgba(0,0,0,0.9)';
         }
-        confirmBtn?.classList.remove('btn-primary');
-        confirmBtn?.classList.add('btn-danger');
-        if (confirmBtn) confirmBtn.textContent = `Submit Anyway (${unanswered} Unanswered)`;
-        if (modalIcon) modalIcon.textContent = '⚠️ ';
+        if (modalIcon) modalIcon.textContent = '🚨';
+        if (modalTitle) {
+          modalTitle.textContent = '🚨 INCOMPLETE ASSESSMENT!';
+          modalTitle.style.color = '#fca5a5';
+        }
+        if (warningBanner) warningBanner.classList.remove('hidden');
+        if (warningHeading) warningHeading.textContent = `🚨 WARNING: ${unanswered} UNANSWERED QUESTION${unanswered > 1 ? 'S' : ''}!`;
+        if (unansweredBadge) unansweredBadge.textContent = unanswered;
+
+        // Show safe jump action & danger submit action; hide normal submit button
+        if (jumpIncompleteBtn) jumpIncompleteBtn.style.display = 'flex';
+        if (dangerSubmitBtn) {
+          dangerSubmitBtn.style.display = 'block';
+          dangerSubmitBtn.textContent = `⚠️ Submit Anyway (${unanswered} Blank = 0 Points)`;
+        }
+        if (confirmSubmitBtn) confirmSubmitBtn.style.display = 'none';
       } else {
-        warningBanner?.classList.add('hidden');
-        confirmBtn?.classList.remove('btn-danger');
-        confirmBtn?.classList.add('btn-primary');
-        if (confirmBtn) confirmBtn.textContent = 'Submit ASSESSMENT 📋';
+        // All Questions Answered: Success State
+        if (modalBox) {
+          modalBox.style.border = '1px solid rgba(16, 185, 129, 0.5)';
+          modalBox.style.boxShadow = '0 0 35px rgba(16, 185, 129, 0.25), 0 20px 50px rgba(0,0,0,0.85)';
+        }
         if (modalIcon) modalIcon.textContent = '✅';
+        if (modalTitle) {
+          modalTitle.textContent = 'Submit ASSESSMENT?';
+          modalTitle.style.color = '#ffffff';
+        }
+        if (warningBanner) warningBanner.classList.add('hidden');
+
+        // Hide incomplete warning buttons; show normal submit button
+        if (jumpIncompleteBtn) jumpIncompleteBtn.style.display = 'none';
+        if (dangerSubmitBtn) dangerSubmitBtn.style.display = 'none';
+        if (confirmSubmitBtn) confirmSubmitBtn.style.display = 'flex';
       }
 
-      document.getElementById('submit-modal').classList.remove('hidden');
+      document.getElementById('submit-modal')?.classList.remove('hidden');
     }
 
     function jumpToNextUnanswered() {
       saveCurrentAnswer();
-      const firstUnansweredIdx = answerRows.findIndex(r => !answeredMap[r.id] || !answeredMap[r.id].trim());
-      if (firstUnansweredIdx >= 0) {
-        renderQuestion(firstUnansweredIdx);
-        showToast(`Jumped to Question ${firstUnansweredIdx + 1}`, 'info');
-      } else {
-        showToast('All questions in this section are answered! Great job!', 'success');
+      const activeMap = window.answeredMap || answeredMap;
+
+      // 1. Check if there is an unanswered question in the current section starting after currentIndex
+      let targetLocalIdx = -1;
+      for (let i = currentIndex + 1; i < answerRows.length; i++) {
+        const r = answerRows[i];
+        if (!activeMap[r.id] || !activeMap[r.id].trim()) {
+          targetLocalIdx = i;
+          break;
+        }
       }
+
+      // 2. If not found after currentIndex, wrap around in the current section (from 0 to currentIndex)
+      if (targetLocalIdx === -1) {
+        for (let i = 0; i <= currentIndex; i++) {
+          const r = answerRows[i];
+          if (!activeMap[r.id] || !activeMap[r.id].trim()) {
+            targetLocalIdx = i;
+            break;
+          }
+        }
+      }
+
+      if (targetLocalIdx !== -1) {
+        renderQuestion(targetLocalIdx);
+        // Calculate global question number
+        let globalNum = targetLocalIdx + 1;
+        if (assessmentSections && assessmentSections.length > 1) {
+          let countBefore = 0;
+          for (let s = 0; s < currentSectionIndex; s++) {
+            const sec = assessmentSections[s];
+            countBefore += allAnswerRows.filter(r => {
+              let snap = r.question_snapshot;
+              if (typeof snap === 'string') { try { snap = JSON.parse(snap); } catch { snap = {}; } }
+              return (snap?.section_id || 'default') === sec.id;
+            }).length;
+          }
+          globalNum = countBefore + targetLocalIdx + 1;
+        }
+        showToast(`Jumped to Question ${globalNum}`, 'info');
+      } else if (assessmentSections && assessmentSections.length > 1) {
+        // 3. Current section is completely answered! Look across allAnswerRows for other sections
+        const nextUnansweredRow = allAnswerRows.find(r => !activeMap[r.id] || !activeMap[r.id].trim());
+        if (nextUnansweredRow) {
+          let snap = nextUnansweredRow.question_snapshot;
+          if (typeof snap === 'string') { try { snap = JSON.parse(snap); } catch { snap = {}; } }
+          const targetSecId = snap?.section_id || 'default';
+          const targetSecIdx = assessmentSections.findIndex(s => s.id === targetSecId);
+
+          if (targetSecIdx >= 0) {
+            const secRows = allAnswerRows.filter(r => {
+              let s = r.question_snapshot;
+              if (typeof s === 'string') { try { s = JSON.parse(s); } catch { s = {}; } }
+              return (s?.section_id || 'default') === targetSecId;
+            });
+            const localIdx = secRows.findIndex(r => r.id === nextUnansweredRow.id);
+            const globalIdx = allAnswerRows.findIndex(r => r.id === nextUnansweredRow.id);
+
+            startSection(targetSecIdx, Math.max(0, localIdx));
+            showToast(`Jumped to Question ${globalIdx + 1} (${assessmentSections[targetSecIdx].title || `Section ${targetSecIdx + 1}`})`, 'info');
+          }
+        } else {
+          showToast(`All ${allAnswerRows.length} questions answered! Great job!`, 'success');
+        }
+      } else {
+        showToast('All questions answered! Great job!', 'success');
+      }
+
       document.getElementById('qNavDrawer')?.classList.remove('open');
       if (window.toggleMatrixPopup) window.toggleMatrixPopup(false);
     }
@@ -1736,12 +1976,22 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       jumpToNextUnanswered();
     });
 
-    document.getElementById('cancel-submit-btn').addEventListener('click', () => {
-      document.getElementById('submit-modal').classList.add('hidden');
+    document.getElementById('cancel-submit-btn')?.addEventListener('click', () => {
+      document.getElementById('submit-modal')?.classList.add('hidden');
     });
 
-    document.getElementById('confirm-submit-btn').addEventListener('click', async () => {
-      document.getElementById('submit-modal').classList.add('hidden');
+    document.getElementById('confirm-submit-btn')?.addEventListener('click', async () => {
+      document.getElementById('submit-modal')?.classList.add('hidden');
+      await doSubmit();
+    });
+
+    document.getElementById('btn-jump-incomplete-action')?.addEventListener('click', () => {
+      document.getElementById('submit-modal')?.classList.add('hidden');
+      jumpToNextUnanswered();
+    });
+
+    document.getElementById('danger-submit-btn')?.addEventListener('click', async () => {
+      document.getElementById('submit-modal')?.classList.add('hidden');
       await doSubmit();
     });
 
