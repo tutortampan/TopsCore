@@ -37,7 +37,9 @@ Status: COMPLETE
   - **5. Automated Verification**:
     - Node verification confirmed: `admin.html` sidebar clean (0 unrequested tabs), `result.js` admin remedial toggle active, and `student-management.js` progress details toggle active (`PASS`).
     - Backend API verified: `labelAttemptRemedial` caps 100% -> 60% Grade B, and restores back to 100% Grade S (`PASS`).
-  - **6. Strict Git Freeze**: 0 commits, 0 pushes. All operations strictly local.
+  - **6. Committed & Pushed to Remote**:
+    - Commit: `87d379d` (`feat(remedial): add late student session flow, points ranking, and in-context remedial controls [PHASE-76]`)
+    - Pushed to `origin/main` successfully per user directive.
 
 - **Phase 75: Batch Standings Leaderboard Avatar De-duplication & State-Leakage Remediation [LOCAL ONLY - GIT FREEZE]**:
   - **1. Database De-duplication**:
