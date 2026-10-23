@@ -29,7 +29,8 @@ import {
   formatStudentName,
   fetchClassInstanceRoster,
   addAdditionalMember,
-  toLevelLetter
+  toLevelLetter,
+  labelAttemptRemedial
 } from '../api.js?v=5.3.2';
 import { showToast, showLoading, hideLoading, getGrade } from '../app.js?v=5.3.2';
 import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=5.3.2';
@@ -1569,12 +1570,12 @@ export async function renderResults(area) {
     });
 
     // Deduplicate by Student + Assessment, keeping highest EFFECTIVE score only.
-    // Remedial cap: EXAM/QUIZ remedial attempts are capped at 70% effective score.
+    // Remedial cap: EXAM/QUIZ remedial attempts are capped at KKM 60% effective score.
     const getEffectivePct = (r) => {
       const rawPct = parseFloat(r.percentage || 0);
       const def = r.assessments || {};
       const isSummative = (def.assessment_type === 'EXAM' || def.assessment_type === 'QUIZ');
-      if (r.is_remedial_unlocked && isSummative && rawPct > 70) return 70;
+      if (r.is_remedial_unlocked && isSummative && rawPct > 60) return 60;
       return rawPct;
     };
     const mergedResults = new Map();
@@ -1625,16 +1626,16 @@ export async function renderResults(area) {
             const def = r.assessments || {};
             const isSummative = (def.assessment_type === 'EXAM' || def.assessment_type === 'QUIZ');
             const rawPct = parseFloat(r.percentage || 0);
-            const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 70;
-            const effectivePct = isRemedialCapped ? 70 : rawPct;
-            const effectiveGrade = effectivePct >= 70 ? 'C' : (r.grade || 'F');
+            const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 60;
+            const effectivePct = isRemedialCapped ? 60 : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
+            const effectiveGrade = effectivePct >= 60 ? (effectivePct >= 80 ? 'A' : 'B') : (r.grade || 'F');
             return `
               <div class="text-center fw-700" style="display:flex;flex-direction:column;align-items:center;gap:3px;">
                 <div style="display:flex;align-items:center;gap:4px;" class="text-grade-${effectiveGrade}">
                   <span>${effectivePct.toFixed(1)}%</span>
                   <span class="badge badge-success text-xs" style="font-size:0.65rem;padding:1px 5px;" title="Highest score recorded across attempts">Highest</span>
                 </div>
-                ${isRemedialCapped ? `<span class="badge" style="font-size:0.6rem;padding:1px 6px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);">&#128282; REMEDIAL CAP APPLIED</span>` : ''}
+                ${isRemedialCapped ? `<span class="badge" style="font-size:0.6rem;padding:1px 6px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);">&#128282; REMEDIAL CAP (KKM 60%)</span>` : ''}
               </div>
             `;
           }
@@ -1643,8 +1644,8 @@ export async function renderResults(area) {
             const def = r.assessments || {};
             const isSummative = (def.assessment_type === 'EXAM' || def.assessment_type === 'QUIZ');
             const rawPct = parseFloat(r.percentage || 0);
-            const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 70;
-            const displayGrade = isRemedialCapped ? 'C' : (r.grade || getGrade(rawPct));
+            const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 60;
+            const displayGrade = isRemedialCapped ? 'B' : (r.grade || getGrade(rawPct));
             const gradeSymbol = (displayGrade === 'S' || (!isRemedialCapped && rawPct >= 100)) ? '⭐' : displayGrade;
             return `<div class="text-center"><span class="grade-badge grade-${displayGrade}" style="width:30px;height:30px;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${gradeSymbol}</span></div>`;
           }
@@ -1701,11 +1702,10 @@ export async function renderResults(area) {
         { key: 'submitted_at', label: 'Submitted At', sortable: true, render: (v, r) => `<div class="text-center text-muted text-xs">${r.submitted_at ? new Date(r.submitted_at).toLocaleString() : '&mdash;'}</div>` },
         { key: 'actions', label: 'Actions', sortable: false, render: (v, r) => {
            let btns = `<button class="btn btn-ghost btn-sm results-view-profile-btn" data-sid="${r.student_id}" style="font-size:0.75rem; padding:3px 10px; display:inline-flex; align-items:center; gap:4px;" title="View full student profile">&#128100; Profile</button>`;
-           const def = r.assessments || {};
-           const isSummativeType = (def.assessment_type === 'EXAM' || def.assessment_type === 'QUIZ');
-           const pct = parseFloat(r.percentage || 0);
-           if (isSummativeType && pct < 70 && !r.is_remedial_unlocked) {
-               btns += `<button class="btn btn-warning btn-sm remedi-unlock-btn" data-aid="${r.id}" style="font-size:0.75rem; padding:3px 10px;" title="Unlock Remedial Attempt">&#128275; Allow Remedial</button>`;
+           if (r.is_remedial_unlocked) {
+             btns += `<button class="btn btn-secondary btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="false" style="font-size:0.75rem; padding:3px 8px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; color:#fbbf24;" title="Batalkan status remidi (kembalikan ke normal)">↩️ Normal</button>`;
+           } else {
+             btns += `<button class="btn btn-warning btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="true" style="font-size:0.75rem; padding:3px 8px;" title="Tandai nilai ini sebagai Remidi (KKM 60%)">🏷️ Remidi (60%)</button>`;
            }
            return `<div class="text-center d-flex gap-2 justify-center flex-wrap" style="min-width:140px;">${btns}</div>`;
         } }
@@ -1750,9 +1750,9 @@ export async function renderResults(area) {
       const def = r.assessments || {};
       const rawPct = Number(r.percentage || r.effective_score || 0);
       const isSummative = (def.assessment_type === 'EXAM' || def.assessment_type === 'QUIZ');
-      const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 70;
-      const exportPct = isRemedialCapped ? 70 : rawPct;
-      const exportGrade = isRemedialCapped ? 'C' : (r.grade || getGrade(rawPct));
+      const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 60;
+      const exportPct = isRemedialCapped ? 60 : rawPct;
+      const exportGrade = isRemedialCapped ? 'B' : (r.grade || getGrade(rawPct));
       return {
         'Student Name': r.students?.name || '—',
         'Gender': r.students?.gender ? (r.students.gender === 'female' ? 'Female' : 'Male') : '—',
@@ -1765,7 +1765,7 @@ export async function renderResults(area) {
         'Raw Percentage (%)': rawPct != null ? `${rawPct}%` : '—',
         'Effective Percentage (%)': `${exportPct}%`,
         'Grade': exportGrade,
-        'Remedial Cap Applied': isRemedialCapped ? 'Yes (capped at 70%)' : 'No',
+        'Remedial Cap Applied': isRemedialCapped ? 'Yes (capped at 60%)' : 'No',
         'Submitted At': r.submitted_at ? new Date(r.submitted_at).toLocaleString() : '—',
         'Status': r.status || '—'
       };
@@ -1780,22 +1780,32 @@ export async function renderResults(area) {
   });
 
   document.getElementById('results-grid-container').addEventListener('click', async e => {
-    const remediBtn = e.target.closest('.remedi-unlock-btn');
-    if (remediBtn) {
-      const attemptId = remediBtn.getAttribute('data-aid');
-      if (confirm('Allow this student to retake this Exam as a remedial attempt?')) {
-        const { getSupabase } = await import('../supabase.js?v=5.3.2');
-        const sb = await getSupabase();
-        const { error } = await sb.from('attempts').update({ is_remedial_unlocked: true }).eq('id', attemptId);
-        if (!error) {
-          // Temporarily imported showToast should be used from scope, we just assume it's available or we use the local DOM alert
-          // showToast is imported at top in class.js
+    const toggleRemBtn = e.target.closest('.toggle-remedial-btn');
+    if (toggleRemBtn) {
+      const attemptId = toggleRemBtn.getAttribute('data-aid');
+      const targetRemedial = toggleRemBtn.getAttribute('data-set-remedial') === 'true';
+      const promptMsg = targetRemedial
+        ? 'Tandai nilai ini sebagai hasil REMEDIAL (otomatis dibatasi maksimal KKM 60%)?'
+        : 'Kembalikan nilai ini ke status NORMAL (menghapus batas KKM 60%)?';
+
+      if (confirm(promptMsg)) {
+        showLoading();
+        try {
+          await labelAttemptRemedial(attemptId, targetRemedial, 60);
           const record = allData.find(x => x.id === attemptId);
-          if (record) record.is_remedial_unlocked = true;
+          if (record) {
+            record.is_remedial_unlocked = targetRemedial;
+            const raw = parseFloat(record.percentage || 0);
+            record.effective_score = targetRemedial ? Math.min(raw, 60.0) : raw;
+            record.grade = getGrade(record.effective_score);
+          }
           renderTable();
-          showToast('Remedial attempt unlocked successfully.', 'success');
-        } else {
-          showToast('Failed to unlock: ' + error.message, 'error');
+          showToast(targetRemedial ? '🏷️ Berhasil dilabel sebagai Remidi (KKM 60%).' : '↩️ Status remidi berhasil dikembalikan ke Normal.', 'success');
+        } catch (err) {
+          console.error('Failed to toggle remedial:', err);
+          showToast('Gagal mengubah status remidi: ' + err.message, 'error');
+        } finally {
+          hideLoading();
         }
       }
       return;

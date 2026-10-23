@@ -1,8 +1,8 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-23 12:48 UTC+8
+Last Updated: 2026-10-23 23:15 UTC+8
 
-Current Phase: Phase 73 Question Matrix Multi-Section Unification & 10 Red Strikes Anti-Cheat [LOCAL ONLY - GIT FREEZE]
+Current Phase: Phase 76: Live Test Session Late Student Enrollment, Points-Centric Standings & Remedial KKM 60% Cap [LOCAL ONLY - GIT FREEZE]
 
 Current Task: Standing order: STRICT FREEZE on commit and push. All operations strictly local.
 
@@ -12,7 +12,74 @@ Status: COMPLETE
 
 ## Completed
 
-- **Phase 73: Question Matrix Multi-Section Unification & 10 Red Strikes Anti-Cheat [LOCAL ONLY - GIT FREEZE]**:
+- **Phase 76: Live Test Session Late Student Enrollment, Points-Centric Standings & Remedial KKM 60% Cap [LOCAL ONLY - GIT FREEZE]**:
+  - **1. Penambahan Siswa Susulan pada Sesi Ujian Aktif (Live Session)**:
+    - **`js/api.js` (`addLateStudentsToSession`)**: Added atomic API function allowing tutors/admins to add late students to an active live session without restarting or resetting the session. Appends student IDs to `allowed_student_ids` and supports per-student `remedial_student_ids`.
+    - **Global Countdown Clamping**: Late students strictly reference the active session's existing `auto_close_at`. Waktu tidak di-reset/tidak bertambah.
+    - **`js/admin/assessment-access.js`**: Added `👥 + Susulan / Remidi` button (`.btn-add-late-modal`) for LIVE test sessions. Added dedicated modal `#modal-add-late-student` displaying active session countdown (`⏳ Sisa Waktu Sesi Global: XX Menit`), unenrolled batch student checklist, and remedial flags.
+  - **2. Points-Centric Ranking in Batch Standings Leaderboard**:
+    - **`js/dashboard.js` (`loadBatchLeaderboard`)**: Upgraded ranking algorithm so standings positions are primarily determined by **Total Points** (`totalPoints`) earned across best assessment results.
+    - **Tie-Breaker Hierarchy**: 1) Total Points (descending), 2) Overall Average Percentage (descending), 3) Completed Assessments count (descending), 4) Earliest last submission timestamp, 5) Alphabetical clean name.
+    - **UI Presentation**: Score column prominently highlights `${st.totalPoints} PTS` in bold alongside the Grade Chip (`⭐`, `A`, `B`, etc.) and sub-info `${st.completedCount} completed • ${st.overallScore}% avg`. Champion bar updated to: `👑 King/Queen Name (XX PTS • YY%)`.
+    - **`js/result.js` (`renderRankInBatch`)**: Synchronized batch rank in result viewer to compute rank using the same points-centric logic.
+  - **3. Remedial Distinction & Strict KKM 60% Cap**:
+    - **`js/api.js` (`openTestSession`)**: Added `isRemedial` flag to unlock entire sessions in remedial mode.
+    - **`js/api.js` (`startAssessment` & `submitAssessment`)**: Automatically flags attempts with `is_remedial_unlocked: true` when opened under a remedial session or for a whitelisted remedial student, capping `effective_score` at `Math.min(percentage, 60.00)` and Grade at B.
+    - **`js/api.js` (`labelAttemptRemedial`)**: Added authoritative 1-click toggle to retroactively label any attempt as remedial (capped at KKM 60%) or restore back to normal.
+    - **`js/admin/class.js` & `js/admin/student-management.js`**: Replaced older 70% threshold with strict KKM 60% cap. Added 1-click `[ 🏷️ Remidi (60%) ]` / `[ ↩️ Normal ]` action buttons in Results Grid.
+    - **`js/result.js`**: Added `🟡 Remedial Attempt (KKM Capped at 60%)` indicator chip and clamped effective percentage.
+  - **4. In-Context Remedial Flag Controls (Gambar 1 & Gambar 2 ➔ Gambar 3)**:
+    - **Sidebar Restored**: Removed unrequested `📊 Results & Gradebook` tab from `admin.html` and `assessment-access.js`. Sidebar remains strictly clean ABCD.
+    - **Gambar 1 (Student Progress Breakdown Modal - `showStudentProgressDetails`)**: Added dedicated `Action / Remidi` column. Completed tests feature a 1-click `[ 🏷️ Remidi ]` / `[ ↩️ Normal ]` toggle and clickable `BEST SCORE` linking directly to the result page.
+    - **Gambar 2 (Class Hub Attendance Matrix - `#class-hub`) ➔ Gambar 3 (Result Page - `result.html`)**:
+      - In Class Hub matrix, clicking any student score cell opens `result.html?attempt_id=...&admin=1`. Remedial attempts feature a subtle gold `R` superscript and dotted indicator.
+      - On Result Page (Gambar 3), an elevated `🛡️ Admin Grade Control` card is rendered with live status (`🟡 REMEDIAL (KKM 60%)` vs `🟢 NORMAL (NILAI PENUH)`), allowing instant 1-click toggling with automatic score capping, grade recalculation, and a `← Kembali ke Class Hub` button.
+  - **5. Automated Verification**:
+    - Node verification confirmed: `admin.html` sidebar clean (0 unrequested tabs), `result.js` admin remedial toggle active, and `student-management.js` progress details toggle active (`PASS`).
+    - Backend API verified: `labelAttemptRemedial` caps 100% -> 60% Grade B, and restores back to 100% Grade S (`PASS`).
+  - **6. Strict Git Freeze**: 0 commits, 0 pushes. All operations strictly local.
+
+- **Phase 75: Batch Standings Leaderboard Avatar De-duplication & State-Leakage Remediation [LOCAL ONLY - GIT FREEZE]**:
+  - **1. Database De-duplication**:
+    - Identified 12 student records in Batch 133 sharing the exact same 18,063-byte WebP Base64 string (`data:image/webp;base64,UklGRtA...`).
+    - Retained genuine photo on the original uploader Miss Laura Fardila (`bd927248-1999-4b9a-8c31-365a553d39ea`, uploaded 2026-10-22 23:57:55 UTC).
+    - Safely reset `photo_url = NULL` and `photo_status = 'not_set'` for the 11 affected students (Unggul Wirakse, Suharto, Muhammad Alif, Ari Wahyu, Sofa Maria Ulfa, Asmul Kholid, Aunul Fikri, Muhammad Masyan, Muhammad Tarmizi, Suke Ajai, Wardatul Husna) plus test account `Mr. Abc` (batch 999).
+    - Database query verified: 0 duplicate `photo_url` values remain in Supabase `students` table.
+  - **2. Code State-Leakage Fix in `js/dashboard.js`**:
+    - Cleared module-scoped `onboardPhotoData = null;` on modal close, modal skip, and entry flow.
+    - Reset file input element (`#onboard-photo-file.value = ''`) and snapshot image preview (`#webcam-snapshot`) on every exit and open.
+    - Prevented stale avatar reuse across logins on shared devices.
+  - **3. Session Avatar Cache Purging in `js/session.js`**:
+    - Enhanced `clearStudentSession()` on logout to iterate and delete all `stu_photo_*` items in `localStorage`, preventing cross-account avatar leaks on shared tablets/computers.
+  - **4. Dynamic Initial Chip Fallback in Batch Standings (`js/dashboard.js`)**:
+    - In `loadBatchLeaderboard()`, updated avatar rendering to strictly read `st.avatar_url || st.photo_url`.
+    - If empty, renders a clean, theme-colored initial chip (`.leaderboard-avatar-init`) reflecting the student's own name initial and performance grade palette color.
+    - Playwright automated headless test verified: 24 total batch members, 11 unique real photo avatars, 13 distinct initial chips, 0 duplicate faces rendered.
+  - **5. Strict Git Freeze**: 0 commits, 0 pushes. All changes local.
+
+- **Phase 74: Result Page Visual Polish, Button Overflow Remediation & Hero Trio Rebalancing [LOCAL ONLY - GIT FREEZE]**:
+  - **1. Button Text Overflow Remediation**:
+    - **`js/result.js` & `css/result.css`**: Fixed horizontal button text blow-out on mobile by implementing `.btn-next-milestone` with a responsive 2-tier internal layout (`.next-btn-tag` e.g. `🚀 UP NEXT MILESTONE` / `🟢 TEST SESSION UNLOCKED` and `.next-btn-title` with `white-space: normal !important; word-break: break-word !important; line-height: 1.35 !important;`). Cleaned title numbers with `cleanTitle()`. Tested on long title `3B2-Vocabulary Task - Communicating with International Customers` with zero overflow.
+  - **2. Refined Best Score & Historical Attempt Badging**:
+    - **`js/result.js` & `result.html`**: Replaced unstyled plain text `"Not your best score"` with a clean glassmorphic pill badge system:
+      - `★ Best Score` (`.result-badge-best` in emerald `#34D399`) when score is 100% or matches the student's highest attempt.
+      - `Best: XX.X%` (`.result-badge-subtle` in subtle `#94A3B8`) for retake attempts.
+    - Wrapped assessment title and best score badge in `.result-title-row` with gap and flex-wrap alignment.
+  - **3. Curriculum Breadcrumb Integration**:
+    - Added `<span id="result-curriculum-crumb" class="result-curriculum-crumb"></span>` above the title, rendering `VOCABULARY • 3RD LEVEL • TASK` in light cyan (`#38bdf8`) matching the student dashboard.
+  - **4. Hero Trio Rebalancing & Centered Identity Bar**:
+    - Separated student name from `.result-portrait-stage` into a dedicated `.result-identity-bar` centered directly beneath the Trio with a sleek glassmorphic pill (`.result-student-name-label`).
+    - The Trio row (`Avatar + Ring`, `100.0%`, `★ Star`) now shares the exact same vertical baseline and center alignment without awkward vertical offset.
+  - **5. Avatar Fallback & Muted Zero-State Metrics**:
+    - Styled `#result-avatar-initial` with bold Outfit font and text shadow on an indigo-cyan gradient background for students without uploaded photos.
+    - Subtly muted `0`-value Partial and Incorrect rows (`color: #64748B`, `opacity: 0.65`) so 100% scores highlight Points and Correct answers.
+  - **6. Dense Tie Ranking & Modal Search Clean-up**:
+    - Enhanced `renderRankInBatch()` with dense ranking so ties for highest score correctly share `#1` and labeled the badge `Batch #X/Y`.
+    - Removed duplicate search emoji from `ans-search-input` placeholder.
+  - **7. Zero-Scroll Verification & Cache Busting**:
+    - Playwright verified across Desktop (1280x800), iPhone (390x844), and Small Mobile (360x640): `isZeroScroll: true` maintained on all screens.
+    - Version bumped `result.html`, `result.css`, `js/result.js`, and `sw.js` cache to `v=5.4.4` (`abcd-core-v5.4.4`).
+  - **8. Git Rule**: Git freeze strictly maintained — 0 commits, 0 pushes. All changes local.
   - **1. Multi-Section Question Matrix (Daftar Pertanyaan)**:
     - **`js/assessment.js` (`buildNavGrid`)**: When an assessment has multiple sections (e.g. 3A2 with 40 Words + 10 Phrases, or 3B1 with 25 Words + 25 Phrases), the Question Matrix modal displays ALL 50 questions across all sections grouped cleanly with section headers (`Part 1: Words (40 Questions) [ACTIVE]` and `Part 2: Phrases (10 Questions)`), per-section answered counters (`0/40 answered`), and continuous 1..50 numbering.
     - **Cross-Section Instant Navigation**: Clicking question 45 while in the Words section immediately transitions to Part 2 (Phrases) via `startSection(secIdx, localIdx)` and renders Question 45.

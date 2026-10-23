@@ -5,6 +5,10 @@ import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calcula
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=5.3.2';
 import { escapeHtml, escHtml } from './app.js?v=5.3.2';
 
+export function getGrade(pct) {
+  return calculateGrade(pct);
+}
+
 export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
 
 // ============================================================
@@ -863,6 +867,12 @@ export async function startAssessment(studentId, assessmentId) {
 
     const attemptNumber = (priorCount || 0) + 1;
 
+    // Check if session or student is designated as remedial
+    const isRemedialSession = Boolean(
+      activeSession?.is_remedial || 
+      (Array.isArray(activeSession?.remedial_student_ids) && activeSession.remedial_student_ids.includes(studentId))
+    );
+
     // Bersihkan: simpan assessment_id satu kali saja
     const { data: newAttempt, error: createErr } = await sb.from('attempts')
       .insert({
@@ -875,7 +885,8 @@ export async function startAssessment(studentId, assessmentId) {
         score: 0,
         percentage: 0,
         grade: 'F',
-        is_best_score: false
+        is_best_score: false,
+        is_remedial_unlocked: isRemedialSession
       })
       .select()
       .single();
@@ -990,22 +1001,51 @@ export async function saveAnswer(attemptAnswerId, studentAnswer) {
 
 export async function submitAssessment(attemptId, answersMap, options = {}) {
   const targetStatus = options?.status || 'submitted';
+  let result = null;
   try {
-    return await callEdgeFunction('submit-assessment', { attempt_id: attemptId, answers: answersMap, status: targetStatus });
+    result = await callEdgeFunction('submit-assessment', { attempt_id: attemptId, answers: answersMap, status: targetStatus });
   } catch (edgeErr) {
     console.warn('Edge Function submit-assessment unavailable, using server RPC fallback:', edgeErr.message);
   }
 
-  // Server-authoritative fallback via PostgreSQL RPC (strictly server-side scoring & RLS compliance)
-  const sb = await getSupabase();
-  const { data: rpcData, error: rpcErr } = await sb.rpc('emergency_submit_attempt', {
-    p_attempt_id: attemptId,
-    p_answers: answersMap,
-    p_status: targetStatus
-  });
+  if (!result) {
+    // Server-authoritative fallback via PostgreSQL RPC (strictly server-side scoring & RLS compliance)
+    const sb = await getSupabase();
+    const { data: rpcData, error: rpcErr } = await sb.rpc('emergency_submit_attempt', {
+      p_attempt_id: attemptId,
+      p_answers: answersMap,
+      p_status: targetStatus
+    });
 
-  if (rpcErr) throw rpcErr;
-  return rpcData;
+    if (rpcErr) throw rpcErr;
+    result = rpcData;
+  }
+
+  // Authoritative Remedial Cap Check (KKM 60% Business Rule)
+  try {
+    const sb = await getSupabase();
+    const { data: att } = await sb.from('attempts')
+      .select('id, is_remedial_unlocked, percentage, effective_score')
+      .eq('id', attemptId)
+      .single();
+    if (att && att.is_remedial_unlocked) {
+      const rawPct = parseFloat(att.percentage || 0);
+      if (rawPct > 60 || !att.effective_score || att.effective_score > 60) {
+        const cappedPct = Math.min(rawPct, 60.00);
+        await sb.from('attempts')
+          .update({
+            effective_score: cappedPct,
+            grade: getGrade(cappedPct),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', attemptId);
+      }
+    }
+  } catch (remedialErr) {
+    console.warn('Post-submit remedial check notice:', remedialErr);
+  }
+
+  return result;
 }
 
 // ============================================================
@@ -2938,7 +2978,7 @@ export async function fetchActiveTestSession(assessmentId, batchId = null) {
   };
 }
 
-export async function openTestSession({ assessmentId, batchId, allocatedMinutes, allowedStudentIds = [] }) {
+export async function openTestSession({ assessmentId, batchId, allocatedMinutes, allowedStudentIds = [], isRemedial = false, remedialStudentIds = [] }) {
   const sb = await getSupabase();
   const { data: existing, error: fetchErr } = await sb.from('assessments')
     .select('id, payload')
@@ -2956,7 +2996,9 @@ export async function openTestSession({ assessmentId, batchId, allocatedMinutes,
     allocated_minutes: minutes,
     unlocked_at: now.toISOString(),
     auto_close_at: autoClose.toISOString(),
-    allowed_student_ids: Array.isArray(allowedStudentIds) ? allowedStudentIds : []
+    allowed_student_ids: Array.isArray(allowedStudentIds) ? allowedStudentIds : [],
+    is_remedial: Boolean(isRemedial),
+    remedial_student_ids: Array.isArray(remedialStudentIds) ? remedialStudentIds : []
   };
 
   const updatedPayload = {
@@ -2973,6 +3015,93 @@ export async function openTestSession({ assessmentId, batchId, allocatedMinutes,
   });
 
   return { success: true, session: testSession, assessment: updated };
+}
+
+export async function addLateStudentsToSession({ assessmentId, studentIds = [], remedialStudentIds = [] }) {
+  const sb = await getSupabase();
+  const { data: existing, error: fetchErr } = await sb.from('assessments')
+    .select('id, payload')
+    .eq('id', assessmentId)
+    .single();
+  if (fetchErr || !existing) throw new Error('Assessment not found');
+
+  const currentSession = existing.payload?.test_session;
+  if (!currentSession || currentSession.status !== 'UNLOCKED') {
+    throw new Error('Sesi ujian ini tidak aktif atau sudah ditutup.');
+  }
+
+  const existingAllowed = new Set(currentSession.allowed_student_ids || []);
+  const existingRemedials = new Set(currentSession.remedial_student_ids || []);
+
+  (studentIds || []).forEach(id => existingAllowed.add(id));
+  (remedialStudentIds || []).forEach(id => existingRemedials.add(id));
+
+  const updatedSession = {
+    ...currentSession,
+    allowed_student_ids: Array.from(existingAllowed),
+    remedial_student_ids: Array.from(existingRemedials)
+  };
+
+  const updatedPayload = {
+    ...(existing.payload || {}),
+    test_session: updatedSession
+  };
+
+  const updated = await adminUpdate('assessments', assessmentId, {
+    payload: updatedPayload
+  });
+
+  return { success: true, session: updatedSession, assessment: updated };
+}
+
+export async function labelAttemptRemedial(attemptId, isRemedial = true, kkm = 60) {
+  const sb = await getSupabase();
+  const { data: att, error: attErr } = await sb.from('attempts')
+    .select('id, student_id, assessment_id, percentage, score, total_questions')
+    .eq('id', attemptId)
+    .single();
+  if (attErr || !att) throw new Error('Attempt not found');
+
+  const rawPct = parseFloat(att.percentage || 0);
+  const effectiveScore = isRemedial ? Math.min(rawPct, parseFloat(kkm)) : rawPct;
+  const grade = getGrade(effectiveScore);
+
+  const { data: updated, error: updErr } = await sb.from('attempts')
+    .update({
+      is_remedial_unlocked: isRemedial,
+      effective_score: effectiveScore,
+      grade: grade,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', attemptId)
+    .select()
+    .single();
+
+  if (updErr) throw updErr;
+
+  // Resolve best score across attempts for this student & assessment
+  const { data: allAttempts } = await sb.from('attempts')
+    .select('id, effective_score, percentage, created_at')
+    .eq('student_id', att.student_id)
+    .eq('assessment_id', att.assessment_id)
+    .in('status', ['submitted', 'auto_submitted', 'evaluated']);
+
+  if (allAttempts && allAttempts.length > 0) {
+    allAttempts.sort((a, b) => {
+      const scoreA = Number(a.effective_score ?? a.percentage ?? 0);
+      const scoreB = Number(b.effective_score ?? b.percentage ?? 0);
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+    const bestId = allAttempts[0].id;
+    for (const a of allAttempts) {
+      await sb.from('attempts')
+        .update({ is_best_score: a.id === bestId })
+        .eq('id', a.id);
+    }
+  }
+
+  return { success: true, attempt: updated };
 }
 
 export async function closeTestSession(assessmentId) {
@@ -3085,6 +3214,8 @@ if (typeof window !== 'undefined') {
   window.adminInsert = adminInsert;
   window.fetchActiveTestSession = fetchActiveTestSession;
   window.openTestSession = openTestSession;
+  window.addLateStudentsToSession = addLateStudentsToSession;
+  window.labelAttemptRemedial = labelAttemptRemedial;
   window.closeTestSession = closeTestSession;
   window.checkStudentTestAccess = checkStudentTestAccess;
 }

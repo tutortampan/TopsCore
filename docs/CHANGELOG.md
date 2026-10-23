@@ -1,3 +1,126 @@
+## [2026-10-23 23:15] — Phase 76: Live Test Session Late Student Enrollment, Points-Centric Standings & Remedial KKM 60% Cap [LOCAL ONLY - GIT FREEZE]
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 76 (Live Test Session Controller, Points Ranking & Remedial Management)
+**Status:** PASS (LOCAL ONLY - STRICT GIT FREEZE ACTIVE)
+
+### Why
+- User Directives:
+  1. "Penambahan Siswa Susulan pada Sesi Ujian Aktif: Memungkinkan admin menambahkan siswa yang terlambat saat sesi tes berstatus unlocked / sedang berlangsung. Waktu pengerjaan siswa susulan mengacu pada global session end-time yang sama (waktu tidak bertambah/tidak di-reset, melainkan menghitung sisa waktu berjalan)."
+  2. "sekaligus atur agar urutan score teratas bukan berdasarkan grade, tapi Points yang diperoleh berdasarkan best result di setiap assessment."
+  3. "untuk sesi ujian, dibedakan nilai remidi dengan nilai pada ujian normal,,, beberaap siswa mendapat nilai terlalu tinggi dalam remidi sebab mereka mendapat kesempatan lebih banyak,,, berikan saya opsi untuk melabel sebuah nilai menjadi remidi, atau mmebuka kunci dengan ststus remidi... batas KKM 60%, lalu proceed"
+
+### Changed
+- `js/api.js`:
+  - `openTestSession`: Updated to accept `isRemedial = false` and `remedialStudentIds = []`.
+  - `addLateStudentsToSession`: Implemented to dynamically append student IDs to `allowed_student_ids` and `remedial_student_ids` of an active session while strictly preserving `unlocked_at` and `auto_close_at`.
+  - `labelAttemptRemedial`: Implemented authoritative 1-click toggle to set `is_remedial_unlocked`, cap `effective_score` at `Math.min(percentage, 60.00)` (KKM 60%), recalculate grade, and re-resolve `is_best_score`.
+  - `startAssessment` & `submitAssessment`: Automatically tag remedial attempts and enforce KKM 60% cap on submission.
+  - Defined and exported `getGrade(pct)`.
+- `js/admin/assessment-access.js`:
+  - Added session mode selector in `#modal-test-session-controller` (Normal vs Remedial KKM 60%).
+  - Added button `👥 + Susulan / Remidi` (`.btn-add-late-modal`) for all active LIVE test sessions.
+  - Added modal `#modal-add-late-student` displaying global countdown (`⏳ Sisa Waktu Sesi Global: XX Menit`), student checklist, and per-student remedial flags.
+- `js/dashboard.js`:
+  - In `loadBatchLeaderboard()`: Updated query to fetch `score, total_questions, percentage, effective_score, is_remedial_unlocked`.
+  - Computed `totalPoints` across best assessment results.
+  - Implemented Points-Centric ranking sort: 1) `totalPoints` (primary), 2) `overallScore`, 3) `completedCount`, 4) earliest `lastSubmittedAt`, 5) alphabetical `cleanName`.
+  - Prominently styled `${st.totalPoints} PTS` in the score column and updated the champion title banner.
+- `admin.html` & `js/admin/assessment-access.js`:
+  - Reverted unrequested sidebar tab and Gradebook buttons. Kept admin navigation strictly faithful to the ABCD System hierarchy without unrequested tabs.
+- `js/admin/student-management.js` (Gambar 1):
+  - In `showStudentProgressDetails` modal, added `Action / Remidi` column. Completed tests now feature a direct 1-click `[ 🏷️ Remidi ]` / `[ ↩️ Normal ]` toggle and clickable `BEST SCORE` linking to the result page.
+- `js/admin/app.js` (Gambar 2):
+  - In Class Hub assessment matrix (`#class-hub`), clicking any student score cell opens `result.html?attempt_id=...&admin=1`. Remedial scores feature a gold `R` superscript and dotted indicator.
+- `js/result.js` (Gambar 3):
+  - Added `🛡️ Admin Grade Control` card on the Result Page when accessed by Admin. Allows instant 1-click toggling between `🟢 Normal` and `🟡 Remedial (KKM 60%)`, with auto-reload, dynamic score capping at 60%, and a `← Kembali ke Class Hub` button.
+
+### Tests
+- Node Backend Verification (`scratch/verify_remedial_and_points.mjs`):
+  - Verified `openTestSession` in remedial mode (`PASS`).
+  - Verified `addLateStudentsToSession` appends late students while keeping `auto_close_at` untouched (`PASS`).
+  - Verified `labelAttemptRemedial` caps 100% -> 60% Grade B, and restores back to 100% Grade S (`PASS`).
+- Automated Playwright Simulation (`scratch/verify_batch133_standings.mjs`):
+  - Verified Batch 133 standings sorted strictly by Total Points (King Aunul Fikri Yasir #1 with 441.5 PTS, Miss Wardatul Husna #2 with 440 PTS, Mr. Muhammad Masyan Hafizi #3 with 400 PTS) (`PASS`).
+- Git Freeze: 0 commits, 0 pushes (`PASS`).
+
+---
+
+## [2026-10-23 22:45] — Phase 75: Batch Standings Leaderboard Avatar De-duplication & State-Leakage Remediation [LOCAL ONLY - GIT FREEZE]
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 75 (Batch Standings Leaderboard Avatar De-duplication & Remediation)
+**Status:** PASS (LOCAL ONLY - STRICT GIT FREEZE ACTIVE)
+
+### Why
+- User Request: "siswa memiliki foto profil yang salah,,, banyak siswa yang fotonya sama padahal mereka upload foto yang berbda, pelajari, analisa, lalu diskusi" followed by "proceed" and directive "FIX HARDCODED / LEAKED AVATAR IN BATCH STANDINGS LEADERBOARD".
+- 12 students in Batch 133 shared the exact same 18,063-byte WebP Base64 photo string due to an un-reset `onboardPhotoData` module variable in `js/dashboard.js` when onboarding consecutively on a shared device.
+- Batch Standings leaderboard displayed the same female student photo across male and female students without individual differentiation.
+
+### Changed
+- Database (`students` table):
+  - Preserved genuine photo on original uploader Miss Laura Fardila (`bd927248-1999-4b9a-8c31-365a553d39ea`).
+  - Safely reset `photo_url = NULL` and `photo_status = 'not_set'` for 11 duplicate students (Unggul Wirakse, Suharto, Muhammad Alif, Ari Wahyu, Sofa Maria Ulfa, Asmul Kholid, Aunul Fikri, Muhammad Masyan, Muhammad Tarmizi, Suke Ajai, Wardatul Husna) and test account `Mr. Abc` (batch 999).
+  - Confirmed 0 duplicate `photo_url` values remain in the database.
+- `js/dashboard.js`:
+  - Reset `onboardPhotoData = null;` cleanly on modal close, modal skip, and entry setup flow.
+  - Cleared `#onboard-photo-file.value = ''` and `#webcam-snapshot.src = ''` on modal close and opening to prevent state carryover.
+  - In `loadBatchLeaderboard()`: updated avatar rendering to read `st.avatar_url || st.photo_url`. If empty, dynamically renders a theme-colored initial chip (`.leaderboard-avatar-init`) reflecting the student's own initial and performance grade palette color.
+- `js/session.js`:
+  - In `clearStudentSession()`: cleared all `stu_photo_*` items from `localStorage` on logout to prevent cross-account avatar leaks across shared classroom devices.
+
+### Tests
+- Database Query: `SELECT photo_url, COUNT(*) FROM students WHERE photo_url IS NOT NULL AND photo_url != '' GROUP BY photo_url HAVING COUNT(*) > 1;` -> 0 duplicates found (`PASS`).
+- Automated Playwright Simulation (`scratch/verify_batch133_standings.mjs`):
+  - Rendered Batch 133 standings (24 members): 11 genuine photo avatars, 13 distinct theme-colored initial chips, 0 duplicate faces rendered (`PASS`).
+  - Verified visual output in `scratch/standings_verified.png` (`PASS`).
+- Git Freeze: 0 commits, 0 pushes. All changes local (`PASS`).
+
+---
+
+## [2026-10-23 22:15] — Phase 74: Result Page Visual Polish, Button Overflow Remediation & Hero Trio Rebalancing [LOCAL ONLY - GIT FREEZE]
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 74 (Result Page Visual Polish & Bug Fixes)
+**Status:** PASS (LOCAL ONLY - STRICT GIT FREEZE ACTIVE)
+
+### Why
+- User Request: "cek result page,,, do you have any suggestion?" followed by "proceed" and standing order "no push commit".
+- Mobile button overflow bug on long assessment milestone names.
+- Awkward "Not your best score" unstyled text cluttering assessment title.
+- Hero Trio vertical alignment asymmetry due to student name placement under portrait stage.
+- Duplicate search icon in Answer Breakdown modal.
+- Dense tie ranking in Batch Standing.
+
+### Changed
+- `result.html`:
+  - Added `<span id="result-curriculum-crumb" class="result-curriculum-crumb"></span>` for curriculum breadcrumb (`VOCABULARY • 3RD LEVEL • TASK`).
+  - Wrapped assessment title and best score pill inside `.result-title-row`.
+  - Rebalanced Hero Trio by moving student name from portrait stage to dedicated centered `.result-identity-bar` (`#result-student-name-label`) directly beneath the Trio.
+  - Bumped version strings to `v=5.4.4`.
+- `css/result.css`:
+  - Implemented `.btn-next-milestone` with 2-tier layout (`.next-btn-tag` and `.next-btn-title`), `white-space: normal`, and word-breaking to eliminate mobile horizontal overflow.
+  - Styled `.result-curriculum-crumb`, `.result-title-row`, `.result-badge-best` (`#34D399`), and `.result-badge-subtle` (`#94A3B8`).
+  - Styled `.result-identity-bar` and `.result-student-name-label` as a centered glassmorphic pill.
+  - Styled `#result-avatar-initial` with bold Outfit font and text shadow on indigo-cyan gradient.
+- `js/result.js`:
+  - `renderSmartNextAction()`: Applied `.btn-next-milestone` with `cleanTitle()` to prevent text overflow.
+  - Replaced unstyled "Not your best score" with `.result-badge-best` (for 100% or highest attempt) and `.result-badge-subtle` (`Best: XX.X%` for retakes).
+  - Subtly muted 0-value Partial and Incorrect rows (`opacity: 0.65; color: #64748B`).
+  - Enhanced `renderRankInBatch()` with dense tie-ranking so identical scores share rank #1 (`🥇 Batch #1/22`).
+  - Removed duplicate search emoji in Answer Breakdown search input placeholder.
+- `sw.js`:
+  - Bumped cache to `abcd-core-v5.4.4`.
+
+### Verification
+- `node --check` across `js/result.js`, `js/app.js`, `js/api.js`, `js/assessment.js`, and `sw.js`: 0 errors.
+- Playwright automated screenshots verified:
+  - `scratch/result_100_mobile_iphone.png`: Clean breadcrumb, best score pill, balanced trio, and centered name pill.
+  - `scratch/result_96_grade_a.png`: Long title button cleanly wraps with 2-tier layout, 0 overflow.
+  - `scratch/result_modal_mobile_iphone.png`: Single search icon, clean breakdown.
+  - `scratch/result_100_mobile_small.png`: 360x640 small screen zero-scroll maintained.
+- Git rule: STRICT GIT FREEZE maintained — 0 commits, 0 pushes.
+
 ## [2026-10-23 15:40] — Phase 73: Multi-Section Question Matrix (50 Questions), 10 Red Anti-Cheat Strikes, and English Incomplete Submit Modal
 
 **Agent/Session:** Antigravity

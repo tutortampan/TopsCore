@@ -506,6 +506,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         console.warn('Photo setup flow error:', err);
       } finally {
         stopOnboardWebcam();
+        onboardPhotoData = null;
+        const fileInp = document.getElementById('onboard-photo-file');
+        if (fileInp) fileInp.value = '';
+        const img = document.getElementById('webcam-snapshot');
+        if (img) {
+          img.src = '';
+          img.removeAttribute('src');
+          img.classList.add('hidden');
+        }
         document.getElementById('photo-setup-modal').classList.add('hidden');
       }
     });
@@ -513,6 +522,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
     // Skip photo setup fallback
     document.getElementById('btn-skip-photo-setup')?.addEventListener('click', () => {
       stopOnboardWebcam();
+      onboardPhotoData = null;
+      const fileInp = document.getElementById('onboard-photo-file');
+      if (fileInp) fileInp.value = '';
+      const img = document.getElementById('webcam-snapshot');
+      if (img) {
+        img.src = '';
+        img.removeAttribute('src');
+        img.classList.add('hidden');
+      }
       document.getElementById('photo-setup-modal').classList.add('hidden');
     });
 
@@ -553,8 +571,27 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         return;
       }
 
-      // No photo registered! Show Photo & Mic Setup Modal
+      // No photo registered! Clean state and show Photo & Mic Setup Modal
       hideLoading();
+      onboardPhotoData = null;
+      const fileInp = document.getElementById('onboard-photo-file');
+      if (fileInp) fileInp.value = '';
+      const snapshotImg = document.getElementById('webcam-snapshot');
+      if (snapshotImg) {
+        snapshotImg.src = '';
+        snapshotImg.removeAttribute('src');
+        snapshotImg.classList.add('hidden');
+      }
+      const snapBtn = document.getElementById('btn-snap-photo');
+      if (snapBtn) snapBtn.classList.remove('hidden');
+      const retakeBtn = document.getElementById('btn-retake-photo');
+      if (retakeBtn) retakeBtn.classList.add('hidden');
+      const confirmBtn = document.getElementById('btn-confirm-photo-setup');
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '✓ Save Photo & Enter Dashboard';
+      }
+
       const modal = document.getElementById('photo-setup-modal');
       modal.classList.remove('hidden');
       await startOnboardWebcam();
@@ -2017,14 +2054,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
         const studentIds = studentList.map(s => s.id);
 
-        // 2. Fetch all submitted attempts for batch students
+        // 2. Fetch all submitted attempts for batch students (including points and remedial state)
         const { data: attempts, error: attErr } = await sb
           .from('attempts')
-          .select('id, student_id, assessment_id, percentage, is_best_score, status, submitted_at, assessments(deleted_at)')
+          .select('id, student_id, assessment_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, status, submitted_at, assessments(deleted_at)')
           .in('student_id', studentIds)
           .in('status', ['submitted', 'auto_submitted']);
 
-        // 3. Compute best scores & overall averages per student
+        // 3. Compute best scores, points & overall averages per student
         const studentStats = studentList.map(st => {
           const stAtts = (attempts || []).filter(a => a.student_id === st.id && !(a.assessments && a.assessments.deleted_at));
           const bestMap = {};
@@ -2033,9 +2070,24 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           stAtts.forEach(att => {
             const key = att.assessment_id;
             if (!key) return;
-            const pct = parseFloat(att.percentage || 0);
-            if (bestMap[key] == null || pct > bestMap[key]) {
-              bestMap[key] = pct;
+            const rawPct = parseFloat(att.percentage || 0);
+            const isRemedial = Boolean(att.is_remedial_unlocked);
+            const effPct = isRemedial ? Math.min(rawPct, 60.0) : parseFloat(att.effective_score ?? rawPct);
+            
+            // Raw question points earned
+            const rawScore = parseFloat(att.score != null ? att.score : (rawPct * (att.total_questions || 100) / 100));
+            // Remedial points capped at KKM 60% of total questions
+            const maxRemedialPts = att.total_questions ? (att.total_questions * 0.6) : (rawScore * 0.6);
+            const effPoints = isRemedial ? Math.min(rawScore, maxRemedialPts) : rawScore;
+
+            if (!bestMap[key] || effPct > bestMap[key].effPct || (effPct === bestMap[key].effPct && effPoints > bestMap[key].points)) {
+              bestMap[key] = {
+                effPct,
+                rawPct,
+                points: effPoints,
+                rawPoints: rawScore,
+                isRemedial
+              };
             }
 
             if (att.submitted_at) {
@@ -2045,12 +2097,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             }
           });
 
-          const scores = Object.entries(bestMap)
+          const bestItems = Object.entries(bestMap)
             .filter(([k]) => !k.endsWith('_locked'))
-            .map(([, v]) => parseFloat(v) || 0);
+            .map(([, v]) => v);
 
-          const completedCount = scores.length;
-          const totalPct = scores.reduce((sum, v) => sum + v, 0);
+          const completedCount = bestItems.length;
+          const totalPoints = Math.round(bestItems.reduce((sum, v) => sum + (v.points || 0), 0) * 10) / 10;
+          const totalPct = bestItems.reduce((sum, v) => sum + (v.effPct || 0), 0);
           const overallScore = completedCount > 0 ? Math.round(totalPct / completedCount) : 0;
           const grade = getGrade(overallScore);
           const cleanName = cleanStudentName(st.name || '');
@@ -2061,6 +2114,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             cleanName: cleanName || st.name || 'Student',
             gender: st.gender || null,
             photo_url: st.photo_url || null,
+            totalPoints,
             overallScore,
             completedCount,
             lastSubmittedAt,
@@ -2068,22 +2122,26 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           };
         });
 
-        // 4. Deterministic Sort with 4-Level Tie-Breakers
+        // 4. Deterministic Sort: Points-Centric Primary with 4-Level Tie-Breakers
         studentStats.sort((a, b) => {
-          // Level 1: Overall Average Score (descending)
+          // Primary: Total Points earned across best results (descending)
+          if (b.totalPoints !== a.totalPoints) {
+            return b.totalPoints - a.totalPoints;
+          }
+          // Tie-Breaker 1: Overall Average Percentage (descending)
           if (b.overallScore !== a.overallScore) {
             return b.overallScore - a.overallScore;
           }
-          // Level 2: Total completed assessments (descending)
+          // Tie-Breaker 2: Total completed assessments (descending)
           if (b.completedCount !== a.completedCount) {
             return b.completedCount - a.completedCount;
           }
-          // Level 3: Earliest last submission timestamp (ascending)
+          // Tie-Breaker 3: Earliest last submission timestamp (ascending)
           if (a.lastSubmittedAt && b.lastSubmittedAt) {
             const diff = new Date(a.lastSubmittedAt) - new Date(b.lastSubmittedAt);
             if (diff !== 0) return diff;
           }
-          // Level 4: Alphabetical clean name (ascending)
+          // Tie-Breaker 4: Alphabetical clean name (ascending)
           return a.cleanName.localeCompare(b.cleanName, undefined, { sensitivity: 'base' });
         });
 
@@ -2097,7 +2155,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           if (st.id === session.student_id) {
             myRank = st.rank;
           }
-          if (st.rank === 1 && st.overallScore > 0) {
+          if (st.rank === 1 && (st.totalPoints > 0 || st.overallScore > 0)) {
             champion = st;
           }
         });
@@ -2115,9 +2173,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           if (champion) {
             const royalPrefix = champion.gender === 'male' ? 'King' : (champion.gender === 'female' ? 'Queen' : '');
             const titleStr = royalPrefix ? `${royalPrefix} ${champion.cleanName}` : champion.cleanName;
-            champNameEl.textContent = `👑 ${titleStr} (${champion.overallScore}%)`;
+            champNameEl.textContent = `👑 ${titleStr} (${champion.totalPoints} PTS • ${champion.overallScore}%)`;
           } else {
-            champNameEl.textContent = 'None yet (0%)';
+            champNameEl.textContent = 'None yet (0 PTS)';
           }
         }
 
@@ -2125,7 +2183,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         let html = `<div class="leaderboard-table">`;
         studentStats.forEach(st => {
           const isMe = st.id === session.student_id;
-          const isRank1 = st.rank === 1 && st.overallScore > 0;
+          const isRank1 = st.rank === 1 && (st.totalPoints > 0 || st.overallScore > 0);
           const rowClass = `leaderboard-row ${isMe ? 'my-row' : ''} ${isRank1 ? 'rank-1-row' : ''}`;
           
           let rankBadgeClass = 'leaderboard-rank-badge';
@@ -2160,12 +2218,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           }
 
           const initChar = st.cleanName ? st.cleanName.charAt(0).toUpperCase() : 'S';
-          const avatarHtml = st.photo_url
-            ? `<img src="${escHtml(st.photo_url)}" class="leaderboard-avatar-mini" alt="${escHtml(st.cleanName)}" onerror="this.outerHTML='<div class=\\'leaderboard-avatar-init\\'>${initChar}</div>'" />`
-            : `<div class="leaderboard-avatar-init">${initChar}</div>`;
-
+          const memberPhoto = st.avatar_url || st.photo_url;
           const theme = GRADE_PALETTE[st.grade] || GRADE_PALETTE.F;
           const gradeSymbol = getGradeSymbol(st.grade, st.overallScore);
+
+          const avatarHtml = memberPhoto
+            ? `<img src="${escHtml(memberPhoto)}" class="leaderboard-avatar-mini" alt="${escHtml(st.cleanName)}" onerror="this.outerHTML='<div class=\\'leaderboard-avatar-init\\' style=\\'background:${theme.color};\\'>${initChar}</div>'" />`
+            : `<div class="leaderboard-avatar-init" style="background:${theme.color};">${initChar}</div>`;
 
           html += `
             <div class="${rowClass}">
@@ -2178,12 +2237,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
                     ${isMe ? '<span style="color:#38bdf8; font-size:0.7rem; font-weight:700;">(You)</span>' : ''}
                     ${royalTag}
                   </div>
-                  <span class="leaderboard-sub-info">${st.completedCount} completed</span>
+                  <span class="leaderboard-sub-info">${st.completedCount} completed &bull; ${st.overallScore}% avg</span>
                 </div>
               </div>
-              <div class="leaderboard-col-right">
-                <span class="leaderboard-score-val" style="color:${theme.color};">${st.overallScore}%</span>
-                <div class="leaderboard-grade-chip" style="background:${theme.color};">${gradeSymbol}</div>
+              <div class="leaderboard-col-right" style="display:flex; align-items:center; gap:8px;">
+                <span class="leaderboard-score-val" style="color:${theme.color}; font-weight:800; font-size:1rem; display:inline-flex; align-items:baseline; gap:3px;">
+                  ${st.totalPoints} <span style="font-size:0.7rem; font-weight:700; color:#94a3b8; letter-spacing:0.04em;">PTS</span>
+                </span>
+                <div class="leaderboard-grade-chip" style="background:${theme.color};" title="Average: ${st.overallScore}%">${gradeSymbol}</div>
               </div>
             </div>
           `;

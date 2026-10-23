@@ -11,6 +11,7 @@
 import {
   adminFetchAll,
   openTestSession,
+  addLateStudentsToSession,
   closeTestSession,
   fetchActiveTestSession
 } from '../api.js?v=5.3.2';
@@ -23,6 +24,7 @@ let _cachedBatches = [];
 let _cachedStudents = [];
 let _cachedPrograms = [];
 let _activeSessionModalAsm = null;
+let _activeLateModalAsm = null;
 
 export async function renderAssessmentAccess(area) {
   showLoading();
@@ -71,6 +73,10 @@ export async function renderAssessmentAccess(area) {
           t._remainingMinutes = Math.ceil(remainingMs / 60000);
           t._batchName = batchMap[sess.batch_id]?.name || 'Batch ' + (sess.batch_id || '');
           t._allowedCount = Array.isArray(sess.allowed_student_ids) ? sess.allowed_student_ids.length : 0;
+          t._isRemedial = Boolean(sess.is_remedial);
+          t._autoCloseAt = sess.auto_close_at;
+          t._allowedStudentIds = sess.allowed_student_ids || [];
+          t._remedialStudentIds = sess.remedial_student_ids || [];
         } else {
           t._isLive = false;
         }
@@ -195,11 +201,31 @@ export async function renderAssessmentAccess(area) {
               </div>
             </div>
 
+            <!-- Session Type: Normal vs Remedial -->
+            <div>
+              <label class="form-label" style="font-weight:600; font-size:0.85rem; color:var(--fm-text-primary); margin-bottom:6px; display:block;">
+                3. Tipe Sesi Ujian
+              </label>
+              <div style="display:flex; gap:16px; align-items:center; background:rgba(255,255,255,0.02); padding:10px 12px; border-radius:6px; border:1px solid var(--fm-border-subtle); flex-wrap:wrap;">
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem; color:var(--fm-text-primary);">
+                  <input type="radio" name="session-mode" value="normal" checked style="cursor:pointer;">
+                  <span>🟢 Normal (Nilai Penuh)</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem; color:#fbbf24; font-weight:600;">
+                  <input type="radio" name="session-mode" value="remedial" style="cursor:pointer;">
+                  <span>🟡 Remedial (Batas Maksimal KKM 60%)</span>
+                </label>
+              </div>
+              <div class="text-xs text-muted" style="margin-top:4px;">
+                Jika Remedial dipilih, nilai efektif siswa pada sesi ini otomatis dibatasi maksimal KKM 60% (Grade B).
+              </div>
+            </div>
+
             <!-- Student Attendance Checklist -->
             <div>
               <div style="display:flex; justify-content:between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
                 <label class="form-label" style="font-weight:600; font-size:0.85rem; color:var(--fm-text-primary); margin:0;">
-                  3. Student Presence & Attendance Whitelist (<span id="session-student-count">0</span>)
+                  4. Student Presence & Attendance Whitelist (<span id="session-student-count">0</span>)
                 </label>
                 <div class="d-flex gap-2 align-center" style="flex-wrap:wrap;">
                   <input type="text" id="session-student-search" placeholder="🔍 Filter student..." class="form-control" style="font-size:0.75rem; padding:3px 8px; width:110px; background:var(--fm-bg-input); border:1px solid var(--fm-border-subtle); color:var(--fm-text-primary); border-radius:4px;">
@@ -224,6 +250,66 @@ export async function renderAssessmentAccess(area) {
             <button class="btn btn-ghost" id="btn-cancel-session-modal">Cancel</button>
             <button class="btn btn-primary" id="btn-confirm-open-session" style="background:#10b981; border-color:#059669; font-weight:700; padding:8px 18px; display:flex; align-items:center; gap:6px;">
               <span>🔓</span> Unlock Test Now
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Tambah Siswa Susulan / Remedial ke Sesi Berjalan -->
+      <div id="modal-add-late-student" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+        <div class="modal-box card" style="background:var(--fm-bg-panel); border:1px solid var(--fm-border-medium); border-radius:12px; width:100%; max-width:560px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 40px rgba(0,0,0,0.6);">
+          <div style="padding:20px; border-bottom:1px solid var(--fm-border-subtle); display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:#a5b4fc; font-weight:700;">👥 Sesi Ujian Berjalan</div>
+              <h3 id="late-modal-test-title" style="margin:4px 0 0; font-size:1.2rem; font-weight:800; color:var(--fm-text-primary);">Test Name</h3>
+              <div id="late-modal-meta" class="text-xs text-muted" style="margin-top:2px;">Batch Name</div>
+            </div>
+            <button class="btn btn-ghost btn-icon" id="btn-close-late-modal" style="color:var(--fm-text-secondary); font-size:1.25rem;">✕</button>
+          </div>
+
+          <div style="padding:20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
+            <!-- Live Global Countdown Notice -->
+            <div style="background:rgba(99, 102, 241, 0.12); border:1px solid rgba(99, 102, 241, 0.35); border-radius:8px; padding:12px 14px;">
+              <div style="font-size:0.85rem; font-weight:700; color:#a5b4fc; display:flex; align-items:center; gap:6px;">
+                <span>⏳ Sisa Waktu Sesi Global:</span>
+                <span id="late-modal-remaining" style="color:#ffffff; font-size:1rem; font-weight:800;">-- Menit</span>
+              </div>
+              <div class="text-xs" style="color:#cbd5e1; margin-top:4px; line-height:1.4;">
+                Waktu pengerjaan siswa susulan <strong>mengacu pada sisa waktu berjalan ini</strong>. Waktu tidak bertambah/tidak di-reset agar adil bagi siswa yang masuk tepat waktu.
+              </div>
+            </div>
+
+            <!-- Student Selection List -->
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+                <label class="form-label" style="font-weight:600; font-size:0.85rem; color:var(--fm-text-primary); margin:0;">
+                  Pilih Siswa Susulan (<span id="late-student-selected-count">0</span> terpilih)
+                </label>
+                <div class="d-flex gap-2 align-center">
+                  <input type="text" id="late-student-search" placeholder="🔍 Cari nama..." class="form-control" style="font-size:0.75rem; padding:3px 8px; width:120px; background:var(--fm-bg-input); border:1px solid var(--fm-border-subtle); color:var(--fm-text-primary); border-radius:4px;">
+                  <button type="button" class="btn btn-secondary btn-xs" id="btn-late-select-all" style="padding:4px 8px; font-size:0.75rem;">✅ Semua</button>
+                  <button type="button" class="btn btn-secondary btn-xs" id="btn-late-deselect-all" style="padding:4px 8px; font-size:0.75rem;">❌ Kosong</button>
+                </div>
+              </div>
+
+              <!-- Remedial Global Checkbox -->
+              <div style="background:rgba(245, 158, 11, 0.08); border:1px solid rgba(245, 158, 11, 0.25); border-radius:6px; padding:8px 10px; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="late-all-remedial-toggle" style="width:16px; height:16px; cursor:pointer;">
+                <label for="late-all-remedial-toggle" style="font-size:0.8rem; font-weight:600; color:#fbbf24; cursor:pointer; margin:0;">
+                  Tandai siswa yang ditambahkan sebagai REMEDIAL (Batas Maksimal KKM 60%)
+                </label>
+              </div>
+
+              <div id="late-students-list" style="max-height:220px; overflow-y:auto; border:1px solid var(--fm-border-subtle); border-radius:6px; background:rgba(0,0,0,0.2); padding:8px; display:flex; flex-direction:column; gap:6px;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:16px 20px; border-top:1px solid var(--fm-border-subtle); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.15);">
+            <button class="btn btn-ghost" id="btn-cancel-late-modal">Batal</button>
+            <button class="btn btn-primary" id="btn-confirm-add-late" style="background:#6366f1; border-color:#4f46e5; font-weight:700; padding:8px 18px; display:flex; align-items:center; gap:6px;">
+              <span>💾</span> Tambahkan Siswa ke Sesi
             </button>
           </div>
         </div>
@@ -260,9 +346,10 @@ function renderTestRows(tests, classMap, levelMap) {
     let stateBadge = '';
     if (t._isLive) {
       stateBadge = `
-        <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(16, 185, 129, 0.15); border:1px solid rgba(16, 185, 129, 0.4); color:#34d399; padding:4px 8px; border-radius:6px; font-weight:700; font-size:0.8rem;">
+        <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(16, 185, 129, 0.15); border:1px solid rgba(16, 185, 129, 0.4); color:#34d399; padding:4px 8px; border-radius:6px; font-weight:700; font-size:0.8rem; flex-wrap:wrap;">
           <span style="width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 8px #10b981; animation:pulse 1.5s infinite;"></span>
           LIVE (${t._remainingMinutes}m left) &bull; ${escapeHtml(t._batchName)} (${t._allowedCount} students)
+          ${t._isRemedial ? '<span style="margin-left:4px; padding:1px 6px; background:rgba(245,158,11,0.2); border:1px solid #f59e0b; color:#fbbf24; border-radius:4px; font-size:0.7rem;">REMIDIAL (KKM 60%)</span>' : ''}
         </span>
       `;
     } else {
@@ -276,9 +363,14 @@ function renderTestRows(tests, classMap, levelMap) {
     let actionBtn = '';
     if (t._isLive) {
       actionBtn = `
-        <button class="btn btn-danger btn-xs btn-lock-session" data-id="${t.id}" style="background:#ef4444; border-color:#dc2626; color:#ffffff; font-weight:600; padding:6px 12px;">
-          🔒 Close Session
-        </button>
+        <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-xs btn-add-late-modal" data-id="${t.id}" style="font-weight:600; padding:6px 10px; background:rgba(99, 102, 241, 0.2); border:1px solid #6366f1; color:#a5b4fc;" title="Tambah Siswa Susulan / Remedial ke Sesi Berjalan">
+            👥 + Susulan / Remidi
+          </button>
+          <button class="btn btn-danger btn-xs btn-lock-session" data-id="${t.id}" style="background:#ef4444; border-color:#dc2626; color:#ffffff; font-weight:600; padding:6px 12px;">
+            🔒 Close Session
+          </button>
+        </div>
       `;
     } else {
       actionBtn = `
@@ -555,6 +647,7 @@ function bindAccessEvents(area, tests, classMap, levelMap, batchMap, programMap)
 
     const allocatedMinutes = parseInt(durationInput.value, 10) || 30;
     const allowedStudentIds = Array.from(_checkedStudentIds);
+    const isRemedial = area.querySelector('input[name="session-mode"]:checked')?.value === 'remedial';
 
     if (allowedStudentIds.length === 0) {
       showToast('Please select at least 1 student to allow access.', 'error');
@@ -567,14 +660,190 @@ function bindAccessEvents(area, tests, classMap, levelMap, batchMap, programMap)
         assessmentId: _activeSessionModalAsm.id,
         batchId: batchId,
         allocatedMinutes: allocatedMinutes,
-        allowedStudentIds: allowedStudentIds
+        allowedStudentIds: allowedStudentIds,
+        isRemedial: isRemedial,
+        remedialStudentIds: isRemedial ? allowedStudentIds : []
       });
-      showToast(`🔓 Live test unlocked for ${allocatedMinutes} minutes (${allowedStudentIds.length} students)`, 'success');
+      showToast(`🔓 Live test unlocked for ${allocatedMinutes} minutes (${allowedStudentIds.length} students)${isRemedial ? ' [REMEDIAL MODE]' : ''}`, 'success');
       closeModal();
       renderAssessmentAccess(area);
     } catch (err) {
       console.error('Failed to open test session:', err);
       showToast('Failed to unlock session: ' + err.message, 'error');
+    } finally {
+      hideLoading();
+    }
+  });
+
+  // --- 3. Live Sesi Tambah Siswa Susulan / Remedial Modal ---
+  const modalLate = area.querySelector('#modal-add-late-student');
+  const btnCloseLate = area.querySelector('#btn-close-late-modal');
+  const btnCancelLate = area.querySelector('#btn-cancel-late-modal');
+  const lateListEl = area.querySelector('#late-students-list');
+  const lateCountEl = area.querySelector('#late-student-selected-count');
+  const lateSearchInput = area.querySelector('#late-student-search');
+  const btnLateSelectAll = area.querySelector('#btn-late-select-all');
+  const btnLateDeselectAll = area.querySelector('#btn-late-deselect-all');
+  const lateAllRemedialToggle = area.querySelector('#late-all-remedial-toggle');
+  const btnConfirmAddLate = area.querySelector('#btn-confirm-add-late');
+
+  let _currentLateBatchStudents = [];
+  let _checkedLateStudentIds = new Set();
+  let _remedialLateStudentIds = new Set();
+  let _lateSearchQuery = '';
+
+  const closeLateModal = () => {
+    modalLate?.classList.add('hidden');
+    _activeLateModalAsm = null;
+    _checkedLateStudentIds.clear();
+    _remedialLateStudentIds.clear();
+  };
+
+  btnCloseLate?.addEventListener('click', closeLateModal);
+  btnCancelLate?.addEventListener('click', closeLateModal);
+
+  const renderLateStudentList = () => {
+    if (!lateListEl) return;
+    if (_currentLateBatchStudents.length === 0) {
+      lateListEl.innerHTML = `<div class="text-xs text-muted p-2 text-center">Tidak ada data siswa dalam batch ini.</div>`;
+      if (lateCountEl) lateCountEl.textContent = '0';
+      return;
+    }
+
+    let list = _currentLateBatchStudents;
+    const q = _lateSearchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(s => (s.name || '').toLowerCase().includes(q));
+    }
+
+    list = [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base', numeric: true }));
+
+    if (lateCountEl) lateCountEl.textContent = String(_checkedLateStudentIds.size);
+
+    if (list.length === 0) {
+      lateListEl.innerHTML = `<div class="text-xs text-muted p-2 text-center">Tidak ada siswa yang cocok dengan "${escapeHtml(q)}".</div>`;
+      return;
+    }
+
+    const sess = _activeLateModalAsm?.payload?.test_session;
+    const existingAllowed = new Set(sess?.allowed_student_ids || []);
+
+    lateListEl.innerHTML = list.map(s => {
+      const isAlreadyAllowed = existingAllowed.has(s.id);
+      const isChecked = _checkedLateStudentIds.has(s.id);
+      const isRemedial = _remedialLateStudentIds.has(s.id);
+
+      if (isAlreadyAllowed) {
+        return `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 10px; border-radius:6px; background:rgba(255,255,255,0.02); opacity:0.6;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="color:#10b981; font-size:0.9rem;">✅</span>
+              <span style="font-size:0.85rem; font-weight:600; color:var(--fm-text-secondary);">${escapeHtml(s.name || 'Unnamed')}</span>
+            </div>
+            <span class="badge badge-success" style="font-size:0.65rem;">Sudah Diizinkan</span>
+          </div>
+        `;
+      }
+
+      return `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 10px; border-radius:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);">
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer; flex:1; margin:0;">
+            <input type="checkbox" class="late-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;">
+            <span style="font-size:0.85rem; font-weight:600; color:var(--fm-text-primary);">${escapeHtml(s.name || 'Unnamed')}</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:4px; font-size:0.75rem; color:#fbbf24; cursor:pointer; margin:0;" title="Batas maksimal nilai siswa ini dibatasi KKM 60%">
+            <input type="checkbox" class="late-student-remedial-checkbox" data-student-id="${s.id}" ${isRemedial ? 'checked' : ''} style="width:14px; height:14px; cursor:pointer;">
+            <span>Remidi (60%)</span>
+          </label>
+        </div>
+      `;
+    }).join('');
+  };
+
+  lateListEl?.addEventListener('change', (e) => {
+    if (e.target.classList.contains('late-student-checkbox')) {
+      const sid = e.target.value;
+      if (e.target.checked) {
+        _checkedLateStudentIds.add(sid);
+        if (lateAllRemedialToggle?.checked) {
+          _remedialLateStudentIds.add(sid);
+        }
+      } else {
+        _checkedLateStudentIds.delete(sid);
+        _remedialLateStudentIds.delete(sid);
+      }
+      renderLateStudentList();
+    } else if (e.target.classList.contains('late-student-remedial-checkbox')) {
+      const sid = e.target.getAttribute('data-student-id');
+      if (e.target.checked) {
+        _remedialLateStudentIds.add(sid);
+        _checkedLateStudentIds.add(sid);
+      } else {
+        _remedialLateStudentIds.delete(sid);
+      }
+      renderLateStudentList();
+    }
+  });
+
+  lateSearchInput?.addEventListener('input', (e) => {
+    _lateSearchQuery = e.target.value;
+    renderLateStudentList();
+  });
+
+  lateAllRemedialToggle?.addEventListener('change', (e) => {
+    const isAllRem = e.target.checked;
+    _checkedLateStudentIds.forEach(id => {
+      if (isAllRem) _remedialLateStudentIds.add(id);
+      else _remedialLateStudentIds.delete(id);
+    });
+    renderLateStudentList();
+  });
+
+  btnLateSelectAll?.addEventListener('click', () => {
+    const sess = _activeLateModalAsm?.payload?.test_session;
+    const existingAllowed = new Set(sess?.allowed_student_ids || []);
+    _currentLateBatchStudents.forEach(s => {
+      if (!existingAllowed.has(s.id)) {
+        _checkedLateStudentIds.add(s.id);
+        if (lateAllRemedialToggle?.checked) {
+          _remedialLateStudentIds.add(s.id);
+        }
+      }
+    });
+    renderLateStudentList();
+  });
+
+  btnLateDeselectAll?.addEventListener('click', () => {
+    _checkedLateStudentIds.clear();
+    _remedialLateStudentIds.clear();
+    renderLateStudentList();
+  });
+
+  btnConfirmAddLate?.addEventListener('click', async () => {
+    if (!_activeLateModalAsm) return;
+    const studentIds = Array.from(_checkedLateStudentIds);
+    if (studentIds.length === 0) {
+      showToast('Pilih setidaknya 1 siswa susulan untuk ditambahkan.', 'warning');
+      return;
+    }
+
+    const remedialStudentIds = Array.from(_remedialLateStudentIds).filter(id => _checkedLateStudentIds.has(id));
+
+    showLoading();
+    try {
+      await addLateStudentsToSession({
+        assessmentId: _activeLateModalAsm.id,
+        studentIds: studentIds,
+        remedialStudentIds: remedialStudentIds
+      });
+
+      const remCount = remedialStudentIds.length;
+      showToast(`👥 Berhasil menambahkan ${studentIds.length} siswa susulan! (${remCount} siswa remedial KKM 60%)`, 'success');
+      closeLateModal();
+      renderAssessmentAccess(area);
+    } catch (err) {
+      console.error('Failed to add late students:', err);
+      showToast('Gagal menambahkan siswa susulan: ' + err.message, 'error');
     } finally {
       hideLoading();
     }
@@ -714,6 +983,48 @@ function bindAccessEvents(area, tests, classMap, levelMap, batchMap, programMap)
         batchSelect.dispatchEvent(new Event('change'));
 
         modal.classList.remove('hidden');
+      });
+    });
+
+    // Add Late Student Button
+    area.querySelectorAll('.btn-add-late-modal').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const asmId = e.currentTarget.getAttribute('data-id');
+        const asm = tests.find(t => t.id === asmId);
+        if (!asm) return;
+
+        const sess = asm.payload?.test_session;
+        if (!sess || sess.status !== 'UNLOCKED') {
+          showToast('Sesi ujian ini tidak aktif.', 'warning');
+          return;
+        }
+
+        const autoClose = sess.auto_close_at ? new Date(sess.auto_close_at) : null;
+        const now = new Date();
+        const remainingMinutes = autoClose ? Math.max(0, Math.ceil((autoClose.getTime() - now.getTime()) / 60000)) : 0;
+
+        _activeLateModalAsm = asm;
+        area.querySelector('#late-modal-test-title').textContent = asm.title || 'Untitled Test';
+        
+        const bName = batchMap[sess.batch_id]?.name || 'Batch ' + (sess.batch_id || '');
+        const endTimeStr = autoClose ? autoClose.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+        area.querySelector('#late-modal-meta').textContent = `${bName} • Berakhir Pukul ${endTimeStr}`;
+        area.querySelector('#late-modal-remaining').textContent = `${remainingMinutes} Menit`;
+
+        // Pre-check if entire session is remedial
+        if (lateAllRemedialToggle) {
+          lateAllRemedialToggle.checked = Boolean(sess.is_remedial);
+        }
+
+        // Get all active students for this batch
+        _currentLateBatchStudents = _cachedStudents.filter(s => s.batch_id === sess.batch_id && !s.deleted_at && s.is_active !== false);
+        _checkedLateStudentIds.clear();
+        _remedialLateStudentIds.clear();
+        _lateSearchQuery = '';
+        if (lateSearchInput) lateSearchInput.value = '';
+
+        renderLateStudentList();
+        modalLate?.classList.remove('hidden');
       });
     });
 

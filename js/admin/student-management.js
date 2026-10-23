@@ -1,4 +1,4 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter } from '../api.js?v=5.3.2';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, labelAttemptRemedial } from '../api.js?v=5.3.2';
 import { getSupabase } from '../supabase.js?v=5.3.2';
 import { getGrade, showToast } from '../app.js?v=5.3.2';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=5.3.2';
@@ -145,6 +145,7 @@ export async function renderStudents(area) {
 
       let bestScore = null;
       let bestPct = null;
+      let bestAttempt = null;
       if (isCompleted) {
         asmAtts.forEach(att => {
           const st = String(att.status || '').toLowerCase();
@@ -155,6 +156,7 @@ export async function renderStudents(area) {
             if (bestPct === null || pct > bestPct) {
               bestScore = sc;
               bestPct = Math.round(pct);
+              bestAttempt = att;
             }
           }
         });
@@ -168,7 +170,9 @@ export async function renderStudents(area) {
         is_completed: isCompleted,
         is_in_progress: isInProgress,
         bestScore,
-        bestPct
+        bestPct,
+        attemptId: bestAttempt?.id || null,
+        is_remedial_unlocked: Boolean(bestAttempt?.is_remedial_unlocked)
       });
     });
 
@@ -529,29 +533,56 @@ export async function renderStudents(area) {
     modal.id = 'prog-details-modal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.92);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;';
 
-    const detailsRows = (rec.details || []).map(r => `
-      <tr>
-        <td class="fw-600 text-sm" style="color:var(--clr-text-1);">${escapeHtml(r.assessmentTitle || '—')}</td>
-        <td class="text-center">
-          <span class="badge badge-primary" style="font-size:0.75rem;">
-            ${escapeHtml(r.levelName || (typeof toLevelLetter === 'function' ? toLevelLetter(r.levelNumber) : `Level ${r.levelNumber}`))}
-          </span>
-        </td>
-        <td class="text-center">
-          <span class="badge ${r.is_completed ? 'badge-success' : r.is_in_progress ? 'badge-warning' : 'badge-neutral'}" style="font-size:0.75rem;padding:3px 8px;">
-            ${r.is_completed ? '&#10004;&#65039; Completed' : r.is_in_progress ? '&#9654;&#65039; In Progress' : '&#128276; Not Started'}
-          </span>
-        </td>
-        <td class="text-center">
-          <span class="fw-700 text-sm" style="color:${r.bestPct != null ? (r.bestPct >= 80 ? '#10b981' : r.bestPct >= 60 ? '#84cc16' : r.bestPct >= 40 ? '#eab308' : r.bestPct >= 20 ? '#f97316' : '#ef4444') : 'var(--clr-text-3)'};">
-            ${r.bestPct != null ? `${r.bestPct}%` : '—'}
-          </span>
-        </td>
-      </tr>
-    `).join('');
+    const detailsRows = (rec.details || []).map(r => {
+      const attId = r.attemptId;
+      const isRem = Boolean(r.is_remedial_unlocked);
+      const scoreClickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();" style="cursor:pointer; text-decoration:underline;" title="Buka Lembar Hasil Ujian (Gambar 3)"` : '';
+      
+      let actionHtml = '<span class="text-muted text-xs">—</span>';
+      if (r.is_completed && attId) {
+        if (isRem) {
+          actionHtml = `
+            <div style="display:inline-flex; align-items:center; gap:4px;">
+              <span class="badge" style="font-size:0.65rem; background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b; padding:2px 6px;">REMIDI (60%)</span>
+              <button class="btn btn-ghost btn-xs btn-prog-toggle-rem" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 6px; font-size:0.75rem;" title="Batalkan status remidi (kembalikan ke normal)">↩️</button>
+            </div>
+          `;
+        } else {
+          actionHtml = `
+            <button class="btn btn-warning btn-xs btn-prog-toggle-rem" data-att-id="${attId}" data-set-remedial="true" style="padding:3px 10px; font-size:0.72rem; font-weight:700; background:#f59e0b; color:#000; border-radius:4px;" title="Tandai hasil ujian ini sebagai Remidi (KKM 60%)">
+              🏷️ Remidi
+            </button>
+          `;
+        }
+      }
+
+      return `
+        <tr>
+          <td class="fw-600 text-sm" style="color:var(--clr-text-1);">${escapeHtml(r.assessmentTitle || '—')}</td>
+          <td class="text-center">
+            <span class="badge badge-primary" style="font-size:0.75rem;">
+              ${escapeHtml(r.levelName || (typeof toLevelLetter === 'function' ? toLevelLetter(r.levelNumber) : `Level ${r.levelNumber}`))}
+            </span>
+          </td>
+          <td class="text-center">
+            <span class="badge ${r.is_completed ? 'badge-success' : r.is_in_progress ? 'badge-warning' : 'badge-neutral'}" style="font-size:0.75rem;padding:3px 8px;">
+              ${r.is_completed ? '&#10004;&#65039; Completed' : r.is_in_progress ? '&#9654;&#65039; In Progress' : '&#128276; Not Started'}
+            </span>
+          </td>
+          <td class="text-center">
+            <span class="fw-700 text-sm" ${scoreClickAttr} style="color:${r.bestPct != null ? (r.bestPct >= 80 ? '#10b981' : r.bestPct >= 60 ? '#84cc16' : r.bestPct >= 40 ? '#eab308' : r.bestPct >= 20 ? '#f97316' : '#ef4444') : 'var(--clr-text-3)'};">
+              ${r.bestPct != null ? `${r.bestPct}%` : '—'}
+            </span>
+          </td>
+          <td class="text-center">
+            ${actionHtml}
+          </td>
+        </tr>
+      `;
+    }).join('');
 
     modal.innerHTML = `
-      <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border);border-radius:14px;width:100%;max-width:760px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 40px rgba(0,0,0,0.6);overflow:hidden;">
+      <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border);border-radius:14px;width:100%;max-width:820px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 40px rgba(0,0,0,0.6);overflow:hidden;">
         <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--clr-border);display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.02);">
           <div class="d-flex align-center gap-3">
             ${rec.photo_url 
@@ -605,13 +636,14 @@ export async function renderStudents(area) {
             <thead>
               <tr>
                 <th class="text-left" style="padding:8px 12px;">Assessment Title</th>
-                <th class="text-center" style="padding:8px 12px;width:140px;">Level</th>
-                <th class="text-center" style="padding:8px 12px;width:130px;">Status</th>
+                <th class="text-center" style="padding:8px 12px;width:130px;">Level</th>
+                <th class="text-center" style="padding:8px 12px;width:120px;">Status</th>
                 <th class="text-center" style="padding:8px 12px;width:100px;">Best Score</th>
+                <th class="text-center" style="padding:8px 12px;width:130px;">Action / Remidi</th>
               </tr>
             </thead>
             <tbody>
-              ${detailsRows || '<tr><td colspan="4" class="text-center text-muted p-4">No assessments assigned.</td></tr>'}
+              ${detailsRows || '<tr><td colspan="5" class="text-center text-muted p-4">No assessments assigned.</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -620,6 +652,35 @@ export async function renderStudents(area) {
     document.body.appendChild(modal);
     modal.querySelector('#btn-close-prog-details').onclick = () => modal.remove();
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+    modal.querySelectorAll('.btn-prog-toggle-rem').forEach(btn => {
+      btn.onclick = async (e) => {
+        e.stopPropagation();
+        const attId = btn.dataset.attId;
+        const targetRemedial = btn.dataset.setRemedial === 'true';
+        const msg = targetRemedial
+          ? 'Tandai nilai ujian ini sebagai hasil REMEDIAL (otomatis dibatasi maksimal KKM 60% / Grade B)?'
+          : 'Kembalikan nilai ujian ini ke status NORMAL (menghapus batas KKM 60%)?';
+        if (!confirm(msg)) return;
+        try {
+          showLoading('Mengubah status remidi...');
+          await labelAttemptRemedial(attId, targetRemedial, 60);
+          showToast(targetRemedial ? '🏷️ Berhasil dilabel sebagai Remidi (KKM 60%).' : '↩️ Status remidi berhasil dikembalikan ke Normal.', 'success');
+          modal.remove();
+          if (typeof window.loadSection === 'function') {
+            await window.loadSection('students');
+          }
+          setTimeout(() => {
+            window.showStudentProgressDetails(studentId);
+          }, 300);
+        } catch(err) {
+          console.error(err);
+          showToast('Gagal mengubah status: ' + err.message, 'error');
+        } finally {
+          hideLoading();
+        }
+      };
+    });
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -862,12 +923,20 @@ export async function renderStudents(area) {
                       <div class="fw-700 text-xs" style="color:var(--fm-text-primary, #f8fafc); text-transform:uppercase;">
                         Questions &amp; Answers Review (${latestAtt.attempt_answers.length} items)
                       </div>
-                      ${(d.bestPct != null && d.bestPct < 70 && !latestAtt.is_remedial_unlocked) ? `
-                        <button class="btn btn-warning btn-sm btn-modal-remedial" data-att-id="${attId}" style="padding:2px 8px;font-size:0.75rem;">
-                          🔓 Authorize Remedial
-                        </button>
-                      ` : ''}
-                      ${latestAtt.is_remedial_unlocked ? `<span class="badge badge-success" style="font-size:0.7rem;">🔓 Remedial Authorized</span>` : ''}
+                      <div class="d-flex align-center gap-2">
+                        ${latestAtt ? `
+                          ${latestAtt.is_remedial_unlocked ? `
+                            <button class="btn btn-secondary btn-sm btn-modal-toggle-rem" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 8px;font-size:0.75rem;background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#fbbf24;" title="Kembalikan status ke Normal (hapus batas KKM 60%)">
+                              ↩️ Normal
+                            </button>
+                            <span class="badge badge-success" style="font-size:0.7rem;">🔓 Remedial Authorized (KKM 60%)</span>
+                          ` : `
+                            <button class="btn btn-warning btn-sm btn-modal-toggle-rem" data-att-id="${attId}" data-set-remedial="true" style="padding:2px 8px;font-size:0.75rem;" title="Tandai nilai ujian ini sebagai Remidi (KKM 60%)">
+                              🏷️ Remidi (60%)
+                            </button>
+                          `}
+                        ` : ''}
+                      </div>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; padding-right:4px;">
                       ${latestAtt.attempt_answers.map((ans, qIdx) => {
@@ -934,25 +1003,28 @@ export async function renderStudents(area) {
           };
         });
 
-        // Bind Remedial Authorize clicks
-        tabBody.querySelectorAll('.btn-modal-remedial').forEach(btn => {
+        // Bind Remedial Toggle clicks
+        tabBody.querySelectorAll('.btn-modal-toggle-rem, .btn-modal-remedial').forEach(btn => {
           btn.onclick = async (e) => {
             e.stopPropagation();
             const attId = btn.dataset.attId;
-            if (!confirm('Authorize a remedial retake for this assessment?')) return;
+            const targetRemedial = btn.dataset.setRemedial !== 'false';
+            const msg = targetRemedial
+              ? 'Tandai nilai ini sebagai hasil REMEDIAL (dibatasi maksimal KKM 60%)?'
+              : 'Kembalikan nilai ini ke status NORMAL (menghapus batas KKM 60%)?';
+            if (!confirm(msg)) return;
             try {
-              const sb = await getSupabase();
-              await sb.from('attempts').update({ is_remedial_unlocked: true }).eq('id', attId);
-              showToast('Remedial retake authorized.', 'success');
-              btn.replaceWith(document.createRange().createContextualFragment('<span class="badge badge-success" style="font-size:0.7rem;">🔓 Remedial Authorized</span>'));
+              await labelAttemptRemedial(attId, targetRemedial, 60);
+              showToast(targetRemedial ? '🏷️ Nilai berhasil dilabel sebagai Remidi (KKM 60%).' : '↩️ Status remidi berhasil dikembalikan ke Normal.', 'success');
+              window.showStudentProfileModal(studentId);
             } catch(err) {
-              showToast('Failed to authorize remedial.', 'error');
+              showToast('Gagal mengubah status: ' + err.message, 'error');
             }
           };
         });
 
       } else if (tabName === 'remediation') {
-        const failedAssessments = (rec.details || []).filter(d => d.bestPct != null && d.bestPct < 70);
+        const failedAssessments = (rec.details || []).filter(d => d.bestPct != null && d.bestPct < 60);
         tabBody.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:16px;">
             <div style="padding:14px 18px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid var(--fm-border-subtle, rgba(255,255,255,0.08));">
@@ -964,13 +1036,13 @@ export async function renderStudents(area) {
 
             ${failedAssessments.length > 0 ? `
               <div style="padding:14px 18px; border-radius:10px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25);">
-                <div class="fw-700 text-sm mb-2" style="color:#fbbf24;">⚠️ Remediation Alerts (${failedAssessments.length} Modules Below 70%)</div>
+                <div class="fw-700 text-sm mb-2" style="color:#fbbf24;">⚠️ Remediation Alerts (${failedAssessments.length} Modules Below KKM 60%)</div>
                 <div style="display:flex; flex-direction:column; gap:8px;">
                   ${failedAssessments.map(fa => `
                     <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(0,0,0,0.2); border-radius:6px;">
                       <div>
                         <div class="fw-600 text-sm" style="color:#f8fafc;">${escapeHtml(fa.assessmentTitle)}</div>
-                        <div class="text-xs text-muted">Current Best: <strong style="color:#ef4444;">${fa.bestPct}%</strong> (Passing requirement: 70%)</div>
+                        <div class="text-xs text-muted">Current Best: <strong style="color:#ef4444;">${fa.bestPct}%</strong> (KKM Passing: 60%)</div>
                       </div>
                       <button class="btn btn-warning btn-sm" onclick="showToast('Remedial retake permitted for ${escapeHtml(fa.assessmentTitle)}', 'info')">
                         Authorize Retake

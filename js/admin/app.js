@@ -1716,14 +1716,15 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
                     const isMid = pct >= 60;
                     const color = isTest ? '#f472b6' : (isHigh ? '#34d399' : isMid ? '#60a5fa' : (sc > 0 ? '#f59e0b' : '#ef4444'));
                     const attId = att.id || att.attempt_id;
-                    const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}', '_blank'); event.stopPropagation();"` : '';
+                    const isRem = Boolean(att.is_remedial_unlocked);
+                    const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                     const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
                     return `
                       <span class="asm-score ${isTest ? 'asm-score-test' : 'asm-score-task'}" 
-                            style="color:${color}; ${cursorStyle}" 
+                            style="color:${color}; ${cursorStyle} ${isRem ? 'text-decoration:underline dashed #fbbf24; text-underline-offset:2px;' : ''}" 
                             ${clickAttr}
-                            title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Points: ${displayVal}/${totalQ} pts (${Math.round(pct)}%)&#10;Click to open result in new tab">
-                        ${displayVal}
+                            title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? '🟡 [REMEDIAL - KKM 60%]' : ''}&#10;Points: ${displayVal}/${totalQ} pts (${Math.round(pct)}%)&#10;Click to open result & manage remedial">
+                        ${displayVal}${isRem ? '<span style="color:#fbbf24; font-size:0.6rem; vertical-align:super; font-weight:800; margin-left:1px;">R</span>' : ''}
                       </span>
                     `;
                   }

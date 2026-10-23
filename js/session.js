@@ -67,6 +67,14 @@ export function getStudentSession() {
 
 export function clearStudentSession() {
   sessionStorage.removeItem(SESSION_KEY);
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('stu_photo_')) {
+        localStorage.removeItem(k);
+      }
+    }
+  } catch (_) {}
 }
 
 export function requireStudentSession(redirectTo = '/index.html') {

@@ -19,9 +19,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Outfit:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=5.4.2" />
-  <link rel="stylesheet" href="css/dashboard.css?v=5.4.2" />
-  <link rel="stylesheet" href="css/result.css?v=5.4.2" />
+  <link rel="stylesheet" href="css/style.css?v=5.4.4" />
+  <link rel="stylesheet" href="css/dashboard.css?v=5.4.4" />
+  <link rel="stylesheet" href="css/result.css?v=5.4.4" />
 </head>
 <body class="result-page">
 
@@ -43,8 +43,11 @@
     <section class="result-hero" id="result-hero-section">
 
       <div id="result-Assessment-name-container" class="result-meta-title-bar" style="opacity:0; animation: result-fade-up 0.4s 0.08s ease forwards;">
-        <span id="result-Assessment-name"></span>
-        <span id="result-best-score-badge"></span>
+        <span id="result-curriculum-crumb" class="result-curriculum-crumb"></span>
+        <div class="result-title-row">
+          <span id="result-Assessment-name"></span>
+          <span id="result-best-score-badge"></span>
+        </div>
       </div>
 
       <!-- Hero Trio Row: Photo, Score, and Grade Side-by-Side ("Berderet") -->
@@ -62,7 +65,6 @@
               <img id="result-avatar-img" class="hidden" alt="Profile Photo" />
             </div>
           </div>
-          <div class="result-student-name-label" id="result-student-name-label"></div>
         </div>
 
         <!-- 2. Score Stage -->
@@ -86,6 +88,11 @@
             </span>
           </div>
         </div>
+      </div>
+
+      <!-- Centered Student Name Beneath Trio with Balanced Spacing -->
+      <div class="result-identity-bar" style="opacity:0; animation: result-fade-up 0.45s 0.2s ease forwards;">
+        <div class="result-student-name-label" id="result-student-name-label"></div>
       </div>
 
       <!-- 4. Stacked Breakdown Metrics with Semantic Colors (Linear / Apple Glassmorphic Design) -->
@@ -118,6 +125,8 @@
       <div id="result-motivation-msg" class="hidden" style="display:none !important;"></div>
       <div id="result-attempt-meta" class="hidden" style="display:none !important;"></div>
 
+      <div id="admin-remedial-control-container"></div>
+
       <div class="result-action-buttons-wrap" style="display:flex; flex-direction:column; gap:8px; max-width:380px; width:100%; margin:8px auto 0 auto; opacity:0; animation: result-fade-up 0.4s 0.45s ease forwards;">
         <div id="smart-next-action-container"></div>
         <button class="btn btn-primary hidden" id="try-again-btn" style="display:none !important;">Try Again</button>
@@ -145,11 +154,11 @@
     </div>
   </div>
 
-  <script type="module" src="./js/result.js?v=5.4.2"></script>
+  <script type="module" src="./js/result.js?v=5.4.4"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=5.4.2').then(r => r.update()).catch(e => console.warn('SW:', e));
+        navigator.serviceWorker.register('sw.js?v=5.4.4').then(r => r.update()).catch(e => console.warn('SW:', e));
       });
     }
   </script>

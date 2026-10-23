@@ -5,7 +5,7 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchAssessmentsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startAssessment, submitAssessment, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme } from './api.js?v=5.3.2';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchAssessmentsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startAssessment, submitAssessment, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial } from './api.js?v=5.3.2';
 import { getStudentSession, getAdminSession } from './session.js?v=5.3.2';
 import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=5.3.2';
 import { getSupabase } from './supabase.js?v=5.3.2';
@@ -223,34 +223,55 @@ if (!session) {
         if (!batchStudents || batchStudents.length < 2) return;
         const batchStudentIds = batchStudents.map(s => s.id);
 
-        // Get all submitted attempts for these students
+        // Get all submitted attempts for these students (including points and remedial state)
         const { data: bAtts } = await supabase
           .from('attempts')
-          .select('student_id, percentage')
+          .select('student_id, assessment_id, score, total_questions, percentage, effective_score, is_remedial_unlocked')
           .in('status', ['submitted', 'auto_submitted'])
           .in('student_id', batchStudentIds);
 
         if (!bAtts || bAtts.length === 0) return;
 
-        // Sum avg percentage per student
-        const scoreMap = {};
+        // Compute best score & points map per student (Points-Centric Ranking)
+        const studentBestMap = {};
+        batchStudentIds.forEach(sid => { studentBestMap[sid] = {}; });
+
         bAtts.forEach(a => {
           const sid = a.student_id;
-          if (!scoreMap[sid]) scoreMap[sid] = { total: 0, count: 0 };
-          scoreMap[sid].total += parseFloat(a.percentage || 0);
-          scoreMap[sid].count++;
+          const aid = a.assessment_id;
+          if (!sid || !aid || !studentBestMap[sid]) return;
+          const rawPct = parseFloat(a.percentage || 0);
+          const isRem = Boolean(a.is_remedial_unlocked);
+          const effPct = isRem ? Math.min(rawPct, 60.0) : parseFloat(a.effective_score ?? rawPct);
+          const rawScore = parseFloat(a.score != null ? a.score : (rawPct * (a.total_questions || 100) / 100));
+          const maxRemPts = a.total_questions ? (a.total_questions * 0.6) : (rawScore * 0.6);
+          const effPoints = isRem ? Math.min(rawScore, maxRemPts) : rawScore;
+
+          if (!studentBestMap[sid][aid] || effPct > studentBestMap[sid][aid].effPct || (effPct === studentBestMap[sid][aid].effPct && effPoints > studentBestMap[sid][aid].points)) {
+            studentBestMap[sid][aid] = { effPct, points: effPoints };
+          }
         });
 
-        const ranked = Object.entries(scoreMap)
-          .map(([sid, d]) => ({ sid, avg: d.total / d.count }))
-          .sort((a, b) => b.avg - a.avg);
+        const ranked = batchStudentIds.map(sid => {
+          const items = Object.values(studentBestMap[sid] || {});
+          const totalPts = Math.round(items.reduce((sum, it) => sum + (it.points || 0), 0) * 10) / 10;
+          const avgPct = items.length > 0 ? items.reduce((sum, it) => sum + (it.effPct || 0), 0) / items.length : 0;
+          return { sid, totalPts, avgPct };
+        }).sort((a, b) => {
+          if (b.totalPts !== a.totalPts) return b.totalPts - a.totalPts;
+          return b.avgPct - a.avgPct;
+        });
 
-        const myRank = ranked.findIndex(r => r.sid === targetStudentId) + 1;
+        const myData = ranked.find(r => r.sid === targetStudentId);
+        if (!myData) return;
+
+        // Points-centric dense ranking
+        const higherCount = ranked.filter(r => r.totalPts > myData.totalPts).length;
+        const myRank = higherCount + 1;
         const total = ranked.length;
-        if (myRank === 0) return;
 
-        const medal = myRank === 1 ? '🥇' : myRank === 2 ? '🥈' : myRank === 3 ? '🥉' : '';
-        el.innerHTML = `${medal} #${myRank}<span style="font-size:0.7rem;color:#94a3b8;">/${total}</span>`;
+        const medal = myRank === 1 ? '🥇 ' : myRank === 2 ? '🥈 ' : myRank === 3 ? '🥉 ' : '';
+        el.innerHTML = `${medal}Batch #${myRank}<span style="font-size:0.7rem;color:#94a3b8;">/${total}</span>`;
         el.classList.remove('hidden');
       } catch (err) {
         console.warn('Rank calculation failed:', err);
@@ -411,8 +432,9 @@ if (!session) {
 
         if (!isTest) {
           container.innerHTML = `
-            <button class="btn btn-primary" id="btn-next-milestone" style="background: linear-gradient(135deg, #0284c7, #2563eb); border: 1px solid #38bdf8; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4); padding: 13px; font-weight: 800; font-size: 0.95rem; border-radius: 8px; width: 100%; color: #fff; cursor: pointer; transition: all 0.2s ease;">
-              🚀 Continue to ${escapeHtml(nextName)} &rarr;
+            <button class="btn-next-milestone" id="btn-next-milestone" type="button">
+              <span class="next-btn-tag">🚀 Up Next Milestone</span>
+              <span class="next-btn-title">${escapeHtml(cleanTitle(nextName))} &rarr;</span>
             </button>
           `;
           document.getElementById('btn-next-milestone').onclick = () => {
@@ -429,8 +451,9 @@ if (!session) {
 
           if (isUnlocked && isWhitelisted) {
             container.innerHTML = `
-              <button class="btn btn-primary" id="btn-next-milestone" style="background: linear-gradient(135deg, #059669, #10b981); border: 1px solid #34d399; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); padding: 13px; font-weight: 800; font-size: 0.95rem; border-radius: 8px; width: 100%; color: #fff; cursor: pointer;">
-                🟢 Start Official Test: ${escapeHtml(nextName)} &rarr;
+              <button class="btn-next-milestone btn-next-test" id="btn-next-milestone" type="button">
+                <span class="next-btn-tag">🟢 Test Session Unlocked</span>
+                <span class="next-btn-title">${escapeHtml(cleanTitle(nextName))} &rarr;</span>
               </button>
             `;
             document.getElementById('btn-next-milestone').onclick = () => {
@@ -442,7 +465,7 @@ if (!session) {
             container.innerHTML = `
               <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.35); border-radius:10px; padding:10px 14px; text-align:center;">
                 <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:#f59e0b; font-weight:800;">
-                  🔒 Next Milestone: ${escapeHtml(nextName)}
+                  🔒 Next Milestone: ${escapeHtml(cleanTitle(nextName))}
                 </div>
                 <div style="font-size:0.8rem; color:#cbd5e1; margin-top:2px;">
                   Waiting for Tutor to unlock this test session during class.
@@ -513,8 +536,10 @@ if (!session) {
         document.getElementById('result-loading').classList.add('hidden');
         document.getElementById('result-content').classList.remove('hidden');
 
-        const pct = parseFloat(attempt.percentage || 0);
-        const grade = attempt.grade || getGrade(pct);
+        const rawPct = parseFloat(attempt.percentage || 0);
+        const isRemedial = Boolean(attempt.is_remedial_unlocked);
+        const pct = isRemedial ? Math.min(rawPct, 60.0) : parseFloat(attempt.effective_score ?? rawPct);
+        const grade = isRemedial && rawPct > 60 ? 'B' : (attempt.grade || getGrade(pct));
         const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE.F;
         const isGradeS = (grade === 'S' || grade === 'STAR');
 
@@ -645,15 +670,17 @@ if (!session) {
 
         // V1: Best score badge
         const assessmentId = attempt.assessment_id || attempt.Assessment_id;
-        const isBest = attempt.is_best_score === true;
+        const isBest = attempt.is_best_score === true || pct >= 100;
 
         // Inject best-score indicator near the grade badge if we have it
         const scoreBadgeEl = document.getElementById('result-best-score-badge');
         if (scoreBadgeEl) {
-          if (isBest) {
-            scoreBadgeEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#34D399;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);border-radius:6px;padding:2px 8px;">★ Best Score</span>`;
+          if (isRemedial) {
+            scoreBadgeEl.innerHTML = `<span class="result-badge-subtle" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; font-weight:700;">🟡 Remedial Attempt (KKM Capped at 60%)</span>`;
+          } else if (isBest) {
+            scoreBadgeEl.innerHTML = `<span class="result-badge-best">★ Best Score</span>`;
           } else {
-            scoreBadgeEl.innerHTML = `<span style="font-size:11px;color:#94A3B8;">Not your best score</span>`;
+            scoreBadgeEl.innerHTML = `<span class="result-badge-subtle">Completed Attempt</span>`;
           }
         }
 
@@ -680,13 +707,25 @@ if (!session) {
         const partialEl = document.getElementById('res-partial');
         if (partialEl) {
           partialEl.textContent = partial;
-          partialEl.style.color = '#FBBF24';
+          if (partial === 0) {
+            partialEl.style.color = '#64748B';
+            document.getElementById('card-filter-partial')?.style.setProperty('opacity', '0.65');
+          } else {
+            partialEl.style.color = '#FBBF24';
+            document.getElementById('card-filter-partial')?.style.setProperty('opacity', '1');
+          }
         }
 
         const wrongEl = document.getElementById('res-wrong');
         if (wrongEl) {
           wrongEl.textContent = wrong;
-          wrongEl.style.color = '#F87171';
+          if (wrong === 0) {
+            wrongEl.style.color = '#64748B';
+            document.getElementById('card-filter-wrong')?.style.setProperty('opacity', '0.65');
+          } else {
+            wrongEl.style.color = '#F87171';
+            document.getElementById('card-filter-wrong')?.style.setProperty('opacity', '1');
+          }
         }
 
         // Breadcrumb & Card Header
@@ -778,6 +817,16 @@ if (!session) {
             // FEATURE 6: Attempt counter + improvement indicator beside stamp
             renderAttemptMeta(thisAssessmentAttempts, attemptId, pct);
 
+            // Calibrate best score pill dynamically based on historical best
+            if (scoreBadgeEl && thisAssessmentAttempts.length > 0) {
+              const maxPct = Math.max(...thisAssessmentAttempts.map(x => parseFloat(x.percentage || 0)));
+              if (pct >= maxPct || pct >= 100) {
+                scoreBadgeEl.innerHTML = `<span class="result-badge-best">★ Best Score</span>`;
+              } else {
+                scoreBadgeEl.innerHTML = `<span class="result-badge-subtle">Best: ${maxPct.toFixed(1)}%</span>`;
+              }
+            }
+
             if (thisAssessmentAttempts.length > 1) {
               renderAttemptHistory(thisAssessmentAttempts, attemptId);
             }
@@ -823,6 +872,77 @@ if (!session) {
               showToast(e.message, 'error');
             }
           };
+        }
+
+        // ─── ADMIN REMEDIAL CONTROL CARD (Gambar 3) ───
+        const isAdmin = Boolean(getAdminSession()) || session?.is_admin === true || urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true';
+        let adminContainer = document.getElementById('admin-remedial-control-container');
+        if (!adminContainer) {
+          adminContainer = document.createElement('div');
+          adminContainer.id = 'admin-remedial-control-container';
+          const buttonsWrap = document.querySelector('.result-action-buttons-wrap');
+          if (buttonsWrap) {
+            buttonsWrap.parentNode.insertBefore(adminContainer, buttonsWrap);
+          }
+        }
+
+        if (isAdmin && adminContainer) {
+          adminContainer.innerHTML = `
+            <div style="margin: 14px auto 6px auto; max-width: 380px; width: 100%; padding: 14px 18px; border-radius: 12px; background: rgba(15, 23, 42, 0.85); border: 1.5px solid ${isRemedial ? '#f59e0b' : 'rgba(99, 102, 241, 0.4)'}; box-shadow: 0 8px 24px rgba(0,0,0,0.5); text-align: center;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;">
+                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; font-weight: 700; display:flex; align-items:center; gap:5px;">
+                  <span>🛡️</span> Admin Grade Control
+                </div>
+                <span class="badge" style="font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; ${isRemedial ? 'background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b;' : 'background:rgba(52,211,153,0.15); color:#34d399; border:1px solid #10b981;'}">
+                  ${isRemedial ? '🟡 REMEDIAL (KKM 60%)' : '🟢 NORMAL (NILAI PENUH)'}
+                </span>
+              </div>
+              <div style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 12px; line-height: 1.4;">
+                ${isRemedial 
+                  ? 'Nilai ini dibatasi maksimal <strong>60.0% (Grade B)</strong> sesuai batas KKM Remidi.' 
+                  : 'Nilai ujian ini saat ini berstatus <strong>Normal</strong> (perolehan murni ' + rawPct.toFixed(1) + '%).'}
+              </div>
+              ${isRemedial ? `
+                <button id="btn-toggle-remedial-admin" type="button" class="btn btn-secondary" style="width: 100%; font-weight: 700; background: rgba(245,158,11,0.15); border: 1px solid #f59e0b; color: #fbbf24; padding: 9px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                  ↩️ Batalkan Status Remidi (Kembalikan ke Normal)
+                </button>
+              ` : `
+                <button id="btn-toggle-remedial-admin" type="button" class="btn btn-warning" style="width: 100%; font-weight: 800; background: #f59e0b; border: 1px solid #d97706; color: #000; padding: 9px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 14px rgba(245,158,11,0.35);">
+                  🏷️ Tandai Nilai Ini Sebagai Hasil Remidi (KKM 60%)
+                </button>
+              `}
+            </div>
+          `;
+
+          const toggleBtn = adminContainer.querySelector('#btn-toggle-remedial-admin');
+          if (toggleBtn) {
+            toggleBtn.onclick = async () => {
+              const targetRemedial = !isRemedial;
+              const msg = targetRemedial
+                ? 'Tandai nilai ini sebagai hasil REMEDIAL (otomatis dibatasi maksimal KKM 60% / Grade B)?'
+                : 'Kembalikan nilai ini ke status NORMAL (menghapus batas KKM 60%)?';
+              if (!confirm(msg)) return;
+              try {
+                showLoading('Menyimpan perubahan status...');
+                await labelAttemptRemedial(attemptId, targetRemedial, 60);
+                showToast(targetRemedial ? '🏷️ Berhasil dilabel sebagai Remidi (KKM 60%).' : '↩️ Status remidi berhasil dikembalikan ke Normal.', 'success');
+                setTimeout(() => {
+                  window.location.reload();
+                }, 300);
+              } catch(err) {
+                console.error('Error toggling remedial:', err);
+                showToast('Gagal mengubah status: ' + err.message, 'error');
+              } finally {
+                hideLoading();
+              }
+            };
+          }
+
+          const backBtn = document.getElementById('back-dashboard-btn');
+          if (backBtn) {
+            backBtn.textContent = '← Kembali ke Class Hub';
+            backBtn.href = 'admin.html#class-hub';
+          }
         }
 
       } catch(e) {
@@ -953,7 +1073,7 @@ if (!session) {
         <div style="max-width: 680px; margin: 0 auto 1.5rem auto; display: flex; flex-direction: column; gap: 10px;">
           <!-- Search Input -->
           <div style="position: relative; width: 100%;">
-            <input type="search" id="ans-search-input" placeholder="🔍 Search question, prompt, or answer..." style="width: 100%; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 10px 14px 10px 38px; color: #f8fafc; font-size: 0.88rem; outline: none; transition: border-color 0.2s;" />
+            <input type="search" id="ans-search-input" placeholder="Search question, prompt, or answer..." style="width: 100%; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 10px 14px 10px 38px; color: #f8fafc; font-size: 0.88rem; outline: none; transition: border-color 0.2s;" />
             <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.5; pointer-events: none; font-size: 0.85rem;">🔍</span>
           </div>
 
