@@ -249,8 +249,8 @@
       <div class="d-flex align-center justify-between flex-wrap gap-3 mb-4 p-3 rounded" style="background:var(--clr-surface-2); border:1px solid var(--clr-border);">
         <div class="d-flex align-center gap-3 flex-wrap" style="flex:1;">
           <div style="min-width:240px; flex:1;">
-            <label class="text-xs text-muted d-block mb-1">Filter by ASSESSMENT</label>
-            <select id="dup-q-assessment-select" class="form-control" style="font-size:0.85rem; padding:6px 10px;">
+            <label class="text-xs text-muted d-block mb-1" for="dup-q-assessment-select">Filter by ASSESSMENT</label>
+            <select id="dup-q-assessment-select" class="form-control" title="Filter by ASSESSMENT" aria-label="Filter by ASSESSMENT" style="font-size:0.85rem; padding:6px 10px;">
               <option value="">— All ASSESSMENTs —</option>
             </select>
           </div>
@@ -327,7 +327,7 @@
         <button class="btn btn-ghost btn-icon" onclick="document.getElementById('roster-modal').classList.add('hidden')">✕</button>
       </div>
       <div style="display:flex; gap:10px; margin-bottom:15px;">
-        <select id="roster-add-student-select" class="form-control" style="flex:1;">
+        <select id="roster-add-student-select" class="form-control" title="Select student to add to roster" aria-label="Select student to add to roster" style="flex:1;">
           <option value="">Loading students...</option>
         </select>
         <button class="btn btn-primary" id="roster-add-student-btn">Add to Roster</button>
@@ -360,8 +360,8 @@
         <input type="text" id="add-class-name" class="form-control" placeholder="e.g. Storytelling 1" required>
       </div>
       <div class="form-group" style="margin-bottom:16px;">
-        <label class="form-label">Program</label>
-        <select id="add-class-program-id" class="form-control" required>
+        <label class="form-label" for="add-class-program-id">Program</label>
+        <select id="add-class-program-id" class="form-control" title="Select Program" aria-label="Select Program" required>
           <option value="">Select Program...</option>
         </select>
       </div>

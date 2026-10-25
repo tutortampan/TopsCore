@@ -87,7 +87,7 @@
           <div id="banner-avatar-container" title="Click to view or change profile">
             <span id="banner-avatar-initial">S</span>
             <img id="banner-avatar-img" class="hidden" alt="Profile Photo" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />
-            <input type="file" id="banner-photo-input" accept="image/*" class="hidden" />
+            <input type="file" id="banner-photo-input" accept="image/*" class="hidden" title="Upload Profile Photo" aria-label="Upload Profile Photo" />
           </div>
         </div>
 
@@ -167,10 +167,6 @@
 
     <!-- Hidden compatibility elements for existing JS routines -->
     <div class="hidden" style="display:none !important;" aria-hidden="true">
-      <div id="dashboard-classes-bar">
-        <span class="classes-bar-name" id="classes-bar-current-name"></span>
-        <span class="classes-bar-pct" id="classes-bar-progress-val"></span>
-      </div>
       <div class="classes-grid" id="classes-grid"></div>
       <div class="dash-dock-tabs">
         <button type="button" class="dash-dock-tab-btn active" id="btn-dock-standings"></button>
@@ -232,7 +228,7 @@
                 <img id="prof-photo-img" class="hidden" alt="Profile Photo" />
               </div>
               <div class="profile-avatar-camera" title="Change photo">&#128247;</div>
-              <input type="file" id="profile-modal-photo-input" accept="image/*" class="hidden" />
+              <input type="file" id="profile-modal-photo-input" accept="image/*" class="hidden" title="Upload Profile Photo" aria-label="Upload Profile Photo" />
             </div>
 
             <div class="profile-id-details">
@@ -455,8 +451,8 @@
         Please enter your date of birth to continue. This is required for your student profile.
       </p>
       <div style="background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem; text-align: left;">
-        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; margin-bottom: 0.5rem;">Date of Birth *</label>
-        <input type="date" id="onboard-birth-date" class="form-control" style="width: 100%; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem; color-scheme: dark;" required>
+        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; margin-bottom: 0.5rem;" for="onboard-birth-date">Date of Birth *</label>
+        <input type="date" id="onboard-birth-date" class="form-control" title="Date of Birth" aria-label="Date of Birth" placeholder="YYYY-MM-DD" style="width: 100%; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem; color-scheme: dark;" required>
       </div>
       <button id="btn-confirm-birthday-setup" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1rem; border-radius: 8px;">✓ Save &amp; Continue</button>
     </div>
@@ -476,7 +472,7 @@
       <div style="background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem;">
         <div style="font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; margin-bottom: 0.5rem;">Entry 1: Latest Institution *</div>
         <div style="display: flex; gap: 0.75rem;">
-          <select id="onboard-edu-inst-1" class="form-control" style="flex: 2; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;" required>
+          <select id="onboard-edu-inst-1" class="form-control" title="Latest Education Level" aria-label="Latest Education Level" style="flex: 2; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;" required>
             <option value="" disabled selected>Pilih Tingkat Pendidikan</option>
             <option value="TK">TK</option>
             <option value="SD">SD</option>
@@ -487,7 +483,7 @@
             <option value="S2">S2</option>
             <option value="S3">S3</option>
           </select>
-          <input type="number" id="onboard-edu-year-1" class="form-control" placeholder="Year (2025)" min="1970" max="2035" style="flex: 1; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;" required />
+          <input type="number" id="onboard-edu-year-1" class="form-control" title="Graduation Year" aria-label="Graduation Year" placeholder="Year (2025)" min="1970" max="2035" style="flex: 1; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;" required />
         </div>
       </div>
 
@@ -495,7 +491,7 @@
       <div style="background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem;">
         <div style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.5rem;">Entry 2: Prior Institution (Optional)</div>
         <div style="display: flex; gap: 0.75rem;">
-          <select id="onboard-edu-inst-2" class="form-control" style="flex: 2; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;">
+          <select id="onboard-edu-inst-2" class="form-control" title="Prior Education Level (Optional)" aria-label="Prior Education Level (Optional)" style="flex: 2; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;">
             <option value="" disabled selected>Pilih Tingkat (Opsional)</option>
             <option value="TK">TK</option>
             <option value="SD">SD</option>
@@ -506,7 +502,7 @@
             <option value="S2">S2</option>
             <option value="S3">S3</option>
           </select>
-          <input type="number" id="onboard-edu-year-2" class="form-control" placeholder="Year" min="1970" max="2035" style="flex: 1; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;" />
+          <input type="number" id="onboard-edu-year-2" class="form-control" title="Prior Graduation Year" aria-label="Prior Graduation Year" placeholder="Year" min="1970" max="2035" style="flex: 1; padding: 0.65rem 0.8rem; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; font-size: 0.9rem;" />
         </div>
       </div>
 

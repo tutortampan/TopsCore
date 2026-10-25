@@ -1,48 +1,68 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-26 06:17 UTC+8
+Last Updated: 2026-10-26 06:25 UTC+8
 
-Current Phase: Phase 119: Standardize Vocabulary Answer Types & Comprehensive E2E Verification [PUSHED TO ORIGIN/MAIN: be8cb64]
+Current Phase: Phase 120: Fix IDE Accessibility, Vendor Prefixes, Duplicate DOM IDs, and Markdown Lint Errors [COMPLETE]
 
-Current Task: Comprehensive end-to-end audit and automated browser verification of all 4 Vocabulary Assessment types (`assessment.html`) and Admin Class Hub (`admin.html#class-hub`): Words Tasks (`spoken`), Phrases Tasks (`spoken`), Words Tests (`written`), and Phrases Tests (`selection`); verified live test session gating, prerequisite enforcement, microphone UI, virtual keyboard input, 5-option selection distractors, and admin hub tabs; committed and pushed to GitHub [COMPLETE]
+Current Task: Fix all reported IDE problems across `admin.html`, `dashboard.html`, `css/dashboard.css`, and docs: added accessible names/titles to `<select>` and file/date inputs, resolved duplicate `dashboard-classes-bar` element ID, added Safari `-webkit-` vendor prefixes for `backdrop-filter` and `user-select`, fixed property order, removed obsolete `-webkit-overflow-scrolling: touch;`, and standardized markdown list bullets to dash [COMPLETE]
 
-Status: COMPLETE (Commit `be8cb64` pushed to `origin/main`; all 4 assessment formats tested and verified 100% in Playwright browser tests; all UI modes render cleanly: Speech/Mic on Tasks, Virtual Keyboard + Textarea on Words Tests, 5-option MCQ pills on Phrases Tests; Admin Class Hub 3 tabs and session modals verified; all temporary test sessions closed cleanly ✅).
+Status: COMPLETE (All IDE problems resolved; 39 JS files syntax-checked 0 errors; ready for git commit and push).
 
 ## Completed
 
+- **Phase 120: Accessibility, CSS Vendor Prefixes, Duplicate IDs & Lint Resolution**:
+  - **1. Accessibility in `admin.html`**:
+    - Added `title="Filter by ASSESSMENT"`, `aria-label="Filter by ASSESSMENT"`, and `for="dup-q-assessment-select"` on question duplicate filter select.
+    - Added `title="Select student to add to roster"` and `aria-label="Select student to add to roster"` on `#roster-add-student-select`.
+    - Added `title="Select Program"`, `aria-label="Select Program"`, and `for="add-class-program-id"` on add class program select.
+  - **2. Accessibility & Duplicate IDs in `dashboard.html`**:
+    - Added `title="Upload Profile Photo"` and `aria-label="Upload Profile Photo"` on `#banner-photo-input` and `#profile-modal-photo-input`.
+    - Added `title="Date of Birth"`, `aria-label="Date of Birth"`, and `placeholder="YYYY-MM-DD"` on onboarding birth date input `#onboard-birth-date`.
+    - Added `title="Latest Education Level"` and `aria-label="Latest Education Level"` on `#onboard-edu-inst-1`.
+    - Added `title="Prior Education Level (Optional)"` and `aria-label="Prior Education Level (Optional)"` on `#onboard-edu-inst-2`.
+    - Added `title="Graduation Year"` and `aria-label="Graduation Year"` on `#onboard-edu-year-1` and `#onboard-edu-year-2`.
+    - Removed redundant duplicate DOM container `#dashboard-classes-bar` and child elements inside hidden compatibility wrapper.
+  - **3. Vendor Prefixes & Compatibility in `css/dashboard.css`**:
+    - Added `-webkit-backdrop-filter` alongside `backdrop-filter` (lines 292, 1051, 2213, 2321).
+    - Added `-webkit-user-select` alongside `user-select` (lines 671, 1812, 2569, 2908, 3060).
+    - Fixed property ordering so `-ms-user-select` precedes standard `user-select` (lines 1110, 1118).
+    - Replaced non-standard `min-height: auto` with `min-height: 0` for Firefox compatibility.
+    - Removed obsolete `-webkit-overflow-scrolling: touch;` declarations to satisfy modern linters.
+  - **4. Markdown Bullet Style Consistency (MD004)**:
+    - Standardized all unordered list bullets from asterisk (`*`) to dash (`-`) across `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, and `docs/SESSION_LOG.md`.
+
 - **Phase 119: Standardize Vocabulary Answer Types & Comprehensive E2E Assessment Audit**:
   - **1. End-to-End Browser Audit of All 4 Assessment Types (`assessment.html`)**:
-    * **Test A: Words Task (`spoken`)**: Tested `3A1-WORDS-TASK` (`0a8e2626-5d34-41a9-b701-107eeea8e593`). Loaded question "Kualifikasi". Rendered Spoken mode with transcript container and green glowing microphone (`.speech-mic-btn-lg`). Screenshot: `scratch/verified_words_task_spoken.png`.
-    * **Test B: Phrases Task (`spoken`)**: Tested `3A1-PHRASES-TASK` (`936f9ae8-d777-458a-8b7f-397c418d72d3`). Loaded question "Saya yakin dapat memberikan kontribusi yang positif." Rendered listening container, language selector, and microphone UI. Screenshot: `scratch/verified_phrases_task_spoken.png`.
-    * **Test C: Words Test (`written`)**: Tested `3A-WORDS-TEST` (`c47e98e6-678c-4e81-a31f-be3c7018ef97`). Loaded question "Kualifikasi" (from 120 questions pool). Rendered centered large textarea (`.written-input`) and full custom Virtual Keyboard (`#virtual-keyboard-container` with QWERTY layout, Shift, ?123, Enter). Screenshot: `scratch/verified_words_test_written.png`.
-    * **Test D: Phrases Test (`selection`)**: Tested `3A-PHRASES-TEST` (`c71bca14-53d2-4e60-89f5-47d16e6cc22b`). Loaded question "Resume ini menampilkan pencapaian saya." Rendered 5 randomized distractors as interactive `.mc-option` radio pills with instant select and auto-advance. Screenshot: `scratch/verified_phrases_test_selection.png`.
+    - **Test A: Words Task (`spoken`)**: Tested `3A1-WORDS-TASK` (`0a8e2626-5d34-41a9-b701-107eeea8e593`). Loaded question "Kualifikasi". Rendered Spoken mode with transcript container and green glowing microphone (`.speech-mic-btn-lg`). Screenshot: `scratch/verified_words_task_spoken.png`.
+    - **Test B: Phrases Task (`spoken`)**: Tested `3A1-PHRASES-TASK` (`936f9ae8-d777-458a-8b7f-397c418d72d3`). Loaded question "Saya yakin dapat memberikan kontribusi yang positif." Rendered listening container, language selector, and microphone UI. Screenshot: `scratch/verified_phrases_task_spoken.png`.
+    - **Test C: Words Test (`written`)**: Tested `3A-WORDS-TEST` (`c47e98e6-678c-4e81-a31f-be3c7018ef97`). Loaded question "Kualifikasi" (from 120 questions pool). Rendered centered large textarea (`.written-input`) and full custom Virtual Keyboard (`#virtual-keyboard-container` with QWERTY layout, Shift, ?123, Enter). Screenshot: `scratch/verified_words_test_written.png`.
+    - **Test D: Phrases Test (`selection`)**: Tested `3A-PHRASES-TEST` (`c71bca14-53d2-4e60-89f5-47d16e6cc22b`). Loaded question "Resume ini menampilkan pencapaian saya." Rendered 5 randomized distractors as interactive `.mc-option` radio pills with instant select and auto-advance. Screenshot: `scratch/verified_phrases_test_selection.png`.
   - **2. Security & Prerequisite Enforcement Verification**:
-    * Prerequisite gating verified: Taking `3A1-PHRASES-TASK` without passing `3A1-WORDS-TASK` ($\ge 60\%$) throws `PREREQUISITE_NOT_MET` (403) and safely blocks access.
-    * Live test session gating verified: Taking `3A-WORDS-TEST` or `3A-PHRASES-TEST` without tutor unlocking the session throws `LOCKED_BY_TUTOR` and blocks unwhitelisted students.
-    * Prerequisite chaining verified: `3A-PHRASES-TEST` strictly requires passing `3A-WORDS-TEST`.
+    - Prerequisite gating verified: Taking `3A1-PHRASES-TASK` without passing `3A1-WORDS-TASK` ($\ge 60\%$) throws `PREREQUISITE_NOT_MET` (403) and safely blocks access.
+    - Live test session gating verified: Taking `3A-WORDS-TEST` or `3A-PHRASES-TEST` without tutor unlocking the session throws `LOCKED_BY_TUTOR` and blocks unwhitelisted students.
+    - Prerequisite chaining verified: `3A-PHRASES-TEST` strictly requires passing `3A-WORDS-TEST`.
   - **3. Admin Class Hub Navigation & Modals Verification**:
-    * Tab 1: 📊 `Students Grade and Score` (Matrix attendance grid rendered with all 18 students and color-coded scores).
-    * Tab 2: 🔐 `Test Sessions` (All 4 Theme cards A, B, C, D rendered; `🟢 Buka Normal` modal opens with 18 eligible students; `🟡 Buka Remidi` modal opens with 16 eligible remedial students; Late addition modal functions cleanly).
-    * Tab 3: 📝 `Class Assessments` (DataGrid rendered with 40 rows showing exact updated badges: `🗣️ Spoken` for Tasks, `WRITTEN` for Words Tests, and `SELECTION` for Phrases Tests).
+    - Tab 1: 📊 `Students Grade and Score` (Matrix attendance grid rendered with all 18 students and color-coded scores).
+    - Tab 2: 🔐 `Test Sessions` (All 4 Theme cards A, B, C, D rendered; `🟢 Buka Normal` modal opens with 18 eligible students; `🟡 Buka Remidi` modal opens with 16 eligible remedial students; Late addition modal functions cleanly).
+    - Tab 3: 📝 `Class Assessments` (DataGrid rendered with 40 rows showing exact updated badges: `🗣️ Spoken` for Tasks, `WRITTEN` for Words Tests, and `SELECTION` for Phrases Tests).
   - **4. Database Realignment Across All 40 Assessments**:
-  - **1. Database Realignment Across All 40 Assessments**:
-    * 16 Words Tasks (`VOCAB_TASK`): Standardized to `answer_type: 'spoken'`, `payload.answer_type: 'spoken'`.
-    * 16 Phrases Tasks (`PHRASE_TASK`): Standardized to `answer_type: 'spoken'`, `payload.answer_type: 'spoken'` (updated from selection).
-    * 4 Words Tests (`VOCAB_TEST`): Standardized to `answer_type: 'written'`, `payload.answer_type: 'written'`.
-    * 4 Phrases Tests (`PHRASE_TEST`): Standardized to `answer_type: 'selection'`, `payload.answer_type: 'selection'` (updated from written).
-  - **2. Auto-Generate Assessment Hierarchy (`js/api.js`)**:
-    * `autoGenerateAssessmentsHierarchy`: Explicitly assigns `answerType: 'spoken'` to Words Task and Phrases Task, `answerType: 'written'` to Words Test, and `answerType: 'selection'` to Phrases Test.
-    * `upsertDynamicAssessmentShell`: Updated `defaultAnswerType` formula to `isTest ? (isPhrase ? 'selection' : 'written') : 'spoken'`.
-    * Prioritized explicit `answerType` argument over legacy database values (`answerType || (existing && existing.answer_type) || defaultAnswerType`).
-    * Fallback in `generateAssessmentQuestions`: Checks `assessment.payload?.answer_type || assessment.answer_type || 'written'`.
-  - **3. Edge Function Alignment (`supabase/functions/start-assessment/index.ts`)**:
-    * Dynamic fallback aligned: `VOCAB_TASK` / `PHRASE_TASK` &rarr; `spoken`, `VOCAB_TEST` &rarr; `written`, `PHRASE_TEST` &rarr; `selection`.
-    * Distractor generation: checks `isSelectionMode = dynamicAnswerType === 'dropdown' || dynamicAnswerType === 'selection' || dynamicAnswerType === 'multiple_choice'` to generate 5-option randomized distractors from Vocabulary Vault.
-  - **4. Seed & Local Consistency**:
-    * Synchronized `supabase_deploy/02_curriculum_and_students.sql` for all 20 updated assessment entries.
-  - **5. Browser & Automated Verification**:
-    * Playwright automated browser test verified `#class-assessments-grid` displays 🗣️ Spoken for Words & Phrases tasks, WRITTEN for Words Tests, and SELECTION for Phrases Tests.
-    * Screenshot verified: `scratch/class_assessments_verified.png`.
+    - 16 Words Tasks (`VOCAB_TASK`): Standardized to `answer_type: 'spoken'`, `payload.answer_type: 'spoken'`.
+    - 16 Phrases Tasks (`PHRASE_TASK`): Standardized to `answer_type: 'spoken'`, `payload.answer_type: 'spoken'` (updated from selection).
+    - 4 Words Tests (`VOCAB_TEST`): Standardized to `answer_type: 'written'`, `payload.answer_type: 'written'`.
+    - 4 Phrases Tests (`PHRASE_TEST`): Standardized to `answer_type: 'selection'`, `payload.answer_type: 'selection'` (updated from written).
+  - **5. Auto-Generate Assessment Hierarchy (`js/api.js`)**:
+    - `autoGenerateAssessmentsHierarchy`: Explicitly assigns `answerType: 'spoken'` to Words Task and Phrases Task, `answerType: 'written'` to Words Test, and `answerType: 'selection'` to Phrases Test.
+    - `upsertDynamicAssessmentShell`: Updated `defaultAnswerType` formula to `isTest ? (isPhrase ? 'selection' : 'written') : 'spoken'`.
+    - Prioritized explicit `answerType` argument over legacy database values (`answerType || (existing && existing.answer_type) || defaultAnswerType`).
+    - Fallback in `generateAssessmentQuestions`: Checks `assessment.payload?.answer_type || assessment.answer_type || 'written'`.
+  - **6. Edge Function Alignment (`supabase/functions/start-assessment/index.ts`)**:
+    - Dynamic fallback aligned: `VOCAB_TASK` / `PHRASE_TASK` &rarr; `spoken`, `VOCAB_TEST` &rarr; `written`, `PHRASE_TEST` &rarr; `selection`.
+    - Distractor generation: checks `isSelectionMode = dynamicAnswerType === 'dropdown' || dynamicAnswerType === 'selection' || dynamicAnswerType === 'multiple_choice'` to generate 5-option randomized distractors from Vocabulary Vault.
+  - **7. Seed & Local Consistency**:
+    - Synchronized `supabase_deploy/02_curriculum_and_students.sql` for all 20 updated assessment entries.
+  - **8. Browser & Automated Verification**:
+    - Playwright automated browser test verified `#class-assessments-grid` displays 🗣️ Spoken for Words & Phrases tasks, WRITTEN for Words Tests, and SELECTION for Phrases Tests.
+    - Screenshot verified: `scratch/class_assessments_verified.png`.
     * Node check: all 39 JavaScript files passed syntax check with 0 errors.
     * Cache bumped across `sw.js` and `admin.html` to `v5.8.1`.
 

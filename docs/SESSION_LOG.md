@@ -1,3 +1,50 @@
+## SESSION-20261026-0626
+
+Start: 2026-10-26 06:16 UTC+8  
+End: 2026-10-26 06:26 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"@[current_problems] fix all"
+
+### Objective
+Resolve all linter errors, accessibility warnings, duplicate element IDs, and vendor prefix issues flagged by the IDE problem scanner across `admin.html`, `dashboard.html`, and `css/dashboard.css`.
+
+### Work Performed
+1. **`admin.html`**:
+   - Added `title="Filter by ASSESSMENT"`, `aria-label="Filter by ASSESSMENT"`, and `for="dup-q-assessment-select"` on question duplicate filter select.
+   - Added `title="Select student to add to roster"` and `aria-label="Select student to add to roster"` on `#roster-add-student-select`.
+   - Added `title="Select Program"`, `aria-label="Select Program"`, and `for="add-class-program-id"` on add class program select.
+2. **`dashboard.html`**:
+   - Added accessible labels, titles, and placeholders to `#banner-photo-input`, `#profile-modal-photo-input`, `#onboard-birth-date`, `#onboard-edu-inst-1`, `#onboard-edu-inst-2`, `#onboard-edu-year-1`, and `#onboard-edu-year-2`.
+   - Removed obsolete duplicate elements `#dashboard-classes-bar`, `#classes-bar-current-name`, and `#classes-bar-progress-val` from legacy hidden compatibility container.
+3. **`css/dashboard.css`**:
+   - Added `-webkit-backdrop-filter` alongside `backdrop-filter` (lines 292, 1051, 2213, 2321).
+   - Added `-webkit-user-select` alongside `user-select` (lines 671, 1812, 2569, 2908, 3060).
+   - Fixed standard property ordering: `-ms-user-select` precedes `user-select`.
+   - Replaced non-standard `min-height: auto` with `min-height: 0` for Firefox compatibility.
+   - Removed deprecated `-webkit-overflow-scrolling: touch;` declarations.
+4. **Markdown Documentation**:
+   - Standardized all unordered list bullets from asterisk (`*`) to dash (`-`) across `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, and `docs/SESSION_LOG.md`.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs`: Checked all 39 JS files with 0 syntax errors.
+- IDE problem scanner: Verified 0 errors remaining.
+
+### Files Changed
+- `admin.html`
+- `dashboard.html`
+- `css/dashboard.css`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Outstanding
+None. All reported problems resolved.
+
+### Resume From
+Commit and push changes to git repository.
+
 ## SESSION-20261026-0615
 
 Start: 2026-10-26 06:00 UTC+8  
@@ -232,10 +279,10 @@ Agent: Antigravity
    - Remedial: Score font `#FFFF00` (capped at 60%), Grade font `#FFFF00` (plain letter "R").
 3. **Vertically Stacked Points & Metrics Table**:
    - Restructured `#result-metrics-bar` into 4 separate vertical rows:
-     * Row 1: `CORRECT` (left) | count (right, `#10b981`)
-     * Row 2: `PARTIAL` (left) | count (right, `#f59e0b`)
-     * Row 3: `INCORRECT` (left) | count (right, `#ef4444`)
-     * Row 4: `POINTS` (left) | points earned (right, `#F8FAFC` or `#FFFF00` for remedial)
+- Row 1: `CORRECT` (left) | count (right, `#10b981`)
+- Row 2: `PARTIAL` (left) | count (right, `#f59e0b`)
+- Row 3: `INCORRECT` (left) | count (right, `#ef4444`)
+- Row 4: `POINTS` (left) | points earned (right, `#F8FAFC` or `#FFFF00` for remedial)
    - Styled with subtle bottom dividers, uniform proportional font sizing via `clamp(...)`, and responsive flex distribution.
 4. **Remedial Specifics**:
    - Kuning Murni (`#FFFF00` / `rgb(255, 255, 0)`) for aura, border, and text.
@@ -270,9 +317,9 @@ Design Baseline: Matte Modern Tokens, Global 10px Spacing, 50px Locked Bars, and
    - Score percentage styled in Modern Purple (`#a78bfa`).
 3. **Dashboard Hero Card Refactor (`#welcome-banner-section`)**:
    - Preserved 3-column horizontal hero layout:
-     * Left: Clean score box (`#banner-score-box`) without label "Score".
-     * Center: Interactive profile avatar (`cursor: pointer` + click upload modal).
-     * Right: Symmetrical grade box (`#banner-grade-box`) without label "Grade".
+- Left: Clean score box (`#banner-score-box`) without label "Score".
+- Center: Interactive profile avatar (`cursor: pointer` + click upload modal).
+- Right: Symmetrical grade box (`#banner-grade-box`) without label "Grade".
    - Grade S / 100% renders volumetric electric violet neon star (`.pure-star-svg`, `#a855f7`).
    - Eliminated `.pure-star-nobox` so `#banner-grade-box` retains symmetrical background and border.
    - Dynamic grade-tier outer border applied to `#welcome-banner-section`.
@@ -286,8 +333,8 @@ Design Baseline: Matte Modern Tokens, Global 10px Spacing, 50px Locked Bars, and
    - **Elemen 6**: Locked 50px TopsCore footer banner.
 5. **Automated Verification**:
    - Executed Playwright script (`scratch/verify_student_experience.js`) with Edge engine on mobile viewport `400×820`:
-     * Dashboard: `bodyScrollHeight: 820` (Zero-Scroll PASS), `headerHeight: 50px`, `bannerHeight: 50px`, `heroDataTier: "A"`, dynamic emerald green border verified.
-     * Result Page: `bodyScrollHeight: 820` (Zero-Scroll PASS), `headerHeight: 50px`, `bannerHeight: 50px`, `card1_CenteredAvatar: true`, `card4_Height: 60px`, `card4_ScoreColor: rgb(167, 139, 250)`, `card4_HasStarSvg: true`, `card4_GradeNoBoxClass: false`.
+- Dashboard: `bodyScrollHeight: 820` (Zero-Scroll PASS), `headerHeight: 50px`, `bannerHeight: 50px`, `heroDataTier: "A"`, dynamic emerald green border verified.
+- Result Page: `bodyScrollHeight: 820` (Zero-Scroll PASS), `headerHeight: 50px`, `bannerHeight: 50px`, `card1_CenteredAvatar: true`, `card4_Height: 60px`, `card4_ScoreColor: rgb(167, 139, 250)`, `card4_HasStarSvg: true`, `card4_GradeNoBoxClass: false`.
    - Captured visual artifacts: `dashboard_refactor_verified.png` and `result_refactor_verified.png`.
 
 ### Commitments
@@ -310,14 +357,14 @@ Files Involved: dashboard.html, result.html, assessment.html, css/style.css, css
 ### Work Performed
 1. Penyeragaman Hero Banner Siswa 1:1 (Result & Dashboard):
    - Restructured `#result-identity-card` in `result.html` to match `#welcome-banner-section` in `dashboard.html` 1:1:
-     * Baris Atas: `#result-meta-wrapper` (`Cake English Course | CAMP | 133 | 3rd Level`).
-     * Divider Line Atas: `.hero-divider`.
-     * Baris Tengah 3-Kolom (`.hero-metrics-row`):
+- Baris Atas: `#result-meta-wrapper` (`Cake English Course | CAMP | 133 | 3rd Level`).
+- Divider Line Atas: `.hero-divider`.
+- Baris Tengah 3-Kolom (`.hero-metrics-row`):
        - Kiri: `#result-score-box` (`.score-box`) dengan `.metric-label` "Score" dan `#result-percentage` ("100%").
        - Tengah: `.banner-avatar-wrapper` dengan `#result-crown-badge` dan `#result-avatar-container` (86×86px) yang dikelilingi ring pendar ungu (`#C084FC` / `#A855F7`).
        - Kanan: `#result-grade-box` (`.grade-box`) dengan `.metric-label` "Grade" dan `#result-grade-val` berisi glowing purple star vector TANPA kotak luar (`.pure-star-nobox`).
-     * Divider Line Tengah: `.hero-divider.hero-name-divider` dengan pendar tengah.
-     * Baris Bawah: `#result-student-name-label` ("Mr. Rifky Ahmad").
+- Divider Line Tengah: `.hero-divider.hero-name-divider` dengan pendar tengah.
+- Baris Bawah: `#result-student-name-label` ("Mr. Rifky Ahmad").
    - Removed detached redundant `#result-score-grade-card` from below the metrics breakdown table in `result.html`.
 2. CSS Synchronization (`css/result.css`):
    - Applied identical dimensions, 18px border-radius, `padding: 10px 14px`, and dynamic radial gradient tier background (`radial-gradient(...)`).
@@ -332,9 +379,9 @@ Files Involved: dashboard.html, result.html, assessment.html, css/style.css, css
    - Replaced 5 manual inline spacer divs (`<div style="height:10px...">`) with container flex `gap: 10px;`.
 5. Automated Playwright Zero-Scroll Verification:
    - Verified via `scratch/test_phase104_unified_hero.mjs`:
-     * Result Page: `bodyScrollHeight: 820` on `400×820` (Zero-Scroll PASS), `isZeroScroll: true`, `identityTier: "S"`, 3-column layout verified, `avatarWidth: 86`, `avatarHeight: 86`, `scoreColor: rgb(168, 85, 247)`, `hasPurpleStarSvg: true`.
-     * Dashboard Page: `bodyScrollHeight: 820`, `headerHeight: 50`, `bannerHeight: 50`, `contentGap: 10px`, `isZeroScroll: true`.
-     * Assessment Page: `bodyScrollHeight: 820`, `headerHeight: 50`, `bannerHeight: 50`, `isZeroScroll: true`.
+- Result Page: `bodyScrollHeight: 820` on `400×820` (Zero-Scroll PASS), `isZeroScroll: true`, `identityTier: "S"`, 3-column layout verified, `avatarWidth: 86`, `avatarHeight: 86`, `scoreColor: rgb(168, 85, 247)`, `hasPurpleStarSvg: true`.
+- Dashboard Page: `bodyScrollHeight: 820`, `headerHeight: 50`, `bannerHeight: 50`, `contentGap: 10px`, `isZeroScroll: true`.
+- Assessment Page: `bodyScrollHeight: 820`, `headerHeight: 50`, `bannerHeight: 50`, `isZeroScroll: true`.
    - Visual artifacts: `phase104_result_hero_unified_mobile.png`, `phase104_dashboard_mobile.png`, `phase104_assessment_mobile.png`.
 
 ### Commitments
@@ -366,9 +413,9 @@ Files Involved: dashboard.html, result.html, assessment.html, css/style.css, css
    - Verified via Playwright `scratch/test_phase103_star_and_layout.mjs`.
    - Mobile Zero-Scroll strictly preserved (`bodyScrollHeight === 820` on `400 × 820`).
    - Visual screenshots confirmed:
-     * `phase103_result_star_nobox_mobile.png`
-     * `phase103_result_star_nobox_desktop.png`
-     * `phase103_dashboard_mobile.png`
+- `phase103_result_star_nobox_mobile.png`
+- `phase103_result_star_nobox_desktop.png`
+- `phase103_dashboard_mobile.png`
 
 ### Commitments
 - Strict Git Freeze maintained (no git commit or push). All changes remain local.
@@ -385,13 +432,13 @@ Agent: Antigravity
 ### Work Performed
 1. Full Solid Color Palette Alignment:
    - Synchronized all color mappings across `js/grading.js`, `js/api.js`, `js/result.js`, `js/dashboard.js`, `js/admin/student-management.js`, `js/admin/app.js`, `css/admin.css`, and `css/style.css`:
-     * E / F: Pure Red (`#FF0000`)
-     * D: Pure Orange (`#FF8000`)
-     * C: Pure Yellow (`#FFFF00`)
-     * B: Pure Cyan (`#00FFFF`)
-     * A: Pure Green (`#00FF00`)
-     * 100% / S (Get a Star): Pure Purple (`#A855F7`, `rgb: 168, 85, 247`)
-     * Remedi / Remedial: Pure Yellow (`#FFFF00`)
+- E / F: Pure Red (`#FF0000`)
+- D: Pure Orange (`#FF8000`)
+- C: Pure Yellow (`#FFFF00`)
+- B: Pure Cyan (`#00FFFF`)
+- A: Pure Green (`#00FF00`)
+- 100% / S (Get a Star): Pure Purple (`#A855F7`, `rgb: 168, 85, 247`)
+- Remedi / Remedial: Pure Yellow (`#FFFF00`)
 2. Dynamic Student Photo Ring:
    - Eliminated hardcoded amber/gold borders around student avatar.
    - Dynamic border `2.5px solid <gradeColor>` and ambient glow `box-shadow` applied directly via JS and CSS per student's Grade tier.
@@ -399,18 +446,18 @@ Agent: Antigravity
    - Locked `#bottom-ad-banner` and `.topscore-locked-banner` to exactly `50px !important; min-height: 50px !important; max-height: 50px !important;` across `result.html`, `dashboard.html`, `assessment.html`, `style.css`, `dashboard.css`, and `assessment.css`.
 4. Verification & Testing:
    - Verified via Playwright automated test `scratch/test_phase102_colors.mjs`:
-     * Real attempt `84af9692-8d91-4a80-a113-739b4e647a81` (100% / Grade S):
+- Real attempt `84af9692-8d91-4a80-a113-739b4e647a81` (100% / Grade S):
        - `scoreText: '100%'`, `scoreColor: 'rgb(168, 85, 247)'`
        - `gradeText: 'S'`, `gradeColor: 'rgb(168, 85, 247)'`
        - `avatarBorder: '2px solid rgb(168, 85, 247)'`
        - `bannerHeight: 50`
        - `bodyScrollHeight: 820` (Strict Zero-Scroll preserved on `400 × 820`)
-     * Dashboard banner: `50px`, `bodyScrollHeight: 820`
-     * Assessment banner: `50px`
-     * Palette verification: S `#A855F7`, A `#00FF00`, B `#00FFFF`, C `#FFFF00`, D `#FF8000`, E `#FF0000`, Remedial `#FFFF00`.
+- Dashboard banner: `50px`, `bodyScrollHeight: 820`
+- Assessment banner: `50px`
+- Palette verification: S `#A855F7`, A `#00FF00`, B `#00FFFF`, C `#FFFF00`, D `#FF8000`, E `#FF0000`, Remedial `#FFFF00`.
    - Visual artifacts generated:
-     * `phase102_result_mobile_purple.png`
-     * `phase102_result_desktop_purple.png`
+- `phase102_result_mobile_purple.png`
+- `phase102_result_desktop_purple.png`
 
 ### Commitments
 - Strict Git Freeze maintained (no git commit or push). All changes remain local.
@@ -432,10 +479,10 @@ Agent: Antigravity
 2. Verification:
    - Executed Playwright automated tests verifying zero-scroll (`bodyScrollHeight = 820` on `400x820`).
    - Captured new screenshots with glowing pink Grade S & Score 100%:
-     * `result_proportions_student_mobile.png`
-     * `result_proportions_tutor_mobile.png`
-     * `result_proportions_student_desktop.png`
-     * `result_proportions_tutor_desktop.png`
+- `result_proportions_student_mobile.png`
+- `result_proportions_tutor_mobile.png`
+- `result_proportions_student_desktop.png`
+- `result_proportions_tutor_desktop.png`
 
 ## SESSION-20261025-0937
 
@@ -458,8 +505,8 @@ Agent: Antigravity
    - Added container impact thud `@keyframes stampBoxThud` vibrating `.grade-box` on stamp landing.
 4. Verification:
    - Verified via Playwright (`verify_phase99_exact.mjs` and `test_phase97_proportions.mjs`):
-     * Card 4 total height: exactly 60px.
-     * Zero-scroll: `bodyScrollHeight: 820`, `windowHeight: 820`.
+- Card 4 total height: exactly 60px.
+- Zero-scroll: `bodyScrollHeight: 820`, `windowHeight: 820`.
    - Screenshots captured: `result_proportions_student_mobile.png`, `result_proportions_tutor_mobile.png`, `result_proportions_student_desktop.png`, `result_proportions_tutor_desktop.png`.
 
 ## SESSION-20261025-0215
@@ -486,16 +533,16 @@ Agent: Antigravity
    - Pinned the action buttons so `VIEW ANSWER BREAKDOWN` sits exactly 10px above the bottom banner.
 5. Verification:
    - Verified via Playwright (`verify_phase99_exact.mjs` & `verify_phase99_tutor.mjs`) on Student and Tutor views:
-     * Header: 50px
-     * Card 1: 162px (Gap: 10px)
-     * Card 2: 38px (Gap: 10px)
-     * Card 3: 240px (each row ~60px, Gap: 10px)
-     * Card 4: 60px (Gap: 10px)
-     * Card 5 Row 1: 60px (Gap: 10px)
-     * Card 5 Row 2: 40px (Gap: 10px)
-     * Card 5 Row 3: 40px (Gap to banner: exactly 10px)
-     * Bottom banner: 50px
-     * Zero-scroll: `bodyScrollHeight: 820, windowHeight: 820`
+- Header: 50px
+- Card 1: 162px (Gap: 10px)
+- Card 2: 38px (Gap: 10px)
+- Card 3: 240px (each row ~60px, Gap: 10px)
+- Card 4: 60px (Gap: 10px)
+- Card 5 Row 1: 60px (Gap: 10px)
+- Card 5 Row 2: 40px (Gap: 10px)
+- Card 5 Row 3: 40px (Gap to banner: exactly 10px)
+- Bottom banner: 50px
+- Zero-scroll: `bodyScrollHeight: 820, windowHeight: 820`
    - Updated screenshot artifacts: `result_proportions_student_mobile.png`, `result_proportions_tutor_mobile.png`, `result_proportions_student_desktop.png`, `result_proportions_tutor_desktop.png`.
 
 ## SESSION-20261025-0148
@@ -545,8 +592,8 @@ Agent: Antigravity
    - Card 5 Row 2 & 3: Enforced uniform `13px` bold uppercase on `BACK TO LOBBY` / `BACK TO ROOM` and `VIEW ANSWER BREAKDOWN`.
 2. Automated Playwright Verification:
    - Script `scratch/test_phase97_proportions.mjs` verified:
-     * Student: `avatar: 86x86`, `card4Height: 61px`, `nextBtnHeight: 61px`, `bodyScrollHeight: 820`.
-     * Tutor: `avatar: 86x86`, `card4Height: 61px`, `segmentedHeight: 61px`, `bodyScrollHeight: 820`.
+- Student: `avatar: 86x86`, `card4Height: 61px`, `nextBtnHeight: 61px`, `bodyScrollHeight: 820`.
+- Tutor: `avatar: 86x86`, `card4Height: 61px`, `segmentedHeight: 61px`, `bodyScrollHeight: 820`.
    - Generated screenshots: `result_proportions_student_mobile.png`, `result_proportions_tutor_mobile.png`, `result_proportions_student_desktop.png`, `result_proportions_tutor_desktop.png`.
 
 ## SESSION-20261025-0100
@@ -585,10 +632,10 @@ Agent: Antigravity
 ### User Request
 "INI SAJA" with uploaded hand-drawn wireframe diagram:
 - Card 3 updated to a unified 2-column table with 4 rows:
-  * Row 1: `CORRECT` (left) | `123` (right)
-  * Row 2: `PARTIAL` (left) | `123` (right)
-  * Row 3: `INCORRECT` (left) | `123` (right)
-  * Row 4: `POINTS` (left, larger/bold) | `123` (right, larger/bold)
+- Row 1: `CORRECT` (left) | `123` (right)
+- Row 2: `PARTIAL` (left) | `123` (right)
+- Row 3: `INCORRECT` (left) | `123` (right)
+- Row 4: `POINTS` (left, larger/bold) | `123` (right, larger/bold)
 - Vertical line dividing left labels and right numbers, with horizontal divider lines between each row.
 - Sequential top-to-bottom animation cascading from Card 1 to Card 5.
 - Grade appears only after score count-up finishes.
@@ -696,29 +743,29 @@ Verify the Result Page (`result.html` & `js/result.js`) in detail following the 
 ### Work Performed
 1. Verified Result Page with Playwright Headless Chrome:
    - Attempt `84af9692-8d91-4a80-a113-739b4e647a81` (`3A1-PHRASES-TASK`):
-     * Standardized Title rendered: `3rd Vocabulary A1 Phrases Task - Professional Identity`
-     * Curriculum Crumb rendered: `VOCABULARY • 3RD LEVEL • PHRASE TASK` (calibrated to remove raw database underscore `PHRASE_TASK`)
-     * Percentage & Grade: `100.0%` (Grade S) with full Magenta glowing ring and Confetti animation
-     * Points: `10 PTS` (out of 10), Batch Rank `#22 / 24`
-     * Up Next Milestone correctly determined next item in linear curriculum: `3rd Vocabulary A2 Words Task - CV & Resume →`
+- Standardized Title rendered: `3rd Vocabulary A1 Phrases Task - Professional Identity`
+- Curriculum Crumb rendered: `VOCABULARY • 3RD LEVEL • PHRASE TASK` (calibrated to remove raw database underscore `PHRASE_TASK`)
+- Percentage & Grade: `100.0%` (Grade S) with full Magenta glowing ring and Confetti animation
+- Points: `10 PTS` (out of 10), Batch Rank `#22 / 24`
+- Up Next Milestone correctly determined next item in linear curriculum: `3rd Vocabulary A2 Words Task - CV & Resume →`
    - Attempt `29f6408c-2fb8-47e6-879a-6badff5ccf12` (`3A-WORDS-TEST`):
-     * Standardized Title rendered: `3rd Vocabulary A Words Test - Workplace`
-     * Curriculum Crumb rendered: `VOCABULARY • 3RD LEVEL • VOCAB TEST`
-     * Percentage & Grade: `51.0%` (Grade C) in pure yellow
-     * Points: `61.5 PTS` (out of 120), Batch Rank `#20 / 24`
-     * Next Milestone locked: `Waiting for Tutor to unlock this test session during class.`
-     * Policy Notice: `Official Test attempt locked & final upon submission.`
+- Standardized Title rendered: `3rd Vocabulary A Words Test - Workplace`
+- Curriculum Crumb rendered: `VOCABULARY • 3RD LEVEL • VOCAB TEST`
+- Percentage & Grade: `51.0%` (Grade C) in pure yellow
+- Points: `61.5 PTS` (out of 120), Batch Rank `#20 / 24`
+- Next Milestone locked: `Waiting for Tutor to unlock this test session during class.`
+- Policy Notice: `Official Test attempt locked & final upon submission.`
 2. Code & API Hardening:
    - `js/result.js`:
-     * Expanded `humanizeType` dictionary to format `WORD_TASK`, `PHRASE_TASK`, `VOCAB_TEST`, `WORDS_TEST`, `PHRASES_TEST`.
-     * Breadcrumb updated to use `humanizeType(asmCategory).toUpperCase()`.
-     * `renderSmartNextAction`: Added `currentClassId` filter (`asmData?.class_id || attempt.class_id`) to ensure students stay within their active class sequence.
-     * Updated asset import query parameters to `v=5.5.8`.
+- Expanded `humanizeType` dictionary to format `WORD_TASK`, `PHRASE_TASK`, `VOCAB_TEST`, `WORDS_TEST`, `PHRASES_TEST`.
+- Breadcrumb updated to use `humanizeType(asmCategory).toUpperCase()`.
+- `renderSmartNextAction`: Added `currentClassId` filter (`asmData?.class_id || attempt.class_id`) to ensure students stay within their active class sequence.
+- Updated asset import query parameters to `v=5.5.8`.
    - `result.html`:
-     * Bumped CSS and module script query versions to `v=5.5.8`.
+- Bumped CSS and module script query versions to `v=5.5.8`.
    - `js/api.js`:
-     * Added `shell_code, assessment_category, class_id` to `fetchAttemptResult`.
-     * Added `shell_code` to `fetchAssessmentsForStudentLevel`.
+- Added `shell_code, assessment_category, class_id` to `fetchAttemptResult`.
+- Added `shell_code` to `fetchAssessmentsForStudentLevel`.
 3. Verified Interactive Features & Modals:
    - Answer Breakdown Modal: All 120 items rendered with status chips (`All`, `Incorrect`, `Partial`, `Correct`), search bar, and Attempt History table.
    - Partial score tolerance: Verified `Partial 0.5pt` with amber borders on minor spelling errors.
@@ -1391,10 +1438,10 @@ Accompanied by screenshot of the Live Session Controller modal in `admin.html`.
    - Updated Vocabulary Vault Level 0 label in `js/admin/vocab-vault.js`.
 5. **Verification**:
    - Executed Playwright test `scratch/verify_live_session_dropdown.mjs`:
-     * Confirmed `#session-batch-select` contains ONLY active batches (`Batch 123`, `Batch 133`).
-     * Confirmed `Batch 131`, `Batch 132`, `Batch TP-2026` (inactive) and `Batch SH-2026` (Level 0) are 100% excluded from `3D-Vocabulary Test`.
-     * Confirmed 0 occurrences of "Inactive", 0 occurrences of "All Levels".
-     * Captured verified screenshot: `screenshot_live_session_active_batches_only.png`.
+- Confirmed `#session-batch-select` contains ONLY active batches (`Batch 123`, `Batch 133`).
+- Confirmed `Batch 131`, `Batch 132`, `Batch TP-2026` (inactive) and `Batch SH-2026` (Level 0) are 100% excluded from `3D-Vocabulary Test`.
+- Confirmed 0 occurrences of "Inactive", 0 occurrences of "All Levels".
+- Captured verified screenshot: `screenshot_live_session_active_batches_only.png`.
    - Executed `scratch/full_e2e_system_audit.mjs`: 17/17 passed, 0 failures, 0 console errors.
    - Strict Git Freeze maintained: 0 commits, 0 pushes.
 
@@ -1429,12 +1476,12 @@ Accompanied by a screenshot of the Class Attendance Matrix (Route C) in `admin.h
    - Identified that `scratch/recalibrate_task_points_50.mjs` had queried `.eq('status', 'submitted')`, thereby missing all `auto_submitted` 40-word attempts. The script then set `total_questions = 50`, `score = 9` (18%) or `score = 10` (20%), and assigned `is_best_score: true`.
 2. **Server Database Recalibration (`scratch/execute_score_recalibration.mjs`, `scratch/execute_remaining_recalibration.mjs`)**:
    - Combined Words + Phrases into the unified 50-point task:
-     * Miss Nurhaliza (3A1): 35 + 9 = **44/50** (88% B), PTS: **216.5 pts**, Average: **90% B**.
-     * Miss Asti Ananta (3A1): 34 + 10 = **44/50** (88% B).
-     * Miss Asti Ananta (3A2): 32 + 8.5 = **40.5/50** (81% B), PTS: **202 pts**, Average: **80% B**.
-     * Mr. Ahmad Nur Suhendro (3A1): 31 + 10 = **41/50** (82% B), PTS: **123 pts**, Average: **90% B**.
-     * Mr. Ari Wahyu Darma (3A3): 40 + 9.5 = **49.5/50** (99% A), PTS: **141.5 pts**, Average: **97% A**.
-     * Miss Siti Qori' Atun Hizbaeni (Batch 131): Corrected stale `is_best_score` on 3C (120/120) and 3D (160/160) Vocab Tests.
+- Miss Nurhaliza (3A1): 35 + 9 = **44/50** (88% B), PTS: **216.5 pts**, Average: **90% B**.
+- Miss Asti Ananta (3A1): 34 + 10 = **44/50** (88% B).
+- Miss Asti Ananta (3A2): 32 + 8.5 = **40.5/50** (81% B), PTS: **202 pts**, Average: **80% B**.
+- Mr. Ahmad Nur Suhendro (3A1): 31 + 10 = **41/50** (82% B), PTS: **123 pts**, Average: **90% B**.
+- Mr. Ari Wahyu Darma (3A3): 40 + 9.5 = **49.5/50** (99% A), PTS: **141.5 pts**, Average: **97% A**.
+- Miss Siti Qori' Atun Hizbaeni (Batch 131): Corrected stale `is_best_score` on 3C (120/120) and 3D (160/160) Vocab Tests.
    - Demoted inferior attempts to `is_best_score: false`.
 3. **Frontend Hardening (`js/admin/app.js`)**:
    - Hardened `bestAtt` selection in `renderClassHub()`: sorted `submittedAtts` by score, percentage, and date; verified `markedBest` cannot override an attempt with higher points or percentage.
@@ -1706,13 +1753,13 @@ Agent: Antigravity
    - Tab displays `Active Enrolled Students: 25`.
 2. **Database Recalibration (`scratch/recalibrate_task_points_50.mjs`)**:
    - Recalibrated all 82 student task pairs in Supabase Cloud:
-     * Words: max 40 pts
-     * Phrases: max 10 pts
-     * Combined: max 50 pts
-     * Unggul: Task 1: `49/50`, Task 2: `50/50`, Task 3: `50/50`, Test: `101.5/120` -> PTS: `250.5 pts`.
-     * Asmul: Task 1: `47/50`, Task 2: `43/50`, Task 3: `42/50`, Test: `116.5/120` -> PTS: `248.5 pts`.
-     * Wardatul: Task 1: `46/50`, Task 2: `50/50`, Task 3: `47/50`, Test: `102/120` -> PTS: `245 pts`.
-     * Masyan: Task 1: `46/50`, Task 2: `44/50`, Task 3: `50/50`, Test: `101.5/120` -> PTS: `241.5 pts`.
+- Words: max 40 pts
+- Phrases: max 10 pts
+- Combined: max 50 pts
+- Unggul: Task 1: `49/50`, Task 2: `50/50`, Task 3: `50/50`, Test: `101.5/120` -> PTS: `250.5 pts`.
+- Asmul: Task 1: `47/50`, Task 2: `43/50`, Task 3: `42/50`, Test: `116.5/120` -> PTS: `248.5 pts`.
+- Wardatul: Task 1: `46/50`, Task 2: `50/50`, Task 3: `47/50`, Test: `102/120` -> PTS: `245 pts`.
+- Masyan: Task 1: `46/50`, Task 2: `44/50`, Task 3: `50/50`, Test: `101.5/120` -> PTS: `241.5 pts`.
    - Repaired 62 secondary attempts with scores > 50 in Supabase.
 3. **Frontend Fallback & Best Attempt Selection (`js/admin/app.js`)**:
    - `totalQ` fallback updated to 50 for tasks and 120 for tests.
@@ -1834,12 +1881,12 @@ Agent: Antigravity
 ### Work Performed
 1. **Auto-Generator Updates (`js/api.js`)**:
    - Updated `upsertDynamicAssessmentShell`:
-     * Generates shell codes matching `3A1 Vocab Task` and `3A Vocab Test`.
-     * Generates titles matching `3A1-Vocabulary Task - [Topic]` and `3A-Vocabulary Test - [Theme]`.
-     * Applies default answer types: `'spoken'` for Task, `'written'` for Test, preserving tutor modifications.
-     * Updated deduplication to update legacy records in place.
+- Generates shell codes matching `3A1 Vocab Task` and `3A Vocab Test`.
+- Generates titles matching `3A1-Vocabulary Task - [Topic]` and `3A-Vocabulary Test - [Theme]`.
+- Applies default answer types: `'spoken'` for Task, `'written'` for Test, preserving tutor modifications.
+- Updated deduplication to update legacy records in place.
    - Updated `autoGenerateAssessmentsHierarchy`:
-     * Generates 1 unified task per topic (combining words & phrases) and 1 unified test per theme in default/unified mode.
+- Generates 1 unified task per topic (combining words & phrases) and 1 unified test per theme in default/unified mode.
 2. **Database Migration & Score Merge (`scratch/execute_merge_migration.mjs`)**:
    - Consolidated 20 assessment groups (16 Tasks + 4 Tests) in Supabase.
    - Reassigned 117 attempts from secondary phrase shells to primary unified shells.
@@ -1948,10 +1995,10 @@ Agent: Antigravity
    - `.vk-key`: Height set to `100% !important;` (expanded to 58.3px). Removed `max-width: 9.5%` so keys expand dynamically. Increased font size to `clamp(16px, 4.4vw, 21px); font-weight: 800;`.
 3. **Engine Updates (`js/assessment.js`)**:
    - Refactored `renderQuestion` in written mode to create 4 direct children in `assessment-main`:
-     * Question Box: 21.4% (allocated 22%)
-     * Metadata Table: 7.6% (allocated 8%)
-     * Answer Box: 21.4% (allocated 22%)
-     * Virtual Keyboard: 47.3% (allocated 48%)
+- Question Box: 21.4% (allocated 22%)
+- Metadata Table: 7.6% (allocated 8%)
+- Answer Box: 21.4% (allocated 22%)
+- Virtual Keyboard: 47.3% (allocated 48%)
 4. **Verification**:
    - `scratch/check_keyboard_ratio.mjs` PASS: Key height verified at 58.27px, width at 30.1px.
    - `scratch/test_police_siren_cheat.mjs` PASS: All anti-cheat features fully intact.
@@ -1997,20 +2044,20 @@ Agent: Antigravity
    - Added `unlockAudio` on first user touch/click for mobile browser autoplay compatibility.
    - Added mobile phone vibration with `navigator.vibrate`.
    - Updated `triggerCheatAlert()`:
-     * Strike 1: `STRIKE 1 OF 3`.
-     * Strike 2: `STRIKE 2 OF 3`.
-     * Strike 3: `STRIKE 3 OF 3 (FINAL WARNING)`.
-     * Violation 4 (Limit Exceeded): Shows `LIMIT EXCEEDED (3/3)` and terminates with auto-submit.
-     * Countdown: 10s down to 0; auto-submits on 0.
-     * Dismiss: Tapping `"Return to My ASSESSMENT"` stops siren, clears countdown, and resumes exam.
-     * Away timer check in `visibilitychange`/`focus`.
+- Strike 1: `STRIKE 1 OF 3`.
+- Strike 2: `STRIKE 2 OF 3`.
+- Strike 3: `STRIKE 3 OF 3 (FINAL WARNING)`.
+- Violation 4 (Limit Exceeded): Shows `LIMIT EXCEEDED (3/3)` and terminates with auto-submit.
+- Countdown: 10s down to 0; auto-submits on 0.
+- Dismiss: Tapping `"Return to My ASSESSMENT"` stops siren, clears countdown, and resumes exam.
+- Away timer check in `visibilitychange`/`focus`.
 4. **Automated Verification**:
    - `scratch/test_police_siren_cheat.mjs`:
-     * Strike 1 (popstate / return button): Red flashing overlay, `STRIKE 1 OF 3`, countdown active, dismissed cleanly.
-     * Strike 2 (blur / side panel): `STRIKE 2 OF 3`, dismissed cleanly.
-     * Strike 3 (blur): `STRIKE 3 OF 3 (FINAL WARNING)` and customized button text verified.
-     * Violation 4: `LIMIT EXCEEDED (3/3)` verified, auto-submit called.
-     * Screenshots confirmed: `scratch/screenshot_cheat_red_strike1.png`, `scratch/screenshot_cheat_red_strike3.png`.
+- Strike 1 (popstate / return button): Red flashing overlay, `STRIKE 1 OF 3`, countdown active, dismissed cleanly.
+- Strike 2 (blur / side panel): `STRIKE 2 OF 3`, dismissed cleanly.
+- Strike 3 (blur): `STRIKE 3 OF 3 (FINAL WARNING)` and customized button text verified.
+- Violation 4: `LIMIT EXCEEDED (3/3)` verified, auto-submit called.
+- Screenshots confirmed: `scratch/screenshot_cheat_red_strike1.png`, `scratch/screenshot_cheat_red_strike3.png`.
 
 ### Files Changed
 - `assessment.html`
@@ -2056,9 +2103,9 @@ Agent: Antigravity
    - Updated `dismissCheatAlert()` to dismiss the overlay and refocus the active keyboard input.
 4. **Automated Verification**:
    - `scratch/test_warning_sign.mjs`:
-     * Return button simulation (`popstate`): Warning modal displayed, `submitAssessment` was NOT called, typed answers preserved (`"hello"`), dismissed cleanly.
-     * Side panel simulation (`blur`): Warning modal displayed, zero auto-submit after 3+ seconds wait, dismissed cleanly, typing continued (`"hellos"`).
-     * Visual screenshots verified: `scratch/screenshot_warning_return_button.png`, `scratch/screenshot_warning_side_panel.png`.
+- Return button simulation (`popstate`): Warning modal displayed, `submitAssessment` was NOT called, typed answers preserved (`"hello"`), dismissed cleanly.
+- Side panel simulation (`blur`): Warning modal displayed, zero auto-submit after 3+ seconds wait, dismissed cleanly, typing continued (`"hellos"`).
+- Visual screenshots verified: `scratch/screenshot_warning_return_button.png`, `scratch/screenshot_warning_side_panel.png`.
 
 ### Files Changed
 - `assessment.html`
@@ -2099,18 +2146,18 @@ Followed by:
    - Enhanced tactile feedback with `active` transform scaling and bright cyan accents.
 2. **JavaScript Layout Updates (`js/assessment.js`)**:
    - Dynamically applied `isWritten` logic in `renderQuestion`:
-     * Question box: 22% (vs 30% for other modes).
-     * Metadata table: 8% (vs 10% for other modes) with `font-size: 10px` and `3px` gap.
-     * Interaction container: 70% (vs 60% for other modes).
-     * Answer area: 31.4% of interaction container (= 22% of body).
-     * Virtual keyboard: 68.6% of interaction container (= 48% of body).
+- Question box: 22% (vs 30% for other modes).
+- Metadata table: 8% (vs 10% for other modes) with `font-size: 10px` and `3px` gap.
+- Interaction container: 70% (vs 60% for other modes).
+- Answer area: 31.4% of interaction container (= 22% of body).
+- Virtual keyboard: 68.6% of interaction container (= 48% of body).
 3. **Automated Verification**:
    - `scratch/test_keyboard_ratio.mjs`:
-     * iPhone 14 (390x844): Question 22.0% (129px), Meta 8.0% (47px), Answer 21.1% (124px), Keyboard 47.0% (276px), Key 46px height.
-     * Galaxy S20 (360x780): Question 22.0% (115px), Meta 8.0% (42px), Answer 21.0% (110px), Keyboard 46.9% (246px), Key 45px height.
-     * Typing input verified: "hello" typed smoothly via virtual keyboard keys into textarea.
+- iPhone 14 (390x844): Question 22.0% (129px), Meta 8.0% (47px), Answer 21.1% (124px), Keyboard 47.0% (276px), Key 46px height.
+- Galaxy S20 (360x780): Question 22.0% (115px), Meta 8.0% (42px), Answer 21.0% (110px), Keyboard 46.9% (246px), Key 45px height.
+- Typing input verified: "hello" typed smoothly via virtual keyboard keys into textarea.
    - `scratch/verify_other_modes.mjs`:
-     * Multiple Choice and Speech modes retain exact 30 - 10 - 60 ratios with 0 regressions.
+- Multiple Choice and Speech modes retain exact 30 - 10 - 60 ratios with 0 regressions.
 
 ### Files Changed
 - `css/assessment.css`
@@ -2154,8 +2201,8 @@ Followed by:
    - Querying the database showed 41 total assessments.
    - Exactly 39 had `class_id = 'ab33498a-90e6-44b7-83f4-5765f964543e'` (Vocabulary Class).
    - Exactly 2 had `class_id = null`:
-     * `b95f4826-ca8c-4d3f-9b46-3ff7ec092a80`: Original A Words Test with 9 student attempts, edited to `spoken`.
-     * `1d32de2f-9c1a-4dc3-b249-fcdf4e592f35`: Duplicate A Words Test with 0 attempts, created by re-generating.
+- `b95f4826-ca8c-4d3f-9b46-3ff7ec092a80`: Original A Words Test with 9 student attempts, edited to `spoken`.
+- `1d32de2f-9c1a-4dc3-b249-fcdf4e592f35`: Duplicate A Words Test with 0 attempts, created by re-generating.
    - In `js/admin/crud-modals.js`: `populateClassesForProgram` filtered classes by `s.institution_id === selectedProgId`. Because `classes.institution_id` is null in the database (classes link to `program_id`), `filteredClasses` was empty, leaving `#field-class_id` with empty value `""`. Saving the modal sent `class_id: null` to Supabase, which caused the assessment to vanish from `#class-hub`.
    - In `js/api.js`: `upsertDynamicAssessmentShell` searched by `.eq('class_id', classId)`. Because the existing shell had `class_id: null`, it found no match and inserted a duplicate shell, inflating Assessment Hub to 41 records.
 2. **Implementation Fixes**:
@@ -2304,13 +2351,13 @@ Objective:
    - Built complete controller: target assessment selector, metrics overview, diff preview table, confirmation modal, and apply execution.
 7. **Automated Verification**:
    - Tested using Playwright at `http://127.0.0.1:5500/admin.html#assessments` and `#health`:
-     * Breadcrumb count: 0 (absent).
-     * Topbar tab cards count: 4 (Total Assessments: 40, Published: 32, Draft: 8, Question Bank: 0).
-     * Row C action buttons count: 0 (100% purged).
-     * Assessment filters visible directly beneath topbar: true.
-     * Tab click toggles active state and filters data grid: PASS.
-     * Recalibration card in `#health` (Domain D): Verified with 41 loaded assessment options and active preview/apply controls.
-     * Zero console errors.
+- Breadcrumb count: 0 (absent).
+- Topbar tab cards count: 4 (Total Assessments: 40, Published: 32, Draft: 8, Question Bank: 0).
+- Row C action buttons count: 0 (100% purged).
+- Assessment filters visible directly beneath topbar: true.
+- Tab click toggles active state and filters data grid: PASS.
+- Recalibration card in `#health` (Domain D): Verified with 41 loaded assessment options and active preview/apply controls.
+- Zero console errors.
    - Captured screenshots: `admin_assessments_verified.png`, `admin_health_verified.png`.
 
 ### Verification
@@ -2362,14 +2409,14 @@ Agent: Antigravity
 5. **Automated Verification**:
    - Executed `test-dashboard-enhancements.mjs` with Playwright across iPhone 14 (390x844) and Android Small (360x640).
    - Confirmed 100% pass rate:
-     * 100% Score Grade Display: `⭐`
-     * Avatar dimensions: `86x86px`
-     * Crown element exists: `true`
-     * Bottom Ad Banner: height = `28px`
-     * Zero-scroll check: `isZeroScroll: true`
-     * Royal Title: `"King Kevin Pratama"`, Crown Visible: `true`
-     * Tab switching between Standings and Completed: `PASS`
-     * Leaderboard rows rendered: `3`
+- 100% Score Grade Display: `⭐`
+- Avatar dimensions: `86x86px`
+- Crown element exists: `true`
+- Bottom Ad Banner: height = `28px`
+- Zero-scroll check: `isZeroScroll: true`
+- Royal Title: `"King Kevin Pratama"`, Crown Visible: `true`
+- Tab switching between Standings and Completed: `PASS`
+- Leaderboard rows rendered: `3`
    - Generated visual screenshots: `dashboard_enhanced_iphone14.png`, `dashboard_enhanced_android_small.png`.
 6. **Git Freeze Compliance**:
    - Verified `git status`: 0 commits, 0 pushes.
@@ -2414,13 +2461,13 @@ Agent: Antigravity
 4. **Automated Verification**:
    - Created and executed `scratch/verify_typography_and_matrix_polish.mjs` using Playwright on desktop (1600x900).
    - Confirmed:
-     * PROGRAM column between INSTITUTION and BATCH: PASS
-     * Tabular numbers on grid cells: PASS
-     * Actions gap: 6px: PASS
-     * Age sanitization (Alif displays `—` and 0 standalone `0 yrs`): PASS
-     * 40 assessment header cells have active native tooltips: PASS
-     * `★ CLASS AVERAGE (KELAS)` summary row rendered beneath table: PASS
-     * Assessment timer & result metrics have tabular numbers: PASS
+- PROGRAM column between INSTITUTION and BATCH: PASS
+- Tabular numbers on grid cells: PASS
+- Actions gap: 6px: PASS
+- Age sanitization (Alif displays `—` and 0 standalone `0 yrs`): PASS
+- 40 assessment header cells have active native tooltips: PASS
+- `★ CLASS AVERAGE (KELAS)` summary row rendered beneath table: PASS
+- Assessment timer & result metrics have tabular numbers: PASS
    - Saved visual artifacts: `student_roster_tabular_verified.png`, `class_matrix_tooltips_and_summary_verified.png`, `class_matrix_summary_row_docked.png`.
 5. **Git Freeze Compliance**:
    - Verified `git status`: 0 commits, 0 pushes.
@@ -2511,9 +2558,9 @@ Verify at http://127.0.0.1:5500/admin.html#students to confirm all columns align
    - Added CSS in `css/admin.css` with `display: flex !important; gap: 8px !important; align-items: center !important; justify-content: flex-end !important;`, 32x32px size, 8px border-radius, clean border, and hover elevation.
 4. **Verification**:
    - Automated verification script `scratch/verify_student_roster_polish.mjs` confirmed:
-     * Header order: `Institution` (1), `Program` (2), `Batch` (3).
-     * Muhammad Alif Rezki Rahmansyah age rendered as `—`.
-     * Actions cell gap computed as `8px` with 4 dedicated `32px` buttons.
+- Header order: `Institution` (1), `Program` (2), `Batch` (3).
+- Muhammad Alif Rezki Rahmansyah age rendered as `—`.
+- Actions cell gap computed as `8px` with 4 dedicated `32px` buttons.
    - Captured screenshot `student_roster_polished_verified.png` at 1920x1080 confirming clean alignment across all columns without horizontal scrollbar.
 
 ### Outstanding
@@ -2622,10 +2669,10 @@ Agent: Antigravity
 6. **Automated Verification**:
    - Executed Playwright suite `scratch/verify_gold_sparkle_and_tier_themes.mjs` and `scratch/verify_dashboard_grade_s.mjs`.
    - Captured screenshots in `artifacts/`:
-     * `result_grade_s_sparkle.png`: 100% Grade S Result page radiating golden ambient halo and sparkling gold badge.
-     * `dashboard_grade_s_banner_sparkle.png`: Dashboard welcome banner glowing in full Grade S champion gold atmosphere.
-     * `dashboard_unggul_view.png`: Dashboard showing Mr. Unggul Wirakse with Grade S completed assessments.
-     * `admin_dashboard_view.png`: Admin central dashboard.
+- `result_grade_s_sparkle.png`: 100% Grade S Result page radiating golden ambient halo and sparkling gold badge.
+- `dashboard_grade_s_banner_sparkle.png`: Dashboard welcome banner glowing in full Grade S champion gold atmosphere.
+- `dashboard_unggul_view.png`: Dashboard showing Mr. Unggul Wirakse with Grade S completed assessments.
+- `admin_dashboard_view.png`: Admin central dashboard.
 
 ### Verification
 - Zero syntax errors in any JavaScript file via `node --check`.
@@ -2672,10 +2719,10 @@ Enforce the business logic rule: Student SCORE (%) and GRADE (S, A, B, C, D, E, 
    - Verified that `computeOverallStats` computes score and grade strictly from taken assessments.
 6. **Automated Verification**:
    - Executed Playwright suite `scratch/verify_calibrated_scores.mjs` verifying:
-     * Top students display 100% Grade S with 15% 6/40 Done progress.
-     * Column sorting verified on `GRD`, `PROG`, and `PTS`.
-     * Zero horizontal scrollbar preserved (`1381px / 1381px`).
-     * Screenshot captured: `class_roster_calibrated_scores.png`.
+- Top students display 100% Grade S with 15% 6/40 Done progress.
+- Column sorting verified on `GRD`, `PROG`, and `PTS`.
+- Zero horizontal scrollbar preserved (`1381px / 1381px`).
+- Screenshot captured: `class_roster_calibrated_scores.png`.
 
 ### Commands Run
 - `node --check js/grading.js; node --check js/api.js; node --check js/admin/class.js; node --check js/admin/datagrid.js; node --check js/admin/app.js; node --check js/dashboard.js`
@@ -2741,10 +2788,10 @@ Execute Phase 26 implementation according to specifications:
 3. **40-Column Matrix & Zero Horizontal Scrollbar (`js/admin/app.js`)**:
    - Replaced fixed assessment column widths with flexible auto-distribution under `table-layout: fixed`, eliminating horizontal scrollbars across all viewports.
    - Grouped columns under 4 thematic Super-Headers:
-     * `THEME A (Workplace)` (cols 1–8)
-     * `THEME B (Tourism)` (cols 9–18)
-     * `THEME C (CCU)` (cols 19–28)
-     * `THEME D (High-Frequency)` (cols 29–40)
+- `THEME A (Workplace)` (cols 1–8)
+- `THEME B (Tourism)` (cols 9–18)
+- `THEME C (CCU)` (cols 19–28)
+- `THEME D (High-Frequency)` (cols 29–40)
    - Highlighted test columns (7, 8, 17, 18, 29, 30, 39, 40) with magenta borders and badges.
    - Formatted pts column with clean `${row.totalEarnedScore} pts` string.
    - Included "★ CLASS AVERAGE" summary row at the bottom.
