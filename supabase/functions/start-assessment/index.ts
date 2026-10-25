@@ -420,16 +420,17 @@ Deno.serve(async (req) => {
         }
       }
 
-      let dynamicAnswerType = assessment.payload.answer_type || ((assessment.answer_type && assessment.answer_type !== 'MULTIPLE_CHOICE') ? assessment.answer_type : null) || 'written';
-      if (!assessment.payload.answer_type && !(assessment.answer_type && assessment.answer_type !== 'MULTIPLE_CHOICE')) {
-         if (assessment.assessment_type === 'VOCAB_TASK') dynamicAnswerType = 'speech_to_text';
+      let dynamicAnswerType = assessment.payload?.answer_type || ((assessment.answer_type && assessment.answer_type !== 'MULTIPLE_CHOICE') ? assessment.answer_type : null) || 'written';
+      if (!assessment.payload?.answer_type && !(assessment.answer_type && assessment.answer_type !== 'MULTIPLE_CHOICE')) {
+         if (assessment.assessment_type === 'VOCAB_TASK' || assessment.assessment_type === 'PHRASE_TASK') dynamicAnswerType = 'spoken';
          else if (assessment.assessment_type === 'VOCAB_TEST') dynamicAnswerType = 'written';
-         else if (assessment.assessment_type === 'PHRASE_TASK' || assessment.assessment_type === 'PHRASE_TEST') dynamicAnswerType = 'dropdown';
+         else if (assessment.assessment_type === 'PHRASE_TEST') dynamicAnswerType = 'selection';
       }
       
       if (vaultWords && vaultWords.length > 0) {
         let distractorPool: any[] = [];
-        if (dynamicAnswerType === 'dropdown') {
+        const isSelectionMode = dynamicAnswerType === 'dropdown' || dynamicAnswerType === 'selection' || dynamicAnswerType === 'multiple_choice';
+        if (isSelectionMode) {
             let distractorQuery = supabase.from('vocabulary_vault')
                 .select('english, word_type')
                 .eq('target_level', levelNum)
@@ -453,7 +454,7 @@ Deno.serve(async (req) => {
              const accepted = vw.english ? vw.english.split('/').map((s: string) => s.trim()) : [];
              let options = null;
              
-             if (dynamicAnswerType === 'dropdown') {
+             if (isSelectionMode) {
                  const correctAnswer = accepted[0] || "N/A";
                  
                  let others = distractorPool.filter((r: any) => {

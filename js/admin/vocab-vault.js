@@ -2,7 +2,7 @@
  * vocab-vault.js
  * Admin Vocabulary Vault Console — Domain C (Class) Section
  * Handles: Word CRUD, Excel Import with Duplicate Resolver, Cascading Assessment Builder
- * Version: 4.6.0
+ * Version: 4.7.0
  */
 import {
   fetchVaultWords,
@@ -45,38 +45,42 @@ export async function renderVocabularyVault(area) {
       fetchVaultTopics()
     ]);
     hideLoading();
-    
+
+    // FIX: normalize word_type to lowercase before comparison
+    // DB stores PascalCase: "Proverb", "Idiom", "Expression" — phraseTypes list is lowercase
     const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase'];
-    const wordsCount = (words || []).filter(w => !phraseTypes.includes(w.word_type)).length;
-    const phrasesCount = (words || []).filter(w => phraseTypes.includes(w.word_type)).length;
+    const wordsCount  = (words || []).filter(w => !phraseTypes.includes((w.word_type || '').toLowerCase())).length;
+    const phrasesCount = (words || []).filter(w =>  phraseTypes.includes((w.word_type || '').toLowerCase())).length;
     const topicsCount = (topics || []).length;
 
-    let activeVaultTab = 'blueprint';
+    let activeVaultTab = window._activeVaultTab || 'blueprint';
 
-    const vaultTabs = [
+    const buildVaultTabs = (activeId) => [
       { id: 'blueprint', icon: '🗺️', title: 'Blueprint', label: 'Assessment Blueprint' },
-      { id: 'topics', icon: '📑', val: topicsCount, label: 'Topic Manager' },
-      { id: 'vocab', icon: '📦', val: wordsCount, label: 'Vocabulary Words' },
-      { id: 'phrases', icon: '💬', val: phrasesCount, label: 'Phrases & Idioms' }
+      { id: 'topics',    icon: '📑', val: topicsCount,  label: 'Topic Manager' },
+      { id: 'vocab',     icon: '📦', val: wordsCount,   label: 'Vocabulary Words' },
+      { id: 'phrases',   icon: '💬', val: phrasesCount, label: 'Phrases & Idioms' }
     ];
 
-    area.innerHTML = `
-      <div>
-        ${window.buildSectionTabBar ? window.buildSectionTabBar({
-          tabs: vaultTabs,
-          activeId: activeVaultTab,
-          onSelect: 'window._switchVaultTab'
-        }) : ''}
-        <div id="vault-tab-content" style="box-sizing: border-box;"></div>
-      </div>
-    `;
+    // FIX: move tabs to topbar (same pattern as Assessment, Class Hub, Students)
+    if (window.setTopbarTabs) {
+      window.setTopbarTabs(buildVaultTabs(activeVaultTab), activeVaultTab, 'window._switchVaultTab');
+    }
+
+    // Content area: only the tab content — NO inline tab bar
+    area.innerHTML = `<div id="vault-tab-content" style="box-sizing: border-box; padding-top: 0.75rem;"></div>`;
 
     const tabContent = document.getElementById('vault-tab-content');
 
     const renderActiveVaultView = () => {
-      document.querySelectorAll('.section-tab-bar .section-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.tabId === activeVaultTab);
-      });
+      // Refresh topbar active highlight
+      if (window.setTopbarTabs) {
+        window.setTopbarTabs(buildVaultTabs(activeVaultTab), activeVaultTab, 'window._switchVaultTab');
+      }
+      // Reset bottom infobar if not on blueprint
+      if (activeVaultTab !== 'blueprint' && window.setBottomInfobar) {
+        window.setBottomInfobar(null, null);
+      }
       tabContent.innerHTML = '';
       if (activeVaultTab === 'blueprint') {
         _renderBlueprintTab(tabContent, words);
@@ -91,6 +95,7 @@ export async function renderVocabularyVault(area) {
 
     window._switchVaultTab = (tabId) => {
       activeVaultTab = tabId;
+      window._activeVaultTab = tabId; // persist across re-renders
       renderActiveVaultView();
     };
 
@@ -131,47 +136,47 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
         
         <!-- Controls Bar -->
-        <div style="padding: 12px 0; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <input type="search" id="vault-search" placeholder="Search Indonesian, English, or Topic..." style="background: #334155; border: 1px solid #475569; color: #f8fafc; padding: 6px 12px; border-radius: 6px; font-size: 12px; width: 280px; outline: none;" />
-            <select id="vault-topic-filter" style="background: #334155; border: 1px solid #475569; color: #f8fafc; padding: 6px 12px; border-radius: 6px; font-size: 12px; width: 200px; outline: none;">
+          <div class="table-toolbar-unified">
+            <input type="search" id="vault-search" placeholder="🔍 Search Indonesian, English, or Topic..." class="toolbar-input-38" style="width: 280px;" />
+            <select id="vault-topic-filter" class="toolbar-input-38" style="width: 190px; cursor: pointer;">
               <option value="">All Topics</option>
               ${topics.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')}
             </select>
-            <select id="vault-wordtype-filter" style="background: #334155; border: 1px solid #475569; color: #f8fafc; padding: 6px 12px; border-radius: 6px; font-size: 12px; width: 160px; outline: none;">
+            <select id="vault-wordtype-filter" class="toolbar-input-38" style="width: 150px; cursor: pointer;">
               <option value="">All Word Types</option>
               ${wordTypeOptions}
             </select>
-            <span style="font-size: 12px; color: #64748b; font-weight: 500; margin-left: 8px;">
+            <span style="font-size: 12px; color: #64748b; font-weight: 500; margin-left: 4px;">
               <span id="vault-count" style="color: #f8fafc; font-weight: 700;">${words.length}</span> ${mode === 'phrases' ? 'phrases' : 'words'}
             </span>
           </div>
 
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <button class="btn btn-secondary btn-sm" id="btn-import-vault" style="font-size:11px; padding:4px 8px;">&#128229; Import Excel</button>
-            <button class="btn btn-secondary btn-sm" id="btn-export-vault" style="font-size:11px; padding:4px 8px;">&#128228; Export Excel</button>
-            <button class="btn btn-secondary btn-sm" id="btn-check-duplicates" style="font-size:11px; padding:4px 8px;">&#9874; Check Duplicates</button>
-            <button class="btn btn-danger btn-sm" id="btn-reset-vault" style="font-size:11px; padding:4px 8px; opacity:0.8;">&#128465; Reset</button>
-            <button class="btn btn-primary btn-sm" id="btn-manual-auto-generate" style="font-size:11px; padding:4px 8px; background:var(--clr-primary);">&#9881; Auto-Gen</button>
-            <button class="btn btn-primary btn-sm" id="btn-create-vocab-assessment" style="font-size:11px; padding:4px 8px;">${mode === 'phrases' ? '+ Phrase Exam' : '+ Vocab Exam'}</button>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-import-vault">&#128229; Import Excel</button>
+            <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-export-vault">&#128228; Export Excel</button>
+            <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-check-duplicates">&#9874; Check Dups</button>
+            <button class="btn btn-danger btn-sm toolbar-btn-38" id="btn-reset-vault" style="opacity:0.85;">&#128465; Reset</button>
+            <button class="btn btn-primary btn-sm toolbar-btn-38" id="btn-manual-auto-generate" style="background:var(--clr-primary);">&#9881; Auto-Gen</button>
+            <button class="btn btn-primary btn-sm toolbar-btn-38" id="btn-create-vocab-assessment">${mode === 'phrases' ? '+ Phrase Exam' : '+ Vocab Exam'}</button>
           </div>
         </div>
 
         <!-- Table Area -->
-        <div style="flex-grow: 1; overflow-y: auto;">
+        <div class="table-wrap sticky-first" style="flex-grow: 1; overflow-y: auto;">
           <table id="vault-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;">
-            <thead style="background: #1e293b; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #334155;">
+            <thead style="background: rgba(15, 23, 42, 0.95); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
               <tr>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 50px;">Lvl</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 80px;">T.Code</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px;">Theme</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 80px;">Topic Code</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px;">Topic</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 100px;">Type</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px;">Indonesian</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px;">English</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: right; width: 100px; position: sticky; right: 0; background: #1e293b; border-left: 1px solid #334155; z-index: 20;">Actions</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; width: 50px;">Lvl</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; width: 80px;">T.Code</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px;">Theme</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; width: 80px;">Topic Code</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px;">Topic</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; width: 100px;">Type</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px;">Indonesian</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px;">English</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: right; width: 100px; position: sticky; right: 0; background: rgba(15, 23, 42, 0.95); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 20;">Actions</th>
               </tr>
             </thead>
             <tbody id="vault-tbody"></tbody>
@@ -201,7 +206,18 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     const uniqueIndoCount = new Set(filtered.map(w => w.indonesian.toLowerCase().trim())).size;
     document.getElementById('vault-count').textContent = `${uniqueIndoCount} questions (${filtered.length} entries)`;
     if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-state__icon">&#128218;</div><p>No words found. Import an Excel file to get started.</p></div></td></tr>';
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9">
+            <div class="smart-empty-state">
+              <span class="smart-empty-icon">🔍</span>
+              <div class="smart-empty-title">No vocabulary words found</div>
+              <div class="smart-empty-subtext">No words match your search or filter criteria.</div>
+              <button type="button" class="smart-empty-btn" onclick="document.getElementById('vault-search').value=''; document.getElementById('vault-topic-filter').value=''; document.getElementById('vault-wordtype-filter').value=''; document.getElementById('vault-search').dispatchEvent(new Event('input'));">✕ Clear Search & Reset</button>
+            </div>
+          </td>
+        </tr>
+      `;
       return;
     }
     tbody.innerHTML = filtered.map((w, i) => {
@@ -213,18 +229,18 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       if (wt === 'proverb') typeColor = "#ef4444"; // red
 
       return `
-      <tr data-word-id="${escapeHtml(w.id)}" style="border-bottom: 1px solid rgba(30, 41, 59, 0.5);">
-        <td class="cell-level" style="padding: 6px 12px; font-weight: 600;"><span style="background:#475569;color:#e2e8f0;font-size:10px;padding:2px 6px;border-radius:4px;">${escapeHtml(String(w.target_level || '1'))}</span></td>
+      <tr data-word-id="${escapeHtml(w.id)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+        <td class="cell-level" style="padding: 6px 12px; font-weight: 600;"><span style="background:#475569;color:#ffffff;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;">${escapeHtml(String(w.target_level || '1'))}</span></td>
         <td class="cell-theme-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#f472b6;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.theme_code || '—')}</span></td>
-        <td class="cell-theme" style="padding: 6px 12px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</td>
+        <td class="cell-theme" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</td>
         <td class="cell-topic-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#a5b4fc;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.topic_code || '—')}</span></td>
-        <td class="cell-topic" style="padding: 6px 12px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;" title="${escapeHtml(w.topic)}">${escapeHtml(w.topic)}</td>
+        <td class="cell-topic" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;" title="${escapeHtml(w.topic)}">${escapeHtml(w.topic)}</td>
         <td class="cell-wordtype" style="padding: 6px 12px;">
-          <span style="font-size:10px; padding: 2px 6px; border-radius: 4px; background: ${typeColor}20; color: ${typeColor}; border: 1px solid ${typeColor}40; display: inline-block; text-transform: capitalize; font-weight: 600;">${escapeHtml(w.word_type || 'Vocab')}</span>
+          <span style="font-size:11px; color: ${typeColor}; display: inline-block; text-transform: capitalize; font-weight: 700; border: none;">${escapeHtml(w.word_type || 'Vocab')}</span>
         </td>
-        <td class="cell-indonesian" style="padding: 6px 12px; font-weight: 700; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.indonesian)}">${escapeHtml(w.indonesian)}</td>
-        <td class="cell-english" style="padding: 6px 12px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.english)}">${escapeHtml(w.english)}</td>
-        <td style="padding: 6px 12px; text-align: right; position: sticky; right: 0; background: #1e293b; border-left: 1px solid rgba(30, 41, 59, 0.5); z-index: 5;">
+        <td class="cell-indonesian" style="padding: 6px 12px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.indonesian)}">${escapeHtml(w.indonesian)}</td>
+        <td class="cell-english" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.english)}">${escapeHtml(w.english)}</td>
+        <td style="padding: 6px 12px; text-align: right; position: sticky; right: 0; background: var(--fm-bg-panel, #0f172a); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 5;">
           <button class="btn btn-xs btn-edit-vault" data-edit-vault="${escapeHtml(w.id)}" style="background: transparent; color: #3b82f6; border: 1px solid #3b82f6; font-size: 10px; padding: 2px 6px;" title="Edit word">&#9998;</button>
           <button class="btn btn-danger btn-xs" data-del-vault="${escapeHtml(w.id)}" title="Delete word" style="font-size: 10px; padding: 2px 6px;">&#128465;</button>
         </td>
@@ -1327,34 +1343,24 @@ function _renderBlueprintTab(area, words) {
      });
   });
 
+  // Elevate metric cards and action button to the bottom infobar (above locked footer banner)
+  if (window.setBottomInfobar) {
+    const leftHtml = `
+      <div class="bottom-info-chip"><span class="chip-label">Levels:</span><span class="chip-val">${totalLevels}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Drill Tasks:</span><span class="chip-val">${totalTasks}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Aggregated Tests:</span><span class="chip-val">${totalTests}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Vault Items:</span><span class="chip-val">${totalItems}</span></div>
+    `;
+    const rightHtml = `
+      <button class="btn btn-primary btn-sm" id="btn-blueprint-auto-generate" style="background:var(--clr-primary); font-size:12px; padding:6px 14px; font-weight:600;">
+        ⚡ Auto-Generate from Blueprint
+      </button>
+    `;
+    window.setBottomInfobar(leftHtml, rightHtml);
+  }
+
   let html = `
     <div style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 20px; font-family: 'Inter', system-ui, sans-serif;">
-      <!-- Metric Cards -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
-        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 4px 8px; display: flex; flex-direction: column; gap: 4px;">
-          <span style="color: #94a3b8; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Levels Detected</span>
-          <span style="color: #f8fafc; font-size: 16px; font-weight: 700;">${totalLevels}</span>
-        </div>
-        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 4px 8px; display: flex; flex-direction: column; gap: 4px;">
-          <span style="color: #94a3b8; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Drill Tasks</span>
-          <span style="color: #f8fafc; font-size: 16px; font-weight: 700;">${totalTasks}</span>
-        </div>
-        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 4px 8px; display: flex; flex-direction: column; gap: 4px;">
-          <span style="color: #94a3b8; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Aggregated Tests</span>
-          <span style="color: #f8fafc; font-size: 16px; font-weight: 700;">${totalTests}</span>
-        </div>
-        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 4px 8px; display: flex; flex-direction: column; gap: 4px;">
-          <span style="color: #94a3b8; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Vault Items</span>
-          <span style="color: #f8fafc; font-size: 16px; font-weight: 700;">${totalItems}</span>
-        </div>
-      </div>
-      
-      <!-- Auto-Generate Action for Blueprint -->
-      <div style="display: flex; justify-content: flex-end; align-items: center; padding-top: 8px;">
-        <button class="btn btn-primary btn-sm" id="btn-blueprint-auto-generate" style="background:var(--clr-primary); font-size:12px; padding:6px 16px;">
-          ⚡ Auto-Generate from Blueprint
-        </button>
-      </div>
   `;
 
   const levels = Array.from(levelsSet).sort((a, b) => a - b);
@@ -1363,13 +1369,13 @@ function _renderBlueprintTab(area, words) {
      html += `
        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;">
          <!-- Level Ribbon Header -->
-         <div style="background: #334155; padding: 4px 8px; border-bottom: 1px solid #475569;">
-           <h3 style="margin: 0; color: #f8fafc; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">${lvl == 0 ? 'NO LEVEL' : `LEVEL ${lvl}`} ROADMAP</h3>
+         <div style="background: #334155; padding: 6px 10px; border-bottom: 1px solid #475569;">
+           <h3 style="margin: 0; color: #ffffff; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">${lvl == 0 ? 'NO LEVEL' : `LEVEL ${lvl}`} ROADMAP</h3>
          </div>
          <div style="display: flex; flex-wrap: wrap; flex: 1; align-items: stretch;">
            <!-- Left Column: Single Words -->
            <div style="flex: 1; min-width: 250px; padding: 12px; border-right: 1px solid #334155; border-bottom: 1px solid #334155;">
-             <h4 style="margin: 0 0 12px 0; color: #94a3b8; font-size: 12px; font-weight: 600;">📦 Single Words (Module 1)</h4>
+             <h4 style="margin: 0 0 12px 0; color: #ffffff; font-size: 12px; font-weight: 600;">📦 Single Words (Module 1)</h4>
      `;
 
      const renderThemeBlock = (themeName, topicsData, titleType, taskType, testType, runningTotal) => {
@@ -1399,10 +1405,10 @@ function _renderBlueprintTab(area, words) {
            const taskName = `${lvl == 0 ? 'No' : toOrdinal(lvl)} Level ${titleType} Task - ${topicName}`;
            blockHtml += `
               <div style="padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; justify-content: space-between; align-items: center; transition: background-color 150ms ease;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.03)'" onmouseout="this.style.backgroundColor='transparent'">
-                <span style="color: #e2e8f0; font-size: 12px; font-weight: 500; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(taskName)}">${escapeHtml(taskName)}</span>
+                <span style="color: #ffffff; font-size: 12px; font-weight: 500; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(taskName)}">${escapeHtml(taskName)}</span>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                  <span style="background: rgba(30, 41, 59, 0.6); color: #cbd5e1; font-size: 9.5px; padding: 3px 8px; border-radius: 12px; font-weight: 600; border: 1px solid rgba(51, 65, 85, 0.5);">${taskType}</span>
-                  <span style="color: #94a3b8; font-size: 12px; font-weight: 600; width: 28px; text-align: right; font-variant-numeric: tabular-nums;">${count}</span>
+                  <span style="background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 9.5px; padding: 3px 8px; border-radius: 4px; font-weight: 600; border: none;">${taskType}</span>
+                  <span style="color: #ffffff; font-size: 12px; font-weight: 700; width: 28px; text-align: right; font-variant-numeric: tabular-nums;">${count}</span>
                 </div>
               </div>
            `;
@@ -1414,10 +1420,10 @@ function _renderBlueprintTab(area, words) {
         const testName = `${lvl == 0 ? 'No' : toOrdinal(lvl)} Level ${titleType} Test - ${themeName}`;
         blockHtml += `
               <div style="padding: 8px 10px; background: transparent; border-top: 1px solid rgba(255,255,255,0.04); border-left: 2px solid #6366f1; display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #f8fafc; font-size: 12px; font-weight: 700; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(testName)}">${escapeHtml(testName)}</span>
+                <span style="color: #ffffff; font-size: 12px; font-weight: 700; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(testName)}">${escapeHtml(testName)}</span>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                  <span style="background: rgba(99, 102, 241, 0.15); color: #a5b4fc; font-size: 9.5px; padding: 3px 8px; border-radius: 12px; font-weight: 600; border: 1px solid rgba(99, 102, 241, 0.3);">${testType}</span>
-                  <span style="color: #f8fafc; font-size: 13px; font-weight: 700; width: 28px; text-align: right; font-variant-numeric: tabular-nums;">${newRunningTotal}</span>
+                  <span style="background: rgba(99, 102, 241, 0.25); color: #c7d2fe; font-size: 9.5px; padding: 3px 8px; border-radius: 4px; font-weight: 600; border: none;">${testType}</span>
+                  <span style="color: #ffffff; font-size: 13px; font-weight: 700; width: 28px; text-align: right; font-variant-numeric: tabular-nums;">${newRunningTotal}</span>
                 </div>
               </div>
             </div>
@@ -1453,7 +1459,7 @@ function _renderBlueprintTab(area, words) {
            </div>
            <!-- Right Column: Phrases -->
            <div style="flex: 1; min-width: 250px; padding: 12px; border-bottom: 1px solid #334155;">
-             <h4 style="margin: 0 0 12px 0; color: #94a3b8; font-size: 12px; font-weight: 600;">💬 Phrases & Idioms (Module 2)</h4>
+             <h4 style="margin: 0 0 12px 0; color: #ffffff; font-size: 12px; font-weight: 600;">💬 Phrases & Idioms (Module 2)</h4>
      `;
 
      const pThemes = Object.keys(phraseHierarchy[lvl] || {}).sort((a,b) => {
@@ -1489,10 +1495,10 @@ function _renderBlueprintTab(area, words) {
   html += `</div></div>`; // Close grid and main container
   area.innerHTML = html;
 
-  // Attach event listener
-  const btnGen = area.querySelector('#btn-blueprint-auto-generate');
+  // Attach event listener (checking both area and bottom infobar in document)
+  const btnGen = document.getElementById('btn-blueprint-auto-generate');
   if (btnGen) {
-    btnGen.addEventListener('click', async () => {
+    btnGen.onclick = async () => {
       const importedLevels = Array.from(levelsSet).sort((a,b)=>a-b);
       if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
       try {
@@ -1509,7 +1515,7 @@ function _renderBlueprintTab(area, words) {
         console.error(err);
         if (window.showToast) window.showToast('Error opening generator: ' + err.message, 'error');
       }
-    });
+    };
   }
 }
 
@@ -1543,30 +1549,30 @@ function _renderTopicManager(area, words, topics) {
   area.innerHTML = `
     <div style="display: flex; flex-direction: column; height: calc(100vh - 120px); box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
       <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
-        <div style="padding: 12px 0; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <input type="search" id="vault-topic-search" placeholder="Search Topics & Themes..." style="background: #334155; border: 1px solid #475569; color: #f8fafc; padding: 6px 12px; border-radius: 6px; font-size: 12px; width: 250px; outline: none;">
-            <button class="btn btn-secondary btn-sm" id="btn-topic-dup-checker">&#9874; Merge Similar Topics</button>
-            <button class="btn btn-danger btn-sm" id="btn-reset-vault-header" title="Truncate all vault words" style="opacity:0.9; margin-left: 16px;">&#9888;&#65039; Reset All Vault Data</button>
+        <div style="padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div class="table-toolbar-unified">
+            <input type="search" id="vault-topic-search" placeholder="🔍 Search Topics & Themes..." class="toolbar-input-38" style="width: 250px;">
+            <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-topic-dup-checker">&#9874; Merge Similar Topics</button>
+            <button class="btn btn-danger btn-sm toolbar-btn-38" id="btn-reset-vault-header" title="Truncate all vault words" style="opacity:0.9; margin-left: 8px;">&#9888;&#65039; Reset All</button>
           </div>
           <div style="font-size: 12px; color: #64748b; font-weight: 500;">
             Total Topics: <span style="color: #f8fafc; font-weight: 700;">${topicEntries.length}</span> &nbsp;|&nbsp; 
             Total Words: <span style="color: #f8fafc; font-weight: 700;">${words.length}</span>
           </div>
         </div>
-        <div style="flex-grow: 1; overflow-y: auto;">
-          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;">
-            <thead style="background: #1e293b; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #334155;">
+        <div class="table-wrap sticky-first" style="flex-grow: 1; overflow-y: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;" id="vault-topic-table">
+            <thead style="background: rgba(15, 23, 42, 0.95); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
               <tr>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px;">Theme</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px;">Topic Title</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: center;">Verb</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: center;">Adjective</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: center;">Noun</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: center;">Phrases</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: center;">Count</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 180px;">Structural Level</th>
-                <th style="padding: 4px 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: right;">Actions</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px;">Theme</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px;">Topic Title</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: center;">Verb</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: center;">Adjective</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: center;">Noun</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: center;">Phrases</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: center;">Count</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; width: 180px;">Structural Level</th>
+                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: right;">Actions</th>
               </tr>
             </thead>
             <tbody id="vault-topic-tbody"></tbody>
@@ -1579,7 +1585,18 @@ function _renderTopicManager(area, words, topics) {
   const tbody = document.getElementById("vault-topic-tbody");
   function renderRows(filteredEntries) {
     if (!filteredEntries.length) {
-      tbody.innerHTML = "<tr><td colspan=\"4\" style=\"text-align: center; padding: 40px; color: #64748b;\">No topics match your search.</td></tr>";
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9">
+            <div class="smart-empty-state">
+              <span class="smart-empty-icon">🔍</span>
+              <div class="smart-empty-title">No topics match your search</div>
+              <div class="smart-empty-subtext">No topic or theme matched your current query.</div>
+              <button type="button" class="smart-empty-btn" onclick="document.getElementById('vault-topic-search').value=''; document.getElementById('vault-topic-search').dispatchEvent(new Event('input'));">✕ Clear Search</button>
+            </div>
+          </td>
+        </tr>
+      `;
       return;
     }
     tbody.innerHTML = filteredEntries.map(([topic, data]) => {
@@ -1587,8 +1604,8 @@ function _renderTopicManager(area, words, topics) {
       const themeCodeStr = Array.from(data.themeCodes).join(', ') || '-';
       const topicCodeStr = Array.from(data.topicCodes).join(', ') || '-';
       
-      const themeDisplay = `<span style="color:#6366f1; font-weight:bold; margin-right:6px;">${escapeHtml(themeCodeStr)}</span> ${escapeHtml(themesStr)}`;
-      const topicDisplay = `<span style="color:#10b981; font-weight:bold; margin-right:6px;">${escapeHtml(topicCodeStr)}</span> ${escapeHtml(topic)}`;
+      const themeDisplay = `<span style="color:#818cf8; font-weight:bold; margin-right:6px;">${escapeHtml(themeCodeStr)}</span> <span style="color:#ffffff;">${escapeHtml(themesStr)}</span>`;
+      const topicDisplay = `<span style="color:#34d399; font-weight:bold; margin-right:6px;">${escapeHtml(topicCodeStr)}</span> <span style="color:#ffffff; font-weight:600;">${escapeHtml(topic)}</span>`;
       
       const verbCount = data.types['Verb'] || 0;
       const adjCount = data.types['Adjective'] || 0;
@@ -1602,14 +1619,14 @@ function _renderTopicManager(area, words, topics) {
       }
 
       return `
-        <tr style="border-bottom: 1px solid rgba(30, 41, 59, 0.5);">
-          <td style="padding: 4px 8px; font-weight: 600; color: #f472b6; white-space: nowrap;">${themeDisplay}</td>
-          <td style="padding: 4px 8px; font-weight: 600; color: #e2e8f0; white-space: nowrap;">${topicDisplay}</td>
-          <td style="padding: 4px 8px; text-align: center; color: #94a3b8;">${verbCount}</td>
-          <td style="padding: 4px 8px; text-align: center; color: #94a3b8;">${adjCount}</td>
-          <td style="padding: 4px 8px; text-align: center; color: #94a3b8;">${nounCount}</td>
-          <td style="padding: 4px 8px; text-align: center; color: #94a3b8;">${phraseCount}</td>
-          <td style="padding: 4px 8px; text-align: center;"><span style="background: #334155; color: #cbd5e1; padding: 2px 8px; border-radius: 20px; font-weight: 700; font-size: 11px;">${data.count}</span></td>
+        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+          <td style="padding: 6px 10px; font-weight: 600; color: #ffffff; white-space: nowrap;">${themeDisplay}</td>
+          <td style="padding: 6px 10px; font-weight: 600; color: #ffffff; white-space: nowrap;">${topicDisplay}</td>
+          <td style="padding: 6px 10px; text-align: center; color: #ffffff; font-weight: 600;">${verbCount}</td>
+          <td style="padding: 6px 10px; text-align: center; color: #ffffff; font-weight: 600;">${adjCount}</td>
+          <td style="padding: 6px 10px; text-align: center; color: #ffffff; font-weight: 600;">${nounCount}</td>
+          <td style="padding: 6px 10px; text-align: center; color: #ffffff; font-weight: 600;">${phraseCount}</td>
+          <td style="padding: 6px 10px; text-align: center;"><span style="background: #334155; color: #ffffff; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; border: none;">${data.count}</span></td>
           <td style="padding: 4px 8px;">
             <select class="topic-level-select form-control" data-topic="${escapeHtml(topic)}" style="background: #0f172a; border: 1px solid #475569; color: #f8fafc; padding: 4px 8px; border-radius: 4px; font-size: 11px; width: 100%; outline: none; cursor: pointer;">
               <option value="0" ${data.targetLevel === 0 ? "selected" : ""}>Level 0 (Pre-Level)</option>

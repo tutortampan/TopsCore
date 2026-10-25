@@ -31,20 +31,46 @@
       flex-direction: column !important;
       justify-content: flex-start !important;
       align-items: stretch !important;
-      background: #020617 !important;
+      background: #070b19 !important;
     }
 
     .result-page .dashboard-header {
-      height: 38px !important;
-      min-height: 38px !important;
-      max-height: 38px !important;
-      padding: 0 1rem !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      padding: 0 14px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       flex-shrink: 0 !important;
-      background: #0b1528 !important;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+      background: rgba(9, 13, 22, 0.95) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 100 !important;
+      box-sizing: border-box !important;
+    }
+
+    .result-page .dashboard-header-brand {
+      position: static !important;
+      font-family: 'Outfit', sans-serif !important;
+      font-size: 0.95rem !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.1em !important;
+      text-transform: uppercase !important;
+      color: #F8FAFC !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      text-align: center !important;
+      margin: 0 auto !important;
+      white-space: nowrap !important;
+    }
+
+    .result-page #result-header-actions {
+      display: none !important;
     }
 
     .result-page #result-content {
@@ -52,17 +78,17 @@
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
-      justify-content: center !important;
-      padding: clamp(4px, 1vh, 8px) 12px clamp(30px, 3.2vh, 34px) 12px !important; /* clearance for 28px bottom-ad-banner */
+      justify-content: flex-start !important;
+      padding: 10px 14px 10px 14px !important; /* Exact 10px gap top and bottom */
       box-sizing: border-box !important;
       overflow: hidden !important;
-      overflow-y: hidden !important;
-      overflow-x: hidden !important;
       scrollbar-width: none !important;
       -ms-overflow-style: none !important;
       width: 100% !important;
       max-width: 100% !important;
-      height: calc(100dvh - 38px) !important;
+      height: calc(100dvh - 100px) !important; /* 50px top header + 50px bottom banner */
+      max-height: calc(100dvh - 100px) !important;
+      min-height: calc(100dvh - 100px) !important;
     }
     .result-page #result-content::-webkit-scrollbar,
     .result-hero::-webkit-scrollbar,
@@ -71,7 +97,9 @@
       display: none !important;
       width: 0 !important;
       height: 0 !important;
-    }    /* ===== SLEEK MODERN GLASSMORPHISM HERO CARD (LINEAR / APPLE DESIGN) ===== */
+    }
+
+    /* ===== SINGLE-BORDER ARCHITECTURE: NO CARD INSIDE CARD ===== */
     .result-hero,
     .result-hero.tier-S,
     .result-hero.tier-A,
@@ -83,24 +111,24 @@
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
       -webkit-font-smoothing: antialiased !important;
       -moz-osx-font-smoothing: grayscale !important;
-      border: 1px solid rgba(250, 204, 21, 0.2) !important;
-      background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%) !important;
-      backdrop-filter: blur(20px) !important;
-      -webkit-backdrop-filter: blur(20px) !important;
-      border-radius: 18px !important;
-      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), 0 0 30px rgba(234, 179, 8, 0.08) !important;
-      padding: clamp(12px, 2vh, 20px) clamp(14px, 3.5vw, 24px) !important;
+      border: none !important;
+      background: transparent !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      padding: 0 !important;
       text-align: center;
-      margin: auto !important;
+      margin: 0 auto !important;
       width: 100% !important;
-      max-width: 480px !important;
+      max-width: 412px !important;
       height: 100% !important;
-      max-height: calc(100dvh - 76px) !important;
+      max-height: 100% !important;
       box-sizing: border-box !important;
-      transition: all 0.3s ease;
       display: flex !important;
       flex-direction: column !important;
-      justify-content: space-evenly !important;
+      justify-content: flex-start !important;
+      gap: 10px !important; /* Strict 10px gap between all cards */
       flex-shrink: 0 !important;
       overflow: hidden !important;
       scrollbar-width: none !important;
@@ -144,15 +172,44 @@
       flex-direction: column !important;
       align-items: center !important;
       justify-content: center !important;
-      gap: 3px !important;
-      background: rgba(15, 23, 42, 0.6) !important;
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
-      border-radius: 10px !important;
-      padding: 6px 14px !important;
-      margin: 0 auto 6px auto !important;
-      max-width: 92% !important;
+      gap: 2px !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, 56, 189, 248), 0.12), transparent 75%), #0f172a !important;
+      border: 1px solid rgba(var(--tier-rgb, 56, 189, 248), 0.35) !important;
+      border-radius: 12px !important;
+      padding: 0 12px !important;
+      margin: 0 auto !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
       backdrop-filter: blur(8px) !important;
       -webkit-backdrop-filter: blur(8px) !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+      flex-shrink: 0 !important;
+      transition: all 0.3s ease !important;
+    }
+    .result-title-row-type {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.06em !important;
+      text-transform: uppercase !important;
+      color: #94A3B8 !important;
+      line-height: 1.2 !important;
+      text-align: center !important;
+    }
+    .result-title-row-topic {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      font-size: 13.5px !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.03em !important;
+      text-transform: uppercase !important;
+      color: #38BDF8 !important;
+      line-height: 1.25 !important;
+      text-align: center !important;
+      text-shadow: 0 0 12px rgba(56, 189, 248, 0.3) !important;
     }
     .result-curriculum-crumb {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -353,7 +410,7 @@
       background: rgba(15, 23, 42, 0.95) !important;
     }
 
-    /* ===== SMART NEXT MILESTONE CTA ===== */
+    /* ===== SMART NEXT MILESTONE CTA (EQUAL HEIGHT WITH SCORE/GRADE ROW = 50px) ===== */
     .btn-next-milestone {
       display: flex !important;
       flex-direction: column !important;
@@ -361,19 +418,22 @@
       justify-content: center !important;
       width: 100% !important;
       box-sizing: border-box !important;
-      padding: 9px 14px !important;
-      min-height: 48px !important;
-      border-radius: 10px !important;
+      padding: 4px 10px !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      border-radius: 12px !important;
       text-align: center !important;
       cursor: pointer !important;
       transition: all 0.2s ease !important;
       white-space: normal !important;
       word-break: break-word !important;
-      line-height: 1.35 !important;
+      line-height: 1.15 !important;
       box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
       border: 1px solid rgba(56, 189, 248, 0.4) !important;
       background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
       color: #ffffff !important;
+      flex-shrink: 0 !important;
     }
     .btn-next-milestone.btn-next-test {
       background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
@@ -390,21 +450,77 @@
     }
     .btn-next-milestone .next-btn-tag {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-size: 10.5px !important;
+      font-size: 10px !important;
       font-weight: 700 !important;
       letter-spacing: 0.08em !important;
       text-transform: uppercase !important;
       opacity: 0.9 !important;
       margin-bottom: 2px !important;
       display: block !important;
+      line-height: 1.1 !important;
     }
     .btn-next-milestone .next-btn-title {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-size: 13.5px !important;
+      font-size: 13px !important;
       font-weight: 800 !important;
-      letter-spacing: -0.01em !important;
+      letter-spacing: 0.02em !important;
+      text-transform: uppercase !important;
       color: #ffffff !important;
       display: block !important;
+      line-height: 1.2 !important;
+    }
+
+    /* ===== TUTOR REMEDIAL 2-COLUMN SEGMENTED CONTROL (EQUAL HEIGHT = 50px) ===== */
+    .tutor-remedial-segmented {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 10px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      flex-shrink: 0 !important;
+    }
+    .remedial-segment-btn {
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      padding: 0 10px !important;
+      border-radius: 12px !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      font-size: 13px !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.06em !important;
+      text-transform: uppercase !important;
+      text-align: center !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 8px !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+      user-select: none !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      background: rgba(15, 23, 42, 0.6) !important;
+      color: #64748B !important;
+      box-sizing: border-box !important;
+    }
+    .remedial-segment-btn:hover {
+      border-color: rgba(255, 255, 255, 0.25) !important;
+      color: #E2E8F0 !important;
+    }
+    .remedial-segment-btn.segment-normal.active {
+      background: rgba(52, 211, 153, 0.16) !important;
+      border-color: rgba(52, 211, 153, 0.5) !important;
+      color: #34D399 !important;
+      box-shadow: 0 0 16px rgba(52, 211, 153, 0.25) !important;
+    }
+    .remedial-segment-btn.segment-remidi.active {
+      background: rgba(255, 255, 0, 0.16) !important;
+      border-color: rgba(255, 255, 0, 0.65) !important;
+      color: #FFFF00 !important;
+      box-shadow: 0 0 16px rgba(255, 255, 0, 0.35) !important;
     }
 
     /* ===== CERTIFICATE CARD HEADER (REMOVED PER USER REQUEST) ===== */
@@ -467,140 +583,352 @@
       border-radius: 50% !important;
     }
 
-    /* ===== 2. HERO TRIO ROW: PHOTO, SCORE, AND STAR SIDE-BY-SIDE ("BERDERET") ===== */
-    .result-hero-trio-row {
-      display: flex !important;
-      flex-direction: row !important;
-      align-items: center !important;
-      justify-content: center !important;
-      gap: clamp(10px, 3.5vw, 24px) !important;
-      margin: clamp(4px, 1vh, 12px) auto !important;
-      width: 100% !important;
-      max-width: 440px !important;
-      flex-shrink: 0 !important;
-    }
-
-    .result-hero-trio-row .result-portrait-stage {
-      position: relative !important;
+    /* ===== 0. CENTERED FULLSCREEN LOADING OVERLAY (ZERO LAYOUT SHIFT) ===== */
+    #result-loading,
+    .result-loading-overlay {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      height: 100dvh !important;
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
       justify-content: center !important;
+      z-index: 9999 !important;
+      background: #070b19 !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      transition: opacity 0.35s ease, visibility 0.35s ease !important;
+      box-sizing: border-box !important;
+      padding: 20px !important;
+    }
+
+    #result-loading.hidden,
+    .result-loading-overlay.hidden {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      display: none !important;
+    }
+
+    #result-loading .spinner,
+    .result-loading-overlay .spinner {
+      width: 44px !important;
+      height: 44px !important;
+      border: 3.5px solid rgba(56, 189, 248, 0.2) !important;
+      border-top-color: #38bdf8 !important;
+      border-radius: 50% !important;
+      animation: spin 0.8s linear infinite !important;
+      margin-bottom: 14px !important;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.35) !important;
+    }
+
+    #result-loading .result-loading-text,
+    #result-loading p,
+    .result-loading-overlay p {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      font-size: 0.92rem !important;
+      font-weight: 600 !important;
+      color: #94a3b8 !important;
+      letter-spacing: 0.02em !important;
       margin: 0 !important;
+      text-align: center !important;
+    }
+
+    /* ===== 1. HERO BANNER (STUDENT IDENTITY - STRICT 150PX UNIFORM WITH DASHBOARD) ===== */
+    .result-identity-card {
+      --tier-color: #A855F7;
+      --tier-rgb: 168, 85, 247;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      border-radius: 18px !important;
+      padding: 8px 14px 8px 14px !important;
+      height: 150px !important;
+      min-height: 150px !important;
+      max-height: 150px !important;
+      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, 168, 85, 247), 0.12), transparent 75%), #0f172a !important;
+      border: 1px solid rgba(var(--tier-rgb, 168, 85, 247), 0.25) !important;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
       flex-shrink: 0 !important;
+      position: relative !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      overflow: hidden !important;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
 
-    .result-hero-trio-row .result-score-ring-wrapper {
-      width: clamp(66px, 11vh, 84px) !important;
-      height: clamp(66px, 11vh, 84px) !important;
+    .result-identity-card[data-tier="S"] {
+      border-color: rgba(168, 85, 247, 0.55) !important;
+      box-shadow: 0 0 35px rgba(168, 85, 247, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
+      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.22), transparent 75%), #0f172a !important;
+    }
+    .result-identity-card[data-tier="A"] { border-color: rgba(16, 185, 129, 0.55) !important; }
+    .result-identity-card[data-tier="B"] { border-color: rgba(56, 189, 248, 0.55) !important; }
+    .result-identity-card[data-tier="C"] { border-color: rgba(245, 158, 11, 0.55) !important; }
+    .result-identity-card[data-tier="D"] { border-color: rgba(249, 115, 22, 0.55) !important; }
+    .result-identity-card[data-tier="E"],
+    .result-identity-card[data-tier="F"] { border-color: rgba(239, 68, 68, 0.55) !important; }
+    .result-identity-card[data-tier="R"] {
+      border-color: rgba(255, 255, 0, 0.55) !important;
+      box-shadow: 0 0 25px rgba(255, 255, 0, 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
+      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(255, 255, 0, 0.15), transparent 75%), #0f172a !important;
     }
 
-    .result-hero-trio-row .result-avatar-circle {
-      width: clamp(52px, 8.8vh, 66px) !important;
-      height: clamp(52px, 8.8vh, 66px) !important;
-      font-size: 1.6rem !important;
-    }
-
-    /* Centered Student Identity Bar */
-    .result-identity-bar {
+    .result-meta-wrapper {
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      margin: 0 auto 2px auto !important;
-      width: 100% !important;
-      max-width: 380px !important;
-    }
-
-    .result-student-name-label {
-      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-size: clamp(0.82rem, 2.4vw, 0.98rem) !important;
-      font-weight: 700 !important;
-      color: #F8FAFC !important;
-      letter-spacing: 0.02em !important;
-      text-align: center !important;
-      max-width: 320px !important;
+      gap: 6px !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      font-size: 0.75rem !important;
+      font-weight: 600 !important;
+      letter-spacing: 0.04em !important;
+      text-transform: uppercase !important;
+      color: #cbd5e1 !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
-      background: rgba(255, 255, 255, 0.04) !important;
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
-      border-radius: 20px !important;
-      padding: 3px 14px !important;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+      margin-bottom: 0 !important;
+      line-height: 1.2 !important;
+    }
+    .result-meta-wrapper .meta-sep {
+      color: #475569 !important;
+      font-size: 10px !important;
+      user-select: none !important;
     }
 
-    .result-hero-trio-row .result-score-stage {
-      display: flex !important;
-      flex-direction: column !important;
-      align-items: center !important;
-      justify-content: center !important;
-      text-align: center !important;
-      margin: 0 !important;
-      flex-shrink: 0 !important;
-    }
-
-    .result-hero-trio-row .result-percentage,
-    .result-hero-trio-row #result-percentage {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-feature-settings: 'tnum' on, 'lnum' on !important;
-      letter-spacing: -0.03em !important;
-      font-weight: 800 !important;
-      background: none !important;
-      -webkit-background-clip: initial !important;
-      background-clip: initial !important;
-      -webkit-text-fill-color: #F8FAFC !important;
-      color: #F8FAFC !important;
-      text-shadow: 0 0 24px rgba(250, 204, 21, 0.35) !important;
-      font-size: clamp(2.3rem, 5.5vh, 3.2rem) !important;
-      line-height: 1 !important;
-      margin: 0 !important;
-      text-align: center !important;
-    }
-
-    .result-hero-trio-row .result-stamp-stage {
-      display: flex !important;
-      justify-content: center !important;
-      align-items: center !important;
-      margin: 0 !important;
-      line-height: 1 !important;
-      flex-shrink: 0 !important;
-    }
-
-    .result-grade-stamp.pure-stamp {
-      position: static !important;
-      width: auto !important;
-      height: auto !important;
-      min-height: auto !important;
+    .result-identity-card .hero-divider {
+      width: 100% !important;
+      height: 1px !important;
+      background: linear-gradient(90deg, transparent 0%, rgba(148, 163, 184, 0.35) 25%, rgba(148, 163, 184, 0.35) 75%, transparent 100%) !important;
+      margin: 2px 0 4px 0 !important;
       border: none !important;
-      background: none !important;
-      box-shadow: none !important;
-      border-radius: 0 !important;
-      padding: 0 !important;
-      display: inline-flex !important;
+    }
+
+    .result-identity-card .hero-name-divider {
+      display: block !important;
+      width: 100% !important;
+      height: 1px !important;
+      margin: 4px 0 2px 0 !important;
+      background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb, 168, 85, 247), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb, 168, 85, 247), 0.6) 80%, transparent 100%) !important;
+      box-shadow: 0 0 10px rgba(var(--tier-rgb, 168, 85, 247), 0.4) !important;
+      border: none !important;
+    }
+
+    /* Centered Avatar Stage (Pure Identity Card) */
+    .result-avatar-stage {
+      position: relative !important;
+      display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      opacity: 0;
-      transform: scale(0.6);
-      pointer-events: none;
-      transition: all 0.25s ease;
+      margin: 2px auto !important;
+      flex-shrink: 0 !important;
     }
-    .result-grade-stamp.pure-stamp.stamped {
+
+    /* Center Avatar & Crown */
+    .result-identity-card .banner-avatar-wrapper {
+      position: relative !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-shrink: 0 !important;
+    }
+
+    .result-identity-card #result-avatar-container {
+      width: 74px !important;
+      height: 74px !important;
+      border-radius: 50% !important;
+      padding: 3px !important;
+      background: rgba(15, 23, 42, 0.9) !important;
+      border: 2.5px solid var(--tier-color, #A855F7) !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
+      overflow: hidden !important;
+    }
+
+    .result-identity-card #result-avatar-img {
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 50% !important;
+      object-fit: cover !important;
+      background: #1e293b !important;
+      display: block !important;
+    }
+
+    .result-identity-card #result-avatar-img.hidden {
+      display: none !important;
+    }
+
+    .result-identity-card #result-avatar-initial {
+      font-family: 'Outfit', sans-serif !important;
+      font-size: 2.2rem !important;
+      font-weight: 800 !important;
+      color: #ffffff !important;
+      user-select: none !important;
+    }
+
+    .result-identity-card[data-tier="S"] #result-avatar-container {
+      background: linear-gradient(135deg, #c084fc 0%, #a855f7 45%, #7e22ce 100%) !important;
+      border: 2.5px solid #a855f7 !important;
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.85), 0 0 45px rgba(192, 132, 252, 0.45) !important;
+    }
+    .result-identity-card[data-tier="A"] #result-avatar-container {
+      border: 2.5px solid #10b981 !important;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.45) !important;
+    }
+    .result-identity-card[data-tier="B"] #result-avatar-container {
+      border: 2.5px solid #38bdf8 !important;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.45) !important;
+    }
+    .result-identity-card[data-tier="C"] #result-avatar-container {
+      border: 2.5px solid #f59e0b !important;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.45) !important;
+    }
+    .result-identity-card[data-tier="D"] #result-avatar-container {
+      border: 2.5px solid #f97316 !important;
+      box-shadow: 0 0 16px rgba(249, 115, 22, 0.45) !important;
+    }
+    .result-identity-card[data-tier="E"] #result-avatar-container,
+    .result-identity-card[data-tier="F"] #result-avatar-container {
+      border: 2.5px solid #ef4444 !important;
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.45) !important;
+    }
+    .result-identity-card[data-tier="R"] #result-avatar-container {
+      border: 2.5px solid #FFFF00 !important;
+      box-shadow: 0 0 18px rgba(255, 255, 0, 0.5) !important;
+    }
+
+    .result-identity-card .avatar-crown-badge {
+      position: absolute !important;
+      top: -15px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      font-size: 1.65rem !important;
+      line-height: 1 !important;
+      z-index: 10 !important;
+      filter: drop-shadow(0 2px 8px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 18px rgba(245, 158, 11, 0.85)) !important;
+      animation: crownFloat 2.6s ease-in-out infinite !important;
+      pointer-events: none !important;
+      user-select: none !important;
+    }
+
+    .result-identity-card .avatar-crown-badge.hidden {
+      display: none !important;
+    }
+
+    /* Student Name */
+    .result-identity-card .result-student-name-label {
+      font-family: 'Outfit', sans-serif !important;
+      font-size: 1.1rem !important;
+      font-weight: 800 !important;
+      letter-spacing: -0.01em !important;
+      text-align: center !important;
+      color: #ffffff !important;
+      margin: 0 !important;
+      line-height: 1.15 !important;
+      max-width: 100% !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+
+    @keyframes star-vector-pulse {
+      0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.65));
+      }
+      50% {
+        transform: scale(1.10);
+        filter: drop-shadow(0 0 22px rgba(168, 85, 247, 1)) drop-shadow(0 0 38px rgba(192, 132, 252, 0.95)) drop-shadow(0 0 52px rgba(168, 85, 247, 0.65));
+      }
+    }
+
+    .pure-star-svg {
+      box-shadow: none !important;
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+      animation: star-vector-pulse 2.2s infinite ease-in-out !important;
+      filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.65)) !important;
+    }
+
+    /* Grade hidden while score is counting up */
+    .score-grade-val.grade-delayed {
+      opacity: 0 !important;
+      transform: scale(3.5) rotate(-26deg) !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      filter: blur(8px) !important;
+    }
+
+    /* Grade stamps down with high velocity impact right after score completes */
+    .score-grade-val.grade-revealed {
       opacity: 1 !important;
-      transform: scale(1) !important;
-      animation: starPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+      visibility: visible !important;
+      transform: rotate(-4deg) !important;
+      animation: gradeStampImpact 0.65s cubic-bezier(0.2, 0.8, 0.25, 1) forwards !important;
     }
-    @keyframes starPop {
+
+    @keyframes gradeStampImpact {
       0% {
-        transform: scale(0.6);
         opacity: 0;
+        transform: scale(3.5) rotate(-26deg);
+        filter: blur(8px);
+      }
+      45% {
+        opacity: 1;
+        transform: scale(0.92) rotate(-3deg);
+        filter: blur(0px);
       }
       70% {
-        transform: scale(1.12);
+        transform: scale(1.08) rotate(-5deg);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) rotate(-4deg);
+        filter: blur(0px);
+      }
+    }
+
+    /* Container haptic impact thud when stamp slams down */
+    .score-grade-box.grade-box.box-stamped {
+      animation: stampBoxThud 0.65s cubic-bezier(0.2, 0.8, 0.25, 1) forwards !important;
+    }
+
+    @keyframes stampBoxThud {
+      0% {
+        transform: scale(1);
+      }
+      45% {
+        transform: scale(0.96);
+      }
+      70% {
+        transform: scale(1.02);
       }
       100% {
         transform: scale(1);
-        opacity: 1;
       }
+    }
+
+    .grade-star-accent {
+      display: inline-block !important;
+      color: #FBBF24 !important;
+      font-size: 0.95em !important;
+      filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.7)) !important;
+      animation: starPulse 2.4s ease-in-out infinite !important;
+    }
+    @keyframes starPulse {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.6)); }
+      50% { transform: scale(1.18); filter: drop-shadow(0 0 14px rgba(251, 191, 36, 0.95)); }
     }
 
     .star-accent-vector {
@@ -627,17 +955,200 @@
       line-height: 1.2 !important;
     }
 
-    /* ===== 3. STACKED BREAKDOWN METRICS WITH SEMANTIC FONT COLORS (LINEAR / APPLE DESIGN) ===== */
+    /* ===== 3. DYNAMIC VERTICAL METRICS TABLE (VERTICALLY STACKED 4 ROWS) ===== */
+    .result-metrics-table-card {
+      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, 56, 189, 248), 0.08), transparent 75%), #0f172a !important;
+      border: 1px solid rgba(var(--tier-rgb, 56, 189, 248), 0.35) !important;
+      border-radius: 12px !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 auto !important;
+      box-sizing: border-box !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+      backdrop-filter: blur(8px) !important;
+      -webkit-backdrop-filter: blur(8px) !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 1 0px !important; /* Truly dynamic in remaining screen */
+      min-height: 100px !important;
+      transition: all 0.3s ease !important;
+    }
+
+    .metric-stacked-row {
+      flex: 1 1 0% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 0 16px !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+      box-sizing: border-box !important;
+      transition: background 0.15s ease !important;
+      user-select: none !important;
+    }
+
+    .metric-stacked-row:last-child {
+      border-bottom: none !important;
+    }
+
+    .metric-stacked-row.summary-clickable {
+      cursor: pointer !important;
+    }
+
+    .metric-stacked-row.summary-clickable:hover {
+      background: rgba(255, 255, 255, 0.06) !important;
+    }
+
+    .metric-stacked-lbl {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      font-size: clamp(12px, 1.8vh, 14px) !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase !important;
+      line-height: 1 !important;
+    }
+
+    .metric-stacked-val {
+      font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      font-feature-settings: 'tnum' on, 'lnum' on !important;
+      font-size: clamp(15px, 2.2vh, 18px) !important;
+      font-weight: 900 !important;
+      line-height: 1 !important;
+      letter-spacing: -0.01em !important;
+    }
+
+    /* Row 1: Correct (Emerald Green) */
+    .metric-row-correct .metric-stacked-lbl,
+    .metric-row-correct .metric-stacked-val {
+      color: #10b981 !important;
+    }
+
+    /* Row 2: Partial (Warm Amber) */
+    .metric-row-partial .metric-stacked-lbl,
+    .metric-row-partial .metric-stacked-val {
+      color: #f59e0b !important;
+    }
+
+    /* Row 3: Incorrect (Crimson Red) */
+    .metric-row-wrong .metric-stacked-lbl,
+    .metric-row-wrong .metric-stacked-val {
+      color: #ef4444 !important;
+    }
+
+    /* Row 4: Points (Bright White or Kuning Murni for Remedial) */
+    .metric-row-points {
+      background: rgba(255, 255, 255, 0.035) !important;
+    }
+    .metric-row-points .metric-stacked-lbl,
+    .metric-row-points .metric-stacked-val {
+      color: #F8FAFC !important;
+    }
+
+    /* ===== 4. DUAL SCORE & GRADE CARD (EXACT 50px SIDE-BY-SIDE SYMMETRICAL) ===== */
+    .result-score-grade-card {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 10px !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 auto !important;
+      box-sizing: border-box !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      flex-shrink: 0 !important;
+    }
+
+    .result-score-grade-card .score-grade-box {
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      background: rgba(23, 33, 56, 0.8) !important;
+      border-radius: 12px !important;
+      border: 1px solid rgba(var(--tier-rgb, 16, 185, 129), 0.45) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+      box-sizing: border-box !important;
+      padding: 0 8px !important;
+      transition: all 0.3s ease !important;
+    }
+
+    .result-score-grade-card #result-score-box {
+      border-color: rgba(var(--tier-rgb, 16, 185, 129), 0.45) !important;
+    }
+
+    .result-score-grade-card #result-percentage {
+      font-family: 'Outfit', sans-serif !important;
+      font-size: clamp(1.5rem, 3.8vw, 1.85rem) !important;
+      font-weight: 900 !important;
+      letter-spacing: -0.02em !important;
+      line-height: 1 !important;
+      color: var(--tier-color, #10b981) !important; /* Follows Grade Color */
+      text-shadow: 0 0 16px rgba(var(--tier-rgb, 16, 185, 129), 0.5) !important;
+    }
+
+    .result-score-grade-card #result-grade-val {
+      font-family: 'Outfit', sans-serif !important;
+      font-size: clamp(1.5rem, 3.8vw, 1.9rem) !important;
+      font-weight: 900 !important;
+      line-height: 1 !important;
+      color: var(--tier-color, #10b981) !important; /* Follows Grade Color */
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      text-shadow: 0 0 16px rgba(var(--tier-rgb, 16, 185, 129), 0.6) !important;
+    }
+
+    .result-score-grade-card[data-tier="S"] .score-grade-box {
+      border-color: rgba(168, 85, 247, 0.6) !important;
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25) !important;
+    }
+    .result-score-grade-card[data-tier="R"] .score-grade-box {
+      border-color: rgba(255, 255, 0, 0.5) !important;
+      box-shadow: 0 0 16px rgba(255, 255, 0, 0.25) !important;
+    }
+
+    /* ===== 5. EVALUATION WORD CARD (EXACT 50px - FAIL / LESS / ENOUGH / GOOD / VERY GOOD / EXCELLENT) ===== */
+    .result-evaluation-card {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      margin: 0 auto !important;
+      border-radius: 12px !important;
+      padding: 0 14px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
+      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, 16, 185, 129), 0.16), transparent 75%), #0f172a !important;
+      border: 1px solid rgba(var(--tier-rgb, 16, 185, 129), 0.45) !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+      font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      font-size: clamp(1.15rem, 3vw, 1.35rem) !important;
+      font-weight: 900 !important;
+      letter-spacing: 0.14em !important;
+      text-transform: uppercase !important;
+      color: var(--tier-color, #10b981) !important;
+      text-shadow: 0 0 16px rgba(var(--tier-rgb, 16, 185, 129), 0.6) !important;
+      user-select: none !important;
+      transition: all 0.3s ease !important;
+    }
+
+    /* Fallback stacked row support */
     .result-stats-stacked-list {
       display: flex !important;
       flex-direction: column !important;
-      gap: clamp(5px, 1vh, 8px) !important;
+      gap: 4px !important;
       width: 100% !important;
-      max-width: 380px !important;
-      margin: clamp(4px, 1vh, 10px) auto !important;
+      max-width: 100% !important;
+      margin: 0 auto !important;
       box-sizing: border-box !important;
     }
-
     .stat-stacked-row {
       display: flex !important;
       align-items: center !important;
@@ -647,80 +1158,21 @@
       border-radius: 10px !important;
       padding: clamp(6px, 1vh, 9px) 14px !important;
       box-sizing: border-box !important;
-      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.03), 0 2px 8px rgba(0, 0, 0, 0.25) !important;
-      backdrop-filter: blur(8px) !important;
-      -webkit-backdrop-filter: blur(8px) !important;
-      user-select: none !important;
-      transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease !important;
     }
 
-    .stat-stacked-row.summary-clickable {
-      cursor: pointer !important;
-    }
-    .stat-stacked-row.summary-clickable:hover {
-      transform: translateY(-1px) !important;
-      background: rgba(30, 41, 59, 0.8) !important;
-      border-color: rgba(255, 255, 255, 0.18) !important;
-    }
-
-    .stat-row-label {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-size: 11.5px !important;
-      font-weight: 700 !important;
-      letter-spacing: 0.08em !important;
-      text-transform: uppercase !important;
-      line-height: 1.2 !important;
-      white-space: nowrap !important;
-    }
-
-    .stat-row-value {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-size: clamp(14px, 2.2vh, 16px) !important;
-      font-weight: 800 !important;
-      line-height: 1.2 !important;
-      font-feature-settings: 'tnum' on, 'lnum' on !important;
-      white-space: nowrap !important;
-    }
-
-    /* Semantic Colors per Directive:
-       - Points: Label #94A3B8, Value #F8FAFC
-       - Correct: Hijau (Green #34D399)
-       - Partial: Kuning (Yellow #FBBF24)
-       - Incorrect: Merah (Red #F87171)
-    */
-    .stat-points .stat-row-label {
-      color: #94A3B8 !important;
-    }
-    .stat-points .stat-val-points {
-      color: #F8FAFC !important;
-    }
-
-    .stat-lbl-correct,
-    .stat-val-correct {
-      color: #34D399 !important;
-    }
-
-    .stat-lbl-partial,
-    .stat-val-partial {
-      color: #FBBF24 !important;
-    }
-
-    .stat-lbl-wrong,
-    .stat-val-wrong {
-      color: #F87171 !important;
-    }
-
-    /* ===== BUTTONS (LINEAR / APPLE DESIGN SYSTEM) ===== */
+    /* ===== BUTTONS (EXACT 30px HEIGHT FOR BACK & BREAKDOWN) ===== */
     .btn-dashboard-primary {
-      height: 44px !important;
-      min-height: 44px !important;
-      border-radius: 10px !important;
+      height: 30px !important;
+      min-height: 30px !important;
+      max-height: 30px !important;
+      border-radius: 8px !important;
       background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%) !important;
       color: #ffffff !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-weight: 600 !important;
-      font-size: 13.5px !important;
-      letter-spacing: 0.02em !important;
+      font-weight: 700 !important;
+      font-size: 11.5px !important;
+      letter-spacing: 0.04em !important;
+      text-transform: uppercase !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
@@ -731,6 +1183,7 @@
       width: 100% !important;
       box-sizing: border-box !important;
       transition: all 0.2s ease !important;
+      flex-shrink: 0 !important;
     }
     .btn-dashboard-primary:hover {
       background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%) !important;
@@ -739,15 +1192,18 @@
     }
 
     .btn-breakdown-ghost {
-      height: 40px !important;
-      min-height: 40px !important;
-      border-radius: 10px !important;
+      height: 30px !important;
+      min-height: 30px !important;
+      max-height: 30px !important;
+      border-radius: 8px !important;
       background: transparent !important;
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
       color: #cbd5e1 !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-weight: 600 !important;
-      font-size: 13px !important;
+      font-weight: 700 !important;
+      font-size: 11px !important;
+      letter-spacing: 0.04em !important;
+      text-transform: uppercase !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
@@ -755,6 +1211,7 @@
       width: 100% !important;
       box-sizing: border-box !important;
       transition: all 0.2s ease !important;
+      flex-shrink: 0 !important;
     }
     .btn-breakdown-ghost:hover {
       background: rgba(255, 255, 255, 0.06) !important;
@@ -821,13 +1278,14 @@
       height: auto !important;
       min-height: auto !important;
     }
-    .result-grade-stamp.pure-stamp.grade-S { color: #fbbf24 !important; filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 28px rgba(245, 158, 11, 0.7)) !important; }
-    .result-grade-stamp.pure-stamp.grade-A { color: #10b981 !important; }
-    .result-grade-stamp.pure-stamp.grade-B { color: #84cc16 !important; }
-    .result-grade-stamp.pure-stamp.grade-C { color: #eab308 !important; }
-    .result-grade-stamp.pure-stamp.grade-D { color: #f97316 !important; }
+    .result-grade-stamp.pure-stamp.grade-S { color: #A855F7 !important; filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.65)) drop-shadow(0 0 28px rgba(168, 85, 247, 0.35)) !important; }
+    .result-grade-stamp.pure-stamp.grade-A { color: #00FF00 !important; }
+    .result-grade-stamp.pure-stamp.grade-B { color: #00FFFF !important; }
+    .result-grade-stamp.pure-stamp.grade-C { color: #FFFF00 !important; }
+    .result-grade-stamp.pure-stamp.grade-D { color: #FF8000 !important; }
     .result-grade-stamp.pure-stamp.grade-E,
-    .result-grade-stamp.pure-stamp.grade-F { color: #ef4444 !important; }
+    .result-grade-stamp.pure-stamp.grade-F { color: #FF0000 !important; }
+    .result-grade-stamp.pure-stamp.grade-remedial { color: #FFFF00 !important; }
 
     @keyframes stamp-slam {
       0% {
@@ -1049,6 +1507,14 @@
         padding: 7px 10px !important;
         font-size: 0.8rem !important;
       }
+      .result-action-buttons-wrap .btn,
+      .result-action-buttons-wrap .btn-dashboard-primary,
+      .result-action-buttons-wrap .btn-breakdown-ghost,
+      .result-action-buttons-wrap .remedial-segment-btn,
+      .result-action-buttons-wrap .btn-next-milestone .next-btn-title {
+        font-size: 13px !important;
+        line-height: 1.2 !important;
+      }
       .result-accuracy-wrap {
         margin-bottom: 3px !important;
       }
@@ -1072,7 +1538,57 @@
       }
     }
 
-    /* ===== STAGGERED ENTRANCE ANIMATION (FEATURE 8) ===== */
+    /* ===== UNIVERSAL TOP-TO-BOTTOM SEQUENTIAL CASCADE SYSTEM ===== */
+    /* Level 1: Major Cards */
+    .cascade-item {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      transform: translateY(-14px) !important;
+      transition: opacity 0.38s cubic-bezier(0.2, 0.8, 0.25, 1), transform 0.38s cubic-bezier(0.2, 0.8, 0.25, 1) !important;
+      will-change: opacity, transform;
+    }
+    .cascade-item.cascade-revealed {
+      opacity: 1 !important;
+      visibility: visible !important;
+      transform: translateY(0) !important;
+    }
+
+    /* Level 2: Metric Table Rows (Slide in horizontally from left one by one) */
+    .cascade-metric-row {
+      opacity: 0 !important;
+      transform: translateX(-16px) !important;
+      transition: opacity 0.32s cubic-bezier(0.2, 0.8, 0.25, 1), transform 0.32s cubic-bezier(0.2, 0.8, 0.25, 1), background 0.15s ease !important;
+      will-change: opacity, transform;
+    }
+    .cascade-metric-row.cascade-revealed {
+      opacity: 1 !important;
+      transform: translateX(0) !important;
+    }
+
+    /* Level 3: Evaluation Word Card (Springy Pop-in with Aura) */
+    .result-evaluation-card.cascade-item {
+      opacity: 0 !important;
+      transform: scale(0.92) translateY(-8px) !important;
+      transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+    .result-evaluation-card.cascade-item.cascade-revealed {
+      opacity: 1 !important;
+      transform: scale(1) translateY(0) !important;
+    }
+
+    /* Level 4: Action Button Items (Cascade in from above) */
+    .cascade-btn-item {
+      opacity: 0 !important;
+      transform: translateY(-8px) !important;
+      transition: opacity 0.32s cubic-bezier(0.2, 0.8, 0.25, 1), transform 0.32s cubic-bezier(0.2, 0.8, 0.25, 1) !important;
+      will-change: opacity, transform;
+    }
+    .cascade-btn-item.cascade-revealed {
+      opacity: 1 !important;
+      transform: translateY(0) !important;
+    }
+
+    /* Fallback / Legacy keyframe support */
     @keyframes result-fade-up {
       from {
         opacity: 0;
@@ -1081,6 +1597,21 @@
       to {
         opacity: 1;
         transform: translateY(0);
+      }
+    }
+
+    /* Accessibility: Respect Reduced Motion Preference */
+    @media (prefers-reduced-motion: reduce) {
+      .cascade-item,
+      .cascade-metric-row,
+      .cascade-btn-item,
+      .score-grade-val.grade-revealed,
+      .score-grade-box.grade-box.box-stamped {
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: none !important;
+        transition: none !important;
+        animation: none !important;
       }
     }
 
@@ -1135,29 +1666,15 @@
       text-overflow: ellipsis;
     }
 
-    /* ===== MOTIVATIONAL MESSAGE (SUPPRESSED PER USER REQUEST) ===== */
-    .result-motivation-msg,
-    #result-motivation-msg,
+    /* ===== ATTEMPT META SUPPRESSION ===== */
     #result-attempt-meta {
       display: none !important;
     }
 
-    /* ===== RANK IN BATCH BADGE (FEATURE 5) ===== */
-    .result-rank-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 999px;
-      padding: 3px 12px;
-      font-size: 0.88rem;
-      font-weight: 800;
-      color: #f8fafc;
-      margin-left: 8px;
-      white-space: nowrap;
-      animation: result-fade-up 0.4s 1s ease both;
+    /* ===== RANK IN BATCH BADGE (SUPPRESSED PER USER REQUEST) ===== */
+    .result-rank-badge,
+    #result-rank-badge {
+      display: none !important;
     }
 
     /* ===== ATTEMPT META (FEATURE 6 — Attempt Counter + Delta) ===== */
@@ -1183,9 +1700,13 @@
     /* ===== COMPREHENSIVE MOBILE ZERO-SCROLL CALIBRATION ===== */
     @media (max-width: 640px) {
       .result-hero {
-        padding: 8px 10px !important;
-        border-radius: 16px !important;
-        max-width: 400px !important;
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+        height: 100% !important;
+        gap: 10px !important;
       }
       .result-hero-row {
         gap: 12px !important;
@@ -1195,15 +1716,16 @@
         gap: 8px !important;
       }
       .result-score-ring-wrapper {
-        width: clamp(66px, 10vh, 78px) !important;
-        height: clamp(66px, 10vh, 78px) !important;
+        width: 86px !important;
+        height: 86px !important;
       }
       .result-score-ring-wrapper .result-avatar-circle {
-        width: clamp(50px, 7.8vh, 60px) !important;
-        height: clamp(50px, 7.8vh, 60px) !important;
+        width: 86px !important;
+        height: 86px !important;
       }
       .result-student-name-label {
-        font-size: 0.8rem !important;
+        font-size: 1.15rem !important;
+        font-weight: 800 !important;
         margin-top: 2px !important;
       }
       #result-percentage {
@@ -1219,7 +1741,7 @@
       }
       #result-Assessment-name-container {
         padding: 2px 8px !important;
-        margin: 0 auto 2px auto !important;
+        margin: 0 auto !important;
       }
       #result-Assessment-name {
         font-size: 0.76rem !important;
@@ -1237,14 +1759,10 @@
         font-size: 0.92rem !important;
       }
       .result-rank-badge {
-        font-size: 0.8rem !important;
-        padding: 2px 8px !important;
+        display: none !important;
       }
       #result-metrics-bar {
-        margin: 0 auto 4px auto !important;
-      }
-      #result-metrics-bar > .unified-metric-item {
-        padding: 3px 6px !important;
+        margin: 0 auto !important;
       }
       .metric-lbl {
         font-size: 0.7rem !important;
@@ -1259,6 +1777,14 @@
         padding: 6px 10px !important;
         font-size: 0.8rem !important;
       }
+      .result-action-buttons-wrap .btn,
+      .result-action-buttons-wrap .btn-dashboard-primary,
+      .result-action-buttons-wrap .btn-breakdown-ghost,
+      .result-action-buttons-wrap .remedial-segment-btn,
+      .result-action-buttons-wrap .btn-next-milestone .next-btn-title {
+        font-size: 13px !important;
+        line-height: 1.2 !important;
+      }
       .security-policy-card {
         padding: 5px 8px !important;
         font-size: 0.72rem !important;
@@ -1267,15 +1793,19 @@
 
     @media (max-height: 720px) {
       .result-hero {
-        padding: 6px 8px !important;
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        height: 100% !important;
       }
       .result-score-ring-wrapper {
-        width: 66px !important;
-        height: 66px !important;
+        width: 86px !important;
+        height: 86px !important;
       }
       .result-score-ring-wrapper .result-avatar-circle {
-        width: 50px !important;
-        height: 50px !important;
+        width: 86px !important;
+        height: 86px !important;
       }
       .result-stamp-stage {
         min-height: 56px !important;
@@ -1287,4 +1817,28 @@
       #result-percentage {
         font-size: 1.75rem !important;
       }
+    }
+
+    /* ===== BOTTOM BANNER (50px ALL ACROSS THE PAGE) ===== */
+    .result-page #bottom-ad-banner,
+    .result-page .topscore-locked-banner {
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      background: rgba(9, 13, 22, 0.95) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-family: 'Inter', sans-serif !important;
+      font-size: 0.82rem !important;
+      color: #94A3B8 !important;
+      letter-spacing: 0.04em !important;
+      flex-shrink: 0 !important;
+      position: sticky !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      z-index: 100 !important;
+      box-sizing: border-box !important;
     }

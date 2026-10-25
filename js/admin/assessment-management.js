@@ -612,6 +612,12 @@ export async function renderResults(area) {
   const submittedOnly = rawData.filter(r => ['submitted', 'auto_submitted'].includes(r.status));
 
   // Deduplicate by Student + Assessment, keeping highest score only
+  const getEffectivePct = (att) => {
+    const isRem = Boolean(att.is_remedial_unlocked);
+    const raw = parseFloat(att.percentage || 0);
+    return isRem ? Math.min(raw, 60.0) : (att.effective_score != null ? parseFloat(att.effective_score) : raw);
+  };
+
   const mergedResults = new Map();
   submittedOnly.forEach(r => {
     const key = `${r.student_id}_${r.assessment_id}`;
@@ -619,8 +625,8 @@ export async function renderResults(area) {
     if (!existing) {
       mergedResults.set(key, r);
     } else {
-      const existingScore = parseFloat(existing.percentage || 0);
-      const currentScore = parseFloat(r.percentage || 0);
+      const existingScore = getEffectivePct(existing);
+      const currentScore = getEffectivePct(r);
       if (currentScore > existingScore || (currentScore === existingScore && new Date(r.submitted_at) > new Date(existing.submitted_at))) {
         mergedResults.set(key, r);
       }
@@ -649,6 +655,11 @@ export async function renderResults(area) {
       else                                        attWrong++;
     });
 
+    const isRem = Boolean(r.is_remedial_unlocked);
+    const rawPct = parseFloat(r.percentage || 0);
+    const effPct = isRem ? Math.min(rawPct, 60.0) : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
+    const effGrade = isRem && rawPct > 60 ? 'B' : (r.grade || (typeof getGrade === 'function' ? getGrade(effPct) : '-'));
+
     return {
       id: r.id,
       studentId: r.student_id,
@@ -657,8 +668,8 @@ export async function renderResults(area) {
       className: r.students?.programs?.name || '—',
       batch: r.students?.batches?.name || '—',
       AssessmentTitle: r.assessments?.title || 'Unknown Assessment',
-      score: r.percentage ? parseFloat(r.percentage).toFixed(1) : '0.0',
-      grade: r.grade || '-',
+      score: effPct.toFixed(1) + (isRem ? ' (Remedial 60%)' : ''),
+      grade: effGrade,
       correct: attCorrect,
       minor: attMinor,
       wrong: attWrong,

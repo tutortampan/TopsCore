@@ -5,10 +5,10 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchAssessmentsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startAssessment, submitAssessment, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial } from './api.js?v=5.3.2';
-import { getStudentSession, getAdminSession } from './session.js?v=5.3.2';
-import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=5.3.2';
-import { getSupabase } from './supabase.js?v=5.3.2';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchAssessmentsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startAssessment, submitAssessment, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial } from './api.js?v=5.6.5';
+import { getStudentSession, getAdminSession } from './session.js?v=5.5.8';
+import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=5.5.8';
+import { getSupabase } from './supabase.js?v=5.5.8';
 
 let session = getStudentSession();
 if (!session) {
@@ -41,13 +41,12 @@ if (!session) {
       return 'incorrect';
     }
 
-    const gradeColors = { S: '#fbbf24', A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', E: '#ef4444', F: '#ef4444' };
+    const gradeColors = { S: '#a855f7', A: '#10b981', B: '#38bdf8', C: '#f59e0b', D: '#f97316', E: '#ef4444', F: '#ef4444' };
 
     // Humanize raw assessment_type values from DB
     function humanizeType(raw) {
       if (!raw) return '';
       const map = {
-        
         VOCABULARY: 'Vocabulary',
         GRAMMAR: 'Grammar',
         SPEAKING: 'Speaking',
@@ -58,6 +57,11 @@ if (!session) {
         TEST: 'Test',
         EXAM: 'Exam',
         QUIZ: 'Quiz',
+        WORD_TASK: 'Word Task',
+        PHRASE_TASK: 'Phrase Task',
+        VOCAB_TEST: 'Vocab Test',
+        WORDS_TEST: 'Word Test',
+        PHRASES_TEST: 'Phrase Test',
       };
       return map[raw.toUpperCase()] || raw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     }
@@ -78,15 +82,16 @@ if (!session) {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
 
-      // Color palette per grade
+      // Color palette per grade (Matte Modern)
       const palettes = {
-        S: ['#fbbf24', '#fef08a', '#f59e0b', '#ffd700'],
-        A: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
-        B: ['#84cc16', '#a3e635', '#bef264', '#d9f99d'],
-        C: ['#eab308', '#fde047', '#fef08a', '#fef9c3'],
-        D: ['#f97316', '#fb923c', '#fdba74', '#fff7ed'],
-        E: ['#ef4444', '#f87171', '#fca5a5', '#fee2e2'],
-        F: ['#ef4444', '#f87171', '#fca5a5', '#fee2e2'],
+        S: ['#a855f7', '#c084fc', '#9333ea', '#e9d5ff'],
+        A: ['#10b981', '#34d399', '#059669', '#6ee7b7'],
+        B: ['#38bdf8', '#7dd3fc', '#0284c7', '#bae6fd'],
+        C: ['#f59e0b', '#fbbf24', '#d97706', '#fde68a'],
+        D: ['#f97316', '#fb923c', '#ea580c', '#fed7aa'],
+        E: ['#ef4444', '#f87171', '#dc2626', '#fca5a5'],
+        F: ['#ef4444', '#f87171', '#dc2626', '#fca5a5'],
+        REMEDIAL: ['#f59e0b', '#fbbf24', '#d97706', '#fde68a'],
       };
       const colors = palettes[grade] || palettes.B;
 
@@ -128,7 +133,7 @@ if (!session) {
     // ═══════════════════════════════════════════════════════════
     // FEATURE 2: SVG Score Ring Animation
     // ═══════════════════════════════════════════════════════════
-    function animateScoreRing(pct, grade) {
+    function animateScoreRing(pct, grade, isRemedial = false) {
       const circle = document.getElementById('ring-progress-circle');
       if (!circle) return;
       const r = 50;
@@ -137,10 +142,10 @@ if (!session) {
       circle.style.strokeDashoffset = circumference; // start empty
 
       const gradeRingColors = {
-        S: '#fbbf24', A: '#10b981', B: '#38bdf8',
-        C: '#a78bfa', D: '#fb923c', E: '#f87171', F: '#ef4444'
+        S: '#a855f7', A: '#10b981', B: '#38bdf8',
+        C: '#f59e0b', D: '#f97316', E: '#ef4444', F: '#ef4444'
       };
-      circle.style.stroke = gradeRingColors[grade] || '#38bdf8';
+      circle.style.stroke = isRemedial ? '#f59e0b' : (gradeRingColors[grade] || '#38bdf8');
 
       const duration = 1400;
       const start = performance.now();
@@ -156,20 +161,35 @@ if (!session) {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FEATURE 4: Grade-specific Motivational Messages
     // ═══════════════════════════════════════════════════════════
-    function getMotivationMsg(grade, pct) {
-      const msgs = {
-        S: { text: '🏆 PERFECT MASTERY! Truly exceptional!', color: '#fbbf24' },
-        A: { text: '🌟 Outstanding! You nailed it!', color: '#10b981' },
-        B: { text: '💪 Great work! Keep pushing higher!', color: '#38bdf8' },
-        C: { text: '👍 Good effort! Room to grow!', color: '#a78bfa' },
-        D: { text: '📚 Keep studying — you can do better!', color: '#fb923c' },
-        E: { text: '⚡ Don\'t give up — review and retry!', color: '#f87171' },
-        F: { text: '🔄 Practice more before retaking.', color: '#ef4444' },
+    // FEATURE 4: Achievement Status (Rule DECISION-018)
+    // Strictly 6 states: FAIL, LESS, ENOUGH, GOOD, VERY GOOD, EXCELLENT.
+    // REMEDIAL is an exam condition/status, NOT an Achievement Status!
+    // ═══════════════════════════════════════════════════════════
+    function getAchievementStatus(grade, pct = null) {
+      let g = String(grade || '').toUpperCase();
+      if (g === 'R' || !['S', 'STAR', 'A', 'B', 'C', 'D', 'E', 'F'].includes(g)) {
+        const p = parseFloat(pct || 0);
+        if (p >= 100) g = 'S';
+        else if (p >= 80) g = 'A';
+        else if (p >= 60) g = 'B';
+        else if (p >= 40) g = 'C';
+        else if (p >= 20) g = 'D';
+        else g = 'E';
+      }
+      const map = {
+        S: 'EXCELLENT',
+        STAR: 'EXCELLENT',
+        A: 'VERY GOOD',
+        B: 'GOOD',
+        C: 'ENOUGH',
+        D: 'LESS',
+        E: 'FAIL',
+        F: 'FAIL'
       };
-      return msgs[grade] || msgs.C;
+      return map[g] || 'ENOUGH';
     }
+    const getEvaluationWord = (grade, isRemedial = false, pct = null) => getAchievementStatus(grade, pct);
 
     // ═══════════════════════════════════════════════════════════
     // FEATURE 3 / 7: Improvement Indicator (delta vs last attempt)
@@ -206,76 +226,10 @@ if (!session) {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FEATURE 5: Rank in Batch
+    // FEATURE 5: Rank in Batch (Suppressed per user request: "card 3 elemen tambahan itu buang saja")
     // ═══════════════════════════════════════════════════════════
     async function renderRankInBatch(targetStudentId, batchId) {
-      const el = document.getElementById('result-rank-badge');
-      if (!el || !batchId) return;
-      try {
-        const supabase = await getSupabase();
-        // Get all students in the batch
-        const { data: batchStudents } = await supabase
-          .from('students')
-          .select('id')
-          .eq('batch_id', batchId)
-          .is('deleted_at', null);
-
-        if (!batchStudents || batchStudents.length < 2) return;
-        const batchStudentIds = batchStudents.map(s => s.id);
-
-        // Get all submitted attempts for these students (including points and remedial state)
-        const { data: bAtts } = await supabase
-          .from('attempts')
-          .select('student_id, assessment_id, score, total_questions, percentage, effective_score, is_remedial_unlocked')
-          .in('status', ['submitted', 'auto_submitted'])
-          .in('student_id', batchStudentIds);
-
-        if (!bAtts || bAtts.length === 0) return;
-
-        // Compute best score & points map per student (Points-Centric Ranking)
-        const studentBestMap = {};
-        batchStudentIds.forEach(sid => { studentBestMap[sid] = {}; });
-
-        bAtts.forEach(a => {
-          const sid = a.student_id;
-          const aid = a.assessment_id;
-          if (!sid || !aid || !studentBestMap[sid]) return;
-          const rawPct = parseFloat(a.percentage || 0);
-          const isRem = Boolean(a.is_remedial_unlocked);
-          const effPct = isRem ? Math.min(rawPct, 60.0) : parseFloat(a.effective_score ?? rawPct);
-          const rawScore = parseFloat(a.score != null ? a.score : (rawPct * (a.total_questions || 100) / 100));
-          const maxRemPts = a.total_questions ? (a.total_questions * 0.6) : (rawScore * 0.6);
-          const effPoints = isRem ? Math.min(rawScore, maxRemPts) : rawScore;
-
-          if (!studentBestMap[sid][aid] || effPct > studentBestMap[sid][aid].effPct || (effPct === studentBestMap[sid][aid].effPct && effPoints > studentBestMap[sid][aid].points)) {
-            studentBestMap[sid][aid] = { effPct, points: effPoints };
-          }
-        });
-
-        const ranked = batchStudentIds.map(sid => {
-          const items = Object.values(studentBestMap[sid] || {});
-          const totalPts = Math.round(items.reduce((sum, it) => sum + (it.points || 0), 0) * 10) / 10;
-          const avgPct = items.length > 0 ? items.reduce((sum, it) => sum + (it.effPct || 0), 0) / items.length : 0;
-          return { sid, totalPts, avgPct };
-        }).sort((a, b) => {
-          if (b.totalPts !== a.totalPts) return b.totalPts - a.totalPts;
-          return b.avgPct - a.avgPct;
-        });
-
-        const myData = ranked.find(r => r.sid === targetStudentId);
-        if (!myData) return;
-
-        // Points-centric dense ranking
-        const higherCount = ranked.filter(r => r.totalPts > myData.totalPts).length;
-        const myRank = higherCount + 1;
-        const total = ranked.length;
-
-        const medal = myRank === 1 ? '🥇 ' : myRank === 2 ? '🥈 ' : myRank === 3 ? '🥉 ' : '';
-        el.innerHTML = `${medal}Batch #${myRank}<span style="font-size:0.7rem;color:#94a3b8;">/${total}</span>`;
-        el.classList.remove('hidden');
-      } catch (err) {
-        console.warn('Rank calculation failed:', err);
-      }
+      return; // Disabled per user request
     }
 
     // Victory Confetti Engine for Star (⭐) / 100%
@@ -362,8 +316,58 @@ if (!session) {
       const container = document.getElementById('smart-next-action-container');
       if (!container) return;
 
+      const isAdmin = Boolean(getAdminSession()) || session?.is_admin === true || urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true' || urlParams.get('from') === 'admin';
+      const isRemedial = Boolean(attempt.is_remedial_unlocked || attempt.is_remedial);
+
+      // IF ADMIN / TUTOR: Render the 2-COLUMN SPLIT SEGMENTED CONTROL [ NORMAL ] | [ REMIDI ] directly in this slot
+      if (isAdmin) {
+        container.innerHTML = `
+          <div class="tutor-remedial-segmented" role="group" aria-label="Exam Remedial Status">
+            <button type="button" class="remedial-segment-btn segment-normal ${!isRemedial ? 'active' : ''}" id="btn-segment-normal" title="Set Status: Normal Exam">
+              <span>${!isRemedial ? '●' : '○'}</span> NORMAL
+            </button>
+            <button type="button" class="remedial-segment-btn segment-remidi ${isRemedial ? 'active' : ''}" id="btn-segment-remidi" title="Set Status: Remedial Exam">
+              <span>${isRemedial ? '●' : '○'}</span> REMIDI
+            </button>
+          </div>
+        `;
+        const btnNormal = document.getElementById('btn-segment-normal');
+        const btnRemidi = document.getElementById('btn-segment-remidi');
+        if (btnNormal && btnRemidi) {
+          btnNormal.onclick = async () => {
+            if (!isRemedial) return;
+            try {
+              showLoading();
+              await labelAttemptRemedial(attempt.id, false, 60);
+              showToast('Status updated: NORMAL', 'success');
+              setTimeout(() => window.location.reload(), 300);
+            } catch (err) {
+              console.error(err);
+              showToast('Failed to update status', 'error');
+            } finally {
+              hideLoading();
+            }
+          };
+          btnRemidi.onclick = async () => {
+            if (isRemedial) return;
+            try {
+              showLoading();
+              await labelAttemptRemedial(attempt.id, true, 60);
+              showToast('Status updated: REMIDI', 'warning');
+              setTimeout(() => window.location.reload(), 300);
+            } catch (err) {
+              console.error(err);
+              showToast('Failed to update status', 'error');
+            } finally {
+              hideLoading();
+            }
+          };
+        }
+        return;
+      }
+
       const targetStudentId = attempt.student_id || session.student_id;
-      if (!targetStudentId || session.is_admin) return;
+      if (!targetStudentId) return;
 
       try {
         const supabase = await getSupabase();
@@ -392,10 +396,14 @@ if (!session) {
           }
         });
 
+        const asmData = attempt.assessments || attempt.Assessments;
+        const currentClassId = asmData?.class_id;
+
         const published = (allAssms || []).filter(a => {
           if (a.deleted_at) return false;
           const status = (a.status || '').toUpperCase();
           if (status !== 'PUBLISHED' && status !== 'ACTIVE') return false;
+          if (currentClassId) return a.class_id === currentClassId;
           return myClassIds.has(a.class_id);
         });
 
@@ -428,12 +436,12 @@ if (!session) {
                        (nextAsm.assessment_type || '').toUpperCase().includes('TEST') ||
                        (nextAsm.title || '').toUpperCase().includes('TEST');
 
-        const nextName = nextAsm.shell_code || nextAsm.title || 'Next Assessment';
+        const nextName = nextAsm.title || nextAsm.shell_code || 'Next Assessment';
 
         if (!isTest) {
           container.innerHTML = `
             <button class="btn-next-milestone" id="btn-next-milestone" type="button">
-              <span class="next-btn-tag">🚀 Up Next Milestone</span>
+              <span class="next-btn-tag">GO TO NEXT ASSESSMENT:</span>
               <span class="next-btn-title">${escapeHtml(cleanTitle(nextName))} &rarr;</span>
             </button>
           `;
@@ -452,7 +460,7 @@ if (!session) {
           if (isUnlocked && isWhitelisted) {
             container.innerHTML = `
               <button class="btn-next-milestone btn-next-test" id="btn-next-milestone" type="button">
-                <span class="next-btn-tag">🟢 Test Session Unlocked</span>
+                <span class="next-btn-tag">GO TO NEXT ASSESSMENT:</span>
                 <span class="next-btn-title">${escapeHtml(cleanTitle(nextName))} &rarr;</span>
               </button>
             `;
@@ -533,38 +541,101 @@ if (!session) {
           }
         }
 
-        document.getElementById('result-loading').classList.add('hidden');
-        document.getElementById('result-content').classList.remove('hidden');
+        // Keep result-loading visible while all DOM data and asynchronous dependencies finish loading
 
+
+        const asmData = attempt.assessments || attempt.Assessments;
+        const assessmentId = attempt.assessment_id || attempt.Assessment_id;
         const rawPct = parseFloat(attempt.percentage || 0);
         const isRemedial = Boolean(attempt.is_remedial_unlocked);
         const pct = isRemedial ? Math.min(rawPct, 60.0) : parseFloat(attempt.effective_score ?? rawPct);
-        const grade = isRemedial && rawPct > 60 ? 'B' : (attempt.grade || getGrade(pct));
-        const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE.F;
-        const isGradeS = (grade === 'S' || grade === 'STAR');
+        const grade = isRemedial ? 'R' : (attempt.grade || getGrade(pct));
+        const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, isRemedial) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE.F;
+        const isGradeS = (grade === 'S' || grade === 'STAR') && !isRemedial;
 
         // FEATURE 1: Launch grade-specific background particles
-        launchBgParticles(grade);
+        launchBgParticles(isRemedial ? 'REMEDIAL' : grade);
 
         // Dynamic Tier Atmosphere on Result Hero
         const heroSection = document.getElementById('result-hero-section') || document.querySelector('.result-hero');
         if (heroSection) {
-          heroSection.className = `result-hero tier-${grade}`;
+          heroSection.className = isRemedial ? `result-hero tier-R` : `result-hero tier-${grade}`;
+        }
+
+        // Wire up Top Header matching Student Dashboard / Lobby
+        const isAdminSession = Boolean(getAdminSession()) || session?.is_admin === true || urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true' || urlParams.get('from') === 'admin';
+        const headerBrand = document.getElementById('result-header-brand');
+        if (headerBrand) headerBrand.textContent = 'RESULT PAGE';
+        const profileBtn = document.getElementById('view-profile-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const headerAvatarInit = document.getElementById('header-avatar-initial');
+
+        if (isAdminSession) {
+          if (profileBtn) {
+            profileBtn.title = "Back to Tutor's Room";
+            profileBtn.onclick = () => location.href = 'admin.html#class-hub';
+          }
+          if (logoutBtn) {
+            logoutBtn.onclick = () => {
+              sessionStorage.clear();
+              localStorage.removeItem('topscore_admin_session');
+              location.href = 'admin.html';
+            };
+          }
+          if (headerAvatarInit) headerAvatarInit.textContent = 'T';
+          const backBtn = document.getElementById('back-dashboard-btn');
+          if (backBtn) {
+            backBtn.textContent = 'BACK TO ROOM';
+            backBtn.href = 'admin.html#class-hub';
+          }
+        } else {
+          if (profileBtn) {
+            profileBtn.title = "Back to Student's Lobby";
+            profileBtn.onclick = () => location.href = 'dashboard.html';
+          }
+          if (logoutBtn) {
+            logoutBtn.onclick = () => {
+              sessionStorage.clear();
+              localStorage.removeItem('topscore_student_session');
+              location.href = 'index.html';
+            };
+          }
+          const backBtn = document.getElementById('back-dashboard-btn');
+          if (backBtn) {
+            backBtn.textContent = 'BACK TO LOBBY';
+            backBtn.href = 'dashboard.html';
+          }
         }
 
         // Fetch user photo + FEATURE 3: student name label
+        // Fetch student identity, institutional metadata, and photo
         let studentFullName = session.student_name || 'Student';
         const targetStudentId = attempt.student_id || session.student_id;
         try {
           const supabase = await getSupabase();
           if (targetStudentId) {
-            const { data: st } = await supabase.from('students').select('name, photo_url, batch_id').eq('id', targetStudentId).single();
+            const { data: st } = await supabase.from('students')
+              .select('id, name, photo_url, batch_id, level_id, program_id, institution_id, institutions(name), programs(name), batches(name), levels(name)')
+              .eq('id', targetStudentId)
+              .single();
             if (st) {
               studentFullName = st.name || studentFullName;
-              // FEATURE 5: Rank in batch (async, non-blocking)
-              if (st.batch_id) {
-                renderRankInBatch(targetStudentId, st.batch_id);
-              }
+
+              // Populate institutional metadata hierarchy (Wireframe: Institution | Program | Batch | Level)
+              const metaInstEl = document.getElementById('meta-inst');
+              const metaProgEl = document.getElementById('meta-prog');
+              const metaBatchEl = document.getElementById('meta-batch');
+              const metaLvlEl = document.getElementById('meta-lvl');
+
+              const instName = st.institutions?.name || session.institution_name || 'Cake English Course';
+              const progName = (st.programs?.name || session.program_name || 'CAMP').toUpperCase();
+              const batchName = st.batches?.name || session.batch_name || '133';
+              const lvlName = asmData?.levels?.name || st.levels?.name || session.level_name || '3rd Level';
+
+              if (metaInstEl) metaInstEl.textContent = instName;
+              if (metaProgEl) metaProgEl.textContent = progName;
+              if (metaBatchEl) metaBatchEl.textContent = batchName;
+              if (metaLvlEl) metaLvlEl.textContent = lvlName;
             }
             if (st && st.photo_url) {
               const avatarImg = document.getElementById('result-avatar-img');
@@ -576,112 +647,280 @@ if (!session) {
               };
               avatarImg.classList.remove('hidden');
               avatarInitial?.classList.add('hidden');
+
+              // Also sync top header avatar
+              const headerAvatarImg = document.getElementById('header-avatar-img');
+              const headerAvatarInitEl = document.getElementById('header-avatar-initial');
+              if (headerAvatarImg) {
+                headerAvatarImg.src = st.photo_url;
+                headerAvatarImg.classList.remove('hidden');
+              }
+              if (headerAvatarInitEl) headerAvatarInitEl.classList.add('hidden');
             } else {
               const cleanStudentName = (st?.name || session.student_name || 'Student').replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?)\s+/i, '').trim();
-              document.getElementById('result-avatar-initial').textContent = cleanStudentName.charAt(0).toUpperCase() || 'S';
+              const initLetter = cleanStudentName.charAt(0).toUpperCase() || 'S';
+              document.getElementById('result-avatar-initial').textContent = initLetter;
+              const headerAvatarInitEl = document.getElementById('header-avatar-initial');
+              if (headerAvatarInitEl && !isAdminSession) headerAvatarInitEl.textContent = initLetter;
             }
           }
         } catch (err) {
           console.warn('Could not load student photo:', err);
         }
 
-        // Render student name below avatar
+        // Render student name below divider in header card
         const nameLabel = document.getElementById('result-student-name-label');
         if (nameLabel && studentFullName) {
           nameLabel.textContent = studentFullName;
         }
 
-        // FEATURE 4: Grade-specific motivational message (Suppressed per user request — no additional comment text)
+        // Authoritative Standard Grading System (Matte Modern Palette)
+        // S = #a855f7, A = #10b981, B = #38bdf8, C = #f59e0b, D = #f97316, E/F = #ef4444, R = #FFFF00
+        const standardGradeColors = {
+          S: '#a855f7', // 💜 Electric Violet / Purple Glow (100% & Grade S)
+          A: '#10b981', // 💚 Emerald Green
+          B: '#38bdf8', // 🩵 Sky Blue
+          C: '#f59e0b', // 💛 Warm Amber
+          D: '#f97316', // 🧡 Matte Orange
+          E: '#ef4444', // ❤️ Crimson Red
+          F: '#ef4444', // ❤️ Crimson Red
+          R: '#FFFF00'  // 💛 Kuning Murni (Remedial)
+        };
+
+        const hexToRgba = (hex, alpha) => {
+          let c = String(hex || '#a855f7').replace('#', '');
+          if (c.length === 3) c = c.split('').map(x => x + x).join('');
+          const num = parseInt(c, 16);
+          return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
+        };
+
+        const hexToRgbString = (hex) => {
+          let c = String(hex || '#a855f7').replace('#', '');
+          if (c.length === 3) c = c.split('').map(x => x + x).join('');
+          const num = parseInt(c, 16);
+          return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
+        };
+
+        const isGradeSOr100 = (pct >= 100 || grade === 'S' || grade === 'STAR') && !isRemedial;
+        const currentTier = isGradeSOr100 ? 'S' : (isRemedial ? 'R' : grade);
+        let gradeColor = isRemedial ? '#FFFF00' : (standardGradeColors[grade] || '#a855f7');
+        const rgbColor = hexToRgbString(gradeColor);
+
+        // 5. Achievement Status (Rule DECISION-018: strictly FAIL, LESS, ENOUGH, GOOD, VERY GOOD, EXCELLENT)
         const motEl = document.getElementById('result-motivation-msg');
         if (motEl) {
-          motEl.textContent = '';
-          motEl.style.display = 'none';
+          motEl.textContent = getAchievementStatus(grade, pct);
+          motEl.style.display = 'flex';
+          motEl.classList.remove('hidden');
+          motEl.dataset.tier = currentTier;
+          motEl.style.setProperty('--tier-color', gradeColor);
+          motEl.style.setProperty('--tier-rgb', rgbColor);
         }
 
-        // Avatar container tier styling & Grade S sparkling gold aura
-        const avatarContainer = document.getElementById('result-avatar-container');
-        if (avatarContainer) {
-          if (grade === 'S') {
-            avatarContainer.style.borderColor = '#fbbf24';
-            avatarContainer.style.boxShadow = '0 0 25px rgba(245, 158, 11, 0.75), 0 0 10px rgba(251, 191, 36, 0.8), 0 8px 24px rgba(0,0,0,0.5)';
-            avatarContainer.style.animation = 'gold-badge-sparkle 2.2s infinite ease-in-out';
+        let displayGradeHtml = grade;
+        if (isRemedial) {
+          displayGradeHtml = 'R';
+          gradeColor = '#FFFF00';
+        } else if (isGradeSOr100) {
+          displayGradeHtml = `
+            <svg class="pure-star-svg" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.65)); display:inline-block; vertical-align:middle;">
+              <defs>
+                <linearGradient id="starPurpleHeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#c084fc" />
+                  <stop offset="50%" stop-color="#a855f7" />
+                  <stop offset="100%" stop-color="#7e22ce" />
+                </linearGradient>
+              </defs>
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starPurpleHeroGrad)" />
+            </svg>
+          `;
+          gradeColor = '#a855f7';
+        } else {
+          displayGradeHtml = grade;
+          gradeColor = standardGradeColors[grade] || '#a855f7';
+        }
+
+        // 1. Ambient Hero Banner Aura & Modular CSS Variables (1:1 with Dashboard)
+        const identityCard = document.getElementById('result-identity-card');
+        if (identityCard) {
+          identityCard.dataset.tier = currentTier;
+          identityCard.style.setProperty('--tier-color', gradeColor);
+          identityCard.style.setProperty('--tier-rgb', rgbColor);
+          if (isGradeSOr100) {
+            identityCard.style.borderColor = 'rgba(168, 85, 247, 0.55)';
+            identityCard.style.boxShadow = '0 0 35px rgba(168, 85, 247, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5)';
+            identityCard.style.background = 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.22), transparent 75%), #0f172a';
+          } else if (isRemedial) {
+            identityCard.style.borderColor = 'rgba(255, 255, 0, 0.55)';
+            identityCard.style.boxShadow = '0 0 25px rgba(255, 255, 0, 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35)';
+            identityCard.style.background = 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(255, 255, 0, 0.15), transparent 75%), #0f172a';
           } else {
-            const bCol = theme.color || theme.hex || gradeColors[grade] || 'rgba(255,255,255,0.2)';
-            avatarContainer.style.borderColor = bCol;
-            avatarContainer.style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)';
-            avatarContainer.style.animation = 'none';
+            identityCard.style.borderColor = `rgba(${rgbColor}, 0.55)`;
+            identityCard.style.boxShadow = `0 0 20px rgba(${rgbColor}, 0.25), 0 10px 25px -5px rgba(0, 0, 0, 0.35)`;
+            identityCard.style.background = `radial-gradient(ellipse 90% 70% at 50% 0%, rgba(${rgbColor}, 0.14), transparent 75%), #0f172a`;
           }
         }
 
-        // Modern Gold Star Accent (★ Vector Badge for S / Star 100%, Letter for A-E)
+        // Propagate tier color & border aura to all cards (Wireframe Rule)
+        const asmTitleWrap = document.getElementById('result-Assessment-name-container');
+        if (asmTitleWrap) {
+          asmTitleWrap.dataset.tier = currentTier;
+          asmTitleWrap.style.setProperty('--tier-color', gradeColor);
+          asmTitleWrap.style.setProperty('--tier-rgb', rgbColor);
+        }
+        const metricsTable = document.getElementById('result-metrics-bar');
+        if (metricsTable) {
+          metricsTable.dataset.tier = currentTier;
+          metricsTable.style.setProperty('--tier-color', gradeColor);
+          metricsTable.style.setProperty('--tier-rgb', rgbColor);
+        }
+        const scoreGradeCard = document.getElementById('result-score-grade-card');
+        if (scoreGradeCard) {
+          scoreGradeCard.dataset.tier = currentTier;
+          scoreGradeCard.style.setProperty('--tier-color', gradeColor);
+          scoreGradeCard.style.setProperty('--tier-rgb', rgbColor);
+        }
+
+        // 2. Student Avatar Container Ring & Glow: Dynamically 100% follows student's Grade (1:1 Dashboard)
+        const avatarContainer = document.getElementById('result-avatar-container');
+        if (avatarContainer) {
+          avatarContainer.style.setProperty('--tier-color', gradeColor);
+          if (isGradeSOr100) {
+            avatarContainer.style.background = 'linear-gradient(135deg, #c084fc 0%, #a855f7 45%, #7e22ce 100%)';
+            avatarContainer.style.boxShadow = '0 0 25px rgba(168, 85, 247, 0.85), 0 0 45px rgba(192, 132, 252, 0.45)';
+            avatarContainer.style.border = '2.5px solid #c084fc';
+          } else if (isRemedial) {
+            avatarContainer.style.background = 'rgba(15, 23, 42, 0.9)';
+            avatarContainer.style.border = '2.5px solid #FFFF00';
+            avatarContainer.style.boxShadow = '0 0 18px rgba(255, 255, 0, 0.5), 0 4px 14px rgba(0, 0, 0, 0.35)';
+          } else {
+            avatarContainer.style.background = 'rgba(15, 23, 42, 0.9)';
+            avatarContainer.style.border = `2.5px solid ${gradeColor}`;
+            avatarContainer.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.45), 0 4px 14px rgba(0, 0, 0, 0.35)`;
+          }
+        }
+
+        // Modern Pure Star Accent (★ Vector Badge for S / Star 100%, Letter for A-E / R)
         const gradeBadge = document.getElementById('result-grade-badge');
         if (gradeBadge) {
-          if (grade === 'S') {
+          if (isRemedial) {
+            gradeBadge.textContent = 'R';
+            gradeBadge.style.color = '#FFFF00';
+          } else if (isGradeSOr100) {
             gradeBadge.innerHTML = `
               <svg class="star-accent-vector" width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                  <linearGradient id="starGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#FDE047" />
-                    <stop offset="100%" stop-color="#EAB308" />
+                  <linearGradient id="starPurpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#C084FC" />
+                    <stop offset="100%" stop-color="#A855F7" />
                   </linearGradient>
                 </defs>
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGoldGrad)" />
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starPurpleGrad)" />
               </svg>
             `;
           } else {
             gradeBadge.textContent = grade;
+            gradeBadge.style.color = gradeColor;
           }
         }
 
         const gradeStamp = document.getElementById('result-grade-stamp');
         if (gradeStamp) {
-          gradeStamp.className = `result-grade-stamp pure-stamp grade-${grade}`;
+          gradeStamp.className = isRemedial
+            ? `result-grade-stamp pure-stamp grade-remedial`
+            : `result-grade-stamp pure-stamp grade-${grade}`;
+          if (isRemedial) {
+            gradeStamp.textContent = 'R';
+            gradeStamp.style.color = '#FFFF00';
+          }
         }
 
-        // Percentage (animated count up) under photo
+        // 3. Percentage in Dual Score & Grade Card (Synchronized font color with Grade)
         const pctEl = document.getElementById('result-percentage');
-        pctEl.className = `result-percentage text-grade-${grade}`;
+        pctEl.className = isRemedial ? 'result-percentage' : `result-percentage text-grade-${grade}`;
+
+        const scoreColor = isRemedial ? '#FFFF00' : gradeColor;
+        const scoreGlow = `0 0 16px ${hexToRgba(scoreColor, 0.65)}, 0 0 32px ${hexToRgba(scoreColor, 0.35)}`;
+
+        // 4. Score Box Accent
+        const scoreBox = document.getElementById('result-score-box') || document.querySelector('.score-grade-box.score-box');
+        if (scoreBox) {
+          scoreBox.style.borderColor = isGradeSOr100 ? 'rgba(168, 85, 247, 0.6)' : `rgba(${rgbColor}, 0.55)`;
+          scoreBox.style.boxShadow = isGradeSOr100
+            ? '0 0 18px rgba(168, 85, 247, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25)'
+            : `0 0 12px rgba(${rgbColor}, 0.25), 0 4px 14px rgba(0, 0, 0, 0.2)`;
+        }
+
+        pctEl.style.cssText = `font-family:'Outfit','Inter',-apple-system,BlinkMacSystemFont,sans-serif !important;font-feature-settings:'tnum' on, 'lnum' on !important;letter-spacing:-0.01em !important;font-weight:900 !important;font-size:clamp(1.5rem, 3.8vw, 1.85rem) !important;line-height:1 !important;color:${scoreColor} !important;-webkit-text-fill-color:${scoreColor} !important;background:none !important;text-shadow:${scoreGlow} !important;`;
+
+        // 5. Grade Box & Value Accent (Kotak Grade simetris dengan Kotak Skor, TANPA .pure-star-nobox)
+        const gradeBox = document.getElementById('result-grade-box') || document.querySelector('.score-grade-box.grade-box');
+        if (gradeBox) {
+          gradeBox.style.borderColor = isGradeSOr100 ? 'rgba(168, 85, 247, 0.6)' : `rgba(${rgbColor}, 0.55)`;
+          gradeBox.style.background = 'rgba(23, 33, 56, 0.8)';
+          gradeBox.style.boxShadow = isGradeSOr100
+            ? '0 0 18px rgba(168, 85, 247, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25)'
+            : `0 0 12px rgba(${rgbColor}, 0.25), 0 4px 14px rgba(0, 0, 0, 0.2)`;
+          gradeBox.classList.remove('pure-star-nobox');
+          gradeBox.classList.remove('box-stamped');
+        }
+
+        const gradeValEl = document.getElementById('result-grade-val');
+        if (gradeValEl) {
+          gradeValEl.innerHTML = displayGradeHtml;
+          if (isGradeSOr100) {
+            gradeValEl.style.cssText = `display:inline-flex !important;align-items:center !important;justify-content:center !important;line-height:1 !important;border:none !important;background:none !important;`;
+          } else {
+            const glow1 = hexToRgba(gradeColor, 0.95);
+            const glow2 = hexToRgba(gradeColor, 0.70);
+            const vibrantTextGlow = `0 0 12px ${glow1}, 0 0 24px ${glow2}`;
+            gradeValEl.style.cssText = `font-family:'Outfit','Inter',-apple-system,BlinkMacSystemFont,sans-serif !important;font-weight:900 !important;font-size:clamp(1.5rem, 3.8vw, 1.85rem) !important;line-height:1 !important;color:${gradeColor} !important;-webkit-text-fill-color:${gradeColor} !important;text-shadow:${vibrantTextGlow} !important;`;
+          }
+          // Initial state: Delayed/Hidden until score animation completes
+          gradeValEl.classList.add('grade-delayed');
+          gradeValEl.classList.remove('grade-revealed');
+        }
 
         // Hide stamp initially; slam it down when calculation reaches final score!
         if (gradeStamp) {
           gradeStamp.classList.remove('stamped');
         }
 
-        // FEATURE 2: Start SVG score ring animation simultaneously
-        animateScoreRing(pct, grade);
+        // Initialize score to 0% for animated count-up sequence
+        pctEl.textContent = '0%';
 
-        animateCount(pctEl, pct, () => {
-          if (gradeStamp) {
-            gradeStamp.classList.add('stamped');
+        // 2. Assessment Title: 2-Line Format (Line 1: Assessment Title, Line 2: Topic / Theme)
+        const asmRawTitle = asmData?.title || asmData?.name || 'Assessment';
+        const parts = asmRawTitle.split(/\s*[-—]\s*/);
+        let titleType = '';
+        let titleTopic = '';
+        if (parts.length >= 2) {
+          titleType = cleanTitle(parts[0]).trim();
+          titleTopic = parts.slice(1).join(' - ').trim();
+        } else {
+          titleType = cleanTitle(asmRawTitle).trim();
+          titleTopic = asmData?.topic || asmData?.theme || asmData?.assessment_type || '';
+        }
+
+        const typeEl = document.getElementById('result-asm-type-row');
+        const topicEl = document.getElementById('result-asm-topic-row');
+        const legacyNameEl = document.getElementById('result-Assessment-name');
+        if (typeEl) typeEl.textContent = titleType.toUpperCase();
+        if (topicEl) {
+          if (titleTopic) {
+            topicEl.textContent = titleTopic.toUpperCase();
+            topicEl.style.display = 'block';
+          } else {
+            topicEl.style.display = 'none';
           }
-          if (isGradeS) {
-            launchConfetti();
-          }
-        });
+        }
+        if (legacyNameEl) legacyNameEl.textContent = asmRawTitle;
 
-        // Sleek Typography: Score Numbers (100.0%)
-        // font-feature-settings: 'tnum' on, 'lnum' on; letter-spacing: -0.03em; font-weight: 800; color: #F8FAFC; text-shadow: 0 0 24px rgba(250, 204, 21, 0.35);
-        pctEl.style.cssText = `font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif !important;font-feature-settings:'tnum' on, 'lnum' on !important;letter-spacing:-0.03em !important;font-weight:800 !important;color:#F8FAFC !important;-webkit-text-fill-color:#F8FAFC !important;background:none !important;text-shadow:0 0 24px rgba(250, 204, 21, 0.35) !important;`;
-
-        // V1: title from assessments or legacy Assessments join
-        const asmData  = attempt.assessments || attempt.Assessments;
-        const asmTitle = asmData?.title || asmData?.name || 'Assessment';
-        document.getElementById('result-Assessment-name').textContent = asmTitle;
-
-        // V1: Best score badge
-        const assessmentId = attempt.assessment_id || attempt.Assessment_id;
-        const isBest = attempt.is_best_score === true || pct >= 100;
-
-        // Inject best-score indicator near the grade badge if we have it
+        // Best score / not best score badge: Suppressed per user request ("tulisan best score atau not best score dihapus saja")
         const scoreBadgeEl = document.getElementById('result-best-score-badge');
         if (scoreBadgeEl) {
-          if (isRemedial) {
-            scoreBadgeEl.innerHTML = `<span class="result-badge-subtle" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; font-weight:700;">🟡 Remedial Attempt (KKM Capped at 60%)</span>`;
-          } else if (isBest) {
-            scoreBadgeEl.innerHTML = `<span class="result-badge-best">★ Best Score</span>`;
-          } else {
-            scoreBadgeEl.innerHTML = `<span class="result-badge-subtle">Completed Attempt</span>`;
-          }
+          scoreBadgeEl.innerHTML = '';
+          scoreBadgeEl.style.display = 'none';
         }
 
         // Stats & Points (Linear / Apple Pill Row with Muted 0-Values)
@@ -689,24 +928,37 @@ if (!session) {
         const partial = answers.filter(a => getEvalCategory(a) === 'minor_spelling_error').length;
         const wrong   = answers.filter(a => getEvalCategory(a) === 'incorrect').length;
         
-        const totalPoints = answers.reduce((sum, a) => sum + Number(a.score ?? 0), 0);
+        const rawTotalPoints = answers.reduce((sum, a) => sum + Number(a.score ?? 0), 0);
+        const attemptTotalQ = Number(attempt.total_questions || answers.length || 50);
+        const maxRemedialPts = attemptTotalQ * 0.6;
+        const totalPoints = isRemedial ? Math.min(rawTotalPoints, maxRemedialPts) : rawTotalPoints;
         const formattedPoints = (totalPoints % 1 !== 0) ? totalPoints.toFixed(1) : totalPoints;
         
         const resPointsEl = document.getElementById('res-points');
         if (resPointsEl) {
-          resPointsEl.textContent = `${formattedPoints} PTS`;
-          resPointsEl.style.color = '#F8FAFC';
+          resPointsEl.textContent = '0';
+          if (isRemedial) {
+            resPointsEl.style.color = '#FFFF00';
+            const ptsRow = document.getElementById('result-points-box');
+            if (ptsRow) {
+              const lbl = ptsRow.querySelector('.metric-stacked-lbl');
+              if (lbl) lbl.style.color = '#FFFF00';
+            }
+            resPointsEl.title = `Capped at KKM 60% (${formattedPoints}/${attemptTotalQ} pts). Raw attempt: ${rawTotalPoints} pts.`;
+          } else {
+            resPointsEl.style.color = '#F8FAFC';
+          }
         }
 
         const correctEl = document.getElementById('res-correct');
         if (correctEl) {
-          correctEl.textContent = correct;
+          correctEl.textContent = '0';
           correctEl.style.color = '#34D399';
         }
 
         const partialEl = document.getElementById('res-partial');
         if (partialEl) {
-          partialEl.textContent = partial;
+          partialEl.textContent = '0';
           if (partial === 0) {
             partialEl.style.color = '#64748B';
             document.getElementById('card-filter-partial')?.style.setProperty('opacity', '0.65');
@@ -718,7 +970,7 @@ if (!session) {
 
         const wrongEl = document.getElementById('res-wrong');
         if (wrongEl) {
-          wrongEl.textContent = wrong;
+          wrongEl.textContent = '0';
           if (wrong === 0) {
             wrongEl.style.color = '#64748B';
             document.getElementById('card-filter-wrong')?.style.setProperty('opacity', '0.65');
@@ -734,7 +986,7 @@ if (!session) {
           const className = asmData?.classes?.name || 'VOCABULARY';
           const levelName = asmData?.levels?.name || 'LEVEL 3';
           const asmCategory = (asmData?.assessment_category || asmData?.assessment_type || 'TASK').toUpperCase();
-          crumbEl.textContent = `${className.toUpperCase()} • ${levelName.toUpperCase()} • ${asmCategory}`;
+          crumbEl.textContent = `${className.toUpperCase()} • ${levelName.toUpperCase()} • ${humanizeType(asmCategory).toUpperCase()}`;
         }
 
         // Batch Champion Crown Check (King / Queen)
@@ -761,10 +1013,10 @@ if (!session) {
         } catch(_) {}
 
         // Accuracy Bar Computation
-        const totalQ = answers.length || 1;
-        const pctCorrect = ((correct / totalQ) * 100).toFixed(1);
-        const pctPartial = ((partial / totalQ) * 100).toFixed(1);
-        const pctWrong   = ((wrong / totalQ) * 100).toFixed(1);
+        const accuracyTotal = answers.length || attemptTotalQ || 1;
+        const pctCorrect = ((correct / accuracyTotal) * 100).toFixed(1);
+        const pctPartial = ((partial / accuracyTotal) * 100).toFixed(1);
+        const pctWrong   = ((wrong / accuracyTotal) * 100).toFixed(1);
 
         const barCorrect = document.getElementById('acc-bar-correct');
         const barPartial = document.getElementById('acc-bar-partial');
@@ -817,16 +1069,6 @@ if (!session) {
             // FEATURE 6: Attempt counter + improvement indicator beside stamp
             renderAttemptMeta(thisAssessmentAttempts, attemptId, pct);
 
-            // Calibrate best score pill dynamically based on historical best
-            if (scoreBadgeEl && thisAssessmentAttempts.length > 0) {
-              const maxPct = Math.max(...thisAssessmentAttempts.map(x => parseFloat(x.percentage || 0)));
-              if (pct >= maxPct || pct >= 100) {
-                scoreBadgeEl.innerHTML = `<span class="result-badge-best">★ Best Score</span>`;
-              } else {
-                scoreBadgeEl.innerHTML = `<span class="result-badge-subtle">Best: ${maxPct.toFixed(1)}%</span>`;
-              }
-            }
-
             if (thisAssessmentAttempts.length > 1) {
               renderAttemptHistory(thisAssessmentAttempts, attemptId);
             }
@@ -841,109 +1083,37 @@ if (!session) {
         const asmStatus = (asmData?.status || 'PUBLISHED').toUpperCase();
         const isPublished = (asmStatus === 'PUBLISHED' || asmStatus === 'ACTIVE');
 
-        if (!isPublished) {
-          tryAgainBtn.outerHTML = `
-            <div class="security-policy-card" style="color:#f87171 !important;">
-              <span>🔒</span> Retakes currently unavailable for this assessment.
-            </div>
-          `;
-        } else if (
-          (asmData?.assessment_type || '').toUpperCase() === 'EXAM' ||
-          (asmData?.assessment_type || '').toUpperCase() === 'TEST' ||
-          (asmData?.assessment_category || '').toUpperCase() === 'TEST' ||
-          (asmData?.title || '').toUpperCase().includes('TEST')
-        ) {
-          tryAgainBtn.outerHTML = `
-            <div class="security-policy-card">
-              <span>🔒</span> Official Test attempt locked & final upon submission.
-            </div>
-          `;
-        } else {
-          tryAgainBtn.onclick = async () => {
-            try {
-              showLoading('Starting new attempt...');
-              const eid = assessmentId;
-              if (!eid) throw new Error('No assessment ID found.');
-              sessionStorage.setItem('topscore_assessment_id', eid);
-              sessionStorage.removeItem('topscore_attempt_id');
-              window.location.href = 'assessment.html';
-            } catch(e) {
-              hideLoading();
-              showToast(e.message, 'error');
-            }
-          };
+        if (tryAgainBtn) {
+          tryAgainBtn.style.display = 'none';
         }
 
-        // ─── ADMIN REMEDIAL CONTROL CARD (Gambar 3) ───
-        const isAdmin = Boolean(getAdminSession()) || session?.is_admin === true || urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true';
-        let adminContainer = document.getElementById('admin-remedial-control-container');
-        if (!adminContainer) {
-          adminContainer = document.createElement('div');
-          adminContainer.id = 'admin-remedial-control-container';
-          const buttonsWrap = document.querySelector('.result-action-buttons-wrap');
-          if (buttonsWrap) {
-            buttonsWrap.parentNode.insertBefore(adminContainer, buttonsWrap);
-          }
-        }
-
-        if (isAdmin && adminContainer) {
-          adminContainer.innerHTML = `
-            <div style="margin: 14px auto 6px auto; max-width: 380px; width: 100%; padding: 14px 18px; border-radius: 12px; background: rgba(15, 23, 42, 0.85); border: 1.5px solid ${isRemedial ? '#f59e0b' : 'rgba(99, 102, 241, 0.4)'}; box-shadow: 0 8px 24px rgba(0,0,0,0.5); text-align: center;">
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;">
-                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; font-weight: 700; display:flex; align-items:center; gap:5px;">
-                  <span>🛡️</span> Admin Grade Control
-                </div>
-                <span class="badge" style="font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; ${isRemedial ? 'background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b;' : 'background:rgba(52,211,153,0.15); color:#34d399; border:1px solid #10b981;'}">
-                  ${isRemedial ? '🟡 REMEDIAL (KKM 60%)' : '🟢 NORMAL (NILAI PENUH)'}
-                </span>
-              </div>
-              <div style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 12px; line-height: 1.4;">
-                ${isRemedial 
-                  ? 'Nilai ini dibatasi maksimal <strong>60.0% (Grade B)</strong> sesuai batas KKM Remidi.' 
-                  : 'Nilai ujian ini saat ini berstatus <strong>Normal</strong> (perolehan murni ' + rawPct.toFixed(1) + '%).'}
-              </div>
-              ${isRemedial ? `
-                <button id="btn-toggle-remedial-admin" type="button" class="btn btn-secondary" style="width: 100%; font-weight: 700; background: rgba(245,158,11,0.15); border: 1px solid #f59e0b; color: #fbbf24; padding: 9px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                  ↩️ Batalkan Status Remidi (Kembalikan ke Normal)
-                </button>
-              ` : `
-                <button id="btn-toggle-remedial-admin" type="button" class="btn btn-warning" style="width: 100%; font-weight: 800; background: #f59e0b; border: 1px solid #d97706; color: #000; padding: 9px 16px; font-size: 0.85rem; border-radius: 8px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 14px rgba(245,158,11,0.35);">
-                  🏷️ Tandai Nilai Ini Sebagai Hasil Remidi (KKM 60%)
-                </button>
-              `}
-            </div>
-          `;
-
-          const toggleBtn = adminContainer.querySelector('#btn-toggle-remedial-admin');
-          if (toggleBtn) {
-            toggleBtn.onclick = async () => {
-              const targetRemedial = !isRemedial;
-              const msg = targetRemedial
-                ? 'Tandai nilai ini sebagai hasil REMEDIAL (otomatis dibatasi maksimal KKM 60% / Grade B)?'
-                : 'Kembalikan nilai ini ke status NORMAL (menghapus batas KKM 60%)?';
-              if (!confirm(msg)) return;
-              try {
-                showLoading('Menyimpan perubahan status...');
-                await labelAttemptRemedial(attemptId, targetRemedial, 60);
-                showToast(targetRemedial ? '🏷️ Berhasil dilabel sebagai Remidi (KKM 60%).' : '↩️ Status remidi berhasil dikembalikan ke Normal.', 'success');
-                setTimeout(() => {
-                  window.location.reload();
-                }, 300);
-              } catch(err) {
-                console.error('Error toggling remedial:', err);
-                showToast('Gagal mengubah status: ' + err.message, 'error');
-              } finally {
-                hideLoading();
-              }
-            };
-          }
-
+        // Back navigation customization for Admin
+        if (isAdminSession) {
           const backBtn = document.getElementById('back-dashboard-btn');
           if (backBtn) {
-            backBtn.textContent = '← Kembali ke Class Hub';
+            backBtn.textContent = 'BACK TO ROOM';
             backBtn.href = 'admin.html#class-hub';
           }
         }
+
+        // Setup complete: Reveal content & hide centered loading overlay smoothly
+        const loadingEl = document.getElementById('result-loading');
+        const contentEl = document.getElementById('result-content');
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (contentEl) contentEl.classList.remove('hidden');
+
+        // Launch unified top-to-bottom sequential cascade animation
+        await runResultEntranceSequence({
+          targetPct: pct,
+          grade,
+          isRemedial,
+          correctCount: correct,
+          partialCount: partial,
+          wrongCount: wrong,
+          formattedPoints,
+          gradeColor,
+          isGradeSOr100
+        });
 
       } catch(e) {
         showToast('Failed to load results: ' + e.message, 'error');
@@ -951,7 +1121,7 @@ if (!session) {
           <div class="empty-state__icon">&#10060;</div>
           <h3>Could not load results</h3>
           <p class="text-muted">${escapeHtml(e.message)}</p>
-          <a href="dashboard.html" class="btn btn-primary mt-4">Back to Dashboard</a>
+          <a href="dashboard.html" class="btn btn-primary mt-4">Back to Student's Lobby</a>
         `;
       }
     }
@@ -1022,22 +1192,201 @@ if (!session) {
 
     function animateCount(el, target, onComplete) {
       let start = 0;
-      const duration = 1200;
+      const duration = 1100;
       const startTime = performance.now();
       function step(now) {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
         const ease = 1 - Math.pow(1 - progress, 3);
         start = ease * target;
-        el.textContent = start.toFixed(1) + '%';
+        el.textContent = (target % 1 === 0 ? Math.round(start) : start.toFixed(1)) + '%';
         if (progress < 1) {
           requestAnimationFrame(step);
         } else {
-          el.textContent = target.toFixed(1) + '%';
+          el.textContent = (target % 1 === 0 ? Math.round(target) : target.toFixed(1)) + '%';
           if (typeof onComplete === 'function') onComplete();
         }
       }
       requestAnimationFrame(step);
+    }
+
+    async function runResultEntranceSequence({
+      targetPct,
+      grade,
+      isRemedial,
+      correctCount,
+      partialCount,
+      wrongCount,
+      formattedPoints,
+      gradeColor,
+      isGradeSOr100
+    }) {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Immediate reveal if user prefers reduced motion
+      if (prefersReducedMotion) {
+        document.querySelectorAll('.cascade-item, .cascade-metric-row, .cascade-btn-item').forEach(el => {
+          el.classList.add('cascade-revealed');
+        });
+        const pctEl = document.getElementById('result-percentage');
+        if (pctEl) pctEl.textContent = (targetPct % 1 === 0 ? Math.round(targetPct) : targetPct.toFixed(1)) + '%';
+        const gradeValEl = document.getElementById('result-grade-val');
+        if (gradeValEl) {
+          gradeValEl.classList.remove('grade-delayed');
+          gradeValEl.classList.add('grade-revealed');
+        }
+        const gradeBox = document.getElementById('result-grade-box');
+        if (gradeBox) gradeBox.classList.add('box-stamped');
+        const correctEl = document.getElementById('res-correct');
+        if (correctEl) correctEl.textContent = correctCount;
+        const partialEl = document.getElementById('res-partial');
+        if (partialEl) partialEl.textContent = partialCount;
+        const wrongEl = document.getElementById('res-wrong');
+        if (wrongEl) wrongEl.textContent = wrongCount;
+        const pointsEl = document.getElementById('res-points');
+        if (pointsEl) pointsEl.textContent = formattedPoints;
+        return;
+      }
+
+      // Safety fallback: ensure all elements become visible even if unexpected error happens
+      const safetyTimeout = setTimeout(() => {
+        document.querySelectorAll('.cascade-item, .cascade-metric-row, .cascade-btn-item').forEach(el => {
+          el.classList.add('cascade-revealed');
+        });
+        const gradeValEl = document.getElementById('result-grade-val');
+        if (gradeValEl) {
+          gradeValEl.classList.remove('grade-delayed');
+          gradeValEl.classList.add('grade-revealed');
+        }
+      }, 5000);
+
+      const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+      function countUp(el, target, duration = 300, isFloat = false) {
+        if (!el) return;
+        const numTarget = Number(target);
+        if (isNaN(numTarget) || numTarget === 0) {
+          el.textContent = isFloat ? '0.0' : '0';
+          return;
+        }
+        const start = performance.now();
+        function step(now) {
+          const elapsed = now - start;
+          const p = Math.min(elapsed / duration, 1);
+          const ease = 1 - Math.pow(1 - p, 3);
+          const current = ease * numTarget;
+          el.textContent = isFloat ? current.toFixed(1) : Math.round(current);
+          if (p < 1) requestAnimationFrame(step);
+          else el.textContent = target;
+        }
+        requestAnimationFrame(step);
+      }
+
+      // Step 1: Student Identity Card cascades in from top
+      const idCard = document.getElementById('result-identity-card');
+      if (idCard) idCard.classList.add('cascade-revealed');
+      await sleep(180);
+
+      // Step 2: Assessment Title cascades in
+      const titleCard = document.getElementById('result-Assessment-name-container');
+      if (titleCard) titleCard.classList.add('cascade-revealed');
+      await sleep(180);
+
+      // Step 3: Metrics Table container cascades in
+      const metricsBar = document.getElementById('result-metrics-bar');
+      if (metricsBar) metricsBar.classList.add('cascade-revealed');
+      await sleep(100);
+
+      // Metric Row 1: CORRECT
+      const rowCorrect = document.getElementById('card-filter-correct');
+      if (rowCorrect) {
+        rowCorrect.classList.add('cascade-revealed');
+        countUp(document.getElementById('res-correct'), correctCount, 260);
+      }
+      await sleep(120);
+
+      // Metric Row 2: PARTIAL
+      const rowPartial = document.getElementById('card-filter-partial');
+      if (rowPartial) {
+        rowPartial.classList.add('cascade-revealed');
+        countUp(document.getElementById('res-partial'), partialCount, 260);
+      }
+      await sleep(120);
+
+      // Metric Row 3: INCORRECT
+      const rowWrong = document.getElementById('card-filter-wrong');
+      if (rowWrong) {
+        rowWrong.classList.add('cascade-revealed');
+        countUp(document.getElementById('res-wrong'), wrongCount, 260);
+      }
+      await sleep(140);
+
+      // Metric Row 4: POINTS
+      const rowPoints = document.getElementById('result-points-box');
+      if (rowPoints) {
+        rowPoints.classList.add('cascade-revealed');
+        const isFloat = String(formattedPoints).includes('.');
+        countUp(document.getElementById('res-points'), formattedPoints, 320, isFloat);
+      }
+      await sleep(180);
+
+      // Step 4: Dual Score & Grade Card cascades in
+      const scoreGradeCard = document.getElementById('result-score-grade-card');
+      if (scoreGradeCard) scoreGradeCard.classList.add('cascade-revealed');
+      await sleep(100);
+
+      // Score starts at 0% and counts up to targetPct% over ~1100ms
+      const pctEl = document.getElementById('result-percentage');
+      const gradeValEl = document.getElementById('result-grade-val');
+      const gradeBox = document.getElementById('result-grade-box');
+      const gradeStamp = document.getElementById('result-grade-stamp');
+
+      // Sync SVG score ring if present
+      animateScoreRing(targetPct, grade, isRemedial);
+
+      await new Promise(resolve => {
+        animateCount(pctEl, targetPct, () => resolve());
+      });
+
+      // Step 5: The EXACT moment score count-up finishes -> Grade Stamp Impact!
+      if (gradeValEl) {
+        gradeValEl.classList.remove('grade-delayed');
+        gradeValEl.classList.add('grade-revealed');
+      }
+      if (gradeBox) {
+        gradeBox.classList.add('box-stamped');
+      }
+      if (gradeStamp) {
+        gradeStamp.classList.add('stamped');
+      }
+      if (isGradeSOr100 || targetPct >= 100) {
+        launchConfetti();
+      }
+
+      // Step 6: 280ms after Grade Stamp -> Evaluation Word Card reveals
+      await sleep(280);
+      const evalCard = document.getElementById('result-motivation-msg');
+      if (evalCard) {
+        evalCard.classList.add('cascade-revealed');
+      }
+
+      // Step 7: 220ms after Evaluation Word Card -> Action Buttons reveal in sequence
+      await sleep(220);
+      const actionsWrap = document.getElementById('result-actions-container') || document.querySelector('.result-action-buttons-wrap');
+      if (actionsWrap) actionsWrap.classList.add('cascade-revealed');
+
+      const smartNext = document.getElementById('smart-next-action-container');
+      if (smartNext) smartNext.classList.add('cascade-revealed');
+      await sleep(120);
+
+      const backBtn = document.getElementById('back-dashboard-btn');
+      if (backBtn) backBtn.classList.add('cascade-revealed');
+      await sleep(120);
+
+      const breakdownBtn = document.getElementById('toggle-answers-btn');
+      if (breakdownBtn) breakdownBtn.classList.add('cascade-revealed');
+
+      clearTimeout(safetyTimeout);
     }
 
     function renderAnswers(answers) {

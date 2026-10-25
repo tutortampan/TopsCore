@@ -3414,11 +3414,11 @@ BEGIN
 
   v_effective_score := v_percentage;
 
-  -- Remedial cap check for EXAM / QUIZ
+  -- Remedial cap check for summative tests (KKM 60% Cap)
   IF v_is_remedial THEN
     SELECT assessment_type INTO v_assessment_type FROM public.assessments WHERE id = v_assessment_id;
-    IF v_assessment_type IN ('EXAM', 'QUIZ') AND v_effective_score > 70 THEN
-      v_effective_score := 70;
+    IF (v_assessment_type IN ('EXAM', 'QUIZ', 'TEST', 'VOCAB_TEST', 'UNIFIED_TEST') OR v_assessment_type LIKE '%TEST%') AND v_effective_score > 60 THEN
+      v_effective_score := 60;
     END IF;
   END IF;
 

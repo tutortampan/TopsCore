@@ -1,16 +1,981 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-23 23:15 UTC+8
+Last Updated: 2026-10-26 06:15 UTC+8
 
-Current Phase: Phase 76: Live Test Session Late Student Enrollment, Points-Centric Standings & Remedial KKM 60% Cap [LOCAL ONLY - GIT FREEZE]
+Current Phase: Phase 119: Standardize Vocabulary Answer Types & Comprehensive E2E Verification
 
-Current Task: Standing order: STRICT FREEZE on commit and push. All operations strictly local.
+Current Task: Comprehensive end-to-end audit and automated browser verification of all 4 Vocabulary Assessment types (`assessment.html`) and Admin Class Hub (`admin.html#class-hub`): Words Tasks (`spoken`), Phrases Tasks (`spoken`), Words Tests (`written`), and Phrases Tests (`selection`); verified live test session gating, prerequisite enforcement, microphone UI, virtual keyboard input, 5-option selection distractors, and admin hub tabs [COMPLETE]
 
-> **STRICT RULE IN FORCE:** DO NOT COMMIT OR PUSH TO GIT. All work must remain strictly in the local workspace.
-
-Status: COMPLETE
+Status: COMPLETE (All 4 assessment formats tested and verified 100% in Playwright browser tests; all UI modes render cleanly: Speech/Mic on Tasks, Virtual Keyboard + Textarea on Words Tests, 5-option MCQ pills on Phrases Tests; Admin Class Hub 3 tabs and session modals verified; all temporary test sessions closed cleanly ✅).
 
 ## Completed
+
+- **Phase 119: Standardize Vocabulary Answer Types & Comprehensive E2E Assessment Audit**:
+  - **1. End-to-End Browser Audit of All 4 Assessment Types (`assessment.html`)**:
+    * **Test A: Words Task (`spoken`)**: Tested `3A1-WORDS-TASK` (`0a8e2626-5d34-41a9-b701-107eeea8e593`). Loaded question "Kualifikasi". Rendered Spoken mode with transcript container and green glowing microphone (`.speech-mic-btn-lg`). Screenshot: `scratch/verified_words_task_spoken.png`.
+    * **Test B: Phrases Task (`spoken`)**: Tested `3A1-PHRASES-TASK` (`936f9ae8-d777-458a-8b7f-397c418d72d3`). Loaded question "Saya yakin dapat memberikan kontribusi yang positif." Rendered listening container, language selector, and microphone UI. Screenshot: `scratch/verified_phrases_task_spoken.png`.
+    * **Test C: Words Test (`written`)**: Tested `3A-WORDS-TEST` (`c47e98e6-678c-4e81-a31f-be3c7018ef97`). Loaded question "Kualifikasi" (from 120 questions pool). Rendered centered large textarea (`.written-input`) and full custom Virtual Keyboard (`#virtual-keyboard-container` with QWERTY layout, Shift, ?123, Enter). Screenshot: `scratch/verified_words_test_written.png`.
+    * **Test D: Phrases Test (`selection`)**: Tested `3A-PHRASES-TEST` (`c71bca14-53d2-4e60-89f5-47d16e6cc22b`). Loaded question "Resume ini menampilkan pencapaian saya." Rendered 5 randomized distractors as interactive `.mc-option` radio pills with instant select and auto-advance. Screenshot: `scratch/verified_phrases_test_selection.png`.
+  - **2. Security & Prerequisite Enforcement Verification**:
+    * Prerequisite gating verified: Taking `3A1-PHRASES-TASK` without passing `3A1-WORDS-TASK` ($\ge 60\%$) throws `PREREQUISITE_NOT_MET` (403) and safely blocks access.
+    * Live test session gating verified: Taking `3A-WORDS-TEST` or `3A-PHRASES-TEST` without tutor unlocking the session throws `LOCKED_BY_TUTOR` and blocks unwhitelisted students.
+    * Prerequisite chaining verified: `3A-PHRASES-TEST` strictly requires passing `3A-WORDS-TEST`.
+  - **3. Admin Class Hub Navigation & Modals Verification**:
+    * Tab 1: 📊 `Students Grade and Score` (Matrix attendance grid rendered with all 18 students and color-coded scores).
+    * Tab 2: 🔐 `Test Sessions` (All 4 Theme cards A, B, C, D rendered; `🟢 Buka Normal` modal opens with 18 eligible students; `🟡 Buka Remidi` modal opens with 16 eligible remedial students; Late addition modal functions cleanly).
+    * Tab 3: 📝 `Class Assessments` (DataGrid rendered with 40 rows showing exact updated badges: `🗣️ Spoken` for Tasks, `WRITTEN` for Words Tests, and `SELECTION` for Phrases Tests).
+  - **4. Database Realignment Across All 40 Assessments**:
+  - **1. Database Realignment Across All 40 Assessments**:
+    * 16 Words Tasks (`VOCAB_TASK`): Standardized to `answer_type: 'spoken'`, `payload.answer_type: 'spoken'`.
+    * 16 Phrases Tasks (`PHRASE_TASK`): Standardized to `answer_type: 'spoken'`, `payload.answer_type: 'spoken'` (updated from selection).
+    * 4 Words Tests (`VOCAB_TEST`): Standardized to `answer_type: 'written'`, `payload.answer_type: 'written'`.
+    * 4 Phrases Tests (`PHRASE_TEST`): Standardized to `answer_type: 'selection'`, `payload.answer_type: 'selection'` (updated from written).
+  - **2. Auto-Generate Assessment Hierarchy (`js/api.js`)**:
+    * `autoGenerateAssessmentsHierarchy`: Explicitly assigns `answerType: 'spoken'` to Words Task and Phrases Task, `answerType: 'written'` to Words Test, and `answerType: 'selection'` to Phrases Test.
+    * `upsertDynamicAssessmentShell`: Updated `defaultAnswerType` formula to `isTest ? (isPhrase ? 'selection' : 'written') : 'spoken'`.
+    * Prioritized explicit `answerType` argument over legacy database values (`answerType || (existing && existing.answer_type) || defaultAnswerType`).
+    * Fallback in `generateAssessmentQuestions`: Checks `assessment.payload?.answer_type || assessment.answer_type || 'written'`.
+  - **3. Edge Function Alignment (`supabase/functions/start-assessment/index.ts`)**:
+    * Dynamic fallback aligned: `VOCAB_TASK` / `PHRASE_TASK` &rarr; `spoken`, `VOCAB_TEST` &rarr; `written`, `PHRASE_TEST` &rarr; `selection`.
+    * Distractor generation: checks `isSelectionMode = dynamicAnswerType === 'dropdown' || dynamicAnswerType === 'selection' || dynamicAnswerType === 'multiple_choice'` to generate 5-option randomized distractors from Vocabulary Vault.
+  - **4. Seed & Local Consistency**:
+    * Synchronized `supabase_deploy/02_curriculum_and_students.sql` for all 20 updated assessment entries.
+  - **5. Browser & Automated Verification**:
+    * Playwright automated browser test verified `#class-assessments-grid` displays 🗣️ Spoken for Words & Phrases tasks, WRITTEN for Words Tests, and SELECTION for Phrases Tests.
+    * Screenshot verified: `scratch/class_assessments_verified.png`.
+    * Node check: all 39 JavaScript files passed syntax check with 0 errors.
+    * Cache bumped across `sw.js` and `admin.html` to `v5.8.1`.
+
+- **Phase 118: Vocabulary Class Hub Unified Test Sessions & Smart Eligibility Engine**:
+  - **1. Sidebar Clean-up & Redundant Menu Removal**:
+    * Cleanly removed `Assessment Access` (`data-sub="assessment-access"`) from `admin.html` sidebar under Domain C (Class).
+    * Backward compatibility: Direct URLs to `#assessment-access` automatically route to `#class-hub` with Tab 2 (`test-sessions`) pre-selected.
+  - **2. Tab Order & Default Active Tab in Class Hub**:
+    * Tab 1 (Default): 📊 `Students Grade and Score` (Class attendance matrix).
+    * Tab 2: 🔐 `Test Sessions` (Unified live test controller).
+    * Tab 3: 📝 `Class Assessments` (Curriculum assessments list).
+  - **3. Unified Theme Test Cards (Themes A, B, C, D)**:
+    * Grouped `Words Test` and `Phrases Test` into single Theme cards: Theme A (Workplace), Theme B (Tourism), Theme C (CCU), Theme D (High-Frequency).
+    * Single unlock action triggers dual activation for both Words and Phrases tests with synchronized auto-close countdown.
+    * 2 separate opening buttons on locked cards: `🟢 Buka Normal` and `🟡 Buka Remidi`.
+  - **4. Smart Eligibility Engine**:
+    * **Normal Mode**: Requires all prerequisite tasks for that Theme to be completed ($\ge 60\%$). Siswa yang sudah lulus ($\ge 60\%$) tetap muncul dengan badge `✓ Lulus (XX%) • Perbaikan Nilai` untuk kesempatan perbaikan nilai tertinggi (Rule 2.7).
+    * **Remedial Mode**: Requires prerequisite tasks to be completed ($\ge 60\%$) AND siswa belum lulus ($< 60\%$ atau belum pernah ujian). Siswa yang sudah lulus ujian normal mutlak disembunyikan/dikecualikan dari remidi.
+    * Ineligible students are summarized with a clean expandable detail toggle.
+  - **5. Late Student Addition (+ Susulan)**:
+    * HANYA menampilkan siswa eligible dari batch aktif yang **BELUM terdaftar di dalam sesi ujian berjalan**.
+    * Siswa yang sudah ada di dalam ujian 100% disaring keluar (bebas tumpukan).
+    * Otomatis mewarisi mode sesi (Normal / Remedial) tanpa perlu checklist manual.
+    * Waktu pengerjaan sinkron dengan sisa waktu berjalan sesi global.
+  - **6. Cache Bump & Syntax Validation**:
+    * Bumped cache version across `sw.js` and `admin.html` to `v5.8.0`.
+    * Passed `node scripts/check_all_js_syntax.cjs` on all 39 JavaScript files with 0 errors.
+
+- **Phase 117: Complete Student Lobby Option B Architecture**:
+  - **1. Header Architecture (Option B: Left Brand + Right Action Cluster)**:
+    * Left: Left-aligned title `THE STUDENT'S LOBBY` (`#dashboard-header-brand`).
+    * Right: Grouped action buttons `.dashboard-header-actions` holding Profile circular avatar button (`#view-profile-btn`) and square Logout button (`#logout-btn`).
+    * Locked strictly to 50px height.
+  - **2. 50px Modular Rhythm Across All Cards**:
+    * Standardized the entire vertical stack to an exact 50px modular rhythm:
+      - Header: 50px
+      - Metadata Hero Card: 150px (3 × 50px)
+      - Achievement Status: 50px (increased from 35px for superior typographic presence and glowing aura)
+      - Classes Selector Bar: 50px (unified bar showing active class and progress badge, click opens modal)
+      - Next Assessment Card: 50px (eliminated 20px redundant label, integrated target icon, task title, and GO button into single 50px card)
+      - Rank Standings: Dynamic Bottom Space (384px, fits ~8 student rows cleanly with internal scroll)
+      - Bottom Banner: 50px
+  - **3. Classes Selector Bar & Modal**:
+    * `#dashboard-classes-bar` styled as a luxury interactive selector bar with dropdown caret and completion progress badge.
+    * Tapping opens `#classes-selector-modal` to switch active class seamlessly without leaving the zero-scroll lobby.
+  - **4. Zero-Scroll & Cache Versioning**:
+    * Maintained 100% Zero-Scroll (`docHeight = clientHeight = 844px`, 0 vertical overflow).
+    * Bumped cache version across `sw.js`, `dashboard.html`, `js/dashboard.js`, and `css/dashboard.css` to `v5.7.1`.
+
+- **Phase 114: Student Lobby (dashboard.html) Wireframe Implementation & Achievement Status System**:
+  - **1. Header Architecture (50px)**:
+    * Left: Circular Profile icon button (`#view-profile-btn`).
+    * Center: Centered brand title `LOBBY` (`#dashboard-header-brand`).
+    * Right: Square Logout icon button (`#logout-btn`).
+    * Exact 50px height (`min-height: 50px; max-height: 50px`).
+  - **2. Student Metadata & Hero Card (150px)**:
+    * Exact 150px height (`#welcome-banner-section`).
+    * Top Meta Row: `INSTITUTION | PROGRAM | BATCH | LEVEL` (e.g. `CAKE ENGLISH COURSE | CAMP | 133 | 3RD LEVEL`).
+    * Score Box (left): Displays student's overall percentage (`#bottom-stat-avg-score`).
+    * Center Avatar: Rounded profile avatar with glowing tier border and Batch Champion Crown (`👑 QUEEN` / `👑 KING`) when student is #1.
+    * Grade Box (right): Displays authoritative grade symbol or glowing Star SVG (`#stat-overall-grade-value`).
+    * Bottom Row: Full formatted student name (`#welcome-name`).
+  - **3. Achievement Status Card (30px)**:
+    * Exact 30px height (`#dashboard-achievement-card`).
+    * Display strictly the 6 official Achievement Status values: `FAIL` (0-19%), `LESS` (20-39%), `ENOUGH` (40-59%), `GOOD` (60-79%), `VERY GOOD` (80-99%), `EXCELLENT` (100%).
+    * DECISION-018: `REMEDIAL` is strictly an exam status/condition, NEVER an achievement status.
+    * Glowing uppercase typography with dynamic `--tier-color` text shadow.
+  - **4. Classes Selector Bar (30px)**:
+    * Exact 30px height (`#dashboard-classes-bar`).
+    * Displays active class title (`📚 CLASSES: <Class Name>`) and class completion progress (`50% ▾`).
+    * Clicking opens `#classes-selector-modal` to switch active class, immediately filtering the Next Assessment Bar.
+  - **5. Next Assessment Bar (30px)**:
+    * Exact 30px height (`#up-next-section`).
+    * Horizontal split: Left displays target icon and next task title; Right displays compact `🚀 Start` or `🔄 Retake` button (`height: 22px`).
+    * When all tasks are passed, displays `🏆 All tasks in this class completed!` with green badge `✓ 100%`.
+  - **6. Dynamic Rank Standings Table (Remaining Screen Space)**:
+    * Dynamically occupies all remaining screen space (`flex: 1 1 0%`, exactly 444px on 390x844 viewport).
+    * Header: `🏆 RANK STANDINGS` on left, `MY RANK #X` on right.
+    * Compact 3-column table: `#` (Rank), `NAME` (Student avatar, name, attempt count, avg %), `POINT` (points & grade badge).
+    * Medals for top 3: Gold #1 (`🥇`), Silver #2 (`🥈`), Bronze #3 (`🥉`).
+    * Active student row highlighted with cyan indicator bar and `(You)` badge.
+    * Internal smooth scrolling with zero parent viewport overflow.
+  - **7. Locked Bottom Banner (50px)**:
+    * Centered `TopsCore © 2026 | Created by Mr. Top`.
+  - **8. Dynamic Tier Aura & Zero-Scroll Compliance**:
+    * All 5 dashboard cards radiate the student's Grade tier color (`--tier-color`, `--tier-rgb`) across borders and radial background glows.
+    * Full 100% Zero-Scroll verified: `docHeight = clientHeight = 844px`.
+  - **9. Cache Versioning**:
+    * Bumped `sw.js`, `dashboard.html`, `js/dashboard.js`, and `css/dashboard.css` to `v5.6.8`.
+
+- **Phase 113: Centered Loading State & Top-to-Bottom Sequential Cascade Animation**:
+  - **1. Centered Fullscreen Loading Overlay (Zero Layout Shift)**:
+    * Repositioned `#result-loading` as a fixed fullscreen backdrop-blur overlay (`position: fixed; inset: 0; z-index: 9999; background: #070b19; backdrop-filter: blur(12px)`).
+    * Spinner and text are positioned dead-center horizontally and vertically (`justify-content: center; align-items: center`).
+    * Completely eliminates vertical layout shifts (hero banner no longer jumps up or down when loading starts or finishes).
+  - **2. Top-to-Bottom Sequential Cascade Animation System**:
+    * Created universal cascade classes in `css/result.css`: `.cascade-item`, `.cascade-metric-row`, `.cascade-btn-item`, and `.cascade-revealed`.
+    * Implemented `runResultEntranceSequence` in `js/result.js` orchestrating a clean, choreographed reveal:
+      1. **Student Identity Card (`#result-identity-card`)**: reveals from top with smooth fade-in (`t = 0`).
+      2. **Assessment Title (`#result-Assessment-name-container`)**: reveals next (`t = 180ms`).
+      3. **Dynamic Metrics Bar (`#result-metrics-bar`)**: container reveals (`t = 360ms`), followed by row-by-row entrance and animated count-up:
+         - Row 1: `CORRECT` slides in & counts up from 0 to target count (`t = 460ms`).
+         - Row 2: `PARTIAL` slides in & counts up from 0 to target count (`t = 580ms`).
+         - Row 3: `INCORRECT` slides in & counts up from 0 to target count (`t = 700ms`).
+         - Row 4: `POINTS` slides in & counts up from 0 to total points (`t = 840ms`).
+      4. **Dual Score & Grade Card (`#result-score-grade-card`)**: reveals (`t = 1020ms`), Score begins counting up from `0%` to achieved percentage over ~1100ms.
+      5. **Grade Stamp Impact**: The exact millisecond the score reaches final value, `#result-grade-val` slams down with `gradeStampImpact` (scale 3.5 -> 0.92 -> 1.08 -> 1, rotation, and blur resolution) and `#result-grade-box` triggers container haptic thud `box-stamped`.
+      6. **Evaluation Word Card (`#result-motivation-msg`)**: reveals 280ms after the stamp with glowing tier aura, displaying strictly the single evaluation word (`EXCELLENT`, `VERY GOOD`, `GOOD`, `ENOUGH`, `LESS`, `FAIL`, `REMEDIAL`).
+      7. **Action Buttons (`.result-action-buttons-wrap`)**: reveal 220ms after evaluation card sequentially:
+         - Next milestone / remedial segmented buttons (`#smart-next-action-container`).
+         - Back button (`#back-dashboard-btn`).
+         - Answer breakdown button (`#toggle-answers-btn`).
+  - **3. Accessibility & Performance**:
+    * Full `@media (prefers-reduced-motion: reduce)` support: disables animations and reveals all content instantly.
+    * 5000ms safety timeout fallback ensures no element remains hidden under any unexpected network or render condition.
+  - **4. Cache & Versioning**:
+    * Bumped `sw.js` and `result.html` to `v5.6.7` (`CACHE_NAME = 'abcd-core-v5.6.7'`).
+  - **5. Automated Playwright Verification**:
+    * Verified centered loading spinner coordinates on 390x844 viewport (`x: 168px, y: 378.6px`, centered horizontally & vertically).
+    * Verified 100% cascade state: all elements received `.cascade-revealed`, score reached `85%`, grade stamp slammed with `box-stamped: true`, evaluation word card showed `VERY GOOD`.
+    * Verified mobile zero-scroll: `Scroll Height: 844px | Client Height: 844px | Zero-scroll: true`.
+
+- **Phase 112: Result Page Wireframe Harmonization & Dynamic Tier Color Sync**:
+  - **1. Exact Evaluation Word Card (50px)**:
+    * Restored `#result-motivation-msg` as `.result-evaluation-card` positioned right after `#result-score-grade-card`.
+    * Implemented `getEvaluationWord` matching user's exact specification: `E=FAIL / D=LESS / C=ENOUGH / B=GOOD / A=VERY GOOD / STAR=EXCELLENT / R=REMEDIAL`.
+    * Strictly text-only: NO icons, NO extra phrases, styled with glowing typography (`font-weight: 900`, `letter-spacing: 0.14em`, `color: var(--tier-color)`).
+    * Removed previous `#result-motivation-msg` CSS suppression (`display: none !important`).
+  - **2. Wireframe Height & Layout Precision (Zero-Scroll System)**:
+    * Assessment Title (`#result-Assessment-name-container`): exact `50px` height (`min-height: 50px; max-height: 50px`).
+    * Score & Grade Card (`#result-score-grade-card` & `.score-grade-box`): exact `50px` height (`min-height: 50px; max-height: 50px`).
+    * Action Bar (`.btn-next-milestone` and `.tutor-remedial-segmented`): exact `50px` height (`min-height: 50px; max-height: 50px`), matching the score/grade bar height.
+    * Navigation Button (`.btn-dashboard-primary`): exact `30px` height (`BACK TO LOBBY` for students, `BACK TO ROOM` for tutors).
+    * Answer Breakdown Button (`.btn-breakdown-ghost`): exact `30px` height (`view answer breakdown`), positioned at the bottom right above the banner.
+    * Metrics Table (`#result-metrics-bar`): dynamic in remaining screen (`flex: 1 1 0px; min-height: 100px`).
+  - **3. Dynamic Tier Border & Background Aura Sync**:
+    * Injected `--tier-color` and `--tier-rgb` across all cards on the Result page: `#result-identity-card`, `#result-Assessment-name-container`, `#result-metrics-bar`, `#result-score-grade-card`, and `#result-motivation-msg`.
+    * Card borders and backgrounds now softly radiate the exact student's grade color (Grade A emerald green, Grade B sky blue, Grade S purple glow, etc.).
+  - **4. Student's View vs Tutor's View Uniformity**:
+    * Strictly identical card dimensions, gaps (10px), and typography between Student and Tutor views.
+    * Student View shows: `GO TO NEXT ASSESSMENT: [Title]` and `BACK TO LOBBY`.
+    * Tutor View shows: `NORMAL` | `REMIDI` segmented buttons (50px) and `BACK TO ROOM` (30px).
+  - **5. Automated Playwright Verification**:
+    * Executed `scripts/verify_result_wireframe.mjs` on Edge headless: 100% assertions passed for both Student's View and Tutor's View.
+    * Saved visual proof: `result_student_view_verified.png` and `result_tutor_view_verified.png`.
+  - **6. Cache & Asset Versioning**:
+    * Bumped `sw.js` and `result.html` to `v5.6.6` (`CACHE_NAME = 'abcd-core-v5.6.6'`).
+
+- **Phase 111: Tactical Table Enhancements (4 Pillars) & System-Wide Analysis**:
+  - **1. Sticky First Column System (`css/admin.css` lines 4330-4345)**:
+    * Added `.table-wrap.sticky-first table th:first-child`, `.table-wrap.sticky-first table td:first-child`, and `.sticky-col-first`.
+    * Header `th:first-child` locks at `position: sticky; left: 0; z-index: 15; background: rgba(15, 23, 42, 0.98)` with depth shadow.
+    * Data cells `td:first-child` lock at `position: sticky; left: 0; z-index: 5; background: var(--fm-bg-panel, #0F172A)`.
+    * Applied to `#access-tests-table`, `#vault-table`, `#vault-topic-table`, and `#indiv-recent-tbody`.
+  - **2. Standardized 38px Search & Filter Toolbar (`css/admin.css` lines 4347-4385)**:
+    * Standardized toolbar containers `.table-toolbar-unified`, inputs `.toolbar-input-38`, and buttons `.toolbar-btn-38` to exact 38px height.
+    * Eliminates uneven 26px/32px/42px mismatched controls across Vocab Vault and Assessment Access.
+  - **3. Tactical Status Dot System (`css/admin.css` lines 4387-4435)**:
+    * Replaced thick rectangular badge containers with `.status-dot-badge` featuring 7px glowing indicator dots.
+    * Status classes: `.dot-live` (pulsing glowing green), `.dot-locked` / `.dot-danger` (glowing red), `.dot-warning` (glowing amber), `.dot-draft` (neutral slate).
+    * Reduces horizontal column consumption by 25-30% while delivering a futuristic control-room aesthetic.
+  - **4. Smart Empty State (`css/admin.css` lines 4437-4475)**:
+    * Upgraded table empty states to `.smart-empty-state` with centered thematic icon (`🔍` or `👥`), bold title, informative subtext, and quick action button (`.smart-empty-btn`) that clears input and resets table in 1 click.
+    * Integrated into Assessment Access, Vocab Words, and Vocab Topic Manager.
+  - **5. Cache & Version Bump**:
+    * Bumped `admin.html` and `sw.js` to `v5.6.2` (`CACHE_NAME = 'abcd-core-v5.6.2'`).
+  - **6. Automated Playwright Verification**:
+    * Verified toolbar metrics: `toolbarHeight: 38px`, `searchInputHeight: 38px`, `sortSelectHeight: 38px`, `firstThPosition: sticky`.
+    * Verified smart empty state appearance on search query miss and instant table restoration upon reset button click.
+    * Verified 0 console errors.
+
+- **Phase 110: Sidebar Tidy-up & Students Registration Hub (Domain B: Board)**:
+
+  - **1. Sidebar Navigation Tidy-up & Standardization**:
+    * Cleaned up dynamic program items (`#sidebar-programs-list`) and class items (`#sidebar-classes-list`) in both `admin.html` (pre-render hydration) and `js/admin/app.js` (`loadSidebarPrograms`, `loadSidebarClasses`).
+    * Eliminated bloated inline styles (`padding:8px 12px; gap:10px; font-size:1.1rem;`) and standardized to `.admin-nav-item` classes with `.nav-icon`.
+    * All sidebar items across Domains A, B, C, and D now have identical pixel-perfect metrics (`padding: 5.76px 9.6px`, `gap: 7.68px`, icon box width `18px`).
+    * Fixed active highlight logic so `Vocabulary` (class item) is only marked active when the current view is `#class-hub`.
+  - **2. Restored "Students Registration" in Domain B**:
+    * Added `<div class="admin-nav-item" data-sub="student-registration"><span class="nav-icon">&#128203;</span>Students Registration</div>` directly under `B — Board` header in `admin.html`.
+    * Registered `student-registration` in `sectionTitles`, `sectionDomainMap` (`BOARD`), `aliasSectionMap` (`import-students` -> `student-registration`), and routed `loadSection` switch statement in `js/admin/app.js`.
+  - **3. Dedicated Students Registration Module (`js/admin/student-registration.js`)**:
+    * Integrated with 50px dynamic edge-to-edge folder tabs via `window.setTopbarTabs`.
+    * **Tab 1: Bulk Excel Import**:
+      - Target Scope selectors (Institution, Program, Batch) with cascading dropdowns.
+      - Interactive Drag & Drop zone (`.student-reg-dropzone`) for `.xlsx`, `.xls`, `.csv` with visual feedback.
+      - Excel column format guide: required `INSTITUTION`, `PROGRAM`, `BATCH`, `NAME`.
+      - Live preview table with `.data-table` tactical dark system and summary badges (Total, New Students, Merge with Existing).
+      - Excel template download (`Template_Students_Registration.xlsx`) and CSV export.
+      - Save action: inserts students, hashes PIN with SHA-256 (defaults to `1234`), creates missing batches, initializes Level 1 progression across active classes in `progress` table, clears cache.
+    * **Tab 2: Add Student (Individual)**:
+      - In-page tactical registration form: Full Name, Honorific & Gender, Date of Birth, Institution, Program (cascades), Batch (cascades with "+ New Batch" quick creation), Personal PIN (defaults to `1234`), Account Status.
+      - Quick shortcut button to open the Full Edit Modal (`window.openStudentFullEdit`).
+      - "Recently Registered Students" tactical table showing the latest 10 enrolled students with live status and quick Edit Profile actions.
+  - **4. Cache & Version Bump**:
+    * Bumped `admin.html` and `sw.js` to `v5.6.1` (`CACHE_NAME = 'abcd-core-v5.6.1'`).
+  - **5. Automated Playwright Verification**:
+    * Verified on Microsoft Edge: confirmed sidebar items geometry, verified both Bulk and Individual tabs render cleanly, verified zero console errors, captured verification screenshots to artifacts.
+
+- **Phase 109: Unified Admin Data Table System & Tactical Dark Standardization**:
+  - **1. Unified Master Admin Data Table System (`css/admin.css` Section 5)**:
+    * Centralized styling for all admin data tables (`.table-wrap table`, `.data-table`, `.datagrid-table`, `.admin-standard-table`, `.table.w-100`, `.table-sm.w-100`, `#vault-table`, `#vault-topic-table`, `#access-tests-table`, `.dossier-table`).
+    * Headers (`th`): `background: rgba(15, 23, 42, 0.95) !important; color: #ffffff !important; font-size: 0.70rem !important; font-weight: 700 !important; letter-spacing: 0.05em !important; text-transform: uppercase !important; padding: 8px 12px !important; border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important; border-right: none !important; position: sticky; top: 0; z-index: 10;`.
+    * Cells (`td`): `padding: 7px 12px !important; font-size: 0.82rem !important; color: #ffffff !important; border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important; border-right: none !important; vertical-align: middle !important;`.
+    * Clean Zebra & Hover: `tbody tr:nth-child(even) td { background: rgba(255, 255, 255, 0.015); }`, `tbody tr:hover td { background: rgba(99, 102, 241, 0.06) !important; }`.
+  - **2. Assessment Access Slimming & Harmonization (`js/admin/assessment-access.js`)**:
+    * Eliminated bloated inline `padding: 14px 16px` and `padding: 12px 16px`, standardizing to 32px header / 42px row height.
+    * Removed inline JS hover handlers, using CSS `:hover` for smooth GPU acceleration.
+    * Applied `.table-wrap` and `.data-table` for uniform container rounding and border.
+  - **3. Vocabulary Vault & Topic Manager Dark Theme Alignment (`js/admin/vocab-vault.js`)**:
+    * Replaced bluish slate-800 (`#1e293b`) and `#334155` borders with `rgba(15, 23, 42, 0.95)` and `rgba(255, 255, 255, 0.08)`.
+    * Replaced sticky action cell background with `var(--fm-bg-panel, #0f172a)` seamlessly blending into the table body.
+    * Replaced row borders with subtle `rgba(255, 255, 255, 0.05)`.
+  - **4. Matrix Spreadsheet Grid Standardization (`css/admin.css` lines 2400-2445)**:
+    * Set background to `var(--fm-bg-panel, #0f172a)`, header background to `rgba(15, 23, 42, 0.95)`, header text to `#ffffff`, and softened vertical column borders to `rgba(255, 255, 255, 0.06)`.
+  - **5. Student Dossier Print Isolation (`css/admin.css`)**:
+    * On screen: `.dossier-table` rendered in dark tactical theme matching the entire admin interface.
+    * On print: `@media print` flips `.dossier-table` and `.student-dossier-sheet` to pure white background, dark `#0f172a` text, and `#cbd5e1` borders for crisp ink-saving paper printing.
+  - **6. Cache & Asset Version Bump**:
+    * Bumped `admin.html` and `sw.js` to `v5.6.0` (`CACHE_NAME = 'abcd-core-v5.6.0'`).
+  - **1. Standardized 50px Topbar & Sidebar Footer**:
+    * In `css/admin.css`: Updated `--fm-topbar-h: 50px;`, `.admin-topbar` set to `height: 50px; max-height: 50px; padding: 0 16px; display: flex; align-items: flex-end;`.
+    * `.sidebar-footer` set to `height: 50px; max-height: 50px; padding: 0 1rem; box-sizing: border-box; display: flex; align-items: center;` perfectly matching the 50px height of the admin row and logout button (🚪).
+  - **2. Dynamic Edge-to-Edge Folder Archive Tabs (Option B)**:
+    * Replaced floating card pills with authentic folder archive tabs spanning the full topbar width: `flex: 1 1 0; min-width: 0; height: 38px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 16px; border-radius: 6px 6px 0 0; border: 1px solid rgba(255, 255, 255, 0.08); border-bottom: none; margin-bottom: -1px;`.
+    * **Dynamic Width**: Automatically divides 100% width equally across all tabs (25% each for 4 tabs, 33.3% for 3 tabs, 50% for 2 tabs) without empty gaps.
+    * **Option B Content Layout**: Icon and title label anchored on the left (`.topbar-tab-left`), counter badge pill anchored on the right (`.topbar-tab-badge`).
+    * Active tab features `border-top: 2px solid var(--fm-accent-tactical)`, workspace-matched background, seamless bottom, and zero glowing circle shadow (`box-shadow: none !important;`).
+    * Badge counter converted to sleek pill badge (`.topbar-tab-badge`, `font-size: 0.72rem; padding: 1px 6px; border-radius: 10px;`).
+  - **3. 50px Bottom Infobar (Docked Directly Above Locked Banner)**:
+    * In `admin.html`: Added `<footer id="admin-bottom-infobar" class="admin-bottom-infobar hidden"></footer>` inside `.admin-main` right above `#bottom-ad-banner`.
+    * In `css/admin.css`: Styled `.admin-bottom-infobar` with `height: 50px; max-height: 50px; padding: 0 16px; background: rgba(15, 23, 42, 0.95);` and `.bottom-info-chip`.
+    * In `js/admin/app.js`: Added `window.setBottomInfobar(leftHtml, rightHtml)` and automatic reset on `loadSection`.
+    * In `js/admin/vocab-vault.js`: Removed the 4 bulky metric cards from the Blueprint workspace; elevated them to the 50px Bottom Infobar along with the `⚡ Auto-Generate from Blueprint` button.
+  - **4. Vocabulary Vault White Typography & Borderless Word Types**:
+    * In `js/admin/vocab-vault.js`: Table headers (`th`), Theme, Topic, Indonesian, English, and Blueprint task names/test names/counts updated to bright white (`#ffffff`).
+    * Removed border outlines on Word Type badges (`border: none`) in table rows and Blueprint badges.
+
+
+- **Phase 106: Uniform Hero Card (150px), Score Font Color Synchronization & Vertically Stacked Metrics**:
+  - **1. Uniform Hero Card Height (150px)**:
+    * In `css/dashboard.css`: `body.dashboard-page #welcome-banner-section` strictly locked to `height: 150px !important; min-height: 150px !important; max-height: 150px !important; padding: 8px 14px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;`.
+    * In `css/result.css`: `.result-identity-card` strictly locked to `height: 150px !important; min-height: 150px !important; max-height: 150px !important; padding: 8px 14px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;`.
+    * Avatar container resized to `74×74px` in both hero cards, with matching 18px border radius, metadata text, dividers, and student name typography.
+  - **2. Score Font Color Synchronized with Grade Font Color**:
+    * In `js/result.js`: Updated `#result-percentage` to dynamically adopt `scoreColor = isRemedial ? '#FFFF00' : gradeColor;`.
+    * Score color and grade color are now 100% harmonized:
+      - Grade A (80-99%): Score `#10b981`, Grade `#10b981`.
+      - Grade B (60-79%): Score `#38bdf8`, Grade `#38bdf8`.
+      - Grade C (40-59%): Score `#f59e0b`, Grade `#f59e0b`.
+      - Grade D (20-39%): Score `#f97316`, Grade `#f97316`.
+      - Grade E / F (0-19%): Score `#ef4444`, Grade `#ef4444`.
+      - Grade S (100%): Score `#a855f7`, Grade pure vector SVG star `#a855f7`.
+      - Remedial: Score `#FFFF00` (capped at 60%), Grade `"R"` `#FFFF00` (Kuning Murni).
+    * Removed static `#a78bfa` override in `css/result.css`.
+  - **3. Vertically Stacked Metrics Table**:
+    * In `result.html` and `css/result.css`: `#result-metrics-bar` restructured into 4 separate horizontal rows:
+      - Row 1: `CORRECT` (left) | count (right, `#10b981`)
+      - Row 2: `PARTIAL` (left) | count (right, `#f59e0b`)
+      - Row 3: `INCORRECT` (left) | count (right, `#ef4444`)
+      - Row 4: `POINTS` (left) | points earned (right, `#F8FAFC` or `#FFFF00` for remedial)
+    * Subtle bottom dividers between rows, uniform font sizing ("ukuran font sama") via `clamp(...)`, and responsive flex distribution.
+  - **4. Remedial Design Specifics**:
+    * Kuning Murni (`#FFFF00` / `rgb(255, 255, 0)`) for aura, border, and font.
+    * Grade displayed as plain uppercase letter `"R"` without superscript.
+    * Remedial segmented button `.segment-remidi.active` updated to `#FFFF00`.
+  - **5. Automated Playwright Verification**:
+    * Verified Dashboard: `offsetHeight: 150`, `computedHeight: '150px'`, `scrollH: 820` (Zero-Scroll PASS).
+    * Verified Result Page Normal (Grade A): `heroHeight: 150`, `scoreColor: 'rgb(16, 185, 129)'`, `gradeColor: 'rgb(16, 185, 129)'`, `gradeText: 'A'`, `stackedRowsCount: 4`, `scrollH: 820` (Zero-Scroll PASS).
+    * Verified Result Page Remedial: `heroHeight: 150`, `scoreColor: 'rgb(255, 255, 0)'`, `gradeColor: 'rgb(255, 255, 0)'`, `gradeText: 'R'`, `scoreText: '60%'`, `scrollH: 820` (Zero-Scroll PASS).
+    * Visual artifacts generated: `dashboard_lobby_crystal.png`, `result_gradeA_verified.png`, `result_remedial_verified_150px.png`.
+
+- **Phase 105: Refactor & Standardize TopsCore Student Experience (Dashboard & Result Page)**:
+  - **1. Global Deep Navy Background (#070b19)**:
+    * Standardized background to `#070b19` across `body.dashboard-page` (`css/dashboard.css`), `body.result-page` (`css/result.css`), `body.assessment-page` (`css/assessment.css`), and root `body` (`css/style.css`).
+  - **2. Matte Modern Color Token Overhaul**:
+    * S / 100%: Electric Violet (`#a855f7`) with volumetric neon SVG Star.
+    * Grade A: Emerald Green (`#10b981`).
+    * Grade B: Sky Blue (`#38bdf8`).
+    * Grade C / Remedi: Warm Amber (`#f59e0b`).
+    * Grade D: Matte Orange (`#f97316`).
+    * Grade E / F: Crimson Red (`#ef4444`).
+    * Score Percentage: Modern Purple (`#a78bfa`) with ambient text shadow.
+    * Synchronized across `js/grading.js`, `js/result.js`, `js/dashboard.js`, `css/dashboard.css`, and `css/result.css`.
+  - **3. Dashboard Hero Card (#welcome-banner-section)**:
+    * Top baris metadata: All Caps (`CAKE ENGLISH COURSE | CAMP | 133 | 3RD LEVEL`).
+    * 3-Kolom horizontal: Kotak skor kiri bersih (`#bottom-stat-avg-score`) tanpa label "Score", Avatar profil tengah interaktif (`cursor: pointer` + click photo modal), Kotak grade kanan simetris (`#stat-overall-grade-value`) tanpa label "Grade".
+    * Tier S (100%): Renders volumetric electric violet SVG Star (`#a855f7`).
+    * Removed `.pure-star-nobox` so `#banner-grade-box` retains symmetrical background (`rgba(23, 33, 56, 0.8)`) and border matching `#banner-score-box`.
+    * Dynamic outer border on `#welcome-banner-section` adhering to student's grade.
+  - **4. Result Page Restructured into 6 Distinct Elements**:
+    * **Elemen 1 (`#result-identity-card`)**: Kartu identitas murni (Avatar 86×86px besar di tengah statis dengan ring dinamis sesuai grade, metadata ALL CAPS di atas, nama lengkap siswa di bawah, dynamic outer border sesuai grade, TANPA score/grade di samping avatar).
+    * **Elemen 2 (`#result-Assessment-name-container`)**: Assessment Title 2 baris (Tipe & Topik/Tema).
+    * **Elemen 3 (`#result-metrics-bar`)**: Points & Breakdown Card (Baris atas: banner POINTS dengan angka poin besar; Baris bawah: 3 kolom teknis `CORRECT` #10b981, `PARTIAL` #f59e0b, `INCORRECT` #ef4444).
+    * **Elemen 4 (`#result-score-grade-card`)**: Dual Score & Grade card tepat di bawah Breakdown, 2 kolom berdampingan berbingkai simetris 60px tanpa label "SCORE" dan "GRADE" (Skor persentase warna ungu modern `#a78bfa`, Grade huruf atau SVG bintang ungu neon `#a855f7` jika 100%).
+    * **Elemen 5**: Action buttons (Student: Next Assessment & Back to Lobby; Tutor: Normal & Remidi split, Back to Room; Link View Answer Breakdown).
+    * **Elemen 6**: Footer banner TopsCore terkunci 50px.
+  - **5. Layout Geometry & Mobile Zero-Scroll Verification**:
+    * Vertical flex column architecture with strict 10px gaps, header 50px locked, footer banner 50px locked.
+    * Automated Playwright test targeting 400×820 viewport:
+      - `dashboard.html`: `bodyScrollHeight: 820` (Zero-Scroll PASS), `headerHeight: 50px`, `bannerHeight: 50px`, `heroDataTier: "A"`, `heroBorderColor: rgba(16, 185, 129, 0.55)`.
+      - `result.html`: `bodyScrollHeight: 820` (Zero-Scroll PASS), `headerHeight: 50px`, `bannerHeight: 50px`, `card1_CenteredAvatar: true`, `card4_Height: 60px`, `card4_ScoreColor: rgb(167, 139, 250)`, `card4_HasStarSvg: true`, `card4_GradeNoBoxClass: false`.
+    * Visual artifacts generated: `dashboard_refactor_verified.png` and `result_refactor_verified.png`.
+
+- **Phase 104: Penyeragaman Global Design System & Struktur Hero Banner 1:1 (Result & Dashboard)**:
+  - **1. Penyeragaman Hero Banner Siswa 1:1 (Result & Dashboard)**:
+    * In `result.html`: Restructured `#result-identity-card` into the identical 1:1 layout from `#welcome-banner-section` in `dashboard.html`:
+      - Baris 1: Metadata institusional (`#result-meta-wrapper`: Institution | Program | Batch | Level).
+      - Divider line atas (`.hero-divider`).
+      - Baris 2 (3-Column Layout):
+        * Kolom Kiri: `#result-score-box` (`.score-box`) dengan `.metric-label` "Score" dan `#result-percentage` ("100%").
+        * Kolom Tengah: `.banner-avatar-wrapper` dengan `#result-crown-badge` dan circular `#result-avatar-container` (86×86px) yang dikelilingi ring pendaran ungu (`#C084FC` / `#A855F7`).
+        * Kolom Kanan: `#result-grade-box` (`.grade-box`) dengan `.metric-label` "Grade" dan `#result-grade-val` berisi glowing purple star vector TANPA kotak luar.
+      - Divider line tengah dengan ambient glow di bagian tengah (`.hero-divider.hero-name-divider`).
+      - Baris 3: Nama lengkap siswa (`#result-student-name-label`, Outfit 800, white).
+    * Removed detached redundant score card `#result-score-grade-card` from below the metrics breakdown, preserving vertical mobile space.
+  - **2. CSS Hero Styling & Dynamic Tier Aura Synchronization (`css/result.css`)**:
+    * Applied exact dimensions, 18px border-radius, `padding: 10px 14px;`, and dynamic tier background (`radial-gradient(...)`).
+    * Configured `.result-identity-card[data-tier="S"]` with `box-shadow: 0 0 35px rgba(168, 85, 247, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5);` and border `rgba(168, 85, 247, 0.5)`.
+    * Score box & grade box styled with `background: rgba(23, 33, 56, 0.8); border-radius: 14px; padding: 6px 8px; border: 1px solid rgba(var(--tier-rgb), 0.2);`.
+    * Pure Star vector remains without outer box (`.pure-star-nobox`).
+  - **3. JS Dynamic Tier Aura Hook (`js/result.js`)**:
+    * Integrated `--tier-color`, `--tier-rgb`, and `dataset.tier` updates on `#result-identity-card`.
+    * Dynamically styled avatar container, score box, and grade box based on student grade/tier.
+  - **4. Standardized Header & 10px Flex Gap in `assessment.html`**:
+    * Adjusted top utility row height from 60px to exactly 50px (`height: 50px; min-height: 50px; max-height: 50px;`).
+    * Avatar resized to 50×50px to fit standard 50px header row.
+    * Removed 5 manual inline spacer divs (`<div style="height:10px...">`), replaced with container flex `gap: 10px;`.
+  - **5. Automated Playwright Zero-Scroll Verification**:
+    * Result Page: `bodyScrollHeight: 820` on `400×820` (Zero-Scroll PASS), `isZeroScroll: true`, `identityTier: "S"`, 3-column hero layout confirmed, `avatarWidth: 86`, `avatarHeight: 86`, `scoreColor: rgb(168, 85, 247)`, `hasPurpleStarSvg: true`.
+    * Dashboard Page: `bodyScrollHeight: 820`, `headerHeight: 50`, `bannerHeight: 50`, `contentGap: 10px`, `isZeroScroll: true`.
+    * Assessment Page: `bodyScrollHeight: 820`, `headerHeight: 50`, `bannerHeight: 50`, `isZeroScroll: true`.
+    * Visual artifacts generated: `phase104_result_hero_unified_mobile.png`, `phase104_dashboard_mobile.png`, `phase104_assessment_mobile.png`.
+
+- **Phase 103: Grade S Pure Purple Star (No Box), Global Deep Navy (#020617), 50px Header & 10px Gap System**:
+  - **1. Grade S / 100% Pure Purple Star TANPA Kotak Luar**:
+    * In `js/result.js`: Updated `displayGradeHtml` for Grade S / 100% to render an ultra-sharp, glowing pure purple SVG Star vector (`#C084FC` to `#A855F7`).
+    * For Grade S / 100%, `#result-grade-box` removes its outer box (`border: none; background: transparent; box-shadow: none; .pure-star-nobox`). The star floats seamlessly with drop-shadow glow without being enclosed in a box.
+    * In `css/result.css`: Added `@keyframes star-vector-pulse` using pure `filter: drop-shadow(...)` instead of `box-shadow` to eliminate any rectangular bounding aura around the vector star.
+  - **2. Global Deep Midnight Navy Background (`#020617`)**:
+    * Aligned `dashboard.html` / `css/dashboard.css` (`body.dashboard-page`), `assessment.html` / `css/assessment.css` (`body.assessment-page`), and `css/style.css` (`body`) to `#020617 !important;`.
+  - **3. Standardized 50px Top Header & 50px Bottom Banner**:
+    * Elevated `body.dashboard-page .dashboard-header` from 44px to exactly **`50px !important; min-height: 50px !important; max-height: 50px !important;`** matching `result.html`.
+    * Confirmed `#bottom-ad-banner` locked at **`50px`** across all pages.
+  - **4. Fixed 10px Panel Gap System**:
+    * Configured `.dashboard-content` with `gap: 10px !important; padding: 10px 14px !important;`.
+    * Eliminated arbitrary inline margins (`margin-top: 6px`) on `#up-next-section`, `.classes-section`, and `#bottom-dock-section` in `dashboard.html`.
+    * Updated Hero Card fallback colors in `css/dashboard.css` from gold (`251, 191, 36`) to purple (`168, 85, 247`).
+  - **5. Automated Playwright Verification**:
+    * Verified Result Page (100% / Grade S): `scoreColor: rgb(168, 85, 247)`, `gradeBoxBorder: 0px none`, `gradeBoxBackground: rgba(0, 0, 0, 0)`, `gradeBoxShadow: none`, `hasPurpleStarSvg: true`, `headerHeight: 50`, `bannerHeight: 50`, `bodyScrollHeight: 820` on `400x820` (Zero-Scroll preserved).
+    * Verified Dashboard Page: `bodyBg: rgb(2, 6, 23)`, `headerHeight: 50`, `bannerHeight: 50`, `contentGap: 10px`, `bodyScrollHeight: 820`.
+    * Verified Assessment Page: `bodyBg: rgb(2, 6, 23)`, `bannerHeight: 50`.
+    * Visual artifacts generated: `phase103_result_star_nobox_mobile.png`, `phase103_result_star_nobox_desktop.png`, `phase103_dashboard_mobile.png`.
+
+- **Phase 102: Full Color Audit, Solid Palette Alignment & Visual Consistency**:
+  - **1. Authoritative Solid Color Palette Aligned Across Entire Platform**:
+    * **E / F**: Pure Red (`#FF0000`, `rgb(255, 0, 0)`)
+    * **D**: Pure Orange (`#FF8000`, `rgb(255, 128, 0)`)
+    * **C**: Pure Yellow (`#FFFF00`, `rgb(255, 255, 0)`)
+    * **B**: Pure Cyan (`#00FFFF`, `rgb(0, 255, 255)`)
+    * **A**: Pure Green (`#00FF00`, `rgb(0, 255, 0)`)
+    * **100% / S (Get a Star)**: **Pure Purple** (`#A855F7`, `rgb(168, 85, 247)`, `rgba(168, 85, 247, ...)`)
+    * **Remedi / Remedial**: Pure Yellow (`#FFFF00`, `rgb(255, 255, 0)`)
+  - **2. Student Photo Ring Dynamically Adheres to Student's Grade**:
+    * Replaced all static gold/amber borders around student avatar with dynamic Grade-driven styling.
+    * In `js/result.js`: `#result-avatar-container` dynamically receives `border: 2.5px solid <gradeColor> !important` and `box-shadow: 0 0 28px <gradeGlow>, 0 0 12px <gradeLightGlow>, 0 8px 24px rgba(0,0,0,0.5)`.
+    * In `css/dashboard.css` and `js/dashboard.js`: Avatar rings and welcome section tier auras configured per tier (S: Pure Purple gradient/border/glow, A: `#00FF00`, B: `#00FFFF`, C: `#FFFF00`, D: `#FF8000`, E: `#FF0000`).
+  - **3. Standardized 50px Bottom Banner Across All Pages**:
+    * `#bottom-ad-banner` and `.topscore-locked-banner` locked to `height: 50px !important; min-height: 50px !important; max-height: 50px !important;` across `result.html`, `dashboard.html`, `assessment.html`, `style.css`, `dashboard.css`, and `assessment.css`.
+  - **4. Vector Badge and Admin UI Synchronized**:
+    * Updated vector star gradient `starPurpleGrad` (`#C084FC` to `#A855F7`) on Result page.
+    * Updated `js/admin/student-management.js`, `js/admin/app.js`, and `css/admin.css` (`cMap['S']`, `badge-grade-star-s`, `text-gold-champion` -> `#A855F7`).
+  - **5. Playwright Verification (Zero-Scroll Intact)**:
+    * Result Page (Attempt 100% / Grade S): `scoreColor: rgb(168, 85, 247)`, `gradeColor: rgb(168, 85, 247)`, `avatarBorderColor: rgb(168, 85, 247)`, `bannerHeight: 50px`, `bodyScrollHeight: 820px` on `400x820` viewport.
+    * Dashboard Banner: `height: 50px`, `bodyScrollHeight: 820px`.
+    * Assessment Banner: `height: 50px`.
+    * Palette verification: S `#A855F7`, A `#00FF00`, B `#00FFFF`, C `#FFFF00`, D `#FF8000`, E `#FF0000`, Remedial `#FFFF00`.
+
+- **Phase 101: Grade S and Score 100% Solid Palette Alignment: Pure Electric Pink (#FF00FF) with Glowing Aura**:
+  - **1. Pure Electric Pink (#FF00FF) for Grade S & 100%**:
+    * Updated `standardGradeColors.S` in `js/result.js` to `#FF00FF`.
+    * Score 100% (`#result-percentage`) and Grade S (`#result-grade-val`) render vibrant pure electric pink `#FF00FF`.
+  - **2. Glowing Pink Aura & Card Borders**:
+    * Applied 3-layer pink neon text glow (`rgba(255, 0, 255, 0.95)`, `rgba(255, 0, 255, 0.70)`, `rgba(255, 0, 255, 0.40)`).
+    * Card borders and shadows (`#result-score-box` and `#result-grade-box`) glow in electric magenta (`rgba(255, 0, 255, 0.65)` and `rgba(255, 0, 255, 0.35)`).
+  - **3. Playwright Verification**:
+    * Verified on mobile (`400x820`) and desktop (`1280x820`).
+    * Zero-scroll intact: `bodyScrollHeight = 820`.
+
+- **Phase 100: Score & Grade Card Realignment: Tier Colored Glowing Values, Visceral Rubber Stamp Impact Effect, and Removal of Small Labels**:
+
+- **Phase 100: Score & Grade Card Realignment: Tier Colored Glowing Values, Visceral Rubber Stamp Impact Effect, and Removal of Small Labels**:
+  - **1. Label Removal & Maximum Value Typography**:
+    * Removed `<span class="score-grade-label">SCORE</span>` and `<span class="score-grade-label">GRADE</span>` from `result.html`.
+    * Dedicated full 60px height to `#result-percentage` (`clamp(26px, 3.8vh, 32px)`, Outfit 900) and `#result-grade-val` (`clamp(28px, 4.4vh, 38px)`, Outfit 900).
+  - **2. Authoritative Tier Colors & Multi-Layer Glow**:
+    * Score and Grade dynamically assigned authoritative colors matching AGENTS.md Section 2.10 (S: Gold `#fbbf24`, A: Emerald Green `#10b981`, B: Lime `#84cc16`, C: Yellow `#eab308`, D: Orange `#f97316`, E: Red `#ef4444`, Remedial: Yellow `#FFFF00`).
+    * Applied 3-layer `text-shadow` glow (`0 0 12px, 0 0 24px, 0 0 42px`) and box glow (`box-shadow: 0 0 20px, inset 0 0 14px`) to `#result-score-box` and `#result-grade-box`.
+  - **3. Visceral Rubber Stamp Slam & Impact Thud**:
+    * Grade reveals with `@keyframes gradeStampImpact`: starts huge (`scale(3.5) rotate(-26deg)` with motion blur), slams down with high kinetic velocity at 45% (`scale(0.92) rotate(-3deg)`), and settles at authentic rubber stamp angle `rotate(-4deg)`.
+    * Box triggers `@keyframes stampBoxThud` vibrating with haptic feedback upon impact.
+  - **4. Zero-Scroll Verification**:
+    * Automated test confirmed: `card4Height: 60`, `bodyScrollHeight: 820`, `windowHeight: 820`.
+
+- **Phase 99: Result Page Realignment: 50px Top Header, Removed Header Icons, Dynamic Card 3 with 10px Gap to 50px Bottom Banner, and Elimination of Double Border**:
+  - **1. Header Icons Removal & Standardized 50px Top Header**:
+    * Removed the 3 icons (`#header-avatar`, `#view-profile-btn`, `#logout-btn`) from `<header class="dashboard-header">` in `result.html`.
+    * Header contains purely centered text **`RESULT PAGE`** with `height: 50px !important; display: flex; justify-content: center; align-items: center;`.
+  - **2. Double Border ("Card Dalam Card") Eliminated**:
+    * Reset `.result-hero` styling across all tiers and media queries to `background: transparent !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: 0 !important;`.
+    * Each card (Card 1, Card 2, Card 3, Card 4, Card 5) is now a clean, standalone floating card with single border.
+  - **3. Dynamic Card 3 & 10px Gap to Bottom Banner**:
+    * Card 3 (`.result-metrics-table-card`) uses `flex: 1 1 0px !important; min-height: 140px;` and expands to absorb available vertical space (~240px on mobile).
+    * Each of the 4 metric rows (`CORRECT`, `PARTIAL`, `INCORRECT`, `POINTS`) expands equally (`flex: 1 1 0px`) to ~60px per row.
+    * Card 5 Row 3 (`VIEW ANSWER BREAKDOWN`) sits exactly **10px** above the bottom banner.
+  - **4. Standard 50px Bottom Banner**:
+    * Bottom banner (`#bottom-ad-banner` / `.topscore-locked-banner`) locked to `height: 50px !important; min-height: 50px !important; max-height: 50px !important;`.
+  - **5. Exact Playwright Verification**:
+    * Tested on both Student (`400x820`) and Tutor (`400x820`) views:
+      - Header: height = 50px, top = 0, bottom = 50.
+      - Card 1: height = 162px. Gap to Header = 10px.
+      - Card 2: height = 38px. Gap to Card 1 = 10px.
+      - Card 3: height = 240px (each row ~60px). Gap to Card 2 = 10px.
+      - Card 4: height = 60px. Gap to Card 3 = 10px.
+      - Card 5 Row 1: height = 60px. Gap to Card 4 = 10px.
+      - Card 5 Row 2: height = 40px. Gap to Row 1 = 10px.
+      - Card 5 Row 3: height = 40px. Gap to Row 2 = 10px.
+      - Gap Card 5 Row 3 to Banner: exactly **10px**!
+      - Bottom Banner: height = **50px**, top = 770, bottom = 820.
+      - `bodyScrollHeight: 820, windowHeight: 820` (Zero scroll!).
+
+- **Phase 98: Centered Top Header ("RESULT PAGE") & Card 3 Extra Element Removal**:
+  - **1. Centered Top Header Bar ("RESULT PAGE")**:
+    * Maintained 44px sticky top header.
+    * Replaced role-specific labels (`STUDENT'S LOBBY` / `TUTOR'S ROOM`) with unified, bold title **`RESULT PAGE`**.
+    * Applied absolute mathematical centering (`left: 50%; top: 50%; transform: translate(-50%, -50%);`) so it remains centered regardless of right-hand action buttons.
+  - **2. Card 3 Extra Element Removal (Points Row Cleanup)**:
+    * Removed `#result-rank-badge` from Card 3 Row 4 in `result.html`.
+    * Suppressed `renderRankInBatch` in `js/result.js` and set `.result-rank-badge { display: none !important; }` in `css/result.css`.
+    * Card 3 now displays only pure metrics: `CORRECT`, `PARTIAL`, `INCORRECT`, and `POINTS` (matching user's bagan 1:1).
+  - **3. Playwright Verification**:
+    * Automated test `scratch/test_phase97_proportions.mjs` confirmed:
+      - `headerText: 'RESULT PAGE'`
+      - `rankBadgeExists: false`
+      - Zero-scroll preserved (`bodyScrollHeight: 820` on `400x820`).
+    * Screenshots updated: `result_proportions_student_mobile.png`, `result_proportions_tutor_mobile.png`.
+
+- **Phase 97: Result Page Proportions & Layout Calibration Per User Diagram**:
+  - **1. Card 1 (Student Identity Banner) Dashboard Alignment (1:1)**:
+    * Standardized avatar emblem dimensions to un-shrunk `86px × 86px` with tier-colored circular ring border (`2.5px solid var(--tier-color)`).
+    * Synchronized metadata subtitle (`Cake English Course | CAMP | 133 | 3rd Level`) with `12px / 0.75rem` semi-bold silver.
+    * Synchronized student name label with `font-family: 'Outfit'`, `18.4px / 1.15rem`, `font-weight: 800`.
+  - **2. Card 2 (Assessment Title) 2-Line Layout**:
+    * Structured into two distinct lines: Line 1 (`#result-asm-type-row`) displays Assessment Type / Level in muted silver (`11px`, SemiBold), Line 2 (`#result-asm-topic-row`) displays Topic / Theme in vibrant cyan `#38BDF8` (`13.5px`, ExtraBold).
+    * Title parser in `js/result.js` cleanly splits raw titles on ` - ` or ` — ` to populate both lines automatically.
+  - **3. Card 3 (Metrics Table) Dynamic Panel & Fluid Typography**:
+    * Configured `.result-metrics-table-card` with `flex: 1 1 auto` to absorb remaining vertical viewport space dynamically.
+    * Configured fluid `clamp()` values for padding (`clamp(5px, 0.9vh, 8px)`) and font sizes (`clamp(11px, 1.4vh, 12.5px)` for labels, `clamp(14px, 1.8vh, 16.5px)` for metric values, `clamp(18px, 2.4vh, 22px)` for Points).
+  - **4. Card 4 (Score & Grade Dual Side-by-Side Card)**:
+    * Grid columns `1fr 1fr` side-by-side with measured total height of exactly `61px`.
+    * Score percentage on left (`100%`), Grade on right (`S`) with glowing accents.
+  - **5. Card 5 Row 1 Height Matching (61px)**:
+    * Set height of `.btn-next-milestone` (Student View) and `.tutor-remedial-segmented` (Tutor View) to exactly **`61px`**, achieving perfect 1:1 symmetry with the Score/Grade card.
+    * Student View: 2-line layout (`GO TO NEXT ASSESSMENT:` + `[TITLE] →`).
+    * Tutor View: 2 tall split buttons (`[ ● NORMAL ]` | `[ ○ REMIDI ]`) with live toggle functionality.
+  - **6. Card 5 Row 2 & 3 Uniform Typography (13px Bold Uppercase)**:
+    * Pinned to bottom with uniform `13px` font size and uppercase text:
+      - Row 2: `BACK TO LOBBY` (Student) / `BACK TO ROOM` (Tutor).
+      - Row 3: `VIEW ANSWER BREAKDOWN`.
+  - **7. Zero-Scroll Verification & Playwright Testing**:
+    * Ran `scratch/test_phase97_proportions.mjs` verifying:
+      - Student View: `avatarWidth: 86`, `avatarHeight: 86`, `card4Height: 61`, `nextBtnHeight: 61`, `backBtnFontSize: 13px`, `breakdownBtnFontSize: 13px`, `bodyScrollHeight: 820`.
+      - Tutor View: `avatarWidth: 86`, `avatarHeight: 86`, `card4Height: 61`, `segmentedHeight: 61`, `btnNormalHeight: 61`, `backBtnFontSize: 13px`, `breakdownBtnFontSize: 13px`, `bodyScrollHeight: 820`.
+    * Captured artifacts: `result_proportions_student_mobile.png`, `result_proportions_student_desktop.png`, `result_proportions_tutor_mobile.png`, `result_proportions_tutor_desktop.png`.
+
+- **Phase 96: Card 5 Uniform Font Size (13px) & Tutor 2-Column Split Action Control**:
+  - **1. Card 5 Uniform Typography Alignment (13px)**:
+    * Harmonized font size to uniform `13px` (`font-weight: 700 / 800`) across all Card 5 action buttons: `.btn-dashboard-primary`, `.btn-breakdown-ghost`, `.btn-next-milestone .next-btn-title`, and `.remedial-segment-btn`.
+    * Protected mobile zero-scroll queries from downscaling Card 5 buttons to `0.8rem` (enforced `13px !important` on `.result-action-buttons-wrap`).
+  - **2. Tutor's View 2-Column Split Control (`NORMAL` | `REMIDI`)**:
+    * Replaced single status badge with interactive 2-column segmented control in Card 5 Row 1 (`.tutor-remedial-segmented`).
+    * Active state indicator: `● NORMAL` (emerald `#34D399` highlight) when normal, `● REMIDI` (amber `#FBBF24` highlight) when remedial.
+    * Interactive toggle: Tutor clicking inactive segment calls `labelAttemptRemedial(attempt.id, ...)` with automatic reload.
+  - **3. Navigation Button Text Harmonization**:
+    * Student View: `BACK TO LOBBY` (`dashboard.html`).
+    * Tutor View: `BACK TO ROOM` (`admin.html#class-hub`).
+    * Breakdown Button: `VIEW ANSWER BREAKDOWN`.
+  - **4. Automated Playwright Verification**:
+    * Automated test `scratch/test_side_by_side_card5_fonts.mjs` executed:
+      - Student View: `nextTagFontSize: 10.5px`, `nextTitleFontSize: 13px`, `backBtnFontSize: 13px`, `breakdownBtnFontSize: 13px`, `bodyScrollHeight: 820`.
+      - Tutor View: `normalFontSize: 13px`, `remidiFontSize: 13px`, `backBtnFontSize: 13px`, `breakdownBtnFontSize: 13px`, `bodyScrollHeight: 820`.
+    * Artifacts captured: `result_card5_student_mobile.png`, `result_card5_student_desktop.png`, `result_card5_tutor_mobile.png`, `result_card5_tutor_desktop.png`.
+
+
+- **Phase 95: Result Page Header Docking, Standard Grade S, Clean Title & Unified Remedial Slot**:
+  - **1. Docked Top Header Aligned with Student Dashboard (`.dashboard-header`)**:
+    * Rendered compact 44px sticky top header with brand (`🎓 STUDENT'S LOBBY` for students, `🛡️ TUTOR'S ROOM` for tutors), avatar circle, profile shortcut, and logout button.
+    * Removed vertical centering gap on `#result-content` (`justify-content: flex-start !important; margin: 0 auto !important;`) so the card docks flush beneath the header and dynamically fills viewport space.
+  - **2. Best Score Badge Removal**:
+    * Deleted `#result-best-score-badge` from Card 2 and suppressed any JS re-injection; Card 2 now displays the clean, focused assessment title.
+  - **3. Authoritative Standard Grading System (AGENTS.md Section 2.10)**:
+    * Replaced artificial `A ★` with official **Grade S** (`#fbbf24` gold) on 100% perfect scores.
+    * Full spectrum calibrated: Grade S (100%), A (80-99%), B (60-79%), C (40-59%), D (20-39%), E (0-19%).
+  - **4. Unified Remedial Status Slot for Admin (Zero Size Growth)**:
+    * Removed separate `#admin-remedial-control-container` and edit toggle button from result page.
+    * When viewed by Admin: the `Next Assessment` slot renders an informative `Status Ujian: NORMAL (Nilai Murni)` / `REMEDIAL (KKM 60%)` badge.
+    * Card count, heights, and layout geometry are 100% identical between Student and Admin views.
+  - **5. Automated Playwright Verification**:
+    * Automated test `scratch/test_aligned_header_and_grading.mjs` verified:
+      - Student View: `headerBrand: "🎓 STUDENT'S LOBBY"`, `hasBestScoreBadge: false`, `score: "100%"`, `grade: "S"`, `nextSlot: "🚀 Go to Next Assessment..."`, `backBtn: "← Back to Lobby"`, `bodyScrollHeight: 820`.
+      - Admin View: `headerBrand: "🛡️ TUTOR'S ROOM"`, `hasBestScoreBadge: false`, `score: "100%"`, `grade: "S"`, `remedialSlot: "🟢 Status Ujian: NORMAL (Nilai Murni)"`, `hasAdminEditButton: false`, `backBtn: "← Kembali ke Tutor's Room"`, `bodyScrollHeight: 820`.
+    * Generated artifacts: `result_aligned_mobile.png`, `result_aligned_desktop.png`, `result_aligned_admin.png`.
+
+
+- **Phase 94: Result Page 2-Column Metrics Table Card ("INI SAJA" Alignment) & Staggered Animations**:
+  - **1. 2-Column 4-Row Metrics Table Card (`.result-metrics-table-card`)**:
+    * Implemented unified 2-column table with middle dividing line and row borders matching user's "INI SAJA" diagram.
+    * Row 1: `CORRECT` (left) \| count e.g. `10` (right) with `#34D399` emerald theme.
+    * Row 2: `PARTIAL` (left) \| count e.g. `0` (right) with `#FBBF24` amber theme.
+    * Row 3: `INCORRECT` (left) \| count e.g. `0` (right) with `#F87171` red theme.
+    * Row 4: `POINTS` (left) \| count e.g. `10` (right) with bold `font-weight: 900` and prominent styling.
+    * Interactive filter maintained: clicking rows 1, 2, or 3 opens answer breakdown modal filtered to that category.
+  - **2. Sequential Top-to-Bottom Cascading Entrance Animation**:
+    * Card 1 (`.result-identity-card`): `result-fade-up` delay `0.06s`.
+    * Card 2 (`.result-assessment-title-wrap`): `result-fade-up` delay `0.12s`.
+    * Card 3 (`.result-metrics-table-card`): `result-fade-up` delay `0.28s`.
+    * Card 4 (`.result-score-grade-card`): `result-fade-up` delay `0.40s`.
+    * Card 5 (`.result-action-buttons-wrap`): `result-fade-up` delay `0.52s`.
+  - **3. Delayed Grade Pop-in (`.grade-delayed` & `.grade-revealed`)**:
+    * Grade value is hidden (`opacity: 0; transform: scale(0.55); visibility: hidden`) while score counts up from `0%` to `100%`.
+    * On `animateCount` completion callback: `.grade-delayed` is removed and `.grade-revealed` triggers `@keyframes gradeSlamPop` with gold star accent and victory confetti.
+  - **4. Verification & Screenshots Captured**:
+    * Automated test `scratch/test_2col_table_result.mjs` executed with Chrome headless Playwright: verified mid-animation grade suppression, final state values, zero-scroll (`scrollHeight: 820, windowHeight: 820`).
+    * Generated artifacts: `result_2col_mobile.png`, `result_2col_desktop.png`, `result_2col_admin.png`.
+
+
+- **Phase 93: Result Page Architectural Redesign (ASCII Wireframe & Dynamic A ★ Star Badge)**:
+  - **1. Header Identity Card (`.result-identity-card`)**:
+    * Institutional Metadata (`.result-meta-wrapper`): Displays `Cake English Course | CAMP | 133 | 3rd Level` dynamically populated from student record joins (`institutions`, `programs`, `batches`, `levels`) with session fallbacks.
+    * Centered glowing avatar ring (`.result-avatar-stage`): Score ring SVG animation with profile photo and batch champion crown badge support.
+    * Subtle Divider (`.hero-divider`): Clean horizontal gradient line separating identity metadata from student name.
+    * Centered Student Name (`.result-student-name-label`): Bold, clean typography displaying full student name (`Mr. Rifky Ahmad`).
+  - **2. Assessment Title Card (`#result-Assessment-name-container`)**:
+    * Positioned directly beneath header card displaying clean uppercase task title (`3RD VOCABULARY A1 PHRASES TASK - PROFESSIONAL IDENTITY`).
+  - **3. Breakdown Metrics Stack (`.result-stats-stacked-list`)**:
+    * Full-width stacked list in exact wireframe order:
+      - `POINTS`: plain number (e.g. `10`) without trailing "PTS".
+      - `CORRECT`: emerald green (`#34D399`) count (e.g. `10`).
+      - `PARTIAL`: amber yellow (`#FBBF24`) count (e.g. `0`).
+      - `INCORRECT`: red (`#F87171`) count (e.g. `0`).
+  - **4. Side-by-Side Current Assessment Score & Grade Dual Card (`.result-score-grade-card`)**:
+    * `SCORE`: percentage achieved formatted cleanly without decimals on whole numbers (e.g. `100%`) with animated count-up.
+    * `GRADE`: displays exact letter grade, dynamically appending glowing gold star `<span class="grade-star-accent">★</span>` only on 100% perfect score (`A ★`), and remedial indicator (`B R`) on remedial attempts.
+  - **5. Actions Stack (`.result-action-buttons-wrap`)**:
+    * `UP NEXT MILESTONE`: Displays clean full title (`3rd Vocabulary A2 Words Task - CV & Resume →`).
+    * `← Kembali ke Classroom`: Primary navigation button to dashboard (or `← Kembali ke Tutor's Room` in admin mode `?admin=1`).
+    * `View Answer Breakdown`: Ghost button opening detailed question review modal.
+    * Locked Footer Banner: `TopsCore © 2026 | Created by Mr. Top`.
+  - **6. Verification & Zero-Scroll Compliance**:
+    * Tested on Chrome headless at 400x800 (mobile) and 1280x800 (desktop) using Playwright.
+    * Verified 100% match with user ASCII wireframe; captured `scratch/result_wireframe_mobile.png`, `scratch/result_wireframe_desktop.png`, and `scratch/modal_test.png`.
+
+- **Phase 92: Ecosystem Naming Rebrand ("Tutor's Room" & "Student's Lobby")**:
+  - **1. Admin Workspace ("Tutor's Room")**:
+    * `admin.html`: Page `<title>` renamed to `Tutor's Room — TOPS CORE`.
+    * Sidebar brand sub-label updated from `TOP OFFICE` to `TUTOR'S ROOM`.
+    * Admin login screen heading updated to `TUTOR'S ROOM`, submit button updated to `Sign In to Tutor's Room`.
+    * Return link on admin login updated to `← Student's Lobby`.
+    * Gear access link in `index.html` updated to `title="Tutor's Room"` and `aria-label="Tutor's Room"`.
+    * Result viewer admin return navigation updated to `← Kembali ke Tutor's Room` (`admin.html#class-hub`).
+  - **2. Student Workspace ("Student's Lobby")**:
+    * `dashboard.html`: Page `<title>` renamed to `Student's Lobby — TOPS CORE`.
+    * Header brand text updated to `🎓 STUDENT'S LOBBY`.
+    * `index.html`: Page `<title>` renamed to `Student's Lobby — TOPS CORE`, subtitle updated to `Student's Lobby — Sign in to continue`.
+    * `result.html`: Return button updated to `&larr; Back to Student's Lobby`.
+  - **3. Verification (`scratch/verify_panel_names.mjs`)**:
+    * Verified on headless Chrome with Playwright: `index.html`, `admin.html` (login & logged-in desktop view), `dashboard.html` (mobile view), and `result.html` (student & admin modes) with 0 errors.
+
+- **Phase 91: Result Page Verification & Standardization Calibration**:
+  - **1. Visual & Functional Verification (`result.html` & `js/result.js`)**:
+    * Verified attempt `84af9692-8d91-4a80-a113-739b4e647a81` (`3A1-PHRASES-TASK`): Title renders `3rd Vocabulary A1 Phrases Task - Professional Identity`, Crumb `VOCABULARY • 3RD LEVEL • PHRASE TASK`, Score `100.0%` (Grade S) with Magenta aura/star and confetti trigger, Points `10 PTS` (out of 10), Batch Rank `#22 / 24`, Up Next Milestone points to `#3` (`3rd Vocabulary A2 Words Task - CV & Resume →`).
+    * Verified attempt `29f6408c-2fb8-47e6-879a-6badff5ccf12` (`3A-WORDS-TEST`): Title renders `3rd Vocabulary A Words Test - Workplace`, Crumb `VOCABULARY • 3RD LEVEL • VOCAB TEST`, Score `51.0%` (Grade C) in pure yellow, Points `61.5 PTS` (out of 120), Retake Policy locked (`Official Test attempt locked & final upon submission`), and Next Milestone displays waiting tutor message.
+  - **2. Smart Next Milestone Calibration (`js/result.js`)**:
+    * Filtered published assessment lookups by current attempt's `class_id` (`asmData?.class_id || attempt.class_id`), preventing cross-class leakage and ensuring students stay on their linear 40-item sequence.
+    * Display button renders clean topic title with `cleanTitle()`.
+  - **3. API Data Projection Hardening (`js/api.js`)**:
+    * `fetchAttemptResult`: Added `shell_code, assessment_category, class_id` to `assessments:assessment_id` projection.
+    * `fetchAssessmentsForStudentLevel`: Added `shell_code` to select list.
+  - **4. Answer Breakdown Modal & Interactive Filters**:
+    * Verified modal opening, question search bar, status chips (All, Incorrect, Partial, Correct), and attempt history table.
+    * Verified tolerance display on partial answers (e.g. `dedicatet` and `touhg` displaying `Partial 0.5pt` with amber borders).
+  - **5. Admin Grade Control & Asset Sync**:
+    * Verified `?admin=1` loads the Admin Grade Control card with 1-click toggle for KKM 60% Remedial status.
+    * Back button dynamically updates to `← Kembali ke Class Hub` (`admin.html#class-hub`).
+    * Synced asset version query strings across `result.html` and `js/result.js` to `v=5.5.8`.
+
+- **Phase 90: 40 Assessments Auto-Generate Standardization, Linear Prerequisite Chain & Unified Codes**:
+  - **1. Auto-Generate Engine Synchronization (`js/api.js`)**:
+    - Upgraded `upsertDynamicAssessmentShell` and `autoGenerateAssessmentsHierarchy` in `js/api.js`:
+      * Generates exactly **40 assessments** (20 Words + 20 Phrases) in strict alternating pairs.
+      * Titles standardized to: `${ordinal} Vocabulary ${themeCode}${topicCode} Words Task - [Topic]` and `${ordinal} Vocabulary ${themeCode}${topicCode} Phrases Task - [Topic]`.
+      * Tests standardized to: `${ordinal} Vocabulary ${themeCode} Words Test - [Theme]` and `${ordinal} Vocabulary ${themeCode} Phrases Test - [Theme]`.
+      * Shell codes standardized to: `${levelNum}${themeCode}${topicCode}-WORDS-TASK`, `${levelNum}${themeCode}${topicCode}-PHRASES-TASK`, `${levelNum}${themeCode}-WORDS-TEST`, and `${levelNum}${themeCode}-PHRASES-TEST`.
+      * Dedup handles legacy shell codes seamlessly, preventing duplicates upon re-generation.
+      * Verified execution via Node: `autoGenerateAssessmentsHierarchy([3], ...)` returned `{ tasks: 0, tests: 0, updated: 40 }`.
+  - **2. Linear Sequential Prerequisite Chain (1 ➔ 2 ➔ 3 ➔ 4 ... ➔ 40) (`scratch/execute_standardize_40_assessments.mjs`)**:
+    - Chained all 40 active assessments in database:
+      * #1 (`3A1-WORDS-TASK`): Prereq: NONE
+      * #2 (`3A1-PHRASES-TASK`): Prereq: #1 (`3A1-WORDS-TASK`)
+      * #3 (`3A2-WORDS-TASK`): Prereq: #2 (`3A1-PHRASES-TASK`)
+      * #4 (`3A2-PHRASES-TASK`): Prereq: #3 (`3A2-WORDS-TASK`)
+      * ...
+      * #7 (`3A-WORDS-TEST`): Prereq: #6 (`3A3-PHRASES-TASK`)
+      * #8 (`3A-PHRASES-TEST`): Prereq: #7 (`3A-WORDS-TEST`)
+      * #9 (`3B1-WORDS-TASK`): Prereq: #8 (`3A-PHRASES-TEST`)
+      * ...
+      * #39 (`3D-WORDS-TEST`): Prereq: #38 (`3D4-PHRASES-TASK`)
+      * #40 (`3D-PHRASES-TEST`): Prereq: #39 (`3D-WORDS-TEST`)
+    - Students must master the Word task then Phrase task before moving to the next topic, and must pass the Words test before attempting the Phrases test.
+  - **3. Dynamic Question Generation Calibration (`js/api.js`)**:
+    - Calibrated `generateAssessmentQuestions`:
+      * `3A1-WORDS-TASK`: Strictly generates **40 words** (max 40 pts).
+      * `3A1-PHRASES-TASK`: Strictly generates **10 phrases** (max 10 pts).
+      * `3A-WORDS-TEST`: Strictly generates **120 words**.
+      * `3A-PHRASES-TEST`: Strictly generates **30 phrases**.
+  - **4. Verification & Non-Destructive Integrity**:
+    - Verified all 742 submitted student attempts and 436 best score flags remain 100% attached and intact.
+    - Verified with Playwright headless browser: Class Hub Matrix renders Theme A (10 cols), Theme B (12 cols), Theme C (14 cols), Theme D (12 cols), and ALL Tests-Only (16 cols) with 0 console or page errors.
+
+
+- **Phase 89: Ecosystem-Wide Pure Solid Palette, Remedial Pure Yellow Overrides, and Sleek Test Column Restructuring**:
+  - **1. Pure Solid 100% Grade Palette (`js/grading.js`, `js/app.js`, `js/api.js`, `css/style.css`, `css/result.css`, `css/dashboard.css`)**:
+    - Standardized `GRADE_PALETTE` and CSS utility classes:
+      * Star / Bintang (100%): `#FF00FF` (Pure Pink/Magenta) with ambient glow `rgba(255, 0, 255, 0.45)`.
+      * Grade A (80% - 99%): `#00FF00` (Pure Green).
+      * Grade B (60% - 79%): `#00FFFF` (Pure Cyan / Sky Blue).
+      * Grade C (40% - 59%): `#FFFF00` (Pure Yellow).
+      * Grade D (20% - 39%): `#FF8000` (Pure Orange).
+      * Grade E / F (0% - 19%): `#FF0000` (Pure Red).
+  - **2. Special Remedial Handling (`js/grading.js`, `js/result.js`, `js/dashboard.js`, `js/admin/app.js`, `css/admin.css`)**:
+    - Remedial attempts (`is_remedial_unlocked` or capped at 60%) are strictly EXCLUDED from Grade B Cyan (`#00FFFF`).
+    - Remedial scores, points, badges, and score rings strictly render in Pure Yellow (`#FFFF00`), matching Grade C visual indicator.
+    - Class Hub matrix table (`admin.html#class-hub`): thick yellow box/border removed (`.asm-score-remedial` background: transparent, border: none, padding: 0).
+    - Delicate superscript: `<sup class="asm-rem-sup">R</sup>` with `font-size: 0.7em`, `opacity: 0.7`, `color: #FFFF00` on remedial scores and points.
+    - Roster student name column: removed `[ REMIDI ]` badge next to student name completely per user instruction; student name now occupies full column width cleanly with zero truncation/distortion. Toolbar legend updated to show `ᴿ Remedi`.
+  - **3. Clean & Sleek Test Columns (`css/admin.css`, `js/admin/app.js`)**:
+    - Completely stripped pink/magenta box outlines and backgrounds from Test columns.
+    - First column of each Test pair (`th/td.col-asm-test-pts`): `border-left: 2px solid rgba(255, 255, 255, 0.25)`.
+    - Column body background: `background: rgba(255, 255, 255, 0.025)`.
+    - Inner divider between PTS and SCORE (`th/td.col-asm-test-score`): `border-left: 1px dashed rgba(255, 255, 255, 0.08)`.
+    - Test column headers (`WRD PTS`, `SCORE`, `PHR PTS`, `SCORE`): replaced pink box badges with clean neutral white `#e2e8f0` text and subtle translucent background `rgba(255, 255, 255, 0.08)`.
+  - **4. Student Dashboard & Result Viewer Alignment (`js/dashboard.js`, `js/result.js`, `result.html`, `dashboard.html`)**:
+    - Dashboard hero banner and avatar container for Star S updated to `#FF00FF` and `rgba(255, 0, 255, 0.45)`.
+    - Result page score ring, particles, grade stamp, and percentage typography render `#FF00FF` for Star S and `#FFFF00` for remedial attempts.
+    - Batch standings / leaderboard properly inherit updated pure solid colors.
+  - **5. Integrity of Business Logic & Cache Bump (`sw.js`, `admin.html`, `dashboard.html`, `result.html`)**:
+    - KKM 60% capping and Damerau-Levenshtein evaluation verified and preserved intact.
+    - Node syntax validation checked and passed with exit code 0.
+    - Service worker cache and script query strings bumped to `abcd-core-v5.5.7`.
+
+- **Phase 88: Visual Refactoring of Remedial Indicators in Admin Class Hub**:
+  - **1. Borderless/Background-Free Remedial Scores (`css/admin.css`)**:
+    - Stripped thick yellow box shadow, background, and border from `.asm-score-remedial`. Remedial values now render cleanly on the dark row background without harsh box borders.
+  - **2. Official Grade B Cyan (#00ffff) Color (`js/admin/app.js`)**:
+    - Removed forced yellow color on remedial scores.
+    - Remedial scores capped at 60% now strictly inherit official Grade B Cyan `#00ffff` color across all assessment columns (Test PTS, Test SCORE, and Task).
+    - Fixed `effSc` definition in Test SCORE renderer to eliminate `ReferenceError` during evaluation.
+  - **3. Delicate & Subtle Superscript `<sup>R</sup>` (`css/admin.css`, `js/admin/app.js`)**:
+    - Replaced heavy inline yellow span with `<sup class="asm-rem-sup">R</sup>` styled at `font-size: 0.7em`, `opacity: 0.65`, `color: #94a3b8`, and `vertical-align: super`.
+  - **4. Elegant Mini-Badge [REMEDI] in Student Name Column (`css/admin.css`, `js/admin/app.js`)**:
+    - Applied user's exact styling to `.badge-remedial-tag`: `background: rgba(234, 179, 8, 0.12)`, `border: 1px solid rgba(234, 179, 8, 0.3)`, `font-size: 9px`, `padding: 1px 5px`, `border-radius: 4px`, `color: #facc15`.
+  - **5. Capping Mathematical Integrity**:
+    - Remedial points and percentage capping formulas (`effSc = Math.min(sc, maxRemPts)` and `effPct = Math.min(rawPct, 60.0)`) remain 100% intact and preserved.
+  - **6. Versioning & Verification**:
+    - Bumped service worker cache and script query string to `abcd-core-v5.5.6` in `sw.js` and `admin.html`.
+    - Verified via Playwright screenshot captures `remedial_refactor_all.png` and `remedial_refactor_theme_a.png`. Zero visual glitches.
+
+- **Phase 87: All Themes Tests-Only View, Luminous Yellow Remedial Highlighting, and 24K Royal Gold Star**:
+  - **1. ALL THEMES Tests-Only Executive View (`js/admin/app.js`)**:
+    - When `selectedTheme === 'ALL'`, filtered `activeAssessments` to Checkpoint Tests only (`isTestAsm(asm)`).
+    - Reduced assessment columns from 48 down to 16 (4 themes $\times$ 2 tests $\times$ 2 cols: PTS & SCORE). Total table columns = 24.
+    - Super-headers dynamically set `colSpan = themeTests.length * 2` (4 cols per theme).
+    - Result: Each test column expands to ~70px of comfortable, legible width without horizontal scrolling or extreme zoom-out in Fit Screen mode.
+    - Individual Theme tabs (`THEME A`, `THEME B`, `THEME C`, `THEME D`) reveal all daily tasks/topics (Tasks 1-6 + Tests 7-8 for Theme A).
+    - Toolbar button updated to `🌐 ALL (TESTS ONLY)`.
+  - **2. Luminous Yellow Remedial Highlighting (`css/admin.css`, `js/admin/app.js`, `js/admin/datagrid.js`)**:
+    - DataGrid configured with `rowClassName: (row) => row.hasRemedial ? 'row-remedial' : ''`.
+    - Added `#class-attendance-grid tbody tr.row-remedial` with subtle yellow background tint and 3px yellow left border on sticky cell.
+    - Added `.badge-remedial-tag` (`REMEDI` pill in yellow next to student name).
+    - Added `.asm-score-remedial` (luminous yellow badge `#fef08a` with `#facc15` border and glowing box-shadow) applied to all remedial test and task scores.
+    - Rendered superscript `<span style="color:#fde047; font-size:0.58rem; vertical-align:super; font-weight:900; margin-left:1.5px;">R</span>`.
+  - **3. Ultra-Metallic 24K Royal Gold Star (`css/admin.css`, `js/admin/app.js`)**:
+    - Replaced flat gold with `.badge-grade-star-s` featuring a 5-stop metallic gradient (`#bf953f` 0%, `#fcf6ba` 25%, `#b38728` 50%, `#fbf5b7` 75%, `#aa771c` 100%), specular white-gold inset highlight, deep bronze drop shadow, and glowing star icon.
+    - Applied `.text-gold-champion` to `SCORE` (100%) and `PTS` (2700 pts) for Grade S rows.
+    - Applied `.badge-grade-star-s` to class average summary row when average grade reaches S.
+    - Clean distinction between Grade S 24K Royal Gold (metallic, 3D luxury) and remedial yellow (luminous lemon-yellow `#facc15`).
+  - **4. Versioning & Verification**:
+    - Bumped service worker cache and script query strings to `abcd-core-v5.5.5` in `sw.js` and `admin.html`.
+    - Playwright verified via `all_themes_tests_only.png` and `theme_a_with_tasks.png`. Zero visual defects, zero breaking changes.
+
+- **Phase 86: Exact Integer/Half-Point Recalibration & Bound Enforcement (Max 40 Word / Max 10 Phrase)**:
+  - **1. Root Cause Identification**:
+    - Discovered that unified 50-question historical attempts retained `total_questions = 50` on Word tasks after splitting, allowing scores to reach 50 or 49.2 on 40-max assessments.
+    - Floating decimal calculation `Math.round(N * pct) / 10` produced invalid fractional points like `9.8`, `9.4`, `8.2`, `8.8`, and `47.1`. TopsCore assessment rules mandate either whole integers or `.5` half-points (from minor spelling error tolerance).
+    - Legacy uncalibrated attempts with `score = 50` or `score = 40.5` were shadowing calibrated attempts because `submittedAtts.sort` prioritized highest numeric score without capping at assessment maximum.
+  - **2. Global Database Sanitization (`scratch/execute_global_clean_and_sanitize.mjs`)**:
+    - Backed up all 742 attempts to `scratch/backup_before_global_sanitize.json`.
+    - Iterated over all student and assessment groups:
+      - Capped Word tasks at max 40; Phrase tasks at max 10; Test 3A at 120/30; Test 3B at 280/70; Test 3C at 480/120; Test 3D at 640/160.
+      - Rounded all points strictly to integers or `.5` half-points: `Math.round(score * 2) / 2`.
+      - Recalibrated percentages to reflect exact points: `Math.round((score / max) * 100)`.
+      - Resolved duplicate `is_best_score` flags so only the single legitimate best attempt per student and assessment is marked `is_best_score = true`.
+    - Executed updates across 277 attempt records.
+    - Verified with `scratch/audit_class_attempts.mjs`: Over max points: 0, Invalid floats: 0, Multiple best: 0, Mismatched pct: 0.
+  - **3. Frontend Bound Enforcement & Clean Display (`js/admin/app.js`)**:
+    - Added outer-scope helper `getAsmExpectedMax(asm)` covering all 40 assessments.
+    - Capped attempt scores at `getAsmExpectedMax(asm)` in `bestAtt` selection, preventing stale attempts from overriding calibrated attempts.
+    - Replaced hardcoded `50` question fallbacks with `getAsmExpectedMax(asm)` across all column renderers.
+    - Cleanly formatted display values: integers render without decimal (e.g. `40`, `10`, `9`), half-points render with `.5` (e.g. `37.5`, `9.5`).
+    - Version bumped service worker and script cache to `abcd-core-v5.5.4` in `sw.js` and `admin.html`.
+  - **4. Playwright Visual Verification**:
+    - `verified_recalibrated_theme_a.png`: Word tasks strictly $\le 40$ (e.g. 40, 39, 37.5, 35), Phrase tasks strictly $\le 10$ (e.g. 10, 9.5, 8.5, 8), zero floating decimals, zero 50s.
+    - `verified_recalibrated_all_themes.png`: Entire 40-assessment panorama fitting on screen with clean integer and `.5` values across all 4 themes. Rank 1 (Mr. Top: 2700 pts) down to Rank 26 remain 100% stable.
+
+- **Phase 85: Option 1 Score Equalization for Passing Assessments (Combined >= 60%)**:
+  - **1. Database Execution (`scratch/execute_option1_equalization.mjs`)**:
+    - Backed up all 721 class attempts to `scratch/backup_pre_option1_equalization.json`.
+    - Analyzed all 20 assessment pairs across 26 students in Vocabulary Class (`ab33498a-90e6-44b7-83f4-5765f964543e`).
+    - Where student combined score percentage $P \ge 60\%$:
+      - Equalized both Word and Phrase to $P$.
+      - Word points = $N_{\text{word}} \times (P / 100)$ (40 pts for tasks, 120/160/200/180 pts for tests).
+      - Phrase points = $N_{\text{phrase}} \times (P / 100)$ (10 pts for tasks, 30/40/50/40 pts for tests).
+      - Set `effective_score = effPct` and `grade = computeGrade(effPct)`.
+    - Rescued 38 phrase assessments across 17 students that unfairly fell into remedial/failure due to the raw question split.
+    - Inserted 21 missing phrase attempts with valid `expires_at` and equalized passing scores for students whose historical tests only recorded word answers (e.g. Miss Siti Qori' Atun on Themes C & D, Mr. Unggul, Mr. Masyan, Mr. Asmul, Miss Wardatul on 3A Phrase Test).
+    - Safely preserved all 24 attempts where combined score was genuinely $< 60\%$ (students who truly failed remain at raw score/remedial).
+  - **2. Score/Percentage Rendering Alignment (`js/admin/app.js`)**:
+    - Fixed `effPct` in lines 1046, 1595, 1862, and 1906: `const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;`
+    - Prevented raw points from shadowing percentage in the Test SCORE column.
+    - Bumped service worker cache and script tags to `abcd-core-v5.5.3` in `sw.js` and `admin.html`.
+  - **3. Mathematical Conservation & Ranking Integrity**:
+    - Rank 1 (Top: 2700 pts) down to Rank 26 remain stable and undisturbed.
+    - Students previously missing phrase tests are now credited their rightful points.
+  - **4. Playwright Visual Verification**:
+    - `equalized_matrix_theme_a.png`: Clean, harmonious scores on Theme A; passing students have equalized scores across Word PTS, Word SCORE, Phrase PTS, Phrase SCORE; remedial students have capped 60% with yellow badge.
+    - `equalized_matrix_theme_b.png`: Clean scores on Theme B; rescued students (Miss Syazida, Mr. Aunul, Miss Tiara, Miss Nurhaliza) have passing scores.
+    - `equalized_matrix_fit_screen.png`: Panoramic view of all 40 assessments fitting 100% on screen with zero clipping.
+
+- **Phase 84: Dual View Modes (Fit Screen All 40 vs 100% Scroll), Pan Controls & Full Width Matrix**:
+  - **1. "🔍 FIT SCREEN (ALL 40)" Panorama Mode (`js/admin/app.js`)**:
+    - Calculates dynamic zoom ratio `zoomRatio = Math.min(1, containerWidth / naturalWidth)` when `FIT SCREEN` is active.
+    - Fits all 40 assessments (Themes A, B, C, D — 48 assessment columns + 8 student columns) on the screen simultaneously without requiring horizontal scroll.
+    - Default view mode on load (`topscore_attendance_view_mode`), persistent in `localStorage`.
+  - **2. "↔️ 100% SCROLL" Standard Mode with Mouse Wheel Glide (`js/admin/app.js` & `css/admin.css`)**:
+    - Provides 100% full-scale columns (42px/58px/50px) with frozen student columns on the left.
+    - Added mouse-wheel listener on `.table-wrap`: rolling the mouse wheel anywhere over the table glides horizontally across the curriculum.
+    - Added interactive `[ ◀ Pan Left ]` and `[ Pan Right ▶ ]` buttons to the toolbar for single-click 400px smooth panning.
+  - **3. "⇱ Full Width" Sidebar Collapse Toggle (`js/admin/app.js` & `css/admin.css`)**:
+    - Clicking `[ ⇱ Full Width ]` collapses `#admin-sidebar` and expands the matrix to 100% of the screen width (from 1650px to 1880px+).
+  - **4. Fixed Bottom Clipping & Elevated Clearance (`js/admin/app.js` & `css/admin.css`)**:
+    - Increased bottom clearance in `fitMatrixToScreen()` from 6px to 20px.
+    - The summary row `★ CLASS AVERAGE (KELAS)` and the horizontal scrollbar now have ~32px of clearance above `#bottom-ad-banner` and are never cut off.
+    - Enhanced scrollbar styling: 9px height with vibrant cyan-indigo gradient thumb (`#38bdf8` to `#818cf8`) and border.
+  - **5. High-Resolution Playwright Verification**:
+    - `verified_mode_fit_screen.png`: All 40 assessments visible on one screen without horizontal scroll.
+    - `verified_mode_scroll_100pct.png`: 100% scale with pan controls and clearance.
+    - `verified_mode_fullwidth_fit.png`: Full-screen width with sidebar collapsed.
+
+- **Phase 83: UI/UX Resolution for Overcrowded Attendance Matrix**:
+  - **1. Eliminated 23px Column Compression Bottleneck (`css/admin.css`)**:
+    - Replaced `overflow: hidden !important` on `#class-attendance-grid .table-wrap` with `overflow-x: auto !important; overflow-y: hidden !important; scrollbar-width: thin;` styled with glowing neon cyan scrollbar thumb.
+    - Set `#class-attendance-grid table.datagrid-table` to `table-layout: fixed !important; width: max-content !important; min-width: 100% !important; border-collapse: separate !important; border-spacing: 0 !important;`.
+    - Columns now have generous, un-squashable minimum widths: 42px for Tasks, 58px for Test PTS, 50px for Test SCORE.
+  - **2. Excel-Style Frozen Sticky Left Panes (`css/admin.css`)**:
+    - Pinned the first 8 student detail columns permanently to the left:
+      - `col-sticky-1` (INST): `left: 0px; width: 48px;`
+      - `col-sticky-2` (PROGRAM): `left: 48px; width: 54px;`
+      - `col-sticky-3` (BATCH): `left: 102px; width: 48px;`
+      - `col-sticky-4` (STUDENT NAME): `left: 150px; width: 140px;`
+      - `col-sticky-5` (PROG): `left: 290px; width: 46px;`
+      - `col-sticky-6` (SCORE): `left: 336px; width: 46px;`
+      - `col-sticky-7` (GRD): `left: 382px; width: 36px;`
+      - `col-sticky-8 .col-sticky-last` (PTS): `left: 418px; width: 62px;` with neon cyan divider border and subtle box-shadow.
+    - Super-header `STUDENT DETAILS` pinned permanently with `position: sticky; left: 0; z-index: 30;`.
+    - Pinned summary row cells with matching `col-sticky` classes.
+  - **3. Interactive Quick Theme Toolbar (`js/admin/app.js` & `css/admin.css`)**:
+    - Injected `.attendance-matrix-toolbar` with theme pill buttons:
+      - `[ 🌐 ALL (40) ]`: Full panoramic view across Themes A, B, C, D (48 rendered columns).
+      - `[ 🟦 THEME A (8) ]`: Focused Workplace view (10 columns: 1 WRD to 8 SCORE).
+      - `[ 🟪 THEME B (10) ]`: Focused Tourism view (12 columns: 9 WRD to 18 SCORE).
+      - `[ 🟧 THEME C (12) ]`: Focused CCU view (14 columns: 19 WRD to 30 SCORE).
+      - `[ 🟩 THEME D (10) ]`: Focused High-Frequency view (12 columns: 31 WRD to 40 SCORE).
+    - Added color-coded legend indicators for `WRD`, `PHR`, `PTS`, `SCORE`, and `R` (Remedial).
+  - **4. Cell Boundary Protection (`css/admin.css`)**:
+    - Enforced `overflow: hidden; text-overflow: clip; white-space: nowrap;` across all table cells to eliminate text collisions or bleed into adjacent cells.
+  - **5. High-Resolution Playwright Verification**:
+    - Captured and validated all views:
+      - `theme_all.png`: 48 assessment columns, clean headers, zero overlap.
+      - `theme_a.png`: 10 columns cleanly isolated.
+      - `theme_b.png`: 12 columns cleanly isolated.
+      - `theme_c.png`: 14 columns cleanly isolated.
+      - `theme_d.png`: 12 columns cleanly isolated.
+      - `theme_all_scrolled_right.png`: Scrolled 900px while student names, points, and grades stay frozen on the left.
+  - **6. Git Rule**: Strict Git freeze maintained — 0 commits, 0 pushes. All changes strictly local.
+
+
+- **Phase 82: Non-Destructive Full Curriculum Split (Words & Phrases into 40 Assessments)**:
+  - **1. Bulletproof 40 MB Backup & Instant Restore Script (`scratch/`)**:
+    - Created exhaustive snapshot `scratch/backup_pre_split_restore_point.json` (40.07 MB) capturing all 40 assessments, 540 attempts, and 35,446 attempt answers with 100% fidelity.
+    - Created instant one-command restore engine `scratch/restore_to_snapshot_point.mjs` ensuring zero risk — the user can revert the entire database to the pre-split state in seconds if needed.
+  - **2. Assessment Restoration & Sequential Re-ordering 1 to 40**:
+    - Un-deleted all 20 phrase assessments in Class `ab33498a-90e6-44b7-83f4-5765f964543e` (`deleted_at = null`, `status = 'published'`).
+    - Sequentially numbered all 40 assessments from 1 to 40 (`display_order`):
+      - **Theme A (1..8)**: 1 (3A1 Vocab Task - Words), 2 (3A1 Phrases Task), 3 (3A2 Words), 4 (3A2 Phrases), 5 (3A3 Words), 6 (3A3 Phrases), 7 (3A Words Test - PTS & SCORE), 8 (3A Phrases Test - PTS & SCORE).
+      - **Theme B (9..18)**: 9..16 (4 Word Tasks + 4 Phrase Tasks), 17 (3B Words Test), 18 (3B Phrases Test).
+      - **Theme C (19..30)**: 19..28 (5 Word Tasks + 5 Phrase Tasks), 29 (3C Words Test), 30 (3C Phrases Test).
+      - **Theme D (31..40)**: 31..38 (4 Word Tasks + 4 Phrase Tasks), 39 (3D Words Test), 40 (3D Phrases Test).
+  - **3. Precision Non-Destructive Attempt Splitting Engine**:
+    - Executed `scratch/execute_curriculum_split.mjs`:
+      - **Remapped 94 Pure Phrase attempts** (e.g. historical 10-Q attempts on 3A2) directly to their corresponding phrase assessments.
+      - **Split 181 Mixed attempts** (e.g. 150-Q attempts on 3A Test, 50-Q on 3B1..3B4 Tasks) into clean Word attempts and Phrase attempts:
+        - Word partition: retains word answers, recalculates points, questions, raw/effective percentages, and grades.
+        - Phrase partition: creates new attempt on the corresponding phrase assessment with re-linked phrase answers, recalculates points, questions, raw/effective percentages, and grades.
+      - **Preserved 248 Pure Word attempts** without modification.
+      - **Recalibrated `is_best_score` flags** across 415 student-assessment pairs.
+  - **4. 100% Mathematical Point & Grade Integrity Verified**:
+    - Verified that sum of Word points + Phrase points equals original points with zero points dropped.
+    - All existing stars (`⭐`), grades (`A`), remedial caps (`60% / R`), and rankings are preserved.
+  - **5. Enhanced Column Header Badges (`js/admin/app.js`)**:
+    - Added clear visual badge labels to column headers:
+      - Tasks: `'1 WRD'` (gold `#facc15`), `'2 PHR'` (sky blue `#38bdf8`), etc.
+      - Tests: `'7 WRD PTS'` / `'7 SCORE'`, `'8 PHR PTS'` / `'8 SCORE'`.
+  - **6. Playwright Browser Verification**:
+    - Verified rendering of all 48 assessment columns under dynamic super headers (`THEME A` 10 cols, `THEME B` 12 cols, `THEME C` 14 cols, `THEME D` 12 cols) exiting code 0 with zero console errors. Screenshot saved to `scratch/verified_40_assessments_matrix.png`.
+  - **7. Git Rule**: Strict Git freeze maintained — 0 commits, 0 pushes. All changes strictly local.
+
+
+- **Phase 81: Dual-Column Test Assessment Layout (PTS & SCORE Split)**:
+  - **1. Split Test Columns into 2 Distinct Columns (`js/admin/app.js`)**:
+    - Replaced vertical stacking within a single cramped cell with 2 dedicated, side-by-side columns for each Test assessment (`isTest`):
+      - **Column 1 (`col-asm-test-pts`)**: Header `4 PTS`, `9 PTS`, `15 PTS`, `20 PTS`. Renders points earned (e.g. `105.5`, `90^R`, `150`) with tier coloring and remedial superscript `R`.
+      - **Column 2 (`col-asm-test-score`)**: Header `4 SCORE`, `9 SCORE`, `15 SCORE`, `20 SCORE`. Renders clean percentage score (e.g. `70%`, `60%`, `100%`) with tier coloring.
+  - **2. Dynamic Super Header Colspan Auto-Adjustment (`js/admin/app.js`)**:
+    - Updated `themeCounts` calculation so each Test assessment contributes `colSpan = 2` (Theme A $\rightarrow$ 5 cols, Theme B $\rightarrow$ 6 cols, Theme C $\rightarrow$ 7 cols, Theme D $\rightarrow$ 6 cols). Super headers align with 100% geometric precision.
+  - **3. Summary Row Docking (`js/admin/app.js`)**:
+    - Split test summary row cells so that PTS columns show average points (e.g. `89.3`) and SCORE columns show average percentage (e.g. `67%`), both styled over pink highlighted backgrounds.
+  - **4. CSS Border & Grouping Polish (`css/admin.css`)**:
+    - Added solid pink outer borders (`border-left` on PTS, `border-right` on SCORE) and subtle dashed pink inner divider (`border-right` on PTS) to visually group each test pair together.
+  - **5. Investigation of 90 vs 72 Remedial Score**:
+    - Verified exact database attempts:
+      - Students with **90 PTS** (Ahmad, Gagan, Sofa, Latifa, Tiara) took Test 3A with **150 questions** ($150 \times 60\% = \mathbf{90\text{ Pts}}$).
+      - Student with **72 PTS** (Miss Asti Ananta) took Test 3A with **120 questions** during an earlier test bank configuration ($120 \times 60\% = \mathbf{72\text{ Pts}}$).
+      - Both represent mathematically identical KKM 60% thresholds.
+  - **6. Automated Verification**:
+    - Executed Playwright test `scratch/verify_split_test_cols.mjs`: 0 page errors, 0 console errors, confirmed headers (`4 PTS`, `4 SCORE`, `9 PTS`, `9 SCORE`), verified sample rows, and saved screenshot to `scratch/verified_split_test_cols.png`.
+  - **7. Git Rule**: Strict Git freeze maintained — 0 commits, 0 pushes. All changes strictly local.
+
+
+- **Phase 80: Remedial KKM 60% Standard Enforcement & Points-Centric Ranking Confirmation**:
+  - **1. Points-Centric Ranking Confirmation**:
+    - Confirmed user directive: in this Vocabulary class, Total Points (`PTS`) is the authoritative primary ranking metric. Secondary tie-breaker is average percentage (`SCORE`), followed by `PROG`, and student name (A-Z).
+    - Verified that Class Hub Matrix and Student Dashboard Leaderboard strictly enforce this multi-level sort comparator.
+  - **2. Root Cause Audit of "Remedial Score Higher Than Test"**:
+    - **Factor 1 (Passed Remedial vs Un-remediated Failed Test)**: In Test 3A (150 questions), KKM 60% is 90 points. Students with remedial (Ahmad, Gagan, Sofa, Latifa, Tiara) completed remedial and were capped at $90^R$ (60%). Meanwhile, other students who took the test but failed (<60%, e.g. Syazida 73 pts = 48.7%, Sukur 73.5 pts = 49%, Nurhaliza 84.5 pts = 56.3%, Laura 86 pts = 57.3%) have not taken remedial yet, so their scores displayed raw failure points (73–86), which are lower than the passing remedial threshold (90 pts).
+    - **Factor 2 (Uncapped Remedial in Legacy Views)**: In `assessment-management.js` (Results Grid) and `class.js` (`openStudentProfile`), the views previously read raw `r.percentage` (e.g. 91.7%) and raw `att.score` (137.5) without applying `is_remedial_unlocked` capping.
+  - **3. Universal Remedial Capping Fixes**:
+    - **`js/admin/assessment-management.js`**: Enforced `effPct = isRem ? Math.min(rawPct, 60.0) : ...` and `effGrade = isRem && rawPct > 60 ? 'B' : ...` in deduplication and table rendering. Remedial attempts now strictly display capped 60.0% and Grade B.
+    - **`js/admin/class.js`**: Enforced `effScore = isRem ? Math.min(sc, maxRemPts) : sc` and `effPct = isRem ? Math.min(rawPct, 60.0) : ...` inside `openStudentProfile`, ensuring student profile popups always show 60% capped scores for remedial assessments.
+  - **4. Automated Verification**:
+    - Verified with Playwright and direct Node queries that all 7 remedial attempts in DB are capped at 60.0% / $90^R$.
+  - **5. Git Rule**: Strict Git freeze maintained — 0 commits, 0 pushes. All changes strictly local.
+
+
+- **Phase 79: Students Grade and Score Tab & Dynamic Test Column Metrics**:
+  - **1. Tab Name Renamed (`js/admin/app.js`)**:
+    - Renamed tab 2 from `Active Enrolled Students` to `Students Grade and Score` (`label: 'Students Grade and Score'`, `icon: '📊'`), matching its function as the comprehensive academic grading and progress matrix.
+  - **2. Dynamic Performance Tier Colors for Test Numbers (`js/admin/app.js`)**:
+    - Eliminated forced pink text color (`#f472b6`) on numbers in test columns. Numbers are now dynamically colored by earned score performance tier (AGENTS.md § 2.10):
+      - 100%: Gold Star (`#fbbf24`)
+      - 80%–99%: Emerald Green Grade A (`#34d399`)
+      - 60%–79%: Sky Blue Grade B (`#60a5fa`) / Gold if remedial (`#fbbf24`)
+      - 40%–59%: Amber Grade C/D (`#f59e0b`)
+      - < 40% / 0: Coral Red Grade E (`#ef4444`)
+    - Distinct pink column banding (`col-asm-test` header box, vertical column background tint, and border) is fully preserved.
+  - **3. Dual Metrics Display in Test Columns (Points + Percentage) (`js/admin/app.js`)**:
+    - Each cell in test columns now renders both points and percentage in a clean vertical stack:
+      - Line 1: Points (`displayVal`, e.g. `105.5`, `90^R`, `150`) with remedial superscripts.
+      - Line 2: Percentage (`${Math.round(effPct)}%`, e.g. `70%`, `60%`, `100%`, `0%`).
+    - Summary row (★ CLASS AVERAGE) in test columns renders class average points and average percentage (e.g. `89.3` points over `60%`).
+  - **4. Styling & Layout Tuning (`css/admin.css`)**:
+    - Set `min-width: 44px;` and `padding: 1px 1px !important;` on `th.col-asm-test, td.col-asm-test` to cleanly host both metrics without table overflow. Added subtle hover zoom animation.
+    - Fixed undefined `rect` in `fitMatrixToScreen()` via `const rect = grid.getBoundingClientRect()`.
+  - **5. Cache Bumping**:
+    - Bumped service worker cache to `abcd-core-v5.4.8` (`sw.js`).
+    - Bumped script query parameters in `admin.html` and `result.html` to `v=5.4.8`.
+  - **6. Automated Verification**:
+    - Ran Playwright script `scratch/verify_matrix_test_cols.mjs`: 0 console errors, 0 page errors, confirmed tab label `Students Grade and Score`, verified sample test scores (Mr. Top `150 100%`, Aunul Fikri `105.5 70%`, Unggul `101.5 85%`, Sofa `90^R 60%`), and saved screenshot to `scratch/verified_students_grade_and_score.png`.
+  - **7. Git Rule**: Strict Git freeze maintained — 0 commits, 0 pushes. All changes strictly local.
+
+- **Phase 78: Result Page Syntax & Projection Fix + Student Roster Score Alignment**:
+  - **1. Result Page Loading Stuck & Syntax Error Fix (`js/result.js`)**:
+    - Eliminated duplicate variable declaration `totalQ` by renaming line 693 to `attemptTotalQ` and line 770 to `accuracyTotal`. `node --check js/result.js` passes with code 0.
+  - **2. API Projection & Safety Guard Fix (`js/api.js`)**:
+    - **`fetchAttemptResult(attemptId)`**: Added `student_id`, `total_questions`, `effective_score`, and `is_remedial_unlocked` to the PostgREST select projection. Resolves student name/photo lookup, correct remedial status detection, and prevents 400 Bad Request queries with `student_id=eq.undefined`.
+    - **`fetchAllStudentAttempts(studentId)` & `fetchStudentAttemptsForAssessment`**: Added empty guards `if (!studentId) return [];` to prevent invalid network calls.
+  - **3. Student Roster Authoritative Score Alignment (`js/admin/student-management.js`)**:
+    - **Remedial Capping**: Applied KKM 60% capping (`effScore`, `effPct`) in `asmAtts.forEach` and `bestByAsm`.
+    - **Authoritative Overall Score (AGENTS.md §2.8)**: Replaced erroneous `(totalObtained / totalMaxScore) * 100` (which divided student points by 850 total questions) with `Math.round(sumPercentages / bestByAsm.size)`, aligning Student Roster scores with Class Hub and Student Dashboard (e.g. Latifa 79% B, Laura 73% B, Tiara 70% B, Sofa 91% A).
+    - **Attempts Query**: Included `effective_score` in `adminFetchAll('attempts', ...)`.
+  - **4. Cache Busting**:
+    - Bumped Service Worker cache to `abcd-core-v5.4.7` (`sw.js`).
+    - Bumped module query parameters in `admin.html`, `result.html`, `dashboard.html`, and `js/admin/app.js` to `v=5.4.7`.
+  - **5. Automated Headless Browser Verification (Playwright)**:
+    - **Result Page (`result.html?attempt_id=c34ce4f9-22f4-47e8-83dd-82b4ca94bd18&admin=1`)**: Loaded Miss Risma's result cleanly with 0 errors, 81 PTS, 54.0% Grade C, and active `🟡 REMEDIAL (KKM 60%)` Admin Grade Control.
+    - **Student Roster (`admin.html#students`)**: Loaded student roster with 0 toasts, 0 unhandled rejections, and verified synchronized scores across all members.
+  - **6. Git Rule**: Strict Git freeze maintained — 0 commits, 0 pushes. All changes strictly local.
+
+- **Phase 77: Class Hub Remedial Capping Display & Cross-Page Points-Centric Synchronization**:
+  - **1. Remedial Capping in Class Hub Attendance Matrix (`js/admin/app.js`)**:
+    - **Cell Points Capping**: In column cells, when an attempt has `is_remedial_unlocked: true`, `displayVal` is now strictly capped at KKM 60% of total questions ($150 \times 0.6 = 90$ pts) with gold `R` superscript (`90^R`). Hover tooltip displays `Effective: 90/150 pts (60%) [Raw: 127.5 pts (85%)]`.
+    - **Total PTS Column**: Remedial attempts add capped effective points ($90\text{ pts}$) instead of raw points ($127.5\text{ pts}$), correcting Miss Sofa Maria Ulfa from `462.5 pts` to `425 pts`.
+    - **Average Score & Grade**: Remedial attempts factor in 60.0% instead of raw percentage, correcting Miss Sofa Maria Ulfa's curriculum average from `95%` to `91%`.
+  - **2. Broadened Test Recognition in Class Management (`js/admin/class.js`)**:
+    - Updated `isSummative` across all 4 calculation and export locations to recognize `assessment_category === 'TEST'` and `assessment_type === 'VOCAB_TEST' / 'UNIFIED_TEST'` instead of only `EXAM` / `QUIZ`.
+  - **3. Points-Centric Best Attempt Synchronization in Student Dashboard (`js/dashboard.js`)**:
+    - Aligned attempt selection in `loadBatchLeaderboard` to prioritize effective points (`effPoints`) over legacy percentage, matching Class Hub and database `is_best_score`.
+    - Filtered out orphan/deleted assessments (`a.assessments && !a.assessments.deleted_at`), fixing Asti Ananta (293 -> 359 pts), Muhammad Masyan (534 -> 571 pts), and Tiara (71% -> 78% avg).
+    - **23/23 members in Batch 133 are now in 100.0% PERFECT SYNCHRONIZATION** between Class Hub Matrix and Student Dashboard Leaderboard.
+  - **4. Result Page Capped Points (`js/result.js`)**:
+    - Capped `resPointsEl` to KKM 60% of total questions on remedial attempts (displaying `90 PTS` with tooltip note `Capped at KKM 60% (Raw: 127.5 PTS)`).
+  - **5. Version Bump & Cache Busting**:
+    - Bumped `admin.html`, `dashboard.html`, `result.html`, and `sw.js` cache name to `v=5.4.6` (`abcd-core-v5.4.6`).
+  - **6. Git Rule**: Strict Git freeze maintained — 0 commits, 0 pushes. All changes strictly local.
 
 - **Phase 76: Live Test Session Late Student Enrollment, Points-Centric Standings & Remedial KKM 60% Cap [LOCAL ONLY - GIT FREEZE]**:
   - **1. Penambahan Siswa Susulan pada Sesi Ujian Aktif (Live Session)**:

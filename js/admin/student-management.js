@@ -64,7 +64,7 @@ export function compareStudentsHierarchical(a, b) {
 export async function renderStudents(area) {
     const [rawData, allAttempts, allLevels, allProgress, allPrograms, allBatches, allAssignments, allAssessments] = await Promise.all([
     adminFetchAll('students', 'id, name, gender, birth_date, photo_url, photo_status, is_active, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)'),
-    adminFetchAll('attempts', 'id, student_id, assessment_id, status, score, total_questions, percentage, created_at, is_remedial_unlocked, assessments(assessment_type, title, class_id)'),
+    adminFetchAll('attempts', 'id, student_id, assessment_id, status, score, total_questions, percentage, effective_score, created_at, is_remedial_unlocked, assessments(assessment_type, title, class_id)'),
     adminFetchAll('levels', 'id, name, level_number'),
     adminFetchAll('progress', 'id, student_id, class_id, unlocked_level, highest_score'),
     adminFetchAll('programs', 'id, name, institution_id, is_active'),
@@ -152,10 +152,14 @@ export async function renderStudents(area) {
           if (validStatuses.includes(st)) {
             const sc = Number(att.score ?? 0);
             const tq = Number(att.total_questions || att.max_score || 10);
-            const pct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
-            if (bestPct === null || pct > bestPct) {
-              bestScore = sc;
-              bestPct = Math.round(pct);
+            const rawPct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
+            const isRem = Boolean(att.is_remedial_unlocked);
+            const maxRemPts = tq * 0.6;
+            const effScore = isRem ? Math.min(sc, maxRemPts) : sc;
+            const effPct = isRem ? Math.min(rawPct, 60.0) : (att.effective_score != null ? Number(att.effective_score) : rawPct);
+            if (bestPct === null || effScore > (bestScore ?? -1) || (effScore === bestScore && effPct > bestPct)) {
+              bestScore = effScore;
+              bestPct = Math.round(effPct);
               bestAttempt = att;
             }
           }
@@ -191,14 +195,18 @@ export async function renderStudents(area) {
 
       const sc = Number(a.score ?? 0);
       const tq = Number(a.total_questions || a.max_score || 10);
-      const pct = a.percentage != null ? Number(a.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
+      const rawPct = a.percentage != null ? Number(a.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
+      const isRem = Boolean(a.is_remedial_unlocked);
+      const maxRemPts = tq * 0.6;
+      const effPoints = isRem ? Math.min(sc, maxRemPts) : sc;
+      const effPct = isRem ? Math.min(rawPct, 60.0) : (a.effective_score != null ? Number(a.effective_score) : rawPct);
 
       if (!bestByAsm.has(asmId)) {
-        bestByAsm.set(asmId, { score: sc, totalQuestions: tq, percentage: pct, attempt: a });
+        bestByAsm.set(asmId, { score: effPoints, totalQuestions: tq, percentage: effPct, attempt: a });
       } else {
         const existing = bestByAsm.get(asmId);
-        if (sc > existing.score) {
-          bestByAsm.set(asmId, { score: sc, totalQuestions: tq, percentage: pct, attempt: a });
+        if (effPoints > existing.score || (effPoints === existing.score && effPct > existing.percentage)) {
+          bestByAsm.set(asmId, { score: effPoints, totalQuestions: tq, percentage: effPct, attempt: a });
         }
       }
     });
@@ -214,21 +222,13 @@ export async function renderStudents(area) {
     let overallPct = -1;
 
     if (bestByAsm.size > 0) {
-      let totalMaxScore = 0;
-      let totalObtained = 0;
       let sumPercentages = 0;
 
       bestByAsm.forEach(best => {
-        totalMaxScore += best.totalQuestions;
-        totalObtained += Math.max(0, best.score);
-        sumPercentages += best.percentage;
+        sumPercentages += Number(best.percentage || 0);
       });
 
-      if (totalMaxScore > 0) {
-        overallPct = Math.round((totalObtained / totalMaxScore) * 100);
-      } else if (bestByAsm.size > 0) {
-        overallPct = Math.round(sumPercentages / bestByAsm.size);
-      }
+      overallPct = Math.round(sumPercentages / bestByAsm.size);
 
       if (overallPct >= 0) {
         overallScoreStr = `${overallPct}%`;
@@ -240,7 +240,7 @@ export async function renderStudents(area) {
           overallPct >= 20 ? 'D' : 'E'
         );
         globalGrade = g;
-        const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#84cc16', 'C': '#eab308', 'D': '#f97316', 'E': '#ef4444', 'F': '#ef4444' };
+        const cMap = { 'S': '#A855F7', 'A': '#00FF00', 'B': '#00FFFF', 'C': '#FFFF00', 'D': '#FF8000', 'E': '#FF0000', 'F': '#FF0000' };
         overallColor = cMap[g] || 'rgba(255,255,255,0.4)';
       }
     }
@@ -570,7 +570,7 @@ export async function renderStudents(area) {
             </span>
           </td>
           <td class="text-center">
-            <span class="fw-700 text-sm" ${scoreClickAttr} style="color:${r.bestPct != null ? (r.bestPct >= 80 ? '#10b981' : r.bestPct >= 60 ? '#84cc16' : r.bestPct >= 40 ? '#eab308' : r.bestPct >= 20 ? '#f97316' : '#ef4444') : 'var(--clr-text-3)'};">
+            <span class="fw-700 text-sm" ${scoreClickAttr} style="color:${r.bestPct != null ? (r.bestPct >= 100 ? '#A855F7' : r.bestPct >= 80 ? '#00FF00' : r.bestPct >= 60 ? '#00FFFF' : r.bestPct >= 40 ? '#FFFF00' : r.bestPct >= 20 ? '#FF8000' : '#FF0000') : 'var(--clr-text-3)'};">
               ${r.bestPct != null ? `${r.bestPct}%` : '—'}
             </span>
           </td>
@@ -619,7 +619,7 @@ export async function renderStudents(area) {
             <div style="flex:1;min-width:90px;">
               <div class="text-xs text-muted">Global Grade</div>
               <div style="margin-top:2px;">
-                <span class="badge" style="${rec.globalGrade === 'S' ? 'background:linear-gradient(135deg, #fef08a, #fbbf24, #d97706);color:#1e1b4b;font-weight:900;box-shadow:0 0 10px rgba(245,158,11,0.7);border:1px solid #fde68a;' : `background:${rec.overallColor};color:#000;font-weight:800;`}font-size:0.85rem;padding:3px 10px;">${rec.globalGrade}</span>
+                <span class="badge" style="${rec.globalGrade === 'S' ? 'background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;' : `background:${rec.overallColor};color:#000;font-weight:800;`}font-size:0.85rem;padding:3px 10px;">${rec.globalGrade}</span>
               </div>
             </div>
             <div style="flex:1.2;min-width:120px;">
@@ -1804,7 +1804,7 @@ export async function renderStudents(area) {
         width: '65px',
         render: (row) => row.globalGrade !== '-' && row.globalGrade !== '—' 
           ? (row.globalGrade === 'S'
-            ? `<span class="badge" style="background:linear-gradient(135deg, #fef08a, #fbbf24, #d97706);color:#1e1b4b;font-weight:900;font-size:0.8rem;padding:2px 8px;box-shadow:0 0 10px rgba(245,158,11,0.7);border:1px solid #fde68a;">S</span>`
+            ? `<span class="badge" style="background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;font-size:0.8rem;padding:2px 8px;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;">S</span>`
             : `<span class="badge" style="background:${row.overallColor};color:#000;font-weight:800;font-size:0.8rem;padding:2px 8px;">${row.globalGrade}</span>`
           )
           : '—'

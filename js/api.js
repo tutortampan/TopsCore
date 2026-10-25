@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=5.3.2';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme } from './grading.js?v=5.3.5';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme } from './grading.js?v=5.6.5';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=5.3.2';
 import { escapeHtml, escHtml } from './app.js?v=5.3.2';
 
@@ -456,7 +456,7 @@ export async function fetchAssessmentsForStudentClass(programId, classId, instit
 export async function fetchAssessmentsForStudentLevel(programId, levelId, institutionId) {
   const sb = await getSupabase();
   let query = sb.from('assessments')
-    .select('id, title, display_name, assessment_type, assessment_category, class_id, level_id, display_order, status, minimum_required_score, prerequisite_assessment_id, prerequisite_id, working_duration_minutes, schedule_mode, deleted_at, levels(id, name, level_number)')
+    .select('id, title, shell_code, display_name, assessment_type, assessment_category, class_id, level_id, display_order, status, minimum_required_score, prerequisite_assessment_id, prerequisite_id, working_duration_minutes, schedule_mode, deleted_at, levels(id, name, level_number)')
     .eq('level_id', levelId)
     .eq('status', 'PUBLISHED')
     .is('deleted_at', null)
@@ -478,6 +478,7 @@ export async function fetchAssessmentsForStudentLevel(programId, levelId, instit
 }
 
 export async function fetchAllStudentAttempts(studentId) {
+  if (!studentId) return [];
   const sb = await getSupabase();
   const { data, error } = await sb.from('attempts')
     .select('id, assessment_id, score, percentage, grade, status, is_best_score, submitted_at, assessments(id, title, assessment_type, deleted_at, status, classes(name))')
@@ -510,6 +511,7 @@ export async function fetchAllStudentAttempts(studentId) {
 }
 
 export async function fetchStudentAttemptsForAssessment(studentId, assessmentId) {
+  if (!studentId || !assessmentId) return [];
   const sb = await getSupabase();
   const { data, error } = await sb.from('attempts')
     .select('id, status, score, percentage, grade, submitted_at')
@@ -675,7 +677,7 @@ export async function generateAssessmentQuestions(sb, assessment) {
     if (vaultWords && vaultWords.length > 0) {
       let allEnglishAnswers = [];
       let typeDistractorPools = {};
-      const ansType = assessment.payload.answer_type || 'written';
+      const ansType = assessment.payload?.answer_type || assessment.answer_type || 'written';
       
       if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
         let allDataQuery = sb.from('vocabulary_vault').select('english, word_type').is('deleted_at', null);
@@ -1056,9 +1058,9 @@ export async function fetchAttemptResult(attemptId) {
   const sb = await getSupabase();
   const { data, error } = await sb.from('attempts')
     .select(`
-      id, status, score, percentage, grade, submitted_at, started_at,
+      id, student_id, status, score, total_questions, percentage, effective_score, is_remedial_unlocked, grade, submitted_at, started_at,
       expires_at, assessment_id, is_best_score,
-      assessments:assessment_id(id, title, status, assessment_type, classes(name), levels(name))
+      assessments:assessment_id(id, title, shell_code, status, assessment_type, assessment_category, class_id, classes(name), levels(name))
     `)
     .eq('id', attemptId)
     .single();
@@ -2586,14 +2588,20 @@ export async function adminUnlockRemedialExam(attemptId) {
   return data;
 }
 
+export const toOrdinal = (n) => {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+
 export async function upsertDynamicAssessmentShell(config) {
   const sb = await getSupabase();
   const {
-    institutionId, programId, classId, levelId, levelNum,
+    institutionId, programId, classId, levelId, levelNum = 3,
     tier, themeName, topicName, description,
     themeCode, topicCode,
     modulePrefix = 'VOCAB',
-    category = 'unified',
+    category = 'words',
     durationMinutes = 60,
     prerequisiteId = null,
     moduleId = null,
@@ -2602,23 +2610,41 @@ export async function upsertDynamicAssessmentShell(config) {
   } = config;
 
   const isTest = tier === 'TEST';
-  // User directive (Phase 47/48):
-  // Task Code: "3A1 Vocab Task", Test Code: "3A Vocab Test"
-  // Task Title: "3A1-Vocabulary Task - [Topic Name]", Test Title: "3A-Vocabulary Test - [Theme Name]"
-  const code = isTest 
-    ? `${levelNum}${themeCode} Vocab Test`
-    : `${levelNum}${themeCode}${topicCode || '1'} Vocab Task`;
-  
+  const isPhrase = category === 'phrases' || modulePrefix === 'PHRASE';
+
+  // Standardized Shell Code: e.g. 3A1-WORDS-TASK, 3A1-PHRASES-TASK, 3A-WORDS-TEST, 3A-PHRASES-TEST
+  const code = isPhrase
+    ? (isTest ? `${levelNum}${themeCode}-PHRASES-TEST` : `${levelNum}${themeCode}${topicCode || '1'}-PHRASES-TASK`)
+    : (isTest ? `${levelNum}${themeCode}-WORDS-TEST` : `${levelNum}${themeCode}${topicCode || '1'}-WORDS-TASK`);
+
+  // Standardized Title: e.g. "3rd Vocabulary A1 Words Task - Professional Identity"
+  const ordinal = toOrdinal(levelNum);
   const cleanTitle = (topicName || themeName || '').replace(/["']/g, '').trim();
-  const generatedTitle = isTest 
-    ? `${levelNum}${themeCode}-Vocabulary Test${cleanTitle ? ' - ' + cleanTitle : ''}`
-    : `${levelNum}${themeCode}${topicCode || '1'}-Vocabulary Task${cleanTitle ? ' - ' + cleanTitle : ''}`;
+  const generatedTitle = isPhrase
+    ? (isTest
+        ? `${ordinal} Vocabulary ${themeCode} Phrases Test${cleanTitle ? ' - ' + cleanTitle : ''}`
+        : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Phrases Task${cleanTitle ? ' - ' + cleanTitle : ''}`)
+    : (isTest
+        ? `${ordinal} Vocabulary ${themeCode} Words Test${cleanTitle ? ' - ' + cleanTitle : ''}`
+        : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Words Task${cleanTitle ? ' - ' + cleanTitle : ''}`);
 
-  // Default answer types per user directive:
-  // "Tipe jawaban untuk task adalah spoken, untuk test adalah written,,, tapi bisa dirubah apabila tutor menginginkan."
-  const defaultAnswerType = isTest ? 'written' : 'spoken';
+  // Default answer types: Spoken for Tasks (Words & Phrases), Written for Words Test, Selection for Phrases Test
+  const defaultAnswerType = isTest ? (isPhrase ? 'selection' : 'written') : 'spoken';
 
-  // Dedup: check by new code, or legacy shell codes
+  // Expected question counts
+  let expectedQuestions = 40;
+  if (!isTest) {
+    expectedQuestions = isPhrase ? 10 : 40;
+  } else {
+    const th = (themeCode || '').toUpperCase();
+    if (th === 'A') expectedQuestions = isPhrase ? 30 : 120;
+    else if (th === 'B') expectedQuestions = isPhrase ? 70 : 280;
+    else if (th === 'C') expectedQuestions = isPhrase ? 120 : 480;
+    else if (th === 'D') expectedQuestions = isPhrase ? 160 : 640;
+    else expectedQuestions = isPhrase ? 30 : 120;
+  }
+
+  // Dedup: check by new standardized shell_code first
   let { data: existing } = await sb.from('assessments')
     .select('id, class_id, answer_type, payload')
     .eq('shell_code', code)
@@ -2628,21 +2654,30 @@ export async function upsertDynamicAssessmentShell(config) {
     .maybeSingle();
 
   if (!existing) {
-    const legacyCode = isTest 
-      ? `${levelNum}${themeCode}-WORDS-TEST`
-      : `${levelNum}${themeCode}${topicCode || '1'}-WORDS-TASK`;
-    const { data: legacy } = await sb.from('assessments')
-      .select('id, class_id, answer_type, payload')
-      .eq('shell_code', legacyCode)
-      .eq('program_id', programId)
-      .eq('level_id', levelId)
-      .is('deleted_at', null)
-      .maybeSingle();
-    if (legacy) existing = legacy;
+    // Check legacy aliases
+    const legacyCodes = isPhrase
+      ? [
+          isTest ? `${levelNum}${themeCode} Phrases Test` : `${levelNum}${themeCode}${topicCode || '1'} Phrases Task`,
+          isTest ? `3VOCAB-${themeCode}-TEST-PHR` : `3VOCAB-${themeCode}${topicCode || '1'}-PHR`
+        ]
+      : [
+          isTest ? `${levelNum}${themeCode} Vocab Test` : `${levelNum}${themeCode}${topicCode || '1'} Vocab Task`,
+          isTest ? `3VOCAB-${themeCode}-TEST-WOR` : `3VOCAB-${themeCode}${topicCode || '1'}-WOR`
+        ];
+    for (const leg of legacyCodes) {
+      const { data: legacy } = await sb.from('assessments')
+        .select('id, class_id, answer_type, payload')
+        .eq('shell_code', leg)
+        .eq('program_id', programId)
+        .eq('level_id', levelId)
+        .is('deleted_at', null)
+        .maybeSingle();
+      if (legacy) { existing = legacy; break; }
+    }
   }
 
-  // If existing record was customized by user (e.g. changed answer_type), preserve it
-  const effectiveAnswerType = (existing && existing.answer_type) ? existing.answer_type : (answerType || defaultAnswerType);
+  // Prioritize explicitly passed answerType, otherwise check existing or use defaultAnswerType
+  const effectiveAnswerType = answerType || (existing && existing.answer_type) || defaultAnswerType;
 
   const asmData = {
     institution_id:             institutionId,
@@ -2650,11 +2685,11 @@ export async function upsertDynamicAssessmentShell(config) {
     class_id:                   classId || (existing ? existing.class_id : null),
     level_id:                   levelId,
     module_id:                  moduleId,
-    assessment_type:            isTest ? 'VOCAB_TEST' : 'VOCAB_TASK',
+    assessment_type:            isTest ? (isPhrase ? 'PHRASE_TEST' : 'VOCAB_TEST') : (isPhrase ? 'PHRASE_TASK' : 'VOCAB_TASK'),
     assessment_category:        tier,
     shell_code:                 code,
     title:                      generatedTitle,
-    description:                description || `${tier}: ${themeCode}/${topicCode || 'ALL'}`,
+    description:                description || `${tier}: ${themeCode}/${topicCode || 'ALL'} (${isPhrase ? 'Phrases' : 'Words'})`,
     status:                     'PUBLISHED',
     working_duration_minutes:   durationMinutes,
     prerequisite_assessment_id: prerequisiteId,
@@ -2664,13 +2699,15 @@ export async function upsertDynamicAssessmentShell(config) {
     payload:                    { 
       ...(existing?.payload || {}), 
       is_dynamic_shell: true, 
-      is_unified: true,
-      is_unified_test: isTest,
+      is_unified: false,
+      is_unified_test: false,
       theme_code: themeCode, 
       topic_code: isTest ? null : (topicCode || null), 
-      category: 'unified', 
+      category: isPhrase ? 'phrases' : 'words', 
       answer_type: effectiveAnswerType, 
-      shell_code: code 
+      shell_code: code,
+      total_questions: expectedQuestions,
+      snapshot_question_count: expectedQuestions
     },
     created_by:                 'Auto-Generator',
     updated_at:                 new Date().toISOString()
@@ -2702,15 +2739,6 @@ export async function autoGenerateAssessmentsHierarchy(targetLevels, config = {}
   if (!progData || progErr) throw new Error(`Program not found.`);
 
   const institutionId = progData.institution_id;
-  const rawInstName = progData.institutions ? progData.institutions.name : '';
-  const instName = rawInstName ? (rawInstName.includes('CEC') ? 'CEC' : rawInstName) : 'Inst';
-  const progShortName = progData.name ? (progData.name.split(' ')[0]) : 'Prog';
-
-  const toOrdinal = (n) => {
-    const s = ["th", "st", "nd", "rd"];
-    const v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
-  };
 
   // Pre-fetch Module IDs
   const { data: vocabModule } = await sb.from('modules').select('id').ilike('name', '%Vocabulary Mastery%').limit(1).maybeSingle();
@@ -2745,8 +2773,6 @@ export async function autoGenerateAssessmentsHierarchy(targetLevels, config = {}
         targetClassId = (anyClasses && anyClasses.length > 0) ? anyClasses[0].id : null;
       }
     }
-
-    // We NO LONGER purge. We use UPSERT to preserve student submissions.
 
     // 1. Fetch Words for Level to know what themes and topics exist
     const { data: words, error } = await sb.from('vocabulary_vault')
@@ -2783,6 +2809,7 @@ export async function autoGenerateAssessmentsHierarchy(targetLevels, config = {}
     let displayOrder = 1;
     let lastTaskId = null;
 
+    // 3. Generate 40 Assessments (20 Words + 20 Phrases) in strict Linear Sequential Chain
     for (const themeCode of sortedThemes) {
       const themeData = themeMap.get(themeCode);
       const sortedTopics = Array.from(themeData.topics.keys()).sort();
@@ -2790,20 +2817,19 @@ export async function autoGenerateAssessmentsHierarchy(targetLevels, config = {}
       let hasAnyVocab = false;
       let hasAnyPhrases = false;
 
-      const isUnified = !config.category || config.category === 'unified' || config.category === 'all';
-
       for (const topicCode of sortedTopics) {
         const topicObj = themeData.topics.get(topicCode);
         const topicName = topicObj.name;
         
-        if (isUnified && (topicObj.hasVocab || topicObj.hasPhrases)) {
+        // 1. Words Task (First in topic pair)
+        if (topicObj.hasVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
           hasAnyVocab = true;
           const { assessmentId, action } = await upsertDynamicAssessmentShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
             tier: 'TASK', themeName: themeData.name, topicName: topicName,
             description: `Theme: ${themeData.name} | Topic: ${topicName}`,
             themeCode, topicCode,
-            modulePrefix: 'VOCAB', category: 'unified',
+            modulePrefix: 'VOCAB', category: 'words',
             moduleId: vocabModuleId,
             answerType: 'spoken',
             prerequisiteId: lastTaskId,
@@ -2812,52 +2838,36 @@ export async function autoGenerateAssessmentsHierarchy(targetLevels, config = {}
           if (action === 'inserted') results.tasks++;
           if (action === 'updated') results.updated++;
           lastTaskId = assessmentId;
-        } else {
-          if (topicObj.hasVocab && config.category === 'words') {
-            hasAnyVocab = true;
-            const { assessmentId, action } = await upsertDynamicAssessmentShell({
-              institutionId, programId, levelId, classId: targetClassId, levelNum,
-              tier: 'TASK', themeName: themeData.name, topicName: topicName,
-              description: `Theme: ${themeData.name} | Topic: ${topicName}`,
-              themeCode, topicCode,
-              modulePrefix: 'VOCAB', category: 'vocab',
-              moduleId: vocabModuleId,
-              answerType: 'spoken',
-              prerequisiteId: lastTaskId,
-              displayOrder: displayOrder++
-            });
-            if (action === 'inserted') results.tasks++;
-            if (action === 'updated') results.updated++;
-            lastTaskId = assessmentId;
-          }
-          
-          if (topicObj.hasPhrases && config.category === 'phrases') {
-            hasAnyPhrases = true;
-            const { assessmentId, action } = await upsertDynamicAssessmentShell({
-              institutionId, programId, levelId, classId: targetClassId, levelNum,
-              tier: 'TASK', themeName: themeData.name, topicName: topicName,
-              description: `Theme: ${themeData.name} | Topic: ${topicName}`,
-              themeCode, topicCode,
-              modulePrefix: 'PHRASE', category: 'phrases',
-              moduleId: phraseModuleId,
-              answerType: 'selection',
-              prerequisiteId: lastTaskId,
-              displayOrder: displayOrder++
-            });
-            if (action === 'inserted') results.tasks++;
-            if (action === 'updated') results.updated++;
-            lastTaskId = assessmentId;
-          }
+        }
+
+        // 2. Phrases Task (Second in topic pair, chained to Word Task)
+        if (topicObj.hasPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
+          hasAnyPhrases = true;
+          const { assessmentId, action } = await upsertDynamicAssessmentShell({
+            institutionId, programId, levelId, classId: targetClassId, levelNum,
+            tier: 'TASK', themeName: themeData.name, topicName: topicName,
+            description: `Theme: ${themeData.name} | Topic: ${topicName}`,
+            themeCode, topicCode,
+            modulePrefix: 'PHRASE', category: 'phrases',
+            moduleId: phraseModuleId,
+            answerType: 'spoken',
+            prerequisiteId: lastTaskId,
+            displayOrder: displayOrder++
+          });
+          if (action === 'inserted') results.tasks++;
+          if (action === 'updated') results.updated++;
+          lastTaskId = assessmentId;
         }
       }
-      
-      if (isUnified && (hasAnyVocab || hasAnyPhrases)) {
+
+      // 3. Words Test (First in theme test pair)
+      if (hasAnyVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
         const { assessmentId, action } = await upsertDynamicAssessmentShell({
           institutionId, programId, levelId, classId: targetClassId, levelNum,
           tier: 'TEST', themeName: themeData.name, topicName: null,
           description: `Theme Test: ${themeData.name}`,
           themeCode, topicCode: null,
-          modulePrefix: 'VOCAB', category: 'unified',
+          modulePrefix: 'VOCAB', category: 'words',
           moduleId: vocabModuleId,
           answerType: 'written',
           durationMinutes: (sortedThemes.indexOf(themeCode) + 1) * 60,
@@ -2867,42 +2877,25 @@ export async function autoGenerateAssessmentsHierarchy(targetLevels, config = {}
         if (action === 'inserted') results.tests++;
         if (action === 'updated') results.updated++;
         lastTaskId = assessmentId;
-      } else {
-        if (hasAnyVocab && config.category === 'words') {
-          const { assessmentId, action } = await upsertDynamicAssessmentShell({
-            institutionId, programId, levelId, classId: targetClassId, levelNum,
-            tier: 'TEST', themeName: themeData.name, topicName: null,
-            description: `Theme Test: ${themeData.name}`,
-            themeCode, topicCode: null,
-            modulePrefix: 'VOCAB', category: 'vocab',
-            moduleId: vocabModuleId,
-            answerType: 'written',
-            durationMinutes: (sortedThemes.indexOf(themeCode) + 1) * 60,
-            prerequisiteId: lastTaskId,
-            displayOrder: displayOrder++
-          });
-          if (action === 'inserted') results.tests++;
-          if (action === 'updated') results.updated++;
-          lastTaskId = assessmentId;
-        }
-        
-        if (hasAnyPhrases && config.category === 'phrases') {
-          const { assessmentId, action } = await upsertDynamicAssessmentShell({
-            institutionId, programId, levelId, classId: targetClassId, levelNum,
-            tier: 'TEST', themeName: themeData.name, topicName: null,
-            description: `Theme Test: ${themeData.name}`,
-            themeCode, topicCode: null,
-            modulePrefix: 'PHRASE', category: 'phrases',
-            moduleId: phraseModuleId,
-            answerType: 'written',
-            durationMinutes: (sortedThemes.indexOf(themeCode) + 1) * 60,
-            prerequisiteId: lastTaskId,
-            displayOrder: displayOrder++
-          });
-          if (action === 'inserted') results.tests++;
-          if (action === 'updated') results.updated++;
-          lastTaskId = assessmentId;
-        }
+      }
+
+      // 4. Phrases Test (Second in theme test pair, chained to Word Test)
+      if (hasAnyPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
+        const { assessmentId, action } = await upsertDynamicAssessmentShell({
+          institutionId, programId, levelId, classId: targetClassId, levelNum,
+          tier: 'TEST', themeName: themeData.name, topicName: null,
+          description: `Theme Test: ${themeData.name}`,
+          themeCode, topicCode: null,
+          modulePrefix: 'PHRASE', category: 'phrases',
+          moduleId: phraseModuleId,
+          answerType: 'selection',
+          durationMinutes: (sortedThemes.indexOf(themeCode) + 1) * 60,
+          prerequisiteId: lastTaskId,
+          displayOrder: displayOrder++
+        });
+        if (action === 'inserted') results.tests++;
+        if (action === 'updated') results.updated++;
+        lastTaskId = assessmentId;
       }
     }
   }

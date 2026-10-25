@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TOPS CORE — Student Login</title>
-  <meta name="description" content="Login to TOPS CORE to access your English assessments, track your progress, and complete Assessments." />
+  <title>Student's Lobby — TOPS CORE</title>
+  <meta name="description" content="Login to Student's Lobby on TOPS CORE to access your English assessments, track your progress, and complete assessments." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=5.3.2" />
-  <link rel="stylesheet" href="css/auth.css?v=5.3.2" />
+  <link rel="stylesheet" href="css/style.css?v=5.5.8" />
+  <link rel="stylesheet" href="css/auth.css?v=5.5.8" />
   <meta name="view-transition" content="same-origin" />
   <!-- Web App Manifest -->
   <link rel="manifest" href="manifest.json">
@@ -31,7 +31,7 @@
       <div class="login-brand">
         <span class="brand-icon" aria-hidden="true">&#127891;</span>
         <h1>TOPS CORE</h1>
-        <p>Sign in to continue your learning journey</p>
+        <p>Student's Lobby — Sign in to continue</p>
       </div>
 
       <!-- --- SECTION 1: Institution --- -->
@@ -173,18 +173,18 @@
 
       <!-- Single Admin Access Gear -->
       <div class="admin-gear-wrap">
-        <a href="admin.html" id="admin-portal-link" class="admin-gear-link" title="Top Office Admin Console" aria-label="Top Office Admin Console">&#9881;&#65039;</a>
+        <a href="admin.html" id="admin-portal-link" class="admin-gear-link" title="Tutor's Room" aria-label="Tutor's Room">&#9881;&#65039;</a>
       </div>
 
     </div>
   </div>
 
-  <script type="module" src="./js/auth.js?v=5.3.2"></script>
+  <script type="module" src="./js/auth.js?v=5.5.8"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=5.4.2')
+        navigator.serviceWorker.register('sw.js?v=5.5.8')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

@@ -339,11 +339,10 @@ export async function renderCurriculum(area) {
         };
       });
 
-      const tabBarHtml = window.buildSectionTabBar ? window.buildSectionTabBar({
-        tabs: institutionTabs,
-        activeId: activeInst.id,
-        onSelect: 'window.switchInstitutionTab'
-      }) : '';
+      // Migrate institution tabs to topbar (same pattern as Assessment, Class Hub)
+      if (window.setTopbarTabs) {
+        window.setTopbarTabs(institutionTabs, activeInst.id, 'window.switchInstitutionTab');
+      }
 
       // Programs under current institution (already sorted A→Z)
       const instPrograms = activeProgs.filter(p => p.institution_id === activeInst.id);
@@ -585,9 +584,6 @@ export async function renderCurriculum(area) {
 
       area.innerHTML = `
         <div>
-          <!-- Top Tabs for Institutions -->
-          ${tabBarHtml}
-
           <!-- Institution Profile Banner -->
           <div class="curriculum-inst-banner">
             <div class="d-flex align-center gap-3" style="min-width: 0; flex: 1;">

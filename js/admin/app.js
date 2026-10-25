@@ -330,18 +330,36 @@ export function setTopbarTabs(tabs = [], activeId = null, onSelect = null) {
     const valColor = tab.valColor ? `style="color:${tab.valColor};"` : '';
     const label = tab.label || tab.title || '';
     const icon = tab.icon || '';
+    const hasVal = tab.val !== undefined && tab.val !== null;
+    const badgeHtml = hasVal ? `<span class="topbar-tab-val topbar-tab-badge" ${valColor}>${tab.val}</span>` : '';
     return `
-      <div class="topbar-tab-card ${activeCls} ${statCls}" data-tab-id="${tab.id || ''}" ${clickAttr} title="${_esc(label)}">
+      <div class="topbar-tab-card topbar-tab-folder ${activeCls} ${statCls}" data-tab-id="${tab.id || ''}" ${clickAttr} title="${_esc(label)}">
         <div class="topbar-tab-left">
           ${icon ? `<span class="topbar-tab-icon">${icon}</span>` : ''}
           <span class="topbar-tab-label">${_esc(label)}</span>
         </div>
-        <div class="topbar-tab-val" ${valColor}>${tab.val ?? 0}</div>
+        ${badgeHtml}
       </div>
     `;
   }).join('');
 }
 window.setTopbarTabs = setTopbarTabs;
+
+export function setBottomInfobar(leftHtml = '', rightHtml = '') {
+  const bar = document.getElementById('admin-bottom-infobar');
+  if (!bar) return;
+  if (!leftHtml && !rightHtml) {
+    bar.classList.add('hidden');
+    bar.innerHTML = '';
+    return;
+  }
+  bar.classList.remove('hidden');
+  bar.innerHTML = `
+    <div class="bottom-infobar-left" id="bottom-infobar-left">${leftHtml || ''}</div>
+    <div class="bottom-infobar-right" id="bottom-infobar-right">${rightHtml || ''}</div>
+  `;
+}
+window.setBottomInfobar = setBottomInfobar;
 import {
   adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, clearAdminCache,
   adminFetchDeleted, adminRestore,
@@ -349,25 +367,26 @@ import {
   detectDuplicateQuestions, resequenceAssessmentQuestions, resolveDuplicateQuestionGroup, batchResolveAssessmentDuplicateQuestions,
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateAssessment, applyRecalibrateAssessment, isPassing, calculatePercentage, toLevelLetter
-} from '../api.js?v=5.3.2';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.3.2';
-import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.3.2';
-import { getSupabase } from '../supabase.js?v=5.3.2';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=5.3.2';
-import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.3.2';
-import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.3.2';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=5.3.2';
-import { renderAssessments } from './assessment-management.js?v=5.3.2';
-import { renderAssessmentAccess } from './assessment-access.js?v=5.3.2';
-import { renderVocabularyVault } from './vocab-vault.js?v=5.3.2';
-import { renderModules } from './modules.js?v=5.3.2';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.3.2';
-import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.3.2';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, hashPin } from './crud-modals.js?v=5.3.2';
-import { renderCurriculum } from './curriculum-management.js?v=5.3.2';
-import { renderClassesHub } from './classes-hub.js?v=5.3.2';
-import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.3.2';
-import { openStudentFullEdit } from './student-management.js?v=5.3.2';
+} from '../api.js?v=5.4.7';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.4.7';
+import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.4.7';
+import { getSupabase } from '../supabase.js?v=5.4.7';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=5.4.7';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.4.7';
+import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.4.7';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=5.4.7';
+import { renderAssessments } from './assessment-management.js?v=5.4.7';
+import { renderAssessmentAccess, renderClassTestSessions } from './assessment-access.js?v=5.8.0';
+import { renderVocabularyVault } from './vocab-vault.js?v=5.4.8';
+import { renderModules } from './modules.js?v=5.4.7';
+import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.4.7';
+import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.4.7';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, hashPin } from './crud-modals.js?v=5.4.7';
+import { renderCurriculum } from './curriculum-management.js?v=5.4.8';
+import { renderClassesHub } from './classes-hub.js?v=5.4.7';
+import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.4.7';
+import { openStudentFullEdit } from './student-management.js?v=5.4.7';
+import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -380,7 +399,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
       'classes-hub': 'Curriculum & Level Master',
       'class-hub': 'Class Hub',
       import_ai_assessments: 'Import AI Assessments',
-      institutions: 'Batches', students: 'Students', 'import-students': 'Import Students', 'progress-view': 'Student Progress',
+      institutions: 'Batches', students: 'Students', 'import-students': 'Students Registration', 'student-registration': 'Students Registration', 'students-registration': 'Students Registration', 'progress-view': 'Student Progress',
       Classes: 'Curriculum & Classes', classes: 'Classes', 'classes-org': 'Organization Hub', class_instances: 'Class Instances', levels: 'Levels', topics: 'Topics', questions: 'Question Bank', vocab_vault: 'Vocabulary Vault', modules: 'Modules (Core Blocks)', 'import-questions': 'Import Questions', 'export-questions': 'Export Questions',
       assessments: 'Assessments Hub', 'assessment-access': 'Assessment Access', assignments: 'Assignments & Rosters', results: 'Assessment Results', recalibrator: 'Assessment Engine Recalibration', question_types: 'Validation Dictionary',
       audit: 'Activity & Audit Logs', settings: 'Site Settings & Cost Guard', recycle: 'Recycle Bin', health: 'Data Health & Connectivity',
@@ -391,7 +410,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
     const sectionDomainMap = {
       dashboard: 'ADMIN', profile: 'ADMIN', schedule: 'ADMIN', work_records: 'ADMIN', cv_generator: 'ADMIN', organization: 'ADMIN',
       'classes-hub': 'ADMIN', curriculum: 'ADMIN',
-      institutions: 'BOARD', students: 'BOARD', 'import-students': 'BOARD', 'progress-view': 'BOARD',
+      institutions: 'BOARD', students: 'BOARD', 'import-students': 'BOARD', 'student-registration': 'BOARD', 'students-registration': 'BOARD', 'progress-view': 'BOARD',
       Classes: 'CLASS', classes: 'CLASS', 'classes-org': 'CLASS', class_instances: 'CLASS', levels: 'CLASS', topics: 'CLASS', questions: 'CLASS', question_types: 'CLASS', 'import-questions': 'CLASS', 'export-questions': 'CLASS',
       assessments: 'CLASS', 'assessment-access': 'CLASS', assignments: 'CLASS', results: 'CLASS', import_ai_assessments: 'CLASS',
       'class-panel': 'CLASS', 'class-hub': 'CLASS', vocab_vault: 'CLASS',
@@ -423,7 +442,9 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
       'academy-programs': 'programs',
       'academy-batches': 'batches',
       'academy-students': 'students',
-      'academy-import': 'import-students',
+      'academy-import': 'student-registration',
+      'import-students': 'student-registration',
+      'students-registration': 'student-registration',
       'board-Classes': 'classes',
       'board-topics': 'topics',
       'board-bank': 'questions',
@@ -478,10 +499,12 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
       try {
         // 1. Primary Check: Master credentials (admin / admin123) or custom saved password
         const savedCustomPass = localStorage.getItem('topscore_admin_custom_password');
-        const isMaster = (user.toLowerCase() === 'admin' && (pass === 'admin123' || (savedCustomPass && pass === savedCustomPass)));
+        const normUser = user.toLowerCase();
+        const isMasterUser = ['admin', 'administrator', 'superadmin', 'mr. top', 'mrtop'].includes(normUser);
+        const isMaster = isMasterUser && (pass === 'admin123' || (savedCustomPass && pass === savedCustomPass));
 
         if (isMaster) {
-          setAdminSession({ admin_id: 'admin-master', username: 'admin' });
+          setAdminSession({ admin_id: 'admin-master', username: user });
           hideLoading();
           showToast('Welcome, Administrator!', 'success');
           showConsole();
@@ -603,15 +626,15 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
         const sortedPrograms = activeList.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const activeId = autoSelectProgramId || window._filterProgramId || localStorage.getItem('topscore_selected_program_id') || sortedPrograms[0]?.id;
 
-        let html = `<div class="sidebar-program-group" style="display:flex; flex-direction:column; gap:4px;">`;
+        let html = `<div class="sidebar-program-group" style="display:flex; flex-direction:column; gap:2px;">`;
         if (sortedPrograms.length === 0) {
           html += `<div style="padding: 12px; color: var(--clr-text-muted); font-size: 0.8rem;">No active programs.</div>`;
         } else {
           sortedPrograms.forEach(prog => {
             const isActive = (activeId === prog.id && (_currentSection === 'students' || window._activeSectionAlias === 'students')) ? 'active' : '';
             html += `
-              <div class="admin-nav-item sidebar-program-item ${isActive}" data-program-id="${prog.id}" data-program-name="${escapeHtml(prog.name)}" data-sub="students" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-weight:500; border-radius:6px; transition:all 0.2s;">
-                <span style="font-size:1.1rem;">👥</span>
+              <div class="admin-nav-item sidebar-program-item ${isActive}" data-program-id="${prog.id}" data-program-name="${escapeHtml(prog.name)}" data-sub="students">
+                <span class="nav-icon">👥</span>
                 <span>${escapeHtml(prog.name)}</span>
               </div>
             `;
@@ -698,15 +721,15 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
         const sortedClasses = (classes || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const activeId = window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || sortedClasses[0]?.id;
         
-        let html = `<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:4px;">`;
+        let html = `<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:2px;">`;
         if (sortedClasses.length === 0) {
           html += `<div style="padding: 12px; color: var(--clr-text-muted); font-size: 0.8rem;">No classes found.</div>`;
         } else {
           sortedClasses.forEach(cls => {
-            const isActive = activeId === cls.id ? 'active' : '';
+            const isActive = (activeId === cls.id && (_currentSection === 'class-hub' || window._activeSectionAlias === 'class-hub')) ? 'active' : '';
             html += `
-              <div class="admin-nav-item sidebar-class-item ${isActive}" data-class-id="${cls.id}" data-class-name="${escapeHtml(cls.name)}" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-weight:500; border-radius:6px; transition:all 0.2s;">
-                <span style="font-size:1.1rem;">📘</span>
+              <div class="admin-nav-item sidebar-class-item ${isActive}" data-class-id="${cls.id}" data-class-name="${escapeHtml(cls.name)}">
+                <span class="nav-icon">📘</span>
                 <span>${escapeHtml(cls.name)}</span>
               </div>
             `;
@@ -940,10 +963,26 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
         // Sort classAssessments sequentially by display_order / order_index
         classAssessments.sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
 
+        const getAsmExpectedMax = (asm) => {
+          const isTest = asm.assessment_category === 'TEST' || 
+                         asm.payload?.assessment_category === 'TEST' || 
+                         asm.payload?.is_unified_test === true ||
+                         /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
+                         /\bTEST\b/i.test(asm.title || '');
+          const code = asm.payload?.shell_code || asm.shell_code || asm.title || '';
+          const isPhrase = asm.payload?.category === 'phrases' || /PHRASES/i.test(code) || /phrase/i.test(asm.title || '');
+          if (!isTest) return isPhrase ? 10 : 40;
+          if (/3A/i.test(code) || /Workplace/i.test(code)) return isPhrase ? 30 : 120;
+          if (/3B/i.test(code) || /Tourism/i.test(code)) return isPhrase ? 70 : 280;
+          if (/3C/i.test(code) || /CCU/i.test(code)) return isPhrase ? 120 : 480;
+          if (/3D/i.test(code) || /High-Frequency/i.test(code)) return isPhrase ? 160 : 640;
+          return isPhrase ? 30 : 120;
+        };
+
         // Calculate total possible points in curriculum across all assessments for cumulative mastery
         let curriculumTotalMaxPoints = 0;
         classAssessments.forEach(asm => {
-          const q = Number(asm.total_questions || (asm.is_dynamic_shell || asm.payload?.is_dynamic_shell ? vaultCountFor(asm, (levelMap[asm.level_id]?.level_number || 1)) : 50));
+          const q = Number(asm.total_questions || getAsmExpectedMax(asm));
           curriculumTotalMaxPoints += q;
         });
         if (curriculumTotalMaxPoints === 0) curriculumTotalMaxPoints = (classAssessments.length || 20) * 50;
@@ -1008,6 +1047,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
 
           classAssessments.forEach(asm => {
             const atts = classAttempts.filter(a => (a.assessment_id || a.Assessment_id) === asm.id);
+            const maxQ = getAsmExpectedMax(asm);
             let bestAtt = null;
             if (atts.length > 0) {
               const submittedAtts = atts.filter(a => {
@@ -1015,9 +1055,11 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
                 return ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
               });
               if (submittedAtts.length > 0) {
-                // Sort by highest score, then highest percentage, then latest date
+                // Sort by highest capped score, then highest percentage, then latest date
                 submittedAtts.sort((x, y) => {
-                  const scoreDiff = Number(y.score ?? 0) - Number(x.score ?? 0);
+                  const xSc = Math.min(Number(x.score ?? 0), maxQ);
+                  const ySc = Math.min(Number(y.score ?? 0), maxQ);
+                  const scoreDiff = ySc - xSc;
                   if (scoreDiff !== 0) return scoreDiff;
                   const pctDiff = Number(y.percentage ?? 0) - Number(x.percentage ?? 0);
                   if (Math.abs(pctDiff) > 0.01) return pctDiff;
@@ -1025,7 +1067,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
                 });
                 const topAtt = submittedAtts[0];
                 const markedBest = submittedAtts.find(a => a.is_best_score === true);
-                if (markedBest && Number(markedBest.score ?? 0) >= Number(topAtt.score ?? 0) && Number(markedBest.percentage ?? 0) >= Number(topAtt.percentage ?? 0) - 0.01) {
+                if (markedBest && Math.min(Number(markedBest.score ?? 0), maxQ) >= Math.min(Number(topAtt.score ?? 0), maxQ) && Number(markedBest.percentage ?? 0) >= Number(topAtt.percentage ?? 0) - 0.01) {
                   bestAtt = markedBest;
                 } else {
                   bestAtt = topAtt;
@@ -1036,18 +1078,26 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
             }
 
             asmScores[asm.id] = bestAtt;
-            const totalQ = Number(bestAtt?.total_questions || (asm.is_dynamic_shell || asm.payload?.is_dynamic_shell ? vaultCountFor(asm, (levelMap[asm.level_id]?.level_number || 1)) : 50));
-            const rawEarned = bestAtt?.score != null ? Number(bestAtt.score) : 0;
-            const pctVal = bestAtt ? (bestAtt.percentage != null ? Number(bestAtt.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
-            rowScoreSortVals[`asm_${asm.id}`] = bestAtt ? rawEarned : -1;
+            const totalQ = Number(bestAtt?.total_questions || maxQ);
+            const rawEarned = bestAtt?.score != null ? Math.min(Number(bestAtt.score), maxQ) : 0;
+            const rawPct = bestAtt ? (bestAtt.percentage != null ? Number(bestAtt.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
+            
+            const isRem = Boolean(bestAtt?.is_remedial_unlocked);
+            const maxRemPts = totalQ * 0.6;
+            const effEarned = isRem ? Math.min(rawEarned, maxRemPts) : rawEarned;
+            const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+
+            rowScoreSortVals[`asm_${asm.id}`] = bestAtt ? effEarned : -1;
+            rowScoreSortVals[`asm_${asm.id}_pts`] = bestAtt ? effEarned : -1;
+            rowScoreSortVals[`asm_${asm.id}_pct`] = bestAtt ? effPct : -1;
 
             if (bestAtt) {
               const st = String(bestAtt.status || '').toLowerCase();
               if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
                 completedCount++;
-                totalEarnedScore += rawEarned;
+                totalEarnedScore += effEarned;
                 totalMaxPossible += totalQ;
-                sumPercentages += pctVal;
+                sumPercentages += effPct;
               }
             }
           });
@@ -1079,7 +1129,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
               averageScorePct >= 20 ? 'D' : 'E'
             );
             grade = g;
-            const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#84cc16', 'C': '#eab308', 'D': '#f97316', 'E': '#ef4444', 'F': '#ef4444' };
+            const cMap = { 'S': '#A855F7', 'A': '#00FF00', 'B': '#00FFFF', 'C': '#FFFF00', 'D': '#FF8000', 'E': '#FF0000', 'F': '#FF0000' };
             gradeColor = cMap[g] || 'rgba(255,255,255,0.4)';
           }
 
@@ -1117,6 +1167,9 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
 
           const isBatchActive = s.batches ? s.batches.is_active !== false : false;
 
+          // Check if student has any unlocked remedial assessment
+          const hasRemedial = Object.values(asmScores).some(att => Boolean(att?.is_remedial_unlocked));
+
           return {
             id: s.id,
             name: s.name || 'Unknown',
@@ -1131,6 +1184,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
             batch: batchObj?.name || s.batches?.name || (s.batch_id ? batchMap[s.batch_id]?.name : '') || '—',
             isBatchActive,
             levelName,
+            hasRemedial,
             completedCount,
             totalClassAssessments,
             progressPct,
@@ -1175,8 +1229,8 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
           return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
         });
 
-        // State for active tab
-        if (!window._classHubActiveTab) window._classHubActiveTab = 'assessments';
+        // State for active tab (Order: 1. Students Grade and Score, 2. Test Sessions, 3. Class Assessments)
+        if (!window._classHubActiveTab) window._classHubActiveTab = 'attendance';
 
         window._switchClassHubTab = (tabId) => {
           window._classHubActiveTab = tabId;
@@ -1189,8 +1243,9 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
         });
 
         const classHubTabs = [
-          { id: 'assessments', icon: '📝', val: classAssessments.length, label: 'Class Assessments' },
-          { id: 'attendance', icon: '👥', val: activeBatchStudents.length, label: 'Active Enrolled Students' }
+          { id: 'attendance', icon: '📊', val: activeBatchStudents.length, label: 'Students Grade and Score' },
+          { id: 'test-sessions', icon: '🔐', val: 4, label: 'Test Sessions' },
+          { id: 'assessments', icon: '📝', val: classAssessments.length, label: 'Class Assessments' }
         ];
 
         if (window.setTopbarTabs) {
@@ -1200,7 +1255,9 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
         let html = `
           <div>
             <div id="class-hub-tab-content">
-              ${window._classHubActiveTab === 'assessments' ? `
+              ${window._classHubActiveTab === 'test-sessions' ? `
+                <div id="class-test-sessions-container"></div>
+              ` : (window._classHubActiveTab === 'assessments' ? `
                 <div class="card" style="padding: 0.75rem 1rem; background: var(--clr-surface); margin: 0;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                     <h3 style="margin: 0; font-size: 1.1rem;">📝 Class Assessments</h3>
@@ -1210,16 +1267,68 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
                 </div>
               ` : `
                 <div id="class-attendance-container">
+                  <div class="attendance-matrix-toolbar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                      <div class="attendance-theme-pills" id="attendance-theme-pills-container">
+                        <span style="font-size:0.7rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em; margin-right:2px;">THEME VIEW:</span>
+                        <button type="button" class="attendance-theme-pill ${(!window._classAttendanceThemeFilter || window._classAttendanceThemeFilter === 'ALL') ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('ALL')" data-theme="ALL">🌐 ALL (TESTS ONLY)</button>
+                        <button type="button" class="attendance-theme-pill theme-a ${window._classAttendanceThemeFilter === 'A' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('A')" data-theme="A">🟦 THEME A (8)</button>
+                        <button type="button" class="attendance-theme-pill theme-b ${window._classAttendanceThemeFilter === 'B' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('B')" data-theme="B">🟪 THEME B (10)</button>
+                        <button type="button" class="attendance-theme-pill theme-c ${window._classAttendanceThemeFilter === 'C' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('C')" data-theme="C">🟧 THEME C (12)</button>
+                        <button type="button" class="attendance-theme-pill theme-d ${window._classAttendanceThemeFilter === 'D' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('D')" data-theme="D">🟩 THEME D (10)</button>
+                      </div>
+
+                      <div class="attendance-view-mode-pills" id="attendance-view-mode-container" style="display:flex; align-items:center; gap:4px; border-left:1px solid rgba(255,255,255,0.12); padding-left:8px;">
+                        <span style="font-size:0.68rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.03em;">DISPLAY:</span>
+                        <button type="button" class="attendance-theme-pill mode-fit ${(!window._attendanceViewMode || window._attendanceViewMode === 'fit') ? 'active' : ''}" onclick="window._toggleAttendanceViewMode('fit')" title="Scale assessments to fit comfortably on screen" data-mode="fit">🔍 FIT SCREEN</button>
+                        <button type="button" class="attendance-theme-pill mode-scroll ${window._attendanceViewMode === 'scroll' ? 'active' : ''}" onclick="window._toggleAttendanceViewMode('scroll')" title="100% full scale with smooth horizontal scroll and mouse wheel" data-mode="scroll">↔️ 100% SCROLL</button>
+                      </div>
+
+                      <div id="attendance-pan-controls" style="display:${window._attendanceViewMode === 'scroll' ? 'inline-flex' : 'none'}; align-items:center; gap:4px;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window._panAttendanceMatrix(-400)" title="Pan Left" style="padding:2px 8px; font-size:0.75rem; height:24px; line-height:1;">◀</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window._panAttendanceMatrix(400)" title="Pan Right" style="padding:2px 8px; font-size:0.75rem; height:24px; line-height:1;">▶</button>
+                      </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:10px; font-size:0.68rem; color:#94a3b8;">
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="window._toggleFullWidthMatrix()" id="matrix-fullwidth-btn" title="Toggle Sidebar for maximum table width" style="padding:2px 8px; font-size:0.72rem; height:24px; line-height:1; display:inline-flex; align-items:center; gap:4px;">
+                        <span>⇱</span> <span id="matrix-fullwidth-text">Full Width</span>
+                      </button>
+                      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FFFF00; font-weight:800;">WRD</span> Word</span>
+                      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#00FFFF; font-weight:800;">PHR</span> Phrase</span>
+                      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">PTS</span> Points</span>
+                      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">SCORE</span> %</span>
+                      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FFFF00; font-weight:800; font-size:0.75rem;">ᴿ</span> Remedi</span>
+                      <span style="display:inline-flex; align-items:center; gap:3px;"><span class="badge badge-grade-star-s" style="padding:0 3px !important; font-size:0.6rem !important;"><span class="star-icon" style="font-size:0.7rem;">⭐</span></span> Star S</span>
+                    </div>
+                  </div>
                   <div id="class-attendance-grid"></div>
                 </div>
-              `}
+              `)}
             </div>
           </div>
         `;
         area.innerHTML = html;
 
-        // Render DataGrids depending on tab
-        if (window._classHubActiveTab === 'assessments') {
+        // Render content depending on tab
+        if (window._classHubActiveTab === 'test-sessions') {
+          const testSessionContainer = document.getElementById('class-test-sessions-container');
+          if (testSessionContainer) {
+            await renderClassTestSessions(testSessionContainer, {
+              classId,
+              className,
+              currentClass,
+              classAssessments,
+              allStudents,
+              classStudents,
+              allBatches,
+              allLevels,
+              allAttempts,
+              batchMap,
+              levelMap
+            });
+          }
+        } else if (window._classHubActiveTab === 'assessments') {
           new window.DataGrid({
             container: document.getElementById('class-assessments-grid'),
             data: assessmentsGridData,
@@ -1356,6 +1465,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
             ]
           });
         } else {
+          let attendanceGridInstance = null;
           const rosterBatchFilter = window._classRosterBatchFilter || 'active';
           const filterRosterData = (data, filterVal) => {
             if (filterVal === 'active') {
@@ -1374,6 +1484,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
 
           // Dynamically compute theme headers and colSpans from actual classAssessments
           const themeCounts = {};
+          const themeAsmCounts = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
           const themeNames = {
             'A': 'WORKPLACE',
             'B': 'TOURISM',
@@ -1382,371 +1493,601 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
           };
 
           classAssessments.forEach(asm => {
+            const isTest = asm.assessment_category === 'TEST' || 
+                           asm.payload?.assessment_category === 'TEST' || 
+                           asm.payload?.is_unified_test === true ||
+                           /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
+                           /\bTEST\b/i.test(asm.title || '');
             const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
             const themeCode = (rawTheme || 'A').toUpperCase();
-            themeCounts[themeCode] = (themeCounts[themeCode] || 0) + 1;
+            const colSpan = isTest ? 2 : 1;
+            themeCounts[themeCode] = (themeCounts[themeCode] || 0) + colSpan;
+            if (themeAsmCounts[themeCode] !== undefined) themeAsmCounts[themeCode]++;
             if (asm.payload?.theme_name && !themeNames[themeCode]) {
               themeNames[themeCode] = asm.payload.theme_name.toUpperCase();
             }
           });
 
-          const dynamicSuperHeaders = [
-            { label: 'STUDENT DETAILS', colSpan: 8, className: 'super-hdr super-hdr-student' }
-          ];
+          // Update theme filter pills labels with accurate assessment counts
+          const themeContainer = document.getElementById('attendance-theme-pills-container');
+          if (themeContainer) {
+            const btnAll = themeContainer.querySelector('[data-theme="ALL"]');
+            if (btnAll) btnAll.textContent = `🌐 ALL (TESTS ONLY)`;
+            const btnA = themeContainer.querySelector('[data-theme="A"]');
+            if (btnA) btnA.textContent = `🟦 THEME A (${themeAsmCounts['A'] || 8})`;
+            const btnB = themeContainer.querySelector('[data-theme="B"]');
+            if (btnB) btnB.textContent = `🟪 THEME B (${themeAsmCounts['B'] || 10})`;
+            const btnC = themeContainer.querySelector('[data-theme="C"]');
+            if (btnC) btnC.textContent = `🟧 THEME C (${themeAsmCounts['C'] || 12})`;
+            const btnD = themeContainer.querySelector('[data-theme="D"]');
+            if (btnD) btnD.textContent = `🟩 THEME D (${themeAsmCounts['D'] || 10})`;
+          }
 
-          const themeColorClasses = {
-            'A': 'super-hdr super-hdr-theme super-hdr-theme-a',
-            'B': 'super-hdr super-hdr-theme super-hdr-theme-b',
-            'C': 'super-hdr super-hdr-theme super-hdr-theme-c',
-            'D': 'super-hdr super-hdr-theme super-hdr-theme-d'
-          };
+          // Function to build and mount the attendance grid based on selected theme
+          const renderAttendanceGridMatrix = (selectedTheme = 'ALL') => {
+            window._classAttendanceThemeFilter = selectedTheme;
 
-          const sortedThemes = Object.keys(themeCounts).sort();
-          sortedThemes.forEach(tc => {
-            const tName = themeNames[tc] ? ` (${themeNames[tc]})` : '';
-            dynamicSuperHeaders.push({
-              label: `THEME ${tc}${tName}`,
-              colSpan: themeCounts[tc],
-              className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
-            });
-          });
+            // Update active pill button state
+            if (themeContainer) {
+              themeContainer.querySelectorAll('.attendance-theme-pill').forEach(b => {
+                b.classList.toggle('active', (b.dataset.theme || 'ALL') === selectedTheme);
+              });
+            }
 
-          const attendanceGridInstance = new window.DataGrid({
-            container: document.getElementById('class-attendance-grid'),
-            data: initialRosterData,
-            pageSize: 50,
-            stickyActionCol: false,
-            tableLayout: 'fixed',
-            hideToolbar: true,
-            searchKeys: ['instName', 'instShort', 'progName', 'batch', 'displayName', 'name', 'pin'],
-            initialSortKey: 'totalEarnedScore',
-            initialSortAsc: false,
-            superHeaders: dynamicSuperHeaders,
-            summaryRow: (visibleCols, filteredData) => {
-              const totalStudents = filteredData.length;
-              if (totalStudents === 0) return '';
+            const isTestAsm = (asm) => asm.assessment_category === 'TEST' || 
+                                       asm.payload?.assessment_category === 'TEST' || 
+                                       asm.payload?.is_unified_test === true ||
+                                       /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
+                                       /\bTEST\b/i.test(asm.title || '');
 
-              // Calculate class averages
-              const avgProg = Math.round(filteredData.reduce((acc, s) => acc + (s.progressPct || 0), 0) / totalStudents);
-              const avgPts = Math.round(filteredData.reduce((acc, s) => acc + (s.totalEarnedScore || 0), 0) / totalStudents);
-              const completedStudents = filteredData.filter(s => (s.completedCount || 0) > 0);
-              const avgScore = completedStudents.length > 0 
-                ? Math.round(completedStudents.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / completedStudents.length) 
-                : 0;
-              const avgGrade = completedStudents.length > 0 && typeof getGrade === 'function' ? getGrade(avgScore) : '—';
-              const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#84cc16', 'C': '#eab308', 'D': '#f97316', 'E': '#ef4444', 'F': '#ef4444' };
-              const avgGradeColor = cMap[avgGrade] || '#94a3b8';
-              const isAvgGradeS = avgGrade === 'S';
-              const avgBadgeStyle = isAvgGradeS
-                ? `background:linear-gradient(135deg, #fef08a, #fbbf24, #d97706); color:#1e1b4b; font-weight:900; font-size:0.65rem; padding:0 5px; line-height:1.2; box-shadow:0 0 10px rgba(245,158,11,0.7); border:1px solid #fde68a;`
-                : `background:${avgGradeColor}; color:#000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
+            // Filter assessments if a specific theme is selected:
+            // When ALL: only show Checkpoint Tests across all themes! (8 tests = 16 columns)
+            // When specific theme (A, B, C, D): show all tasks and tests for that theme!
+            const activeAssessments = selectedTheme === 'ALL'
+              ? classAssessments.filter(isTestAsm)
+              : classAssessments.filter(asm => {
+                  const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+                  return (rawTheme || 'A').toUpperCase() === selectedTheme;
+                });
 
-              let cellsHtml = '';
-              visibleCols.forEach(col => {
-                if (col.key === 'instName') {
-                  cellsHtml += `<td class="text-center" style="font-weight:800; color:#facc15; font-size:0.75rem;">★</td>`;
-                } else if (col.key === 'progName' || col.key === 'batch') {
-                  cellsHtml += `<td class="text-center" style="color:#94a3b8; font-size:0.7rem;">—</td>`;
-                } else if (col.key === 'displayName') {
-                  cellsHtml += `<td style="font-weight:800; color:#facc15; font-size:0.75rem; white-space:nowrap; text-transform:uppercase; letter-spacing:0.02em;">★ CLASS AVERAGE (KELAS)</td>`;
-                } else if (col.key === 'progressPct') {
-                  cellsHtml += `
-                    <td class="text-center">
-                      <div class="fw-700 text-xs" style="color:#facc15; font-size:0.75rem;">${avgProg}%</div>
-                      <div style="font-size:0.55rem; color:#94a3b8; white-space:nowrap;">Avg Done</div>
-                    </td>
-                  `;
-                } else if (col.key === 'averageScorePct') {
-                  cellsHtml += `
-                    <td class="text-center">
-                      <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; line-height:1.1; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(251,191,36,0.6));' : ''}">${avgScore}%</div>
-                    </td>
-                  `;
-                } else if (col.key === 'grade') {
-                  cellsHtml += `
-                    <td class="text-center">
-                      <span class="badge" style="${avgBadgeStyle}">${isAvgGradeS ? '⭐' : avgGrade}</span>
-                    </td>
-                  `;
-                } else if (col.key === 'totalEarnedScore') {
-                  cellsHtml += `
-                    <td class="text-center">
-                      <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(251,191,36,0.6));' : ''}">${avgPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
-                    </td>
-                  `;
-                } else if (col.key && col.key.startsWith('asm_')) {
-                  const asmId = col.key.replace('asm_', '');
-                  let count = 0;
-                  let scoreSum = 0;
-                  filteredData.forEach(s => {
-                    const att = s.asmScores?.[asmId];
-                    if (att && ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(att.status || '').toLowerCase())) {
-                      count++;
-                      const sc = att.score != null ? Number(att.score) : 0;
-                      scoreSum += sc;
-                    }
+            // Dynamic super-headers
+            const dynamicSuperHeaders = [
+              { label: 'STUDENT DETAILS', colSpan: 8, className: 'super-hdr super-hdr-student' }
+            ];
+
+            const themeColorClasses = {
+              'A': 'super-hdr super-hdr-theme super-hdr-theme-a',
+              'B': 'super-hdr super-hdr-theme super-hdr-theme-b',
+              'C': 'super-hdr super-hdr-theme super-hdr-theme-c',
+              'D': 'super-hdr super-hdr-theme super-hdr-theme-d'
+            };
+
+            const sortedThemes = Object.keys(themeCounts).sort();
+            if (selectedTheme === 'ALL') {
+              sortedThemes.forEach(tc => {
+                const tName = themeNames[tc] ? ` (${themeNames[tc]})` : '';
+                const themeTests = activeAssessments.filter(asm => {
+                  const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+                  return (rawTheme || 'A').toUpperCase() === tc;
+                });
+                const colSpan = themeTests.length * 2; // PTS + SCORE for each test
+                if (colSpan > 0) {
+                  dynamicSuperHeaders.push({
+                    label: `THEME ${tc}${tName}`,
+                    colSpan: colSpan,
+                    className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
                   });
-                  const isTest = col.className && col.className.includes('col-asm-test');
-                  if (count > 0) {
-                    const avgSc = (scoreSum / count).toFixed(1).replace(/\.0$/, '');
-                    cellsHtml += `
-                      <td class="text-center ${col.className || ''}" style="${isTest ? 'background:rgba(244,114,182,0.12);' : ''}">
-                        <span style="color:#facc15; font-weight:700; font-size:0.72rem; font-family:monospace;" title="Avg: ${avgSc} pts (${count} students)">${avgSc}</span>
-                      </td>
-                    `;
-                  } else {
-                    cellsHtml += `
-                      <td class="text-center ${col.className || ''}" style="${isTest ? 'background:rgba(244,114,182,0.12);' : ''}">
-                        <span style="color:rgba(255,255,255,0.22); font-weight:800; font-size:0.85rem; line-height:1;">&middot;</span>
-                      </td>
-                    `;
-                  }
-                } else {
-                  cellsHtml += `<td></td>`;
                 }
               });
+            } else {
+              const tName = themeNames[selectedTheme] ? ` (${themeNames[selectedTheme]})` : '';
+              dynamicSuperHeaders.push({
+                label: `THEME ${selectedTheme}${tName}`,
+                colSpan: themeCounts[selectedTheme] || activeAssessments.length,
+                className: themeColorClasses[selectedTheme] || `super-hdr super-hdr-theme super-hdr-theme-${selectedTheme.toLowerCase()}`
+              });
+            }
 
-              return `<tr class="datagrid-summary-row">${cellsHtml}</tr>`;
-            },
-            sortComparator: (sortKey, direction, a, b) => {
-              const aActive = a.isActive ? 1 : 0;
-              const bActive = b.isActive ? 1 : 0;
-              if (aActive !== bActive) return bActive - aActive;
+            // Clean destruction of previous instance if any
+            const gridContainer = document.getElementById('class-attendance-grid');
+            if (gridContainer && gridContainer._datagridInstance) {
+              gridContainer._datagridInstance.destroy();
+            }
 
-              if (sortKey === 'totalEarnedScore' || sortKey === 'PTS') {
-                const sA = Number(a.totalEarnedScore ?? 0);
-                const sB = Number(b.totalEarnedScore ?? 0);
-                if (sA !== sB) return direction === 'asc' ? sA - sB : sB - sA;
-                const scoreA = Number(a.averageScorePct ?? 0);
-                const scoreB = Number(b.averageScorePct ?? 0);
-                if (scoreA !== scoreB) return scoreB - scoreA;
-                const pA = Number(a.progressPct ?? 0);
-                const pB = Number(b.progressPct ?? 0);
-                if (pA !== pB) return pB - pA;
-              }
+            attendanceGridInstance = new window.DataGrid({
+              container: gridContainer,
+              data: initialRosterData,
+              pageSize: 50,
+              stickyActionCol: false,
+              tableLayout: 'fixed',
+              hideToolbar: true,
+              rowClassName: (row) => row.hasRemedial ? 'row-remedial' : '',
+              searchKeys: ['instName', 'instShort', 'progName', 'batch', 'displayName', 'name', 'pin'],
+              initialSortKey: 'totalEarnedScore',
+              initialSortAsc: false,
+              superHeaders: dynamicSuperHeaders,
+              summaryRow: (visibleCols, filteredData) => {
+                const totalStudents = filteredData.length;
+                if (totalStudents === 0) return '';
 
-              if (sortKey === 'progressPct' || sortKey === 'PROG') {
-                const pA = Number(a.progressPct ?? 0);
-                const pB = Number(b.progressPct ?? 0);
-                if (pA !== pB) return direction === 'asc' ? pA - pB : pB - pA;
-                const sA = Number(a.totalEarnedScore ?? 0);
-                const sB = Number(b.totalEarnedScore ?? 0);
-                if (sA !== sB) return sB - sA;
-                const scoreA = Number(a.averageScorePct ?? 0);
-                const scoreB = Number(b.averageScorePct ?? 0);
-                if (scoreA !== scoreB) return scoreB - scoreA;
-              }
+                // Calculate class averages
+                const avgProg = Math.round(filteredData.reduce((acc, s) => acc + (s.progressPct || 0), 0) / totalStudents);
+                const avgPts = Math.round(filteredData.reduce((acc, s) => acc + (s.totalEarnedScore || 0), 0) / totalStudents);
+                const completedStudents = filteredData.filter(s => (s.completedCount || 0) > 0);
+                const avgScore = completedStudents.length > 0 
+                  ? Math.round(completedStudents.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / completedStudents.length) 
+                  : 0;
+                const avgGrade = completedStudents.length > 0 && typeof getGrade === 'function' ? getGrade(avgScore) : '—';
+                const cMap = { 'S': '#A855F7', 'A': '#00FF00', 'B': '#00FFFF', 'C': '#FFFF00', 'D': '#FF8000', 'E': '#FF0000', 'F': '#FF0000' };
+                const avgGradeColor = cMap[avgGrade] || '#94a3b8';
+                const isAvgGradeS = avgGrade === 'S';
+                const avgBadgeStyle = isAvgGradeS
+                  ? `background:rgba(168,85,247,0.18); color:#A855F7; font-weight:900; font-size:0.65rem; padding:0 5px; line-height:1.2; box-shadow:0 0 10px rgba(168,85,247,0.45); border:1px solid #A855F7;`
+                  : `background:${avgGradeColor}; color:#000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
 
-              if (sortKey === 'grade' || sortKey === 'GRD' || sortKey === 'SCORE' || sortKey === 'averageScorePct') {
-                const gA = Number(a.averageScorePct ?? 0);
-                const gB = Number(b.averageScorePct ?? 0);
-                if (gA !== gB) return direction === 'asc' ? gA - gB : gB - gA;
-                const sA = Number(a.totalEarnedScore ?? 0);
-                const sB = Number(b.totalEarnedScore ?? 0);
-                if (sA !== sB) return sB - sA;
-                const pA = Number(a.progressPct ?? 0);
-                const pB = Number(b.progressPct ?? 0);
-                if (pA !== pB) return pB - pA;
-              }
+                let cellsHtml = '';
+                visibleCols.forEach(col => {
+                  if (col.key === 'instName') {
+                    cellsHtml += `<td class="col-sticky col-sticky-1 text-center" style="font-weight:800; color:#FFFF00; font-size:0.75rem;">★</td>`;
+                  } else if (col.key === 'progName' || col.key === 'batch') {
+                    const stickyCls = col.key === 'progName' ? 'col-sticky-2' : 'col-sticky-3';
+                    cellsHtml += `<td class="col-sticky ${stickyCls} text-center" style="color:#94a3b8; font-size:0.7rem;">—</td>`;
+                  } else if (col.key === 'displayName') {
+                    cellsHtml += `<td class="col-sticky col-sticky-4" style="font-weight:800; color:#FFFF00; font-size:0.75rem; white-space:nowrap; text-transform:uppercase; letter-spacing:0.02em;">★ CLASS AVERAGE (KELAS)</td>`;
+                  } else if (col.key === 'progressPct') {
+                    cellsHtml += `
+                      <td class="col-sticky col-sticky-5 text-center">
+                        <div class="fw-700 text-xs" style="color:#FFFF00; font-size:0.75rem;">${avgProg}%</div>
+                      </td>
+                    `;
+                  } else if (col.key === 'averageScorePct') {
+                    cellsHtml += `
+                      <td class="col-sticky col-sticky-6 text-center">
+                        <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; line-height:1.1; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(168,85,247,0.6)); color:#A855F7;' : ''}">${avgScore}%</div>
+                      </td>
+                    `;
+                  } else if (col.key === 'grade') {
+                    cellsHtml += `
+                      <td class="col-sticky col-sticky-7 text-center">
+                        ${isAvgGradeS ? '<span class="badge badge-grade-star-s" title="Average Grade S (100% ⭐)"><span class="star-icon">⭐</span></span>' : `<span class="badge" style="${avgBadgeStyle}">${avgGrade}</span>`}
+                      </td>
+                    `;
+                  } else if (col.key === 'totalEarnedScore') {
+                    cellsHtml += `
+                      <td class="col-sticky col-sticky-8 col-sticky-last text-center">
+                        <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(168,85,247,0.6)); color:#A855F7;' : ''}">${avgPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
+                      </td>
+                    `;
+                  } else if (col.key && col.key.startsWith('asm_')) {
+                    const isPtsCol = col.key.endsWith('_pts');
+                    const isPctCol = col.key.endsWith('_pct');
+                    const asmId = col.key.replace('asm_', '').replace('_pts', '').replace('_pct', '');
+                    let count = 0;
+                    let scoreSum = 0;
+                    let pctSum = 0;
+                    filteredData.forEach(s => {
+                      const att = s.asmScores?.[asmId];
+                      if (att && ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(att.status || '').toLowerCase())) {
+                        count++;
+                        const sc = att.score != null ? Number(att.score) : 0;
+                        const isRem = Boolean(att.is_remedial_unlocked);
+                        const targetAsm = classAssessments.find(a => a.id === asmId);
+                        const tq = Number(att.total_questions || targetAsm?.total_questions || 50);
+                        const effSc = isRem ? Math.min(sc, tq * 0.6) : sc;
+                        const rawPct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
+                        const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                        scoreSum += effSc;
+                        pctSum += effPct;
+                      }
+                    });
+                    const isTest = col.className && col.className.includes('col-asm-test');
+                    const targetAsm = classAssessments.find(a => a.id === asmId);
+                    const totalQ = Number(targetAsm?.total_questions || (isTest ? 150 : 50));
+                    if (count > 0) {
+                      const avgSc = (scoreSum / count).toFixed(1).replace(/\.0$/, '');
+                      const avgPct = Math.round(pctSum / count);
+                      const avgCol = avgPct >= 100 ? '#A855F7' : (avgPct >= 80 ? '#00FF00' : (avgPct >= 60 ? '#00FFFF' : (avgPct >= 40 ? '#FFFF00' : (avgPct >= 20 ? '#FF8000' : '#FF0000'))));
+                      if (isTest && isPctCol) {
+                        cellsHtml += `
+                          <td class="text-center ${col.className || ''}">
+                            <span style="color:${avgCol}; font-weight:700; font-size:0.68rem;" title="Class Avg Score: ${avgPct}%">${avgPct}%</span>
+                          </td>
+                        `;
+                      } else if (isTest && isPtsCol) {
+                        cellsHtml += `
+                          <td class="text-center ${col.className || ''}">
+                            <span style="color:#e2e8f0; font-weight:700; font-size:0.72rem; font-family:monospace;" title="Class Avg Points: ${avgSc}/${totalQ} pts">${avgSc}</span>
+                          </td>
+                        `;
+                      } else {
+                        cellsHtml += `
+                          <td class="text-center ${col.className || ''}">
+                            <span style="color:#e2e8f0; font-weight:700; font-size:0.72rem; font-family:monospace;" title="Avg: ${avgSc} pts (${count} students)">${avgSc}</span>
+                          </td>
+                        `;
+                      }
+                    } else {
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span style="color:rgba(255,255,255,0.22); font-weight:800; font-size:0.85rem; line-height:1;">&middot;</span>
+                        </td>
+                      `;
+                    }
+                  } else {
+                    cellsHtml += `<td></td>`;
+                  }
+                });
 
-              if (sortKey && sortKey.startsWith('asm_')) {
-                const scoreA = Number(a[sortKey] ?? -1);
-                const scoreB = Number(b[sortKey] ?? -1);
-                if (scoreA !== scoreB) {
-                  return direction === 'asc' ? scoreA - scoreB : scoreB - scoreA;
+                return `<tr class="datagrid-summary-row">${cellsHtml}</tr>`;
+              },
+              sortComparator: (sortKey, direction, a, b) => {
+                const aActive = a.isActive ? 1 : 0;
+                const bActive = b.isActive ? 1 : 0;
+                if (aActive !== bActive) return bActive - aActive;
+
+                if (sortKey === 'totalEarnedScore' || sortKey === 'PTS') {
+                  const sA = Number(a.totalEarnedScore ?? 0);
+                  const sB = Number(b.totalEarnedScore ?? 0);
+                  if (sA !== sB) return direction === 'asc' ? sA - sB : sB - sA;
+                  const scoreA = Number(a.averageScorePct ?? 0);
+                  const scoreB = Number(b.averageScorePct ?? 0);
+                  if (scoreA !== scoreB) return scoreB - scoreA;
+                  const pA = Number(a.progressPct ?? 0);
+                  const pB = Number(b.progressPct ?? 0);
+                  if (pA !== pB) return pB - pA;
                 }
-              }
 
-              if (sortKey === 'instName') {
-                const instCmp = (a.instName || '').localeCompare(b.instName || '', undefined, { sensitivity: 'base', numeric: true });
-                if (instCmp !== 0) return direction === 'desc' ? -instCmp : instCmp;
-              }
-
-              if (sortKey === 'progName') {
-                const progCmp = (a.progName || '').localeCompare(b.progName || '', undefined, { sensitivity: 'base', numeric: true });
-                if (progCmp !== 0) return direction === 'desc' ? -progCmp : progCmp;
-              }
-
-              if (sortKey === 'batch') {
-                const batchCmp = (a.batch || '').localeCompare(b.batch || '', undefined, { sensitivity: 'base', numeric: true });
-                if (batchCmp !== 0) return direction === 'desc' ? -batchCmp : batchCmp;
-              }
-
-              if (sortKey === 'displayName') {
-                const nameCmp = (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
-                return direction === 'desc' ? -nameCmp : nameCmp;
-              }
-
-              let valA = a[sortKey];
-              let valB = b[sortKey];
-              if (typeof valA === 'string') valA = valA.toLowerCase();
-              if (typeof valB === 'string') valB = valB.toLowerCase();
-              if (valA < valB) return direction === 'asc' ? -1 : 1;
-              if (valA > valB) return direction === 'asc' ? 1 : -1;
-              return 0;
-            },
-            columns: [
-              {
-                key: 'instName',
-                label: 'INST',
-                sortable: true,
-                align: 'center',
-                width: '65px',
-                render: (val, row) => `<span class="badge" style="background:rgba(255,255,255,0.08); font-weight:700; font-family:monospace; font-size:0.7rem; padding:2px 6px;" title="${escapeHtml(row.instName)}">${escapeHtml(row.instShort || row.instName)}</span>`
-              },
-              {
-                key: 'progName',
-                label: 'PROGRAM',
-                sortable: true,
-                align: 'center',
-                width: '65px',
-                render: (val, row) => `<div class="text-xs" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60px;" title="${escapeHtml(row.progName)}">${escapeHtml(row.progName)}</div>`
-              },
-              {
-                key: 'batch',
-                label: 'BATCH',
-                sortable: true,
-                align: 'center',
-                width: '55px',
-                render: (val, row) => `<span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-weight:700; font-size:0.7rem; padding:2px 6px; border-radius:10px;">${escapeHtml(row.batch)}</span>`
-              },
-              {
-                key: 'displayName',
-                label: 'STUDENT NAME',
-                sortable: true,
-                width: '140px',
-                render: (val, row) => `
-                  <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:135px;" title="${escapeHtml(row.displayName)}&#10;PIN: ${escapeHtml(row.pin)}">
-                    <span class="fw-600 text-xs" style="color:var(--clr-text-1); font-size:0.78rem;">
-                      ${escapeHtml(row.displayName)}
-                    </span>
-                  </div>
-                `
-              },
-              {
-                key: 'progressPct',
-                label: 'PROG',
-                sortable: true,
-                align: 'center',
-                width: '50px',
-                render: (val, row) => `
-                  <div class="fw-700 text-xs" style="color:var(--clr-text-1); font-size:var(--matrix-font-size, 0.75rem); line-height:1;" title="${row.completedCount}/${row.totalClassAssessments} Done (${row.progressPct}%)">${row.progressPct}%</div>
-                `
-              },
-              {
-                key: 'averageScorePct',
-                label: 'SCORE',
-                sortable: true,
-                align: 'center',
-                width: '45px',
-                render: (val, row) => {
-                  if (row.completedCount === 0) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
-                  const isGradeS = row.grade === 'S';
-                  return `
-                    <div class="fw-700 text-xs" style="color:${row.gradeColor}; font-size:0.75rem; line-height:1.1; ${isGradeS ? 'font-weight:900; filter:drop-shadow(0 0 6px rgba(251,191,36,0.6));' : ''}">${row.averageScorePct}%</div>
-                  `;
+                if (sortKey === 'progressPct' || sortKey === 'PROG') {
+                  const pA = Number(a.progressPct ?? 0);
+                  const pB = Number(b.progressPct ?? 0);
+                  if (pA !== pB) return direction === 'asc' ? pA - pB : pB - pA;
+                  const sA = Number(a.totalEarnedScore ?? 0);
+                  const sB = Number(b.totalEarnedScore ?? 0);
+                  if (sA !== sB) return sB - sA;
+                  const scoreA = Number(a.averageScorePct ?? 0);
+                  const scoreB = Number(b.averageScorePct ?? 0);
+                  if (scoreA !== scoreB) return scoreB - scoreA;
                 }
-              },
-              {
-                key: 'grade',
-                label: 'GRD',
-                sortable: true,
-                align: 'center',
-                width: '35px',
-                render: (val, row) => {
-                  if (row.grade === '—' || row.grade === '-') return '<span class="text-muted" style="font-size:0.75rem;">&mdash;</span>';
-                  const isGradeS = row.grade === 'S';
-                  const badgeStyle = isGradeS
-                    ? `background:linear-gradient(135deg, #fef08a, #fbbf24, #d97706); color:#1e1b4b; font-weight:900; font-size:0.65rem; padding:0 5px; line-height:1.2; box-shadow:0 0 10px rgba(245,158,11,0.7); border:1px solid #fde68a;`
-                    : `background:${row.gradeColor}; color:#000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
-                  return `
-                    <span class="badge" style="${badgeStyle}">${isGradeS ? '⭐' : row.grade}</span>
-                  `;
+
+                if (sortKey === 'grade' || sortKey === 'GRD' || sortKey === 'SCORE' || sortKey === 'averageScorePct') {
+                  const gA = Number(a.averageScorePct ?? 0);
+                  const gB = Number(b.averageScorePct ?? 0);
+                  if (gA !== gB) return direction === 'asc' ? gA - gB : gB - gA;
+                  const sA = Number(a.totalEarnedScore ?? 0);
+                  const sB = Number(b.totalEarnedScore ?? 0);
+                  if (sA !== sB) return sB - sA;
+                  const pA = Number(a.progressPct ?? 0);
+                  const pB = Number(b.progressPct ?? 0);
+                  if (pA !== pB) return pB - pA;
                 }
-              },
-              {
-                key: 'totalEarnedScore',
-                label: 'PTS',
-                sortable: true,
-                align: 'center',
-                width: '55px',
-                render: (val, row) => {
-                  const isGradeS = row.grade === 'S';
-                  const ptsColor = (row.grade !== '—' && row.gradeColor) ? row.gradeColor : 'var(--clr-text-1)';
-                  const ptsVal = Number(row.totalEarnedScore ?? 0);
-                  const formattedPts = (ptsVal % 1 !== 0) ? ptsVal.toFixed(1) : ptsVal;
-                  return `
-                    <div class="fw-700 text-xs" style="color:${ptsColor}; font-size:0.75rem; ${isGradeS ? 'font-weight:900; filter:drop-shadow(0 0 6px rgba(251,191,36,0.6));' : ''}">${formattedPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
-                  `;
+
+                if (sortKey && sortKey.startsWith('asm_')) {
+                  const scoreA = Number(a[sortKey] ?? -1);
+                  const scoreB = Number(b[sortKey] ?? -1);
+                  if (scoreA !== scoreB) {
+                    return direction === 'asc' ? scoreA - scoreB : scoreB - scoreA;
+                  }
                 }
+
+                if (sortKey === 'instName') {
+                  const instCmp = (a.instName || '').localeCompare(b.instName || '', undefined, { sensitivity: 'base', numeric: true });
+                  if (instCmp !== 0) return direction === 'desc' ? -instCmp : instCmp;
+                }
+
+                if (sortKey === 'progName') {
+                  const progCmp = (a.progName || '').localeCompare(b.progName || '', undefined, { sensitivity: 'base', numeric: true });
+                  if (progCmp !== 0) return direction === 'desc' ? -progCmp : progCmp;
+                }
+
+                if (sortKey === 'batch') {
+                  const batchCmp = (a.batch || '').localeCompare(b.batch || '', undefined, { sensitivity: 'base', numeric: true });
+                  if (batchCmp !== 0) return direction === 'desc' ? -batchCmp : batchCmp;
+                }
+
+                if (sortKey === 'displayName') {
+                  const nameCmp = (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
+                  return direction === 'desc' ? -nameCmp : nameCmp;
+                }
+
+                let valA = a[sortKey];
+                let valB = b[sortKey];
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                if (valA < valB) return direction === 'asc' ? -1 : 1;
+                if (valA > valB) return direction === 'asc' ? 1 : -1;
+                return 0;
               },
-              ...classAssessments.map((asm, idx) => {
-                const num = idx + 1;
-                const isTest = asm.assessment_category === 'TEST' || 
-                               asm.payload?.assessment_category === 'TEST' || 
-                               asm.payload?.is_unified_test === true ||
-                               /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
-                               /\bTEST\b/i.test(asm.title || '');
-                const code = asm.payload?.shell_code || asm.shell_code || asm.title;
-                const colClass = isTest ? 'col-asm col-asm-test' : 'col-asm col-asm-task';
-                const tag = isTest ? 'TEST' : 'TASK';
-                const cleanTitle = asm.title || asm.name || code || 'Assessment';
-                const headerTooltip = (code && cleanTitle && !cleanTitle.toLowerCase().startsWith(code.toLowerCase()))
-                  ? `${code}: ${cleanTitle}`
-                  : cleanTitle;
-                return {
-                  key: `asm_${asm.id}`,
-                  className: colClass,
-                  headerTitle: headerTooltip,
-                  title: headerTooltip,
-                  label: `<span class="asm-num ${isTest ? 'asm-num-test' : 'asm-num-task'}" title="${escapeHtml(headerTooltip)}">${num}</span>`,
-                  sortable: false,
+              columns: [
+                {
+                  key: 'instName',
+                  label: 'INST',
+                  className: 'col-sticky col-sticky-1',
+                  sortable: true,
                   align: 'center',
-                  render: (val, row) => {
-                    const att = row.asmScores?.[asm.id];
-                    if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                    const st = String(att.status || '').toLowerCase();
-                    if (st === 'in_progress') return `<span style="color:#eab308; font-size:0.65rem;" title="In Progress">⏳</span>`;
-                    if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                    const sc = att.score != null ? Number(att.score) : 0;
-                    const totalQ = Number(att.total_questions || (asm.is_dynamic_shell || asm.payload?.is_dynamic_shell ? (asm.assessment_category === 'TEST' ? 120 : 50) : 50));
-                    const pct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
-                    const displayVal = (sc % 1 !== 0) ? sc.toFixed(1) : sc;
-                    const isHigh = pct >= 80;
-                    const isMid = pct >= 60;
-                    const color = isTest ? '#f472b6' : (isHigh ? '#34d399' : isMid ? '#60a5fa' : (sc > 0 ? '#f59e0b' : '#ef4444'));
-                    const attId = att.id || att.attempt_id;
-                    const isRem = Boolean(att.is_remedial_unlocked);
-                    const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                    const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-                    return `
-                      <span class="asm-score ${isTest ? 'asm-score-test' : 'asm-score-task'}" 
-                            style="color:${color}; ${cursorStyle} ${isRem ? 'text-decoration:underline dashed #fbbf24; text-underline-offset:2px;' : ''}" 
-                            ${clickAttr}
-                            title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? '🟡 [REMEDIAL - KKM 60%]' : ''}&#10;Points: ${displayVal}/${totalQ} pts (${Math.round(pct)}%)&#10;Click to open result & manage remedial">
-                        ${displayVal}${isRem ? '<span style="color:#fbbf24; font-size:0.6rem; vertical-align:super; font-weight:800; margin-left:1px;">R</span>' : ''}
+                  width: '48px',
+                  render: (val, row) => `<span class="badge" style="background:rgba(255,255,255,0.08); font-weight:700; font-family:monospace; font-size:0.7rem; padding:2px 4px;" title="${escapeHtml(row.instName)}">${escapeHtml(row.instShort || row.instName)}</span>`
+                },
+                {
+                  key: 'progName',
+                  label: 'PROGRAM',
+                  className: 'col-sticky col-sticky-2',
+                  sortable: true,
+                  align: 'center',
+                  width: '54px',
+                  render: (val, row) => `<div class="text-xs" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:50px;" title="${escapeHtml(row.progName)}">${escapeHtml(row.progName)}</div>`
+                },
+                {
+                  key: 'batch',
+                  label: 'BATCH',
+                  className: 'col-sticky col-sticky-3',
+                  sortable: true,
+                  align: 'center',
+                  width: '48px',
+                  render: (val, row) => `<span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-weight:700; font-size:0.7rem; padding:2px 5px; border-radius:10px;">${escapeHtml(row.batch)}</span>`
+                },
+                {
+                  key: 'displayName',
+                  label: 'STUDENT NAME',
+                  className: 'col-sticky col-sticky-4',
+                  sortable: true,
+                  width: '140px',
+                  render: (val, row) => `
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:135px;" title="${escapeHtml(row.displayName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Siswa memiliki nilai remedial' : ''}">
+                      <span class="fw-600 text-xs" style="color:var(--clr-text-1); font-size:0.78rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        ${escapeHtml(row.displayName)}
                       </span>
+                    </div>
+                  `
+                },
+                {
+                  key: 'progressPct',
+                  label: 'PROG',
+                  className: 'col-sticky col-sticky-5',
+                  sortable: true,
+                  align: 'center',
+                  width: '46px',
+                  render: (val, row) => `
+                    <div class="fw-700 text-xs" style="color:var(--clr-text-1); font-size:var(--matrix-font-size, 0.75rem); line-height:1;" title="${row.completedCount}/${row.totalClassAssessments} Done (${row.progressPct}%)">${row.progressPct}%</div>
+                  `
+                },
+                {
+                  key: 'averageScorePct',
+                  label: 'SCORE',
+                  className: 'col-sticky col-sticky-6',
+                  sortable: true,
+                  align: 'center',
+                  width: '46px',
+                  render: (val, row) => {
+                    if (row.completedCount === 0) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+                    const isGradeS = row.grade === 'S';
+                    return `
+                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${isGradeS ? '#A855F7' : row.gradeColor}; font-size:0.75rem; line-height:1.1;">${row.averageScorePct}%</div>
                     `;
                   }
-                };
-              })
-            ]
-          });
+                },
+                {
+                  key: 'grade',
+                  label: 'GRD',
+                  className: 'col-sticky col-sticky-7',
+                  sortable: true,
+                  align: 'center',
+                  width: '36px',
+                  render: (val, row) => {
+                    if (row.grade === '—' || row.grade === '-') return '<span class="text-muted" style="font-size:0.75rem;">&mdash;</span>';
+                    const isGradeS = row.grade === 'S';
+                    if (isGradeS) {
+                      return `<span class="badge badge-grade-star-s" title="Grade S (100% Sempurna ⭐)"><span class="star-icon">⭐</span></span>`;
+                    }
+                    const badgeStyle = `background:${row.gradeColor}; color:#000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
+                    return `
+                      <span class="badge" style="${badgeStyle}">${row.grade}</span>
+                    `;
+                  }
+                },
+                {
+                  key: 'totalEarnedScore',
+                  label: 'PTS',
+                  className: 'col-sticky col-sticky-8 col-sticky-last',
+                  sortable: true,
+                  align: 'center',
+                  width: '62px',
+                  render: (val, row) => {
+                    const isGradeS = row.grade === 'S';
+                    const ptsColor = isGradeS ? '#A855F7' : ((row.grade !== '—' && row.gradeColor) ? row.gradeColor : 'var(--clr-text-1)');
+                    const ptsVal = Number(row.totalEarnedScore ?? 0);
+                    const formattedPts = (ptsVal % 1 !== 0) ? ptsVal.toFixed(1) : ptsVal;
+                    return `
+                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${ptsColor}; font-size:0.75rem;">${formattedPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
+                    `;
+                  }
+                },
+                ...activeAssessments.flatMap((asm) => {
+                  const num = asm.display_order || (classAssessments.indexOf(asm) + 1);
+                  const isTest = asm.assessment_category === 'TEST' || 
+                                 asm.payload?.assessment_category === 'TEST' || 
+                                 asm.payload?.is_unified_test === true ||
+                                 /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
+                                 /\bTEST\b/i.test(asm.title || '');
+                  const code = asm.payload?.shell_code || asm.shell_code || asm.title;
+                  const isPhrase = asm.payload?.category === 'phrases' || /PHRASES/i.test(code || '') || /phrase/i.test(asm.title || '');
+                  const tag = isTest ? (isPhrase ? 'PHRASE TEST' : 'WORD TEST') : (isPhrase ? 'PHRASE TASK' : 'WORD TASK');
+                  const cleanTitle = asm.title || asm.name || code || 'Assessment';
+                  const headerTooltip = (code && cleanTitle && !cleanTitle.toLowerCase().startsWith(code.toLowerCase()))
+                    ? `${code}: ${cleanTitle}`
+                    : cleanTitle;
 
-          // Dynamic responsive viewport sizing: fit all rows without vertical scroll
+                  if (isTest) {
+                    return [
+                      {
+                        key: `asm_${asm.id}_pts`,
+                        className: 'col-asm col-asm-test col-asm-test-pts',
+                        width: '58px',
+                        headerTitle: `${headerTooltip} (Points)`,
+                        title: `${headerTooltip} (Points)`,
+                        label: `
+                          <div class="asm-hdr-cell">
+                            <span class="asm-num asm-num-test" title="${escapeHtml(headerTooltip)}">${num}</span>
+                            <span class="asm-subtag asm-subtag-test-pts">${isPhrase ? 'PHR' : 'WRD'} PTS</span>
+                          </div>
+                        `,
+                        sortable: false,
+                        align: 'center',
+                        render: (val, row) => {
+                          const att = row.asmScores?.[asm.id];
+                          if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                          const st = String(att.status || '').toLowerCase();
+                          if (st === 'in_progress') return `<span style="color:#eab308; font-size:0.65rem;" title="In Progress">⏳</span>`;
+                          if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                          const isRem = Boolean(att.is_remedial_unlocked);
+                          const maxQ = getAsmExpectedMax(asm);
+                          const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
+                          const totalQ = Number(att.total_questions || maxQ);
+                          const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
+                          const maxRemPts = totalQ * 0.6;
+                          const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
+                          const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                          const cleanEffSc = Math.round(effSc * 2) / 2;
+                          const cleanRawSc = Math.round(sc * 2) / 2;
+                          const displayVal = (cleanEffSc % 1 !== 0) ? cleanEffSc.toFixed(1) : cleanEffSc.toString();
+                          const rawDisplayVal = (cleanRawSc % 1 !== 0) ? cleanRawSc.toFixed(1) : cleanRawSc.toString();
+                          const color = isRem ? '#FFFF00' : (effPct >= 100 ? '#A855F7' : (effPct >= 80 ? '#00FF00' : (effPct >= 60 ? '#00FFFF' : (effPct >= 40 ? '#FFFF00' : (effPct >= 20 ? '#FF8000' : '#FF0000')))));
+                          const attId = att.id || att.attempt_id;
+                          const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                          const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+
+                          return `
+                            <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}" 
+                                  style="color:${color}; ${cursorStyle}" 
+                                  ${clickAttr}
+                                  title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🟡 [REMEDIAL - KKM 60% CAP]&#10;Effective Points: ${displayVal}/${totalQ} pts&#10;Raw Points: ${rawDisplayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`}&#10;Click to open result & manage remedial">
+                              <span style="font-weight:800; font-size:var(--matrix-font-size, 0.74rem); letter-spacing:-0.02em;">
+                                ${displayVal}${isRem ? '<sup class="asm-rem-sup">R</sup>' : ''}
+                              </span>
+                            </span>
+                          `;
+                        }
+                      },
+                      {
+                        key: `asm_${asm.id}_pct`,
+                        className: 'col-asm col-asm-test col-asm-test-score',
+                        width: '50px',
+                        headerTitle: `${headerTooltip} (Score %)`,
+                        title: `${headerTooltip} (Score %)`,
+                        label: `
+                          <div class="asm-hdr-cell">
+                            <span class="asm-num asm-num-test" title="${escapeHtml(headerTooltip)}">${num}</span>
+                            <span class="asm-subtag asm-subtag-test-score">SCORE</span>
+                          </div>
+                        `,
+                        sortable: false,
+                        align: 'center',
+                        render: (val, row) => {
+                          const att = row.asmScores?.[asm.id];
+                          if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                          const st = String(att.status || '').toLowerCase();
+                          if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:0.65rem;" title="In Progress">⏳</span>`;
+                          if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                          const isRem = Boolean(att.is_remedial_unlocked);
+                          const maxQ = getAsmExpectedMax(asm);
+                          const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
+                          const totalQ = Number(att.total_questions || maxQ);
+                          const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
+                          const maxRemPts = totalQ * 0.6;
+                          const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
+                          const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                          const color = isRem ? '#FFFF00' : (effPct >= 100 ? '#A855F7' : (effPct >= 80 ? '#00FF00' : (effPct >= 60 ? '#00FFFF' : (effPct >= 40 ? '#FFFF00' : (effPct >= 20 ? '#FF8000' : '#FF0000')))));
+                          const attId = att.id || att.attempt_id;
+                          const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                          const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+
+                          return `
+                            <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}" 
+                                  style="color:${color}; ${cursorStyle} font-weight:700; font-size:var(--matrix-font-size, 0.74rem);" 
+                                  ${clickAttr}
+                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🟡 [REMEDIAL - KKM 60% CAP]&#10;Effective Score: ${Math.round(effPct)}%&#10;Raw Attempt: ${Math.round(rawPct)}%` : `Score: ${Math.round(effPct)}%`}&#10;Click to open result">
+                              ${Math.round(effPct)}%${isRem ? '<sup class="asm-rem-sup">R</sup>' : ''}
+                            </span>
+                          `;
+                        }
+                      }
+                    ];
+                  }
+
+                  return [
+                    {
+                      key: `asm_${asm.id}`,
+                      className: 'col-asm col-asm-task',
+                      width: '42px',
+                      headerTitle: headerTooltip,
+                      title: headerTooltip,
+                      label: `
+                        <div class="asm-hdr-cell">
+                          <span class="asm-num asm-num-task" title="${escapeHtml(headerTooltip)}">${num}</span>
+                          <span class="asm-subtag ${isPhrase ? 'asm-subtag-phr' : 'asm-subtag-wrd'}">${isPhrase ? 'PHR' : 'WRD'}</span>
+                        </div>
+                      `,
+                      sortable: false,
+                      align: 'center',
+                      render: (val, row) => {
+                        const att = row.asmScores?.[asm.id];
+                        if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                        const st = String(att.status || '').toLowerCase();
+                        if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:0.65rem;" title="In Progress">⏳</span>`;
+                        if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                        const isRem = Boolean(att.is_remedial_unlocked);
+                        const maxQ = getAsmExpectedMax(asm);
+                        const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
+                        const totalQ = Number(att.total_questions || maxQ);
+                        const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
+                        const maxRemPts = totalQ * 0.6;
+                        const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
+                        const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                        const cleanSc = Math.round(effSc * 2) / 2;
+                        const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
+                        const color = isRem ? '#FFFF00' : (effPct >= 100 ? '#A855F7' : (effPct >= 80 ? '#00FF00' : (effPct >= 60 ? '#00FFFF' : (effPct >= 40 ? '#FFFF00' : (effPct >= 20 ? '#FF8000' : '#FF0000')))));
+                        const attId = att.id || att.attempt_id;
+                        const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                        const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+
+                        return `
+                          <span class="asm-score asm-score-task ${isRem ? 'asm-score-remedial' : ''}" 
+                                style="color:${color}; ${cursorStyle}" 
+                                ${clickAttr}
+                                title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🟡 [REMEDIAL - KKM 60% CAP]&#10;Effective Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`} (${Math.round(effPct)}%)&#10;Click to view result">
+                            ${displayVal}${isRem ? '<sup class="asm-rem-sup">R</sup>' : ''}
+                          </span>
+                        `;
+                      }
+                    }
+                  ];
+                })
+              ]
+            });
+
+            requestAnimationFrame(() => {
+              fitMatrixToScreen();
+              setTimeout(fitMatrixToScreen, 60);
+            });
+          };
+
+          // Dynamic responsive viewport sizing: fit all rows without vertical scroll & handle zoom fit
           const fitMatrixToScreen = () => {
             const grid = document.getElementById('class-attendance-grid');
             if (!grid) return;
+            const rect = grid.getBoundingClientRect();
             const banner = document.getElementById('bottom-ad-banner');
             const bannerHeight = banner ? banner.offsetHeight : 38;
-            const availHeight = Math.max(260, window.innerHeight - rect.top - bannerHeight - 6);
+            // 20px extra breathing room so the summary row and horizontal scrollbar are NEVER cut off
+            const availHeight = Math.max(260, window.innerHeight - rect.top - bannerHeight - 20);
             grid.style.height = `${availHeight}px`;
 
             const rows = grid.querySelectorAll('tbody tr');
             const count = rows.length || 25;
             const headerHeight = 44; // super-header (~20px) + column header (~22px)
-            const footerHeight = 24; // summary row (~24px)
-            const rowHeight = Math.max(16, (availHeight - headerHeight - footerHeight) / count);
+            const footerHeight = 26; // summary row (~26px)
+            const isScrollMode = (window._attendanceViewMode === 'scroll');
+            const scrollbarHeight = isScrollMode ? 14 : 0;
+            const rowHeight = Math.max(16, (availHeight - headerHeight - footerHeight - scrollbarHeight) / count);
 
             grid.style.setProperty('--matrix-row-height', `${rowHeight.toFixed(2)}px`);
             
@@ -1757,12 +2098,84 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
             grid.style.setProperty('--matrix-font-size', `${fontSize.toFixed(1)}px`);
             grid.style.setProperty('--matrix-badge-font', `${badgeFont.toFixed(1)}px`);
             grid.style.setProperty('--matrix-cell-padding', `${padY}px 2px`);
+
+            // Apply fit-to-screen zoom or standard scrollable layout
+            const wrap = grid.querySelector('.table-wrap');
+            const tbl = wrap?.querySelector('table.datagrid-table');
+            if (wrap && tbl) {
+              const currentFilter = window._classAttendanceThemeFilter || 'ALL';
+              const isFitMode = (!window._attendanceViewMode || window._attendanceViewMode === 'fit');
+              
+              if (isFitMode && currentFilter === 'ALL') {
+                wrap.style.overflowX = 'hidden';
+                tbl.style.zoom = '1';
+                const naturalWidth = tbl.scrollWidth || 2688;
+                const containerWidth = wrap.clientWidth || 1650;
+                if (naturalWidth > containerWidth) {
+                  const zoomRatio = (containerWidth / naturalWidth).toFixed(4);
+                  tbl.style.zoom = String(zoomRatio);
+                } else {
+                  tbl.style.zoom = '1';
+                }
+              } else {
+                wrap.style.overflowX = 'auto';
+                tbl.style.zoom = '1';
+              }
+
+              // Attach mouse wheel horizontal scroll in scroll mode
+              if (!wrap._wheelAttached) {
+                wrap._wheelAttached = true;
+                wrap.addEventListener('wheel', (e) => {
+                  const isScroll = (window._attendanceViewMode === 'scroll') || (window._classAttendanceThemeFilter && window._classAttendanceThemeFilter !== 'ALL');
+                  if (isScroll && e.deltaY !== 0 && wrap.scrollWidth > wrap.clientWidth) {
+                    e.preventDefault();
+                    wrap.scrollLeft += e.deltaY * 1.5;
+                  }
+                }, { passive: false });
+              }
+            }
           };
 
-          requestAnimationFrame(() => {
+          window._setAttendanceThemeFilter = (targetTheme) => {
+            renderAttendanceGridMatrix(targetTheme);
+          };
+
+          window._toggleAttendanceViewMode = (mode) => {
+            window._attendanceViewMode = mode;
+            try { localStorage.setItem('topscore_attendance_view_mode', mode); } catch(e) {}
+            const container = document.getElementById('attendance-view-mode-container');
+            if (container) {
+              container.querySelectorAll('.attendance-theme-pill').forEach(b => {
+                b.classList.toggle('active', (b.dataset.mode || 'fit') === mode);
+              });
+            }
+            const panControls = document.getElementById('attendance-pan-controls');
+            if (panControls) {
+              panControls.style.display = (mode === 'scroll') ? 'inline-flex' : 'none';
+            }
             fitMatrixToScreen();
-            setTimeout(fitMatrixToScreen, 60);
-          });
+          };
+
+          window._panAttendanceMatrix = (offset) => {
+            const wrap = document.querySelector('#class-attendance-grid .table-wrap');
+            if (wrap) {
+              wrap.scrollBy({ left: offset, behavior: 'smooth' });
+            }
+          };
+
+          window._toggleFullWidthMatrix = () => {
+            document.body.classList.toggle('sidebar-collapsed');
+            const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+            const btnText = document.getElementById('matrix-fullwidth-text');
+            if (btnText) btnText.textContent = isCollapsed ? 'Normal Width' : 'Full Width';
+            setTimeout(fitMatrixToScreen, 150);
+          };
+
+          // Mount initial grid view with stored view mode (default: fit)
+          if (!window._attendanceViewMode) {
+            try { window._attendanceViewMode = localStorage.getItem('topscore_attendance_view_mode') || 'fit'; } catch(e) { window._attendanceViewMode = 'fit'; }
+          }
+          renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
 
           if (window._attendanceResizeHandler) {
             window.removeEventListener('resize', window._attendanceResizeHandler);
@@ -1774,11 +2187,11 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
           if (countBadge) countBadge.textContent = `${initialRosterData.length} Enrolled`;
 
           const batchFilterSelect = document.getElementById('class-roster-batch-filter');
-          if (batchFilterSelect && attendanceGridInstance) {
+          if (batchFilterSelect) {
             batchFilterSelect.addEventListener('change', (e) => {
               window._classRosterBatchFilter = e.target.value;
               const filtered = filterRosterData(studentsGridData, window._classRosterBatchFilter);
-              attendanceGridInstance.updateData(filtered);
+              if (attendanceGridInstance) attendanceGridInstance.updateData(filtered);
               if (countBadge) countBadge.textContent = `${filtered.length} Enrolled`;
               requestAnimationFrame(fitMatrixToScreen);
             });
@@ -2033,6 +2446,8 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
           : (sectionTitles[section] || section);
         topbarTabsEl.innerHTML = `<div class="topbar-default-title" id="topbar-title">${secTitle}</div>`;
       }
+      // Reset bottom infobar by default on section change
+      if (window.setBottomInfobar) window.setBottomInfobar(null, null);
       const area = document.getElementById('admin-content-area');
       area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading...</p></div>';
 
@@ -2063,22 +2478,17 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
           case 'vocab_vault':             await renderVocabularyVault(area); break;
           case 'modules':                 await renderModules(area); break;
           case 'students':
-            const studentTabs = [
+            const studentNavTabs = [
               { id: 'roster', icon: '👤', title: 'Student Roster', label: 'Enrolled Active Students' },
               { id: 'import', icon: '📤', title: 'Import Students', label: 'Bulk Excel / CSV Ingestion' }
             ];
-            let activeStudentTab = 'roster';
+            let activeStudentTab = window._activeStudentNavTab || 'roster';
             const renderStudentSection = async () => {
-              area.innerHTML = `
-                <div>
-                  ${buildSectionTabBar({
-                    tabs: studentTabs,
-                    activeId: activeStudentTab,
-                    onSelect: 'window._switchStudentTab'
-                  })}
-                  <div id="tab-content-area"></div>
-                </div>
-              `;
+              // Elevate Roster/Import navigation tabs to topbar
+              if (window.setTopbarTabs) {
+                window.setTopbarTabs(studentNavTabs, activeStudentTab, 'window._switchStudentTab');
+              }
+              area.innerHTML = `<div id="tab-content-area" style="padding-top: 0.75rem;"></div>`;
               const contentArea = area.querySelector('#tab-content-area');
               contentArea.innerHTML = '<div class="spinner" style="margin:2rem auto;"></div>';
               if (activeStudentTab === 'roster') {
@@ -2089,6 +2499,7 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
             };
             window._switchStudentTab = async (tabId) => {
               activeStudentTab = tabId;
+              window._activeStudentNavTab = tabId;
               await renderStudentSection();
             };
             await renderStudentSection();
@@ -2103,23 +2514,18 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
           case 'recycle':             await renderRecycleBin(area); break;
           case 'settings':
             const settingTabs = [
-              { id: 'site', icon: '⚙️', title: 'Site Settings', label: 'Cost Guard & Engine' },
-              { id: 'audit', icon: '📋', title: 'Activity Logs', label: 'Audit & Security Trail' },
-              { id: 'health', icon: '🩺', title: 'Data Health', label: 'Integrity Diagnostics' },
-              { id: 'recycle', icon: '🗑️', title: 'Recycle Bin', label: 'Restoration Vault' }
+              { id: 'site',    icon: '⚙️',  title: 'Site Settings',  label: 'Cost Guard & Engine' },
+              { id: 'audit',   icon: '📋',  title: 'Activity Logs',   label: 'Audit & Security Trail' },
+              { id: 'health',  icon: '🩺',  title: 'Data Health',     label: 'Integrity Diagnostics' },
+              { id: 'recycle', icon: '🗑️', title: 'Recycle Bin',     label: 'Restoration Vault' }
             ];
-            let activeSettingTab = 'site';
+            let activeSettingTab = window._activeSettingTab || 'site';
             const renderSettingSection = async () => {
-              area.innerHTML = `
-                <div>
-                  ${buildSectionTabBar({
-                    tabs: settingTabs,
-                    activeId: activeSettingTab,
-                    onSelect: 'window._switchSettingTab'
-                  })}
-                  <div id="unified-settings-content"></div>
-                </div>
-              `;
+              // Elevate settings navigation to topbar
+              if (window.setTopbarTabs) {
+                window.setTopbarTabs(settingTabs, activeSettingTab, 'window._switchSettingTab');
+              }
+              area.innerHTML = `<div id="unified-settings-content" style="padding-top: 0.75rem;"></div>`;
               const sArea = area.querySelector('#unified-settings-content');
               if (activeSettingTab === 'site') await renderSettings(sArea);
               else if (activeSettingTab === 'audit') await renderAuditLog(sArea);
@@ -2128,11 +2534,14 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
             };
             window._switchSettingTab = async (tabId) => {
               activeSettingTab = tabId;
+              window._activeSettingTab = tabId;
               await renderSettingSection();
             };
             await renderSettingSection();
             break;
-          case 'import-students':     await renderImportStudents(area); break;
+          case 'student-registration':
+          case 'students-registration':
+          case 'import-students':     await renderStudentsRegistration(area); break;
           case 'import-questions':    await renderCentralQuestionImport(area); break;
           case 'export-questions':    renderExportQuestions(area); break;
           case 'recalibrator':
@@ -2141,7 +2550,11 @@ import { openStudentFullEdit } from './student-management.js?v=5.3.2';
           case 'assessment-hub':      window.location.hash = '#assessments'; break;
           case 'class-hub':           await renderClassHub(area); break;
           case 'assessments':         await renderAssessments(area); break;
-          case 'assessment-access':   await renderAssessmentAccess(area); break;
+          case 'assessment-access':
+            window._classHubActiveTab = 'test-sessions';
+            window.location.hash = '#class-hub';
+            await renderClassHub(area);
+            break;
           case 'class-panel':         await renderClassPanel(area); break;
           case 'import_ai_assessments': window.location.hash = '#assessments'; break;
           case 'dashboard':           await renderDashboard(area); break;

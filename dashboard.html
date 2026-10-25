@@ -16,14 +16,14 @@
       }
     })();
   </script>
-  <title>Dashboard — TOPS CORE</title>
-  <meta name="description" content="Your TOPS CORE learning dashboard — track progress, view Classes, and start Assessments." />
+  <title>Student's Lobby — TOPS CORE</title>
+  <meta name="description" content="Student's Lobby on TOPS CORE — track progress, view Classes, and start Assessments." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=5.3.2" />
-  <link rel="stylesheet" href="css/dashboard.css?v=5.3.5" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=5.3.2" />
+  <link rel="stylesheet" href="css/style.css?v=5.6.8" />
+  <link rel="stylesheet" href="css/dashboard.css?v=5.7.1" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=5.6.8" />
   
 
 </head>
@@ -31,19 +31,16 @@
 
 
 
-  <div id="toast-container"></div>  <!-- Top Navigation -->
-  <header class="dashboard-header">
-    <div class="dashboard-header-brand">🎓 TOPS CORE</div>
-    <div class="d-flex align-center gap-3">
-      <!-- Removed redundant avatar and mic check -->
-      <!-- Restored header avatar as requested by user -->
-      <div id="header-avatar" class="header-avatar" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: var(--clr-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;">
-        <span id="header-avatar-initial">S</span>
-        <img id="header-avatar-img" class="hidden" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;" />
-      </div>
-
+  <!-- Top Navigation (Option B: Title on Left, Profile + Logout Actions on Right) -->
+  <header class="dashboard-header" id="dashboard-top-header">
+    <div class="dashboard-header-brand" id="dashboard-header-brand">THE STUDENT'S LOBBY</div>
+    <div class="dashboard-header-actions">
       <button class="header-action-btn header-profile-btn" id="view-profile-btn" title="View Profile" aria-label="Profile">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <div id="header-avatar" class="header-avatar" style="width: 28px; height: 28px; border-radius: 50%; overflow: hidden; background: var(--clr-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;">
+          <span id="header-avatar-initial">S</span>
+          <img id="header-avatar-img" class="hidden" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;" />
+        </div>
+        <svg class="header-profile-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
         </svg>
@@ -54,7 +51,6 @@
           <polyline points="16 17 21 12 16 7"></polyline>
           <line x1="21" y1="12" x2="9" y2="12"></line>
         </svg>
-      </button>
       </button>
     </div>
   </header>
@@ -82,7 +78,6 @@
       <div class="hero-metrics-row">
         <!-- Kotak Score -->
         <div id="banner-score-box">
-          <span class="metric-label">Score</span>
           <span id="bottom-stat-avg-score">0%</span>
         </div>
 
@@ -98,7 +93,6 @@
 
         <!-- Kotak Grade -->
         <div id="banner-grade-box">
-          <span class="metric-label">Grade</span>
           <span id="stat-overall-grade-value">&mdash;</span>
         </div>
       </div>
@@ -119,80 +113,99 @@
         <span id="bottom-stat-best-score">0%</span>
       </div>
     </section>
-      <!-- UP NEXT SECTION (Dynamic Guided Hero: Daily Task -> Ready for Test -> Start Test) -->
-      <section id="up-next-section" style="margin-top: 6px; margin-bottom: 0; flex-shrink: 0;">
-        <div id="up-next-container" style="background: var(--clr-surface-1, #0f172a); border-radius: 10px; padding: 10px 14px; border: 1px solid var(--clr-border, rgba(255, 255, 255, 0.08)); box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
-          <!-- Populated dynamically by renderNextAssignmentHero -->
-        </div>
-      </section>
 
-      <section class="classes-section" aria-labelledby="classes-heading" style="margin-top: 6px; margin-bottom: 0;">
-      <div class="section-header">
-        <div>
-          <h2 class="section-title" id="classes-heading">📚 Classes</h2>
-          
+    <!-- 3. ACHIEVEMENT STATUS CARD (50px) -->
+    <div class="dashboard-achievement-card" id="dashboard-achievement-card" aria-label="Achievement Status">
+      <span class="achievement-status-text" id="dashboard-achievement-text">—</span>
+    </div>
+
+    <!-- 4. CLASSES SELECTOR BAR (50px: Unified Bar - click opens modal list) -->
+    <section id="dashboard-classes-section" class="dashboard-classes-deck">
+      <div id="dashboard-classes-bar" class="dashboard-classes-bar" role="button" tabindex="0" title="Click to switch class">
+        <div class="classes-bar-left">
+          <span class="classes-bar-icon">📚</span>
+          <span class="classes-bar-name" id="classes-bar-current-name">Select Class</span>
+          <span class="classes-bar-caret">▾</span>
+        </div>
+        <div class="classes-bar-right">
+          <span class="classes-bar-pct" id="classes-bar-progress-val">0%</span>
         </div>
       </div>
+      <!-- Backward compatibility hidden container -->
+      <div id="dashboard-classes-boxes" class="dashboard-classes-boxes hidden" style="display:none !important;" data-count="1"></div>
+    </section>
 
-      <div class="classes-grid" id="classes-grid">
-        <div class="empty-state">
-          <div class="spinner"></div>
-          <p>Loading Classes…</p>
-        </div>
+    <!-- 5. NEXT ASSESSMENT SECTION (50px: Single Unified Card, no floating label) -->
+    <section id="up-next-section" class="dashboard-next-assessment-deck">
+      <div id="up-next-container" class="next-assessment-card">
+        <!-- Populated dynamically by renderNextAssignmentHero -->
       </div>
     </section>
 
-    <!-- Dock Section: Batch Standings & Completed Assessments (Zero-Scroll Isolated Container) -->
-    <section id="bottom-dock-section" class="completed-Assessments-section" style="margin-top: 6px; margin-bottom: 0; flex: 1 1 0%; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
-      <!-- Dock Navigation Bar -->
-      <div class="section-header d-flex align-center justify-between gap-2" style="margin-bottom: 4px; flex-shrink: 0;">
-        <div class="dash-dock-tabs" role="tablist">
-          <button type="button" class="dash-dock-tab-btn active" id="btn-dock-standings" role="tab" aria-selected="true">
-            <span>🏆</span> Batch Standings
-          </button>
-          <button type="button" class="dash-dock-tab-btn" id="btn-dock-completed" role="tab" aria-selected="false">
-            <span>📋</span> Completed
-          </button>
-        </div>
-        <div id="dock-my-rank-badge" class="dock-rank-indicator">
-          <span class="rank-label">Rank</span>
+    <!-- 6. RANK STANDINGS CARD (DINAMIS SESUAI SISA LAYAR) -->
+    <section id="bottom-dock-section" class="dashboard-standings-card" aria-labelledby="standings-card-title">
+      <div class="standings-card-header">
+        <div class="standings-card-title" id="standings-card-title">RANK STANDINGS</div>
+        <div class="standings-my-rank" id="dock-my-rank-badge">
+          <span class="rank-label">MY RANK</span>
           <span id="dock-my-rank-number" class="rank-number">#--</span>
         </div>
       </div>
-
-      <!-- Dock Tab 1: Batch Leaderboard Standings -->
-      <div id="dock-pane-standings" class="card dock-card-pane active" style="flex: 1 1 0%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
-        <!-- Pinned My Standing Status Bar -->
-        <div id="leaderboard-my-summary" class="leaderboard-my-summary">
-          <div class="my-summary-left">
-            <span class="my-summary-title">My Standing:</span>
-            <span id="leaderboard-my-rank" class="my-summary-rank">—</span>
-          </div>
-          <div class="my-summary-right">
-            <span class="my-champion-label">Leader:</span>
-            <span id="leaderboard-champion-name" class="my-summary-champion">—</span>
-          </div>
-        </div>
-
-        <!-- Scrollable Leaderboard Table / Cards -->
-        <div class="table-responsive" id="batch-leaderboard-container" style="flex: 1 1 0%; min-height: 0; overflow-y: auto;">
-          <div class="empty-state p-4">
-            <div class="spinner"></div>
-            <p>Loading Batch Standings…</p>
-          </div>
-        </div>
+      <div class="standings-table-header">
+        <span class="th-col th-rank">NO</span>
+        <span class="th-col th-name">STUDENTS NAME</span>
+        <span class="th-col th-point">POINT</span>
+        <span class="th-col th-grade">GRADE</span>
       </div>
-
-      <!-- Dock Tab 2: Completed Assessments History -->
-      <div id="dock-pane-completed" class="card dock-card-pane hidden" style="flex: 1 1 0%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
-        <div class="table-responsive" id="completed-Assessments-container" style="flex: 1 1 0%; min-height: 0; overflow-y: auto;">
-          <div class="empty-state p-4">
-            <div class="spinner"></div>
-            <p>Loading your Assessment history…</p>
-          </div>
+      <div class="standings-table-wrap" id="batch-leaderboard-container">
+        <div class="empty-state p-4 text-center">
+          <div class="spinner"></div>
+          <p>Loading Rank Standings…</p>
         </div>
       </div>
     </section>
+
+    <!-- Hidden compatibility elements for existing JS routines -->
+    <div class="hidden" style="display:none !important;" aria-hidden="true">
+      <div id="dashboard-classes-bar">
+        <span class="classes-bar-name" id="classes-bar-current-name"></span>
+        <span class="classes-bar-pct" id="classes-bar-progress-val"></span>
+      </div>
+      <div class="classes-grid" id="classes-grid"></div>
+      <div class="dash-dock-tabs">
+        <button type="button" class="dash-dock-tab-btn active" id="btn-dock-standings"></button>
+        <button type="button" class="dash-dock-tab-btn" id="btn-dock-completed"></button>
+      </div>
+      <div id="dock-pane-standings"></div>
+      <div id="dock-pane-completed">
+        <div id="completed-Assessments-container"></div>
+      </div>
+      <div id="leaderboard-my-summary">
+        <span id="leaderboard-my-rank"></span>
+        <span id="leaderboard-champion-name"></span>
+      </div>
+    </div>
+
+    <!-- Classes Selector Modal (Triggered by clicking 30px Classes Bar) -->
+    <div class="modal-backdrop hidden" id="classes-selector-modal" role="dialog" aria-modal="true" aria-labelledby="classes-selector-modal-title">
+      <div class="modal-box classes-selector-modal-box">
+        <div class="modal-header">
+          <div>
+            <h3 id="classes-selector-modal-title">📚 Select Class</h3>
+            <p class="text-muted text-xs" style="margin-top:2px;">Switch class to focus your next task and assessment</p>
+          </div>
+          <button class="btn btn-ghost btn-icon btn-sm" id="close-classes-selector-modal" aria-label="Close">✕</button>
+        </div>
+        <div id="classes-selector-modal-list" class="classes-selector-modal-list">
+          <!-- Dynamically populated with active classes -->
+        </div>
+        <div class="classes-selector-modal-actions" style="margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--clr-border);">
+          <button type="button" class="btn btn-secondary btn-block" id="btn-open-class-levels" style="font-size: 0.85rem; padding: 8px 12px;">
+            🔍 View All Levels &amp; Detailed Assessments
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Student Profile Modal (Sleek, Compact, Zero-Scroll) -->
     <div class="modal-backdrop hidden" id="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
@@ -503,12 +516,12 @@
     </div>
   </div>
 
-  <script type="module" src="./js/dashboard.js?v=5.3.5"></script>
+  <script type="module" src="./js/dashboard.js?v=5.7.1"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=5.4.2')
+        navigator.serviceWorker.register('sw.js?v=5.5.8')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

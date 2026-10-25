@@ -267,3 +267,123 @@ This wasted ~160px of vertical viewport height, pushing filter tabs and the main
 - 160px+ of vertical space reclaimed across all displays.
 - Recalibration logic centralized in its proper domain (Domain D Data Health & Maintenance).
 
+---
+
+## DECISION-015 — Ecosystem Naming Rebrand: Admin Panel to "Tutor's Room" and Student Panel to "Student's Lobby"
+
+Date: 2026-10-25
+Status: ACCEPTED
+
+### Context
+User explicitly directed to rebrand the administrative and student workspaces:
+"the admin panle's name now the "Tutor's Room". students panel now called "Student's Lobby". do it!"
+Previously, the admin console was titled "Top Office" and student dashboard was titled "Top Space" or "Dashboard".
+
+### Decision
+1. **Admin Workspace ("Tutor's Room")**:
+   - `admin.html`: Page `<title>` renamed to `Tutor's Room — TOPS CORE`.
+   - Sidebar brand sub-label renamed from `TOP OFFICE` to `TUTOR'S ROOM`.
+   - Admin Login screen title updated to `TUTOR'S ROOM` with submit button `Sign In to Tutor's Room`.
+   - Return navigation on admin login card updated to `← Student's Lobby`.
+   - Gear icon on student login portal updated with title and aria-label `Tutor's Room`.
+   - Admin result viewer back navigation updated to `← Kembali ke Tutor's Room`.
+2. **Student Workspace ("Student's Lobby")**:
+   - `dashboard.html`: Page `<title>` renamed to `Student's Lobby — TOPS CORE`.
+   - Header brand text in `dashboard.html` updated to `🎓 STUDENT'S LOBBY`.
+   - `index.html`: Page `<title>` renamed to `Student's Lobby — TOPS CORE`, subtitle updated to `Student's Lobby — Sign in to continue`.
+   - `result.html`: Primary return button updated to `&larr; Back to Student's Lobby`.
+
+### Consequences
+- High pedagogical clarity: Tutors have their dedicated "Tutor's Room", while students congregate and track learning progress in "Student's Lobby".
+- Consistent naming across titles, meta tags, headers, and cross-panel navigation links.
+- Non-destructive change preserving all underlying ABCD architecture, database schema, and authentication sessions.
+
+---
+
+## DECISION-016 — Authoritative Solid Color Palette and 50px Bottom Banner Standardization
+
+Date: 2026-10-25
+Status: ACCEPTED
+
+### Context
+User issued explicit non-negotiable directives:
+1. "warna E = pure Red, D Pure ornage, C = Pure Yellow B =Pure Cyan A= Pure Green 100% get a star=Pure Purple Remidi Pure Yellow"
+2. Student photo ring must dynamically reflect the student's Grade tier with ambient glow.
+3. Bottom banner across all main application pages must measure exactly 50px in height.
+
+### Decision
+1. **Authoritative Solid Tier Colors**:
+   - E / F: Pure Red (`#FF0000`, `rgb(255, 0, 0)`)
+   - D: Pure Orange (`#FF8000`, `rgb(255, 128, 0)`)
+   - C: Pure Yellow (`#FFFF00`, `rgb(255, 255, 0)`)
+   - B: Pure Cyan (`#00FFFF`, `rgb(0, 255, 255)`)
+   - A: Pure Green (`#00FF00`, `rgb(0, 255, 0)`)
+   - 100% / S (Get a Star): Pure Purple (`#A855F7`, `rgb(168, 85, 247)`)
+   - Remedial / Remidi: Pure Yellow (`#FFFF00`, `rgb(255, 255, 0)`)
+2. **Dynamic Student Photo Ring**:
+   - Eliminated all static amber/yellow avatar borders. Avatar rings now adhere dynamically to the student's Grade with `border: 2.5px solid <gradeColor>` and glowing `box-shadow`.
+3. **Global 50px Bottom Banner**:
+   - Fixed `#bottom-ad-banner` and `.topscore-locked-banner` to exactly `50px !important; min-height: 50px !important; max-height: 50px !important;` across `result.html`, `dashboard.html`, and `assessment.html`.
+
+### Consequences
+- Visually stunning, high-contrast, pure solid color hierarchy across both student and tutor panels.
+- Unified 50px bottom banner guarantees consistent layout metrics and strictly preserves mobile zero-scroll budget (`820px`).
+
+---
+
+## DECISION-017 — Result Page Wireframe Architecture, Exact Word Evaluation, and Dynamic Tier Aura Synchronization
+
+Date: 2026-10-25
+Status: ACCEPTED
+
+### Context
+User provided an architectural wireframe diagram specifying exact zero-scroll vertical dimensions and visual styling for the TopsCore Result Page across Student's View and Tutor's View:
+1. Realign components with fixed ergonomic heights: Header (50px), Student Metadata (150px, 1:1 with Student Dashboard), 2-Line Assessment Title (50px), Score/Grade Card (50px), Evaluation Word Card (50px), Action Bar [Next Milestone / Tutor Normal-Remidi] (50px), Navigation Button [Back to Lobby / Room] (30px), Answer Breakdown (30px), Bottom Banner (50px).
+2. The Metrics Table (Correct, Partial, Incorrect, Points) dynamically absorbs the remaining vertical viewport (`flex: 1 1 0px`).
+3. User explicitly mandated that the evaluation card must contain ONLY the exact single word without icons or extra phrases: `E=FAIL / D=LESS / C=ENOUGH / B=GOOD / A=VERY GOOD / STAR=EXCELLENT / R=REMEDIAL`.
+4. User evaluated a secondary proposal of percentage-based heights (15%-35%-15%-15%-10%-10%) and formally approved retaining the fixed ergonomic + dynamic metrics scoreboard model ("baik, biarkan saja").
+5. Container borders and radial backgrounds across all cards dynamically radiate the student's Grade tier color.
+
+### Decision
+1. **Fixed Ergonomic Card Heights**: Standardize Title (50px), Score/Grade (50px), Evaluation Word (50px), Next Action / Remedial segmented buttons (50px), Back button (30px), and Breakdown button (30px).
+2. **Exact Word Evaluation**: `#result-motivation-msg` (`.result-evaluation-card`) renders text-only single words (`FAIL`, `LESS`, `ENOUGH`, `GOOD`, `VERY GOOD`, `EXCELLENT`, `REMEDIAL`) with glowing uppercase typography.
+3. **Dynamic Tier Border & Background Aura**: Card borders and backgrounds across all containers dynamically reflect `--tier-color` and `--tier-rgb`.
+4. **View Parity**: Student's view and Tutor's view maintain strictly identical card heights, 10px gaps, and typography.
+
+### Consequences
+- Guaranteed zero-scroll layout across all standard mobile and desktop viewports without vertical overflow.
+- Data-driven centerpiece: Metrics table retains maximum vertical headroom and legibility.
+- Clean, focused, minimalist evaluation card without distracting emojis or verbose sentences.
+---
+
+## DECISION-018 — Authoritative Grade Terminology: Achievement Status & Remedial Exclusion
+
+Date: 2026-10-25
+Status: ACCEPTED
+
+### Context
+User issued an explicit directive regarding grade-based evaluation wording:
+"UNTUK UCAPAN SESUAI GRADE, KITA SEBUT DENGAN ISTILAH ACHIEVEMENT STATUS, FAIL, LESS ENOUGH, GOOD, VERU GOOD, EXCELLENT. REMEDIAL BUKAN STSUS ACHEVEMENT."
+
+### Decision
+1. **Official Component Name**: The evaluation word component is formally designated as **Achievement Status** (`achievement_status`).
+2. **Authoritative 6-Tier Values**:
+   - Grade E / F (0–19%): `FAIL`
+   - Grade D (20–39%): `LESS`
+   - Grade C (40–59%): `ENOUGH`
+   - Grade B (60–79%): `GOOD`
+   - Grade A (80–99%): `VERY GOOD`
+   - Grade S / STAR (100%): `EXCELLENT`
+3. **Strict Remedial Exclusion**:
+   - `REMEDIAL` is an exam status / condition, NOT an Achievement Status.
+   - The Achievement Status card MUST NEVER display "REMEDIAL".
+   - Remedial attempts evaluate their Achievement Status from their achieved / effective score (e.g., a remedial score capped at 60% receives `ENOUGH`; scores below 40% receive `LESS` or `FAIL`).
+4. **Universal Applicability**:
+   - Applies across both the Result Page (`result.html`) and the Student Lobby Dashboard (`dashboard.html`).
+
+### Consequences
+- Eliminates semantic ambiguity between exam state (normal vs remedial) and academic performance achievement.
+- Provides a clean, standardized, 6-tier classification scale across the entire TopsCore platform.
+
+
+

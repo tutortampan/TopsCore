@@ -1,6 +1,7 @@
 export class DataGrid {
-  constructor({ container, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false, sortComparator = null, initialSortKey = null, initialSortAsc = true, superHeaders = null, summaryRow = null, tableLayout = null }) {
+  constructor({ container, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false, sortComparator = null, initialSortKey = null, initialSortAsc = true, superHeaders = null, summaryRow = null, tableLayout = null, rowClassName = null }) {
     this.container = typeof container === 'string' ? document.getElementById(container) : container;
+    this.rowClassName = rowClassName;
     if (!this.container) {
       console.warn('[DataGrid] Container element not found or not in DOM:', container);
       return;
@@ -401,6 +402,10 @@ export class DataGrid {
 
     pageData.forEach(row => {
       const tr = document.createElement('tr');
+      if (this.rowClassName) {
+        const cls = typeof this.rowClassName === 'function' ? this.rowClassName(row) : this.rowClassName;
+        if (cls) tr.className = cls;
+      }
       if (this.onRowClick) {
         tr.style.cursor = 'pointer';
         tr.addEventListener('click', (e) => {

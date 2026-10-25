@@ -2195,14 +2195,15 @@ body.dashboard-page {
   flex-direction: column !important;
   margin: 0 !important;
   padding: 0 !important;
+  background: #070b19 !important;
   box-sizing: border-box !important;
 }
 
-/* Header: Sleek & Compact */
+/* Header: Standard 50px Height */
 body.dashboard-page .dashboard-header {
-  height: 44px !important;
-  min-height: 44px !important;
-  max-height: 44px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
   padding: 0 14px !important;
   display: flex !important;
   align-items: center !important;
@@ -2210,7 +2211,7 @@ body.dashboard-page .dashboard-header {
   flex-shrink: 0 !important;
   z-index: 100 !important;
   backdrop-filter: blur(12px) !important;
-  background: rgba(9, 13, 22, 0.92) !important;
+  background: rgba(9, 13, 22, 0.95) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-sizing: border-box !important;
 }
@@ -2219,25 +2220,82 @@ body.dashboard-page .dashboard-header-brand {
   font-family: 'Outfit', sans-serif !important;
   font-size: 0.95rem !important;
   font-weight: 800 !important;
-  letter-spacing: 0.02em !important;
+  letter-spacing: 0.06em !important;
+  color: #ffffff !important;
+  text-align: left !important;
+  flex: 0 1 auto !important;
+  margin: 0 !important;
 }
 
-/* Main Content: Zero-Scroll Vertical Column */
+body.dashboard-page .dashboard-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+body.dashboard-page .header-profile-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.5) !important;
+  background: rgba(30, 41, 59, 0.8) !important;
+  cursor: pointer !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+body.dashboard-page .header-profile-btn:hover {
+  transform: scale(1.05) !important;
+  border-color: var(--tier-color) !important;
+  box-shadow: 0 0 10px rgba(var(--tier-rgb), 0.5) !important;
+}
+
+body.dashboard-page .header-profile-icon {
+  display: none !important;
+}
+
+body.dashboard-page .header-logout-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 8px !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: #ef4444 !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+body.dashboard-page .header-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.22) !important;
+  transform: scale(1.05) !important;
+}
+
+/* Main Content: Zero-Scroll Vertical Column with Exact 10px Gap */
 body.dashboard-page .dashboard-content {
   flex: 1 1 0% !important;
   min-height: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  padding: 8px 12px !important;
-  gap: 8px !important;
+  padding: 10px 14px !important;
+  gap: 10px !important;
   max-width: 580px !important;
   margin: 0 auto !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
 
-/* Dedicated Slim Bottom Banner (28px - Preserved & Anchored at Base) */
+/* Dedicated Bottom Banner (50px - Preserved & Anchored at Base) */
 body.dashboard-page .topscore-locked-banner,
 body.dashboard-page #bottom-ad-banner {
   position: static !important;
@@ -2246,9 +2304,9 @@ body.dashboard-page #bottom-ad-banner {
   margin: 0 !important;
   left: 0 !important;
   right: 0 !important;
-  height: 28px !important;
-  min-height: 28px !important;
-  max-height: 28px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -2271,50 +2329,60 @@ body.dashboard-page #bottom-ad-banner {
   z-index: 9999 !important;
 }
 
-/* Modern Tier Hero Card */
+/* Modern Tier Hero Card (Strict 150px Uniform Height) */
 body.dashboard-page #welcome-banner-section {
-  --tier-color: #fbbf24;
-  --tier-rgb: 251, 191, 36;
+  --tier-color: #A855F7;
+  --tier-rgb: 168, 85, 247;
   width: 100% !important;
   max-width: 100% !important;
-  margin: 0 0 2px 0 !important;
+  margin: 0 !important;
   border-radius: 18px !important;
-  padding: 10px 14px 10px 14px !important;
+  padding: 8px 14px 8px 14px !important;
+  height: 150px !important;
+  min-height: 150px !important;
+  max-height: 150px !important;
   background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.12), transparent 75%), #0f172a !important;
   border: 1px solid rgba(var(--tier-rgb), 0.25) !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
   flex-shrink: 0 !important;
   position: relative !important;
   box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  overflow: hidden !important;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="S"] {
-  border-color: rgba(251, 191, 36, 0.5) !important;
-  box-shadow: 0 0 35px rgba(245, 158, 11, 0.28), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(245, 158, 11, 0.22), transparent 75%), #0f172a !important;
+  border-color: rgba(168, 85, 247, 0.5) !important;
+  box-shadow: 0 0 35px rgba(168, 85, 247, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.22), transparent 75%), #0f172a !important;
 }
 
 body.dashboard-page #welcome-name {
   font-family: 'Outfit', sans-serif !important;
-  font-size: 1.15rem !important;
+  font-size: 1.1rem !important;
   font-weight: 800 !important;
   letter-spacing: -0.01em !important;
   text-align: center !important;
   color: #ffffff !important;
-  margin: 2px 0 0 0 !important;
+  margin: 0 !important;
   line-height: 1.15 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 body.dashboard-page .hero-divider {
   width: 100% !important;
   height: 1px !important;
   background: rgba(148, 163, 184, 0.25) !important;
-  margin: 6px 0 !important;
+  margin: 2px 0 !important;
 }
 
 body.dashboard-page #welcome-meta-wrapper + .hero-divider {
-  margin: 4px 0 10px 0 !important;
+  margin: 2px 0 4px 0 !important;
   background: linear-gradient(90deg, transparent 0%, rgba(148, 163, 184, 0.35) 25%, rgba(148, 163, 184, 0.35) 75%, transparent 100%) !important;
 }
 
@@ -2323,9 +2391,9 @@ body.dashboard-page .hero-name-divider {
   display: block !important;
   width: 100% !important;
   height: 1px !important;
-  margin: 9px 0 6px 0 !important;
-  background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb, 251, 191, 36), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb, 251, 191, 36), 0.6) 80%, transparent 100%) !important;
-  box-shadow: 0 0 10px rgba(var(--tier-rgb, 251, 191, 36), 0.4) !important;
+  margin: 4px 0 2px 0 !important;
+  background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb, 168, 85, 247), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb, 168, 85, 247), 0.6) 80%, transparent 100%) !important;
+  box-shadow: 0 0 10px rgba(var(--tier-rgb, 168, 85, 247), 0.4) !important;
 }
 
 body.dashboard-page .hero-metrics-row {
@@ -2333,6 +2401,7 @@ body.dashboard-page .hero-metrics-row {
   align-items: center !important;
   justify-content: space-between !important;
   gap: 12px !important;
+  margin: 2px 0 !important;
 }
 
 body.dashboard-page #banner-score-box,
@@ -2343,8 +2412,11 @@ body.dashboard-page #banner-grade-box {
   align-items: center !important;
   justify-content: center !important;
   background: rgba(23, 33, 56, 0.8) !important;
-  border-radius: 14px !important;
-  padding: 6px 8px !important;
+  border-radius: 12px !important;
+  padding: 0 8px !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
   border: 1px solid rgba(var(--tier-rgb), 0.2) !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
   transition: all 0.3s ease !important;
@@ -2353,63 +2425,125 @@ body.dashboard-page #banner-grade-box {
 
 body.dashboard-page #welcome-banner-section[data-tier="S"] #banner-score-box,
 body.dashboard-page #welcome-banner-section[data-tier="S"] #banner-grade-box {
-  border-color: rgba(251, 191, 36, 0.45) !important;
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.2), 0 6px 16px rgba(0, 0, 0, 0.25) !important;
+  border-color: rgba(168, 85, 247, 0.6) !important;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25) !important;
 }
 
 body.dashboard-page .metric-label {
-  font-family: 'Inter', sans-serif !important;
-  font-size: 0.62rem !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.1em !important;
-  color: #94a3b8 !important;
-  margin-bottom: 2px !important;
+  display: none !important;
 }
 
-body.dashboard-page #bottom-stat-avg-score,
-body.dashboard-page #stat-overall-grade-value {
+body.dashboard-page #bottom-stat-avg-score {
   font-family: 'Outfit', sans-serif !important;
-  font-size: 1.5rem !important;
-  font-weight: 800 !important;
+  font-size: clamp(1.9rem, 5.2vw, 2.25rem) !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.02em !important;
   line-height: 1 !important;
   color: var(--tier-color) !important;
+  margin: 0 !important;
+  padding: 0 !important;
   transition: all 0.3s ease !important;
+}
+
+body.dashboard-page #stat-overall-grade-value {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: clamp(2rem, 5.5vw, 2.4rem) !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  color: var(--tier-color) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transition: all 0.3s ease !important;
+}
+
+body.dashboard-page #welcome-banner-section[data-tier="S"] {
+  border-color: rgba(168, 85, 247, 0.55) !important;
+  box-shadow: 0 0 35px rgba(168, 85, 247, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.22), transparent 75%), #0f172a !important;
+}
+
+body.dashboard-page #welcome-banner-section[data-tier="A"] {
+  border-color: rgba(16, 185, 129, 0.55) !important;
+}
+
+body.dashboard-page #welcome-banner-section[data-tier="B"] {
+  border-color: rgba(56, 189, 248, 0.55) !important;
+}
+
+body.dashboard-page #welcome-banner-section[data-tier="C"] {
+  border-color: rgba(245, 158, 11, 0.55) !important;
+}
+
+body.dashboard-page #welcome-banner-section[data-tier="D"] {
+  border-color: rgba(249, 115, 22, 0.55) !important;
+}
+
+body.dashboard-page #welcome-banner-section[data-tier="E"],
+body.dashboard-page #welcome-banner-section[data-tier="F"] {
+  border-color: rgba(239, 68, 68, 0.55) !important;
+}
+
+body.dashboard-page #welcome-banner-section[data-tier="R"] {
+  border-color: rgba(255, 255, 0, 0.55) !important;
+  box-shadow: 0 0 25px rgba(255, 255, 0, 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(255, 255, 0, 0.15), transparent 75%), #0f172a !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="S"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="S"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 14px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 24px rgba(245, 158, 11, 0.7)) !important;
+  filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 24px rgba(168, 85, 247, 0.45)) !important;
+  color: #a855f7 !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="A"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="A"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.55)) !important;
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.45)) !important;
+  color: #10b981 !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="B"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="B"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(132, 204, 22, 0.55)) !important;
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.45)) !important;
+  color: #38bdf8 !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="C"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="C"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(234, 179, 8, 0.55)) !important;
+  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.45)) !important;
+  color: #f59e0b !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="D"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="D"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.55)) !important;
+  filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.45)) !important;
+  color: #f97316 !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="E"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="E"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.55)) !important;
+  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.45)) !important;
+  color: #ef4444 !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="F"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="F"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.55)) !important;
+  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.45)) !important;
+  color: #ef4444 !important;
+}
+
+body.dashboard-page #welcome-banner-section[data-tier="R"] #bottom-stat-avg-score,
+body.dashboard-page #welcome-banner-section[data-tier="R"] #stat-overall-grade-value {
+  filter: drop-shadow(0 0 12px rgba(255, 255, 0, 0.65)) !important;
+  color: #FFFF00 !important;
+}
+
+body.dashboard-page #welcome-banner-section[data-tier="R"] #banner-score-box,
+body.dashboard-page #welcome-banner-section[data-tier="R"] #banner-grade-box {
+  border-color: rgba(255, 255, 0, 0.5) !important;
+  box-shadow: 0 0 14px rgba(255, 255, 0, 0.25) !important;
 }
 
 /* Enlarged Avatar & Crown Anchor */
@@ -2445,8 +2579,8 @@ body.dashboard-page .avatar-crown-badge.hidden {
 }
 
 body.dashboard-page #banner-avatar-container {
-  width: 86px !important;
-  height: 86px !important;
+  width: 74px !important;
+  height: 74px !important;
   border-radius: 50% !important;
   padding: 3px !important;
   background: rgba(15, 23, 42, 0.9) !important;
@@ -2475,28 +2609,57 @@ body.dashboard-page #banner-avatar-img.hidden {
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="S"] #banner-avatar-container {
-  background: linear-gradient(135deg, #fef08a 0%, #fbbf24 45%, #d97706 100%) !important;
-  border: 2.5px solid #fde68a !important;
-  box-shadow: 0 0 25px rgba(245, 158, 11, 0.85), 0 0 45px rgba(251, 191, 36, 0.45) !important;
+  background: linear-gradient(135deg, #c084fc 0%, #a855f7 45%, #7e22ce 100%) !important;
+  border: 2.5px solid #a855f7 !important;
+  box-shadow: 0 0 28px rgba(168, 85, 247, 0.95), 0 0 50px rgba(192, 132, 252, 0.5) !important;
+}
+
+body.dashboard-page .pure-star-svg {
+  width: 56px !important;
+  height: 56px !important;
+  box-shadow: none !important;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  animation: star-vector-pulse 2.2s infinite ease-in-out !important;
+  filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.65)) !important;
+}
+
+@keyframes star-vector-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.65));
+  }
+  50% {
+    transform: scale(1.10);
+    filter: drop-shadow(0 0 22px rgba(168, 85, 247, 1)) drop-shadow(0 0 38px rgba(192, 132, 252, 0.95)) drop-shadow(0 0 52px rgba(168, 85, 247, 0.65));
+  }
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="A"] #banner-avatar-container {
+  border: 2.5px solid #10b981 !important;
   box-shadow: 0 0 18px rgba(16, 185, 129, 0.5) !important;
 }
 body.dashboard-page #welcome-banner-section[data-tier="B"] #banner-avatar-container {
-  box-shadow: 0 0 18px rgba(132, 204, 22, 0.5) !important;
+  border: 2.5px solid #38bdf8 !important;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.5) !important;
 }
 body.dashboard-page #welcome-banner-section[data-tier="C"] #banner-avatar-container {
-  box-shadow: 0 0 18px rgba(234, 179, 8, 0.5) !important;
+  border: 2.5px solid #f59e0b !important;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.5) !important;
 }
 body.dashboard-page #welcome-banner-section[data-tier="D"] #banner-avatar-container {
+  border: 2.5px solid #f97316 !important;
   box-shadow: 0 0 18px rgba(249, 115, 22, 0.5) !important;
 }
-body.dashboard-page #welcome-banner-section[data-tier="E"] #banner-avatar-container {
+body.dashboard-page #welcome-banner-section[data-tier="E"] #banner-avatar-container,
+body.dashboard-page #welcome-banner-section[data-tier="F"] #banner-avatar-container {
+  border: 2.5px solid #ef4444 !important;
   box-shadow: 0 0 18px rgba(239, 68, 68, 0.5) !important;
 }
-body.dashboard-page #welcome-banner-section[data-tier="F"] #banner-avatar-container {
-  box-shadow: 0 0 18px rgba(239, 68, 68, 0.5) !important;
+body.dashboard-page #welcome-banner-section[data-tier="R"] #banner-avatar-container {
+  border: 2.5px solid #FFFF00 !important;
+  box-shadow: 0 0 18px rgba(255, 255, 0, 0.5) !important;
 }
 
 body.dashboard-page #banner-avatar-initial {
@@ -2524,6 +2687,7 @@ body.dashboard-page #welcome-meta-wrapper {
   font-size: 0.75rem !important;
   font-weight: 600 !important;
   letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
   color: #cbd5e1 !important;
   display: flex !important;
   align-items: center !important;
@@ -2535,149 +2699,447 @@ body.dashboard-page #welcome-meta-wrapper .meta-sep {
   color: #475569 !important;
 }
 
-/* Classes Section Compact */
-body.dashboard-page .classes-section {
-  flex-shrink: 0 !important;
-  margin: 0 !important;
+/* ============================================================
+   MODERN TIER AURA (Shared across all Lobby Cards)
+   "Warna border dan warna latar belakang pada halaman result
+    dan dashboard siswa mengikuti warna dari penghitungan skor/grade"
+   ============================================================ */
+:root,
+body.dashboard-page {
+  --tier-color: #10b981;
+  --tier-rgb: 16, 185, 129;
 }
 
-body.dashboard-page .classes-section .section-header {
-  margin-bottom: 4px !important;
-}
-
-body.dashboard-page .classes-section .section-title {
-  font-family: 'Outfit', sans-serif !important;
-  font-size: 0.84rem !important;
-  font-weight: 700 !important;
-  margin: 0 !important;
-  color: #94a3b8 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-}
-
-body.dashboard-page .classes-grid {
-  display: grid !important;
-  grid-template-columns: 1fr !important;
-  gap: 6px !important;
-  margin-bottom: 2px !important;
-}
-
-body.dashboard-page .class-card {
-  padding: 8px 12px !important;
-  border-radius: 12px !important;
-  gap: 10px !important;
-  background: rgba(15, 23, 42, 0.75) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  min-height: auto !important;
-}
-
-body.dashboard-page .class-card .class-icon {
-  font-size: 1.3rem !important;
-}
-
-body.dashboard-page .class-card .class-name {
-  font-family: 'Outfit', sans-serif !important;
-  font-size: 0.92rem !important;
-  font-weight: 700 !important;
+body.dashboard-page #welcome-banner-section,
+body.dashboard-page .dashboard-achievement-card,
+body.dashboard-page .dashboard-standings-card,
+body.dashboard-page .next-assessment-card,
+body.dashboard-page .dashboard-classes-deck {
+  border: 1px solid rgba(var(--tier-rgb), 0.35) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.12), transparent 75%), #0f172a !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+  box-sizing: border-box !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 /* ============================================================
-   BOTTOM DOCK: BATCH STANDINGS & COMPLETED DUAL TABS
+   3. ACHIEVEMENT STATUS CARD (Strict 50px Height)
+   Terms: FAIL, LESS, ENOUGH, GOOD, VERY GOOD, EXCELLENT (DECISION-018)
    ============================================================ */
-body.dashboard-page .completed-Assessments-section {
-  flex: 1 1 0% !important;
-  min-height: 0 !important;
+body.dashboard-page .dashboard-achievement-card {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  flex-shrink: 0 !important;
   display: flex !important;
-  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 10px !important;
+  padding: 0 14px !important;
   margin: 0 !important;
   overflow: hidden !important;
 }
 
-body.dashboard-page .dash-dock-tabs {
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-  background: rgba(15, 23, 42, 0.8) !important;
-  padding: 3px !important;
-  border-radius: 10px !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-
-body.dashboard-page .dash-dock-tab-btn {
-  background: transparent !important;
-  border: none !important;
-  color: #94a3b8 !important;
+body.dashboard-page .achievement-status-text {
   font-family: 'Outfit', sans-serif !important;
-  font-size: 0.78rem !important;
-  font-weight: 700 !important;
-  padding: 4px 10px !important;
-  border-radius: 7px !important;
-  cursor: pointer !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 5px !important;
-  transition: all 0.2s ease !important;
-}
-
-body.dashboard-page .dash-dock-tab-btn:hover {
-  color: #ffffff !important;
-}
-
-body.dashboard-page .dash-dock-tab-btn.active {
-  background: rgba(30, 41, 59, 0.95) !important;
-  color: #38bdf8 !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
-}
-
-body.dashboard-page .dock-rank-indicator {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 5px !important;
-  padding: 3px 8px !important;
-  border-radius: 8px !important;
-  background: rgba(234, 179, 8, 0.12) !important;
-  border: 1px solid rgba(234, 179, 8, 0.35) !important;
-  font-family: 'Outfit', sans-serif !important;
-}
-
-body.dashboard-page .dock-rank-indicator .rank-label {
-  font-size: 0.68rem !important;
-  font-weight: 700 !important;
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.08em !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.06em !important;
-  color: #eab308 !important;
+  line-height: 1 !important;
+  color: var(--tier-color) !important;
+  filter: drop-shadow(0 0 10px rgba(var(--tier-rgb), 0.7)) !important;
 }
 
-body.dashboard-page .dock-rank-indicator .rank-number {
-  font-size: 0.85rem !important;
-  font-weight: 800 !important;
-  color: #fde047 !important;
-  font-variant-numeric: tabular-nums !important;
-}
-
-body.dashboard-page .dock-card-pane {
+/* ============================================================
+   4. RANK STANDINGS CARD (Absorbs Dynamic Remaining Screen Space)
+   ============================================================ */
+body.dashboard-page .dashboard-standings-card {
   flex: 1 1 0% !important;
-  min-height: 0 !important;
+  min-height: 100px !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
+  border-radius: 12px !important;
   padding: 0 !important;
-  border-radius: 14px !important;
-  background: rgba(15, 23, 42, 0.75) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin: 0 !important;
 }
 
-body.dashboard-page .dock-card-pane.hidden {
-  display: none !important;
-}
-
-/* Pinned Standing Summary Bar */
-body.dashboard-page .leaderboard-my-summary {
+body.dashboard-page .standings-card-header {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 6px 12px !important;
-  background: rgba(30, 41, 59, 0.65) !important;
+  padding: 0 12px !important;
+  background: rgba(15, 23, 42, 0.7) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+  flex-shrink: 0 !important;
+}
+
+body.dashboard-page .standings-card-title {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.8rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  color: #ffffff !important;
+}
+
+body.dashboard-page .standings-my-rank {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-family: 'Outfit', sans-serif !important;
+  background: rgba(var(--tier-rgb), 0.12) !important;
+  border: 1px solid rgba(var(--tier-rgb), 0.35) !important;
+  padding: 2px 8px !important;
+  border-radius: 6px !important;
+}
+
+body.dashboard-page .standings-my-rank .rank-label {
+  font-size: 0.68rem !important;
+  font-weight: 800 !important;
+  color: var(--tier-color) !important;
+  letter-spacing: 0.05em !important;
+}
+
+body.dashboard-page .standings-my-rank .rank-number {
+  font-size: 0.84rem !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+body.dashboard-page .standings-table-header {
+  display: grid !important;
+  grid-template-columns: 28px 1fr 48px 40px !important;
+  align-items: center !important;
+  padding: 4px 12px !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.68rem !important;
+  font-weight: 800 !important;
+  color: #64748b !important;
+  letter-spacing: 0.06em !important;
+  background: rgba(30, 41, 59, 0.45) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  flex-shrink: 0 !important;
+}
+
+body.dashboard-page .standings-table-header .th-rank {
+  text-align: center !important;
+}
+
+body.dashboard-page .standings-table-header .th-name {
+  text-align: left !important;
+}
+
+body.dashboard-page .standings-table-header .th-point {
+  text-align: right !important;
+}
+
+body.dashboard-page .standings-table-header .th-grade {
+  text-align: center !important;
+}
+
+body.dashboard-page .standings-table-wrap {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  scrollbar-width: none !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+body.dashboard-page .standings-table-wrap::-webkit-scrollbar {
+  display: none !important;
+}
+
+body.dashboard-page .standings-row {
+  display: grid !important;
+  grid-template-columns: 28px 1fr 48px 40px !important;
+  align-items: center !important;
+  padding: 5px 12px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  transition: background 0.15s ease !important;
+}
+
+body.dashboard-page .standings-row:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+body.dashboard-page .standings-row.my-row {
+  background: rgba(var(--tier-rgb), 0.1) !important;
+  border-left: 3px solid var(--tier-color) !important;
+}
+
+body.dashboard-page .standings-row.rank-1-row {
+  background: radial-gradient(ellipse 90% 60% at 20% 50%, rgba(245, 158, 11, 0.12), transparent 75%), rgba(15, 23, 42, 0.9) !important;
+  border-left: 3px solid #fbbf24 !important;
+}
+
+/* ============================================================
+   4. CLASSES SELECTOR BAR (Strict 50px Height)
+   Single unified bar: click opens available class list
+   ============================================================ */
+body.dashboard-page .dashboard-classes-deck {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+body.dashboard-page .dashboard-classes-bar {
+  width: 100% !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 14px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  background: transparent !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+body.dashboard-page .dashboard-classes-bar:hover {
+  background: rgba(var(--tier-rgb), 0.08) !important;
+}
+
+body.dashboard-page .classes-bar-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+body.dashboard-page .classes-bar-icon {
+  font-size: 1.15rem !important;
+  flex-shrink: 0 !important;
+}
+
+body.dashboard-page .classes-bar-name {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.92rem !important;
+  font-weight: 800 !important;
+  color: #f8fafc !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+body.dashboard-page .classes-bar-caret {
+  font-size: 0.8rem !important;
+  color: var(--tier-color) !important;
+  margin-left: 2px !important;
+  transition: transform 0.2s ease !important;
+  flex-shrink: 0 !important;
+}
+
+body.dashboard-page .classes-bar-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+body.dashboard-page .classes-bar-pct {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
+  color: var(--tier-color) !important;
+  padding: 3px 8px !important;
+  background: rgba(var(--tier-rgb), 0.15) !important;
+  border: 1px solid rgba(var(--tier-rgb), 0.3) !important;
+  border-radius: 6px !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* ============================================================
+   5. NEXT ASSESSMENT SECTION (Strict 50px Height)
+   Single unified card, no separate floating label
+   ============================================================ */
+body.dashboard-page .dashboard-next-assessment-deck {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.dashboard-page .next-assessment-card {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  width: 100% !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 14px !important;
+  box-sizing: border-box !important;
+  gap: 10px !important;
+}
+
+body.dashboard-page .next-asm-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+body.dashboard-page .next-asm-icon {
+  font-size: 1.15rem !important;
+  line-height: 1 !important;
+  flex-shrink: 0 !important;
+}
+
+body.dashboard-page .next-asm-title {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.88rem !important;
+  font-weight: 800 !important;
+  color: #f8fafc !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+body.dashboard-page .next-asm-go-btn {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  padding: 0 18px !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.05em !important;
+  border-radius: 8px !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  background: linear-gradient(135deg, var(--tier-color, #10b981) 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  cursor: pointer !important;
+  box-shadow: 0 0 14px rgba(var(--tier-rgb, 16, 185, 129), 0.45) !important;
+  transition: all 0.2s ease !important;
+}
+
+body.dashboard-page .next-asm-go-btn:hover {
+  filter: brightness(1.15) !important;
+  transform: scale(1.03) !important;
+}
+
+body.dashboard-page .class-deck-box {
+  height: 50px !important;
+  border-radius: 10px !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  padding: 4px 6px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+body.dashboard-page .class-deck-box:hover {
+  background: rgba(30, 41, 59, 0.8) !important;
+  border-color: rgba(var(--tier-rgb), 0.5) !important;
+}
+
+body.dashboard-page .class-deck-box.active {
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.25), transparent 75%), #0f172a !important;
+  border: 1.5px solid var(--tier-color) !important;
+  box-shadow: 0 0 16px rgba(var(--tier-rgb), 0.45) !important;
+}
+
+body.dashboard-page .class-deck-title {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
+  color: #f8fafc !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+  text-align: center !important;
+}
+
+body.dashboard-page .class-deck-box.active .class-deck-title {
+  color: var(--tier-color) !important;
+  text-shadow: 0 0 8px rgba(var(--tier-rgb), 0.6) !important;
+}
+
+body.dashboard-page .class-deck-progress {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  line-height: 1 !important;
+}
+
+body.dashboard-page .class-deck-box.active .class-deck-progress {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+/* Classes Selector Modal */
+.classes-selector-modal-box {
+  max-width: 440px !important;
+  background: #0f172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
+}
+
+.classes-selector-modal-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  max-height: 320px !important;
+  overflow-y: auto !important;
+  margin-top: 10px !important;
+}
+
+.classes-selector-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 10px 14px !important;
+  border-radius: 10px !important;
+  background: rgba(30, 41, 59, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.classes-selector-item:hover,
+.classes-selector-item.selected {
+  background: rgba(56, 189, 248, 0.12) !important;
+  border-color: #38bdf8 !important;
+}
   border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
   font-family: 'Inter', sans-serif !important;
   font-size: 0.75rem !important;

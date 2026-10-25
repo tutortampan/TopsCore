@@ -19,119 +19,117 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Outfit:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=5.4.4" />
-  <link rel="stylesheet" href="css/dashboard.css?v=5.4.4" />
-  <link rel="stylesheet" href="css/result.css?v=5.4.4" />
+  <link rel="stylesheet" href="css/style.css?v=5.6.7" />
+  <link rel="stylesheet" href="css/dashboard.css?v=5.6.7" />
+  <link rel="stylesheet" href="css/result.css?v=5.6.7" />
 </head>
 <body class="result-page">
 
   <canvas id="bg-particle-canvas" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0; opacity:0.35;"></canvas>
   <div id="toast-container"></div>
 
-  <header class="dashboard-header" style="justify-content: center; position: relative; z-index: 10;">
-    <div class="dashboard-header-brand">&#127891; TOPS CORE</div>
+  <header class="dashboard-header" id="result-page-header">
+    <div class="dashboard-header-brand" id="result-header-brand">RESULT PAGE</div>
   </header>
 
   <canvas id="confetti-canvas" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999;"></canvas>
 
-  <div id="result-loading" class="empty-state" style="position:relative; z-index:5; padding:var(--space-16);">
+  <div id="result-loading" class="result-loading-overlay">
     <div class="spinner"></div>
-    <p>Loading your results...</p>
+    <p class="result-loading-text">Loading your results...</p>
   </div>
 
   <div id="result-content" class="hidden" style="position:relative; z-index:5;">
     <section class="result-hero" id="result-hero-section">
 
-      <div id="result-Assessment-name-container" class="result-meta-title-bar" style="opacity:0; animation: result-fade-up 0.4s 0.08s ease forwards;">
-        <span id="result-curriculum-crumb" class="result-curriculum-crumb"></span>
-        <div class="result-title-row">
-          <span id="result-Assessment-name"></span>
-          <span id="result-best-score-badge"></span>
+      <!-- 1. Header Card (Student & Class Identity - Pure Identity Card) -->
+      <div class="result-identity-card cascade-item" id="result-identity-card">
+        <!-- Institutional Metadata -->
+        <div class="result-meta-wrapper" id="result-meta-wrapper">
+          <span id="meta-inst">CAKE ENGLISH COURSE</span>
+          <span class="meta-sep">|</span>
+          <span id="meta-prog">CAMP</span>
+          <span class="meta-sep">|</span>
+          <span id="meta-batch">133</span>
+          <span class="meta-sep">|</span>
+          <span id="meta-lvl">3RD LEVEL</span>
         </div>
-      </div>
 
-      <!-- Hero Trio Row: Photo, Score, and Grade Side-by-Side ("Berderet") -->
-      <div class="result-hero-trio-row" id="result-hero-trio-row" style="opacity:0; animation: result-fade-up 0.45s 0.14s ease forwards;">
-        <!-- 1. Student Portrait Stage -->
-        <div class="result-portrait-stage">
-          <div id="result-crown-badge" class="result-crown-badge hidden" title="Batch Champion">&#128081;</div>
-          <div class="result-score-ring-wrapper" id="result-score-ring-wrapper">
-            <svg class="result-score-ring-svg" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
-              <circle class="ring-track" cx="55" cy="55" r="50" />
-              <circle class="ring-progress" id="ring-progress-circle" cx="55" cy="55" r="50" />
-            </svg>
-            <div id="result-avatar-container" class="result-avatar-circle">
-              <span id="result-avatar-initial">S</span>
-              <img id="result-avatar-img" class="hidden" alt="Profile Photo" />
-            </div>
+        <div class="hero-divider"></div>
+
+        <!-- Centered Large Avatar (Static / Non-clickable with Dynamic Grade Ring) -->
+        <div class="result-avatar-stage" style="position: relative; display: flex; align-items: center; justify-content: center; margin: 4px auto 6px auto;">
+          <span id="result-crown-badge" class="avatar-crown-badge hidden" title="Batch Champion">&#128081;</span>
+          <div id="result-avatar-container" class="banner-avatar-container" title="Profile Photo">
+            <span id="result-avatar-initial">S</span>
+            <img id="result-avatar-img" class="hidden" alt="Profile Photo" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />
           </div>
         </div>
 
-        <!-- 2. Score Stage -->
-        <div class="result-score-stage">
-          <div class="result-percentage" id="result-percentage">0%</div>
-        </div>
+        <div class="hero-divider hero-name-divider"></div>
 
-        <!-- 3. Modern Gold Star Accent (★ Vector Badge) -->
-        <div class="result-stamp-stage">
-          <div id="result-grade-stamp" class="result-grade-stamp pure-stamp" title="Certified Achievement">
-            <span id="result-grade-badge" class="stamp-grade-symbol">
-              <svg class="star-accent-vector" width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="starGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#FDE047" />
-                    <stop offset="100%" stop-color="#EAB308" />
-                  </linearGradient>
-                </defs>
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGoldGrad)" />
-              </svg>
-            </span>
-          </div>
+        <!-- Centered Student Name -->
+        <div class="result-student-name-label" id="result-student-name-label">Student</div>
+      </div>
+
+      <!-- 2. Assessment Title (2-Line: Type/Name & Topic/Theme) -->
+      <div class="result-assessment-title-wrap cascade-item" id="result-Assessment-name-container">
+        <div class="result-title-row-type" id="result-asm-type-row">ASSESSMENT TITLE</div>
+        <div class="result-title-row-topic" id="result-asm-topic-row">TOPIC / THEME</div>
+        <span id="result-Assessment-name" class="hidden" style="display:none !important;"></span>
+      </div>
+
+      <!-- 3. Dynamic Vertical Metrics Table (Stacked: CORRECT, PARTIAL, INCORRECT, POINTS) -->
+      <div class="result-metrics-table-card cascade-item" id="result-metrics-bar">
+        <!-- Row 1: CORRECT -->
+        <div class="metric-stacked-row metric-row-correct summary-clickable cascade-metric-row" id="card-filter-correct" title="Click to view correct answers">
+          <span class="metric-stacked-lbl">CORRECT</span>
+          <span class="metric-stacked-val" id="res-correct">0</span>
+        </div>
+        <!-- Row 2: PARTIAL -->
+        <div class="metric-stacked-row metric-row-partial summary-clickable cascade-metric-row" id="card-filter-partial" title="Click to view partial answers">
+          <span class="metric-stacked-lbl">PARTIAL</span>
+          <span class="metric-stacked-val" id="res-partial">0</span>
+        </div>
+        <!-- Row 3: INCORRECT -->
+        <div class="metric-stacked-row metric-row-wrong summary-clickable cascade-metric-row" id="card-filter-wrong" title="Click to view incorrect answers">
+          <span class="metric-stacked-lbl">INCORRECT</span>
+          <span class="metric-stacked-val" id="res-wrong">0</span>
+        </div>
+        <!-- Row 4: POINTS -->
+        <div class="metric-stacked-row metric-row-points cascade-metric-row" id="result-points-box" title="Total Points Earned">
+          <span class="metric-stacked-lbl">POINTS</span>
+          <span class="metric-stacked-val" id="res-points">0</span>
         </div>
       </div>
 
-      <!-- Centered Student Name Beneath Trio with Balanced Spacing -->
-      <div class="result-identity-bar" style="opacity:0; animation: result-fade-up 0.45s 0.2s ease forwards;">
-        <div class="result-student-name-label" id="result-student-name-label"></div>
-      </div>
-
-      <!-- 4. Stacked Breakdown Metrics with Semantic Colors (Linear / Apple Glassmorphic Design) -->
-      <div class="result-stats-stacked-list" id="result-metrics-bar" style="opacity:0; animation: result-fade-up 0.4s 0.28s ease forwards;">
-        <!-- Row 1: Total Points -->
-        <div class="stat-stacked-row stat-points" id="result-points-box" title="Total Points Earned">
-          <span class="stat-row-label">Points</span>
-          <span class="stat-row-value stat-val-points" id="res-points">0 PTS</span>
-          <div id="result-rank-badge" class="result-rank-badge hidden"></div>
+      <!-- 4. Dual Score & Grade Card (Side-by-Side Symmetrical - 50px) -->
+      <div class="result-score-grade-card cascade-item" id="result-score-grade-card">
+        <!-- Kotak Score Bersih -->
+        <div class="score-grade-box score-box" id="result-score-box">
+          <span class="score-grade-val" id="result-percentage">0%</span>
         </div>
-        <!-- Row 2: Correct (Green / Hijau) -->
-        <div class="stat-stacked-row stat-correct summary-clickable" id="card-filter-correct" title="Click to view correct answers">
-          <span class="stat-row-label stat-lbl-correct">Correct</span>
-          <span class="stat-row-value stat-val-correct" id="res-correct">0</span>
-        </div>
-        <!-- Row 3: Partial (Yellow / Kuning) -->
-        <div class="stat-stacked-row stat-partial summary-clickable" id="card-filter-partial" title="Click to view partial answers">
-          <span class="stat-row-label stat-lbl-partial">Partial</span>
-          <span class="stat-row-value stat-val-partial" id="res-partial">0</span>
-        </div>
-        <!-- Row 4: Incorrect (Red / Merah) -->
-        <div class="stat-stacked-row stat-wrong summary-clickable" id="card-filter-wrong" title="Click to view incorrect answers">
-          <span class="stat-row-label stat-lbl-wrong">Incorrect</span>
-          <span class="stat-row-value stat-val-wrong" id="res-wrong">0</span>
+        <!-- Kotak Grade Bersih -->
+        <div class="score-grade-box grade-box" id="result-grade-box">
+          <span class="score-grade-val grade-delayed" id="result-grade-val">&mdash;</span>
         </div>
       </div>
 
-      <!-- Hidden compatibility hooks (no additional comment text) -->
+      <!-- 5. Evaluation / Motivation Word Card (FAIL / LESS / ENOUGH / GOOD / VERY GOOD / EXCELLENT - 50px) -->
+      <div class="result-evaluation-card cascade-item" id="result-motivation-msg">&mdash;</div>
+
+      <!-- Hidden compatibility hooks -->
+      <div id="result-curriculum-crumb" class="hidden" style="display:none !important;"></div>
+      <div id="result-grade-stamp" class="hidden" style="display:none !important;"><span id="result-grade-badge"></span></div>
       <div id="result-points-row" class="hidden" style="display:none !important;"></div>
-      <div id="result-motivation-msg" class="hidden" style="display:none !important;"></div>
       <div id="result-attempt-meta" class="hidden" style="display:none !important;"></div>
 
-      <div id="admin-remedial-control-container"></div>
-
-      <div class="result-action-buttons-wrap" style="display:flex; flex-direction:column; gap:8px; max-width:380px; width:100%; margin:8px auto 0 auto; opacity:0; animation: result-fade-up 0.4s 0.45s ease forwards;">
-        <div id="smart-next-action-container"></div>
+      <!-- 6. Actions (Next Milestone/Remedial 50px, Back 30px, Breakdown 30px) -->
+      <div class="result-action-buttons-wrap cascade-item" id="result-actions-container" style="display:flex; flex-direction:column; gap:10px; max-width:100%; width:100%; margin:0 auto;">
+        <div id="smart-next-action-container" class="cascade-btn-item"></div>
         <button class="btn btn-primary hidden" id="try-again-btn" style="display:none !important;">Try Again</button>
-        <a href="dashboard.html" class="btn btn-dashboard-primary" id="back-dashboard-btn">&larr; Back to Dashboard</a>
-        <button class="btn btn-breakdown-ghost" id="toggle-answers-btn">View Answer Breakdown</button>
+        <a href="dashboard.html" class="btn btn-dashboard-primary cascade-btn-item" id="back-dashboard-btn">BACK TO LOBBY</a>
+        <button class="btn btn-breakdown-ghost cascade-btn-item" id="toggle-answers-btn">VIEW ANSWER BREAKDOWN</button>
       </div>
     </section>
 
@@ -154,16 +152,16 @@
     </div>
   </div>
 
-  <script type="module" src="./js/result.js?v=5.4.4"></script>
+  <script type="module" src="./js/result.js?v=5.6.7"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=5.4.4').then(r => r.update()).catch(e => console.warn('SW:', e));
+        navigator.serviceWorker.register('sw.js?v=5.6.7').then(r => r.update()).catch(e => console.warn('SW:', e));
       });
     }
   </script>
-  <div id="bottom-ad-banner" class="topscore-locked-banner">
+  <footer id="bottom-ad-banner" class="topscore-locked-banner">
     <span style="color:#38bdf8; font-weight:800;">TopsCore</span>&nbsp;&copy; 2026&nbsp;<span style="opacity:0.4; margin:0 6px;">|</span>&nbsp;<span style="color:#cbd5e1;">Created by Mr. Top</span>
-  </div>
+  </footer>
 </body>
 </html>

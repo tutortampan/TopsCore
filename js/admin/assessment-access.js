@@ -1,1052 +1,1115 @@
 /**
- * TopsCore — Assessment Access & Live Test Sessions Controller
- * Dedicated panel under Domain C (Class) for controlling formal Tests across all classes.
+ * TopsCore — Assessment Access & Live Test Sessions Controller (v5.8.0)
+ * Integrated under Domain C: Class Hub (Vocabulary Class & Curriculum).
+ * 
  * Features:
- * - Filtered strictly to assessments of category 'TEST'.
- * - Live Session Controller: manual/timed opening with dynamic countdown allocation.
- * - Active Batch filter (only active enrolled batches).
- * - Attendance checklist (Select All + per-student exclusion) to prevent remote access by absentees.
+ * 1. Unified Theme Test Cards (Theme A, B, C, D): Words Test & Phrases Test unified into 1 Theme Card.
+ * 2. 2 Distinct Session Opening Triggers: "🟢 Buka Sesi Normal" & "🟡 Buka Sesi Remidi".
+ * 3. Smart Eligibility Engine:
+ *    - Normal Mode: Prerequisite tasks tuntas (>= 60%). Siswa yang sudah lulus tetap muncul untuk perbaikan nilai.
+ *    - Remedial Mode: Prerequisite tasks tuntas (>= 60%) & belum lulus (< 60% atau belum pernah ikut). Siswa yang sudah lulus TIDAK masuk remidi.
+ * 4. Late Student Addition (+ Susulan):
+ *    - HANYA menampilkan siswa eligible yang BELUM terdaftar di dalam sesi ujian.
+ *    - Siswa yang sudah terdaftar 100% disembunyikan.
+ *    - Otomatis mewarisi mode sesi (Normal / Remedial) tanpa centang manual.
+ *    - Sisa waktu mengacu pada sisa waktu berjalan sesi global.
+ * 5. 1-Click Dual Activation: Membuka/menutup Words Test dan Phrases Test secara serempak di database.
  */
 
 import {
-  adminFetchAll,
   openTestSession,
   addLateStudentsToSession,
-  closeTestSession,
-  fetchActiveTestSession
+  closeTestSession
 } from '../api.js?v=5.3.2';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.3.2';
 
-let _cachedAssessments = [];
-let _cachedClasses = [];
-let _cachedLevels = [];
-let _cachedBatches = [];
-let _cachedStudents = [];
-let _cachedPrograms = [];
-let _activeSessionModalAsm = null;
-let _activeLateModalAsm = null;
+const THEME_DEFINITIONS = [
+  { code: 'A', name: 'Workplace', color: '#3b82f6', bgRgba: 'rgba(59, 130, 246, 0.08)', borderRgba: 'rgba(59, 130, 246, 0.25)' },
+  { code: 'B', name: 'Tourism', color: '#a855f7', bgRgba: 'rgba(168, 85, 247, 0.08)', borderRgba: 'rgba(168, 85, 247, 0.25)' },
+  { code: 'C', name: 'CCU', color: '#f97316', bgRgba: 'rgba(249, 115, 22, 0.08)', borderRgba: 'rgba(249, 115, 22, 0.25)' },
+  { code: 'D', name: 'High-Frequency', color: '#10b981', bgRgba: 'rgba(16, 185, 129, 0.08)', borderRgba: 'rgba(16, 185, 129, 0.25)' }
+];
 
+let _activeClassHubContext = null;
+let _selectedBatchId = null;
+let _currentOpenModalTheme = null;
+let _currentOpenModalMode = 'normal'; // 'normal' | 'remedial'
+let _currentLateModalTheme = null;
+
+// Backward-compatibility delegator for loadSection('assessment-access')
 export async function renderAssessmentAccess(area) {
-  showLoading();
-  try {
-    const [rawAssessments, classes, levels, batches, students, programs] = await Promise.all([
-      adminFetchAll('assessments'),
-      adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => []),
-      adminFetchAll('levels', 'id, name, level_number').catch(() => []),
-      adminFetchAll('batches', 'id, name, program_id, current_level_id, is_active, deleted_at').catch(() => []),
-      adminFetchAll('students', 'id, name, batch_id, is_active, deleted_at').catch(() => []),
-      adminFetchAll('programs', 'id, name, institution_id').catch(() => [])
-    ]);
+  window._classHubActiveTab = 'test-sessions';
+  if (window.loadSection) {
+    window.loadSection('class-hub');
+  }
+}
 
-    _cachedAssessments = rawAssessments || [];
-    _cachedClasses = classes || [];
-    _cachedLevels = levels || [];
-    _cachedBatches = batches || [];
-    _cachedStudents = students || [];
-    _cachedPrograms = programs || [];
+/**
+ * Main renderer inside Class Hub: Tab "Test Sessions"
+ */
+export async function renderClassTestSessions(container, context = {}) {
+  _activeClassHubContext = context;
+  const {
+    classId,
+    className,
+    classAssessments = [],
+    allStudents = [],
+    classStudents = [],
+    allBatches = [],
+    allLevels = [],
+    allAttempts = [],
+    batchMap = {},
+    levelMap = {}
+  } = context;
 
-    const classMap = Object.fromEntries(_cachedClasses.map(c => [c.id, c]));
-    const levelMap = Object.fromEntries(_cachedLevels.map(l => [l.id, l]));
-    const batchMap = Object.fromEntries(_cachedBatches.map(b => [b.id, b]));
-    const programMap = Object.fromEntries(_cachedPrograms.map(p => [p.id, p]));
+  // Active batches for batch selection
+  const activeBatches = (allBatches || []).filter(b => !b.deleted_at && b.is_active !== false);
+  
+  if (!_selectedBatchId || !activeBatches.some(b => b.id === _selectedBatchId)) {
+    // Default to the first active batch with students or active batch in storage
+    const saved = localStorage.getItem('topscore_active_test_batch');
+    if (saved && activeBatches.some(b => b.id === saved)) {
+      _selectedBatchId = saved;
+    } else {
+      _selectedBatchId = activeBatches[0]?.id || '';
+    }
+  }
 
-    // Filter only tests across all classes and sort alphabetically by default
-    const tests = _cachedAssessments.filter(a => {
-      if (a.deleted_at) return false;
-      const cat = (a.assessment_category || '').toUpperCase();
+  // Group class assessments into Themes
+  const themesData = THEME_DEFINITIONS.map(def => {
+    const code = def.code;
+    const wordsTest = classAssessments.find(a => {
+      const pl = a.payload || {};
+      const tc = (pl.theme_code || '').toUpperCase();
+      const cat = (pl.category || '').toLowerCase();
       const type = (a.assessment_type || '').toUpperCase();
-      const title = (a.title || '').toUpperCase();
-      return cat === 'TEST' || type.includes('TEST') || title.includes('TEST');
+      const isTest = a.assessment_category === 'TEST' || type.includes('TEST');
+      return tc === code && isTest && (cat === 'words' || type === 'VOCAB_TEST');
     });
 
-    tests.sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { numeric: true, sensitivity: 'base' }));
+    const phrasesTest = classAssessments.find(a => {
+      const pl = a.payload || {};
+      const tc = (pl.theme_code || '').toUpperCase();
+      const cat = (pl.category || '').toLowerCase();
+      const type = (a.assessment_type || '').toUpperCase();
+      const isTest = a.assessment_category === 'TEST' || type.includes('TEST');
+      return tc === code && isTest && (cat === 'phrases' || type === 'PHRASE_TEST');
+    });
 
-    // Check live session status for each test
-    const now = new Date();
-    tests.forEach(t => {
-      const sess = t.payload?.test_session;
-      if (sess && sess.status === 'UNLOCKED') {
-        const autoClose = sess.auto_close_at ? new Date(sess.auto_close_at) : null;
-        if (autoClose && autoClose.getTime() > now.getTime()) {
-          t._isLive = true;
-          const remainingMs = autoClose.getTime() - now.getTime();
-          t._remainingMinutes = Math.ceil(remainingMs / 60000);
-          t._batchName = batchMap[sess.batch_id]?.name || 'Batch ' + (sess.batch_id || '');
-          t._allowedCount = Array.isArray(sess.allowed_student_ids) ? sess.allowed_student_ids.length : 0;
-          t._isRemedial = Boolean(sess.is_remedial);
-          t._autoCloseAt = sess.auto_close_at;
-          t._allowedStudentIds = sess.allowed_student_ids || [];
-          t._remedialStudentIds = sess.remedial_student_ids || [];
-        } else {
-          t._isLive = false;
-        }
-      } else {
-        t._isLive = false;
+    const tasks = classAssessments.filter(a => {
+      const pl = a.payload || {};
+      const tc = (pl.theme_code || '').toUpperCase();
+      const isTask = a.assessment_category === 'TASK' || (a.assessment_type || '').includes('TASK');
+      return tc === code && isTask;
+    });
+
+    // Check live state
+    const now = Date.now();
+    const sessW = wordsTest?.payload?.test_session;
+    const sessP = phrasesTest?.payload?.test_session;
+    const sess = (sessW && sessW.status === 'UNLOCKED') ? sessW : ((sessP && sessP.status === 'UNLOCKED') ? sessP : null);
+
+    let isLive = false;
+    let remainingMinutes = 0;
+    let liveBatchId = null;
+    let liveBatchName = '';
+    let allowedStudentIds = [];
+    let isRemedial = false;
+
+    if (sess && sess.status === 'UNLOCKED') {
+      const autoClose = sess.auto_close_at ? new Date(sess.auto_close_at).getTime() : 0;
+      if (autoClose > now) {
+        isLive = true;
+        remainingMinutes = Math.max(1, Math.ceil((autoClose - now) / 60000));
+        liveBatchId = sess.batch_id;
+        liveBatchName = batchMap[sess.batch_id]?.name || 'Batch ' + (sess.batch_id || '');
+        allowedStudentIds = sess.allowed_student_ids || [];
+        isRemedial = Boolean(sess.is_remedial);
       }
-    });
+    }
 
-    const liveCount = tests.filter(t => t._isLive).length;
-    const lockedCount = tests.length - liveCount;
+    return {
+      ...def,
+      wordsTest,
+      phrasesTest,
+      tasks,
+      isLive,
+      remainingMinutes,
+      liveBatchId,
+      liveBatchName,
+      allowedStudentIds,
+      isRemedial
+    };
+  });
 
-    area.innerHTML = `
-      <div class="section-header d-flex justify-between align-center flex-wrap gap-3 mb-4">
+  // Count active sessions
+  const liveCount = themesData.filter(t => t.isLive).length;
+
+  container.innerHTML = `
+    <div class="test-sessions-tab-wrapper" style="padding: 4px 0 24px;">
+      <!-- Top Control Bar -->
+      <div style="background: var(--fm-bg-panel, #0f172a); border: 1px solid var(--fm-border-subtle, rgba(255,255,255,0.08)); border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
         <div>
-          <h2 class="section-title text-gradient" style="display:flex; align-items:center; gap:8px;">
-            <span>🔐</span> Assessment Access & Live Test Sessions
-          </h2>
-          <p class="section-subtitle">
-            Dedicated control room for all Tests across all classes. Unlock live testing sessions with dynamic duration and student attendance whitelists.
-          </p>
-        </div>
-        <div class="d-flex gap-2 align-center">
-          <button class="btn btn-secondary btn-sm" id="btn-refresh-access">🔄 Refresh Status</button>
-        </div>
-      </div>
-
-      <!-- KPI Summary Cards -->
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:24px;">
-        <div class="card p-3" style="background:var(--fm-bg-panel); border:1px solid var(--fm-border-subtle); border-radius:8px;">
-          <div class="text-xs text-muted" style="text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">Total Tests</div>
-          <div style="font-size:2rem; font-weight:800; color:var(--fm-text-primary); margin-top:4px;">${tests.length}</div>
-          <div class="text-xs text-muted" style="margin-top:2px;">Across all curriculum classes</div>
-        </div>
-
-        <div class="card p-3" style="background:var(--fm-bg-panel); border:1px solid ${liveCount > 0 ? 'var(--fm-accent-pitch)' : 'var(--fm-border-subtle)'}; border-radius:8px;">
-          <div class="text-xs text-muted" style="text-transform:uppercase; letter-spacing:0.05em; font-weight:600; color:${liveCount > 0 ? '#10b981' : ''};">
-            🟢 Active / Unlocked Sessions
+          <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+            <span>🔐</span> Live Test Sessions Controller
           </div>
-          <div style="font-size:2rem; font-weight:800; color:${liveCount > 0 ? '#10b981' : 'var(--fm-text-primary)'}; margin-top:4px;">
-            ${liveCount}
+          <div style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin-top: 2px;">
+            ${escapeHtml(className || 'Vocabulary')} &bull; Unified Test Access
           </div>
-          <div class="text-xs text-muted" style="margin-top:2px;">Currently accessible to whitelisted students</div>
+          <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">
+            Words & Phrases Test disatukan per Theme. Buka ujian normal atau remidi dengan alokasi durasi dan seleksi siswa eligible.
+          </div>
         </div>
 
-        <div class="card p-3" style="background:var(--fm-bg-panel); border:1px solid var(--fm-border-subtle); border-radius:8px;">
-          <div class="text-xs text-muted" style="text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">🔒 Locked / Inactive Tests</div>
-          <div style="font-size:2rem; font-weight:800; color:var(--fm-accent-amber); margin-top:4px;">${lockedCount}</div>
-          <div class="text-xs text-muted" style="margin-top:2px;">Waiting for tutor unlock</div>
-        </div>
-      </div>
-
-      <!-- Tests Grid / Table -->
-      <div class="card" style="background:var(--fm-bg-panel); border:1px solid var(--fm-border-subtle); border-radius:8px; overflow:hidden;">
-        <div style="padding:16px 20px; border-bottom:1px solid var(--fm-border-subtle); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-          <div style="font-weight:700; font-size:1.1rem; color:var(--fm-text-primary);">All Test Assessments</div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <select id="access-sort-select" class="form-control" style="font-size:0.85rem; padding:6px 10px; background:var(--fm-bg-input); border:1px solid var(--fm-border-subtle); color:var(--fm-text-primary); border-radius:6px; cursor:pointer;">
-              <option value="title-asc">🔤 Sort: Title (A → Z)</option>
-              <option value="title-desc">🔤 Sort: Title (Z → A)</option>
-              <option value="class-asc">📚 Sort: Class Name (A → Z)</option>
-              <option value="live-first">🟢 Sort: Active Sessions First</option>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="test-session-batch-select" style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1; margin: 0; white-space: nowrap;">
+              🎯 Active Batch:
+            </label>
+            <select id="test-session-batch-select" class="form-control" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.15); color: #ffffff; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; min-width: 200px; cursor: pointer;">
+              ${activeBatches.map(b => {
+                const bStuds = allStudents.filter(s => s.batch_id === b.id && !s.deleted_at && s.is_active !== false).length;
+                const isSel = b.id === _selectedBatchId;
+                return `<option value="${b.id}" ${isSel ? 'selected' : ''}>Batch ${escapeHtml(b.name || b.id)} (${bStuds} Students)</option>`;
+              }).join('')}
             </select>
-            <input type="text" id="access-search-input" placeholder="Search test name or class..." class="form-control" style="max-width:220px; font-size:0.85rem; padding:6px 12px; background:var(--fm-bg-input); border:1px solid var(--fm-border-subtle); color:var(--fm-text-primary); border-radius:6px;">
           </div>
-        </div>
 
-        <div style="overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.9rem;" id="access-tests-table">
-            <thead>
-              <tr style="background:rgba(255,255,255,0.02); border-bottom:1px solid var(--fm-border-subtle); color:var(--fm-text-secondary); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em;">
-                <th style="padding:12px 16px; cursor:pointer; user-select:none;" class="th-sortable" data-sort="title" title="Click to toggle Title A-Z / Z-A">
-                  Test Assessment Title <span class="sort-icon-title" style="opacity:0.6; font-size:0.75rem;">↕</span>
-                </th>
-                <th style="padding:12px 16px; cursor:pointer; user-select:none;" class="th-sortable" data-sort="class" title="Click to sort by Class Name">
-                  Class & Level <span class="sort-icon-class" style="opacity:0.6; font-size:0.75rem;">↕</span>
-                </th>
-                <th style="padding:12px 16px;">Publication</th>
-                <th style="padding:12px 16px; cursor:pointer; user-select:none;" class="th-sortable" data-sort="live" title="Click to sort by Live Sessions First">
-                  Session State <span class="sort-icon-live" style="opacity:0.6; font-size:0.75rem;">↕</span>
-                </th>
-                <th style="padding:12px 16px; text-align:right;">Control Action</th>
-              </tr>
-            </thead>
-            <tbody id="access-tests-tbody">
-              ${renderTestRows(tests, classMap, levelMap)}
-            </tbody>
-          </table>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-test-sessions" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+            <span>🔄</span> Refresh Status
+          </button>
         </div>
       </div>
 
-      <!-- Test Session Controller Modal -->
-      <div id="modal-test-session-controller" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
-        <div class="modal-box card" style="background:var(--fm-bg-panel); border:1px solid var(--fm-border-medium); border-radius:12px; width:100%; max-width:540px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 40px rgba(0,0,0,0.6);">
-          <div style="padding:20px; border-bottom:1px solid var(--fm-border-subtle); display:flex; justify-content:between; align-items:flex-start;">
-            <div>
-              <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--fm-accent-tactical); font-weight:700;">Live Session Controller</div>
-              <h3 id="session-modal-test-title" style="margin:4px 0 0; font-size:1.25rem; font-weight:800; color:var(--fm-text-primary);">Test Name</h3>
-              <div id="session-modal-test-meta" class="text-xs text-muted" style="margin-top:2px;">Class | Level</div>
-            </div>
-            <button class="btn btn-ghost btn-icon" id="btn-close-session-modal" style="color:var(--fm-text-secondary); font-size:1.25rem;">✕</button>
+      <!-- KPI Summary Pills -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px;">
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px;">
+          <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: #94a3b8;">Total Theme Tests</div>
+          <div style="font-size: 1.6rem; font-weight: 800; color: #ffffff; margin-top: 4px;">4 Themes <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">(8 Modules)</span></div>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid ${liveCount > 0 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255,255,255,0.06)'}; border-radius: 8px; padding: 12px 16px;">
+          <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: ${liveCount > 0 ? '#34d399' : '#94a3b8'};">
+            🟢 Active Live Sessions
           </div>
-
-          <div style="padding:20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
-            <!-- Batch Selection -->
-            <div>
-              <label class="form-label" style="font-weight:600; font-size:0.85rem; color:var(--fm-text-primary); margin-bottom:6px; display:block;">
-                1. Target Active Batch
-              </label>
-              <select id="session-batch-select" class="form-control" style="width:100%; background:var(--fm-bg-input); border:1px solid var(--fm-border-subtle); color:var(--fm-text-primary); padding:8px 12px; border-radius:6px;">
-                <option value="">Select active batch...</option>
-              </select>
-            </div>
-
-            <!-- Allocated Duration -->
-            <div>
-              <label class="form-label" style="font-weight:600; font-size:0.85rem; color:var(--fm-text-primary); margin-bottom:6px; display:block;">
-                2. Allocated Test Duration (Minutes)
-              </label>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <input type="number" id="session-duration-input" class="form-control" value="30" min="5" max="180" step="5" style="width:110px; background:var(--fm-bg-input); border:1px solid var(--fm-border-subtle); color:var(--fm-text-primary); padding:8px 12px; border-radius:6px; font-weight:700; font-size:1rem;">
-                <span class="text-sm text-muted">Minutes (Student countdown dynamically synchronizes to this duration)</span>
-              </div>
-            </div>
-
-            <!-- Session Type: Normal vs Remedial -->
-            <div>
-              <label class="form-label" style="font-weight:600; font-size:0.85rem; color:var(--fm-text-primary); margin-bottom:6px; display:block;">
-                3. Tipe Sesi Ujian
-              </label>
-              <div style="display:flex; gap:16px; align-items:center; background:rgba(255,255,255,0.02); padding:10px 12px; border-radius:6px; border:1px solid var(--fm-border-subtle); flex-wrap:wrap;">
-                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem; color:var(--fm-text-primary);">
-                  <input type="radio" name="session-mode" value="normal" checked style="cursor:pointer;">
-                  <span>🟢 Normal (Nilai Penuh)</span>
-                </label>
-                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem; color:#fbbf24; font-weight:600;">
-                  <input type="radio" name="session-mode" value="remedial" style="cursor:pointer;">
-                  <span>🟡 Remedial (Batas Maksimal KKM 60%)</span>
-                </label>
-              </div>
-              <div class="text-xs text-muted" style="margin-top:4px;">
-                Jika Remedial dipilih, nilai efektif siswa pada sesi ini otomatis dibatasi maksimal KKM 60% (Grade B).
-              </div>
-            </div>
-
-            <!-- Student Attendance Checklist -->
-            <div>
-              <div style="display:flex; justify-content:between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
-                <label class="form-label" style="font-weight:600; font-size:0.85rem; color:var(--fm-text-primary); margin:0;">
-                  4. Student Presence & Attendance Whitelist (<span id="session-student-count">0</span>)
-                </label>
-                <div class="d-flex gap-2 align-center" style="flex-wrap:wrap;">
-                  <input type="text" id="session-student-search" placeholder="🔍 Filter student..." class="form-control" style="font-size:0.75rem; padding:3px 8px; width:110px; background:var(--fm-bg-input); border:1px solid var(--fm-border-subtle); color:var(--fm-text-primary); border-radius:4px;">
-                  <button type="button" class="btn btn-secondary btn-xs" id="btn-sort-students" title="Click to toggle alphabetical sort A-Z / Z-A" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
-                    <span id="sort-students-icon">🔤</span> <span id="sort-students-text">A → Z</span>
-                  </button>
-                  <button type="button" class="btn btn-secondary btn-xs" id="btn-select-all-students" style="padding:4px 8px; font-size:0.75rem;">✅ All</button>
-                  <button type="button" class="btn btn-secondary btn-xs" id="btn-deselect-all-students" style="padding:4px 8px; font-size:0.75rem;">❌ None</button>
-                </div>
-              </div>
-              <div class="text-xs text-muted" style="margin-bottom:8px;">
-                Only checked students in the physical room will have access. Uncheck students who are absent.
-              </div>
-
-              <div id="session-students-list" style="max-height:180px; overflow-y:auto; border:1px solid var(--fm-border-subtle); border-radius:6px; background:rgba(0,0,0,0.2); padding:8px; display:flex; flex-direction:column; gap:6px;">
-                <div class="text-xs text-muted p-2 text-center">Please select a batch above to load enrolled students.</div>
-              </div>
-            </div>
+          <div style="font-size: 1.6rem; font-weight: 800; color: ${liveCount > 0 ? '#34d399' : '#ffffff'}; margin-top: 4px;">
+            ${liveCount} <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">Sesi Terbuka</span>
           </div>
+        </div>
 
-          <div style="padding:16px 20px; border-top:1px solid var(--fm-border-subtle); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.15);">
-            <button class="btn btn-ghost" id="btn-cancel-session-modal">Cancel</button>
-            <button class="btn btn-primary" id="btn-confirm-open-session" style="background:#10b981; border-color:#059669; font-weight:700; padding:8px 18px; display:flex; align-items:center; gap:6px;">
-              <span>🔓</span> Unlock Test Now
-            </button>
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px;">
+          <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: #94a3b8;">🔒 Locked Themes</div>
+          <div style="font-size: 1.6rem; font-weight: 800; color: #fbbf24; margin-top: 4px;">
+            ${4 - liveCount} <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">Menunggu Tutor</span>
           </div>
         </div>
       </div>
 
-      <!-- Modal Tambah Siswa Susulan / Remedial ke Sesi Berjalan -->
-      <div id="modal-add-late-student" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
-        <div class="modal-box card" style="background:var(--fm-bg-panel); border:1px solid var(--fm-border-medium); border-radius:12px; width:100%; max-width:560px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 40px rgba(0,0,0,0.6);">
-          <div style="padding:20px; border-bottom:1px solid var(--fm-border-subtle); display:flex; justify-content:space-between; align-items:flex-start;">
-            <div>
-              <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:#a5b4fc; font-weight:700;">👥 Sesi Ujian Berjalan</div>
-              <h3 id="late-modal-test-title" style="margin:4px 0 0; font-size:1.2rem; font-weight:800; color:var(--fm-text-primary);">Test Name</h3>
-              <div id="late-modal-meta" class="text-xs text-muted" style="margin-top:2px;">Batch Name</div>
-            </div>
-            <button class="btn btn-ghost btn-icon" id="btn-close-late-modal" style="color:var(--fm-text-secondary); font-size:1.25rem;">✕</button>
+      <!-- Theme Cards Grid (2x2 Spacious Clean Layout) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px;">
+        ${themesData.map(theme => renderThemeCard(theme, context)).join('')}
+      </div>
+    </div>
+
+    <!-- Modal 1: Buka Sesi Ujian (Normal / Remidi) -->
+    <div id="modal-theme-open-session" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:600px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 50px rgba(0,0,0,0.8);">
+        <div style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <div id="open-modal-theme-badge" style="display:inline-block; font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:2px 8px; border-radius:4px; margin-bottom:4px;">THEME A</div>
+            <h3 id="open-modal-title" style="margin:0; font-size:1.25rem; font-weight:800; color:#ffffff;">Buka Sesi Ujian</h3>
+            <div id="open-modal-subtitle" style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">Words Test & Phrases Test dibuka serentak.</div>
+          </div>
+          <button type="button" class="btn btn-ghost btn-icon" id="btn-close-open-modal" style="color:#94a3b8; font-size:1.25rem; padding:4px 8px;">✕</button>
+        </div>
+
+        <div style="padding:20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
+          <!-- 1. Target Batch -->
+          <div>
+            <label class="form-label" style="font-weight:700; font-size:0.85rem; color:#ffffff; margin-bottom:6px; display:block;">
+              1. Target Batch Ujian
+            </label>
+            <select id="open-modal-batch-select" class="form-control" style="width:100%; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; padding:8px 12px; border-radius:6px; font-weight:600;">
+              ${activeBatches.map(b => `<option value="${b.id}" ${b.id === _selectedBatchId ? 'selected' : ''}>Batch ${escapeHtml(b.name || b.id)}</option>`).join('')}
+            </select>
           </div>
 
-          <div style="padding:20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
-            <!-- Live Global Countdown Notice -->
-            <div style="background:rgba(99, 102, 241, 0.12); border:1px solid rgba(99, 102, 241, 0.35); border-radius:8px; padding:12px 14px;">
+          <!-- 2. Durasi Ujian -->
+          <div>
+            <label class="form-label" style="font-weight:700; font-size:0.85rem; color:#ffffff; margin-bottom:6px; display:block;">
+              2. Alokasi Durasi Ujian (Menit)
+            </label>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <input type="number" id="open-modal-duration-input" class="form-control" value="60" min="5" max="180" step="5" style="width:110px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; padding:8px 12px; border-radius:6px; font-weight:800; font-size:1.05rem;">
+              <span style="font-size:0.8rem; color:#94a3b8;">Menit (Countdown siswa sinkron dengan durasi ini)</span>
+            </div>
+          </div>
+
+          <!-- 3. Status Sesi Banner (Locked Mode) -->
+          <div id="open-modal-mode-banner" style="border-radius:8px; padding:10px 14px; font-size:0.82rem; font-weight:600;">
+            <!-- Populated dynamically -->
+          </div>
+
+          <!-- 4. Whitelist Kehadiran Siswa Eligible -->
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+              <label class="form-label" style="font-weight:700; font-size:0.85rem; color:#ffffff; margin:0;">
+                4. Siswa Terdaftar (<span id="open-modal-student-count" style="color:#38bdf8;">0</span> Terpilih)
+              </label>
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <input type="text" id="open-modal-student-search" placeholder="🔍 Cari siswa..." class="form-control" style="font-size:0.75rem; padding:4px 8px; width:110px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:4px;">
+                <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-sort" style="padding:4px 8px; font-size:0.75rem; font-weight:600;">🔤 A → Z</button>
+                <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-select-all" style="padding:4px 8px; font-size:0.75rem;">✅ Semua</button>
+                <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-deselect-all" style="padding:4px 8px; font-size:0.75rem;">❌ Kosong</button>
+              </div>
+            </div>
+
+            <div id="open-modal-students-list" style="max-height:220px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(0,0,0,0.3); padding:8px; display:flex; flex-direction:column; gap:6px;">
+              <!-- Populated dynamically -->
+            </div>
+
+            <!-- Ineligible notice & toggle -->
+            <div id="open-modal-ineligible-summary" style="margin-top:8px; font-size:0.78rem; color:#94a3b8; display:flex; justify-content:space-between; align-items:center;">
+              <span id="open-modal-ineligible-text">ℹ️ Memuat kelayakan siswa...</span>
+              <button type="button" id="btn-toggle-ineligible-view" class="btn btn-ghost btn-xs" style="font-size:0.72rem; color:#38bdf8; padding:0 4px; text-decoration:underline;">Lihat Detail</button>
+            </div>
+            <div id="open-modal-ineligible-details" class="hidden" style="margin-top:6px; max-height:120px; overflow-y:auto; background:rgba(0,0,0,0.4); border:1px dashed rgba(255,255,255,0.1); border-radius:6px; padding:8px; font-size:0.75rem;">
+              <!-- Populated with ineligible list -->
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-open-modal" style="color:#94a3b8;">Batal</button>
+          <button type="button" class="btn btn-primary" id="btn-confirm-open-session" style="font-weight:700; padding:8px 20px; display:flex; align-items:center; gap:8px;">
+            <span>🔓</span> Buka Ujian Sekarang
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: Tambah Siswa Susulan ke Sesi Berjalan -->
+    <div id="modal-theme-add-late" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:580px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 50px rgba(0,0,0,0.8);">
+        <div style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:#a5b4fc; font-weight:800;">👥 Sesi Ujian Sedang Berjalan</div>
+            <h3 id="late-modal-theme-title" style="margin:2px 0 0; font-size:1.25rem; font-weight:800; color:#ffffff;">Theme Test Name</h3>
+            <div id="late-modal-batch-name" style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">Batch Name</div>
+          </div>
+          <button type="button" class="btn btn-ghost btn-icon" id="btn-close-late-modal" style="color:#94a3b8; font-size:1.25rem; padding:4px 8px;">✕</button>
+        </div>
+
+        <div style="padding:20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
+          <!-- Live Global Countdown & Mode Alert -->
+          <div style="background:rgba(99, 102, 241, 0.12); border:1px solid rgba(99, 102, 241, 0.35); border-radius:8px; padding:12px 14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
               <div style="font-size:0.85rem; font-weight:700; color:#a5b4fc; display:flex; align-items:center; gap:6px;">
                 <span>⏳ Sisa Waktu Sesi Global:</span>
-                <span id="late-modal-remaining" style="color:#ffffff; font-size:1rem; font-weight:800;">-- Menit</span>
+                <span id="late-modal-remaining-time" style="color:#ffffff; font-size:1.05rem; font-weight:800;">-- Menit</span>
               </div>
-              <div class="text-xs" style="color:#cbd5e1; margin-top:4px; line-height:1.4;">
-                Waktu pengerjaan siswa susulan <strong>mengacu pada sisa waktu berjalan ini</strong>. Waktu tidak bertambah/tidak di-reset agar adil bagi siswa yang masuk tepat waktu.
+              <div id="late-modal-mode-badge" style="font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:4px;">
+                NORMAL
               </div>
             </div>
-
-            <!-- Student Selection List -->
-            <div>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
-                <label class="form-label" style="font-weight:600; font-size:0.85rem; color:var(--fm-text-primary); margin:0;">
-                  Pilih Siswa Susulan (<span id="late-student-selected-count">0</span> terpilih)
-                </label>
-                <div class="d-flex gap-2 align-center">
-                  <input type="text" id="late-student-search" placeholder="🔍 Cari nama..." class="form-control" style="font-size:0.75rem; padding:3px 8px; width:120px; background:var(--fm-bg-input); border:1px solid var(--fm-border-subtle); color:var(--fm-text-primary); border-radius:4px;">
-                  <button type="button" class="btn btn-secondary btn-xs" id="btn-late-select-all" style="padding:4px 8px; font-size:0.75rem;">✅ Semua</button>
-                  <button type="button" class="btn btn-secondary btn-xs" id="btn-late-deselect-all" style="padding:4px 8px; font-size:0.75rem;">❌ Kosong</button>
-                </div>
-              </div>
-
-              <!-- Remedial Global Checkbox -->
-              <div style="background:rgba(245, 158, 11, 0.08); border:1px solid rgba(245, 158, 11, 0.25); border-radius:6px; padding:8px 10px; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="late-all-remedial-toggle" style="width:16px; height:16px; cursor:pointer;">
-                <label for="late-all-remedial-toggle" style="font-size:0.8rem; font-weight:600; color:#fbbf24; cursor:pointer; margin:0;">
-                  Tandai siswa yang ditambahkan sebagai REMEDIAL (Batas Maksimal KKM 60%)
-                </label>
-              </div>
-
-              <div id="late-students-list" style="max-height:220px; overflow-y:auto; border:1px solid var(--fm-border-subtle); border-radius:6px; background:rgba(0,0,0,0.2); padding:8px; display:flex; flex-direction:column; gap:6px;">
-                <!-- Populated dynamically -->
-              </div>
+            <div class="text-xs" style="color:#cbd5e1; margin-top:6px; line-height:1.4;">
+              Siswa susulan <strong>otomatis mewarisi status sesi</strong> dan waktu pengerjaan mengacu pada sisa waktu berjalan ini agar adil bagi siswa yang masuk tepat waktu.
             </div>
           </div>
 
-          <div style="padding:16px 20px; border-top:1px solid var(--fm-border-subtle); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.15);">
-            <button class="btn btn-ghost" id="btn-cancel-late-modal">Batal</button>
-            <button class="btn btn-primary" id="btn-confirm-add-late" style="background:#6366f1; border-color:#4f46e5; font-weight:700; padding:8px 18px; display:flex; align-items:center; gap:6px;">
-              <span>💾</span> Tambahkan Siswa ke Sesi
-            </button>
+          <!-- Unenrolled Eligible Students Checklist -->
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+              <label class="form-label" style="font-weight:700; font-size:0.85rem; color:#ffffff; margin:0;">
+                Pilih Siswa Susulan (<span id="late-modal-selected-count" style="color:#38bdf8;">0</span> Terpilih)
+              </label>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input type="text" id="late-modal-search" placeholder="🔍 Cari nama..." class="form-control" style="font-size:0.75rem; padding:4px 8px; width:120px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:4px;">
+                <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-select-all" style="padding:4px 8px; font-size:0.75rem;">✅ Semua</button>
+                <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-deselect-all" style="padding:4px 8px; font-size:0.75rem;">❌ Kosong</button>
+              </div>
+            </div>
+
+            <div id="late-modal-students-list" style="max-height:220px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(0,0,0,0.3); padding:8px; display:flex; flex-direction:column; gap:6px;">
+              <!-- Populated dynamically with UNENROLLED ELIGIBLE students only -->
+            </div>
+            <div class="text-xs" style="color:#94a3b8; margin-top:6px;">
+              * Siswa yang sudah terdaftar di sesi ini otomatis disaring keluar dan tidak ditampilkan di daftar di atas.
+            </div>
           </div>
         </div>
-      </div>
-    `;
 
-    bindAccessEvents(area, tests, classMap, levelMap, batchMap, programMap);
-  } catch (err) {
-    console.error('Error rendering Assessment Access:', err);
-    area.innerHTML = `
-      <div class="glass-panel text-center p-5 mx-auto" style="max-width:500px; margin-top:5vh;">
-        <h3 class="text-danger mb-2">Failed to load Assessment Access</h3>
-        <p class="text-muted text-sm">${escapeHtml(err.message)}</p>
-        <button class="btn btn-primary btn-sm mt-3" onclick="window.loadSection('assessment-access')">Retry</button>
+        <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-late-modal" style="color:#94a3b8;">Batal</button>
+          <button type="button" class="btn btn-primary" id="btn-confirm-add-late" style="background:#6366f1; border-color:#4f46e5; font-weight:700; padding:8px 20px; display:flex; align-items:center; gap:8px;">
+            <span>💾</span> Tambahkan Siswa ke Ujian
+          </button>
+        </div>
       </div>
-    `;
-  } finally {
-    hideLoading();
-  }
+    </div>
+  `;
+
+  bindTestSessionsEvents(container, themesData, context);
 }
 
-function renderTestRows(tests, classMap, levelMap) {
-  if (!tests || tests.length === 0) {
-    return `<tr><td colspan="5" class="text-center text-muted" style="padding:32px;">No tests found in curriculum.</td></tr>`;
-  }
+/**
+ * Renders a single unified Theme Card
+ */
+function renderThemeCard(theme, context) {
+  const { code, name, color, bgRgba, borderRgba, wordsTest, phrasesTest, tasks, isLive, remainingMinutes, liveBatchName, allowedStudentIds, isRemedial } = theme;
+  
+  let stateContent = '';
+  let actionButtons = '';
 
-  return tests.map(t => {
-    const targetClass = classMap[t.class_id];
-    const effLevelId = t.level_id || targetClass?.level_id;
-    const cls = targetClass?.name || 'All Classes';
-    const lvl = levelMap[effLevelId]?.name ? (String(levelMap[effLevelId].name).toLowerCase().includes('level') ? levelMap[effLevelId].name : `Level ${levelMap[effLevelId].name}`) : 'Level 1';
-    const isPub = (t.status || '').toUpperCase() === 'PUBLISHED';
-
-    let stateBadge = '';
-    if (t._isLive) {
-      stateBadge = `
-        <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(16, 185, 129, 0.15); border:1px solid rgba(16, 185, 129, 0.4); color:#34d399; padding:4px 8px; border-radius:6px; font-weight:700; font-size:0.8rem; flex-wrap:wrap;">
-          <span style="width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 8px #10b981; animation:pulse 1.5s infinite;"></span>
-          LIVE (${t._remainingMinutes}m left) &bull; ${escapeHtml(t._batchName)} (${t._allowedCount} students)
-          ${t._isRemedial ? '<span style="margin-left:4px; padding:1px 6px; background:rgba(245,158,11,0.2); border:1px solid #f59e0b; color:#fbbf24; border-radius:4px; font-size:0.7rem;">REMIDIAL (KKM 60%)</span>' : ''}
-        </span>
-      `;
-    } else {
-      stateBadge = `
-        <span style="display:inline-flex; align-items:center; gap:4px; background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.3); color:#fbbf24; padding:4px 8px; border-radius:6px; font-weight:600; font-size:0.8rem;">
-          🔒 LOCKED
-        </span>
-      `;
-    }
-
-    let actionBtn = '';
-    if (t._isLive) {
-      actionBtn = `
-        <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-xs btn-add-late-modal" data-id="${t.id}" style="font-weight:600; padding:6px 10px; background:rgba(99, 102, 241, 0.2); border:1px solid #6366f1; color:#a5b4fc;" title="Tambah Siswa Susulan / Remedial ke Sesi Berjalan">
-            👥 + Susulan / Remidi
-          </button>
-          <button class="btn btn-danger btn-xs btn-lock-session" data-id="${t.id}" style="background:#ef4444; border-color:#dc2626; color:#ffffff; font-weight:600; padding:6px 12px;">
-            🔒 Close Session
-          </button>
-        </div>
-      `;
-    } else {
-      actionBtn = `
-        <button class="btn btn-primary btn-xs btn-open-session-modal" data-id="${t.id}" style="font-weight:600; padding:6px 12px; background:var(--fm-accent-tactical);">
-          🎮 Manage & Unlock
-        </button>
-      `;
-    }
-
-    return `
-      <tr style="border-bottom:1px solid var(--fm-border-subtle); transition:background 0.15s;" onmouseover="this.style.background='var(--fm-bg-hover)'" onmouseout="this.style.background='transparent'">
-        <td style="padding:14px 16px; font-weight:700; color:var(--fm-text-primary);">
-          ${escapeHtml(t.title || 'Untitled Test')}
-          ${t.payload?.is_unified || t.assessment_type === 'UNIFIED_TEST' ? '<span style="font-size:0.7rem; margin-left:6px; padding:2px 6px; background:#6366f1; color:#fff; border-radius:4px; font-weight:700;">UNIFIED</span>' : ''}
-        </td>
-        <td style="padding:14px 16px; color:var(--fm-text-secondary); font-size:0.85rem;">
-          ${escapeHtml(cls)} &bull; ${escapeHtml(lvl)}
-        </td>
-        <td style="padding:14px 16px;">
-          <span style="font-size:0.75rem; padding:3px 8px; border-radius:4px; font-weight:700; ${isPub ? 'background:rgba(52, 211, 153, 0.15); color:#34d399;' : 'background:rgba(251, 191, 36, 0.15); color:#fbbf24;'}">
-            ${isPub ? 'PUBLISHED' : 'DRAFT'}
+  if (isLive) {
+    stateContent = `
+      <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px 14px; margin: 12px 0 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 800; color: #34d399;">
+            <span class="status-dot dot-live" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
+            LIVE (${remainingMinutes}m tersisa)
           </span>
-        </td>
-        <td style="padding:14px 16px;">
-          ${stateBadge}
-        </td>
-        <td style="padding:14px 16px; text-align:right;">
-          ${actionBtn}
-        </td>
-      </tr>
+          <span style="font-size: 0.72rem; font-weight: 800; padding: 2px 7px; border-radius: 4px; ${isRemedial ? 'background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24;' : 'background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399;'}">
+            ${isRemedial ? 'REMEDIAL (KKM 60%)' : 'NORMAL (Nilai Penuh)'}
+          </span>
+        </div>
+        <div style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600;">
+          👥 ${escapeHtml(liveBatchName)} &bull; ${allowedStudentIds.length} Siswa Terdaftar
+        </div>
+      </div>
     `;
-  }).join('');
+
+    actionButtons = `
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: auto;">
+        <button type="button" class="btn btn-sm btn-theme-add-late" data-theme="${code}" style="background: #6366f1; border-color: #4f46e5; color: #ffffff; font-weight: 700; flex: 1; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+          <span>👥</span> + Susulan
+        </button>
+        <button type="button" class="btn btn-sm btn-theme-close-session" data-theme="${code}" style="background: #ef4444; border-color: #dc2626; color: #ffffff; font-weight: 700; flex: 1; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+          <span>🔒</span> Tutup Sesi
+        </button>
+      </div>
+    `;
+  } else {
+    stateContent = `
+      <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.18); border-radius: 8px; padding: 12px 14px; margin: 12px 0 16px;">
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: #fbbf24;">
+          <span>🔒</span> LOCKED &bull; Tidak Ada Sesi Aktif
+        </div>
+        <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">
+          Prasyarat: ${tasks.length} Tugas Materi Theme ${code} (Min KKM 60%)
+        </div>
+      </div>
+    `;
+
+    actionButtons = `
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: auto;">
+        <button type="button" class="btn btn-sm btn-theme-open-session" data-theme="${code}" data-mode="normal" style="background: #10b981; border-color: #059669; color: #ffffff; font-weight: 700; flex: 1; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Buka ujian normal nilai penuh untuk siswa eligible">
+          <span>🟢</span> Buka Normal
+        </button>
+        <button type="button" class="btn btn-sm btn-theme-open-session" data-theme="${code}" data-mode="remedial" style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; font-weight: 700; flex: 1; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Buka sesi remidi (nilai maksimal KKM 60%) untuk siswa yang belum tuntas">
+          <span>🟡</span> Buka Remidi
+        </button>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="card theme-test-card" style="background: var(--fm-bg-panel, #0f172a); border: 1px solid ${borderRgba}; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 16px rgba(0,0,0,0.25); position: relative; overflow: hidden;">
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: ${color};"></div>
+      
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+          <span style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 4px; background: ${bgRgba}; color: ${color}; border: 1px solid ${borderRgba};">
+            THEME ${code}
+          </span>
+          <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">2 Modul Serentak</span>
+        </div>
+
+        <h4 style="margin: 4px 0 0; font-size: 1.15rem; font-weight: 800; color: #ffffff;">
+          ${escapeHtml(name)} Test
+        </h4>
+        <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 3px; display: flex; gap: 8px;">
+          <span>📝 Words (Written)</span>
+          <span>&bull;</span>
+          <span>💬 Phrases (Dropdown)</span>
+        </div>
+
+        ${stateContent}
+      </div>
+
+      ${actionButtons}
+    </div>
+  `;
 }
 
-function bindAccessEvents(area, tests, classMap, levelMap, batchMap, programMap) {
-  // --- 1. Tests Table Sorting & Search ---
-  const searchInput = area.querySelector('#access-search-input');
-  const sortSelect = area.querySelector('#access-sort-select');
-  const tbody = area.querySelector('#access-tests-tbody');
-  let currentSort = 'title-asc';
-  let searchQuery = '';
+/**
+ * Event binding and interactive modal controller
+ */
+function bindTestSessionsEvents(container, themesData, context) {
+  const { allStudents = [], allAttempts = [], batchMap = {} } = context;
 
-  function getSortedAndFiltered() {
-    let result = tests.filter(t => {
-      if (!searchQuery) return true;
-      const title = (t.title || '').toLowerCase();
-      const cls = (classMap[t.class_id]?.name || '').toLowerCase();
-      return title.includes(searchQuery) || cls.includes(searchQuery);
-    });
-
-    result.sort((a, b) => {
-      if (currentSort === 'title-asc') {
-        return (a.title || '').localeCompare(b.title || '', undefined, { numeric: true, sensitivity: 'base' });
-      }
-      if (currentSort === 'title-desc') {
-        return (b.title || '').localeCompare(a.title || '', undefined, { numeric: true, sensitivity: 'base' });
-      }
-      if (currentSort === 'class-asc') {
-        const cA = classMap[a.class_id]?.name || '';
-        const cB = classMap[b.class_id]?.name || '';
-        const cmp = cA.localeCompare(cB, undefined, { numeric: true, sensitivity: 'base' });
-        return cmp !== 0 ? cmp : (a.title || '').localeCompare(b.title || '', undefined, { numeric: true, sensitivity: 'base' });
-      }
-      if (currentSort === 'live-first') {
-        const aLive = a._isLive ? 1 : 0;
-        const bLive = b._isLive ? 1 : 0;
-        if (aLive !== bLive) return bLive - aLive;
-        return (a.title || '').localeCompare(b.title || '', undefined, { numeric: true, sensitivity: 'base' });
-      }
-      return 0;
-    });
-
-    return result;
-  }
-
-  function updateTable() {
-    if (!tbody) return;
-    tbody.innerHTML = renderTestRows(getSortedAndFiltered(), classMap, levelMap);
-    bindRowActions();
-  }
-
-  searchInput?.addEventListener('input', (e) => {
-    searchQuery = e.target.value.toLowerCase().trim();
-    updateTable();
+  // 1. Batch Selection Toolbar
+  const batchSelect = container.querySelector('#test-session-batch-select');
+  batchSelect?.addEventListener('change', (e) => {
+    _selectedBatchId = e.target.value;
+    try {
+      localStorage.setItem('topscore_active_test_batch', _selectedBatchId);
+    } catch(err) {}
+    renderClassTestSessions(container, context);
   });
 
-  sortSelect?.addEventListener('change', (e) => {
-    currentSort = e.target.value;
-    updateTable();
+  // Refresh status
+  container.querySelector('#btn-refresh-test-sessions')?.addEventListener('click', () => {
+    if (window.renderClassHub) {
+      window.renderClassHub(document.getElementById('admin-content-area'));
+    }
   });
 
-  // Clickable sortable table headers
-  area.querySelectorAll('.th-sortable').forEach(th => {
-    th.addEventListener('click', () => {
-      const sortType = th.getAttribute('data-sort');
-      if (sortType === 'title') {
-        currentSort = (currentSort === 'title-asc') ? 'title-desc' : 'title-asc';
-      } else if (sortType === 'class') {
-        currentSort = (currentSort === 'class-asc') ? 'title-asc' : 'class-asc';
-      } else if (sortType === 'live') {
-        currentSort = (currentSort === 'live-first') ? 'title-asc' : 'live-first';
-      }
-      if (sortSelect) sortSelect.value = currentSort;
-      updateTable();
+  // 2. Open Session Triggers
+  container.querySelectorAll('.btn-theme-open-session').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const mode = e.currentTarget.getAttribute('data-mode') || 'normal';
+      const theme = themesData.find(t => t.code === themeCode);
+      if (!theme) return;
+
+      openThemeSessionModal(container, theme, mode, context);
     });
   });
 
-  // Refresh status button
-  area.querySelector('#btn-refresh-access')?.addEventListener('click', () => {
-    renderAssessmentAccess(area);
+  // 3. Add Late Student Triggers
+  container.querySelectorAll('.btn-theme-add-late').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const theme = themesData.find(t => t.code === themeCode);
+      if (!theme) return;
+
+      openThemeLateModal(container, theme, context);
+    });
   });
 
-  // --- 2. Live Session Controller Modal ---
-  const modal = area.querySelector('#modal-test-session-controller');
-  const btnCloseModal = area.querySelector('#btn-close-session-modal');
-  const btnCancelModal = area.querySelector('#btn-cancel-session-modal');
-  const batchSelect = area.querySelector('#session-batch-select');
-  const studentsListEl = area.querySelector('#session-students-list');
-  const studentCountEl = area.querySelector('#session-student-count');
-  const durationInput = area.querySelector('#session-duration-input');
-  const btnSelectAll = area.querySelector('#btn-select-all-students');
-  const btnDeselectAll = area.querySelector('#btn-deselect-all-students');
-  const btnConfirmOpen = area.querySelector('#btn-confirm-open-session');
-  const btnSortStudents = area.querySelector('#btn-sort-students');
-  const sortStudentsText = area.querySelector('#sort-students-text');
-  const searchStudentInput = area.querySelector('#session-student-search');
+  // 4. Close Session Triggers
+  container.querySelectorAll('.btn-theme-close-session').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const theme = themesData.find(t => t.code === themeCode);
+      if (!theme) return;
 
-  let _whitelistSortOrder = 'asc'; // 'asc' = A-Z, 'desc' = Z-A
-  let _currentBatchStudents = [];
-  let _checkedStudentIds = new Set();
-  let _whitelistSearchQuery = '';
+      const confirmed = confirm(`Tutup sesi ujian THEME ${theme.code} (${theme.name}) untuk ${theme.liveBatchName}?\nSiswa tidak akan dapat mengakses lagi setelah ditutup.`);
+      if (!confirmed) return;
 
-  const renderStudentWhitelist = () => {
-    if (!studentsListEl) return;
-    if (_currentBatchStudents.length === 0) {
-      studentsListEl.innerHTML = `<div class="text-xs text-muted p-2 text-center">Please select a batch above to load enrolled students.</div>`;
-      if (studentCountEl) studentCountEl.textContent = '0';
-      return;
-    }
+      showLoading();
+      try {
+        const promises = [];
+        if (theme.wordsTest) promises.push(closeTestSession(theme.wordsTest.id));
+        if (theme.phrasesTest) promises.push(closeTestSession(theme.phrasesTest.id));
+        await Promise.all(promises);
 
-    // Filter by search query if any
-    let list = _currentBatchStudents;
-    const q = _whitelistSearchQuery.trim().toLowerCase();
-    if (q) {
-      list = list.filter(s => (s.name || '').toLowerCase().includes(q));
-    }
-
-    // Sort alphabetically by name
-    list = [...list].sort((a, b) => {
-      const nameA = (a.name || '').trim();
-      const nameB = (b.name || '').trim();
-      const cmp = nameA.localeCompare(nameB, undefined, { sensitivity: 'base', numeric: true });
-      return _whitelistSortOrder === 'asc' ? cmp : -cmp;
+        showToast(`🔒 Sesi ujian Theme ${theme.code} berhasil ditutup.`, 'success');
+        if (window.renderClassHub) {
+          window.renderClassHub(document.getElementById('admin-content-area'));
+        }
+      } catch (err) {
+        console.error('Error closing test session:', err);
+        showToast('Gagal menutup sesi: ' + err.message, 'error');
+      } finally {
+        hideLoading();
+      }
     });
+  });
+}
 
-    if (studentCountEl) {
-      studentCountEl.textContent = String(_checkedStudentIds.size);
-    }
+/**
+ * Open Modal: Buka Sesi Ujian (Normal / Remidi)
+ */
+function openThemeSessionModal(container, theme, mode, context) {
+  _currentOpenModalTheme = theme;
+  _currentOpenModalMode = mode;
 
-    if (list.length === 0) {
-      studentsListEl.innerHTML = `<div class="text-xs text-muted p-2 text-center">No students matching "${escapeHtml(q)}".</div>`;
-      return;
-    }
+  const modal = container.querySelector('#modal-theme-open-session');
+  if (!modal) return;
 
-    studentsListEl.innerHTML = list.map(s => {
-      const isChecked = _checkedStudentIds.has(s.id);
-      return `
-      <label style="display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:4px; background:rgba(255,255,255,0.03); cursor:pointer;">
-        <input type="checkbox" class="session-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;">
-        <span style="width:24px; height:24px; border-radius:50%; background:var(--fm-accent-tactical); color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">
-          ${(s.name || 'S').charAt(0).toUpperCase()}
-        </span>
-        <span style="font-size:0.85rem; font-weight:600; color:var(--fm-text-primary);">${escapeHtml(s.name || 'Unnamed')}</span>
-      </label>
+  const titleEl = modal.querySelector('#open-modal-title');
+  const badgeEl = modal.querySelector('#open-modal-theme-badge');
+  const bannerEl = modal.querySelector('#open-modal-mode-banner');
+  const batchSelect = modal.querySelector('#open-modal-batch-select');
+  const durationInput = modal.querySelector('#open-modal-duration-input');
+  const confirmBtn = modal.querySelector('#btn-confirm-open-session');
+
+  badgeEl.textContent = `THEME ${theme.code} • ${theme.name}`;
+  badgeEl.style.background = theme.bgRgba;
+  badgeEl.style.color = theme.color;
+  badgeEl.style.border = `1px solid ${theme.borderRgba}`;
+
+  if (mode === 'normal') {
+    titleEl.innerHTML = `<span style="color:#10b981;">🟢 Buka Sesi Ujian Normal</span>: Theme ${theme.code}`;
+    bannerEl.style.background = 'rgba(16, 185, 129, 0.12)';
+    bannerEl.style.border = '1px solid rgba(16, 185, 129, 0.35)';
+    bannerEl.style.color = '#34d399';
+    bannerEl.innerHTML = `
+      🟢 <strong>SESI NORMAL (NILAI PENUH)</strong>: Siswa eligible mengerjakan ujian untuk mendapatkan nilai penuh kurikulum. Siswa yang sudah lulus tetap dapat mengikuti ujian untuk perbaikan nilai tertinggi.
     `;
-    }).join('');
-  };
+    confirmBtn.style.background = '#10b981';
+    confirmBtn.style.borderColor = '#059669';
+  } else {
+    titleEl.innerHTML = `<span style="color:#fbbf24;">🟡 Buka Sesi Ujian Remidi</span>: Theme ${theme.code}`;
+    bannerEl.style.background = 'rgba(245, 158, 11, 0.12)';
+    bannerEl.style.border = '1px solid rgba(245, 158, 11, 0.35)';
+    bannerEl.style.color = '#fbbf24';
+    bannerEl.innerHTML = `
+      🟡 <strong>SESI REMIDI (BATAS MAKSIMAL KKM 60%)</strong>: Diperuntukkan bagi siswa yang belum tuntas/belum lulus (< 60%) atau belum pernah mengikuti ujian. Nilai efektif otomatis dibatasi maksimal 60% (Grade B).
+    `;
+    confirmBtn.style.background = '#f59e0b';
+    confirmBtn.style.borderColor = '#d97706';
+  }
 
-  // Checkbox state tracking
-  studentsListEl?.addEventListener('change', (e) => {
-    if (e.target.classList.contains('session-student-checkbox')) {
-      if (e.target.checked) {
-        _checkedStudentIds.add(e.target.value);
-      } else {
-        _checkedStudentIds.delete(e.target.value);
-      }
-      if (studentCountEl) {
-        studentCountEl.textContent = String(_checkedStudentIds.size);
-      }
-    }
-  });
+  // Set selected batch
+  if (_selectedBatchId) {
+    batchSelect.value = _selectedBatchId;
+  }
 
-  // Alphabetical sort toggle A-Z <-> Z-A
-  btnSortStudents?.addEventListener('click', () => {
-    _whitelistSortOrder = _whitelistSortOrder === 'asc' ? 'desc' : 'asc';
-    if (sortStudentsText) {
-      sortStudentsText.textContent = _whitelistSortOrder === 'asc' ? 'A → Z' : 'Z → A';
-    }
-    renderStudentWhitelist();
-  });
+  // State for student checklist inside modal
+  let checkedStudentIds = new Set();
+  let studentSearchQuery = '';
+  let studentSortOrder = 'asc';
+  let showIneligible = false;
 
-  // Instant student search filter
-  searchStudentInput?.addEventListener('input', (e) => {
-    _whitelistSearchQuery = e.target.value;
-    renderStudentWhitelist();
-  });
-
-  const closeModal = () => {
-    modal.classList.add('hidden');
-    _activeSessionModalAsm = null;
-  };
-
-  btnCloseModal?.addEventListener('click', closeModal);
-  btnCancelModal?.addEventListener('click', closeModal);
-
-  // Populate students when batch changes
-  batchSelect?.addEventListener('change', () => {
-    const selectedBatchId = batchSelect.value;
-    if (!selectedBatchId) {
-      _currentBatchStudents = [];
-      _checkedStudentIds.clear();
-      renderStudentWhitelist();
-      return;
-    }
-
-    _currentBatchStudents = _cachedStudents.filter(s => s.batch_id === selectedBatchId && !s.deleted_at && s.is_active !== false);
-
-    const allowedList = _activeSessionModalAsm?.payload?.test_session?.allowed_student_ids;
-    const allowedSet = (Array.isArray(allowedList) && allowedList.length > 0) ? new Set(allowedList) : null;
-
-    _checkedStudentIds = new Set();
-    _currentBatchStudents.forEach(s => {
-      if (!allowedSet || allowedSet.has(s.id)) {
-        _checkedStudentIds.add(s.id);
-      }
+  const renderModalStudents = () => {
+    const curBatchId = batchSelect.value;
+    const batchStudents = (context.allStudents || []).filter(s => s.batch_id === curBatchId && !s.deleted_at && s.is_active !== false);
+    
+    // Evaluate eligibility
+    const evaluated = evaluateStudentsEligibility({
+      students: batchStudents,
+      theme,
+      themeTasks: theme.tasks,
+      wordsTest: theme.wordsTest,
+      phrasesTest: theme.phrasesTest,
+      allAttempts: context.allAttempts || [],
+      mode
     });
 
-    renderStudentWhitelist();
+    const eligibleList = evaluated.filter(e => e.isEligible);
+    const ineligibleList = evaluated.filter(e => !e.isEligible);
+
+    // Initial check all eligible by default if first time
+    if (checkedStudentIds.size === 0 && eligibleList.length > 0) {
+      eligibleList.forEach(e => checkedStudentIds.add(e.student.id));
+    }
+
+    // Update count display
+    const countEl = modal.querySelector('#open-modal-student-count');
+    if (countEl) countEl.textContent = `${checkedStudentIds.size} / ${eligibleList.length}`;
+
+    // Filter by search
+    let displayList = eligibleList;
+    const q = studentSearchQuery.trim().toLowerCase();
+    if (q) {
+      displayList = displayList.filter(e => (e.student.name || '').toLowerCase().includes(q));
+    }
+
+    // Sort
+    displayList.sort((a, b) => {
+      const nA = (a.student.name || '').trim();
+      const nB = (b.student.name || '').trim();
+      const cmp = nA.localeCompare(nB, undefined, { sensitivity: 'base', numeric: true });
+      return studentSortOrder === 'asc' ? cmp : -cmp;
+    });
+
+    const listContainer = modal.querySelector('#open-modal-students-list');
+    if (!listContainer) return;
+
+    if (displayList.length === 0) {
+      listContainer.innerHTML = `
+        <div style="padding:16px; text-align:center; color:#94a3b8; font-size:0.8rem;">
+          ${q ? `Tidak ada siswa eligible cocok dengan "${escapeHtml(q)}".` : 'Tidak ada siswa yang eligible dalam batch ini.'}
+        </div>
+      `;
+    } else {
+      listContainer.innerHTML = displayList.map(item => {
+        const s = item.student;
+        const isChecked = checkedStudentIds.has(s.id);
+        const initial = (s.name || 'S').charAt(0).toUpperCase();
+
+        let badgeBg = 'rgba(56, 189, 248, 0.15)';
+        let badgeColor = '#38bdf8';
+        if (item.statusType === 'success') {
+          badgeBg = 'rgba(16, 185, 129, 0.15)';
+          badgeColor = '#34d399';
+        } else if (item.statusType === 'amber') {
+          badgeBg = 'rgba(245, 158, 11, 0.15)';
+          badgeColor = '#fbbf24';
+        }
+
+        return `
+          <label style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px; border-radius:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); cursor:pointer;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <input type="checkbox" class="open-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;">
+              <span style="width:24px; height:24px; border-radius:50%; background:var(--fm-accent-tactical, #2563eb); color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">
+                ${initial}
+              </span>
+              <span style="font-size:0.85rem; font-weight:600; color:#ffffff;">${escapeHtml(s.name || 'Unnamed')}</span>
+            </div>
+            <span style="font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:4px; background:${badgeBg}; color:${badgeColor}; white-space:nowrap;">
+              ${escapeHtml(item.statusLabel)}
+            </span>
+          </label>
+        `;
+      }).join('');
+    }
+
+    // Ineligible summary notice
+    const ineligTextEl = modal.querySelector('#open-modal-ineligible-text');
+    const ineligDetailsEl = modal.querySelector('#open-modal-ineligible-details');
+    if (ineligTextEl) {
+      ineligTextEl.textContent = `ℹ️ ${ineligibleList.length} Siswa tidak eligible disembunyikan.`;
+    }
+    if (ineligDetailsEl) {
+      if (ineligibleList.length === 0) {
+        ineligDetailsEl.innerHTML = `<span style="color:#94a3b8;">Seluruh siswa dalam batch ini berstatus eligible.</span>`;
+      } else {
+        ineligDetailsEl.innerHTML = ineligibleList.map(item => `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04); color:#94a3b8;">
+            <span>${escapeHtml(item.student.name || '')}</span>
+            <span style="color:#f87171;">${escapeHtml(item.statusLabel)}</span>
+          </div>
+        `).join('');
+      }
+    }
+  };
+
+  // Checkbox listener
+  modal.querySelector('#open-modal-students-list')?.addEventListener('change', (e) => {
+    if (e.target.classList.contains('open-student-checkbox')) {
+      if (e.target.checked) checkedStudentIds.add(e.target.value);
+      else checkedStudentIds.delete(e.target.value);
+      renderModalStudents();
+    }
   });
+
+  // Batch changed
+  batchSelect.onchange = () => {
+    checkedStudentIds.clear();
+    renderModalStudents();
+  };
+
+  // Search input
+  modal.querySelector('#open-modal-student-search').oninput = (e) => {
+    studentSearchQuery = e.target.value;
+    renderModalStudents();
+  };
+
+  // Sort toggle
+  const sortBtn = modal.querySelector('#btn-open-modal-sort');
+  sortBtn.onclick = () => {
+    studentSortOrder = studentSortOrder === 'asc' ? 'desc' : 'asc';
+    sortBtn.textContent = studentSortOrder === 'asc' ? '🔤 A → Z' : '🔤 Z → A';
+    renderModalStudents();
+  };
 
   // Select all / deselect all
-  btnSelectAll?.addEventListener('click', () => {
-    const visibleBoxes = studentsListEl.querySelectorAll('.session-student-checkbox');
-    visibleBoxes.forEach(cb => {
-      cb.checked = true;
-      _checkedStudentIds.add(cb.value);
+  modal.querySelector('#btn-open-modal-select-all').onclick = () => {
+    const curBatchId = batchSelect.value;
+    const batchStudents = (context.allStudents || []).filter(s => s.batch_id === curBatchId && !s.deleted_at && s.is_active !== false);
+    const evaluated = evaluateStudentsEligibility({
+      students: batchStudents,
+      theme,
+      themeTasks: theme.tasks,
+      wordsTest: theme.wordsTest,
+      phrasesTest: theme.phrasesTest,
+      allAttempts: context.allAttempts || [],
+      mode
     });
-    if (!_whitelistSearchQuery.trim()) {
-      _currentBatchStudents.forEach(s => _checkedStudentIds.add(s.id));
-    }
-    if (studentCountEl) studentCountEl.textContent = String(_checkedStudentIds.size);
-  });
+    evaluated.filter(e => e.isEligible).forEach(e => checkedStudentIds.add(e.student.id));
+    renderModalStudents();
+  };
 
-  btnDeselectAll?.addEventListener('click', () => {
-    const visibleBoxes = studentsListEl.querySelectorAll('.session-student-checkbox');
-    visibleBoxes.forEach(cb => {
-      cb.checked = false;
-      _checkedStudentIds.delete(cb.value);
-    });
-    if (!_whitelistSearchQuery.trim()) {
-      _checkedStudentIds.clear();
-    }
-    if (studentCountEl) studentCountEl.textContent = String(_checkedStudentIds.size);
-  });
+  modal.querySelector('#btn-open-modal-deselect-all').onclick = () => {
+    checkedStudentIds.clear();
+    renderModalStudents();
+  };
 
-  // Confirm Unlock Test
-  btnConfirmOpen?.addEventListener('click', async () => {
-    if (!_activeSessionModalAsm) return;
-    const batchId = batchSelect.value;
-    if (!batchId) {
-      showToast('Please select a target batch first.', 'error');
+  // Toggle ineligible view
+  const toggleIneligBtn = modal.querySelector('#btn-toggle-ineligible-view');
+  toggleIneligBtn.onclick = () => {
+    const details = modal.querySelector('#open-modal-ineligible-details');
+    showIneligible = !showIneligible;
+    if (showIneligible) {
+      details.classList.remove('hidden');
+      toggleIneligBtn.textContent = 'Sembunyikan';
+    } else {
+      details.classList.add('hidden');
+      toggleIneligBtn.textContent = 'Lihat Detail';
+    }
+  };
+
+  // Close handlers
+  const closeModal = () => modal.classList.add('hidden');
+  modal.querySelector('#btn-close-open-modal').onclick = closeModal;
+  modal.querySelector('#btn-cancel-open-modal').onclick = closeModal;
+
+  // Confirm Unlock Session
+  confirmBtn.onclick = async () => {
+    const targetBatchId = batchSelect.value;
+    if (!targetBatchId) {
+      showToast('Pilih batch target terlebih dahulu.', 'error');
       return;
     }
 
-    const allocatedMinutes = parseInt(durationInput.value, 10) || 30;
-    const allowedStudentIds = Array.from(_checkedStudentIds);
-    const isRemedial = area.querySelector('input[name="session-mode"]:checked')?.value === 'remedial';
-
+    const allowedStudentIds = Array.from(checkedStudentIds);
     if (allowedStudentIds.length === 0) {
-      showToast('Please select at least 1 student to allow access.', 'error');
+      showToast('Pilih setidaknya 1 siswa eligible untuk mengikuti ujian.', 'warning');
       return;
     }
+
+    const duration = parseInt(durationInput.value, 10) || 60;
+    const isRemedial = (mode === 'remedial');
 
     showLoading();
     try {
-      await openTestSession({
-        assessmentId: _activeSessionModalAsm.id,
-        batchId: batchId,
-        allocatedMinutes: allocatedMinutes,
-        allowedStudentIds: allowedStudentIds,
-        isRemedial: isRemedial,
-        remedialStudentIds: isRemedial ? allowedStudentIds : []
-      });
-      showToast(`🔓 Live test unlocked for ${allocatedMinutes} minutes (${allowedStudentIds.length} students)${isRemedial ? ' [REMEDIAL MODE]' : ''}`, 'success');
+      const promises = [];
+      if (theme.wordsTest) {
+        promises.push(openTestSession({
+          assessmentId: theme.wordsTest.id,
+          batchId: targetBatchId,
+          allocatedMinutes: duration,
+          allowedStudentIds: allowedStudentIds,
+          isRemedial: isRemedial,
+          remedialStudentIds: isRemedial ? allowedStudentIds : []
+        }));
+      }
+      if (theme.phrasesTest) {
+        promises.push(openTestSession({
+          assessmentId: theme.phrasesTest.id,
+          batchId: targetBatchId,
+          allocatedMinutes: duration,
+          allowedStudentIds: allowedStudentIds,
+          isRemedial: isRemedial,
+          remedialStudentIds: isRemedial ? allowedStudentIds : []
+        }));
+      }
+
+      await Promise.all(promises);
+
+      showToast(`🔓 Sesi ujian Theme ${theme.code} (${mode.toUpperCase()}) berhasil dibuka untuk ${allowedStudentIds.length} siswa (${duration} menit)!`, 'success');
       closeModal();
-      renderAssessmentAccess(area);
+      if (window.renderClassHub) {
+        window.renderClassHub(document.getElementById('admin-content-area'));
+      }
     } catch (err) {
-      console.error('Failed to open test session:', err);
-      showToast('Failed to unlock session: ' + err.message, 'error');
+      console.error('Error unlocking session:', err);
+      showToast('Gagal membuka sesi ujian: ' + err.message, 'error');
     } finally {
       hideLoading();
     }
-  });
-
-  // --- 3. Live Sesi Tambah Siswa Susulan / Remedial Modal ---
-  const modalLate = area.querySelector('#modal-add-late-student');
-  const btnCloseLate = area.querySelector('#btn-close-late-modal');
-  const btnCancelLate = area.querySelector('#btn-cancel-late-modal');
-  const lateListEl = area.querySelector('#late-students-list');
-  const lateCountEl = area.querySelector('#late-student-selected-count');
-  const lateSearchInput = area.querySelector('#late-student-search');
-  const btnLateSelectAll = area.querySelector('#btn-late-select-all');
-  const btnLateDeselectAll = area.querySelector('#btn-late-deselect-all');
-  const lateAllRemedialToggle = area.querySelector('#late-all-remedial-toggle');
-  const btnConfirmAddLate = area.querySelector('#btn-confirm-add-late');
-
-  let _currentLateBatchStudents = [];
-  let _checkedLateStudentIds = new Set();
-  let _remedialLateStudentIds = new Set();
-  let _lateSearchQuery = '';
-
-  const closeLateModal = () => {
-    modalLate?.classList.add('hidden');
-    _activeLateModalAsm = null;
-    _checkedLateStudentIds.clear();
-    _remedialLateStudentIds.clear();
   };
 
-  btnCloseLate?.addEventListener('click', closeLateModal);
-  btnCancelLate?.addEventListener('click', closeLateModal);
+  renderModalStudents();
+  modal.classList.remove('hidden');
+}
 
-  const renderLateStudentList = () => {
-    if (!lateListEl) return;
-    if (_currentLateBatchStudents.length === 0) {
-      lateListEl.innerHTML = `<div class="text-xs text-muted p-2 text-center">Tidak ada data siswa dalam batch ini.</div>`;
-      if (lateCountEl) lateCountEl.textContent = '0';
-      return;
-    }
+/**
+ * Open Modal: Tambah Siswa Susulan ke Sesi Berjalan
+ */
+function openThemeLateModal(container, theme, context) {
+  _currentLateModalTheme = theme;
+  const modal = container.querySelector('#modal-theme-add-late');
+  if (!modal) return;
 
-    let list = _currentLateBatchStudents;
-    const q = _lateSearchQuery.trim().toLowerCase();
+  const titleEl = modal.querySelector('#late-modal-theme-title');
+  const batchNameEl = modal.querySelector('#late-modal-batch-name');
+  const remainingEl = modal.querySelector('#late-modal-remaining-time');
+  const modeBadgeEl = modal.querySelector('#late-modal-mode-badge');
+  const confirmBtn = modal.querySelector('#btn-confirm-add-late');
+
+  titleEl.textContent = `Theme ${theme.code} • ${theme.name}`;
+  batchNameEl.textContent = `${theme.liveBatchName} (${theme.allowedStudentIds.length} Siswa Terdaftar)`;
+  remainingEl.textContent = `${theme.remainingMinutes} Menit`;
+
+  if (theme.isRemedial) {
+    modeBadgeEl.style.background = 'rgba(245, 158, 11, 0.2)';
+    modeBadgeEl.style.border = '1px solid #f59e0b';
+    modeBadgeEl.style.color = '#fbbf24';
+    modeBadgeEl.textContent = '🟡 REMEDIAL (MAKS KKM 60%)';
+  } else {
+    modeBadgeEl.style.background = 'rgba(16, 185, 129, 0.2)';
+    modeBadgeEl.style.border = '1px solid #10b981';
+    modeBadgeEl.style.color = '#34d399';
+    modeBadgeEl.textContent = '🟢 NORMAL (NILAI PENUH)';
+  }
+
+  // Filter ONLY unenrolled batch students who are eligible!
+  const targetBatchId = theme.liveBatchId;
+  const batchStudents = (context.allStudents || []).filter(s => s.batch_id === targetBatchId && !s.deleted_at && s.is_active !== false);
+  const enrolledSet = new Set(theme.allowedStudentIds || []);
+
+  // Exclude enrolled students completely!
+  const unenrolledStudents = batchStudents.filter(s => !enrolledSet.has(s.id));
+
+  // Evaluate eligibility for the session mode
+  const mode = theme.isRemedial ? 'remedial' : 'normal';
+  const evaluated = evaluateStudentsEligibility({
+    students: unenrolledStudents,
+    theme,
+    themeTasks: theme.tasks,
+    wordsTest: theme.wordsTest,
+    phrasesTest: theme.phrasesTest,
+    allAttempts: context.allAttempts || [],
+    mode
+  });
+
+  const eligibleLateList = evaluated.filter(e => e.isEligible);
+
+  let checkedLateIds = new Set();
+  let lateSearchQuery = '';
+
+  const renderLateList = () => {
+    let list = eligibleLateList;
+    const q = lateSearchQuery.trim().toLowerCase();
     if (q) {
-      list = list.filter(s => (s.name || '').toLowerCase().includes(q));
+      list = list.filter(e => (e.student.name || '').toLowerCase().includes(q));
     }
 
-    list = [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base', numeric: true }));
+    list.sort((a, b) => (a.student.name || '').localeCompare(b.student.name || '', undefined, { sensitivity: 'base', numeric: true }));
 
-    if (lateCountEl) lateCountEl.textContent = String(_checkedLateStudentIds.size);
+    const selectedCountEl = modal.querySelector('#late-modal-selected-count');
+    if (selectedCountEl) selectedCountEl.textContent = String(checkedLateIds.size);
+
+    const listContainer = modal.querySelector('#late-modal-students-list');
+    if (!listContainer) return;
 
     if (list.length === 0) {
-      lateListEl.innerHTML = `<div class="text-xs text-muted p-2 text-center">Tidak ada siswa yang cocok dengan "${escapeHtml(q)}".</div>`;
+      listContainer.innerHTML = `
+        <div style="padding:16px; text-align:center; color:#94a3b8; font-size:0.8rem;">
+          ${q ? `Tidak ada siswa cocok dengan "${escapeHtml(q)}".` : 'Semua siswa eligible dalam batch ini sudah terdaftar di ujian.'}
+        </div>
+      `;
       return;
     }
 
-    const sess = _activeLateModalAsm?.payload?.test_session;
-    const existingAllowed = new Set(sess?.allowed_student_ids || []);
-
-    lateListEl.innerHTML = list.map(s => {
-      const isAlreadyAllowed = existingAllowed.has(s.id);
-      const isChecked = _checkedLateStudentIds.has(s.id);
-      const isRemedial = _remedialLateStudentIds.has(s.id);
-
-      if (isAlreadyAllowed) {
-        return `
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 10px; border-radius:6px; background:rgba(255,255,255,0.02); opacity:0.6;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="color:#10b981; font-size:0.9rem;">✅</span>
-              <span style="font-size:0.85rem; font-weight:600; color:var(--fm-text-secondary);">${escapeHtml(s.name || 'Unnamed')}</span>
-            </div>
-            <span class="badge badge-success" style="font-size:0.65rem;">Sudah Diizinkan</span>
-          </div>
-        `;
-      }
+    listContainer.innerHTML = list.map(item => {
+      const s = item.student;
+      const isChecked = checkedLateIds.has(s.id);
+      const initial = (s.name || 'S').charAt(0).toUpperCase();
 
       return `
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 10px; border-radius:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);">
-          <label style="display:flex; align-items:center; gap:10px; cursor:pointer; flex:1; margin:0;">
+        <label style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px; border-radius:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:10px;">
             <input type="checkbox" class="late-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;">
-            <span style="font-size:0.85rem; font-weight:600; color:var(--fm-text-primary);">${escapeHtml(s.name || 'Unnamed')}</span>
-          </label>
-          <label style="display:flex; align-items:center; gap:4px; font-size:0.75rem; color:#fbbf24; cursor:pointer; margin:0;" title="Batas maksimal nilai siswa ini dibatasi KKM 60%">
-            <input type="checkbox" class="late-student-remedial-checkbox" data-student-id="${s.id}" ${isRemedial ? 'checked' : ''} style="width:14px; height:14px; cursor:pointer;">
-            <span>Remidi (60%)</span>
-          </label>
-        </div>
+            <span style="width:24px; height:24px; border-radius:50%; background:#6366f1; color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">
+              ${initial}
+            </span>
+            <span style="font-size:0.85rem; font-weight:600; color:#ffffff;">${escapeHtml(s.name || 'Unnamed')}</span>
+          </div>
+          <span style="font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:4px; background:rgba(99, 102, 241, 0.2); color:#a5b4fc;">
+            ${escapeHtml(item.statusLabel)}
+          </span>
+        </label>
       `;
     }).join('');
   };
 
-  lateListEl?.addEventListener('change', (e) => {
+  modal.querySelector('#late-modal-students-list')?.addEventListener('change', (e) => {
     if (e.target.classList.contains('late-student-checkbox')) {
-      const sid = e.target.value;
-      if (e.target.checked) {
-        _checkedLateStudentIds.add(sid);
-        if (lateAllRemedialToggle?.checked) {
-          _remedialLateStudentIds.add(sid);
-        }
-      } else {
-        _checkedLateStudentIds.delete(sid);
-        _remedialLateStudentIds.delete(sid);
-      }
-      renderLateStudentList();
-    } else if (e.target.classList.contains('late-student-remedial-checkbox')) {
-      const sid = e.target.getAttribute('data-student-id');
-      if (e.target.checked) {
-        _remedialLateStudentIds.add(sid);
-        _checkedLateStudentIds.add(sid);
-      } else {
-        _remedialLateStudentIds.delete(sid);
-      }
-      renderLateStudentList();
+      if (e.target.checked) checkedLateIds.add(e.target.value);
+      else checkedLateIds.delete(e.target.value);
+      renderLateList();
     }
   });
 
-  lateSearchInput?.addEventListener('input', (e) => {
-    _lateSearchQuery = e.target.value;
-    renderLateStudentList();
-  });
+  modal.querySelector('#late-modal-search').oninput = (e) => {
+    lateSearchQuery = e.target.value;
+    renderLateList();
+  };
 
-  lateAllRemedialToggle?.addEventListener('change', (e) => {
-    const isAllRem = e.target.checked;
-    _checkedLateStudentIds.forEach(id => {
-      if (isAllRem) _remedialLateStudentIds.add(id);
-      else _remedialLateStudentIds.delete(id);
-    });
-    renderLateStudentList();
-  });
+  modal.querySelector('#btn-late-modal-select-all').onclick = () => {
+    eligibleLateList.forEach(e => checkedLateIds.add(e.student.id));
+    renderLateList();
+  };
 
-  btnLateSelectAll?.addEventListener('click', () => {
-    const sess = _activeLateModalAsm?.payload?.test_session;
-    const existingAllowed = new Set(sess?.allowed_student_ids || []);
-    _currentLateBatchStudents.forEach(s => {
-      if (!existingAllowed.has(s.id)) {
-        _checkedLateStudentIds.add(s.id);
-        if (lateAllRemedialToggle?.checked) {
-          _remedialLateStudentIds.add(s.id);
-        }
-      }
-    });
-    renderLateStudentList();
-  });
+  modal.querySelector('#btn-late-modal-deselect-all').onclick = () => {
+    checkedLateIds.clear();
+    renderLateList();
+  };
 
-  btnLateDeselectAll?.addEventListener('click', () => {
-    _checkedLateStudentIds.clear();
-    _remedialLateStudentIds.clear();
-    renderLateStudentList();
-  });
+  const closeModal = () => modal.classList.add('hidden');
+  modal.querySelector('#btn-close-late-modal').onclick = closeModal;
+  modal.querySelector('#btn-cancel-late-modal').onclick = closeModal;
 
-  btnConfirmAddLate?.addEventListener('click', async () => {
-    if (!_activeLateModalAsm) return;
-    const studentIds = Array.from(_checkedLateStudentIds);
+  confirmBtn.onclick = async () => {
+    const studentIds = Array.from(checkedLateIds);
     if (studentIds.length === 0) {
       showToast('Pilih setidaknya 1 siswa susulan untuk ditambahkan.', 'warning');
       return;
     }
 
-    const remedialStudentIds = Array.from(_remedialLateStudentIds).filter(id => _checkedLateStudentIds.has(id));
-
+    const isRem = theme.isRemedial;
     showLoading();
     try {
-      await addLateStudentsToSession({
-        assessmentId: _activeLateModalAsm.id,
-        studentIds: studentIds,
-        remedialStudentIds: remedialStudentIds
-      });
+      const promises = [];
+      if (theme.wordsTest) {
+        promises.push(addLateStudentsToSession({
+          assessmentId: theme.wordsTest.id,
+          studentIds: studentIds,
+          remedialStudentIds: isRem ? studentIds : []
+        }));
+      }
+      if (theme.phrasesTest) {
+        promises.push(addLateStudentsToSession({
+          assessmentId: theme.phrasesTest.id,
+          studentIds: studentIds,
+          remedialStudentIds: isRem ? studentIds : []
+        }));
+      }
 
-      const remCount = remedialStudentIds.length;
-      showToast(`👥 Berhasil menambahkan ${studentIds.length} siswa susulan! (${remCount} siswa remedial KKM 60%)`, 'success');
-      closeLateModal();
-      renderAssessmentAccess(area);
+      await Promise.all(promises);
+
+      showToast(`👥 Berhasil menambahkan ${studentIds.length} siswa susulan ke Theme ${theme.code}! (${isRem ? 'Status: REMEDIAL' : 'Status: NORMAL'})`, 'success');
+      closeModal();
+      if (window.renderClassHub) {
+        window.renderClassHub(document.getElementById('admin-content-area'));
+      }
     } catch (err) {
-      console.error('Failed to add late students:', err);
+      console.error('Error adding late students:', err);
       showToast('Gagal menambahkan siswa susulan: ' + err.message, 'error');
     } finally {
       hideLoading();
     }
+  };
+
+  renderLateList();
+  modal.classList.remove('hidden');
+}
+
+/**
+ * Smart Eligibility Engine:
+ * Evaluates whether students meet prerequisite tasks and prior exam status.
+ */
+function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, phrasesTest, allAttempts = [], mode }) {
+  const results = [];
+
+  students.forEach(student => {
+    const studAtts = (allAttempts || []).filter(a => a.student_id === student.id);
+
+    // 1. Prerequisite tasks check:
+    let prereqMet = true;
+    let completedTaskCount = 0;
+
+    if (themeTasks.length > 0) {
+      for (const task of themeTasks) {
+        const taskAtts = studAtts.filter(a => (a.assessment_id || a.Assessment_id) === task.id);
+        const passedAtt = taskAtts.find(a => {
+          const st = String(a.status || '').toLowerCase();
+          const isSub = ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
+          const pct = parseFloat(a.percentage ?? 0);
+          return isSub && pct >= 60;
+        });
+
+        if (passedAtt) {
+          completedTaskCount++;
+        } else {
+          prereqMet = false;
+        }
+      }
+    }
+
+    // 2. Prior exam attempts on words & phrases:
+    let wBestPct = null;
+    let pBestPct = null;
+    if (wordsTest) {
+      const wAtts = studAtts.filter(a => (a.assessment_id || a.Assessment_id) === wordsTest.id);
+      const subW = wAtts.filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
+      if (subW.length > 0) {
+        wBestPct = Math.max(...subW.map(a => parseFloat(a.percentage ?? 0)));
+      }
+    }
+    if (phrasesTest) {
+      const pAtts = studAtts.filter(a => (a.assessment_id || a.Assessment_id) === phrasesTest.id);
+      const subP = pAtts.filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
+      if (subP.length > 0) {
+        pBestPct = Math.max(...subP.map(a => parseFloat(a.percentage ?? 0)));
+      }
+    }
+
+    const hasTakenWords = wBestPct !== null;
+    const hasTakenPhrases = pBestPct !== null;
+    const wordsPassed = hasTakenWords && wBestPct >= 60;
+    const phrasesPassed = hasTakenPhrases && pBestPct >= 60;
+    const isAlreadyPassed = (hasTakenWords || hasTakenPhrases) && (wordsPassed && phrasesPassed);
+
+    let avgScore = null;
+    if (hasTakenWords && hasTakenPhrases) avgScore = Math.round((wBestPct + pBestPct) / 2);
+    else if (hasTakenWords) avgScore = Math.round(wBestPct);
+    else if (hasTakenPhrases) avgScore = Math.round(pBestPct);
+
+    let isEligible = false;
+    let statusLabel = '';
+    let statusType = 'neutral';
+    let reason = '';
+
+    if (mode === 'normal') {
+      // Normal Mode:
+      // - Prereq must be met.
+      // - If already passed: STILL eligible per user rule ("siapa tahu dia ingin mencoba lagi untuk nilai yang lebih baik").
+      // - If prereq not met: NOT eligible.
+      if (!prereqMet) {
+        isEligible = false;
+        statusType = 'danger';
+        statusLabel = `⚠️ Tugas Belum Lengkap (${completedTaskCount}/${themeTasks.length})`;
+        reason = `Belum menyelesaikan seluruh tugas materi Theme ${theme.code}.`;
+      } else {
+        isEligible = true;
+        if (isAlreadyPassed) {
+          statusType = 'success';
+          statusLabel = `✓ Lulus (${avgScore}%) • Perbaikan Nilai`;
+          reason = `Sudah lulus dengan nilai ${avgScore}%. Diizinkan mengulang untuk nilai lebih baik.`;
+        } else {
+          statusType = 'cyan';
+          statusLabel = `✓ Prasyarat Tuntas (Siap Ujian)`;
+          reason = `Seluruh ${themeTasks.length} tugas materi tuntas >= 60%.`;
+        }
+      }
+    } else {
+      // Remedial Mode:
+      // - Prereq must be met.
+      // - AND student has NOT passed (< 60% or not taken).
+      // - If already passed: NOT ELIGIBLE for remedial!
+      if (!prereqMet) {
+        isEligible = false;
+        statusType = 'danger';
+        statusLabel = `⚠️ Tugas Belum Lengkap (${completedTaskCount}/${themeTasks.length})`;
+        reason = `Belum menyelesaikan seluruh tugas materi Theme ${theme.code}.`;
+      } else if (isAlreadyPassed) {
+        isEligible = false;
+        statusType = 'warning';
+        statusLabel = `Sudah Lulus (${avgScore}%) — Tidak Masuk Remidi`;
+        reason = `Siswa sudah lulus ujian normal (>= 60%), tidak berhak mengikuti remidi.`;
+      } else {
+        isEligible = true;
+        statusType = 'amber';
+        if (avgScore !== null) {
+          statusLabel = `🟡 Remidi (Skor Sebelumnya: ${avgScore}%)`;
+          reason = `Nilai sebelumnya ${avgScore}% (< KKM 60%). Berhak mengikuti remidi.`;
+        } else {
+          statusLabel = `🟡 Remidi (Belum Pernah Ujian)`;
+          reason = `Tugas tuntas namun belum pernah ujian normal.`;
+        }
+      }
+    }
+
+    results.push({
+      student,
+      isEligible,
+      statusLabel,
+      statusType,
+      reason,
+      avgScore,
+      completedTaskCount,
+      totalTasks: themeTasks.length,
+      prereqMet,
+      isAlreadyPassed
+    });
   });
 
-  function bindRowActions() {
-    // Open session modal button
-    area.querySelectorAll('.btn-open-session-modal').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const asmId = e.currentTarget.getAttribute('data-id');
-        const asm = tests.find(t => t.id === asmId);
-        if (!asm) return;
-
-        _activeSessionModalAsm = asm;
-        area.querySelector('#session-modal-test-title').textContent = asm.title || 'Untitled Test';
-        const targetClass = classMap[asm.class_id];
-        const targetLevelId = asm.level_id || targetClass?.level_id;
-        const targetProgramId = targetClass?.program_id;
-
-        const clsName = targetClass?.name || 'All Classes';
-        const lvlName = levelMap[targetLevelId]?.name || 'Level 1';
-        area.querySelector('#session-modal-test-meta').textContent = `${clsName} | ${lvlName}`;
-
-        const targetLevelObj = levelMap[targetLevelId];
-        const targetLevelNum = (targetLevelObj && typeof targetLevelObj.level_number === 'number')
-          ? targetLevelObj.level_number
-          : null;
-
-        // ONLY list active batches! Inactive means INACTIVE.
-        const availableBatches = _cachedBatches.filter(b => !b.deleted_at && b.is_active !== false);
-
-        const relatedBatches = [];
-        const otherBatches = [];
-
-        availableBatches.forEach(b => {
-          const bLevelObj = levelMap[b.current_level_id];
-          const bLevelNum = (bLevelObj && typeof bLevelObj.level_number === 'number')
-            ? bLevelObj.level_number
-            : null;
-
-          // Level 0 is under Level 1: do NOT show Level 0 batches for Level 1, 2, or 3 tests!
-          if (targetLevelNum != null && targetLevelNum >= 1 && bLevelNum === 0) {
-            return;
-          }
-
-          // If the test is explicitly Level 0, do not show batches that are Level 1, 2, or 3
-          if (targetLevelNum === 0 && bLevelNum != null && bLevelNum > 0) {
-            return;
-          }
-
-          const isLevelMatch = Boolean(targetLevelId && b.current_level_id === targetLevelId);
-          const isProgMatch = Boolean(targetProgramId && b.program_id === targetProgramId);
-          const isRelated = isLevelMatch || isProgMatch;
-
-          const activeStuds = _cachedStudents.filter(s => s.batch_id === b.id && !s.deleted_at && s.is_active !== false).length;
-          const progName = programMap[b.program_id]?.name || '';
-          let lvlTitle = bLevelObj?.name || '';
-          if (lvlTitle.toLowerCase() === 'all levels') {
-            lvlTitle = 'Level 0';
-          }
-
-          const metaParts = [];
-          if (activeStuds > 0) metaParts.push(`${activeStuds} Students`);
-          else metaParts.push('0 Students');
-          if (progName) metaParts.push(progName);
-          if (lvlTitle) metaParts.push(lvlTitle.toLowerCase().includes('level') ? lvlTitle : `Level ${lvlTitle}`);
-          const metaStr = metaParts.length > 0 ? ` (${metaParts.join(' • ')})` : '';
-
-          const item = {
-            id: b.id,
-            name: b.name || b.id,
-            label: `${b.name ? (b.name.toLowerCase().startsWith('batch') ? b.name : 'Batch ' + b.name) : 'Batch ' + b.id}${metaStr}`,
-            isRelated,
-            isDirect: isLevelMatch && isProgMatch,
-            isLevelMatch,
-            isProgMatch,
-            activeStuds,
-            isActive: true
-          };
-
-          if (isRelated) {
-            relatedBatches.push(item);
-          } else {
-            otherBatches.push(item);
-          }
-        });
-
-        // Sort: direct matches first, then natural alphabetical/numeric order
-        relatedBatches.sort((a, b) => {
-          if (a.isDirect !== b.isDirect) return b.isDirect ? 1 : -1;
-          if (a.isLevelMatch !== b.isLevelMatch) return b.isLevelMatch ? 1 : -1;
-          return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
-        });
-
-        otherBatches.sort((a, b) => {
-          return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
-        });
-
-        let optionsHtml = '<option value="">Select target batch...</option>';
-        if (relatedBatches.length > 0) {
-          optionsHtml += `
-            <optgroup label="🎯 Related Batches (${escapeHtml(clsName)} • ${escapeHtml(lvlName)})">
-              ${relatedBatches.map(b => `<option value="${b.id}">${escapeHtml(b.label)}</option>`).join('')}
-            </optgroup>
-          `;
-        }
-        if (otherBatches.length > 0) {
-          optionsHtml += `
-            <optgroup label="Other Batches">
-              ${otherBatches.map(b => `<option value="${b.id}">${escapeHtml(b.label)}</option>`).join('')}
-            </optgroup>
-          `;
-        }
-        batchSelect.innerHTML = optionsHtml;
-
-        // Auto-select session batch if already unlocked, or the best matching related batch
-        const currentSessionBatchId = asm.payload?.test_session?.batch_id;
-        const defaultBatch = (currentSessionBatchId && availableBatches.some(b => b.id === currentSessionBatchId))
-          ? { id: currentSessionBatchId }
-          : (relatedBatches.find(b => b.isActive && b.activeStuds > 0) || relatedBatches[0] || otherBatches.find(b => b.isActive && b.activeStuds > 0));
-
-        if (defaultBatch) {
-          batchSelect.value = defaultBatch.id;
-        } else {
-          batchSelect.value = '';
-        }
-
-        durationInput.value = asm.working_duration_minutes || 30;
-
-        // Reset student whitelist sort and search
-        _whitelistSortOrder = 'asc';
-        if (sortStudentsText) sortStudentsText.textContent = 'A → Z';
-        _whitelistSearchQuery = '';
-        if (searchStudentInput) searchStudentInput.value = '';
-
-        // Auto-trigger change event to populate enrolled students immediately
-        batchSelect.dispatchEvent(new Event('change'));
-
-        modal.classList.remove('hidden');
-      });
-    });
-
-    // Add Late Student Button
-    area.querySelectorAll('.btn-add-late-modal').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const asmId = e.currentTarget.getAttribute('data-id');
-        const asm = tests.find(t => t.id === asmId);
-        if (!asm) return;
-
-        const sess = asm.payload?.test_session;
-        if (!sess || sess.status !== 'UNLOCKED') {
-          showToast('Sesi ujian ini tidak aktif.', 'warning');
-          return;
-        }
-
-        const autoClose = sess.auto_close_at ? new Date(sess.auto_close_at) : null;
-        const now = new Date();
-        const remainingMinutes = autoClose ? Math.max(0, Math.ceil((autoClose.getTime() - now.getTime()) / 60000)) : 0;
-
-        _activeLateModalAsm = asm;
-        area.querySelector('#late-modal-test-title').textContent = asm.title || 'Untitled Test';
-        
-        const bName = batchMap[sess.batch_id]?.name || 'Batch ' + (sess.batch_id || '');
-        const endTimeStr = autoClose ? autoClose.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
-        area.querySelector('#late-modal-meta').textContent = `${bName} • Berakhir Pukul ${endTimeStr}`;
-        area.querySelector('#late-modal-remaining').textContent = `${remainingMinutes} Menit`;
-
-        // Pre-check if entire session is remedial
-        if (lateAllRemedialToggle) {
-          lateAllRemedialToggle.checked = Boolean(sess.is_remedial);
-        }
-
-        // Get all active students for this batch
-        _currentLateBatchStudents = _cachedStudents.filter(s => s.batch_id === sess.batch_id && !s.deleted_at && s.is_active !== false);
-        _checkedLateStudentIds.clear();
-        _remedialLateStudentIds.clear();
-        _lateSearchQuery = '';
-        if (lateSearchInput) lateSearchInput.value = '';
-
-        renderLateStudentList();
-        modalLate?.classList.remove('hidden');
-      });
-    });
-
-    // Close session button
-    area.querySelectorAll('.btn-lock-session').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const asmId = e.currentTarget.getAttribute('data-id');
-        if (!confirm('Are you sure you want to close/lock this test session immediately?')) return;
-        showLoading();
-        try {
-          await closeTestSession(asmId);
-          showToast('🔒 Test session locked successfully.', 'info');
-          renderAssessmentAccess(area);
-        } catch (err) {
-          console.error('Failed to close session:', err);
-          showToast('Failed to lock session: ' + err.message, 'error');
-        } finally {
-          hideLoading();
-        }
-      });
-    });
-  }
-
-  bindRowActions();
+  return results;
 }

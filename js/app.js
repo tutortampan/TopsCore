@@ -1,4 +1,4 @@
-import { calculateGrade, getGradeSymbol } from './grading.js?v=5.3.5';
+import { calculateGrade, getGradeSymbol, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme } from './grading.js?v=5.5.7';
 
 // TOPS CORE — Toast Notification System
 let toastContainer = null;
@@ -143,7 +143,7 @@ export function getGrade(pct) {
   return calculateGrade(pct);
 }
 
-export { getGradeSymbol };
+export { calculateGrade, getGradeSymbol, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme };
 
 /** Format seconds to MM:SS */
 export function formatTime(totalSeconds) {

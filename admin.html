@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TOP OFFICE — TOPS CORE</title>
-  <meta name="description" content="Top Office management console for TOPS CORE — manage institutions, programs, students, and ASSESSMENTs." />
+  <title>Tutor's Room — TOPS CORE</title>
+  <meta name="description" content="Tutor's Room management console for TOPS CORE — manage institutions, programs, students, and assessments." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=5.4.2" />
-  <link rel="stylesheet" href="css/admin.css?v=5.4.2" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=5.4.2" />
+  <link rel="stylesheet" href="css/style.css?v=5.6.0" />
+  <link rel="stylesheet" href="css/admin.css?v=5.6.0" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=5.6.0" />
   <!-- SheetJS for Excel Import / Export -->
   <script src="./js/vendor/xlsx.full.min.js?v=5.4.2" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=5.4.2';"></script>
 
@@ -28,7 +28,7 @@
     <div class="auth-card">
       <div class="auth-brand">
         <div class="brand-icon">🛡️</div>
-        <h1>TOP OFFICE</h1>
+        <h1>TUTOR'S ROOM</h1>
         <p>Tops Core — ABCD System</p>
       </div>
       <div class="form-group">
@@ -39,9 +39,9 @@
         <label class="form-label" for="admin-password">Password</label>
         <input class="form-control" type="password" id="admin-password" autocomplete="current-password" placeholder="Enter admin password" />
       </div>
-      <button class="btn btn-primary" style="width:100%;" id="admin-login-btn">Sign In to Console</button>
+      <button class="btn btn-primary" style="width:100%;" id="admin-login-btn">Sign In to Tutor's Room</button>
       <div class="auth-footer-link" style="text-align:center; margin-top:1rem; font-size:0.8rem;">
-        <a href="index.html">← Top Space</a>
+        <a href="index.html">← Student's Lobby</a>
       </div>
     </div>
   </div>
@@ -53,7 +53,7 @@
     <aside class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
       <div class="sidebar-logo">
         <div class="logo-text">TOPS CORE</div>
-        <div class="logo-sub">TOP OFFICE</div>
+        <div class="logo-sub">TUTOR'S ROOM</div>
       </div>
 
       <!-- ABCD Architecture Primary Sidebar (ADMIN, BOARD, CLASS, DESK) -->
@@ -69,6 +69,7 @@
         <!-- DOMAIN B: Board (Registry & Roster) -->
         <div class="nav-domain-group" data-domain="board">
           <div class="nav-domain-header"><span class="domain-icon">&#128208;</span>B &mdash; Board</div>
+          <div class="admin-nav-item" data-sub="student-registration"><span class="nav-icon">&#128203;</span>Students Registration</div>
           <div id="sidebar-programs-list"></div>
           <script>
             (function() {
@@ -78,10 +79,10 @@
                   var list = JSON.parse(raw);
                   if (Array.isArray(list) && list.length > 0) {
                     var selId = localStorage.getItem('topscore_selected_program_id') || list[0].id;
-                    var h = '<div class="sidebar-program-group" style="display:flex; flex-direction:column; gap:4px;">';
+                    var h = '<div class="sidebar-program-group" style="display:flex; flex-direction:column; gap:2px;">';
                     list.forEach(function(prog) {
-                      var isActive = (selId === prog.id) ? 'active' : '';
-                      h += '<div class="admin-nav-item sidebar-program-item ' + isActive + '" data-program-id="' + prog.id + '" data-program-name="' + (prog.name || '').replace(/"/g, '&quot;') + '" data-sub="students" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-weight:500; border-radius:6px; transition:all 0.2s;"><span style="font-size:1.1rem;">👥</span><span>' + (prog.name || '') + '</span></div>';
+                      var isActive = (selId === prog.id && location.hash === '#students') ? 'active' : '';
+                      h += '<div class="admin-nav-item sidebar-program-item ' + isActive + '" data-program-id="' + prog.id + '" data-program-name="' + (prog.name || '').replace(/"/g, '&quot;') + '" data-sub="students"><span class="nav-icon">👥</span><span>' + (prog.name || '') + '</span></div>';
                     });
                     h += '</div>';
                     var el = document.getElementById('sidebar-programs-list');
@@ -105,10 +106,10 @@
                   var list = JSON.parse(raw);
                   if (Array.isArray(list) && list.length > 0) {
                     var selId = localStorage.getItem('topscore_selected_class_id') || list[0].id;
-                    var h = '<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:4px;">';
+                    var h = '<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:2px;">';
                     list.forEach(function(cls) {
-                      var isActive = (selId === cls.id) ? 'active' : '';
-                      h += '<div class="admin-nav-item sidebar-class-item ' + isActive + '" data-class-id="' + cls.id + '" data-class-name="' + (cls.name || '').replace(/"/g, '&quot;') + '" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-weight:500; border-radius:6px; transition:all 0.2s;"><span style="font-size:1.1rem;">📘</span><span>' + (cls.name || '') + '</span></div>';
+                      var isActive = (selId === cls.id && location.hash === '#class-hub') ? 'active' : '';
+                      h += '<div class="admin-nav-item sidebar-class-item ' + isActive + '" data-class-id="' + cls.id + '" data-class-name="' + (cls.name || '').replace(/"/g, '&quot;') + '"><span class="nav-icon">📘</span><span>' + (cls.name || '') + '</span></div>';
                     });
                     h += '</div>';
                     var el = document.getElementById('sidebar-classes-list');
@@ -119,7 +120,6 @@
             })();
           </script>
           <div class="admin-nav-item" data-sub="assessments" data-view="assessments"><span class="nav-icon">&#128221;</span>Assessment</div>
-          <div class="admin-nav-item" data-sub="assessment-access" data-view="assessment-access"><span class="nav-icon">🔐</span>Assessment Access</div>
           <div class="admin-nav-item" data-sub="vocab_vault"><span class="nav-icon">&#128214;</span>Vocabulary Vault</div>
         </div>
 
@@ -158,7 +158,10 @@
         <!-- loadSection renders here -->
       </main>
 
-
+      <!-- Bottom Info Bar (Docked directly above the bottom banner, height 50px) -->
+      <footer id="admin-bottom-infobar" class="admin-bottom-infobar hidden">
+        <!-- Dynamic bottom info metrics & action buttons render here -->
+      </footer>
 
     </div>
 
@@ -376,20 +379,26 @@
   </div>
 
   <script>
-  if (!sessionStorage.getItem('topscore_admin_session')) {
-    document.getElementById('admin-login-screen')?.classList.remove('hidden');
-    document.getElementById('admin-console')?.classList.add('hidden');
-  }
+  (function() {
+    const hasSession = sessionStorage.getItem('topscore_admin_session') || localStorage.getItem('topscore_admin_session');
+    if (!hasSession) {
+      document.getElementById('admin-login-screen')?.classList.remove('hidden');
+      document.getElementById('admin-console')?.classList.add('hidden');
+    } else {
+      document.getElementById('admin-login-screen')?.classList.add('hidden');
+      document.getElementById('admin-console')?.classList.remove('hidden');
+    }
+  })();
 </script>
 <script type="module">
     import { DataGrid } from './js/admin/datagrid.js?v=5.4.2';
     window.DataGrid = DataGrid;
   </script>
-  <script type="module" src="js/admin/app.js?v=5.4.2"></script>
+  <script type="module" src="js/admin/app.js?v=5.8.1"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=5.4.2')
+        navigator.serviceWorker.register('sw.js?v=5.8.1')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

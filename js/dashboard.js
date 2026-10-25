@@ -3,12 +3,12 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentClass, fetchStudentAttemptsForAssessment, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchAssessments, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=5.3.2';
+import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentClass, fetchStudentAttemptsForAssessment, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchAssessments, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=5.6.8';
     import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=5.3.2';
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=5.3.2';
     import { testMicrophoneCapability } from './speech.js?v=5.3.2';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=5.3.2';
-    import { GRADE_PALETTE, getGradeSymbol } from './grading.js?v=5.3.5';
+    import { GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getAchievementStatus } from './grading.js?v=5.6.8';
 
     window._isBatchChampion = false;
 
@@ -865,6 +865,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       section.classList.remove('hidden');
 
       const classMap = Object.fromEntries((classes || []).map(c => [c.id, c]));
+      const activeClassId = window._selectedClassId || (classes && classes[0]?.id);
       const myClassIds = new Set((classes || []).map(c => c.id));
 
       const bestMap = {};
@@ -876,10 +877,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         }
       });
 
-      const published = (allAssessments || []).filter(a => {
+      let published = (allAssessments || []).filter(a => {
         if (a.deleted_at) return false;
         const status = (a.status || '').toUpperCase();
         if (status !== 'PUBLISHED' && status !== 'ACTIVE') return false;
+        if (activeClassId) return a.class_id === activeClassId;
         return myClassIds.has(a.class_id);
       });
 
@@ -901,18 +903,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
       if (!nextAsm) {
         container.innerHTML = `
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:2px 0;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span style="font-size:1.5rem;">🏆</span>
-              <div>
-                <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:#34d399; font-weight:700;">Level Mastery Achieved</div>
-                <div style="font-size:0.95rem; font-weight:700; color:#f8fafc;">All Tasks & Tests Completed!</div>
-              </div>
-            </div>
-            <span style="font-size:0.8rem; padding:4px 10px; background:rgba(52,211,153,0.15); color:#34d399; border-radius:6px; font-weight:700; border:1px solid rgba(52,211,153,0.3);">
-              PASSED 100%
-            </span>
+          <div class="next-asm-left">
+            <span class="next-asm-icon">🏆</span>
+            <span class="next-asm-title">All tasks in this class completed!</span>
           </div>
+          <span style="font-size:0.75rem; font-weight:800; color:#10b981; padding:2px 8px; border-radius:4px; background:rgba(16,185,129,0.15);">✓ 100%</span>
         `;
         return;
       }
@@ -924,34 +919,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
       if (!isTest) {
         const hasAttempted = bestMap[nextAsm.id] != null;
-        const score = hasAttempted ? `${bestMap[nextAsm.id]}%` : '';
-        const btnText = hasAttempted ? '🔄 Retake Task' : '🚀 Start Task';
+        const btnText = hasAttempted ? 'RETAKE ➔' : 'GO ➔';
 
         container.innerHTML = `
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-            <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 200px;">
-              <span style="font-size:1.4rem; flex-shrink:0;">🎯</span>
-              <div style="min-width:0;">
-                <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
-                  <span style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--clr-accent-1, #38bdf8); font-weight:700;">
-                    Daily Task
-                  </span>
-                  <span style="color:rgba(255,255,255,0.2);">&bull;</span>
-                  <span style="font-size:0.75rem; color:var(--clr-text-secondary, #94a3b8);">${escapeHtml(className)}</span>
-                </div>
-                <div style="font-size:0.92rem; font-weight:700; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                  ${escapeHtml(nextAsm.title || 'Untitled Task')}
-                </div>
-              </div>
-            </div>
-
-            <div style="display:flex; align-items:center; gap:8px;">
-              ${hasAttempted ? `<span style="font-size:0.75rem; padding:3px 8px; border-radius:4px; background:rgba(239,68,68,0.15); color:#f87171; font-weight:700;">Score: ${score}</span>` : ''}
-              <button class="btn btn-primary btn-sm" onclick="window.location.href='assessment.html?id=${nextAsm.id}'" style="padding:7px 14px; font-weight:700; font-size:0.85rem; border-radius:6px; white-space:nowrap;">
-                ${btnText}
-              </button>
-            </div>
+          <div class="next-asm-left">
+            <span class="next-asm-icon">🎯</span>
+            <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Task')}">${escapeHtml(nextAsm.title || 'Task')}</span>
           </div>
+          <button type="button" class="next-asm-go-btn" onclick="window.location.href='assessment.html?id=${nextAsm.id}'">
+            ${btnText}
+          </button>
         `;
       } else {
         const activeSession = await fetchActiveTestSession(nextAsm.id, session.batch_id).catch(() => null);
@@ -963,98 +940,56 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         if (isUnlocked && isWhitelisted) {
           const remMin = activeSession.remaining_minutes || 30;
           container.innerHTML = `
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border-left:3px solid #10b981; padding-left:10px;">
-              <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 200px;">
-                <span style="font-size:1.5rem; flex-shrink:0;">🟢</span>
-                <div style="min-width:0;">
-                  <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
-                    <span style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:#34d399; font-weight:800;">
-                      Official Test &bull; Session Active
-                    </span>
-                    <span style="font-size:0.75rem; color:#94a3b8;">&bull; ${escapeHtml(className)}</span>
-                  </div>
-                  <div style="font-size:0.95rem; font-weight:800; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                    ${escapeHtml(nextAsm.title || 'Official Exam')}
-                  </div>
-                </div>
-              </div>
-
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:6px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.4);">
-                  ⏰ ${remMin}m left
-                </span>
-                <button class="btn btn-primary btn-sm" onclick="window.location.href='assessment.html?id=${nextAsm.id}'" style="background:#10b981; border-color:#059669; font-weight:800; padding:7px 16px; font-size:0.85rem; border-radius:6px; box-shadow:0 0 12px rgba(16,185,129,0.4);">
-                  🚀 Start Test
-                </button>
-              </div>
+            <div class="next-asm-left">
+              <span class="next-asm-icon">🟢</span>
+              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">${escapeHtml(nextAsm.title || 'Official Exam')} (${remMin}m left)</span>
             </div>
+            <button type="button" class="next-asm-go-btn" onclick="window.location.href='assessment.html?id=${nextAsm.id}'" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff;">
+              GO TEST ➔
+            </button>
           `;
         } else if (isUnlocked && !isWhitelisted) {
           container.innerHTML = `
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border-left:3px solid #ef4444; padding-left:10px;">
-              <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 200px;">
-                <span style="font-size:1.4rem; flex-shrink:0;">🚫</span>
-                <div style="min-width:0;">
-                  <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:#f87171; font-weight:800;">
-                    Official Test Session
-                  </div>
-                  <div style="font-size:0.92rem; font-weight:700; color:#f8fafc;">
-                    ${escapeHtml(nextAsm.title || 'Official Exam')}
-                  </div>
-                  <div class="text-xs text-muted" style="margin-top:2px;">
-                    You are not on today's room attendance list. Please confirm with your tutor.
-                  </div>
-                </div>
-              </div>
-              <button class="btn btn-secondary btn-sm" disabled style="opacity:0.5; font-size:0.8rem;">
-                Not Eligible
-              </button>
+            <div class="next-asm-left">
+              <span class="next-asm-icon">🚫</span>
+              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">${escapeHtml(nextAsm.title || 'Official Exam')}</span>
             </div>
+            <span style="font-size:0.72rem; font-weight:700; color:#f87171;">Not Eligible</span>
           `;
         } else {
           container.innerHTML = `
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border-left:3px solid #f59e0b; padding-left:10px;">
-              <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 200px;">
-                <span style="font-size:1.4rem; flex-shrink:0;">🔒</span>
-                <div style="min-width:0;">
-                  <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
-                    <span style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:#fbbf24; font-weight:800;">
-                      Ready for Test
-                    </span>
-                    <span style="font-size:0.75rem; color:#94a3b8;">&bull; ${escapeHtml(className)}</span>
-                  </div>
-                  <div style="font-size:0.92rem; font-weight:700; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                    ${escapeHtml(nextAsm.title || 'Official Exam')}
-                  </div>
-                  <div class="text-xs text-muted" style="margin-top:2px;">
-                    Tasks completed! Waiting for tutor to unlock test session in class.
-                  </div>
-                </div>
-              </div>
-
-              <span style="font-size:0.75rem; font-weight:700; padding:5px 10px; border-radius:6px; background:rgba(245,158,11,0.12); color:#fbbf24; border:1px solid rgba(245,158,11,0.3);">
-                🔒 Waiting for Tutor
-              </span>
+            <div class="next-asm-left">
+              <span class="next-asm-icon">🔒</span>
+              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">Ready for Test: ${escapeHtml(nextAsm.title || 'Official Exam')}</span>
             </div>
+            <span style="font-size:0.72rem; font-weight:700; color:#fbbf24; white-space:nowrap; padding:2px 8px; border-radius:4px; background:rgba(245,158,11,0.15);">🔒 Waiting for Tutor</span>
           `;
         }
       }
     }
 
     function renderClasses(rawClasses, progress, allAssessments = [], allAttempts = []) {
-        window._loadedClasses = rawClasses;
+      window._loadedClasses = rawClasses;
+      window._classesProgress = progress;
+      window._allAssessments = allAssessments;
+      window._allAttempts = allAttempts;
+
       const subjCountEl = document.getElementById('overview-classes-count');
       if (subjCountEl) subjCountEl.textContent = rawClasses.length;
 
       const grid = document.getElementById('classes-grid');
-      grid.innerHTML = '';
+      if (grid) grid.innerHTML = '';
 
       if (!rawClasses.length) {
-        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
-          <div class="empty-state__icon">📚</div>
-          <h3>No Classes assigned</h3>
-          <p>Your class doesn't have any Classes assigned yet. Please contact your teacher.</p>
-        </div>`;
+        if (grid) {
+          grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+            <div class="empty-state__icon">📚</div>
+            <h3>No Classes assigned</h3>
+            <p>Your class doesn't have any Classes assigned yet. Please contact your teacher.</p>
+          </div>`;
+        }
+        updateClassesBarUI();
+        populateClassesSelectorModal([]);
         return;
       }
 
@@ -1080,14 +1015,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       activeClasses.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       completedClasses.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-      const classIcons = ['&#128218;', '&#9999;&#65039;', '&#128483;&#65039;', '&#127911;', '&#128200;', '&#127757;', '&#128214;', '&#128172;'];
+      const classIcons = ['📚', '✍️', '🗣️', '🎧', '📈', '🌍', '📖', '💬'];
       
       if (activeClasses.length === 0) {
-        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
-          <div class="empty-state__icon">📚</div>
-          <h3>No Active Classes</h3>
-          <p>You don't have any active classes for your current level.</p>
-        </div>`;
+        if (grid) {
+          grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+            <div class="empty-state__icon">📚</div>
+            <h3>No Active Classes</h3>
+            <p>You don't have any active classes for your current level.</p>
+          </div>`;
+        }
       } else {
         activeClasses.forEach((subj, idx) => {
           const subjProgress = (progress || []).filter(p => (p.class_id || p.Class_id) === subj.id);
@@ -1133,27 +1070,163 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
           const statusText = isCompleted ? "Completed" : (pct > 0 ? `${pct}%` : "In Progress");
 
-          const card = document.createElement('div');
-          card.className = 'class-card';
-          card.setAttribute('role', 'button');
-          card.setAttribute('tabindex', '0');
-          card.setAttribute('aria-label', `Class: ${subj.name}`);
-          card.innerHTML = `
-            <div class="class-icon">${classIcons[idx % classIcons.length]}</div>
-            <div class="class-name">${subj.name}</div>
-            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-              <div class="text-xs text-muted mb-0">${statusText}</div>
-              <div class="score-bar-wrap" style="width: 80px;" title="${pct}%">
-                <div class="score-bar" style="width:${pct}%; background: ${isCompleted ? 'var(--clr-success, #10b981)' : 'var(--clr-primary, #6366f1)'};"></div>
+          subj._pct = pct;
+          subj._isCompleted = isCompleted;
+          subj._statusText = statusText;
+
+          if (grid) {
+            const card = document.createElement('div');
+            card.className = 'class-card';
+            card.setAttribute('role', 'button');
+            card.setAttribute('tabindex', '0');
+            card.setAttribute('aria-label', `Class: ${subj.name}`);
+            card.innerHTML = `
+              <div class="class-icon">${classIcons[idx % classIcons.length]}</div>
+              <div class="class-name">${subj.name}</div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                <div class="text-xs text-muted mb-0">${statusText}</div>
+                <div class="score-bar-wrap" style="width: 80px;" title="${pct}%">
+                  <div class="score-bar" style="width:${pct}%; background: ${isCompleted ? 'var(--clr-success, #10b981)' : 'var(--clr-primary, #6366f1)'};"></div>
+                </div>
               </div>
-            </div>
-          `;
-          card.addEventListener('click', () => openClassModal(subj, progress));
-          card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openClassModal(subj, progress); });
-          grid.appendChild(card);
+            `;
+            card.addEventListener('click', () => openClassModal(subj, progress));
+            card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openClassModal(subj, progress); });
+            grid.appendChild(card);
+          }
         });
       }
 
+      window._activeClasses = activeClasses;
+      if (!window._selectedClassId && activeClasses.length > 0) {
+        window._selectedClassId = activeClasses[0].id;
+      }
+
+      updateClassesBarUI();
+      renderClassesBoxes(activeClasses);
+      populateClassesSelectorModal(activeClasses);
+    }
+
+    function renderClassesBoxes(activeClasses = []) {
+      const container = document.getElementById('dashboard-classes-boxes');
+      if (!container) return;
+      const count = Math.min(Math.max(activeClasses.length, 1), 3);
+      container.dataset.count = String(count);
+      if (window._tierColor) {
+        container.style.setProperty('--tier-color', window._tierColor);
+        container.style.setProperty('--tier-rgb', window._tierRgb);
+      }
+
+      const classIcons = ['📚', '✍️', '🗣️', '🎧', '📈', '🌍', '📖', '💬'];
+      let html = '';
+      (activeClasses || []).forEach((c, idx) => {
+        const isSelected = c.id === window._selectedClassId;
+        const icon = classIcons[idx % classIcons.length];
+        const pct = c._pct != null ? c._pct : 0;
+        const activeStyle = (isSelected && window._tierColor)
+          ? `style="border-color:${window._tierColor} !important; box-shadow:0 0 16px rgba(${window._tierRgb}, 0.45) !important;"`
+          : '';
+        html += `
+          <div class="class-deck-box ${isSelected ? 'active' : ''}" data-cid="${c.id}" role="button" tabindex="0" ${activeStyle}>
+            <div class="class-deck-title">${icon} ${escapeHtml(c.name)}</div>
+            <div class="class-deck-progress">${pct}%</div>
+          </div>
+        `;
+      });
+      container.innerHTML = html || '<div class="class-deck-box active"><div class="class-deck-title">No Class Assigned</div><div class="class-deck-progress">0%</div></div>';
+
+      container.querySelectorAll('.class-deck-box').forEach(box => {
+        box.addEventListener('click', () => {
+          const cid = box.dataset.cid;
+          if (!cid) return;
+          window._selectedClassId = cid;
+          renderClassesBoxes(window._activeClasses);
+          updateClassesBarUI();
+          renderNextAssignmentHero(window._allAssessments, window._allAttempts, window._loadedClasses);
+        });
+      });
+    }
+
+    function updateClassesBarUI() {
+      const activeClass = (window._activeClasses || []).find(c => c.id === window._selectedClassId) || (window._activeClasses || [])[0];
+      const nameEl = document.getElementById('classes-bar-current-name');
+      const pctEl = document.getElementById('classes-bar-progress-val');
+      if (activeClass) {
+        if (nameEl) nameEl.textContent = activeClass.name;
+        if (pctEl) pctEl.textContent = `${activeClass._pct != null ? activeClass._pct : 0}%`;
+      } else {
+        if (nameEl) nameEl.textContent = 'No Classes Assigned';
+        if (pctEl) pctEl.textContent = '0%';
+      }
+    }
+
+    function populateClassesSelectorModal(activeClasses = []) {
+      const listEl = document.getElementById('classes-selector-modal-list');
+      if (!listEl) return;
+      const classIcons = ['📚', '✍️', '🗣️', '🎧', '📈', '🌍', '📖', '💬'];
+      let html = '';
+      (activeClasses || []).forEach((c, idx) => {
+        const isSelected = c.id === window._selectedClassId;
+        const icon = classIcons[idx % classIcons.length];
+        const pct = c._pct != null ? c._pct : 0;
+        const status = c._statusText || (pct > 0 ? `${pct}%` : 'In Progress');
+        html += `
+          <div class="classes-selector-item ${isSelected ? 'selected' : ''}" data-cid="${c.id}" role="button" tabindex="0">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.3rem;">${icon}</span>
+              <div>
+                <div style="font-weight:800; font-size:0.9rem; color:#fff;">${escapeHtml(c.name)}</div>
+                <div style="font-size:0.75rem; color:#94a3b8;">${escapeHtml(status)}</div>
+              </div>
+            </div>
+            <div style="font-weight:800; font-size:0.88rem; color:var(--tier-color, #38bdf8);">${pct}%</div>
+          </div>
+        `;
+      });
+      listEl.innerHTML = html || '<div class="text-muted p-4 text-center">No active classes.</div>';
+
+      listEl.querySelectorAll('.classes-selector-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const cid = item.dataset.cid;
+          window._selectedClassId = cid;
+          updateClassesBarUI();
+          populateClassesSelectorModal(window._activeClasses);
+          renderNextAssignmentHero(window._allAssessments, window._allAttempts, window._loadedClasses);
+          document.getElementById('classes-selector-modal')?.classList.add('hidden');
+        });
+      });
+
+      // Wire modal events once
+      const classesBar = document.getElementById('dashboard-classes-bar');
+      if (classesBar && !classesBar._hasClickListener) {
+        classesBar._hasClickListener = true;
+        classesBar.addEventListener('click', () => {
+          populateClassesSelectorModal(window._activeClasses);
+          document.getElementById('classes-selector-modal')?.classList.remove('hidden');
+        });
+        classesBar.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            populateClassesSelectorModal(window._activeClasses);
+            document.getElementById('classes-selector-modal')?.classList.remove('hidden');
+          }
+        });
+      }
+      const closeBtn = document.getElementById('close-classes-selector-modal');
+      if (closeBtn && !closeBtn._hasClickListener) {
+        closeBtn._hasClickListener = true;
+        closeBtn.addEventListener('click', () => {
+          document.getElementById('classes-selector-modal')?.classList.add('hidden');
+        });
+      }
+      const btnOpenLevels = document.getElementById('btn-open-class-levels');
+      if (btnOpenLevels && !btnOpenLevels._hasClickListener) {
+        btnOpenLevels._hasClickListener = true;
+        btnOpenLevels.addEventListener('click', () => {
+          document.getElementById('classes-selector-modal')?.classList.add('hidden');
+          const cur = (window._activeClasses || []).find(c => c.id === window._selectedClassId) || (window._activeClasses || [])[0];
+          if (cur) openClassModal(cur, window._classesProgress);
+        });
+      }
     }
 
     // ── openClassModal: Opens the Level Modal for a Class ──
@@ -1228,8 +1301,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             const bestPct   = best ? parseFloat(best.percentage || 0) : null;
             const passed    = bestPct !== null && bestPct >= (Assessment.minimum_required_score || Assessment.pass_threshold || 60);
             const grade     = bestPct !== null ? getGrade(bestPct) : null;
-            const gradeColors = { S: '#fbbf24', A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', E: '#ef4444', F: '#ef4444' };
-            const gradeColor  = grade ? (gradeColors[grade] || '#94a3b8') : null;
+            const isRem       = Boolean(best && (best.is_remedial_unlocked || best.is_remedial));
+            const gradeColors = { S: '#A855F7', A: '#00FF00', B: '#00FFFF', C: '#FFFF00', D: '#FF8000', E: '#FF0000', F: '#FF0000' };
+            const gradeColor  = isRem ? '#FFFF00' : (grade ? (gradeColors[grade] || '#94a3b8') : null);
 
             // Prerequisite Gating Logic
             let prereqMet = true;
@@ -1264,11 +1338,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
                               style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
                               font-size:0.78rem;font-weight:700;cursor:pointer;">Resume ←’</button>`;
             } else if (best) {
-              const badgeBg = passed ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.12)';
-              const badgeClr= passed ? '#10b981' : '#f87171';
-              statusBadge = `<span style="background:${badgeBg};color:${badgeClr};border:1px solid ${badgeClr}33;
+              const isRemedialBest = Boolean(best.is_remedial_unlocked || best.is_remedial);
+              const badgeBg = passed ? 'rgba(0,255,0,0.15)' : 'rgba(255,0,0,0.12)';
+              const badgeClr= passed ? (isRemedialBest ? '#FFFF00' : '#00FF00') : '#FF0000';
+              statusBadge = `<span style="background:${badgeBg};color:${badgeClr};border:1px solid ${badgeClr}44;
                               padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">
-                              ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%</span>`;
+                              ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%${isRemedialBest ? '<sup class="asm-rem-sup" style="color:#FFFF00;font-size:0.7em;opacity:0.7;margin-left:2px;">R</sup>' : ''}</span>`;
 
               if (Assessment.assessment_type === 'EXAM' && !passed) {
                 if (best.is_remedial_unlocked) {
@@ -1420,7 +1495,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         }
       });
 
-      const gradeColors = { S: '#fbbf24', A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', E: '#ef4444', F: '#ef4444' };
+      const gradeColors = { S: '#A855F7', A: '#00FF00', B: '#00FFFF', C: '#FFFF00', D: '#FF8000', E: '#FF0000', F: '#FF0000' };
 
       let cards = '';
       for (const asm of assessments) {
@@ -1589,12 +1664,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
               ${bestPct !== null ? `
                 <div style="text-align:center;">
-                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColors[grade] || 'var(--clr-text-1)'}${grade === 'S' ? ';text-shadow:0 0 10px rgba(251,191,36,0.6);' : ''}">${bestPct.toFixed(0)}%</div>
+                  <div style="font-size:1.1rem;font-weight:800;color:${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '#FFFF00' : (gradeColors[grade] || 'var(--clr-text-1)')}${grade === 'S' && !Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? ';text-shadow:0 0 10px rgba(255, 0, 255, 0.45);' : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="asm-rem-sup" style="color:#FFFF00;font-size:0.7em;opacity:0.7;margin-left:2px;">R</sup>' : ''}</div>
                   <div style="font-size:0.7rem;color:var(--clr-text-3);">Best Score</div>
                 </div>
-                ${grade === 'S'
-                  ? `<div class="grade-S" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(245,158,11,0.7);">⭐</div>`
-                  : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#64748b'};color:${gradeColors[grade] || '#64748b'};">${getGradeSymbol(grade)}</div>`
+                ${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial)
+                  ? `<div class="grade-remedial" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid #FFFF00;color:#FFFF00;">${getGradeSymbol(grade)}<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.7;color:#FFFF00;">R</sup></div>`
+                  : (grade === 'S'
+                    ? `<div class="grade-S" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(168, 85, 247, 0.45);color:#A855F7;">⭐</div>`
+                    : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#64748b'};color:${gradeColors[grade] || '#64748b'};">${getGradeSymbol(grade)}</div>`
+                  )
                 }
               ` : ''}
               ${actionBtn}
@@ -1675,6 +1753,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         document.getElementById('stat-overall-score').textContent = '0%';
         const gradeBadgeVal = document.getElementById('stat-overall-grade-value');
         if (gradeBadgeVal) gradeBadgeVal.textContent = '—';
+        const achievementTextEl = document.getElementById('dashboard-achievement-text');
+        if (achievementTextEl) {
+          achievementTextEl.textContent = getAchievementStatus('E', 0); // FAIL
+          achievementTextEl.style.color = '#ef4444';
+        }
         const gb = document.getElementById('stat-overall-grade-badge'); if (gb) gb.className = 'result-grade-display grade-none';
         renderCompletedAssessmentsBottom(attempts, 0);
         populateUpNext(attempts, assessments);
@@ -1690,31 +1773,77 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       scoreEl.className = `fw-800 banner-score-text text-grade-${overallGrade}`;
 
       const isGradeS = overallGrade === 'S' || avgPct >= 100;
-      const gradeSymbol = isGradeS ? '⭐' : overallGrade;
-
       const gradeBadgeValue = document.getElementById('stat-overall-grade-value');
-      if (gradeBadgeValue) gradeBadgeValue.textContent = gradeSymbol;
+      if (gradeBadgeValue) {
+        if (isGradeS) {
+          gradeBadgeValue.innerHTML = `
+            <svg class="pure-star-svg" width="46" height="46" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 24px rgba(192, 132, 252, 0.65)); display:inline-block; vertical-align:middle;">
+              <defs>
+                <linearGradient id="starPurpleDashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#C084FC" />
+                  <stop offset="50%" stop-color="#A855F7" />
+                  <stop offset="100%" stop-color="#7E22CE" />
+                </linearGradient>
+              </defs>
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starPurpleDashGrad)" />
+            </svg>
+          `;
+        } else {
+          gradeBadgeValue.textContent = overallGrade;
+        }
+      }
       
       const theme = (GRADE_PALETTE && GRADE_PALETTE[overallGrade]) ? GRADE_PALETTE[overallGrade] : {
-        color: '#fbbf24', dark: '#d97706', light: '#fef08a', rgb: '251, 191, 36', glow: 'rgba(245, 158, 11, 0.85)'
+        color: '#a855f7', dark: '#7e22ce', light: '#c084fc', rgb: '168, 85, 247', glow: 'rgba(168, 85, 247, 0.45)'
       };
       const targetColor = theme.color;
-      const rgbColor = theme.rgb || '251, 191, 36';
+      const rgbColor = theme.rgb || '16, 185, 129';
 
-      // 1. Ambient Hero Banner Aura & Modular CSS Variables
-      const welcomeSection = document.getElementById('welcome-banner-section');
-      if (welcomeSection) {
-        welcomeSection.dataset.tier = overallGrade;
-        welcomeSection.style.setProperty('--tier-color', targetColor);
-        welcomeSection.style.setProperty('--tier-rgb', rgbColor);
+      // Set globally on documentElement and body so all components inherit seamlessly
+      document.documentElement.style.setProperty('--tier-color', targetColor);
+      document.documentElement.style.setProperty('--tier-rgb', rgbColor);
+      document.body.style.setProperty('--tier-color', targetColor);
+      document.body.style.setProperty('--tier-rgb', rgbColor);
+      window._tierColor = targetColor;
+      window._tierRgb = rgbColor;
+
+      // 1. Ambient Hero Banner Aura & Modular CSS Variables across all Lobby Cards
+      const tierElements = [
+        document.getElementById('welcome-banner-section'),
+        document.getElementById('dashboard-achievement-card'),
+        document.getElementById('bottom-dock-section'),
+        document.querySelector('.next-assessment-card'),
+        document.getElementById('dashboard-classes-section'),
+        document.getElementById('dashboard-classes-bar'),
+        document.getElementById('dashboard-classes-boxes')
+      ];
+      tierElements.forEach(el => {
+        if (el) {
+          el.dataset.tier = isGradeS ? 'S' : overallGrade;
+          el.style.setProperty('--tier-color', targetColor);
+          el.style.setProperty('--tier-rgb', rgbColor);
+          if (isGradeS) {
+            el.style.borderColor = 'rgba(168, 85, 247, 0.55)';
+            el.style.boxShadow = '0 0 25px rgba(168, 85, 247, 0.35), 0 8px 20px -6px rgba(0, 0, 0, 0.5)';
+            el.style.background = 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.22), transparent 75%), #0f172a';
+          } else {
+            el.style.borderColor = `rgba(${rgbColor}, 0.45)`;
+            el.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.2), 0 6px 18px -5px rgba(0, 0, 0, 0.35)`;
+            el.style.background = `radial-gradient(ellipse 90% 70% at 50% 0%, rgba(${rgbColor}, 0.14), transparent 75%), #0f172a`;
+          }
+        }
+      });
+
+      // Update Achievement Status Card (strictly FAIL, LESS, ENOUGH, GOOD, VERY GOOD, EXCELLENT)
+      const achievementTextEl = document.getElementById('dashboard-achievement-text');
+      if (achievementTextEl) {
+        const statusWord = getAchievementStatus(overallGrade, avgPct);
+        achievementTextEl.textContent = statusWord;
+        achievementTextEl.style.color = targetColor;
         if (isGradeS) {
-          welcomeSection.style.borderColor = 'rgba(251, 191, 36, 0.5)';
-          welcomeSection.style.boxShadow = '0 0 35px rgba(245, 158, 11, 0.35), 0 15px 35px -8px rgba(0, 0, 0, 0.5)';
-          welcomeSection.style.background = 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(245, 158, 11, 0.22), transparent 75%), #0f172a';
+          achievementTextEl.style.filter = 'drop-shadow(0 0 10px rgba(168, 85, 247, 0.85))';
         } else {
-          welcomeSection.style.borderColor = `rgba(${rgbColor}, 0.35)`;
-          welcomeSection.style.boxShadow = `0 0 20px rgba(${rgbColor}, 0.25), 0 10px 25px -5px rgba(0, 0, 0, 0.35)`;
-          welcomeSection.style.background = `radial-gradient(ellipse 90% 70% at 50% 0%, rgba(${rgbColor}, 0.14), transparent 75%), #0f172a`;
+          achievementTextEl.style.filter = `drop-shadow(0 0 8px rgba(${rgbColor}, 0.6))`;
         }
       }
 
@@ -1722,9 +1851,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       const avatarBox = document.getElementById('banner-avatar-container');
       if (avatarBox) {
         if (isGradeS) {
-          avatarBox.style.background = 'linear-gradient(135deg, #fef08a 0%, #fbbf24 45%, #d97706 100%)';
-          avatarBox.style.boxShadow = '0 0 25px rgba(245, 158, 11, 0.85), 0 0 45px rgba(251, 191, 36, 0.45)';
-          avatarBox.style.border = '2.5px solid #fde68a';
+          avatarBox.style.background = 'linear-gradient(135deg, #C084FC 0%, #A855F7 45%, #7E22CE 100%)';
+          avatarBox.style.boxShadow = '0 0 25px rgba(168, 85, 247, 0.85), 0 0 45px rgba(168, 85, 247, 0.45)';
+          avatarBox.style.border = '2.5px solid #a855f7';
           avatarBox.classList.add('grade-S');
         } else {
           avatarBox.classList.remove('grade-S');
@@ -1739,7 +1868,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       if (scoreVal) {
         scoreVal.style.color = targetColor;
         if (isGradeS) {
-          scoreVal.style.filter = 'drop-shadow(0 0 14px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 24px rgba(245, 158, 11, 0.7))';
+          scoreVal.style.filter = 'drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 24px rgba(168, 85, 247, 0.45))';
           scoreVal.classList.add('text-grade-S');
         } else {
           scoreVal.classList.remove('text-grade-S');
@@ -1752,7 +1881,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       if (gradeVal) {
         gradeVal.style.color = targetColor;
         if (isGradeS) {
-          gradeVal.style.filter = 'drop-shadow(0 0 14px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 24px rgba(245, 158, 11, 0.7))';
+          gradeVal.style.filter = 'drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 24px rgba(168, 85, 247, 0.45))';
           gradeVal.classList.add('text-grade-S');
         } else {
           gradeVal.classList.remove('text-grade-S');
@@ -1760,19 +1889,19 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         }
       }
 
-      // 5. Border Accent on Score & Grade Cards
+      // 5. Border Accent on Score & Grade Cards (Symmetrical Boxes)
       const scoreCard = document.getElementById('banner-score-box');
       if (scoreCard) {
-        scoreCard.style.borderColor = isGradeS ? 'rgba(251, 191, 36, 0.5)' : `rgba(${rgbColor}, 0.3)`;
+        scoreCard.style.borderColor = isGradeS ? 'rgba(168, 85, 247, 0.6)' : `rgba(${rgbColor}, 0.35)`;
         scoreCard.style.boxShadow = isGradeS
-          ? '0 0 18px rgba(245, 158, 11, 0.25), 0 6px 16px rgba(0, 0, 0, 0.25)'
+          ? '0 0 20px rgba(168, 85, 247, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25)'
           : `0 0 12px rgba(${rgbColor}, 0.15), 0 4px 14px rgba(0, 0, 0, 0.2)`;
       }
       const gradeCard = document.getElementById('banner-grade-box');
       if (gradeCard) {
-        gradeCard.style.borderColor = isGradeS ? 'rgba(251, 191, 36, 0.5)' : `rgba(${rgbColor}, 0.3)`;
+        gradeCard.style.borderColor = isGradeS ? 'rgba(168, 85, 247, 0.6)' : `rgba(${rgbColor}, 0.35)`;
         gradeCard.style.boxShadow = isGradeS
-          ? '0 0 18px rgba(245, 158, 11, 0.25), 0 6px 16px rgba(0, 0, 0, 0.25)'
+          ? '0 0 20px rgba(168, 85, 247, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25)'
           : `0 0 12px rgba(${rgbColor}, 0.15), 0 4px 14px rgba(0, 0, 0, 0.2)`;
       }
 
@@ -2057,36 +2186,56 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         // 2. Fetch all submitted attempts for batch students (including points and remedial state)
         const { data: attempts, error: attErr } = await sb
           .from('attempts')
-          .select('id, student_id, assessment_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, status, submitted_at, assessments(deleted_at)')
+          .select('id, student_id, assessment_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, status, submitted_at, assessments(id, deleted_at)')
           .in('student_id', studentIds)
-          .in('status', ['submitted', 'auto_submitted']);
+          .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
 
         // 3. Compute best scores, points & overall averages per student
         const studentStats = studentList.map(st => {
-          const stAtts = (attempts || []).filter(a => a.student_id === st.id && !(a.assessments && a.assessments.deleted_at));
+          const stAtts = (attempts || []).filter(a => a.student_id === st.id && a.assessments && !a.assessments.deleted_at);
           const bestMap = {};
           let lastSubmittedAt = null;
 
           stAtts.forEach(att => {
             const key = att.assessment_id;
             if (!key) return;
+            const totalQ = Number(att.total_questions || 50);
             const rawPct = parseFloat(att.percentage || 0);
             const isRemedial = Boolean(att.is_remedial_unlocked);
             const effPct = isRemedial ? Math.min(rawPct, 60.0) : parseFloat(att.effective_score ?? rawPct);
             
             // Raw question points earned
-            const rawScore = parseFloat(att.score != null ? att.score : (rawPct * (att.total_questions || 100) / 100));
+            const rawScore = parseFloat(att.score != null ? att.score : (rawPct * totalQ / 100));
             // Remedial points capped at KKM 60% of total questions
-            const maxRemedialPts = att.total_questions ? (att.total_questions * 0.6) : (rawScore * 0.6);
+            const maxRemedialPts = totalQ * 0.6;
             const effPoints = isRemedial ? Math.min(rawScore, maxRemedialPts) : rawScore;
 
-            if (!bestMap[key] || effPct > bestMap[key].effPct || (effPct === bestMap[key].effPct && effPoints > bestMap[key].points)) {
+            // Points-Centric comparison: Compare effPoints first (matching Class Hub matrix & §2.8 / Phase 76)
+            let shouldReplace = false;
+            if (!bestMap[key]) {
+              shouldReplace = true;
+            } else {
+              const cur = bestMap[key];
+              const ptsDiff = effPoints - cur.points;
+              if (ptsDiff > 0.01) {
+                shouldReplace = true;
+              } else if (Math.abs(ptsDiff) <= 0.01) {
+                if (effPct > cur.effPct + 0.01) {
+                  shouldReplace = true;
+                } else if (Math.abs(effPct - cur.effPct) <= 0.01 && att.is_best_score && !cur.is_best_score) {
+                  shouldReplace = true;
+                }
+              }
+            }
+
+            if (shouldReplace) {
               bestMap[key] = {
                 effPct,
                 rawPct,
                 points: effPoints,
                 rawPoints: rawScore,
-                isRemedial
+                isRemedial,
+                is_best_score: Boolean(att.is_best_score)
               };
             }
 
@@ -2180,41 +2329,32 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         }
 
         // 8. Render Leaderboard List
-        let html = `<div class="leaderboard-table">`;
+        let html = '';
         studentStats.forEach(st => {
           const isMe = st.id === session.student_id;
           const isRank1 = st.rank === 1 && (st.totalPoints > 0 || st.overallScore > 0);
-          const rowClass = `leaderboard-row ${isMe ? 'my-row' : ''} ${isRank1 ? 'rank-1-row' : ''}`;
+          const rowClass = `standings-row ${isMe ? 'my-row' : ''} ${isRank1 ? 'rank-1-row' : ''}`;
           
           let rankBadgeClass = 'leaderboard-rank-badge';
-          let rankContent = st.rank;
-          if (st.rank === 1) {
-            rankBadgeClass += ' rank-1';
-            rankContent = isRank1 ? '👑' : '1';
-          } else if (st.rank === 2) {
-            rankBadgeClass += ' rank-2';
-            rankContent = '🥈';
-          } else if (st.rank === 3) {
-            rankBadgeClass += ' rank-3';
-            rankContent = '🥉';
-          }
+          if (st.rank === 1) rankBadgeClass += ' rank-1';
+          else if (st.rank === 2) rankBadgeClass += ' rank-2';
+          else if (st.rank === 3) rankBadgeClass += ' rank-3';
+          const rankContent = st.rank; // Clean numbers strictly: 1, 2, 3, 4, ...
 
-          // Title & Tag
-          let royalTag = '';
-          let displayTitleName = st.cleanName;
+          // Title & Name (no duplicate king/queen icon tag as title is already prefixed)
+          const rawClean = st.cleanName.replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?|king|queen)\s+/i, '').trim();
+          let displayTitleName = rawClean;
           if (isRank1) {
             if (st.gender === 'male') {
-              royalTag = `<span class="leaderboard-royal-tag">👑 KING</span>`;
-              displayTitleName = `King ${st.cleanName}`;
+              displayTitleName = `King ${rawClean}`;
             } else if (st.gender === 'female') {
-              royalTag = `<span class="leaderboard-royal-tag">👑 QUEEN</span>`;
-              displayTitleName = `Queen ${st.cleanName}`;
+              displayTitleName = `Queen ${rawClean}`;
             } else {
-              royalTag = `<span class="leaderboard-royal-tag">👑 TOP</span>`;
+              displayTitleName = `Champion ${rawClean}`;
             }
           } else {
-            if (st.gender === 'male') displayTitleName = `Mr. ${st.cleanName}`;
-            else if (st.gender === 'female') displayTitleName = `Miss ${st.cleanName}`;
+            if (st.gender === 'male') displayTitleName = `Mr. ${rawClean}`;
+            else if (st.gender === 'female') displayTitleName = `Miss ${rawClean}`;
           }
 
           const initChar = st.cleanName ? st.cleanName.charAt(0).toUpperCase() : 'S';
@@ -2228,28 +2368,30 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
           html += `
             <div class="${rowClass}">
-              <div class="leaderboard-col-left">
+              <div class="th-col th-rank" style="display:flex; justify-content:center;">
                 <div class="${rankBadgeClass}">${rankContent}</div>
+              </div>
+              <div class="th-col th-name" style="display:flex; align-items:center; gap:8px; min-width:0; overflow:hidden;">
                 ${avatarHtml}
-                <div class="leaderboard-student-info">
+                <div style="min-width:0; overflow:hidden;">
                   <div class="leaderboard-name-wrap">
                     <span class="leaderboard-student-name">${escHtml(displayTitleName)}</span>
                     ${isMe ? '<span style="color:#38bdf8; font-size:0.7rem; font-weight:700;">(You)</span>' : ''}
-                    ${royalTag}
                   </div>
                   <span class="leaderboard-sub-info">${st.completedCount} completed &bull; ${st.overallScore}% avg</span>
                 </div>
               </div>
-              <div class="leaderboard-col-right" style="display:flex; align-items:center; gap:8px;">
-                <span class="leaderboard-score-val" style="color:${theme.color}; font-weight:800; font-size:1rem; display:inline-flex; align-items:baseline; gap:3px;">
-                  ${st.totalPoints} <span style="font-size:0.7rem; font-weight:700; color:#94a3b8; letter-spacing:0.04em;">PTS</span>
+              <div class="th-col th-point" style="display:flex; align-items:center; justify-content:flex-end;">
+                <span style="color:${theme.color}; font-weight:800; font-size:0.95rem; font-variant-numeric:tabular-nums;">
+                  ${st.totalPoints}
                 </span>
-                <div class="leaderboard-grade-chip" style="background:${theme.color};" title="Average: ${st.overallScore}%">${gradeSymbol}</div>
+              </div>
+              <div class="th-col th-grade" style="display:flex; align-items:center; justify-content:center;">
+                <div class="leaderboard-grade-chip" style="background:${theme.color}; width:22px; height:22px; border-radius:6px; font-size:0.72rem; font-weight:800; display:flex; align-items:center; justify-content:center; color:#fff;" title="Average: ${st.overallScore}%">${gradeSymbol}</div>
               </div>
             </div>
           `;
         });
-        html += `</div>`;
 
         container.innerHTML = html;
 

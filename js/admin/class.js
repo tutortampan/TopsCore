@@ -1574,9 +1574,11 @@ export async function renderResults(area) {
     const getEffectivePct = (r) => {
       const rawPct = parseFloat(r.percentage || 0);
       const def = r.assessments || {};
-      const isSummative = (def.assessment_type === 'EXAM' || def.assessment_type === 'QUIZ');
+      const defType = (def.assessment_type || '').toUpperCase();
+      const defCat = (def.assessment_category || '').toUpperCase();
+      const isSummative = defType === 'EXAM' || defType === 'QUIZ' || defType.includes('TEST') || defCat === 'TEST';
       if (r.is_remedial_unlocked && isSummative && rawPct > 60) return 60;
-      return rawPct;
+      return r.effective_score != null ? parseFloat(r.effective_score) : rawPct;
     };
     const mergedResults = new Map();
     filtered.forEach(r => {
@@ -1624,7 +1626,9 @@ export async function renderResults(area) {
         {
           key: 'percentage', label: 'Score', sortable: true, render: (v, r) => {
             const def = r.assessments || {};
-            const isSummative = (def.assessment_type === 'EXAM' || def.assessment_type === 'QUIZ');
+            const defType = (def.assessment_type || '').toUpperCase();
+            const defCat = (def.assessment_category || '').toUpperCase();
+            const isSummative = defType === 'EXAM' || defType === 'QUIZ' || defType.includes('TEST') || defCat === 'TEST';
             const rawPct = parseFloat(r.percentage || 0);
             const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 60;
             const effectivePct = isRemedialCapped ? 60 : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
@@ -1642,7 +1646,9 @@ export async function renderResults(area) {
         },
         { key: 'grade', label: 'Grade', sortable: true, render: (v, r) => {
             const def = r.assessments || {};
-            const isSummative = (def.assessment_type === 'EXAM' || def.assessment_type === 'QUIZ');
+            const defType = (def.assessment_type || '').toUpperCase();
+            const defCat = (def.assessment_category || '').toUpperCase();
+            const isSummative = defType === 'EXAM' || defType === 'QUIZ' || defType.includes('TEST') || defCat === 'TEST';
             const rawPct = parseFloat(r.percentage || 0);
             const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 60;
             const displayGrade = isRemedialCapped ? 'B' : (r.grade || getGrade(rawPct));
@@ -1749,7 +1755,9 @@ export async function renderResults(area) {
     const exportData = rowsToExport.map(r => {
       const def = r.assessments || {};
       const rawPct = Number(r.percentage || r.effective_score || 0);
-      const isSummative = (def.assessment_type === 'EXAM' || def.assessment_type === 'QUIZ');
+      const defType = (def.assessment_type || '').toUpperCase();
+      const defCat = (def.assessment_category || '').toUpperCase();
+      const isSummative = defType === 'EXAM' || defType === 'QUIZ' || defType.includes('TEST') || defCat === 'TEST';
       const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 60;
       const exportPct = isRemedialCapped ? 60 : rawPct;
       const exportGrade = isRemedialCapped ? 'B' : (r.grade || getGrade(rawPct));
@@ -1942,13 +1950,17 @@ export async function renderProgressView(area) {
           let bestTotalQ = 10;
           let bestPct = 0;
           validAtts.forEach(att => {
+            const isRem = Boolean(att.is_remedial_unlocked);
             const sc = Number(att.score ?? 0);
             const tq = Number(att.total_questions || 10);
-            const pct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
-            if (sc > bestScore || bestScore === -1) {
-              bestScore = sc;
+            const maxRemPts = tq * 0.6;
+            const effScore = isRem ? Math.min(sc, maxRemPts) : sc;
+            const rawPct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
+            const effPct = isRem ? Math.min(rawPct, 60.0) : (att.effective_score != null ? Number(att.effective_score) : rawPct);
+            if (effScore > bestScore || bestScore === -1) {
+              bestScore = effScore;
               bestTotalQ = tq;
-              bestPct = pct;
+              bestPct = effPct;
             }
           });
           totalScoreObtained += Math.max(0, bestScore);
