@@ -1192,13 +1192,13 @@ async function enforceAssessmentSystemGuard(sb, payload, existingAssessment = nu
     if (merged.class_id) {
       const { data: cls } = await sb.from('classes').select('name').eq('id', merged.class_id).single();
       if (cls && !cls.name.toLowerCase().includes('vocab')) {
-        throw new Error('SYSTEM GUARD: Modul Vocabulary Mastery dan Phrase Recognition dikunci secara mutlak hanya untuk Kelas Vocabulary.');
+        throw new Error('SYSTEM GUARD: Vocabulary Mastery and Phrase Recognition modules are strictly locked to Vocabulary Class only.');
       }
     }
     if (merged.level_id) {
       const { data: lvl } = await sb.from('levels').select('level_number').eq('id', merged.level_id).single();
       if (lvl && ![0, 1, 2, 3].includes(lvl.level_number)) {
-        throw new Error('SYSTEM GUARD: Modul Vocabulary hanya diizinkan untuk Level 0, 1, 2, 3.');
+        throw new Error('SYSTEM GUARD: Vocabulary modules are only permitted for Levels 0, 1, 2, and 3.');
       }
     }
   }
@@ -3020,7 +3020,7 @@ export async function addLateStudentsToSession({ assessmentId, studentIds = [], 
 
   const currentSession = existing.payload?.test_session;
   if (!currentSession || currentSession.status !== 'UNLOCKED') {
-    throw new Error('Sesi ujian ini tidak aktif atau sudah ditutup.');
+    throw new Error('This test session is inactive or has been closed.');
   }
 
   const existingAllowed = new Set(currentSession.allowed_student_ids || []);
@@ -3157,7 +3157,7 @@ export async function checkStudentTestAccess(studentId, assessmentId) {
       allowed: false,
       is_test: true,
       reason: 'SESSION_LOCKED',
-      message: 'Sesi ujian ini belum dibuka oleh Tutor. Harap tunggu aba-aba dari Tutor di kelas.'
+      message: 'This test session has not been opened by the Tutor yet. Please wait for instructions from the Tutor in class.'
     };
   }
 
@@ -3168,7 +3168,7 @@ export async function checkStudentTestAccess(studentId, assessmentId) {
       allowed: false,
       is_test: true,
       reason: 'SESSION_EXPIRED',
-      message: 'Sesi ujian telah berakhir dan gembok telah ditutup.'
+      message: 'The test session has ended and access is locked.'
     };
   }
 
@@ -3177,7 +3177,7 @@ export async function checkStudentTestAccess(studentId, assessmentId) {
       allowed: false,
       is_test: true,
       reason: 'WRONG_BATCH',
-      message: 'Sesi ujian ini ditujukan untuk batch lain.'
+      message: 'This test session is designated for a different batch.'
     };
   }
 
@@ -3187,7 +3187,7 @@ export async function checkStudentTestAccess(studentId, assessmentId) {
       allowed: false,
       is_test: true,
       reason: 'NOT_WHITELISTED',
-      message: 'Anda tidak tercatat dalam daftar kehadiran sesi ujian hari ini. Silakan hubungi Tutor di ruangan.'
+      message: "You are not on the attendance whitelist for today's test session. Please contact the Tutor in class."
     };
   }
 

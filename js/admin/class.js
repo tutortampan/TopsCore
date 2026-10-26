@@ -1709,9 +1709,9 @@ export async function renderResults(area) {
         { key: 'actions', label: 'Actions', sortable: false, render: (v, r) => {
            let btns = `<button class="btn btn-ghost btn-sm results-view-profile-btn" data-sid="${r.student_id}" style="font-size:0.75rem; padding:3px 10px; display:inline-flex; align-items:center; gap:4px;" title="View full student profile">&#128100; Profile</button>`;
            if (r.is_remedial_unlocked) {
-             btns += `<button class="btn btn-secondary btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="false" style="font-size:0.75rem; padding:3px 8px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; color:#fbbf24;" title="Batalkan status remidi (kembalikan ke normal)">↩️ Normal</button>`;
+             btns += `<button class="btn btn-secondary btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="false" style="font-size:0.75rem; padding:3px 8px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; color:#fbbf24;" title="Revert remedial status (return to normal)">↩️ Normal</button>`;
            } else {
-             btns += `<button class="btn btn-warning btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="true" style="font-size:0.75rem; padding:3px 8px;" title="Tandai nilai ini sebagai Remidi (KKM 60%)">🏷️ Remidi (60%)</button>`;
+             btns += `<button class="btn btn-warning btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="true" style="font-size:0.75rem; padding:3px 8px;" title="Mark this score as Remedial (Max 60%)">🏷️ Remedial (60%)</button>`;
            }
            return `<div class="text-center d-flex gap-2 justify-center flex-wrap" style="min-width:140px;">${btns}</div>`;
         } }
@@ -1793,8 +1793,8 @@ export async function renderResults(area) {
       const attemptId = toggleRemBtn.getAttribute('data-aid');
       const targetRemedial = toggleRemBtn.getAttribute('data-set-remedial') === 'true';
       const promptMsg = targetRemedial
-        ? 'Tandai nilai ini sebagai hasil REMEDIAL (otomatis dibatasi maksimal KKM 60%)?'
-        : 'Kembalikan nilai ini ke status NORMAL (menghapus batas KKM 60%)?';
+        ? 'Mark this score as REMEDIAL (automatically capped at max 60%)?'
+        : 'Revert this score to NORMAL (remove 60% cap)?';
 
       if (confirm(promptMsg)) {
         showLoading();
@@ -1808,10 +1808,10 @@ export async function renderResults(area) {
             record.grade = getGrade(record.effective_score);
           }
           renderTable();
-          showToast(targetRemedial ? '🏷️ Berhasil dilabel sebagai Remidi (KKM 60%).' : '↩️ Status remidi berhasil dikembalikan ke Normal.', 'success');
+          showToast(targetRemedial ? '🏷️ Successfully labeled as Remedial (Max 60%).' : '↩️ Remedial status reverted to Normal.', 'success');
         } catch (err) {
           console.error('Failed to toggle remedial:', err);
-          showToast('Gagal mengubah status remidi: ' + err.message, 'error');
+          showToast('Failed to update remedial status: ' + err.message, 'error');
         } finally {
           hideLoading();
         }

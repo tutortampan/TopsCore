@@ -157,7 +157,7 @@ export async function renderClassTestSessions(container, context = {}) {
             ${escapeHtml(className || 'Vocabulary')} &bull; Unified Test Access
           </div>
           <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">
-            Words & Phrases Test disatukan per Theme. Buka ujian normal atau remidi dengan alokasi durasi dan seleksi siswa eligible.
+            Words & Phrases Tests unified per Theme. Open normal or remedial test sessions with duration allocation and eligible student whitelist.
           </div>
         </div>
 
@@ -193,14 +193,14 @@ export async function renderClassTestSessions(container, context = {}) {
             🟢 Active Live Sessions
           </div>
           <div style="font-size: 1.6rem; font-weight: 800; color: ${liveCount > 0 ? '#34d399' : '#ffffff'}; margin-top: 4px;">
-            ${liveCount} <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">Sesi Terbuka</span>
+            ${liveCount} <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">Open Sessions</span>
           </div>
         </div>
 
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px;">
           <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: #94a3b8;">🔒 Locked Themes</div>
           <div style="font-size: 1.6rem; font-weight: 800; color: #fbbf24; margin-top: 4px;">
-            ${4 - liveCount} <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">Menunggu Tutor</span>
+            ${4 - liveCount} <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">Awaiting Tutor</span>
           </div>
         </div>
       </div>
@@ -211,14 +211,14 @@ export async function renderClassTestSessions(container, context = {}) {
       </div>
     </div>
 
-    <!-- Modal 1: Buka Sesi Ujian (Normal / Remidi) -->
+    <!-- Modal 1: Open Test Session (Normal / Remedial) -->
     <div id="modal-theme-open-session" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
       <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:600px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 50px rgba(0,0,0,0.8);">
         <div style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:flex-start;">
           <div>
             <div id="open-modal-theme-badge" style="display:inline-block; font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:2px 8px; border-radius:4px; margin-bottom:4px;">THEME A</div>
-            <h3 id="open-modal-title" style="margin:0; font-size:1.25rem; font-weight:800; color:#ffffff;">Buka Sesi Ujian</h3>
-            <div id="open-modal-subtitle" style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">Words Test & Phrases Test dibuka serentak.</div>
+            <h3 id="open-modal-title" style="margin:0; font-size:1.25rem; font-weight:800; color:#ffffff;">Open Test Session</h3>
+            <div id="open-modal-subtitle" style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">Words Test & Phrases Test unlocked simultaneously.</div>
           </div>
           <button type="button" class="btn btn-ghost btn-icon" id="btn-close-open-modal" style="color:#94a3b8; font-size:1.25rem; padding:4px 8px;">✕</button>
         </div>
@@ -227,40 +227,40 @@ export async function renderClassTestSessions(container, context = {}) {
           <!-- 1. Target Batch -->
           <div>
             <label class="form-label" style="font-weight:700; font-size:0.85rem; color:#ffffff; margin-bottom:6px; display:block;">
-              1. Target Batch Ujian
+              1. Target Test Batch
             </label>
             <select id="open-modal-batch-select" class="form-control" style="width:100%; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; padding:8px 12px; border-radius:6px; font-weight:600;">
               ${activeBatches.map(b => `<option value="${b.id}" ${b.id === _selectedBatchId ? 'selected' : ''}>Batch ${escapeHtml(b.name || b.id)}</option>`).join('')}
             </select>
           </div>
 
-          <!-- 2. Durasi Ujian -->
+          <!-- 2. Test Duration -->
           <div>
             <label class="form-label" style="font-weight:700; font-size:0.85rem; color:#ffffff; margin-bottom:6px; display:block;">
-              2. Alokasi Durasi Ujian (Menit)
+              2. Test Duration Allocation (Minutes)
             </label>
             <div style="display:flex; align-items:center; gap:10px;">
               <input type="number" id="open-modal-duration-input" class="form-control" value="60" min="5" max="180" step="5" style="width:110px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; padding:8px 12px; border-radius:6px; font-weight:800; font-size:1.05rem;">
-              <span style="font-size:0.8rem; color:#94a3b8;">Menit (Countdown siswa sinkron dengan durasi ini)</span>
+              <span style="font-size:0.8rem; color:#94a3b8;">Minutes (Student countdown synchronizes with this duration)</span>
             </div>
           </div>
 
-          <!-- 3. Status Sesi Banner (Locked Mode) -->
+          <!-- 3. Session Status Banner (Locked Mode) -->
           <div id="open-modal-mode-banner" style="border-radius:8px; padding:10px 14px; font-size:0.82rem; font-weight:600;">
             <!-- Populated dynamically -->
           </div>
 
-          <!-- 4. Whitelist Kehadiran Siswa Eligible -->
+          <!-- 4. Whitelist Attendance for Eligible Students -->
           <div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
               <label class="form-label" style="font-weight:700; font-size:0.85rem; color:#ffffff; margin:0;">
-                4. Siswa Terdaftar (<span id="open-modal-student-count" style="color:#38bdf8;">0</span> Terpilih)
+                4. Enrolled Students (<span id="open-modal-student-count" style="color:#38bdf8;">0</span> Selected)
               </label>
               <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-                <input type="text" id="open-modal-student-search" placeholder="🔍 Cari siswa..." class="form-control" style="font-size:0.75rem; padding:4px 8px; width:110px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:4px;">
+                <input type="text" id="open-modal-student-search" placeholder="🔍 Search student..." class="form-control" style="font-size:0.75rem; padding:4px 8px; width:110px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:4px;">
                 <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-sort" style="padding:4px 8px; font-size:0.75rem; font-weight:600;">🔤 A → Z</button>
-                <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-select-all" style="padding:4px 8px; font-size:0.75rem;">✅ Semua</button>
-                <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-deselect-all" style="padding:4px 8px; font-size:0.75rem;">❌ Kosong</button>
+                <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-select-all" style="padding:4px 8px; font-size:0.75rem;">✅ All</button>
+                <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-deselect-all" style="padding:4px 8px; font-size:0.75rem;">❌ None</button>
               </div>
             </div>
 
@@ -270,8 +270,8 @@ export async function renderClassTestSessions(container, context = {}) {
 
             <!-- Ineligible notice & toggle -->
             <div id="open-modal-ineligible-summary" style="margin-top:8px; font-size:0.78rem; color:#94a3b8; display:flex; justify-content:space-between; align-items:center;">
-              <span id="open-modal-ineligible-text">ℹ️ Memuat kelayakan siswa...</span>
-              <button type="button" id="btn-toggle-ineligible-view" class="btn btn-ghost btn-xs" style="font-size:0.72rem; color:#38bdf8; padding:0 4px; text-decoration:underline;">Lihat Detail</button>
+              <span id="open-modal-ineligible-text">ℹ️ Loading student eligibility...</span>
+              <button type="button" id="btn-toggle-ineligible-view" class="btn btn-ghost btn-xs" style="font-size:0.72rem; color:#38bdf8; padding:0 4px; text-decoration:underline;">View Details</button>
             </div>
             <div id="open-modal-ineligible-details" class="hidden" style="margin-top:6px; max-height:120px; overflow-y:auto; background:rgba(0,0,0,0.4); border:1px dashed rgba(255,255,255,0.1); border-radius:6px; padding:8px; font-size:0.75rem;">
               <!-- Populated with ineligible list -->
@@ -280,20 +280,20 @@ export async function renderClassTestSessions(container, context = {}) {
         </div>
 
         <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
-          <button type="button" class="btn btn-ghost" id="btn-cancel-open-modal" style="color:#94a3b8;">Batal</button>
+          <button type="button" class="btn btn-ghost" id="btn-cancel-open-modal" style="color:#94a3b8;">Cancel</button>
           <button type="button" class="btn btn-primary" id="btn-confirm-open-session" style="font-weight:700; padding:8px 20px; display:flex; align-items:center; gap:8px;">
-            <span>🔓</span> Buka Ujian Sekarang
+            <span>🔓</span> Unlock Test Now
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Modal 2: Tambah Siswa Susulan ke Sesi Berjalan -->
+    <!-- Modal 2: Add Late Arrival Students to Live Session -->
     <div id="modal-theme-add-late" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
       <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:580px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 50px rgba(0,0,0,0.8);">
         <div style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:flex-start;">
           <div>
-            <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:#a5b4fc; font-weight:800;">👥 Sesi Ujian Sedang Berjalan</div>
+            <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:#a5b4fc; font-weight:800;">👥 Live Test Session in Progress</div>
             <h3 id="late-modal-theme-title" style="margin:2px 0 0; font-size:1.25rem; font-weight:800; color:#ffffff;">Theme Test Name</h3>
             <div id="late-modal-batch-name" style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">Batch Name</div>
           </div>
@@ -305,15 +305,15 @@ export async function renderClassTestSessions(container, context = {}) {
           <div style="background:rgba(99, 102, 241, 0.12); border:1px solid rgba(99, 102, 241, 0.35); border-radius:8px; padding:12px 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
               <div style="font-size:0.85rem; font-weight:700; color:#a5b4fc; display:flex; align-items:center; gap:6px;">
-                <span>⏳ Sisa Waktu Sesi Global:</span>
-                <span id="late-modal-remaining-time" style="color:#ffffff; font-size:1.05rem; font-weight:800;">-- Menit</span>
+                <span>⏳ Global Remaining Session Time:</span>
+                <span id="late-modal-remaining-time" style="color:#ffffff; font-size:1.05rem; font-weight:800;">-- Mins</span>
               </div>
               <div id="late-modal-mode-badge" style="font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:4px;">
                 NORMAL
               </div>
             </div>
             <div class="text-xs" style="color:#cbd5e1; margin-top:6px; line-height:1.4;">
-              Siswa susulan <strong>otomatis mewarisi status sesi</strong> dan waktu pengerjaan mengacu pada sisa waktu berjalan ini agar adil bagi siswa yang masuk tepat waktu.
+              Late arrival students <strong>automatically inherit session status</strong> and work time refers to this remaining live duration to ensure fairness.
             </div>
           </div>
 
@@ -321,12 +321,12 @@ export async function renderClassTestSessions(container, context = {}) {
           <div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
               <label class="form-label" style="font-weight:700; font-size:0.85rem; color:#ffffff; margin:0;">
-                Pilih Siswa Susulan (<span id="late-modal-selected-count" style="color:#38bdf8;">0</span> Terpilih)
+                Select Late Arrival Students (<span id="late-modal-selected-count" style="color:#38bdf8;">0</span> Selected)
               </label>
               <div style="display:flex; gap:6px; align-items:center;">
-                <input type="text" id="late-modal-search" placeholder="🔍 Cari nama..." class="form-control" style="font-size:0.75rem; padding:4px 8px; width:120px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:4px;">
-                <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-select-all" style="padding:4px 8px; font-size:0.75rem;">✅ Semua</button>
-                <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-deselect-all" style="padding:4px 8px; font-size:0.75rem;">❌ Kosong</button>
+                <input type="text" id="late-modal-search" placeholder="🔍 Search name..." class="form-control" style="font-size:0.75rem; padding:4px 8px; width:120px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:4px;">
+                <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-select-all" style="padding:4px 8px; font-size:0.75rem;">✅ All</button>
+                <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-deselect-all" style="padding:4px 8px; font-size:0.75rem;">❌ None</button>
               </div>
             </div>
 
@@ -334,15 +334,15 @@ export async function renderClassTestSessions(container, context = {}) {
               <!-- Populated dynamically with UNENROLLED ELIGIBLE students only -->
             </div>
             <div class="text-xs" style="color:#94a3b8; margin-top:6px;">
-              * Siswa yang sudah terdaftar di sesi ini otomatis disaring keluar dan tidak ditampilkan di daftar di atas.
+              * Students already enrolled in this session are automatically filtered out and hidden above.
             </div>
           </div>
         </div>
 
         <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
-          <button type="button" class="btn btn-ghost" id="btn-cancel-late-modal" style="color:#94a3b8;">Batal</button>
+          <button type="button" class="btn btn-ghost" id="btn-cancel-late-modal" style="color:#94a3b8;">Cancel</button>
           <button type="button" class="btn btn-primary" id="btn-confirm-add-late" style="background:#6366f1; border-color:#4f46e5; font-weight:700; padding:8px 20px; display:flex; align-items:center; gap:8px;">
-            <span>💾</span> Tambahkan Siswa ke Ujian
+            <span>💾</span> Add Students to Test
           </button>
         </div>
       </div>
@@ -367,14 +367,14 @@ function renderThemeCard(theme, context) {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
           <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 800; color: #34d399;">
             <span class="status-dot dot-live" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
-            LIVE (${remainingMinutes}m tersisa)
+            LIVE (${remainingMinutes}m remaining)
           </span>
           <span style="font-size: 0.72rem; font-weight: 800; padding: 2px 7px; border-radius: 4px; ${isRemedial ? 'background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24;' : 'background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399;'}">
-            ${isRemedial ? 'REMEDIAL (KKM 60%)' : 'NORMAL (Nilai Penuh)'}
+            ${isRemedial ? 'REMEDIAL (MAX 60%)' : 'NORMAL (FULL SCORE)'}
           </span>
         </div>
         <div style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600;">
-          👥 ${escapeHtml(liveBatchName)} &bull; ${allowedStudentIds.length} Siswa Terdaftar
+          👥 ${escapeHtml(liveBatchName)} &bull; ${allowedStudentIds.length} Enrolled Students
         </div>
       </div>
     `;
@@ -382,10 +382,10 @@ function renderThemeCard(theme, context) {
     actionButtons = `
       <div style="display: flex; gap: 8px; align-items: center; margin-top: auto;">
         <button type="button" class="btn btn-sm btn-theme-add-late" data-theme="${code}" style="background: #6366f1; border-color: #4f46e5; color: #ffffff; font-weight: 700; flex: 1; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
-          <span>👥</span> + Susulan
+          <span>👥</span> + Late Add
         </button>
         <button type="button" class="btn btn-sm btn-theme-close-session" data-theme="${code}" style="background: #ef4444; border-color: #dc2626; color: #ffffff; font-weight: 700; flex: 1; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
-          <span>🔒</span> Tutup Sesi
+          <span>🔒</span> Close Session
         </button>
       </div>
     `;
@@ -393,21 +393,21 @@ function renderThemeCard(theme, context) {
     stateContent = `
       <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.18); border-radius: 8px; padding: 12px 14px; margin: 12px 0 16px;">
         <div style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: #fbbf24;">
-          <span>🔒</span> LOCKED &bull; Tidak Ada Sesi Aktif
+          <span>🔒</span> LOCKED &bull; No Active Session
         </div>
         <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">
-          Prasyarat: ${tasks.length} Tugas Materi Theme ${code} (Min KKM 60%)
+          Prerequisites: ${tasks.length} Learning Tasks Theme ${code} (Min 60%)
         </div>
       </div>
     `;
 
     actionButtons = `
       <div style="display: flex; gap: 8px; align-items: center; margin-top: auto;">
-        <button type="button" class="btn btn-sm btn-theme-open-session" data-theme="${code}" data-mode="normal" style="background: #10b981; border-color: #059669; color: #ffffff; font-weight: 700; flex: 1; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Buka ujian normal nilai penuh untuk siswa eligible">
-          <span>🟢</span> Buka Normal
+        <button type="button" class="btn btn-sm btn-theme-open-session" data-theme="${code}" data-mode="normal" style="background: #10b981; border-color: #059669; color: #ffffff; font-weight: 700; flex: 1; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Open normal test session (full score) for eligible students">
+          <span>🟢</span> Open Normal
         </button>
-        <button type="button" class="btn btn-sm btn-theme-open-session" data-theme="${code}" data-mode="remedial" style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; font-weight: 700; flex: 1; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Buka sesi remidi (nilai maksimal KKM 60%) untuk siswa yang belum tuntas">
-          <span>🟡</span> Buka Remidi
+        <button type="button" class="btn btn-sm btn-theme-open-session" data-theme="${code}" data-mode="remedial" style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; font-weight: 700; flex: 1; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Open remedial session (max 60% score) for students needing retake">
+          <span>🟡</span> Open Remedial
         </button>
       </div>
     `;
@@ -422,7 +422,7 @@ function renderThemeCard(theme, context) {
           <span style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 4px; background: ${bgRgba}; color: ${color}; border: 1px solid ${borderRgba};">
             THEME ${code}
           </span>
-          <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">2 Modul Serentak</span>
+          <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">2 Simultaneous Modules</span>
         </div>
 
         <h4 style="margin: 4px 0 0; font-size: 1.15rem; font-weight: 800; color: #ffffff;">
@@ -495,7 +495,7 @@ function bindTestSessionsEvents(container, themesData, context) {
       const theme = themesData.find(t => t.code === themeCode);
       if (!theme) return;
 
-      const confirmed = confirm(`Tutup sesi ujian THEME ${theme.code} (${theme.name}) untuk ${theme.liveBatchName}?\nSiswa tidak akan dapat mengakses lagi setelah ditutup.`);
+      const confirmed = confirm(`Close test session for THEME ${theme.code} (${theme.name}) for ${theme.liveBatchName}?\nStudents will no longer be able to access the test once closed.`);
       if (!confirmed) return;
 
       showLoading();
@@ -505,13 +505,13 @@ function bindTestSessionsEvents(container, themesData, context) {
         if (theme.phrasesTest) promises.push(closeTestSession(theme.phrasesTest.id));
         await Promise.all(promises);
 
-        showToast(`🔒 Sesi ujian Theme ${theme.code} berhasil ditutup.`, 'success');
+        showToast(`🔒 Test session Theme ${theme.code} closed successfully.`, 'success');
         if (window.renderClassHub) {
           window.renderClassHub(document.getElementById('admin-content-area'));
         }
       } catch (err) {
         console.error('Error closing test session:', err);
-        showToast('Gagal menutup sesi: ' + err.message, 'error');
+        showToast('Failed to close session: ' + err.message, 'error');
       } finally {
         hideLoading();
       }
@@ -542,22 +542,22 @@ function openThemeSessionModal(container, theme, mode, context) {
   badgeEl.style.border = `1px solid ${theme.borderRgba}`;
 
   if (mode === 'normal') {
-    titleEl.innerHTML = `<span style="color:#10b981;">🟢 Buka Sesi Ujian Normal</span>: Theme ${theme.code}`;
+    titleEl.innerHTML = `<span style="color:#10b981;">🟢 Open Normal Test Session</span>: Theme ${theme.code}`;
     bannerEl.style.background = 'rgba(16, 185, 129, 0.12)';
     bannerEl.style.border = '1px solid rgba(16, 185, 129, 0.35)';
     bannerEl.style.color = '#34d399';
     bannerEl.innerHTML = `
-      🟢 <strong>SESI NORMAL (NILAI PENUH)</strong>: Siswa eligible mengerjakan ujian untuk mendapatkan nilai penuh kurikulum. Siswa yang sudah lulus tetap dapat mengikuti ujian untuk perbaikan nilai tertinggi.
+      🟢 <strong>NORMAL SESSION (FULL SCORE)</strong>: Eligible students take the test for full curriculum scores. Students who already passed may retake to improve their highest score.
     `;
     confirmBtn.style.background = '#10b981';
     confirmBtn.style.borderColor = '#059669';
   } else {
-    titleEl.innerHTML = `<span style="color:#fbbf24;">🟡 Buka Sesi Ujian Remidi</span>: Theme ${theme.code}`;
+    titleEl.innerHTML = `<span style="color:#fbbf24;">🟡 Open Remedial Test Session</span>: Theme ${theme.code}`;
     bannerEl.style.background = 'rgba(245, 158, 11, 0.12)';
     bannerEl.style.border = '1px solid rgba(245, 158, 11, 0.35)';
     bannerEl.style.color = '#fbbf24';
     bannerEl.innerHTML = `
-      🟡 <strong>SESI REMIDI (BATAS MAKSIMAL KKM 60%)</strong>: Diperuntukkan bagi siswa yang belum tuntas/belum lulus (< 60%) atau belum pernah mengikuti ujian. Nilai efektif otomatis dibatasi maksimal 60% (Grade B).
+      🟡 <strong>REMEDIAL SESSION (MAX 60% CAP)</strong>: Designated for students who have not passed (< 60%) or have not taken the test yet. Final effective score is capped at 60% (Grade B).
     `;
     confirmBtn.style.background = '#f59e0b';
     confirmBtn.style.borderColor = '#d97706';
@@ -622,7 +622,7 @@ function openThemeSessionModal(container, theme, mode, context) {
     if (displayList.length === 0) {
       listContainer.innerHTML = `
         <div style="padding:16px; text-align:center; color:#94a3b8; font-size:0.8rem;">
-          ${q ? `Tidak ada siswa eligible cocok dengan "${escapeHtml(q)}".` : 'Tidak ada siswa yang eligible dalam batch ini.'}
+          ${q ? `No eligible students match "${escapeHtml(q)}".` : 'No eligible students found in this batch.'}
         </div>
       `;
     } else {
@@ -662,11 +662,11 @@ function openThemeSessionModal(container, theme, mode, context) {
     const ineligTextEl = modal.querySelector('#open-modal-ineligible-text');
     const ineligDetailsEl = modal.querySelector('#open-modal-ineligible-details');
     if (ineligTextEl) {
-      ineligTextEl.textContent = `ℹ️ ${ineligibleList.length} Siswa tidak eligible disembunyikan.`;
+      ineligTextEl.textContent = `ℹ️ ${ineligibleList.length} Ineligible students hidden.`;
     }
     if (ineligDetailsEl) {
       if (ineligibleList.length === 0) {
-        ineligDetailsEl.innerHTML = `<span style="color:#94a3b8;">Seluruh siswa dalam batch ini berstatus eligible.</span>`;
+        ineligDetailsEl.innerHTML = `<span style="color:#94a3b8;">All students in this batch are eligible.</span>`;
       } else {
         ineligDetailsEl.innerHTML = ineligibleList.map(item => `
           <div style="display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04); color:#94a3b8;">
@@ -736,10 +736,10 @@ function openThemeSessionModal(container, theme, mode, context) {
     showIneligible = !showIneligible;
     if (showIneligible) {
       details.classList.remove('hidden');
-      toggleIneligBtn.textContent = 'Sembunyikan';
+      toggleIneligBtn.textContent = 'Hide Details';
     } else {
       details.classList.add('hidden');
-      toggleIneligBtn.textContent = 'Lihat Detail';
+      toggleIneligBtn.textContent = 'View Details';
     }
   };
 
@@ -752,13 +752,13 @@ function openThemeSessionModal(container, theme, mode, context) {
   confirmBtn.onclick = async () => {
     const targetBatchId = batchSelect.value;
     if (!targetBatchId) {
-      showToast('Pilih batch target terlebih dahulu.', 'error');
+      showToast('Please select a target batch first.', 'error');
       return;
     }
 
     const allowedStudentIds = Array.from(checkedStudentIds);
     if (allowedStudentIds.length === 0) {
-      showToast('Pilih setidaknya 1 siswa eligible untuk mengikuti ujian.', 'warning');
+      showToast('Please select at least 1 eligible student for the test.', 'warning');
       return;
     }
 
@@ -791,14 +791,14 @@ function openThemeSessionModal(container, theme, mode, context) {
 
       await Promise.all(promises);
 
-      showToast(`🔓 Sesi ujian Theme ${theme.code} (${mode.toUpperCase()}) berhasil dibuka untuk ${allowedStudentIds.length} siswa (${duration} menit)!`, 'success');
+      showToast(`🔓 Test session Theme ${theme.code} (${mode.toUpperCase()}) successfully opened for ${allowedStudentIds.length} students (${duration} mins)!`, 'success');
       closeModal();
       if (window.renderClassHub) {
         window.renderClassHub(document.getElementById('admin-content-area'));
       }
     } catch (err) {
       console.error('Error unlocking session:', err);
-      showToast('Gagal membuka sesi ujian: ' + err.message, 'error');
+      showToast('Failed to open test session: ' + err.message, 'error');
     } finally {
       hideLoading();
     }
@@ -823,19 +823,19 @@ function openThemeLateModal(container, theme, context) {
   const confirmBtn = modal.querySelector('#btn-confirm-add-late');
 
   titleEl.textContent = `Theme ${theme.code} • ${theme.name}`;
-  batchNameEl.textContent = `${theme.liveBatchName} (${theme.allowedStudentIds.length} Siswa Terdaftar)`;
-  remainingEl.textContent = `${theme.remainingMinutes} Menit`;
+  batchNameEl.textContent = `${theme.liveBatchName} (${theme.allowedStudentIds.length} Enrolled Students)`;
+  remainingEl.textContent = `${theme.remainingMinutes} Mins`;
 
   if (theme.isRemedial) {
     modeBadgeEl.style.background = 'rgba(245, 158, 11, 0.2)';
     modeBadgeEl.style.border = '1px solid #f59e0b';
     modeBadgeEl.style.color = '#fbbf24';
-    modeBadgeEl.textContent = '🟡 REMEDIAL (MAKS KKM 60%)';
+    modeBadgeEl.textContent = '🟡 REMEDIAL (MAX 60%)';
   } else {
     modeBadgeEl.style.background = 'rgba(16, 185, 129, 0.2)';
     modeBadgeEl.style.border = '1px solid #10b981';
     modeBadgeEl.style.color = '#34d399';
-    modeBadgeEl.textContent = '🟢 NORMAL (NILAI PENUH)';
+    modeBadgeEl.textContent = '🟢 NORMAL (FULL SCORE)';
   }
 
   // Filter ONLY unenrolled batch students who are eligible!
@@ -881,7 +881,7 @@ function openThemeLateModal(container, theme, context) {
     if (list.length === 0) {
       listContainer.innerHTML = `
         <div style="padding:16px; text-align:center; color:#94a3b8; font-size:0.8rem;">
-          ${q ? `Tidak ada siswa cocok dengan "${escapeHtml(q)}".` : 'Semua siswa eligible dalam batch ini sudah terdaftar di ujian.'}
+          ${q ? `No students match "${escapeHtml(q)}".` : 'All eligible students in this batch are already enrolled in the test.'}
         </div>
       `;
       return;
@@ -939,7 +939,7 @@ function openThemeLateModal(container, theme, context) {
   confirmBtn.onclick = async () => {
     const studentIds = Array.from(checkedLateIds);
     if (studentIds.length === 0) {
-      showToast('Pilih setidaknya 1 siswa susulan untuk ditambahkan.', 'warning');
+      showToast('Please select at least 1 late arrival student to add.', 'warning');
       return;
     }
 
@@ -964,14 +964,14 @@ function openThemeLateModal(container, theme, context) {
 
       await Promise.all(promises);
 
-      showToast(`👥 Berhasil menambahkan ${studentIds.length} siswa susulan ke Theme ${theme.code}! (${isRem ? 'Status: REMEDIAL' : 'Status: NORMAL'})`, 'success');
+      showToast(`👥 Successfully added ${studentIds.length} late student(s) to Theme ${theme.code}! (${isRem ? 'Status: REMEDIAL' : 'Status: NORMAL'})`, 'success');
       closeModal();
       if (window.renderClassHub) {
         window.renderClassHub(document.getElementById('admin-content-area'));
       }
     } catch (err) {
       console.error('Error adding late students:', err);
-      showToast('Gagal menambahkan siswa susulan: ' + err.message, 'error');
+      showToast('Failed to add late arrival students: ' + err.message, 'error');
     } finally {
       hideLoading();
     }
@@ -1055,18 +1055,18 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, p
       if (!prereqMet) {
         isEligible = false;
         statusType = 'danger';
-        statusLabel = `⚠️ Tugas Belum Lengkap (${completedTaskCount}/${themeTasks.length})`;
-        reason = `Belum menyelesaikan seluruh tugas materi Theme ${theme.code}.`;
+        statusLabel = `⚠️ Incomplete Tasks (${completedTaskCount}/${themeTasks.length})`;
+        reason = `Incomplete prerequisite tasks for Theme ${theme.code}.`;
       } else {
         isEligible = true;
         if (isAlreadyPassed) {
           statusType = 'success';
-          statusLabel = `✓ Lulus (${avgScore}%) • Perbaikan Nilai`;
-          reason = `Sudah lulus dengan nilai ${avgScore}%. Diizinkan mengulang untuk nilai lebih baik.`;
+          statusLabel = `✓ Passed (${avgScore}%) • Score Improvement`;
+          reason = `Passed with ${avgScore}%. Eligible to retake for higher score.`;
         } else {
           statusType = 'cyan';
-          statusLabel = `✓ Prasyarat Tuntas (Siap Ujian)`;
-          reason = `Seluruh ${themeTasks.length} tugas materi tuntas >= 60%.`;
+          statusLabel = `✓ Prerequisites Met (Exam Ready)`;
+          reason = `All ${themeTasks.length} prerequisite tasks passed >= 60%.`;
         }
       }
     } else {
@@ -1077,22 +1077,22 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, p
       if (!prereqMet) {
         isEligible = false;
         statusType = 'danger';
-        statusLabel = `⚠️ Tugas Belum Lengkap (${completedTaskCount}/${themeTasks.length})`;
-        reason = `Belum menyelesaikan seluruh tugas materi Theme ${theme.code}.`;
+        statusLabel = `⚠️ Incomplete Tasks (${completedTaskCount}/${themeTasks.length})`;
+        reason = `Incomplete prerequisite tasks for Theme ${theme.code}.`;
       } else if (isAlreadyPassed) {
         isEligible = false;
         statusType = 'warning';
-        statusLabel = `Sudah Lulus (${avgScore}%) — Tidak Masuk Remidi`;
-        reason = `Siswa sudah lulus ujian normal (>= 60%), tidak berhak mengikuti remidi.`;
+        statusLabel = `Already Passed (${avgScore}%) — Remedial Ineligible`;
+        reason = `Student already passed normal exam (>= 60%), ineligible for remedial.`;
       } else {
         isEligible = true;
         statusType = 'amber';
         if (avgScore !== null) {
-          statusLabel = `🟡 Remidi (Skor Sebelumnya: ${avgScore}%)`;
-          reason = `Nilai sebelumnya ${avgScore}% (< KKM 60%). Berhak mengikuti remidi.`;
+          statusLabel = `🟡 Remedial (Previous Score: ${avgScore}%)`;
+          reason = `Previous score ${avgScore}% (< 60%). Eligible for remedial.`;
         } else {
-          statusLabel = `🟡 Remidi (Belum Pernah Ujian)`;
-          reason = `Tugas tuntas namun belum pernah ujian normal.`;
+          statusLabel = `🟡 Remedial (Never Tested)`;
+          reason = `Prerequisites completed, never taken normal exam.`;
         }
       }
     }

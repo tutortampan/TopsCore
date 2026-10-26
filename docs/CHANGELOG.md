@@ -1,3 +1,45 @@
+## [2026-10-26 10:25] — Phase 121: Complete Internationalization & Direct English Only Alignment
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 121 (Complete Internationalization & Direct English Only Alignment across UI, Dialogs, Modals, Badges, and Error Guards per AGENTS.md Rule 2.12)
+**Status:** PASS
+
+### Why
+- AGENTS.md Rule 2.12: "Direct English Only for all user interfaces, prompts, and system messages." (Question text is preserved for student translation purposes).
+- User Instruction: "Ubah semua bahasa yang ada di web ke bahasa inggris, keculai soal untuk pertanyaan".
+
+### Changed
+- `dashboard.html` & `js/dashboard.js`:
+  - Translated education level options and assessment picker modal subtitle to English.
+  - Translated profile photo update notifications to English.
+  - Converted internal HTML comments to English.
+- `js/api.js`:
+  - Translated vocabulary module system guard error messages to English.
+  - Translated test access validation guard messages (inactive session, awaiting tutor, expired, wrong batch, not in whitelist) to English.
+- `js/result.js`:
+  - Standardized segmented toggle button and toast text to `REMEDIAL`.
+- `js/admin/class.js`:
+  - Translated remedial action button tooltips, confirmation dialogs, and toast messages to English.
+- `js/admin/student-management.js`:
+  - Translated student progress detail modal remedial buttons, badges, table headers, confirmation dialogs, and toasts to English.
+- `js/admin/assessment-access.js`:
+  - Translated Live Test Sessions Controller subheaders, KPI counter labels ("Open Sessions", "Awaiting Tutor").
+  - Translated Open Test Session Modal and Add Late Arrival Modal titles, form labels, mode banners, empty state messages, and action toasts.
+  - Translated Smart Eligibility Engine status badges and explanation reasons to English.
+- `js/admin/admin-deck.js`:
+  - Translated CV profile labels ("Birth Year", "Highest Education", "Work Experience (Optional)") to English.
+- `js/admin/app.js`:
+  - Translated student matrix row average title to "★ CLASS AVERAGE", hover warnings to "⚠️ Student has remedial score", and remedial cap indicators to "🟡 [REMEDIAL - MAX 60% CAP]".
+- `docs/CURRENT_STATE.md`:
+  - Documented Phase 121 completion details.
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS (All 39 JS files passed syntax validation)`
+
+### Next Action
+- Commit and push to git as instructed by user.
+
 ## [2026-10-26 06:26] — Phase 120: Fix IDE Accessibility, Vendor Prefixes, Duplicate DOM IDs, and Markdown Lint Errors
 
 **Agent/Session:** Antigravity

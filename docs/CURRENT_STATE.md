@@ -1,14 +1,38 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-26 06:25 UTC+8
+Last Updated: 2026-10-26 10:25 UTC+8
 
-Current Phase: Phase 120: Fix IDE Accessibility, Vendor Prefixes, Duplicate DOM IDs, and Markdown Lint Errors [COMPLETE]
+Current Phase: Phase 121: Complete Internationalization & Direct English Only Alignment across UI, Dialogs, Modals, Badges, and Error Guards [COMPLETE]
 
-Current Task: Fix all reported IDE problems across `admin.html`, `dashboard.html`, `css/dashboard.css`, and docs: added accessible names/titles to `<select>` and file/date inputs, resolved duplicate `dashboard-classes-bar` element ID, added Safari `-webkit-` vendor prefixes for `backdrop-filter` and `user-select`, fixed property order, removed obsolete `-webkit-overflow-scrolling: touch;`, and standardized markdown list bullets to dash [COMPLETE]
+Current Task: Translate all remaining Indonesian UI texts, dialog prompts, form labels, modal headers, status badges, and error guard messages to Direct English Only across `dashboard.html`, `js/dashboard.js`, `js/result.js`, `js/api.js`, `js/admin/admin-deck.js`, `js/admin/app.js`, `js/admin/class.js`, `js/admin/student-management.js`, and `js/admin/assessment-access.js` (preserving question text data for translation learning). [COMPLETE]
 
-Status: COMPLETE (All IDE problems resolved; 39 JS files syntax-checked 0 errors; ready for git commit and push).
+Status: COMPLETE (All UI strings translated to English; 39 JS files syntax-checked 0 errors; clean git working directory ready for commit and push).
 
 ## Completed
+
+- **Phase 121: Complete Internationalization & Direct English Only Alignment**:
+  - **1. Rule 2.12 Direct English Only Enforcement**:
+    - Translated all Indonesian UI texts, forms, modals, confirmations, badges, and alerts across the codebase into natural English.
+    - Preserved question content/fallbacks (`soal`, `pertanyaan`, `jawaban`, `kunci`) for student translation prompts.
+  - **2. `dashboard.html` & `js/dashboard.js`**:
+    - Translated education level selector options ("Select Education Level", "Select Level (Optional)").
+    - Translated assessment selection modal description ("Select an available assessment below.").
+    - Translated photo update toast notifications ("Profile photo successfully updated and saved!", "Failed to process photo...").
+  - **3. `js/api.js`**:
+    - Translated system guard module restriction errors ("SYSTEM GUARD: Vocabulary Mastery and Phrase Recognition modules are strictly locked to Vocabulary Class only.", "SYSTEM GUARD: Vocabulary modules are only permitted for Levels 0, 1, 2, and 3.").
+    - Translated test access check messages ("This test session is inactive or has been closed.", "This test session has not been opened by the Tutor yet...", "The test session has ended and access is locked.", "This test session is designated for a different batch.", "You are not on the attendance whitelist for today's test session...").
+  - **4. `js/result.js`**:
+    - Standardized remedial segment toggle button and toast to `REMEDIAL` ("Status updated: REMEDIAL").
+  - **5. `js/admin/class.js` & `js/admin/student-management.js`**:
+    - Translated remedial toggle buttons, tooltips, confirmation prompts, table headers, and toasts ("Revert remedial status (return to normal)", "Mark this score as Remedial (Max 60%)", "Action / Remedial", "Score successfully labeled as Remedial (Max 60%).").
+  - **6. `js/admin/assessment-access.js` (Test Sessions Tab)**:
+    - Translated header subtitle, KPI pill labels ("Open Sessions", "Awaiting Tutor").
+    - Translated Open Test Session Modal: titles, target batch label, duration label, banner descriptions ("NORMAL SESSION (FULL SCORE)", "REMEDIAL SESSION (MAX 60% CAP)"), search placeholder, select all/none buttons, ineligible warning/toggle, and confirmation toasts.
+    - Translated Late Arrival Students Modal: header, live duration label, warning description, search placeholder, and toasts.
+    - Translated Smart Eligibility Engine status badges and explanation reasons ("⚠️ Incomplete Tasks (X/Y)", "✓ Passed (X%) • Score Improvement", "✓ Prerequisites Met (Exam Ready)", "Already Passed (X%) — Remedial Ineligible", "🟡 Remedial (Previous Score: X%)", "🟡 Remedial (Never Tested)").
+  - **7. `js/admin/admin-deck.js` & `js/admin/app.js`**:
+    - Translated CV profile labels ("Birth Year", "Highest Education", "Work Experience (Optional)").
+    - Translated matrix row header ("★ CLASS AVERAGE") and tooltip warnings ("⚠️ Student has remedial score", "🟡 [REMEDIAL - MAX 60% CAP]").
 
 - **Phase 120: Accessibility, CSS Vendor Prefixes, Duplicate IDs & Lint Resolution**:
   - **1. Accessibility in `admin.html`**:

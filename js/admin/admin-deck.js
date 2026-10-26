@@ -313,17 +313,17 @@ export async function renderAdminProfile(container) {
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
             <div class="form-group">
-              <label class="form-label">Tahun Lahir</label>
+              <label class="form-label">Birth Year</label>
               <input type="number" class="form-control" id="adm-birth-year" value="${profile?.cv_data?.birth_year || ''}" placeholder="e.g. 1985" min="1900" max="2100" />
             </div>
             <div class="form-group">
-              <label class="form-label">Pendidikan Terakhir</label>
+              <label class="form-label">Highest Education</label>
               <input type="text" class="form-control" id="adm-education" value="${profile?.cv_data?.education || ''}" placeholder="e.g. M.Ed. in TESOL" />
             </div>
           </div>
 
           <div class="form-group mb-3">
-            <label class="form-label">Riwayat Kerja (Opsional)</label>
+            <label class="form-label">Work Experience (Optional)</label>
             <textarea class="form-control" id="adm-work-history" rows="2" placeholder="Brief summary of your professional experience...">${profile?.cv_data?.work_history || ''}</textarea>
           </div>
 

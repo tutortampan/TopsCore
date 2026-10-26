@@ -1633,7 +1633,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     const stickyCls = col.key === 'progName' ? 'col-sticky-2' : 'col-sticky-3';
                     cellsHtml += `<td class="col-sticky ${stickyCls} text-center" style="color:#94a3b8; font-size:0.7rem;">—</td>`;
                   } else if (col.key === 'displayName') {
-                    cellsHtml += `<td class="col-sticky col-sticky-4" style="font-weight:800; color:#FFFF00; font-size:0.75rem; white-space:nowrap; text-transform:uppercase; letter-spacing:0.02em;">★ CLASS AVERAGE (KELAS)</td>`;
+                    cellsHtml += `<td class="col-sticky col-sticky-4" style="font-weight:800; color:#FFFF00; font-size:0.75rem; white-space:nowrap; text-transform:uppercase; letter-spacing:0.02em;">★ CLASS AVERAGE</td>`;
                   } else if (col.key === 'progressPct') {
                     cellsHtml += `
                       <td class="col-sticky col-sticky-5 text-center">
@@ -1832,7 +1832,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   sortable: true,
                   width: '140px',
                   render: (val, row) => `
-                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:135px;" title="${escapeHtml(row.displayName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Siswa memiliki nilai remedial' : ''}">
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:135px;" title="${escapeHtml(row.displayName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Student has remedial score' : ''}">
                       <span class="fw-600 text-xs" style="color:var(--clr-text-1); font-size:0.78rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         ${escapeHtml(row.displayName)}
                       </span>
@@ -1959,7 +1959,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                             <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}" 
                                   style="color:${color}; ${cursorStyle}" 
                                   ${clickAttr}
-                                  title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🟡 [REMEDIAL - KKM 60% CAP]&#10;Effective Points: ${displayVal}/${totalQ} pts&#10;Raw Points: ${rawDisplayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`}&#10;Click to open result & manage remedial">
+                                  title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🟡 [REMEDIAL - MAX 60% CAP]&#10;Effective Points: ${displayVal}/${totalQ} pts&#10;Raw Points: ${rawDisplayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`}&#10;Click to open result & manage remedial">
                               <span style="font-weight:800; font-size:var(--matrix-font-size, 0.74rem); letter-spacing:-0.02em;">
                                 ${displayVal}${isRem ? '<sup class="asm-rem-sup">R</sup>' : ''}
                               </span>
@@ -2004,7 +2004,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                             <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}" 
                                   style="color:${color}; ${cursorStyle} font-weight:700; font-size:var(--matrix-font-size, 0.74rem);" 
                                   ${clickAttr}
-                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🟡 [REMEDIAL - KKM 60% CAP]&#10;Effective Score: ${Math.round(effPct)}%&#10;Raw Attempt: ${Math.round(rawPct)}%` : `Score: ${Math.round(effPct)}%`}&#10;Click to open result">
+                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🟡 [REMEDIAL - MAX 60% CAP]&#10;Effective Score: ${Math.round(effPct)}%&#10;Raw Attempt: ${Math.round(rawPct)}%` : `Score: ${Math.round(effPct)}%`}&#10;Click to open result">
                               ${Math.round(effPct)}%${isRem ? '<sup class="asm-rem-sup">R</sup>' : ''}
                             </span>
                           `;
@@ -2053,7 +2053,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                           <span class="asm-score asm-score-task ${isRem ? 'asm-score-remedial' : ''}" 
                                 style="color:${color}; ${cursorStyle}" 
                                 ${clickAttr}
-                                title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🟡 [REMEDIAL - KKM 60% CAP]&#10;Effective Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`} (${Math.round(effPct)}%)&#10;Click to view result">
+                                title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🟡 [REMEDIAL - MAX 60% CAP]&#10;Effective Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`} (${Math.round(effPct)}%)&#10;Click to view result">
                             ${displayVal}${isRem ? '<sup class="asm-rem-sup">R</sup>' : ''}
                           </span>
                         `;

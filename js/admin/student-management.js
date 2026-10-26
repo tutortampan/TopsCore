@@ -536,21 +536,21 @@ export async function renderStudents(area) {
     const detailsRows = (rec.details || []).map(r => {
       const attId = r.attemptId;
       const isRem = Boolean(r.is_remedial_unlocked);
-      const scoreClickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();" style="cursor:pointer; text-decoration:underline;" title="Buka Lembar Hasil Ujian (Gambar 3)"` : '';
+      const scoreClickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();" style="cursor:pointer; text-decoration:underline;" title="View Exam Result Sheet"` : '';
       
       let actionHtml = '<span class="text-muted text-xs">—</span>';
       if (r.is_completed && attId) {
         if (isRem) {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
-              <span class="badge" style="font-size:0.65rem; background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b; padding:2px 6px;">REMIDI (60%)</span>
-              <button class="btn btn-ghost btn-xs btn-prog-toggle-rem" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 6px; font-size:0.75rem;" title="Batalkan status remidi (kembalikan ke normal)">↩️</button>
+              <span class="badge" style="font-size:0.65rem; background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b; padding:2px 6px;">REMEDIAL (60%)</span>
+              <button class="btn btn-ghost btn-xs btn-prog-toggle-rem" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 6px; font-size:0.75rem;" title="Revert remedial status (return to normal)">↩️</button>
             </div>
           `;
         } else {
           actionHtml = `
-            <button class="btn btn-warning btn-xs btn-prog-toggle-rem" data-att-id="${attId}" data-set-remedial="true" style="padding:3px 10px; font-size:0.72rem; font-weight:700; background:#f59e0b; color:#000; border-radius:4px;" title="Tandai hasil ujian ini sebagai Remidi (KKM 60%)">
-              🏷️ Remidi
+            <button class="btn btn-warning btn-xs btn-prog-toggle-rem" data-att-id="${attId}" data-set-remedial="true" style="padding:3px 10px; font-size:0.72rem; font-weight:700; background:#f59e0b; color:#000; border-radius:4px;" title="Mark this exam result as Remedial (Max 60%)">
+              🏷️ Remedial
             </button>
           `;
         }
@@ -639,7 +639,7 @@ export async function renderStudents(area) {
                 <th class="text-center" style="padding:8px 12px;width:130px;">Level</th>
                 <th class="text-center" style="padding:8px 12px;width:120px;">Status</th>
                 <th class="text-center" style="padding:8px 12px;width:100px;">Best Score</th>
-                <th class="text-center" style="padding:8px 12px;width:130px;">Action / Remidi</th>
+                <th class="text-center" style="padding:8px 12px;width:130px;">Action / Remedial</th>
               </tr>
             </thead>
             <tbody>
@@ -659,13 +659,13 @@ export async function renderStudents(area) {
         const attId = btn.dataset.attId;
         const targetRemedial = btn.dataset.setRemedial === 'true';
         const msg = targetRemedial
-          ? 'Tandai nilai ujian ini sebagai hasil REMEDIAL (otomatis dibatasi maksimal KKM 60% / Grade B)?'
-          : 'Kembalikan nilai ujian ini ke status NORMAL (menghapus batas KKM 60%)?';
+          ? 'Mark this exam result as REMEDIAL (automatically capped at max 60% / Grade B)?'
+          : 'Revert this exam result to NORMAL (remove 60% cap)?';
         if (!confirm(msg)) return;
         try {
-          showLoading('Mengubah status remidi...');
+          showLoading('Updating remedial status...');
           await labelAttemptRemedial(attId, targetRemedial, 60);
-          showToast(targetRemedial ? '🏷️ Berhasil dilabel sebagai Remidi (KKM 60%).' : '↩️ Status remidi berhasil dikembalikan ke Normal.', 'success');
+          showToast(targetRemedial ? '🏷️ Successfully labeled as Remedial (Max 60%).' : '↩️ Remedial status reverted to Normal.', 'success');
           modal.remove();
           if (typeof window.loadSection === 'function') {
             await window.loadSection('students');
@@ -675,7 +675,7 @@ export async function renderStudents(area) {
           }, 300);
         } catch(err) {
           console.error(err);
-          showToast('Gagal mengubah status: ' + err.message, 'error');
+          showToast('Failed to update status: ' + err.message, 'error');
         } finally {
           hideLoading();
         }
@@ -926,13 +926,13 @@ export async function renderStudents(area) {
                       <div class="d-flex align-center gap-2">
                         ${latestAtt ? `
                           ${latestAtt.is_remedial_unlocked ? `
-                            <button class="btn btn-secondary btn-sm btn-modal-toggle-rem" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 8px;font-size:0.75rem;background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#fbbf24;" title="Kembalikan status ke Normal (hapus batas KKM 60%)">
+                            <button class="btn btn-secondary btn-sm btn-modal-toggle-rem" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 8px;font-size:0.75rem;background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#fbbf24;" title="Revert status to Normal (remove 60% cap)">
                               ↩️ Normal
                             </button>
-                            <span class="badge badge-success" style="font-size:0.7rem;">🔓 Remedial Authorized (KKM 60%)</span>
+                            <span class="badge badge-success" style="font-size:0.7rem;">🔓 Remedial Authorized (Max 60%)</span>
                           ` : `
-                            <button class="btn btn-warning btn-sm btn-modal-toggle-rem" data-att-id="${attId}" data-set-remedial="true" style="padding:2px 8px;font-size:0.75rem;" title="Tandai nilai ujian ini sebagai Remidi (KKM 60%)">
-                              🏷️ Remidi (60%)
+                            <button class="btn btn-warning btn-sm btn-modal-toggle-rem" data-att-id="${attId}" data-set-remedial="true" style="padding:2px 8px;font-size:0.75rem;" title="Mark this exam score as Remedial (Max 60%)">
+                              🏷️ Remedial (60%)
                             </button>
                           `}
                         ` : ''}
@@ -1010,15 +1010,15 @@ export async function renderStudents(area) {
             const attId = btn.dataset.attId;
             const targetRemedial = btn.dataset.setRemedial !== 'false';
             const msg = targetRemedial
-              ? 'Tandai nilai ini sebagai hasil REMEDIAL (dibatasi maksimal KKM 60%)?'
-              : 'Kembalikan nilai ini ke status NORMAL (menghapus batas KKM 60%)?';
+              ? 'Mark this score as REMEDIAL (capped at max 60%)?'
+              : 'Revert this score to NORMAL (remove 60% cap)?';
             if (!confirm(msg)) return;
             try {
               await labelAttemptRemedial(attId, targetRemedial, 60);
-              showToast(targetRemedial ? '🏷️ Nilai berhasil dilabel sebagai Remidi (KKM 60%).' : '↩️ Status remidi berhasil dikembalikan ke Normal.', 'success');
+              showToast(targetRemedial ? '🏷️ Score successfully labeled as Remedial (Max 60%).' : '↩️ Remedial status reverted to Normal.', 'success');
               window.showStudentProfileModal(studentId);
             } catch(err) {
-              showToast('Gagal mengubah status: ' + err.message, 'error');
+              showToast('Failed to update status: ' + err.message, 'error');
             }
           };
         });

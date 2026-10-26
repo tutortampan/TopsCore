@@ -327,7 +327,7 @@ if (!session) {
               <span>${!isRemedial ? '●' : '○'}</span> NORMAL
             </button>
             <button type="button" class="remedial-segment-btn segment-remidi ${isRemedial ? 'active' : ''}" id="btn-segment-remidi" title="Set Status: Remedial Exam">
-              <span>${isRemedial ? '●' : '○'}</span> REMIDI
+              <span>${isRemedial ? '●' : '○'}</span> REMEDIAL
             </button>
           </div>
         `;
@@ -353,7 +353,7 @@ if (!session) {
             try {
               showLoading();
               await labelAttemptRemedial(attempt.id, true, 60);
-              showToast('Status updated: REMIDI', 'warning');
+              showToast('Status updated: REMEDIAL', 'warning');
               setTimeout(() => window.location.reload(), 300);
             } catch (err) {
               console.error(err);

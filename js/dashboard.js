@@ -1240,7 +1240,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
       // Open modal immediately with a loading state
       titleEl.textContent  = (subj.name || 'Class') + ' Assessments';
-      classEl.textContent = 'Pilih assessment yang tersedia di bawah ini.';
+      classEl.textContent = 'Select an available assessment below.';
       container.innerHTML  = `<div style="padding:2rem;text-align:center;color:var(--clr-text-3);">
         <div class="spinner" style="margin:0 auto 1rem;"></div>
         <p>Loading Assessments…</p></div>`;
@@ -2591,10 +2591,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           applyPhotoEverywhere(compressedDataUrl);
           await uploadStudentPhoto(session.student_id, compressedDataUrl);
           hideLoading();
-          showToast('Foto profil baru berhasil diperbarui & disimpan!', 'success');
+          showToast('Profile photo successfully updated and saved!', 'success');
         } catch(err) {
           hideLoading();
-          showToast('Gagal memproses foto: ' + err.message, 'error');
+          showToast('Failed to process photo: ' + err.message, 'error');
         } finally {
           e.target.value = '';
         }
