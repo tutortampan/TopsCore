@@ -234,18 +234,32 @@ export async function renderAssessments(area) {
     },
     initialSortKey: 'order',
     initialSortAsc: true,
-    onBulkAction: async (selectedIds) => {
-      const action = prompt(`Bulk Action for ${selectedIds.length} Assessments.\nOptions: delete`);
-      if (action === 'delete') {
-        if (confirm(`Are you sure you want to permanently soft-delete ${selectedIds.length} Assessments?`)) {
-          for (const id of selectedIds) {
-            await adminSoftDelete('Assessments', id);
+    customBulkActions: [
+      {
+        label: '⚡ Bulk Edit',
+        className: 'btn-primary',
+        onClick: (selectedIds) => {
+          if (window.openBulkEditAssessmentsModal) {
+            window.openBulkEditAssessmentsModal(selectedIds, () => {
+              renderAssessments(area);
+            });
           }
-          showToast(`Deleted ${selectedIds.length} Assessments.`, 'success');
-          renderAssessments(area);
+        }
+      },
+      {
+        label: '🗑️ Bulk Delete',
+        className: 'btn-danger',
+        onClick: async (selectedIds) => {
+          if (confirm(`Are you sure you want to permanently soft-delete ${selectedIds.length} Assessments?`)) {
+            for (const id of selectedIds) {
+              await adminSoftDelete('Assessments', id);
+            }
+            showToast(`Deleted ${selectedIds.length} Assessments.`, 'success');
+            renderAssessments(area);
+          }
         }
       }
-    },
+    ],
     onRowClick: (row) => {
       const r = (row && typeof row === 'object') ? row : {};
       const prereqText = r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';

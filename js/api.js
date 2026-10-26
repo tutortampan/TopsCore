@@ -677,7 +677,7 @@ export async function generateAssessmentQuestions(sb, assessment) {
     if (vaultWords && vaultWords.length > 0) {
       let allEnglishAnswers = [];
       let typeDistractorPools = {};
-      const ansType = assessment.payload?.answer_type || assessment.answer_type || 'written';
+      const ansType = assessment.answer_type || assessment.payload?.answer_type || 'written';
       
       if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
         let allDataQuery = sb.from('vocabulary_vault').select('english, word_type').is('deleted_at', null);
@@ -2600,7 +2600,7 @@ export async function upsertDynamicAssessmentShell(config) {
     themeCode, topicCode,
     modulePrefix = 'VOCAB',
     category = 'words',
-    durationMinutes = 60,
+    durationMinutes = null,
     prerequisiteId = null,
     moduleId = null,
     answerType = null,
@@ -2609,6 +2609,9 @@ export async function upsertDynamicAssessmentShell(config) {
 
   const isTest = tier === 'TEST';
   const isPhrase = category === 'phrases' || modulePrefix === 'PHRASE';
+  const effectiveDurationMinutes = durationMinutes !== null && durationMinutes !== undefined
+    ? Number(durationMinutes)
+    : (isTest ? 120 : 5);
 
   // Standardized Shell Code: e.g. 3A1-WORDS-TASK, 3A1-PHRASES-TASK, 3A-WORDS-TEST, 3A-PHRASES-TEST
   const code = isPhrase
@@ -2689,7 +2692,8 @@ export async function upsertDynamicAssessmentShell(config) {
     title:                      generatedTitle,
     description:                description || `${tier}: ${themeCode}/${topicCode || 'ALL'} (${isPhrase ? 'Phrases' : 'Words'})`,
     status:                     'PUBLISHED',
-    working_duration_minutes:   durationMinutes,
+    working_duration_minutes:   effectiveDurationMinutes,
+    duration_minutes:           effectiveDurationMinutes,
     prerequisite_assessment_id: prerequisiteId,
     answer_type:                effectiveAnswerType,
     is_dynamic_shell:           true,
@@ -2704,6 +2708,8 @@ export async function upsertDynamicAssessmentShell(config) {
       category: isPhrase ? 'phrases' : 'words', 
       answer_type: effectiveAnswerType, 
       shell_code: code,
+      working_duration_minutes: effectiveDurationMinutes,
+      duration_minutes: effectiveDurationMinutes,
       total_questions: expectedQuestions,
       snapshot_question_count: expectedQuestions
     },
@@ -3199,6 +3205,169 @@ export async function checkStudentTestAccess(studentId, assessmentId) {
   };
 }
 
+export async function removeStudentFromTestSession({ assessmentId, studentId, action = 'submit' }) {
+  const sb = await getSupabase();
+  const { data: existing, error: fetchErr } = await sb.from('assessments')
+    .select('id, payload')
+    .eq('id', assessmentId)
+    .single();
+  if (fetchErr || !existing) throw new Error('Assessment not found');
+
+  const currentSession = existing.payload?.test_session;
+  if (!currentSession) {
+    throw new Error('No active test session found.');
+  }
+
+  const allowed = (currentSession.allowed_student_ids || []).filter(id => id !== studentId);
+  const remedials = (currentSession.remedial_student_ids || []).filter(id => id !== studentId);
+
+  const updatedSession = {
+    ...currentSession,
+    allowed_student_ids: allowed,
+    remedial_student_ids: remedials
+  };
+
+  const updatedPayload = {
+    ...(existing.payload || {}),
+    test_session: updatedSession
+  };
+
+  await adminUpdate('assessments', assessmentId, {
+    payload: updatedPayload
+  });
+
+  // Handle active in-progress attempt for this student & assessment
+  const { data: activeAttempts } = await sb.from('attempts')
+    .select('id, status, started_at, total_questions')
+    .eq('student_id', studentId)
+    .eq('assessment_id', assessmentId)
+    .eq('status', 'in_progress');
+
+  if (activeAttempts && activeAttempts.length > 0) {
+    for (const att of activeAttempts) {
+      if (action === 'submit') {
+        // Collect current answers from attempt_answers
+        const { data: ansRows } = await sb.from('attempt_answers')
+          .select('id, student_answer, accepted_answers_snapshot, correct_answer_snapshot')
+          .eq('attempt_id', att.id);
+
+        let correctCount = 0;
+        (ansRows || []).forEach(r => {
+          const ans = (r.student_answer || '').trim();
+          if (ans) {
+            let accepted = r.accepted_answers_snapshot || [];
+            if (typeof accepted === 'string') {
+              try { accepted = JSON.parse(accepted); } catch { accepted = []; }
+            }
+            const normAns = ans.toLowerCase();
+            const isMatch = (accepted || []).some(a => String(a).trim().toLowerCase() === normAns) ||
+              (r.correct_answer_snapshot && String(r.correct_answer_snapshot).trim().toLowerCase() === normAns);
+            if (isMatch) correctCount++;
+          }
+        });
+
+        const totalQ = att.total_questions || (ansRows ? ansRows.length : 1);
+        const rawScore = totalQ > 0 ? (correctCount / totalQ) * 100 : 0;
+        const isRem = Boolean(currentSession.is_remedial);
+        const effectiveScore = isRem ? Math.min(rawScore, 60.0) : rawScore;
+        const grade = getGrade(effectiveScore);
+
+        await sb.from('attempts')
+          .update({
+            status: 'auto_submitted',
+            score: correctCount,
+            correct_count: correctCount,
+            percentage: Math.round(rawScore * 10) / 10,
+            effective_score: Math.round(effectiveScore * 10) / 10,
+            grade: grade,
+            submitted_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', att.id);
+      } else if (action === 'cancel') {
+        await sb.from('attempts')
+          .update({
+            status: 'cancelled',
+            score: 0,
+            percentage: 0,
+            effective_score: 0,
+            grade: 'E',
+            submitted_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', att.id);
+      }
+    }
+  }
+
+  // Audit log
+  try {
+    await sb.from('audit_logs').insert({
+      actor_role: 'admin',
+      action: 'REMOVE_STUDENT_FROM_TEST_SESSION',
+      entity_type: 'assessment',
+      entity_id: assessmentId,
+      new_value: {
+        student_id: studentId,
+        action: action,
+        timestamp: new Date().toISOString()
+      },
+      created_at: new Date().toISOString()
+    });
+  } catch (logErr) {
+    console.warn('Failed to insert audit log for student removal:', logErr);
+  }
+
+  return { success: true, updatedSession };
+}
+
+export async function fetchLiveTestSessionData({ assessmentIds = [], studentIds = [], unlockedAt = null }) {
+  const sb = await getSupabase();
+  if (!assessmentIds.length || !studentIds.length) {
+    return { attempts: [], cheatLogs: [], answers: [] };
+  }
+
+  let attemptsQuery = sb.from('attempts')
+    .select('id, student_id, assessment_id, status, score, correct_count, total_questions, percentage, effective_score, grade, started_at, submitted_at, updated_at')
+    .in('assessment_id', assessmentIds)
+    .in('student_id', studentIds);
+
+  if (unlockedAt) {
+    const windowStart = new Date(new Date(unlockedAt).getTime() - 10 * 60 * 1000).toISOString();
+    attemptsQuery = attemptsQuery.gte('created_at', windowStart);
+  }
+
+  const { data: attempts } = await attemptsQuery;
+
+  let cheatQuery = sb.from('audit_logs')
+    .select('id, actor_user_id, entity_id, new_value, created_at')
+    .eq('action', 'CHEAT_ATTEMPT')
+    .in('entity_id', assessmentIds)
+    .in('actor_user_id', studentIds);
+
+  if (unlockedAt) {
+    const windowStart = new Date(new Date(unlockedAt).getTime() - 10 * 60 * 1000).toISOString();
+    cheatQuery = cheatQuery.gte('created_at', windowStart);
+  }
+
+  const { data: cheatLogs } = await cheatQuery;
+
+  const attemptIds = (attempts || []).map(a => a.id);
+  let answersData = [];
+  if (attemptIds.length > 0) {
+    const { data: answers } = await sb.from('attempt_answers')
+      .select('id, attempt_id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, is_correct, score, updated_at')
+      .in('attempt_id', attemptIds);
+    answersData = answers || [];
+  }
+
+  return {
+    attempts: attempts || [],
+    cheatLogs: cheatLogs || [],
+    answers: answersData
+  };
+}
+
 if (typeof window !== 'undefined') {
   window.adminFetchAll = adminFetchAll;
   window.adminUpdate = adminUpdate;
@@ -3206,8 +3375,11 @@ if (typeof window !== 'undefined') {
   window.fetchActiveTestSession = fetchActiveTestSession;
   window.openTestSession = openTestSession;
   window.addLateStudentsToSession = addLateStudentsToSession;
+  window.removeStudentFromTestSession = removeStudentFromTestSession;
+  window.fetchLiveTestSessionData = fetchLiveTestSessionData;
   window.labelAttemptRemedial = labelAttemptRemedial;
   window.closeTestSession = closeTestSession;
   window.checkStudentTestAccess = checkStudentTestAccess;
 }
+
 

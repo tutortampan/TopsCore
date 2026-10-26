@@ -2852,7 +2852,12 @@ body.dashboard-page .standings-table-wrap {
   min-height: 0 !important;
   overflow-y: auto !important;
   -ms-overflow-style: none !important;
-  scrollbar-width: none !important;
+}
+
+@supports (scrollbar-width: none) {
+  body.dashboard-page .standings-table-wrap {
+    scrollbar-width: none !important;
+  }
 }
 
 body.dashboard-page .standings-table-wrap::-webkit-scrollbar {
@@ -3191,7 +3196,13 @@ body.dashboard-page #completed-Assessments-container {
   min-height: 0 !important;
   overflow-y: auto !important;
   -ms-overflow-style: none !important;
-  scrollbar-width: none !important;
+}
+
+@supports (scrollbar-width: none) {
+  body.dashboard-page #batch-leaderboard-container,
+  body.dashboard-page #completed-Assessments-container {
+    scrollbar-width: none !important;
+  }
 }
 
 body.dashboard-page #batch-leaderboard-container::-webkit-scrollbar,
@@ -3388,5 +3399,364 @@ body.dashboard-page .completed-summary-val {
   font-size: 0.95rem !important;
   font-weight: 800 !important;
   font-variant-numeric: tabular-nums !important;
+}
+
+/* ============================================================
+   EXTERNALIZED STYLES FOR DASHBOARD.HTML
+   ============================================================ */
+.header-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--clr-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.header-avatar img,
+#header-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.banner-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+#banner-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.classes-selector-modal-desc {
+  margin-top: 2px;
+}
+
+.classes-selector-modal-actions {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--clr-border);
+}
+
+#btn-open-class-levels {
+  font-size: 0.85rem;
+  padding: 8px 12px;
+}
+
+.personal-data-card {
+  margin-top: 10px;
+  margin-bottom: 16px;
+}
+
+.profile-pin-inputs-compact {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+}
+
+.profile-pin-input-compact {
+  font-size: 0.85rem;
+  padding: 6px;
+}
+
+#prof-age.profile-pin-input-compact {
+  background: var(--clr-surface-2);
+  display: flex;
+  align-items: center;
+  color: var(--clr-text-3);
+}
+
+.level-modal-box {
+  max-width: 680px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#levels-container {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-right: 8px;
+}
+
+.gender-setup-box {
+  max-width: 540px;
+  text-align: center;
+}
+
+.setup-modal-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-2);
+}
+
+.setup-modal-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--clr-text-1);
+  margin-bottom: var(--space-2);
+}
+
+.gender-cards-row {
+  flex-wrap: wrap;
+}
+
+.gender-card {
+  flex: 1;
+  min-width: 180px;
+  cursor: pointer;
+  border: 2px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  background: rgba(255,255,255,0.03);
+  transition: all 0.25s ease;
+}
+
+.gender-card-icon {
+  font-size: 3.2rem;
+  margin-bottom: var(--space-2);
+}
+
+.gender-card-label {
+  color: var(--clr-text-1);
+}
+
+.setup-btn-confirm {
+  padding: var(--space-3) var(--space-6);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.photo-setup-box {
+  max-width: 540px;
+  text-align: center;
+}
+
+.webcam-viewport {
+  width: 220px;
+  height: 220px;
+  margin: 0 auto var(--space-4);
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid var(--clr-primary);
+  position: relative;
+  background: #050510;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+
+.webcam-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.webcam-snapshot-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  font-size: 0.8rem;
+  padding: 12px;
+}
+
+.setup-controls-row {
+  flex-wrap: wrap;
+}
+
+.btn-upload-label {
+  cursor: pointer;
+  margin: 0;
+}
+
+#mic-status-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+}
+
+#mic-status-icon {
+  font-size: 1.3rem;
+}
+
+#btn-retry-mic {
+  font-size: 0.75rem;
+}
+
+#btn-skip-photo-setup {
+  margin-top: var(--space-2);
+  font-size: 0.85rem;
+  color: var(--clr-text-3);
+}
+
+#birthday-setup-modal {
+  z-index: 100000;
+  background: rgba(0,0,0,0.8);
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.birthday-setup-card {
+  background: #1e293b;
+  color: #f8fafc;
+  padding: 2rem;
+  border-radius: 16px;
+  max-width: 480px;
+  width: 92%;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.1);
+  text-align: center;
+}
+
+.setup-card-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.setup-card-title {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.setup-card-subtitle {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin-top: 0.35rem;
+  margin-bottom: 1.5rem;
+}
+
+.setup-card-input-box {
+  background: rgba(0,0,0,0.25);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.setup-input-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #38bdf8;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+#onboard-birth-date {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color-scheme: dark;
+}
+
+#btn-confirm-birthday-setup {
+  width: 100%;
+  padding: 0.85rem;
+  font-size: 1rem;
+  border-radius: 8px;
+}
+
+#education-setup-modal {
+  z-index: 100000;
+  background: #000000;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.education-setup-card {
+  background: #1e293b;
+  color: #f8fafc;
+  padding: 2rem;
+  border-radius: 16px;
+  max-width: 480px;
+  width: 92%;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.education-setup-header {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.education-setup-header .setup-card-subtitle {
+  margin-bottom: 0;
+}
+
+.edu-entry-box {
+  background: rgba(0,0,0,0.25);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 1rem;
+}
+
+.edu-entry-box.optional {
+  margin-bottom: 1.5rem;
+}
+
+.edu-entry-box .setup-input-label.optional {
+  color: #94a3b8;
+}
+
+.edu-entry-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.edu-select-input {
+  flex: 2;
+  padding: 0.65rem 0.8rem;
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.edu-year-input {
+  flex: 1;
+  padding: 0.65rem 0.8rem;
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+#btn-confirm-education-setup {
+  padding: 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 8px;
 }
 

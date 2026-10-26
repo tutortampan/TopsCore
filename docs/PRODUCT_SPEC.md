@@ -19,7 +19,16 @@ TopsCore is an institutional, data-efficient, low-egress English Learning Manage
 - **Scoring & Retakes**: Unlimited retakes bounded by availability windows. The main report card stores the **HIGHEST** score. Global average strictly counts unopened/unattempted available modules as 0. Teachers have manual override privileges.
 - **Prerequisites**: Dynamic multi-level prerequisites supporting 0 to N parent assessments, minimum score thresholds, and aggregate average score thresholds.
 - **Stateless AI Media Pipeline**: Supabase stores ONLY structured text/JSON. Media (audio/photos) is processed transiently in the browser, sent directly to the AI API for evaluation via Edge Functions, and immediately discarded.
-- **Grading Scale**: F (0-10%), E (11-30%), D (31-50%), C (51-70%), B (71-90%), A (91-99%), S (100%).
+- **Official Grading Scale (6 Tiers)**:
+  - `★` (100%): "Excellent" | Purple (`#A855F7`)
+  - `A` (90% – 99%): "Very Good" | Deep/Rich Green (`#059669`)
+  - `B` (80% – 89%): "Good" | Bright Lime (`#84CC16`)
+  - `C` (60% – 79%): "Enough" | Yellow (`#EAB308`) — Passing threshold (KKM)
+  - `D` (30% – 59%): "Less" | Orange (`#F97316`)
+  - `E` (0% – 29%): "Fail" | Red (`#EF4444`)
+  - Non-standard grades "S", "F", and "R" are strictly eliminated.
+  - Remedial attempts are capped at maximum 60% effective score (Grade C).
+  - Remedial "R" indicator (`60%ᴿ` or `<sup class="asm-rem-sup">R</sup>`) is strictly attached ONLY to the Score percentage, and never appears on Grade or Point.
 - **The 8 Assessment Modules**: 
   1. Point & Speak! (Visual Pronouns)
   2. Storytelling (Narrative Tense)

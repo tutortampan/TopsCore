@@ -55,7 +55,7 @@ export class DataGrid {
           <span class="datagrid-count text-muted text-sm" style="margin-right:1rem;"></span>
           ${this.bulkActions ? (
              this.customBulkActions.length > 0 
-              ? this.customBulkActions.map((btn, i) => `<button class="btn btn-secondary btn-sm datagrid-custom-bulk-btn hidden" data-idx="${i}">${btn.label} (<span class="datagrid-bulk-count">0</span>)</button>`).join(' ')
+              ? this.customBulkActions.map((btn, i) => `<button class="btn ${btn.className || 'btn-secondary'} btn-sm datagrid-custom-bulk-btn hidden" data-idx="${i}">${btn.label} (<span class="datagrid-bulk-count">0</span>)</button>`).join(' ')
               : `<button class="btn btn-secondary btn-sm datagrid-bulk-btn hidden">Bulk Action (<span class="datagrid-bulk-count">0</span>)</button>`
           ) : ''}
         </div>
@@ -347,6 +347,36 @@ export class DataGrid {
 
   getSelection() {
     return Array.from(this.selectedIds);
+  }
+
+  selectAllRows(filterFn = null) {
+    if (!this.bulkActions) return;
+    this.selectedIds.clear();
+    const target = filterFn ? this.filteredData.filter(filterFn) : this.filteredData;
+    target.forEach(r => {
+      if (r && r.id) this.selectedIds.add(String(r.id));
+    });
+    if (this.tbody) {
+      const rowCbs = this.tbody.querySelectorAll('.datagrid-row-cb');
+      rowCbs.forEach(cb => {
+        cb.checked = this.selectedIds.has(String(cb.value));
+      });
+    }
+    if (this.selectAllCb) {
+      this.selectAllCb.checked = this.selectedIds.size > 0 && this.selectedIds.size === this.filteredData.length;
+    }
+    this.updateBulkUI();
+  }
+
+  clearSelection() {
+    if (!this.bulkActions) return;
+    this.selectedIds.clear();
+    if (this.tbody) {
+      const rowCbs = this.tbody.querySelectorAll('.datagrid-row-cb');
+      rowCbs.forEach(cb => { cb.checked = false; });
+    }
+    if (this.selectAllCb) this.selectAllCb.checked = false;
+    this.updateBulkUI();
   }
 
   updateBulkUI() {

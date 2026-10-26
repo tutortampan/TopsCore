@@ -29,7 +29,7 @@ When sources conflict:
 
 **Never infer a new business rule merely because it is technically convenient.**
 
-### 0.1 Command Execution Authority
+## 0.1 Command Execution Authority
 The user has granted standing, unconditional permission to execute all `powershell` commands proactively for diagnostics, verification, health checks, database queries, and test scripts across the workspace without requesting confirmation each time.
 
 ---
@@ -38,7 +38,7 @@ The user has granted standing, unconditional permission to execute all `powershe
 
 ## 1.1 Name
 
-**TopsCore**
+TopsCore
 
 ## 1.2 Product Type
 
@@ -239,12 +239,12 @@ Centralized authoritative grading (Official Grading Scale):
 | D | Less | 30% – 59% | Jingga / Orange | `#F97316` |
 | E | Fail | 0% – 29% | Merah (Red) | `#EF4444` |
 
-### Non-Standard Grades Elimination:
+### Non-Standard Grades Elimination
 - **No Grade "S"**: 100% Star tier is strictly represented by the symbol `★` (U+2605). Grade "S" is eliminated.
 - **No Grade "F"**: Fail tier (0%–29%) is strictly Grade `E`. Grade "F" is eliminated.
 - **No Grade "R"**: Remedial receives Grade `C` (derived from the 60% cap). Grade "R" does not exist.
 
-### Remedial Rules:
+### Remedial Rules
 - **Score Cap**: Maximum effective score is capped at **60%** (e.g., `Math.min(score, 60%)` or `Math.min(points, total_questions * 0.6)`).
 - **Remedial 'R' Placement**: A small letter "R" (`<sup class="asm-rem-sup">R</sup>` or `ᴿ`) is displayed **ONLY** beside the **Score** percentage (e.g. `60%ᴿ` or `60%<sup>R</sup>`) on the result page (`result.html`) and the student grade page inside class (`admin.html` Class Hub). It MUST NOT appear beside Grade (which remains clean: `★`, `A`, `B`, `C`, `D`, `E`) or Point (which displays clean numbers without 'R').
 - **Color Adherence**: Remedials do not receive a special standalone color override; the visual color strictly follows the score tier (at 60%, Yellow `#EAB308`).

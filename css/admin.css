@@ -813,12 +813,26 @@ body {
   margin-right: 3px;
 }
 .form-pill.grade-star,
-.form-pill.grade-s { background: linear-gradient(135deg, #c084fc, #a855f7, #7e22ce); color: #fff; font-weight: 900; box-shadow: 0 0 12px rgba(168, 85, 247, 0.7); }
-.form-pill.grade-a { background: linear-gradient(135deg, #34d399, #10b981); color: #fff; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
-.form-pill.grade-b { background: linear-gradient(135deg, #bef264, #84cc16); color: #1e1b4b; font-weight: 800; box-shadow: 0 0 8px rgba(132, 204, 22, 0.4); }
-.form-pill.grade-c { background: linear-gradient(135deg, #fef08a, #eab308); color: #1e1b4b; font-weight: 800; box-shadow: 0 0 8px rgba(234, 179, 8, 0.35); }
-.form-pill.grade-d { background: linear-gradient(135deg, #fb923c, #f97316); color: #fff; box-shadow: 0 0 8px rgba(249, 115, 22, 0.35); }
-.form-pill.grade-e { background: linear-gradient(135deg, #fca5a5, #ef4444); color: #fff; box-shadow: 0 0 8px rgba(239, 68, 68, 0.35); }
+.form-pill.grade-s {
+  background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%);
+  color: #ffffff;
+  font-weight: 900;
+  box-shadow: 0 0 12px rgba(192, 132, 252, 0.7);
+}
+.form-pill.grade-a {
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  color: #fff;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+.form-pill.grade-b {
+  background: linear-gradient(135deg, #d9f99d, #bef264);
+  color: #0f172a;
+  font-weight: 800;
+  box-shadow: 0 0 8px rgba(190, 242, 100, 0.4);
+}
+.form-pill.grade-c { background: linear-gradient(135deg, #fef08a, #fde047); color: #0f172a; font-weight: 800; box-shadow: 0 0 8px rgba(253, 224, 71, 0.35); }
+.form-pill.grade-d { background: linear-gradient(135deg, #fed7aa, #fb923c); color: #fff; box-shadow: 0 0 8px rgba(251, 146, 60, 0.35); }
+.form-pill.grade-e { background: linear-gradient(135deg, #fca5a5, #f87171); color: #fff; box-shadow: 0 0 8px rgba(248, 113, 113, 0.35); }
 
 /* ============================================================
    6. MATTE BUTTONS & FILTER CONTROLS
@@ -1091,8 +1105,12 @@ body {
     overflow-x: auto;
     width: 100%;
     padding-bottom: 2px;
-    scrollbar-width: none;
     -ms-overflow-style: none;
+  }
+  @supports (scrollbar-width: none) {
+    .topbar-tabs-container {
+      scrollbar-width: none;
+    }
   }
   .topbar-tabs-container::-webkit-scrollbar {
     display: none;
@@ -2128,9 +2146,11 @@ tr.deleted-row td {
    27. SCROLLBAR GLOBAL (Tactical Thin Dark)
    ============================================================ */
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--fm-border-medium) transparent;
+@supports (scrollbar-width: thin) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--fm-border-medium) transparent;
+  }
 }
 
 *::-webkit-scrollbar {
@@ -3417,8 +3437,13 @@ tr.deleted-row td {
   width: 100% !important;
   display: block !important;
   position: relative;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(56, 189, 248, 0.6) rgba(15, 23, 42, 0.85);
+}
+
+@supports (scrollbar-width: thin) {
+  #class-attendance-grid .table-wrap {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(56, 189, 248, 0.6) rgba(15, 23, 42, 0.85);
+  }
 }
 
 #class-attendance-grid .table-wrap::-webkit-scrollbar {
@@ -3776,25 +3801,86 @@ body.sidebar-collapsed .admin-main {
   flex-shrink: 0 !important;
 }
 
-/* Star Grade S (100% Pure Purple #A855F7 with Glow) */
-.badge-grade-star-s {
-  background: rgba(168, 85, 247, 0.18) !important;
-  color: #A855F7 !important;
-  font-weight: 900 !important;
+/* ============================================================
+   GRADE CIRCLE BADGES (Uniform Round Pills for ★, A, B, C, D, E)
+   ============================================================ */
+.grade-circle {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 19px !important;
+  height: 19px !important;
+  min-width: 19px !important;
+  min-height: 19px !important;
+  border-radius: 50% !important;
   font-size: 0.68rem !important;
-  padding: 1px 6px !important;
-  line-height: 1.2 !important;
-  border: 1px solid #A855F7 !important;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.6) !important;
-  border-radius: 4px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+  vertical-align: middle !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+.grade-circle.grade-circle-star {
+  background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%) !important;
+  color: #ffffff !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+  box-shadow: 0 0 8px rgba(192, 132, 252, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+}
+
+.grade-circle.grade-circle-a {
+  background: #22C55E !important;
+  color: #ffffff !important;
+}
+
+.grade-circle.grade-circle-b {
+  background: #BEF264 !important;
+  color: #0f172a !important;
+  font-weight: 900 !important;
+}
+
+.grade-circle.grade-circle-c {
+  background: #FDE047 !important;
+  color: #0f172a !important;
+  font-weight: 900 !important;
+}
+
+.grade-circle.grade-circle-d {
+  background: #FB923C !important;
+  color: #ffffff !important;
+}
+
+.grade-circle.grade-circle-e {
+  background: #F87171 !important;
+  color: #ffffff !important;
+}
+
+/* Star Grade S (100% Pure Purple #C084FC with Glow) */
+.badge-grade-star-s {
+  background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%) !important;
+  color: #ffffff !important;
+  font-weight: 900 !important;
+  font-size: 0.72rem !important;
+  width: 19px !important;
+  height: 19px !important;
+  min-width: 19px !important;
+  min-height: 19px !important;
+  border-radius: 50% !important;
+  line-height: 1 !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 0 8px rgba(192, 132, 252, 0.6) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
 }
 
 .badge-grade-star-s .star-icon {
-  filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.75));
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   line-height: 1;
 }
 
@@ -4701,5 +4787,263 @@ body.sidebar-collapsed .admin-main {
 .topscore-locked-banner .banner-author {
   color: #cbd5e1 !important;
 }
+
+/* ==========================================================================
+   BULK EDIT ASSESSMENTS MODAL STYLES (Zero inline styles)
+   ========================================================================== */
+.bulk-edit-modal-box {
+  max-width: 680px !important;
+  max-height: 90vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.bulk-edit-body {
+  overflow-y: auto !important;
+  padding: 0.5rem 0 1rem !important;
+  flex: 1 !important;
+}
+
+.bulk-edit-target-box {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid var(--clr-border) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  margin-bottom: 1.25rem !important;
+}
+
+.bulk-edit-target-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.bulk-edit-target-label {
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  color: #94a3b8 !important;
+  text-transform: uppercase !important;
+}
+
+.bulk-edit-target-badge {
+  font-weight: 800 !important;
+  font-size: 0.75rem !important;
+}
+
+.bulk-edit-target-chips {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+  max-height: 90px !important;
+  overflow-y: auto !important;
+}
+
+.badge-task-chip {
+  font-size: 0.72rem !important;
+  padding: 2px 6px !important;
+  font-weight: 600 !important;
+  background: rgba(250, 204, 21, 0.12) !important;
+  color: #facc15 !important;
+  border: 1px solid rgba(250, 204, 21, 0.25) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.badge-test-chip {
+  font-size: 0.72rem !important;
+  padding: 2px 6px !important;
+  font-weight: 600 !important;
+  background: rgba(244, 114, 182, 0.12) !important;
+  color: #f472b6 !important;
+  border: 1px solid rgba(244, 114, 182, 0.25) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.bulk-edit-form {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1rem !important;
+}
+
+.bulk-edit-field-card {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+}
+
+.bulk-edit-field-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  margin-bottom: 0.6rem !important;
+}
+
+.bulk-edit-checkbox {
+  width: 18px !important;
+  height: 18px !important;
+  cursor: pointer !important;
+}
+
+.bulk-edit-field-label {
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  cursor: pointer !important;
+  color: var(--clr-text-1) !important;
+}
+
+.bulk-edit-field-wrap {
+  opacity: 0.45 !important;
+  pointer-events: none !important;
+  transition: opacity 0.2s !important;
+  padding-left: 1.7rem !important;
+}
+
+.bulk-edit-field-wrap.active {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.bulk-edit-input-group {
+  display: flex !important;
+  gap: 0.5rem !important;
+  align-items: center !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.bulk-edit-input-num {
+  width: 120px !important;
+}
+
+.bulk-edit-preset-row {
+  display: flex !important;
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+}
+
+.bulk-edit-preset-btn {
+  padding: 2px 8px !important;
+  font-size: 0.75rem !important;
+}
+
+.bulk-edit-select {
+  max-width: 320px !important;
+}
+
+.bulk-edit-help-text {
+  margin: 0.35rem 0 0 0 !important;
+}
+
+.bulk-edit-footer {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding-top: 1rem !important;
+  border-top: 1px solid var(--clr-border) !important;
+}
+
+.bulk-edit-save-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-weight: 700 !important;
+}
+
+/* ==========================================================================
+   GLOBAL TASK & TEST SETTINGS BOX (Class Hub)
+   ========================================================================== */
+.global-asm-settings-box {
+  background: rgba(15, 23, 42, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+  padding: 12px 16px !important;
+  margin-bottom: 16px !important;
+}
+
+.global-asm-settings-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 10px !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+.global-asm-settings-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  color: var(--clr-text-1) !important;
+}
+
+.global-asm-settings-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.global-asm-tier-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+
+.global-asm-tier-card.task-card {
+  border-left: 3px solid #facc15 !important;
+}
+
+.global-asm-tier-card.test-card {
+  border-left: 3px solid #f472b6 !important;
+}
+
+.global-asm-tier-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.global-asm-tier-title {
+  font-size: 0.88rem !important;
+  font-weight: 800 !important;
+}
+
+.global-asm-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+}
+
+.global-asm-item {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  flex: 1 !important;
+  min-width: 90px !important;
+}
+
+.global-asm-label {
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  text-transform: uppercase !important;
+}
+
+.global-asm-input {
+  height: 30px !important;
+  font-size: 0.8rem !important;
+  padding: 2px 8px !important;
+}
+
 
 

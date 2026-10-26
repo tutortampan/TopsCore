@@ -8,11 +8,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=5.6.0" />
-  <link rel="stylesheet" href="css/admin.css?v=5.6.0" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=5.6.0" />
+  <link rel="stylesheet" href="css/style.css?v=20261027" />
+  <link rel="stylesheet" href="css/admin.css?v=20261027" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=20261027" />
   <!-- SheetJS for Excel Import / Export -->
-  <script src="./js/vendor/xlsx.full.min.js?v=5.4.2" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=5.4.2';"></script>
+  <script src="./js/vendor/xlsx.full.min.js?v=20261027" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=20261027';"></script>
 
 </head>
 <body>
@@ -280,6 +280,122 @@
     </div>
   </div>
 
+  <!-- --- BULK EDIT ASSESSMENTS MODAL --- -->
+  <div class="modal-backdrop modal-z-1000 hidden" id="bulk-edit-assessments-modal" role="dialog" aria-modal="true" aria-labelledby="bulk-edit-asm-title">
+    <div class="modal-box modal-box-lg bulk-edit-modal-box">
+      <div class="modal-header modal-header-bordered">
+        <div>
+          <h3 id="bulk-edit-asm-title" class="modal-title-lg">⚡ Bulk Edit Assessments</h3>
+          <p class="text-xs text-muted modal-subtitle" id="bulk-edit-asm-subtitle">Ubah pengaturan waktu, cara jawab, dan skor kelulusan untuk beberapa assessment sekaligus.</p>
+        </div>
+        <button class="btn btn-ghost btn-icon" id="close-bulk-edit-asm-modal" aria-label="Close">✕</button>
+      </div>
+
+      <div class="modal-body-scroll bulk-edit-body">
+        <!-- Target Selection Preview Box -->
+        <div class="bulk-edit-target-box">
+          <div class="bulk-edit-target-header">
+            <span class="bulk-edit-target-label">Target Terpilih:</span>
+            <span class="badge badge-info bulk-edit-target-badge" id="bulk-edit-target-count">0 Selected</span>
+          </div>
+          <div id="bulk-edit-target-preview" class="bulk-edit-target-chips">
+            <!-- Assessment chips inserted dynamically -->
+          </div>
+        </div>
+
+        <form id="bulk-edit-asm-form" novalidate class="bulk-edit-form">
+          
+          <!-- 1. WAKTU / DURATION -->
+          <div class="bulk-edit-field-card">
+            <div class="bulk-edit-field-header">
+              <input type="checkbox" id="bulk-check-duration" class="bulk-edit-checkbox" title="Aktifkan perubahan durasi waktu" />
+              <label for="bulk-check-duration" class="bulk-edit-field-label">
+                ⏱️ Ubah Waktu Pengerjaan (Menit)
+              </label>
+            </div>
+            <div id="bulk-wrap-duration" class="bulk-edit-field-wrap">
+              <div class="bulk-edit-input-group">
+                <input type="number" id="bulk-input-duration" min="1" max="360" value="5" placeholder="5" title="Waktu Pengerjaan dalam menit" class="form-control bulk-edit-input-num" />
+                <label for="bulk-input-duration" class="text-sm text-muted">Menit per sesi pengerjaan</label>
+              </div>
+              <div class="bulk-edit-preset-row">
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-5">⚡ 5 Menit (Task Harian)</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-15">15 Menit</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-30">30 Menit</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-60">60 Menit</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-120">📝 120 Menit (Test)</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. CARA JAWAB / ANSWER TYPE -->
+          <div class="bulk-edit-field-card">
+            <div class="bulk-edit-field-header">
+              <input type="checkbox" id="bulk-check-answertype" class="bulk-edit-checkbox" title="Aktifkan perubahan cara jawab" />
+              <label for="bulk-check-answertype" class="bulk-edit-field-label">
+                🗣️ Ubah Tipe Cara Menjawab (Answer Type)
+              </label>
+            </div>
+            <div id="bulk-wrap-answertype" class="bulk-edit-field-wrap">
+              <select id="bulk-select-answertype" class="form-control bulk-edit-select" title="Pilih tipe cara menjawab" aria-label="Tipe Cara Menjawab">
+                <option value="spoken">🗣️ Spoken (Speech to Text / Lisan)</option>
+                <option value="written">✍️ Written (Mengetik Tulisan Langsung)</option>
+                <option value="selection">🔘 Selection (Pilihan Ganda / Dropdown)</option>
+                <option value="mixed">🔀 Mixed (Campuran)</option>
+              </select>
+              <p class="text-xs text-muted bulk-edit-help-text">Otomatis menyinkronkan seluruh soal di assessment_questions yang bersangkutan.</p>
+            </div>
+          </div>
+
+          <!-- 3. MINIMAL SCORE / PASSING SCORE -->
+          <div class="bulk-edit-field-card">
+            <div class="bulk-edit-field-header">
+              <input type="checkbox" id="bulk-check-minscore" class="bulk-edit-checkbox" title="Aktifkan perubahan batas kelulusan" />
+              <label for="bulk-check-minscore" class="bulk-edit-field-label">
+                🎯 Ubah Batas Skor Kelulusan (Passing Score %)
+              </label>
+            </div>
+            <div id="bulk-wrap-minscore" class="bulk-edit-field-wrap">
+              <div class="bulk-edit-input-group">
+                <input type="number" id="bulk-input-minscore" min="1" max="100" value="60" placeholder="60" title="Batas Minimal Skor (%)" class="form-control bulk-edit-input-num" />
+                <label for="bulk-input-minscore" class="text-sm text-muted">% nilai minimal untuk lulus modul</label>
+              </div>
+              <div class="bulk-edit-preset-row">
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-min-60">60% (Grade C Standar)</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-min-70">70%</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-min-80">80% (Grade B)</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. URUTAN SOAL / QUESTION ORDER -->
+          <div class="bulk-edit-field-card">
+            <div class="bulk-edit-field-header">
+              <input type="checkbox" id="bulk-check-order" class="bulk-edit-checkbox" title="Aktifkan perubahan urutan soal" />
+              <label for="bulk-check-order" class="bulk-edit-field-label">
+                🔀 Ubah Urutan Soal (Question Order)
+              </label>
+            </div>
+            <div id="bulk-wrap-order" class="bulk-edit-field-wrap">
+              <select id="bulk-select-order" class="form-control bulk-edit-select" title="Pilih urutan soal" aria-label="Urutan Soal">
+                <option value="random">🔀 Random (Soal Diacak)</option>
+                <option value="sequential">➡️ Sequential (Soal Berurutan)</option>
+              </select>
+            </div>
+          </div>
+
+        </form>
+      </div>
+
+      <div class="modal-footer modal-footer-bordered bulk-edit-footer">
+        <button type="button" class="btn btn-secondary" id="bulk-cancel-btn">Batal</button>
+        <button type="button" class="btn btn-primary bulk-edit-save-btn" id="bulk-save-btn">
+          <span>💾 Terapkan Perubahan</span> (<span id="bulk-save-count">0</span> Assessment)
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ✨ RECORD DRAWER ✨ -->
   <div id="datagrid-drawer-overlay" class="datagrid-drawer-overlay hidden" onclick="closeRecordDrawer()"></div>
   <div id="datagrid-drawer" class="datagrid-drawer">
@@ -391,14 +507,14 @@
   })();
 </script>
 <script type="module">
-    import { DataGrid } from './js/admin/datagrid.js?v=5.4.2';
+    import { DataGrid } from './js/admin/datagrid.js?v=20261027';
     window.DataGrid = DataGrid;
   </script>
-  <script type="module" src="js/admin/app.js?v=5.8.5"></script>
+  <script type="module" src="js/admin/app.js?v=20261027"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=5.8.7')
+        navigator.serviceWorker.register('sw.js?v=20261027')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

@@ -749,11 +749,65 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         isAssessmentActive = true;
         requestScreenWakeLock();
         lockHistory();
+        startSessionHeartbeatGuard();
       } catch(e) {
         hideLoading();
         showToast(e.message, 'error');
         setTimeout(() => window.location.href = 'dashboard.html', 2000);
       }
+    }
+
+    let _sessionHeartbeatTimer = null;
+    function startSessionHeartbeatGuard() {
+      if (_sessionHeartbeatTimer) clearInterval(_sessionHeartbeatTimer);
+      _sessionHeartbeatTimer = setInterval(async () => {
+        if (!isAssessmentActive || !attemptData?.id) return;
+        try {
+          const sb = await getSupabase();
+          // 1. Check attempt status
+          const { data: att } = await sb.from('attempts')
+            .select('status')
+            .eq('id', attemptData.id)
+            .single();
+
+          if (att) {
+            const st = String(att.status || '').toLowerCase();
+            if (st === 'cancelled') {
+              isAssessmentActive = false;
+              clearInterval(_sessionHeartbeatTimer);
+              alert('🚨 Sesi ujian Anda telah dibatalkan / dihentikan oleh Pengawas / Tutor.');
+              window.location.href = 'dashboard.html';
+              return;
+            }
+            if (st === 'auto_submitted') {
+              isAssessmentActive = false;
+              clearInterval(_sessionHeartbeatTimer);
+              alert('🚨 Sesi ujian Anda telah dikumpulkan oleh Pengawas / Tutor.');
+              window.location.href = `result.html?attempt_id=${attemptData.id}`;
+              return;
+            }
+          }
+
+          // 2. Check if student was removed from test_session.allowed_student_ids
+          if (assessmentId) {
+            const { data: asm } = await sb.from('assessments')
+              .select('payload')
+              .eq('id', assessmentId)
+              .single();
+            const sess = asm?.payload?.test_session;
+            if (sess && sess.status === 'UNLOCKED') {
+              const allowed = sess.allowed_student_ids || [];
+              if (Array.isArray(allowed) && allowed.length > 0 && !allowed.includes(session.student_id)) {
+                isAssessmentActive = false;
+                clearInterval(_sessionHeartbeatTimer);
+                alert('🚨 Akses Anda ke sesi ujian ini telah dicabut oleh Pengawas / Tutor.');
+                window.location.href = 'dashboard.html';
+                return;
+              }
+            }
+          }
+        } catch (_) {}
+      }, 8000);
     }
 
     function startSection(index, initialIdx = 0) {
@@ -2010,6 +2064,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
     async function doSubmit(isAuto = false) {
       isAssessmentActive = false; // Disable anti-cheat alerts on submission
+      if (_sessionHeartbeatTimer) { clearInterval(_sessionHeartbeatTimer); _sessionHeartbeatTimer = null; }
       releaseScreenWakeLock();
       timerController?.stop();
       saveCurrentAnswer();

@@ -19,8 +19,12 @@
 import {
   openTestSession,
   addLateStudentsToSession,
-  closeTestSession
+  removeStudentFromTestSession,
+  fetchLiveTestSessionData,
+  closeTestSession,
+  getGrade
 } from '../api.js?v=5.3.2';
+import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=5.6.5';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.3.2';
 
 const THEME_DEFINITIONS = [
@@ -138,7 +142,8 @@ export async function renderClassTestSessions(container, context = {}) {
       liveBatchId,
       liveBatchName,
       allowedStudentIds,
-      isRemedial
+      isRemedial,
+      unlockedAt: sess?.unlocked_at || null
     };
   });
 
@@ -347,6 +352,132 @@ export async function renderClassTestSessions(container, context = {}) {
         </div>
       </div>
     </div>
+
+    <!-- Modal 3: Live Test Session Monitor & Student Controller -->
+    <div id="modal-theme-live-monitor" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div class="modal-box card" style="background:#0b1329; border:1px solid rgba(255,255,255,0.18); border-radius:14px; width:100%; max-width:1050px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
+        <!-- Modal Header -->
+        <div style="padding:18px 24px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.85); flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span id="live-modal-theme-badge" style="font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:4px 10px; border-radius:6px; background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3);">THEME A</span>
+            <div>
+              <h3 id="live-modal-title" style="margin:0; font-size:1.25rem; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:8px;">
+                <span>👁️</span> Live Test Session Monitor
+              </h3>
+              <div id="live-modal-subtitle" style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">
+                Workplace Test &bull; Batch SH-26 &bull; Real-time Progress, Alarm & Scoring
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div id="live-modal-mode-badge" style="font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px; background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#34d399;">
+              NORMAL
+            </div>
+            <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:4px 10px; font-size:0.8rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+              <span>⏳ Sisa:</span>
+              <span id="live-modal-remaining" style="color:#ffffff; font-weight:800;">--m</span>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-live-modal-refresh" style="padding:5px 12px; font-size:0.8rem; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+              <span>🔄</span> Refresh
+            </button>
+            <button type="button" class="btn btn-ghost btn-icon" id="btn-close-live-modal" style="color:#94a3b8; font-size:1.3rem; padding:4px 8px;">✕</button>
+          </div>
+        </div>
+
+        <!-- KPI Summary Grid -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; padding:14px 24px; background:rgba(0,0,0,0.3); border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px;">
+            <div style="font-size:0.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase;">👥 Total Siswa</div>
+            <div id="kpi-live-total" style="font-size:1.4rem; font-weight:800; color:#ffffff; margin-top:2px;">0</div>
+          </div>
+          <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:8px; padding:10px 14px;">
+            <div style="font-size:0.7rem; font-weight:700; color:#60a5fa; text-transform:uppercase;">🟢 Sedang Mengerjakan</div>
+            <div id="kpi-live-in-progress" style="font-size:1.4rem; font-weight:800; color:#38bdf8; margin-top:2px;">0</div>
+          </div>
+          <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:8px; padding:10px 14px;">
+            <div style="font-size:0.7rem; font-weight:700; color:#34d399; text-transform:uppercase;">✅ Sudah Selesai</div>
+            <div id="kpi-live-submitted" style="font-size:1.4rem; font-weight:800; color:#10b981; margin-top:2px;">0</div>
+          </div>
+          <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:8px; padding:10px 14px;">
+            <div style="font-size:0.7rem; font-weight:700; color:#fbbf24; text-transform:uppercase;">⏳ Belum Mulai</div>
+            <div id="kpi-live-not-started" style="font-size:1.4rem; font-weight:800; color:#fbbf24; margin-top:2px;">0</div>
+          </div>
+          <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:10px 14px;">
+            <div style="font-size:0.7rem; font-weight:700; color:#f87171; text-transform:uppercase;">🚨 Total Alarm</div>
+            <div id="kpi-live-alarms" style="font-size:1.4rem; font-weight:800; color:#ef4444; margin-top:2px;">0</div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div style="padding:12px 24px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:rgba(15,23,42,0.4); border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;" id="live-modal-filter-tabs">
+            <button type="button" class="btn btn-xs btn-primary live-filter-btn active" data-filter="all">Semua (<span id="tab-cnt-all">0</span>)</button>
+            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="in_progress">🟢 Sedang Mengerjakan (<span id="tab-cnt-in-progress">0</span>)</button>
+            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="submitted">✅ Selesai (<span id="tab-cnt-submitted">0</span>)</button>
+            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="not_started">⏳ Belum Mulai (<span id="tab-cnt-not-started">0</span>)</button>
+            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="alarm">🚨 Ada Alarm (<span id="tab-cnt-alarm">0</span>)</button>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#cbd5e1; cursor:pointer;">
+              <input type="checkbox" id="live-modal-auto-poll" checked style="cursor:pointer;">
+              <span>⚡ Auto-Refresh (5s)</span>
+            </label>
+            <input type="text" id="live-modal-search" placeholder="🔍 Cari siswa..." class="form-control" style="font-size:0.78rem; padding:4px 10px; width:150px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:6px;">
+          </div>
+        </div>
+
+        <!-- Student Cards Container -->
+        <div id="live-modal-students-container" style="padding:16px 24px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:10px;">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Modal Footer -->
+        <div style="padding:12px 24px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); font-size:0.78rem; color:#94a3b8;">
+          <span id="live-modal-footer-info">Status ujian diperbarui secara real-time.</span>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-close-live-modal-footer" style="color:#cbd5e1;">Tutup</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 4: Kick Student Confirmation Modal -->
+    <div id="modal-kick-student-confirm" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10005; padding:16px;">
+      <div class="modal-box card" style="background:#0f172a; border:2px solid #ef4444; border-radius:12px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 20px 50px rgba(239,68,68,0.35);">
+        <div style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:12px;">
+          <span style="font-size:1.6rem;">🚨</span>
+          <div>
+            <h4 style="margin:0; font-size:1.15rem; font-weight:800; color:#f87171;">Keluarkan Siswa dari Ujian</h4>
+            <div id="kick-confirm-student-name" style="font-size:0.85rem; color:#cbd5e1; margin-top:2px;">Nama Siswa</div>
+          </div>
+        </div>
+        <div style="padding:20px; font-size:0.85rem; color:#cbd5e1; display:flex; flex-direction:column; gap:12px;">
+          <div>Pilih tindakan untuk berkas ujian siswa yang sedang berlangsung:</div>
+          <label style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); cursor:pointer;">
+            <input type="radio" name="kick_action" value="submit" checked style="margin-top:3px; cursor:pointer;">
+            <div>
+              <div style="font-weight:700; color:#ffffff;">📥 Kumpulkan & Nilai Jawaban Saat Ini</div>
+              <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Ujian siswa dihentikan seketika. Jawaban yang sudah diisi disimpan dan dinilai secara otomatis.</div>
+            </div>
+          </label>
+          <label style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); cursor:pointer;">
+            <input type="radio" name="kick_action" value="cancel" style="margin-top:3px; cursor:pointer;">
+            <div>
+              <div style="font-weight:700; color:#f87171;">⛔ Batalkan Ujian (Skor 0 / Cancelled)</div>
+              <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Ujian siswa dibatalkan dan status berkas menjadi 'cancelled' dengan skor 0.</div>
+            </div>
+          </label>
+        </div>
+        <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-kick" style="color:#94a3b8;">Batal</button>
+          <button type="button" class="btn btn-danger" id="btn-confirm-kick" style="background:#dc2626; border-color:#b91c1c; font-weight:800; padding:8px 18px; display:inline-flex; align-items:center; gap:6px;">
+            <span>🚫</span> Keluarkan Sekarang
+          </button>
+        </div>
+      </div>
+    </div>
   `;
 
   bindTestSessionsEvents(container, themesData, context);
@@ -380,13 +511,18 @@ function renderThemeCard(theme, context) {
     `;
 
     actionButtons = `
-      <div style="display: flex; gap: 8px; align-items: center; margin-top: auto;">
-        <button type="button" class="btn btn-sm btn-theme-add-late" data-theme="${code}" style="background: #6366f1; border-color: #4f46e5; color: #ffffff; font-weight: 700; flex: 1; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
-          <span>👥</span> + Late Add
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
+        <button type="button" class="btn btn-sm btn-theme-live-monitor" data-theme="${code}" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); border: 1px solid #3b82f6; color: #ffffff; font-weight: 700; width: 100%; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(37,99,235,0.35);">
+          <span>👁️</span> Monitor Live & Status Ujian (${allowedStudentIds.length})
         </button>
-        <button type="button" class="btn btn-sm btn-theme-close-session" data-theme="${code}" style="background: #ef4444; border-color: #dc2626; color: #ffffff; font-weight: 700; flex: 1; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
-          <span>🔒</span> Close Session
-        </button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button type="button" class="btn btn-sm btn-theme-add-late" data-theme="${code}" style="background: #4f46e5; border-color: #4338ca; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 10px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>👥</span> + Susulan
+          </button>
+          <button type="button" class="btn btn-sm btn-theme-close-session" data-theme="${code}" style="background: #ef4444; border-color: #dc2626; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 10px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>🔒</span> Tutup Sesi
+          </button>
+        </div>
       </div>
     `;
   } else {
@@ -485,6 +621,17 @@ function bindTestSessionsEvents(container, themesData, context) {
       if (!theme) return;
 
       openThemeLateModal(container, theme, context);
+    });
+  });
+
+  // 3b. Live Monitor Triggers
+  container.querySelectorAll('.btn-theme-live-monitor').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const theme = themesData.find(t => t.code === themeCode);
+      if (!theme) return;
+
+      openThemeLiveMonitorModal(container, theme, context);
     });
   });
 
@@ -979,6 +1126,509 @@ function openThemeLateModal(container, theme, context) {
 
   renderLateList();
   modal.classList.remove('hidden');
+}
+
+let _livePollingTimer = null;
+let _liveMonitorActiveFilter = 'all';
+let _liveMonitorSearchQuery = '';
+
+/**
+ * Open Modal: Live Test Session Monitor & Student Controller
+ */
+async function openThemeLiveMonitorModal(container, theme, context) {
+  const modal = container.querySelector('#modal-theme-live-monitor');
+  if (!modal) return;
+
+  if (_livePollingTimer) {
+    clearInterval(_livePollingTimer);
+    _livePollingTimer = null;
+  }
+
+  // Header Elements
+  const themeBadgeEl = modal.querySelector('#live-modal-theme-badge');
+  const titleEl = modal.querySelector('#live-modal-title');
+  const subtitleEl = modal.querySelector('#live-modal-subtitle');
+  const modeBadgeEl = modal.querySelector('#live-modal-mode-badge');
+  const remainingEl = modal.querySelector('#live-modal-remaining');
+  const studentsContainer = modal.querySelector('#live-modal-students-container');
+  const autoPollCheckbox = modal.querySelector('#live-modal-auto-poll');
+  const searchInput = modal.querySelector('#live-modal-search');
+  const refreshBtn = modal.querySelector('#btn-live-modal-refresh');
+  const footerInfoEl = modal.querySelector('#live-modal-footer-info');
+
+  themeBadgeEl.textContent = `THEME ${theme.code}`;
+  themeBadgeEl.style.background = theme.bgRgba;
+  themeBadgeEl.style.color = theme.color;
+  themeBadgeEl.style.border = `1px solid ${theme.borderRgba}`;
+
+  titleEl.innerHTML = `<span>👁️</span> Live Test Session Monitor: Theme ${theme.code}`;
+  subtitleEl.textContent = `${theme.name} Test • ${theme.liveBatchName} • Words & Phrases Modules`;
+
+  if (theme.isRemedial) {
+    modeBadgeEl.style.background = 'rgba(245, 158, 11, 0.2)';
+    modeBadgeEl.style.border = '1px solid #f59e0b';
+    modeBadgeEl.style.color = '#fbbf24';
+    modeBadgeEl.textContent = '🟡 REMEDIAL (MAX 60%)';
+  } else {
+    modeBadgeEl.style.background = 'rgba(16, 185, 129, 0.2)';
+    modeBadgeEl.style.border = '1px solid #10b981';
+    modeBadgeEl.style.color = '#34d399';
+    modeBadgeEl.textContent = '🟢 NORMAL (FULL SCORE)';
+  }
+
+  remainingEl.textContent = `${theme.remainingMinutes}m`;
+  if (searchInput) searchInput.value = '';
+  _liveMonitorSearchQuery = '';
+  _liveMonitorActiveFilter = 'all';
+
+  let processedStudents = [];
+
+  async function loadLiveData(silent = false) {
+    if (!silent) {
+      studentsContainer.innerHTML = `
+        <div style="padding: 40px; text-align: center; color: #94a3b8;">
+          <div class="loading-spinner" style="margin: 0 auto 12px; width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+          <div style="font-size: 0.9rem; font-weight: 600;">Mengambil status live siswa, progres jawaban, & alarm...</div>
+        </div>
+      `;
+    }
+
+    try {
+      const assessmentIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+      const studentIds = theme.allowedStudentIds || [];
+      const sessionData = await fetchLiveTestSessionData({
+        assessmentIds,
+        studentIds,
+        unlockedAt: theme.unlockedAt
+      });
+
+      const allStudents = context.allStudents || [];
+      const enrolledStudents = allStudents.filter(s => studentIds.includes(s.id));
+
+      processedStudents = enrolledStudents.map(student => {
+        const studAttempts = (sessionData.attempts || []).filter(a => a.student_id === student.id);
+        const wAtt = studAttempts.find(a => a.assessment_id === theme.wordsTest?.id);
+        const pAtt = studAttempts.find(a => a.assessment_id === theme.phrasesTest?.id);
+
+        const inProgressAtt = [wAtt, pAtt].find(a => a && a.status === 'in_progress');
+        const hasSubmitted = [wAtt, pAtt].some(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
+        const hasCancelled = [wAtt, pAtt].some(a => a && a.status === 'cancelled');
+
+        let status = 'not_started';
+        let statusText = 'Belum Mulai';
+        let statusColor = '#fbbf24';
+
+        if (inProgressAtt) {
+          status = 'in_progress';
+          statusText = 'Sedang Mengerjakan';
+          statusColor = '#38bdf8';
+        } else if (hasSubmitted) {
+          status = 'submitted';
+          statusText = 'Sudah Selesai';
+          statusColor = '#10b981';
+        } else if (hasCancelled) {
+          status = 'cancelled';
+          statusText = 'Dibatalkan / Kicked';
+          statusColor = '#ef4444';
+        }
+
+        // Module
+        let activeModule = 'None';
+        if (inProgressAtt) {
+          activeModule = (inProgressAtt.assessment_id === theme.wordsTest?.id) ? 'Words Test' : 'Phrases Test';
+        } else if (hasSubmitted) {
+          activeModule = (wAtt && pAtt) ? 'Words & Phrases' : (wAtt ? 'Words Test' : 'Phrases Test');
+        }
+
+        // Answers & Progress
+        const studAttIds = studAttempts.map(a => a.id);
+        const studAnswers = (sessionData.answers || []).filter(ans => studAttIds.includes(ans.attempt_id));
+        const answeredCount = studAnswers.filter(ans => ans.student_answer && ans.student_answer.trim()).length;
+        
+        let totalQuestions = 0;
+        if (studAttempts.length > 0) {
+          totalQuestions = studAttempts.reduce((acc, a) => acc + (a.total_questions || 0), 0);
+        }
+        if (totalQuestions === 0) {
+          totalQuestions = (theme.wordsTest ? 20 : 0) + (theme.phrasesTest ? 20 : 0);
+        }
+
+        const answeredPercent = totalQuestions > 0 ? Math.min(100, Math.round((answeredCount / totalQuestions) * 100)) : 0;
+
+        // Real-time Score calculation
+        let rawScore = 0;
+        let effectiveScore = 0;
+        let isEvaluated = false;
+
+        if (status === 'submitted') {
+          const validSub = [wAtt, pAtt].filter(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
+          if (validSub.length > 0) {
+            const sumEff = validSub.reduce((acc, a) => acc + parseFloat(a.effective_score ?? a.percentage ?? 0), 0);
+            effectiveScore = Math.round(sumEff / validSub.length);
+            rawScore = effectiveScore;
+            isEvaluated = true;
+          }
+        } else if (status === 'in_progress') {
+          let correctCount = 0;
+          studAnswers.forEach(ans => {
+            const val = (ans.student_answer || '').trim().toLowerCase();
+            if (!val) return;
+            let accepted = ans.accepted_answers_snapshot || [];
+            if (typeof accepted === 'string') {
+              try { accepted = JSON.parse(accepted); } catch { accepted = []; }
+            }
+            const isMatch = (accepted || []).some(a => String(a).trim().toLowerCase() === val) ||
+              (ans.correct_answer_snapshot && String(ans.correct_answer_snapshot).trim().toLowerCase() === val) ||
+              ans.is_correct === true;
+            if (isMatch) correctCount++;
+          });
+
+          rawScore = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+          effectiveScore = theme.isRemedial ? Math.min(rawScore, 60) : rawScore;
+          isEvaluated = true;
+        }
+
+        const grade = getGrade(effectiveScore);
+
+        // Alarms / Anti-cheat
+        const studCheats = (sessionData.cheatLogs || []).filter(c => c.actor_user_id === student.id);
+        const alarmCount = studCheats.length;
+        const alarmReasons = studCheats.map(c => c.new_value?.reason || 'Security Warning');
+
+        return {
+          student,
+          status,
+          statusText,
+          statusColor,
+          activeModule,
+          answeredCount,
+          totalQuestions,
+          answeredPercent,
+          rawScore,
+          effectiveScore,
+          isEvaluated,
+          grade,
+          alarmCount,
+          alarmReasons,
+          hasAttempts: studAttempts.length > 0
+        };
+      });
+
+      renderLiveMonitorUI();
+
+      if (footerInfoEl) {
+        const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        footerInfoEl.textContent = `Terakhir diperbarui: ${timeStr} WITA • Data real-time sinkron`;
+      }
+    } catch (err) {
+      console.error('Error loading live test session data:', err);
+      studentsContainer.innerHTML = `
+        <div style="padding: 30px; text-align: center; color: #f87171;">
+          <div>⚠️ Gagal memuat data live monitor: ${escapeHtml(err.message)}</div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-retry-live-load" style="margin-top: 10px;">Coba Lagi</button>
+        </div>
+      `;
+      modal.querySelector('#btn-retry-live-load')?.addEventListener('click', () => loadLiveData(false));
+    }
+  }
+
+  function renderLiveMonitorUI() {
+    // 1. Update KPI numbers
+    const total = processedStudents.length;
+    const inProgress = processedStudents.filter(s => s.status === 'in_progress').length;
+    const submitted = processedStudents.filter(s => s.status === 'submitted').length;
+    const notStarted = processedStudents.filter(s => s.status === 'not_started').length;
+    const totalAlarms = processedStudents.reduce((acc, s) => acc + s.alarmCount, 0);
+    const studentsWithAlarms = processedStudents.filter(s => s.alarmCount > 0).length;
+
+    modal.querySelector('#kpi-live-total').textContent = String(total);
+    modal.querySelector('#kpi-live-in-progress').textContent = String(inProgress);
+    modal.querySelector('#kpi-live-submitted').textContent = String(submitted);
+    modal.querySelector('#kpi-live-not-started').textContent = String(notStarted);
+    modal.querySelector('#kpi-live-alarms').innerHTML = `${totalAlarms} <span style="font-size:0.75rem; font-weight:600; color:#cbd5e1;">(${studentsWithAlarms} Siswa)</span>`;
+
+    modal.querySelector('#tab-cnt-all').textContent = String(total);
+    modal.querySelector('#tab-cnt-in-progress').textContent = String(inProgress);
+    modal.querySelector('#tab-cnt-submitted').textContent = String(submitted);
+    modal.querySelector('#tab-cnt-not-started').textContent = String(notStarted);
+    modal.querySelector('#tab-cnt-alarm').textContent = String(studentsWithAlarms);
+
+    // 2. Filter tabs active class
+    modal.querySelectorAll('.live-filter-btn').forEach(btn => {
+      const f = btn.getAttribute('data-filter');
+      if (f === _liveMonitorActiveFilter) {
+        btn.classList.add('btn-primary', 'active');
+        btn.classList.remove('btn-secondary');
+      } else {
+        btn.classList.add('btn-secondary');
+        btn.classList.remove('btn-primary', 'active');
+      }
+    });
+
+    // 3. Filter & Search
+    let displayList = processedStudents;
+    if (_liveMonitorActiveFilter === 'in_progress') {
+      displayList = displayList.filter(s => s.status === 'in_progress');
+    } else if (_liveMonitorActiveFilter === 'submitted') {
+      displayList = displayList.filter(s => s.status === 'submitted');
+    } else if (_liveMonitorActiveFilter === 'not_started') {
+      displayList = displayList.filter(s => s.status === 'not_started');
+    } else if (_liveMonitorActiveFilter === 'alarm') {
+      displayList = displayList.filter(s => s.alarmCount > 0);
+    }
+
+    const q = _liveMonitorSearchQuery.trim().toLowerCase();
+    if (q) {
+      displayList = displayList.filter(s => (s.student.name || '').toLowerCase().includes(q));
+    }
+
+    // Sort: alarms first, then in_progress, then submitted, then not_started
+    displayList.sort((a, b) => {
+      if (b.alarmCount !== a.alarmCount) return b.alarmCount - a.alarmCount;
+      const order = { 'in_progress': 1, 'submitted': 2, 'not_started': 3, 'cancelled': 4 };
+      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+      return (a.student.name || '').localeCompare(b.student.name || '');
+    });
+
+    if (displayList.length === 0) {
+      studentsContainer.innerHTML = `
+        <div style="padding: 30px; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+          ${q ? `Tidak ada siswa yang cocok dengan "${escapeHtml(q)}".` : 'Tidak ada siswa pada filter ini.'}
+        </div>
+      `;
+      return;
+    }
+
+    studentsContainer.innerHTML = displayList.map(item => {
+      const s = item.student;
+      const initial = (s.name || 'S').charAt(0).toUpperCase();
+      const scoreColor = getGradeColorByScore(item.effectiveScore);
+      const isRemedialCap = theme.isRemedial;
+      const scoreDisplay = item.isEvaluated 
+        ? `${item.effectiveScore}%${isRemedialCap ? '<sup style="font-size:0.65em; font-weight:900; color:#fbbf24; margin-left:1px;">R</sup>' : ''}`
+        : '--';
+
+      const isStar = item.grade === '★' || item.grade === 'Star' || item.effectiveScore === 100;
+      const gradeText = isStar ? '★' : item.grade;
+      const circleText = (item.grade === 'B' || item.grade === 'C') ? '#0f172a' : '#ffffff';
+
+      const gradeCircleHtml = item.isEvaluated ? `
+        <div class="grade-circle grade-circle-${item.grade.toLowerCase()}" style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 800; background: ${scoreColor}; color: ${circleText}; box-shadow: 0 0 8px ${scoreColor}; flex-shrink: 0;">
+          ${gradeText}
+        </div>
+      ` : `
+        <div style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; background: rgba(255,255,255,0.06); color: #64748b; border: 1px dashed rgba(255,255,255,0.15); flex-shrink: 0;">
+          -
+        </div>
+      `;
+
+      const alarmTooltip = item.alarmCount > 0 ? `Alarm dipicu ${item.alarmCount}x: ${item.alarmReasons.slice(0, 3).join(', ')}` : 'Aman / Tidak ada alarm';
+
+      return `
+        <div class="live-student-card" style="background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+          <!-- 1. Student Identity -->
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 220px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,0.3); flex-shrink: 0;">
+              ${initial}
+            </div>
+            <div>
+              <div style="font-size: 0.92rem; font-weight: 700; color: #ffffff;">${escapeHtml(s.name || 'Unnamed')}</div>
+              <div style="font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                <span>${escapeHtml(theme.liveBatchName)}</span>
+                <span>&bull;</span>
+                <span style="color: ${item.statusColor}; font-weight: 700;">${item.statusText}</span>
+                ${item.activeModule !== 'None' ? `<span style="background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; font-size:0.7rem; color:#cbd5e1;">${escapeHtml(item.activeModule)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Soal Terjawab (Progress Bar) -->
+          <div style="min-width: 170px; flex: 1;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 5px;">
+              <span style="color: #94a3b8;">Soal Terjawab:</span>
+              <span style="font-weight: 800; color: #ffffff;">${item.answeredCount} / ${item.totalQuestions} (${item.answeredPercent}%)</span>
+            </div>
+            <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+              <div style="height: 100%; width: ${item.answeredPercent}%; background: linear-gradient(90deg, #3b82f6, #10b981); border-radius: 3px; transition: width 0.3s ease;"></div>
+            </div>
+          </div>
+
+          <!-- 3. Alarm / Anti-Cheat Status -->
+          <div style="min-width: 110px; text-align: center;">
+            ${item.alarmCount === 0 ? `
+              <span style="font-size: 0.75rem; font-weight: 700; color: #34d399; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                🛡️ 0x Bersih
+              </span>
+            ` : `
+              <span style="font-size: 0.75rem; font-weight: 800; color: #ef4444; background: rgba(239,68,68,0.2); border: 1px solid #ef4444; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(239,68,68,0.3); cursor: help;" title="${escapeHtml(alarmTooltip)}">
+                🚨 ${item.alarmCount}x ALARM
+              </span>
+            `}
+          </div>
+
+          <!-- 4. Skor Real-Time -->
+          <div style="min-width: 120px; display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
+            <div style="text-align: right;">
+              <div style="font-size: 0.95rem; font-weight: 800; color: ${scoreColor};">
+                ${scoreDisplay}
+              </div>
+              <div style="font-size: 0.7rem; color: #94a3b8;">
+                ${item.isEvaluated ? `${item.effectiveScore >= 60 ? 'Passing' : 'Below Passing'}` : 'Belum Ada Skor'}
+              </div>
+            </div>
+            ${gradeCircleHtml}
+          </div>
+
+          <!-- 5. Tombol Keluarkan (Kick) -->
+          <div style="display: flex; align-items: center;">
+            <button type="button" class="btn btn-sm btn-kick-student" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #f87171; font-weight: 700; font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#dc2626'; this.style.color='#fff';" onmouseout="this.style.background='rgba(239,68,68,0.15)'; this.style.color='#f87171';">
+              <span>🚫</span> Keluarkan
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach kick listener
+    studentsContainer.querySelectorAll('.btn-kick-student').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const studentId = e.currentTarget.getAttribute('data-student-id');
+        const studentName = e.currentTarget.getAttribute('data-student-name');
+        if (!studentId) return;
+
+        openKickConfirmationModal(container, studentId, studentName, theme, async () => {
+          theme.allowedStudentIds = (theme.allowedStudentIds || []).filter(id => id !== studentId);
+          await loadLiveData(false);
+          const enrolledLabel = container.querySelector(`.btn-theme-live-monitor[data-theme="${theme.code}"]`);
+          if (enrolledLabel) enrolledLabel.innerHTML = `<span>👁️</span> Monitor Live & Status Ujian (${theme.allowedStudentIds.length})`;
+          if (window.renderClassHub) {
+            // Background sync Class Hub if open
+          }
+        });
+      });
+    });
+  }
+
+  // Filter tab listeners
+  modal.querySelectorAll('.live-filter-btn').forEach(btn => {
+    btn.onclick = () => {
+      _liveMonitorActiveFilter = btn.getAttribute('data-filter') || 'all';
+      renderLiveMonitorUI();
+    };
+  });
+
+  // Search input
+  if (searchInput) {
+    searchInput.oninput = (e) => {
+      _liveMonitorSearchQuery = e.target.value;
+      renderLiveMonitorUI();
+    };
+  }
+
+  // Refresh button
+  if (refreshBtn) {
+    refreshBtn.onclick = () => loadLiveData(false);
+  }
+
+  // Close handlers
+  const closeModal = () => {
+    if (_livePollingTimer) {
+      clearInterval(_livePollingTimer);
+      _livePollingTimer = null;
+    }
+    modal.classList.add('hidden');
+  };
+
+  modal.querySelector('#btn-close-live-modal').onclick = closeModal;
+  modal.querySelector('#btn-close-live-modal-footer').onclick = closeModal;
+
+  // Auto-poll interval handling
+  const setupAutoPoll = () => {
+    if (_livePollingTimer) {
+      clearInterval(_livePollingTimer);
+      _livePollingTimer = null;
+    }
+    if (autoPollCheckbox && autoPollCheckbox.checked) {
+      _livePollingTimer = setInterval(() => {
+        if (!modal.classList.contains('hidden')) {
+          loadLiveData(true);
+        } else {
+          clearInterval(_livePollingTimer);
+          _livePollingTimer = null;
+        }
+      }, 5000);
+    }
+  };
+
+  if (autoPollCheckbox) {
+    autoPollCheckbox.onchange = setupAutoPoll;
+  }
+
+  await loadLiveData(false);
+  setupAutoPoll();
+  modal.classList.remove('hidden');
+}
+
+/**
+ * Open Modal: Konfirmasi Keluarkan Siswa (Kick Student)
+ */
+function openKickConfirmationModal(container, studentId, studentName, theme, onDone) {
+  const kickModal = container.querySelector('#modal-kick-student-confirm');
+  if (!kickModal) return;
+
+  const nameEl = kickModal.querySelector('#kick-confirm-student-name');
+  if (nameEl) {
+    nameEl.textContent = `${studentName} • Theme ${theme.code} (${theme.name})`;
+  }
+
+  const cancelBtn = kickModal.querySelector('#btn-cancel-kick');
+  const confirmBtn = kickModal.querySelector('#btn-confirm-kick');
+
+  const closeKickModal = () => kickModal.classList.add('hidden');
+  cancelBtn.onclick = closeKickModal;
+
+  confirmBtn.onclick = async () => {
+    const actionRadios = kickModal.querySelectorAll('input[name="kick_action"]');
+    let chosenAction = 'submit';
+    actionRadios.forEach(r => {
+      if (r.checked) chosenAction = r.value;
+    });
+
+    closeKickModal();
+    showLoading();
+    try {
+      const promises = [];
+      if (theme.wordsTest) {
+        promises.push(removeStudentFromTestSession({
+          assessmentId: theme.wordsTest.id,
+          studentId: studentId,
+          action: chosenAction
+        }));
+      }
+      if (theme.phrasesTest) {
+        promises.push(removeStudentFromTestSession({
+          assessmentId: theme.phrasesTest.id,
+          studentId: studentId,
+          action: chosenAction
+        }));
+      }
+
+      await Promise.all(promises);
+
+      const actionText = chosenAction === 'submit' ? 'Jawaban Dikumpulkan & Dinilai' : 'Ujian Dibatalkan (Skor 0)';
+      showToast(`🚫 ${studentName} berhasil dikeluarkan dari sesi ujian (${actionText}).`, 'success');
+      if (typeof onDone === 'function') {
+        await onDone();
+      }
+    } catch (err) {
+      console.error('Error kicking student:', err);
+      showToast('Gagal mengeluarkan siswa: ' + err.message, 'error');
+    } finally {
+      hideLoading();
+    }
+  };
+
+  kickModal.classList.remove('hidden');
 }
 
 /**

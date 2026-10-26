@@ -1,4 +1,37 @@
-import { calculateGrade, getGradeSymbol, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, formatGradeBadgeHtml, getAchievementStatus } from './grading.js?v=5.8.4';
+import {
+  calculateGrade,
+  calculateGrade as getGrade,
+  getGradeSymbol,
+  GRADE_PALETTE,
+  getGradeColor,
+  getGradeColorByScore,
+  getScoreColor,
+  getGradeTheme,
+  formatGradeBadgeHtml,
+  getAchievementStatus
+} from './grading.js';
+
+export {
+  calculateGrade,
+  calculateGrade as getGrade,
+  getGradeSymbol,
+  GRADE_PALETTE,
+  getGradeColor,
+  getGradeColorByScore,
+  getScoreColor,
+  getGradeTheme,
+  formatGradeBadgeHtml,
+  getAchievementStatus
+};
+
+if (typeof window !== 'undefined') {
+  window.calculateGrade = calculateGrade;
+  window.getGrade = calculateGrade;
+  window.getGradeColorByScore = getGradeColorByScore;
+  window.getGradeColor = getGradeColor;
+  window.getGradeSymbol = getGradeSymbol;
+  window.GRADE_PALETTE = GRADE_PALETTE;
+}
 
 // TOPS CORE — Toast Notification System
 let toastContainer = null;
@@ -138,12 +171,6 @@ if (typeof window !== 'undefined') {
   window.escHtml = escapeHtml;
 }
 
-/** Display-only grade lookup — mirrors AGENTS.md §2.10 */
-export function getGrade(pct) {
-  return calculateGrade(pct);
-}
-
-export { calculateGrade, getGradeSymbol, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, formatGradeBadgeHtml, getAchievementStatus };
 
 /** Format seconds to MM:SS */
 export function formatTime(totalSeconds) {

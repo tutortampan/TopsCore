@@ -1,14 +1,203 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-27 00:30 UTC+8
+Last Updated: 2026-10-27 07:00 UTC+8
 
-Current Phase: Phase 126: Elimination of Grades "S", "F", and "R" in Favor of Canonical 6-Tier Scale (★, A, B, C, D, E) [COMPLETE]
+Current Phase: Phase 134: Global Task & Test Settings Box, 5-Minute Default Duration & Assessment Editing Polish [COMPLETE]
 
-Current Task: Eliminate grades "S", "F", and "R", making ★ the official 100% grade and E the sole failing grade, with remedial strictly receiving Grade C and attaching 'R' superscript exclusively to the Score percentage. [COMPLETE]
+Current Task: Implement Global Settings Box in Class Hub assessments tab, enforce 5-minute default duration for tasks across system, optimize single assessment edit modal with presets, title, and status, and externalize all bulk edit modal inline styles with full accessibility compliance [COMPLETE]
 
-Status: COMPLETE (Canonical 6-tier grading scale ★, A, B, C, D, E active across frontend, Edge Functions, database schema, and CSS; grades S, F, and R eliminated; 39 JS files syntax-checked 0 errors; cache bumped to v5.8.7).
+Status: COMPLETE (Added Global Task & Test Settings Box in Class Hub with one-click mass update for tasks and tests; enforced 5-minute default for tasks in `js/api.js` and `js/admin/crud-modals.js`; added quick duration and passing score preset buttons to single edit modal; added Title and Status editing to single assessment form; removed all inline styles from `#bulk-edit-assessments-modal` in `admin.html` and added accessibility attributes; cache key bumped to `topscore-cache-mockup-v1`; 39/39 JS files syntax validated with 0 errors; strictly NO git commit/push).
 
 ## Completed
+
+- **Phase 134: Global Task & Test Settings Box, 5-Minute Default Duration & Assessment Editing Polish**:
+  - **1. Global Task & Test Settings Box in Class Hub (`js/admin/app.js` & `css/admin.css`)**:
+    - Created dedicated `.global-asm-settings-box` above the Class Assessments data grid.
+    - Two specialized cards:
+      - ⚡ **Task Harian (Daily Tasks)**: Duration (default 5m), Answer Type (`spoken`, `written`, `selection`, `mixed`), Passing Score (default 60%), and `[⚡ Simpan & Terapkan ke Semua Task]` button with confirmation.
+      - 📝 **Test / Ujian (Themes A–D Tests)**: Duration (default 120m), Answer Type (`written`, `selection`, `spoken`, `mixed`), Passing Score (default 60%), and `[📝 Simpan & Terapkan ke Semua Test]` button with confirmation.
+    - Collapsible toggle `[▲ Sembunyikan / ▼ Tampilkan]`.
+    - Atomically updates `working_duration_minutes`, `duration_minutes`, `answer_type`, `minimum_required_score`, and `payload` JSON, plus `assessment_questions` synchronization.
+  - **2. 5-Minute Default Duration for Daily Tasks (`js/api.js` & `js/admin/crud-modals.js`)**:
+    - In `upsertDynamicAssessmentShell` (`js/api.js`): `effectiveDurationMinutes` defaults to `5` for tasks (`!isTest`) and `120` for tests (`isTest`).
+    - In `openCrudModal` (`js/admin/crud-modals.js`): detects daily task rows and defaults duration to 5 minutes.
+  - **3. Assessment Editing Modal Upgrade (`js/admin/crud-modals.js`)**:
+    - Added `title` text input with placeholder.
+    - Added `status` dropdown (`PUBLISHED`, `DRAFT`, `UNPUBLISHED`, `ARCHIVED`) with case-insensitive matching.
+    - Added quick preset buttons right below Duration (`5m`, `15m`, `30m`, `60m`, `120m`).
+    - Added quick preset buttons right below Passing Score (`60%`, `70%`, `80%`).
+    - Synchronized `duration_minutes` and `minimum_required_score` inside `payload` JSON on single edit save.
+  - **4. Bulk Edit Modal CSS Externalization & Accessibility Compliance (`admin.html` & `css/admin.css`)**:
+    - Externalized 100% of inline styles in `#bulk-edit-assessments-modal` to dedicated `.bulk-edit-*` CSS classes in `css/admin.css`.
+    - Added `<label for="...">`, `title`, and `placeholder` attributes to all form inputs to eliminate all accessibility warnings/errors.
+  - **5. Cache & Verification**:
+    - Bumped `sw.js` cache name to `topscore-cache-mockup-v1`.
+    - Validated all 39 JavaScript files with `node scripts/check_all_js_syntax.cjs` (0 errors).
+    - Verified `git status`: Changes in working tree only (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
+- **Phase 133: Live Test Sessions Monitor & Student Expulsion / Kick Controller**:
+  - **1. Backend & API Synchronization (`js/api.js`)**:
+    - Implemented `removeStudentFromTestSession({ assessmentId, studentId, action })`:
+      - Removes student ID from `allowed_student_ids` and `remedial_student_ids` in `assessments.payload.test_session`.
+      - If `action === 'submit'`: gathers active `attempt_answers`, scores them against accepted answers, marks attempt as `auto_submitted`, and stores effective score and grade.
+      - If `action === 'cancel'`: marks attempt as `cancelled` with score 0 and grade `E`.
+      - Injects audit log record (`REMOVE_STUDENT_FROM_TEST_SESSION`) for traceability.
+    - Implemented `fetchLiveTestSessionData({ assessmentIds, studentIds, unlockedAt })`:
+      - Queries `attempts` for all enrolled students across theme tests within session window.
+      - Queries `audit_logs` for `action = 'CHEAT_ATTEMPT'` within session window.
+      - Queries `attempt_answers` for in-progress attempts to dynamically tally answered questions and compute real-time scores.
+    - Exported both functions and exposed to `window`.
+  - **2. Live Test Sessions Controller Enhancement (`js/admin/assessment-access.js`)**:
+    - Added `[👁️ Monitor Live & Status Ujian (N)]` button to active Theme cards in Tab 2 (Test Sessions).
+    - Designed `#modal-theme-live-monitor` dark-mode real-time dashboard modal:
+      - Header with Theme badge, session mode (`NORMAL` / `REMEDIAL`), global countdown timer, refresh button, and 5-second auto-poll toggle.
+      - 5 KPI summary cards: `Total Siswa`, `🟢 Sedang Mengerjakan`, `✅ Sudah Selesai`, `⏳ Belum Mulai`, `🚨 Total Alarm`.
+      - Filter tabs (`Semua`, `🟢 Sedang Mengerjakan`, `✅ Sudah Selesai`, `⏳ Belum Mulai`, `🚨 Ada Alarm`) and instant search input.
+      - Student roster cards displaying:
+        - Student avatar + name + batch + status + active test module.
+        - Answered questions progress bar (`X / Y Soal (Z%)`).
+        - Alarm strike badge (`🛡️ 0x Bersih` vs `🚨 Xx ALARM` with hover tooltip detailing violations).
+        - Real-time score percentage and points with Official Grading Scale circle badge (`★`, `A`, `B`, `C`, `D`, `E` or `60%ᴿ` for remedial).
+        - `[🚫 Keluarkan]` kick button.
+    - Implemented `#modal-kick-student-confirm` confirmation dialog offering two distinct options:
+      - 📥 *Kumpulkan & Nilai Jawaban Saat Ini* (submit current answers).
+      - ⛔ *Batalkan Ujian* (void/cancel attempt).
+  - **3. Student-Side Real-Time Expulsion Guard (`js/assessment.js`)**:
+    - Added `startSessionHeartbeatGuard()` that runs every 8 seconds during active assessment:
+      - Queries `attempts.status`: if changed to `cancelled` or `auto_submitted`, immediately alerts student and redirects to dashboard/result page.
+      - Checks `assessments.payload.test_session.allowed_student_ids`: if student was removed by tutor, immediately terminates exam and redirects to dashboard.
+      - Cleaned up interval on normal/auto submission in `doSubmit`.
+  - **4. Cache & Verification**:
+    - Bumped `sw.js` cache name to `topscore-cache-v5.5.0`.
+    - Validated all 39 JavaScript files with `node scripts/check_all_js_syntax.cjs` (0 errors).
+    - Executed `test_grading_suite.mjs` (All assertions passed).
+    - Verified `git status`: Changes in working tree only (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
+  - **1. Bulk Edit Modal UI (`admin.html`)**:
+    - Created `#bulk-edit-assessments-modal` with high-contrast card styling, target preview chips, and target counter.
+    - Added selective toggle checkboxes for 4 attributes (only checked fields are altered):
+      - ⏱️ Waktu / Duration (Minutes) with quick presets: `[⚡ 5 Menit (Task Harian)]`, `[15 Menit]`, `[30 Menit]`, `[60 Menit]`, `[120 Menit (Test)]`.
+      - 🗣️ Cara Jawab / Answer Type (`spoken`, `written`, `selection`, `mixed`).
+      - 🎯 Minimal Skor / Passing Score % with quick presets: `[60% (Grade C Standar)]`, `[70%]`, `[80% (Grade B)]`.
+      - 🔀 Urutan Soal / Question Order (`random`, `sequential`).
+  - **2. Bulk Edit Logic & Synchronization (`js/admin/crud-modals.js`)**:
+    - Implemented `openBulkEditAssessmentsModal(selectedIds, onComplete)`.
+    - Automatically pre-selects 5 minutes duration toggle if all selected items are daily tasks.
+    - Synchronizes database table columns (`working_duration_minutes`, `duration_minutes`, `answer_type`, `minimum_required_score`, `question_order`).
+    - Synchronizes dynamic shell JSON `payload` (`payload.working_duration_minutes`, `payload.answer_type`, etc.) for seamless runner/API compatibility.
+    - Synchronizes `assessment_questions` records if `answer_type` was modified.
+    - Refreshes calling view via `onComplete` callback.
+  - **3. Class Assessments Toolbar & Quick Select Helpers (`js/admin/app.js`, `js/admin/datagrid.js`)**:
+    - Added `bulkActions: true` and `customBulkActions: [{ label: '⚡ Bulk Edit', className: 'btn-primary', ... }]` to `Class Assessments` DataGrid.
+    - Added Quick Select buttons directly in card header:
+      - `⚡ Semua Task (32)`: Selects all daily task rows in 1 click.
+      - `📝 Semua Test (8)`: Selects all test rows in 1 click.
+      - `🌐 Semua (40)`: Selects all assessments.
+      - `✕ Batal`: Clears selection.
+    - Enhanced `DataGrid` class with `selectAllRows(filterFn)` and `clearSelection()` methods.
+  - **4. Assessments Management Hub Integration (`js/admin/assessment-management.js`)**:
+    - Added `customBulkActions` with `⚡ Bulk Edit` and `🗑️ Bulk Delete` buttons for global assessment management.
+  - **5. Cache & Verification**:
+    - Bumped `crud-modals.js` import to `v=5.4.9` in `js/admin/app.js`.
+    - Bumped `sw.js` cache name to `topscore-cache-v5.4.9`.
+    - Validated all 39 JavaScript files with `node scripts/check_all_js_syntax.cjs` (0 errors).
+    - Executed `test_grading_suite.mjs` (All assertions passed).
+    - Verified `git status`: Changes in working tree only (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
+- **Phase 131: Assessment Edit Modal Streamlining & ReferenceError Bug Fix**:
+  - **1. Fixed `ReferenceError: record is not defined` (`js/admin/crud-modals.js`)**:
+    - Defined module-level `let _editRecord = null;` alongside `_editId`.
+    - Stored `_editRecord = record ? { ...record } : null;` when `openCrudModal` is invoked.
+    - Updated submit handler to safely reference `_editRecord` instead of out-of-scope `record`.
+    - Reset `_editRecord = null;` and `_editId = null;` upon form submission and cancellation.
+  - **2. Streamlined Assessment Edit Modal (`js/admin/crud-modals.js`)**:
+    - Eliminated 11 redundant fields (`institution_id`, `program_id`, `level_id`, `class_id`, `module_id`, `shell_code`, `title`, `description`, `assessment_type`, `assessment_category`, `status`, `max_attempts`).
+    - Retained only the 6 essential actionable fields:
+      - `working_duration_minutes` (Duration in Minutes)
+      - `answer_type` (Spoken, Written, Selection, Mixed)
+      - `minimum_required_score` (Passing Score %)
+      - `question_order` (Sequential, Random)
+      - `display_order` (Display Order)
+      - `prerequisite_assessment_id` (Prerequisite Assessment)
+    - Added high-contrast context header banner card showing Assessment Title, Code, Type, and Status.
+    - Pre-selected existing `answer_type` aliases seamlessly (`speech_to_text` -> `spoken`, `dropdown` -> `selection`).
+    - Safely prefilled duration from `working_duration_minutes`, `duration_minutes`, or `payload`.
+  - **3. Payload & Runner Synchronization (`js/admin/crud-modals.js`, `js/api.js`, `start-assessment`)**:
+    - Synchronized dynamic shell jsonb `payload` so `answer_type`, `duration_minutes`, and `working_duration_minutes` match between column and JSON payload.
+    - Added synchronization for `assessment_questions` table to update question answer types if modified.
+    - Prioritized explicit database column `assessment.answer_type` in `js/api.js` (line 680) and `start-assessment` edge function (line 423).
+  - **4. Cache Invalidation & Verification**:
+    - Bumped `crud-modals.js` import to `v=5.4.8` in `js/admin/app.js`.
+    - Bumped `sw.js` cache name to `topscore-cache-v5.4.8`.
+    - Validated all 39 JavaScript files with `node scripts/check_all_js_syntax.cjs` (0 errors).
+    - Executed `test_grading_suite.mjs` (All assertions passed).
+    - Verified `git status`: Changes in working tree only (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
+- **Phase 130: Cross-Browser CSS Vendor Prefixes & Line-Clamp Order Alignment**:
+  - **1. Safari `user-select` Prefix**:
+    - `css/admin.css:3823`: Added `-webkit-user-select: none !important;` before `user-select: none !important;` in `.grade-circle`.
+    - `css/style.css:1002`: Added `-webkit-user-select: none !important;` before `user-select: none !important;` in `.grade-circle`.
+  - **2. Safari `backdrop-filter` Prefix (`css/assessment.css`)**:
+    - Added `-webkit-backdrop-filter: blur(...)` to `.btn-giveup`, `.assessment-page .assessment-timer`, `.assessment-title-bar`, `.matrix-close-btn`, and `#submit-modal`.
+  - **3. Standard CSS Spec Ordering (`css/assessment.css`)**:
+    - Ordered `-webkit-line-clamp: 2;` before `line-clamp: 2;` in `.assessment-main-title`.
+  - **4. Verification**:
+    - Verified all 8 IDE problems eliminated.
+    - Verified all 39 JS files pass `node --check` syntax validation with 0 errors.
+    - Verified strictly NO git commits / pushes made.
+
+- **Phase 129: Experimental Color Mockup Protocol**:
+  - **1. Test Tokens Applied in `js/grading.js`**:
+    - Star (100%): `#C084FC` (Bright Purple)
+    - Grade A (90-99%): `#22C55E` (True Leaf Green)
+    - Grade B (80-89%): `#BEF264` (Electric Bright Lime)
+    - Grade C (60-79%): `#FDE047` (Pure Electric Lemon Yellow)
+    - Grade D (30-59%): `#FB923C` (Clean Orange)
+    - Grade E (0-29%): `#F87171` (Light Red)
+    - Updated `STAR_THEME`, `GRADE_PALETTE`, `getGradeColorByScore`, and `getGradeColor`.
+  - **2. Stylesheet Utility Alignment (`css/admin.css` & `css/style.css`)**:
+    - `css/admin.css`: `.form-pill.grade-*`, `.grade-circle.grade-circle-*`, and `.badge-grade-star-s` updated to test tokens.
+    - `css/style.css`: `.score-high`, `.score-dist`, `.score-pass`, `.score-warn`, `.score-remed`, `.score-poor`, `.score-fail`, and `.grade-circle.grade-circle-*` updated to test tokens.
+  - **3. Class Hub Table Fallback Synchronization (`js/admin/app.js`)**:
+    - Synchronized all dynamic score coloring and fallback ladders across average rows, PTS, and individual score columns to the new test tokens.
+  - **4. Cache Invalidation & Syntax Verification**:
+    - Incremented Service Worker cache key in `sw.js` to `topscore-cache-mockup-v1`.
+    - Executed `node scripts/check_all_js_syntax.cjs`: all 39 JS files passed syntax validation (exit code 0).
+    - Executed `scratch/test_grading_suite.mjs`: all unit test assertions passed.
+    - Verified strictly NO git commits / pushes made.
+
+- **Phase 128: HTML Inline Styles Extraction & Video Playsinline Cross-Browser Fix**:
+  - **1. `result.html` Style Externalization**:
+    - Removed 15 inline `style="..."` attributes and redundant `style="display:none !important;"` on `.hidden` elements.
+    - Added clean classes to `css/result.css`: `.bg-particle-canvas`, `.confetti-canvas`, `.result-avatar-stage`, `.result-avatar-img`, `.result-action-buttons-wrap`.
+  - **2. `assessment.html` Style Externalization**:
+    - Removed 68 inline `style="..."` attributes across topbar, timer, avatar, question matrix, anti-cheat popup, and submit modal.
+    - Added dedicated classes to `css/assessment.css`: `.assessment-header`, `.assessment-topbar`, `.assessment-giveup-wrap`, `.btn-giveup`, `.giveup-flag-icon`, `.assessment-avatar-wrap`, `.assessment-student-avatar`, `.assessment-timer-wrap`, `.timer-icon`, `.assessment-title-bar`, `.assessment-main-title`, `.assessment-fixed-bottom`, `.assessment-bottom-container`, `.btn-nav-prev`, `.btn-nav-next`, `.question-counter`, `.assessment-progress-outer`, `.assessment-progress-track`, `.assessment-progress-bar-bg`, `.assessment-progress-fill`, `.matrix-popup`, `.matrix-header`, `.matrix-title`, `.matrix-close-btn`, `.matrix-scroll-area`, `.matrix-footer`, `.matrix-jump-btn`, `.matrix-submit-btn`, `.cheat-box`, `.cheat-title`, `.cheat-strikes-badge`, `.cheat-reason`, `.cheat-countdown-circle`, `.cheat-timer-count`, `.cheat-countdown-label`, `.cheat-dismiss-btn`, `#submit-modal`, `#submit-modal-box`, `.submit-modal-icon`, `.submit-modal-title`, `.unanswered-warning-banner`, `.unanswered-warning-heading`, `.unanswered-warning-text`, `.unanswered-count-badge`, `.unanswered-warning-note`, `.submit-modal-message`, `.answered-count-val`, `.total-count-val`, `.submit-modal-subtext`, `.submit-modal-actions`, `.btn-jump-incomplete`, `.btn-danger-submit`, `.btn-confirm-submit`, `.btn-cancel-submit`.
+  - **3. `dashboard.html` Style Externalization & Video Playsinline Fix**:
+    - Removed 74 inline `style="..."` attributes across header avatar, banner avatar, hidden compatibility blocks, class selector modal, profile modal, level modal, gender setup modal, webcam setup modal, birthday setup modal, and education setup modal.
+    - Added clean classes to `css/dashboard.css`: `.header-avatar`, `.banner-avatar-wrapper`, `.classes-selector-modal-desc`, `.classes-selector-modal-actions`, `#btn-open-class-levels`, `.personal-data-card`, `.profile-pin-inputs-compact`, `.profile-pin-input-compact`, `.level-modal-box`, `#levels-container`, `.gender-setup-box`, `.setup-modal-icon`, `.setup-modal-title`, `.gender-cards-row`, `.gender-card`, `.gender-card-icon`, `.gender-card-label`, `.setup-btn-confirm`, `.photo-setup-box`, `.webcam-viewport`, `.webcam-video`, `.webcam-snapshot-img`, `.camera-loading-overlay`, `.setup-controls-row`, `.btn-upload-label`, `#mic-status-card`, `#mic-status-icon`, `#btn-retry-mic`, `#btn-skip-photo-setup`, `#birthday-setup-modal`, `.birthday-setup-card`, `.setup-card-icon`, `.setup-card-title`, `.setup-card-subtitle`, `.setup-card-input-box`, `.setup-input-label`, `#onboard-birth-date`, `#btn-confirm-birthday-setup`, `#education-setup-modal`, `.education-setup-card`, `.education-setup-header`, `.edu-entry-box`, `.edu-entry-row`, `.edu-select-input`, `.edu-year-input`, `#btn-confirm-education-setup`.
+    - Solved Firefox warning `'video[playsinline]' is not supported by Firefox`: removed static `playsinline` attribute from HTML `<video id="webcam-stream">` and set programmatically via JavaScript (`video.setAttribute('playsinline', ''); video.playsInline = true;` in `js/dashboard.js`).
+  - **4. Global Footer Banner Classes (`css/style.css`)**:
+    - Added reusable `.topscore-locked-banner .banner-brand`, `.topscore-locked-banner .banner-sep`, and `.topscore-locked-banner .banner-author`.
+  - **5. Verification**:
+    - Verified 0 inline styles remain in `assessment.html`, `dashboard.html`, and `result.html`.
+    - Verified all 39 JS files pass `node --check` syntax validation with 0 errors.
+    - Verified strictly NO git commits / pushes made.
+
+- **Phase 127: Visual Alignment: Star Circle Badge & Exact Palette Tuning**:
+  - **1. Star Badge Circle Pill Unification**:
+    - Implemented `.grade-circle` uniform 19px circular pill container for ★ and all grades (`A`, `B`, `C`, `D`, `E`).
+    - Integrated across `js/grading.js` (`formatGradeBadgeHtml`), `js/admin/app.js` (summary row, legend, DataGrid column), `css/admin.css`, and `css/style.css`.
+  - **2. Exact Color Palette Tuning**:
+    - ★: Ungu `#A855F7`.
+    - A: Medium Green `#10B981` (distinct leaf green).
+    - B: Lime Yellow-Green `#A3E635` (high contrast vs A in dark mode).
+    - C: Kuning `#EAB308`.
+    - D: Jingga/Orange `#F97316`.
+    - E: Merah `#EF4444`.
+  - **3. Cache & Syntax Verification**:
+    - Bumped Service Worker cache to `topscore-cache-20261027-v2`.
+    - Ran `scratch/test_grading_suite.mjs` (all assertions passed).
 
 - **Phase 126: Elimination of Grades "S", "F", and "R" in Favor of Canonical 6-Tier Scale (★, A, B, C, D, E)**:
   - **1. Authoritative Grade Function Normalization (`js/grading.js`)**:

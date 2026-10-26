@@ -1,5 +1,5 @@
 import { DataGrid } from './datagrid.js?v=5.3.2';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade } from '../app.js?v=5.3.2';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE } from '../app.js?v=20261027';
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
@@ -381,7 +381,7 @@ import { renderVocabularyVault } from './vocab-vault.js?v=5.4.8';
 import { renderModules } from './modules.js?v=5.4.7';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.4.7';
 import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.4.7';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, hashPin } from './crud-modals.js?v=5.4.7';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditAssessmentsModal, hashPin } from './crud-modals.js?v=5.4.9';
 import { renderCurriculum } from './curriculum-management.js?v=5.4.8';
 import { renderClassesHub } from './classes-hub.js?v=5.4.7';
 import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.4.7';
@@ -1121,16 +1121,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           let grade = '—';
           let gradeColor = 'rgba(255,255,255,0.4)';
           if (completedCount > 0) {
-            const g = typeof getGrade === 'function' ? getGrade(averageScorePct) : (
-              averageScorePct >= 100 ? 'S' :
-              averageScorePct >= 80 ? 'A' :
-              averageScorePct >= 60 ? 'B' :
-              averageScorePct >= 40 ? 'C' :
-              averageScorePct >= 20 ? 'D' : 'E'
-            );
+            const g = typeof calculateGrade === 'function' ? calculateGrade(averageScorePct) : (typeof getGrade === 'function' ? getGrade(averageScorePct) : '—');
             grade = g;
-            const cMap = { 'S': '#A855F7', 'A': '#00FF00', 'B': '#00FFFF', 'C': '#FFFF00', 'D': '#FF8000', 'E': '#FF0000', 'F': '#FF0000' };
-            gradeColor = cMap[g] || 'rgba(255,255,255,0.4)';
+            gradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(averageScorePct) : (typeof getGradeColor === 'function' ? getGradeColor(g) : '#EAB308');
           }
 
           // Find latest submitted assessment
@@ -1242,6 +1235,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           return b ? b.is_active !== false : true;
         });
 
+        const taskAssessments = classAssessments.filter(a => a.assessment_type === 'VOCAB_TASK' || a.assessment_type === 'PHRASE_TASK' || /\bTASK\b/i.test(a.title || ''));
+        const testAssessments = classAssessments.filter(a => a.assessment_type === 'VOCAB_TEST' || a.assessment_type === 'PHRASE_TEST' || /\bTEST\b/i.test(a.title || ''));
+
         const classHubTabs = [
           { id: 'attendance', icon: '📊', val: activeBatchStudents.length, label: 'Students Grade and Score' },
           { id: 'test-sessions', icon: '🔐', val: 4, label: 'Test Sessions' },
@@ -1259,8 +1255,92 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 <div id="class-test-sessions-container"></div>
               ` : (window._classHubActiveTab === 'assessments' ? `
                 <div class="card" style="padding: 0.75rem 1rem; background: var(--clr-surface); margin: 0;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0; font-size: 1.1rem;">📝 Class Assessments</h3>
+                  <!-- ⚙️ GLOBAL SETTINGS BOX FOR TASKS & TESTS -->
+                  <div class="global-asm-settings-box" id="class-global-asm-settings-box">
+                    <div class="global-asm-settings-header">
+                      <div class="global-asm-settings-title">
+                        <span>⚙️ Pengaturan Global Task &amp; Test</span>
+                        <span class="text-xs text-muted" style="font-weight: 400;">Ubah durasi, cara jawab, dan skor kelulusan secara massal untuk seluruh assessment di kelas ini.</span>
+                      </div>
+                      <button type="button" class="btn btn-ghost btn-sm" id="btn-toggle-global-settings" style="font-size: 0.72rem; padding: 2px 8px;">
+                        <span id="icon-toggle-global-settings">▲</span> <span id="text-toggle-global-settings">Sembunyikan</span>
+                      </button>
+                    </div>
+
+                    <div class="global-asm-settings-grid" id="global-settings-grid-body">
+                      <!-- 1. Task Harian Box -->
+                      <div class="global-asm-tier-card task-card">
+                        <div class="global-asm-tier-header">
+                          <span class="global-asm-tier-title" style="color: #facc15;">⚡ Task Harian (Daily Tasks)</span>
+                          <span class="badge" style="background: rgba(250, 204, 21, 0.15); color: #facc15; font-weight: 800; font-size: 0.72rem;">${taskAssessments.length} Tasks</span>
+                        </div>
+                        <div class="global-asm-row">
+                          <div class="global-asm-item">
+                            <label for="global-task-dur" class="global-asm-label">⏱️ Waktu (Mnt)</label>
+                            <input type="number" id="global-task-dur" min="1" max="180" value="5" placeholder="5" title="Waktu pengerjaan task (default 5 menit)" class="form-control global-asm-input" />
+                          </div>
+                          <div class="global-asm-item" style="flex: 1.4;">
+                            <label for="global-task-ans" class="global-asm-label">🗣️ Cara Jawab</label>
+                            <select id="global-task-ans" class="form-control global-asm-input" title="Tipe cara menjawab task">
+                              <option value="spoken" selected>🗣️ Spoken (Lisan)</option>
+                              <option value="written">✍️ Written (Mengetik)</option>
+                              <option value="selection">🔘 Selection (Pilgan)</option>
+                              <option value="mixed">🔀 Mixed (Campuran)</option>
+                            </select>
+                          </div>
+                          <div class="global-asm-item">
+                            <label for="global-task-min" class="global-asm-label">🎯 Min. Skor</label>
+                            <input type="number" id="global-task-min" min="1" max="100" value="60" placeholder="60" title="Skor minimal lulus (%)" class="form-control global-asm-input" />
+                          </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-apply-global-tasks" style="font-weight: 700; font-size: 0.75rem; border-color: rgba(250, 204, 21, 0.4); color: #facc15;">
+                          ⚡ Simpan &amp; Terapkan ke Semua Task (${taskAssessments.length})
+                        </button>
+                      </div>
+
+                      <!-- 2. Test / Ujian Box -->
+                      <div class="global-asm-tier-card test-card">
+                        <div class="global-asm-tier-header">
+                          <span class="global-asm-tier-title" style="color: #f472b6;">📝 Test / Ujian (Themes A–D)</span>
+                          <span class="badge" style="background: rgba(244, 114, 182, 0.15); color: #f472b6; font-weight: 800; font-size: 0.72rem;">${testAssessments.length} Tests</span>
+                        </div>
+                        <div class="global-asm-row">
+                          <div class="global-asm-item">
+                            <label for="global-test-dur" class="global-asm-label">⏱️ Waktu (Mnt)</label>
+                            <input type="number" id="global-test-dur" min="1" max="360" value="120" placeholder="120" title="Waktu pengerjaan test (default 120 menit)" class="form-control global-asm-input" />
+                          </div>
+                          <div class="global-asm-item" style="flex: 1.4;">
+                            <label for="global-test-ans" class="global-asm-label">🗣️ Cara Jawab</label>
+                            <select id="global-test-ans" class="form-control global-asm-input" title="Tipe cara menjawab test">
+                              <option value="written" selected>✍️ Written (Mengetik)</option>
+                              <option value="selection">🔘 Selection (Pilgan)</option>
+                              <option value="spoken">🗣️ Spoken (Lisan)</option>
+                              <option value="mixed">🔀 Mixed (Campuran)</option>
+                            </select>
+                          </div>
+                          <div class="global-asm-item">
+                            <label for="global-test-min" class="global-asm-label">🎯 Min. Skor</label>
+                            <input type="number" id="global-test-min" min="1" max="100" value="60" placeholder="60" title="Skor minimal lulus (%)" class="form-control global-asm-input" />
+                          </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-apply-global-tests" style="font-weight: 700; font-size: 0.75rem; border-color: rgba(244, 114, 182, 0.4); color: #f472b6;">
+                          📝 Simpan &amp; Terapkan ke Semua Test (${testAssessments.length})
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <h3 style="margin: 0; font-size: 1.1rem;">📝 Class Assessments</h3>
+                      <div style="display: inline-flex; align-items: center; gap: 4px; border-left: 1px solid rgba(255,255,255,0.12); padding-left: 8px;">
+                        <span style="font-size: 0.68rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">PILIH CEPAT:</span>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-select-tasks" style="padding: 2px 8px; font-size: 0.72rem;">⚡ Semua Task (${taskAssessments.length})</button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-select-tests" style="padding: 2px 8px; font-size: 0.72rem;">📝 Semua Test (${testAssessments.length})</button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-select-all" style="padding: 2px 8px; font-size: 0.72rem;">🌐 Semua (${classAssessments.length})</button>
+                        <button type="button" class="btn btn-ghost btn-sm" id="btn-quick-clear-sel" style="padding: 2px 8px; font-size: 0.72rem;">✕ Batal</button>
+                      </div>
+                    </div>
                     <button class="btn btn-primary btn-sm" onclick="window.loadSection('assessments')">Manage Assessments Hub</button>
                   </div>
                   <div id="class-assessments-grid"></div>
@@ -1299,7 +1379,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">PTS</span> Points</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">SCORE</span> %</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FFFF00; font-weight:800; font-size:0.75rem;">ᴿ</span> Remedi</span>
-                      <span style="display:inline-flex; align-items:center; gap:3px;"><span class="badge badge-grade-star-s" style="padding:0 3px !important; font-size:0.6rem !important;"><span class="star-icon" style="font-size:0.7rem;">★</span></span> ★ (100%)</span>
+                      <span style="display:inline-flex; align-items:center; gap:3px;"><span class="grade-circle grade-circle-star" style="width:16px !important; height:16px !important; min-width:16px !important; min-height:16px !important; font-size:0.6rem !important;">★</span> ★ (100%)</span>
                     </div>
                   </div>
                   <div id="class-attendance-grid"></div>
@@ -1329,11 +1409,23 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             });
           }
         } else if (window._classHubActiveTab === 'assessments') {
-          new window.DataGrid({
+          const classAsmGrid = new window.DataGrid({
             container: document.getElementById('class-assessments-grid'),
             data: assessmentsGridData,
             pageSize: 50,
             searchKeys: ['title', 'shellCode', 'status', 'AssessmentCategory'],
+            bulkActions: true,
+            customBulkActions: [
+              {
+                label: '⚡ Bulk Edit',
+                className: 'btn-primary',
+                onClick: (selectedIds) => {
+                  window.openBulkEditAssessmentsModal(selectedIds, () => {
+                    window.renderClassHub(document.getElementById('admin-content-area'));
+                  });
+                }
+              }
+            ],
             sortComparator: (sortKey, direction, a, b) => {
               if (sortKey === 'title' || sortKey === 'TITLE' || sortKey === 'order') {
                 return direction === 'asc' 
@@ -1448,21 +1540,169 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 sortable: false,
                 render: (val, row) => {
                   const id = row.id || '';
+                  const st = String(row.status || 'draft').toLowerCase();
+                  const isPub = st === 'published';
+                  const pubBtnCls = isPub ? 'btn-danger' : 'btn-success';
+                  const pubIcon = isPub ? '&#128065;&#65039;' : '&#128065;';
+                  const safeTitle = (row.title || '').replace(/['"\\]/g, ' ');
                   return `
                     <div class="d-flex gap-1 justify-end align-center">
                       <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterAssessmentResults='${id}'; window.loadSection('results');">&#128202;</button>
                       <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateAssessment='${id}'; window.loadSection('health');">&#9878;&#65039;</button>
-                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateAssessment('${id}')" title="Duplicate">📄</button>
-                      <button class="btn ${String(row.status).toLowerCase() === 'published' ? 'btn-danger' : 'btn-success'}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishAssessment('${id}', '${row.status || 'draft'}')">
-                        ${String(row.status).toLowerCase() === 'published' ? '👁️‍🗨️' : '👁️'}
+                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateAssessment('${id}')" title="Duplicate">&#128196;</button>
+                      <button class="btn ${pubBtnCls}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishAssessment('${id}', '${st}')">
+                        ${pubIcon}
                       </button>
-                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openCrudModal('assessments', window._classHubRecords['${id}'])">✏️</button>
-                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; background-color: var(--clr-accent-1); color: white;" onclick="window._deleteRecord('assessments', '${id}', '${escapeHtml(row.title || '')}')">🗑️</button>
+                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openCrudModal('assessments', window._classHubRecords['${id}'])">&#9999;&#65039;</button>
+                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; background-color: var(--clr-accent-1); color: white;" onclick="window._deleteRecord('assessments', '${id}', '${safeTitle}')">&#128465;&#65039;</button>
                     </div>
                   `;
                 }
               }
             ]
+          });
+
+          const isTaskRow = (r) => r && (r.AssessmentCategory === 'VOCAB_TASK' || r.AssessmentCategory === 'PHRASE_TASK' || /\bTASK\b/i.test(r.title || '') || /\bTASK\b/i.test(r.AssessmentCategory || ''));
+          const isTestRow = (r) => r && (r.AssessmentCategory === 'VOCAB_TEST' || r.AssessmentCategory === 'PHRASE_TEST' || /\bTEST\b/i.test(r.title || '') || /\bTEST\b/i.test(r.AssessmentCategory || ''));
+
+          document.getElementById('btn-quick-select-tasks')?.addEventListener('click', () => {
+            classAsmGrid.selectAllRows(isTaskRow);
+          });
+          document.getElementById('btn-quick-select-tests')?.addEventListener('click', () => {
+            classAsmGrid.selectAllRows(isTestRow);
+          });
+          document.getElementById('btn-quick-select-all')?.addEventListener('click', () => {
+            classAsmGrid.selectAllRows();
+          });
+          document.getElementById('btn-quick-clear-sel')?.addEventListener('click', () => {
+            classAsmGrid.clearSelection();
+          });
+
+          // Global Settings Collapse Toggle
+          const toggleBtn = document.getElementById('btn-toggle-global-settings');
+          const gridBody = document.getElementById('global-settings-grid-body');
+          const toggleIcon = document.getElementById('icon-toggle-global-settings');
+          const toggleText = document.getElementById('text-toggle-global-settings');
+          if (toggleBtn && gridBody) {
+            toggleBtn.addEventListener('click', () => {
+              const isHidden = gridBody.classList.toggle('hidden');
+              if (toggleIcon) toggleIcon.textContent = isHidden ? '▼' : '▲';
+              if (toggleText) toggleText.textContent = isHidden ? 'Tampilkan' : 'Sembunyikan';
+            });
+          }
+
+          // Apply Global Settings to Tasks
+          document.getElementById('btn-apply-global-tasks')?.addEventListener('click', async () => {
+            const dur = parseInt(document.getElementById('global-task-dur')?.value || '5', 10);
+            const ans = document.getElementById('global-task-ans')?.value || 'spoken';
+            const min = parseInt(document.getElementById('global-task-min')?.value || '60', 10);
+            const taskIds = taskAssessments.map(t => t.id).filter(Boolean);
+
+            if (taskIds.length === 0) {
+              showToast('Tidak ada Task Harian yang ditemukan di kelas ini.', 'warning');
+              return;
+            }
+
+            if (!confirm(`Terapkan pengaturan ke seluruh ${taskIds.length} Task Harian di kelas ini?\n\n• Waktu Pengerjaan: ${dur} menit (Default: 5 menit)\n• Cara Jawab: ${ans}\n• Minimal Skor: ${min}%`)) {
+              return;
+            }
+
+            const applyBtn = document.getElementById('btn-apply-global-tasks');
+            const origText = applyBtn.innerHTML;
+            applyBtn.disabled = true;
+            applyBtn.innerHTML = '⏳ Menerapkan ke Task...';
+
+            try {
+              const sb = await getSupabase();
+              for (const t of taskAssessments) {
+                const up = {
+                  working_duration_minutes: dur,
+                  duration_minutes: dur,
+                  answer_type: ans,
+                  minimum_required_score: min
+                };
+                if (t.payload && typeof t.payload === 'object') {
+                  up.payload = {
+                    ...t.payload,
+                    working_duration_minutes: dur,
+                    duration_minutes: dur,
+                    answer_type: ans,
+                    minimum_required_score: min
+                  };
+                }
+                await adminUpdate('assessments', t.id, up);
+              }
+
+              if (ans && sb) {
+                await sb.from('assessment_questions').update({ answer_type: ans }).in('assessment_id', taskIds);
+              }
+
+              showToast(`Berhasil memperbarui ${taskIds.length} Task Harian (Durasi: ${dur} mnt, ${ans}, Min: ${min}%).`, 'success');
+              window.renderClassHub(document.getElementById('admin-content-area'));
+            } catch (err) {
+              console.error('Apply global tasks failed:', err);
+              showToast('Gagal memperbarui task: ' + (err.message || 'Error'), 'danger');
+            } finally {
+              applyBtn.disabled = false;
+              applyBtn.innerHTML = origText;
+            }
+          });
+
+          // Apply Global Settings to Tests
+          document.getElementById('btn-apply-global-tests')?.addEventListener('click', async () => {
+            const dur = parseInt(document.getElementById('global-test-dur')?.value || '120', 10);
+            const ans = document.getElementById('global-test-ans')?.value || 'written';
+            const min = parseInt(document.getElementById('global-test-min')?.value || '60', 10);
+            const testIds = testAssessments.map(t => t.id).filter(Boolean);
+
+            if (testIds.length === 0) {
+              showToast('Tidak ada Test yang ditemukan di kelas ini.', 'warning');
+              return;
+            }
+
+            if (!confirm(`Terapkan pengaturan ke seluruh ${testIds.length} Test / Ujian di kelas ini?\n\n• Waktu Pengerjaan: ${dur} menit\n• Cara Jawab: ${ans}\n• Minimal Skor: ${min}%`)) {
+              return;
+            }
+
+            const applyBtn = document.getElementById('btn-apply-global-tests');
+            const origText = applyBtn.innerHTML;
+            applyBtn.disabled = true;
+            applyBtn.innerHTML = '⏳ Menerapkan ke Test...';
+
+            try {
+              const sb = await getSupabase();
+              for (const t of testAssessments) {
+                const up = {
+                  working_duration_minutes: dur,
+                  duration_minutes: dur,
+                  answer_type: ans,
+                  minimum_required_score: min
+                };
+                if (t.payload && typeof t.payload === 'object') {
+                  up.payload = {
+                    ...t.payload,
+                    working_duration_minutes: dur,
+                    duration_minutes: dur,
+                    answer_type: ans,
+                    minimum_required_score: min
+                  };
+                }
+                await adminUpdate('assessments', t.id, up);
+              }
+
+              if (ans && sb) {
+                await sb.from('assessment_questions').update({ answer_type: ans }).in('assessment_id', testIds);
+              }
+
+              showToast(`Berhasil memperbarui ${testIds.length} Test (Durasi: ${dur} mnt, ${ans}, Min: ${min}%).`, 'success');
+              window.renderClassHub(document.getElementById('admin-content-area'));
+            } catch (err) {
+              console.error('Apply global tests failed:', err);
+              showToast('Gagal memperbarui test: ' + (err.message || 'Error'), 'danger');
+            } finally {
+              applyBtn.disabled = false;
+              applyBtn.innerHTML = origText;
+            }
           });
         } else {
           let attendanceGridInstance = null;
@@ -1617,12 +1857,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 const avgScore = completedStudents.length > 0 
                   ? Math.round(completedStudents.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / completedStudents.length) 
                   : 0;
-                const avgGrade = completedStudents.length > 0 && typeof getGrade === 'function' ? getGrade(avgScore) : '—';
-                const cMap = { '★': '#A855F7', 'S': '#A855F7', 'A': '#10B981', 'B': '#84CC16', 'C': '#EAB308', 'D': '#F97316', 'E': '#EF4444' };
-                const avgGradeColor = cMap[avgGrade] || '#94a3b8';
+                const avgGrade = completedStudents.length > 0 
+                  ? (typeof calculateGrade === 'function' ? calculateGrade(avgScore) : (typeof getGrade === 'function' ? getGrade(avgScore) : '—'))
+                  : '—';
+                const avgGradeColor = completedStudents.length > 0 && typeof getGradeColorByScore === 'function'
+                  ? getGradeColorByScore(avgScore)
+                  : '#94a3b8';
                 const isAvgGradeS = avgGrade === '★' || avgGrade === 'S';
                 const avgBadgeStyle = isAvgGradeS
-                  ? `background:rgba(168,85,247,0.18); color:#A855F7; font-weight:900; font-size:0.65rem; padding:0 5px; line-height:1.2; box-shadow:0 0 10px rgba(168,85,247,0.45); border:1px solid #A855F7;`
+                  ? `background:rgba(192,132,252,0.18); color:#C084FC; font-weight:900; font-size:0.65rem; padding:0 5px; line-height:1.2; box-shadow:0 0 10px rgba(192,132,252,0.45); border:1px solid #C084FC;`
                   : `background:${avgGradeColor}; color:#000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
 
                 let cellsHtml = '';
@@ -1643,19 +1886,24 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   } else if (col.key === 'averageScorePct') {
                     cellsHtml += `
                       <td class="col-sticky col-sticky-6 text-center">
-                        <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; line-height:1.1; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(168,85,247,0.6)); color:#A855F7;' : ''}">${avgScore}%</div>
+                        <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; line-height:1.1; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(192,132,252,0.6)); color:#C084FC;' : ''}">${avgScore}%</div>
                       </td>
                     `;
                   } else if (col.key === 'grade') {
+                    const cleanAvgGrade = String(avgGrade || '').trim().toUpperCase();
+                    const lowerAvgG = cleanAvgGrade.toLowerCase();
+                    const avgTextColor = (cleanAvgGrade === 'B' || cleanAvgGrade === 'C') ? '#0f172a' : '#ffffff';
                     cellsHtml += `
                       <td class="col-sticky col-sticky-7 text-center">
-                        ${isAvgGradeS ? '<span class="badge badge-grade-star-s" title="Average Grade ★ (100%)"><span class="star-icon">★</span></span>' : `<span class="badge" style="${avgBadgeStyle}">${avgGrade}</span>`}
+                        ${isAvgGradeS 
+                          ? '<span class="grade-circle grade-circle-star" title="Average Grade ★ (100%)">★</span>' 
+                          : `<span class="grade-circle grade-circle-${lowerAvgG}" style="background:${avgGradeColor}; color:${avgTextColor};" title="Average Grade ${cleanAvgGrade}">${cleanAvgGrade}</span>`}
                       </td>
                     `;
                   } else if (col.key === 'totalEarnedScore') {
                     cellsHtml += `
                       <td class="col-sticky col-sticky-8 col-sticky-last text-center">
-                        <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(168,85,247,0.6)); color:#A855F7;' : ''}">${avgPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
+                        <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(192,132,252,0.6)); color:#C084FC;' : ''}">${avgPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
                       </td>
                     `;
                   } else if (col.key && col.key.startsWith('asm_')) {
@@ -1687,7 +1935,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     if (count > 0) {
                       const avgSc = (scoreSum / count).toFixed(1).replace(/\.0$/, '');
                       const avgPct = Math.round(pctSum / count);
-                      const avgCol = avgPct >= 100 ? '#A855F7' : (avgPct >= 90 ? '#10B981' : (avgPct >= 80 ? '#84CC16' : (avgPct >= 60 ? '#EAB308' : (avgPct >= 30 ? '#F97316' : '#EF4444'))));
+                      const avgCol = typeof getGradeColorByScore === 'function'
+                        ? getGradeColorByScore(avgPct)
+                        : (avgPct >= 100 ? '#C084FC' : (avgPct >= 90 ? '#22C55E' : (avgPct >= 80 ? '#BEF264' : (avgPct >= 60 ? '#FDE047' : (avgPct >= 30 ? '#FB923C' : '#F87171')))));
                       if (isTest && isPctCol) {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
@@ -1861,8 +2111,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   render: (val, row) => {
                     if (row.completedCount === 0) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
                     const isGradeS = row.grade === '★' || row.grade === 'S';
+                    const scoreColor = (typeof getGradeColorByScore === 'function')
+                      ? getGradeColorByScore(row.averageScorePct)
+                      : (isGradeS ? '#C084FC' : row.gradeColor);
                     return `
-                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${isGradeS ? '#A855F7' : row.gradeColor}; font-size:0.75rem; line-height:1.1;">${row.averageScorePct}%</div>
+                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${scoreColor}; font-size:0.75rem; line-height:1.1;">${row.averageScorePct}%</div>
                     `;
                   }
                 },
@@ -1877,11 +2130,16 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     if (row.grade === '—' || row.grade === '-') return '<span class="text-muted" style="font-size:0.75rem;">&mdash;</span>';
                     const isGradeS = row.grade === 'S' || row.grade === '★';
                     if (isGradeS) {
-                      return `<span class="badge badge-grade-star-s" title="Grade ★ (100% Excellent)"><span class="star-icon">★</span></span>`;
+                      return `<span class="grade-circle grade-circle-star" title="Grade ★ (100% Excellent)">★</span>`;
                     }
-                    const badgeStyle = `background:${row.gradeColor}; color:#000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
+                    const cleanGrade = String(row.grade || '').trim().toUpperCase();
+                    const lowerG = cleanGrade.toLowerCase();
+                    const badgeColor = (typeof getGradeColorByScore === 'function')
+                      ? getGradeColorByScore(row.averageScorePct)
+                      : (row.gradeColor || '#94a3b8');
+                    const textColor = (cleanGrade === 'B' || cleanGrade === 'C') ? '#0f172a' : '#ffffff';
                     return `
-                      <span class="badge" style="${badgeStyle}">${row.grade}</span>
+                      <span class="grade-circle grade-circle-${lowerG}" style="background:${badgeColor}; color:${textColor};" title="Grade ${cleanGrade}">${cleanGrade}</span>
                     `;
                   }
                 },
@@ -1894,7 +2152,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   width: '62px',
                   render: (val, row) => {
                     const isGradeS = row.grade === '★' || row.grade === 'S';
-                    const ptsColor = isGradeS ? '#A855F7' : ((row.grade !== '—' && row.gradeColor) ? row.gradeColor : 'var(--clr-text-1)');
+                    const ptsColor = (row.completedCount > 0 && typeof getGradeColorByScore === 'function')
+                      ? getGradeColorByScore(row.averageScorePct)
+                      : (isGradeS ? '#C084FC' : ((row.grade !== '—' && row.gradeColor) ? row.gradeColor : 'var(--clr-text-1)'));
                     const ptsVal = Number(row.totalEarnedScore ?? 0);
                     const formattedPts = (ptsVal % 1 !== 0) ? ptsVal.toFixed(1) : ptsVal;
                     return `
@@ -1949,7 +2209,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                           const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
                           const cleanEffSc = Math.round(effSc * 2) / 2;
                           const displayVal = (cleanEffSc % 1 !== 0) ? cleanEffSc.toFixed(1) : cleanEffSc.toString();
-                          const color = effPct >= 100 ? '#A855F7' : (effPct >= 90 ? '#10B981' : (effPct >= 80 ? '#84CC16' : (effPct >= 60 ? '#EAB308' : (effPct >= 30 ? '#F97316' : '#EF4444'))));
+                          const color = typeof getGradeColorByScore === 'function'
+                            ? getGradeColorByScore(effPct)
+                            : (effPct >= 100 ? '#C084FC' : (effPct >= 90 ? '#22C55E' : (effPct >= 80 ? '#BEF264' : (effPct >= 60 ? '#FDE047' : (effPct >= 30 ? '#FB923C' : '#F87171')))));
                           const attId = att.id || att.attempt_id;
                           const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                           const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
@@ -1994,7 +2256,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                           const maxRemPts = totalQ * 0.6;
                           const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
                           const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-                          const color = effPct >= 100 ? '#A855F7' : (effPct >= 90 ? '#10B981' : (effPct >= 80 ? '#84CC16' : (effPct >= 60 ? '#EAB308' : (effPct >= 30 ? '#F97316' : '#EF4444'))));
+                          const color = typeof getGradeColorByScore === 'function'
+                            ? getGradeColorByScore(effPct)
+                            : (effPct >= 100 ? '#C084FC' : (effPct >= 90 ? '#22C55E' : (effPct >= 80 ? '#BEF264' : (effPct >= 60 ? '#FDE047' : (effPct >= 30 ? '#FB923C' : '#F87171')))));
                           const attId = att.id || att.attempt_id;
                           const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                           const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
@@ -2043,7 +2307,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                         const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
                         const cleanSc = Math.round(effSc * 2) / 2;
                         const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
-                        const color = effPct >= 100 ? '#A855F7' : (effPct >= 90 ? '#10B981' : (effPct >= 80 ? '#84CC16' : (effPct >= 60 ? '#EAB308' : (effPct >= 30 ? '#F97316' : '#EF4444'))));
+                        const color = typeof getGradeColorByScore === 'function'
+                          ? getGradeColorByScore(effPct)
+                          : (effPct >= 100 ? '#C084FC' : (effPct >= 90 ? '#22C55E' : (effPct >= 80 ? '#BEF264' : (effPct >= 60 ? '#FDE047' : (effPct >= 30 ? '#FB923C' : '#F87171')))));
                         const attId = att.id || att.attempt_id;
                         const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                         const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';

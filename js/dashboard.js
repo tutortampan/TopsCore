@@ -268,6 +268,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           webcamStream = await navigator.mediaDevices.getUserMedia({
             video: { width: { ideal: 480 }, height: { ideal: 480 }, facingMode: 'user' }
           });
+          video.setAttribute('playsinline', '');
+          video.playsInline = true;
           video.srcObject = webcamStream;
           video.classList.remove('hidden');
           if (overlay) overlay.classList.add('hidden');
@@ -2360,7 +2362,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
           const initChar = st.cleanName ? st.cleanName.charAt(0).toUpperCase() : 'S';
           const memberPhoto = st.avatar_url || st.photo_url;
-          const theme = GRADE_PALETTE[st.grade] || GRADE_PALETTE.F;
+          const theme = GRADE_PALETTE[st.grade] || GRADE_PALETTE.E;
           const gradeSymbol = getGradeSymbol(st.grade, st.overallScore);
 
           const avatarHtml = memberPhoto

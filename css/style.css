@@ -710,8 +710,13 @@ textarea.form-control {
   overflow-y: auto;
   border-radius: var(--radius-lg);
   border: 1px solid var(--clr-border);
-  scrollbar-width: thin;
-  scrollbar-color: rgba(99, 102, 241, 0.4) rgba(15, 23, 42, 0.6);
+}
+
+@supports (scrollbar-width: thin) {
+  .table-wrap {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99, 102, 241, 0.4) rgba(15, 23, 42, 0.6);
+  }
 }
 
 .table-wrap::-webkit-scrollbar {
@@ -856,126 +861,183 @@ tbody tr:last-child td {
 .text-grade-star,
 .text-grade-★,
 .text-grade-S {
-  color: #A855F7 !important;
+  color: #C084FC !important;
   animation: star-text-gleam 2.2s infinite ease-in-out;
 }
 
-/* A: Grade A (90-99%) - Hijau (Rich Green) #10B981 */
+/* A: Grade A (90-99%) - True Leaf Green #22C55E */
 .grade-A {
-  background: rgba(16, 185, 129, 0.16) !important;
-  color: #10B981 !important;
-  border: 1.5px solid rgba(16, 185, 129, 0.7) !important;
+  background: rgba(34, 197, 94, 0.16) !important;
+  color: #22C55E !important;
+  border: 1.5px solid rgba(34, 197, 94, 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-A {
-  color: #10B981 !important;
+  color: #22C55E !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-/* B: Grade B (80-89%) - Lime (Hijau Muda/Yellow-Green) #84CC16 */
+/* B: Grade B (80-89%) - Electric Bright Lime #BEF264 */
 .grade-B {
-  background: rgba(132, 204, 22, 0.16) !important;
-  color: #84CC16 !important;
-  border: 1.5px solid rgba(132, 204, 22, 0.7) !important;
+  background: rgba(190, 242, 100, 0.16) !important;
+  color: #BEF264 !important;
+  border: 1.5px solid rgba(190, 242, 100, 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-B {
-  color: #84CC16 !important;
+  color: #BEF264 !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-/* C: Grade C (60-79%) - Kuning (Yellow) #EAB308 */
+/* C: Grade C (60-79%) - Pure Electric Lemon Yellow #FDE047 */
 .grade-C {
-  background: rgba(234, 179, 8, 0.16) !important;
-  color: #EAB308 !important;
-  border: 1.5px solid rgba(234, 179, 8, 0.7) !important;
+  background: rgba(253, 224, 71, 0.16) !important;
+  color: #FDE047 !important;
+  border: 1.5px solid rgba(253, 224, 71, 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-C {
-  color: #EAB308 !important;
+  color: #FDE047 !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-/* D: Grade D (30-59%) - Jingga / Orange #F97316 */
+/* D: Grade D (30-59%) - Clean Orange #FB923C */
 .grade-D {
-  background: rgba(249, 115, 22, 0.16) !important;
-  color: #F97316 !important;
-  border: 1.5px solid rgba(249, 115, 22, 0.7) !important;
+  background: rgba(251, 146, 60, 0.16) !important;
+  color: #FB923C !important;
+  border: 1.5px solid rgba(251, 146, 60, 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-D {
-  color: #F97316 !important;
+  color: #FB923C !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-/* E: Grade E (0-29%) - Merah (Red) #EF4444 */
-.grade-E {
-  background: rgba(239, 68, 68, 0.16) !important;
-  color: #EF4444 !important;
-  border: 1.5px solid rgba(239, 68, 68, 0.7) !important;
+/* E: Grade E (0-29%) & Legacy F - Light Red #F87171 */
+.grade-E,
+.grade-F {
+  background: rgba(248, 113, 113, 0.16) !important;
+  color: #F87171 !important;
+  border: 1.5px solid rgba(248, 113, 113, 0.7) !important;
   box-shadow: none !important;
 }
 
-.text-grade-E {
-  color: #EF4444 !important;
+.text-grade-E,
+.text-grade-F {
+  color: #F87171 !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
 /* Score text colors - Glow ONLY on Grade S / Star */
 .score-high {
-  color: #A855F7 !important;
+  color: #C084FC !important;
   font-weight: 700;
-  filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.45));
+  filter: drop-shadow(0 0 8px rgba(192, 132, 252, 0.45));
 } /* 100% Star ⭐ */
 
 .score-dist {
-  color: #00FF00 !important;
+  color: #22C55E !important;
   font-weight: 700;
   filter: none !important;
-} /* 80-99% A */
+} /* 90-99% A (True Leaf Green) */
 
 .score-pass {
-  color: #00FFFF !important;
+  color: #BEF264 !important;
   font-weight: 700;
   filter: none !important;
-} /* 60-79% B */
+} /* 80-89% B (Electric Bright Lime) */
 
 .score-warn {
-  color: #FFFF00 !important;
+  color: #FDE047 !important;
   font-weight: 700;
   filter: none !important;
-} /* 40-59% C */
+} /* 60-79% C (Pure Electric Lemon Yellow) */
 
 .score-remed {
-  color: #FF8000 !important;
+  color: #FB923C !important;
   font-weight: 700;
   filter: none !important;
-} /* 20-39% D */
+} /* 30-59% D (Clean Orange) */
 
 .score-poor {
-  color: #FF0000 !important;
+  color: #F87171 !important;
   font-weight: 700;
   filter: none !important;
-} /* 0-19% E */
+} /* 0-29% E (Light Red) */
 
 .score-fail {
-  color: #FF0000 !important;
+  color: #F87171 !important;
   font-weight: 700;
   filter: none !important;
-} /* Legacy Fallback */
-  filter: none !important;
+} /* Legacy Fail Fallback */
+
+/* ============================================================
+   GRADE CIRCLE BADGES (Uniform Round Pills for ★, A, B, C, D, E)
+   ============================================================ */
+.grade-circle {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 19px !important;
+  height: 19px !important;
+  min-width: 19px !important;
+  min-height: 19px !important;
+  border-radius: 50% !important;
+  font-size: 0.68rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+  vertical-align: middle !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
 }
 
-/* Legacy Fallback */
+.grade-circle.grade-circle-star {
+  background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%) !important;
+  color: #ffffff !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+  box-shadow: 0 0 8px rgba(192, 132, 252, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+}
+
+.grade-circle.grade-circle-a {
+  background: #22C55E !important;
+  color: #ffffff !important;
+}
+
+.grade-circle.grade-circle-b {
+  background: #BEF264 !important;
+  color: #0f172a !important;
+  font-weight: 900 !important;
+}
+
+.grade-circle.grade-circle-c {
+  background: #FDE047 !important;
+  color: #0f172a !important;
+  font-weight: 900 !important;
+}
+
+.grade-circle.grade-circle-d {
+  background: #FB923C !important;
+  color: #ffffff !important;
+}
+
+.grade-circle.grade-circle-e {
+  background: #F87171 !important;
+  color: #ffffff !important;
+}
 
 /* ============================================================
    SCORE BAR
@@ -1409,6 +1471,21 @@ body.assessment-page {
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
+}
+
+.topscore-locked-banner .banner-brand {
+  color: #38bdf8;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.topscore-locked-banner .banner-sep {
+  opacity: 0.4;
+  margin: 0 6px;
+}
+
+.topscore-locked-banner .banner-author {
+  color: #cbd5e1;
 }
 
 

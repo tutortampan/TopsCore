@@ -1,4 +1,4 @@
-const CACHE_NAME = 'abcd-core-v5.8.7';
+const CACHE_NAME = 'topscore-cache-mockup-v1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,25 +6,25 @@ const ASSETS_TO_CACHE = [
   './dashboard.html',
   './assessment.html',
   './result.html',
-  './css/style.css?v=5.8.7',
-  './css/admin.css?v=5.8.7',
-  './css/dashboard.css?v=5.8.7',
-  './css/auth.css?v=5.8.7',
-  './css/assessment.css?v=5.8.7',
-  './css/result.css?v=5.8.7',
-  './css/components/avatars.css?v=5.8.7',
-  './js/app.js?v=5.8.7',
-  './js/api.js?v=5.8.7',
-  './js/auth.js?v=5.8.7',
-  './js/dashboard.js?v=5.8.7',
-  './js/assessment.js?v=5.8.7',
-  './js/result.js?v=5.8.7',
-  './js/session.js?v=5.8.7',
-  './js/supabase.js?v=5.8.7',
-  './js/grading.js?v=5.8.7',
+  './css/style.css?v=20261027',
+  './css/admin.css?v=20261027',
+  './css/dashboard.css?v=20261027',
+  './css/auth.css?v=20261027',
+  './css/assessment.css?v=20261027',
+  './css/result.css?v=20261027',
+  './css/components/avatars.css?v=20261027',
+  './js/app.js?v=20261027',
+  './js/api.js?v=20261027',
+  './js/auth.js?v=20261027',
+  './js/dashboard.js?v=20261027',
+  './js/assessment.js?v=20261027',
+  './js/result.js?v=20261027',
+  './js/session.js?v=20261027',
+  './js/supabase.js?v=20261027',
+  './js/grading.js?v=20261027',
   './js/vendor/supabase.js',
-  './js/vendor/xlsx.full.min.js?v=5.8.5',
-  './js/wake-lock.js?v=5.8.5'
+  './js/vendor/xlsx.full.min.js?v=20261027',
+  './js/wake-lock.js?v=20261027'
 ];
 
 self.addEventListener('install', event => {

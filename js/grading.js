@@ -241,22 +241,22 @@ export function calculateOverallStudentScore(takenPercentages = []) {
 
 /**
  * Authoritative Grade & Score Palette (6 Clean Tiers: ★, A, B, C, D, E)
- * ★ Excellent  100%       Ungu (Purple)           #A855F7
- * A Very Good  90% – 99%  Hijau (Rich Green)      #10B981
- * B Good       80% – 89%  Lime (Yellow-Green)     #84CC16
- * C Enough     60% – 79%  Kuning (Yellow)         #EAB308
- * D Less       30% – 59%  Jingga / Orange         #F97316
- * E Fail       0% – 29%   Merah (Red)             #EF4444
+ * ★ Excellent  100%       Bright Purple           #C084FC
+ * A Very Good  90% – 99%  True Leaf Green         #22C55E
+ * B Good       80% – 89%  Electric Bright Lime    #BEF264
+ * C Enough     60% – 79%  Electric Lemon Yellow   #FDE047
+ * D Less       30% – 59%  Clean Orange            #FB923C
+ * E Fail       0% – 29%   Light Red               #F87171
  */
 const STAR_THEME = {
   symbol: '★',
   label: 'Excellent',
   predicate: 'Excellent',
-  color: '#a855f7',       // Ungu / Purple (100% Star)
-  dark: '#7e22ce',
-  light: '#c084fc',
-  rgb: '168, 85, 247',
-  glow: 'rgba(168, 85, 247, 0.45)',
+  color: '#C084FC',       // Bright Purple (100% Star)
+  dark: '#a855f7',
+  light: '#e9d5ff',
+  rgb: '192, 132, 252',
+  glow: 'rgba(192, 132, 252, 0.45)',
   name: 'Excellent (100%)',
   minScore: 100,
   maxScore: 100,
@@ -270,11 +270,11 @@ export const GRADE_PALETTE = {
     symbol: 'A',
     label: 'Very Good',
     predicate: 'Very Good',
-    color: '#10b981',       // Hijau / Rich Green (90-99%)
-    dark: '#059669',
-    light: '#34d399',
-    rgb: '16, 185, 129',
-    glow: 'rgba(16, 185, 129, 0.35)',
+    color: '#22C55E',       // True Leaf Green (90-99%)
+    dark: '#16a34a',
+    light: '#86efac',
+    rgb: '34, 197, 94',
+    glow: 'rgba(34, 197, 94, 0.35)',
     name: 'Very Good (90-99%)',
     minScore: 90,
     maxScore: 99,
@@ -284,11 +284,11 @@ export const GRADE_PALETTE = {
     symbol: 'B',
     label: 'Good',
     predicate: 'Good',
-    color: '#84cc16',       // Lime / Hijau Muda / Yellow-Green (80-89%)
-    dark: '#65a30d',
-    light: '#a3e635',
-    rgb: '132, 204, 22',
-    glow: 'rgba(132, 204, 22, 0.35)',
+    color: '#BEF264',       // Electric Bright Lime (80-89%)
+    dark: '#a3e635',
+    light: '#d9f99d',
+    rgb: '190, 242, 100',
+    glow: 'rgba(190, 242, 100, 0.35)',
     name: 'Good (80-89%)',
     minScore: 80,
     maxScore: 89,
@@ -298,11 +298,11 @@ export const GRADE_PALETTE = {
     symbol: 'C',
     label: 'Enough',
     predicate: 'Enough',
-    color: '#eab308',       // Kuning / Yellow (60-79%)
-    dark: '#ca8a04',
-    light: '#fde047',
-    rgb: '234, 179, 8',
-    glow: 'rgba(234, 179, 8, 0.35)',
+    color: '#FDE047',       // Pure Electric Lemon Yellow (60-79%)
+    dark: '#eab308',
+    light: '#fef08a',
+    rgb: '253, 224, 71',
+    glow: 'rgba(253, 224, 71, 0.35)',
     name: 'Enough (60-79%)',
     minScore: 60,
     maxScore: 79,
@@ -312,11 +312,11 @@ export const GRADE_PALETTE = {
     symbol: 'D',
     label: 'Less',
     predicate: 'Less',
-    color: '#f97316',       // Jingga / Orange (30-59%)
-    dark: '#ea580c',
-    light: '#fb923c',
-    rgb: '249, 115, 22',
-    glow: 'rgba(249, 115, 22, 0.35)',
+    color: '#FB923C',       // Clean Orange (30-59%)
+    dark: '#f97316',
+    light: '#fed7aa',
+    rgb: '251, 146, 60',
+    glow: 'rgba(251, 146, 60, 0.35)',
     name: 'Less (30-59%)',
     minScore: 30,
     maxScore: 59,
@@ -326,11 +326,11 @@ export const GRADE_PALETTE = {
     symbol: 'E',
     label: 'Fail',
     predicate: 'Fail',
-    color: '#ef4444',       // Merah / Red (0-29%)
-    dark: '#dc2626',
-    light: '#f87171',
-    rgb: '239, 68, 68',
-    glow: 'rgba(239, 68, 68, 0.35)',
+    color: '#F87171',       // Light Red (0-29%)
+    dark: '#ef4444',
+    light: '#fca5a5',
+    rgb: '248, 113, 113',
+    glow: 'rgba(248, 113, 113, 0.35)',
     name: 'Fail (0-29%)',
     minScore: 0,
     maxScore: 29,
@@ -338,15 +338,32 @@ export const GRADE_PALETTE = {
   }
 };
 
+/**
+ * Universal Grade Color Resolver by Percentage Score (Single Source of Truth)
+ * Returns authoritative color hex for any given percentage score.
+ * 
+ * @param {number|string} percentage Score percentage (0 - 100)
+ * @returns {string} Hex color string
+ */
+export function getGradeColorByScore(percentage) {
+  const p = Number(percentage);
+  if (isNaN(p) || p < 0) return '#94a3b8';
+  if (p >= 100) return GRADE_PALETTE['★']?.color || '#C084FC';
+  if (p >= 90) return GRADE_PALETTE.A?.color || '#22C55E';
+  if (p >= 80) return GRADE_PALETTE.B?.color || '#BEF264';
+  if (p >= 60) return GRADE_PALETTE.C?.color || '#FDE047';
+  if (p >= 30) return GRADE_PALETTE.D?.color || '#FB923C';
+  return GRADE_PALETTE.E?.color || '#F87171';
+}
+
 export function getGradeColor(grade, isRemedial = false) {
   const g = String(grade || '').trim();
-  if (g === '★' || g.toUpperCase() === 'S') return GRADE_PALETTE['★']?.color || '#a855f7';
+  if (g === '★' || g.toUpperCase() === 'S') return GRADE_PALETTE['★']?.color || '#C084FC';
   return GRADE_PALETTE[g.toUpperCase()]?.color || '#94a3b8';
 }
 
 export function getScoreColor(percentage, isRemedial = false) {
-  const grade = calculateGrade(percentage);
-  return getGradeColor(grade, false);
+  return getGradeColorByScore(percentage);
 }
 
 export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
@@ -363,13 +380,14 @@ export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
 export function formatGradeBadgeHtml(grade, isRemedial = false, customStyle = '') {
   const g = String(grade || '').trim();
   const isStar = g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR';
-  const displayLetter = isStar ? '★' : g.toUpperCase();
-  const color = isStar ? '#A855F7' : (GRADE_PALETTE[displayLetter]?.color || '#94a3b8');
-  
   if (isStar) {
-    return `<span class="badge" style="background:rgba(168,85,247,0.18); color:#A855F7; font-weight:900; box-shadow:0 0 10px rgba(168,85,247,0.45); border:1px solid #A855F7; padding:2px 7px; display:inline-flex; align-items:center; ${customStyle}">★</span>`;
+    return `<span class="grade-circle grade-circle-star" title="Grade ★ (100% Excellent)" style="${customStyle}">★</span>`;
   }
-  return `<span class="badge" style="background:${color}; color:#000; font-weight:800; padding:2px 7px; display:inline-flex; align-items:center; ${customStyle}">${displayLetter}</span>`;
+  const cleanGrade = g.toUpperCase();
+  const lowerG = cleanGrade.toLowerCase();
+  const color = GRADE_PALETTE[cleanGrade]?.color || '#94a3b8';
+  const textColor = (cleanGrade === 'B' || cleanGrade === 'C') ? '#0f172a' : '#ffffff';
+  return `<span class="grade-circle grade-circle-${lowerG}" style="background:${color}; color:${textColor}; ${customStyle}" title="Grade ${cleanGrade}">${cleanGrade}</span>`;
 }
 
 export function getGradeTheme(grade, isRemedial = false) {

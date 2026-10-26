@@ -26,6 +26,7 @@ let crudModal   = null;
 let crudForm    = null;
 let _currentSection = null;
 let _editId     = null;
+let _editRecord = null;
 
 const formFields = {
   
@@ -105,26 +106,30 @@ const formFields = {
     { id: 'pin_hash', label: 'PIN (4 digits)', type: 'password', placeholder: '****' },
     { id: 'is_active', label: 'Active', type: 'checkbox' },
   ],
-          assessments: [
-      { id: 'institution_id', label: 'Institution', type: 'select', source: 'institutions', required: true, readonly: true },
-      { id: 'program_id', label: 'Program', type: 'select', source: 'programs', required: true, dependsOn: 'institution_id', readonly: true },
-      { id: 'level_id', label: 'Level', type: 'select', source: 'levels', required: true, dependsOn: 'program_id', readonly: true },
-      { id: 'class_id', label: 'Class', type: 'select', source: 'classes', required: true, dependsOn: 'level_id', readonly: true },
-      { id: 'module_id', label: 'AI Module', type: 'select', source: 'modules', required: true, readonly: true },
-      { id: 'shell_code', label: 'Shell Code / Code ID', type: 'text', required: true, readonly: true },
-      { id: 'title', label: 'Assessment Title', type: 'text', required: true, readonly: true },
-      { id: 'description', label: 'Description', type: 'textarea', readonly: true },
-      { id: 'assessment_type', label: 'Assessment Type', type: 'text', readonly: true },
-      { id: 'assessment_category', label: 'Category / Tier', type: 'text', readonly: true },
-      { id: 'status', label: 'Status', type: 'select', options: [{value:'PUBLISHED',label:'PUBLISHED'},{value:'DRAFT',label:'DRAFT'},{value:'UNPUBLISHED',label:'UNPUBLISHED'},{value:'ARCHIVED',label:'ARCHIVED'}], required: true },
-      { id: 'working_duration_minutes', label: 'Duration (Minutes)', type: 'number' },
-      { id: 'question_order', label: 'Question Order', type: 'select', options: [{ value: 'sequential', label: 'Sequential' }, { value: 'random', label: 'Random' }] },
-      { id: 'answer_type', label: 'Answer Type', type: 'select', options: [{ value: 'spoken', label: 'Spoken' }, { value: 'written', label: 'Written' }, { value: 'selection', label: 'Selection' }, { value: 'mixed', label: 'Mixed' }] },
-      { id: 'prerequisite_assessment_id', label: 'Prerequisite (Optional)', type: 'select', source: 'assessments', required: false },
-      { id: 'max_attempts', label: 'Max Attempts (blank = unlimited)', type: 'number' },
-      { id: 'minimum_required_score', label: 'Passing Score %', type: 'number' },
-      { id: 'display_order', label: 'Display Order', type: 'number' }
-    ],
+  assessments: [
+    { id: 'title', label: 'Assessment Title', type: 'text', required: true, placeholder: 'e.g. 3rd Vocabulary A1 Words Task' },
+    { id: 'status', label: 'Status', type: 'select', options: [
+      { value: 'PUBLISHED', label: '👁️ PUBLISHED (Aktif / Bisa Dikerjakan)' },
+      { value: 'DRAFT', label: '📝 DRAFT (Konsep / Tersembunyi)' },
+      { value: 'UNPUBLISHED', label: '⏸️ UNPUBLISHED (Ditangguhkan)' },
+      { value: 'ARCHIVED', label: '📦 ARCHIVED (Arsip)' }
+    ], required: true },
+    { id: 'working_duration_minutes', label: 'Duration (Minutes)', type: 'number', required: true, defaultValue: 5 },
+    { id: 'answer_type', label: 'Answer Type', type: 'select', options: [
+      { value: 'spoken', label: '🗣️ Spoken (Speech to Text)' },
+      { value: 'written', label: '✍️ Written (Teks Langsung)' },
+      { value: 'selection', label: '🔘 Selection (Pilihan Ganda)' },
+      { value: 'mixed', label: '🔀 Mixed (Campuran)' }
+    ], required: true },
+    { id: 'minimum_required_score', label: 'Passing Score %', type: 'number', defaultValue: 60 },
+    { id: 'question_order', label: 'Question Order', type: 'select', options: [
+      { value: 'sequential', label: '➡️ Sequential (Berurutan)' },
+      { value: 'random', label: '🔀 Random (Diacak)' }
+    ] },
+    { id: 'display_order', label: 'Display Order', type: 'number', defaultValue: 1 },
+    { id: 'prerequisite_assessment_id', label: 'Prerequisite (Optional)', type: 'select', source: 'assessments', required: false },
+    { id: 'description', label: 'Description / Notes', type: 'textarea', required: false, placeholder: 'Catatan assessment / silabus' }
+  ],
   questions: [
     { id: 'question_text', label: 'Question Text', type: 'textarea', required: true },
     { id: 'question_order', label: 'Order', type: 'number', required: true },
@@ -149,6 +154,7 @@ async function openCrudModal(section, record) {
       _ensureDomRefs();
       _currentSection = section;
       _editId = record?.id || null;
+      _editRecord = record ? { ...record } : null;
       window.isProfileDirty = false;
       const sectionTitles = {
           programs: 'Program',
@@ -174,6 +180,23 @@ async function openCrudModal(section, record) {
         crudForm.innerHTML = `<p class="text-muted">Form for "${section}" not yet configured.</p>`;
         crudModal.classList.remove('hidden');
         return;
+      }
+
+      if ((section === 'assessments' || section === 'Assessments') && record) {
+        const infoCard = document.createElement('div');
+        infoCard.className = 'assessment-settings-card';
+        infoCard.style.cssText = 'background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
+        infoCard.innerHTML = `
+          <div style="font-size: 0.95rem; font-weight: 800; color: #38bdf8; line-height: 1.35;">
+            ${escapeHtml(record.title || record.display_name || 'Assessment Settings')}
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.75rem; color: #94a3b8; margin-top: 6px;">
+            ${record.shell_code ? `<span>Code: <strong style="color:#f1f5f9;">${escapeHtml(record.shell_code)}</strong></span>` : ''}
+            ${record.status ? `<span>Status: <strong style="color:${String(record.status).toUpperCase() === 'PUBLISHED' ? '#22c55e' : '#f59e0b'};">${escapeHtml(record.status)}</strong></span>` : ''}
+            ${record.assessment_type ? `<span>Type: <strong style="color:#f1f5f9;">${escapeHtml(record.assessment_type)}</strong></span>` : ''}
+          </div>
+        `;
+        crudForm.appendChild(infoCard);
       }
 
       const formGrid = document.createElement('div');
@@ -259,7 +282,14 @@ async function openCrudModal(section, record) {
           sel.innerHTML = `<option value="">— Select —</option>` + f.options.map(o => {
             const val = typeof o === 'object' ? o.value : o;
             const labelStr = typeof o === 'object' ? o.label : o;
-            const isSelected = record?.[f.id] === val || (!record && val === 'sequential');
+            let isSelected = String(record?.[f.id] || '').toUpperCase() === String(val).toUpperCase() || (!record && (val === 'sequential' || val === 'PUBLISHED'));
+            if (f.id === 'answer_type' && record?.answer_type) {
+              const norm = String(record.answer_type).toLowerCase();
+              if ((norm === 'spoken' || norm === 'speech_to_text') && val === 'spoken') isSelected = true;
+              else if ((norm === 'written' || norm === 'text') && val === 'written') isSelected = true;
+              else if ((norm === 'selection' || norm === 'dropdown' || norm === 'multiple_choice') && val === 'selection') isSelected = true;
+              else if (norm === 'mixed' && val === 'mixed') isSelected = true;
+            }
             return `<option value="${val}" ${isSelected ? 'selected' : ''}>${labelStr}</option>`;
           }).join('');
           group.appendChild(sel);
@@ -296,9 +326,58 @@ async function openCrudModal(section, record) {
           if (f.required) inp.required = true;
           if (f.readonly) inp.readOnly = true;
           if (f.placeholder) inp.placeholder = f.placeholder;
-          if (record?.[f.id] !== undefined) inp.value = record[f.id];
-          else if (f.defaultValue !== undefined) inp.value = f.defaultValue;
+          if (record?.[f.id] !== undefined && record?.[f.id] !== null) {
+            inp.value = record[f.id];
+          } else if (f.id === 'working_duration_minutes') {
+            const isTask = record && (record.assessment_type === 'VOCAB_TASK' || record.assessment_type === 'PHRASE_TASK' || /\bTASK\b/i.test(record.title || ''));
+            let dur = record?.working_duration_minutes ?? record?.duration_minutes ?? record?.payload?.working_duration_minutes ?? record?.payload?.duration_minutes;
+            if (isTask && (!dur || Number(dur) === 60)) {
+              dur = 5;
+            } else if (!dur) {
+              dur = isTask ? 5 : (f.defaultValue ?? 5);
+            }
+            inp.value = dur;
+          } else if (f.defaultValue !== undefined) {
+            inp.value = f.defaultValue;
+          }
           group.appendChild(inp);
+
+          // Add quick presets for duration and passing score in assessment editing
+          if ((_currentSection === 'assessments' || _currentSection === 'Assessments') && f.id === 'working_duration_minutes') {
+            const presets = document.createElement('div');
+            presets.className = 'bulk-edit-preset-row mt-1';
+            [
+              { label: '⚡ 5m (Task)', val: 5 },
+              { label: '15m', val: 15 },
+              { label: '30m', val: 30 },
+              { label: '60m', val: 60 },
+              { label: '📝 120m (Test)', val: 120 }
+            ].forEach(p => {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'btn btn-secondary btn-sm bulk-preset-btn';
+              btn.textContent = p.label;
+              btn.onclick = () => { inp.value = p.val; window.isProfileDirty = true; };
+              presets.appendChild(btn);
+            });
+            group.appendChild(presets);
+          } else if ((_currentSection === 'assessments' || _currentSection === 'Assessments') && f.id === 'minimum_required_score') {
+            const presets = document.createElement('div');
+            presets.className = 'bulk-edit-preset-row mt-1';
+            [
+              { label: '60% (Grade C)', val: 60 },
+              { label: '70%', val: 70 },
+              { label: '80% (Grade B)', val: 80 }
+            ].forEach(p => {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'btn btn-secondary btn-sm bulk-preset-btn';
+              btn.textContent = p.label;
+              btn.onclick = () => { inp.value = p.val; window.isProfileDirty = true; };
+              presets.appendChild(btn);
+            });
+            group.appendChild(presets);
+          }
         }
 
         formGrid.appendChild(group);
@@ -731,17 +810,22 @@ function _initCrudModals() {
         else if (f.type === 'password' && el.value) {
           payload[f.id] = await hashPin(el.value);
         }
-        else if (f.readonly && _editId && record?.[f.id] !== undefined) {
-          payload[f.id] = record[f.id];
+        else if (f.readonly && _editId && _editRecord?.[f.id] !== undefined) {
+          payload[f.id] = _editRecord[f.id];
         }
-        else if (_editId && !el.value && record?.[f.id] !== undefined && (f.id === 'class_id' || f.id === 'program_id' || f.id === 'level_id' || f.id === 'institution_id')) {
-          payload[f.id] = record[f.id];
+        else if (_editId && !el.value && _editRecord?.[f.id] !== undefined && (f.id === 'class_id' || f.id === 'program_id' || f.id === 'level_id' || f.id === 'institution_id')) {
+          payload[f.id] = _editRecord[f.id];
         }
         else payload[f.id] = el.value || null;
       }
 
+      // Convert empty string prerequisite to null for UUID column safety
+      if (payload.prerequisite_assessment_id === '') {
+        payload.prerequisite_assessment_id = null;
+      }
+
       // Prerequisite Assessment Validation: Must fill if level and order are not Level A and Order 1
-      if (_currentSection === 'Assessments') {
+      if (_currentSection === 'Assessments' || _currentSection === 'assessments') {
         // Prerequisite logic handled in Assessment Builder
       }
 
@@ -749,6 +833,28 @@ function _initCrudModals() {
       delete payload.display_name;
 
       const targetTable = (_currentSection || '').replace('-', '_');
+      const normTarget = (targetTable || '').toLowerCase();
+
+      // Synchronize dynamic payload for vocabulary assessments / dynamic shells
+      if (normTarget === 'assessments' && _editRecord) {
+        if (payload.working_duration_minutes !== undefined && payload.working_duration_minutes !== null) {
+          payload.duration_minutes = payload.working_duration_minutes;
+        }
+        if (_editRecord.payload && typeof _editRecord.payload === 'object') {
+          payload.payload = {
+            ..._editRecord.payload,
+            ...(payload.answer_type ? { answer_type: payload.answer_type } : {}),
+            ...(payload.working_duration_minutes !== undefined && payload.working_duration_minutes !== null ? {
+              working_duration_minutes: payload.working_duration_minutes,
+              duration_minutes: payload.working_duration_minutes
+            } : {}),
+            ...(payload.minimum_required_score !== undefined && payload.minimum_required_score !== null ? {
+              minimum_required_score: payload.minimum_required_score
+            } : {}),
+            ...(payload.question_order ? { question_order: payload.question_order } : {})
+          };
+        }
+      }
       
       if (_currentSection === 'students') {
         if (payload.name) payload.name = cleanStudentName(payload.name);
@@ -772,7 +878,7 @@ function _initCrudModals() {
             if (targetTable === 'levels' && payloadToSave.program_id && (err.message?.includes('program_id') || err.message?.includes('PGRST204') || err.message?.includes('400'))) {
               delete payloadToSave.program_id;
               await adminUpdate(targetTable, _editId, payloadToSave);
-            } else if (targetTable === 'Assessments') {
+            } else if (normTarget === 'assessments') {
               let retried = false;
               if ('program_id' in payloadToSave && (err.message?.includes('program_id') || err.message?.includes('PGRST204') || err.message?.includes('400'))) {
                 delete payloadToSave.program_id;
@@ -782,8 +888,8 @@ function _initCrudModals() {
                 delete payloadToSave.prerequisite_assessment_id;
                 retried = true;
               }
-              if ('Assessment_order' in payloadToSave && (err.message?.includes('order') || err.message?.includes('PGRST204') || err.message?.includes('400'))) {
-                delete payloadToSave.Assessment_order;
+              if ('assessment_order' in payloadToSave && (err.message?.includes('order') || err.message?.includes('PGRST204') || err.message?.includes('400'))) {
+                delete payloadToSave.assessment_order;
                 retried = true;
               }
               if (retried) {
@@ -793,6 +899,17 @@ function _initCrudModals() {
               }
             } else {
               throw err;
+            }
+          }
+          if (normTarget === 'assessments' && payloadToSave.answer_type && _editId) {
+            // Also synchronize questions in assessment_questions for this assessment
+            try {
+              const sb = await getSupabase();
+              if (sb) {
+                await sb.from('assessment_questions').update({ answer_type: payloadToSave.answer_type }).eq('assessment_id', _editId);
+              }
+            } catch (qErr) {
+              console.warn('[crud-modals] Note: assessment_questions answer_type sync notice:', qErr);
             }
           }
           if (targetTable === 'classes') {
@@ -865,6 +982,8 @@ function _initCrudModals() {
           showToast('Record added.', 'success');
         }
         window.isProfileDirty = false;
+        _editRecord = null;
+        _editId = null;
         crudModal.classList.add('hidden');
         if (typeof window.loadSection === 'function') {
           window.loadSection(window._activeSectionAlias || _currentSection);
@@ -886,6 +1005,8 @@ function _initCrudModals() {
         if (!confirm('You have unsaved changes. Are you sure you want to close?')) return;
       }
       window.isProfileDirty = false;
+      _editRecord = null;
+      _editId = null;
       crudModal.classList.add('hidden');
       if (crudForm) {
         crudForm.reset();
@@ -1332,10 +1453,274 @@ async function openDuplicateQuestionsModal() {
   await loadDuplicateQuestions();
 }
 
+// --- BULK EDIT ASSESSMENTS IMPLEMENTATION ---
+let _bulkEditSelectedIds = [];
+let _bulkEditOnComplete = null;
+let _bulkEditInitialized = false;
+
+function _initBulkEditModal() {
+  if (_bulkEditInitialized) return;
+  _bulkEditInitialized = true;
+
+  const modal = document.getElementById('bulk-edit-assessments-modal');
+  const closeBtn = document.getElementById('close-bulk-edit-asm-modal');
+  const cancelBtn = document.getElementById('bulk-cancel-btn');
+  const saveBtn = document.getElementById('bulk-save-btn');
+
+  // Toggle handlers for enabling/disabling field input wrappers
+  const wireToggle = (chkId, wrapId) => {
+    const chk = document.getElementById(chkId);
+    const wrap = document.getElementById(wrapId);
+    if (chk && wrap) {
+      chk.addEventListener('change', () => {
+        wrap.style.opacity = chk.checked ? '1' : '0.45';
+        wrap.style.pointerEvents = chk.checked ? 'auto' : 'none';
+      });
+    }
+  };
+
+  wireToggle('bulk-check-duration', 'bulk-wrap-duration');
+  wireToggle('bulk-check-answertype', 'bulk-wrap-answertype');
+  wireToggle('bulk-check-minscore', 'bulk-wrap-minscore');
+  wireToggle('bulk-check-order', 'bulk-wrap-order');
+
+  // Presets
+  const setDur = (mins) => {
+    const chk = document.getElementById('bulk-check-duration');
+    const input = document.getElementById('bulk-input-duration');
+    const wrap = document.getElementById('bulk-wrap-duration');
+    if (chk && input && wrap) {
+      chk.checked = true;
+      wrap.style.opacity = '1';
+      wrap.style.pointerEvents = 'auto';
+      input.value = mins;
+      input.focus();
+    }
+  };
+
+  const setMin = (score) => {
+    const chk = document.getElementById('bulk-check-minscore');
+    const input = document.getElementById('bulk-input-minscore');
+    const wrap = document.getElementById('bulk-wrap-minscore');
+    if (chk && input && wrap) {
+      chk.checked = true;
+      wrap.style.opacity = '1';
+      wrap.style.pointerEvents = 'auto';
+      input.value = score;
+      input.focus();
+    }
+  };
+
+  document.getElementById('btn-preset-dur-5')?.addEventListener('click', () => setDur(5));
+  document.getElementById('btn-preset-dur-15')?.addEventListener('click', () => setDur(15));
+  document.getElementById('btn-preset-dur-30')?.addEventListener('click', () => setDur(30));
+  document.getElementById('btn-preset-dur-60')?.addEventListener('click', () => setDur(60));
+  document.getElementById('btn-preset-dur-120')?.addEventListener('click', () => setDur(120));
+
+  document.getElementById('btn-preset-min-60')?.addEventListener('click', () => setMin(60));
+  document.getElementById('btn-preset-min-70')?.addEventListener('click', () => setMin(70));
+  document.getElementById('btn-preset-min-80')?.addEventListener('click', () => setMin(80));
+
+  const closeModal = () => {
+    if (modal) modal.classList.add('hidden');
+    _bulkEditSelectedIds = [];
+    _bulkEditOnComplete = null;
+  };
+
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
+
+  // Save handler
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      if (!_bulkEditSelectedIds || _bulkEditSelectedIds.length === 0) {
+        showToast('Tidak ada assessment yang dipilih.', 'warning');
+        return;
+      }
+
+      const chkDur = document.getElementById('bulk-check-duration')?.checked;
+      const chkAns = document.getElementById('bulk-check-answertype')?.checked;
+      const chkMin = document.getElementById('bulk-check-minscore')?.checked;
+      const chkOrd = document.getElementById('bulk-check-order')?.checked;
+
+      if (!chkDur && !chkAns && !chkMin && !chkOrd) {
+        showToast('Pilih setidaknya satu opsi centang yang ingin diubah.', 'warning');
+        return;
+      }
+
+      const durVal = chkDur ? parseInt(document.getElementById('bulk-input-duration')?.value || '5', 10) : null;
+      const ansVal = chkAns ? document.getElementById('bulk-select-answertype')?.value : null;
+      const minVal = chkMin ? parseInt(document.getElementById('bulk-input-minscore')?.value || '60', 10) : null;
+      const ordVal = chkOrd ? document.getElementById('bulk-select-order')?.value : null;
+
+      const count = _bulkEditSelectedIds.length;
+      if (!confirm(`Yakin ingin menerapkan perubahan massal ke ${count} assessment terpilih?`)) {
+        return;
+      }
+
+      saveBtn.disabled = true;
+      const origText = saveBtn.innerHTML;
+      saveBtn.innerHTML = `<span>⏳ Menyimpan...</span>`;
+
+      try {
+        const sb = getSupabaseClient();
+        if (!sb) throw new Error('Database client tidak tersedia.');
+
+        // 1. Fetch current records to check dynamic shells & payloads
+        const { data: currentRows, error: fetchErr } = await sb
+          .from('assessments')
+          .select('id, title, payload, is_dynamic_shell, working_duration_minutes, answer_type, minimum_required_score, question_order')
+          .in('id', _bulkEditSelectedIds);
+
+        if (fetchErr) throw fetchErr;
+
+        // 2. Perform updates
+        for (const row of (currentRows || [])) {
+          const updatePayload = {};
+          if (chkDur && durVal != null) {
+            updatePayload.working_duration_minutes = durVal;
+            updatePayload.duration_minutes = durVal;
+          }
+          if (chkAns && ansVal) {
+            updatePayload.answer_type = ansVal;
+          }
+          if (chkMin && minVal != null) {
+            updatePayload.minimum_required_score = minVal;
+          }
+          if (chkOrd && ordVal) {
+            updatePayload.question_order = ordVal;
+          }
+
+          // If dynamic shell / has JSON payload, sync payload properties
+          if (row.payload && typeof row.payload === 'object') {
+            const nextPayload = { ...row.payload };
+            if (chkDur && durVal != null) {
+              nextPayload.working_duration_minutes = durVal;
+              nextPayload.duration_minutes = durVal;
+            }
+            if (chkAns && ansVal) {
+              nextPayload.answer_type = ansVal;
+            }
+            if (chkMin && minVal != null) {
+              nextPayload.minimum_required_score = minVal;
+            }
+            if (chkOrd && ordVal) {
+              nextPayload.question_order = ordVal;
+            }
+            updatePayload.payload = nextPayload;
+          }
+
+          await adminUpdate('assessments', row.id, updatePayload);
+        }
+
+        // 3. If answer_type changed, also sync assessment_questions for those assessment IDs
+        if (chkAns && ansVal) {
+          const { error: qErr } = await sb
+            .from('assessment_questions')
+            .update({ answer_type: ansVal })
+            .in('assessment_id', _bulkEditSelectedIds);
+
+          if (qErr) {
+            console.warn('[BulkEdit] Note: assessment_questions sync returned:', qErr);
+          }
+        }
+
+        showToast(`Berhasil memperbarui ${count} assessment secara massal.`, 'success');
+        closeModal();
+
+        if (typeof _bulkEditOnComplete === 'function') {
+          _bulkEditOnComplete();
+        }
+      } catch (err) {
+        console.error('[BulkEdit] Failed:', err);
+        showToast('Gagal menerapkan perubahan: ' + (err.message || 'Unknown error'), 'danger');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = origText;
+      }
+    });
+  }
+}
+
+async function openBulkEditAssessmentsModal(selectedIds = [], onComplete = null) {
+  _ensureDomRefs();
+  _initBulkEditModal();
+
+  if (!selectedIds || selectedIds.length === 0) {
+    showToast('Pilih setidaknya satu assessment untuk di-edit.', 'warning');
+    return;
+  }
+
+  _bulkEditSelectedIds = [...selectedIds];
+  _bulkEditOnComplete = onComplete;
+
+  const modal = document.getElementById('bulk-edit-assessments-modal');
+  const countBadge = document.getElementById('bulk-edit-target-count');
+  const saveCount = document.getElementById('bulk-save-count');
+  const previewBox = document.getElementById('bulk-edit-target-preview');
+
+  if (countBadge) countBadge.textContent = `${_bulkEditSelectedIds.length} Selected`;
+  if (saveCount) saveCount.textContent = _bulkEditSelectedIds.length;
+
+  // Render preview chips of selected assessments
+  if (previewBox) {
+    previewBox.innerHTML = '';
+    const recordsMap = window._classHubRecords || {};
+    _bulkEditSelectedIds.forEach(id => {
+      const rec = recordsMap[id];
+      const title = rec?.title || rec?.shell_code || `ID: ${id.slice(0, 8)}...`;
+      const isTask = /\bTASK\b/i.test(title) || rec?.assessment_type === 'VOCAB_TASK' || rec?.assessment_type === 'PHRASE_TASK';
+      const chip = document.createElement('span');
+      chip.className = `badge ${isTask ? 'badge-task-chip' : 'badge-test-chip'}`;
+      chip.textContent = title;
+      previewBox.appendChild(chip);
+    });
+  }
+
+  // Reset checkboxes
+  ['bulk-check-duration', 'bulk-check-answertype', 'bulk-check-minscore', 'bulk-check-order'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+  ['bulk-wrap-duration', 'bulk-wrap-answertype', 'bulk-wrap-minscore', 'bulk-wrap-order'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.opacity = '0.45';
+      el.style.pointerEvents = 'none';
+    }
+  });
+
+  // If all selected items are daily tasks, pre-select 5 minutes by default as convenience
+  const allAreTasks = _bulkEditSelectedIds.every(id => {
+    const r = window._classHubRecords?.[id];
+    return r ? (r.assessment_type === 'VOCAB_TASK' || r.assessment_type === 'PHRASE_TASK' || /\bTASK\b/i.test(r.title || '')) : false;
+  });
+
+  if (allAreTasks) {
+    const durChk = document.getElementById('bulk-check-duration');
+    const durWrap = document.getElementById('bulk-wrap-duration');
+    const durInput = document.getElementById('bulk-input-duration');
+    if (durChk && durWrap && durInput) {
+      durChk.checked = true;
+      durWrap.style.opacity = '1';
+      durWrap.style.pointerEvents = 'auto';
+      durInput.value = '5';
+    }
+  }
+
+  if (modal) modal.classList.remove('hidden');
+}
+
 // Ensure global accessibility across all views
 if (typeof window !== 'undefined') {
   window.openDuplicateStudentsModal = openDuplicateStudentsModal;
   window.openDuplicateQuestionsModal = openDuplicateQuestionsModal;
+  window.openBulkEditAssessmentsModal = openBulkEditAssessmentsModal;
 }
 
 // Auto-initialize when DOM is ready
@@ -1343,15 +1728,15 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     _initCrudModals();
     _initDuplicateModals();
+    _initBulkEditModal();
   });
 } else {
   _initCrudModals();
   _initDuplicateModals();
+  _initBulkEditModal();
 }
 
+export { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditAssessmentsModal, hashPin };
 
-
-
-export { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, hashPin };
 
 

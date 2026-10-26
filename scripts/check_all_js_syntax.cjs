@@ -33,6 +33,8 @@ for (const file of jsFiles) {
 
 if (!hasErrors) {
   console.log('ALL JS files passed syntax validation (node --check)!');
+  process.exit(0);
 } else {
-  console.log('Syntax errors were detected.');
+  console.error('Syntax errors were detected.');
+  process.exit(1);
 }
