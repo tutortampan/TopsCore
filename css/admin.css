@@ -80,6 +80,7 @@ body {
   flex-direction: column;
   flex-shrink: 0;
   z-index: 50;
+  -webkit-user-select: none;
   user-select: none;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -279,8 +280,8 @@ body {
   padding: 0 16px;
   box-sizing: border-box;
   background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
   z-index: 40;
@@ -330,6 +331,7 @@ body {
   border-bottom: none;
   box-sizing: border-box;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   text-decoration: none;
@@ -433,8 +435,8 @@ body {
   padding: 0 16px;
   box-sizing: border-box;
   background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
@@ -601,7 +603,6 @@ body {
   border-radius: var(--fm-radius-md, 8px);
   overflow-x: auto;
   overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
   margin-bottom: 1.5rem;
 }
 
@@ -836,6 +837,7 @@ body {
   transition: all 0.12s ease;
   border: 1px solid transparent;
   white-space: nowrap;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -1010,8 +1012,8 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1313,6 +1315,7 @@ body {
 
 .datagrid-sortable {
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   transition: color 0.15s ease;
 }
@@ -1348,8 +1351,8 @@ body {
   border: 1px solid var(--fm-border-subtle) !important;
   border-radius: var(--fm-radius-md) !important;
   box-shadow: none !important;
-  backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 .card:hover, .glass-card:hover {
@@ -1570,6 +1573,7 @@ input[type="checkbox"], input[type="radio"] {
   gap: 0.75rem;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   box-sizing: border-box;
   text-align: left;
@@ -2081,6 +2085,7 @@ textarea.form-control {
   border: 1px solid var(--fm-border-subtle) !important;
   border-radius: var(--fm-radius-md) !important;
   box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
 
@@ -2155,6 +2160,7 @@ tr.deleted-row td {
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
   z-index: 1040;
+  -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
   transition: opacity 0.3s ease;
 }
@@ -2272,8 +2278,8 @@ tr.deleted-row td {
 
 .antigravity-card {
   background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
   border-radius: 12px;
@@ -2334,8 +2340,8 @@ tr.deleted-row td {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2450,6 +2456,7 @@ tr.deleted-row td {
   bottom: 0;
   width: 6px;
   cursor: col-resize;
+  -webkit-user-select: none;
   user-select: none;
   z-index: 10;
   background-color: transparent;
@@ -2877,6 +2884,7 @@ tr.deleted-row td {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  -webkit-user-select: none;
   user-select: none;
 }
 .cnav-item:hover {
@@ -3020,6 +3028,7 @@ tr.deleted-row td {
   align-items: center;
   gap: 0.75rem;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   border-bottom: 1px solid transparent;
 }
@@ -3286,6 +3295,7 @@ tr.deleted-row td {
   background: rgba(99, 102, 241, 0.05);
   border-bottom: 1px solid rgba(99, 102, 241, 0.12);
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   transition: background 0.15s ease;
 }
@@ -3824,6 +3834,7 @@ body.sidebar-collapsed .admin-main {
   color: #94a3b8;
   cursor: pointer;
   transition: all 0.15s ease;
+  -webkit-user-select: none;
   user-select: none;
   display: inline-flex;
   align-items: center;
@@ -4005,8 +4016,8 @@ body.sidebar-collapsed .admin-main {
   width: 100vw;
   height: 100vh;
   background: rgba(9, 13, 22, 0.88);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   z-index: 99999 !important;
   display: flex !important;
   align-items: center;
@@ -4211,6 +4222,7 @@ body.sidebar-collapsed .admin-main {
   .student-modal-backdrop {
     position: static !important;
     background: transparent !important;
+    -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     padding: 0 !important;
     display: block !important;
