@@ -1570,14 +1570,9 @@ export async function renderResults(area) {
     });
 
     // Deduplicate by Student + Assessment, keeping highest EFFECTIVE score only.
-    // Remedial cap: EXAM/QUIZ remedial attempts are capped at KKM 60% effective score.
     const getEffectivePct = (r) => {
       const rawPct = parseFloat(r.percentage || 0);
-      const def = r.assessments || {};
-      const defType = (def.assessment_type || '').toUpperCase();
-      const defCat = (def.assessment_category || '').toUpperCase();
-      const isSummative = defType === 'EXAM' || defType === 'QUIZ' || defType.includes('TEST') || defCat === 'TEST';
-      if (r.is_remedial_unlocked && isSummative && rawPct > 60) return 60;
+      if (r.is_remedial_unlocked && rawPct > 60) return 60;
       return r.effective_score != null ? parseFloat(r.effective_score) : rawPct;
     };
     const mergedResults = new Map();
@@ -1625,35 +1620,28 @@ export async function renderResults(area) {
         },
         {
           key: 'percentage', label: 'Score', sortable: true, render: (v, r) => {
-            const def = r.assessments || {};
-            const defType = (def.assessment_type || '').toUpperCase();
-            const defCat = (def.assessment_category || '').toUpperCase();
-            const isSummative = defType === 'EXAM' || defType === 'QUIZ' || defType.includes('TEST') || defCat === 'TEST';
             const rawPct = parseFloat(r.percentage || 0);
-            const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 60;
-            const effectivePct = isRemedialCapped ? 60 : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
-            const effectiveGrade = effectivePct >= 60 ? (effectivePct >= 80 ? 'A' : 'B') : (r.grade || 'F');
+            const isRemedial = Boolean(r.is_remedial_unlocked);
+            const effectivePct = isRemedial ? Math.min(rawPct, 60.0) : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
+            const effectiveGrade = r.grade || (typeof getGrade === 'function' ? getGrade(effectivePct) : (effectivePct >= 90 ? 'A' : (effectivePct >= 80 ? 'B' : (effectivePct >= 60 ? 'C' : (effectivePct >= 30 ? 'D' : 'E')))));
             return `
               <div class="text-center fw-700" style="display:flex;flex-direction:column;align-items:center;gap:3px;">
                 <div style="display:flex;align-items:center;gap:4px;" class="text-grade-${effectiveGrade}">
-                  <span>${effectivePct.toFixed(1)}%</span>
+                  <span>${effectivePct.toFixed(1)}%${isRemedial ? '<sup style="font-size:0.7em;font-weight:900;margin-left:2px;">R</sup>' : ''}</span>
                   <span class="badge badge-success text-xs" style="font-size:0.65rem;padding:1px 5px;" title="Highest score recorded across attempts">Highest</span>
                 </div>
-                ${isRemedialCapped ? `<span class="badge" style="font-size:0.6rem;padding:1px 6px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);">&#128282; REMEDIAL CAP (KKM 60%)</span>` : ''}
               </div>
             `;
           }
         },
         { key: 'grade', label: 'Grade', sortable: true, render: (v, r) => {
-            const def = r.assessments || {};
-            const defType = (def.assessment_type || '').toUpperCase();
-            const defCat = (def.assessment_category || '').toUpperCase();
-            const isSummative = defType === 'EXAM' || defType === 'QUIZ' || defType.includes('TEST') || defCat === 'TEST';
             const rawPct = parseFloat(r.percentage || 0);
-            const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 60;
-            const displayGrade = isRemedialCapped ? 'B' : (r.grade || getGrade(rawPct));
-            const gradeSymbol = (displayGrade === 'S' || (!isRemedialCapped && rawPct >= 100)) ? '⭐' : displayGrade;
-            return `<div class="text-center"><span class="grade-badge grade-${displayGrade}" style="width:30px;height:30px;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${gradeSymbol}</span></div>`;
+            const isRemedial = Boolean(r.is_remedial_unlocked);
+            const effectivePct = isRemedial ? Math.min(rawPct, 60.0) : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
+            const displayGrade = r.grade || (typeof getGrade === 'function' ? getGrade(effectivePct) : 'E');
+            const gradeSymbol = (displayGrade === 'S' || effectivePct >= 100) ? '⭐' : displayGrade;
+            const remSupHtml = isRemedial ? `<sup style="font-size:0.6em;font-weight:900;margin-left:1px;vertical-align:super;">R</sup>` : '';
+            return `<div class="text-center"><span class="grade-badge grade-${displayGrade}" style="width:30px;height:30px;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${gradeSymbol}${remSupHtml}</span></div>`;
           }
         },
         {
@@ -1711,7 +1699,7 @@ export async function renderResults(area) {
            if (r.is_remedial_unlocked) {
              btns += `<button class="btn btn-secondary btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="false" style="font-size:0.75rem; padding:3px 8px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; color:#fbbf24;" title="Revert remedial status (return to normal)">↩️ Normal</button>`;
            } else {
-             btns += `<button class="btn btn-warning btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="true" style="font-size:0.75rem; padding:3px 8px;" title="Mark this score as Remedial (Max 60%)">🏷️ Remedial (60%)</button>`;
+             btns += `<button class="btn btn-warning btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="true" style="font-size:0.75rem; padding:3px 8px;" title="Mark this score as Remedial">🏷️ Remedial</button>`;
            }
            return `<div class="text-center d-flex gap-2 justify-center flex-wrap" style="min-width:140px;">${btns}</div>`;
         } }
@@ -1755,12 +1743,9 @@ export async function renderResults(area) {
     const exportData = rowsToExport.map(r => {
       const def = r.assessments || {};
       const rawPct = Number(r.percentage || r.effective_score || 0);
-      const defType = (def.assessment_type || '').toUpperCase();
-      const defCat = (def.assessment_category || '').toUpperCase();
-      const isSummative = defType === 'EXAM' || defType === 'QUIZ' || defType.includes('TEST') || defCat === 'TEST';
-      const isRemedialCapped = r.is_remedial_unlocked && isSummative && rawPct > 60;
-      const exportPct = isRemedialCapped ? 60 : rawPct;
-      const exportGrade = isRemedialCapped ? 'B' : (r.grade || getGrade(rawPct));
+      const isRemedial = Boolean(r.is_remedial_unlocked);
+      const exportPct = isRemedial ? Math.min(rawPct, 60.0) : (r.effective_score != null ? Number(r.effective_score) : rawPct);
+      const exportGrade = (r.grade || getGrade(exportPct)) + (isRemedial ? 'ᴿ' : '');
       return {
         'Student Name': r.students?.name || '—',
         'Gender': r.students?.gender ? (r.students.gender === 'female' ? 'Female' : 'Male') : '—',
@@ -1773,7 +1758,7 @@ export async function renderResults(area) {
         'Raw Percentage (%)': rawPct != null ? `${rawPct}%` : '—',
         'Effective Percentage (%)': `${exportPct}%`,
         'Grade': exportGrade,
-        'Remedial Cap Applied': isRemedialCapped ? 'Yes (capped at 60%)' : 'No',
+        'Is Remedial': isRemedial ? 'Yes' : 'No',
         'Submitted At': r.submitted_at ? new Date(r.submitted_at).toLocaleString() : '—',
         'Status': r.status || '—'
       };
@@ -1793,8 +1778,8 @@ export async function renderResults(area) {
       const attemptId = toggleRemBtn.getAttribute('data-aid');
       const targetRemedial = toggleRemBtn.getAttribute('data-set-remedial') === 'true';
       const promptMsg = targetRemedial
-        ? 'Mark this score as REMEDIAL (automatically capped at max 60%)?'
-        : 'Revert this score to NORMAL (remove 60% cap)?';
+        ? 'Mark this score as REMEDIAL (Grade will display with small "R", max score capped at 60%)?'
+        : 'Revert this score to NORMAL?';
 
       if (confirm(promptMsg)) {
         showLoading();
@@ -1808,7 +1793,7 @@ export async function renderResults(area) {
             record.grade = getGrade(record.effective_score);
           }
           renderTable();
-          showToast(targetRemedial ? '🏷️ Successfully labeled as Remedial (Max 60%).' : '↩️ Remedial status reverted to Normal.', 'success');
+          showToast(targetRemedial ? '🏷️ Successfully labeled as Remedial.' : '↩️ Remedial status reverted to Normal.', 'success');
         } catch (err) {
           console.error('Failed to toggle remedial:', err);
           showToast('Failed to update remedial status: ' + err.message, 'error');
@@ -1977,7 +1962,7 @@ export async function renderProgressView(area) {
         : 0;
       const overallScoreStr = completedScoredCount > 0 ? `${overallPct}%` : '—';
       const globalGrade = completedScoredCount > 0 && typeof getGrade === 'function' ? getGrade(overallPct) : '—';
-      const cMap = { 'S': '#fbbf24', 'A': '#10b981', 'B': '#84cc16', 'C': '#eab308', 'D': '#f97316', 'E': '#ef4444', 'F': '#ef4444' };
+      const cMap = { 'S': '#A855F7', 'A': '#10B981', 'B': '#84CC16', 'C': '#EAB308', 'D': '#F97316', 'E': '#EF4444', 'F': '#EF4444' };
       const gradeColor = cMap[globalGrade] || 'rgba(255,255,255,0.4)';
 
       // Calculate age from birth_date

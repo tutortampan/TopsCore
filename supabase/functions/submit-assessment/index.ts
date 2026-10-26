@@ -155,10 +155,10 @@ function evaluateStudentAnswer(
 
 function calculateGrade(pct: number): string {
   if (pct >= 100) return "S";
-  if (pct >= 80) return "A";
-  if (pct >= 60) return "B";
-  if (pct >= 40) return "C";
-  if (pct >= 20) return "D";
+  if (pct >= 90) return "A";
+  if (pct >= 80) return "B";
+  if (pct >= 60) return "C";
+  if (pct >= 30) return "D";
   return "E";
 }
 
@@ -275,32 +275,12 @@ Deno.serve(async (req: Request) => {
     const percentage = totalQuestions > 0 ? (totalScore / totalQuestions) * 100 : 0;
     const roundedPct = Math.round(percentage * 100) / 100;
 
-    // 5b. Server-Authoritative Remedial Cap (AGENTS.md §2 — Non-Negotiable Business Rule)
-    // When an attempt is flagged is_remedial_unlocked=true on a summative assessment (EXAM, QUIZ, TEST, VOCAB_TEST),
-    // the effective score stored for best-score resolution is capped at KKM 60% (Grade B).
-    // Raw score/percentage is preserved intact; only effectivePct and grade are capped.
-    let effectivePct = roundedPct;
-    let isRemedialCapApplied = false;
+    // 5b. Remedial Attempt Handling (Official Rule)
+    // Remedial attempts are capped at maximum 60% effective score.
+    // Grade follows the effective score directly (capped at 60% = Grade C), with is_remedial_unlocked preserving the remedial status.
     const isRemedial = Boolean(attempt.is_remedial_unlocked || attempt.is_remedial);
-    if (isRemedial) {
-      const targetAsmId = attempt.assessment_id;
-      const { data: asmForCap } = await supabase
-        .from("assessments")
-        .select("assessment_type, assessment_category, title")
-        .eq("id", targetAsmId)
-        .single();
-      const asmType = (asmForCap?.assessment_type || '').toUpperCase();
-      const asmCat = (asmForCap?.assessment_category || '').toUpperCase();
-      const isSummative = asmType === "EXAM" || asmType === "QUIZ" || asmType.includes("TEST") || asmCat === "TEST";
-      if (isSummative) {
-        if (effectivePct > 60) {
-          effectivePct = 60;
-          isRemedialCapApplied = true;
-        }
-      }
-    }
-
-    const grade = calculateGrade(Math.round(isRemedialCapApplied ? effectivePct : roundedPct));
+    const effectivePct = isRemedial ? Math.min(roundedPct, 60.0) : roundedPct;
+    const grade = calculateGrade(Math.round(effectivePct));
 
     // 6. Update Attempt
     const { data: updatedAttempt, error: updErr } = await supabase

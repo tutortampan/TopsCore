@@ -667,15 +667,15 @@
       background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.22), transparent 75%), #0f172a !important;
     }
     .result-identity-card[data-tier="A"] { border-color: rgba(16, 185, 129, 0.55) !important; }
-    .result-identity-card[data-tier="B"] { border-color: rgba(56, 189, 248, 0.55) !important; }
-    .result-identity-card[data-tier="C"] { border-color: rgba(245, 158, 11, 0.55) !important; }
+    .result-identity-card[data-tier="B"] { border-color: rgba(132, 204, 22, 0.55) !important; }
+    .result-identity-card[data-tier="C"] { border-color: rgba(234, 179, 8, 0.55) !important; }
     .result-identity-card[data-tier="D"] { border-color: rgba(249, 115, 22, 0.55) !important; }
     .result-identity-card[data-tier="E"],
     .result-identity-card[data-tier="F"] { border-color: rgba(239, 68, 68, 0.55) !important; }
     .result-identity-card[data-tier="R"] {
-      border-color: rgba(255, 255, 0, 0.55) !important;
-      box-shadow: 0 0 25px rgba(255, 255, 0, 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
-      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(255, 255, 0, 0.15), transparent 75%), #0f172a !important;
+      border-color: rgba(234, 179, 8, 0.55) !important;
+      box-shadow: 0 0 25px rgba(234, 179, 8, 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
+      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(234, 179, 8, 0.15), transparent 75%), #0f172a !important;
     }
 
     .result-meta-wrapper {
@@ -1279,13 +1279,13 @@
       min-height: auto !important;
     }
     .result-grade-stamp.pure-stamp.grade-S { color: #A855F7 !important; filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.65)) drop-shadow(0 0 28px rgba(168, 85, 247, 0.35)) !important; }
-    .result-grade-stamp.pure-stamp.grade-A { color: #00FF00 !important; }
-    .result-grade-stamp.pure-stamp.grade-B { color: #00FFFF !important; }
-    .result-grade-stamp.pure-stamp.grade-C { color: #FFFF00 !important; }
-    .result-grade-stamp.pure-stamp.grade-D { color: #FF8000 !important; }
+    .result-grade-stamp.pure-stamp.grade-A { color: #10B981 !important; }
+    .result-grade-stamp.pure-stamp.grade-B { color: #84CC16 !important; }
+    .result-grade-stamp.pure-stamp.grade-C { color: #EAB308 !important; }
+    .result-grade-stamp.pure-stamp.grade-D { color: #F97316 !important; }
     .result-grade-stamp.pure-stamp.grade-E,
-    .result-grade-stamp.pure-stamp.grade-F { color: #FF0000 !important; }
-    .result-grade-stamp.pure-stamp.grade-remedial { color: #FFFF00 !important; }
+    .result-grade-stamp.pure-stamp.grade-F { color: #EF4444 !important; }
+    .result-grade-stamp.pure-stamp.grade-remedial { color: #EAB308 !important; }
 
     @keyframes stamp-slam {
       0% {

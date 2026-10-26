@@ -857,72 +857,72 @@ tbody tr:last-child td {
   animation: star-text-gleam 2.2s infinite ease-in-out;
 }
 
-/* A: Grade A (80-99%) - Hijau Murni #00FF00 */
+/* A: Grade A (90-99%) - Hijau (Rich Green) #10B981 */
 .grade-A {
-  background: rgba(0, 255, 0, 0.16) !important;
-  color: #00FF00 !important;
-  border: 1.5px solid rgba(0, 255, 0, 0.7) !important;
+  background: rgba(16, 185, 129, 0.16) !important;
+  color: #10B981 !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-A {
-  color: #00FF00 !important;
+  color: #10B981 !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-/* B: Grade B (60-79%) - Cyan / Biru Langit Murni #00FFFF */
+/* B: Grade B (80-89%) - Lime (Hijau Muda/Yellow-Green) #84CC16 */
 .grade-B {
-  background: rgba(0, 255, 255, 0.16) !important;
-  color: #00FFFF !important;
-  border: 1.5px solid rgba(0, 255, 255, 0.7) !important;
+  background: rgba(132, 204, 22, 0.16) !important;
+  color: #84CC16 !important;
+  border: 1.5px solid rgba(132, 204, 22, 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-B {
-  color: #00FFFF !important;
+  color: #84CC16 !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-/* C: Grade C (40-59%) - Kuning Murni #FFFF00 */
+/* C: Grade C (60-79%) - Kuning (Yellow) #EAB308 */
 .grade-C {
-  background: rgba(255, 255, 0, 0.16) !important;
-  color: #FFFF00 !important;
-  border: 1.5px solid rgba(255, 255, 0, 0.7) !important;
+  background: rgba(234, 179, 8, 0.16) !important;
+  color: #EAB308 !important;
+  border: 1.5px solid rgba(234, 179, 8, 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-C {
-  color: #FFFF00 !important;
+  color: #EAB308 !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-/* D: Grade D (20-39%) - Oranye Murni #FF8000 */
+/* D: Grade D (30-59%) - Jingga / Orange #F97316 */
 .grade-D {
-  background: rgba(255, 128, 0, 0.16) !important;
-  color: #FF8000 !important;
-  border: 1.5px solid rgba(255, 128, 0, 0.7) !important;
+  background: rgba(249, 115, 22, 0.16) !important;
+  color: #F97316 !important;
+  border: 1.5px solid rgba(249, 115, 22, 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-D {
-  color: #FF8000 !important;
+  color: #F97316 !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-/* E: Grade E (0-19%) - Merah Murni #FF0000 */
+/* E: Grade E (0-29%) - Merah (Red) #EF4444 */
 .grade-E {
-  background: rgba(255, 0, 0, 0.16) !important;
-  color: #FF0000 !important;
-  border: 1.5px solid rgba(255, 0, 0, 0.7) !important;
+  background: rgba(239, 68, 68, 0.16) !important;
+  color: #EF4444 !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-E {
-  color: #FF0000 !important;
+  color: #EF4444 !important;
   filter: none !important;
   text-shadow: none !important;
 }

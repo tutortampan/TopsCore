@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=5.3.2';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme } from './grading.js?v=5.6.5';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml } from './grading.js?v=5.6.5';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=5.3.2';
 import { escapeHtml, escHtml } from './app.js?v=5.3.2';
 
@@ -9,7 +9,7 @@ export function getGrade(pct) {
   return calculateGrade(pct);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -1023,7 +1023,7 @@ export async function submitAssessment(attemptId, answersMap, options = {}) {
     result = rpcData;
   }
 
-  // Authoritative Remedial Cap Check (KKM 60% Business Rule)
+  // Authoritative Remedial Sync (Remedial retains earned score, grade follows score)
   try {
     const sb = await getSupabase();
     const { data: att } = await sb.from('attempts')
@@ -1032,16 +1032,14 @@ export async function submitAssessment(attemptId, answersMap, options = {}) {
       .single();
     if (att && att.is_remedial_unlocked) {
       const rawPct = parseFloat(att.percentage || 0);
-      if (rawPct > 60 || !att.effective_score || att.effective_score > 60) {
-        const cappedPct = Math.min(rawPct, 60.00);
-        await sb.from('attempts')
-          .update({
-            effective_score: cappedPct,
-            grade: getGrade(cappedPct),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', attemptId);
-      }
+      const effPct = Math.min(rawPct, 60.0);
+      await sb.from('attempts')
+        .update({
+          effective_score: effPct,
+          grade: getGrade(effPct),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', attemptId);
     }
   } catch (remedialErr) {
     console.warn('Post-submit remedial check notice:', remedialErr);
@@ -3047,7 +3045,7 @@ export async function addLateStudentsToSession({ assessmentId, studentIds = [], 
   return { success: true, session: updatedSession, assessment: updated };
 }
 
-export async function labelAttemptRemedial(attemptId, isRemedial = true, kkm = 60) {
+export async function labelAttemptRemedial(attemptId, isRemedial = true) {
   const sb = await getSupabase();
   const { data: att, error: attErr } = await sb.from('attempts')
     .select('id, student_id, assessment_id, percentage, score, total_questions')
@@ -3056,7 +3054,7 @@ export async function labelAttemptRemedial(attemptId, isRemedial = true, kkm = 6
   if (attErr || !att) throw new Error('Attempt not found');
 
   const rawPct = parseFloat(att.percentage || 0);
-  const effectiveScore = isRemedial ? Math.min(rawPct, parseFloat(kkm)) : rawPct;
+  const effectiveScore = isRemedial ? Math.min(rawPct, 60.0) : rawPct; // Remedial capped at max 60%
   const grade = getGrade(effectiveScore);
 
   const { data: updated, error: updErr } = await sb.from('attempts')

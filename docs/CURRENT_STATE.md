@@ -1,14 +1,58 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-26 10:25 UTC+8
+Last Updated: 2026-10-26 23:25 UTC+8
 
-Current Phase: Phase 121: Complete Internationalization & Direct English Only Alignment across UI, Dialogs, Modals, Badges, and Error Guards [COMPLETE]
+Current Phase: Phase 123: Official Grading Scale & Remedial Max 60% Score Capping [COMPLETE]
 
-Current Task: Translate all remaining Indonesian UI texts, dialog prompts, form labels, modal headers, status badges, and error guard messages to Direct English Only across `dashboard.html`, `js/dashboard.js`, `js/result.js`, `js/api.js`, `js/admin/admin-deck.js`, `js/admin/app.js`, `js/admin/class.js`, `js/admin/student-management.js`, and `js/admin/assessment-access.js` (preserving question text data for translation learning). [COMPLETE]
+Current Task: Implement authoritative Grading Scale (★ 100% Purple `#A855F7`, A 90–99% Rich Green `#10B981`, B 80–89% Lime `#84CC16`, C 60–79% Yellow `#EAB308`, D 30–59% Orange `#F97316`, E 0–29% Red `#EF4444`), cap remedial scores at max 60% (Grade C max) with small "R" superscript, without special color overrides, across frontend ES modules and Supabase backend functions. [COMPLETE]
 
-Status: COMPLETE (All UI strings translated to English; 39 JS files syntax-checked 0 errors; clean git working directory ready for commit and push).
+Status: COMPLETE (Official grading scale and max 60% remedial capping fully implemented; 39 JS files syntax-checked 0 errors; cache bumped to v5.8.4).
 
 ## Completed
+
+- **Phase 123: Official Grading Scale & Remedial Max 60% Score Capping**:
+  - **1. Centralized Grading Scale Synchronized (`js/grading.js`)**:
+    - Updated `calculateGrade(pct)`: 100% -> `S` (★ Excellent), 90%–99% -> `A` (Very Good), 80%–89% -> `B` (Good), 60%–79% -> `C` (Enough), 30%–59% -> `D` (Less), 0%–29% -> `E` (Fail).
+    - Aligned `GRADE_PALETTE`: S (`#A855F7`), A (`#10B981`), B (`#84CC16`), C (`#EAB308`), D (`#F97316`), E (`#EF4444`), and R (`#EAB308` score tier color).
+    - Updated `getAchievementStatus(grade, pct)`: Thresholds 90, 80, 60, 30, 0 matching official labels: `EXCELLENT`, `VERY GOOD`, `GOOD`, `ENOUGH`, `LESS`, `FAIL`.
+    - Updated `getGradeColor`: Remedial uses the standard score tier color (`#EAB308` at 60%).
+    - Updated `getGradeSymbol` & `formatGradeBadgeHtml`: Renders obtained grade with small `<sup>R</sup>` or superscript `ᴿ` (e.g. `Cᴿ`).
+  - **2. Supabase Edge Functions (`supabase/functions/submit-assessment/index.ts`)**:
+    - Synchronized `calculateGrade(pct)` boundaries to 100, 90–99, 80–89, 60–79, 30–59, 0–29.
+    - Server-authoritative remedial cap: `effectivePct = isRemedial ? Math.min(roundedPct, 60.0) : roundedPct`.
+    - Grade derived from `effectivePct`.
+  - **3. Assessment API Client (`js/api.js`)**:
+    - `submitAssessment`: Remedial capped at `Math.min(rawPct, 60.0)` with `getGrade(effPct)`.
+    - `labelAttemptRemedial`: `effectiveScore = isRemedial ? Math.min(rawPct, 60.0) : rawPct` and recalculated `getGrade(effectiveScore)`.
+  - **4. Student Result Page (`js/result.js`, `css/result.css`)**:
+    - Harmonized `gradeRingColors` & `standardGradeColors` to `#A855F7`, `#10B981`, `#84CC16`, `#EAB308`, `#F97316`, `#EF4444`.
+    - Updated score capping: `pct = isRemedial ? Math.min(rawPct, 60.0) : ...` and points `totalPoints = isRemedial ? Math.min(rawTotalPoints, maxQuestions * 0.6) : rawTotalPoints`.
+    - Rendered small `<sup>R</sup>` next to Grade with matching score tier color aura.
+  - **5. Admin Roster & Class Matrix (`js/admin/student-management.js`, `js/admin/app.js`, `js/admin/class.js`)**:
+    - Effective score capping for remedial: `effScore = isRem ? Math.min(sc, tq * 0.6) : sc`, `effPct = isRem ? Math.min(rawPct, 60.0) : rawPct`.
+    - Color mapping: Thresholds 90, 80, 60, 30, 0 with palette `#A855F7`, `#10B981`, `#84CC16`, `#EAB308`, `#F97316`, `#EF4444`.
+    - Removed arbitrary yellow override on remedial score; score color strictly follows score tier.
+    - Gradebook export and results grid format remedial grades as `Cᴿ`.
+  - **6. Student Dashboard (`js/dashboard.js`)**:
+    - Harmonized tier colors and best score capping (`Math.min(rawBestPct, 60.0)` for remedial).
+    - Grade display formatted with small `<sup>R</sup>`.
+  - **7. Cache Invalidation & Syntax Verification**:
+    - Updated `sw.js` cache to `abcd-core-v5.8.4` and `admin.html` query strings to `?v=5.8.4`.
+    - Verified all 39 JavaScript files pass syntax check (`node scripts/check_all_js_syntax.cjs`) with 0 errors.
+
+- **Phase 122: Fix Student Roster Loading State Glitch & Remove Obsolete Flashing Tabs**:
+  - **1. Eliminated Conflicting Loading Tabs in `js/admin/app.js`**:
+    - Removed temporary `studentNavTabs` (`Enrolled Active Students` & `Bulk Excel / CSV Ingestion`) from `case 'students':`.
+    - Streamlined `case 'students':` to directly call `await _renderStudentsModule(area)`.
+    - Eliminated the visual jump/flash where the temporary tabs appeared with a spinner and then were abruptly overwritten by the 4 student KPI cards.
+    - Preserved `window._switchStudentTab` as a fallback function redirecting to `loadSection('students')`.
+  - **2. Topbar Consistency & Program Persistence**:
+    - Enhanced topbar section title resolution in `loadSection` to check `localStorage.getItem('topscore_selected_program_name')` on initial page loads/reloads, displaying the program title (e.g., "Camp") cleanly while student data is fetched.
+    - Verified that bulk import and registration remain cleanly accessible in their dedicated sidebar location under `B — BOARD` → `Students Registration`.
+  - **3. Cache Invalidation & Verification**:
+    - Bumped `CACHE_NAME` in `sw.js` to `abcd-core-v5.8.2`.
+    - Bumped script query parameters in `admin.html` to `v=5.8.2`.
+    - Verified all 39 JavaScript files pass syntax check (`node scripts/check_all_js_syntax.cjs`) with 0 errors.
 
 - **Phase 121: Complete Internationalization & Direct English Only Alignment**:
   - **1. Rule 2.12 Direct English Only Enforcement**:

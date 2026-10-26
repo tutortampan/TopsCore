@@ -198,15 +198,21 @@ export function isPrerequisiteMet(studentBestPercentage, requiredPercentage = 60
 }
 
 /**
- * Centralized Grade Engine (Reorganized: E, D, C, B, A, Star ⭐)
+ * Centralized Authoritative Grade Engine (Official Scale)
+ * ★ (S) : 100%       - Excellent (Purple #A855F7)
+ * A     : 90% – 99%  - Very Good (Rich Green #10B981)
+ * B     : 80% – 89%  - Good (Lime / Yellow-Green #84CC16)
+ * C     : 60% – 79%  - Enough (Yellow #EAB308)
+ * D     : 30% – 59%  - Less (Orange #F97316)
+ * E     : 0% – 29%   - Fail (Red #EF4444)
  */
 export function calculateGrade(percentage) {
   const pct = Math.round(Number(percentage) || 0);
   if (pct >= 100) return 'S';
-  if (pct >= 80) return 'A';
-  if (pct >= 60) return 'B';
-  if (pct >= 40) return 'C';
-  if (pct >= 20) return 'D';
+  if (pct >= 90) return 'A';
+  if (pct >= 80) return 'B';
+  if (pct >= 60) return 'C';
+  if (pct >= 30) return 'D';
   return 'E';
 }
 
@@ -233,128 +239,170 @@ export function calculateOverallStudentScore(takenPercentages = []) {
 }
 
 /**
- * Authoritative Grade & Score Palette (Pure Solid 100% Colors)
- * Order: E 0-19 (#FF0000 Merah), D 20-39 (#FF8000 Oranye), C 40-59 (#FFFF00 Kuning), B 60-79 (#00FFFF Cyan), A 80-99 (#00FF00 Hijau), Star ⭐ 100 (#A855F7 Pure Purple + Glow)
- * Remedial Override: #FFFF00 (Kuning Murni)
+ * Authoritative Grade & Score Palette
+ * ★ Excellent  100%       Ungu (Purple)           #A855F7
+ * A Very Good  90% – 99%  Hijau (Rich Green)      #10B981
+ * B Good       80% – 89%  Lime (Yellow-Green)     #84CC16
+ * C Enough     60% – 79%  Kuning (Yellow)         #EAB308
+ * D Less       30% – 59%  Jingga / Orange         #F97316
+ * E Fail       0% – 29%   Merah (Red)             #EF4444
  */
 export const GRADE_PALETTE = {
   S: {
     symbol: '⭐',
-    color: '#a855f7',       // Electric Violet / Purple Glow (100% Star)
+    label: 'Excellent',
+    predicate: 'Excellent',
+    color: '#a855f7',       // Ungu / Purple (100% Star)
     dark: '#7e22ce',
     light: '#c084fc',
     rgb: '168, 85, 247',
     glow: 'rgba(168, 85, 247, 0.45)',
-    name: 'Tier S (100% Purple Glow)',
+    name: 'Excellent (100%)',
+    minScore: 100,
+    maxScore: 100,
     sparkle: true
   },
   A: {
     symbol: 'A',
-    color: '#10b981',       // Emerald Green (80-99%)
+    label: 'Very Good',
+    predicate: 'Very Good',
+    color: '#10b981',       // Hijau / Rich Green (90-99%)
     dark: '#059669',
     light: '#34d399',
     rgb: '16, 185, 129',
     glow: 'rgba(16, 185, 129, 0.35)',
-    name: 'Grade A (80-99%)',
+    name: 'Very Good (90-99%)',
+    minScore: 90,
+    maxScore: 99,
     sparkle: false
   },
   B: {
     symbol: 'B',
-    color: '#38bdf8',       // Sky Blue (60-79%)
-    dark: '#0284c7',
-    light: '#7dd3fc',
-    rgb: '56, 189, 248',
-    glow: 'rgba(56, 189, 248, 0.35)',
-    name: 'Grade B (60-79%)',
+    label: 'Good',
+    predicate: 'Good',
+    color: '#84cc16',       // Lime / Hijau Muda / Yellow-Green (80-89%)
+    dark: '#65a30d',
+    light: '#a3e635',
+    rgb: '132, 204, 22',
+    glow: 'rgba(132, 204, 22, 0.35)',
+    name: 'Good (80-89%)',
+    minScore: 80,
+    maxScore: 89,
     sparkle: false
   },
   C: {
     symbol: 'C',
-    color: '#f59e0b',       // Warm Amber (40-59%)
-    dark: '#d97706',
-    light: '#fbbf24',
-    rgb: '245, 158, 11',
-    glow: 'rgba(245, 158, 11, 0.35)',
-    name: 'Grade C (40-59%)',
+    label: 'Enough',
+    predicate: 'Enough',
+    color: '#eab308',       // Kuning / Yellow (60-79%)
+    dark: '#ca8a04',
+    light: '#fde047',
+    rgb: '234, 179, 8',
+    glow: 'rgba(234, 179, 8, 0.35)',
+    name: 'Enough (60-79%)',
+    minScore: 60,
+    maxScore: 79,
     sparkle: false
   },
   D: {
     symbol: 'D',
-    color: '#f97316',       // Matte Orange (20-39%)
+    label: 'Less',
+    predicate: 'Less',
+    color: '#f97316',       // Jingga / Orange (30-59%)
     dark: '#ea580c',
     light: '#fb923c',
     rgb: '249, 115, 22',
     glow: 'rgba(249, 115, 22, 0.35)',
-    name: 'Grade D (20-39%)',
+    name: 'Less (30-59%)',
+    minScore: 30,
+    maxScore: 59,
     sparkle: false
   },
   E: {
     symbol: 'E',
-    color: '#ef4444',       // Crimson Red (0-19%)
+    label: 'Fail',
+    predicate: 'Fail',
+    color: '#ef4444',       // Merah / Red (0-29%)
     dark: '#dc2626',
     light: '#f87171',
     rgb: '239, 68, 68',
     glow: 'rgba(239, 68, 68, 0.35)',
-    name: 'Grade E (0-19%)',
+    name: 'Fail (0-29%)',
+    minScore: 0,
+    maxScore: 29,
     sparkle: false
   },
   F: {
-    symbol: 'E',            // Legacy Alias to E (Crimson Red)
+    symbol: 'E',            // Legacy Alias to E (Red)
+    label: 'Fail',
+    predicate: 'Fail',
     color: '#ef4444',
     dark: '#dc2626',
     light: '#f87171',
     rgb: '239, 68, 68',
     glow: 'rgba(239, 68, 68, 0.35)',
-    name: 'Grade F (Legacy Fallback)',
+    name: 'Fail (Legacy Fallback)',
+    minScore: 0,
+    maxScore: 29,
     sparkle: false
   },
   R: {
-    symbol: 'R',            // Grade R (Remedial KKM 60% - Kuning Murni)
-    color: '#FFFF00',
-    dark: '#cccc00',
-    light: '#ffff99',
-    rgb: '255, 255, 0',
-    glow: 'rgba(255, 255, 0, 0.45)',
-    name: 'Grade R (Remedial)',
+    symbol: 'C',            // Remedial Max 60% falls in Grade C (Kuning #EAB308)
+    label: 'Enough',
+    predicate: 'Enough',
+    color: '#eab308',
+    dark: '#ca8a04',
+    light: '#fde047',
+    rgb: '234, 179, 8',
+    glow: 'rgba(234, 179, 8, 0.35)',
+    name: 'Remedial (Max 60% / Grade C)',
+    minScore: 60,
+    maxScore: 60,
     sparkle: false
   }
 };
 
 export function getGradeColor(grade, isRemedial = false) {
-  if (isRemedial || String(grade || '').toUpperCase() === 'R') return '#FFFF00';
   const g = String(grade || '').toUpperCase();
+  if (g === 'R') return GRADE_PALETTE.C?.color || '#eab308';
   return GRADE_PALETTE[g]?.color || '#94a3b8';
 }
 
 export function getScoreColor(percentage, isRemedial = false) {
-  if (isRemedial) return '#FFFF00';
   const grade = calculateGrade(percentage);
-  return getGradeColor(grade, isRemedial);
+  return getGradeColor(grade, false);
 }
 
 export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
-  if (isRemedial || String(grade || '').toUpperCase() === 'R') return 'R';
-  if (percentage !== null && Number(percentage) >= 100) return '⭐';
+  let baseSymbol;
+  if (percentage !== null && Number(percentage) >= 100) {
+    baseSymbol = '⭐';
+  } else {
+    const g = String(grade || '').toUpperCase();
+    if (g === 'S') baseSymbol = '⭐';
+    else if (g === 'R') baseSymbol = 'C';
+    else baseSymbol = GRADE_PALETTE[g]?.symbol || g || '—';
+  }
+  return isRemedial ? `${baseSymbol}ᴿ` : baseSymbol;
+}
+
+export function formatGradeBadgeHtml(grade, isRemedial = false, customStyle = '') {
   const g = String(grade || '').toUpperCase();
-  if (g === 'S') return '⭐';
-  return GRADE_PALETTE[g]?.symbol || g || '—';
+  const color = getGradeColor(g);
+  const isS = g === 'S' || g === '⭐';
+  const displayLetter = isS ? '⭐' : (g === 'R' ? 'C' : g);
+  const remTag = isRemedial ? '<sup style="font-size:0.65em; font-weight:900; margin-left:1px; vertical-align:super; line-height:0;">R</sup>' : '';
+  
+  if (isS) {
+    return `<span class="badge" style="background:rgba(168,85,247,0.18); color:#A855F7; font-weight:900; box-shadow:0 0 10px rgba(168,85,247,0.45); border:1px solid #A855F7; padding:2px 7px; display:inline-flex; align-items:center; ${customStyle}">${displayLetter}${remTag}</span>`;
+  }
+  return `<span class="badge" style="background:${color}; color:#000; font-weight:800; padding:2px 7px; display:inline-flex; align-items:center; ${customStyle}">${displayLetter}${remTag}</span>`;
 }
 
 export function getGradeTheme(grade, isRemedial = false) {
   const g = String(grade || '').toUpperCase();
-  if (isRemedial || g === 'R') {
-    return {
-      symbol: 'R',
-      color: '#FFFF00',
-      dark: '#cccc00',
-      light: '#ffff99',
-      rgb: '255, 255, 0',
-      glow: 'rgba(255, 255, 0, 0.45)',
-      name: 'Remedial (Kuning Murni)',
-      sparkle: false
-    };
-  }
-  return GRADE_PALETTE[g] || {
+  const effectiveGrade = g === 'R' ? 'C' : g;
+  const theme = GRADE_PALETTE[effectiveGrade] || {
     symbol: g || '—',
     color: '#94a3b8',
     dark: '#64748b',
@@ -364,11 +412,19 @@ export function getGradeTheme(grade, isRemedial = false) {
     name: 'Standard',
     sparkle: false
   };
+  if (isRemedial) {
+    return {
+      ...theme,
+      isRemedial: true,
+      symbol: (theme.symbol === '⭐' ? '⭐ᴿ' : `${theme.symbol}ᴿ`)
+    };
+  }
+  return theme;
 }
 
 /**
- * Authoritative Achievement Status (Rule DECISION-018)
- * Strictly 6 states: FAIL, LESS, ENOUGH, GOOD, VERY GOOD, EXCELLENT.
+ * Authoritative Achievement Status (Official Predicate)
+ * Strictly 6 states: FAIL (0-29%), LESS (30-59%), ENOUGH (60-79%), GOOD (80-89%), VERY GOOD (90-99%), EXCELLENT (100%).
  * REMEDIAL is an exam condition/status, NOT an Achievement Status!
  */
 export function getAchievementStatus(grade, percentage = null) {
@@ -376,10 +432,10 @@ export function getAchievementStatus(grade, percentage = null) {
   if (g === 'R' || !['S', 'STAR', 'A', 'B', 'C', 'D', 'E', 'F'].includes(g)) {
     const p = parseFloat(percentage ?? 0);
     if (p >= 100) g = 'S';
-    else if (p >= 80) g = 'A';
-    else if (p >= 60) g = 'B';
-    else if (p >= 40) g = 'C';
-    else if (p >= 20) g = 'D';
+    else if (p >= 90) g = 'A';
+    else if (p >= 80) g = 'B';
+    else if (p >= 60) g = 'C';
+    else if (p >= 30) g = 'D';
     else g = 'E';
   }
   const map = {

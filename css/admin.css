@@ -3719,17 +3719,17 @@ body.sidebar-collapsed .admin-main {
 #class-attendance-grid .asm-subtag-test-pts { color: #e2e8f0; }
 #class-attendance-grid .asm-subtag-test-score { color: #cbd5e1; }
 
-/* Remedial Row & Value Styling */
+/* Remedial Row & Value Styling (No special color; color follows score, small R tag inherits color) */
 #class-attendance-grid tbody tr.row-remedial {
-  background: rgba(255, 255, 0, 0.04) !important;
+  /* Clean standard row */
 }
 
 #class-attendance-grid tbody tr.row-remedial td.col-sticky-1 {
-  border-left: 3px solid #FFFF00 !important;
+  /* No yellow border override */
 }
 
 #class-attendance-grid tbody tr.row-remedial:hover td {
-  background: rgba(255, 255, 0, 0.09) !important;
+  /* Standard hover */
 }
 
 .asm-score-remedial {
@@ -3742,8 +3742,8 @@ body.sidebar-collapsed .admin-main {
 
 .asm-rem-sup {
   font-size: 0.7em !important;
-  opacity: 0.7 !important;
-  color: #FFFF00 !important;
+  opacity: 0.85 !important;
+  color: inherit !important;
   font-weight: 800 !important;
   margin-left: 1.5px !important;
   vertical-align: super !important;

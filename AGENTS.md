@@ -228,16 +228,21 @@ Answer evaluation MUST preserve question-level score and evaluation result.
 
 ## 2.10 Grade
 
-Centralized authoritative grading:
+Centralized authoritative grading (Official Grading Scale):
 
-| Percentage | Grade | Symbol / Visual |
-|---:|:---:|:---:|
-| 0–19 | E | Merah (`#ef4444`) |
-| 20–39 | D | Oranye (`#f97316`) |
-| 40–59 | C | Kuning (`#eab308`) |
-| 60–79 | B | Lime / Kuning-Hijau (`#84cc16`) |
-| 80–99 | A | Hijau (`#10b981`) |
-| 100 | Star (S) | ⭐ Emas Asli Berkilau (`#fbbf24`) |
+| Symbol | Predicate (Label) | Score Range | Main Color & Gradient | Hex Code |
+|:---:|:---:|:---:|:---:|:---:|
+| ★ (S) | Excellent | 100% | Ungu (Purple) | `#A855F7` |
+| A | Very Good | 90% – 99% | Hijau (Rich Green) | `#10B981` |
+| B | Good | 80% – 89% | Lime (Hijau Muda / Yellow-Green) | `#84CC16` |
+| C | Enough | 60% – 79% | Kuning (Yellow) | `#EAB308` |
+| D | Less | 30% – 59% | Jingga / Orange | `#F97316` |
+| E | Fail | 0% – 29% | Merah (Red) | `#EF4444` |
+
+### Remedial Rules:
+- **Score Cap**: Maximum effective score is capped at **60%** (e.g., `Math.min(score, 60%)` or `Math.min(points, total_questions * 0.6)`).
+- **Grade Symbol & Badge**: A small letter "R" (`<sup>R</sup>` or `ᴿ`) is displayed beside the grade obtained (e.g. `Cᴿ`).
+- **Color Adherence**: Remedials do not receive a special standalone color override; the visual color strictly follows the score tier (at 60%, Yellow `#EAB308`).
 
 No frontend page may independently implement a competing grading algorithm.
 

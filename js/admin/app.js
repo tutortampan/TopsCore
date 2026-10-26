@@ -1673,7 +1673,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                         const isRem = Boolean(att.is_remedial_unlocked);
                         const targetAsm = classAssessments.find(a => a.id === asmId);
                         const tq = Number(att.total_questions || targetAsm?.total_questions || 50);
-                        const effSc = isRem ? Math.min(sc, tq * 0.6) : sc;
+                        const maxRemPts = tq * 0.6;
+                        const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
                         const rawPct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
                         const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
                         scoreSum += effSc;
@@ -1686,7 +1687,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     if (count > 0) {
                       const avgSc = (scoreSum / count).toFixed(1).replace(/\.0$/, '');
                       const avgPct = Math.round(pctSum / count);
-                      const avgCol = avgPct >= 100 ? '#A855F7' : (avgPct >= 80 ? '#00FF00' : (avgPct >= 60 ? '#00FFFF' : (avgPct >= 40 ? '#FFFF00' : (avgPct >= 20 ? '#FF8000' : '#FF0000'))));
+                      const avgCol = avgPct >= 100 ? '#A855F7' : (avgPct >= 90 ? '#10B981' : (avgPct >= 80 ? '#84CC16' : (avgPct >= 60 ? '#EAB308' : (avgPct >= 30 ? '#F97316' : '#EF4444'))));
                       if (isTest && isPctCol) {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
@@ -1947,10 +1948,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                           const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
                           const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
                           const cleanEffSc = Math.round(effSc * 2) / 2;
-                          const cleanRawSc = Math.round(sc * 2) / 2;
                           const displayVal = (cleanEffSc % 1 !== 0) ? cleanEffSc.toFixed(1) : cleanEffSc.toString();
-                          const rawDisplayVal = (cleanRawSc % 1 !== 0) ? cleanRawSc.toFixed(1) : cleanRawSc.toString();
-                          const color = isRem ? '#FFFF00' : (effPct >= 100 ? '#A855F7' : (effPct >= 80 ? '#00FF00' : (effPct >= 60 ? '#00FFFF' : (effPct >= 40 ? '#FFFF00' : (effPct >= 20 ? '#FF8000' : '#FF0000')))));
+                          const color = effPct >= 100 ? '#A855F7' : (effPct >= 90 ? '#10B981' : (effPct >= 80 ? '#84CC16' : (effPct >= 60 ? '#EAB308' : (effPct >= 30 ? '#F97316' : '#EF4444'))));
                           const attId = att.id || att.attempt_id;
                           const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                           const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
@@ -1959,7 +1958,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                             <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}" 
                                   style="color:${color}; ${cursorStyle}" 
                                   ${clickAttr}
-                                  title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🟡 [REMEDIAL - MAX 60% CAP]&#10;Effective Points: ${displayVal}/${totalQ} pts&#10;Raw Points: ${rawDisplayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`}&#10;Click to open result & manage remedial">
+                                  title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`}&#10;Click to open result & manage remedial">
                               <span style="font-weight:800; font-size:var(--matrix-font-size, 0.74rem); letter-spacing:-0.02em;">
                                 ${displayVal}${isRem ? '<sup class="asm-rem-sup">R</sup>' : ''}
                               </span>
@@ -1995,7 +1994,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                           const maxRemPts = totalQ * 0.6;
                           const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
                           const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-                          const color = isRem ? '#FFFF00' : (effPct >= 100 ? '#A855F7' : (effPct >= 80 ? '#00FF00' : (effPct >= 60 ? '#00FFFF' : (effPct >= 40 ? '#FFFF00' : (effPct >= 20 ? '#FF8000' : '#FF0000')))));
+                          const color = effPct >= 100 ? '#A855F7' : (effPct >= 90 ? '#10B981' : (effPct >= 80 ? '#84CC16' : (effPct >= 60 ? '#EAB308' : (effPct >= 30 ? '#F97316' : '#EF4444'))));
                           const attId = att.id || att.attempt_id;
                           const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                           const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
@@ -2004,7 +2003,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                             <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}" 
                                   style="color:${color}; ${cursorStyle} font-weight:700; font-size:var(--matrix-font-size, 0.74rem);" 
                                   ${clickAttr}
-                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🟡 [REMEDIAL - MAX 60% CAP]&#10;Effective Score: ${Math.round(effPct)}%&#10;Raw Attempt: ${Math.round(rawPct)}%` : `Score: ${Math.round(effPct)}%`}&#10;Click to open result">
+                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Score: ${Math.round(effPct)}%` : `Score: ${Math.round(effPct)}%`}&#10;Click to open result">
                               ${Math.round(effPct)}%${isRem ? '<sup class="asm-rem-sup">R</sup>' : ''}
                             </span>
                           `;
@@ -2044,7 +2043,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                         const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
                         const cleanSc = Math.round(effSc * 2) / 2;
                         const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
-                        const color = isRem ? '#FFFF00' : (effPct >= 100 ? '#A855F7' : (effPct >= 80 ? '#00FF00' : (effPct >= 60 ? '#00FFFF' : (effPct >= 40 ? '#FFFF00' : (effPct >= 20 ? '#FF8000' : '#FF0000')))));
+                        const color = effPct >= 100 ? '#A855F7' : (effPct >= 90 ? '#10B981' : (effPct >= 80 ? '#84CC16' : (effPct >= 60 ? '#EAB308' : (effPct >= 30 ? '#F97316' : '#EF4444'))));
                         const attId = att.id || att.attempt_id;
                         const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                         const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
@@ -2053,7 +2052,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                           <span class="asm-score asm-score-task ${isRem ? 'asm-score-remedial' : ''}" 
                                 style="color:${color}; ${cursorStyle}" 
                                 ${clickAttr}
-                                title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🟡 [REMEDIAL - MAX 60% CAP]&#10;Effective Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`} (${Math.round(effPct)}%)&#10;Click to view result">
+                                title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`} (${Math.round(effPct)}%)&#10;Click to view result">
                             ${displayVal}${isRem ? '<sup class="asm-rem-sup">R</sup>' : ''}
                           </span>
                         `;
@@ -2441,8 +2440,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       // Reset topbar container with default section title (or views will elevate their KPI tabs)
       const topbarTabsEl = document.getElementById('topbar-tabs-container');
       if (topbarTabsEl) {
-        const secTitle = (rawSection === 'students' && window._selectedProgramName) 
-          ? window._selectedProgramName 
+        const secTitle = (rawSection === 'students' && (window._selectedProgramName || localStorage.getItem('topscore_selected_program_name'))) 
+          ? (window._selectedProgramName || localStorage.getItem('topscore_selected_program_name')) 
           : (sectionTitles[section] || section);
         topbarTabsEl.innerHTML = `<div class="topbar-default-title" id="topbar-title">${secTitle}</div>`;
       }
@@ -2478,31 +2477,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           case 'vocab_vault':             await renderVocabularyVault(area); break;
           case 'modules':                 await renderModules(area); break;
           case 'students':
-            const studentNavTabs = [
-              { id: 'roster', icon: '👤', title: 'Student Roster', label: 'Enrolled Active Students' },
-              { id: 'import', icon: '📤', title: 'Import Students', label: 'Bulk Excel / CSV Ingestion' }
-            ];
-            let activeStudentTab = window._activeStudentNavTab || 'roster';
-            const renderStudentSection = async () => {
-              // Elevate Roster/Import navigation tabs to topbar
-              if (window.setTopbarTabs) {
-                window.setTopbarTabs(studentNavTabs, activeStudentTab, 'window._switchStudentTab');
-              }
-              area.innerHTML = `<div id="tab-content-area" style="padding-top: 0.75rem;"></div>`;
-              const contentArea = area.querySelector('#tab-content-area');
-              contentArea.innerHTML = '<div class="spinner" style="margin:2rem auto;"></div>';
-              if (activeStudentTab === 'roster') {
-                await _renderStudentsModule(contentArea);
-              } else {
-                await renderImportStudents(contentArea);
-              }
-            };
-            window._switchStudentTab = async (tabId) => {
-              activeStudentTab = tabId;
-              window._activeStudentNavTab = tabId;
-              await renderStudentSection();
-            };
-            await renderStudentSection();
+            window._switchStudentTab = () => window.loadSection('students');
+            await _renderStudentsModule(area);
             break;
 
           case 'questions':           await renderCentralQuestionBank(area); break;

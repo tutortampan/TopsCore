@@ -234,16 +234,18 @@ export async function renderStudents(area) {
         overallScoreStr = `${overallPct}%`;
         const g = typeof getGrade === 'function' ? getGrade(overallPct) : (
           overallPct >= 100 ? 'S' :
-          overallPct >= 80 ? 'A' :
-          overallPct >= 60 ? 'B' :
-          overallPct >= 40 ? 'C' :
-          overallPct >= 20 ? 'D' : 'E'
+          overallPct >= 90 ? 'A' :
+          overallPct >= 80 ? 'B' :
+          overallPct >= 60 ? 'C' :
+          overallPct >= 30 ? 'D' : 'E'
         );
         globalGrade = g;
-        const cMap = { 'S': '#A855F7', 'A': '#00FF00', 'B': '#00FFFF', 'C': '#FFFF00', 'D': '#FF8000', 'E': '#FF0000', 'F': '#FF0000' };
+        const cMap = { 'S': '#A855F7', 'A': '#10B981', 'B': '#84CC16', 'C': '#EAB308', 'D': '#F97316', 'E': '#EF4444', 'F': '#EF4444' };
         overallColor = cMap[g] || 'rgba(255,255,255,0.4)';
       }
     }
+    const hasRemedial = Array.from(bestByAsm.values()).some(b => Boolean(b.attempt?.is_remedial_unlocked));
+
 
     // Compute age from birth_date
     let ageDisplay = '—';
@@ -318,6 +320,7 @@ export async function renderStudents(area) {
       overallPct,
       globalGrade,
       overallColor,
+      hasRemedial,
       remediationPending,
       isOrphaned,
       joinDate,
@@ -543,13 +546,13 @@ export async function renderStudents(area) {
         if (isRem) {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
-              <span class="badge" style="font-size:0.65rem; background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b; padding:2px 6px;">REMEDIAL (60%)</span>
+              <span class="badge" style="font-size:0.65rem; background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b; padding:2px 6px;">REMEDIAL</span>
               <button class="btn btn-ghost btn-xs btn-prog-toggle-rem" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 6px; font-size:0.75rem;" title="Revert remedial status (return to normal)">↩️</button>
             </div>
           `;
         } else {
           actionHtml = `
-            <button class="btn btn-warning btn-xs btn-prog-toggle-rem" data-att-id="${attId}" data-set-remedial="true" style="padding:3px 10px; font-size:0.72rem; font-weight:700; background:#f59e0b; color:#000; border-radius:4px;" title="Mark this exam result as Remedial (Max 60%)">
+            <button class="btn btn-warning btn-xs btn-prog-toggle-rem" data-att-id="${attId}" data-set-remedial="true" style="padding:3px 10px; font-size:0.72rem; font-weight:700; background:#f59e0b; color:#000; border-radius:4px;" title="Mark this exam result as Remedial">
               🏷️ Remedial
             </button>
           `;
@@ -570,8 +573,8 @@ export async function renderStudents(area) {
             </span>
           </td>
           <td class="text-center">
-            <span class="fw-700 text-sm" ${scoreClickAttr} style="color:${r.bestPct != null ? (r.bestPct >= 100 ? '#A855F7' : r.bestPct >= 80 ? '#00FF00' : r.bestPct >= 60 ? '#00FFFF' : r.bestPct >= 40 ? '#FFFF00' : r.bestPct >= 20 ? '#FF8000' : '#FF0000') : 'var(--clr-text-3)'};">
-              ${r.bestPct != null ? `${r.bestPct}%` : '—'}
+            <span class="fw-700 text-sm" ${scoreClickAttr} style="color:${r.bestPct != null ? (r.bestPct >= 100 ? '#A855F7' : r.bestPct >= 90 ? '#10B981' : r.bestPct >= 80 ? '#84CC16' : r.bestPct >= 60 ? '#EAB308' : r.bestPct >= 30 ? '#F97316' : '#EF4444') : 'var(--clr-text-3)'};">
+              ${r.bestPct != null ? `${r.bestPct}%${isRem ? '<sup style="font-size:0.7em;font-weight:900;margin-left:2px;">R</sup>' : ''}` : '—'}
             </span>
           </td>
           <td class="text-center">
@@ -614,12 +617,12 @@ export async function renderStudents(area) {
             </div>
             <div style="flex:1;min-width:100px;">
               <div class="text-xs text-muted">Overall Score</div>
-              <div class="fw-700" style="font-size:1.25rem;color:var(--clr-text-1);">${rec.overallScoreStr}</div>
+              <div class="fw-700" style="font-size:1.25rem;color:${rec.overallColor || 'var(--clr-text-1)'};">${rec.overallScoreStr}</div>
             </div>
             <div style="flex:1;min-width:90px;">
               <div class="text-xs text-muted">Global Grade</div>
               <div style="margin-top:2px;">
-                <span class="badge" style="${rec.globalGrade === 'S' ? 'background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;' : `background:${rec.overallColor};color:#000;font-weight:800;`}font-size:0.85rem;padding:3px 10px;">${rec.globalGrade}</span>
+                <span class="badge" style="${rec.globalGrade === 'S' ? 'background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;' : `background:${rec.overallColor};color:#000;font-weight:800;`}font-size:0.85rem;padding:3px 10px;">${rec.globalGrade}${rec.hasRemedial ? '<sup style="font-size:0.65em;font-weight:900;margin-left:1px;">R</sup>' : ''}</span>
               </div>
             </div>
             <div style="flex:1.2;min-width:120px;">
@@ -659,13 +662,13 @@ export async function renderStudents(area) {
         const attId = btn.dataset.attId;
         const targetRemedial = btn.dataset.setRemedial === 'true';
         const msg = targetRemedial
-          ? 'Mark this exam result as REMEDIAL (automatically capped at max 60% / Grade B)?'
-          : 'Revert this exam result to NORMAL (remove 60% cap)?';
+          ? 'Mark this exam result as REMEDIAL (Grade will display with small "R", actual score preserved)?'
+          : 'Revert this exam result to NORMAL?';
         if (!confirm(msg)) return;
         try {
           showLoading('Updating remedial status...');
           await labelAttemptRemedial(attId, targetRemedial, 60);
-          showToast(targetRemedial ? '🏷️ Successfully labeled as Remedial (Max 60%).' : '↩️ Remedial status reverted to Normal.', 'success');
+          showToast(targetRemedial ? '🏷️ Successfully labeled as Remedial.' : '↩️ Remedial status reverted to Normal.', 'success');
           modal.remove();
           if (typeof window.loadSection === 'function') {
             await window.loadSection('students');
@@ -926,13 +929,13 @@ export async function renderStudents(area) {
                       <div class="d-flex align-center gap-2">
                         ${latestAtt ? `
                           ${latestAtt.is_remedial_unlocked ? `
-                            <button class="btn btn-secondary btn-sm btn-modal-toggle-rem" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 8px;font-size:0.75rem;background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#fbbf24;" title="Revert status to Normal (remove 60% cap)">
+                            <button class="btn btn-secondary btn-sm btn-modal-toggle-rem" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 8px;font-size:0.75rem;background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#fbbf24;" title="Revert status to Normal">
                               ↩️ Normal
                             </button>
-                            <span class="badge badge-success" style="font-size:0.7rem;">🔓 Remedial Authorized (Max 60%)</span>
+                            <span class="badge badge-success" style="font-size:0.7rem;">🔓 Remedial Authorized</span>
                           ` : `
-                            <button class="btn btn-warning btn-sm btn-modal-toggle-rem" data-att-id="${attId}" data-set-remedial="true" style="padding:2px 8px;font-size:0.75rem;" title="Mark this exam score as Remedial (Max 60%)">
-                              🏷️ Remedial (60%)
+                            <button class="btn btn-warning btn-sm btn-modal-toggle-rem" data-att-id="${attId}" data-set-remedial="true" style="padding:2px 8px;font-size:0.75rem;" title="Mark this exam score as Remedial">
+                              🏷️ Remedial
                             </button>
                           `}
                         ` : ''}
@@ -1010,12 +1013,12 @@ export async function renderStudents(area) {
             const attId = btn.dataset.attId;
             const targetRemedial = btn.dataset.setRemedial !== 'false';
             const msg = targetRemedial
-              ? 'Mark this score as REMEDIAL (capped at max 60%)?'
-              : 'Revert this score to NORMAL (remove 60% cap)?';
+              ? 'Mark this score as REMEDIAL (Grade will display with small "R", actual score preserved)?'
+              : 'Revert this score to NORMAL?';
             if (!confirm(msg)) return;
             try {
               await labelAttemptRemedial(attId, targetRemedial, 60);
-              showToast(targetRemedial ? '🏷️ Score successfully labeled as Remedial (Max 60%).' : '↩️ Remedial status reverted to Normal.', 'success');
+              showToast(targetRemedial ? '🏷️ Score successfully labeled as Remedial.' : '↩️ Remedial status reverted to Normal.', 'success');
               window.showStudentProfileModal(studentId);
             } catch(err) {
               showToast('Failed to update status: ' + err.message, 'error');
@@ -1793,7 +1796,7 @@ export async function renderStudents(area) {
         sortable: true,
         align: 'center',
         width: '70px',
-        render: (row) => `<span class="fw-700" style="font-size:0.92rem;color:var(--clr-text-1);">${row.overallScoreStr}</span>`
+        render: (row) => `<span class="fw-700" style="font-size:0.92rem;color:${row.overallColor || 'var(--clr-text-1)'};">${row.overallScoreStr}</span>`
       },
       // 10. Grade
       {
@@ -1804,8 +1807,8 @@ export async function renderStudents(area) {
         width: '65px',
         render: (row) => row.globalGrade !== '-' && row.globalGrade !== '—' 
           ? (row.globalGrade === 'S'
-            ? `<span class="badge" style="background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;font-size:0.8rem;padding:2px 8px;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;">S</span>`
-            : `<span class="badge" style="background:${row.overallColor};color:#000;font-weight:800;font-size:0.8rem;padding:2px 8px;">${row.globalGrade}</span>`
+            ? `<span class="badge" style="background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;font-size:0.8rem;padding:2px 8px;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;">S${row.hasRemedial ? '<sup style="font-size:0.65em;font-weight:900;margin-left:1px;">R</sup>' : ''}</span>`
+            : `<span class="badge" style="background:${row.overallColor};color:#000;font-weight:800;font-size:0.8rem;padding:2px 8px;">${row.globalGrade}${row.hasRemedial ? '<sup style="font-size:0.65em;font-weight:900;margin-left:1px;">R</sup>' : ''}</span>`
           )
           : '—'
       },

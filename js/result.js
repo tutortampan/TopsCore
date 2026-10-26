@@ -142,10 +142,10 @@ if (!session) {
       circle.style.strokeDashoffset = circumference; // start empty
 
       const gradeRingColors = {
-        S: '#a855f7', A: '#10b981', B: '#38bdf8',
-        C: '#f59e0b', D: '#f97316', E: '#ef4444', F: '#ef4444'
+        S: '#a855f7', A: '#10b981', B: '#84cc16',
+        C: '#eab308', D: '#f97316', E: '#ef4444', F: '#ef4444'
       };
-      circle.style.stroke = isRemedial ? '#f59e0b' : (gradeRingColors[grade] || '#38bdf8');
+      circle.style.stroke = gradeRingColors[grade] || '#84cc16';
 
       const duration = 1400;
       const start = performance.now();
@@ -171,10 +171,10 @@ if (!session) {
       if (g === 'R' || !['S', 'STAR', 'A', 'B', 'C', 'D', 'E', 'F'].includes(g)) {
         const p = parseFloat(pct || 0);
         if (p >= 100) g = 'S';
-        else if (p >= 80) g = 'A';
-        else if (p >= 60) g = 'B';
-        else if (p >= 40) g = 'C';
-        else if (p >= 20) g = 'D';
+        else if (p >= 90) g = 'A';
+        else if (p >= 80) g = 'B';
+        else if (p >= 60) g = 'C';
+        else if (p >= 30) g = 'D';
         else g = 'E';
       }
       const map = {
@@ -549,17 +549,17 @@ if (!session) {
         const rawPct = parseFloat(attempt.percentage || 0);
         const isRemedial = Boolean(attempt.is_remedial_unlocked);
         const pct = isRemedial ? Math.min(rawPct, 60.0) : parseFloat(attempt.effective_score ?? rawPct);
-        const grade = isRemedial ? 'R' : (attempt.grade || getGrade(pct));
+        const grade = getGrade(pct);
         const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, isRemedial) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE.F;
-        const isGradeS = (grade === 'S' || grade === 'STAR') && !isRemedial;
+        const isGradeS = (grade === 'S' || grade === 'STAR');
 
         // FEATURE 1: Launch grade-specific background particles
-        launchBgParticles(isRemedial ? 'REMEDIAL' : grade);
+        launchBgParticles(grade);
 
         // Dynamic Tier Atmosphere on Result Hero
         const heroSection = document.getElementById('result-hero-section') || document.querySelector('.result-hero');
         if (heroSection) {
-          heroSection.className = isRemedial ? `result-hero tier-R` : `result-hero tier-${grade}`;
+          heroSection.className = `result-hero tier-${grade}`;
         }
 
         // Wire up Top Header matching Student Dashboard / Lobby
@@ -674,17 +674,17 @@ if (!session) {
           nameLabel.textContent = studentFullName;
         }
 
-        // Authoritative Standard Grading System (Matte Modern Palette)
-        // S = #a855f7, A = #10b981, B = #38bdf8, C = #f59e0b, D = #f97316, E/F = #ef4444, R = #FFFF00
+        // Authoritative Standard Grading System (Official Scale)
+        // S = #a855f7, A = #10b981, B = #84cc16, C = #eab308, D = #f97316, E/F = #ef4444, R = #eab308 (capped at 60% / Grade C)
         const standardGradeColors = {
-          S: '#a855f7', // 💜 Electric Violet / Purple Glow (100% & Grade S)
-          A: '#10b981', // 💚 Emerald Green
-          B: '#38bdf8', // 🩵 Sky Blue
-          C: '#f59e0b', // 💛 Warm Amber
-          D: '#f97316', // 🧡 Matte Orange
-          E: '#ef4444', // ❤️ Crimson Red
-          F: '#ef4444', // ❤️ Crimson Red
-          R: '#FFFF00'  // 💛 Kuning Murni (Remedial)
+          S: '#a855f7', // 💜 Ungu / Purple (100% & Grade S)
+          A: '#10b981', // 💚 Hijau / Rich Green (90-99%)
+          B: '#84cc16', // 🍈 Lime / Hijau Muda (80-89%)
+          C: '#eab308', // 💛 Kuning / Yellow (60-79%)
+          D: '#f97316', // 🧡 Jingga / Orange (30-59%)
+          E: '#ef4444', // ❤️ Merah / Red (0-29%)
+          F: '#ef4444', // ❤️ Merah / Red
+          R: '#eab308'  // 💛 Remedial Max 60% falls in Grade C (Kuning)
         };
 
         const hexToRgba = (hex, alpha) => {
@@ -701,9 +701,9 @@ if (!session) {
           return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
         };
 
-        const isGradeSOr100 = (pct >= 100 || grade === 'S' || grade === 'STAR') && !isRemedial;
-        const currentTier = isGradeSOr100 ? 'S' : (isRemedial ? 'R' : grade);
-        let gradeColor = isRemedial ? '#FFFF00' : (standardGradeColors[grade] || '#a855f7');
+        const isGradeSOr100 = (pct >= 100 || grade === 'S' || grade === 'STAR');
+        const currentTier = isGradeSOr100 ? 'S' : grade;
+        let gradeColor = isGradeSOr100 ? '#a855f7' : (standardGradeColors[grade] || '#a855f7');
         const rgbColor = hexToRgbString(gradeColor);
 
         // 5. Achievement Status (Rule DECISION-018: strictly FAIL, LESS, ENOUGH, GOOD, VERY GOOD, EXCELLENT)
@@ -717,12 +717,8 @@ if (!session) {
           motEl.style.setProperty('--tier-rgb', rgbColor);
         }
 
-        let displayGradeHtml = grade;
-        if (isRemedial) {
-          displayGradeHtml = 'R';
-          gradeColor = '#FFFF00';
-        } else if (isGradeSOr100) {
-          displayGradeHtml = `
+        const remSupHtml = isRemedial ? `<sup style="font-size:0.55em;vertical-align:super;font-weight:900;margin-left:2px;color:${gradeColor};">R</sup>` : '';
+        let displayGradeHtml = isGradeSOr100 ? `
             <svg class="pure-star-svg" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.65)); display:inline-block; vertical-align:middle;">
               <defs>
                 <linearGradient id="starPurpleHeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -732,13 +728,8 @@ if (!session) {
                 </linearGradient>
               </defs>
               <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starPurpleHeroGrad)" />
-            </svg>
-          `;
-          gradeColor = '#a855f7';
-        } else {
-          displayGradeHtml = grade;
-          gradeColor = standardGradeColors[grade] || '#a855f7';
-        }
+            </svg>${remSupHtml}
+          ` : `${grade}${remSupHtml}`;
 
         // 1. Ambient Hero Banner Aura & Modular CSS Variables (1:1 with Dashboard)
         const identityCard = document.getElementById('result-identity-card');
@@ -750,10 +741,6 @@ if (!session) {
             identityCard.style.borderColor = 'rgba(168, 85, 247, 0.55)';
             identityCard.style.boxShadow = '0 0 35px rgba(168, 85, 247, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5)';
             identityCard.style.background = 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.22), transparent 75%), #0f172a';
-          } else if (isRemedial) {
-            identityCard.style.borderColor = 'rgba(255, 255, 0, 0.55)';
-            identityCard.style.boxShadow = '0 0 25px rgba(255, 255, 0, 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35)';
-            identityCard.style.background = 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(255, 255, 0, 0.15), transparent 75%), #0f172a';
           } else {
             identityCard.style.borderColor = `rgba(${rgbColor}, 0.55)`;
             identityCard.style.boxShadow = `0 0 20px rgba(${rgbColor}, 0.25), 0 10px 25px -5px rgba(0, 0, 0, 0.35)`;
@@ -789,10 +776,6 @@ if (!session) {
             avatarContainer.style.background = 'linear-gradient(135deg, #c084fc 0%, #a855f7 45%, #7e22ce 100%)';
             avatarContainer.style.boxShadow = '0 0 25px rgba(168, 85, 247, 0.85), 0 0 45px rgba(192, 132, 252, 0.45)';
             avatarContainer.style.border = '2.5px solid #c084fc';
-          } else if (isRemedial) {
-            avatarContainer.style.background = 'rgba(15, 23, 42, 0.9)';
-            avatarContainer.style.border = '2.5px solid #FFFF00';
-            avatarContainer.style.boxShadow = '0 0 18px rgba(255, 255, 0, 0.5), 0 4px 14px rgba(0, 0, 0, 0.35)';
           } else {
             avatarContainer.style.background = 'rgba(15, 23, 42, 0.9)';
             avatarContainer.style.border = `2.5px solid ${gradeColor}`;
@@ -803,43 +786,43 @@ if (!session) {
         // Modern Pure Star Accent (★ Vector Badge for S / Star 100%, Letter for A-E / R)
         const gradeBadge = document.getElementById('result-grade-badge');
         if (gradeBadge) {
-          if (isRemedial) {
-            gradeBadge.textContent = 'R';
-            gradeBadge.style.color = '#FFFF00';
-          } else if (isGradeSOr100) {
+          if (isGradeSOr100) {
             gradeBadge.innerHTML = `
-              <svg class="star-accent-vector" width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="starPurpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#C084FC" />
-                    <stop offset="100%" stop-color="#A855F7" />
-                  </linearGradient>
-                </defs>
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starPurpleGrad)" />
-              </svg>
+              <span style="display:inline-flex; align-items:center;">
+                <svg class="star-accent-vector" width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="starPurpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#C084FC" />
+                      <stop offset="100%" stop-color="#A855F7" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starPurpleGrad)" />
+                </svg>
+                ${isRemedial ? `<sup style="font-size:0.55em; font-weight:900; margin-left:2px; vertical-align:super; color:#a855f7;">R</sup>` : ''}
+              </span>
             `;
           } else {
-            gradeBadge.textContent = grade;
+            gradeBadge.innerHTML = isRemedial 
+              ? `${grade}<sup style="font-size:0.55em; font-weight:900; margin-left:2px; vertical-align:super;">R</sup>`
+              : grade;
             gradeBadge.style.color = gradeColor;
           }
         }
 
         const gradeStamp = document.getElementById('result-grade-stamp');
         if (gradeStamp) {
-          gradeStamp.className = isRemedial
-            ? `result-grade-stamp pure-stamp grade-remedial`
-            : `result-grade-stamp pure-stamp grade-${grade}`;
+          gradeStamp.className = `result-grade-stamp pure-stamp grade-${grade}`;
           if (isRemedial) {
-            gradeStamp.textContent = 'R';
-            gradeStamp.style.color = '#FFFF00';
+            gradeStamp.innerHTML = `${grade}<sup style="font-size:0.5em; vertical-align:super; margin-left:1px;">R</sup>`;
+            gradeStamp.style.color = gradeColor;
           }
         }
 
         // 3. Percentage in Dual Score & Grade Card (Synchronized font color with Grade)
         const pctEl = document.getElementById('result-percentage');
-        pctEl.className = isRemedial ? 'result-percentage' : `result-percentage text-grade-${grade}`;
+        pctEl.className = `result-percentage text-grade-${grade}`;
 
-        const scoreColor = isRemedial ? '#FFFF00' : gradeColor;
+        const scoreColor = gradeColor;
         const scoreGlow = `0 0 16px ${hexToRgba(scoreColor, 0.65)}, 0 0 32px ${hexToRgba(scoreColor, 0.35)}`;
 
         // 4. Score Box Accent
@@ -938,16 +921,9 @@ if (!session) {
         if (resPointsEl) {
           resPointsEl.textContent = '0';
           if (isRemedial) {
-            resPointsEl.style.color = '#FFFF00';
-            const ptsRow = document.getElementById('result-points-box');
-            if (ptsRow) {
-              const lbl = ptsRow.querySelector('.metric-stacked-lbl');
-              if (lbl) lbl.style.color = '#FFFF00';
-            }
-            resPointsEl.title = `Capped at KKM 60% (${formattedPoints}/${attemptTotalQ} pts). Raw attempt: ${rawTotalPoints} pts.`;
-          } else {
-            resPointsEl.style.color = '#F8FAFC';
+            resPointsEl.title = `Remedial capped at max 60% (${formattedPoints}/${attemptTotalQ} pts). Raw: ${rawTotalPoints} pts.`;
           }
+          resPointsEl.style.color = '#F8FAFC';
         }
 
         const correctEl = document.getElementById('res-correct');

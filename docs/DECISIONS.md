@@ -385,5 +385,39 @@ User issued an explicit directive regarding grade-based evaluation wording:
 - Eliminates semantic ambiguity between exam state (normal vs remedial) and academic performance achievement.
 - Provides a clean, standardized, 6-tier classification scale across the entire TopsCore platform.
 
+---
+
+## DECISION-019 — Official Grading Scale & Remedial Max 60% Score Capping
+
+Date: 2026-10-26
+Status: ACCEPTED (SUPERSEDES DECISION-016 tier color mappings & prior score thresholds)
+
+### Context
+User provided the official Grading Scale diagram (tablet & printout specifications) with exact score intervals, predicate labels, and color gradients:
+1. **Grading Scale Chart**:
+   - **★ (S)**: 100% | Predicate: `Excellent` | Ungu / Purple (`#A855F7`)
+   - **A**: 90% – 99% | Predicate: `Very Good` | Hijau / Rich Green (`#10B981`)
+   - **B**: 80% – 89% | Predicate: `Good` | Lime / Hijau Muda / Yellow-Green (`#84CC16`)
+   - **C**: 60% – 79% | Predicate: `Enough` | Kuning / Yellow (`#EAB308`)
+   - **D**: 30% – 59% | Predicate: `Less` | Jingga / Orange (`#F97316`)
+   - **E**: 0% – 29% | Predicate: `Fail` | Merah / Red (`#EF4444`)
+2. **Remedial Rules**:
+   - Remedials do not get a standalone special remedial score or separate artificial color override.
+   - Maximum remedial score is capped at **60%** (`Math.min(rawPct, 60.0)` and `Math.min(points, totalQuestions * 0.6)`).
+   - Grade is derived directly from the effective score (at the 60% cap, Grade is `C`).
+   - Remedial status is visually indicated with a small "R" superscript directly beside the obtained grade (e.g., `Cᴿ` or `C<sup class="grade-rem-tag">R</sup>`).
+   - The visual color strictly follows the score tier (at 60%, Yellow `#EAB308`).
+
+### Decision
+1. Update `calculateGrade(pct)` across `grading.js`, `submit-assessment` Edge Function, `api.js`, `app.js`, `student-management.js`, and `class.js` to strictly enforce the new boundaries (100, 90–99, 80–89, 60–79, 30–59, 0–29).
+2. Align `GRADE_PALETTE` and CSS utility classes to `#A855F7` (S/★), `#10B981` (A), `#84CC16` (B), `#EAB308` (C/R), `#F97316` (D), `#EF4444` (E).
+3. Enforce server and client remedial score capping at 60% max.
+4. Render small `<sup>R</sup>` or `ᴿ` next to the Grade symbol without overriding score color.
+
+### Consequences
+- Authoritative visual and functional harmony across all Student, Tutor, and Admin surfaces.
+- Remedial students are fairly assessed up to the maximum 60% passing threshold with clear distinction in grade badges.
+- Clean code architecture across both client ES modules and Supabase Edge Functions.
+
 
 

@@ -1298,12 +1298,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           for (const Assessment of lvl.Assessments) {
             const best      = bestByAssessment[Assessment.id];
             const inProg    = inProgByAssessment[Assessment.id];
-            const bestPct   = best ? parseFloat(best.percentage || 0) : null;
-            const passed    = bestPct !== null && bestPct >= (Assessment.minimum_required_score || Assessment.pass_threshold || 60);
-            const grade     = bestPct !== null ? getGrade(bestPct) : null;
             const isRem       = Boolean(best && (best.is_remedial_unlocked || best.is_remedial));
-            const gradeColors = { S: '#A855F7', A: '#00FF00', B: '#00FFFF', C: '#FFFF00', D: '#FF8000', E: '#FF0000', F: '#FF0000' };
-            const gradeColor  = isRem ? '#FFFF00' : (grade ? (gradeColors[grade] || '#94a3b8') : null);
+            const rawBestPct  = best ? parseFloat(best.percentage || 0) : null;
+            const bestPct     = isRem && rawBestPct !== null ? Math.min(rawBestPct, 60.0) : rawBestPct;
+            const passed      = bestPct !== null && bestPct >= (Assessment.minimum_required_score || Assessment.pass_threshold || 60);
+            const grade       = bestPct !== null ? getGrade(bestPct) : null;
+            const gradeColors = { S: '#A855F7', A: '#10B981', B: '#84CC16', C: '#EAB308', D: '#F97316', E: '#EF4444', F: '#EF4444' };
+            const gradeColor  = grade ? (gradeColors[grade] || '#94a3b8') : null;
 
             // Prerequisite Gating Logic
             let prereqMet = true;
@@ -1339,11 +1340,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
                               font-size:0.78rem;font-weight:700;cursor:pointer;">Resume ←’</button>`;
             } else if (best) {
               const isRemedialBest = Boolean(best.is_remedial_unlocked || best.is_remedial);
-              const badgeBg = passed ? 'rgba(0,255,0,0.15)' : 'rgba(255,0,0,0.12)';
-              const badgeClr= passed ? (isRemedialBest ? '#FFFF00' : '#00FF00') : '#FF0000';
+              const badgeBg = passed ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.12)';
+              const badgeClr= passed ? (gradeColor || '#10B981') : '#EF4444';
               statusBadge = `<span style="background:${badgeBg};color:${badgeClr};border:1px solid ${badgeClr}44;
                               padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">
-                              ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%${isRemedialBest ? '<sup class="asm-rem-sup" style="color:#FFFF00;font-size:0.7em;opacity:0.7;margin-left:2px;">R</sup>' : ''}</span>`;
+                              ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%${isRemedialBest ? '<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</span>`;
 
               if (Assessment.assessment_type === 'EXAM' && !passed) {
                 if (best.is_remedial_unlocked) {
@@ -1664,11 +1665,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
               ${bestPct !== null ? `
                 <div style="text-align:center;">
-                  <div style="font-size:1.1rem;font-weight:800;color:${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '#FFFF00' : (gradeColors[grade] || 'var(--clr-text-1)')}${grade === 'S' && !Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? ';text-shadow:0 0 10px rgba(255, 0, 255, 0.45);' : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="asm-rem-sup" style="color:#FFFF00;font-size:0.7em;opacity:0.7;margin-left:2px;">R</sup>' : ''}</div>
+                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColors[grade] || 'var(--clr-text-1)'}${grade === 'S' ? ';text-shadow:0 0 10px rgba(168, 85, 247, 0.45);' : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</div>
                   <div style="font-size:0.7rem;color:var(--clr-text-3);">Best Score</div>
                 </div>
                 ${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial)
-                  ? `<div class="grade-remedial" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid #FFFF00;color:#FFFF00;">${getGradeSymbol(grade)}<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.7;color:#FFFF00;">R</sup></div>`
+                  ? `<div class="grade-remedial" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#eab308'};color:${gradeColors[grade] || '#eab308'};">${grade}<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.85;color:inherit;">R</sup></div>`
                   : (grade === 'S'
                     ? `<div class="grade-S" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(168, 85, 247, 0.45);color:#A855F7;">⭐</div>`
                     : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#64748b'};color:${gradeColors[grade] || '#64748b'};">${getGradeSymbol(grade)}</div>`
@@ -2023,9 +2024,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         const AssessmentTitle = AssessmentObj.title || AssessmentObj.name || AssessmentObj.Assessment_title || 'English Assessment';
         const AssessmentType = AssessmentObj.assessment_type || AssessmentObj.Assessment_type || '';
         const className = AssessmentObj.classes?.name || 'General English';
-        const pct = parseFloat(a.percentage || 0).toFixed(1);
-        const grade = a.grade || getGrade(pct);
-        const displayGrade = getGradeSymbol(grade, pct);
+        const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
+        const rawPct = parseFloat(a.percentage || 0);
+        const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+        const pct = effPct.toFixed(1);
+        const grade = a.grade || getGrade(effPct);
+        const displayGrade = getGradeSymbol(grade, effPct, isRem);
         const gradeColor = gradeColors[grade] || 'var(--clr-text-1)';
         const dateStr = a.submitted_at ? new Date(a.submitted_at).toLocaleDateString(undefined, {
           year: 'numeric',
@@ -2446,9 +2450,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           validAttempts.forEach(a => {
             const tr = document.createElement('tr');
             const title = a.Assessments ? `${a.Assessments.Assessment_type || ''} — ${a.Assessments.Assessment_title || 'Assessment'}` : 'Assessment';
-            const pct = parseFloat(a.percentage || 0).toFixed(1);
-            const grade = a.grade || getGrade(pct);
-            const displayGrade = getGradeSymbol(grade, pct);
+            const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
+            const rawPct = parseFloat(a.percentage || 0);
+            const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+            const pct = effPct.toFixed(1);
+            const grade = a.grade || getGrade(effPct);
+            const displayGrade = getGradeSymbol(grade, effPct, isRem);
 
             tr.innerHTML = `
               <td class="fw-600">${title}</td>

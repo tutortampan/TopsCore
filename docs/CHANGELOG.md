@@ -1,3 +1,116 @@
+## [2026-10-26 23:20] — Phase 123: Official Grading Scale & Remedial Max 60% Score Capping
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 123 (Official Grading Scale & Remedial Max 60% Score Capping Implementation)
+**Status:** PASS
+
+### Why
+- User Directive: Official Grading Scale chart & tablet/printout diagrams:
+  - ★ (S): 100% | Predicate: "Excellent" | Ungu (Purple `#A855F7`)
+  - A: 90% – 99% | Predicate: "Very Good" | Hijau (Rich Green `#10B981`)
+  - B: 80% – 89% | Predicate: "Good" | Lime (Hijau Muda / Yellow-Green `#84CC16`)
+  - C: 60% – 79% | Predicate: "Enough" | Kuning (Yellow `#EAB308`)
+  - D: 30% – 59% | Predicate: "Less" | Jingga / Orange (`#F97316`)
+  - E: 0% – 29% | Predicate: "Fail" | Merah (Red `#EF4444`)
+- Remedial Rules:
+  - Remedials do not get a special remedial score or separate artificial color override.
+  - Maximum effective score is capped at 60% (`effective_score = Math.min(rawScore, 60%)`).
+  - Grade is derived from capped score (at 60% cap, Grade is `C` with small "R": `Cᴿ`).
+  - Color strictly follows the score tier (`#EAB308` for 60%).
+
+### Changed
+- `js/grading.js`:
+  - Updated `calculateGrade(pct)`: 100: S, 90–99: A, 80–89: B, 60–79: C, 30–59: D, 0–29: E.
+  - Aligned `GRADE_PALETTE` hex codes and predicates (`EXCELLENT`, `VERY GOOD`, `GOOD`, `ENOUGH`, `LESS`, `FAIL`).
+  - Added small `<sup>R</sup>` or `ᴿ` formatting to `getGradeSymbol` and `formatGradeBadgeHtml`.
+- `supabase/functions/submit-assessment/index.ts`:
+  - Updated `calculateGrade(pct)` boundaries.
+  - Implemented server-authoritative remedial cap at 60.0% (`effectivePct = isRemedial ? Math.min(roundedPct, 60.0) : roundedPct`).
+- `js/api.js`:
+  - Remedial attempts capped at `Math.min(rawPct, 60.0)` in `submitAssessment` and `labelAttemptRemedial`.
+- `js/result.js` & `css/result.css`:
+  - Harmonized grade colors to `#A855F7`, `#10B981`, `#84CC16`, `#EAB308`, `#F97316`, `#EF4444`.
+  - Capped remedial points at `maxQuestions * 0.6` and rendered small `<sup>R</sup>` with score tier color aura.
+- `js/admin/student-management.js`, `js/admin/app.js`, `js/admin/class.js`:
+  - Updated grade calculation thresholds and tier colors.
+  - Enforced 60% remedial cap and removed yellow override on remedial score values.
+  - Formatted remedial grades with small `ᴿ` tag.
+- `js/dashboard.js`:
+  - Capped remedial best scores at 60% and rendered small `<sup>R</sup>` tags.
+- `css/style.css` & `css/admin.css`:
+  - Synchronized CSS grade color utility classes.
+- `sw.js` & `admin.html`:
+  - Bumped cache to `abcd-core-v5.8.4` and query parameters to `?v=5.8.4`.
+
+### Files
+- `js/grading.js`
+- `supabase/functions/submit-assessment/index.ts`
+- `js/api.js`
+- `js/result.js`
+- `js/admin/student-management.js`
+- `js/admin/app.js`
+- `js/admin/class.js`
+- `js/dashboard.js`
+- `js/app.js`
+- `css/style.css`
+- `css/result.css`
+- `css/admin.css`
+- `sw.js`
+- `admin.html`
+- `AGENTS.md`
+- `docs/DECISIONS.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS (All 39 JS files passed syntax validation)`
+
+### Next Action
+- Commit changes and notify user of complete implementation.
+
+## [2026-10-26 22:30] — Phase 122: Fix Student Roster Loading State Glitch & Remove Obsolete Flashing Tabs
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 122 (Fix Student Roster Loading State Glitch & Remove Obsolete Flashing Topbar Tabs in Admin Console)
+**Status:** PASS
+
+### Why
+- User Report: "when I load the students roster, this shows up when loading, but after that the screen turn to the next picture".
+- Root Cause Analysis:
+  - When navigating to `#students` (or clicking a program roster such as "Camp"), `js/admin/app.js` rendered temporary legacy navigation tabs (`Enrolled Active Students` & `Bulk Excel / CSV Ingestion`) into `topbar-tabs-container` during the loading state.
+  - As soon as student roster data finished fetching from Supabase, `js/admin/student-management.js` called `setTopbarTabs(...)` with the 4 canonical student KPI stat cards (`Camp Students`, `Active Students`, `Completed Modules`, `Need Remediation`), overwriting the topbar tabs and causing a jarring visual glitch.
+  - Furthermore, student bulk import and single-student registration already reside in their own dedicated sidebar hub under `B — BOARD` → `Students Registration` (`student-registration.js`).
+
+### Changed
+- `js/admin/app.js`:
+  - Removed obsolete `studentNavTabs` (`Enrolled Active Students` and `Bulk Excel / CSV Ingestion`) from `case 'students':`.
+  - Streamlined `case 'students':` to directly invoke `await _renderStudentsModule(area)`.
+  - Enhanced topbar section title fallback to check `localStorage.getItem('topscore_selected_program_name')` on initial reload so program name displays consistently during data fetching.
+  - Added fallback `window._switchStudentTab = () => window.loadSection('students');` to safely redirect legacy callers to the roster.
+- `admin.html`:
+  - Cache-busted `app.js` and `sw.js` registration query strings from `v=5.8.1` to `v=5.8.2`.
+- `sw.js`:
+  - Bumped `CACHE_NAME` from `abcd-core-v5.8.1` to `abcd-core-v5.8.2`.
+- `docs/CURRENT_STATE.md`:
+  - Updated current phase to Phase 122, documenting the elimination of the loading glitch.
+
+### Files
+- `js/admin/app.js`
+- `admin.html`
+- `sw.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS (All 39 JS files passed syntax validation)`
+
+### Next Action
+- Present summary of findings and resolution to user.
+
 ## [2026-10-26 10:25] — Phase 121: Complete Internationalization & Direct English Only Alignment
 
 **Agent/Session:** Antigravity
