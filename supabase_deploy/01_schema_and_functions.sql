@@ -3430,16 +3430,16 @@ BEGIN
     END IF;
   END IF;
 
-  -- Centralized authoritative grade mapping (§2.10: E 0-19, D 20-39, C 40-59, B 60-79, A 80-99, Star 100)
+  -- Centralized authoritative grade mapping (Official Scale: ★ 100%, A 90-99%, B 80-89%, C 60-79%, D 30-59%, E 0-29%)
   IF v_effective_score >= 100 THEN
     v_grade := 'S';
-  ELSIF v_effective_score >= 80 THEN
+  ELSIF v_effective_score >= 90 THEN
     v_grade := 'A';
-  ELSIF v_effective_score >= 60 THEN
+  ELSIF v_effective_score >= 80 THEN
     v_grade := 'B';
-  ELSIF v_effective_score >= 40 THEN
+  ELSIF v_effective_score >= 60 THEN
     v_grade := 'C';
-  ELSIF v_effective_score >= 20 THEN
+  ELSIF v_effective_score >= 30 THEN
     v_grade := 'D';
   ELSE
     v_grade := 'E';
@@ -3659,16 +3659,16 @@ BEGIN
     END IF;
   END IF;
 
-  -- Centralized authoritative grade mapping (§2.10: E 0-19, D 20-39, C 40-59, B 60-79, A 80-99, Star 100)
+  -- Centralized authoritative grade mapping (Official Scale: ★ 100%, A 90-99%, B 80-89%, C 60-79%, D 30-59%, E 0-29%)
   IF v_effective_score >= 100 THEN
     v_grade := 'S';
-  ELSIF v_effective_score >= 80 THEN
+  ELSIF v_effective_score >= 90 THEN
     v_grade := 'A';
-  ELSIF v_effective_score >= 60 THEN
+  ELSIF v_effective_score >= 80 THEN
     v_grade := 'B';
-  ELSIF v_effective_score >= 40 THEN
+  ELSIF v_effective_score >= 60 THEN
     v_grade := 'C';
-  ELSIF v_effective_score >= 20 THEN
+  ELSIF v_effective_score >= 30 THEN
     v_grade := 'D';
   ELSE
     v_grade := 'E';

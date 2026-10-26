@@ -1639,7 +1639,7 @@ export async function renderResults(area) {
             const isRemedial = Boolean(r.is_remedial_unlocked);
             const effectivePct = isRemedial ? Math.min(rawPct, 60.0) : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
             const displayGrade = r.grade || (typeof getGrade === 'function' ? getGrade(effectivePct) : 'E');
-            const gradeSymbol = (displayGrade === 'S' || effectivePct >= 100) ? '⭐' : displayGrade;
+            const gradeSymbol = (displayGrade === 'S' || displayGrade === '★' || effectivePct >= 100) ? '★' : displayGrade;
             const remSupHtml = isRemedial ? `<sup style="font-size:0.6em;font-weight:900;margin-left:1px;vertical-align:super;">R</sup>` : '';
             return `<div class="text-center"><span class="grade-badge grade-${displayGrade}" style="width:30px;height:30px;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${gradeSymbol}${remSupHtml}</span></div>`;
           }
@@ -2252,12 +2252,12 @@ export async function renderProgressView(area) {
                 <span style="color:var(--clr-success); font-weight:700;">${r.completedCount}</span> / <span class="text-muted" style="font-size:0.75rem;">${r.totalAssigned}</span>
               </td>
               <td class="text-center">
-                <span class="fw-700 text-xs" style="color:${r.gradeColor}; font-size:0.8rem; ${r.globalGrade === 'S' ? 'filter:drop-shadow(0 0 6px rgba(251,191,36,0.6)); font-weight:900;' : ''}">${r.overallScoreStr}</span>
+                <span class="fw-700 text-xs" style="color:${r.gradeColor}; font-size:0.8rem; ${r.globalGrade === 'S' || r.globalGrade === '★' ? 'filter:drop-shadow(0 0 6px rgba(168,85,247,0.6)); font-weight:900;' : ''}">${r.overallScoreStr}</span>
               </td>
               <td class="text-center">
                 ${r.globalGrade !== '—' 
-                  ? (r.globalGrade === 'S'
-                    ? `<span class="badge" style="background:linear-gradient(135deg, #fef08a, #fbbf24, #d97706);color:#1e1b4b;font-weight:900;font-size:0.72rem;padding:2px 7px;box-shadow:0 0 10px rgba(245,158,11,0.7);border:1px solid #fde68a;">S</span>`
+                  ? (r.globalGrade === 'S' || r.globalGrade === '★'
+                    ? `<span class="badge" style="background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;font-size:0.72rem;padding:2px 7px;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;">★</span>`
                     : `<span class="badge" style="background:${r.gradeColor};color:#000;font-weight:800;font-size:0.72rem;padding:2px 7px;">${r.globalGrade}</span>`
                   ) 
                   : '<span class="text-muted" style="font-size:0.75rem;">&mdash;</span>'

@@ -1299,7 +1299,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">PTS</span> Points</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">SCORE</span> %</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FFFF00; font-weight:800; font-size:0.75rem;">ᴿ</span> Remedi</span>
-                      <span style="display:inline-flex; align-items:center; gap:3px;"><span class="badge badge-grade-star-s" style="padding:0 3px !important; font-size:0.6rem !important;"><span class="star-icon" style="font-size:0.7rem;">⭐</span></span> Star S</span>
+                      <span style="display:inline-flex; align-items:center; gap:3px;"><span class="badge badge-grade-star-s" style="padding:0 3px !important; font-size:0.6rem !important;"><span class="star-icon" style="font-size:0.7rem;">★</span></span> Star S</span>
                     </div>
                   </div>
                   <div id="class-attendance-grid"></div>
@@ -1649,7 +1649,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   } else if (col.key === 'grade') {
                     cellsHtml += `
                       <td class="col-sticky col-sticky-7 text-center">
-                        ${isAvgGradeS ? '<span class="badge badge-grade-star-s" title="Average Grade S (100% ⭐)"><span class="star-icon">⭐</span></span>' : `<span class="badge" style="${avgBadgeStyle}">${avgGrade}</span>`}
+                        ${isAvgGradeS ? '<span class="badge badge-grade-star-s" title="Average Grade ★ (100%)"><span class="star-icon">★</span></span>' : `<span class="badge" style="${avgBadgeStyle}">${avgGrade}</span>`}
                       </td>
                     `;
                   } else if (col.key === 'totalEarnedScore') {
@@ -1875,9 +1875,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   width: '36px',
                   render: (val, row) => {
                     if (row.grade === '—' || row.grade === '-') return '<span class="text-muted" style="font-size:0.75rem;">&mdash;</span>';
-                    const isGradeS = row.grade === 'S';
+                    const isGradeS = row.grade === 'S' || row.grade === '★';
                     if (isGradeS) {
-                      return `<span class="badge badge-grade-star-s" title="Grade S (100% Sempurna ⭐)"><span class="star-icon">⭐</span></span>`;
+                      return `<span class="badge badge-grade-star-s" title="Grade ★ (100% Excellent)"><span class="star-icon">★</span></span>`;
                     }
                     const badgeStyle = `background:${row.gradeColor}; color:#000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
                     return `

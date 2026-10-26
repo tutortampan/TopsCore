@@ -207,8 +207,9 @@ export function isPrerequisiteMet(studentBestPercentage, requiredPercentage = 60
  * E     : 0% – 29%   - Fail (Red #EF4444)
  */
 export function calculateGrade(percentage) {
-  const pct = Math.round(Number(percentage) || 0);
-  if (pct >= 100) return 'S';
+  const num = Number(percentage) || 0;
+  if (num >= 100) return 'S';
+  const pct = Math.round(num);
   if (pct >= 90) return 'A';
   if (pct >= 80) return 'B';
   if (pct >= 60) return 'C';
@@ -249,7 +250,7 @@ export function calculateOverallStudentScore(takenPercentages = []) {
  */
 export const GRADE_PALETTE = {
   S: {
-    symbol: '⭐',
+    symbol: '★',
     label: 'Excellent',
     predicate: 'Excellent',
     color: '#a855f7',       // Ungu / Purple (100% Star)
@@ -376,10 +377,10 @@ export function getScoreColor(percentage, isRemedial = false) {
 export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
   let baseSymbol;
   if (percentage !== null && Number(percentage) >= 100) {
-    baseSymbol = '⭐';
+    baseSymbol = '★';
   } else {
     const g = String(grade || '').toUpperCase();
-    if (g === 'S') baseSymbol = '⭐';
+    if (g === 'S' || g === 'STAR' || g === '★' || g === '⭐') baseSymbol = '★';
     else if (g === 'R') baseSymbol = 'C';
     else baseSymbol = GRADE_PALETTE[g]?.symbol || g || '—';
   }
@@ -389,8 +390,8 @@ export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
 export function formatGradeBadgeHtml(grade, isRemedial = false, customStyle = '') {
   const g = String(grade || '').toUpperCase();
   const color = getGradeColor(g);
-  const isS = g === 'S' || g === '⭐';
-  const displayLetter = isS ? '⭐' : (g === 'R' ? 'C' : g);
+  const isS = g === 'S' || g === '★' || g === 'STAR' || g === '⭐';
+  const displayLetter = isS ? '★' : (g === 'R' ? 'C' : g);
   const remTag = isRemedial ? '<sup style="font-size:0.65em; font-weight:900; margin-left:1px; vertical-align:super; line-height:0;">R</sup>' : '';
   
   if (isS) {
@@ -401,7 +402,7 @@ export function formatGradeBadgeHtml(grade, isRemedial = false, customStyle = ''
 
 export function getGradeTheme(grade, isRemedial = false) {
   const g = String(grade || '').toUpperCase();
-  const effectiveGrade = g === 'R' ? 'C' : g;
+  const effectiveGrade = (g === 'STAR' || g === '★' || g === '⭐') ? 'S' : (g === 'R' ? 'C' : g);
   const theme = GRADE_PALETTE[effectiveGrade] || {
     symbol: g || '—',
     color: '#94a3b8',
@@ -416,7 +417,7 @@ export function getGradeTheme(grade, isRemedial = false) {
     return {
       ...theme,
       isRemedial: true,
-      symbol: (theme.symbol === '⭐' ? '⭐ᴿ' : `${theme.symbol}ᴿ`)
+      symbol: (theme.symbol === '★' ? '★ᴿ' : `${theme.symbol}ᴿ`)
     };
   }
   return theme;
@@ -429,7 +430,7 @@ export function getGradeTheme(grade, isRemedial = false) {
  */
 export function getAchievementStatus(grade, percentage = null) {
   let g = String(grade || '').toUpperCase();
-  if (g === 'R' || !['S', 'STAR', 'A', 'B', 'C', 'D', 'E', 'F'].includes(g)) {
+  if (g === 'R' || !['S', 'STAR', '★', 'A', 'B', 'C', 'D', 'E', 'F'].includes(g)) {
     const p = parseFloat(percentage ?? 0);
     if (p >= 100) g = 'S';
     else if (p >= 90) g = 'A';
@@ -441,6 +442,8 @@ export function getAchievementStatus(grade, percentage = null) {
   const map = {
     S: 'EXCELLENT',
     STAR: 'EXCELLENT',
+    '★': 'EXCELLENT',
+    '⭐': 'EXCELLENT',
     A: 'VERY GOOD',
     B: 'GOOD',
     C: 'ENOUGH',

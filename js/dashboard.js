@@ -1994,7 +1994,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         const dateB = b.submitted_at ? new Date(b.submitted_at).getTime() : 0;
         return dateB - dateA;
       });
-      const gradeColors = { S: '#fbbf24', A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', E: '#ef4444', F: '#ef4444' };
+      const gradeColors = { S: '#a855f7', '★': '#a855f7', A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', E: '#ef4444', F: '#ef4444' };
 
       // Desktop Table
       let tableHtml = `

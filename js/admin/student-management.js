@@ -622,7 +622,7 @@ export async function renderStudents(area) {
             <div style="flex:1;min-width:90px;">
               <div class="text-xs text-muted">Global Grade</div>
               <div style="margin-top:2px;">
-                <span class="badge" style="${rec.globalGrade === 'S' ? 'background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;' : `background:${rec.overallColor};color:#000;font-weight:800;`}font-size:0.85rem;padding:3px 10px;">${rec.globalGrade}${rec.hasRemedial ? '<sup style="font-size:0.65em;font-weight:900;margin-left:1px;">R</sup>' : ''}</span>
+                <span class="badge" style="${rec.globalGrade === 'S' || rec.globalGrade === '★' ? 'background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;' : `background:${rec.overallColor};color:#000;font-weight:800;`}font-size:0.85rem;padding:3px 10px;">${rec.globalGrade === 'S' ? '★' : rec.globalGrade}${rec.hasRemedial ? '<sup style="font-size:0.65em;font-weight:900;margin-left:1px;">R</sup>' : ''}</span>
               </div>
             </div>
             <div style="flex:1.2;min-width:120px;">
@@ -1253,10 +1253,13 @@ export async function renderStudents(area) {
     const transcriptRows = completedRecords.map((att, idx) => {
       const title = att.assessments?.title || 'Curriculum Assessment';
       const type = att.assessments?.assessment_type || 'TASK';
-      const maxQ = att.total_questions || 40;
-      const pts = att.score != null ? att.score : '—';
-      const pct = att.percentage != null ? Math.round(Number(att.percentage)) : Math.round(((att.score || 0) / maxQ) * 100);
-      const grade = att.grade || ((typeof getGrade === 'function') ? getGrade(pct) : '—');
+      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+      const rawPct = att.percentage != null ? Number(att.percentage) : ((att.score || 0) / maxQ) * 100;
+      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+      const pct = Math.round(effPct);
+      const grade = att.grade || ((typeof getGrade === 'function') ? getGrade(effPct) : '—');
+      const displayGrade = grade === 'S' || grade === '★' ? '★' : grade;
+      const remTag = isRem ? '<sup style="font-size:0.65em;vertical-align:super;">R</sup>' : '';
       const dateStr = att.submitted_at ? new Date(att.submitted_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
       return `
@@ -1267,7 +1270,7 @@ export async function renderStudents(area) {
           <td style="text-align:center;color:#475569;font-size:0.78rem;">${dateStr}</td>
           <td style="text-align:center;font-weight:600;">${pts} / ${maxQ}</td>
           <td style="text-align:center;font-weight:700;color:#0f172a;">${pct}%</td>
-          <td style="text-align:center;"><strong style="font-size:0.9rem;">${grade}</strong></td>
+          <td style="text-align:center;"><strong style="font-size:0.9rem;">${displayGrade}${remTag}</strong></td>
         </tr>
       `;
     }).join('');

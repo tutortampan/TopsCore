@@ -394,11 +394,11 @@
     import { DataGrid } from './js/admin/datagrid.js?v=5.4.2';
     window.DataGrid = DataGrid;
   </script>
-  <script type="module" src="js/admin/app.js?v=5.8.2"></script>
+  <script type="module" src="js/admin/app.js?v=5.8.5"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=5.8.4')
+        navigator.serviceWorker.register('sw.js?v=5.8.5')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

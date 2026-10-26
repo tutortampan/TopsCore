@@ -7,7 +7,7 @@
 
 import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchAssessmentsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startAssessment, submitAssessment, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial } from './api.js?v=5.6.5';
 import { getStudentSession, getAdminSession } from './session.js?v=5.5.8';
-import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=5.5.8';
+import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=5.8.5';
 import { getSupabase } from './supabase.js?v=5.5.8';
 
 let session = getStudentSession();
@@ -168,7 +168,7 @@ if (!session) {
     // ═══════════════════════════════════════════════════════════
     function getAchievementStatus(grade, pct = null) {
       let g = String(grade || '').toUpperCase();
-      if (g === 'R' || !['S', 'STAR', 'A', 'B', 'C', 'D', 'E', 'F'].includes(g)) {
+      if (g === 'R' || !['S', 'STAR', '★', 'A', 'B', 'C', 'D', 'E', 'F'].includes(g)) {
         const p = parseFloat(pct || 0);
         if (p >= 100) g = 'S';
         else if (p >= 90) g = 'A';
@@ -180,6 +180,8 @@ if (!session) {
       const map = {
         S: 'EXCELLENT',
         STAR: 'EXCELLENT',
+        '★': 'EXCELLENT',
+        '⭐': 'EXCELLENT',
         A: 'VERY GOOD',
         B: 'GOOD',
         C: 'ENOUGH',
@@ -1125,16 +1127,16 @@ if (!session) {
         const isBestRow = (a.is_best_score && parseFloat(a.percentage || 0) === maxPct) || (maxPct > 0 && a.id === bestAttempt?.id);
         const dateStr = a.submitted_at ? new Date(a.submitted_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
         const aTheme = (typeof getGradeTheme === 'function' ? getGradeTheme(ag) : null) || GRADE_PALETTE[ag] || GRADE_PALETTE.F;
-        const isGradeS = (ag === 'S' || ag === 'STAR');
-        const displayGrade = isGradeS ? '⭐' : ag;
+        const isGradeS = (ag === 'S' || ag === 'STAR' || ag === '★');
+        const displayGrade = isGradeS ? '★' : ag;
         const badgeStyle = isGradeS
-          ? 'background:linear-gradient(135deg, #f59e0b, #fbbf24, #fef08a);color:#78350f;border:1px solid #fef08a;box-shadow:0 0 10px rgba(245,158,11,0.6);animation:gold-badge-sparkle 2.2s infinite ease-in-out;'
+          ? 'background:rgba(168,85,247,0.18);color:#A855F7;border:1px solid #A855F7;box-shadow:0 0 10px rgba(168,85,247,0.45);'
           : `background:${aTheme.hex}18;border:1.5px solid ${aTheme.border};color:${aTheme.hex};box-shadow:0 0 8px ${aTheme.glow};`;
 
         return `
           <tr style="${isThis ? 'background:rgba(56,189,248,0.07);' : ''}">
             <td style="padding:8px 12px;font-size:0.82rem;color:var(--clr-text-3);">${escapeHtml(dateStr)}</td>
-            <td style="padding:8px 12px;font-weight:700;color:${aTheme.hex};${isGradeS ? 'text-shadow:0 0 8px rgba(251,191,36,0.6);' : ''}">${apct}%</td>
+            <td style="padding:8px 12px;font-weight:700;color:${isGradeS ? '#A855F7' : aTheme.hex};${isGradeS ? 'text-shadow:0 0 8px rgba(168,85,247,0.6);' : ''}">${apct}%</td>
             <td style="padding:8px 12px;">
               <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;font-weight:800;font-size:0.85rem;${badgeStyle}">${displayGrade}</span>
             </td>

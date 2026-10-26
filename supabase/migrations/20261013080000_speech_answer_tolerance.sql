@@ -246,19 +246,18 @@ BEGIN
   v_effective_score := v_percentage;
   IF v_is_remedial THEN
     SELECT assessment_type INTO v_cand_clean FROM public.assessments WHERE id = v_assessment_id;
-    IF v_cand_clean IN ('EXAM', 'QUIZ') AND v_effective_score > 70.00 THEN
-      v_effective_score := 70.00;
+    IF (v_cand_clean IN ('EXAM', 'QUIZ', 'TEST', 'VOCAB_TEST', 'UNIFIED_TEST') OR v_cand_clean LIKE '%TEST%') AND v_effective_score > 60.00 THEN
+      v_effective_score := 60.00;
     END IF;
   END IF;
 
-  -- 6. Determine Grade
-  IF v_percentage >= 100.00 THEN v_grade := 'S';
-  ELSIF v_percentage >= 91.00 THEN v_grade := 'A';
-  ELSIF v_percentage >= 71.00 THEN v_grade := 'B';
-  ELSIF v_percentage >= 51.00 THEN v_grade := 'C';
-  ELSIF v_percentage >= 31.00 THEN v_grade := 'D';
-  ELSIF v_percentage >= 11.00 THEN v_grade := 'E';
-  ELSE v_grade := 'F';
+  -- 6. Determine Grade (Official Scale: ★ 100%, A 90-99%, B 80-89%, C 60-79%, D 30-59%, E 0-29%)
+  IF v_effective_score >= 100.00 THEN v_grade := 'S';
+  ELSIF v_effective_score >= 90.00 THEN v_grade := 'A';
+  ELSIF v_effective_score >= 80.00 THEN v_grade := 'B';
+  ELSIF v_effective_score >= 60.00 THEN v_grade := 'C';
+  ELSIF v_effective_score >= 30.00 THEN v_grade := 'D';
+  ELSE v_grade := 'E';
   END IF;
 
   -- 7. Update Attempt

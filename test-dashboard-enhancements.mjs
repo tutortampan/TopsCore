@@ -56,19 +56,19 @@ async function run() {
     console.log('\n--- 1. Testing js/grading.js ---');
     const { calculateGrade, getGradeSymbol, GRADE_PALETTE } = await import('./js/grading.js');
     
-    // Boundary checks for exact 20-point tiers
+    // Boundary checks for official scale tiers
     console.log('\n--- Exhaustive Boundary Verification ---');
     const boundaries = [
-      { score: 100, expected: 'S', symbol: '⭐' },
+      { score: 100, expected: 'S', symbol: '★' },
       { score: 99, expected: 'A', symbol: 'A' },
-      { score: 80, expected: 'A', symbol: 'A' },
-      { score: 79, expected: 'B', symbol: 'B' },
-      { score: 60, expected: 'B', symbol: 'B' },
-      { score: 59, expected: 'C', symbol: 'C' },
-      { score: 40, expected: 'C', symbol: 'C' },
-      { score: 39, expected: 'D', symbol: 'D' },
-      { score: 20, expected: 'D', symbol: 'D' },
-      { score: 19, expected: 'E', symbol: 'E' },
+      { score: 90, expected: 'A', symbol: 'A' },
+      { score: 89, expected: 'B', symbol: 'B' },
+      { score: 80, expected: 'B', symbol: 'B' },
+      { score: 79, expected: 'C', symbol: 'C' },
+      { score: 60, expected: 'C', symbol: 'C' },
+      { score: 59, expected: 'D', symbol: 'D' },
+      { score: 30, expected: 'D', symbol: 'D' },
+      { score: 29, expected: 'E', symbol: 'E' },
       { score: 0, expected: 'E', symbol: 'E' }
     ];
 
