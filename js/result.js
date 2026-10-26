@@ -719,7 +719,6 @@ if (!session) {
           motEl.style.setProperty('--tier-rgb', rgbColor);
         }
 
-        const remSupHtml = isRemedial ? `<sup style="font-size:0.55em;vertical-align:super;font-weight:900;margin-left:2px;color:${gradeColor};">R</sup>` : '';
         let displayGradeHtml = isGradeSOr100 ? `
             <svg class="pure-star-svg" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.65)); display:inline-block; vertical-align:middle;">
               <defs>
@@ -730,8 +729,8 @@ if (!session) {
                 </linearGradient>
               </defs>
               <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starPurpleHeroGrad)" />
-            </svg>${remSupHtml}
-          ` : `${grade}${remSupHtml}`;
+            </svg>
+          ` : `${grade}`;
 
         // 1. Ambient Hero Banner Aura & Modular CSS Variables (1:1 with Dashboard)
         const identityCard = document.getElementById('result-identity-card');
@@ -800,13 +799,10 @@ if (!session) {
                   </defs>
                   <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starPurpleGrad)" />
                 </svg>
-                ${isRemedial ? `<sup style="font-size:0.55em; font-weight:900; margin-left:2px; vertical-align:super; color:#a855f7;">R</sup>` : ''}
               </span>
             `;
           } else {
-            gradeBadge.innerHTML = isRemedial 
-              ? `${grade}<sup style="font-size:0.55em; font-weight:900; margin-left:2px; vertical-align:super;">R</sup>`
-              : grade;
+            gradeBadge.textContent = grade;
             gradeBadge.style.color = gradeColor;
           }
         }
@@ -814,10 +810,8 @@ if (!session) {
         const gradeStamp = document.getElementById('result-grade-stamp');
         if (gradeStamp) {
           gradeStamp.className = `result-grade-stamp pure-stamp grade-${grade}`;
-          if (isRemedial) {
-            gradeStamp.innerHTML = `${grade}<sup style="font-size:0.5em; vertical-align:super; margin-left:1px;">R</sup>`;
-            gradeStamp.style.color = gradeColor;
-          }
+          gradeStamp.textContent = grade;
+          gradeStamp.style.color = gradeColor;
         }
 
         // 3. Percentage in Dual Score & Grade Card (Synchronized font color with Grade)
@@ -1126,6 +1120,8 @@ if (!session) {
         const isThis = a.id === currentAttemptId;
         const isBestRow = (a.is_best_score && parseFloat(a.percentage || 0) === maxPct) || (maxPct > 0 && a.id === bestAttempt?.id);
         const dateStr = a.submitted_at ? new Date(a.submitted_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+        const isRemRow = Boolean(a.is_remedial_unlocked || a.is_remedial);
+        const remTag = isRemRow ? '<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : '';
         const aTheme = (typeof getGradeTheme === 'function' ? getGradeTheme(ag) : null) || GRADE_PALETTE[ag] || GRADE_PALETTE.F;
         const isGradeS = (ag === 'S' || ag === 'STAR' || ag === '★');
         const displayGrade = isGradeS ? '★' : ag;
@@ -1136,7 +1132,7 @@ if (!session) {
         return `
           <tr style="${isThis ? 'background:rgba(56,189,248,0.07);' : ''}">
             <td style="padding:8px 12px;font-size:0.82rem;color:var(--clr-text-3);">${escapeHtml(dateStr)}</td>
-            <td style="padding:8px 12px;font-weight:700;color:${isGradeS ? '#A855F7' : aTheme.hex};${isGradeS ? 'text-shadow:0 0 8px rgba(168,85,247,0.6);' : ''}">${apct}%</td>
+            <td style="padding:8px 12px;font-weight:700;color:${isGradeS ? '#A855F7' : aTheme.hex};${isGradeS ? 'text-shadow:0 0 8px rgba(168,85,247,0.6);' : ''}">${apct}%${remTag}</td>
             <td style="padding:8px 12px;">
               <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;font-weight:800;font-size:0.85rem;${badgeStyle}">${displayGrade}</span>
             </td>
@@ -1168,7 +1164,7 @@ if (!session) {
       `;
     }
 
-    function animateCount(el, target, onComplete) {
+    function animateCount(el, target, isRemedial = false, onComplete) {
       let start = 0;
       const duration = 1100;
       const startTime = performance.now();
@@ -1181,7 +1177,9 @@ if (!session) {
         if (progress < 1) {
           requestAnimationFrame(step);
         } else {
-          el.textContent = (target % 1 === 0 ? Math.round(target) : target.toFixed(1)) + '%';
+          const finalVal = (target % 1 === 0 ? Math.round(target) : target.toFixed(1)) + '%';
+          const remHtml = isRemedial ? '<sup class="asm-rem-sup" style="font-size:0.55em;vertical-align:super;font-weight:900;margin-left:2px;color:inherit;line-height:0;">R</sup>' : '';
+          el.innerHTML = finalVal + remHtml;
           if (typeof onComplete === 'function') onComplete();
         }
       }
@@ -1207,7 +1205,11 @@ if (!session) {
           el.classList.add('cascade-revealed');
         });
         const pctEl = document.getElementById('result-percentage');
-        if (pctEl) pctEl.textContent = (targetPct % 1 === 0 ? Math.round(targetPct) : targetPct.toFixed(1)) + '%';
+        if (pctEl) {
+          const finalVal = (targetPct % 1 === 0 ? Math.round(targetPct) : targetPct.toFixed(1)) + '%';
+          const remHtml = isRemedial ? '<sup class="asm-rem-sup" style="font-size:0.55em;vertical-align:super;font-weight:900;margin-left:2px;color:inherit;line-height:0;">R</sup>' : '';
+          pctEl.innerHTML = finalVal + remHtml;
+        }
         const gradeValEl = document.getElementById('result-grade-val');
         if (gradeValEl) {
           gradeValEl.classList.remove('grade-delayed');
@@ -1323,7 +1325,7 @@ if (!session) {
       animateScoreRing(targetPct, grade, isRemedial);
 
       await new Promise(resolve => {
-        animateCount(pctEl, targetPct, () => resolve());
+        animateCount(pctEl, targetPct, isRemedial, () => resolve());
       });
 
       // Step 5: The EXACT moment score count-up finishes -> Grade Stamp Impact!

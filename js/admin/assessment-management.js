@@ -658,7 +658,7 @@ export async function renderResults(area) {
     const isRem = Boolean(r.is_remedial_unlocked);
     const rawPct = parseFloat(r.percentage || 0);
     const effPct = isRem ? Math.min(rawPct, 60.0) : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
-    const effGrade = isRem && rawPct > 60 ? 'B' : (r.grade || (typeof getGrade === 'function' ? getGrade(effPct) : '-'));
+    const effGrade = r.grade || (typeof getGrade === 'function' ? getGrade(effPct) : (effPct >= 60 ? 'C' : 'E'));
 
     return {
       id: r.id,

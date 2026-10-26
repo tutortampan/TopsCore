@@ -1,3 +1,37 @@
+## SESSION-20261026-2358
+
+Start: 2026-10-26 23:40 UTC+8  
+End: 2026-10-26 23:58 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"huruf R jangan muncul di samping Grade, hanya ada di samping score dalam hasil dan halaman student grade di dalam kelas. di grade dan Point, tidak perlu muuncul, sebab nanti mengikuti score yang ada, jadi logo 'r' khanya ada di score di hlaman result dan di hlaman grade siswa dalam kelas"
+
+### Objective
+Remove the letter "R" from all Grade and Point elements across the entire system. Ensure the letter "R" (`<sup class="asm-rem-sup">R</sup>` or `ᴿ`) appears strictly and solely beside the **Score** percentage on the result page (`result.html` / `js/result.js`) and the student grade page in class (`admin.html` Class Hub).
+
+### Work Performed
+1. **Grade & Point Sanitization**:
+   - `js/grading.js`: Removed `ᴿ` from `getGradeSymbol`, `formatGradeBadgeHtml`, and `getGradeTheme`. Grade outputs are strictly clean (`★`, `A`, `B`, `C`, `D`, `E`).
+   - `js/result.js`: Removed `remSupHtml` from `displayGradeHtml`, `gradeBadge`, and `gradeStamp`. Grade reveals cleanly without "R". Points row (`#res-points`) displays clean numbers (`0`, `formattedPoints`) without "R".
+   - `js/admin/app.js`: In `#class-attendance-grid`, removed `<sup>R</sup>` from Test Points column (`asm_${asm.id}_pts`) and Task column (`asm_${asm.id}`); PTS displays clean numbers (`displayVal`).
+   - `js/admin/class.js`: Removed `remSupHtml` from results grid Grade column; removed `+ (isRemedial ? 'ᴿ' : '')` from Excel export `exportGrade`.
+   - `js/admin/student-management.js`: In student dossier transcript, removed `remTag` from Grade and Points columns (`${pts} / ${maxQ}` and `${displayGrade}`).
+   - `js/dashboard.js`: Removed `<sup class="asm-rem-sup">R</sup>` from lobby card grade box.
+2. **Score-Only Remedial "R" Attachment**:
+   - `js/result.js`: Appended `<sup class="asm-rem-sup">R</sup>` to `#result-percentage` in `animateCount` and reduced motion fallback.
+   - `js/result.js`: Attempt History table Score column attaches `<sup class="asm-rem-sup">R</sup>` for remedial attempts.
+   - `js/admin/app.js`: Class Hub assessment matrix Test SCORE column (`asm_${asm.id}_pct`) retains `${Math.round(effPct)}%<sup class="asm-rem-sup">R</sup>`.
+   - `js/admin/class.js`: Results table Score column retains `${effectivePct}%<sup class="asm-rem-sup">R</sup>`. Excel export effective percentage retains `${exportPct}%ᴿ`.
+   - `js/admin/student-management.js`: Dossier transcript Score column attaches `${pct}%${remTag}`.
+3. **Styling & Cache Invalidation**:
+   - Added `.asm-rem-sup` CSS rule to `css/result.css`.
+   - Bumped ServiceWorker cache to `abcd-core-v5.8.6` in `sw.js`, `admin.html`, and `result.html`.
+4. **Verification**:
+   - All 39 JS files passed syntax validation (`node scripts/check_all_js_syntax.cjs`) with 0 errors.
+
+---
+
 ## SESSION-20261026-2325
 
 Start: 2026-10-26 22:45 UTC+8  

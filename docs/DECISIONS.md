@@ -405,18 +405,19 @@ User provided the official Grading Scale diagram (tablet & printout specificatio
    - Remedials do not get a standalone special remedial score or separate artificial color override.
    - Maximum remedial score is capped at **60%** (`Math.min(rawPct, 60.0)` and `Math.min(points, totalQuestions * 0.6)`).
    - Grade is derived directly from the effective score (at the 60% cap, Grade is `C`).
-   - Remedial status is visually indicated with a small "R" superscript directly beside the obtained grade (e.g., `Cᴿ` or `C<sup class="grade-rem-tag">R</sup>`).
+   - Remedial status is visually indicated with a small "R" superscript (`<sup class="asm-rem-sup">R</sup>` or `ᴿ`) attached **ONLY** to the **Score** percentage (e.g., `60%ᴿ` or `60%<sup>R</sup>`) on the result page and student grade page in class. It is NOT attached to Grade or Point.
+   - Grade and Point remain clean (Grade: `C`, `D`, `E`, etc.; Point: clean numbers).
    - The visual color strictly follows the score tier (at 60%, Yellow `#EAB308`).
 
 ### Decision
 1. Update `calculateGrade(pct)` across `grading.js`, `submit-assessment` Edge Function, `api.js`, `app.js`, `student-management.js`, and `class.js` to strictly enforce the new boundaries (100, 90–99, 80–89, 60–79, 30–59, 0–29).
 2. Align `GRADE_PALETTE` and CSS utility classes to `#A855F7` (S/★), `#10B981` (A), `#84CC16` (B), `#EAB308` (C/R), `#F97316` (D), `#EF4444` (E).
 3. Enforce server and client remedial score capping at 60% max.
-4. Render small `<sup>R</sup>` or `ᴿ` next to the Grade symbol without overriding score color.
+4. Render small `<sup class="asm-rem-sup">R</sup>` or `ᴿ` strictly next to the **Score** percentage on the result page and the class student grade page, omitting "R" from Grade and Point displays.
 
 ### Consequences
 - Authoritative visual and functional harmony across all Student, Tutor, and Admin surfaces.
-- Remedial students are fairly assessed up to the maximum 60% passing threshold with clear distinction in grade badges.
+- Remedial students are fairly assessed up to the maximum 60% passing threshold with clear distinction on score percentages.
 - Clean code architecture across both client ES modules and Supabase Edge Functions.
 
 

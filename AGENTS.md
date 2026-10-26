@@ -241,7 +241,7 @@ Centralized authoritative grading (Official Grading Scale):
 
 ### Remedial Rules:
 - **Score Cap**: Maximum effective score is capped at **60%** (e.g., `Math.min(score, 60%)` or `Math.min(points, total_questions * 0.6)`).
-- **Grade Symbol & Badge**: A small letter "R" (`<sup>R</sup>` or `ᴿ`) is displayed beside the grade obtained (e.g. `Cᴿ`).
+- **Remedial 'R' Placement**: A small letter "R" (`<sup class="asm-rem-sup">R</sup>` or `ᴿ`) is displayed **ONLY** beside the **Score** percentage (e.g. `60%ᴿ` or `60%<sup>R</sup>`) on the result page (`result.html`) and the student grade page inside class (`admin.html` Class Hub). It MUST NOT appear beside Grade (which remains clean: `★`, `A`, `B`, `C`, `D`, `E`) or Point (which displays clean numbers without 'R').
 - **Color Adherence**: Remedials do not receive a special standalone color override; the visual color strictly follows the score tier (at 60%, Yellow `#EAB308`).
 
 No frontend page may independently implement a competing grading algorithm.

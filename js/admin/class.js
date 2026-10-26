@@ -1627,7 +1627,7 @@ export async function renderResults(area) {
             return `
               <div class="text-center fw-700" style="display:flex;flex-direction:column;align-items:center;gap:3px;">
                 <div style="display:flex;align-items:center;gap:4px;" class="text-grade-${effectiveGrade}">
-                  <span>${effectivePct.toFixed(1)}%${isRemedial ? '<sup style="font-size:0.7em;font-weight:900;margin-left:2px;">R</sup>' : ''}</span>
+                  <span>${effectivePct.toFixed(1)}%${isRemedial ? '<sup class="asm-rem-sup" style="font-size:0.7em;font-weight:900;margin-left:2px;">R</sup>' : ''}</span>
                   <span class="badge badge-success text-xs" style="font-size:0.65rem;padding:1px 5px;" title="Highest score recorded across attempts">Highest</span>
                 </div>
               </div>
@@ -1640,8 +1640,7 @@ export async function renderResults(area) {
             const effectivePct = isRemedial ? Math.min(rawPct, 60.0) : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
             const displayGrade = r.grade || (typeof getGrade === 'function' ? getGrade(effectivePct) : 'E');
             const gradeSymbol = (displayGrade === 'S' || displayGrade === '★' || effectivePct >= 100) ? '★' : displayGrade;
-            const remSupHtml = isRemedial ? `<sup style="font-size:0.6em;font-weight:900;margin-left:1px;vertical-align:super;">R</sup>` : '';
-            return `<div class="text-center"><span class="grade-badge grade-${displayGrade}" style="width:30px;height:30px;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${gradeSymbol}${remSupHtml}</span></div>`;
+            return `<div class="text-center"><span class="grade-badge grade-${displayGrade}" style="width:30px;height:30px;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${gradeSymbol}</span></div>`;
           }
         },
         {
@@ -1745,7 +1744,7 @@ export async function renderResults(area) {
       const rawPct = Number(r.percentage || r.effective_score || 0);
       const isRemedial = Boolean(r.is_remedial_unlocked);
       const exportPct = isRemedial ? Math.min(rawPct, 60.0) : (r.effective_score != null ? Number(r.effective_score) : rawPct);
-      const exportGrade = (r.grade || getGrade(exportPct)) + (isRemedial ? 'ᴿ' : '');
+      const exportGrade = r.grade || getGrade(exportPct);
       return {
         'Student Name': r.students?.name || '—',
         'Gender': r.students?.gender ? (r.students.gender === 'female' ? 'Female' : 'Male') : '—',
@@ -1756,7 +1755,7 @@ export async function renderResults(area) {
         'Assessment Type': def.assessment_type || '—',
         'Score': r.score != null ? r.score : '—',
         'Raw Percentage (%)': rawPct != null ? `${rawPct}%` : '—',
-        'Effective Percentage (%)': `${exportPct}%`,
+        'Effective Percentage (%)': `${exportPct}%${isRemedial ? 'ᴿ' : ''}`,
         'Grade': exportGrade,
         'Is Remedial': isRemedial ? 'Yes' : 'No',
         'Submitted At': r.submitted_at ? new Date(r.submitted_at).toLocaleString() : '—',

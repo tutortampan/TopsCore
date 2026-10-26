@@ -1842,3 +1842,13 @@
       z-index: 100 !important;
       box-sizing: border-box !important;
     }
+
+.asm-rem-sup {
+  font-size: 0.55em !important;
+  vertical-align: super !important;
+  font-weight: 900 !important;
+  margin-left: 2px !important;
+  line-height: 0 !important;
+  color: inherit !important;
+}
+

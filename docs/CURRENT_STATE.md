@@ -1,14 +1,35 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-26 23:35 UTC+8
+Last Updated: 2026-10-26 23:58 UTC+8
 
-Current Phase: Phase 123: Official Grading Scale & Remedial Max 60% Score Capping [COMPLETE]
+Current Phase: Phase 124: Remedial "R" Placement Strictly on Score (Omitting "R" from Grade and Point) [COMPLETE]
 
-Current Task: Implement authoritative Grading Scale (★ 100% Purple `#A855F7`, A 90–99% Rich Green `#10B981`, B 80–89% Lime `#84CC16`, C 60–79% Yellow `#EAB308`, D 30–59% Orange `#F97316`, E 0–29% Red `#EF4444`), cap remedial scores at max 60% (Grade C max) with small "R" superscript, without special color overrides, across frontend ES modules and Supabase backend functions. [COMPLETE]
+Current Task: Ensure the letter "R" (`<sup class="asm-rem-sup">R</sup>` or `ᴿ`) appears strictly and solely beside the **Score** percentage (`%`) on the result page (`result.html`) and the student grade page in class (`admin.html` Class Hub), omitting "R" from all Grade and Point displays. [COMPLETE]
 
-Status: COMPLETE (Full comprehensive audit verified 100% compliant with user grading table; 39 JS files syntax-checked 0 errors; cache bumped to v5.8.5).
+Status: COMPLETE (Grade & Point clean without 'R'; Score percentage displays delicate 'R' superscript for remedial attempts; 39 JS files syntax-checked 0 errors; cache bumped to v5.8.6).
 
 ## Completed
+
+- **Phase 124: Remedial "R" Placement Strictly on Score (Omitting "R" from Grade and Point)**:
+  - **1. Grade & Symbol Sanitization (`js/grading.js`, `js/result.js`, `js/admin/class.js`, `js/dashboard.js`)**:
+    - `getGradeSymbol`, `formatGradeBadgeHtml`, and `getGradeTheme`: Removed `ᴿ` superscript suffix and `remTag`. All grade badges and symbol outputs are 100% clean (`★`, `A`, `B`, `C`, `D`, `E`).
+    - `result.js`: Removed `remSupHtml` from `displayGradeHtml`, `gradeBadge`, and `gradeStamp`. Grade reveals cleanly without "R".
+    - `class.js`: Removed `remSupHtml` from results grid Grade column and removed `+ (isRemedial ? 'ᴿ' : '')` from Excel export `exportGrade`.
+    - `dashboard.js`: Removed `<sup class="asm-rem-sup">R</sup>` from lobby card grade box.
+  - **2. Point Sanitization (`js/result.js`, `js/admin/app.js`, `js/admin/student-management.js`)**:
+    - `result.js`: `#res-points` displays clean numbers (`0`, `formattedPoints`), without "R".
+    - `app.js`: In `#class-attendance-grid`, Test PTS column (`asm_${asm.id}_pts`) and Task column (`asm_${asm.id}`) display clean points (`displayVal`), removing `<sup>R</sup>`.
+    - `student-management.js`: Transcript table in student dossier displays clean points (`${pts} / ${maxQ}`), removing `remTag`.
+  - **3. Score Percentage Remedial "R" Attachment (`js/result.js`, `js/admin/app.js`, `js/admin/class.js`, `js/admin/student-management.js`)**:
+    - `result.js`: `#result-percentage` dynamically appends `<sup class="asm-rem-sup">R</sup>` upon completion of `animateCount` and in reduced motion fallback.
+    - `result.js`: Attempt History table Score column attaches `<sup class="asm-rem-sup">R</sup>` for remedial attempts.
+    - `app.js`: Class Hub assessment matrix Test SCORE column (`asm_${asm.id}_pct`) retains `${Math.round(effPct)}%<sup class="asm-rem-sup">R</sup>`.
+    - `class.js`: Results table Score column retains `${effectivePct}%<sup class="asm-rem-sup">R</sup>`.
+    - `student-management.js`: Dossier transcript Score column attaches `${pct}%${remTag}`.
+  - **4. Styling & Cache Invalidation**:
+    - Added `.asm-rem-sup` CSS rule to `css/result.css`.
+    - Bumped ServiceWorker cache to `abcd-core-v5.8.6` in `sw.js`, `admin.html`, and `result.html`.
+    - Verified all 39 JS files pass syntax validation (`node scripts/check_all_js_syntax.cjs`) with 0 errors.
 
 - **Phase 123: Official Grading Scale & Remedial Max 60% Score Capping**:
   - **1. Centralized Grading Scale Synchronized (`js/grading.js`)**:

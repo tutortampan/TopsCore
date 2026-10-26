@@ -1269,8 +1269,8 @@ export async function renderStudents(area) {
           <td style="text-align:center;"><span style="font-size:0.7rem;padding:2px 6px;border-radius:4px;background:#f1f5f9;font-weight:700;">${escapeHtml(type)}</span></td>
           <td style="text-align:center;color:#475569;font-size:0.78rem;">${dateStr}</td>
           <td style="text-align:center;font-weight:600;">${pts} / ${maxQ}</td>
-          <td style="text-align:center;font-weight:700;color:#0f172a;">${pct}%</td>
-          <td style="text-align:center;"><strong style="font-size:0.9rem;">${displayGrade}${remTag}</strong></td>
+          <td style="text-align:center;font-weight:700;color:#0f172a;">${pct}%${remTag}</td>
+          <td style="text-align:center;"><strong style="font-size:0.9rem;">${displayGrade}</strong></td>
         </tr>
       `;
     }).join('');

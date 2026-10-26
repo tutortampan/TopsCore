@@ -1669,9 +1669,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
                   <div style="font-size:0.7rem;color:var(--clr-text-3);">Best Score</div>
                 </div>
                 ${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial)
-                  ? `<div class="grade-remedial" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#eab308'};color:${gradeColors[grade] || '#eab308'};">${grade}<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.85;color:inherit;">R</sup></div>`
+                  ? `<div class="grade-remedial" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#eab308'};color:${gradeColors[grade] || '#eab308'};">${grade}</div>`
                   : (grade === 'S'
-                    ? `<div class="grade-S" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(168, 85, 247, 0.45);color:#A855F7;">⭐</div>`
+                    ? `<div class="grade-S" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(168, 85, 247, 0.45);color:#A855F7;">★</div>`
                     : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#64748b'};color:${gradeColors[grade] || '#64748b'};">${getGradeSymbol(grade)}</div>`
                   )
                 }

@@ -1960,7 +1960,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                                   ${clickAttr}
                                   title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`}&#10;Click to open result & manage remedial">
                               <span style="font-weight:800; font-size:var(--matrix-font-size, 0.74rem); letter-spacing:-0.02em;">
-                                ${displayVal}${isRem ? '<sup class="asm-rem-sup">R</sup>' : ''}
+                                ${displayVal}
                               </span>
                             </span>
                           `;
@@ -2053,7 +2053,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                                 style="color:${color}; ${cursorStyle}" 
                                 ${clickAttr}
                                 title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`} (${Math.round(effPct)}%)&#10;Click to view result">
-                            ${displayVal}${isRem ? '<sup class="asm-rem-sup">R</sup>' : ''}
+                            ${displayVal}
                           </span>
                         `;
                       }

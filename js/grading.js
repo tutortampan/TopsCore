@@ -384,7 +384,7 @@ export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
     else if (g === 'R') baseSymbol = 'C';
     else baseSymbol = GRADE_PALETTE[g]?.symbol || g || '—';
   }
-  return isRemedial ? `${baseSymbol}ᴿ` : baseSymbol;
+  return baseSymbol;
 }
 
 export function formatGradeBadgeHtml(grade, isRemedial = false, customStyle = '') {
@@ -392,12 +392,11 @@ export function formatGradeBadgeHtml(grade, isRemedial = false, customStyle = ''
   const color = getGradeColor(g);
   const isS = g === 'S' || g === '★' || g === 'STAR' || g === '⭐';
   const displayLetter = isS ? '★' : (g === 'R' ? 'C' : g);
-  const remTag = isRemedial ? '<sup style="font-size:0.65em; font-weight:900; margin-left:1px; vertical-align:super; line-height:0;">R</sup>' : '';
   
   if (isS) {
-    return `<span class="badge" style="background:rgba(168,85,247,0.18); color:#A855F7; font-weight:900; box-shadow:0 0 10px rgba(168,85,247,0.45); border:1px solid #A855F7; padding:2px 7px; display:inline-flex; align-items:center; ${customStyle}">${displayLetter}${remTag}</span>`;
+    return `<span class="badge" style="background:rgba(168,85,247,0.18); color:#A855F7; font-weight:900; box-shadow:0 0 10px rgba(168,85,247,0.45); border:1px solid #A855F7; padding:2px 7px; display:inline-flex; align-items:center; ${customStyle}">${displayLetter}</span>`;
   }
-  return `<span class="badge" style="background:${color}; color:#000; font-weight:800; padding:2px 7px; display:inline-flex; align-items:center; ${customStyle}">${displayLetter}${remTag}</span>`;
+  return `<span class="badge" style="background:${color}; color:#000; font-weight:800; padding:2px 7px; display:inline-flex; align-items:center; ${customStyle}">${displayLetter}</span>`;
 }
 
 export function getGradeTheme(grade, isRemedial = false) {
@@ -417,7 +416,7 @@ export function getGradeTheme(grade, isRemedial = false) {
     return {
       ...theme,
       isRemedial: true,
-      symbol: (theme.symbol === '★' ? '★ᴿ' : `${theme.symbol}ᴿ`)
+      symbol: theme.symbol
     };
   }
   return theme;

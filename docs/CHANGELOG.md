@@ -1,3 +1,46 @@
+## [2026-10-26 23:55] — Phase 124: Remedial "R" Placement Strictly on Score (Omitting "R" from Grade and Point)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 124 (Remedial "R" Placement Precision on Score Percentage Only)
+**Status:** PASS
+
+### Why
+- User clarification: "huruf R jangan muncul di samping Grade, hanya ada di samping score dalam hasil dan halaman student grade di dalam kelas. di grade dan Point, tidak perlu muuncul, sebab nanti mengikuti score yang ada, jadi logo 'r' hanya ada di score di halaman result dan di halaman grade siswa dalam kelas".
+- The letter "R" (`<sup>R</sup>` or `<sup class="asm-rem-sup">R</sup>`) must appear **ONLY** beside the **Score** percentage (`%`) on the result page (`result.html`) and in the student grade page in class (`admin.html` Class Hub).
+- Grade and Point must remain completely clean without any "R" superscript.
+
+### Changed
+- `js/grading.js`:
+  - Removed `ᴿ` from `getGradeSymbol`, `formatGradeBadgeHtml`, and `getGradeTheme`. Grade outputs are strictly clean (`★`, `A`, `B`, `C`, `D`, `E`).
+- `js/result.js`:
+  - Removed `remSupHtml` from `displayGradeHtml`, `gradeBadge`, and `gradeStamp`. Grade reveals cleanly without "R".
+  - Points row (`#res-points`): Displays clean numbers (`0`, `formattedPoints`), without "R".
+  - Score percentage (`#result-percentage`): Appends `<sup class="asm-rem-sup">R</sup>` dynamically upon count-up completion and in reduced motion fallback.
+  - Attempt History table: Score column appends `<sup class="asm-rem-sup">R</sup>` for remedial attempts, while Grade column shows clean badges.
+- `js/admin/app.js`:
+  - In Class Hub assessment matrix (`#class-attendance-grid`):
+    - Test Points column (`asm_${asm.id}_pts`) and Task column (`asm_${asm.id}`): Displays clean points (`displayVal`), removing `<sup>R</sup>`.
+    - Test Score column (`asm_${asm.id}_pct`): Retains `${Math.round(effPct)}%<sup class="asm-rem-sup">R</sup>`.
+    - Grade column (`grade`): Displays clean grade without "R".
+- `js/admin/class.js`:
+  - Results table (`#results-grid-container`): Grade column renders clean `${gradeSymbol}` without `remSupHtml`. Score column retains `${effectivePct}%<sup class="asm-rem-sup">R</sup>`.
+  - Excel Export: Grade column exports clean `r.grade || getGrade(exportPct)`. Effective percentage column retains `${exportPct}%ᴿ`.
+- `js/admin/student-management.js`:
+  - Student dossier transcript printout: Moves `remTag` exclusively to the Score percentage column (`${pct}%${remTag}`); Grade and Points columns remain clean.
+  - Aligned assessment review table in student profile.
+- `js/dashboard.js`:
+  - Removed `<sup class="asm-rem-sup">R</sup>` from lobby card grade box; retains `<sup>R</sup>` on Best Score (`${bestPct}%<sup>R</sup>`).
+- `css/result.css`:
+  - Added `.asm-rem-sup` styling for delicate, pixel-perfect alignment (`font-size: 0.55em`, `vertical-align: super`, `font-weight: 900`, `line-height: 0`).
+- `sw.js`, `admin.html`, `result.html`:
+  - Bumped ServiceWorker cache and asset version query strings to `v5.8.6`.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs`: All 39 JavaScript files passed syntax check with 0 errors.
+- Unit checks confirmed: Grade symbol never has `R`; Score retains `R` for remedial attempts.
+
+---
+
 ## [2026-10-26 23:20] — Phase 123: Official Grading Scale & Remedial Max 60% Score Capping
 
 **Agent/Session:** Antigravity
