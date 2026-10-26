@@ -252,7 +252,7 @@ BEGIN
   END IF;
 
   -- 6. Determine Grade (Official Scale: ★ 100%, A 90-99%, B 80-89%, C 60-79%, D 30-59%, E 0-29%)
-  IF v_effective_score >= 100.00 THEN v_grade := 'S';
+  IF v_effective_score >= 100.00 THEN v_grade := '★';
   ELSIF v_effective_score >= 90.00 THEN v_grade := 'A';
   ELSIF v_effective_score >= 80.00 THEN v_grade := 'B';
   ELSIF v_effective_score >= 60.00 THEN v_grade := 'C';

@@ -59,7 +59,7 @@ async function run() {
     // Boundary checks for official scale tiers
     console.log('\n--- Exhaustive Boundary Verification ---');
     const boundaries = [
-      { score: 100, expected: 'S', symbol: '★' },
+      { score: 100, expected: '★', symbol: '★' },
       { score: 99, expected: 'A', symbol: 'A' },
       { score: 90, expected: 'A', symbol: 'A' },
       { score: 89, expected: 'B', symbol: 'B' },

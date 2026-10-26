@@ -154,7 +154,7 @@ function evaluateStudentAnswer(
 }
 
 function calculateGrade(pct: number): string {
-  if (pct >= 100) return "S";
+  if (pct >= 100) return "★";
   if (pct >= 90) return "A";
   if (pct >= 80) return "B";
   if (pct >= 60) return "C";

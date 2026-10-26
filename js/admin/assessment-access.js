@@ -557,7 +557,7 @@ function openThemeSessionModal(container, theme, mode, context) {
     bannerEl.style.border = '1px solid rgba(245, 158, 11, 0.35)';
     bannerEl.style.color = '#fbbf24';
     bannerEl.innerHTML = `
-      🟡 <strong>REMEDIAL SESSION (MAX 60% CAP)</strong>: Designated for students who have not passed (< 60%) or have not taken the test yet. Final effective score is capped at 60% (Grade B).
+      🟡 <strong>REMEDIAL SESSION (MAX 60% CAP)</strong>: Designated for students who have not passed (< 60%) or have not taken the test yet. Final effective score is capped at 60% (Grade C).
     `;
     confirmBtn.style.background = '#f59e0b';
     confirmBtn.style.borderColor = '#d97706';

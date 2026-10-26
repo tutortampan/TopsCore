@@ -1,3 +1,54 @@
+## [2026-10-27 00:25] — Phase 126: Elimination of Grades "S", "F", and "R" in Favor of Canonical 6-Tier Scale (★, A, B, C, D, E)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 126 (Grading Scale Canonical Normalization & Non-Standard Grade Elimination)
+**Status:** PASS
+
+### Why
+- User requirement: "hilangkan grade 'S' dan 'F', serta 'R'".
+- 100% Star tier is strictly represented by the canonical glyph `★` (U+2605). Grade "S" is eliminated.
+- Fail tier (0%–29%) is strictly Grade `E`. Legacy grade "F" is eliminated.
+- Remedial attempts receive Grade `C` (under the 60% cap). Grade "R" is eliminated from all grading palettes, stamps, and badges.
+
+### Changed
+- `js/grading.js`:
+  - `calculateGrade(percentage)`: returns `'★'` directly when score >= 100%. Canonical returns: `'★'`, `'A'`, `'B'`, `'C'`, `'D'`, `'E'`.
+  - `GRADE_PALETTE`: Added primary key `'★'`. Removed keys `F` and `R`. Retained `'S'` as alias for historical DB records.
+  - `getGradeSymbol`, `formatGradeBadgeHtml`, `getGradeTheme`: Display clean `'★'` without any "S", "F", or "R".
+  - `getAchievementStatus`: Simplified to 5 predicates (EXCELLENT, VERY GOOD, GOOD, ENOUGH, LESS, FAIL) without 'F' or 'R'.
+- `supabase/functions/submit-assessment/index.ts`:
+  - `calculateGrade(pct)` returns `"★"` when `pct >= 100`.
+- `supabase/migrations/20261013080000_speech_answer_tolerance.sql`, `supabase/schema.sql`, `supabase_deploy/01_schema_and_functions.sql`:
+  - `emergency_submit_attempt`: sets `v_grade := '★'` when score >= 100.
+- `js/dashboard.js`:
+  - Removed `<div class="grade-remedial">`. Replaced grade "S" checks with `★`.
+  - Updated lobby card styles to `.grade-star` and `.text-grade-star` with purple `#A855F7`.
+- `js/result.js`:
+  - Removed legacy `GRADE_PALETTE.F`. Added support for `grade-star` stamp for `★`.
+- `js/admin/app.js`:
+  - Legend: changed `"Star S"` to `"★ (100%)"`.
+  - `cMap`: updated with canonical `'★': '#A855F7'`, `'A': '#10B981'`, `'B': '#84CC16'`, `'C': '#EAB308'`, `'D': '#F97316'`, `'E': '#EF4444'`.
+- `js/admin/student-management.js`:
+  - Cleaned grade badges to display `'★'`. Removed `${hasRemedial ? '<sup>R</sup>' : ''}` from Grade badges.
+- `js/admin/assessment-management.js`:
+  - Replaced emoji `'⭐'` with clean `'★'`.
+- `js/admin/assessment-access.js`:
+  - Corrected remedial session description from "Grade B" to "Grade C".
+- `css/style.css`:
+  - Added `.grade-star`, `.grade-★`, `.text-grade-star`, `.text-grade-★` with purple `#A855F7`.
+  - Removed `.grade-F` and `.text-grade-F`.
+- `css/admin.css`:
+  - Updated `.form-pill.grade-star, .form-pill.grade-s` to purple `#A855F7`. Removed `.form-pill.grade-f`.
+- `css/result.css`:
+  - Added `.pure-stamp.grade-star, .pure-stamp.grade-★`. Removed `.pure-stamp.grade-F` and `.pure-stamp.grade-remedial`.
+- Cache bumped to `abcd-core-v5.8.7` in `sw.js`, `admin.html`, and `result.html`.
+
+### Verification
+- Ran Node.js unit verification script `verify_grading.mjs`: `calculateGrade(100)` verified as `★`, keys confirmed without `F` or `R`.
+- Ran `node scripts/check_all_js_syntax.cjs`: all 39 JS files passed syntax validation with 0 errors.
+
+---
+
 ## [2026-10-27 00:02] — Phase 125: CSS Cross-Browser Prefix & Compatibility Fixes
 
 **Agent/Session:** Antigravity

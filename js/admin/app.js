@@ -1299,7 +1299,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">PTS</span> Points</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">SCORE</span> %</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FFFF00; font-weight:800; font-size:0.75rem;">ᴿ</span> Remedi</span>
-                      <span style="display:inline-flex; align-items:center; gap:3px;"><span class="badge badge-grade-star-s" style="padding:0 3px !important; font-size:0.6rem !important;"><span class="star-icon" style="font-size:0.7rem;">★</span></span> Star S</span>
+                      <span style="display:inline-flex; align-items:center; gap:3px;"><span class="badge badge-grade-star-s" style="padding:0 3px !important; font-size:0.6rem !important;"><span class="star-icon" style="font-size:0.7rem;">★</span></span> ★ (100%)</span>
                     </div>
                   </div>
                   <div id="class-attendance-grid"></div>
@@ -1618,9 +1618,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   ? Math.round(completedStudents.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / completedStudents.length) 
                   : 0;
                 const avgGrade = completedStudents.length > 0 && typeof getGrade === 'function' ? getGrade(avgScore) : '—';
-                const cMap = { 'S': '#A855F7', 'A': '#00FF00', 'B': '#00FFFF', 'C': '#FFFF00', 'D': '#FF8000', 'E': '#FF0000', 'F': '#FF0000' };
+                const cMap = { '★': '#A855F7', 'S': '#A855F7', 'A': '#10B981', 'B': '#84CC16', 'C': '#EAB308', 'D': '#F97316', 'E': '#EF4444' };
                 const avgGradeColor = cMap[avgGrade] || '#94a3b8';
-                const isAvgGradeS = avgGrade === 'S';
+                const isAvgGradeS = avgGrade === '★' || avgGrade === 'S';
                 const avgBadgeStyle = isAvgGradeS
                   ? `background:rgba(168,85,247,0.18); color:#A855F7; font-weight:900; font-size:0.65rem; padding:0 5px; line-height:1.2; box-shadow:0 0 10px rgba(168,85,247,0.45); border:1px solid #A855F7;`
                   : `background:${avgGradeColor}; color:#000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
@@ -1860,7 +1860,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   width: '46px',
                   render: (val, row) => {
                     if (row.completedCount === 0) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
-                    const isGradeS = row.grade === 'S';
+                    const isGradeS = row.grade === '★' || row.grade === 'S';
                     return `
                       <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${isGradeS ? '#A855F7' : row.gradeColor}; font-size:0.75rem; line-height:1.1;">${row.averageScorePct}%</div>
                     `;
@@ -1893,7 +1893,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   align: 'center',
                   width: '62px',
                   render: (val, row) => {
-                    const isGradeS = row.grade === 'S';
+                    const isGradeS = row.grade === '★' || row.grade === 'S';
                     const ptsColor = isGradeS ? '#A855F7' : ((row.grade !== '—' && row.gradeColor) ? row.gradeColor : 'var(--clr-text-1)');
                     const ptsVal = Number(row.totalEarnedScore ?? 0);
                     const formattedPts = (ptsVal % 1 !== 0) ? ptsVal.toFixed(1) : ptsVal;

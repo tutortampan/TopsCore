@@ -843,6 +843,8 @@ tbody tr:last-child td {
   }
 }
 
+.grade-star,
+.grade-★,
 .grade-S {
   background: rgba(168, 85, 247, 0.18) !important;
   color: #A855F7 !important;
@@ -851,6 +853,8 @@ tbody tr:last-child td {
   animation: star-badge-glow 2.2s infinite ease-in-out;
 }
 
+.text-grade-star,
+.text-grade-★,
 .text-grade-S {
   color: #A855F7 !important;
   animation: star-text-gleam 2.2s infinite ease-in-out;
@@ -922,20 +926,6 @@ tbody tr:last-child td {
 
 .text-grade-E {
   color: #EF4444 !important;
-  filter: none !important;
-  text-shadow: none !important;
-}
-
-/* F: Legacy Fallback Alias to Merah Murni #FF0000 */
-.grade-F {
-  background: rgba(255, 0, 0, 0.16) !important;
-  color: #FF0000 !important;
-  border: 1.5px solid rgba(255, 0, 0, 0.7) !important;
-  box-shadow: none !important;
-}
-
-.text-grade-F {
-  color: #FF0000 !important;
   filter: none !important;
   text-shadow: none !important;
 }

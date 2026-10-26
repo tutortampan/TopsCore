@@ -208,7 +208,7 @@ export function isPrerequisiteMet(studentBestPercentage, requiredPercentage = 60
  */
 export function calculateGrade(percentage) {
   const num = Number(percentage) || 0;
-  if (num >= 100) return 'S';
+  if (num >= 100) return '★';
   const pct = Math.round(num);
   if (pct >= 90) return 'A';
   if (pct >= 80) return 'B';
@@ -240,7 +240,7 @@ export function calculateOverallStudentScore(takenPercentages = []) {
 }
 
 /**
- * Authoritative Grade & Score Palette
+ * Authoritative Grade & Score Palette (6 Clean Tiers: ★, A, B, C, D, E)
  * ★ Excellent  100%       Ungu (Purple)           #A855F7
  * A Very Good  90% – 99%  Hijau (Rich Green)      #10B981
  * B Good       80% – 89%  Lime (Yellow-Green)     #84CC16
@@ -248,21 +248,24 @@ export function calculateOverallStudentScore(takenPercentages = []) {
  * D Less       30% – 59%  Jingga / Orange         #F97316
  * E Fail       0% – 29%   Merah (Red)             #EF4444
  */
+const STAR_THEME = {
+  symbol: '★',
+  label: 'Excellent',
+  predicate: 'Excellent',
+  color: '#a855f7',       // Ungu / Purple (100% Star)
+  dark: '#7e22ce',
+  light: '#c084fc',
+  rgb: '168, 85, 247',
+  glow: 'rgba(168, 85, 247, 0.45)',
+  name: 'Excellent (100%)',
+  minScore: 100,
+  maxScore: 100,
+  sparkle: true
+};
+
 export const GRADE_PALETTE = {
-  S: {
-    symbol: '★',
-    label: 'Excellent',
-    predicate: 'Excellent',
-    color: '#a855f7',       // Ungu / Purple (100% Star)
-    dark: '#7e22ce',
-    light: '#c084fc',
-    rgb: '168, 85, 247',
-    glow: 'rgba(168, 85, 247, 0.45)',
-    name: 'Excellent (100%)',
-    minScore: 100,
-    maxScore: 100,
-    sparkle: true
-  },
+  '★': STAR_THEME,
+  S: STAR_THEME,          // Backward-compatibility alias for historical records
   A: {
     symbol: 'A',
     label: 'Very Good',
@@ -332,41 +335,13 @@ export const GRADE_PALETTE = {
     minScore: 0,
     maxScore: 29,
     sparkle: false
-  },
-  F: {
-    symbol: 'E',            // Legacy Alias to E (Red)
-    label: 'Fail',
-    predicate: 'Fail',
-    color: '#ef4444',
-    dark: '#dc2626',
-    light: '#f87171',
-    rgb: '239, 68, 68',
-    glow: 'rgba(239, 68, 68, 0.35)',
-    name: 'Fail (Legacy Fallback)',
-    minScore: 0,
-    maxScore: 29,
-    sparkle: false
-  },
-  R: {
-    symbol: 'C',            // Remedial Max 60% falls in Grade C (Kuning #EAB308)
-    label: 'Enough',
-    predicate: 'Enough',
-    color: '#eab308',
-    dark: '#ca8a04',
-    light: '#fde047',
-    rgb: '234, 179, 8',
-    glow: 'rgba(234, 179, 8, 0.35)',
-    name: 'Remedial (Max 60% / Grade C)',
-    minScore: 60,
-    maxScore: 60,
-    sparkle: false
   }
 };
 
 export function getGradeColor(grade, isRemedial = false) {
-  const g = String(grade || '').toUpperCase();
-  if (g === 'R') return GRADE_PALETTE.C?.color || '#eab308';
-  return GRADE_PALETTE[g]?.color || '#94a3b8';
+  const g = String(grade || '').trim();
+  if (g === '★' || g.toUpperCase() === 'S') return GRADE_PALETTE['★']?.color || '#a855f7';
+  return GRADE_PALETTE[g.toUpperCase()]?.color || '#94a3b8';
 }
 
 export function getScoreColor(percentage, isRemedial = false) {
@@ -375,42 +350,41 @@ export function getScoreColor(percentage, isRemedial = false) {
 }
 
 export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
-  let baseSymbol;
   if (percentage !== null && Number(percentage) >= 100) {
-    baseSymbol = '★';
-  } else {
-    const g = String(grade || '').toUpperCase();
-    if (g === 'S' || g === 'STAR' || g === '★' || g === '⭐') baseSymbol = '★';
-    else if (g === 'R') baseSymbol = 'C';
-    else baseSymbol = GRADE_PALETTE[g]?.symbol || g || '—';
+    return '★';
   }
-  return baseSymbol;
+  const g = String(grade || '').trim();
+  if (g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR') {
+    return '★';
+  }
+  return GRADE_PALETTE[g.toUpperCase()]?.symbol || g || '—';
 }
 
 export function formatGradeBadgeHtml(grade, isRemedial = false, customStyle = '') {
-  const g = String(grade || '').toUpperCase();
-  const color = getGradeColor(g);
-  const isS = g === 'S' || g === '★' || g === 'STAR' || g === '⭐';
-  const displayLetter = isS ? '★' : (g === 'R' ? 'C' : g);
+  const g = String(grade || '').trim();
+  const isStar = g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR';
+  const displayLetter = isStar ? '★' : g.toUpperCase();
+  const color = isStar ? '#A855F7' : (GRADE_PALETTE[displayLetter]?.color || '#94a3b8');
   
-  if (isS) {
-    return `<span class="badge" style="background:rgba(168,85,247,0.18); color:#A855F7; font-weight:900; box-shadow:0 0 10px rgba(168,85,247,0.45); border:1px solid #A855F7; padding:2px 7px; display:inline-flex; align-items:center; ${customStyle}">${displayLetter}</span>`;
+  if (isStar) {
+    return `<span class="badge" style="background:rgba(168,85,247,0.18); color:#A855F7; font-weight:900; box-shadow:0 0 10px rgba(168,85,247,0.45); border:1px solid #A855F7; padding:2px 7px; display:inline-flex; align-items:center; ${customStyle}">★</span>`;
   }
   return `<span class="badge" style="background:${color}; color:#000; font-weight:800; padding:2px 7px; display:inline-flex; align-items:center; ${customStyle}">${displayLetter}</span>`;
 }
 
 export function getGradeTheme(grade, isRemedial = false) {
-  const g = String(grade || '').toUpperCase();
-  const effectiveGrade = (g === 'STAR' || g === '★' || g === '⭐') ? 'S' : (g === 'R' ? 'C' : g);
-  const theme = GRADE_PALETTE[effectiveGrade] || {
-    symbol: g || '—',
-    color: '#94a3b8',
-    dark: '#64748b',
-    light: '#cbd5e1',
-    rgb: '148, 163, 184',
-    glow: 'rgba(148, 163, 184, 0.25)',
-    name: 'Standard',
-    sparkle: false
+  const g = String(grade || '').trim();
+  const isStar = (g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR');
+  const effectiveKey = isStar ? '★' : g.toUpperCase();
+  const theme = GRADE_PALETTE[effectiveKey] || {
+    symbol: isStar ? '★' : (g || '—'),
+    color: isStar ? '#a855f7' : '#94a3b8',
+    dark: isStar ? '#7e22ce' : '#64748b',
+    light: isStar ? '#c084fc' : '#cbd5e1',
+    rgb: isStar ? '168, 85, 247' : '148, 163, 184',
+    glow: isStar ? 'rgba(168, 85, 247, 0.45)' : 'rgba(148, 163, 184, 0.25)',
+    name: isStar ? 'Excellent (100%)' : 'Standard',
+    sparkle: isStar
   };
   if (isRemedial) {
     return {
@@ -424,33 +398,31 @@ export function getGradeTheme(grade, isRemedial = false) {
 
 /**
  * Authoritative Achievement Status (Official Predicate)
- * Strictly 6 states: FAIL (0-29%), LESS (30-59%), ENOUGH (60-79%), GOOD (80-89%), VERY GOOD (90-99%), EXCELLENT (100%).
- * REMEDIAL is an exam condition/status, NOT an Achievement Status!
+ * Strictly 6 official tiers: FAIL (0-29%), LESS (30-59%), ENOUGH (60-79%), GOOD (80-89%), VERY GOOD (90-99%), EXCELLENT (100%).
  */
 export function getAchievementStatus(grade, percentage = null) {
-  let g = String(grade || '').toUpperCase();
-  if (g === 'R' || !['S', 'STAR', '★', 'A', 'B', 'C', 'D', 'E', 'F'].includes(g)) {
+  const g = String(grade || '').trim();
+  if (g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR') {
+    return 'EXCELLENT';
+  }
+  let effGrade = g.toUpperCase();
+  if (!['A', 'B', 'C', 'D', 'E'].includes(effGrade)) {
     const p = parseFloat(percentage ?? 0);
-    if (p >= 100) g = 'S';
-    else if (p >= 90) g = 'A';
-    else if (p >= 80) g = 'B';
-    else if (p >= 60) g = 'C';
-    else if (p >= 30) g = 'D';
-    else g = 'E';
+    if (p >= 100) return 'EXCELLENT';
+    if (p >= 90) effGrade = 'A';
+    else if (p >= 80) effGrade = 'B';
+    else if (p >= 60) effGrade = 'C';
+    else if (p >= 30) effGrade = 'D';
+    else effGrade = 'E';
   }
   const map = {
-    S: 'EXCELLENT',
-    STAR: 'EXCELLENT',
-    '★': 'EXCELLENT',
-    '⭐': 'EXCELLENT',
     A: 'VERY GOOD',
     B: 'GOOD',
     C: 'ENOUGH',
     D: 'LESS',
-    E: 'FAIL',
-    F: 'FAIL'
+    E: 'FAIL'
   };
-  return map[g] || 'ENOUGH';
+  return map[effGrade] || 'ENOUGH';
 }
 
 /** Alias for normalizeAnswerText */

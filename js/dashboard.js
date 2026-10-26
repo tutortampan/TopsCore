@@ -1665,15 +1665,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
               ${bestPct !== null ? `
                 <div style="text-align:center;">
-                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColors[grade] || 'var(--clr-text-1)'}${grade === 'S' ? ';text-shadow:0 0 10px rgba(168, 85, 247, 0.45);' : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</div>
+                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColors[grade] || 'var(--clr-text-1)'}${(grade === '★' || grade === 'S') ? ';text-shadow:0 0 10px rgba(168, 85, 247, 0.45);' : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</div>
                   <div style="font-size:0.7rem;color:var(--clr-text-3);">Best Score</div>
                 </div>
-                ${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial)
-                  ? `<div class="grade-remedial" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#eab308'};color:${gradeColors[grade] || '#eab308'};">${grade}</div>`
-                  : (grade === 'S'
-                    ? `<div class="grade-S" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(168, 85, 247, 0.45);color:#A855F7;">★</div>`
-                    : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#64748b'};color:${gradeColors[grade] || '#64748b'};">${getGradeSymbol(grade)}</div>`
-                  )
+                ${(grade === '★' || grade === 'S' || bestPct >= 100)
+                  ? `<div class="grade-star" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(168, 85, 247, 0.45);color:#A855F7;border:1.5px solid #A855F7;">★</div>`
+                  : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#64748b'};color:${gradeColors[grade] || '#64748b'};">${getGradeSymbol(grade)}</div>`
                 }
               ` : ''}
               ${actionBtn}
@@ -1773,7 +1770,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       scoreEl.textContent = `${avgPct}%`;
       scoreEl.className = `fw-800 banner-score-text text-grade-${overallGrade}`;
 
-      const isGradeS = overallGrade === 'S' || avgPct >= 100;
+      const isGradeS = overallGrade === '★' || overallGrade === 'S' || avgPct >= 100;
       const gradeBadgeValue = document.getElementById('stat-overall-grade-value');
       if (gradeBadgeValue) {
         if (isGradeS) {
@@ -1855,9 +1852,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           avatarBox.style.background = 'linear-gradient(135deg, #C084FC 0%, #A855F7 45%, #7E22CE 100%)';
           avatarBox.style.boxShadow = '0 0 25px rgba(168, 85, 247, 0.85), 0 0 45px rgba(168, 85, 247, 0.45)';
           avatarBox.style.border = '2.5px solid #a855f7';
-          avatarBox.classList.add('grade-S');
+          avatarBox.classList.add('grade-star');
         } else {
-          avatarBox.classList.remove('grade-S');
+          avatarBox.classList.remove('grade-star');
           avatarBox.style.background = 'rgba(15, 23, 42, 0.9)';
           avatarBox.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.45), 0 4px 14px rgba(0, 0, 0, 0.35)`;
           avatarBox.style.border = `2.5px solid ${targetColor}`;
@@ -1870,9 +1867,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         scoreVal.style.color = targetColor;
         if (isGradeS) {
           scoreVal.style.filter = 'drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 24px rgba(168, 85, 247, 0.45))';
-          scoreVal.classList.add('text-grade-S');
+          scoreVal.classList.add('text-grade-star');
         } else {
-          scoreVal.classList.remove('text-grade-S');
+          scoreVal.classList.remove('text-grade-star');
           scoreVal.style.filter = `drop-shadow(0 0 10px rgba(${rgbColor}, 0.55))`;
         }
       }
@@ -1883,9 +1880,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         gradeVal.style.color = targetColor;
         if (isGradeS) {
           gradeVal.style.filter = 'drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 24px rgba(168, 85, 247, 0.45))';
-          gradeVal.classList.add('text-grade-S');
+          gradeVal.classList.add('text-grade-star');
         } else {
-          gradeVal.classList.remove('text-grade-S');
+          gradeVal.classList.remove('text-grade-star');
           gradeVal.style.filter = `drop-shadow(0 0 10px rgba(${rgbColor}, 0.55))`;
         }
       }
@@ -2060,10 +2057,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
               <span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(className)}</span>
             </td>
             <td>
-              <span class="fw-700 text-grade-${grade}" style="font-size:1rem; ${grade === 'S' ? 'filter:drop-shadow(0 0 6px rgba(251,191,36,0.6)); font-weight:900;' : ''}">${pct}%</span>
+              <span class="fw-700 ${(grade === '★' || grade === 'S') ? 'text-grade-star' : `text-grade-${grade}`}" style="font-size:1rem; ${(grade === '★' || grade === 'S') ? 'filter:drop-shadow(0 0 6px rgba(168,85,247,0.6)); font-weight:900;' : ''}">${pct}%</span>
             </td>
             <td>
-              <span class="grade-badge grade-${grade}" style="width:28px;height:28px;font-size:0.82rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${grade === 'S' ? '' : `color:#fff;border:1.5px solid ${gradeColor};`}">${displayGrade}</span>
+              <span class="grade-badge ${(grade === '★' || grade === 'S') ? 'grade-star' : `grade-${grade}`}" style="width:28px;height:28px;font-size:0.82rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${(grade === '★' || grade === 'S') ? '' : `color:#fff;border:1.5px solid ${gradeColor};`}">${displayGrade}</span>
             </td>
             <td class="text-muted text-sm">
               ${escapeHtml(dateStr)}
@@ -2079,12 +2076,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           <div class="completed-Assessment-mobile-card" onclick="${navLink}" style="padding: 8px 12px; gap: 4px; margin-bottom: 6px;">
             <div class="Assessment-card-header" style="margin-bottom: 2px;">
               <div class="Assessment-card-title" style="font-size: 0.9rem; line-height: 1.3;">${escapeHtml(AssessmentTitle)}</div>
-              <span class="grade-badge grade-${grade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${grade === 'S' ? '' : `color:#fff;border:1px solid ${gradeColor};`} flex-shrink:0;">${displayGrade}</span>
+              <span class="grade-badge ${(grade === '★' || grade === 'S') ? 'grade-star' : `grade-${grade}`}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${(grade === '★' || grade === 'S') ? '' : `color:#fff;border:1px solid ${gradeColor};`} flex-shrink:0;">${displayGrade}</span>
             </div>
             
             <div class="Assessment-card-footer" style="margin-top: 0;">
               <div style="display:flex;align-items:center;gap:8px; font-size: 0.75rem;">
-                <span style="color:var(--clr-text-3);">Score: <strong style="color:${gradeColor}; ${grade === 'S' ? 'filter:drop-shadow(0 0 4px rgba(251,191,36,0.6)); font-weight:900;' : ''}">${pct}%</strong></span>
+                <span style="color:var(--clr-text-3);">Score: <strong style="color:${gradeColor}; ${(grade === '★' || grade === 'S') ? 'filter:drop-shadow(0 0 4px rgba(168,85,247,0.6)); font-weight:900;' : ''}">${pct}%</strong></span>
                 <span style="color:var(--clr-text-3);">&bull;</span>
                 <span>${statusBadgeMobile}</span>
               </div>

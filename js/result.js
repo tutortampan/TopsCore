@@ -552,8 +552,8 @@ if (!session) {
         const isRemedial = Boolean(attempt.is_remedial_unlocked);
         const pct = isRemedial ? Math.min(rawPct, 60.0) : parseFloat(attempt.effective_score ?? rawPct);
         const grade = getGrade(pct);
-        const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, isRemedial) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE.F;
-        const isGradeS = (grade === 'S' || grade === 'STAR');
+        const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, isRemedial) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
+        const isGradeS = (grade === '★' || grade === 'S' || grade === 'STAR' || pct >= 100);
 
         // FEATURE 1: Launch grade-specific background particles
         launchBgParticles(grade);
@@ -703,7 +703,7 @@ if (!session) {
           return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
         };
 
-        const isGradeSOr100 = (pct >= 100 || grade === 'S' || grade === 'STAR');
+        const isGradeSOr100 = (pct >= 100 || grade === '★' || grade === 'S' || grade === 'STAR');
         const currentTier = isGradeSOr100 ? 'S' : grade;
         let gradeColor = isGradeSOr100 ? '#a855f7' : (standardGradeColors[grade] || '#a855f7');
         const rgbColor = hexToRgbString(gradeColor);
@@ -809,14 +809,16 @@ if (!session) {
 
         const gradeStamp = document.getElementById('result-grade-stamp');
         if (gradeStamp) {
-          gradeStamp.className = `result-grade-stamp pure-stamp grade-${grade}`;
+          const stampClass = (grade === '★' || grade === 'S') ? 'grade-star' : `grade-${grade}`;
+          gradeStamp.className = `result-grade-stamp pure-stamp ${stampClass}`;
           gradeStamp.textContent = grade;
           gradeStamp.style.color = gradeColor;
         }
 
         // 3. Percentage in Dual Score & Grade Card (Synchronized font color with Grade)
         const pctEl = document.getElementById('result-percentage');
-        pctEl.className = `result-percentage text-grade-${grade}`;
+        const textGradeClass = (grade === '★' || grade === 'S') ? 'text-grade-star' : `text-grade-${grade}`;
+        pctEl.className = `result-percentage ${textGradeClass}`;
 
         const scoreColor = gradeColor;
         const scoreGlow = `0 0 16px ${hexToRgba(scoreColor, 0.65)}, 0 0 32px ${hexToRgba(scoreColor, 0.35)}`;
@@ -1122,8 +1124,8 @@ if (!session) {
         const dateStr = a.submitted_at ? new Date(a.submitted_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
         const isRemRow = Boolean(a.is_remedial_unlocked || a.is_remedial);
         const remTag = isRemRow ? '<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : '';
-        const aTheme = (typeof getGradeTheme === 'function' ? getGradeTheme(ag) : null) || GRADE_PALETTE[ag] || GRADE_PALETTE.F;
-        const isGradeS = (ag === 'S' || ag === 'STAR' || ag === '★');
+        const aTheme = (typeof getGradeTheme === 'function' ? getGradeTheme(ag) : null) || GRADE_PALETTE[ag] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
+        const isGradeS = (ag === '★' || ag === 'S' || ag === 'STAR');
         const displayGrade = isGradeS ? '★' : ag;
         const badgeStyle = isGradeS
           ? 'background:rgba(168,85,247,0.18);color:#A855F7;border:1px solid #A855F7;box-shadow:0 0 10px rgba(168,85,247,0.45);'

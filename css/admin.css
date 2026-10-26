@@ -812,13 +812,13 @@ body {
   font-weight: 800;
   margin-right: 3px;
 }
-.form-pill.grade-s { background: linear-gradient(135deg, #fffbeb, #fde047, #fbbf24, #d97706); color: #1e1b4b; font-weight: 900; box-shadow: 0 0 12px rgba(245, 158, 11, 0.7); }
+.form-pill.grade-star,
+.form-pill.grade-s { background: linear-gradient(135deg, #c084fc, #a855f7, #7e22ce); color: #fff; font-weight: 900; box-shadow: 0 0 12px rgba(168, 85, 247, 0.7); }
 .form-pill.grade-a { background: linear-gradient(135deg, #34d399, #10b981); color: #fff; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
 .form-pill.grade-b { background: linear-gradient(135deg, #bef264, #84cc16); color: #1e1b4b; font-weight: 800; box-shadow: 0 0 8px rgba(132, 204, 22, 0.4); }
 .form-pill.grade-c { background: linear-gradient(135deg, #fef08a, #eab308); color: #1e1b4b; font-weight: 800; box-shadow: 0 0 8px rgba(234, 179, 8, 0.35); }
 .form-pill.grade-d { background: linear-gradient(135deg, #fb923c, #f97316); color: #fff; box-shadow: 0 0 8px rgba(249, 115, 22, 0.35); }
 .form-pill.grade-e { background: linear-gradient(135deg, #fca5a5, #ef4444); color: #fff; box-shadow: 0 0 8px rgba(239, 68, 68, 0.35); }
-.form-pill.grade-f { background: linear-gradient(135deg, #fca5a5, #ef4444); color: #fff; box-shadow: 0 0 8px rgba(239, 68, 68, 0.35); }
 
 /* ============================================================
    6. MATTE BUTTONS & FILTER CONTROLS

@@ -1287,14 +1287,14 @@
       height: auto !important;
       min-height: 0 !important;
     }
+    .result-grade-stamp.pure-stamp.grade-star,
+    .result-grade-stamp.pure-stamp.grade-★,
     .result-grade-stamp.pure-stamp.grade-S { color: #A855F7 !important; filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.65)) drop-shadow(0 0 28px rgba(168, 85, 247, 0.35)) !important; }
     .result-grade-stamp.pure-stamp.grade-A { color: #10B981 !important; }
     .result-grade-stamp.pure-stamp.grade-B { color: #84CC16 !important; }
     .result-grade-stamp.pure-stamp.grade-C { color: #EAB308 !important; }
     .result-grade-stamp.pure-stamp.grade-D { color: #F97316 !important; }
-    .result-grade-stamp.pure-stamp.grade-E,
-    .result-grade-stamp.pure-stamp.grade-F { color: #EF4444 !important; }
-    .result-grade-stamp.pure-stamp.grade-remedial { color: #EAB308 !important; }
+    .result-grade-stamp.pure-stamp.grade-E { color: #EF4444 !important; }
 
     @keyframes stamp-slam {
       0% {

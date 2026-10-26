@@ -622,7 +622,7 @@ export async function renderStudents(area) {
             <div style="flex:1;min-width:90px;">
               <div class="text-xs text-muted">Global Grade</div>
               <div style="margin-top:2px;">
-                <span class="badge" style="${rec.globalGrade === 'S' || rec.globalGrade === '★' ? 'background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;' : `background:${rec.overallColor};color:#000;font-weight:800;`}font-size:0.85rem;padding:3px 10px;">${rec.globalGrade === 'S' ? '★' : rec.globalGrade}${rec.hasRemedial ? '<sup style="font-size:0.65em;font-weight:900;margin-left:1px;">R</sup>' : ''}</span>
+                <span class="badge" style="${rec.globalGrade === 'S' || rec.globalGrade === '★' ? 'background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;' : `background:${rec.overallColor};color:#000;font-weight:800;`}font-size:0.85rem;padding:3px 10px;">${(rec.globalGrade === 'S' || rec.globalGrade === '★') ? '★' : rec.globalGrade}</span>
               </div>
             </div>
             <div style="flex:1.2;min-width:120px;">
@@ -805,7 +805,7 @@ export async function renderStudents(area) {
           </div>
           <div class="profile-kpi-card">
             <div class="profile-kpi-label">Overall Score</div>
-            <div class="profile-kpi-val" style="color: ${rec.overallColor || 'var(--fm-text-primary, #f8fafc)'}; ${rec.globalGrade === 'S' ? 'filter:drop-shadow(0 0 8px rgba(251,191,36,0.6)); font-weight:900;' : ''}">${rec.overallScoreStr || '—'}</div>
+            <div class="profile-kpi-val" style="color: ${rec.overallColor || 'var(--fm-text-primary, #f8fafc)'}; ${(rec.globalGrade === 'S' || rec.globalGrade === '★') ? 'filter:drop-shadow(0 0 8px rgba(168,85,247,0.6)); font-weight:900;' : ''}">${rec.overallScoreStr || '—'}</div>
           </div>
           <div class="profile-kpi-card">
             <div class="profile-kpi-label">Curriculum Done</div>
@@ -1809,9 +1809,9 @@ export async function renderStudents(area) {
         align: 'center',
         width: '65px',
         render: (row) => row.globalGrade !== '-' && row.globalGrade !== '—' 
-          ? (row.globalGrade === 'S'
-            ? `<span class="badge" style="background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;font-size:0.8rem;padding:2px 8px;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;">S${row.hasRemedial ? '<sup style="font-size:0.65em;font-weight:900;margin-left:1px;">R</sup>' : ''}</span>`
-            : `<span class="badge" style="background:${row.overallColor};color:#000;font-weight:800;font-size:0.8rem;padding:2px 8px;">${row.globalGrade}${row.hasRemedial ? '<sup style="font-size:0.65em;font-weight:900;margin-left:1px;">R</sup>' : ''}</span>`
+          ? ((row.globalGrade === 'S' || row.globalGrade === '★')
+            ? `<span class="badge" style="background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;font-size:0.8rem;padding:2px 8px;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;">★</span>`
+            : `<span class="badge" style="background:${row.overallColor};color:#000;font-weight:800;font-size:0.8rem;padding:2px 8px;">${row.globalGrade}</span>`
           )
           : '—'
       },

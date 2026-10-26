@@ -420,5 +420,27 @@ User provided the official Grading Scale diagram (tablet & printout specificatio
 - Remedial students are fairly assessed up to the maximum 60% passing threshold with clear distinction on score percentages.
 - Clean code architecture across both client ES modules and Supabase Edge Functions.
 
+---
 
+## DECISION-020 — Elimination of Grades "S", "F", and "R" in Favor of Canonical 6-Tier Scale (★, A, B, C, D, E)
 
+Date: 2026-10-27
+Status: ACCEPTED (SUPERSEDES DECISION-019 regarding the letter representation of the 100% Star tier)
+
+### Context
+User requirement: "hilangkan grade 'S' dan 'F', serta 'R'".
+1. **Grade "S"**: The Star tier (100%) must be represented strictly by the canonical symbol `★` (U+2605), not the letter "S".
+2. **Grade "F"**: Fail tier (0%–29%) is represented exclusively by Grade `E`. The legacy alias "F" is eliminated.
+3. **Grade "R"**: Remedial is an assessment condition, not a grade symbol. Remedial attempts receive Grade `C` (derived from the 60% cap). Grade "R" does not exist in any grading scale, palette, or badge.
+
+### Decision
+1. `calculateGrade(percentage)` returns `'★'` directly when score >= 100%. Allowed grade outputs across the system are strictly: `★`, `A`, `B`, `C`, `D`, `E`.
+2. `GRADE_PALETTE` has `'★'` as its primary key. The keys `'F'` and `'R'` are removed. Key `'S'` is preserved solely as a backwards-compatibility alias for older database records.
+3. Database Edge Function `submit-assessment` and PostgreSQL fallback RPCs assign `v_grade := '★'` when effective score >= 100.
+4. CSS stylesheets define `.grade-star`, `.grade-★`, `.text-grade-star`, `.text-grade-★` with purple `#A855F7`, and remove `.grade-F` and `.form-pill.grade-f`.
+5. Grade badges display clean symbols (`★`, `A`, `B`, `C`, `D`, `E`). Remedial status `R` is attached exclusively to the Score percentage (`%`).
+
+### Consequences
+- Unambiguous 6-tier grade nomenclature matching official institution standards: ★, A, B, C, D, E.
+- Zero confusion between remedial attempts and grade letters.
+- Flawless visual consistency across frontend, database, and backend functions.

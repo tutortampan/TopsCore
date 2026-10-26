@@ -3432,7 +3432,7 @@ BEGIN
 
   -- Centralized authoritative grade mapping (Official Scale: ★ 100%, A 90-99%, B 80-89%, C 60-79%, D 30-59%, E 0-29%)
   IF v_effective_score >= 100 THEN
-    v_grade := 'S';
+    v_grade := '★';
   ELSIF v_effective_score >= 90 THEN
     v_grade := 'A';
   ELSIF v_effective_score >= 80 THEN
@@ -3661,7 +3661,7 @@ BEGIN
 
   -- Centralized authoritative grade mapping (Official Scale: ★ 100%, A 90-99%, B 80-89%, C 60-79%, D 30-59%, E 0-29%)
   IF v_effective_score >= 100 THEN
-    v_grade := 'S';
+    v_grade := '★';
   ELSIF v_effective_score >= 90 THEN
     v_grade := 'A';
   ELSIF v_effective_score >= 80 THEN

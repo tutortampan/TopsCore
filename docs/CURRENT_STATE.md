@@ -1,14 +1,37 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-27 00:04 UTC+8
+Last Updated: 2026-10-27 00:30 UTC+8
 
-Current Phase: Phase 125: CSS Cross-Browser Prefix & Compatibility Fixes [COMPLETE]
+Current Phase: Phase 126: Elimination of Grades "S", "F", and "R" in Favor of Canonical 6-Tier Scale (★, A, B, C, D, E) [COMPLETE]
 
-Current Task: Resolve all linter errors and warnings in `@[current_problems]`, ensuring `-webkit-user-select` and `-webkit-backdrop-filter` are correctly placed and ordered, replacing non-standard `min-height: auto` with `min-height: 0 !important;`, and removing deprecated `-webkit-overflow-scrolling`. [COMPLETE]
+Current Task: Eliminate grades "S", "F", and "R", making ★ the official 100% grade and E the sole failing grade, with remedial strictly receiving Grade C and attaching 'R' superscript exclusively to the Score percentage. [COMPLETE]
 
-Status: COMPLETE (All reported CSS cross-browser linter errors and warnings resolved across admin.css, result.css, assessment.css, and style.css; 39 JS files syntax-checked 0 errors).
+Status: COMPLETE (Canonical 6-tier grading scale ★, A, B, C, D, E active across frontend, Edge Functions, database schema, and CSS; grades S, F, and R eliminated; 39 JS files syntax-checked 0 errors; cache bumped to v5.8.7).
 
 ## Completed
+
+- **Phase 126: Elimination of Grades "S", "F", and "R" in Favor of Canonical 6-Tier Scale (★, A, B, C, D, E)**:
+  - **1. Authoritative Grade Function Normalization (`js/grading.js`)**:
+    - `calculateGrade(percentage)`: returns `'★'` directly when score >= 100%. Canonical returns: `'★'`, `'A'`, `'B'`, `'C'`, `'D'`, `'E'`.
+    - `GRADE_PALETTE`: Added primary key `'★'`. Removed keys `F` and `R`. Retained `'S'` as alias for historical DB records.
+    - `getGradeSymbol`, `formatGradeBadgeHtml`, `getGradeTheme`: Display clean `'★'` without any "S", "F", or "R".
+    - `getAchievementStatus`: Simplified to 5 predicates (EXCELLENT, VERY GOOD, GOOD, ENOUGH, LESS, FAIL) without 'F' or 'R'.
+  - **2. Backend & Database Normalization (`submit-assessment`, SQL RPCs)**:
+    - `submit-assessment/index.ts`: `calculateGrade(pct)` returns `"★"` when `pct >= 100`.
+    - `emergency_submit_attempt` in `supabase/schema.sql`, `supabase_deploy/01_schema_and_functions.sql`, and `20261013080000_speech_answer_tolerance.sql`: sets `v_grade := '★'`.
+  - **3. UI & CSS Alignment**:
+    - `css/style.css`: Added `.grade-star`, `.grade-★`, `.text-grade-star`, `.text-grade-★` with purple `#A855F7`. Removed `.grade-F` and `.text-grade-F`.
+    - `css/admin.css`: Updated `.form-pill.grade-star, .form-pill.grade-s` to purple `#A855F7`. Removed `.form-pill.grade-f`.
+    - `css/result.css`: Added `.pure-stamp.grade-star, .pure-stamp.grade-★`. Removed `.pure-stamp.grade-F` and `.pure-stamp.grade-remedial`.
+    - `js/dashboard.js`: Removed `<div class="grade-remedial">`. Replaced grade "S" checks with `★`.
+    - `js/admin/app.js`: Legend updated to `"★ (100%)"`. `cMap` updated to canonical palette.
+    - `js/admin/student-management.js`: Cleaned grade badges to display `'★'`. Removed `${hasRemedial ? '<sup>R</sup>' : ''}` from Grade badges.
+    - `js/admin/assessment-management.js`: Replaced emoji `'⭐'` with clean `'★'`.
+    - `js/admin/assessment-access.js`: Corrected remedial session description from "Grade B" to "Grade C".
+  - **4. Cache & Tests**:
+    - Cache bumped to `abcd-core-v5.8.7` in `sw.js`, `admin.html`, and `result.html`.
+    - Node.js unit verification script `verify_grading.mjs` passed.
+    - `node scripts/check_all_js_syntax.cjs`: all 39 JS files passed syntax validation with 0 errors.
 
 - **Phase 125: CSS Cross-Browser Prefix & Compatibility Fixes**:
   - **1. Safari `-webkit-user-select` Prefixing**:

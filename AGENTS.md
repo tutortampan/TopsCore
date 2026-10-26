@@ -232,12 +232,17 @@ Centralized authoritative grading (Official Grading Scale):
 
 | Symbol | Predicate (Label) | Score Range | Main Color & Gradient | Hex Code |
 |:---:|:---:|:---:|:---:|:---:|
-| ★ (S) | Excellent | 100% | Ungu (Purple) | `#A855F7` |
+| ★ | Excellent | 100% | Ungu (Purple) | `#A855F7` |
 | A | Very Good | 90% – 99% | Hijau (Rich Green) | `#10B981` |
 | B | Good | 80% – 89% | Lime (Hijau Muda / Yellow-Green) | `#84CC16` |
 | C | Enough | 60% – 79% | Kuning (Yellow) | `#EAB308` |
 | D | Less | 30% – 59% | Jingga / Orange | `#F97316` |
 | E | Fail | 0% – 29% | Merah (Red) | `#EF4444` |
+
+### Non-Standard Grades Elimination:
+- **No Grade "S"**: 100% Star tier is strictly represented by the symbol `★` (U+2605). Grade "S" is eliminated.
+- **No Grade "F"**: Fail tier (0%–29%) is strictly Grade `E`. Grade "F" is eliminated.
+- **No Grade "R"**: Remedial receives Grade `C` (derived from the 60% cap). Grade "R" does not exist.
 
 ### Remedial Rules:
 - **Score Cap**: Maximum effective score is capped at **60%** (e.g., `Math.min(score, 60%)` or `Math.min(points, total_questions * 0.6)`).
