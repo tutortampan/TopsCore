@@ -12,6 +12,9 @@
 - `admin.html`:
   - Added `title` and `aria-label` attributes to `<select id="dup-q-assessment-select">`, `<select id="roster-add-student-select">`, and `<select id="add-class-program-id">`.
   - Added matching `for="..."` attributes on corresponding `<label>` elements.
+  - Replaced all inline styles across delete modal, duplicate students modal, duplicate questions modal, roster modal, add class modal, login screen, and footer banner with dedicated CSS utility classes.
+- `css/admin.css`:
+  - Added modal and console utility classes (`.modal-z-1000`, `.modal-box-lg`, `.modal-box-delete`, `.modal-box-roster`, `.modal-box-add-class`, `.dup-filter-bar`, `.dup-select-control`, `.btn-block`, `.flex-1`, `.font-bold`, `.font-bold-nowrap`, `.topscore-locked-banner` styling).
 - `dashboard.html`:
   - Added accessible labels, titles, and placeholders to `#banner-photo-input`, `#profile-modal-photo-input`, `#onboard-birth-date`, `#onboard-edu-inst-1`, `#onboard-edu-inst-2`, `#onboard-edu-year-1`, and `#onboard-edu-year-2`.
   - Removed obsolete duplicate elements `#dashboard-classes-bar`, `#classes-bar-current-name`, and `#classes-bar-progress-val` from legacy hidden compatibility container.
@@ -23,6 +26,7 @@
   - Removed deprecated `-webkit-overflow-scrolling: touch;` declarations.
 - `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`:
   - Standardized all unordered list bullets from asterisk (`*`) to dash (`-`) across docs to resolve MD004 markdownlint warnings.
+  - Fixed nested list indentation and ordering in `docs/SESSION_LOG.md`.
 
 ### Tests
 - command: `node scripts/check_all_js_syntax.cjs`
@@ -257,16 +261,16 @@
 - User Directives:
 - "achievement ststus 35px. dalam nama peringkat satu sudah ada gelar King/Queen, tidak perlu tambahkan icon king dan queen pada kolom nama lagi. lalu pada urutan, ada yang diganto logo mahkota, hilangkan itu, ganti dengan angka saja mulai nomer 2, dst. coba lakukan"
 - Revised architectural wireframe requested:
-    - Header: 50px
-    - Student Metadata Hero: 150px
-    - Achievement Status: 35px
-    - Rank Standings: Dynamic middle (fills remaining vertical space)
-- 4 Columns: `#` | `TITLE AND FULL NAME` | `GRADE` | `POINT`
-- Rank column strictly uses numbers (`1`, `2`, `3`, `4`...), NO crown icon or medal emoji replacements
-- Name column does not add redundant `👑 KING` / `👑 QUEEN` badge since honorific is already prefixed to the name
-    - Next Assessment Deck: 70px (20px label: `Next Assesment (Based on the class selected)` + 50px card with assessment title and prominent `GO ➔` button)
-    - Boxes of Classes: 50px (dynamically split into 1, 2, or 3 boxes for 1-tap class switching)
-    - Bottom Banner: 50px
+  - Header: 50px
+  - Student Metadata Hero: 150px
+  - Achievement Status: 35px
+  - Rank Standings: Dynamic middle (fills remaining vertical space)
+  - 4 Columns: `#` | `TITLE AND FULL NAME` | `GRADE` | `POINT`
+  - Rank column strictly uses numbers (`1`, `2`, `3`, `4`...), NO crown icon or medal emoji replacements
+  - Name column does not add redundant `👑 KING` / `👑 QUEEN` badge since honorific is already prefixed to the name
+  - Next Assessment Deck: 70px (20px label: `Next Assesment (Based on the class selected)` + 50px card with assessment title and prominent `GO ➔` button)
+  - Boxes of Classes: 50px (dynamically split into 1, 2, or 3 boxes for 1-tap class switching)
+  - Bottom Banner: 50px
 
 ### Changed
 - `dashboard.html`:

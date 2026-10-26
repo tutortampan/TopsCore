@@ -4508,3 +4508,186 @@ body.sidebar-collapsed .admin-main {
   transform: translateY(-1px);
 }
 
+/* ============================================================
+   ADMIN CONSOLE & MODAL UTILITIES (NO INLINE STYLES)
+   ============================================================ */
+.btn-block,
+.w-full {
+  width: 100% !important;
+}
+
+.flex-1 {
+  flex: 1 !important;
+}
+
+.auth-footer-link {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.8rem;
+}
+
+.admin-user-chip .btn-logout {
+  margin-left: auto !important;
+  font-size: 1.1rem !important;
+}
+
+.modal-z-1000 {
+  z-index: var(--z-modal, 1000) !important;
+}
+
+.modal-box-delete {
+  max-width: 420px !important;
+  text-align: center !important;
+}
+
+.delete-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-4);
+}
+
+.modal-box-lg {
+  max-width: 960px !important;
+  max-height: 88vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 24px !important;
+}
+
+.modal-header-bordered {
+  padding-bottom: 14px !important;
+  margin-bottom: 14px !important;
+  border-bottom: 1px solid var(--clr-border) !important;
+}
+
+.modal-title-lg {
+  margin: 0 !important;
+  font-size: 1.25rem !important;
+}
+
+.modal-subtitle {
+  margin: 4px 0 0 !important;
+}
+
+.font-bold {
+  font-weight: 700 !important;
+}
+
+.font-bold-nowrap {
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+}
+
+.dup-modal-content {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding-right: 6px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+}
+
+.dup-questions-content {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding-right: 6px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+.dup-filter-bar {
+  background: var(--clr-surface-2) !important;
+  border: 1px solid var(--clr-border) !important;
+}
+
+.dup-filter-col {
+  min-width: 240px !important;
+  flex: 1 !important;
+}
+
+.dup-select-control {
+  font-size: 0.85rem !important;
+  padding: 6px 10px !important;
+}
+
+.pt-16 {
+  padding-top: 16px !important;
+}
+
+.datagrid-drawer-close-btn {
+  font-size: 1.5rem !important;
+  line-height: 1 !important;
+  padding: 0 0.5rem !important;
+}
+
+.modal-box-roster {
+  max-width: 800px !important;
+  max-height: 80vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 24px !important;
+}
+
+.roster-add-bar {
+  display: flex !important;
+  gap: 10px !important;
+  margin-bottom: 15px !important;
+}
+
+.roster-table-scroll {
+  flex: 1 !important;
+  overflow-y: auto !important;
+}
+
+.roster-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.roster-table tr {
+  border-bottom: 1px solid var(--clr-border) !important;
+}
+
+.roster-table th {
+  padding: 8px 0 !important;
+}
+
+.modal-box-add-class {
+  max-width: 400px !important;
+  padding: 24px !important;
+}
+
+.modal-header-add-class {
+  margin-bottom: 16px !important;
+  border-bottom: 1px solid var(--clr-border) !important;
+  padding-bottom: 12px !important;
+}
+
+.add-class-levels-container {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  max-height: 120px !important;
+  overflow-y: auto !important;
+  padding: 10px !important;
+  border: 1px solid var(--clr-border) !important;
+  border-radius: 6px !important;
+  background: var(--clr-surface-2) !important;
+}
+
+.topscore-locked-banner .banner-brand {
+  color: #38bdf8 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+}
+
+.topscore-locked-banner .banner-divider {
+  opacity: 0.4 !important;
+  margin: 0 6px !important;
+}
+
+.topscore-locked-banner .banner-author {
+  color: #cbd5e1 !important;
+}
+
+

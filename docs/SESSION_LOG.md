@@ -279,10 +279,10 @@ Agent: Antigravity
    - Remedial: Score font `#FFFF00` (capped at 60%), Grade font `#FFFF00` (plain letter "R").
 3. **Vertically Stacked Points & Metrics Table**:
    - Restructured `#result-metrics-bar` into 4 separate vertical rows:
-- Row 1: `CORRECT` (left) | count (right, `#10b981`)
-- Row 2: `PARTIAL` (left) | count (right, `#f59e0b`)
-- Row 3: `INCORRECT` (left) | count (right, `#ef4444`)
-- Row 4: `POINTS` (left) | points earned (right, `#F8FAFC` or `#FFFF00` for remedial)
+     - Row 1: `CORRECT` (left) | count (right, `#10b981`)
+     - Row 2: `PARTIAL` (left) | count (right, `#f59e0b`)
+     - Row 3: `INCORRECT` (left) | count (right, `#ef4444`)
+     - Row 4: `POINTS` (left) | points earned (right, `#F8FAFC` or `#FFFF00` for remedial)
    - Styled with subtle bottom dividers, uniform proportional font sizing via `clamp(...)`, and responsive flex distribution.
 4. **Remedial Specifics**:
    - Kuning Murni (`#FFFF00` / `rgb(255, 255, 0)`) for aura, border, and text.
@@ -317,9 +317,9 @@ Design Baseline: Matte Modern Tokens, Global 10px Spacing, 50px Locked Bars, and
    - Score percentage styled in Modern Purple (`#a78bfa`).
 3. **Dashboard Hero Card Refactor (`#welcome-banner-section`)**:
    - Preserved 3-column horizontal hero layout:
-- Left: Clean score box (`#banner-score-box`) without label "Score".
-- Center: Interactive profile avatar (`cursor: pointer` + click upload modal).
-- Right: Symmetrical grade box (`#banner-grade-box`) without label "Grade".
+     - Left: Clean score box (`#banner-score-box`) without label "Score".
+     - Center: Interactive profile avatar (`cursor: pointer` + click upload modal).
+     - Right: Symmetrical grade box (`#banner-grade-box`) without label "Grade".
    - Grade S / 100% renders volumetric electric violet neon star (`.pure-star-svg`, `#a855f7`).
    - Eliminated `.pure-star-nobox` so `#banner-grade-box` retains symmetrical background and border.
    - Dynamic grade-tier outer border applied to `#welcome-banner-section`.
@@ -333,8 +333,8 @@ Design Baseline: Matte Modern Tokens, Global 10px Spacing, 50px Locked Bars, and
    - **Elemen 6**: Locked 50px TopsCore footer banner.
 5. **Automated Verification**:
    - Executed Playwright script (`scratch/verify_student_experience.js`) with Edge engine on mobile viewport `400×820`:
-- Dashboard: `bodyScrollHeight: 820` (Zero-Scroll PASS), `headerHeight: 50px`, `bannerHeight: 50px`, `heroDataTier: "A"`, dynamic emerald green border verified.
-- Result Page: `bodyScrollHeight: 820` (Zero-Scroll PASS), `headerHeight: 50px`, `bannerHeight: 50px`, `card1_CenteredAvatar: true`, `card4_Height: 60px`, `card4_ScoreColor: rgb(167, 139, 250)`, `card4_HasStarSvg: true`, `card4_GradeNoBoxClass: false`.
+     - Dashboard: `bodyScrollHeight: 820` (Zero-Scroll PASS), `headerHeight: 50px`, `bannerHeight: 50px`, `heroDataTier: "A"`, dynamic emerald green border verified.
+     - Result Page: `bodyScrollHeight: 820` (Zero-Scroll PASS), `headerHeight: 50px`, `bannerHeight: 50px`, `card1_CenteredAvatar: true`, `card4_Height: 60px`, `card4_ScoreColor: rgb(167, 139, 250)`, `card4_HasStarSvg: true`, `card4_GradeNoBoxClass: false`.
    - Captured visual artifacts: `dashboard_refactor_verified.png` and `result_refactor_verified.png`.
 
 ### Commitments

@@ -39,8 +39,8 @@
         <label class="form-label" for="admin-password">Password</label>
         <input class="form-control" type="password" id="admin-password" autocomplete="current-password" placeholder="Enter admin password" />
       </div>
-      <button class="btn btn-primary" style="width:100%;" id="admin-login-btn">Sign In to Tutor's Room</button>
-      <div class="auth-footer-link" style="text-align:center; margin-top:1rem; font-size:0.8rem;">
+      <button class="btn btn-primary btn-block" id="admin-login-btn">Sign In to Tutor's Room</button>
+      <div class="auth-footer-link">
         <a href="index.html">← Student's Lobby</a>
       </div>
     </div>
@@ -138,7 +138,7 @@
             <div class="user-name">Administrator</div>
             <div class="user-role">Super Admin</div>
           </div>
-          <button class="btn btn-ghost btn-icon btn-sm" id="admin-logout-btn" title="Logout" style="margin-left:auto;font-size:1.1rem;">&#128682;</button>
+          <button class="btn btn-ghost btn-icon btn-sm btn-logout" id="admin-logout-btn" title="Logout">&#128682;</button>
         </div>
       </div>
     </aside>
@@ -188,24 +188,24 @@
 
   <!-- Delete confirm modal -->
   <div class="modal-backdrop hidden" id="delete-modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
-    <div class="modal-box" style="max-width:420px;text-align:center;">
-      <div style="font-size:2.5rem;margin-bottom:var(--space-4);">&#9888;&#65039;</div>
+    <div class="modal-box modal-box-delete">
+      <div class="delete-icon">&#9888;&#65039;</div>
       <h3 id="delete-modal-title" class="mb-3">Delete Record?</h3>
       <p class="text-muted text-sm mb-6" id="delete-modal-message">This action soft-deletes the record. Historical data is preserved.</p>
       <div class="d-flex gap-3 justify-between">
-        <button class="btn btn-secondary" id="delete-cancel-btn" style="flex:1;">Cancel</button>
-        <button class="btn btn-danger" id="delete-confirm-btn" style="flex:1;">Delete</button>
+        <button class="btn btn-secondary flex-1" id="delete-cancel-btn">Cancel</button>
+        <button class="btn btn-danger flex-1" id="delete-confirm-btn">Delete</button>
       </div>
     </div>
   </div>
 
   <!-- --- DUPLICATE STUDENTS REVIEW & RESOLVER MODAL --- -->
-  <div class="modal-backdrop hidden" id="duplicate-students-modal" role="dialog" aria-modal="true" aria-labelledby="dup-students-modal-title" style="z-index:var(--z-modal,1000);">
-    <div class="modal-box" style="max-width:960px; max-height:88vh; display:flex; flex-direction:column; padding:24px;">
-      <div class="modal-header" style="padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--clr-border);">
+  <div class="modal-backdrop modal-z-1000 hidden" id="duplicate-students-modal" role="dialog" aria-modal="true" aria-labelledby="dup-students-modal-title">
+    <div class="modal-box modal-box-lg">
+      <div class="modal-header modal-header-bordered">
         <div>
-          <h3 id="dup-students-modal-title" style="margin:0; font-size:1.25rem;">&#128269; Duplicate Students Review &amp; Resolver</h3>
-          <p class="text-xs text-muted" style="margin:4px 0 0;">Compare duplicate student profiles side-by-side and safely unify their ASSESSMENT attempts and progress.</p>
+          <h3 id="dup-students-modal-title" class="modal-title-lg">&#128269; Duplicate Students Review &amp; Resolver</h3>
+          <p class="text-xs text-muted modal-subtitle">Compare duplicate student profiles side-by-side and safely unify their ASSESSMENT attempts and progress.</p>
         </div>
         <button class="btn btn-ghost btn-icon" id="close-dup-students-modal" aria-label="Close">✕</button>
       </div>
@@ -221,40 +221,40 @@
           </button>
         </div>
         <div class="d-flex gap-2">
-          <button class="btn btn-warning btn-sm" id="btn-merge-all-visible-students" style="font-weight:700;">
+          <button class="btn btn-warning btn-sm font-bold" id="btn-merge-all-visible-students">
             &#9889; Quick Merge All Groups
           </button>
         </div>
       </div>
 
       <!-- Content Area with Groups -->
-      <div id="dup-students-content" style="flex:1; overflow-y:auto; padding-right:6px; display:flex; flex-direction:column; gap:20px;">
+      <div id="dup-students-content" class="dup-modal-content">
         <div class="empty-state p-6 text-center"><div class="spinner"></div><p>Scanning for duplicate students...</p></div>
       </div>
     </div>
   </div>
 
   <!-- --- DUPLICATE QUESTIONS REVIEW & RESOLVER MODAL --- -->
-  <div class="modal-backdrop hidden" id="duplicate-questions-modal" role="dialog" aria-modal="true" aria-labelledby="dup-questions-modal-title" style="z-index:var(--z-modal,1000);">
-    <div class="modal-box" style="max-width:960px; max-height:88vh; display:flex; flex-direction:column; padding:24px;">
-      <div class="modal-header" style="padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--clr-border);">
+  <div class="modal-backdrop modal-z-1000 hidden" id="duplicate-questions-modal" role="dialog" aria-modal="true" aria-labelledby="dup-questions-modal-title">
+    <div class="modal-box modal-box-lg">
+      <div class="modal-header modal-header-bordered">
         <div>
-          <h3 id="dup-questions-modal-title" style="margin:0; font-size:1.25rem;">&#128269; Duplicate Questions Review &amp; Resequencer</h3>
-          <p class="text-xs text-muted" style="margin:4px 0 0;">Detect duplicate question texts within ASSESSMENTs and auto-resequence question orders seamlessly.</p>
+          <h3 id="dup-questions-modal-title" class="modal-title-lg">&#128269; Duplicate Questions Review &amp; Resequencer</h3>
+          <p class="text-xs text-muted modal-subtitle">Detect duplicate question texts within ASSESSMENTs and auto-resequence question orders seamlessly.</p>
         </div>
         <button class="btn btn-ghost btn-icon" id="close-dup-questions-modal" aria-label="Close">✕</button>
       </div>
 
       <!-- Scope / Filter Bar -->
-      <div class="d-flex align-center justify-between flex-wrap gap-3 mb-4 p-3 rounded" style="background:var(--clr-surface-2); border:1px solid var(--clr-border);">
-        <div class="d-flex align-center gap-3 flex-wrap" style="flex:1;">
-          <div style="min-width:240px; flex:1;">
+      <div class="d-flex align-center justify-between flex-wrap gap-3 mb-4 p-3 rounded dup-filter-bar">
+        <div class="d-flex align-center gap-3 flex-wrap flex-1">
+          <div class="dup-filter-col">
             <label class="text-xs text-muted d-block mb-1" for="dup-q-assessment-select">Filter by ASSESSMENT</label>
-            <select id="dup-q-assessment-select" class="form-control" title="Filter by ASSESSMENT" aria-label="Filter by ASSESSMENT" style="font-size:0.85rem; padding:6px 10px;">
+            <select id="dup-q-assessment-select" class="form-control dup-select-control" title="Filter by ASSESSMENT" aria-label="Filter by ASSESSMENT">
               <option value="">— All ASSESSMENTs —</option>
             </select>
           </div>
-          <div class="d-flex gap-2" style="padding-top:16px;">
+          <div class="d-flex gap-2 pt-16">
             <button class="btn btn-primary btn-sm dup-q-tab-btn" data-qtab="same_assessment" id="tab-btn-q-same">
               &#9888;&#65039; Same-ASSESSMENT Duplicates (<span id="dup-q-same-count">0</span>)
             </button>
@@ -266,15 +266,15 @@
             </button>
           </div>
         </div>
-        <div class="d-flex align-end" style="padding-top:16px;">
-          <button class="btn btn-danger btn-sm" id="btn-batch-clean-assessment-questions" style="font-weight:700; white-space:nowrap;">
+        <div class="d-flex align-end pt-16">
+          <button class="btn btn-danger btn-sm font-bold-nowrap" id="btn-batch-clean-assessment-questions">
             &#9889; Clean All &amp; Resequence (1..N)
           </button>
         </div>
       </div>
 
       <!-- Content Container -->
-      <div id="dup-questions-content" style="flex:1; overflow-y:auto; padding-right:6px; display:flex; flex-direction:column; gap:16px;">
+      <div id="dup-questions-content" class="dup-questions-content">
         <div class="empty-state p-6 text-center"><div class="spinner"></div><p>Scanning for duplicate questions...</p></div>
       </div>
     </div>
@@ -285,7 +285,7 @@
   <div id="datagrid-drawer" class="datagrid-drawer">
     <div class="datagrid-drawer-header">
       <h3 id="drawer-title">Record Details</h3>
-      <button class="btn btn-ghost btn-sm" onclick="closeRecordDrawer()" style="font-size:1.5rem; line-height:1; padding:0 0.5rem;">&times;</button>
+      <button class="btn btn-ghost btn-sm datagrid-drawer-close-btn" onclick="closeRecordDrawer()">&times;</button>
     </div>
     <div class="datagrid-drawer-body" id="drawer-body">
       <!-- Content dynamically inserted -->
@@ -317,25 +317,25 @@
   </script>
 
   <!-- Roster Modal -->
-  <div class="modal-backdrop hidden" id="roster-modal" role="dialog" aria-modal="true" aria-labelledby="roster-modal-title" style="z-index:var(--z-modal,1000);">
-    <div class="modal-box" style="max-width:800px; max-height:80vh; display:flex; flex-direction:column; padding:24px;">
-      <div class="modal-header" style="padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--clr-border);">
+  <div class="modal-backdrop modal-z-1000 hidden" id="roster-modal" role="dialog" aria-modal="true" aria-labelledby="roster-modal-title">
+    <div class="modal-box modal-box-roster">
+      <div class="modal-header modal-header-bordered">
         <div>
-          <h3 id="roster-modal-title" style="margin:0; font-size:1.25rem;">Class Roster</h3>
-          <p class="text-xs text-muted" style="margin:4px 0 0;" id="roster-modal-subtitle">Auto-enrolled vs Manually Added Students</p>
+          <h3 id="roster-modal-title" class="modal-title-lg">Class Roster</h3>
+          <p class="text-xs text-muted modal-subtitle" id="roster-modal-subtitle">Auto-enrolled vs Manually Added Students</p>
         </div>
         <button class="btn btn-ghost btn-icon" onclick="document.getElementById('roster-modal').classList.add('hidden')">✕</button>
       </div>
-      <div style="display:flex; gap:10px; margin-bottom:15px;">
-        <select id="roster-add-student-select" class="form-control" title="Select student to add to roster" aria-label="Select student to add to roster" style="flex:1;">
+      <div class="roster-add-bar">
+        <select id="roster-add-student-select" class="form-control flex-1" title="Select student to add to roster" aria-label="Select student to add to roster">
           <option value="">Loading students...</option>
         </select>
         <button class="btn btn-primary" id="roster-add-student-btn">Add to Roster</button>
       </div>
-      <div style="flex:1; overflow-y:auto;">
-        <table style="width:100%; border-collapse: collapse;">
+      <div class="roster-table-scroll">
+        <table class="roster-table">
           <thead>
-            <tr style="border-bottom: 1px solid var(--clr-border);"><th class="text-left" style="padding:8px 0;">Student Name</th><th class="text-right" style="padding:8px 0;">Enrollment Type</th></tr>
+            <tr><th class="text-left">Student Name</th><th class="text-right">Enrollment Type</th></tr>
           </thead>
           <tbody id="roster-modal-tbody">
             <!-- Dynamic rows -->
@@ -346,28 +346,28 @@
   </div>
 
   <!-- Add Class Modal -->
-  <div class="modal-backdrop hidden" id="add-class-modal" role="dialog" aria-modal="true" style="z-index:var(--z-modal,1000);">
-    <div class="modal-box" style="max-width:400px; padding:24px;">
-      <div class="modal-header" style="margin-bottom:16px; border-bottom:1px solid var(--clr-border); padding-bottom:12px;">
+  <div class="modal-backdrop modal-z-1000 hidden" id="add-class-modal" role="dialog" aria-modal="true">
+    <div class="modal-box modal-box-add-class">
+      <div class="modal-header modal-header-add-class">
         <div>
-          <h3 style="margin:0; font-size:1.25rem;">➕ Add Class</h3>
-          <p class="text-xs text-muted" style="margin:4px 0 0;" id="add-class-level-label">Inheriting Level</p>
+          <h3 class="modal-title-lg">➕ Add Class</h3>
+          <p class="text-xs text-muted modal-subtitle" id="add-class-level-label">Inheriting Level</p>
         </div>
         <button class="btn btn-ghost btn-icon" onclick="document.getElementById('add-class-modal').classList.add('hidden')">✕</button>
       </div>
-      <div class="form-group" style="margin-bottom:16px;">
+      <div class="form-group mb-4">
         <label class="form-label">Class Name</label>
         <input type="text" id="add-class-name" class="form-control" placeholder="e.g. Storytelling 1" required>
       </div>
-      <div class="form-group" style="margin-bottom:16px;">
+      <div class="form-group mb-4">
         <label class="form-label" for="add-class-program-id">Program</label>
         <select id="add-class-program-id" class="form-control" title="Select Program" aria-label="Select Program" required>
           <option value="">Select Program...</option>
         </select>
       </div>
-      <div class="form-group" style="margin-bottom:16px;">
+      <div class="form-group mb-4">
         <label class="form-label">Levels (Multiple selection allowed)</label>
-        <div id="add-class-level-checkboxes" style="display:flex; flex-wrap:wrap; gap:10px; max-height: 120px; overflow-y: auto; padding: 10px; border: 1px solid var(--clr-border); border-radius: 6px; background: var(--clr-surface-2);">
+        <div id="add-class-level-checkboxes" class="add-class-levels-container">
           <span class="text-muted text-sm">Loading levels...</span>
         </div>
       </div>
@@ -411,7 +411,7 @@
 
 
   <div id="bottom-ad-banner" class="topscore-locked-banner">
-    <span style="color:#38bdf8; font-weight:800; letter-spacing:0.04em;">TopsCore</span>&nbsp;&copy; 2026&nbsp;<span style="opacity:0.4; margin:0 6px;">|</span>&nbsp;<span style="color:#cbd5e1;">Created by Mr. Top</span>
+    <span class="banner-brand">TopsCore</span>&nbsp;&copy; 2026&nbsp;<span class="banner-divider">|</span>&nbsp;<span class="banner-author">Created by Mr. Top</span>
   </div>
 </body>
 </html>
