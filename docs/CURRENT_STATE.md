@@ -1,14 +1,24 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-26 23:58 UTC+8
+Last Updated: 2026-10-27 00:04 UTC+8
 
-Current Phase: Phase 124: Remedial "R" Placement Strictly on Score (Omitting "R" from Grade and Point) [COMPLETE]
+Current Phase: Phase 125: CSS Cross-Browser Prefix & Compatibility Fixes [COMPLETE]
 
-Current Task: Ensure the letter "R" (`<sup class="asm-rem-sup">R</sup>` or `ᴿ`) appears strictly and solely beside the **Score** percentage (`%`) on the result page (`result.html`) and the student grade page in class (`admin.html` Class Hub), omitting "R" from all Grade and Point displays. [COMPLETE]
+Current Task: Resolve all linter errors and warnings in `@[current_problems]`, ensuring `-webkit-user-select` and `-webkit-backdrop-filter` are correctly placed and ordered, replacing non-standard `min-height: auto` with `min-height: 0 !important;`, and removing deprecated `-webkit-overflow-scrolling`. [COMPLETE]
 
-Status: COMPLETE (Grade & Point clean without 'R'; Score percentage displays delicate 'R' superscript for remedial attempts; 39 JS files syntax-checked 0 errors; cache bumped to v5.8.6).
+Status: COMPLETE (All reported CSS cross-browser linter errors and warnings resolved across admin.css, result.css, assessment.css, and style.css; 39 JS files syntax-checked 0 errors).
 
 ## Completed
+
+- **Phase 125: CSS Cross-Browser Prefix & Compatibility Fixes**:
+  - **1. Safari `-webkit-user-select` Prefixing**:
+    - Added `-webkit-user-select: none;` to all 10 un-prefixed rules in `css/admin.css` and 9 rules in `css/result.css`.
+  - **2. Safari `-webkit-backdrop-filter` Prefixing & Ordering**:
+    - Added `-webkit-backdrop-filter` to standalone rules in `css/admin.css` and `css/assessment.css`.
+    - Corrected declaration order so vendor prefixes appear before standard `backdrop-filter` across `css/admin.css` and `css/result.css`.
+  - **3. Standard CSS Cleanups**:
+    - Replaced `min-height: auto !important;` in `css/result.css` with standard `min-height: 0 !important;`.
+    - Removed deprecated `-webkit-overflow-scrolling: touch` across `css/admin.css`, `css/result.css`, `css/assessment.css`, and `css/style.css`.
 
 - **Phase 124: Remedial "R" Placement Strictly on Score (Omitting "R" from Grade and Point)**:
   - **1. Grade & Symbol Sanitization (`js/grading.js`, `js/result.js`, `js/admin/class.js`, `js/dashboard.js`)**:

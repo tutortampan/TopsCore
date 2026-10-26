@@ -1,3 +1,38 @@
+## [2026-10-27 00:02] — Phase 125: CSS Cross-Browser Prefix & Compatibility Fixes
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 125 (CSS Cross-Browser & Linter Issue Resolution)
+**Status:** PASS
+
+### Why
+- Addressed linter errors and warnings in `@[current_problems]` across `css/admin.css`, `css/result.css`, `css/assessment.css`, and `css/style.css`.
+- Ensured 100% compliance with Safari/iOS Safari by adding `-webkit-user-select` and `-webkit-backdrop-filter`.
+- Standardized property ordering so vendor prefixes (`-webkit-backdrop-filter`) precede standard properties (`backdrop-filter`).
+- Removed deprecated `-webkit-overflow-scrolling: touch` and replaced non-standard `min-height: auto` with cross-browser `min-height: 0 !important;`.
+
+### Changed
+- `css/admin.css`:
+  - Added `-webkit-user-select: none;` to all 10 un-prefixed rules.
+  - Added `-webkit-backdrop-filter` to all 3 standalone rules.
+  - Reordered 7 occurrences so `-webkit-backdrop-filter` precedes `backdrop-filter`.
+  - Removed deprecated `-webkit-overflow-scrolling: touch;`.
+- `css/result.css`:
+  - Added `-webkit-user-select` to all 9 un-prefixed rules.
+  - Reordered 6 occurrences so `-webkit-backdrop-filter` precedes `backdrop-filter`.
+  - Replaced `min-height: auto !important;` with `min-height: 0 !important;`.
+  - Removed deprecated `-webkit-overflow-scrolling: touch !important;`.
+- `css/assessment.css`:
+  - Added `-webkit-backdrop-filter` to 4 modal and interactive containers.
+  - Removed deprecated `-webkit-overflow-scrolling: touch !important;`.
+- `css/style.css`:
+  - Removed deprecated `-webkit-overflow-scrolling: touch;`.
+
+### Verification
+- Full CSS scan confirmed all `user-select` and `backdrop-filter` properties have appropriate prefixes and order.
+- Node.js syntax test on all 39 JS files passed with 0 errors.
+
+---
+
 ## [2026-10-26 23:55] — Phase 124: Remedial "R" Placement Strictly on Score (Omitting "R" from Grade and Point)
 
 **Agent/Session:** Antigravity
