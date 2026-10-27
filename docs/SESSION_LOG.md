@@ -1,3 +1,41 @@
+## SESSION-20261028-0635
+
+Start: 2026-10-28 06:14 UTC+8  
+End: 2026-10-28 06:35 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"nilai2 disini terlihat salah, seharusnya exam bukan ini nilainya,,, cek lagi"
+(User attached screenshot of `http://127.0.0.1:5500/admin.html#class-hub` showing all exam points displayed as 40 for words and 10 for phrases, Theme TOT PTS as 50, and roster PTS as 140 pts/100 pts/90 pts/50 pts).
+
+### Objective
+Diagnose why exam points and score metrics were incorrect in the Class Hub matrix, fix the calculations across `app.js` and supporting renderers, verify with live database data and Playwright tests, and document the resolution.
+
+### Work Performed
+- **Root Cause Analysis**:
+  - Found `getAsmExpectedMax(asm)` in `js/admin/app.js` checked `/\bTEST\b/i` instead of `EXAM`.
+  - With recent terminology migration to `EXAM`, all weekly milestone exams (`3A-WORDS-EXAM`, `3B-WORDS-EXAM`, etc.) evaluated `isTest === false` and were capped to 40 (words) and 10 (phrases).
+  - Attempt scores up to 120, 280, 480 questions were capped to 40 and 10, forcing artificial multiples across the entire table.
+  - The summaryRow footer checked column keys with `asm_` instead of `test_`, leaving the footer blank for individual exam columns.
+- **Implementation**:
+  - Updated `getAsmExpectedMax` to prioritize `asm.payload?.total_questions`, `asm.total_questions`, and canonical `isWeeklyExam(asm)` with theme maximums (120/30, 280/70, 480/120, 640/160).
+  - Updated `vaultCountFor` to recognize `-EXAM`.
+  - Updated `studentsGridData` and column renderers to cap attempt scores against `totalQ = Number(att.total_questions || maxQ)` instead of quiz `maxQ`.
+  - Added remedial status checking fallback for `att.is_remedial`.
+  - Updated Theme Total Points calculation to aggregate exclusively from exams in the theme.
+  - Fixed summaryRow footer to match `test_` column keys, restoring class average scores and points for all columns.
+  - Updated DataGrid `sortComparator` for `test_` column sorting.
+  - Bumped cache query string in `admin.html` to `v=20261028`.
+- **Verification**:
+  - Verified against live Supabase data for Batch 133 students (Miss Syazida, Mr. Aunul Fikri, Mr. Unggul, Mr. Suharto).
+  - Ran Playwright E2E browser verification against live `admin.html#class-hub` and captured screenshot.
+  - Verified 0 JS syntax errors across all modified files.
+
+### Resume From
+Ready for user review. All exam points and scores in Class Hub attendance matrix accurately match database records.
+
+---
+
 ## SESSION-20261027-1630
 
 Start: 2026-10-27 16:07 UTC+8  

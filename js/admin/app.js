@@ -885,7 +885,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           const pl = r?.payload || {};
           const isUnified = pl.category === 'unified' || pl.is_unified === true || pl.is_unified_test === true || r?.test_type === 'UNIFIED_TEST';
           const wantPhrases = pl.category === 'phrases';
-          const isTest = (r?.category === 'TEST' || r?.test_category === 'TEST' || String(r?.test_type).toUpperCase() === 'TEST' || String(r?.test_type).toLowerCase() === 'exam' || (r?.shell_code && r.shell_code.includes('-TEST')) || r?.test_subtype === 'VOCAB_TEST' || r?.test_subtype === 'PHRASE_TEST') && !pl.topic_code;
+          const isTest = (r?.category === 'TEST' || r?.test_category === 'TEST' || String(r?.test_type).toUpperCase() === 'TEST' || String(r?.test_type).toLowerCase() === 'exam' || (r?.shell_code && (r.shell_code.includes('-TEST') || r.shell_code.includes('-EXAM'))) || r?.test_subtype === 'VOCAB_TEST' || r?.test_subtype === 'PHRASE_TEST') && !pl.topic_code;
           let themes = (pl.themes && Array.isArray(pl.themes) && pl.themes.length > 0) ? pl.themes : null;
           if (!themes && isTest && pl.theme_code) {
             const idx = _ALL_THEMES.indexOf(String(pl.theme_code).toUpperCase());
@@ -977,12 +977,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         classTests.sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
 
         const getAsmExpectedMax = (asm) => {
-          const isTest = asm.test_category === 'TEST' || 
-                         asm.payload?.test_category === 'TEST' || 
-                         asm.payload?.is_unified_test === true ||
-                         /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
-                         /\bTEST\b/i.test(asm.title || '');
-          const code = asm.payload?.shell_code || asm.shell_code || asm.title || '';
+          if (!asm) return 40;
+          if (asm.payload?.total_questions && Number(asm.payload.total_questions) > 0) {
+            return Number(asm.payload.total_questions);
+          }
+          if (asm.total_questions && Number(asm.total_questions) > 0) {
+            return Number(asm.total_questions);
+          }
+          const isTest = isWeeklyExam(asm);
+          const code = String(asm.payload?.shell_code || asm.shell_code || asm.title || '');
           const isPhrase = asm.payload?.category === 'phrases' || /PHRASES/i.test(code) || /phrase/i.test(asm.title || '');
           if (!isTest) return isPhrase ? 10 : 40;
           if (/3A/i.test(code) || /Workplace/i.test(code)) return isPhrase ? 30 : 120;
@@ -1071,8 +1074,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               if (submittedAtts.length > 0) {
                 // Sort by highest capped score, then highest percentage, then latest date
                 submittedAtts.sort((x, y) => {
-                  const xSc = Math.min(Number(x.score ?? 0), maxQ);
-                  const ySc = Math.min(Number(y.score ?? 0), maxQ);
+                  const xTotal = Number(x.total_questions || maxQ);
+                  const yTotal = Number(y.total_questions || maxQ);
+                  const xSc = Math.min(Number(x.score ?? 0), xTotal);
+                  const ySc = Math.min(Number(y.score ?? 0), yTotal);
                   const scoreDiff = ySc - xSc;
                   if (scoreDiff !== 0) return scoreDiff;
                   const pctDiff = Number(y.percentage ?? 0) - Number(x.percentage ?? 0);
@@ -1081,7 +1086,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 });
                 const topAtt = submittedAtts[0];
                 const markedBest = submittedAtts.find(a => a.is_best_score === true);
-                if (markedBest && Math.min(Number(markedBest.score ?? 0), maxQ) >= Math.min(Number(topAtt.score ?? 0), maxQ) && Number(markedBest.percentage ?? 0) >= Number(topAtt.percentage ?? 0) - 0.01) {
+                if (markedBest && Math.min(Number(markedBest.score ?? 0), Number(markedBest.total_questions || maxQ)) >= Math.min(Number(topAtt.score ?? 0), Number(topAtt.total_questions || maxQ)) && Number(markedBest.percentage ?? 0) >= Number(topAtt.percentage ?? 0) - 0.01) {
                   bestAtt = markedBest;
                 } else {
                   bestAtt = topAtt;
@@ -1093,10 +1098,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
             asmScores[asm.id] = bestAtt;
             const totalQ = Number(bestAtt?.total_questions || maxQ);
-            const rawEarned = bestAtt?.score != null ? Math.min(Number(bestAtt.score), maxQ) : 0;
+            const rawEarned = bestAtt?.score != null ? Math.min(Number(bestAtt.score), totalQ) : 0;
             const rawPct = bestAtt ? (bestAtt.percentage != null ? Number(bestAtt.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
             
-            const isRem = Boolean(bestAtt?.is_remedial_unlocked);
+            const isRem = Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial);
             const maxRemPts = totalQ * 0.6;
             const effEarned = isRem ? Math.min(rawEarned, maxRemPts) : rawEarned;
             const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
@@ -1588,7 +1593,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           const themeContainer = document.getElementById('attendance-theme-pills-container');
           if (themeContainer) {
             const btnAll = themeContainer.querySelector('[data-theme="ALL"]');
-            if (btnAll) btnAll.textContent = `🌐 ALL (TESTS ONLY)`;
+            if (btnAll) btnAll.textContent = `🌐 ALL (EXAMS ONLY)`;
             const btnA = themeContainer.querySelector('[data-theme="A"]');
             if (btnA) btnA.textContent = `🟦 THEME A (${themeAsmCounts['A'] || 8})`;
             const btnB = themeContainer.querySelector('[data-theme="B"]');
@@ -1636,19 +1641,21 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             // Pre-calculate theme total points for each student in studentsGridData
             sortedActiveThemes.forEach(tc => {
               const asmsInTheme = themeGroups[tc];
+              const examAsmsInTheme = asmsInTheme.filter(isWeeklyExam);
+              const targetAsms = examAsmsInTheme.length > 0 ? examAsmsInTheme : asmsInTheme;
               studentsGridData.forEach(row => {
                 let themeEarned = 0;
                 let hasAtt = false;
-                asmsInTheme.forEach(asm => {
+                targetAsms.forEach(asm => {
                   const att = row.asmScores?.[asm.id];
                   if (att) {
                     const st = String(att.status || '').toLowerCase();
                     if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
                       hasAtt = true;
-                      const isRem = Boolean(att.is_remedial_unlocked);
+                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                       const maxQ = getAsmExpectedMax(asm);
-                      const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
                       const totalQ = Number(att.total_questions || maxQ);
+                      const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
                       const maxRemPts = totalQ * 0.6;
                       const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
                       themeEarned += effSc;
@@ -1746,10 +1753,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       const st = String(att.status || '').toLowerCase();
                       if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:0.65rem;" title="In Progress">⏳</span>`;
                       if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                      const isRem = Boolean(att.is_remedial_unlocked);
+                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                       const maxQ = getAsmExpectedMax(asm);
-                      const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
                       const totalQ = Number(att.total_questions || maxQ);
+                      const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
                       const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
                       const maxRemPts = totalQ * 0.6;
                       const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
@@ -1793,10 +1800,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       const st = String(att.status || '').toLowerCase();
                       if (st === 'in_progress') return `<span style="color:#eab308; font-size:0.65rem;" title="In Progress">⏳</span>`;
                       if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                      const isRem = Boolean(att.is_remedial_unlocked);
+                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                       const maxQ = getAsmExpectedMax(asm);
-                      const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
                       const totalQ = Number(att.total_questions || maxQ);
+                      const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
                       const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
                       const maxRemPts = totalQ * 0.6;
                       const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
@@ -1844,10 +1851,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       const st = String(att.status || '').toLowerCase();
                       if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:0.65rem;" title="In Progress">⏳</span>`;
                       if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                      const isRem = Boolean(att.is_remedial_unlocked);
+                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                       const maxQ = getAsmExpectedMax(asm);
-                      const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
                       const totalQ = Number(att.total_questions || maxQ);
+                      const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
                       const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
                       const maxRemPts = totalQ * 0.6;
                       const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
@@ -1896,7 +1903,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   }
 
                   let themeMaxQ = 0;
-                  asmsInTheme.forEach(asm => {
+                  const examAsms = asmsInTheme.filter(isWeeklyExam);
+                  const targetAsms = examAsms.length > 0 ? examAsms : asmsInTheme;
+                  targetAsms.forEach(asm => {
                     themeMaxQ += getAsmExpectedMax(asm);
                   });
 
@@ -2013,10 +2022,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                         <div class="fw-700 text-xs" style="color:${weeklyCompletedStudents.length > 0 ? avgGradeColor : '#94a3b8'}; font-size:0.75rem; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(34,197,94,0.6)); color:#22C55E;' : ''}">${avgPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
                       </td>
                     `;
-                  } else if (col.key && col.key.startsWith('asm_')) {
+                  } else if (col.key && (col.key.startsWith('test_') || col.key.startsWith('asm_'))) {
                     const isPtsCol = col.key.endsWith('_pts');
                     const isPctCol = col.key.endsWith('_pct');
-                    const asmId = col.key.replace('asm_', '').replace('_pts', '').replace('_pct', '');
+                    const asmId = col.key.replace(/^test_/, '').replace(/^asm_/, '').replace('_pts', '').replace('_pct', '');
                     let count = 0;
                     let scoreSum = 0;
                     let pctSum = 0;
@@ -2024,10 +2033,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       const att = s.asmScores?.[asmId];
                       if (att && ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(att.status || '').toLowerCase())) {
                         count++;
-                        const sc = att.score != null ? Number(att.score) : 0;
-                        const isRem = Boolean(att.is_remedial_unlocked);
+                        const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                         const targetAsm = classTests.find(a => a.id === asmId);
-                        const tq = Number(att.total_questions || targetAsm?.total_questions || 50);
+                        const maxQ = getAsmExpectedMax(targetAsm);
+                        const tq = Number(att.total_questions || maxQ || 50);
+                        const sc = att.score != null ? Math.min(Number(att.score), tq) : 0;
                         const maxRemPts = tq * 0.6;
                         const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
                         const rawPct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
@@ -2038,7 +2048,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     });
                     const isTest = col.className && col.className.includes('col-exam');
                     const targetAsm = classTests.find(a => a.id === asmId);
-                    const totalQ = Number(targetAsm?.total_questions || (isTest ? 150 : 50));
+                    const totalQ = Number(targetAsm?.total_questions || getAsmExpectedMax(targetAsm) || (isTest ? 150 : 50));
                     if (count > 0) {
                       const avgSc = (scoreSum / count).toFixed(1).replace(/\.0$/, '');
                       const avgPct = Math.round(pctSum / count);
@@ -2145,7 +2155,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   if (scoreA !== scoreB) return scoreB - scoreA;
                 }
 
-                if (sortKey && (sortKey.startsWith('asm_') || sortKey.startsWith('theme_'))) {
+                if (sortKey && (sortKey.startsWith('test_') || sortKey.startsWith('asm_') || sortKey.startsWith('theme_'))) {
                   const scoreA = Number(a[sortKey] ?? -1);
                   const scoreB = Number(b[sortKey] ?? -1);
                   if (scoreA !== scoreB) {

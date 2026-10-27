@@ -1,14 +1,39 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-28 06:10 UTC+8
+Last Updated: 2026-10-28 06:35 UTC+8
 
-Current Phase: Phase 154: Student Dashboard Exam-Only Metrics & Ranking Parity [COMPLETE]
+Current Phase: Phase 155: Class Hub Exam Point & Maximum Questions Restoration [COMPLETE]
 
-Current Task: Autonomously locate and align Student Dashboard (Lobby / Student View) and Batch Leaderboard with Tutor Class Hub: points, score %, and grade evaluated exclusively from weekly exams; multi-tier ranking (PROG % > Global SCORE % > Global PTS) enforced [COMPLETE]
+Current Task: Investigate and fix inaccurate exam point values, column totals, and maximum questions calculations in Tutor's Room / Class Hub attendance matrix [COMPLETE]
 
-Status: COMPLETE (All student dashboard components, hero stats, and batch standings leaderboard synchronized to exam-only metrics; daily quizzes strictly isolated to progress & completion badges; multi-tier tie-breakers verified; neutral styling for 0-exam students implemented; 39/39 JS syntax valid; test suite 100% PASS; ready for atomic git commit & push per task instructions).
+Status: COMPLETE (Fixed getAsmExpectedMax to recognize exams and dynamic total questions; removed flawed 40/10 quiz caps on milestone exams; restored true exam points, Theme TOT PTS, and left roster Global PTS; resolved summaryRow footer test column key mismatch; verified live in Chromium with Playwright; 100% PASS).
 
 ## Completed
+
+- **Phase 155: Class Hub Exam Point & Maximum Questions Restoration**:
+  - **Root Cause Identified**:
+    - `getAsmExpectedMax(asm)` in `js/admin/app.js` contained an obsolete regex matching only `TEST` instead of `EXAM`.
+    - Following the terminology migration (`TEST` -> `EXAM`), all weekly milestone exams (`3A-WORDS-EXAM`, `3B-WORDS-EXAM`, etc.) failed `isTest` evaluation and were erroneously treated as daily quizzes with caps of 40 (words) and 10 (phrases).
+    - Students who earned 73 pts, 102 pts, 188.5 pts, etc. on 120/280/480-question exams were artificially capped down to 40 pts and 10 pts, Theme TOT PTS displayed 50, and left roster PTS displayed artificial multiples of 40 and 10 (e.g. 140 pts instead of 472.5 pts).
+    - In the summaryRow footer, column keys were checked using `asm_` instead of `test_`, leaving individual exam score/points averages blank.
+  - **Fixes Applied**:
+    - `js/admin/app.js`:
+      - Updated `getAsmExpectedMax(asm)` to dynamically inspect `asm.payload?.total_questions`, `asm.total_questions`, and `isWeeklyExam(asm)`, returning true question counts (120, 30, 280, 70, 480, 120, 640, 160).
+      - Updated `vaultCountFor` to recognize `-EXAM` in shell codes.
+      - Updated `studentsGridData` and `renderAttendanceGridMatrix` columns (Score, Points, Theme Total) to cap score against `totalQ = Number(att.total_questions || maxQ)` instead of hardcoded 40/10.
+      - Updated remedial status checking to support both `is_remedial_unlocked` and `is_remedial`.
+      - Updated Theme Total Points calculation to sum points and maximum questions strictly across exams in the theme.
+      - Updated summaryRow footer to match both `test_` and `asm_` column prefixes, restoring class averages for all test columns.
+      - Updated DataGrid `sortComparator` to sort on `test_` columns.
+    - `admin.html`:
+      - Bumped script version to `js/admin/app.js?v=20261028`.
+  - **Verification**:
+    - Verified against live database records in Batch 133:
+      * Miss Syazida: Col 7 WRD PTS = 73 (was 40), Col 8 PHR PTS = 18 (was 10), Theme A TOT = 91 (was 50), Col 17 WRD PTS = 188.5 (was 40), Col 18 PHR PTS = 47 (was 10), Theme B TOT = 235.5 (was 50), Col 29 WRD PTS = 146 (was 40), Total PTS = 472.5 pts (was 140 pts).
+      * Mr. Aunul Fikri: Col 7 = 84.5, Col 8 = 21, Theme A TOT = 105.5, Col 17 = 173, Col 18 = 43, Total PTS = 415.5 pts (was 140 pts).
+      * Mr. Unggul: Col 7 = 101.5, Col 8 = 25.5, Theme A TOT = 127, Col 17 = 190.5, Col 18 = 70, Theme B TOT = 260.5, Total PTS = 387.5 pts (was 100 pts).
+      * Mr. Suharto: Col 7 = 72, Col 8 = 18, Theme A TOT = 90, Total PTS = 90 pts (was 50 pts).
+    - Executed Playwright browser verification script `scratch/verify_matrix_scores.mjs` against live `http://127.0.0.1:5500/admin.html#class-hub`: verified all cells, theme totals, and footer row. 100% PASS. Screenshot saved to artifacts.
 
 - **Phase 154: Student Dashboard Exam-Only Metrics & Ranking Parity**:
   - **1. Centralized Helper (`js/grading.js`, `js/app.js`, `js/api.js`)**:

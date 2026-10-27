@@ -1,3 +1,41 @@
+## [2026-10-28 06:35] — Phase 155: Class Hub Exam Point & Maximum Questions Restoration
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 155 (Class Hub Exam Point & Maximum Questions Restoration)
+**Status:** PASS
+
+### Why
+- The user reported: *"nilai2 disini terlihat salah, seharusnya exam bukan ini nilainya,,, cek lagi"* regarding the matrix in `http://127.0.0.1:5500/admin.html#class-hub`.
+- Examination revealed that following the system-wide migration from legacy `TEST` terminology to `EXAM`, `getAsmExpectedMax(asm)` in `js/admin/app.js` contained an obsolete regex matching only `TEST` (`/\bTEST\b/i`).
+- Consequently, all milestone exams (`3A-WORDS-EXAM`, `3B-WORDS-EXAM`, etc.) evaluated `isTest === false` and were erroneously capped to daily quiz maximums (40 for words, 10 for phrases).
+- As a result, students who legitimately scored 73, 102, 188.5, etc. on 120/280/480-question exams had their points capped to 40, Theme TOT PTS was capped to 50, and roster Global PTS showed artificial multiples of 40/10 (140 pts, 100 pts, 90 pts, 50 pts).
+- Additionally, the matrix footer (`summaryRow`) checked column keys with an obsolete `asm_` prefix instead of `test_`, leaving the individual exam columns' class averages blank.
+
+### Changed
+- `js/admin/app.js`:
+  - `getAsmExpectedMax(asm)`: Updated to inspect `asm.payload?.total_questions`, `asm.total_questions`, and canonical `isWeeklyExam(asm)` with theme regexes (A: 120/30, B: 280/70, C: 480/120, D: 640/160), ensuring true maximum question values.
+  - `vaultCountFor`: Added support for `-EXAM` in shell code detection.
+  - `studentsGridData`: Updated attempt score capping to use `totalQ = Number(bestAtt?.total_questions || maxQ)` instead of quiz `maxQ`. Added fallback support for `is_remedial`.
+  - `renderAttendanceGridMatrix`:
+    - Updated `themeEarned` to aggregate exclusively from exams in the theme and use `totalQ` capping.
+    - Updated SCORE and PTS column renderers for exams and daily quizzes to accurately cap against `totalQ` and display genuine points.
+    - Updated Theme Total Points column renderer (`themeMaxQ`) to sum expected maximums of exams in the theme.
+    - Updated `summaryRow` to match both `test_` and `asm_` keys, restoring class average SCORE and PTS across all test columns.
+    - Updated DataGrid `sortComparator` to support `test_` column sorting.
+    - Updated theme filter pill label to `🌐 ALL (EXAMS ONLY)`.
+- `admin.html`:
+  - Bumped script cache query string to `js/admin/app.js?v=20261028`.
+
+### Verification
+- `scratch/test_calc.cjs`: Verified calculated points and scores against live Supabase attempts:
+  * Miss Syazida: Col 7 WRD PTS = 73, Col 8 PHR PTS = 18, Theme A TOT = 91, Col 17 WRD PTS = 188.5, Col 18 PHR PTS = 47, Theme B TOT = 235.5, Col 29 WRD PTS = 146, PTS = 472.5 pts.
+  * Mr. Aunul Fikri: Col 7 = 84.5, Col 8 = 21, Theme A TOT = 105.5, Col 17 = 173, Col 18 = 43, PTS = 415.5 pts.
+  * Mr. Unggul: Col 7 = 101.5, Col 8 = 25.5, Theme A TOT = 127, Col 17 = 190.5, Col 18 = 70, Theme B TOT = 260.5, PTS = 387.5 pts.
+  * Mr. Suharto: Col 7 = 72, Col 8 = 18, Theme A TOT = 90, PTS = 90 pts.
+- Playwright E2E verification `scratch/verify_matrix_scores.mjs`: Automated browser loaded live `admin.html#class-hub` for 3rd Vocabulary, confirmed 100% of cells rendered with accurate exam points, theme totals, and footer class averages.
+- Visual inspection of `scratch/verified_matrix_scores.png`: confirmed UI appearance, formatting, and alignment.
+- Syntax verification: 0 errors across modified files.
+
 ## [2026-10-28 06:10] — Phase 154: Student Dashboard Exam-Only Metrics & Ranking Parity
 
 **Agent/Session:** Antigravity
