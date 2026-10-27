@@ -62,14 +62,16 @@ export async function openAutoGenerateModal(options = {}) {
         const sb = await getSupabase();
         const { data: existingAsms } = await sb
           .from('tests')
-          .select('test_category, category, payload, shell_code, title, answer_type, working_duration_minutes, minimum_required_score')
+          .select('test_type, test_category, category, payload, shell_code, title, answer_type, working_duration_minutes, minimum_required_score')
           .eq('class_id', currentClassId)
           .is('deleted_at', null)
           .limit(40);
 
         if (existingAsms && existingAsms.length > 0) {
           for (const a of existingAsms) {
-            const isTest = String(a.test_category).toUpperCase() === 'TEST';
+            const isTest = String(a.category || a.test_category || a.test_type).toUpperCase() === 'TEST' 
+              || String(a.test_type).toLowerCase() === 'exam' 
+              || (a.shell_code && a.shell_code.endsWith('-TEST'));
             const isPhrase = a.category === 'phrases' 
               || (a.payload && a.payload.category === 'phrases') 
               || (a.shell_code && a.shell_code.toUpperCase().includes('PHRASE'))

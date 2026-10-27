@@ -320,12 +320,14 @@ Deno.serve(async (req) => {
 
       let query = supabase.from("vocabulary_vault").select("*").is("deleted_at", null).eq("target_level", levelNum).range(0, 4999);
       
-      const themes = test.payload.themes;
+      const isThemeTest = (test.category === 'TEST' || test.test_category === 'TEST' || String(test.test_type).toLowerCase() === 'exam' || String(test.test_type).toUpperCase() === 'TEST' || test.test_subtype === 'VOCAB_TEST' || test.test_subtype === 'PHRASE_TEST' || (test.shell_code && test.shell_code.includes('-TEST'))) && !topicCode;
+
+      const themes = test.payload?.themes;
       if (themes && Array.isArray(themes) && themes.length > 0) {
           query = query.in("theme_code", themes);
-      } else if (test.test_type === 'exam' && themeCode) {
+      } else if (isThemeTest && themeCode) {
           const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-          const idx = allThemes.indexOf(themeCode);
+          const idx = allThemes.indexOf(String(themeCode).toUpperCase());
           if (idx !== -1) {
               const targetThemes = allThemes.slice(0, idx + 1);
               query = query.in("theme_code", targetThemes);

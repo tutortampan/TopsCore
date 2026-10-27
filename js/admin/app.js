@@ -885,10 +885,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           const pl = r?.payload || {};
           const isUnified = pl.category === 'unified' || pl.is_unified === true || pl.is_unified_test === true || r?.test_type === 'UNIFIED_TEST';
           const wantPhrases = pl.category === 'phrases';
-          const isTest = r?.test_category === 'TEST';
-          let themes = null;
-          if (isTest && pl.theme_code) {
-            const idx = _ALL_THEMES.indexOf(pl.theme_code);
+          const isTest = (r?.category === 'TEST' || r?.test_category === 'TEST' || String(r?.test_type).toUpperCase() === 'TEST' || String(r?.test_type).toLowerCase() === 'exam' || (r?.shell_code && r.shell_code.includes('-TEST')) || r?.test_subtype === 'VOCAB_TEST' || r?.test_subtype === 'PHRASE_TEST') && !pl.topic_code;
+          let themes = (pl.themes && Array.isArray(pl.themes) && pl.themes.length > 0) ? pl.themes : null;
+          if (!themes && isTest && pl.theme_code) {
+            const idx = _ALL_THEMES.indexOf(String(pl.theme_code).toUpperCase());
             themes = idx >= 0 ? _ALL_THEMES.slice(0, idx + 1) : [pl.theme_code];
           }
           return _vaultRows.filter(v => {

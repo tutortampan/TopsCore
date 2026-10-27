@@ -540,6 +540,8 @@ export async function generateTestQuestions(sb, test) {
       if (levelRec?.level_number) levelNum = levelRec.level_number;
     }
     
+    const isThemeTest = (test.category === 'TEST' || test.test_category === 'TEST' || String(test.test_type).toUpperCase() === 'TEST' || String(test.test_type).toLowerCase() === 'exam' || (test.shell_code && test.shell_code.includes('-TEST')) || test.test_subtype === 'VOCAB_TEST' || test.test_subtype === 'PHRASE_TEST') && !topicCode;
+
     // Resilient vocabulary query: try with category column first, fallback without category column
     let vaultData = null;
     try {
@@ -550,9 +552,9 @@ export async function generateTestQuestions(sb, test) {
         .range(0, 4999);
       if (themes && Array.isArray(themes) && themes.length > 0) {
         query = query.in('theme_code', themes);
-      } else if (test.test_type === 'TEST' && themeCode) {
+      } else if (isThemeTest && themeCode) {
         const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-        const idx = allThemes.indexOf(themeCode);
+        const idx = allThemes.indexOf(String(themeCode).toUpperCase());
         if (idx !== -1) {
           const targetThemes = allThemes.slice(0, idx + 1);
           query = query.in('theme_code', targetThemes);
@@ -578,9 +580,9 @@ export async function generateTestQuestions(sb, test) {
         .range(0, 4999);
       if (themes && Array.isArray(themes) && themes.length > 0) {
         queryNoCat = queryNoCat.in('theme_code', themes);
-      } else if (test.test_type === 'TEST' && themeCode) {
+      } else if (isThemeTest && themeCode) {
         const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-        const idx = allThemes.indexOf(themeCode);
+        const idx = allThemes.indexOf(String(themeCode).toUpperCase());
         if (idx !== -1) {
           queryNoCat = queryNoCat.in('theme_code', allThemes.slice(0, idx + 1));
         } else {
@@ -2706,6 +2708,13 @@ export async function upsertDynamicTestShell(config) {
     ? Number(config.minimumRequiredScore) 
     : (existing?.minimum_required_score || 60);
 
+  // Cumulative theme determination for weekly milestone tests
+  const allThemesList = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  const themeIdx = allThemesList.indexOf((themeCode || '').toUpperCase());
+  const cumulativeThemes = (isTest && themeIdx !== -1)
+    ? allThemesList.slice(0, themeIdx + 1)
+    : (themeCode ? [themeCode.toUpperCase()] : []);
+
   const asmData = {
     institution_id:             institutionId,
     program_id:                 programId,
@@ -2713,7 +2722,8 @@ export async function upsertDynamicTestShell(config) {
     level_id:                   levelId,
     module_id:                  moduleId,
     test_subtype:            isTest ? (isPhrase ? 'PHRASE_TEST' : 'VOCAB_TEST') : (isPhrase ? 'PHRASE_TASK' : 'VOCAB_TASK'),
-    test_type:        tier,
+    test_type:                  isTest ? 'TEST' : 'TASK',
+    category:                   isTest ? 'TEST' : 'TASK',
     shell_code:                 code,
     title:                      generatedTitle,
     description:                description || `${tier}: ${themeCode}/${topicCode || 'ALL'} (${isPhrase ? 'Phrases' : 'Words'})`,
@@ -2730,6 +2740,8 @@ export async function upsertDynamicTestShell(config) {
       is_unified: false,
       is_unified_test: false,
       theme_code: themeCode, 
+      themes: isTest ? cumulativeThemes : (themeCode ? [themeCode] : null),
+      is_cumulative: isTest,
       topic_code: isTest ? null : (topicCode || null), 
       category: isPhrase ? 'phrases' : 'words', 
       answer_type: effectiveAnswerType, 
@@ -2790,7 +2802,11 @@ export async function updateClassTestsConfig(params = {}) {
   let updatedTests = 0;
 
   for (const row of rows) {
-    const isTest = String(row.test_type).toUpperCase() === 'TEST';
+    const isTest = String(row.category).toUpperCase() === 'TEST'
+      || String(row.test_type).toUpperCase() === 'TEST'
+      || String(row.test_type).toLowerCase() === 'exam'
+      || (row.shell_code && row.shell_code.endsWith('-TEST'))
+      || (row.title && row.title.toUpperCase().includes(' TEST'));
     const isPhrase = row.category === 'phrases' 
       || (row.payload && row.payload.category === 'phrases') 
       || (row.shell_code && row.shell_code.toUpperCase().includes('PHRASE'))

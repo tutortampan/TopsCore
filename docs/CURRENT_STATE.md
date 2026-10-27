@@ -1,14 +1,48 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-27 18:45 UTC+8
+Last Updated: 2026-10-27 19:30 UTC+8
 
-Current Phase: Phase 146: Student Test Entrance & Prerequisite Dead-Lock Resolution [COMPLETE]
+Current Phase: Phase 147: Assessment Generator Cumulative Weekly Tests Resolution [COMPLETE]
 
-Current Task: Diagnose and resolve test entrance blockage where previously eligible students were locked out of quizzes and exams [COMPLETE]
+Current Task: Fix weekly milestone tests to be strictly cumulative across all themes (Theme A: 120/30, Theme B: 280/70, Theme C: 480/120, Theme D: 640/160) in generator, runner, and data display [COMPLETE]
 
-Status: COMPLETE (Fixed circular prerequisite dead-lock on 32 learning tasks caused by erroneous `category = 'TEST'` in DB and over-broad `isThemeTest` filters; cleaned up rogue `test_session` metadata from quiz tasks; fixed ReferenceError on undefined `a.test_type` in `startTest`; refined `checkStudentTestAccess` to strictly require sessions for formal exams only; updated `start-test` Edge Function to honor tutor live session authorizations and remedial bypasses; bumped SW cache to `topscore-cache-test-entrance-fix-v2`; 39/39 JS files syntax valid).
+Status: COMPLETE (Fixed weekly test generator in `upsertDynamicTestShell` and `autoGenerateTestsHierarchy` to store cumulative themes `themes: ['A', 'B', ...]` and `is_cumulative: true` in test payloads; updated `generateTestQuestions` in `js/api.js` and `start-test` Edge Function to query cumulative theme slices for all theme tests; fixed `vaultCountFor` in `js/admin/app.js` and `js/admin/tests-management.js` to identify `category = 'TEST'` and display cumulative question counts; updated all 8 live weekly tests in Supabase database; bumped SW cache to `topscore-cache-cumulative-tests-v4`; 39/39 JS files syntax valid; 8/8 tests verified cumulative MATCH OK).
 
 ## Completed
+
+- **Phase 147: Assessment Generator Cumulative Weekly Tests Resolution**:
+  - **1. Root Cause Analysis**:
+    - Discovered that in `upsertDynamicTestShell`, weekly milestone tests (`tier: 'TEST'`) did not store the cumulative theme list in `payload.themes` (only saved single `theme_code`).
+    - In `generateTestQuestions` (`js/api.js`) and `start-test` Edge Function (`supabase/functions/start-test/index.ts`), the query checking `test.test_type === 'TEST'` or `test.test_type === 'exam'` failed because database column values were either `'exam'` or `'TEST'` or checked `test_category` instead of `category`. This caused the query to fall back to `eq('theme_code', themeCode)` (fetching only 160 words for Theme B instead of 280 words, 200 words for Theme C instead of 480 words, etc.).
+    - In `js/admin/app.js` and `js/admin/tests-management.js`, `vaultCountFor` checked `r?.test_category === 'TEST'` (column doesn't exist; actual column is `category`), causing the UI data table to report non-cumulative question counts (160 instead of 280, 200 instead of 480).
+    - In `js/admin/auto-gen-modal.js`, `isTest` detection only checked `a.test_category`, failing to detect tests when updating configuration.
+  - **2. Generator & Runner Architectural Fixes**:
+    - `js/api.js`:
+      - In `upsertDynamicTestShell`: Automatically compute `cumulativeThemes = allThemes.slice(0, themeIdx + 1)` and store `themes: cumulativeThemes`, `is_cumulative: isTest`, `category: 'TEST'`, `test_type: 'TEST'` in both the database record and payload.
+      - In `generateTestQuestions`: Added robust `isThemeTest` flag checking `category === 'TEST' || test_type === 'TEST' || test_type === 'exam' || shell_code.includes('-TEST')`. Always queries `allThemes.slice(0, idx + 1)` whenever `themes` array is absent, guaranteeing 100% cumulative question generation.
+      - In `updateClassTestsConfig`: Fixed `isTest` detection to check `category`, `test_type`, and `shell_code`.
+    - `supabase/functions/start-test/index.ts`:
+      - Enhanced `isThemeTest` to check `category === 'TEST' || test_type === 'exam' || test_type === 'TEST' || shell_code.includes('-TEST')`.
+      - When starting an exam attempt, strictly queries `in('theme_code', targetThemes)` across all cumulative themes up to the exam's theme code.
+    - `js/admin/app.js` & `js/admin/tests-management.js`:
+      - Fixed `vaultCountFor` to check `category === 'TEST' || test_type === 'TEST' || test_type === 'exam' || shell_code.includes('-TEST')`.
+      - UI DataGrid now correctly displays cumulative word and phrase counts (Theme A: 120/30, Theme B: 280/70, Theme C: 480/120, Theme D: 640/160).
+    - `js/admin/auto-gen-modal.js`:
+      - Fixed `isTest` detection across `category`, `test_type`, and `shell_code`.
+  - **3. Database Layer Sync**:
+    - Synchronized all 8 live weekly tests in Supabase PostgreSQL: populated `payload.themes`, set `category = 'TEST'`, verified cumulative counts:
+      - `3A-WORDS-TEST`: 120 (A)
+      - `3B-WORDS-TEST`: 280 (A+B)
+      - `3C-WORDS-TEST`: 480 (A+B+C)
+      - `3D-WORDS-TEST`: 640 (A+B+C+D)
+      - `3A-PHRASES-TEST`: 30 (A)
+      - `3B-PHRASES-TEST`: 70 (A+B)
+      - `3C-PHRASES-TEST`: 120 (A+B+C)
+      - `3D-PHRASES-TEST`: 160 (A+B+C+D)
+  - **4. Verification & Testing**:
+    - Bumped `CACHE_NAME` in `sw.js` to `topscore-cache-cumulative-tests-v4`.
+    - Verified 39/39 JS files syntax valid via `node scripts/check_all_js_syntax.cjs`.
+    - Verified all 8 weekly tests generate exact match cumulative question counts via Node simulation script.
 
 - **Phase 146: Student Test Entrance & Prerequisite Dead-Lock Resolution**:
   - **1. Root Cause Diagnostics**:
