@@ -1,3 +1,51 @@
+## [2026-10-27 19:45] — Phase 148: Spoken & Selection Answer Types Alignment (Zero Typing/Written)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 148 (Spoken & Selection Answer Types Alignment)
+**Status:** PASS
+
+### Why
+- The user instructed: "pengunnan jawaban juga masih ada yang mengetik,,, padahal saya minta quiz harian spoken semua dan tugas mingguan spoken dan selection,,, coba cek dengan baik!!!".
+- Investigation discovered that:
+  1. All 4 Words Tests in the database (`3A-WORDS-TEST`, `3B-WORDS-TEST`, `3C-WORDS-TEST`, `3D-WORDS-TEST`) had `answer_type: 'written'`, which forced students to type answers using a keyboard.
+  2. Generator defaults in `upsertDynamicTestShell`, `updateClassTestsConfig`, and `autoGenerateTestsHierarchy` defaulted `wordsTestAnswerType` to `'written'`.
+  3. `supabase/functions/start-test/index.ts` fell back to `'written'` for `VOCAB_TEST`.
+  4. `js/admin/auto-gen-modal.js` prefilled `prefillWordsTestAns = 'written'` and had `Written (Mengetik)` as the default first option.
+  5. `js/admin/vocab-vault.js` blueprint preview hardcoded `'Written'` for Single Words tests and `'Dropdown'` for Phrases tasks.
+
+### Changed
+- **Database (Supabase PostgreSQL `public.tests`)**:
+  - Updated all 40 tests/tasks in `public.tests`:
+    - 32 Daily Quizzes / Tasks: `spoken`
+    - 4 Weekly Words Tests: `spoken`
+    - 4 Weekly Phrases Tests: `selection`
+  - Verified: 36 SPOKEN, 4 SELECTION, 0 WRITTEN.
+- **`js/api.js`**:
+  - `upsertDynamicTestShell`: Default `defaultAnswerType` set to `isTest ? (isPhrase ? 'selection' : 'spoken') : 'spoken'`.
+  - `updateClassTestsConfig`: `wordsTestAnswerType` default set to `'spoken'`.
+  - `autoGenerateTestsHierarchy`: `wordsTestAns` default set to `'spoken'`.
+  - `generateTestQuestions`: Default fallback set to `'spoken'` (or `'selection'` for `PHRASE_TEST`).
+- **`supabase/functions/start-test/index.ts`**:
+  - Changed `VOCAB_TEST` dynamic answer type from `'written'` to `'spoken'`.
+  - Changed question item `answer_type` fallback from `'written'` to `'spoken'`.
+- **`js/admin/auto-gen-modal.js`**:
+  - Set `prefillWordsTestAns = 'spoken'`.
+  - Reordered dropdown options to place `🗣️ Spoken (Lisan)` as the first and selected default option.
+- **`js/admin/vocab-vault.js`**:
+  - Updated `renderThemeBlock` calls: Single Words displays `Speech / Speech`, Phrases displays `Speech / Selection`.
+- **`js/test.js`**:
+  - Updated question parsing fallback to `'spoken'` and read `testData.answer_type` before falling back.
+- **`sw.js`**:
+  - Bumped cache to `topscore-cache-spoken-tests-v5`.
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (39/39 JS files passed syntax validation).
+- command: Database answer_type verification script
+- result: `PASS` (Total: 40, Spoken: 36, Selection: 4, Written: 0).
+
+---
+
 ## [2026-10-27 19:30] — Phase 147: Assessment Generator Cumulative Weekly Tests Resolution
 
 **Agent/Session:** Antigravity

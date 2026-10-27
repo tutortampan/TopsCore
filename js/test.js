@@ -1226,9 +1226,9 @@ import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       let snap = row.question_snapshot;
       if (typeof snap === 'string') {
-        try { snap = JSON.parse(snap); } catch { snap = { question_text: snap, answer_type: 'written' }; }
+        try { snap = JSON.parse(snap); } catch { snap = { question_text: snap, answer_type: 'spoken' }; }
       }
-      const answerType = snap?.answer_type || row.answer_type || 'written';
+      const answerType = snap?.answer_type || row.answer_type || testData?.answer_type || testData?.payload?.answer_type || 'spoken';
       const questionText = snap?.question_text || snap?.questionText || snap?.question || snap?.text || snap?.soal || snap?.indonesia || row.question_text_snapshot || (typeof row.question_snapshot === 'string' ? row.question_snapshot : '') || 'Question text unavailable';
       // Extract Theme (Name + Code), Topic, Category, and Type for 4 corners
       const THEME_NAMES = {

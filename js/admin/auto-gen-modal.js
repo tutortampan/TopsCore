@@ -53,7 +53,7 @@ export async function openAutoGenerateModal(options = {}) {
     let prefillWordsTaskAns = 'spoken';
     let prefillPhrasesTaskAns = 'spoken';
     let prefillTaskMin = 60;
-    let prefillWordsTestAns = 'written';
+    let prefillWordsTestAns = 'spoken';
     let prefillPhrasesTestAns = 'selection';
     let prefillTestMin = 60;
 
@@ -236,11 +236,11 @@ export async function openAutoGenerateModal(options = {}) {
 
             <div style="display:grid; grid-template-columns:1.2fr 1.2fr 1fr; gap:8px;">
               <div>
-                <label for="wizard-test-ans-words" class="form-label" style="font-size:0.7rem; color:#94a3b8; margin-bottom:2px; display:block;">✍️ Words Test</label>
+                <label for="wizard-test-ans-words" class="form-label" style="font-size:0.7rem; color:#94a3b8; margin-bottom:2px; display:block;">🗣️ Words Test</label>
                 <select id="wizard-test-ans-words" class="form-control" style="background:#090d16; color:#f8fafc; font-size:0.78rem; height:32px;">
-                  <option value="written" ${prefillWordsTestAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik)</option>
-                  <option value="selection" ${prefillWordsTestAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan)</option>
                   <option value="spoken" ${prefillWordsTestAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan)</option>
+                  <option value="selection" ${prefillWordsTestAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan)</option>
+                  <option value="written" ${prefillWordsTestAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik)</option>
                   <option value="mixed" ${prefillWordsTestAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran)</option>
                 </select>
               </div>

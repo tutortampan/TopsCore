@@ -385,10 +385,10 @@ Deno.serve(async (req) => {
         }
       }
 
-      let dynamicAnswerType = ((test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE') ? test.answer_type : null) || test.payload?.answer_type || 'written';
+      let dynamicAnswerType = ((test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE') ? test.answer_type : null) || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
       if (!test.payload?.answer_type && !(test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE')) {
          if (test.test_subtype === 'VOCAB_TASK' || test.test_subtype === 'PHRASE_TASK') dynamicAnswerType = 'spoken';
-         else if (test.test_subtype === 'VOCAB_TEST') dynamicAnswerType = 'written';
+         else if (test.test_subtype === 'VOCAB_TEST') dynamicAnswerType = 'spoken';
          else if (test.test_subtype === 'PHRASE_TEST') dynamicAnswerType = 'selection';
       }
       
@@ -521,7 +521,7 @@ Deno.serve(async (req) => {
         word_type: sq.word_type_snapshot,
         topic: sq.topic_snapshot,
         display_order: sq.display_order,
-        answer_type: sq.answer_type || 'written',
+        answer_type: sq.answer_type || dynamicAnswerType || 'spoken',
         options_snapshot: sq.options_snapshot || [],
         test_section: sq.test_section || null,
         section_label: sq.section_label || null

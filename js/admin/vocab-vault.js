@@ -1416,7 +1416,7 @@ function _renderBlueprintTab(area, words) {
      if (vThemes.length > 0) {
         let currentTotal = 0;
         vThemes.forEach(themeName => {
-           const result = renderThemeBlock(themeName, vocabHierarchy[lvl][themeName].topics, 'Vocabulary', 'Speech', 'Written', currentTotal);
+           const result = renderThemeBlock(themeName, vocabHierarchy[lvl][themeName].topics, 'Vocabulary', 'Speech', 'Speech', currentTotal);
            html += result.html;
            currentTotal = result.total;
         });
@@ -1446,7 +1446,7 @@ function _renderBlueprintTab(area, words) {
      if (pThemes.length > 0) {
         let currentTotal = 0;
         pThemes.forEach(themeName => {
-           const result = renderThemeBlock(themeName, phraseHierarchy[lvl][themeName].topics, 'Phrases', 'Dropdown', 'Dropdown', currentTotal);
+           const result = renderThemeBlock(themeName, phraseHierarchy[lvl][themeName].topics, 'Phrases', 'Speech', 'Selection', currentTotal);
            html += result.html;
            currentTotal = result.total;
         });

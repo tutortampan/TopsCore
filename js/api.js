@@ -679,7 +679,7 @@ export async function generateTestQuestions(sb, test) {
     if (vaultWords && vaultWords.length > 0) {
       let allEnglishAnswers = [];
       let typeDistractorPools = {};
-      const ansType = test.answer_type || test.payload?.answer_type || 'written';
+      const ansType = test.answer_type || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
       
       if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
         let allDataQuery = sb.from('vocabulary_vault').select('english, word_type').is('deleted_at', null);
@@ -2654,8 +2654,8 @@ export async function upsertDynamicTestShell(config) {
         ? `${ordinal} Vocabulary ${themeCode} Words Test${cleanTitle ? ' - ' + cleanTitle : ''}`
         : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Words Task${cleanTitle ? ' - ' + cleanTitle : ''}`);
 
-  // Default answer types: Spoken for Tasks (Words & Phrases), Written for Words Test, Selection for Phrases Test
-  const defaultAnswerType = isTest ? (isPhrase ? 'selection' : 'written') : 'spoken';
+  // Default answer types: Spoken for Tasks (Words & Phrases), Spoken for Words Test, Selection for Phrases Test
+  const defaultAnswerType = isTest ? (isPhrase ? 'selection' : 'spoken') : 'spoken';
 
   // Expected question counts
   let expectedQuestions = 40;
@@ -2782,7 +2782,7 @@ export async function updateClassTestsConfig(params = {}) {
     wordsTaskAnswerType,
     phrasesTaskAnswerType,
     taskPassingScore = 60,
-    wordsTestAnswerType = 'written',
+    wordsTestAnswerType = 'spoken',
     phrasesTestAnswerType = 'selection',
     testPassingScore = 60
   } = params;
@@ -2815,7 +2815,7 @@ export async function updateClassTestsConfig(params = {}) {
     const updateData = {};
     if (isTest) {
       updateData.minimum_required_score = Number(testPassingScore);
-      const testAns = isPhrase ? (phrasesTestAnswerType || 'selection') : (wordsTestAnswerType || 'written');
+      const testAns = isPhrase ? (phrasesTestAnswerType || 'selection') : (wordsTestAnswerType || 'spoken');
       updateData.answer_type = testAns;
       if (row.payload && typeof row.payload === 'object') {
         updateData.payload = {
@@ -2943,10 +2943,10 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
 
     const taskDur = config.taskDurationMinutes !== undefined ? Number(config.taskDurationMinutes) : 5;
     const taskAns = config.taskAnswerType || 'spoken';
-    const wordsTaskAns = config.wordsTaskAnswerType || taskAns;
-    const phrasesTaskAns = config.phrasesTaskAnswerType || taskAns;
+    const wordsTaskAns = config.wordsTaskAnswerType || taskAns || 'spoken';
+    const phrasesTaskAns = config.phrasesTaskAnswerType || taskAns || 'spoken';
     const taskPass = config.taskPassingScore !== undefined ? Number(config.taskPassingScore) : 60;
-    const wordsTestAns = config.wordsTestAnswerType || 'written';
+    const wordsTestAns = config.wordsTestAnswerType || 'spoken';
     const phrasesTestAns = config.phrasesTestAnswerType || 'selection';
     const testPass = config.testPassingScore !== undefined ? Number(config.testPassingScore) : 60;
 

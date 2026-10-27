@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-cumulative-tests-v4';
+const CACHE_NAME = 'topscore-cache-spoken-tests-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

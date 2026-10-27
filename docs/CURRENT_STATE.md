@@ -1,14 +1,30 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-27 19:30 UTC+8
+Last Updated: 2026-10-27 19:45 UTC+8
 
-Current Phase: Phase 147: Assessment Generator Cumulative Weekly Tests Resolution [COMPLETE]
+Current Phase: Phase 148: Spoken & Selection Answer Types Alignment (Zero Typing/Written) [COMPLETE]
 
-Current Task: Fix weekly milestone tests to be strictly cumulative across all themes (Theme A: 120/30, Theme B: 280/70, Theme C: 480/120, Theme D: 640/160) in generator, runner, and data display [COMPLETE]
+Current Task: Enforce that all daily quizzes/tasks are spoken, weekly tests are spoken (Words) & selection (Phrases), and completely eliminate typing/written mode across generator, database, runners, modals, and edge function [COMPLETE]
 
-Status: COMPLETE (Fixed weekly test generator in `upsertDynamicTestShell` and `autoGenerateTestsHierarchy` to store cumulative themes `themes: ['A', 'B', ...]` and `is_cumulative: true` in test payloads; updated `generateTestQuestions` in `js/api.js` and `start-test` Edge Function to query cumulative theme slices for all theme tests; fixed `vaultCountFor` in `js/admin/app.js` and `js/admin/tests-management.js` to identify `category = 'TEST'` and display cumulative question counts; updated all 8 live weekly tests in Supabase database; bumped SW cache to `topscore-cache-cumulative-tests-v4`; 39/39 JS files syntax valid; 8/8 tests verified cumulative MATCH OK).
+Status: COMPLETE (Updated all 40 tests/tasks in Supabase database: 32 daily tasks = spoken, 4 Words Tests = spoken, 4 Phrases Tests = selection, 0 written/typing; updated generator defaults in `js/api.js`, `upsertDynamicTestShell`, `updateClassTestsConfig`, and `autoGenerateTestsHierarchy`; updated `supabase/functions/start-test/index.ts` dynamicAnswerType defaults; updated `js/admin/auto-gen-modal.js` prefill and UI options; updated `js/admin/vocab-vault.js` blueprint rendering; updated `js/test.js` fallback; bumped SW cache to `topscore-cache-spoken-tests-v5`; 39/39 JS files syntax valid).
 
 ## Completed
+
+- **Phase 148: Spoken & Selection Answer Types Alignment (Zero Typing/Written)**:
+  - **1. User Intent Realignment**:
+    - User requirement: "quiz harian spoken semua dan tugas mingguan spoken dan selection... jangan ada yang mengetik".
+    - Identified that `3A-WORDS-TEST`, `3B-WORDS-TEST`, `3C-WORDS-TEST`, `3D-WORDS-TEST` had `answer_type: 'written'` (requiring typing), and generator/modal defaults had `wordsTestAnswerType = 'written'`.
+  - **2. Full Alignment Across Stack**:
+    - **Database (`public.tests`)**: Updated all 40 tests/tasks. 36 tests/tasks set to `spoken` (16 Words tasks, 16 Phrases tasks, 4 Words Tests). 4 Phrases Tests set to `selection`. 0 tests use `written`.
+    - **Generator (`js/api.js`)**: Updated `defaultAnswerType` in `upsertDynamicTestShell` (`isTest ? (isPhrase ? 'selection' : 'spoken') : 'spoken'`), `wordsTestAnswerType = 'spoken'` in `updateClassTestsConfig`, `wordsTestAns = 'spoken'` in `autoGenerateTestsHierarchy`, and runner fallback to `spoken`.
+    - **Edge Function (`supabase/functions/start-test/index.ts`)**: Replaced `VOCAB_TEST` default from `'written'` to `'spoken'`; updated dynamic fallback to `'spoken'`.
+    - **Wizard Modal (`js/admin/auto-gen-modal.js`)**: Changed `prefillWordsTestAns = 'spoken'`, updated dropdown options order so `Spoken (Lisan)` is first and default.
+    - **Blueprint (`js/admin/vocab-vault.js`)**: Updated `renderThemeBlock` calls so Single Words displays `Speech / Speech` and Phrases displays `Speech / Selection`.
+    - **Runner (`js/test.js`)**: Replaced `'written'` JSON parsing and row fallbacks with `'spoken'`.
+  - **3. Verification**:
+    - Database query verified: 36 SPOKEN, 4 SELECTION, 0 WRITTEN.
+    - Test runner simulation confirmed: Tasks and Words Tests execute with spoken engine, Phrases Tests execute with selection engine.
+    - Syntax validation: 39/39 JS files passed (`node --check`).
 
 - **Phase 147: Assessment Generator Cumulative Weekly Tests Resolution**:
   - **1. Root Cause Analysis**:
