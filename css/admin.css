@@ -592,7 +592,7 @@ body {
 /* ============================================================
    5. UNIFIED ADMIN DATA TABLES (TACTICAL DARK DESIGN SYSTEM)
    Standardized across DataGrid, Vocab Vault, Topics,
-   Assessments, Access Controller, Audit Logs & Modals.
+   Tests, Access Controller, Audit Logs & Modals.
    ============================================================ */
 
 .table-wrap {
@@ -814,25 +814,26 @@ body {
 }
 .form-pill.grade-star,
 .form-pill.grade-s {
-  background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
   color: #ffffff;
   font-weight: 900;
-  box-shadow: 0 0 12px rgba(192, 132, 252, 0.7);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
 }
 .form-pill.grade-a {
   background: linear-gradient(135deg, #4ade80, #22c55e);
-  color: #fff;
+  color: #000000;
+  font-weight: 900;
   box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
 }
 .form-pill.grade-b {
   background: linear-gradient(135deg, #d9f99d, #bef264);
-  color: #0f172a;
-  font-weight: 800;
+  color: #000000;
+  font-weight: 900;
   box-shadow: 0 0 8px rgba(190, 242, 100, 0.4);
 }
-.form-pill.grade-c { background: linear-gradient(135deg, #fef08a, #fde047); color: #0f172a; font-weight: 800; box-shadow: 0 0 8px rgba(253, 224, 71, 0.35); }
-.form-pill.grade-d { background: linear-gradient(135deg, #fed7aa, #fb923c); color: #fff; box-shadow: 0 0 8px rgba(251, 146, 60, 0.35); }
-.form-pill.grade-e { background: linear-gradient(135deg, #fca5a5, #f87171); color: #fff; box-shadow: 0 0 8px rgba(248, 113, 113, 0.35); }
+.form-pill.grade-c { background: linear-gradient(135deg, #fef08a, #fde047); color: #000000; font-weight: 900; box-shadow: 0 0 8px rgba(253, 224, 71, 0.35); }
+.form-pill.grade-d { background: linear-gradient(135deg, #fed7aa, #fb923c); color: #000000; font-weight: 900; box-shadow: 0 0 8px rgba(251, 146, 60, 0.35); }
+.form-pill.grade-e { background: linear-gradient(135deg, #fca5a5, #f87171); color: #000000; font-weight: 900; box-shadow: 0 0 8px rgba(248, 113, 113, 0.35); }
 
 /* ============================================================
    6. MATTE BUTTONS & FILTER CONTROLS
@@ -1476,7 +1477,7 @@ input[type="checkbox"], input[type="radio"] {
    12. TACTICAL KPI GRID (Inside Domain Section Views)
    ============================================================ */
 
-/* KPI grid used inside rendered section views (e.g., Assessments Hub) */
+/* KPI grid used inside rendered section views (e.g., Tests Hub) */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -1687,7 +1688,7 @@ input[type="checkbox"], input[type="radio"] {
    13. EXAM HERO / SECTION HERO PANEL
    ============================================================ */
 
-.assessment-hero {
+.test-hero {
   background: var(--fm-bg-panel);
   border: 1px solid var(--fm-border-subtle);
   border-radius: var(--fm-radius-md);
@@ -1695,7 +1696,7 @@ input[type="checkbox"], input[type="radio"] {
   margin-bottom: 1.25rem;
 }
 
-.assessment-hero .section-title {
+.test-hero .section-title {
   font-size: 1.35rem !important;
   font-weight: 800 !important;
 }
@@ -2026,7 +2027,7 @@ textarea.form-control {
    22. EXAM STATUS INDICATORS (Tactical)
    ============================================================ */
 
-.assessment-status {
+.test-status {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -2038,10 +2039,10 @@ textarea.form-control {
   letter-spacing: 0.04em;
 }
 
-.assessment-status.published  { background: rgba(16, 185, 129, 0.12); color: var(--fm-accent-pitch);    border: 1px solid rgba(16, 185, 129, 0.3); }
-.assessment-status.draft      { background: rgba(245, 158, 11, 0.12); color: var(--fm-accent-amber);    border: 1px solid rgba(245, 158, 11, 0.3); }
-.assessment-status.unpublished{ background: rgba(100, 116, 139, 0.1); color: var(--fm-text-muted);      border: 1px solid rgba(100, 116, 139, 0.2); }
-.assessment-status.archived   { background: rgba(239, 68, 68, 0.1);   color: var(--fm-accent-crimson);  border: 1px solid rgba(239, 68, 68, 0.2); }
+.test-status.published  { background: rgba(16, 185, 129, 0.12); color: var(--fm-accent-pitch);    border: 1px solid rgba(16, 185, 129, 0.3); }
+.test-status.draft      { background: rgba(245, 158, 11, 0.12); color: var(--fm-accent-amber);    border: 1px solid rgba(245, 158, 11, 0.3); }
+.test-status.unpublished{ background: rgba(100, 116, 139, 0.1); color: var(--fm-text-muted);      border: 1px solid rgba(100, 116, 139, 0.2); }
+.test-status.archived   { background: rgba(239, 68, 68, 0.1);   color: var(--fm-accent-crimson);  border: 1px solid rgba(239, 68, 68, 0.2); }
 
 /* ============================================================
    23. IMPORT / UPLOAD ZONES
@@ -2810,8 +2811,8 @@ tr.deleted-row td {
   border-bottom: none;
 }
 
-/* ── Assessments Panel ── */
-.split-assessments-panel {
+/* ── Tests Panel ── */
+.split-tests-panel {
   background: rgba(255, 255, 255, 0.015);
   border: 1px solid var(--clr-border);
   border-radius: 10px;
@@ -2934,12 +2935,12 @@ tr.deleted-row td {
 .datagrid-summary-row td,
 #class-attendance-grid .table-wrap th,
 #class-attendance-grid .table-wrap td,
-#class-attendance-grid th.col-asm,
-#class-attendance-grid td.col-asm,
-#class-attendance-grid .asm-num,
-#class-attendance-grid .asm-score,
-#class-attendance-grid .asm-dot,
-#assessment-timer,
+#class-attendance-grid th.col-test,
+#class-attendance-grid td.col-test,
+#class-attendance-grid .test-num,
+#class-attendance-grid .test-score,
+#class-attendance-grid .test-dot,
+#test-timer,
 #timer-display,
 .timer-display,
 .result-summary-val,
@@ -3390,6 +3391,34 @@ tr.deleted-row td {
 }
 
 /* ============================================================
+   ZERO-SCROLL VOCABULARY VAULT VIEWPORT LOCK
+   ============================================================ */
+.admin-content:has(#vault-tab-content) {
+  padding: 4px 10px 0 10px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  height: calc(100vh - 50px - 28px) !important;
+}
+
+.admin-content:has(#vault-tab-content):has(+ #admin-bottom-infobar:not(.hidden)) {
+  height: calc(100vh - 50px - 50px - 28px) !important;
+}
+
+#vault-tab-content {
+  flex: 1 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* ============================================================
    ZERO-SCROLL DYNAMIC RESPONSIVE CLASS ATTENDANCE MATRIX
    ============================================================ */
 .admin-content:has(#class-attendance-grid) {
@@ -3524,7 +3553,15 @@ body.sidebar-collapsed .admin-main {
   box-sizing: border-box;
 }
 
-/* Super Headers (Themes A, B, C, D) */
+/* Super Headers (Themes A, B, C, D) & Header White Typography */
+#class-attendance-grid thead,
+#class-attendance-grid thead th,
+#class-attendance-grid thead th *,
+#class-attendance-grid .datagrid-thead th,
+#class-attendance-grid .datagrid-thead th * {
+  color: #ffffff !important;
+}
+
 #class-attendance-grid th.super-hdr {
   font-size: var(--matrix-badge-font, 0.65rem);
   font-weight: 800;
@@ -3535,6 +3572,7 @@ body.sidebar-collapsed .admin-main {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   line-height: 1.1;
   height: 20px;
+  color: #ffffff !important;
 }
 
 #class-attendance-grid th.super-hdr-student {
@@ -3542,35 +3580,35 @@ body.sidebar-collapsed .admin-main {
   left: 0 !important;
   z-index: 30 !important;
   background: #0b1120 !important;
-  color: #94a3b8;
+  color: #ffffff !important;
   border-right: 2px solid rgba(56, 189, 248, 0.45) !important;
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.4);
 }
 
 #class-attendance-grid th.super-hdr-theme-a {
   background: rgba(56, 189, 248, 0.12);
-  color: #38bdf8;
+  color: #ffffff !important;
   border-right: 1px solid rgba(56, 189, 248, 0.3);
   border-top: 2px solid #38bdf8;
 }
 
 #class-attendance-grid th.super-hdr-theme-b {
   background: rgba(168, 85, 247, 0.12);
-  color: #c084fc;
+  color: #ffffff !important;
   border-right: 1px solid rgba(168, 85, 247, 0.3);
   border-top: 2px solid #c084fc;
 }
 
 #class-attendance-grid th.super-hdr-theme-c {
   background: rgba(245, 158, 11, 0.12);
-  color: #fbbf24;
+  color: #ffffff !important;
   border-right: 1px solid rgba(245, 158, 11, 0.3);
   border-top: 2px solid #fbbf24;
 }
 
 #class-attendance-grid th.super-hdr-theme-d {
   background: rgba(16, 185, 129, 0.12);
-  color: #34d399;
+  color: #ffffff !important;
   border-top: 2px solid #34d399;
 }
 
@@ -3579,6 +3617,7 @@ body.sidebar-collapsed .admin-main {
   font-size: var(--matrix-badge-font, 0.68rem);
   line-height: 1.1;
   height: 22px;
+  color: #ffffff !important;
 }
 
 /* Sticky Student Info Columns on the Left */
@@ -3622,9 +3661,9 @@ body.sidebar-collapsed .admin-main {
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Assessment Columns Widths & Layout */
-#class-attendance-grid th.col-asm,
-#class-attendance-grid td.col-asm {
+/* Test Columns Widths & Layout */
+#class-attendance-grid th.col-test,
+#class-attendance-grid td.col-test {
   padding: var(--matrix-cell-padding, 2px 1px) !important;
   text-align: center !important;
   overflow: hidden !important;
@@ -3632,15 +3671,15 @@ body.sidebar-collapsed .admin-main {
   white-space: nowrap !important;
 }
 
-#class-attendance-grid th.col-asm-task,
-#class-attendance-grid td.col-asm-task {
+#class-attendance-grid th.col-quiz,
+#class-attendance-grid td.col-quiz {
   width: 42px !important;
   min-width: 42px !important;
   max-width: 44px !important;
 }
 
 /* Base number & score */
-#class-attendance-grid th.col-asm .asm-num {
+#class-attendance-grid th.col-test .test-num {
   font-size: var(--matrix-badge-font, 0.7rem);
   font-weight: 800;
   font-family: monospace;
@@ -3649,7 +3688,7 @@ body.sidebar-collapsed .admin-main {
   line-height: 1.1;
 }
 
-#class-attendance-grid td.col-asm .asm-score {
+#class-attendance-grid td.col-test .test-score {
   font-size: var(--matrix-font-size, 0.76rem);
   font-weight: 700;
   font-family: monospace;
@@ -3658,7 +3697,7 @@ body.sidebar-collapsed .admin-main {
   line-height: 1.1;
 }
 
-#class-attendance-grid .asm-dot {
+#class-attendance-grid .test-dot {
   color: rgba(255, 255, 255, 0.22);
   font-weight: 800;
   font-size: var(--matrix-font-size, 0.76rem);
@@ -3666,37 +3705,47 @@ body.sidebar-collapsed .admin-main {
   display: inline-block;
 }
 
-/* TASK Columns (Cyan / Sky Blue) */
-#class-attendance-grid th.col-asm-task .asm-num {
-  color: #38bdf8;
+/* TASK Columns (Pure White Number) */
+#class-attendance-grid th.col-quiz .test-num {
+  color: #ffffff !important;
 }
 
 /* TEST Columns (Clean & Sleek Contrast-Based Line Structure) */
-#class-attendance-grid th.col-asm-test {
+#class-attendance-grid th.col-exam {
   background: rgba(255, 255, 255, 0.025) !important;
   border-bottom: 2px solid rgba(255, 255, 255, 0.18) !important;
 }
 
-#class-attendance-grid th.col-asm-test-pts,
-#class-attendance-grid td.col-asm-test-pts {
-  width: 58px !important;
-  min-width: 58px !important;
-  max-width: 60px !important;
-  border-left: 2px solid rgba(255, 255, 255, 0.25) !important;
-  border-right: none !important;
-}
-
-#class-attendance-grid th.col-asm-test-score,
-#class-attendance-grid td.col-asm-test-score {
+#class-attendance-grid th.col-exam-score,
+#class-attendance-grid td.col-exam-score {
   width: 50px !important;
   min-width: 50px !important;
   max-width: 52px !important;
-  border-left: 1px dashed rgba(255, 255, 255, 0.08) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-left: 2px solid rgba(255, 255, 255, 0.22) !important;
+  border-right: none !important;
 }
 
-#class-attendance-grid th.col-asm-test .asm-num {
-  color: #e2e8f0 !important;
+#class-attendance-grid th.col-exam-pts,
+#class-attendance-grid td.col-exam-pts {
+  width: 58px !important;
+  min-width: 58px !important;
+  max-width: 60px !important;
+  border-left: 1px dashed rgba(255, 255, 255, 0.12) !important;
+  border-right: none !important;
+}
+
+#class-attendance-grid th.col-test-theme-total,
+#class-attendance-grid td.col-test-theme-total {
+  width: 60px !important;
+  min-width: 60px !important;
+  max-width: 65px !important;
+  border-left: 2px solid rgba(255, 255, 255, 0.35) !important;
+  border-right: 2px solid rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+#class-attendance-grid th.col-exam .test-num {
+  color: #ffffff !important;
   font-weight: 800;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -3704,36 +3753,52 @@ body.sidebar-collapsed .admin-main {
   padding: 0 3px;
 }
 
-#class-attendance-grid td.col-asm-test {
+#class-attendance-grid th.col-test-theme-total .test-num {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  font-weight: 900 !important;
+}
+
+#class-attendance-grid td.col-exam {
   background: rgba(255, 255, 255, 0.025) !important;
   padding: 1px 1px !important;
 }
 
-#class-attendance-grid td.col-asm-test-pts {
-  border-left: 2px solid rgba(255, 255, 255, 0.25) !important;
+#class-attendance-grid td.col-exam-score {
+  border-left: 2px solid rgba(255, 255, 255, 0.22) !important;
   border-right: none !important;
 }
 
-#class-attendance-grid td.col-asm-test-score {
-  border-left: 1px dashed rgba(255, 255, 255, 0.08) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+#class-attendance-grid td.col-exam-pts {
+  border-left: 1px dashed rgba(255, 255, 255, 0.12) !important;
+  border-right: none !important;
 }
 
-#class-attendance-grid tr:hover td.col-asm-test {
+#class-attendance-grid td.col-test-theme-total {
+  border-left: 2px solid rgba(255, 255, 255, 0.35) !important;
+  border-right: 2px solid rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+#class-attendance-grid tr:hover td.col-exam {
   background: rgba(255, 255, 255, 0.05) !important;
 }
 
-#class-attendance-grid td.col-asm-test .asm-score-test {
+#class-attendance-grid tr:hover td.col-test-theme-total {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+#class-attendance-grid td.col-exam .test-score-test {
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 
-#class-attendance-grid td.col-asm-test .asm-score-test:hover {
+#class-attendance-grid td.col-exam .test-score-test:hover {
   transform: scale(1.08);
   filter: brightness(1.2);
 }
 
-/* Header Cell Badges */
-#class-attendance-grid .asm-hdr-cell {
+/* Header Cell Badges (Pure White Text) */
+#class-attendance-grid .test-hdr-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3741,18 +3806,19 @@ body.sidebar-collapsed .admin-main {
   line-height: 1.05;
 }
 
-#class-attendance-grid .asm-subtag {
+#class-attendance-grid .test-subtag {
   font-size: 0.50rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   margin-top: 1px;
   line-height: 1;
+  color: #ffffff !important;
 }
 
-#class-attendance-grid .asm-subtag-wrd { color: #FFFF00; }
-#class-attendance-grid .asm-subtag-phr { color: #00FFFF; }
-#class-attendance-grid .asm-subtag-test-pts { color: #e2e8f0; }
-#class-attendance-grid .asm-subtag-test-score { color: #cbd5e1; }
+#class-attendance-grid .test-subtag-wrd { color: #ffffff !important; }
+#class-attendance-grid .test-subtag-phr { color: #ffffff !important; }
+#class-attendance-grid .test-subtag-test-pts { color: #ffffff !important; }
+#class-attendance-grid .test-subtag-test-score { color: #ffffff !important; }
 
 /* Remedial Row & Value Styling (No special color; color follows score, small R tag inherits color) */
 #class-attendance-grid tbody tr.row-remedial {
@@ -3767,7 +3833,7 @@ body.sidebar-collapsed .admin-main {
   /* Standard hover */
 }
 
-.asm-score-remedial {
+.test-score-remedial {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -3775,7 +3841,7 @@ body.sidebar-collapsed .admin-main {
   display: inline-block !important;
 }
 
-.asm-rem-sup {
+.test-rem-sup {
   font-size: 0.7em !important;
   opacity: 0.85 !important;
   color: inherit !important;
@@ -3825,44 +3891,47 @@ body.sidebar-collapsed .admin-main {
 }
 
 .grade-circle.grade-circle-star {
-  background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%) !important;
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%) !important;
   color: #ffffff !important;
   font-size: 0.72rem !important;
   font-weight: 900 !important;
-  box-shadow: 0 0 8px rgba(192, 132, 252, 0.6) !important;
-  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
 
 .grade-circle.grade-circle-a {
   background: #22C55E !important;
-  color: #ffffff !important;
+  color: #000000 !important;
+  font-weight: 900 !important;
 }
 
 .grade-circle.grade-circle-b {
   background: #BEF264 !important;
-  color: #0f172a !important;
+  color: #000000 !important;
   font-weight: 900 !important;
 }
 
 .grade-circle.grade-circle-c {
   background: #FDE047 !important;
-  color: #0f172a !important;
+  color: #000000 !important;
   font-weight: 900 !important;
 }
 
 .grade-circle.grade-circle-d {
   background: #FB923C !important;
-  color: #ffffff !important;
+  color: #000000 !important;
+  font-weight: 900 !important;
 }
 
 .grade-circle.grade-circle-e {
   background: #F87171 !important;
-  color: #ffffff !important;
+  color: #000000 !important;
+  font-weight: 900 !important;
 }
 
-/* Star Grade S (100% Pure Purple #C084FC with Glow) */
+/* Star Grade S (100% Rich Green with White Star and Glow) */
 .badge-grade-star-s {
-  background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%) !important;
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%) !important;
   color: #ffffff !important;
   font-weight: 900 !important;
   font-size: 0.72rem !important;
@@ -3872,8 +3941,8 @@ body.sidebar-collapsed .admin-main {
   min-height: 19px !important;
   border-radius: 50% !important;
   line-height: 1 !important;
-  border: 1px solid rgba(255, 255, 255, 0.4) !important;
-  box-shadow: 0 0 8px rgba(192, 132, 252, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -3885,8 +3954,8 @@ body.sidebar-collapsed .admin-main {
 }
 
 .text-gold-champion {
-  color: #A855F7 !important;
-  text-shadow: 0 0 8px rgba(168, 85, 247, 0.6), 0 0 16px rgba(168, 85, 247, 0.45) !important;
+  color: #22C55E !important;
+  text-shadow: 0 0 8px rgba(34, 197, 94, 0.6), 0 0 16px rgba(34, 197, 94, 0.35) !important;
   font-weight: 900 !important;
 }
 
@@ -4789,7 +4858,7 @@ body.sidebar-collapsed .admin-main {
 }
 
 /* ==========================================================================
-   BULK EDIT ASSESSMENTS MODAL STYLES (Zero inline styles)
+   BULK EDIT TESTS MODAL STYLES (Zero inline styles)
    ========================================================================== */
 .bulk-edit-modal-box {
   max-width: 680px !important;

@@ -1,5 +1,5 @@
 /**
- * TopsCore — Assessment Access & Live Test Sessions Controller (v5.8.0)
+ * TopsCore — Test Access & Live Test Sessions Controller (v5.8.0)
  * Integrated under Domain C: Class Hub (Vocabulary Class & Curriculum).
  * 
  * Features:
@@ -40,8 +40,8 @@ let _currentOpenModalTheme = null;
 let _currentOpenModalMode = 'normal'; // 'normal' | 'remedial'
 let _currentLateModalTheme = null;
 
-// Backward-compatibility delegator for loadSection('assessment-access')
-export async function renderAssessmentAccess(area) {
+// Backward-compatibility delegator for loadSection('test-access')
+export async function renderTestAccess(area) {
   window._classHubActiveTab = 'test-sessions';
   if (window.loadSection) {
     window.loadSection('class-hub');
@@ -56,7 +56,7 @@ export async function renderClassTestSessions(container, context = {}) {
   const {
     classId,
     className,
-    classAssessments = [],
+    classTests = [],
     allStudents = [],
     classStudents = [],
     allBatches = [],
@@ -79,31 +79,31 @@ export async function renderClassTestSessions(container, context = {}) {
     }
   }
 
-  // Group class assessments into Themes
+  // Group class tests into Themes
   const themesData = THEME_DEFINITIONS.map(def => {
     const code = def.code;
-    const wordsTest = classAssessments.find(a => {
+    const wordsTest = classTests.find(a => {
       const pl = a.payload || {};
       const tc = (pl.theme_code || '').toUpperCase();
       const cat = (pl.category || '').toLowerCase();
-      const type = (a.assessment_type || '').toUpperCase();
-      const isTest = a.assessment_category === 'TEST' || type.includes('TEST');
+      const type = (a.test_type || '').toUpperCase();
+      const isTest = a.test_category === 'TEST' || type.includes('TEST');
       return tc === code && isTest && (cat === 'words' || type === 'VOCAB_TEST');
     });
 
-    const phrasesTest = classAssessments.find(a => {
+    const phrasesTest = classTests.find(a => {
       const pl = a.payload || {};
       const tc = (pl.theme_code || '').toUpperCase();
       const cat = (pl.category || '').toLowerCase();
-      const type = (a.assessment_type || '').toUpperCase();
-      const isTest = a.assessment_category === 'TEST' || type.includes('TEST');
+      const type = (a.test_type || '').toUpperCase();
+      const isTest = a.test_category === 'TEST' || type.includes('TEST');
       return tc === code && isTest && (cat === 'phrases' || type === 'PHRASE_TEST');
     });
 
-    const tasks = classAssessments.filter(a => {
+    const tasks = classTests.filter(a => {
       const pl = a.payload || {};
       const tc = (pl.theme_code || '').toUpperCase();
-      const isTask = a.assessment_category === 'TASK' || (a.assessment_type || '').includes('TASK');
+      const isTask = a.test_category === 'TASK' || (a.test_type || '').includes('TASK');
       return tc === code && isTask;
     });
 
@@ -917,7 +917,7 @@ function openThemeSessionModal(container, theme, mode, context) {
       const promises = [];
       if (theme.wordsTest) {
         promises.push(openTestSession({
-          assessmentId: theme.wordsTest.id,
+          testId: theme.wordsTest.id,
           batchId: targetBatchId,
           allocatedMinutes: duration,
           allowedStudentIds: allowedStudentIds,
@@ -927,7 +927,7 @@ function openThemeSessionModal(container, theme, mode, context) {
       }
       if (theme.phrasesTest) {
         promises.push(openTestSession({
-          assessmentId: theme.phrasesTest.id,
+          testId: theme.phrasesTest.id,
           batchId: targetBatchId,
           allocatedMinutes: duration,
           allowedStudentIds: allowedStudentIds,
@@ -1096,14 +1096,14 @@ function openThemeLateModal(container, theme, context) {
       const promises = [];
       if (theme.wordsTest) {
         promises.push(addLateStudentsToSession({
-          assessmentId: theme.wordsTest.id,
+          testId: theme.wordsTest.id,
           studentIds: studentIds,
           remedialStudentIds: isRem ? studentIds : []
         }));
       }
       if (theme.phrasesTest) {
         promises.push(addLateStudentsToSession({
-          assessmentId: theme.phrasesTest.id,
+          testId: theme.phrasesTest.id,
           studentIds: studentIds,
           remedialStudentIds: isRem ? studentIds : []
         }));
@@ -1194,10 +1194,10 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     }
 
     try {
-      const assessmentIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+      const testIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
       const studentIds = theme.allowedStudentIds || [];
       const sessionData = await fetchLiveTestSessionData({
-        assessmentIds,
+        testIds,
         studentIds,
         unlockedAt: theme.unlockedAt
       });
@@ -1207,8 +1207,8 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
       processedStudents = enrolledStudents.map(student => {
         const studAttempts = (sessionData.attempts || []).filter(a => a.student_id === student.id);
-        const wAtt = studAttempts.find(a => a.assessment_id === theme.wordsTest?.id);
-        const pAtt = studAttempts.find(a => a.assessment_id === theme.phrasesTest?.id);
+        const wAtt = studAttempts.find(a => a.test_id === theme.wordsTest?.id);
+        const pAtt = studAttempts.find(a => a.test_id === theme.phrasesTest?.id);
 
         const inProgressAtt = [wAtt, pAtt].find(a => a && a.status === 'in_progress');
         const hasSubmitted = [wAtt, pAtt].some(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
@@ -1235,7 +1235,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         // Module
         let activeModule = 'None';
         if (inProgressAtt) {
-          activeModule = (inProgressAtt.assessment_id === theme.wordsTest?.id) ? 'Words Test' : 'Phrases Test';
+          activeModule = (inProgressAtt.test_id === theme.wordsTest?.id) ? 'Words Test' : 'Phrases Test';
         } else if (hasSubmitted) {
           activeModule = (wAtt && pAtt) ? 'Words & Phrases' : (wAtt ? 'Words Test' : 'Phrases Test');
         }
@@ -1600,14 +1600,14 @@ function openKickConfirmationModal(container, studentId, studentName, theme, onD
       const promises = [];
       if (theme.wordsTest) {
         promises.push(removeStudentFromTestSession({
-          assessmentId: theme.wordsTest.id,
+          testId: theme.wordsTest.id,
           studentId: studentId,
           action: chosenAction
         }));
       }
       if (theme.phrasesTest) {
         promises.push(removeStudentFromTestSession({
-          assessmentId: theme.phrasesTest.id,
+          testId: theme.phrasesTest.id,
           studentId: studentId,
           action: chosenAction
         }));
@@ -1647,7 +1647,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, p
 
     if (themeTasks.length > 0) {
       for (const task of themeTasks) {
-        const taskAtts = studAtts.filter(a => (a.assessment_id || a.Assessment_id) === task.id);
+        const taskAtts = studAtts.filter(a => (a.test_id || a.Test_id) === task.id);
         const passedAtt = taskAtts.find(a => {
           const st = String(a.status || '').toLowerCase();
           const isSub = ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
@@ -1667,14 +1667,14 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, p
     let wBestPct = null;
     let pBestPct = null;
     if (wordsTest) {
-      const wAtts = studAtts.filter(a => (a.assessment_id || a.Assessment_id) === wordsTest.id);
+      const wAtts = studAtts.filter(a => (a.test_id || a.Test_id) === wordsTest.id);
       const subW = wAtts.filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
       if (subW.length > 0) {
         wBestPct = Math.max(...subW.map(a => parseFloat(a.percentage ?? 0)));
       }
     }
     if (phrasesTest) {
-      const pAtts = studAtts.filter(a => (a.assessment_id || a.Assessment_id) === phrasesTest.id);
+      const pAtts = studAtts.filter(a => (a.test_id || a.Test_id) === phrasesTest.id);
       const subP = pAtts.filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
       if (subP.length > 0) {
         pBestPct = Math.max(...subP.map(a => parseFloat(a.percentage ?? 0)));

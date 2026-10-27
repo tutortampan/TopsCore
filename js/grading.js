@@ -219,13 +219,13 @@ export function calculateGrade(percentage) {
 
 /**
  * Authoritative Student Overall Score & Grade (AGENTS.md §2.8 & §2.10)
- * Evaluates strictly across taken/unlocked assessments.
- * Unopened/locked assessments do NOT penalize or drag down student score.
+ * Evaluates strictly across taken/unlocked tests.
+ * Unopened/locked tests do NOT penalize or drag down student score.
  * 
- * Formula: average_score = sum(best_percentage_on_taken) / count(taken_assessments)
+ * Formula: average_score = sum(best_percentage_on_taken) / count(taken_tests)
  * Grade: getGrade(average_score)
  * 
- * @param {Array<number>} takenPercentages Array of best percentages on completed/taken assessments
+ * @param {Array<number>} takenPercentages Array of best percentages on completed/taken tests
  * @returns {{ averageScore: number, grade: string, count: number }}
  */
 export function calculateOverallStudentScore(takenPercentages = []) {
@@ -241,7 +241,7 @@ export function calculateOverallStudentScore(takenPercentages = []) {
 
 /**
  * Authoritative Grade & Score Palette (6 Clean Tiers: ★, A, B, C, D, E)
- * ★ Excellent  100%       Bright Purple           #C084FC
+ * ★ Excellent  100%       Rich Green (White Star) #22C55E
  * A Very Good  90% – 99%  True Leaf Green         #22C55E
  * B Good       80% – 89%  Electric Bright Lime    #BEF264
  * C Enough     60% – 79%  Electric Lemon Yellow   #FDE047
@@ -252,11 +252,11 @@ const STAR_THEME = {
   symbol: '★',
   label: 'Excellent',
   predicate: 'Excellent',
-  color: '#C084FC',       // Bright Purple (100% Star)
-  dark: '#a855f7',
-  light: '#e9d5ff',
-  rgb: '192, 132, 252',
-  glow: 'rgba(192, 132, 252, 0.45)',
+  color: '#22C55E',       // Green (100% Star)
+  dark: '#16a34a',
+  light: '#86efac',
+  rgb: '34, 197, 94',
+  glow: 'rgba(34, 197, 94, 0.45)',
   name: 'Excellent (100%)',
   minScore: 100,
   maxScore: 100,
@@ -348,7 +348,7 @@ export const GRADE_PALETTE = {
 export function getGradeColorByScore(percentage) {
   const p = Number(percentage);
   if (isNaN(p) || p < 0) return '#94a3b8';
-  if (p >= 100) return GRADE_PALETTE['★']?.color || '#C084FC';
+  if (p >= 100) return GRADE_PALETTE['★']?.color || '#22C55E';
   if (p >= 90) return GRADE_PALETTE.A?.color || '#22C55E';
   if (p >= 80) return GRADE_PALETTE.B?.color || '#BEF264';
   if (p >= 60) return GRADE_PALETTE.C?.color || '#FDE047';
@@ -358,7 +358,7 @@ export function getGradeColorByScore(percentage) {
 
 export function getGradeColor(grade, isRemedial = false) {
   const g = String(grade || '').trim();
-  if (g === '★' || g.toUpperCase() === 'S') return GRADE_PALETTE['★']?.color || '#C084FC';
+  if (g === '★' || g.toUpperCase() === 'S') return GRADE_PALETTE['★']?.color || '#22C55E';
   return GRADE_PALETTE[g.toUpperCase()]?.color || '#94a3b8';
 }
 
@@ -386,7 +386,7 @@ export function formatGradeBadgeHtml(grade, isRemedial = false, customStyle = ''
   const cleanGrade = g.toUpperCase();
   const lowerG = cleanGrade.toLowerCase();
   const color = GRADE_PALETTE[cleanGrade]?.color || '#94a3b8';
-  const textColor = (cleanGrade === 'B' || cleanGrade === 'C') ? '#0f172a' : '#ffffff';
+  const textColor = '#000000';
   return `<span class="grade-circle grade-circle-${lowerG}" style="background:${color}; color:${textColor}; ${customStyle}" title="Grade ${cleanGrade}">${cleanGrade}</span>`;
 }
 
@@ -396,11 +396,11 @@ export function getGradeTheme(grade, isRemedial = false) {
   const effectiveKey = isStar ? '★' : g.toUpperCase();
   const theme = GRADE_PALETTE[effectiveKey] || {
     symbol: isStar ? '★' : (g || '—'),
-    color: isStar ? '#a855f7' : '#94a3b8',
-    dark: isStar ? '#7e22ce' : '#64748b',
-    light: isStar ? '#c084fc' : '#cbd5e1',
-    rgb: isStar ? '168, 85, 247' : '148, 163, 184',
-    glow: isStar ? 'rgba(168, 85, 247, 0.45)' : 'rgba(148, 163, 184, 0.25)',
+    color: isStar ? '#22C55E' : '#94a3b8',
+    dark: isStar ? '#16a34a' : '#64748b',
+    light: isStar ? '#86efac' : '#cbd5e1',
+    rgb: isStar ? '34, 197, 94' : '148, 163, 184',
+    glow: isStar ? 'rgba(34, 197, 94, 0.45)' : 'rgba(148, 163, 184, 0.25)',
     name: isStar ? 'Excellent (100%)' : 'Standard',
     sparkle: isStar
   };

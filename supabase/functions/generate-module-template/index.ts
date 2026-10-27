@@ -1,4 +1,4 @@
-﻿import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 serve(async (req: Request) => {
@@ -36,7 +36,7 @@ serve(async (req: Request) => {
       case "POINT_AND_SPEAK":
         filename = "template_point_and_speak.csv";
         csvHeader = "Image_URL,Expected_Pronouns,Expected_Adjectives\n";
-        csvSampleData = "https://Assessmentple.com/img1.jpg,this|that|these|those,big|red\n";
+        csvSampleData = "https://example.com/img1.jpg,this|that|these|those,big|red\n";
         break;
       case "STORYTELLING":
         filename = "template_storytelling.csv";
@@ -51,7 +51,7 @@ serve(async (req: Request) => {
       case "VOCAB_MASTERY":
         filename = "template_vocab_mastery.csv";
         csvHeader = "Word,Definition,Audio_Prompt_URL\n";
-        csvSampleData = "Resilience,The capacity to recover quickly from difficulties,https://Assessmentple.com/audio/resilience.mp3\n";
+        csvSampleData = "Resilience,The capacity to recover quickly from difficulties,https://example.com/audio/resilience.mp3\n";
         break;
       default:
         // Generic template for others

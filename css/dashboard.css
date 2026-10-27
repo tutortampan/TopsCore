@@ -457,9 +457,9 @@
 }
 
 /* ============================================================
-   ASSESSMENT PAGE (COMPACT)
+   TEST PAGE (COMPACT)
    ============================================================ */
-.assessment-page {
+.test-page {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
@@ -467,7 +467,7 @@
   flex-direction: column;
 }
 
-.assessment-topbar {
+.test-topbar {
   position: sticky;
   top: 0;
   z-index: var(--z-nav);
@@ -480,7 +480,7 @@
   gap: var(--space-3);
 }
 
-.assessment-title-bar {
+.test-title-bar {
   flex: 1;
   overflow: hidden;
   display: flex;
@@ -488,7 +488,7 @@
   gap: var(--space-2);
 }
 
-.assessment-name-display {
+.test-name-display {
   font-weight: 700;
   font-size: 0.9rem;
   white-space: nowrap;
@@ -497,12 +497,12 @@
   color: var(--clr-accent-1);
 }
 
-.assessment-meta-display {
+.test-meta-display {
   display: none; /* Hide meta on topbar for compactness */
 }
 
 /* Timer */
-.assessment-timer {
+.test-timer {
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -516,14 +516,14 @@
   transition: all var(--transition-base);
 }
 
-.assessment-timer.warning {
+.test-timer.warning {
   background: rgba(245,158,11,0.15);
   border-color: rgba(245,158,11,0.4);
   color: var(--clr-warning);
   animation: timer-pulse 1s ease-in-out infinite;
 }
 
-.assessment-timer.critical {
+.test-timer.critical {
   background: rgba(239,68,68,0.15);
   border-color: rgba(239,68,68,0.4);
   color: var(--clr-danger);
@@ -534,19 +534,19 @@
   50% { transform: scale(1.03); }
 }
 
-.assessment-progress-wrap {
+.test-progress-wrap {
   height: 2px; /* Super thin progress bar */
   background: rgba(255,255,255,0.06);
 }
 
-.assessment-progress-fill {
+.test-progress-fill {
   height: 100%;
   background: var(--grad-primary);
   transition: width 0.5s ease;
 }
 
-/* Assessment Layout Container */
-.assessment-body {
+/* Test Layout Container */
+.test-body {
   flex: 1;
   display: flex;
   overflow: hidden;
@@ -555,7 +555,7 @@
 }
 
 /* Question area */
-.assessment-main-content {
+.test-main-content {
   flex: 1;
   overflow-y: auto;
   padding: 6px 8px 0 8px;
@@ -610,7 +610,7 @@
   margin-bottom: var(--space-4);
 }
 
-/* Assessment Nav Drawer (Mobile first, slide up from bottom) */
+/* Test Nav Drawer (Mobile first, slide up from bottom) */
 .q-nav-drawer {
   position: fixed;
   bottom: 0;
@@ -811,14 +811,14 @@
   color: var(--clr-text-3);
 }
 
-/* Assessment nav buttons (removed desktop-specific large margin) */
-.assessment-nav-buttons {
+/* Test nav buttons (removed desktop-specific large margin) */
+.test-nav-buttons {
   display: none; /* Handled by bottom nav on mobile, hidden initially */
 }
 
 /* Desktop override for sidebar */
 @media (min-width: 769px) {
-  .assessment-body {
+  .test-body {
     flex-direction: row;
     padding: var(--space-4);
     padding-bottom: 0;
@@ -841,7 +841,7 @@
     display: none;
   }
   
-  .assessment-nav-buttons {
+  .test-nav-buttons {
     display: flex;
     justify-content: space-between;
     margin-top: var(--space-4);
@@ -978,8 +978,8 @@
     gap: var(--space-4);
   }
 
-  /* Assessment Layout (exam.html overrides) */
-  .assessment-main-content {
+  /* Test Layout (exam.html overrides) */
+  .test-main-content {
     padding: var(--space-2);
   }
 
@@ -1108,7 +1108,7 @@
   -webkit-touch-callout: none;
 }
 
-.question-text, .question-number, .q-nav-grid, .assessment-topbar {
+.question-text, .question-number, .q-nav-grid, .test-topbar {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
@@ -1123,7 +1123,7 @@
   user-select: text !important;
 }
 
-/* ── Completed Assessments Section (Bottom of Dashboard) ── */
+/* ── Completed Tests Section (Bottom of Dashboard) ── */
 .completed-exams-section {
   margin-top: var(--space-8);
   margin-bottom: var(--space-10);
@@ -1279,7 +1279,7 @@
   gap: 12px;
 }
 
-/* Assessment table — compact rows */
+/* Test table — compact rows */
 .completed-exams-table td {
   padding: 10px 14px;
   font-size: 0.82rem;
@@ -1323,7 +1323,7 @@
 
   /* Section header row: tighter vertical spacing */
   .classes-section .section-header,
-.completed-Assessments-section .section-header,
+.completed-Tests-section .section-header,
 #up-next-section .section-header {
   margin-bottom: 6px;
 }
@@ -1351,7 +1351,7 @@
     letter-spacing: 0.02em;
   }
 
-  /* Assessment list table: hide less-important columns */
+  /* Test list table: hide less-important columns */
   .completed-exams-table th:nth-child(4),
   .completed-exams-table td:nth-child(4) {
     display: none; /* hide Date column */
@@ -1365,18 +1365,18 @@
     font-size: 0.62rem;
   }
 
-  /* Mobile assessment card list (v1 cards) */
-  .v1-assessment-card {
+  /* Mobile test card list (v1 cards) */
+  .v1-test-card {
     padding: 14px 16px;
   }
-  .assessment-card-title {
+  .test-card-title {
     font-size: 1rem;
     line-height: 1.4;
   }
-  .assessment-card-badges {
+  .test-card-badges {
     gap: 6px;
   }
-  .assessment-card-badges .badge {
+  .test-card-badges .badge {
     font-size: 0.72rem;
     padding: 3px 8px;
   }
@@ -1749,8 +1749,8 @@
 
 
 
-/* Compact Completed Assessments Cards */
-.completed-Assessment-mobile-card {
+/* Compact Completed Tests Cards */
+.completed-Test-mobile-card {
   padding: 8px 12px !important;
   gap: 4px !important;
   margin-bottom: 8px !important;
@@ -1906,8 +1906,8 @@
       color: var(--clr-accent-1, #a78bfa);
     }
 
-    /* Completed Assessments Section (Bottom of Dashboard) */
-    .completed-Assessments-section {
+    /* Completed Tests Section (Bottom of Dashboard) */
+    .completed-Tests-section {
       margin-top: var(--space-6);
       margin-bottom: var(--space-8);
     }
@@ -1968,12 +1968,12 @@
     }
 
     /* Desktop Table Styling */
-    .completed-Assessments-table {
+    .completed-Tests-table {
       width: 100%;
       border-collapse: collapse;
       text-align: left;
     }
-    .completed-Assessments-table th {
+    .completed-Tests-table th {
       padding: 10px 14px;
       font-size: 0.7rem;
       text-transform: uppercase;
@@ -1984,31 +1984,31 @@
       font-weight: 700;
       white-space: nowrap;
     }
-    .completed-Assessments-table td {
+    .completed-Tests-table td {
       padding: 10px 14px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       font-size: 0.85rem;
       vertical-align: middle;
     }
-    .completed-Assessments-table tbody tr:last-child td {
+    .completed-Tests-table tbody tr:last-child td {
       border-bottom: none;
     }
-    .completed-Assessments-table tbody tr {
+    .completed-Tests-table tbody tr {
       transition: background var(--transition-fast);
       cursor: pointer;
     }
-    .completed-Assessments-table tbody tr:hover {
+    .completed-Tests-table tbody tr:hover {
       background: rgba(99, 102, 241, 0.07);
     }
 
-    /* Mobile Cards View for Completed Assessments */
-    .completed-Assessments-mobile-list {
+    /* Mobile Cards View for Completed Tests */
+    .completed-Tests-mobile-list {
       display: none;
       flex-direction: column;
       gap: 8px;
       padding: 8px;
     }
-    .completed-Assessment-mobile-card {
+    .completed-Test-mobile-card {
       background: rgba(255, 255, 255, 0.025);
       border: 1px solid var(--clr-border);
       border-radius: var(--radius-md);
@@ -2021,32 +2021,32 @@
       text-decoration: none;
       color: inherit;
     }
-    .completed-Assessment-mobile-card:hover,
-    .completed-Assessment-mobile-card:active {
+    .completed-Test-mobile-card:hover,
+    .completed-Test-mobile-card:active {
       background: rgba(99, 102, 241, 0.08);
       border-color: rgba(99, 102, 241, 0.4);
       transform: translateY(-1px);
     }
-    .Assessment-card-header {
+    .Test-card-header {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       gap: 8px;
     }
-    .Assessment-card-title {
+    .Test-card-title {
       font-size: 0.88rem;
       font-weight: 700;
       color: var(--clr-text-1);
       line-height: 1.25;
     }
-    .Assessment-card-badges {
+    .Test-card-badges {
       display: flex;
       align-items: center;
       gap: 6px;
       flex-wrap: wrap;
       margin-top: 2px;
     }
-    .Assessment-card-footer {
+    .Test-card-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -2105,14 +2105,14 @@
       .completed-summary-lbl {
         font-size: 0.58rem;
       }
-      .completed-Assessments-table {
+      .completed-Tests-table {
         display: none !important;
       }
-      .completed-Assessments-mobile-list {
+      .completed-Tests-mobile-list {
         display: flex !important;
       }
     }
-    .asm-modal-row {
+    .test-modal-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -2124,10 +2124,10 @@
       border: 1px solid var(--clr-border);
       transition: background 0.15s;
     }
-    .asm-modal-row:hover {
+    .test-modal-row:hover {
       background: rgba(255, 255, 255, 0.05);
     }
-    .asm-modal-info {
+    .test-modal-info {
       display: grid;
       grid-template-columns: 2fr 1fr 1fr;
       gap: 0.5rem;
@@ -2135,7 +2135,7 @@
       min-width: 0;
       align-items: center;
     }
-    .asm-modal-actions {
+    .test-modal-actions {
       display: flex;
       align-items: center;
       justify-content: flex-end;
@@ -2144,27 +2144,27 @@
       flex-shrink: 0;
     }
     @media (max-width: 640px) {
-      .asm-modal-row {
+      .test-modal-row {
         flex-direction: column;
         align-items: stretch;
         padding: 0.85rem;
         gap: 0.6rem;
       }
-      .asm-modal-info {
+      .test-modal-info {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
         gap: 0.35rem;
       }
-      .asm-modal-info > div {
+      .test-modal-info > div {
         width: 100%;
       }
-      .asm-modal-meta-group {
+      .test-modal-meta-group {
         display: flex;
         gap: 0.8rem;
         align-items: center;
       }
-      .asm-modal-actions {
+      .test-modal-actions {
         width: 100%;
         justify-content: space-between;
         margin-top: 0.4rem;
@@ -2185,7 +2185,7 @@
 
 /* ============================================================
    ZERO-SCROLL MOBILE DASHBOARD & MODERN TIER THEME ARCHITECTURE
-   Strictly scoped to body.dashboard-page (Assessment page 100% untouched)
+   Strictly scoped to body.dashboard-page (Test page 100% untouched)
    ============================================================ */
 
 body.dashboard-page {
@@ -2718,7 +2718,7 @@ body.dashboard-page {
 body.dashboard-page #welcome-banner-section,
 body.dashboard-page .dashboard-achievement-card,
 body.dashboard-page .dashboard-standings-card,
-body.dashboard-page .next-assessment-card,
+body.dashboard-page .next-test-card,
 body.dashboard-page .dashboard-classes-deck {
   border: 1px solid rgba(var(--tier-rgb), 0.35) !important;
   background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.12), transparent 75%), #0f172a !important;
@@ -2977,10 +2977,10 @@ body.dashboard-page .classes-bar-pct {
 }
 
 /* ============================================================
-   5. NEXT ASSESSMENT SECTION (Strict 50px Height)
+   5. NEXT TEST SECTION (Strict 50px Height)
    Single unified card, no separate floating label
    ============================================================ */
-body.dashboard-page .dashboard-next-assessment-deck {
+body.dashboard-page .dashboard-next-test-deck {
   height: 50px !important;
   min-height: 50px !important;
   max-height: 50px !important;
@@ -2991,7 +2991,7 @@ body.dashboard-page .dashboard-next-assessment-deck {
   padding: 0 !important;
 }
 
-body.dashboard-page .next-assessment-card {
+body.dashboard-page .next-test-card {
   height: 50px !important;
   min-height: 50px !important;
   max-height: 50px !important;
@@ -3191,7 +3191,7 @@ body.dashboard-page .leaderboard-my-summary .my-summary-champion {
 
 /* Leaderboard List / Scroll Container */
 body.dashboard-page #batch-leaderboard-container,
-body.dashboard-page #completed-Assessments-container {
+body.dashboard-page #completed-Tests-container {
   flex: 1 1 0% !important;
   min-height: 0 !important;
   overflow-y: auto !important;
@@ -3200,13 +3200,13 @@ body.dashboard-page #completed-Assessments-container {
 
 @supports (scrollbar-width: none) {
   body.dashboard-page #batch-leaderboard-container,
-  body.dashboard-page #completed-Assessments-container {
+  body.dashboard-page #completed-Tests-container {
     scrollbar-width: none !important;
   }
 }
 
 body.dashboard-page #batch-leaderboard-container::-webkit-scrollbar,
-body.dashboard-page #completed-Assessments-container::-webkit-scrollbar {
+body.dashboard-page #completed-Tests-container::-webkit-scrollbar {
   display: none !important;
 }
 

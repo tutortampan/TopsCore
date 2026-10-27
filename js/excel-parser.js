@@ -15,7 +15,7 @@ const HEADER_ALIASES = {
   birth_date: ['birth_date', 'birthdate', 'dob', 'tanggallahir', 'tanggal_lahir', 'tgllahir', 'tgl'],
   age: ['age', 'usia', 'umur'],
   pin: ['pin', 'password', 'pass', 'kodesandi'],
-  title: ['title', 'Assessment_title', 'Assessmenttitle', 'judul', 'nama_ujian'],
+  title: ['title', 'Test_title', 'Testtitle', 'judul', 'nama_ujian'],
   topic: ['topic', 'topik', 'topic_name', 'nama_topik', 'tema', 'theme', 'kategori', 'category'],
   question_type: ['question_type', 'word_type', 'wordtype', 'part_of_speech', 'pos', 'type', 'tipe', 'jenis_kata', 'tipe_kata', 'tipekata', 'jenis', 'kategori_kata', 'pos_tag', 'category', 'mode'],
   week: ['week', 'minggu', 'wk'],
@@ -403,7 +403,7 @@ export function processCentralBankQuestionImport(normalizedRows, { existingQuest
 
 
 
-export function processAIAssessmentUpload(moduleType, jsonRows) {
+export function processAITestUpload(moduleType, jsonRows) {
   // Simple pass-through or mapping for AI Modules based on panel-c-builder.js definitions
   // We just return the rows as an array of items for the payload
   const items = [];

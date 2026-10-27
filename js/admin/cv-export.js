@@ -93,7 +93,7 @@ export function generateExecutiveCV(profile, workRecords = [], skills = []) {
   const title = profile?.title || "Lead Instructor & Academic Director";
   
   // Strict clamp of summary to ~350 characters
-  let bio = (profile?.bio || "Experienced educational leader and administrator specializing in communicative language curriculum development, digital assessment architecture, and bilingual learning pedagogy.").trim();
+  let bio = (profile?.bio || "Experienced educational leader and administrator specializing in communicative language curriculum development, digital test architecture, and bilingual learning pedagogy.").trim();
   if (bio.length > 350) {
     bio = bio.substring(0, 347) + "...";
   }
@@ -124,11 +124,11 @@ export function generateExecutiveCV(profile, workRecords = [], skills = []) {
   `).join("") : `<div class="cv-item" style="margin-bottom: 0.5rem;">
     <div style="font-weight: 700; color: #0f172a;">Senior English Academic Coordinator</div>
     <div style="font-size: 8.5pt; color: #2563eb; font-weight: 600;">TopsCore &middot; 2024 &ndash; Present</div>
-    <div style="font-size: 8pt; color: #475569;">Directing assessment standards and modular testing curriculum across all regional batches.</div>
+    <div style="font-size: 8pt; color: #475569;">Directing test standards and modular testing curriculum across all regional batches.</div>
   </div>`;
 
   const skillsList = (skills || []).map(s => typeof s === 'string' ? s : (s.skill_name || s.name || '')).filter(Boolean);
-  const skillsHtml = skillsList.length > 0 ? skillsList.join(" &bull; ") : "Curriculum Design &bull; Educational Leadership &bull; Pronunciation Assessment &bull; CEFR Evaluation &bull; Database Administration";
+  const skillsHtml = skillsList.length > 0 ? skillsList.join(" &bull; ") : "Curriculum Design &bull; Educational Leadership &bull; Pronunciation Test &bull; CEFR Evaluation &bull; Database Administration";
 
   container.innerHTML = `
     <style>

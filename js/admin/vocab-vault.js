@@ -1,7 +1,7 @@
 /**
  * vocab-vault.js
  * Admin Vocabulary Vault Console — Domain C (Class) Section
- * Handles: Word CRUD, Excel Import with Duplicate Resolver, Cascading Assessment Builder
+ * Handles: Word CRUD, Excel Import with Duplicate Resolver, Cascading Test Builder
  * Version: 4.7.0
  */
 import {
@@ -11,17 +11,17 @@ import {
   importVaultWords,
   deleteVaultWord,
   updateVaultWord,
-  createVocabMasteryAssessment,
+  createVocabMasteryTest,
   fetchInstitutions,
   fetchPrograms,
-  fetchAssessmentDefinitions,
+  fetchTestDefinitions,
   adminFetchAll,
   renameVaultTopic,
   exportVaultWords,
-  updateAssessmentDefinition
-} from '../api.js?v=5.3.2';
-import { showToast, showLoading, hideLoading } from '../app.js?v=5.3.2';
-import { getSupabase } from '../supabase.js?v=5.3.2';
+  updateTestDefinition
+} from '../api.js?v=20261027b';
+import { showToast, showLoading, hideLoading } from '../app.js?v=20261027b';
+import { getSupabase } from '../supabase.js?v=20261027b';
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -56,19 +56,19 @@ export async function renderVocabularyVault(area) {
     let activeVaultTab = window._activeVaultTab || 'blueprint';
 
     const buildVaultTabs = (activeId) => [
-      { id: 'blueprint', icon: '🗺️', title: 'Blueprint', label: 'Assessment Blueprint' },
+      { id: 'blueprint', icon: '🗺️', title: 'Blueprint', label: 'Test Blueprint' },
       { id: 'topics',    icon: '📑', val: topicsCount,  label: 'Topic Manager' },
       { id: 'vocab',     icon: '📦', val: wordsCount,   label: 'Vocabulary Words' },
       { id: 'phrases',   icon: '💬', val: phrasesCount, label: 'Phrases & Idioms' }
     ];
 
-    // FIX: move tabs to topbar (same pattern as Assessment, Class Hub, Students)
+    // FIX: move tabs to topbar (same pattern as Test, Class Hub, Students)
     if (window.setTopbarTabs) {
       window.setTopbarTabs(buildVaultTabs(activeVaultTab), activeVaultTab, 'window._switchVaultTab');
     }
 
     // Content area: only the tab content — NO inline tab bar
-    area.innerHTML = `<div id="vault-tab-content" style="box-sizing: border-box; padding-top: 0.75rem;"></div>`;
+    area.innerHTML = `<div id="vault-tab-content" style="box-sizing: border-box; height: 100%; display: flex; flex-direction: column; overflow: hidden; flex: 1; min-height: 0; padding: 2px 0 0 0;"></div>`;
 
     const tabContent = document.getElementById('vault-tab-content');
 
@@ -132,51 +132,51 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     `;
 
   area.innerHTML = `
-    <div style="display: flex; flex-direction: column; height: calc(100vh - 120px); box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
-      <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
+    <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
+      <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
         
         <!-- Controls Bar -->
-        <div style="padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="padding: 4px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; flex-shrink: 0;">
           
           <div class="table-toolbar-unified">
-            <input type="search" id="vault-search" placeholder="🔍 Search Indonesian, English, or Topic..." class="toolbar-input-38" style="width: 280px;" />
-            <select id="vault-topic-filter" class="toolbar-input-38" style="width: 190px; cursor: pointer;">
+            <input type="search" id="vault-search" placeholder="🔍 Search Indonesian, English, or Topic..." class="toolbar-input-38" style="width: 260px;" />
+            <select id="vault-topic-filter" class="toolbar-input-38" style="width: 170px; cursor: pointer;">
               <option value="">All Topics</option>
               ${topics.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')}
             </select>
-            <select id="vault-wordtype-filter" class="toolbar-input-38" style="width: 150px; cursor: pointer;">
+            <select id="vault-wordtype-filter" class="toolbar-input-38" style="width: 140px; cursor: pointer;">
               <option value="">All Word Types</option>
               ${wordTypeOptions}
             </select>
-            <span style="font-size: 12px; color: #64748b; font-weight: 500; margin-left: 4px;">
+            <span style="font-size: 11px; color: #64748b; font-weight: 500; margin-left: 4px;">
               <span id="vault-count" style="color: #f8fafc; font-weight: 700;">${words.length}</span> ${mode === 'phrases' ? 'phrases' : 'words'}
             </span>
           </div>
 
-          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
             <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-import-vault">&#128229; Import Excel</button>
             <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-export-vault">&#128228; Export Excel</button>
             <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-check-duplicates">&#9874; Check Dups</button>
             <button class="btn btn-danger btn-sm toolbar-btn-38" id="btn-reset-vault" style="opacity:0.85;">&#128465; Reset</button>
             <button class="btn btn-primary btn-sm toolbar-btn-38" id="btn-manual-auto-generate" style="background:var(--clr-primary);">&#9881; Auto-Gen</button>
-            <button class="btn btn-primary btn-sm toolbar-btn-38" id="btn-create-vocab-assessment">${mode === 'phrases' ? '+ Phrase Exam' : '+ Vocab Exam'}</button>
+            <button class="btn btn-primary btn-sm toolbar-btn-38" id="btn-create-vocab-test">${mode === 'phrases' ? '+ Phrase Exam' : '+ Vocab Exam'}</button>
           </div>
         </div>
 
         <!-- Table Area -->
-        <div class="table-wrap sticky-first" style="flex-grow: 1; overflow-y: auto;">
-          <table id="vault-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;">
+        <div class="table-wrap sticky-first" style="flex-grow: 1; overflow-y: auto; min-height: 0;">
+          <table id="vault-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
             <thead style="background: rgba(15, 23, 42, 0.95); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
               <tr>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; width: 50px;">Lvl</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; width: 80px;">T.Code</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px;">Theme</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; width: 80px;">Topic Code</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px;">Topic</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; width: 100px;">Type</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px;">Indonesian</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px;">English</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: right; width: 100px; position: sticky; right: 0; background: rgba(15, 23, 42, 0.95); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 20;">Actions</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 45px; line-height: 1.2;">Lvl</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 70px; line-height: 1.2;">T.Code</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">Theme</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 70px; line-height: 1.2;">Topic Code</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">Topic</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 90px; line-height: 1.2;">Type</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">Indonesian</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">English</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: right; width: 90px; position: sticky; right: 0; background: rgba(15, 23, 42, 0.95); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 20; line-height: 1.2;">Actions</th>
               </tr>
             </thead>
             <tbody id="vault-tbody"></tbody>
@@ -398,34 +398,17 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     filterAndRender();
   }, mode));
   
-  document.getElementById('btn-manual-auto-generate')?.addEventListener('click', async () => {
-    try {
-      const vaultLevels = [...new Set(_allWords.map(w => parseInt(w.target_level || 1, 10)))].filter(Boolean).sort();
-      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=5.3.2');
-      await openAutoGenerateModal({
-        availableLevels: vaultLevels,
-        preSelectedLevels: vaultLevels,
-        explicitClassId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
-        onComplete: (res) => {
-           // Success handled by modal
-        }
-      });
-    } catch(err) {
-      console.error(err);
-      if (window.showToast) window.showToast('Error opening generator: ' + err.message, 'error');
-    }
-  });
   document.getElementById('btn-check-duplicates')?.addEventListener('click', () => {
     openDuplicateCheckerModal(_allWords, (updatedWords) => {
       _allWords = updatedWords;
       filterAndRender();
     });
   });
-  document.getElementById('btn-create-vocab-assessment')?.addEventListener('click', () => {
+  document.getElementById('btn-create-vocab-test')?.addEventListener('click', () => {
     if (mode === 'phrases') {
-      openAssessmentBuilderModal(topics, { assessmentType: 'IDIOM_PROVERB' });
+      openTestBuilderModal(topics, { testType: 'IDIOM_PROVERB' });
     } else {
-      openAssessmentBuilderModal(topics, { assessmentType: 'VOCAB_MASTERY' });
+      openTestBuilderModal(topics, { testType: 'VOCAB_MASTERY' });
     }
   });
 
@@ -678,20 +661,6 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       showToast(`&#10003; Import complete: ${result.inserted} inserted, ${result.updated} updated, ${result.skipped} skipped.`, 'success');
       const newWords = await fetchVaultWords({ limit: 10000, targetLevel: null });
       onSuccess(newWords);
-
-      // Check if any words were imported and extract levels
-      const importedLevels = [...new Set(_parsedRows.map(r => parseInt(r.target_level || 1, 10)))].filter(Boolean);
-      if (importedLevels.length > 0) {
-        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=5.3.2');
-        await openAutoGenerateModal({
-          availableLevels: importedLevels,
-          preSelectedLevels: importedLevels,
-          explicitClassId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
-          onComplete: (res) => {
-             // Success handled by modal
-          }
-        });
-      }
     } catch (e) {
       hideLoading();
       showToast('Import failed: ' + e.message, 'error');
@@ -699,9 +668,9 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
   });
 }
 
-// ─── Assessment Builder Modal (5 Steps) ────────────────────
+// ─── Test Builder Modal (5 Steps) ────────────────────
 
-export async function openAssessmentBuilderModal(initialVaultTopics, overrides = {}) {
+export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
   let vaultTopics = initialVaultTopics;
   if (!vaultTopics) {
     vaultTopics = await fetchVaultTopics();
@@ -715,7 +684,7 @@ export async function openAssessmentBuilderModal(initialVaultTopics, overrides =
   modal.innerHTML = `
     <div class="modal-box" style="max-width:720px;max-height:90vh;overflow-y:auto;">
       <div class="d-flex justify-between align-center mb-4">
-        <h3 class="fw-700" style="margin:0;">&#10133; ${overrides.editAssessment ? 'Edit' : 'Create'} Vocabulary Assessment</h3>
+        <h3 class="fw-700" style="margin:0;">&#10133; ${overrides.editTest ? 'Edit' : 'Create'} Vocabulary Test</h3>
         <button class="btn btn-ghost btn-sm" id="close-builder-modal">&#10005;</button>
       </div>
 
@@ -742,17 +711,17 @@ export async function openAssessmentBuilderModal(initialVaultTopics, overrides =
   document.getElementById('close-builder-modal')?.addEventListener('click', () => modal.remove());
 
   // State
-  const editAsm = overrides.editAssessment || null;
+  const editAsm = overrides.editTest || null;
   const state = {
     isEdit: !!editAsm,
-    assessmentId: editAsm?.id || null,
+    testId: editAsm?.id || null,
     step: overrides.skipStep1 ? 2 : 1,
     institutionId: editAsm?.institution_id || overrides.institutionId || '', institutionName: overrides.institutionName || '',
     programId: editAsm?.program_id || overrides.programId || '', programName: overrides.programName || '',
     classId: editAsm?.class_id || overrides.classId || '', className: overrides.className || '',
     levelId: editAsm?.level_id || overrides.levelId || '', levelName: overrides.levelName || '',
-    assessmentType: editAsm?.assessment_type || overrides.assessmentType || 'VOCAB_MASTERY',
-    tier: editAsm ? (editAsm.assessment_type.includes('TASK') ? 'TASK' : (editAsm.assessment_type.includes('QUIZ') ? 'QUIZ' : 'EXAM')) : 'TASK',
+    testType: editAsm?.test_type || overrides.testType || 'VOCAB_MASTERY',
+    tier: editAsm ? (editAsm.test_type.includes('TASK') ? 'TASK' : (editAsm.test_type.includes('QUIZ') ? 'QUIZ' : 'EXAM')) : 'TASK',
     title: editAsm?.title || '',
     sourceTopic: null,
     sourceTaskIds: [],
@@ -777,7 +746,7 @@ export async function openAssessmentBuilderModal(initialVaultTopics, overrides =
       el.style.color = isActive ? 'var(--clr-primary)' : isDone ? '#10b981' : 'var(--clr-text-3)';
     });
     document.getElementById('builder-back-btn').style.display = currentStep > 1 ? '' : 'none';
-    document.getElementById('builder-next-btn').innerHTML = currentStep === 4 ? (state.isEdit ? '&#10003; Save Changes' : '&#10003; Create Assessment') : 'Next →';
+    document.getElementById('builder-next-btn').innerHTML = currentStep === 4 ? (state.isEdit ? '&#10003; Save Changes' : '&#10003; Create Test') : 'Next →';
   }
 
   function updateAutoTitle() {
@@ -828,7 +797,7 @@ export async function openAssessmentBuilderModal(initialVaultTopics, overrides =
             ${state.isEdit ? '<div class="text-sm mt-3" style="color:var(--clr-warning);"><strong>Note:</strong> Scope and Tier are locked in Edit Mode to preserve history.</div>' : ''}
           </div>
           <div style="flex: 1; min-width: 250px;">
-            <label class="form-label">Assessment Tier</label>
+            <label class="form-label">Test Tier</label>
             <div class="d-flex flex-column gap-3 mb-3">
               ${[
                 { val: 'TASK', icon: '&#128203;', label: 'Task', desc: 'Single topic drill' },
@@ -845,7 +814,7 @@ export async function openAssessmentBuilderModal(initialVaultTopics, overrides =
               `).join('')}
             </div>
             <div class="form-group">
-              <label class="form-label">Assessment Title</label>
+              <label class="form-label">Test Title</label>
               <input type="text" class="form-control" id="b-title" placeholder="Auto-generated title..." />
             </div>
           </div>
@@ -1010,17 +979,17 @@ export async function openAssessmentBuilderModal(initialVaultTopics, overrides =
           r.addEventListener('change', () => { state.sourceTopic = r.value; updateAutoTitle(); });
         });
       } else if (state.tier === 'QUIZ') {
-        // Load existing TASK assessments in selected class
+        // Load existing TASK tests in selected class
         const sb = await getSupabase();
-        const { data: tasks } = await sb.from('assessments')
+        const { data: tasks } = await sb.from('tests')
           .select('id,title,description')
-          .eq('assessment_type', 'VOCAB_TASK')
+          .eq('test_type', 'VOCAB_TASK')
           .eq('class_id', state.classId)
           .eq('status', 'PUBLISHED')
           .is('deleted_at', null)
           .order('created_at');
         if (!tasks || !tasks.length) {
-          sourceArea.innerHTML = `<p class="text-warning">No Task assessments found in this class. Create Tasks first.</p>`;
+          sourceArea.innerHTML = `<p class="text-warning">No Task tests found in this class. Create Tasks first.</p>`;
         } else {
           sourceArea.innerHTML = `
             <p class="text-muted text-sm mb-3">Select Tasks to aggregate for this Quiz:</p>
@@ -1044,17 +1013,17 @@ export async function openAssessmentBuilderModal(initialVaultTopics, overrides =
           });
         }
       } else if (state.tier === 'EXAM') {
-        // Load existing QUIZ assessments
+        // Load existing QUIZ tests
         const sb = await getSupabase();
-        const { data: quizzes } = await sb.from('assessments')
+        const { data: quizzes } = await sb.from('tests')
           .select('id,title,description')
-          .eq('assessment_type', 'VOCAB_QUIZ')
+          .eq('test_type', 'VOCAB_QUIZ')
           .eq('class_id', state.classId)
           .eq('status', 'PUBLISHED')
           .is('deleted_at', null)
           .order('created_at');
         if (!quizzes || !quizzes.length) {
-          sourceArea.innerHTML = `<p class="text-warning">No Quiz assessments found in this class. Create Quizzes first.</p>`;
+          sourceArea.innerHTML = `<p class="text-warning">No Quiz tests found in this class. Create Quizzes first.</p>`;
         } else {
           sourceArea.innerHTML = `
             <p class="text-muted text-sm mb-3">Select Quizzes to aggregate for this Exam:</p>
@@ -1172,7 +1141,7 @@ export async function openAssessmentBuilderModal(initialVaultTopics, overrides =
 
         <!-- Summary -->
         <div class="mt-4 p-3 rounded" style="background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);">
-          <p class="text-xs fw-700 mb-2" style="color:var(--clr-text-2);">ASSESSMENT SUMMARY</p>
+          <p class="text-xs fw-700 mb-2" style="color:var(--clr-text-2);">TEST SUMMARY</p>
           <div class="text-sm" style="line-height:1.8;">
             <div><strong>Title:</strong> ${escapeHtml(state.title||'(not set)')}</div>
             <div><strong>Tier:</strong> ${escapeHtml(state.tier)}</div>
@@ -1217,16 +1186,16 @@ export async function openAssessmentBuilderModal(initialVaultTopics, overrides =
       }
     } else if (state.step === 4) {
       // Final submission
-      if (!state.title) { showToast('Assessment title is required.', 'warning'); return; }
+      if (!state.title) { showToast('Test title is required.', 'warning'); return; }
       state.windowStart = null;
       state.windowEnd = document.getElementById('b-window-end')?.value
         ? parseWita(document.getElementById('b-window-end').value) : null;
       state.durationMinutes = parseInt(document.getElementById('b-duration')?.value) || 60;
 
-      showLoading(state.isEdit ? 'Saving changes...' : 'Creating assessment...');
+      showLoading(state.isEdit ? 'Saving changes...' : 'Creating test...');
       try {
         if (state.isEdit) {
-          await updateAssessmentDefinition(state.assessmentId, {
+          await updateTestDefinition(state.testId, {
             title: state.title,
             working_duration_minutes: state.durationMinutes,
             availability_start: state.windowStart,
@@ -1234,9 +1203,9 @@ export async function openAssessmentBuilderModal(initialVaultTopics, overrides =
           });
           hideLoading();
           modal.remove();
-          showToast(`&#10003; Assessment saved successfully.`, 'success');
+          showToast(`&#10003; Test saved successfully.`, 'success');
         } else {
-          const result = await createVocabMasteryAssessment({
+          const result = await createVocabMasteryTest({
             institutionId: state.institutionId,
             programId: state.programId,
             classId: state.classId,
@@ -1253,8 +1222,8 @@ export async function openAssessmentBuilderModal(initialVaultTopics, overrides =
             sourceTopic: state.sourceTopic,
             sourceTaskIds: state.sourceTaskIds,
             sourceQuizIds: state.sourceQuizIds,
-            assessmentType: state.assessmentType,
-            answerType: state.assessmentType === 'IDIOM_PROVERB' ? 'dropdown_10' : 'written'
+            testType: state.testType,
+            answerType: state.testType === 'IDIOM_PROVERB' ? 'dropdown_10' : 'written'
           });
           hideLoading();
           modal.remove();
@@ -1262,7 +1231,7 @@ export async function openAssessmentBuilderModal(initialVaultTopics, overrides =
         }
       } catch (e) {
         hideLoading();
-        showToast('Failed to save assessment: ' + e.message, 'error');
+        showToast('Failed to save test: ' + e.message, 'error');
       }
       return;
     }
@@ -1502,7 +1471,7 @@ function _renderBlueprintTab(area, words) {
       const importedLevels = Array.from(levelsSet).sort((a,b)=>a-b);
       if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
       try {
-        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=5.3.2');
+        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261027c');
         await openAutoGenerateModal({
           availableLevels: importedLevels,
           preSelectedLevels: importedLevels,
@@ -1700,8 +1669,8 @@ function _renderTopicManager(area, words, topics) {
         const newLevel = parseInt(e.target.value, 10);
         
         // Dynamic import to avoid missing dependencies in older backup
-        const { moveVaultTopicsToLevel } = await import('../api.js?v=5.3.2');
-        const { showLoading, hideLoading, showToast } = await import('../app.js?v=5.3.2');
+        const { moveVaultTopicsToLevel } = await import('../api.js?v=20261027b');
+        const { showLoading, hideLoading, showToast } = await import('../app.js?v=20261027b');
         
         showLoading();
         try {

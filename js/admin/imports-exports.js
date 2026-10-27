@@ -795,7 +795,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
           <div class="section-header" style="flex-shrink: 0;">
             <div>
               <h2 class="section-title">Import Questions (Excel)</h2>
-              <p class="section-subtitle">Select Assessment & Assessment Type first to view the correct Excel template format before uploading a file.</p>
+              <p class="section-subtitle">Select Test & Test Type first to view the correct Excel template format before uploading a file.</p>
             </div>
           </div>
 
@@ -805,12 +805,12 @@ function calculateAgeFromBirthDate(birthDateStr) {
             <div class="glass-card p-6" style="flex: 1; min-width: 300px; max-width: calc(50% - 12px); height: 100%; overflow-y: auto; display: flex; flex-direction: column;">
               <div class="d-flex flex-column gap-4 mb-4">
                 <div class="form-group w-100">
-                  <label class="form-label">1. Select Target Assessment</label>
-                  <select class="form-control" id="import-Assessment-select"><option value="">Loading assessments...</option></select>
+                  <label class="form-label">1. Select Target Test</label>
+                  <select class="form-control" id="import-Test-select"><option value="">Loading tests...</option></select>
                 </div>
                 <div class="form-group w-100">
-                  <label class="form-label">2. Assessment Type (Answer Method)</label>
-                  <select class="form-control" id="import-Assessment-type-select">
+                  <label class="form-label">2. Test Type (Answer Method)</label>
+                  <select class="form-control" id="import-Test-type-select">
                     <option value="written">Written (Type)</option>
                     <option value="spoken">Spoken (Suara)</option>
                     <option value="selection">Selection</option>
@@ -835,7 +835,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
                 </div>
               </div>
 
-              <!-- Quick Template Download Bar for All 4 Assessment Types -->
+              <!-- Quick Template Download Bar for All 4 Test Types -->
               <div class="p-4 rounded mt-auto" style="background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);">
                 <div class="text-xs fw-700 text-muted uppercase mb-3">Other Templates:</div>
                 <div class="d-flex flex-column gap-2">
@@ -843,7 +843,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
                   <button class="btn btn-secondary btn-sm text-left" id="dl-tmpl-speech">🎙️ Speech to Text</button>
                   <button class="btn btn-secondary btn-sm text-left" id="dl-tmpl-mc">🔘 Multiple Choice</button>
                   <button class="btn btn-secondary btn-sm text-left" id="dl-tmpl-dropdown">&#9660; Drop-down</button>
-                  <div class="text-xs fw-700 text-primary uppercase mt-3 mb-1">TopsCore AI assessments:</div>
+                  <div class="text-xs fw-700 text-primary uppercase mt-3 mb-1">TopsCore AI tests:</div>
                   <button class="btn btn-outline-primary btn-sm text-left dl-ai-tmpl" data-module="POINT_AND_SPEAK">⚡ Point & Speak!</button>
                   <button class="btn btn-outline-primary btn-sm text-left dl-ai-tmpl" data-module="STORYTELLING">⚡ Storytelling</button>
                   <button class="btn btn-outline-primary btn-sm text-left dl-ai-tmpl" data-module="CONVERSATIONAL">⚡ Conversational</button>
@@ -863,7 +863,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
                     <p class="text-muted text-sm mt-1">Review questions data before saving.</p>
                   </div>
                   <div>
-                    <span class="badge badge-primary p-2" id="preview-assessment-type-badge" style="font-size:0.85rem;">Assessment Type: WRITTEN</span>
+                    <span class="badge badge-primary p-2" id="preview-test-type-badge" style="font-size:0.85rem;">Test Type: WRITTEN</span>
                   </div>
                 </div>
 
@@ -895,7 +895,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
       `;
 
       let parsedQuestionsState = [];
-      let fetchedAssessmentsList = [];
+      let fetchedTestsList = [];
 
       const formatInfos = {
         written: {
@@ -949,8 +949,8 @@ function calculateAgeFromBirthDate(birthDateStr) {
         document.getElementById('format-title-badge').textContent = info.title;
         document.getElementById('format-desc-label').textContent = info.desc;
         document.getElementById('format-columns-code').textContent = info.columns;
-        const previewBadge = document.getElementById('preview-assessment-type-badge');
-        if (previewBadge) previewBadge.textContent = `Assessment Type: ${typeKey.replace('_',' ').toUpperCase()}`;
+        const previewBadge = document.getElementById('preview-test-type-badge');
+        if (previewBadge) previewBadge.textContent = `Test Type: ${typeKey.replace('_',' ').toUpperCase()}`;
 
         if (parsedQuestionsState.length) {
           parsedQuestionsState.forEach(q => { q.answerType = typeKey; });
@@ -958,35 +958,35 @@ function calculateAgeFromBirthDate(birthDateStr) {
         }
       }
 
-      adminFetchAll('assessments').then(assessments => {
-        fetchedAssessmentsList = Array.isArray(assessments) ? assessments : [];
-        const sortedAssessments = [...fetchedAssessmentsList].sort((a, b) => {
-          const nameA = `${a?.assessment_type ? a.assessment_type + ' - ' : ''}${a?.title || ''}`;
-          const nameB = `${b?.assessment_type ? b.assessment_type + ' - ' : ''}${b?.title || ''}`;
+      adminFetchAll('tests').then(tests => {
+        fetchedTestsList = Array.isArray(tests) ? tests : [];
+        const sortedTests = [...fetchedTestsList].sort((a, b) => {
+          const nameA = `${a?.test_type ? a.test_type + ' - ' : ''}${a?.title || ''}`;
+          const nameB = `${b?.test_type ? b.test_type + ' - ' : ''}${b?.title || ''}`;
           return nameA.localeCompare(nameB);
         });
-        const sel = document.getElementById('import-Assessment-select');
+        const sel = document.getElementById('import-Test-select');
         if (sel) {
-          sel.innerHTML = '<option value="">— Select Target Assessment —</option>' +
-            sortedAssessments.map(e => `<option value="${e.id}">${escapeHtml(formatAssessmentDisplayName(e))} (${formatAnswerType(e.answer_type)})</option>`).join('');
+          sel.innerHTML = '<option value="">— Select Target Test —</option>' +
+            sortedTests.map(e => `<option value="${e.id}">${escapeHtml(formatTestDisplayName(e))} (${formatAnswerType(e.answer_type)})</option>`).join('');
         }
       }).catch(err => {
-        console.warn('Failed to load assessments for import questions:', err);
-        const sel = document.getElementById('import-Assessment-select');
-        if (sel) sel.innerHTML = '<option value="">(No assessments available or failed to load)</option>';
+        console.warn('Failed to load tests for import questions:', err);
+        const sel = document.getElementById('import-Test-select');
+        if (sel) sel.innerHTML = '<option value="">(No tests available or failed to load)</option>';
       });
 
-      document.getElementById('import-Assessment-select').addEventListener('change', (e) => {
-        const AssessmentId = e.target.value;
-        const selectedAssessment = fetchedAssessmentsList.find(x => x.id === AssessmentId);
-        if (selectedAssessment) {
-          const atype = selectedAssessment.answer_type || 'written';
-          document.getElementById('import-Assessment-type-select').value = atype;
+      document.getElementById('import-Test-select').addEventListener('change', (e) => {
+        const testId = e.target.value;
+        const selectedTest = fetchedTestsList.find(x => x.id === testId);
+        if (selectedTest) {
+          const atype = selectedTest.answer_type || 'written';
+          document.getElementById('import-Test-type-select').value = atype;
           updateFormatDisplay(atype);
         }
       });
 
-      document.getElementById('import-Assessment-type-select').addEventListener('change', (e) => {
+      document.getElementById('import-Test-type-select').addEventListener('change', (e) => {
         updateFormatDisplay(e.target.value);
       });
 
@@ -996,13 +996,13 @@ function calculateAgeFromBirthDate(birthDateStr) {
         const ws = XLSX.utils.json_to_sheet(info.sample);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Template');
-        XLSX.writeFile(wb, `Template_${typeKey}_Assessment.xlsx`);
+        XLSX.writeFile(wb, `Template_${typeKey}_Test.xlsx`);
         showToast(`Template ${typeKey.replace('_',' ')} downloaded successfully.`, 'success');
       }
 
       // Download template for selected format
       document.getElementById('download-template-btn').addEventListener('click', () => {
-        const currentType = document.getElementById('import-Assessment-type-select').value || 'written';
+        const currentType = document.getElementById('import-Test-type-select').value || 'written';
         downloadTemplateForType(currentType);
       });
 
@@ -1040,7 +1040,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
               return;
             }
 
-            // Check if this is an AI Assessment based on headers
+            // Check if this is an AI Test based on headers
             const headers = Object.keys(jsonRows[0] || {}).map(h => h.trim().toUpperCase().replace(/\s+/g, '_'));
             let detectedAIModule = null;
             for (const [modKey, modDef] of Object.entries(AI_MODULES)) {
@@ -1052,8 +1052,8 @@ function calculateAgeFromBirthDate(birthDateStr) {
 
             if (detectedAIModule) {
               hideLoading();
-              document.getElementById('preview-summary-title').innerHTML = `⚠️ This is an AI Assessment Module (<b>` + AI_MODULES[detectedAIModule].name + `</b>)`;
-              document.getElementById('preview-count-label').innerHTML = `<span class="text-danger">AI Modules cannot be saved here. Please go to <b>Panel C (Class & Assessment Management) -> Import Payload</b> to upload this file.</span>`;
+              document.getElementById('preview-summary-title').innerHTML = `⚠️ This is an AI Test Module (<b>` + AI_MODULES[detectedAIModule].name + `</b>)`;
+              document.getElementById('preview-count-label').innerHTML = `<span class="text-danger">AI Modules cannot be saved here. Please go to <b>Panel C (Class & Test Management) -> Import Payload</b> to upload this file.</span>`;
               
               // Render basic preview
               const tbody = document.getElementById('tbl-import-preview');
@@ -1084,10 +1084,10 @@ function calculateAgeFromBirthDate(birthDateStr) {
             if (cancelBtn) cancelBtn.textContent = 'Cancel';
 
 
-            // Get target Assessment answer_type from selected Assessment
-            const AssessmentId = document.getElementById('import-Assessment-select').value;
-            const selectedAssessment = fetchedAssessmentsList.find(x => x.id === AssessmentId);
-            let defaultAnswerType = selectedAssessment?.answer_type || 'written';
+            // Get target Test answer_type from selected Test
+            const testId = document.getElementById('import-Test-select').value;
+            const selectedTest = fetchedTestsList.find(x => x.id === testId);
+            let defaultAnswerType = selectedTest?.answer_type || 'written';
 
             parsedQuestionsState = [];
             jsonRows.forEach((rawRow, i) => {
@@ -1111,10 +1111,10 @@ function calculateAgeFromBirthDate(birthDateStr) {
               const rawNo = row.no || getRowVal(rawRow, ['no', 'nomor', 'number', 'order', 'urutan']);
               const qNo = parseInt(rawNo || (i + 1), 10);
               const classItem = getRowVal(rawRow, ['Class', 'matapelajaran', 'mapel', 'class']);
-              const title = getRowVal(rawRow, ['title', 'Assessmenttitle', 'judul']);
+              const title = getRowVal(rawRow, ['title', 'Testtitle', 'judul']);
               const week = getRowVal(rawRow, ['week', 'minggu']);
               const day = getRowVal(rawRow, ['day', 'hari']);
-              const type = row.question_type || getRowVal(rawRow, ['type', 'wordtype', 'word_type', 'category', 'Assessmenttype', 'tipe', 'jenisquestions']);
+              const type = row.question_type || getRowVal(rawRow, ['type', 'wordtype', 'word_type', 'category', 'Testtype', 'tipe', 'jenisquestions']);
               const topic = row.topic || getRowVal(rawRow, ['topic', 'topik', 'kategori']);
 
               // Extract options: Check separate OPTION A..J or OPTION 1..10 (2 to 10 options)
@@ -1150,9 +1150,9 @@ function calculateAgeFromBirthDate(birthDateStr) {
                 }
               }
 
-              const program = getRowVal(rawRow, ['program', 'programname', 'namaprogram']) || selectedAssessment?.institutions?.name || 'CEC';
+              const program = getRowVal(rawRow, ['program', 'programname', 'namaprogram']) || selectedTest?.institutions?.name || 'CEC';
               const programName = getRowVal(rawRow, ['class', 'classname', 'kelas', 'namakelas']) || 'Camp';
-              const level = getRowVal(rawRow, ['level', 'tingkat', 'levelnumber']) || selectedAssessment?.levels?.name || '3rd Step';
+              const level = getRowVal(rawRow, ['level', 'tingkat', 'levelnumber']) || selectedTest?.levels?.name || '3rd Step';
 
               // Validation Badge Logic
               let statusBadge = 'ready';
@@ -1258,8 +1258,8 @@ function calculateAgeFromBirthDate(birthDateStr) {
       });
 
       document.getElementById('confirm-save-import-btn')?.addEventListener('click', async () => {
-        const AssessmentId = document.getElementById('import-Assessment-select').value;
-        if (!AssessmentId) { showToast('Please select a target Assessment before saving.', 'warning'); return; }
+        const testId = document.getElementById('import-Test-select').value;
+        if (!testId) { showToast('Please select a target Test before saving.', 'warning'); return; }
         if (!parsedQuestionsState.length) { showToast('No questions to save.', 'warning'); return; }
 
         showLoading('Saving & merging questions to database via Server...');
@@ -1303,7 +1303,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
           });
 
           // callEdgeFunction throws on error — no need to check response.error
-          const response = await callEdgeFunction('import-questions', { questions: questionsPayload, AssessmentId });
+          const response = await callEdgeFunction('import-questions', { questions: questionsPayload, testId });
           hideLoading();
 
           const insertedCount = response?.insertedCount ?? 0;
@@ -1335,30 +1335,30 @@ function calculateAgeFromBirthDate(birthDateStr) {
 
 
     async function renderExportQuestions(area) {
-      showLoading('Loading assessments for export…');
-      let assessments = [];
+      showLoading('Loading tests for export…');
+      let tests = [];
       try {
-        assessments = await adminFetchAll('assessments', 'id, title, assessment_type, class_id, level_id');
+        tests = await adminFetchAll('tests', 'id, title, test_type, class_id, level_id');
       } catch (err) {
-        console.warn('Export assessments fetch warning:', err);
+        console.warn('Export tests fetch warning:', err);
       } finally {
         hideLoading();
       }
       area.innerHTML = `
         <div class="section-header"><div><h2 class="section-title">Export Questions (Excel)</h2></div></div>
         <div class="glass-card p-8" style="max-width:640px;">
-          <p class="text-muted mb-4">Export questions from an Assessment into an Excel workbook formatted with standard columns:</p>
+          <p class="text-muted mb-4">Export questions from an Test into an Excel workbook formatted with standard columns:</p>
           <div class="mb-5 p-3 rounded" style="background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);font-size:0.75rem;font-family:monospace;">
             PROGRAM | CLASS | Class | LEVEL | TITLE | WEEK | DAY | TYPE | NO | QUESTION | ANSWER
           </div>
-          <div class="form-group"><label class="form-label">Select Assessment to Export</label>
-            <select class="form-control" id="export-assessment-select">
-              <option value="">— Select Assessment —</option>
-              ${[...assessments].sort((a, b) => {
-                const labelA = `${a.assessment_type ? a.assessment_type + ' - ' : ''}${a.title}`;
-                const labelB = `${b.assessment_type ? b.assessment_type + ' - ' : ''}${b.title}`;
+          <div class="form-group"><label class="form-label">Select Test to Export</label>
+            <select class="form-control" id="export-test-select">
+              <option value="">— Select Test —</option>
+              ${[...tests].sort((a, b) => {
+                const labelA = `${a.test_type ? a.test_type + ' - ' : ''}${a.title}`;
+                const labelB = `${b.test_type ? b.test_type + ' - ' : ''}${b.title}`;
                 return labelA.localeCompare(labelB);
-              }).map(e => `<option value="${e.id}">${e.assessment_type ? e.assessment_type + ' - ' : ''}${e.title}</option>`).join('')}
+              }).map(e => `<option value="${e.id}">${e.test_type ? e.test_type + ' - ' : ''}${e.title}</option>`).join('')}
             </select>
           </div>
           <button class="btn btn-primary mt-2" id="export-questions-btn">📤 Download Excel (.xlsx)</button>
@@ -1366,23 +1366,23 @@ function calculateAgeFromBirthDate(birthDateStr) {
       `;
 
       document.getElementById('export-questions-btn').addEventListener('click', async () => {
-        const AssessmentId = document.getElementById('export-assessment-select').value;
-        if (!AssessmentId) { showToast('Please select an Assessment to export.', 'warning'); return; }
+        const testId = document.getElementById('export-test-select').value;
+        if (!testId) { showToast('Please select an Test to export.', 'warning'); return; }
 
-        const selectedAssessment = assessments.find(e => e.id === AssessmentId);
+        const selectedTest = tests.find(e => e.id === testId);
         showLoading('Preparing Excel export…');
 
         try {
           const sb = await getSupabase();
           let questions = [];
-          const [directQRes, AssessmentClasses] = await Promise.all([
-            sb.from('assessment_questions').select('*').eq('assessment_id', AssessmentId),
-            sb.from('assignments').select('programs(name)').eq('assessment_id', AssessmentId)
+          const [directQRes, TestClasses] = await Promise.all([
+            sb.from('test_items').select('*').eq('test_id', testId),
+            sb.from('assignments').select('programs(name)').eq('test_id', testId)
           ]);
           questions = directQRes?.data || [];
           if (!questions.length) {
             try {
-              const { data: sections } = await sb.from('Assessment_sections').select('id').eq('assessment_id', AssessmentId);
+              const { data: sections } = await sb.from('Test_sections').select('id').eq('test_id', testId);
               const sectionIds = (sections || []).map(s => s.id);
               if (sectionIds.length > 0) {
                 const { data: secQ } = await sb.from('questions').select('*').in('section_id', sectionIds).is('deleted_at', null);
@@ -1392,17 +1392,17 @@ function calculateAgeFromBirthDate(birthDateStr) {
           }
 
           const sortedQuestions = questions.sort((a,b) => (a.question_order || 0) - (b.question_order || 0));
-          const programName = AssessmentClasses?.data?.[0]?.programs?.name || 'Camp';
+          const programName = TestClasses?.data?.[0]?.programs?.name || 'Camp';
 
           const excelData = sortedQuestions.map((q, idx) => ({
-            'PROGRAM': selectedAssessment?.institutions?.name || 'CEC',
+            'PROGRAM': selectedTest?.institutions?.name || 'CEC',
             'CLASS': programName,
-            'Class': q.metadata?.classItem || q.metadata?.Class || selectedAssessment?.classes?.name || 'Vocab',
-            'LEVEL': selectedAssessment?.levels?.name || '3rd Step',
-            'TITLE': q.metadata?.title || selectedAssessment?.title || 'Practice 1',
+            'Class': q.metadata?.classItem || q.metadata?.Class || selectedTest?.classes?.name || 'Vocab',
+            'LEVEL': selectedTest?.levels?.name || '3rd Step',
+            'TITLE': q.metadata?.title || selectedTest?.title || 'Practice 1',
             'WEEK': q.metadata?.week || '1',
             'DAY': q.metadata?.day || '1',
-            'TYPE': q.metadata?.type || selectedAssessment?.assessment_type || '1 - VERB',
+            'TYPE': q.metadata?.type || selectedTest?.test_type || '1 - VERB',
             'NO': q.question_order || (idx + 1),
             'QUESTION': q.question_text || '',
             'ANSWER': q.correct_answer || ''
@@ -1410,7 +1410,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
 
           if (!excelData.length) {
             hideLoading();
-            showToast('No questions found for this Assessment.', 'warning');
+            showToast('No questions found for this Test.', 'warning');
             return;
           }
 
@@ -1426,7 +1426,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
           const workbook = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(workbook, worksheet, 'Questions');
 
-          const fileName = `${(selectedAssessment?.title || 'Assessment').replace(/\s+/g, '_')}_Questions.xlsx`;
+          const fileName = `${(selectedTest?.title || 'Test').replace(/\s+/g, '_')}_Questions.xlsx`;
           XLSX.writeFile(workbook, fileName);
 
           hideLoading();

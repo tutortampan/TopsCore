@@ -42,7 +42,7 @@ TopsCore
 
 ## 1.2 Product Type
 
-Online English assessment/testing platform.
+Online English learning and testing platform.
 
 ## 1.3 Core hierarchy
 
@@ -53,10 +53,10 @@ INSTITUTION
         │     └── STUDENTS (Grouped by Batch)
         │
         └── CLASSES (Formerly 'Subjects')
-              └── ASSESSMENTS (Formerly 'Exams')
+              └── TESTS (Quizzes & Exams)
                     └── MODULES (AI Evaluation Engines)
 
-STUDENT + ASSESSMENT
+STUDENT + TEST
   └── ATTEMPT
         └── ATTEMPT ANSWER
 
@@ -75,11 +75,11 @@ Can manage:
 - Levels
 - Students
 - Student imports (into Batches)
-- Assessments
-- Assessment assignments (to Batches or Students)
+- Tests (Quizzes & Exams)
+- Test access assignments (to Batches or Students)
 - Questions
 - Question imports/exports
-- Assessment publishing/unpublishing
+- Test publishing/unpublishing
 - Results and attempt inspection
 - Website settings/background
 - Admin security
@@ -92,7 +92,7 @@ Can:
 - complete first-login photo setup when required
 - select assigned Classes
 - view unlocked Levels
-- start eligible published Assessments
+- start eligible published Tests (Quizzes & Exams)
 - answer questions
 - resume an interrupted Attempt
 - submit an Attempt
@@ -113,7 +113,7 @@ These are implementation rules, not suggestions.
 The admin navigation uses the **ABCD System** hierarchy:
 1. `A — ADMIN` (Executive Dashboard, Profiles, etc.)
 2. `B — BOARD` (Batches, Rosters, Progress)
-3. `C — CLASS` (Classes, Levels, Topics, Assessments, Banks, Vaults)
+3. `C — CLASS` (Classes, Levels, Topics, Tests, Banks, Vaults)
 4. `D — DATA`
 
 Do not attempt to merge or erase this hierarchy.
@@ -162,30 +162,30 @@ Never put plaintext PINs in logs or audit records.
 Classes (Subjects) are assigned to a **Level** (e.g., Telling Story 1 belongs to 1st Level).
 A Student/Batch progresses through Levels.
 
-## 2.5 Assessment Auto-Assignment (Level-Centric)
+## 2.5 Test Auto-Assignment (Level-Centric)
 
-Assessments are created within a **Class**.
-Because that Class belongs to a **Level**, the system automatically assigns the assessment to any Batch/Student that has unlocked that Level. 
-There is NO manual assessment-to-batch assignment required. Batches inherit assessments automatically based on their current Level.
+Tests (Quizzes & Exams) are created within a **Class**.
+Because that Class belongs to a **Level**, the system automatically assigns the test to any Batch/Student that has unlocked that Level. 
+There is NO manual test-to-batch assignment required. Batches inherit tests automatically based on their current Level.
 
 ### Important naming note
 
 The approved display-name formula includes PROGRAM:
 
 ```text
-INSTITUTION + PROGRAM + CLASS + LEVEL + ASSESSMENT TYPE + ASSESSMENT TITLE
+INSTITUTION + PROGRAM + CLASS + LEVEL + TEST TYPE + TEST TITLE
 ```
 
-Because a single Assessment can be assigned to multiple Batches/Students, the PROGRAM text in the name is a **display/name component**, not the authorization mechanism. 
+Because a single Test can be assigned to multiple Batches/Students, the PROGRAM text in the name is a **display/name component**, not the authorization mechanism. 
 
 Do not silently redesign this naming decision. If the product owner later changes it, update this file + decision log + tests.
 
-## 2.6 Assessment name
+## 2.6 Test name
 
 Approved formula:
 
 ```text
-INSTITUTION + PROGRAM + CLASS + LEVEL + ASSESSMENT TYPE + ASSESSMENT TITLE
+INSTITUTION + PROGRAM + CLASS + LEVEL + TEST TYPE + TEST TITLE
 ```
 
 Rules:
@@ -193,8 +193,8 @@ Rules:
 - `PROGRAM` is the approved display/name component described above.
 - `CLASS` comes from Class data.
 - `LEVEL` comes from Level data.
-- `ASSESSMENT TYPE` is imported/provided from the approved Excel workflow or AI Engine.
-- `ASSESSMENT TITLE` is determined by Admin.
+- `TEST TYPE` is either Quiz (daily formative drill) or Exam (formal scheduled test).
+- `TEST TITLE` is determined by Admin.
 
 The application SHOULD store structured fields separately and generate/display the name from those components. Do not use one concatenated string as the sole source of truth.
 
@@ -205,18 +205,18 @@ Dynamic multi-level prerequisites supporting 0 to N parent modules.
 - Aggregate average score thresholds may apply.
 - Unlimited retakes bounded by availability windows (start/end date-time) and per-attempt countdown timers.
 - The main report card stores HIGHEST score. 
-- All attempts are recorded in assessment history.
+- All attempts are recorded in attempt history.
 - Global average strictly counts unopened/unattempted available modules as 0.
 
 ## 2.8 Overall score
 
-Overall score is the average of all Assessments that are:
+Overall score is the average of all Tests that are:
 - available/takeable for the Student under the current rules; and
 - completed by the Student.
 
-An unavailable/unassigned/unpublished assessment that cannot currently be taken MUST NOT enter the calculation merely because it exists in the database.
+An unavailable/unassigned/unpublished test that cannot currently be taken MUST NOT enter the calculation merely because it exists in the database.
 
-A previously completed Assessment remains part of the Student's historical completed score even if that Assessment is later unpublished.
+A previously completed Test remains part of the Student's historical completed score even if that Test is later unpublished.
 
 The exact calculation must be centralized in one authoritative service/function and covered by tests.
 
@@ -251,7 +251,7 @@ Centralized authoritative grading (Official Grading Scale):
 
 No frontend page may independently implement a competing grading algorithm.
 
-## 2.11 The 8 Assessment Modules
+## 2.11 The 8 Test Evaluation Modules
 
 The system uses 8 specific AI-evaluated modules:
 1. Point & Speak! (Visual Pronouns)
@@ -294,9 +294,9 @@ Default tolerance:
 
 The tolerance engine must be deterministic, tested, and server-authoritative.
 
-## 2.14 Assessment lifecycle
+## 2.14 Test lifecycle
 
-Only `PUBLISHED` assessments can be taken.
+Only `PUBLISHED` tests can be taken.
 
 Recommended status enum:
 
@@ -349,20 +349,20 @@ At/after deadline:
 - server determines whether the attempt is on-time/expired;
 - client cannot extend the timer by manipulating JavaScript or system time.
 
-## 2.17 Historical snapshot without Assessment Versions
+## 2.17 Historical snapshot without Test Versions
 
-The application MUST NOT implement Assessment Version entities.
+The application MUST NOT implement Test Version entities.
 
 Do NOT create:
-- `AssessmentVersion`
-- `assessment_version_id` on Attempt
+- `TestVersion`
+- `test_version_id` on Attempt
 - a version-management UI
 
-Instead, when an Attempt starts, create immutable snapshot data sufficient to preserve historical meaning even if current Assessment or Question records later change.
+Instead, when an Attempt starts, create immutable snapshot data sufficient to preserve historical meaning even if current Test or Question records later change.
 
 At minimum, attempt answer records should retain the relevant question and answer-option/correct-answer snapshot needed to evaluate/display the historical result.
 
-Historical results MUST NOT be recalculated by rereading today's Question/Assessment records.
+Historical results MUST NOT be recalculated by rereading today's Question/Test records.
 
 ## 2.18 Soft delete
 
@@ -407,11 +407,11 @@ Never store plaintext passwords or PINs in audit logs.
 
 Audit examples:
 - create/update/delete/restore student
-- create/update/delete/restore assessment
-- publish/unpublish assessment
+- create/update/delete/restore test
+- publish/unpublish test
 - import questions
 - import students
-- assign assessment to BATCH or STUDENT
+- assign test access to BATCH or STUDENT
 - modify PROGRAM/CLASS/level
 - security changes
 - admin authentication events where appropriate
@@ -499,7 +499,7 @@ TOP-ENGLISH-PROGRAM/
 │   │   ├── auth.css
 │   │   ├── admin.css
 │   │   ├── dashboard.css
-│   │   ├── assessment.css (formerly exam.css)
+│   │   ├── test.css
 │   │   └── result.css
 │   │
 │   ├── js/
@@ -520,18 +520,18 @@ TOP-ENGLISH-PROGRAM/
 │   │       ├── database.js
 │   │       ├── program-management.js
 │   │       ├── student-management.js
-│   │       ├── assessment-management.js (formerly exam-management.js)
+│   │       ├── tests-management.js
 │   │       └── imports.js
 │   │
 │   ├── supabase/
 │   │   ├── functions/
 │   │   │   ├── admin-auth-check/
 │   │   │   │   └── index.ts
-│   │   │   ├── start-assessment/ (formerly start-exam)
+│   │   │   ├── start-test/
 │   │   │   │   └── index.ts
 │   │   │   ├── save-answer/
 │   │   │   │   └── index.ts
-│   │   │   ├── submit-assessment/ (formerly submit-exam)
+│   │   │   ├── submit-test/
 │   │   │   │   └── index.ts
 │   │   │   ├── calculate-result/
 │   │   │   │   └── index.ts
@@ -561,11 +561,11 @@ TOP-ENGLISH-PROGRAM/
 │   │
 │   ├── admin.html
 │   ├── dashboard.html
-│   ├── assessment.html (formerly exam.html)
+│   ├── test.html
 │   ├── result.html
 │   ├── program-management.html
 │   ├── student-management.html
-│   ├── assessment-management.html (formerly exam-management.html)
+│   ├── tests-management.html
 â”œâ”€â”€ management.html
 â”œâ”€â”€ index.html
 â”‚
@@ -881,10 +881,10 @@ classes
 users (students, teachers, admins)
 
 modules
-assessments
-assessment_prerequisites
-
-student_submissions
+tests
+test_items
+test_topics
+test_results
 exam_history
 progress
 site_settings
@@ -1001,23 +1001,21 @@ description
 config_schema
 ```
 
-### assessments
+### tests
 
 At minimum:
 
 ```text
 id
-module_id
-institution_id
-program_id
-batch_id
+class_id
+level_id
+test_type              -- 'quiz' or 'exam'
+title
 name
-auto_name_override
-available_from
-available_until
-time_limit_seconds
+status                 -- 'draft', 'published', 'archived'
+is_active
+working_duration_minutes
 payload
-prerequisite_rules
 created_at
 updated_at
 ```
@@ -1029,7 +1027,7 @@ At minimum:
 ```text
 id
 student_id
-assessment_id
+test_id
 status
 started_at
 submitted_at
@@ -1046,7 +1044,7 @@ teacher_override_notes
 id
 submission_id
 student_id
-assessment_id
+test_id
 action_type
 old_payload
 new_payload

@@ -1,10 +1,10 @@
 import { generateAvatarDataUri } from './utils/avatar-engine.js?v=5.3.2';
 /**
- * TopsCore — Assessment Engine Module
- * Extracted from assessment.html
+ * TopsCore — Test Engine Module
+ * Extracted from test.html
  */
 
-import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=5.3.2';
+import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=5.3.2';
     import { requireStudentSession } from './session.js?v=5.3.2';
     import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=5.3.2';
     import { startCountdown, isExpired } from './timer.js?v=5.3.2';
@@ -27,46 +27,46 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     if (!session) throw new Error('Not authenticated');
 
     const urlParams = new URLSearchParams(window.location.search);
-    // Case-insensitive assessment ID extraction — resilient across all URL param casings
-    let assessmentId = urlParams.get('id') ||
-                       urlParams.get('assessment_id') ||
-                       urlParams.get('Assessment_id') ||
-                       urlParams.get('ASSESSMENT_id') ||
-                       sessionStorage.getItem('topscore_assessment_id') ||
-                       sessionStorage.getItem('topscore_ASSESSMENT_id');
+    // Case-insensitive test ID extraction — resilient across all URL param casings
+    let testId = urlParams.get('id') ||
+                       urlParams.get('test_id') ||
+                       urlParams.get('Test_id') ||
+                       urlParams.get('TEST_id') ||
+                       sessionStorage.getItem('topscore_test_id') ||
+                       sessionStorage.getItem('topscore_TEST_id');
 
-    if (assessmentId === 'test-assessment-id') {
-      sessionStorage.removeItem('topscore_assessment_id');
-      sessionStorage.removeItem('topscore_ASSESSMENT_id');
-      assessmentId = urlParams.get('id') || urlParams.get('assessment_id');
+    if (testId === 'test-test-id') {
+      sessionStorage.removeItem('topscore_test_id');
+      sessionStorage.removeItem('topscore_TEST_id');
+      testId = urlParams.get('id') || urlParams.get('test_id');
     }
 
-    if (assessmentId) {
+    if (testId) {
       // Normalize to lowercase key for consistency going forward
-      sessionStorage.setItem('topscore_assessment_id', assessmentId);
+      sessionStorage.setItem('topscore_test_id', testId);
     }
     if (urlParams.get('attempt_id')) {
       sessionStorage.setItem('topscore_attempt_id', urlParams.get('attempt_id'));
     }
-    if (!assessmentId) {
-      console.warn('No valid assessment ID found. Redirecting to dashboard.');
+    if (!testId) {
+      console.warn('No valid test ID found. Redirecting to dashboard.');
       window.location.href = 'dashboard.html';
     }
 
     let currentIndex = 0;
     let allAnswerRows = [];
     let answerRows = [];
-    let assessmentSections = [];
+    let testsections = [];
     let currentSectionIndex = 0;
     let attemptData = null;
-    let assessmentData = null;
-    let assessmentDisplayName = '';
+    let testData = null;
+    let testDisplayName = '';
     let timerController = null;
     let answeredMap = {}; // attempt_answer_id -> student_answer
     window.answeredMap = answeredMap;
 
     // —— Anti-Cheat State & Police Siren Audio ——
-    let isAssessmentActive = false;
+    let isTestActive = false;
     let cheatInterval = null;
     let audioCtx = null;
     let sirenOsc = null;
@@ -149,12 +149,12 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     // Intercept Back / Return Button
     function lockHistory() {
       for (let i = 0; i < 5; i++) {
-        history.pushState({ ASSESSMENTLocked: true, step: i }, '', location.href);
+        history.pushState({ TESTLocked: true, step: i }, '', location.href);
       }
       window.addEventListener('popstate', () => {
-        if (isAssessmentActive) {
+        if (isTestActive) {
           for (let i = 0; i < 3; i++) {
-            history.pushState({ ASSESSMENTLocked: true, step: i }, '', location.href);
+            history.pushState({ TESTLocked: true, step: i }, '', location.href);
           }
           triggerCheatAlert('Return button pressed / Navigation attempted');
         }
@@ -168,7 +168,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     let lastCheatTriggerTime = 0;
 
     function triggerCheatAlert(reason) {
-      if (!isAssessmentActive || !securityConfig.enabled) return;
+      if (!isTestActive || !securityConfig.enabled) return;
 
       const now = Date.now();
       // Cooldown & Active Guard: Prevent multi-event cascade (e.g. popstate + blur + visibilitychange firing in 1s on side panel or return button)
@@ -179,7 +179,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       isCheatAlertActive = true;
 
       cheatStrikes++;
-      logCheatingEvent(session.student_id, assessmentId, 'CHEAT_ATTEMPT', {
+      logCheatingEvent(session.student_id, testId, 'CHEAT_ATTEMPT', {
         reason: reason,
         strike: cheatStrikes,
         max_strikes: MAX_STRIKES,
@@ -207,7 +207,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         }
         if (reasonEl) {
           reasonEl.style.color = '#ffffff';
-          reasonEl.textContent = `🚨 ASSESSMENT TERMINATED: Maximum warning limit (${MAX_STRIKES} warnings) exceeded!`;
+          reasonEl.textContent = `🚨 TEST TERMINATED: Maximum warning limit (${MAX_STRIKES} warnings) exceeded!`;
         }
         if (countEl) countEl.textContent = '0';
         if (dismissBtn) dismissBtn.style.display = 'none';
@@ -236,7 +236,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         reasonEl.style.color = '#ffffff';
         reasonEl.textContent = isFinalWarning
           ? `🚨 FINAL WARNING: ${reason}! You have reached the maximum limit of ${MAX_STRIKES} warnings. Any further navigation or countdown reaching 0 will terminate your exam!`
-          : `🚨 WARNING (STRIKE ${cheatStrikes} OF ${MAX_STRIKES}): ${reason}! (Reaching 0 or exceeding ${MAX_STRIKES} warnings will auto-submit your assessment)`;
+          : `🚨 WARNING (STRIKE ${cheatStrikes} OF ${MAX_STRIKES}): ${reason}! (Reaching 0 or exceeding ${MAX_STRIKES} warnings will auto-submit your test)`;
       }
 
       if (dismissBtn) {
@@ -245,7 +245,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         dismissBtn.style.color = '#ffffff';
         dismissBtn.style.border = '2px solid #ffffff';
         dismissBtn.style.boxShadow = '0 0 25px rgba(220, 38, 38, 0.85)';
-        dismissBtn.textContent = isFinalWarning ? 'Return to My ASSESSMENT (Final Warning)' : 'Return to My ASSESSMENT';
+        dismissBtn.textContent = isFinalWarning ? 'Return to My TEST (Final Warning)' : 'Return to My TEST';
       }
 
       if (overlay) overlay.style.display = 'flex';
@@ -305,38 +305,38 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
     // Global Anti-Cheat Clipboard & Context Interception
     document.addEventListener('copy', (e) => {
-      if (isAssessmentActive) {
+      if (isTestActive) {
         e.preventDefault();
         triggerCheatAlert('Clipboard Copy Attempt');
       }
     });
 
     document.addEventListener('cut', (e) => {
-      if (isAssessmentActive) {
+      if (isTestActive) {
         e.preventDefault();
         triggerCheatAlert('Clipboard Cut Attempt');
       }
     });
 
     document.addEventListener('paste', (e) => {
-      if (isAssessmentActive) {
+      if (isTestActive) {
         e.preventDefault();
         triggerCheatAlert('Clipboard Paste Attempt');
       }
     });
 
     document.addEventListener('selectstart', (e) => {
-      if (isAssessmentActive && !e.target.matches('input, textarea')) {
+      if (isTestActive && !e.target.matches('input, textarea')) {
         e.preventDefault();
       }
     });
 
     document.addEventListener('dragstart', (e) => {
-      if (isAssessmentActive) e.preventDefault();
+      if (isTestActive) e.preventDefault();
     });
 
     document.addEventListener('contextmenu', (e) => {
-      if (isAssessmentActive) {
+      if (isTestActive) {
         e.preventDefault();
         triggerCheatAlert('Right-Click / Context Menu');
       }
@@ -344,7 +344,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
     // DevTools & Print/Save Keyboard Interception
     window.addEventListener('keydown', (e) => {
-      if (!isAssessmentActive) return;
+      if (!isTestActive) return;
 
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
       const isShift = e.shiftKey;
@@ -379,7 +379,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
     // Detect switching tab or minimizing browser
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && isAssessmentActive) {
+      if (document.visibilityState === 'visible' && isTestActive) {
         requestScreenWakeLock();
         saveCurrentAnswer();
 
@@ -404,13 +404,13 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         }
       }
       if (!securityConfig.enabled) return;
-      if (isAssessmentActive && document.hidden) {
+      if (isTestActive && document.hidden) {
         triggerCheatAlert('Leaving the tab / Minimizing browser');
       }
     });
 
     window.addEventListener('focus', () => {
-      if (isAssessmentActive) {
+      if (isTestActive) {
         saveCurrentAnswer();
         if (isCheatAlertActive && cheatDeadline > 0) {
           if (Date.now() >= cheatDeadline) {
@@ -434,7 +434,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     // Detect opening another app, side panel, or losing window focus
     window.addEventListener('blur', () => {
       if (!securityConfig.enabled) return;
-      if (isAssessmentActive) {
+      if (isTestActive) {
         triggerCheatAlert('Screen lost focus / Side panel or external app opened');
       }
     });
@@ -442,18 +442,18 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     // On pagehide / minimize: safely buffer current answers to storage only.
     // Do NOT prematurely force-submit here because mobile browsers fire pagehide on normal Home press.
     window.addEventListener('pagehide', () => {
-      if (isAssessmentActive && attemptData?.id) {
+      if (isTestActive && attemptData?.id) {
         saveCurrentAnswer();
       }
     });
 
     window.addEventListener('beforeunload', (e) => {
-      if (isAssessmentActive) {
+      if (isTestActive) {
         // BUG FIX: Do NOT call submitOnPageExit() here! 
         // If the user clicks 'Cancel' on the browser's reload warning, they should be able to continue.
         // Actual forceful submission is handled reliably by the 'pagehide' event if they do leave.
         e.preventDefault();
-        e.returnValue = 'ASSESSMENT is in progress! Closing or reloading this page will automatically submit the ASSESSMENT.';
+        e.returnValue = 'TEST is in progress! Closing or reloading this page will automatically submit the TEST.';
         return e.returnValue;
       }
     });
@@ -500,30 +500,30 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     }
 
     // —— Boot ——
-    async function bootAssessment() {
-      window.bootAssessment = bootAssessment;
-      showLoading('Starting ASSESSMENT…');
+    async function bootTest() {
+      window.bootTest = bootTest;
+      showLoading('Starting TEST…');
       try {
         const fetchedConfig = await getSecuritySettings();
         if (fetchedConfig) securityConfig = fetchedConfig;
 
-        const result = await startASSESSMENT(session.student_id, assessmentId);
+        const result = await startTEST(session.student_id, testId);
         attemptData = result.attempt;
-        assessmentData = result.assessment || result.ASSESSMENT || {};
-        assessmentSections = result.sections || [];
+        testData = result.test || result.TEST || {};
+        testsections = result.sections || [];
         allAnswerRows = result.answers || [];
         window.attemptData = attemptData;
         window.allAnswerRows = allAnswerRows;
 
-        // Status check: do not start if assessment has been soft-deleted or unpublished/drafted
-        const asmStatus = String(assessmentData?.status || 'PUBLISHED').toUpperCase();
-        if (assessmentData?.deleted_at || (asmStatus !== 'PUBLISHED' && asmStatus !== 'ACTIVE')) {
-          const main = document.getElementById('assessment-main');
+        // Status check: do not start if test has been soft-deleted or unpublished/drafted
+        const asmStatus = String(testData?.status || 'PUBLISHED').toUpperCase();
+        if (testData?.deleted_at || (asmStatus !== 'PUBLISHED' && asmStatus !== 'ACTIVE')) {
+          const main = document.getElementById('test-main');
           if (main) {
             main.innerHTML = `
               <div class="glass-panel text-center p-5 mx-auto" style="max-width:500px;margin-top:10vh;">
-                <h2 class="fw-800 text-xl mb-3" style="color:#f87171;">🔒 Assessment Unavailable</h2>
-                <p class="text-sm" style="color:var(--clr-text-2);">This assessment is unavailable or has been archived by your tutor. Retakes are not available.</p>
+                <h2 class="fw-800 text-xl mb-3" style="color:#f87171;">🔒 Test Unavailable</h2>
+                <p class="text-sm" style="color:var(--clr-text-2);">This test is unavailable or has been archived by your tutor. Retakes are not available.</p>
                 <button class="btn btn-primary mt-4" onclick="window.location.href='dashboard.html'">Return to Dashboard</button>
               </div>
             `;
@@ -533,12 +533,12 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         }
 
         // Server time gate: Enforce WITA window check for schedule_mode === 'fixed'
-        if (assessmentData?.schedule_mode === 'manual' && assessmentData?.is_unlocked === false) {
-          const main = document.getElementById('assessment-main');
+        if (testData?.schedule_mode === 'manual' && testData?.is_unlocked === false) {
+          const main = document.getElementById('test-main');
           if (main) {
             main.innerHTML = `
               <div class="glass-panel text-center p-5 mx-auto" style="max-width:500px;margin-top:10vh;">
-                <h2 class="fw-800 text-xl mb-3" style="color:var(--clr-text-1);">🔒 Assessment Locked</h2>
+                <h2 class="fw-800 text-xl mb-3" style="color:var(--clr-text-1);">🔒 Test Locked</h2>
                 <p class="text-sm" style="color:var(--clr-text-2);">Waiting for your tutor to unlock this session in class.</p>
                 <button class="btn btn-primary mt-4" onclick="window.location.href='dashboard.html'">Return to Dashboard</button>
               </div>
@@ -548,20 +548,20 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
           return;
         }
         
-        if (assessmentData?.schedule_mode === 'fixed') {
+        if (testData?.schedule_mode === 'fixed') {
           const witaNow = await getServerTimeWita();
-          const witaStart = assessmentData.window_start ? new Date(assessmentData.window_start) : null;
-          const witaEnd = assessmentData.window_end ? new Date(assessmentData.window_end) : null;
+          const witaStart = testData.window_start ? new Date(testData.window_start) : null;
+          const witaEnd = testData.window_end ? new Date(testData.window_end) : null;
           
           if (witaStart && witaNow < witaStart) {
             hideLoading();
-            alert('This assessment has not started yet. Please wait until ' + witaStart.toLocaleString());
+            alert('This test has not started yet. Please wait until ' + witaStart.toLocaleString());
             window.location.href = 'dashboard.html';
             return;
           }
           if (witaEnd && witaNow > witaEnd) {
             hideLoading();
-            alert('This assessment has already expired.');
+            alert('This test has already expired.');
             window.location.href = 'dashboard.html';
             return;
           }
@@ -569,18 +569,18 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
 
         // Question order shuffle (if random, default in TopsCore)
-        const orderSetting = String(assessmentData?.question_order || assessmentData?.payload?.question_order || 'random').toLowerCase();
+        const orderSetting = String(testData?.question_order || testData?.payload?.question_order || 'random').toLowerCase();
         if (orderSetting === 'random' && allAnswerRows.length > 1) {
           const hasTwoSections = allAnswerRows.some(r => r.question_snapshot?.test_section === 'words') &&
                                 allAnswerRows.some(r => r.question_snapshot?.test_section === 'phrases');
           if (hasTwoSections) {
             const wordRows = allAnswerRows.filter(r => r.question_snapshot?.test_section !== 'phrases');
             const phraseRows = allAnswerRows.filter(r => r.question_snapshot?.test_section === 'phrases');
-            const shuffledWords = shuffleWithSeed(wordRows, (attemptData?.id || assessmentId) + '_words');
-            const shuffledPhrases = shuffleWithSeed(phraseRows, (attemptData?.id || assessmentId) + '_phrases');
+            const shuffledWords = shuffleWithSeed(wordRows, (attemptData?.id || testId) + '_words');
+            const shuffledPhrases = shuffleWithSeed(phraseRows, (attemptData?.id || testId) + '_phrases');
             allAnswerRows = [...shuffledWords, ...shuffledPhrases];
           } else {
-            allAnswerRows = shuffleWithSeed(allAnswerRows, attemptData?.id || assessmentId);
+            allAnswerRows = shuffleWithSeed(allAnswerRows, attemptData?.id || testId);
           }
           window.allAnswerRows = allAnswerRows;
         }
@@ -611,26 +611,26 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
           }
         } catch (_) {}
 
-        // Populate ASSESSMENT base name
-        assessmentDisplayName = assessmentData?.display_name || assessmentData?.name || '';
-        if (!assessmentDisplayName && assessmentData) {
+        // Populate TEST base name
+        testDisplayName = testData?.display_name || testData?.name || '';
+        if (!testDisplayName && testData) {
           const parts = [
             session.institution_name || '',
             session.program_name || '',
-            assessmentData.classes?.name || '',
-            assessmentData.levels?.name ? (String(assessmentData.levels.name).toLowerCase().includes('level') ? assessmentData.levels.name : `Level ${assessmentData.levels.name}`) : '',
-            assessmentData.assessment_type || '',
-            assessmentData.assessment_title || ''
+            testData.classes?.name || '',
+            testData.levels?.name ? (String(testData.levels.name).toLowerCase().includes('level') ? testData.levels.name : `Level ${testData.levels.name}`) : '',
+            testData.test_type || '',
+            testData.test_title || ''
           ].filter(Boolean);
-          assessmentDisplayName = parts.length > 0 ? parts.join(' · ') : (assessmentData.assessment_title || 'ASSESSMENT');
+          testDisplayName = parts.length > 0 ? parts.join(' · ') : (testData.test_title || 'TEST');
         }
 
         try {
-          const classEl = document.getElementById('assessment-class-name');
-          if (classEl && assessmentData?.classes?.name) classEl.textContent = assessmentData.classes.name;
-          const titleEl = document.getElementById('assessment-main-title');
+          const classEl = document.getElementById('test-class-name');
+          if (classEl && testData?.classes?.name) classEl.textContent = testData.classes.name;
+          const titleEl = document.getElementById('test-main-title');
           if (titleEl) {
-            const rawTitle = assessmentData?.title || assessmentData?.assessment_title || assessmentData?.name || assessmentDisplayName || 'Assessment';
+            const rawTitle = testData?.title || testData?.test_title || testData?.name || testDisplayName || 'Test';
             titleEl.textContent = rawTitle;
             titleEl.setAttribute('title', rawTitle);
           }
@@ -638,9 +638,9 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
         // Fetch student info for header
         try {
-          const nameEl = document.getElementById('assessment-student-name');
-          const avatarEl = document.getElementById('assessment-student-avatar');
-          const detailsEl = document.getElementById('assessment-student-details');
+          const nameEl = document.getElementById('test-student-name');
+          const avatarEl = document.getElementById('test-student-avatar');
+          const detailsEl = document.getElementById('test-student-details');
 
           if (nameEl) nameEl.textContent = session.student_name || 'Student';
           if (detailsEl) {
@@ -691,7 +691,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
           if (attemptData?.id) {
             sessionStorage.removeItem(`topscore_sec_${attemptData.id}`);
           }
-          const mainEl = document.getElementById('assessment-main');
+          const mainEl = document.getElementById('test-main');
           if (mainEl) {
             mainEl.style.justifyContent = 'center';
             mainEl.style.minHeight = '100%';
@@ -700,7 +700,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
                 <div style="font-size:3.5rem;margin-bottom:1rem;">⚠️ </div>
                 <h3 style="font-size:1.4rem;font-weight:700;margin-bottom:0.75rem;">No Questions Found</h3>
                 <p class="text-muted" style="max-width:440px;margin:0 auto 1.5rem;line-height:1.6;">
-                  This assessment does not have any questions yet or the session needs to be refreshed.
+                  This test does not have any questions yet or the session needs to be refreshed.
                 </p>
                 <div style="display:flex;gap:10px;justify-content:center;">
                   <button class="btn btn-secondary" onclick="window.location.reload()">Retry Loading</button>
@@ -713,8 +713,8 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         }
 
         // V1 Snapshot fallback: ensure every question has a valid section_id
-        if (!assessmentSections || assessmentSections.length === 0) {
-          assessmentSections = [{ id: 'default', title: assessmentData?.title || assessmentData?.assessment_title || 'Assessment', section_order: 1 }];
+        if (!testsections || testsections.length === 0) {
+          testsections = [{ id: 'default', title: testData?.title || testData?.test_title || 'Test', section_order: 1 }];
         }
         allAnswerRows.forEach(row => {
           if (row.question_snapshot) {
@@ -736,7 +736,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
         // Figure out current section
         const savedSecIndex = parseInt(sessionStorage.getItem(`topscore_sec_${attemptData.id}`), 10);
-        if (!isNaN(savedSecIndex) && savedSecIndex >= 0 && savedSecIndex < assessmentSections.length) {
+        if (!isNaN(savedSecIndex) && savedSecIndex >= 0 && savedSecIndex < testsections.length) {
           currentSectionIndex = savedSecIndex;
         } else {
           currentSectionIndex = 0;
@@ -746,7 +746,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         startSection(currentSectionIndex);
 
         // Activate Anti-Cheat System & Screen Wake Lock
-        isAssessmentActive = true;
+        isTestActive = true;
         requestScreenWakeLock();
         lockHistory();
         startSessionHeartbeatGuard();
@@ -761,7 +761,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     function startSessionHeartbeatGuard() {
       if (_sessionHeartbeatTimer) clearInterval(_sessionHeartbeatTimer);
       _sessionHeartbeatTimer = setInterval(async () => {
-        if (!isAssessmentActive || !attemptData?.id) return;
+        if (!isTestActive || !attemptData?.id) return;
         try {
           const sb = await getSupabase();
           // 1. Check attempt status
@@ -773,14 +773,14 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
           if (att) {
             const st = String(att.status || '').toLowerCase();
             if (st === 'cancelled') {
-              isAssessmentActive = false;
+              isTestActive = false;
               clearInterval(_sessionHeartbeatTimer);
               alert('🚨 Sesi ujian Anda telah dibatalkan / dihentikan oleh Pengawas / Tutor.');
               window.location.href = 'dashboard.html';
               return;
             }
             if (st === 'auto_submitted') {
-              isAssessmentActive = false;
+              isTestActive = false;
               clearInterval(_sessionHeartbeatTimer);
               alert('🚨 Sesi ujian Anda telah dikumpulkan oleh Pengawas / Tutor.');
               window.location.href = `result.html?attempt_id=${attemptData.id}`;
@@ -789,16 +789,16 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
           }
 
           // 2. Check if student was removed from test_session.allowed_student_ids
-          if (assessmentId) {
-            const { data: asm } = await sb.from('assessments')
+          if (testId) {
+            const { data: asm } = await sb.from('tests')
               .select('payload')
-              .eq('id', assessmentId)
+              .eq('id', testId)
               .single();
             const sess = asm?.payload?.test_session;
             if (sess && sess.status === 'UNLOCKED') {
               const allowed = sess.allowed_student_ids || [];
               if (Array.isArray(allowed) && allowed.length > 0 && !allowed.includes(session.student_id)) {
-                isAssessmentActive = false;
+                isTestActive = false;
                 clearInterval(_sessionHeartbeatTimer);
                 alert('🚨 Akses Anda ke sesi ujian ini telah dicabut oleh Pengawas / Tutor.');
                 window.location.href = 'dashboard.html';
@@ -813,9 +813,9 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     function startSection(index, initialIdx = 0) {
        currentSectionIndex = index;
        sessionStorage.setItem(`topscore_sec_${attemptData.id}`, index);
-       const currentSection = assessmentSections[index];
+       const currentSection = testsections[index];
 
-       if (!assessmentSections || assessmentSections.length <= 1 || currentSection?.id === 'default') {
+       if (!testsections || testsections.length <= 1 || currentSection?.id === 'default') {
          answerRows = allAnswerRows;
        } else {
          answerRows = allAnswerRows.filter(row => {
@@ -833,9 +833,9 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
        }
        window.answerRows = answerRows;
 
-       const nameEl = document.getElementById('assessment-main-title') || document.getElementById('assessment-name');
-       if (nameEl) nameEl.textContent = assessmentDisplayName + (assessmentSections.length > 1 ? ` - ${currentSection?.title || `Section ${index + 1}`}` : '');
-       const metaEl = document.getElementById('assessment-meta');
+       const nameEl = document.getElementById('test-main-title') || document.getElementById('test-name');
+       if (nameEl) nameEl.textContent = testDisplayName + (testsections.length > 1 ? ` - ${currentSection?.title || `Section ${index + 1}`}` : '');
+       const metaEl = document.getElementById('test-meta');
        if (metaEl) metaEl.textContent = `${allAnswerRows.length} Questions · ${session.student_name}`;
 
        buildNavGrid();
@@ -890,7 +890,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         return;
       }
 
-      const timerEl = document.getElementById('assessment-timer');
+      const timerEl = document.getElementById('test-timer');
       const display = document.getElementById('timer-display');
       timerEl.classList.remove('warning', 'critical');
 
@@ -915,7 +915,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
     function nextSection() {
       saveCurrentAnswer();
-      if (currentSectionIndex < assessmentSections.length - 1) {
+      if (currentSectionIndex < testsections.length - 1) {
          startSection(currentSectionIndex + 1);
       } else {
          openSubmitModal();
@@ -925,13 +925,13 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     function handleTimeUp(isSection) {
        if (isSection) {
           showToast('Section time is up! Moving to next section.', 'warning', 5000);
-          if (currentSectionIndex < assessmentSections.length - 1) {
+          if (currentSectionIndex < testsections.length - 1) {
               startSection(currentSectionIndex + 1);
           } else {
               autoSubmit();
           }
        } else {
-          showToast('Time is up! Submitting your ASSESSMENT…', 'warning', 5000);
+          showToast('Time is up! Submitting your TEST…', 'warning', 5000);
           autoSubmit();
        }
     }
@@ -947,7 +947,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         matrixTitle.textContent = `Question Matrix (${allAnswerRows.length} Questions)`;
       }
 
-      const isMultiSection = assessmentSections && assessmentSections.length > 1;
+      const isMultiSection = testsections && testsections.length > 1;
 
       if (!isMultiSection) {
         // Single continuous grid
@@ -985,7 +985,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
         let globalCounter = 0;
 
-        assessmentSections.forEach((sec, secIdx) => {
+        testsections.forEach((sec, secIdx) => {
           const secRows = allAnswerRows.filter(row => {
             let snap = row.question_snapshot;
             if (typeof snap === 'string') {
@@ -1059,7 +1059,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       const activeMap = window.answeredMap || answeredMap;
       const answered = Object.values(activeMap).filter(v => v?.trim()).length;
       const pct = allAnswerRows.length > 0 ? (answered / allAnswerRows.length) * 100 : 0;
-      const fillEl = document.getElementById('assessment-progress-fill');
+      const fillEl = document.getElementById('test-progress-fill');
       if (fillEl) fillEl.style.width = pct + '%';
       const progressTextEl = document.getElementById('progress-text-percent');
       if (progressTextEl) progressTextEl.textContent = Math.round(pct) + '%';
@@ -1111,8 +1111,8 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       }
 
       // Update per-section answered counters
-      if (assessmentSections && assessmentSections.length > 1) {
-        assessmentSections.forEach((sec, secIdx) => {
+      if (testsections && testsections.length > 1) {
+        testsections.forEach((sec, secIdx) => {
           const secRows = allAnswerRows.filter(row => {
             let snap = row.question_snapshot;
             if (typeof snap === 'string') {
@@ -1210,7 +1210,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         currentIndex = 0;
       }
       if (!row) {
-        const main = document.getElementById('assessment-main');
+        const main = document.getElementById('test-main');
         if (main) {
           main.innerHTML = `
             <div class="question-card text-center" style="padding:2.5rem 1.5rem;text-align:center;width:100%;max-width:380px;margin:auto;">
@@ -1241,7 +1241,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         'TH3': 'Theme 3'
       };
 
-      let themeCode = snap?.theme_code || snap?.metadata?.theme_code || row?.theme_code_snapshot || assessmentData?.payload?.theme_code || '';
+      let themeCode = snap?.theme_code || snap?.metadata?.theme_code || row?.theme_code_snapshot || testData?.payload?.theme_code || '';
       let themeName = snap?.theme || snap?.metadata?.theme || row?.theme_snapshot || '';
 
       if (themeName && themeName.length === 1 && /[A-Za-z]/.test(themeName)) {
@@ -1253,8 +1253,8 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         themeName = '';
       }
 
-      if (!themeCode && assessmentData?.title) {
-        const matchTheme = assessmentData.title.match(/Theme\s+([A-D0-9]+)/i) || assessmentData.title.match(/Vocabulary\s+([A-D0-9]+)/i);
+      if (!themeCode && testData?.title) {
+        const matchTheme = testData.title.match(/Theme\s+([A-D0-9]+)/i) || testData.title.match(/Vocabulary\s+([A-D0-9]+)/i);
         if (matchTheme) themeCode = (matchTheme[1] || matchTheme[2]).toUpperCase();
       }
 
@@ -1262,11 +1262,11 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         themeName = THEME_NAMES[themeCode.toUpperCase()];
       }
 
-      if (!themeName && assessmentData?.title) {
-        if (/Workplace/i.test(assessmentData.title)) { themeName = 'Workplace'; if (!themeCode) themeCode = 'A'; }
-        else if (/Tourism/i.test(assessmentData.title)) { themeName = 'Tourism'; if (!themeCode) themeCode = 'B'; }
-        else if (/CCU/i.test(assessmentData.title)) { themeName = 'CCU'; if (!themeCode) themeCode = 'C'; }
-        else if (/High-Frequency/i.test(assessmentData.title)) { themeName = 'High-Frequency'; if (!themeCode) themeCode = 'D'; }
+      if (!themeName && testData?.title) {
+        if (/Workplace/i.test(testData.title)) { themeName = 'Workplace'; if (!themeCode) themeCode = 'A'; }
+        else if (/Tourism/i.test(testData.title)) { themeName = 'Tourism'; if (!themeCode) themeCode = 'B'; }
+        else if (/CCU/i.test(testData.title)) { themeName = 'CCU'; if (!themeCode) themeCode = 'C'; }
+        else if (/High-Frequency/i.test(testData.title)) { themeName = 'High-Frequency'; if (!themeCode) themeCode = 'D'; }
       }
 
       let displayTheme = themeName || (themeCode ? ('Theme ' + themeCode) : 'General');
@@ -1275,27 +1275,27 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       }
 
       let displayTopic = snap?.topic || snap?.metadata?.topic || row?.topic_snapshot || '';
-      if (!displayTopic && assessmentData?.title) {
-        const parts = assessmentData.title.split('-');
+      if (!displayTopic && testData?.title) {
+        const parts = testData.title.split('-');
         if (parts.length > 1) displayTopic = parts.slice(1).join('-').trim();
       }
       if (!displayTopic) displayTopic = 'Vocabulary Mastery';
 
       let displayType = snap?.word_type || snap?.metadata?.word_type || snap?.metadata?.type || snap?.type || row?.word_type_snapshot || snap?.question_type || row?.question_type_snapshot || '';
       if (!displayType) {
-        const cat = assessmentData?.payload?.category || '';
-        if (cat === 'phrases' || assessmentData?.title?.toLowerCase().includes('phrase')) displayType = 'Phrase';
+        const cat = testData?.payload?.category || '';
+        if (cat === 'phrases' || testData?.title?.toLowerCase().includes('phrase')) displayType = 'Phrase';
         else displayType = 'Word';
       }
 
-      let displayCategory = snap?.category || snap?.metadata?.category || row?.category_snapshot || assessmentData?.payload?.category || '';
-      if (!displayCategory && assessmentData?.assessment_type) {
-        if (assessmentData.assessment_type.includes('PHRASE')) displayCategory = 'phrases';
-        else if (assessmentData.assessment_type.includes('VOCAB') || assessmentData.assessment_type.includes('WORD')) displayCategory = 'words';
+      let displayCategory = snap?.category || snap?.metadata?.category || row?.category_snapshot || testData?.payload?.category || '';
+      if (!displayCategory && testData?.test_type) {
+        if (testData.test_type.includes('PHRASE')) displayCategory = 'phrases';
+        else if (testData.test_type.includes('VOCAB') || testData.test_type.includes('WORD')) displayCategory = 'words';
       }
-      if (!displayCategory && assessmentData?.title) {
-        if (/phrase/i.test(assessmentData.title)) displayCategory = 'phrases';
-        else if (/word|vocab/i.test(assessmentData.title)) displayCategory = 'words';
+      if (!displayCategory && testData?.title) {
+        if (/phrase/i.test(testData.title)) displayCategory = 'phrases';
+        else if (/word|vocab/i.test(testData.title)) displayCategory = 'words';
       }
       if (!displayCategory && displayType) {
         const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(displayType.toLowerCase());
@@ -1324,9 +1324,9 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         }
       }
 
-      const main = document.getElementById('assessment-main');
+      const main = document.getElementById('test-main');
       main.innerHTML = '';
-      main.className = 'assessment-main-content flex-1 flex flex-col items-center min-h-0 w-full mx-auto';
+      main.className = 'test-main-content flex-1 flex flex-col items-center min-h-0 w-full mx-auto';
       main.style.cssText = 'flex:1; display:flex; flex-direction:column; justify-content:flex-start; align-items:center; min-height:100%; height:100%; max-height:100%; overflow:hidden; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:0; box-sizing:border-box; gap:6px;';
 
       const isWritten = (answerType === 'written');
@@ -1479,7 +1479,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       }
       if (bottomNext) {
         const isLast = (idx === answerRows.length - 1);
-        const isLastSection = (currentSectionIndex === assessmentSections.length - 1);
+        const isLastSection = (currentSectionIndex === testsections.length - 1);
         if (isLast) {
           if (isLastSection) {
             bottomNext.textContent = 'Submit 📋';
@@ -1847,7 +1847,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       
       popup.style.display = shouldShow ? 'flex' : 'none';
       
-      const mainContent = document.getElementById('assessment-main');
+      const mainContent = document.getElementById('test-main');
       if (mainContent) {
         if (shouldShow) {
           mainContent.style.pointerEvents = 'none';
@@ -1916,7 +1916,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         }
         if (modalIcon) modalIcon.textContent = '🚨';
         if (modalTitle) {
-          modalTitle.textContent = '🚨 INCOMPLETE ASSESSMENT!';
+          modalTitle.textContent = '🚨 INCOMPLETE TEST!';
           modalTitle.style.color = '#fca5a5';
         }
         if (warningBanner) warningBanner.classList.remove('hidden');
@@ -1938,7 +1938,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         }
         if (modalIcon) modalIcon.textContent = '✅';
         if (modalTitle) {
-          modalTitle.textContent = 'Submit ASSESSMENT?';
+          modalTitle.textContent = 'Submit TEST?';
           modalTitle.style.color = '#ffffff';
         }
         if (warningBanner) warningBanner.classList.add('hidden');
@@ -1981,10 +1981,10 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
         renderQuestion(targetLocalIdx);
         // Calculate global question number
         let globalNum = targetLocalIdx + 1;
-        if (assessmentSections && assessmentSections.length > 1) {
+        if (testsections && testsections.length > 1) {
           let countBefore = 0;
           for (let s = 0; s < currentSectionIndex; s++) {
-            const sec = assessmentSections[s];
+            const sec = testsections[s];
             countBefore += allAnswerRows.filter(r => {
               let snap = r.question_snapshot;
               if (typeof snap === 'string') { try { snap = JSON.parse(snap); } catch { snap = {}; } }
@@ -1994,14 +1994,14 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
           globalNum = countBefore + targetLocalIdx + 1;
         }
         showToast(`Jumped to Question ${globalNum}`, 'info');
-      } else if (assessmentSections && assessmentSections.length > 1) {
+      } else if (testsections && testsections.length > 1) {
         // 3. Current section is completely answered! Look across allAnswerRows for other sections
         const nextUnansweredRow = allAnswerRows.find(r => !activeMap[r.id] || !activeMap[r.id].trim());
         if (nextUnansweredRow) {
           let snap = nextUnansweredRow.question_snapshot;
           if (typeof snap === 'string') { try { snap = JSON.parse(snap); } catch { snap = {}; } }
           const targetSecId = snap?.section_id || 'default';
-          const targetSecIdx = assessmentSections.findIndex(s => s.id === targetSecId);
+          const targetSecIdx = testsections.findIndex(s => s.id === targetSecId);
 
           if (targetSecIdx >= 0) {
             const secRows = allAnswerRows.filter(r => {
@@ -2013,7 +2013,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
             const globalIdx = allAnswerRows.findIndex(r => r.id === nextUnansweredRow.id);
 
             startSection(targetSecIdx, Math.max(0, localIdx));
-            showToast(`Jumped to Question ${globalIdx + 1} (${assessmentSections[targetSecIdx].title || `Section ${targetSecIdx + 1}`})`, 'info');
+            showToast(`Jumped to Question ${globalIdx + 1} (${testsections[targetSecIdx].title || `Section ${targetSecIdx + 1}`})`, 'info');
           }
         } else {
           showToast(`All ${allAnswerRows.length} questions answered! Great job!`, 'success');
@@ -2063,7 +2063,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
     });
 
     async function doSubmit(isAuto = false) {
-      isAssessmentActive = false; // Disable anti-cheat alerts on submission
+      isTestActive = false; // Disable anti-cheat alerts on submission
       if (_sessionHeartbeatTimer) { clearInterval(_sessionHeartbeatTimer); _sessionHeartbeatTimer = null; }
       releaseScreenWakeLock();
       timerController?.stop();
@@ -2071,7 +2071,7 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       if (attemptData?.id) {
         sessionStorage.setItem('topscore_attempt_id', attemptData.id);
       }
-      showLoading(isAuto ? 'Time is up. Auto-submitting the ASSESSMENT.' : 'Submitting your ASSESSMENT.');
+      showLoading(isAuto ? 'Time is up. Auto-submitting the TEST.' : 'Submitting your TEST.');
 
       const activeAnswers = window.answeredMap || answeredMap;
       const payload = allAnswerRows.map(row => ({
@@ -2086,11 +2086,11 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
 
       try {
         const targetStatus = isAuto ? 'auto_submitted' : 'submitted';
-        const result = await submitAssessment(attemptData.id, payload, { status: targetStatus });
+        const result = await submitTest(attemptData.id, payload, { status: targetStatus });
         
-        if (assessmentData?.assessment_type === 'EXAM') {
+        if (testData?.test_type === 'EXAM') {
           try {
-            await checkAndTriggerLevelUp(session.student_id, assessmentData.level_id);
+            await checkAndTriggerLevelUp(session.student_id, testData.level_id);
           } catch (e) {
             console.error('Level up check failed:', e);
           }
@@ -2132,10 +2132,10 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
           }
           // If both submit and auto_close fail, keep answers safe in local buffer and alert user
           showToast('Connection interrupted during submission. Your answers are safely saved. Please click Submit to retry.', 'error', 10000);
-          isAssessmentActive = true;
+          isTestActive = true;
         } else {
           showToast('Submission failed: ' + e.message, 'error', 8000);
-          isAssessmentActive = true;
+          isTestActive = true;
         }
       }
     }
@@ -2216,4 +2216,4 @@ import { startASSESSMENT, saveAnswer, submitAssessment, logCheatingEvent, getSer
       }
     });
 
-    bootAssessment();
+    bootTest();

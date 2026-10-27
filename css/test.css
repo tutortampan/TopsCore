@@ -1,9 +1,9 @@
 /* ============================================================
-   TopsCore — css/assessment.css
+   TopsCore — css/test.css
    ============================================================ */
 
 /* ===== MODERN SLEEK 705PX BLUEPRINT RESPONSIVE LAYOUT ===== */
-    body.assessment-page {
+    body.test-page {
       background: #070b19 !important;
       height: 100vh !important;
       height: 100dvh !important;
@@ -22,7 +22,7 @@
     }
 
     /* Responsive Content Container without overflow clipping */
-    body.assessment-page .assessment-body {
+    body.test-page .test-body {
       flex: 1 !important;
       display: flex !important;
       flex-direction: column !important;
@@ -35,7 +35,7 @@
       padding: 0 !important;
       box-sizing: border-box !important;
     }
-    body.assessment-page .assessment-main-content {
+    body.test-page .test-main-content {
       flex: 1 !important;
       display: flex !important;
       flex-direction: column !important;
@@ -52,24 +52,24 @@
       box-sizing: border-box !important;
     }
     @supports (scrollbar-width: none) {
-      body.assessment-page .assessment-main-content {
+      body.test-page .test-main-content {
         scrollbar-width: none !important;
       }
     }
-    body.assessment-page .assessment-main-content::-webkit-scrollbar {
+    body.test-page .test-main-content::-webkit-scrollbar {
       display: none !important;
       width: 0 !important;
       height: 0 !important;
     }
 
     @media (max-height: 640px) {
-      body.assessment-page {
+      body.test-page {
         height: auto !important;
         min-height: 100dvh !important;
         max-height: none !important;
         overflow-y: auto !important;
       }
-      body.assessment-page .assessment-body {
+      body.test-page .test-body {
         height: auto !important;
         max-height: none !important;
         overflow: visible !important;
@@ -78,7 +78,7 @@
 
 
     /* Floating Toast Container (does not consume layout height) */
-    body.assessment-page #toast-container {
+    body.test-page #toast-container {
       position: fixed !important;
       top: 10px !important;
       left: 50% !important;
@@ -99,8 +99,8 @@
       pointer-events: none !important;
       flex-shrink: 0 !important;
     }
-    body.assessment-page #toast-container .toast,
-    body.assessment-page .toast {
+    body.test-page #toast-container .toast,
+    body.test-page .toast {
       position: static !important;
       margin: 0 !important;
       padding: 3px 14px !important;
@@ -127,14 +127,14 @@
       overflow: hidden !important;
       max-width: 380px !important;
     }
-    body.assessment-page .toast.hiding {
+    body.test-page .toast.hiding {
       opacity: 0 !important;
       transition: opacity 0.2s ease-out !important;
     }
 
     /* Dedicated Bottom Banner (50px Modern Sleek - 100% Full-Width Global Footer) */
-    body.assessment-page .topscore-locked-banner,
-    body.assessment-page #bottom-ad-banner {
+    body.test-page .topscore-locked-banner,
+    body.test-page #bottom-ad-banner {
       position: static !important;
       width: 100% !important;
       max-width: 100% !important;
@@ -342,7 +342,7 @@
       gap: 5px;
     }
 
-    /* GENERAL ASSESSMENT UI (FROSTED GLASS) */
+    /* GENERAL TEST UI (FROSTED GLASS) */
     .mc-option {
       width: 100%;
       background: rgba(255,255,255,0.08);
@@ -663,9 +663,9 @@
     } 
 
     /* Anti-Cheat selection and touch callout suppression */
-    body.assessment-page,
-    .assessment-layout,
-    .assessment-main-content,
+    body.test-page,
+    .test-layout,
+    .test-main-content,
     .speech-question-text,
     .speech-transcript-box,
     .mc-option,
@@ -690,10 +690,10 @@
     }
 
     /* Tabular Numbers for Timers and Numeric Metrics */
-    #assessment-timer,
+    #test-timer,
     #timer-display,
     .timer-display,
-    .assessment-timer,
+    .test-timer,
     .score-val,
     .badge,
     .result-summary-val,
@@ -702,9 +702,9 @@
     }
 
 /* ============================================================
-   EXTERNALIZED STYLES FOR ASSESSMENT.HTML
+   EXTERNALIZED STYLES FOR TEST.HTML
    ============================================================ */
-.assessment-page header.assessment-header {
+.test-page header.test-header {
   width: 95% !important;
   max-width: 440px !important;
   margin: 0 auto !important;
@@ -716,7 +716,7 @@
   flex-shrink: 0;
 }
 
-.assessment-topbar {
+.test-topbar {
   width: 100%;
   height: 50px;
   min-height: 50px;
@@ -727,7 +727,7 @@
   box-sizing: border-box;
 }
 
-.assessment-giveup-wrap {
+.test-giveup-wrap {
   flex: 1;
   display: flex;
   align-items: center;
@@ -759,7 +759,7 @@
   font-size: 13px;
 }
 
-.assessment-avatar-wrap {
+.test-avatar-wrap {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -768,7 +768,7 @@
   height: 50px;
 }
 
-.assessment-student-avatar {
+.test-student-avatar {
   width: 50px;
   height: 50px;
   min-width: 50px;
@@ -780,14 +780,14 @@
   background: #0f172a;
 }
 
-.assessment-timer-wrap {
+.test-timer-wrap {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: flex-end;
 }
 
-.assessment-page .assessment-timer {
+.test-page .test-timer {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.9));
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
@@ -806,7 +806,7 @@
   font-size: 13px;
 }
 
-.assessment-page .timer-display {
+.test-page .timer-display {
   font-weight: 800;
   color: #38bdf8;
   font-size: 13.5px;
@@ -816,7 +816,7 @@
   text-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
 }
 
-.assessment-title-bar {
+.test-title-bar {
   width: 100%;
   height: 54px;
   min-height: 54px;
@@ -836,7 +836,7 @@
   overflow: hidden;
 }
 
-.assessment-main-title {
+.test-main-title {
   font-size: 13.5px;
   font-weight: 800;
   color: #ffffff;
@@ -853,7 +853,7 @@
   letter-spacing: 0.02em;
 }
 
-.assessment-page .assessment-body {
+.test-page .test-body {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -867,7 +867,7 @@
   box-sizing: border-box;
 }
 
-.assessment-fixed-bottom {
+.test-fixed-bottom {
   flex-shrink: 0;
   z-index: 1000;
   display: flex;
@@ -882,7 +882,7 @@
   padding-top: 10px;
 }
 
-.assessment-bottom-container {
+.test-bottom-container {
   width: 95% !important;
   max-width: 440px !important;
   padding: 0;
@@ -890,7 +890,7 @@
   margin: 0 auto !important;
 }
 
-.assessment-page .bottom-nav-bar {
+.test-page .bottom-nav-bar {
   position: relative;
   margin: 0 auto;
   padding: 0;
@@ -951,7 +951,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.assessment-progress-outer {
+.test-progress-outer {
   width: 95% !important;
   max-width: 440px !important;
   padding: 0;
@@ -959,7 +959,7 @@
   margin: 0 auto !important;
 }
 
-.assessment-progress-track {
+.test-progress-track {
   width: 100%;
   height: 10px;
   min-height: 10px;
@@ -976,7 +976,7 @@
   border-radius: 4px;
 }
 
-.assessment-progress-bar-bg {
+.test-progress-bar-bg {
   width: 100%;
   height: 4px;
   background: rgba(255, 255, 255, 0.08);
@@ -1033,7 +1033,7 @@
   min-height: 0;
 }
 
-.assessment-page .q-nav-grid {
+.test-page .q-nav-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
   gap: 6px;
@@ -1291,7 +1291,7 @@
   color: #cbd5e1;
 }
 
-.assessment-page .assessment-progress-fill {
+.test-page .test-progress-fill {
   width: 0%;
   height: 100%;
   background: linear-gradient(90deg, #06b6d4, #10b981);

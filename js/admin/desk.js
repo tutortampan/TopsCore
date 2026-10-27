@@ -15,8 +15,8 @@ import {
   adminHardDelete,
   clearAdminCache,
   testSupabaseConnection,
-  previewRecalibrateAssessment,
-  applyRecalibrateAssessment
+  previewRecalibrateTest,
+  applyRecalibrateTest
 } from '../api.js?v=5.3.2';
 import { getSupabase } from '../supabase.js?v=5.3.2';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.3.2';
@@ -33,7 +33,7 @@ export async function renderRecycleBin(container) {
     <div class="section-header d-flex justify-between align-center flex-wrap gap-2 mb-4">
       <div>
         <h2 class="section-title text-gradient">Recycle Bin <span class="count-chip" id="recycle-total-chip">Loading...</span></h2>
-        <p class="section-subtitle">Centralized data recovery for soft-deleted Students, Classes, Assessments, and Questions</p>
+        <p class="section-subtitle">Centralized data recovery for soft-deleted Students, Classes, Tests, and Questions</p>
       </div>
       <div class="d-flex gap-2 align-center">
         <button class="btn btn-secondary btn-sm" id="recycle-refresh-all-btn">&#x21bb; Refresh Bin</button>
@@ -45,7 +45,7 @@ export async function renderRecycleBin(container) {
       <button class="btn btn-primary btn-xs recycle-tab-btn" data-type="all">All Entities</button>
       <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="students">Students</button>
       <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="programs">Classes (Programs)</button>
-      <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="Assessments">Assessments (Assessments)</button>
+      <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="Tests">Tests (Tests)</button>
       <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="questions">Questions</button>
     </div>
 
@@ -69,17 +69,17 @@ export async function renderRecycleBin(container) {
     if (wrap) wrap.innerHTML = '<div class="p-5 text-center text-muted"><div class="spinner"></div> Scanning Recycle Bin...</div>';
 
     try {
-      const [stds, progs, Assessments, quests] = await Promise.all([
+      const [stds, progs, Tests, quests] = await Promise.all([
         adminFetchDeleted('students').catch(() => []),
         adminFetchDeleted('programs').catch(() => []),
-        adminFetchDeleted('Assessments').catch(() => []),
+        adminFetchDeleted('Tests').catch(() => []),
         adminFetchDeleted('questions').catch(() => [])
       ]);
 
       const items = [
         ...stds.map(r => ({ ...r, _table: 'students', _entityType: 'Student', _name: r.name || 'Unnamed Student' })),
         ...progs.map(r => ({ ...r, _table: 'programs', _entityType: 'Class', _name: r.name || 'Unnamed Class' })),
-        ...Assessments.map(r => ({ ...r, _table: 'Assessments', _entityType: 'Assessment', _name: r.title || r.title || 'Unnamed Assessment' })),
+        ...Tests.map(r => ({ ...r, _table: 'Tests', _entityType: 'Test', _name: r.title || r.title || 'Unnamed Test' })),
         ...quests.map(r => ({ ...r, _table: 'questions', _entityType: 'Question', _name: r.question_text || 'Unnamed Question' }))
       ];
 
@@ -124,7 +124,7 @@ export async function renderRecycleBin(container) {
       const badgeClass =
         item._entityType === 'Student' ? 'badge-info' :
         item._entityType === 'Class' ? 'badge-success' :
-        item._entityType === 'Assessment' ? 'badge-warning' : 'badge-neutral';
+        item._entityType === 'Test' ? 'badge-warning' : 'badge-neutral';
 
       html += `
         <tr>
@@ -323,7 +323,7 @@ export async function renderAuditLog(area) {
           <option value="">&mdash; All Event Categories &mdash;</option>
           <option value="AUTH">Logins &amp; Authentication</option>
           <option value="CRUD">CRUD Operations (Create/Delete/Update)</option>
-          <option value="CONFIG">Assessment &amp; Site Configurations</option>
+          <option value="CONFIG">Test &amp; Site Configurations</option>
           <option value="SECURITY">Security &amp; Anti-Cheat Events</option>
         </select>
       </div>
@@ -503,9 +503,9 @@ export async function renderDataHealth(container) {
       </div>
 
       <div class="antigravity-card p-4">
-        <div class="text-xs text-muted text-uppercase fw-700 mb-2">Assessments &amp; Attempts</div>
-        <div style="font-size:1.75rem;font-weight:700;color:#f8fafc;" id="metric-Assessments">&mdash;</div>
-        <div class="text-xs text-muted mt-1" id="metric-attempts-desc">Assessment attempts logged</div>
+        <div class="text-xs text-muted text-uppercase fw-700 mb-2">Tests &amp; Attempts</div>
+        <div style="font-size:1.75rem;font-weight:700;color:#f8fafc;" id="metric-Tests">&mdash;</div>
+        <div class="text-xs text-muted mt-1" id="metric-attempts-desc">Test attempts logged</div>
       </div>
     </div>
 
@@ -542,7 +542,7 @@ export async function renderDataHealth(container) {
             </div>
           </div>
           <p style="font-size:0.85rem;color:var(--clr-text-2);line-height:1.5;margin:0 0 1.25rem 0;">
-            Identify duplicate questions across the centralized question bank or within the same assessment to maintain question uniqueness.
+            Identify duplicate questions across the centralized question bank or within the same test to maintain question uniqueness.
           </p>
         </div>
         <button class="btn btn-warning" id="btn-health-scan-questions" style="width:100%;font-weight:600;color:#000;">
@@ -561,7 +561,7 @@ export async function renderDataHealth(container) {
             </div>
           </div>
           <p style="font-size:0.85rem;color:var(--clr-text-2);line-height:1.5;margin:0 0 1.25rem 0;">
-            Audit foreign key integrity. Identify unlinked attempt answers, progress records missing students, and Assessments with dangling references.
+            Audit foreign key integrity. Identify unlinked attempt answers, progress records missing students, and Tests with dangling references.
           </p>
         </div>
         <button class="btn btn-success" id="btn-health-scan-orphans" style="width:100%;font-weight:600;background:linear-gradient(135deg, #10b981, #059669);color:#fff;">
@@ -571,13 +571,13 @@ export async function renderDataHealth(container) {
 
     </div>
 
-    <!-- Dedicated Maintenance Card: Assessment Engine Recalibration -->
-    <div class="antigravity-card p-5 mt-4" id="card-assessment-recalibration" style="border: 1px solid rgba(245, 158, 11, 0.25);">
+    <!-- Dedicated Maintenance Card: Test Engine Recalibration -->
+    <div class="antigravity-card p-5 mt-4" id="card-test-recalibration" style="border: 1px solid rgba(245, 158, 11, 0.25);">
       <div class="d-flex justify-between align-center flex-wrap gap-2 mb-3">
         <div class="d-flex align-center gap-3">
           <div style="font-size: 1.8rem; background: rgba(245, 158, 11, 0.12); padding: 0.5rem; border-radius: 10px; line-height: 1;">⚡</div>
           <div>
-            <h3 style="font-weight: 700; margin: 0 0 2px 0; font-size: 1.15rem;">Assessment Engine Recalibration</h3>
+            <h3 style="font-weight: 700; margin: 0 0 2px 0; font-size: 1.15rem;">Test Engine Recalibration</h3>
             <p class="text-xs text-muted" style="margin: 0;">
               Recalculate historical submitted student attempts after updating questions, adding multiple correct answers (separated by <code>;</code> or <code>|</code>), or enabling hyphen tolerance
             </p>
@@ -588,9 +588,9 @@ export async function renderDataHealth(container) {
 
       <div class="d-flex align-center gap-3 flex-wrap mt-3" style="background: rgba(255, 255, 255, 0.02); padding: 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
         <div style="flex: 1; min-width: 260px;">
-          <label class="form-label text-xs fw-700 text-muted mb-1" style="display: block;">Select Target Assessment</label>
-          <select class="form-control" id="recalibrator-Assessment-select" style="height: 38px;">
-            <option value="">&mdash; Choose an Assessment to Recalibrate &mdash;</option>
+          <label class="form-label text-xs fw-700 text-muted mb-1" style="display: block;">Select Target Test</label>
+          <select class="form-control" id="recalibrator-Test-select" style="height: 38px;">
+            <option value="">&mdash; Choose an Test to Recalibrate &mdash;</option>
           </select>
         </div>
         <div class="d-flex gap-2 align-end" style="padding-top: 18px;">
@@ -667,7 +667,7 @@ export async function renderDataHealth(container) {
     <div class="modal-backdrop hidden" id="recal-confirm-modal" role="dialog" aria-modal="true">
       <div class="modal-box" style="max-width: 480px; text-align: center;">
         <div style="font-size: 2.8rem; margin-bottom: 1rem;">⚡</div>
-        <h3 class="mb-2">Confirm Assessment Recalibration?</h3>
+        <h3 class="mb-2">Confirm Test Recalibration?</h3>
         <p class="text-muted text-sm mb-4">
           This will safely update historical submitted scores, percentages, grades, and student progression using the authoritative grading engine.
         </p>
@@ -723,21 +723,21 @@ export async function renderDataHealth(container) {
   // Load Database Counts
   const loadEntityCounts = async () => {
     try {
-      const [students, Assessments, attempts] = await Promise.all([
+      const [students, Tests, attempts] = await Promise.all([
         adminFetchAll('students', 'id, deleted_at').catch(() => []),
-        adminFetchAll('assessments', 'id, deleted_at').catch(() => []),
+        adminFetchAll('tests', 'id, deleted_at').catch(() => []),
         adminFetchAll('attempts', 'id').catch(() => [])
       ]);
 
       const activeStds = (students || []).filter(s => !s.deleted_at).length;
-      const activeAssessments = (Assessments || []).filter(e => !e.deleted_at).length;
+      const activeTests = (Tests || []).filter(e => !e.deleted_at).length;
       const totalAttempts = (attempts || []).length;
 
       const sEl = document.getElementById('metric-students');
       if (sEl) sEl.textContent = activeStds;
 
-      const eEl = document.getElementById('metric-Assessments');
-      if (eEl) eEl.textContent = activeAssessments;
+      const eEl = document.getElementById('metric-Tests');
+      if (eEl) eEl.textContent = activeTests;
 
       const aEl = document.getElementById('metric-attempts-desc');
       if (aEl) aEl.textContent = `${totalAttempts} attempts logged`;
@@ -770,26 +770,26 @@ export async function renderDataHealth(container) {
   document.getElementById('btn-health-scan-orphans')?.addEventListener('click', async () => {
     showLoading('Auditing relational database integrity...');
     try {
-      const [students, Assessments, attempts, questions, attemptAnswers, progress] = await Promise.all([
+      const [students, Tests, attempts, questions, attemptAnswers, progress] = await Promise.all([
         adminFetchAll('students', 'id, name, deleted_at'),
-        adminFetchAll('assessments', 'id, title, deleted_at'),
-        adminFetchAll('attempts', 'id, student_id, assessment_id, status, created_at'),
-        adminFetchAll('assessment_questions', 'id, assessment_id, question_text'),
+        adminFetchAll('tests', 'id, title, deleted_at'),
+        adminFetchAll('attempts', 'id, student_id, test_id, status, created_at'),
+        adminFetchAll('test_questions', 'id, test_id, question_text'),
         adminFetchAll('attempt_answers', 'id, attempt_id'),
         adminFetchAll('progress', 'id, student_id').catch(() => [])
       ]);
 
       const studentIdSet = new Set((students || []).map(s => s.id));
-      const AssessmentIdSet = new Set((Assessments || []).map(e => e.id));
+      const TestIdSet = new Set((Tests || []).map(e => e.id));
       const attemptIdSet = new Set((attempts || []).map(a => a.id));
 
       const orphanedAttempts = (attempts || []).filter(a => 
         (a.student_id && !studentIdSet.has(a.student_id)) || 
-        (a.assessment_id && !AssessmentIdSet.has(a.assessment_id))
+        (a.test_id && !TestIdSet.has(a.test_id))
       );
 
       const orphanedQuestions = (questions || []).filter(q => 
-        q.assessment_id && !AssessmentIdSet.has(q.assessment_id)
+        q.test_id && !TestIdSet.has(q.test_id)
       );
 
       const orphanedAnswers = (attemptAnswers || []).filter(ans => 
@@ -810,7 +810,7 @@ export async function renderDataHealth(container) {
               ${totalIssues === 0 ? 'All Relational Constraints Healthy' : `${totalIssues} Integrity Issue(s) Detected`}
             </h3>
             <p class="text-xs text-muted" style="margin:0;">
-              ${totalIssues === 0 ? 'All Assessment attempts, questions, answers, and progress records have valid relational parents.' : 'Some records reference missing or unlinked entities.'}
+              ${totalIssues === 0 ? 'All Test attempts, questions, answers, and progress records have valid relational parents.' : 'Some records reference missing or unlinked entities.'}
             </p>
           </div>
 
@@ -855,15 +855,15 @@ export async function renderDataHealth(container) {
     }
   });
 
-  // --- Assessment Engine Recalibration Controller ---
+  // --- Test Engine Recalibration Controller ---
   (async () => {
     try {
-      const allAssessments = await adminFetchAll('assessments');
-      const activeAssessments = (allAssessments || []).filter(e => !e.deleted_at).sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-      const asmSelect = document.getElementById('recalibrator-Assessment-select');
+      const allTests = await adminFetchAll('tests');
+      const activeTests = (allTests || []).filter(e => !e.deleted_at).sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      const asmSelect = document.getElementById('recalibrator-Test-select');
       if (asmSelect) {
-        asmSelect.innerHTML = '<option value="">&mdash; Choose an Assessment to Recalibrate &mdash;</option>' +
-          activeAssessments.map(e => `<option value="${e.id}">[${escapeHtml(e.assessment_type || 'Assessment')}] ${escapeHtml(e.title || e.display_name || e.id)}</option>`).join('');
+        asmSelect.innerHTML = '<option value="">&mdash; Choose an Test to Recalibrate &mdash;</option>' +
+          activeTests.map(e => `<option value="${e.id}">[${escapeHtml(e.test_type || 'Test')}] ${escapeHtml(e.title || e.display_name || e.id)}</option>`).join('');
       }
 
       let currentPreviewData = null;
@@ -942,7 +942,7 @@ export async function renderDataHealth(container) {
 
           showLoading('Calculating recalibration preview across all attempts...');
           try {
-            currentPreviewData = await previewRecalibrateAssessment(asmId);
+            currentPreviewData = await previewRecalibrateTest(asmId);
             hideLoading();
 
             const qEl = document.getElementById('recal-metric-questions');
@@ -996,7 +996,7 @@ export async function renderDataHealth(container) {
 
           showLoading('Applying recalibration to historical student results...');
           try {
-            const res = await applyRecalibrateAssessment(asmId);
+            const res = await applyRecalibrateTest(asmId);
             hideLoading();
             showToast(`Successfully recalibrated ${res.updatedAttemptsCount} attempts!`, 'success');
             btnApply.disabled = true;
@@ -1007,17 +1007,17 @@ export async function renderDataHealth(container) {
           }
         });
 
-        // Pre-selection if navigated from an assessment row
-        if (window._filterRecalibrateAssessment) {
-          asmSelect.value = window._filterRecalibrateAssessment;
-          window._filterRecalibrateAssessment = null;
+        // Pre-selection if navigated from an test row
+        if (window._filterRecalibrateTest) {
+          asmSelect.value = window._filterRecalibrateTest;
+          window._filterRecalibrateTest = null;
           btnPreview.disabled = !asmSelect.value;
-          document.getElementById('card-assessment-recalibration')?.scrollIntoView({ behavior: 'smooth' });
+          document.getElementById('card-test-recalibration')?.scrollIntoView({ behavior: 'smooth' });
           if (!btnPreview.disabled) btnPreview.click();
         }
       }
     } catch(err) {
-      console.warn('Could not initialize Assessment Recalibrator in Data Health:', err);
+      console.warn('Could not initialize Test Recalibrator in Data Health:', err);
     }
   })();
 }
@@ -1057,7 +1057,7 @@ export async function renderSettings(area) {
           </div>
         </div>
         <p class="text-xs text-muted mb-3" style="line-height:1.4;">
-          Strict safety throttles to eliminate infinite looping and runaway LLM token bills. Configured values are broadcast globally to all student Assessmentination sessions.
+          Strict safety throttles to eliminate infinite looping and runaway LLM token bills. Configured values are broadcast globally to all student Testination sessions.
         </p>
 
         <div class="form-group mb-3">
@@ -1077,18 +1077,18 @@ export async function renderSettings(area) {
         </button>
       </div>
 
-      <!-- 1.5 Assessment Security & Anti-Cheat Engine Card -->
+      <!-- 1.5 Test Security & Anti-Cheat Engine Card -->
       <div class="antigravity-card p-5" style="border-color:rgba(234, 179, 8, 0.3);box-shadow:0 20px 40px rgba(234, 179, 8, 0.08);">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
           <div style="font-size:1.5rem;">🛡️</div>
           <div>
-            <h3 style="font-size:1.1rem;margin:0;color:#eab308;font-weight:700;">Assessment Security &amp; Anti-Cheat Engine</h3>
+            <h3 style="font-size:1.1rem;margin:0;color:#eab308;font-weight:700;">Test Security &amp; Anti-Cheat Engine</h3>
             <div class="text-xs text-muted">Controls for exam-taking integrity</div>
           </div>
         </div>
         
         <p class="text-xs text-muted mb-3" style="line-height:1.4;">
-          Configurable anti-cheat controls to prevent tab switching and enforce exam integrity. Settings are synced dynamically to the assessment runner.
+          Configurable anti-cheat controls to prevent tab switching and enforce exam integrity. Settings are synced dynamically to the test runner.
         </p>
 
         <div class="form-group mb-3 d-flex justify-between align-center">
@@ -1284,7 +1284,7 @@ export async function renderSettings(area) {
         sb.from('site_settings').upsert({ key: 'anti_cheat_sound_enabled', value: isSoundEnabled ? 'true' : 'false', updated_at: new Date().toISOString() }, { onConflict: 'key' }),
         sb.from('site_settings').upsert({ key: 'anti_cheat_countdown_seconds', value: countdown, updated_at: new Date().toISOString() }, { onConflict: 'key' })
       ]);
-      showToast('Assessment Security Settings saved securely!', 'success');
+      showToast('Test Security Settings saved securely!', 'success');
     } catch (err) {
       showToast('Failed to save security settings: ' + err.message, 'error');
     }

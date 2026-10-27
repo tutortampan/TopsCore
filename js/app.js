@@ -136,7 +136,7 @@ export function withTimeout(promise, ms, actionName = 'Operation') {
 }
 
 // TOPS CORE — Scoring & Grade (client-display only, NOT authoritative)
-// The authoritative calculation is in submit-Assessment Edge Function.
+// The authoritative calculation is in submit-Test Edge Function.
 
 /** Escape HTML special characters */
 export function fixMojibake(str) {

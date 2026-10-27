@@ -61,7 +61,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { questions, AssessmentId, adminUserId } = await req.json();
+    const { questions, testId: rawTestId, test_id, adminUserId } = await req.json();
+    const testId = rawTestId || test_id;
 
     if (!Array.isArray(questions) || questions.length === 0) {
       return new Response(JSON.stringify({ error: "No questions provided for import." }), {
@@ -69,8 +70,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!AssessmentId) {
-      return new Response(JSON.stringify({ error: "AssessmentId is required." }), {
+    if (!testId) {
+      return new Response(JSON.stringify({ error: "testId is required." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
@@ -79,11 +80,11 @@ Deno.serve(async (req) => {
     let updatedCount = 0;
     const errors: string[] = [];
 
-    // Fetch existing questions for this Assessment to determine insert vs update
+    // Fetch existing questions for this Test to determine insert vs update
     const { data: existingRows } = await supabase
       .from("questions")
       .select("id, question_order")
-      .eq("Assessment_id", AssessmentId)
+      .eq("test_id", testId)
       .is("deleted_at", null);
 
     const existingOrderMap = new Map<number, string>(
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
       await Promise.all(chunk.map(async (q: any) => {
         const orderNum = Number(q.order);
         const payload: any = {
-          Assessment_id:        AssessmentId,
+          test_id:        testId,
           question_order: orderNum,
           question_text:  String(q.questionText ?? "").trim(),
           correct_answer: String(q.correctAnswer ?? "").trim(),
@@ -142,7 +143,7 @@ Deno.serve(async (req) => {
         entity_type:   "questions",
         entity_id:     null,
         old_value:     null,
-        new_value:     JSON.stringify({ AssessmentId, insertedCount, updatedCount, errors: errors.length }),
+        new_value:     JSON.stringify({ testId, insertedCount, updatedCount, errors: errors.length }),
         ip_address:    req.headers.get("x-forwarded-for") || "unknown",
         user_agent:    req.headers.get("user-agent") || "unknown",
       });

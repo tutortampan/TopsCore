@@ -760,7 +760,7 @@ export async function renderCVGenerator(container) {
       <div style="margin-bottom: 1rem;">
         <h3 style="font-size: 9pt; font-weight: 800; text-transform: uppercase; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.2rem; margin-bottom: 0.4rem;">Executive Summary</h3>
         <p style="font-size: 8.5pt; line-height: 1.35; color: #334155; margin: 0;">
-          ${(profile?.bio && profile.bio.length > 350) ? profile.bio.substring(0, 347) + '...' : (profile?.bio || 'Experienced educational leader specializing in language pedagogy and assessment systems.')}
+          ${(profile?.bio && profile.bio.length > 350) ? profile.bio.substring(0, 347) + '...' : (profile?.bio || 'Experienced educational leader specializing in language pedagogy and test systems.')}
         </p>
       </div>
 

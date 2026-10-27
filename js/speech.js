@@ -101,7 +101,7 @@ export async function testMicrophoneCapability() {
 
     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
       state = 'permission_denied';
-      message = 'Microphone permission was denied. Please allow microphone access to take speech Assessments.';
+      message = 'Microphone permission was denied. Please allow microphone access to take speech Tests.';
     } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
       state = 'no_device';
       message = 'No microphone device was detected on your phone or computer. Please connect a microphone or headset.';

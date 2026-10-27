@@ -1,3 +1,236 @@
+## SESSION-20261027-1630
+
+Start: 2026-10-27 16:07 UTC+8  
+End: 2026-10-27 16:30 UTC+8  
+Agent: Antigravity  
+
+### User Request
+[TASK: SCORING, POINTS & RANKING OVERHAUL - DIRECT EXECUTION & SINGLE COMMIT - TOPSCORE]
+1. PROG % (Completion Rate): Maintain calculation across ALL activities (daily tasks/quizzes + weekly exams).
+2. Global SCORE % & Global GRD (Academic Mastery): Calculate EXCLUSIVELY from weekly exams (milestone exam sessions). Exclude daily drills entirely.
+3. Global PTS (Points): Aggregate points earned EXCLUSIVELY from weekly exams.
+4. Edge-Case Handling (Unattempted Weekly Exams): When a student only completed daily drills, PROG reflects tasks, SCORE shows `—`, GRD shows `—`, PTS evaluates to 0.
+5. Leaderboard Sort Order: Primary: PROG % DESC > Secondary: Global SCORE % DESC > Tertiary: Global PTS DESC.
+6. Footer "CLASS AVERAGE": Align average calculations with the weekly-only metrics.
+7. Stage all changed files, Accept all changes, then push and commit, ONCE!
+
+### Objective
+Implement the business logic overhaul in `admin.html#class-hub` and its backing logic, verify calculations and sorting, update documentation, and perform the final single commit and push.
+
+### Work Performed
+- **Scoring & Point Overhaul**:
+  - Implemented `isWeeklyExam` helper in `js/admin/app.js`.
+  - Maintained `completedCount` across all 40 activities for `progressPct`.
+  - Segregated `completedWeeklyCount`, `weeklyEarnedScore`, and `sumWeeklyPercentages` strictly from weekly exams.
+  - Assigned `averageScorePct`, `grade`, and `totalEarnedScore` (Global PTS) strictly from weekly exams.
+  - Cleaned edge-case display for students who only completed daily drills to render `—` and `0 pts`.
+- **Ranking & Sorting**:
+  - Configured `studentsGridData.sort` to follow `PROG % DESC > Global SCORE % DESC > Global PTS DESC`.
+  - Configured `attendanceGridInstance` with `initialSortKey: 'progressPct'`.
+  - Updated `sortComparator` for `progressPct`, `averageScorePct`, and `totalEarnedScore`.
+- **Footer Class Average**:
+  - Updated `summaryRow` to average SCORE and GRADE exclusively from students with completed weekly exams.
+- **Cache & Manifest**:
+  - Bumped `CACHE_NAME` in `sw.js` to `topscore-cache-ranking-v1`.
+- **Documentation**:
+  - Documented `DECISION-022` in `docs/DECISIONS.md`.
+  - Updated `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`.
+
+### Verification
+- `node scratch/test_scoring_and_ranking_overhaul.cjs`: 100% assertions passed across all 6 scenarios.
+- `node scripts/check_all_js_syntax.cjs`: 39/39 JS files passed syntax validation.
+- `node scratch/zero_residue_verification.cjs`: 0 occurrences of "assessment" across all active code files.
+- `node scratch/test_complete_system.mjs`: 100% assertions passed.
+
+---
+
+## SESSION-20261027-1605
+
+Start: 2026-10-27 15:30 UTC+8  
+End: 2026-10-27 16:05 UTC+8  
+Agent: Antigravity  
+
+### User Request
+[TASK: FULL SYSTEM TERMINOLOGY OVERHAUL, DATABASE MIGRATION & PURGE - TOPSCORE]
+1. Complete deprecation and absolute purge of the term "Assessment" across the entire repository.
+2. Singular/Plural Precision Rule:
+   - "Assessment" -> "Test" (singular context, entity name, component name, table name).
+   - "Assessments" -> "Tests" (plural context, navigation menus, collections, route groups).
+3. Sub-categories strictly split into:
+   - "Quiz" (pl: "Quizzes"): Daily tasks, formative checks, phrase runner drills, quick-feedback items.
+   - "Exam" (pl: "Exams"): Formal, scheduled, high-stakes, strictly-timed examinations.
+4. ZERO RESIDUE & 100% DATA PRESERVATION.
+
+### Objective
+Execute complete database migration, backfill, edge function modernization, frontend refactoring, and legacy purge with zero residue and 100% preservation of all student attempt history.
+
+### Work Performed
+- **Database Layer**:
+  - Live PostgreSQL database migration (`tests`, `test_items`, `test_topics`, `test_results`, `test_type` ENUM).
+  - Backfilled and verified 40 tests (32 quizzes + 8 exams) and 851 student attempts.
+  - Added `test_id` column to `attempts`, `assignments`, `student_submissions`, `question_usage_history`.
+  - Enforced `NOT NULL` on `attempts.test_id` with foreign key cascade.
+  - Dropped legacy tables: `assessments`, `assessment_questions`, `assessment_topics`, `assessment_results`, `assessment_instances`, `assessment_attempts`, `assessment_attempt_answers`.
+  - Synchronized repository schema files (`schema.sql`, `db_schema.sql`, `supabase_deploy/01_schema_and_functions.sql`).
+- **Edge Functions**:
+  - Created `start-test`, `submit-test`, `duplicate-test`, `evaluate-test`.
+  - Updated `import-questions` and `generate-module-template`.
+  - Purged obsolete legacy assessment functions.
+- **Frontend & UI**:
+  - Renamed physical files: `test.html`, `css/test.css`, `js/test.js`, `js/admin/tests-management.js`, `js/admin/tests-access.js`, `js/admin/test-builder.js`.
+  - Updated database queries in `js/api.js` and all 25 modules in `js/`.
+  - Refactored UI labels, tabs, headers, modal titles, and button texts in `admin.html`, `dashboard.html`, `test.html`, `result.html`, `index.html`.
+  - Updated `sw.js` cache manifest to `topscore-cache-test-v1`.
+- **Documentation**:
+  - Added `DECISION-021` to `docs/DECISIONS.md`.
+  - Updated `AGENTS.md`, `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`.
+
+### Verification
+- `node scratch/zero_residue_verification.cjs`: PASSED (0 occurrences in all 62 code files).
+- `node scripts/check_all_js_syntax.cjs`: PASSED (39/39 JS files valid).
+- `node scratch/test_complete_system.mjs`: PASSED (100% assertions verified).
+- `git status`: Working tree changes only (STRICTLY NO COMMIT / NO PUSH).
+
+### Resume From
+Terminology overhaul, database migration, and legacy purge 100% complete. Ready for normal operations.
+
+---
+
+## SESSION-20261027-1200
+
+Start: 2026-10-27 11:40 UTC+8  
+End: 2026-10-27 12:00 UTC+8  
+Agent: Antigravity  
+
+### User Request
+[PROTOCOL: ANTI-GRAVITY / EXPERIMENTAL COLOR MOCKUP]
+Temporarily update color tokens across `js/grading.js` and `css/admin.css` to test high-vibrancy dark-mode values for all Grades to look like the reference photo ("Grading 2.jpg").
+
+STRICT GIT RULES:
+- STRICTLY NO GIT COMMIT & NO GIT PUSH!
+- Local working tree changes only.
+
+Proposed Test Tokens:
+- Star (100%): #C084FC (Bright Purple)
+- Grade A (90-99%): #22C55E (True Leaf Green - visibly deeper than lime)
+- Grade B (80-89%): #BEF264 (Electric Bright Lime - heavy yellow undertone)
+- Grade C (60-79%): #FDE047 (Pure Electric Lemon Yellow - zero orange cast)
+- Grade D (30-59%): #FB923C (Clean Orange)
+- Grade E (0-29%): #F87171 (Light Red)
+
+### Objective
+1. Apply the 6 test tokens across `GRADE_PALETTE` and `getGradeColorByScore` in `js/grading.js`.
+2. Update corresponding utility classes in `css/admin.css` and `css/style.css`.
+3. Standardize Star grade into a circular pill badge matching the form factor of grades A–E.
+4. Increment cache key in `sw.js` to `topscore-cache-mockup-v1`.
+5. Run syntax check `node scripts/check_all_js_syntax.cjs` and unit grading tests `test_grading_suite.mjs`.
+6. Enforce strictly NO git commit & NO git push.
+
+### Work Performed
+- Updated `js/grading.js` with the 6 exact tokens: Star `#C084FC`, Grade A `#22C55E`, Grade B `#BEF264`, Grade C `#FDE047`, Grade D `#FB923C`, Grade E `#F87171`.
+- Added circular badge rendering for Star (`.grade-circle.grade-circle-star`) in `js/grading.js`, `css/admin.css`, and `css/style.css`.
+- Configured crisp dark text (`#0f172a`) for Grade B and Grade C badges for optimal contrast on bright backgrounds.
+- Updated `sw.js` with `topscore-cache-mockup-v1`.
+- Ran `node scripts/check_all_js_syntax.cjs` (39/39 JS files passed syntax validation).
+- Ran `scratch/test_grading_suite.mjs` (all 7 score tiers, remedial behavior, and circle badge HTML assertions passed 100%).
+- Verified `git status`: All changes remain uncommitted in local working tree only.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs`: Exit code 0 (39/39 files valid).
+- `node scratch/test_grading_suite.mjs`: Exit code 0 (100% pass).
+- `git status`: Working tree changes only, strictly NO commit/push.
+
+### Resume From
+Ready for user manual inspection of the high-vibrancy dark-mode colors and circle badges in browser.
+
+## SESSION-20261027-1135
+
+Start: 2026-10-27 11:23 UTC+8  
+End: 2026-10-27 11:35 UTC+8  
+Agent: Antigravity  
+
+### User Request
+Continue resolution of assessment creation/generation pipeline and eliminate stale cache issues in browser.
+
+### Objective
+1. Inspect `autoGenerateAssessmentsHierarchy` in `auto-gen-modal.js` and `upsertDynamicAssessmentShell` in `api.js` for any residual references to `duration_minutes` on the root table entity.
+2. Implement universal interceptor defense in `adminInsert` and `adminUpdate` in `api.js` to strip `duration_minutes` from root table payloads.
+3. Cache-bust dynamic and static imports of `api.js` and `auto-gen-modal.js` across the application.
+4. Run live auto-generation simulation to verify 0 errors.
+
+### Work Performed
+- Found and removed root `duration_minutes` in `upsertDynamicAssessmentShell`.
+- Added defensive interceptors in `adminInsert` and `adminUpdate` in `js/api.js` to ensure any incoming object for `assessments` table automatically migrates root `duration_minutes` to `working_duration_minutes` and deletes the root property.
+- Fixed stale pinned version query parameters (`?v=5.3.2`) in dynamic imports across `auto-gen-modal.js`, `vocab-vault.js`, `app.js`, `crud-modals.js`, `classes-management.js`, and `admin.html`.
+- Updated `sw.js` cache name to `topscore-cache-fix-duration-col-v2`.
+- Executed `scratch/test_full_autogen.cjs` verifying that `autoGenerateAssessmentsHierarchy` creates and updates all 40 assessments without PGRST204 errors.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs`: 39/39 JS files passed syntax validation.
+- Live test output: 40/40 assessments updated successfully with 0 errors.
+- `git status` confirmed only local working tree changes, strictly NO commit/push.
+
+### Resume From
+Ready for user browser refresh and verification.
+
+## SESSION-20261027-1122
+
+Start: 2026-10-27 11:05 UTC+8  
+End: 2026-10-27 11:22 UTC+8  
+Agent: Antigravity  
+
+### User Request
+User provided a screenshot showing multiple `Failed to load resource: 400 (Bad Request)` errors when updating assessment configurations in Class Hub, where only row 1 had 5m applied and remaining rows stayed at 60m/120m.
+
+### Objective
+1. Identify the root cause of the HTTP 400 errors during assessment config updates.
+2. Fix any non-existent PostgreSQL columns passed to Supabase REST endpoints.
+3. Validate and execute full update across all assessments of the target class.
+4. Verify JavaScript syntax across all files and confirm strictly NO git commit/push.
+
+### Work Performed
+- Ran schema inspection on `assessments` table and discovered that `duration_minutes` is NOT a physical column in PostgreSQL (`working_duration_minutes` is the physical column; `duration_minutes` is only stored inside `payload` JSONB).
+- Removed root table `duration_minutes` from `updateClassAssessmentsConfig` and `createAssessmentShell` in `js/api.js`.
+- Hardened `js/admin/crud-modals.js` to strip `duration_minutes` from root payloads during single and bulk assessment updates.
+- Tested live batch update on class `ab33498a-90e6-44b7-83f4-5765f964543e` (40 assessments): all 32 tasks updated to 5m, 8 tests updated to passing score 60% with HTTP 200 OK and 0 errors.
+- Bumped cache key in `sw.js` to `topscore-cache-fix-duration-col-v1`.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs`: 39/39 JS files passed syntax validation.
+- Live database verification confirmed all 32 tasks have `working_duration_minutes = 5` and `payload.duration_minutes = 5`.
+- `git status` confirmed only working tree changes, no commits or pushes.
+
+### Resume From
+Ready for user testing and verification in browser.
+
+## SESSION-20261027-1058
+
+Start: 2026-10-27 10:20 UTC+8  
+End: 2026-10-27 10:58 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"coba perhatikan alur pembuatan assesment secara menyeluruh, sepertinya banyak yang tidak efisien, seperti bulk assesment, global setting, assesment generator, dan assesment blueprint, bukankan generator itu fungsinya untuk generate dan setting dari blueprint kurikulum? apa bedanya generator dan global setting? lalu kenapa di vault juga ada auto generate? bukankah generator itu harusnya satu aja? lalu waktu test itu kan tergantung dari sesi ujian, bukan dari settingan menit... 
+coba analisa, petakan dan berikan opsi atau solusi terbaik."
+
+### Objective
+1. Conduct architectural analysis of assessment lifecycle and eliminate redundant touchpoints.
+2. Unify generator and global settings into ONE coherent guided Wizard (`js/admin/auto-gen-modal.js`).
+3. Remove redundant static global settings boxes and intrusive post-import popups.
+4. Align test duration architecture with real-world dynamic session windows (`test_session.expires_at`), keeping 5m default for tasks.
+5. Upgrade Class Hub with a sleek high-density tactical toolbar linking Blueprint and Wizard.
+6. Strictly adhere to: NO GIT COMMIT & NO GIT PUSH.
+
+### Work Performed
+- Mapped entire assessment generation flow and identified 4 major redundancies.
+- Redesigned `js/admin/auto-gen-modal.js` into unified Assessment Generator & Blueprint Wizard with class locking, task configuration (5m default), test session notes, and dual actions (`[⚡ Update Pengaturan Saja]` and `[🚀 Generate & Sinkronkan Soal]`).
+- Cleaned up `js/admin/app.js`: eliminated bulky static global settings box and replaced with sleek metadata chips and direct action buttons.
+- Cleaned up `js/admin/vocab-vault.js`: removed intrusive post-import auto-generator pop-up.
+- Added atomic `updateClassAssessmentsConfig` and customizable parameters to `autoGenerateAssessmentsHierarchy` in `js/api.js`.
+- Bumped cache key in `sw.js` to `topscore-cache-blueprint-wizard-v1`.
+- Verified all 39 JS files with `node scripts/check_all_js_syntax.cjs` (0 errors).
+- Verified `git status`: working tree modifications only, strictly NO commit/push.
+
 ## SESSION-20261027-0700
 
 Start: 2026-10-27 06:48 UTC+8  

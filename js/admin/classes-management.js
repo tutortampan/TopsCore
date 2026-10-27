@@ -1,13 +1,13 @@
-import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsAssessments, autoGeneratePhrasesAssessments } from '../api.js?v=5.3.2';
-import { showToast, escapeHtml, escHtml } from '../app.js?v=5.3.2';
-import { openAssessmentBuilder } from './assessment-builder.js?v=5.3.2';
-import { DataGrid } from './datagrid.js?v=5.3.2';
-import { openAssessmentBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.3.2';
+import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsTests, autoGeneratePhrasesTests } from '../api.js?v=20261027b';
+import { showToast, escapeHtml, escHtml } from '../app.js?v=20261027b';
+import { openTestBuilder } from './test-builder.js?v=20261027b';
+import { DataGrid } from './datagrid.js?v=20261027b';
+import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261027b';
 
 // ─────────────────────────────────────────────────────────────
 // SMART CLASS-AWARE TASK / TEST ROUTERS
 // Detects class type by name → opens the correct wizard.
-// All new assessments use assessment_category: 'TASK' or 'TEST'
+// All new tests use test_category: 'TASK' or 'TEST'
 // (QUIZ/EXAM are @deprecated — do NOT use for new classes)
 // ─────────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ window.handleAddTask = (classId, className) => {
     case 'VOCABULARY':
       // Vocab/Phrase Task → use existing Vocab Vault wizard (tier: TASK)
       const asmTypeTask = 'VOCAB_MASTERY';
-      openVocabWizard(null, { classId, className, assessmentType: asmTypeTask, tier: 'TASK', category: 'TASK' });
+      openVocabWizard(null, { classId, className, testType: asmTypeTask, tier: 'TASK', category: 'TASK' });
       break;
     case 'BASIC_ENGLISH':
     case 'TELLING_STORY':
@@ -40,8 +40,8 @@ window.handleAddTask = (classId, className) => {
     case 'STORYTELLING_L1':
     case 'GENERIC':
     default:
-      // All other Task types → generic Assessment Builder (with category pre-set to TASK)
-      openAssessmentBuilder(null, classId, { category: 'TASK' });
+      // All other Task types → generic Test Builder (with category pre-set to TASK)
+      openTestBuilder(null, classId, { category: 'TASK' });
       break;
   }
 };
@@ -53,7 +53,7 @@ window.handleAddTest = (classId, className) => {
     case 'VOCABULARY':
       // Vocab Test → Aggregator mode (combines Task words into one Test)
       const asmTypeTest = 'VOCAB_MASTERY';
-      openVocabWizard(null, { classId, className, assessmentType: asmTypeTest, tier: 'TEST', category: 'TEST' });
+      openVocabWizard(null, { classId, className, testType: asmTypeTest, tier: 'TEST', category: 'TEST' });
       break;
     case 'BASIC_ENGLISH':
     case 'TELLING_STORY':
@@ -62,15 +62,15 @@ window.handleAddTest = (classId, className) => {
     case 'STORYTELLING_L1':
     case 'GENERIC':
     default:
-      // All other Test types → generic Assessment Builder (with category pre-set to TEST)
-      openAssessmentBuilder(null, classId, { category: 'TEST' });
+      // All other Test types → generic Test Builder (with category pre-set to TEST)
+      openTestBuilder(null, classId, { category: 'TEST' });
       break;
   }
 };
 
 /** @deprecated — Use handleAddTask / handleAddTest instead */
-window.handleCreateClassAssessment = (classId, className) => {
-  console.warn('[DEPRECATED] handleCreateClassAssessment — use handleAddTask or handleAddTest');
+window.handleCreateClassTest = (classId, className) => {
+  console.warn('[DEPRECATED] handleCreateClassTest — use handleAddTask or handleAddTest');
   window.handleAddTask(classId, className);
 };
 
@@ -528,7 +528,7 @@ function renderClassDetail(cls) {
       
       <!-- 3-TAB NAVIGATION -->
       <div style="display:flex; gap:2rem; margin-top:2rem; border-bottom:1px solid transparent;">
-        <div class="workspace-tab active" data-tab="learning-path" style="padding-bottom:0.75rem; cursor:pointer; font-weight:600; color:var(--clr-primary); border-bottom:2px solid var(--clr-primary); font-size:0.95rem;">&#128203; Learning Path & Assessments</div>
+        <div class="workspace-tab active" data-tab="learning-path" style="padding-bottom:0.75rem; cursor:pointer; font-weight:600; color:var(--clr-primary); border-bottom:2px solid var(--clr-primary); font-size:0.95rem;">&#128203; Learning Path & Tests</div>
         <div class="workspace-tab" data-tab="students" style="padding-bottom:0.75rem; cursor:pointer; font-weight:500; color:var(--clr-text-muted); border-bottom:2px solid transparent; font-size:0.95rem;">&#128101; Students</div>
         <div class="workspace-tab" data-tab="gradebook" style="padding-bottom:0.75rem; cursor:pointer; font-weight:500; color:var(--clr-text-muted); border-bottom:2px solid transparent; font-size:0.95rem;">&#128202; Gradebook</div>
       </div>
@@ -592,9 +592,9 @@ function renderClassDetail(cls) {
       
       let res;
       if (type === 'words') {
-        res = await autoGenerateWordsAssessments(payload);
+        res = await autoGenerateWordsTests(payload);
       } else {
-        res = await autoGeneratePhrasesAssessments(payload);
+        res = await autoGeneratePhrasesTests(payload);
       }
       
       showToast(`Success: Created ${res.tasks} Tasks, ${res.tests} Tests. Updated ${res.updated}.`, 'success');
@@ -650,14 +650,14 @@ export async function loadClassLearningPath(classId) {
     if (window._selectedLevelId && window._selectedLevelId !== 'no-level') {
         filters.level_id = window._selectedLevelId;
     }
-    const assessmentsRaw = await adminFetchAll('assessments', '*, prerequisite_assessment_id(id, name, title, shell_code), levels!level_id(id, name)', filters);
-    const assessments = assessmentsRaw.sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
+    const testsRaw = await adminFetchAll('tests', '*, prerequisite_test_id(id, name, title, shell_code), levels!level_id(id, name)', filters);
+    const tests = testsRaw.sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
     
-    if (!assessments || assessments.length === 0) {
+    if (!tests || tests.length === 0) {
       container.innerHTML = `
          <div class="empty-state" style="padding:3rem; text-align:center;">
            <div style="font-size:2.5rem; margin-bottom:1rem;">&#128203;</div>
-           <h4 style="color:var(--clr-text-1); margin:0 0 0.5rem 0;">No assessments yet</h4>
+           <h4 style="color:var(--clr-text-1); margin:0 0 0.5rem 0;">No tests yet</h4>
            <p class="text-muted text-sm">Use the <strong>Add Task</strong> or <strong>Add Test</strong> buttons above to start building the curriculum for this class.</p>
          </div>`;
       return;
@@ -667,12 +667,12 @@ export async function loadClassLearningPath(classId) {
     let testCount = 0;
     let tryoutCount = 0;
 
-    assessments.forEach(asm => {
-      const cat = asm.assessment_category
-        || (asm.assessment_type && (asm.assessment_type.includes('EXAM') || asm.assessment_type.includes('TEST')) ? 'TEST' : null)
+    tests.forEach(asm => {
+      const cat = asm.test_category
+        || (asm.test_type && (asm.test_type.includes('EXAM') || asm.test_type.includes('TEST')) ? 'TEST' : null)
         || (asm.title && (asm.title.toLowerCase().includes('test') || asm.title.toLowerCase().includes('exam')) ? 'TEST' : 'TASK');
       
-      const isTryout = asm.assessment_category === 'TRYOUT' || (asm.payload?.shell_code || '').startsWith('TRYOUT');
+      const isTryout = asm.test_category === 'TRYOUT' || (asm.payload?.shell_code || '').startsWith('TRYOUT');
       
       if (isTryout) {
         tryoutCount++;
@@ -700,9 +700,9 @@ export async function loadClassLearningPath(classId) {
     `;
     container.innerHTML = summaryHtml;
 
-    const gridData = assessments.map((r, idx) => {
-      const isTest = (r.assessment_category === 'TEST') || (r.title || '').toLowerCase().includes('test');
-      const isTryout = r.assessment_category === 'TRYOUT' || (r.payload?.shell_code || '').startsWith('TRYOUT');
+    const gridData = tests.map((r, idx) => {
+      const isTest = (r.test_category === 'TEST') || (r.title || '').toLowerCase().includes('test');
+      const isTryout = r.test_category === 'TRYOUT' || (r.payload?.shell_code || '').startsWith('TRYOUT');
       const isTask = !isTest && !isTryout;
       
       const _isDyn = r?.payload?.is_dynamic_shell;
@@ -713,8 +713,8 @@ export async function loadClassLearningPath(classId) {
         title: r.title,
         order: r.display_order ?? r.order_index ?? r.order ?? (idx + 1),
         shellCode: r.shell_code || '',
-        prereq: r.prerequisite_assessment_id ? (r.prerequisite_assessment_id.shell_code || r.prerequisite_assessment_id.title || r.prerequisite_assessment_id.name || 'Yes') : '',
-        type: r.assessment_type || 'STANDARD',
+        prereq: r.prerequisite_test_id ? (r.prerequisite_test_id.shell_code || r.prerequisite_test_id.title || r.prerequisite_test_id.name || 'Yes') : '',
+        type: r.test_type || 'STANDARD',
         level: r.levels?.name || '—',
         access: r.question_order === 'fixed' ? 'Fixed' : 'Rand',
         answerType: formatAnswerType(r.payload?.answer_type || r.answer_type),
@@ -743,10 +743,10 @@ export async function loadClassLearningPath(classId) {
         {
           label: 'Publish Selected',
           onClick: async (ids) => {
-            if (!confirm(`Publish ${ids.length} selected assessments?`)) return;
+            if (!confirm(`Publish ${ids.length} selected tests?`)) return;
             try {
-              for (const id of ids) await adminUpdate('assessments', id, { status: 'PUBLISHED' });
-              showToast(`Published ${ids.length} assessments`, 'success');
+              for (const id of ids) await adminUpdate('tests', id, { status: 'PUBLISHED' });
+              showToast(`Published ${ids.length} tests`, 'success');
               loadClassLearningPath(classId);
             } catch (e) {
               showToast('Error publishing: ' + e.message, 'error');
@@ -756,10 +756,10 @@ export async function loadClassLearningPath(classId) {
         {
           label: 'Unpublish Selected',
           onClick: async (ids) => {
-            if (!confirm(`Unpublish ${ids.length} selected assessments?`)) return;
+            if (!confirm(`Unpublish ${ids.length} selected tests?`)) return;
             try {
-              for (const id of ids) await adminUpdate('assessments', id, { status: 'DRAFT' });
-              showToast(`Unpublished ${ids.length} assessments`, 'success');
+              for (const id of ids) await adminUpdate('tests', id, { status: 'DRAFT' });
+              showToast(`Unpublished ${ids.length} tests`, 'success');
               loadClassLearningPath(classId);
             } catch (e) {
               showToast('Error unpublishing: ' + e.message, 'error');
@@ -837,12 +837,12 @@ export async function loadClassLearningPath(classId) {
           key: 'actions', label: '', sortable: false,
           render: (val, row) => `
             <div class="d-flex gap-1 justify-end align-center">
-              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterAssessmentResults='${row.id}'; window.loadSection('results');">&#128202;</button>
-              <button class="btn ${row.status === 'published' ? 'btn-danger' : 'btn-success'}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._toggleClassAssessmentPublish('${row.id}', '${row.status || 'draft'}')">
+              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterTestResults='${row.id}'; window.loadSection('results');">&#128202;</button>
+              <button class="btn ${row.status === 'published' ? 'btn-danger' : 'btn-success'}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._toggleClassTestPublish('${row.id}', '${row.status || 'draft'}')">
                 ${row.status === 'published' ? 'Unpub' : 'Pub'}
               </button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openAssessmentBuilder('${row.id}')">Edit</button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; color: var(--clr-accent-1);" onclick="window._deleteRecord('Assessments', '${row.id}', '${escapeHtml(row.title)}')">Del</button>
+              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openTestBuilder('${row.id}')">Edit</button>
+              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; color: var(--clr-accent-1);" onclick="window._deleteRecord('Tests', '${row.id}', '${escapeHtml(row.title)}')">Del</button>
             </div>
           `
         }
@@ -894,11 +894,11 @@ function formatAnswerType(type) {
 
 // escapeHtml / escHtml imported canonically
 
-window._toggleClassAssessmentPublish = async (AssessmentId, currentStatus) => {
+window._toggleClassTestPublish = async (testId, currentStatus) => {
   const newStatus = (currentStatus || '').toUpperCase() === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';
   try {
-    await window.adminUpdate('assessments', AssessmentId, { status: newStatus });
-    window.showToast(`Assessment ${newStatus}.`, 'success');
+    await window.adminUpdate('tests', testId, { status: newStatus });
+    window.showToast(`Test ${newStatus}.`, 'success');
     
     // Attempt to reload the current class learning path if possible
     const classSel = document.getElementById('class-select');

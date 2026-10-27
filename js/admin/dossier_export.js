@@ -1,11 +1,11 @@
 // js/admin/dossier_export.js
 
-export function exportStudentDossier(studentData, educationList, skillsList, assessmentList) {
+export function exportStudentDossier(studentData, educationList, skillsList, testList) {
   const printWindow = window.open('', '_blank');
   
   const eduHtml = educationList.map(e => `&bull; [${e.period}] ${e.institution} &mdash; ${e.details}`).join('<br>');
   const skillHtml = skillsList.map(s => `&bull; ${s}`).join('<br>');
-  const assessmentHtml = assessmentList.map(a => `&bull; [${a.date}] ${a.title} &mdash; Score: ${a.score}% (Grade: ${a.grade}) [${a.status}]`).join('<br>');
+  const testHtml = testList.map(a => `&bull; [${a.date}] ${a.title} &mdash; Score: ${a.score}% (Grade: ${a.grade}) [${a.status}]`).join('<br>');
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -75,8 +75,8 @@ export function exportStudentDossier(studentData, educationList, skillsList, ass
       </div>
 
       <div class="section">
-        <div class="section-title">V. Assessment History (Reverse Chronological)</div>
-        <p>${assessmentHtml || 'No assessment history found.'}</p>
+        <div class="section-title">V. Test History (Reverse Chronological)</div>
+        <p>${testHtml || 'No test history found.'}</p>
       </div>
 
       <div class="footer">

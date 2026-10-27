@@ -444,3 +444,96 @@ User requirement: "hilangkan grade 'S' dan 'F', serta 'R'".
 - Unambiguous 6-tier grade nomenclature matching official institution standards: ★, A, B, C, D, E.
 - Zero confusion between remedial attempts and grade letters.
 - Flawless visual consistency across frontend, database, and backend functions.
+
+---
+
+## DECISION-021 — Complete Deprecation and Absolute Purge of Term "Assessment" in Favor of "Test" (Plural: "Tests", Sub-categories: "Quiz" & "Exam")
+
+Date: 2026-10-27
+Status: ACCEPTED
+
+### Context
+Over the platform's history, the term "Assessment" was used alongside "Exam", "Task", and "Quiz" resulting in lexical overlap, ambiguous table names (`assessments`, `assessment_questions`), and inconsistent UI labels.
+User mandate:
+1. Complete deprecation and absolute purge of the term "Assessment" / "Assessments" across the entire repository.
+2. Singular/Plural Precision Rule:
+   - Singular context: `Test`
+   - Plural context: `Tests`
+3. Sub-categories strictly split into:
+   - `Quiz` (pl: `Quizzes`): Daily tasks, formative checks, phrase runner drills, quick-feedback items.
+   - `Exam` (pl: `Exams`): Formal, scheduled, high-stakes, strictly-timed examinations.
+4. ZERO RESIDUE: No orphan tables, dead alias RPCs, deprecated columns, unused TypeScript interfaces, or residual UI strings containing "assessment".
+5. DATA PRESERVATION: 100% data preservation of all historical attempts (851 attempts, 44,566 attempt answers) and 40 live tests (32 quizzes + 8 exams).
+
+### Decision
+1. **Database Schema**:
+   - Created `test_type` ENUM (`quiz`, `exam`).
+   - Created `public.tests`, `public.test_items`, `public.test_topics`, `public.test_results`.
+   - Backfilled and verified 100% of data from legacy tables.
+   - Added `test_id` column to `attempts`, `assignments`, `student_submissions`, `question_usage_history`.
+   - Enforced `NOT NULL` on `attempts.test_id` with foreign key `attempts_test_id_fkey` referencing `tests(id) ON DELETE CASCADE`.
+   - Dropped legacy columns (`attempts.assessment_id`, etc.) and legacy tables: `assessments`, `assessment_questions`, `assessment_topics`, `assessment_results`, `assessment_instances`, `assessment_attempts`, `assessment_attempt_answers`.
+   - Updated RPCs `reorder_test` and `emergency_submit_attempt`.
+2. **Backend / Edge Functions**:
+   - Replaced legacy functions with `start-test`, `submit-test`, `duplicate-test`, `evaluate-test`.
+   - Updated `import-questions` and `generate-module-template`.
+   - Deleted legacy assessment function folders.
+3. **Frontend Core & State**:
+   - Renamed physical files:
+     - `assessment.html` -> `test.html`
+     - `css/assessment.css` -> `css/test.css`
+     - `js/assessment.js` -> `js/test.js`
+     - `js/admin/assessment-management.js` -> `js/admin/tests-management.js`
+     - `js/admin/assessment-access.js` -> `js/admin/tests-access.js`
+     - `js/admin/assessment-builder.js` -> `js/admin/test-builder.js`
+   - Updated all database queries in `js/api.js` and all 25 modules in `js/` to target `tests`, `test_items`, and `test_id`.
+   - Updated UI text, navigation tabs, buttons, modal headers, and badges across `admin.html`, `dashboard.html`, `test.html`, `result.html`, `index.html`.
+   - Updated `sw.js` cache manifest to `topscore-cache-test-v1` and registered `css/test.css` & `js/test.js`.
+
+### Consequences
+- Pristine, unified, intuitive domain terminology: Tests (Quizzes & Exams).
+- Zero technical debt, zero residue, and zero semantic confusion across all layers.
+- 100% preserved student attempt history and complete relational integrity.
+
+---
+
+## DECISION-022 — Weekly-Only Academic Scoring (SCORE, GRD, PTS) & Comprehensive PROG Leaderboard Ranking in Class Hub
+
+Date: 2026-10-27
+Status: ACCEPTED
+
+### Context
+In `admin.html#class-hub`, previous metric calculations aggregated all activities indiscriminately, allowing daily drills to dilute or inflate formal academic grades and overall mastery.
+User requirements:
+1. **PROG % (Completion Rate)**: Maintain calculation across ALL activities (daily tasks/quizzes + weekly milestone exams).
+2. **Global SCORE % & Global GRD (Academic Mastery)**: Calculate EXCLUSIVELY from weekly exams (milestone exam sessions). Exclude daily drills entirely. Dynamic GRD badge (★, A, B, C, D, E) maps directly to this weekly-only Global SCORE %.
+3. **Global PTS (Points)**: Aggregate points earned EXCLUSIVELY from weekly exams.
+4. **Edge-Case Handling (Unattempted Weekly Exams)**: If a student has only completed daily drills without taking weekly exams:
+   - PROG % reflects task completion.
+   - SCORE % displays `—` (or 0%).
+   - GRD badge displays `—`.
+   - PTS evaluates to 0.
+5. **Leaderboard Sort Order**:
+   - Primary: PROG % DESC.
+   - Secondary: Global SCORE % DESC.
+   - Tertiary: Global PTS DESC.
+6. **Footer "CLASS AVERAGE"**: Align average calculations with the weekly-only metrics.
+
+### Decision
+1. Update `renderClassHub` in `js/admin/app.js`:
+   - Classify tests via `isWeeklyExam(asm)`.
+   - Compute `completedCount` across all 40 class activities for `progressPct`.
+   - Compute `completedWeeklyCount`, `sumWeeklyPercentages`, and `weeklyEarnedScore` strictly from weekly exams.
+   - Assign `averageScorePct = completedWeeklyCount > 0 ? Math.round(sumWeeklyPercentages / completedWeeklyCount) : 0`.
+   - Assign `totalEarnedScore = completedWeeklyCount > 0 ? weeklyEarnedScore : 0`.
+   - Assign `grade = completedWeeklyCount > 0 ? calculateGrade(averageScorePct) : '—'`.
+2. Format table cells for SCORE, GRD, and PTS to cleanly display `—` / `0 pts` when weekly exams are unattempted.
+3. Configure `sortComparator` and `studentsGridData.sort` to sort by `PROG % DESC` > `Global SCORE % DESC` > `Global PTS DESC`.
+4. Update `summaryRow` so that class average SCORE and GRADE are derived strictly from students with completed weekly exams.
+
+### Consequences
+- True academic mastery is isolated from daily practice drills.
+- Leaderboard fairly elevates students with high curriculum completion first, followed by formal exam mastery and points.
+- Consistent, intuitive edge-case presentation for students before they take weekly exams.
+
+

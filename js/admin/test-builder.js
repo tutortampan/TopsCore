@@ -1,42 +1,42 @@
-// TOPS CORE — Centralized Assessment Wizard V1
-// Implements multi-step Evaluation & Assessment creation, topic derivation from Evaluations,
+// TOPS CORE — Centralized Test Wizard V1
+// Implements multi-step Evaluation & Test creation, topic derivation from Evaluations,
 // live question counts, inline assignments, and frozen snapshots on publish.
 import {
   fetchClasses,
   fetchTopics,
   fetchCentralQuestions,
-  fetchAssessmentDefinitions,
-  createAssessmentDefinition,
-  updateAssessmentDefinition,
-  createAssessmentDefinitionWithTopics,
-  updateAssessmentWithTopics,
-  publishAssessmentDefinition,
-  createAssessmentInstance,
+  fetchTestDefinitions,
+  createTestDefinition,
+  updateTestDefinition,
+  createTestDefinitionWithTopics,
+  updateTestWithTopics,
+  publishTestDefinition,
+  createTestInstance,
   fetchBatches,
   fetchClassInstances,
   createTopic,
   adminFetchAll,
   clearAdminCache,
-  reorderAssessment
+  reorderTest
 } from '../api.js?v=5.3.2';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.3.2';
 
-export async function openAssessmentBuilder(assessmentId = null, initialClassId = null) {
-  const isEdit = !!assessmentId;
+export async function openTestBuilder(testId = null, initialClassId = null) {
+  const isEdit = !!testId;
 
   const builderDiv = document.createElement('div');
-  builderDiv.id = 'assessment-builder-modal';
+  builderDiv.id = 'test-builder-modal';
   builderDiv.className = 'modal-backdrop';
   builderDiv.innerHTML = `
     <div class="modal-content" style="max-width: 960px; height: 90vh; display: flex; flex-direction: column;">
       <div class="modal-header d-flex justify-between align-center p-3" style="border-bottom: 1px solid var(--clr-border);">
         <div>
           <h2 class="modal-title m-0 text-gradient" style="font-size: 1.35rem;">
-            ${isEdit ? 'Edit Assessment' : 'New Assessment Wizard (V1)'}
+            ${isEdit ? 'Edit Test' : 'New Test Wizard (V1)'}
           </h2>
-          <p class="text-muted m-0" style="font-size: 0.8rem;">Create Evaluations or Comprehensive Assessments with frozen question snapshots</p>
+          <p class="text-muted m-0" style="font-size: 0.8rem;">Create Evaluations or Comprehensive Tests with frozen question snapshots</p>
         </div>
-        <button class="btn btn-ghost" id="close-assessment-builder" style="font-size: 1.5rem; line-height: 1;">&times;</button>
+        <button class="btn btn-ghost" id="close-test-builder" style="font-size: 1.5rem; line-height: 1;">&times;</button>
       </div>
 
       <div class="modal-body p-0" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
@@ -61,21 +61,21 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
             <div class="card p-4" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
               <div class="form-grid">
                 <div class="form-group form-group-full mb-3">
-                  <label class="form-label">Assessment Type *</label>
+                  <label class="form-label">Test Type *</label>
                   <div class="d-flex gap-4">
                     <label style="cursor:pointer;display:flex;align-items:center;gap:8px;">
                       <input type="radio" name="wiz-type" value="EVALUATION" checked />
                       <strong>Evaluation</strong> <span class="text-muted text-xs">(Routine / modular topic check)</span>
                     </label>
                     <label style="cursor:pointer;display:flex;align-items:center;gap:8px;">
-                      <input type="radio" name="wiz-type" value="Assessment" />
-                      <strong>Comprehensive Assessment</strong> <span class="text-muted text-xs">(Derived from Evaluation sequences)</span>
+                      <input type="radio" name="wiz-type" value="Test" />
+                      <strong>Comprehensive Test</strong> <span class="text-muted text-xs">(Derived from Evaluation sequences)</span>
                     </label>
                   </div>
                 </div>
 
                 <div class="form-group form-group-full mb-3">
-                  <label class="form-label">Assessment Title *</label>
+                  <label class="form-label">Test Title *</label>
                   <input type="text" class="form-control" id="wiz-title" placeholder="e.g. Vocabulary Evaluation A1 - Daily Routine" required />
                 </div>
 
@@ -114,7 +114,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
                 </div>
 
                 <div class="form-group mb-3">
-                  <label class="form-label">Prerequisite Assessment</label>
+                  <label class="form-label">Prerequisite Test</label>
                   <select class="form-control" id="wiz-prereq">
                     <option value="">None (Available immediately)</option>
                   </select>
@@ -172,8 +172,8 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
               </div>
             </div>
 
-            <!-- Container for Assessment: sequence of evaluations derivation -->
-            <div id="wiz-Assessment-sequence-section" class="card p-4 mb-4 hidden" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
+            <!-- Container for Test: sequence of evaluations derivation -->
+            <div id="wiz-Test-sequence-section" class="card p-4 mb-4 hidden" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
               <div class="d-flex justify-between align-center flex-wrap gap-2 mb-3">
                 <div>
                   <h3 style="font-size:1.1rem;margin:0;">Derive Coverage from Evaluations</h3>
@@ -181,7 +181,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
                 </div>
                 <div>
                   <span class="badge badge-primary p-2" style="font-size:0.85rem;">
-                    Derived Questions: <strong id="wiz-Assessment-q-count">0</strong>
+                    Derived Questions: <strong id="wiz-Test-q-count">0</strong>
                   </span>
                 </div>
               </div>
@@ -212,7 +212,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
           <!-- TAB 4: REVIEW & PUBLISH -->
           <div id="tab-publish" class="b-tab-content hidden">
             <div class="card p-4" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
-              <h3 style="font-size:1.1rem;margin-bottom:1rem;">Assessment Summary &amp; Snapshot Freeze</h3>
+              <h3 style="font-size:1.1rem;margin-bottom:1rem;">Test Summary &amp; Snapshot Freeze</h3>
               
               <div class="p-4 rounded mb-4" style="background:rgba(0,0,0,0.25);border:1px solid var(--clr-border);">
                 <div class="d-flex justify-between align-center mb-3">
@@ -233,7 +233,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
                   <div>
                     <div style="font-size:0.85rem;font-weight:700;">Question Snapshot Immutability</div>
                     <div class="text-xs text-muted">
-                      Publishing will freeze exactly <strong id="rev-questions" class="text-success">0</strong> active questions into <code>assessment_questions</code>.
+                      Publishing will freeze exactly <strong id="rev-questions" class="text-success">0</strong> active questions into <code>test_questions</code>.
                     </div>
                   </div>
                 </div>
@@ -243,7 +243,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
                 <button class="btn btn-secondary btn-sm" id="btn-publish-prev">← Back to Topic Coverage</button>
                 <div class="d-flex gap-2">
                   <button class="btn btn-secondary btn-sm" id="btn-save-draft">💾 Save as Draft</button>
-                  <button class="btn btn-success btn-sm" id="btn-publish-assessment">🚀 Publish &amp; Freeze Snapshot</button>
+                  <button class="btn btn-success btn-sm" id="btn-publish-test">🚀 Publish &amp; Freeze Snapshot</button>
                 </div>
               </div>
             </div>
@@ -273,29 +273,29 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
 
   const close = () => {
     builderDiv.remove();
-    if (window.loadSection) window.loadSection('Assessments');
+    if (window.loadSection) window.loadSection('Tests');
   };
-  document.getElementById('close-assessment-builder').onclick = close;
+  document.getElementById('close-test-builder').onclick = close;
 
   // Load Initial Data
-  showLoading('Initializing Assessment Wizard...');
+  showLoading('Initializing Test Wizard...');
   let allClasses = [];
   let allTopics = [];
   let allQuestions = [];
-  let existingAssessments = [];
+  let existingTests = [];
   let allBatches = [];
   let allStudents = [];
   let allClassInstances = [];
   let selectedTopicIds = new Set();
   let selectedEvalIds = new Set();
-  let createdAssessmentId = assessmentId;
+  let createdTestId = testId;
 
   try {
         const [subjs, topcs, qList, asms, btchs, stds, classInsts] = await Promise.all([
       fetchClasses(),
       fetchTopics(),
       fetchCentralQuestions({ status: 'active' }),
-      fetchAssessmentDefinitions(),
+      fetchTestDefinitions(),
       fetchBatches(),
       adminFetchAll('students'),
       fetchClassInstances()
@@ -304,7 +304,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
     allClasses = subjs;
     allTopics = topcs;
     allQuestions = qList;
-    existingAssessments = asms;
+    existingTests = asms;
     allBatches = btchs;
     allStudents = stds.filter(s => !s.deleted_at);
     allClassInstances = classInsts;
@@ -327,13 +327,13 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
       const currentVal = prereqSel.value;
       
       prereqSel.innerHTML = `<option value="">None (Available immediately)</option>` +
-        existingAssessments
-          .filter(a => a.id !== assessmentId && subSel && a.class_id === subSel.value)
+        existingTests
+          .filter(a => a.id !== testId && subSel && a.class_id === subSel.value)
           .sort((a,b)=>(a.display_order||999)-(b.display_order||999))
           .map(a => {
             const ord = a.display_order || 999;
             const isDisabled = ord >= currentOrder;
-            return `<option value="${a.id}" ${isDisabled ? 'disabled' : ''}>[ORD ${ord}] ${escapeHtml(a.title)} (${escapeHtml(a.assessment_type || 'EVALUATION')})</option>`;
+            return `<option value="${a.id}" ${isDisabled ? 'disabled' : ''}>[ORD ${ord}] ${escapeHtml(a.title)} (${escapeHtml(a.test_type || 'EVALUATION')})</option>`;
           }).join('');
           
       if (prereqSel.querySelector(`option[value="${currentVal}"]`)) {
@@ -344,19 +344,19 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
     const displayOrderInputEl = document.getElementById('wiz-display-order');
     if (displayOrderInputEl) displayOrderInputEl.addEventListener('change', updatePrereqs);
 
-    // Toggle Evaluation vs Assessment UI in Tab 2
+    // Toggle Evaluation vs Test UI in Tab 2
     const typeRadios = builderDiv.querySelectorAll('input[name="wiz-type"]');
     const evalSection = document.getElementById('wiz-evaluation-topic-section');
-    const Assessmentsection = document.getElementById('wiz-Assessment-sequence-section');
+    const Testsection = document.getElementById('wiz-Test-sequence-section');
 
     const updateTypeUI = () => {
       const checkedType = builderDiv.querySelector('input[name="wiz-type"]:checked');
       if (!checkedType) return;
-      const isAssessment = checkedType.value === 'Assessment';
-      if (evalSection) evalSection.classList.toggle('hidden', isAssessment);
-      if (Assessmentsection) Assessmentsection.classList.toggle('hidden', !isAssessment);
-      if (isAssessment) {
-        renderAssessmentEvaluations();
+      const isTest = checkedType.value === 'Test';
+      if (evalSection) evalSection.classList.toggle('hidden', isTest);
+      if (Testsection) Testsection.classList.toggle('hidden', !isTest);
+      if (isTest) {
+        renderTestEvaluations();
       } else {
         renderTopicCheckboxes();
       }
@@ -430,15 +430,15 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
       document.getElementById('wiz-eval-q-count').textContent = sum;
     };
 
-    // Render source Evaluations checkboxes (Assessment mode)
-    const renderAssessmentEvaluations = () => {
+    // Render source Evaluations checkboxes (Test mode)
+    const renderTestEvaluations = () => {
       const currentClassId = subSel.value;
-      const evals = existingAssessments.filter(a => a.class_id === currentClassId && (a.assessment_type || 'EVALUATION') === 'EVALUATION');
+      const evals = existingTests.filter(a => a.class_id === currentClassId && (a.test_type || 'EVALUATION') === 'EVALUATION');
       const container = document.getElementById('wiz-evaluations-container');
 
       if (!evals.length) {
         container.innerHTML = `<p class="text-muted text-xs p-3 text-center">No published evaluations found for this Class. Create Evaluations first.</p>`;
-        updateAssessmentDerivedCoverage();
+        updateTestDerivedCoverage();
         return;
       }
 
@@ -457,21 +457,21 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
         `;
       }).join('');
 
-      updateAssessmentDerivedCoverage();
+      updateTestDerivedCoverage();
     };
 
-    const updateAssessmentDerivedCoverage = async () => {
+    const updateTestDerivedCoverage = async () => {
       // Find all topics linked to selected evaluations
       const derivedTopicIds = new Set();
 
       for (const evId of selectedEvalIds) {
-        const ev = existingAssessments.find(a => a.id === evId);
-        if (ev && ev.assessment_topics) {
-          ev.assessment_topics.forEach(t => derivedTopicIds.add(t.topic_id));
+        const ev = existingTests.find(a => a.id === evId);
+        if (ev && ev.test_topics) {
+          ev.test_topics.forEach(t => derivedTopicIds.add(t.topic_id));
         }
       }
 
-      // If assessment_topics is empty locally, fallback to all active topics in Class
+      // If test_topics is empty locally, fallback to all active topics in Class
       selectedTopicIds = derivedTopicIds;
 
       const chipsContainer = document.getElementById('wiz-derived-topics-chips');
@@ -482,7 +482,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
 
       if (!derivedTopics.length) {
         chipsContainer.innerHTML = `<span class="text-muted text-xs">No evaluations selected or no topics linked yet.</span>`;
-        document.getElementById('wiz-Assessment-q-count').textContent = '0';
+        document.getElementById('wiz-Test-q-count').textContent = '0';
         return;
       }
 
@@ -492,65 +492,65 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
 
       // Calculate total questions belonging to these topics
       const qCount = allQuestions.filter(q => derivedTopicIds.has(q.topic_id)).length;
-      document.getElementById('wiz-Assessment-q-count').textContent = qCount;
+      document.getElementById('wiz-Test-q-count').textContent = qCount;
     };
 
     // Pre-populate if in edit mode
-    let editAssessment = null;
-    if (assessmentId) {
-      editAssessment = existingAssessments.find(a => a.id === assessmentId);
-      if (!editAssessment) {
+    let editTest = null;
+    if (testId) {
+      editTest = existingTests.find(a => a.id === testId);
+      if (!editTest) {
         try {
-          const allAssessments = await adminFetchAll('assessments');
-          editAssessment = (allAssessments || []).find(e => e.id === assessmentId);
+          const allTests = await adminFetchAll('tests');
+          editTest = (allTests || []).find(e => e.id === testId);
         } catch (_) {}
       }
     }
 
-    if (editAssessment) {
-      const isAssessment = (editAssessment.assessment_type || '').toUpperCase() === 'Assessment';
-      const typeRadio = builderDiv.querySelector(`input[name="wiz-type"][value="${isAssessment ? 'Assessment' : 'EVALUATION'}"]`);
+    if (editTest) {
+      const isTest = (editTest.test_type || '').toUpperCase() === 'Test';
+      const typeRadio = builderDiv.querySelector(`input[name="wiz-type"][value="${isTest ? 'Test' : 'EVALUATION'}"]`);
       if (typeRadio) typeRadio.checked = true;
 
       const titleInput = document.getElementById('wiz-title');
-      if (titleInput) titleInput.value = editAssessment.title || editAssessment.title || '';
+      if (titleInput) titleInput.value = editTest.title || editTest.title || '';
 
-      if (editAssessment.class_id && subSel) {
-        subSel.value = editAssessment.class_id;
+      if (editTest.class_id && subSel) {
+        subSel.value = editTest.class_id;
       }
 
       const durInput = document.getElementById('wiz-duration');
-      if (durInput) durInput.value = editAssessment.working_duration_minutes || editAssessment.time_limit_minutes || 60;
+      if (durInput) durInput.value = editTest.working_duration_minutes || editTest.time_limit_minutes || 60;
 
       const orderSel = document.getElementById('wiz-order');
       if (orderSel) {
-        const ordVal = (editAssessment.question_order || '').toUpperCase();
+        const ordVal = (editTest.question_order || '').toUpperCase();
         orderSel.value = ordVal === 'SEQUENTIAL' ? 'SEQUENTIAL' : 'RANDOM';
       }
 
       const statusSel = document.getElementById('wiz-status');
-      if (statusSel) statusSel.value = editAssessment.status || 'DRAFT';
+      if (statusSel) statusSel.value = editTest.status || 'DRAFT';
       
       const displayOrderInput = document.getElementById('wiz-display-order');
-      if (displayOrderInput) displayOrderInput.value = editAssessment.display_order || 999;
+      if (displayOrderInput) displayOrderInput.value = editTest.display_order || 999;
       
       const maxAttemptsInput = document.getElementById('wiz-max-attempts');
-      if (maxAttemptsInput) maxAttemptsInput.value = editAssessment.max_attempts || 0;
+      if (maxAttemptsInput) maxAttemptsInput.value = editTest.max_attempts || 0;
       
       const passThresholdInput = document.getElementById('wiz-pass-threshold');
-      if (passThresholdInput) passThresholdInput.value = editAssessment.minimum_required_score || 0;
+      if (passThresholdInput) passThresholdInput.value = editTest.minimum_required_score || 0;
       
       const answerTypeSel = document.getElementById('wiz-answer-type');
-      if (answerTypeSel) answerTypeSel.value = editAssessment.answer_type || 'MULTIPLE_CHOICE';
+      if (answerTypeSel) answerTypeSel.value = editTest.answer_type || 'MULTIPLE_CHOICE';
 
       updatePrereqs();
       const prereqSelEl = document.getElementById('wiz-prereq');
-      if (prereqSelEl && (editAssessment.prerequisite_assessment_id || editAssessment.prerequisite_assessment_id)) {
-        prereqSelEl.value = editAssessment.prerequisite_assessment_id || editAssessment.prerequisite_assessment_id;
+      if (prereqSelEl && (editTest.prerequisite_test_id || editTest.prerequisite_test_id)) {
+        prereqSelEl.value = editTest.prerequisite_test_id || editTest.prerequisite_test_id;
       }
       
       // PUBLISHED Guardrails
-      if (editAssessment.status === 'PUBLISHED') {
+      if (editTest.status === 'PUBLISHED') {
         if (typeRadio) typeRadio.disabled = true;
         subSel.disabled = true;
         answerTypeSel.disabled = true;
@@ -560,21 +560,21 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
         document.getElementById('btn-wiz-add-topic').disabled = true;
       }
 
-      if (editAssessment.availability_start) {
-        const d = new Date(editAssessment.availability_start);
+      if (editTest.availability_start) {
+        const d = new Date(editTest.availability_start);
         if (!isNaN(d.getTime())) document.getElementById('wiz-start').value = d.toISOString().slice(0, 16);
       }
-      if (editAssessment.availability_end) {
-        const d = new Date(editAssessment.availability_end);
+      if (editTest.availability_end) {
+        const d = new Date(editTest.availability_end);
         if (!isNaN(d.getTime())) document.getElementById('wiz-end').value = d.toISOString().slice(0, 16);
       }
 
-      // Pre-select topics linked to this assessment/Assessment
-      if (Array.isArray(editAssessment.assessment_topics)) {
-        editAssessment.assessment_topics.forEach(t => selectedTopicIds.add(t.topic_id));
+      // Pre-select topics linked to this test/Test
+      if (Array.isArray(editTest.test_topics)) {
+        editTest.test_topics.forEach(t => selectedTopicIds.add(t.topic_id));
       }
-      // Also check questions linked to this Assessment for topic_ids
-      const linkedQuestions = allQuestions.filter(q => q.assessment_id === assessmentId || q.assessment_id === assessmentId);
+      // Also check questions linked to this Test for topic_ids
+      const linkedQuestions = allQuestions.filter(q => q.test_id === testId || q.test_id === testId);
       linkedQuestions.forEach(q => {
         if (q.topic_id) selectedTopicIds.add(q.topic_id);
       });
@@ -600,7 +600,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
         const id = e.target.value;
         if (e.target.checked) selectedEvalIds.add(id);
         else selectedEvalIds.delete(id);
-        updateAssessmentDerivedCoverage();
+        updateTestDerivedCoverage();
       }
     });
 
@@ -608,7 +608,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
     document.getElementById('btn-details-next').onclick = () => {
       const title = document.getElementById('wiz-title').value.trim();
       if (!title) {
-        showToast('Please enter an assessment title.', 'warning');
+        showToast('Please enter an test title.', 'warning');
         return;
       }
       updateTypeUI();
@@ -619,7 +619,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
     document.getElementById('btn-topics-prev').onclick = () => switchTab('tab-details');
     document.getElementById('btn-topics-next').onclick = () => {
       if (selectedTopicIds.size === 0) {
-        showToast('Please select at least one topic (or source evaluation) for this assessment.', 'warning');
+        showToast('Please select at least one topic (or source evaluation) for this test.', 'warning');
         return;
       }
       
@@ -667,8 +667,8 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
       const topicNames = allTopics.filter(t => selectedTopicIds.has(t.id)).map(t => t.name).join(', ');
       document.getElementById('rev-topics').textContent = topicNames || 'Selected Topics';
 
-      const qTotal = (typeVal === 'Assessment')
-        ? document.getElementById('wiz-Assessment-q-count').textContent
+      const qTotal = (typeVal === 'Test')
+        ? document.getElementById('wiz-Test-q-count').textContent
         : document.getElementById('wiz-eval-q-count').textContent;
       document.getElementById('rev-questions').textContent = qTotal;
 
@@ -680,15 +680,15 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
 
     // Save as Draft
     document.getElementById('btn-save-draft').onclick = async () => {
-      await persistAssessment('DRAFT');
+      await persistTest('DRAFT');
     };
 
     // Publish & Freeze Snapshot
-    document.getElementById('btn-publish-assessment').onclick = async () => {
-      await persistAssessment('PUBLISHED');
+    document.getElementById('btn-publish-test').onclick = async () => {
+      await persistTest('PUBLISHED');
     };
 
-    async function persistAssessment(targetStatus) {
+    async function persistTest(targetStatus) {
       const title = document.getElementById('wiz-title').value.trim();
       const typeVal = builderDiv.querySelector('input[name="wiz-type"]:checked').value;
       const ClassId = subSel.value;
@@ -706,14 +706,14 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
       const startVal = document.getElementById('wiz-start') ? document.getElementById('wiz-start').value : null;
       const endVal = document.getElementById('wiz-end') ? document.getElementById('wiz-end').value : null;
 
-      showLoading(targetStatus === 'PUBLISHED' ? 'Publishing & Freezing Snapshot...' : 'Saving Assessment Draft...');
+      showLoading(targetStatus === 'PUBLISHED' ? 'Publishing & Freezing Snapshot...' : 'Saving Test Draft...');
       try {
-        let asmId = createdAssessmentId;
+        let asmId = createdTestId;
         
         // If edit mode and published, we should not change type, class, answer_type or topics.
-        const structuralData = (editAssessment && editAssessment.status === 'PUBLISHED') ? {} : {
+        const structuralData = (editTest && editTest.status === 'PUBLISHED') ? {} : {
             class_id: ClassId,
-            assessment_type: (editAssessment && editAssessment.assessment_type && !['EVALUATION', 'ASSESSMENT'].includes(editAssessment.assessment_type.toUpperCase())) ? editAssessment.assessment_type : typeVal,
+            test_type: (editTest && editTest.test_type && !['EVALUATION', 'TEST'].includes(editTest.test_type.toUpperCase())) ? editTest.test_type : typeVal,
             answer_type: answerType
         };
 
@@ -722,7 +722,7 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
           title,
           working_duration_minutes: duration,
           question_order: order,
-          prerequisite_assessment_id: prereqId,
+          prerequisite_test_id: prereqId,
           availability_start: startVal ? new Date(startVal).toISOString() : null,
           availability_end: endVal ? new Date(endVal).toISOString() : null,
           status: (targetStatus === 'PUBLISHED' ? 'PUBLISHED' : statusVal),
@@ -732,27 +732,27 @@ export async function openAssessmentBuilder(assessmentId = null, initialClassId 
 
         if (!asmId) {
           updatePayload.display_order = 999;
-          const newAsm = await createAssessmentDefinitionWithTopics(updatePayload, Array.from(selectedTopicIds));
+          const newAsm = await createTestDefinitionWithTopics(updatePayload, Array.from(selectedTopicIds));
           asmId = newAsm.id;
-          createdAssessmentId = asmId;
+          createdTestId = asmId;
         } else {
-          await updateAssessmentWithTopics(
+          await updateTestWithTopics(
             asmId, 
             updatePayload, 
-            (editAssessment && editAssessment.status === 'PUBLISHED') ? null : Array.from(selectedTopicIds)
+            (editTest && editTest.status === 'PUBLISHED') ? null : Array.from(selectedTopicIds)
           );
         }
 
-        const oldOrder = editAssessment ? (editAssessment.display_order || 999) : 999;
-        if (displayOrder !== oldOrder || !editAssessment) {
-          await reorderAssessment(asmId, displayOrder, ClassId);
+        const oldOrder = editTest ? (editTest.display_order || 999) : 999;
+        if (displayOrder !== oldOrder || !editTest) {
+          await reorderTest(asmId, displayOrder, ClassId);
         }
 
         if (targetStatus === 'PUBLISHED') {
-          const res = await publishAssessmentDefinition(asmId);
-          showToast(`Assessment published with ${res.total_questions} frozen questions!`, 'success');
+          const res = await publishTestDefinition(asmId);
+          showToast(`Test published with ${res.total_questions} frozen questions!`, 'success');
         } else {
-          showToast(isEdit ? 'Assessment updated successfully.' : 'Assessment saved as draft.', 'success');
+          showToast(isEdit ? 'Test updated successfully.' : 'Test saved as draft.', 'success');
         }
 
         close();

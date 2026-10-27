@@ -3,7 +3,7 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentClass, fetchStudentAttemptsForAssessment, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchAssessments, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=5.6.8';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=5.6.8';
     import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=5.3.2';
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=5.3.2';
     import { testMicrophoneCapability } from './speech.js?v=5.3.2';
@@ -553,7 +553,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
       if (photoUrl) {
         applyPhotoEverywhere(photoUrl);
-        // Test mic upfront on entry so browser permission is established before Assessments
+        // Test mic upfront on entry so browser permission is established before Tests
         checkMicrophoneOnEntry();
 
         // Background sync: memastikan localStorage selalu sinkron dengan database terbaru
@@ -827,25 +827,25 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           }, 1000);
         }
 
-        const [Classes, progress, attempts, assignmentsRaw, assessmentsRaw] = await withTimeout(
+        const [Classes, progress, attempts, assignmentsRaw, testsRaw] = await withTimeout(
           Promise.all([
             fetchStudentClasses(session.program_id, session.institution_id, session.level_id),
             fetchStudentProgress(session.student_id),
             fetchAllStudentAttempts(session.student_id),
             Promise.resolve([]),
-            fetchAssessments({ class_id: null }).catch(() => [])
+            fetchTests({ class_id: null }).catch(() => [])
           ]),
           20000,
           'Fetching dashboard data'
         );
 
         hideLoading();
-        renderClasses(Classes, progress, assessmentsRaw, attempts);
-        await renderNextAssignmentHero(assessmentsRaw, attempts, Classes);
+        renderClasses(Classes, progress, testsRaw, attempts);
+        await renderNextAssignmentHero(testsRaw, attempts, Classes);
 
         const myClassIds = Classes.map(c => c.id);
-        const myAssessments = assessmentsRaw.filter(a => myClassIds.includes(a.class_id) || myClassIds.includes(a.Class_id));
-        await computeOverallStats(attempts, myAssessments);
+        const myTests = testsRaw.filter(a => myClassIds.includes(a.class_id) || myClassIds.includes(a.Class_id));
+        await computeOverallStats(attempts, myTests);
         await loadBatchLeaderboard();
         setupProfileModal(attempts);
       } catch(e) {
@@ -853,13 +853,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         showToast('Failed to load dashboard: ' + e.message, 'error');
         // Clear loading placeholders if there's an error
         renderClasses([], [], [], []);
-        renderCompletedAssessmentsBottom([], 0);
+        renderCompletedTestsBottom([], 0);
         await loadBatchLeaderboard().catch(() => {});
         setupProfileModal([]);
       }
     }
 
-    async function renderNextAssignmentHero(allAssessments = [], attempts = [], classes = []) {
+    async function renderNextAssignmentHero(allTests = [], attempts = [], classes = []) {
       const section = document.getElementById('up-next-section');
       const container = document.getElementById('up-next-container');
       if (!section || !container) return;
@@ -872,14 +872,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
       const bestMap = {};
       (attempts || []).forEach(a => {
-        const aid = a.assessment_id;
+        const aid = a.test_id;
         const pct = parseFloat(a.percentage || 0);
         if (bestMap[aid] == null || pct > bestMap[aid]) {
           bestMap[aid] = pct;
         }
       });
 
-      let published = (allAssessments || []).filter(a => {
+      let published = (allTests || []).filter(a => {
         if (a.deleted_at) return false;
         const status = (a.status || '').toUpperCase();
         if (status !== 'PUBLISHED' && status !== 'ACTIVE') return false;
@@ -915,8 +915,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       }
 
       const className = classMap[nextAsm.class_id]?.name || 'Class Module';
-      const isTest = (nextAsm.assessment_category || '').toUpperCase() === 'TEST' ||
-                     (nextAsm.assessment_type || '').toUpperCase().includes('TEST') ||
+      const isTest = (nextAsm.test_category || '').toUpperCase() === 'TEST' ||
+                     (nextAsm.test_type || '').toUpperCase().includes('TEST') ||
                      (nextAsm.title || '').toUpperCase().includes('TEST');
 
       if (!isTest) {
@@ -928,7 +928,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             <span class="next-asm-icon">🎯</span>
             <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Task')}">${escapeHtml(nextAsm.title || 'Task')}</span>
           </div>
-          <button type="button" class="next-asm-go-btn" onclick="window.location.href='assessment.html?id=${nextAsm.id}'">
+          <button type="button" class="next-asm-go-btn" onclick="window.location.href='test.html?id=${nextAsm.id}'">
             ${btnText}
           </button>
         `;
@@ -946,7 +946,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
               <span class="next-asm-icon">🟢</span>
               <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">${escapeHtml(nextAsm.title || 'Official Exam')} (${remMin}m left)</span>
             </div>
-            <button type="button" class="next-asm-go-btn" onclick="window.location.href='assessment.html?id=${nextAsm.id}'" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff;">
+            <button type="button" class="next-asm-go-btn" onclick="window.location.href='test.html?id=${nextAsm.id}'" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff;">
               GO TEST ➔
             </button>
           `;
@@ -970,10 +970,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       }
     }
 
-    function renderClasses(rawClasses, progress, allAssessments = [], allAttempts = []) {
+    function renderClasses(rawClasses, progress, allTests = [], allAttempts = []) {
       window._loadedClasses = rawClasses;
       window._classesProgress = progress;
-      window._allAssessments = allAssessments;
+      window._allTests = allTests;
       window._allAttempts = allAttempts;
 
       const subjCountEl = document.getElementById('overview-classes-count');
@@ -1032,7 +1032,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           const subjProgress = (progress || []).filter(p => (p.class_id || p.Class_id) === subj.id);
           const dbCompleted = subjProgress.some(p => p.is_completed || p.level_status === 'Level Completed');
 
-          const classAssms = (allAssessments || []).filter(a => {
+          const classAssms = (allTests || []).filter(a => {
             if (a.deleted_at) return false;
             const matchClass = (a.class_id || a.Class_id) === subj.id;
             const matchStatus = (a.status || 'PUBLISHED').toUpperCase() === 'PUBLISHED';
@@ -1052,7 +1052,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
                   const s = (att.status || '').toLowerCase();
                   return s === 'submitted' || s === 'completed' || s === 'auto_submitted';
                 })
-                .map(att => att.assessment_id || att.Assessment_id)
+                .map(att => att.test_id || att.Test_id)
                 .filter(Boolean)
             );
             completedCount = classAssms.filter(a => completedAssmIds.has(a.id)).length;
@@ -1144,7 +1144,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           window._selectedClassId = cid;
           renderClassesBoxes(window._activeClasses);
           updateClassesBarUI();
-          renderNextAssignmentHero(window._allAssessments, window._allAttempts, window._loadedClasses);
+          renderNextAssignmentHero(window._allTests, window._allAttempts, window._loadedClasses);
         });
       });
     }
@@ -1193,7 +1193,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           window._selectedClassId = cid;
           updateClassesBarUI();
           populateClassesSelectorModal(window._activeClasses);
-          renderNextAssignmentHero(window._allAssessments, window._allAttempts, window._loadedClasses);
+          renderNextAssignmentHero(window._allTests, window._allAttempts, window._loadedClasses);
           document.getElementById('classes-selector-modal')?.classList.add('hidden');
         });
       });
@@ -1241,38 +1241,38 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       if (!modal || !container) return;
 
       // Open modal immediately with a loading state
-      titleEl.textContent  = (subj.name || 'Class') + ' Assessments';
-      classEl.textContent = 'Select an available assessment below.';
+      titleEl.textContent  = (subj.name || 'Class') + ' Tests';
+      classEl.textContent = 'Select an available test below.';
       container.innerHTML  = `<div style="padding:2rem;text-align:center;color:var(--clr-text-3);">
         <div class="spinner" style="margin:0 auto 1rem;"></div>
-        <p>Loading Assessments…</p></div>`;
+        <p>Loading Tests…</p></div>`;
       modal.classList.remove('hidden');
 
       try {
-        const Assessments = await fetchAssessmentsForStudentClass(
+        const Tests = await fetchTestsForStudentClass(
           session.program_id, subj.id, session.institution_id, session.level_id
         );
 
-        if (!Assessments || Assessments.length === 0) {
+        if (!Tests || Tests.length === 0) {
           container.innerHTML = `<div style="padding:2.5rem 1.5rem;text-align:center;color:var(--clr-text-3);">
             <div style="font-size:2.5rem;margin-bottom:0.75rem;">📈</div>
-            <p style="font-size:0.9rem;">No published Assessments available in this Class yet.</p></div>`;
+            <p style="font-size:0.9rem;">No published Tests available in this Class yet.</p></div>`;
           return;
         }
 
-        // Group Assessments by level (level_id or level name)
+        // Group Tests by level (level_id or level name)
         const levelMap = new Map();
-        for (const Assessment of Assessments) {
-          const lvlId   = Assessment.level_id || '_default';
-          const lvlNum  = Assessment.levels?.level_number ?? null;
+        for (const Test of Tests) {
+          const lvlId   = Test.level_id || '_default';
+          const lvlNum  = Test.levels?.level_number ?? null;
           // Use toOrdinalLevel for proper "1st Level", "2nd Level", etc.
           // Fall back to existing name, then derive from level_number, then 'Unleveled'
           const lvlName = lvlNum != null
             ? toOrdinalLevel(lvlNum)
-            : (Assessment.levels?.name || Assessment.level_name || (lvlId === '_default' ? 'Unleveled' : `Level ${lvlId}`));
-          const lvlOrder = Assessment.levels?.level_number ?? Assessment.level_order ?? 99;
-          if (!levelMap.has(lvlId)) levelMap.set(lvlId, { name: lvlName, order: lvlOrder, Assessments: [] });
-          levelMap.get(lvlId).Assessments.push(Assessment);
+            : (Test.levels?.name || Test.level_name || (lvlId === '_default' ? 'Unleveled' : `Level ${lvlId}`));
+          const lvlOrder = Test.levels?.level_number ?? Test.level_order ?? 99;
+          if (!levelMap.has(lvlId)) levelMap.set(lvlId, { name: lvlName, order: lvlOrder, Tests: [] });
+          levelMap.get(lvlId).Tests.push(Test);
         }
 
         // Sort levels by order
@@ -1280,16 +1280,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
         // Build attempts quick-lookup for this student
         const attemptsRaw = await fetchAllStudentAttempts(session.student_id).catch(() => []);
-        const bestByAssessment = {};
-        const inProgByAssessment = {};
+        const bestByTest = {};
+        const inProgByTest = {};
         for (const att of attemptsRaw) {
-          const eid = att.assessment_id || att.Assessment_id;
+          const eid = att.test_id || att.Test_id;
           if (!eid) continue;
           const pct = parseFloat(att.percentage || 0);
           const st  = (att.status || '').toLowerCase();
-          if (st === 'in_progress') { inProgByAssessment[eid] = att; continue; }
-          if (!bestByAssessment[eid] || pct > parseFloat(bestByAssessment[eid].percentage || 0) || (pct === parseFloat(bestByAssessment[eid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByAssessment[eid].submitted_at || 0))) {
-            bestByAssessment[eid] = att;
+          if (st === 'in_progress') { inProgByTest[eid] = att; continue; }
+          if (!bestByTest[eid] || pct > parseFloat(bestByTest[eid].percentage || 0) || (pct === parseFloat(bestByTest[eid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByTest[eid].submitted_at || 0))) {
+            bestByTest[eid] = att;
           }
         }
 
@@ -1297,13 +1297,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         let html = '';
         for (const lvl of sortedLevels) {
           let lvlHtml = '';
-          for (const Assessment of lvl.Assessments) {
-            const best      = bestByAssessment[Assessment.id];
-            const inProg    = inProgByAssessment[Assessment.id];
+          for (const Test of lvl.Tests) {
+            const best      = bestByTest[Test.id];
+            const inProg    = inProgByTest[Test.id];
             const isRem       = Boolean(best && (best.is_remedial_unlocked || best.is_remedial));
             const rawBestPct  = best ? parseFloat(best.percentage || 0) : null;
             const bestPct     = isRem && rawBestPct !== null ? Math.min(rawBestPct, 60.0) : rawBestPct;
-            const passed      = bestPct !== null && bestPct >= (Assessment.minimum_required_score || Assessment.pass_threshold || 60);
+            const passed      = bestPct !== null && bestPct >= (Test.minimum_required_score || Test.pass_threshold || 60);
             const grade       = bestPct !== null ? getGrade(bestPct) : null;
             const gradeColors = { S: '#A855F7', A: '#10B981', B: '#84CC16', C: '#EAB308', D: '#F97316', E: '#EF4444', F: '#EF4444' };
             const gradeColor  = grade ? (gradeColors[grade] || '#94a3b8') : null;
@@ -1311,14 +1311,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             // Prerequisite Gating Logic
             let prereqMet = true;
             let prereqTitle = '';
-            const prereqId = Assessment.prerequisite_assessment_id || Assessment.prerequisite_id;
+            const prereqId = Test.prerequisite_test_id || Test.prerequisite_id;
             if (prereqId) {
-               const prereqBest = bestByAssessment[prereqId];
+               const prereqBest = bestByTest[prereqId];
                const prereqPct = prereqBest ? parseFloat(prereqBest.percentage || 0) : null;
-               const pObj = Assessments.find(a => a.id === prereqId);
+               const pObj = Tests.find(a => a.id === prereqId);
                const pMinScore = pObj ? (pObj.minimum_required_score || pObj.pass_threshold || 60) : 60;
                prereqMet = prereqPct !== null && prereqPct >= pMinScore;
-               prereqTitle = pObj ? (pObj.display_name || pObj.title || pObj.name || 'Prerequisite') : 'Prerequisite Assessment';
+               prereqTitle = pObj ? (pObj.display_name || pObj.title || pObj.name || 'Prerequisite') : 'Prerequisite Test';
             }
 
             let statusBadge = '';
@@ -1332,12 +1332,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
               statusBadge = `<span style="background:rgba(255,255,255,0.1);color:#a1a1aa;border:1px solid rgba(255,255,255,0.2);
                               padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">🔒 Locked</span>`;
               actionBtn = `<div style="text-align:right;">
-                             <span style="font-size:0.7rem;color:var(--clr-text-3);">Complete <b>${prereqTitle}</b><br>to unlock this assessment.</span>
+                             <span style="font-size:0.7rem;color:var(--clr-text-3);">Complete <b>${prereqTitle}</b><br>to unlock this test.</span>
                            </div>`;
             } else if (inProg) {
               statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);
                               padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">&#9203; In Progress</span>`;
-              actionBtn   = `<button onclick="location.href='assessment.html?attempt_id=${inProg.id}&assessment_id=${inProg.assessment_id || ''}'"
+              actionBtn   = `<button onclick="location.href='test.html?attempt_id=${inProg.id}&test_id=${inProg.test_id || ''}'"
                               style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
                               font-size:0.78rem;font-weight:700;cursor:pointer;">Resume ←’</button>`;
             } else if (best) {
@@ -1346,11 +1346,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
               const badgeClr= passed ? (gradeColor || '#10B981') : '#EF4444';
               statusBadge = `<span style="background:${badgeBg};color:${badgeClr};border:1px solid ${badgeClr}44;
                               padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">
-                              ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%${isRemedialBest ? '<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</span>`;
+                              ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%${isRemedialBest ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</span>`;
 
-              if (Assessment.assessment_type === 'EXAM' && !passed) {
+              if (Test.test_type === 'EXAM' && !passed) {
                 if (best.is_remedial_unlocked) {
-                  actionBtn = `<button onclick="location.href='assessment.html?assessment_id=${Assessment.id}'"
+                  actionBtn = `<button onclick="location.href='test.html?test_id=${Test.id}'"
                                 style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
                                 font-size:0.78rem;font-weight:700;cursor:pointer;">🔓 Remedial Attempt Authorized — Start Retake</button>`;
                 } else {
@@ -1361,18 +1361,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
                 }
               } else {
                 let extraAction = '';
-                const isAsmPublished = ((Assessment.status || 'PUBLISHED').toUpperCase() === 'PUBLISHED' || (Assessment.status || '').toUpperCase() === 'ACTIVE');
+                const isAsmPublished = ((Test.status || 'PUBLISHED').toUpperCase() === 'PUBLISHED' || (Test.status || '').toUpperCase() === 'ACTIVE');
                 if (
                   isAsmPublished && (
-                    Assessment.assessment_category === 'TRYOUT' ||
-                    Assessment.assessment_category === 'TASK' ||
-                    (Assessment.assessment_type && Assessment.assessment_type.includes('TASK')) ||
-                    (Assessment.title && Assessment.title.includes('Task')) ||
-                    Assessment.payload?.is_standalone_tryout === true ||
+                    Test.test_category === 'TRYOUT' ||
+                    Test.test_category === 'TASK' ||
+                    (Test.test_type && Test.test_type.includes('TASK')) ||
+                    (Test.title && Test.title.includes('Task')) ||
+                    Test.payload?.is_standalone_tryout === true ||
                     !passed
                   )
                 ) {
-                  extraAction = `<button onclick="location.href='assessment.html?assessment_id=${Assessment.id}'"
+                  extraAction = `<button onclick="location.href='test.html?test_id=${Test.id}'"
                                 style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
                                 font-size:0.78rem;font-weight:700;cursor:pointer;margin-left:8px;">Retake</button>`;
                 } else if (!isAsmPublished) {
@@ -1388,9 +1388,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             } else {
               statusBadge = `<span style="background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);
                               padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">Not Started</span>`;
-              actionBtn   = `<button onclick="location.href='assessment.html?assessment_id=${Assessment.id}'"
+              actionBtn   = `<button onclick="location.href='test.html?test_id=${Test.id}'"
                               style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
-                              font-size:0.78rem;font-weight:700;cursor:pointer;">Start Assessment ←’</button>`;
+                              font-size:0.78rem;font-weight:700;cursor:pointer;">Start Test ←’</button>`;
             }
 
             const gradeChip = grade ? `<span style="background:${gradeColor}22;color:${gradeColor};border:1px solid ${gradeColor}44;
@@ -1404,15 +1404,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
 
               <div class="asm-modal-info">
-                <div style="font-size:0.85rem;font-weight:600;color:var(--clr-text-1);white-space:normal;line-height:1.3;" title="${Assessment.Assessment_title || Assessment.title || 'Assessment'}">
-                  ${(Assessment.Assessment_title || Assessment.title || 'Assessment').replace(/^.*?-\s*\d+[a-z]{2}\s+Level\s*-\s*/i, '').replace(/Vocabulary Mastery /i, '')}
+                <div style="font-size:0.85rem;font-weight:600;color:var(--clr-text-1);white-space:normal;line-height:1.3;" title="${Test.Test_title || Test.title || 'Test'}">
+                  ${(Test.Test_title || Test.title || 'Test').replace(/^.*?-\s*\d+[a-z]{2}\s+Level\s*-\s*/i, '').replace(/Vocabulary Mastery /i, '')}
                 </div>
                 <div class="asm-modal-meta-group">
                   <div style="font-size:0.72rem;color:var(--clr-text-3);">
-                  ${formatAnswerType(Assessment.answer_type)}
+                  ${formatAnswerType(Test.answer_type)}
                 </div>
                 <div style="font-size:0.72rem;color:var(--clr-text-3);">
-                  ⏱️ ${Assessment.time_limit_minutes || 0} min
+                  ⏱️ ${Test.time_limit_minutes || 0} min
                   </div>
                 </div>
               </div>
@@ -1433,14 +1433,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           }
         }
         if (!html) {
-          html = `<div style="padding:2.5rem 1.5rem;text-align:center;color:var(--clr-text-3);"><p>More assessments will unlock as you progress!</p></div>`;
+          html = `<div style="padding:2.5rem 1.5rem;text-align:center;color:var(--clr-text-3);"><p>More tests will unlock as you progress!</p></div>`;
         }
         container.innerHTML = html;
 
       } catch(err) {
         container.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--clr-text-3);">
           <div style="font-size:1.5rem;margin-bottom:0.5rem;">⚠️</div>
-          <p style="font-size:0.85rem;">Could not load Assessments: ${err.message}</p></div>`;
+          <p style="font-size:0.85rem;">Could not load Tests: ${err.message}</p></div>`;
       }
     }
 
@@ -1455,25 +1455,25 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
 
 
-    // --- V1: Render Assigned Assessments Section ---
-    // (Existing assessments logic)
-    // --- Render Completed Assessments Section (Bottom of Dashboard) ---
+    // --- V1: Render Assigned Tests Section ---
+    // (Existing tests logic)
+    // --- Render Completed Tests Section (Bottom of Dashboard) ---
     // --- Profile Modal & History ---
     // --- Level Modal close ---
     // --- Gamification: Show Level Up Popup ---
-    // --- Render Completed Assessments Section (Bottom of Dashboard) ---
+    // --- Render Completed Tests Section (Bottom of Dashboard) ---
     // --- Profile Modal & History ---
     // --- Level Modal close ---
     // --- Gamification: Show Level Up Popup ---
-    async function renderAssignedAssessments(assessments, allAttempts) {
-      // Find or create the assigned-assessments section
-      let section = document.getElementById('v1-assessments-section');
+    async function renderAssignedTests(tests, allAttempts) {
+      // Find or create the assigned-tests section
+      let section = document.getElementById('v1-tests-section');
       if (!section) {
-        // Insert before the completed-Assessments area
-        const completedSection = document.getElementById('completed-Assessments-container')?.closest('section') ||
-          document.getElementById('completed-Assessments-container')?.parentElement;
+        // Insert before the completed-Tests area
+        const completedSection = document.getElementById('completed-Tests-container')?.closest('section') ||
+          document.getElementById('completed-Tests-container')?.parentElement;
         section = document.createElement('section');
-        section.id = 'v1-assessments-section';
+        section.id = 'v1-tests-section';
         section.style.cssText = 'margin: 0 0 2rem 0;';
         if (completedSection) {
           completedSection.parentElement.insertBefore(section, completedSection);
@@ -1482,28 +1482,28 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         }
       }
 
-      // Build attempts map: assessment_id -> best attempt
-      const bestByAssessment = {};
-      const inProgressByAssessment = {};
+      // Build attempts map: test_id -> best attempt
+      const bestByTest = {};
+      const inProgressByTest = {};
       allAttempts.forEach(att => {
-        const aid = att.assessment_id || att.Assessment_id;
+        const aid = att.test_id || att.Test_id;
         if (!aid) return;
         const pct = parseFloat(att.percentage || 0);
         if ((att.status || '').toUpperCase() === 'IN_PROGRESS') {
-          inProgressByAssessment[aid] = att;
+          inProgressByTest[aid] = att;
         }
         // AGENTS.md §2.7: Report card stores strictly HIGHEST score across attempts
-        if (!bestByAssessment[aid] || pct > parseFloat(bestByAssessment[aid].percentage || 0) || (pct === parseFloat(bestByAssessment[aid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByAssessment[aid].submitted_at || 0))) {
-          bestByAssessment[aid] = att;
+        if (!bestByTest[aid] || pct > parseFloat(bestByTest[aid].percentage || 0) || (pct === parseFloat(bestByTest[aid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByTest[aid].submitted_at || 0))) {
+          bestByTest[aid] = att;
         }
       });
 
       const gradeColors = { S: '#A855F7', A: '#00FF00', B: '#00FFFF', C: '#FFFF00', D: '#FF8000', E: '#FF0000', F: '#FF0000' };
 
       let cards = '';
-      for (const asm of assessments) {
-        const bestAtt = bestByAssessment[asm.id];
-        const inProgAtt = inProgressByAssessment[asm.id];
+      for (const asm of tests) {
+        const bestAtt = bestByTest[asm.id];
+        const inProgAtt = inProgressByTest[asm.id];
         const bestPct = bestAtt ? parseFloat(bestAtt.percentage || 0) : null;
         const grade = bestPct !== null ? getGrade(bestPct) : null;
         const passed = bestPct !== null && bestPct >= (asm.pass_threshold || 60);
@@ -1512,11 +1512,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         let prereqMet = true;
         let prereqTitle = '';
 
-        if (asm.assessment_category === 'TEST' || asm.assessment_type === 'VOCAB_TEST' || asm.assessment_type === 'PHRASE_TEST') {
+        if (asm.test_category === 'TEST' || asm.test_type === 'VOCAB_TEST' || asm.test_type === 'PHRASE_TEST') {
           const themeCode = asm.payload?.theme_code;
           if (themeCode) {
-            const siblingTasks = assessments.filter(a => 
-              (a.assessment_category === 'TASK' || a.assessment_type === 'VOCAB_TASK' || a.assessment_type === 'PHRASE_TASK') && 
+            const siblingTasks = tests.filter(a => 
+              (a.test_category === 'TASK' || a.test_type === 'VOCAB_TASK' || a.test_type === 'PHRASE_TASK') && 
               a.payload?.theme_code === themeCode && 
               a.level_id === asm.level_id &&
               a.class_id === asm.class_id
@@ -1524,7 +1524,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             
             const reqScore = asm.prerequisite_min_score || 60;
             for (const task of siblingTasks) {
-              const taskBest = bestByAssessment[task.id];
+              const taskBest = bestByTest[task.id];
               const taskPct = taskBest ? parseFloat(taskBest.percentage || 0) : null;
               if (taskPct === null || taskPct < reqScore) {
                 prereqMet = false;
@@ -1538,13 +1538,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           let totalScore = 0;
           let count = 0;
           for (const parent of parents) {
-            const pid = parent.assessment_id;
+            const pid = parent.test_id;
             const minScore = parent.min_score || 60;
-            const parentBest = bestByAssessment[pid];
+            const parentBest = bestByTest[pid];
             const parentPct = parentBest ? parseFloat(parentBest.percentage || 0) : null;
             if (parentPct === null || parentPct < minScore) {
               prereqMet = false;
-              const pObj = assessments.find(a => a.id === pid);
+              const pObj = tests.find(a => a.id === pid);
               prereqTitle = (pObj ? (pObj.title || pObj.name) : 'Prerequisite') + ` (Required: ≥${minScore}%)`;
               break;
             }
@@ -1558,14 +1558,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
               prereqTitle = `Aggregate Avg Required: ${asm.prerequisites.aggregate_avg_threshold}% (Current: ${Math.round(avg)}%)`;
             }
           }
-        } else if (asm.prerequisite_id || asm.prerequisite_assessment_id || asm.prerequisite_Assessment_id) {
-          const pid = asm.prerequisite_id || asm.prerequisite_assessment_id || asm.prerequisite_Assessment_id;
-          const prereqBest = bestByAssessment[pid];
+        } else if (asm.prerequisite_id || asm.prerequisite_test_id || asm.prerequisite_Test_id) {
+          const pid = asm.prerequisite_id || asm.prerequisite_test_id || asm.prerequisite_Test_id;
+          const prereqBest = bestByTest[pid];
           const prereqPct = prereqBest ? parseFloat(prereqBest.percentage || 0) : null;
           prereqMet = prereqPct !== null && prereqPct >= (asm.prerequisite_min_score || 60);
           
-          const pObj = assessments.find(a => a.id === pid);
-          prereqTitle = pObj ? (pObj.title || pObj.Assessment_title || 'Prerequisite') : 'Prerequisite Assessment';
+          const pObj = tests.find(a => a.id === pid);
+          prereqTitle = pObj ? (pObj.title || pObj.Test_title || 'Prerequisite') : 'Prerequisite Test';
         }
 
         // Availability window
@@ -1593,15 +1593,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           statusBadge = `<span class="badge" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);">\u25BA In Progress</span>`;
           actionBtn = `<button class="btn btn-warning btn-sm" data-aid="${asm.id}">Resume</button>`;
         } else if (isCompleted) {
-          const isAsmTest = (asm.assessment_category || '').toUpperCase() === 'TEST' ||
-                            (asm.assessment_type || '').toUpperCase() === 'EXAM' ||
-                            (asm.assessment_type || '').toUpperCase().includes('TEST') ||
+          const isAsmTest = (asm.test_category || '').toUpperCase() === 'TEST' ||
+                            (asm.test_type || '').toUpperCase() === 'EXAM' ||
+                            (asm.test_type || '').toUpperCase().includes('TEST') ||
                             (asm.title || '').toUpperCase().includes('TEST');
 
           const session = asm.payload?.test_session;
           const isSessionUnlocked = session?.status === 'UNLOCKED' && (!session.auto_close_at || new Date(session.auto_close_at) > new Date());
 
-          let retakesAllowed = asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.assessment_id || a.Assessment_id) === asm.id && (a.status || '').toUpperCase() !== 'IN_PROGRESS').length));
+          let retakesAllowed = asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.test_id || a.Test_id) === asm.id && (a.status || '').toUpperCase() !== 'IN_PROGRESS').length));
           
           if (isAsmTest) {
             // For formal Tests: Never allow retake if already passed; if not passed, only allow if session is unlocked by Tutor
@@ -1632,12 +1632,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
         const duration = asm.working_duration_minutes || asm.time_limit_minutes || 60;
         const qCount = asm.question_count || '—';
-        const asmType = asm.assessment_type || asm.Assessment_type || 'Assessment';
-        const asmTitle = asm.title || asm.Assessment_title || 'Assessment';
+        const asmType = asm.test_type || asm.Test_type || 'Test';
+        const asmTitle = asm.title || asm.Test_title || 'Test';
         const className = asm.classes?.name || '';
 
         cards += `
-          <div class="v1-assessment-card" data-assessment-id="${asm.id}" ${isLocked ? 'data-locked="true"' : ''} style="
+          <div class="v1-test-card" data-test-id="${asm.id}" ${isLocked ? 'data-locked="true"' : ''} style="
             background: var(--clr-card, rgba(30,41,59,0.8));
             border: 1px solid var(--clr-border, rgba(255,255,255,0.08));
             border-radius: 14px;
@@ -1667,7 +1667,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
             <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
               ${bestPct !== null ? `
                 <div style="text-align:center;">
-                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColors[grade] || 'var(--clr-text-1)'}${(grade === '★' || grade === 'S') ? ';text-shadow:0 0 10px rgba(168, 85, 247, 0.45);' : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</div>
+                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColors[grade] || 'var(--clr-text-1)'}${(grade === '★' || grade === 'S') ? ';text-shadow:0 0 10px rgba(168, 85, 247, 0.45);' : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</div>
                   <div style="font-size:0.7rem;color:var(--clr-text-3);">Best Score</div>
                 </div>
                 ${(grade === '★' || grade === 'S' || bestPct >= 100)
@@ -1683,16 +1683,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
       section.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-          <h3 style="font-size:1rem;font-weight:700;color:var(--clr-text-1);margin:0;">\uD83D\uDCCB Assigned Assessments <span style="font-size:0.75rem;color:var(--clr-text-3);font-weight:400;margin-left:8px;">${assessments.length} total</span></h3>
+          <h3 style="font-size:1rem;font-weight:700;color:var(--clr-text-1);margin:0;">\uD83D\uDCCB Assigned Tests <span style="font-size:0.75rem;color:var(--clr-text-3);font-weight:400;margin-left:8px;">${tests.length} total</span></h3>
         </div>
-        ${cards || '<div class="empty-state" style="padding:2rem;text-align:center;"><p class="text-muted">No assessments assigned to you yet.</p></div>'}
+        ${cards || '<div class="empty-state" style="padding:2rem;text-align:center;"><p class="text-muted">No tests assigned to you yet.</p></div>'}
       `;
 
       // Wire up buttons
       section.querySelectorAll('[data-aid]').forEach(btn => {
         btn.addEventListener('click', () => {
-          sessionStorage.setItem('topscore_assessment_id', btn.dataset.aid);
-          window.location.href = 'assessment.html';
+          sessionStorage.setItem('topscore_test_id', btn.dataset.aid);
+          window.location.href = 'test.html';
         });
       });
       section.querySelectorAll('[data-aid-result]').forEach(btn => {
@@ -1704,20 +1704,20 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
     // ── Overall Stats Calculation (AGENTS.md §2.8 & §2.10) ──
     
-    function populateUpNext(attempts, myAssessments) {
-      renderNextAssignmentHero(myAssessments, attempts, window._loadedClasses);
+    function populateUpNext(attempts, myTests) {
+      renderNextAssignmentHero(myTests, attempts, window._loadedClasses);
     }
 
-    async function computeOverallStats(attempts, assessments = []) {
-      // Rule 2.8: Overall score is average of all takeable Assessments for student.
+    async function computeOverallStats(attempts, tests = []) {
+      // Rule 2.8: Overall score is average of all takeable Tests for student.
       // Rule 2.7: Global average strictly counts unopened/unattempted available modules as 0.
-      // Best score per assessment is preserved across attempts.
-      // Soft-deleted or unavailable assessments must NOT enter calculation.
-      const activeAsmMap = new Map((assessments || []).map(a => [a.id, a]));
+      // Best score per test is preserved across attempts.
+      // Soft-deleted or unavailable tests must NOT enter calculation.
+      const activeAsmMap = new Map((tests || []).map(a => [a.id, a]));
       const bestMap = {};
       attempts.forEach(att => {
-        if (att.assessments && att.assessments.deleted_at) return;
-        const uniqueKey = att.assessment_instance_id || att.assessment_id || att.Assessment_id;
+        if (att.tests && att.tests.deleted_at) return;
+        const uniqueKey = att.test_instance_id || att.test_id || att.Test_id;
         if (!uniqueKey) return;
         if (activeAsmMap.size > 0) {
           const asm = activeAsmMap.get(uniqueKey);
@@ -1729,24 +1729,24 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         }
       });
 
-      // Filter assessments that are currently within their availability window
+      // Filter tests that are currently within their availability window
       const now = new Date();
-      const availableAssms = (assessments || []).filter(a => {
+      const availableAssms = (tests || []).filter(a => {
         const start = a.availability_start ? new Date(a.availability_start) : null;
         const end = a.availability_end ? new Date(a.availability_end) : null;
         return (!start || now >= start) && (!end || now <= end);
       });
 
       let scores = [];
-      /* User requested strictly counting taken assessments */
+      /* User requested strictly counting taken tests */
       scores = Object.entries(bestMap)
         .filter(([k]) => !k.endsWith('_locked'))
         .map(([, v]) => parseFloat(v) || 0);
 
       const completedCount = Object.keys(bestMap).filter(k => !k.endsWith('_locked')).length;
-      const AssessmentsCountEl = document.getElementById('stat-Assessments-done');
-      if (AssessmentsCountEl) AssessmentsCountEl.textContent = completedCount;
-      const ovCountEl = document.getElementById('overview-Assessments-count');
+      const TestsCountEl = document.getElementById('stat-Tests-done');
+      if (TestsCountEl) TestsCountEl.textContent = completedCount;
+      const ovCountEl = document.getElementById('overview-Tests-count');
       if (ovCountEl) ovCountEl.textContent = completedCount;
 
       if (!scores.length) {
@@ -1759,8 +1759,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           achievementTextEl.style.color = '#ef4444';
         }
         const gb = document.getElementById('stat-overall-grade-badge'); if (gb) gb.className = 'result-grade-display grade-none';
-        renderCompletedAssessmentsBottom(attempts, 0);
-        populateUpNext(attempts, assessments);
+        renderCompletedTestsBottom(attempts, 0);
+        populateUpNext(attempts, tests);
         return;
       }
 
@@ -1812,7 +1812,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         document.getElementById('welcome-banner-section'),
         document.getElementById('dashboard-achievement-card'),
         document.getElementById('bottom-dock-section'),
-        document.querySelector('.next-assessment-card'),
+        document.querySelector('.next-test-card'),
         document.getElementById('dashboard-classes-section'),
         document.getElementById('dashboard-classes-bar'),
         document.getElementById('dashboard-classes-boxes')
@@ -1905,26 +1905,26 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           : `0 0 12px rgba(${rgbColor}, 0.15), 0 4px 14px rgba(0, 0, 0, 0.2)`;
       }
 
-      renderCompletedAssessmentsBottom(attempts, avgPct);
-      populateUpNext(attempts, assessments);
+      renderCompletedTestsBottom(attempts, avgPct);
+      populateUpNext(attempts, tests);
     }
 
-    // --- Render Completed Assessments Section (Bottom of Dashboard) ---
-    function renderCompletedAssessmentsBottom(attempts, avgPct = 0) {
-      const container = document.getElementById('completed-Assessments-container');
+    // --- Render Completed Tests Section (Bottom of Dashboard) ---
+    function renderCompletedTestsBottom(attempts, avgPct = 0) {
+      const container = document.getElementById('completed-Tests-container');
       const badgeEl = document.getElementById('bottom-completed-badge');
-      const statTotalEl = document.getElementById('bottom-stat-total-Assessments');
+      const statTotalEl = document.getElementById('bottom-stat-total-Tests');
       const statAvgEl = document.getElementById('bottom-stat-avg-score');
       const statBestEl = document.getElementById('bottom-stat-best-score');
 
-      // Filter out attempts on soft-deleted or merged assessments
+      // Filter out attempts on soft-deleted or merged tests
       const validAttempts = (attempts || []).filter(att => {
-        if (att.assessments && att.assessments.deleted_at) return false;
+        if (att.tests && att.tests.deleted_at) return false;
         return true;
       });
 
       if (!validAttempts || !validAttempts.length) {
-        if (badgeEl) badgeEl.textContent = '0 Assessments Completed';
+        if (badgeEl) badgeEl.textContent = '0 Tests Completed';
         if (statTotalEl) statTotalEl.textContent = '0';
         if (statAvgEl) statAvgEl.textContent = '0%';
         if (statBestEl) statBestEl.textContent = '0%';
@@ -1932,9 +1932,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           container.innerHTML = `
             <div class="empty-state p-8 text-center" style="padding: 40px 20px;">
               <div class="empty-state__icon" style="font-size:2.5rem;margin-bottom:12px;">📈 </div>
-              <h3 class="fw-700 text-base mb-1" style="color:var(--clr-text-1);">No Completed Assessments yet</h3>
+              <h3 class="fw-700 text-base mb-1" style="color:var(--clr-text-1);">No Completed Tests yet</h3>
               <p class="text-sm text-muted" style="max-width:440px;margin:0 auto;">
-                Pick a Class above to start taking your assigned English assessments. Your scores, grades, and completion records will appear here.
+                Pick a Class above to start taking your assigned English tests. Your scores, grades, and completion records will appear here.
               </p>
             </div>
           `;
@@ -1949,39 +1949,39 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       validAttempts.forEach(att => {
         const pct = parseFloat(att.percentage || 0);
         if (pct > highestPct) highestPct = pct;
-        const aid = att.assessment_id || att.Assessment_id;
+        const aid = att.test_id || att.Test_id;
         if (!bestAttemptsMap[aid] || pct > bestAttemptsMap[aid]) {
           bestAttemptsMap[aid] = pct;
         }
       });
 
-      const uniqueAssessmentsCount = Object.keys(bestAttemptsMap).length;
+      const uniqueTestsCount = Object.keys(bestAttemptsMap).length;
       let totalPctSum = 0;
       Object.values(bestAttemptsMap).forEach(pct => totalPctSum += pct);
       const avgScore = avgPct;
 
-      if (badgeEl) badgeEl.textContent = `${uniqueAssessmentsCount} Assessment${uniqueAssessmentsCount === 1 ? '' : 's'} Completed`;
-      if (statTotalEl) statTotalEl.textContent = uniqueAssessmentsCount;
+      if (badgeEl) badgeEl.textContent = `${uniqueTestsCount} Test${uniqueTestsCount === 1 ? '' : 's'} Completed`;
+      if (statTotalEl) statTotalEl.textContent = uniqueTestsCount;
       if (statAvgEl) statAvgEl.textContent = `${avgScore}%`;
       if (statBestEl) statBestEl.textContent = `${highestPct.toFixed(1)}%`;
 
-      // Deduplicate attempts: keep the one with the highest score (or latest if tied) for each assessment
+      // Deduplicate attempts: keep the one with the highest score (or latest if tied) for each test
       const uniqueAttemptsMap = new Map();
       validAttempts.forEach(a => {
-        const assessmentId = a.assessment_id || a.Assessment_id || (a.assessments && a.assessments.id) || a.id;
+        const testId = a.test_id || a.Test_id || (a.tests && a.tests.id) || a.id;
         const currentPct = parseFloat(a.percentage || 0);
-        if (!uniqueAttemptsMap.has(assessmentId)) {
-          uniqueAttemptsMap.set(assessmentId, a);
+        if (!uniqueAttemptsMap.has(testId)) {
+          uniqueAttemptsMap.set(testId, a);
         } else {
-          const existing = uniqueAttemptsMap.get(assessmentId);
+          const existing = uniqueAttemptsMap.get(testId);
           const existingPct = parseFloat(existing.percentage || 0);
           if (currentPct > existingPct) {
-            uniqueAttemptsMap.set(assessmentId, a);
+            uniqueAttemptsMap.set(testId, a);
           } else if (currentPct === existingPct) {
              const existingDate = existing.submitted_at ? new Date(existing.submitted_at).getTime() : 0;
              const currentDate = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
              if (currentDate > existingDate) {
-                 uniqueAttemptsMap.set(assessmentId, a);
+                 uniqueAttemptsMap.set(testId, a);
              }
           }
         }
@@ -1998,10 +1998,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
       // Desktop Table
       let tableHtml = `
         <div class="table-responsive">
-          <table class="completed-Assessments-table">
+          <table class="completed-Tests-table">
             <thead>
               <tr>
-                <th>Assessment Title</th>
+                <th>Test Title</th>
                 <th>Type</th>
                 <th>Class</th>
                 <th>Score</th>
@@ -2015,14 +2015,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
       // Mobile List
       let mobileListHtml = `
-        <div class="completed-Assessments-mobile-list">
+        <div class="completed-Tests-mobile-list">
       `;
 
       sortedAttempts.forEach(a => {
-        const AssessmentObj = a.assessments || a.Assessments || {};
-        const AssessmentTitle = AssessmentObj.title || AssessmentObj.name || AssessmentObj.Assessment_title || 'English Assessment';
-        const AssessmentType = AssessmentObj.assessment_type || AssessmentObj.Assessment_type || '';
-        const className = AssessmentObj.classes?.name || 'General English';
+        const TestObj = a.tests || a.Tests || {};
+        const TestTitle = TestObj.title || TestObj.name || TestObj.Test_title || 'English Test';
+        const TestType = TestObj.test_type || TestObj.Test_type || '';
+        const className = TestObj.classes?.name || 'General English';
         const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
         const rawPct = parseFloat(a.percentage || 0);
         const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
@@ -2050,10 +2050,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         tableHtml += `
           <tr onclick="${navLink}">
             <td>
-              <div class="fw-700" style="color:var(--clr-text-1);">${escapeHtml(AssessmentTitle)}</div>
+              <div class="fw-700" style="color:var(--clr-text-1);">${escapeHtml(TestTitle)}</div>
             </td>
             <td>
-              ${AssessmentType ? `<span class="badge badge-neutral" style="font-size:0.7rem;">${escapeHtml(AssessmentType)}</span>` : '<span class="text-muted text-xs">—</span>'}
+              ${TestType ? `<span class="badge badge-neutral" style="font-size:0.7rem;">${escapeHtml(TestType)}</span>` : '<span class="text-muted text-xs">—</span>'}
             </td>
             <td>
               <span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(className)}</span>
@@ -2075,13 +2075,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
 
         // Mobile Card
         mobileListHtml += `
-          <div class="completed-Assessment-mobile-card" onclick="${navLink}" style="padding: 8px 12px; gap: 4px; margin-bottom: 6px;">
-            <div class="Assessment-card-header" style="margin-bottom: 2px;">
-              <div class="Assessment-card-title" style="font-size: 0.9rem; line-height: 1.3;">${escapeHtml(AssessmentTitle)}</div>
+          <div class="completed-Test-mobile-card" onclick="${navLink}" style="padding: 8px 12px; gap: 4px; margin-bottom: 6px;">
+            <div class="Test-card-header" style="margin-bottom: 2px;">
+              <div class="Test-card-title" style="font-size: 0.9rem; line-height: 1.3;">${escapeHtml(TestTitle)}</div>
               <span class="grade-badge ${(grade === '★' || grade === 'S') ? 'grade-star' : `grade-${grade}`}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${(grade === '★' || grade === 'S') ? '' : `color:#fff;border:1px solid ${gradeColor};`} flex-shrink:0;">${displayGrade}</span>
             </div>
             
-            <div class="Assessment-card-footer" style="margin-top: 0;">
+            <div class="Test-card-footer" style="margin-top: 0;">
               <div style="display:flex;align-items:center;gap:8px; font-size: 0.75rem;">
                 <span style="color:var(--clr-text-3);">Score: <strong style="color:${gradeColor}; ${(grade === '★' || grade === 'S') ? 'filter:drop-shadow(0 0 4px rgba(168,85,247,0.6)); font-weight:900;' : ''}">${pct}%</strong></span>
                 <span style="color:var(--clr-text-3);">&bull;</span>
@@ -2189,18 +2189,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         // 2. Fetch all submitted attempts for batch students (including points and remedial state)
         const { data: attempts, error: attErr } = await sb
           .from('attempts')
-          .select('id, student_id, assessment_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, status, submitted_at, assessments(id, deleted_at)')
+          .select('id, student_id, test_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, status, submitted_at, tests(id, deleted_at)')
           .in('student_id', studentIds)
           .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
 
         // 3. Compute best scores, points & overall averages per student
         const studentStats = studentList.map(st => {
-          const stAtts = (attempts || []).filter(a => a.student_id === st.id && a.assessments && !a.assessments.deleted_at);
+          const stAtts = (attempts || []).filter(a => a.student_id === st.id && a.tests && !a.tests.deleted_at);
           const bestMap = {};
           let lastSubmittedAt = null;
 
           stAtts.forEach(att => {
-            const key = att.assessment_id;
+            const key = att.test_id;
             if (!key) return;
             const totalQ = Number(att.total_questions || 50);
             const rawPct = parseFloat(att.percentage || 0);
@@ -2284,7 +2284,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
           if (b.overallScore !== a.overallScore) {
             return b.overallScore - a.overallScore;
           }
-          // Tie-Breaker 2: Total completed assessments (descending)
+          // Tie-Breaker 2: Total completed tests (descending)
           if (b.completedCount !== a.completedCount) {
             return b.completedCount - a.completedCount;
           }
@@ -2438,17 +2438,17 @@ import { fetchStudentClasses, fetchStudentProgress, fetchAssessmentsForStudentCl
         }
       }
 
-      // Render Completed Assessments History
+      // Render Completed Tests History
       const tbody = document.getElementById('tbl-profile-history');
       if (tbody) {
         tbody.innerHTML = '';
-        const validAttempts = (attempts || []).filter(a => !(a.assessments && a.assessments.deleted_at));
+        const validAttempts = (attempts || []).filter(a => !(a.tests && a.tests.deleted_at));
         if (!validAttempts || !validAttempts.length) {
-          tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted p-4">No Completed Assessments yet.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted p-4">No Completed Tests yet.</td></tr>';
         } else {
           validAttempts.forEach(a => {
             const tr = document.createElement('tr');
-            const title = a.Assessments ? `${a.Assessments.Assessment_type || ''} — ${a.Assessments.Assessment_title || 'Assessment'}` : 'Assessment';
+            const title = a.Tests ? `${a.Tests.Test_type || ''} — ${a.Tests.Test_title || 'Test'}` : 'Test';
             const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
             const rawPct = parseFloat(a.percentage || 0);
             const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;

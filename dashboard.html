@@ -17,7 +17,7 @@
     })();
   </script>
   <title>Student's Lobby — TOPS CORE</title>
-  <meta name="description" content="Student's Lobby on TOPS CORE — track progress, view Classes, and start Assessments." />
+  <meta name="description" content="Student's Lobby on TOPS CORE — track progress, view Classes, and start Tests." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -135,9 +135,9 @@
       <div id="dashboard-classes-boxes" class="dashboard-classes-boxes hidden" data-count="1"></div>
     </section>
 
-    <!-- 5. NEXT ASSESSMENT SECTION (50px: Single Unified Card, no floating label) -->
-    <section id="up-next-section" class="dashboard-next-assessment-deck">
-      <div id="up-next-container" class="next-assessment-card">
+    <!-- 5. NEXT TEST SECTION (50px: Single Unified Card, no floating label) -->
+    <section id="up-next-section" class="dashboard-next-test-deck">
+      <div id="up-next-container" class="next-test-card">
         <!-- Populated dynamically by renderNextAssignmentHero -->
       </div>
     </section>
@@ -174,7 +174,7 @@
       </div>
       <div id="dock-pane-standings"></div>
       <div id="dock-pane-completed">
-        <div id="completed-Assessments-container"></div>
+        <div id="completed-Tests-container"></div>
       </div>
       <div id="leaderboard-my-summary">
         <span id="leaderboard-my-rank"></span>
@@ -188,7 +188,7 @@
         <div class="modal-header">
           <div>
             <h3 id="classes-selector-modal-title">📚 Select Class</h3>
-            <p class="text-muted text-xs classes-selector-modal-desc">Switch class to focus your next task and assessment</p>
+            <p class="text-muted text-xs classes-selector-modal-desc">Switch class to focus your next task and test</p>
           </div>
           <button class="btn btn-ghost btn-icon btn-sm" id="close-classes-selector-modal" aria-label="Close">✕</button>
         </div>
@@ -197,7 +197,7 @@
         </div>
         <div class="classes-selector-modal-actions">
           <button type="button" class="btn btn-secondary btn-block" id="btn-open-class-levels">
-            🔍 View All Levels &amp; Detailed Assessments
+            🔍 View All Levels &amp; Detailed Tests
           </button>
         </div>
       </div>
@@ -322,7 +322,7 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Assessment Title</th>
+                    <th>Test Title</th>
                     <th>Score</th>
                     <th>Grade</th>
                     <th>Date</th>

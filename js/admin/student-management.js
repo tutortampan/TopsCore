@@ -62,20 +62,20 @@ export function compareStudentsHierarchical(a, b) {
 }
 
 export async function renderStudents(area) {
-    const [rawData, allAttempts, allLevels, allProgress, allPrograms, allBatches, allAssignments, allAssessments] = await Promise.all([
+    const [rawData, allAttempts, allLevels, allProgress, allPrograms, allBatches, allAssignments, allTests] = await Promise.all([
     adminFetchAll('students', 'id, name, gender, birth_date, photo_url, photo_status, is_active, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)'),
-    adminFetchAll('attempts', 'id, student_id, assessment_id, status, score, total_questions, percentage, effective_score, created_at, is_remedial_unlocked, assessments(assessment_type, title, class_id)'),
+    adminFetchAll('attempts', 'id, student_id, test_id, status, score, total_questions, percentage, effective_score, created_at, is_remedial_unlocked, tests(test_type, title, class_id)'),
     adminFetchAll('levels', 'id, name, level_number'),
     adminFetchAll('progress', 'id, student_id, class_id, unlocked_level, highest_score'),
     adminFetchAll('programs', 'id, name, institution_id, is_active'),
     adminFetchAll('batches', 'id, name, program_id, is_active, current_level_id'),
-    adminFetchAll('assignments', 'student_id, batch_id, assessment_id').catch(() => []),
-    adminFetchAll('assessments', 'id, title, level_id, levels(name, level_number)').catch(() => [])
+    adminFetchAll('assignments', 'student_id, batch_id, test_id').catch(() => []),
+    adminFetchAll('tests', 'id, title, level_id, levels(name, level_number)').catch(() => [])
   ]);
   const levelsMap = new Map();
   (allLevels || []).forEach(l => levelsMap.set(l.id, l));
 
-  const assessmentsMap = new Map((allAssessments || []).map(a => [a.id, a]));
+  const testsMap = new Map((allTests || []).map(a => [a.id, a]));
 
   const attemptsByStudent = new Map();
   (allAttempts || []).forEach(att => {
@@ -104,19 +104,19 @@ export async function renderStudents(area) {
     const studentAttempts = attemptsByStudent.get(s.id) || [];
     const validStatuses = ['submitted', 'auto_submitted', 'evaluated', 'graded'];
 
-    // Map curriculum assignments & level-centric assessments (Rule 2.5 & 2.7)
+    // Map curriculum assignments & level-centric tests (Rule 2.5 & 2.7)
     const sAssignments = (allAssignments || []).filter(a =>
       a.student_id === s.id || (a.batch_id && a.batch_id === s.batch_id)
     );
     const studentBatch = (allBatches || []).find(b => b.id === s.batch_id);
     const studentLevelId = s.level_id || studentBatch?.current_level_id;
-    const levelAssesIds = studentLevelId ? (allAssessments || []).filter(a => a.level_id === studentLevelId).map(a => a.id) : [];
-    const assignedAssesIds = new Set([...sAssignments.map(a => a.assessment_id), ...levelAssesIds]);
+    const levelAssesIds = studentLevelId ? (allTests || []).filter(a => a.level_id === studentLevelId).map(a => a.id) : [];
+    const assignedAssesIds = new Set([...sAssignments.map(a => a.test_id), ...levelAssesIds]);
     const totalAssigned = assignedAssesIds.size || 40;
 
     const sAttemptsByAsm = new Map();
     studentAttempts.forEach(att => {
-      const asmId = att.assessment_id || att.Assessment_id;
+      const asmId = att.test_id || att.Test_id;
       if (!asmId) return;
       if (!sAttemptsByAsm.has(asmId)) sAttemptsByAsm.set(asmId, []);
       sAttemptsByAsm.get(asmId).push(att);
@@ -126,11 +126,11 @@ export async function renderStudents(area) {
     let inProgressCount = 0;
     const studentDetails = [];
 
-    assignedAssesIds.forEach(assessmentId => {
-      const assessment = assessmentsMap.get(assessmentId);
-      if (!assessment) return;
+    assignedAssesIds.forEach(testId => {
+      const test = testsMap.get(testId);
+      if (!test) return;
 
-      const asmAtts = sAttemptsByAsm.get(assessmentId) || [];
+      const asmAtts = sAttemptsByAsm.get(testId) || [];
       const isCompleted = asmAtts.some(att => {
         const st = String(att.status || '').toLowerCase();
         return validStatuses.includes(st);
@@ -167,10 +167,10 @@ export async function renderStudents(area) {
       }
 
       studentDetails.push({
-        assessmentId,
-        assessmentTitle: assessment.title,
-        levelNumber: assessment.levels?.level_number || 1,
-        levelName: assessment.levels?.name || 'Unknown',
+        testId,
+        testTitle: test.title,
+        levelNumber: test.levels?.level_number || 1,
+        levelName: test.levels?.name || 'Unknown',
         is_completed: isCompleted,
         is_in_progress: isInProgress,
         bestScore,
@@ -182,15 +182,15 @@ export async function renderStudents(area) {
 
     studentDetails.sort((a, b) => {
       if (a.levelNumber !== b.levelNumber) return a.levelNumber - b.levelNumber;
-      return (a.assessmentTitle || '').localeCompare(b.assessmentTitle || '');
+      return (a.testTitle || '').localeCompare(b.testTitle || '');
     });
 
-    // Group valid attempts by assessment_id and find highest score (Rule 2.7 & 2.8)
+    // Group valid attempts by test_id and find highest score (Rule 2.7 & 2.8)
     const bestByAsm = new Map();
     studentAttempts.forEach(a => {
       const st = String(a.status || '').toLowerCase();
       if (!validStatuses.includes(st)) return;
-      const asmId = a.assessment_id || a.Assessment_id;
+      const asmId = a.test_id || a.Test_id;
       if (!asmId) return;
 
       const sc = Number(a.score ?? 0);
@@ -211,11 +211,11 @@ export async function renderStudents(area) {
       }
     });
 
-    const completedAssessmentsCount = Math.max(bestByAsm.size, completedAssignedCount);
-    const completionPct = totalAssigned > 0 ? Math.round((completedAssessmentsCount / totalAssigned) * 100) : 0;
+    const completedTestsCount = Math.max(bestByAsm.size, completedAssignedCount);
+    const completionPct = totalAssigned > 0 ? Math.round((completedTestsCount / totalAssigned) * 100) : 0;
     const latestAttempt = studentAttempts.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
     
-    // Authoritative global grade & score across completed assessments (Rule 2.8 & 2.10)
+    // Authoritative global grade & score across completed tests (Rule 2.8 & 2.10)
     let overallScoreStr = '—';
     let globalGrade = '—';
     let overallColor = 'rgba(255,255,255,0.4)';
@@ -264,7 +264,7 @@ export async function renderStudents(area) {
     const remediationPending = studentAttempts
       .filter(a => {
         const st = String(a.status || '').toLowerCase();
-        return validStatuses.includes(st) && a.assessments?.assessment_type === 'EXAM';
+        return validStatuses.includes(st) && a.tests?.test_type === 'EXAM';
       })
       .some(a => {
         const maxVal = a.total_questions || a.max_score || 0;
@@ -311,7 +311,7 @@ export async function renderStudents(area) {
       levelName,
       pinDisplay: s.pin || 'NOT SET',
       totalAssigned,
-      completedAssessments: completedAssessmentsCount,
+      completedTests: completedTestsCount,
       inProgressCount,
       completionPct,
       details: studentDetails,
@@ -402,7 +402,7 @@ export async function renderStudents(area) {
   // Elevate Student KPI tabs to topbar
   if (window.setTopbarTabs) {
     const activeCount = programStudents.filter(s => s.batches ? s.batches.is_active !== false : true).length;
-    const totalAttemptCount = programStudents.reduce((sum, s) => sum + (s.completedAssessments || 0), 0);
+    const totalAttemptCount = programStudents.reduce((sum, s) => sum + (s.completedTests || 0), 0);
     window.setTopbarTabs([
       { id: 'enrolled', icon: '👥', label: `${window._selectedProgramName || 'Program'} Students`, val: programStudents.length },
       { id: 'active', icon: '🟢', label: 'Active Students', val: activeCount, valColor: 'var(--clr-success, #4ade80)' },
@@ -417,7 +417,7 @@ export async function renderStudents(area) {
         <h2 class="section-title">Students — ${escapeHtml(currentProgram ? currentProgram.name : 'Roster')} <span class="count-chip">${filteredGridData.length} ${currentBatchStatus === 'active' ? 'Active' : 'Total'}</span>
         ${remediationPendingCount > 0 ? `<span class="badge badge-warning" style="margin-left:8px; font-size: 0.9rem;">⚠️ ${remediationPendingCount} Awaiting Remediation</span>` : ''}
         </h2>
-        <p class="section-subtitle">Student roster for <strong>${escapeHtml(currentProgram ? currentProgram.name : 'Program')}</strong> with enrollment, curriculum assessment pacing, global scores, and grade records</p>
+        <p class="section-subtitle">Student roster for <strong>${escapeHtml(currentProgram ? currentProgram.name : 'Program')}</strong> with enrollment, curriculum test pacing, global scores, and grade records</p>
       </div>
       <div class="d-flex gap-2">
         ${totalDuplicates > 0 ? `<button class="btn btn-warning btn-sm" id="students-merge-shortcut" style="font-weight:700;">⚠️ Resolve Duplicates (${totalDuplicates})</button>` : ''}
@@ -444,7 +444,7 @@ export async function renderStudents(area) {
           <div>
             <div class="fw-700 text-sm">Detected ${totalDuplicates} Duplicate Student Profiles</div>
             <div class="text-xs text-muted" style="color:rgba(255,255,255,0.85)!important;">
-              Found ${duplicateGroups.length} groups of students with identical names in the same class. Merge them to unify their Assessment progress.
+              Found ${duplicateGroups.length} groups of students with identical names in the same class. Merge them to unify their Test progress.
             </div>
           </div>
         </div>
@@ -494,7 +494,7 @@ export async function renderStudents(area) {
       return;
     }
     
-    const headers = ['Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Assessment Type', 'Score (%)', 'Grade', 'Status', 'Remediation Granted'];
+    const headers = ['Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Test Type', 'Score (%)', 'Grade', 'Status', 'Remediation Granted'];
     const rows = filteredGridData.map(s => {
       return {
         'Institution': s.instName || '—',
@@ -502,7 +502,7 @@ export async function renderStudents(area) {
         'Batch': s.batchName || '—',
         'Current Level': s.levelName || '—',
         'Student Name': s.displayName || s.name || '—',
-        'Assessment Type': s.remediationPending ? 'EXAM' : '—',
+        'Test Type': s.remediationPending ? 'EXAM' : '—',
         'Score (%)': s.overallScoreStr || '—',
         'Grade': s.globalGrade || '—',
         'Status': s.is_active ? 'Active' : 'Inactive',
@@ -525,7 +525,7 @@ export async function renderStudents(area) {
     }
   };
 
-  // Detailed Modal for Curriculum Breakdown (40 Assessments Pacing)
+  // Detailed Modal for Curriculum Breakdown (40 Tests Pacing)
   window.showStudentProgressDetails = function(studentId) {
     const rec = (filteredGridData || gridData || []).find(d => d.id === studentId);
     if (!rec) return;
@@ -561,7 +561,7 @@ export async function renderStudents(area) {
 
       return `
         <tr>
-          <td class="fw-600 text-sm" style="color:var(--clr-text-1);">${escapeHtml(r.assessmentTitle || '—')}</td>
+          <td class="fw-600 text-sm" style="color:var(--clr-text-1);">${escapeHtml(r.testTitle || '—')}</td>
           <td class="text-center">
             <span class="badge badge-primary" style="font-size:0.75rem;">
               ${escapeHtml(r.levelName || (typeof toLevelLetter === 'function' ? toLevelLetter(r.levelNumber) : `Level ${r.levelNumber}`))}
@@ -609,7 +609,7 @@ export async function renderStudents(area) {
             </div>
             <div style="flex:1;min-width:90px;">
               <div class="text-xs text-muted">Completed</div>
-              <div class="fw-700" style="font-size:1.25rem;color:var(--clr-success);">${rec.completedAssessments}</div>
+              <div class="fw-700" style="font-size:1.25rem;color:var(--clr-success);">${rec.completedTests}</div>
             </div>
             <div style="flex:1;min-width:90px;">
               <div class="text-xs text-muted">In Progress</div>
@@ -638,7 +638,7 @@ export async function renderStudents(area) {
           <table class="table-wrap" style="width:100%;">
             <thead>
               <tr>
-                <th class="text-left" style="padding:8px 12px;">Assessment Title</th>
+                <th class="text-left" style="padding:8px 12px;">Test Title</th>
                 <th class="text-center" style="padding:8px 12px;width:130px;">Level</th>
                 <th class="text-center" style="padding:8px 12px;width:120px;">Status</th>
                 <th class="text-center" style="padding:8px 12px;width:100px;">Best Score</th>
@@ -646,7 +646,7 @@ export async function renderStudents(area) {
               </tr>
             </thead>
             <tbody>
-              ${detailsRows || '<tr><td colspan="5" class="text-center text-muted p-4">No assessments assigned.</td></tr>'}
+              ${detailsRows || '<tr><td colspan="5" class="text-center text-muted p-4">No tests assigned.</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -717,7 +717,7 @@ export async function renderStudents(area) {
             levelName: st.levels?.name || '—',
             overallScoreStr: '—',
             globalGrade: '—',
-            completedAssessments: 0,
+            completedTests: 0,
             totalAssigned: 40,
             completionPct: 0,
             details: []
@@ -810,7 +810,7 @@ export async function renderStudents(area) {
           <div class="profile-kpi-card">
             <div class="profile-kpi-label">Curriculum Done</div>
             <div class="profile-kpi-val" style="color: #38bdf8; font-size: 1.15rem;">
-              ${rec.completedAssessments || 0} / ${rec.totalAssigned || 40}
+              ${rec.completedTests || 0} / ${rec.totalAssigned || 40}
               <span style="font-size: 0.75rem; color: var(--fm-text-muted); font-weight: 600;">(${rec.completionPct || 0}%)</span>
             </div>
           </div>
@@ -830,14 +830,14 @@ export async function renderStudents(area) {
 
         <!-- Navigation Tabs -->
         <div style="display: flex; gap: 4px; padding: 0 1.5rem; border-bottom: 1px solid var(--fm-border-subtle, rgba(255,255,255,0.08)); background: rgba(0,0,0,0.08);">
-          <button class="student-profile-tab-btn active" data-tab="assessments">📝 Assessment Breakdown (${(rec.details || []).length || 40})</button>
+          <button class="student-profile-tab-btn active" data-tab="tests">📝 Test Breakdown (${(rec.details || []).length || 40})</button>
           <button class="student-profile-tab-btn" data-tab="remediation">⚠️ Remediation & Progression</button>
           <button class="student-profile-tab-btn" data-tab="account">🔑 Account & Enrollment</button>
         </div>
 
         <!-- Tab Body -->
         <div style="padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1;" id="profile-tab-body">
-          <div class="empty-state" style="padding: 2rem;"><div class="spinner"></div><p style="margin-top:8px;">Loading assessment history...</p></div>
+          <div class="empty-state" style="padding: 2rem;"><div class="spinner"></div><p style="margin-top:8px;">Loading test history...</p></div>
         </div>
       </div>
     `;
@@ -849,7 +849,7 @@ export async function renderStudents(area) {
     try {
       const sb = await getSupabase();
       const { data: atts } = await sb.from('attempts')
-        .select('id, assessment_id, score, total_questions, percentage, grade, submitted_at, status, is_remedial_unlocked, assessments(id, title, assessment_type, classes(id, name)), attempt_answers(id, is_correct, evaluation_result, score, question_snapshot, student_answer, correct_answer_snapshot)')
+        .select('id, test_id, score, total_questions, percentage, grade, submitted_at, status, is_remedial_unlocked, tests(id, title, test_type, classes(id, name)), attempt_answers(id, is_correct, evaluation_result, score, question_snapshot, student_answer, correct_answer_snapshot)')
         .eq('student_id', studentId)
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
         .order('submitted_at', { ascending: false });
@@ -883,10 +883,10 @@ export async function renderStudents(area) {
       const tabBody = backdrop.querySelector('#profile-tab-body');
       if (!tabBody) return;
 
-      if (tabName === 'assessments') {
+      if (tabName === 'tests') {
         const details = rec.details || [];
         const rows = details.map(d => {
-          const matchingAttempts = studentAttempts.filter(a => a.assessment_id === d.assessment_id);
+          const matchingAttempts = studentAttempts.filter(a => a.test_id === d.test_id);
           const latestAtt = matchingAttempts[0];
           const hasAnswers = latestAtt && latestAtt.attempt_answers && latestAtt.attempt_answers.length > 0;
           const attId = latestAtt ? latestAtt.id : null;
@@ -896,7 +896,7 @@ export async function renderStudents(area) {
               <td class="fw-600">
                 <div class="d-flex align-center gap-2">
                   ${hasAnswers ? `<span class="toggle-arrow" id="modal-arrow-${attId}" style="font-size:0.7rem; color:var(--clr-text-muted); transition:transform 0.2s;">▶</span>` : '<span style="display:inline-block;width:12px;"></span>'}
-                  <span>${escapeHtml(d.assessmentTitle || '—')}</span>
+                  <span>${escapeHtml(d.testTitle || '—')}</span>
                 </div>
               </td>
               <td class="text-center">
@@ -980,7 +980,7 @@ export async function renderStudents(area) {
           <table class="table-wrap" style="width:100%;">
             <thead>
               <tr>
-                <th class="text-left" style="padding:8px 12px;">Assessment Title</th>
+                <th class="text-left" style="padding:8px 12px;">Test Title</th>
                 <th class="text-center" style="padding:8px 12px;width:120px;">Level</th>
                 <th class="text-center" style="padding:8px 12px;width:120px;">Status</th>
                 <th class="text-center" style="padding:8px 12px;width:90px;">Best Score</th>
@@ -988,7 +988,7 @@ export async function renderStudents(area) {
               </tr>
             </thead>
             <tbody>
-              ${rows || '<tr><td colspan="5" class="text-center text-muted p-4">No assessments assigned.</td></tr>'}
+              ${rows || '<tr><td colspan="5" class="text-center text-muted p-4">No tests assigned.</td></tr>'}
             </tbody>
           </table>
         `;
@@ -1027,27 +1027,27 @@ export async function renderStudents(area) {
         });
 
       } else if (tabName === 'remediation') {
-        const failedAssessments = (rec.details || []).filter(d => d.bestPct != null && d.bestPct < 60);
+        const failedTests = (rec.details || []).filter(d => d.bestPct != null && d.bestPct < 60);
         tabBody.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:16px;">
             <div style="padding:14px 18px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid var(--fm-border-subtle, rgba(255,255,255,0.08));">
               <div class="fw-700 text-sm mb-1" style="color:var(--fm-text-primary, #f8fafc);">Curriculum Progression Status</div>
               <p class="text-xs text-muted" style="margin:0;">
-                Current Level: <strong>${escapeHtml(rec.levelName)}</strong> &bull; Completed: <strong>${rec.completedAssessments} of ${rec.totalAssigned}</strong> (${rec.completionPct}%)
+                Current Level: <strong>${escapeHtml(rec.levelName)}</strong> &bull; Completed: <strong>${rec.completedTests} of ${rec.totalAssigned}</strong> (${rec.completionPct}%)
               </p>
             </div>
 
-            ${failedAssessments.length > 0 ? `
+            ${failedTests.length > 0 ? `
               <div style="padding:14px 18px; border-radius:10px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25);">
-                <div class="fw-700 text-sm mb-2" style="color:#fbbf24;">⚠️ Remediation Alerts (${failedAssessments.length} Modules Below KKM 60%)</div>
+                <div class="fw-700 text-sm mb-2" style="color:#fbbf24;">⚠️ Remediation Alerts (${failedTests.length} Modules Below KKM 60%)</div>
                 <div style="display:flex; flex-direction:column; gap:8px;">
-                  ${failedAssessments.map(fa => `
+                  ${failedTests.map(fa => `
                     <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(0,0,0,0.2); border-radius:6px;">
                       <div>
-                        <div class="fw-600 text-sm" style="color:#f8fafc;">${escapeHtml(fa.assessmentTitle)}</div>
+                        <div class="fw-600 text-sm" style="color:#f8fafc;">${escapeHtml(fa.testTitle)}</div>
                         <div class="text-xs text-muted">Current Best: <strong style="color:#ef4444;">${fa.bestPct}%</strong> (KKM Passing: 60%)</div>
                       </div>
-                      <button class="btn btn-warning btn-sm" onclick="showToast('Remedial retake permitted for ${escapeHtml(fa.assessmentTitle)}', 'info')">
+                      <button class="btn btn-warning btn-sm" onclick="showToast('Remedial retake permitted for ${escapeHtml(fa.testTitle)}', 'info')">
                         Authorize Retake
                       </button>
                     </div>
@@ -1058,7 +1058,7 @@ export async function renderStudents(area) {
               <div style="padding:24px; text-align:center; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:10px;">
                 <div style="font-size:2rem; margin-bottom:4px;">🎉</div>
                 <div class="fw-700" style="color:#10b981;">No Remediation Required</div>
-                <div class="text-xs text-muted" style="margin-top:4px;">All attempted assessments meet or exceed academic passing criteria.</div>
+                <div class="text-xs text-muted" style="margin-top:4px;">All attempted tests meet or exceed academic passing criteria.</div>
               </div>
             `}
           </div>
@@ -1098,7 +1098,7 @@ export async function renderStudents(area) {
       }
     };
 
-    renderTab('assessments');
+    renderTab('tests');
 
     // Tab buttons event listeners
     backdrop.querySelectorAll('.student-profile-tab-btn').forEach(btn => {
@@ -1197,7 +1197,7 @@ export async function renderStudents(area) {
             levelName: st.levels?.name || '—',
             overallScoreStr: '—',
             globalGrade: '—',
-            completedAssessments: 0,
+            completedTests: 0,
             totalAssigned: 40,
             completionPct: 0,
             details: []
@@ -1226,7 +1226,7 @@ export async function renderStudents(area) {
     try {
       const sb = await getSupabase();
       const { data: atts } = await sb.from('attempts')
-        .select('id, assessment_id, score, total_questions, percentage, grade, submitted_at, status, assessments(id, title, assessment_type)')
+        .select('id, test_id, score, total_questions, percentage, grade, submitted_at, status, tests(id, title, test_type)')
         .eq('student_id', studentId)
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
         .order('submitted_at', { ascending: true });
@@ -1235,13 +1235,13 @@ export async function renderStudents(area) {
       console.warn('Error fetching attempts for dossier:', err);
     }
 
-    // Best attempt per assessment
+    // Best attempt per test
     const bestByAsm = new Map();
     studentAttempts.forEach(att => {
       const pct = parseFloat(att.percentage || att.score || 0);
-      const prev = bestByAsm.get(att.assessment_id);
+      const prev = bestByAsm.get(att.test_id);
       if (!prev || pct > parseFloat(prev.percentage || prev.score || 0)) {
-        bestByAsm.set(att.assessment_id, att);
+        bestByAsm.set(att.test_id, att);
       }
     });
     const completedRecords = Array.from(bestByAsm.values());
@@ -1251,8 +1251,8 @@ export async function renderStudents(area) {
     const generationDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
     const transcriptRows = completedRecords.map((att, idx) => {
-      const title = att.assessments?.title || 'Curriculum Assessment';
-      const type = att.assessments?.assessment_type || 'TASK';
+      const title = att.tests?.title || 'Curriculum Test';
+      const type = att.tests?.test_type || 'TASK';
       const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
       const rawPct = att.percentage != null ? Number(att.percentage) : ((att.score || 0) / maxQ) * 100;
       const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
@@ -1306,7 +1306,7 @@ export async function renderStudents(area) {
                 🛡️ TOPS CORE ACADEMIC ADMINISTRATION
               </div>
               <div style="font-size:0.85rem;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">
-                CENTRAL ENGLISH ASSESSMENT &amp; CERTIFICATION BOARD
+                CENTRAL ENGLISH TEST &amp; CERTIFICATION BOARD
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:0.72rem;color:#64748b;font-weight:600;border-top:1px solid #e2e8f0;padding-top:6px;">
                 <span>DOCUMENT REF: <strong>${docRef}</strong></span>
@@ -1371,7 +1371,7 @@ export async function renderStudents(area) {
               <div>
                 <div style="font-size:0.65rem;font-weight:700;color:#64748b;text-transform:uppercase;">Curriculum Pace</div>
                 <div style="font-size:1.15rem;font-weight:800;color:#0f172a;line-height:1.3;">
-                  ${rec.completedAssessments || 0} / ${rec.totalAssigned || 40}
+                  ${rec.completedTests || 0} / ${rec.totalAssigned || 40}
                   <span style="font-size:0.75rem;color:#64748b;font-weight:600;">(${rec.completionPct || 0}%)</span>
                 </div>
               </div>
@@ -1383,16 +1383,16 @@ export async function renderStudents(area) {
               </div>
             </div>
 
-            <!-- Assessment Transcript Section -->
+            <!-- Test Transcript Section -->
             <div style="margin-bottom:20px;">
               <div style="font-size:0.85rem;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;border-left:4px solid #0f172a;padding-left:8px;margin-bottom:8px;">
-                Official Assessment Transcript &amp; Module History
+                Official Test Transcript &amp; Module History
               </div>
               <table class="dossier-table">
                 <thead>
                   <tr>
                     <th style="width:30px;text-align:center;">#</th>
-                    <th>Assessment Title</th>
+                    <th>Test Title</th>
                     <th style="width:70px;text-align:center;">Type</th>
                     <th style="width:95px;text-align:center;">Date</th>
                     <th style="width:85px;text-align:center;">Points</th>
@@ -1401,7 +1401,7 @@ export async function renderStudents(area) {
                   </tr>
                 </thead>
                 <tbody>
-                  ${transcriptRows || '<tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">No completed assessments recorded.</td></tr>'}
+                  ${transcriptRows || '<tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">No completed tests recorded.</td></tr>'}
                 </tbody>
               </table>
             </div>
@@ -1499,9 +1499,9 @@ export async function renderStudents(area) {
       }
 
       // Column-specific comparison
-      if (sortKey === 'completedAssessments') {
-        const scA = a.completedAssessments ?? 0;
-        const scB = b.completedAssessments ?? 0;
+      if (sortKey === 'completedTests') {
+        const scA = a.completedTests ?? 0;
+        const scB = b.completedTests ?? 0;
         if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
       } else if (sortKey === 'completionPct') {
         const scA = a.completionPct ?? 0;
@@ -1725,7 +1725,7 @@ export async function renderStudents(area) {
         sortable: true,
         align: 'center',
         width: '75px',
-        render: (row) => `<span class="badge" style="background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.25);font-weight:700;font-size:0.75rem;padding:2px 8px;border-radius:10px;">${escapeHtml(row.batchName)}</span>`
+        render: (row) => `<span class="text-sm fw-600" style="color:#ffffff;">${escapeHtml(row.batchName || '—')}</span>`
       },
       // 4. Level
       {
@@ -1734,7 +1734,7 @@ export async function renderStudents(area) {
         sortable: true,
         align: 'center',
         width: '85px',
-        render: (row) => `<span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(row.levelName)}</span>`
+        render: (row) => `<span class="text-sm fw-600" style="color:#ffffff;">${escapeHtml(row.levelName || '—')}</span>`
       },
       // 5. Name
       {
@@ -1773,22 +1773,22 @@ export async function renderStudents(area) {
         sortable: true,
         align: 'center',
         width: '80px',
-        render: (row) => row.gender === 'male'
-          ? `<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);font-size:0.7rem;">&#9794; Male</span>`
-          : row.gender === 'female'
-          ? `<span class="badge" style="background:rgba(244,114,182,0.15);color:#f472b6;border:1px solid rgba(244,114,182,0.3);font-size:0.7rem;">&#9792; Female</span>`
-          : `<span class="badge badge-neutral" style="font-size:0.7rem;">&#8212; Unset</span>`
+        render: (row) => (row.gender || '').toLowerCase() === 'male'
+          ? `<span class="fw-600" style="color:#22c55e;font-size:0.8rem;">&#9794; Male</span>`
+          : (row.gender || '').toLowerCase() === 'female'
+          ? `<span class="fw-600" style="color:#f472b6;font-size:0.8rem;">&#9792; Female</span>`
+          : `<span class="text-muted fw-600" style="font-size:0.8rem;">&mdash;</span>`
       },
-      // 8. Assessments (Completed / Assigned)
+      // 8. Tests (Completed / Assigned)
       {
-        key: 'completedAssessments',
-        label: 'Assessments',
+        key: 'completedTests',
+        label: 'Tests',
         sortable: true,
         align: 'center',
         width: '95px',
         render: (row) => `
           <div class="fw-700" style="font-size:0.9rem;color:var(--clr-text-1);">
-            ${row.completedAssessments} <span class="text-xs text-muted" style="font-weight:400;">/ ${row.totalAssigned}</span>
+            ${row.completedTests} <span class="text-xs text-muted" style="font-weight:400;">/ ${row.totalAssigned}</span>
           </div>
         `
       },
@@ -1862,7 +1862,7 @@ export async function renderStudents(area) {
 
           const detailsBtn = document.createElement('button');
           detailsBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn';
-          detailsBtn.title = 'Assessment Details (40 Modules Breakdown)';
+          detailsBtn.title = 'Test Details (40 Modules Breakdown)';
           detailsBtn.innerHTML = '📝';
           detailsBtn.onclick = (e) => {
             e.stopPropagation();

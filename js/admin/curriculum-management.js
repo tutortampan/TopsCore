@@ -339,7 +339,7 @@ export async function renderCurriculum(area) {
         };
       });
 
-      // Migrate institution tabs to topbar (same pattern as Assessment, Class Hub)
+      // Migrate institution tabs to topbar (same pattern as Test, Class Hub)
       if (window.setTopbarTabs) {
         window.setTopbarTabs(institutionTabs, activeInst.id, 'window.switchInstitutionTab');
       }

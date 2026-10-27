@@ -1,6 +1,6 @@
 // @ts-nocheck
-// TOP ENGLISH CLASS — Edge Function: start-Assessment (Assessment V1)
-// Server-authoritative assessment start. Creates or resumes an attempt.
+// TOPSCORE LMS — Edge Function: start-test
+// Server-authoritative test start. Creates or resumes an attempt.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -17,10 +17,10 @@ Deno.serve(async (req) => {
   try {
     const payload = await req.json();
     const student_id = payload.student_id;
-    const assessment_id = payload.assessment_id || payload.Assessment_id;
+    const test_id = payload.test_id;
 
-    if (!student_id || !assessment_id) {
-      return new Response(JSON.stringify({ error: "Missing student_id or assessment_id." }), {
+    if (!student_id || !test_id) {
+      return new Response(JSON.stringify({ error: "Missing student_id or test_id." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // 1. Fetch Student Details (join batches to get current_level_id for dynamic shell level gating)
+    // 1. Fetch Student Details
     const { data: student } = await supabase
       .from("students")
       .select("id, institution_id, program_id, batch_id, is_active, batches!batch_id(current_level_id)")
@@ -44,44 +44,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Fetch Assessment Details (Try assessments table first, fallback to Assessments)
-    let assessment: any = null;
-    const { data: asmData, error: asmErr } = await supabase
-      .from("assessments")
+    // 2. Fetch Test Details
+    let test: any = null;
+    const { data: tData, error: tErr } = await supabase
+      .from("tests")
       .select("*")
-      .eq("id", assessment_id)
+      .eq("id", test_id)
       .is("deleted_at", null)
       .single();
 
-    if (!asmErr && asmData) {
-      assessment = asmData;
-    } else {
-      const { data: exData, error: exErr } = await supabase
-        .from("assessments")
-        .select("*")
-        .eq("id", assessment_id)
-        .is("deleted_at", null)
-        .single();
-      if (!exErr && exData) {
-        assessment = {
-          ...exData,
-          title: exData.title || exData.Assessment_title,
-          assessment_type: exData.assessment_type || 'EVALUATION',
-          working_duration_minutes: exData.working_duration_minutes || exData.time_limit_minutes || 60,
-          status: (exData.Assessment_status || 'draft').toUpperCase()
-        };
-      }
+    if (!tErr && tData) {
+      test = tData;
     }
 
-    if (!assessment) {
-      return new Response(JSON.stringify({ error: "Assessment not found." }), {
+    if (!test) {
+      return new Response(JSON.stringify({ error: "Test not found." }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    const currentStatus = String(assessment.status || '').toUpperCase();
+    const currentStatus = String(test.status || '').toUpperCase();
     if (currentStatus !== 'PUBLISHED' && currentStatus !== 'ACTIVE') {
-      return new Response(JSON.stringify({ error: "Assessment is not available (not published)." }), {
+      return new Response(JSON.stringify({ error: "Test is not available (not published)." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
@@ -94,7 +78,7 @@ Deno.serve(async (req) => {
     const { data: assignments } = await supabase
       .from("assignments")
       .select("*")
-      .eq("assessment_id", assessment_id)
+      .eq("test_id", test_id)
       .eq("status", "active");
 
     if (assignments && assignments.length > 0) {
@@ -111,71 +95,51 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fallback: Check assessment_programs or Assessment_programs or Assessment_access
-    if (!isEligible) {
-      const { data: progMatch } = await supabase
-        .from("assessment_programs")
-        .select("*")
-        .eq("assessment_id", assessment_id)
-        .eq("program_id", student.program_id);
-
-      if (progMatch && progMatch.length > 0) {
-        isEligible = true;
-      } else {
-        const { data: exProgMatch } = await supabase
-          .from("assessment_programs")
-          .select("*")
-          .eq("assessment_id", assessment_id)
-          .eq("program_id", student.program_id);
-        if (exProgMatch && exProgMatch.length > 0) isEligible = true;
-      }
-    }
-
-    // Fallback 2: If no explicit assignment rules exist yet, allow if institution matches
+    // Fallback: If no explicit assignment rules exist, allow if institution matches
     if (!isEligible && (!assignments || assignments.length === 0)) {
-      if (!assessment.institution_id || assessment.institution_id === student.institution_id) {
+      if (!test.institution_id || test.institution_id === student.institution_id) {
         isEligible = true;
       }
     }
 
     if (!isEligible) {
-      return new Response(JSON.stringify({ error: "Student not eligible for this assessment." }), {
+      return new Response(JSON.stringify({ error: "Student not eligible for this test." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
     // 4. Check Availability Window
     const now = new Date();
-    const effectiveStart = assignmentWindow.start || assessment.availability_start;
-    const effectiveEnd = assignmentWindow.end || assessment.availability_end;
+    const effectiveStart = assignmentWindow.start || test.availability_start;
+    const effectiveEnd = assignmentWindow.end || test.availability_end;
 
     if (effectiveStart && now < new Date(effectiveStart)) {
-      return new Response(JSON.stringify({ error: "This assessment is not yet available." }), {
+      return new Response(JSON.stringify({ error: "This test is not yet available." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
     if (effectiveEnd && now > new Date(effectiveEnd)) {
-      return new Response(JSON.stringify({ error: "This assessment is no longer available." }), {
+      return new Response(JSON.stringify({ error: "This test is no longer available." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    // 5. Check Prerequisite Assessment
-    const isStandaloneTryout = assessment.payload?.is_standalone_tryout === true;
-    const prereqId = assessment.prerequisite_assessment_id;
+    // 5. Check Prerequisite Test
+    const isStandaloneTryout = test.payload?.is_standalone_tryout === true;
+    const prereqId = test.prerequisite_test_id;
     if (prereqId && !isStandaloneTryout) {
       const { data: prereqAttempts } = await supabase
         .from("attempts")
         .select("effective_score, percentage, status")
         .eq("student_id", student_id)
-        .eq("assessment_id", prereqId)
+        .eq("test_id", prereqId)
         .in("status", ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
 
-      const reqScore = assessment.prerequisite_min_score || 60;
+      const reqScore = test.prerequisite_min_score || 60;
       const hasPassed = prereqAttempts && prereqAttempts.some((a: any) => (a.effective_score || a.percentage || 0) >= reqScore);
 
       if (!hasPassed) {
-        return new Response(JSON.stringify({ error: `Prerequisite not completed. You must score at least ${reqScore}% on the prerequisite assessment.` }), {
+        return new Response(JSON.stringify({ error: `Prerequisite not completed. You must score at least ${reqScore}% on the prerequisite test.` }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
@@ -186,7 +150,7 @@ Deno.serve(async (req) => {
       .from("attempts")
       .select("*")
       .eq("student_id", student_id)
-      .eq("assessment_id", assessment_id)
+      .eq("test_id", test_id)
       .in("status", ["in_progress", "IN_PROGRESS"])
       .order("created_at", { ascending: false })
       .limit(1)
@@ -204,7 +168,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Fetch saved answers for this attempt (strip answer keys for client)
+      // Fetch saved answers for this attempt
       const { data: rawAnswers } = await supabase
         .from("attempt_answers")
         .select("id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score")
@@ -234,96 +198,86 @@ Deno.serve(async (req) => {
         attempt: existing,
         answers: sanitizedResumedAnswers,
         resumed: true,
-        assessment: {
-          id: assessment.id,
-          title: assessment.title,
-          assessment_type: assessment.assessment_type,
-          working_duration_minutes: assessment.working_duration_minutes,
-          question_order: assessment.question_order || assessment.payload?.question_order || 'random'
+        test: {
+          id: test.id,
+          title: test.title,
+          test_type: test.test_type,
+          test_subtype: test.test_subtype,
+          working_duration_minutes: test.working_duration_minutes,
+          question_order: test.question_order || test.payload?.question_order || 'random'
         }
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    // 7. Check Attempt Limits & Remedial Cap
+    // 7. Check Attempt Limits
     const { data: pastAttemptsData } = await supabase
       .from("attempts")
       .select("*")
       .eq("student_id", student_id)
-      .eq("assessment_id", assessment_id)
+      .eq("test_id", test_id)
       .in("status", ["submitted", "auto_submitted", "evaluated", "expired", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED", "EXPIRED"])
       .order("created_at", { ascending: false });
 
     const attemptCount = pastAttemptsData?.length || 0;
 
-    // TEST retake cap: max 2 retakes = max 3 attempts total (server-authoritative)
-    if (assessment.assessment_category === 'TEST' && attemptCount >= 3) {
+    // Exam retake cap: max 2 retakes = max 3 attempts total
+    if (test.test_type === 'exam' && attemptCount >= 3) {
       return new Response(JSON.stringify({ error: "Maximum retake limit reached (2 retakes allowed)." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    if (assessment.max_attempts && attemptCount >= assessment.max_attempts) {
-      return new Response(JSON.stringify({ error: "Maximum attempts reached for this assessment." }), {
+    if (test.max_attempts && attemptCount >= test.max_attempts) {
+      return new Response(JSON.stringify({ error: "Maximum attempts reached for this test." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    if (assessment.assessment_type === 'EXAM' && attemptCount >= 1) {
-      const mostRecentAttempt = pastAttemptsData?.[0];
-      if (!mostRecentAttempt?.is_remedial_unlocked) {
-        return new Response(JSON.stringify({ error: "Official Exam attempt completed. Remedial retake requires teacher authorization." }), {
-          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
-      }
-    }
-    // 8. Fetch Assessment Questions (from frozen snapshot assessment_questions)
+    // 8. Fetch Questions / Items
     let snapQuestions: any = [];
-    if (assessment.payload && assessment.payload.is_dynamic_shell) {
-      
-      // Validation 1: Level Gating (use batches.current_level_id — student.level_id does not exist)
+    if (test.payload && test.payload.is_dynamic_shell) {
       const studentCurrentLevelId = student.batches?.current_level_id;
-      if (!isStandaloneTryout && studentCurrentLevelId && assessment.level_id && studentCurrentLevelId !== assessment.level_id) {
-         return new Response(JSON.stringify({ error: "Level mismatch. You do not have access to this assessment's level." }), {
+      if (!isStandaloneTryout && studentCurrentLevelId && test.level_id && studentCurrentLevelId !== test.level_id) {
+         return new Response(JSON.stringify({ error: "Level mismatch. You do not have access to this test's level." }), {
            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
          });
       }
 
-      // Validation 2: Theme Prerequisites
-      if (!isStandaloneTryout && (assessment.assessment_category === 'TEST' || assessment.assessment_type === 'VOCAB_TEST' || assessment.assessment_type === 'PHRASE_TEST')) {
-        const themeCode = assessment.payload?.theme_code;
+      // Validation: Theme Prerequisites for Exams
+      if (!isStandaloneTryout && test.test_type === 'exam') {
+        const themeCode = test.payload?.theme_code;
         if (themeCode) {
-          // Fetch all sibling tasks in this theme
           const { data: siblingTasks } = await supabase
-            .from('assessments')
+            .from('tests')
             .select('id')
-            .eq('class_id', assessment.class_id)
-            .eq('level_id', assessment.level_id)
-            .in('assessment_category', ['TASK'])
+            .eq('class_id', test.class_id)
+            .eq('level_id', test.level_id)
+            .eq('test_type', 'quiz')
             .contains('payload', { theme_code: themeCode });
 
           if (siblingTasks && siblingTasks.length > 0) {
             const taskIds = siblingTasks.map(t => t.id);
             const { data: siblingAttempts } = await supabase
               .from('attempts')
-              .select('assessment_id, percentage, effective_score, is_best_score, status')
+              .select('test_id, percentage, effective_score, is_best_score, status')
               .eq('student_id', student_id)
-              .in('assessment_id', taskIds)
+              .in('test_id', taskIds)
               .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
               
-            const reqScore = assessment.prerequisite_min_score || 60;
+            const reqScore = test.prerequisite_min_score || 60;
             const passedTaskIds = new Set();
             if (siblingAttempts) {
               siblingAttempts.forEach(att => {
                 if ((att.effective_score || att.percentage || 0) >= reqScore) {
-                  passedTaskIds.add(att.assessment_id);
+                  passedTaskIds.add(att.test_id);
                 }
               });
             }
 
             if (passedTaskIds.size < taskIds.length) {
-              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must score at least ${reqScore}% on ALL Theme Tasks before taking the Theme Test.` }), {
+              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must score at least ${reqScore}% on ALL Theme Quizzes before taking the Theme Exam.` }), {
                 status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
               });
             }
@@ -331,28 +285,25 @@ Deno.serve(async (req) => {
         }
       }
 
-      const themeCode = assessment.payload.theme_code;
-      const topicCode = assessment.payload.topic_code;
+      const themeCode = test.payload.theme_code;
+      const topicCode = test.payload.topic_code;
       
-      // Resolve level UUID -> integer level_number (vocabulary_vault.target_level is INTEGER).
-      // Vault queries MUST be scoped to this level or cumulative themes would bleed across levels.
       let levelNum = 1;
-      if (assessment.level_id) {
+      if (test.level_id) {
         const { data: levelRec } = await supabase
           .from('levels')
           .select('level_number')
-          .eq('id', assessment.level_id)
+          .eq('id', test.level_id)
           .single();
         if (levelRec?.level_number) levelNum = levelRec.level_number;
       }
 
       let query = supabase.from("vocabulary_vault").select("*").is("deleted_at", null).eq("target_level", levelNum).range(0, 4999);
       
-      const themes = assessment.payload.themes;
-      // Cumulative Themes Logic for TESTS
+      const themes = test.payload.themes;
       if (themes && Array.isArray(themes) && themes.length > 0) {
           query = query.in("theme_code", themes);
-      } else if (assessment.assessment_category === 'TEST' && themeCode) {
+      } else if (test.test_type === 'exam' && themeCode) {
           const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
           const idx = allThemes.indexOf(themeCode);
           if (idx !== -1) {
@@ -366,29 +317,21 @@ Deno.serve(async (req) => {
           if (topicCode) query = query.eq("topic_code", topicCode);
       }
       
-      const { data: vaultData, error: vErr } = await query;
-      if (vErr) {
-        console.error("Failed to load vault words:", vErr);
-      }
-      
+      const { data: vaultData } = await query;
       let vaultWords = vaultData || [];
-      const category = assessment.payload.category || 'vocab';
+      const category = test.payload.category || 'vocab';
       const isUnified = category === 'all' || 
                         category === 'unified' || 
-                        assessment.payload?.is_unified === true || 
-                        assessment.payload?.is_unified_test === true ||
-                        assessment.assessment_type === 'UNIFIED_TEST';
+                        test.payload?.is_unified === true || 
+                        test.payload?.is_unified_test === true;
 
-      const orderSetting = String(assessment.question_order || assessment.payload?.question_order || 'random').toLowerCase();
+      const orderSetting = String(test.question_order || test.payload?.question_order || 'random').toLowerCase();
 
       if (isUnified) {
-        // TWO-STAGE SHUFFLING:
-        // Stage 1: Words only (shuffled independently)
         let wordsPool = vaultWords.filter((w: any) => {
           const wt = (w.word_type || '').toLowerCase();
           return !['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
         });
-        // Stage 2: Phrases only (shuffled independently)
         let phrasesPool = vaultWords.filter((w: any) => {
           const wt = (w.word_type || '').toLowerCase();
           return ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
@@ -420,11 +363,11 @@ Deno.serve(async (req) => {
         }
       }
 
-      let dynamicAnswerType = ((assessment.answer_type && assessment.answer_type !== 'MULTIPLE_CHOICE') ? assessment.answer_type : null) || assessment.payload?.answer_type || 'written';
-      if (!assessment.payload?.answer_type && !(assessment.answer_type && assessment.answer_type !== 'MULTIPLE_CHOICE')) {
-         if (assessment.assessment_type === 'VOCAB_TASK' || assessment.assessment_type === 'PHRASE_TASK') dynamicAnswerType = 'spoken';
-         else if (assessment.assessment_type === 'VOCAB_TEST') dynamicAnswerType = 'written';
-         else if (assessment.assessment_type === 'PHRASE_TEST') dynamicAnswerType = 'selection';
+      let dynamicAnswerType = ((test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE') ? test.answer_type : null) || test.payload?.answer_type || 'written';
+      if (!test.payload?.answer_type && !(test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE')) {
+         if (test.test_subtype === 'VOCAB_TASK' || test.test_subtype === 'PHRASE_TASK') dynamicAnswerType = 'spoken';
+         else if (test.test_subtype === 'VOCAB_TEST') dynamicAnswerType = 'written';
+         else if (test.test_subtype === 'PHRASE_TEST') dynamicAnswerType = 'selection';
       }
       
       if (vaultWords && vaultWords.length > 0) {
@@ -440,7 +383,7 @@ Deno.serve(async (req) => {
             const { data: allPhraseData } = await distractorQuery;
             if (allPhraseData) {
                 const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase'];
-                const isPhraseMode = category === 'phrases' || assessment.assessment_type === 'PHRASE_TASK' || assessment.assessment_type === 'PHRASE_TEST';
+                const isPhraseMode = category === 'phrases' || test.test_subtype === 'PHRASE_TASK' || test.test_subtype === 'PHRASE_TEST';
                 
                 distractorPool = allPhraseData.filter((r: any) => {
                     const wt = (r.word_type || '').toLowerCase();
@@ -456,7 +399,6 @@ Deno.serve(async (req) => {
              
              if (isSelectionMode) {
                  const correctAnswer = accepted[0] || "N/A";
-                 
                  let others = distractorPool.filter((r: any) => {
                      const eng = (r.english||'').split('/')[0].trim();
                      return eng && eng !== correctAnswer && !accepted.includes(eng);
@@ -485,7 +427,7 @@ Deno.serve(async (req) => {
                  item_code: vw.item_code || null,
                  question_text_snapshot: vw.indonesian || "N/A",
                  accepted_answers_snapshot: accepted,
-                 options_snapshot: options ? options : null, // Not JSON stringified to match expected array structure
+                 options_snapshot: options ? options : null,
                  topic_snapshot: vw.topic || vw.topic_code || "General",
                  word_type_snapshot: vw.word_type,
                  display_order: idx + 1,
@@ -497,72 +439,47 @@ Deno.serve(async (req) => {
       }
     } else {
       const { data } = await supabase
-      .from("assessment_questions")
-      .select("*")
-      .eq("assessment_id", assessment_id)
-      .order("display_order");
+        .from("test_items")
+        .select("*")
+        .eq("test_id", test_id)
+        .order("display_order");
       snapQuestions = data || [];
     }
 
-    // Fallback to legacy questions if snapshot not populated yet
     if (!snapQuestions || snapQuestions.length === 0) {
-      const { data: legacyQ } = await supabase
-        .from("questions")
-        .select("*")
-        .eq("assessment_id", assessment_id)
-        .is("deleted_at", null);
-      if (legacyQ && legacyQ.length > 0) {
-        snapQuestions = legacyQ.map((q: any, idx: number) => ({
-          question_id: q.id,
-          question_text_snapshot: q.question_text,
-          accepted_answers_snapshot: q.accepted_answers || [q.correct_answer],
-          topic_snapshot: 'General',
-          word_type_snapshot: q.word_type || null,
-          display_order: idx + 1
-        }));
-      }
-    }
-
-    if (!snapQuestions || snapQuestions.length === 0) {
-      return new Response(JSON.stringify({ error: "Assessment has no questions available." }), {
+      return new Response(JSON.stringify({ error: "Test has no questions available." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    // Randomize order if configured (only if not already partitioned in unified two-stage shuffle)
-    if (!isUnified && String(assessment.question_order || assessment.payload?.question_order || 'random').toLowerCase() === 'random') {
+    if (!isUnified && String(test.question_order || test.payload?.question_order || 'random').toLowerCase() === 'random') {
       snapQuestions.sort(() => Math.random() - 0.5);
     }
 
     // 9. Create New Attempt
-    let durationMinutes = assessment.working_duration_minutes || assessment.time_limit_minutes || 60;
+    let durationMinutes = test.working_duration_minutes || 60;
     let expiresAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
 
-    // Hard Deadline for EXAM and QUIZ types
-    if (assessment.assessment_type === 'EXAM' || assessment.assessment_type === 'QUIZ') {
+    if (test.test_type === 'quiz') {
+      durationMinutes = test.working_duration_minutes || 5;
+      expiresAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
+    } else if (test.test_type === 'exam') {
       if (effectiveEnd) {
         expiresAt = new Date(effectiveEnd);
       }
-      durationMinutes = 0; // Not duration-based
-    } else if (assessment.assessment_type === 'TASK') {
-      // TASKS have no duration limit; set expiry 10 years in future
-      expiresAt = new Date(now.getTime() + 10 * 365 * 24 * 3600 * 1000);
-      durationMinutes = 0;
+      durationMinutes = test.working_duration_minutes || 120;
     }
 
     const attemptPayload: any = {
       student_id,
+      test_id,
       started_at: now.toISOString(),
+      expires_at: expiresAt.toISOString(),
       status: "in_progress",
       score: 0,
       percentage: 0,
       total_questions: snapQuestions.length
     };
-
-    // Include both column variants for seamless database schema compatibility
-    attemptPayload.assessment_id = assessment_id;
-    attemptPayload.expires_at = expiresAt.toISOString();
-
 
     const { data: newAttempt, error: attemptErr } = await supabase
       .from("attempts")
@@ -595,7 +512,6 @@ Deno.serve(async (req) => {
       score: 0
     }));
 
-    // Batch insertion in chunks of 100 (avoids Edge Function timeouts on 640-item cumulative tests)
     const insertedAnswers: any[] = [];
     for (let i = 0; i < answerInserts.length; i += 100) {
       const chunk = answerInserts.slice(i, i + 100);
@@ -604,7 +520,6 @@ Deno.serve(async (req) => {
         .insert(chunk)
         .select("id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score");
       if (insAnsErr) {
-        // Roll back the half-created attempt so a refresh does not resume a broken snapshot
         await supabase.from("attempt_answers").delete().eq("attempt_id", newAttempt.id);
         await supabase.from("attempts").delete().eq("id", newAttempt.id);
         throw insAnsErr;
@@ -612,7 +527,6 @@ Deno.serve(async (req) => {
       if (chunkRows) insertedAnswers.push(...chunkRows);
     }
 
-    // Return to client WITHOUT exposing accepted_answers_snapshot
     const sanitizedNewAnswers = (insertedAnswers || []).map((a: any) => {
       const snap = typeof a.question_snapshot === "string"
         ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })()
@@ -636,22 +550,22 @@ Deno.serve(async (req) => {
       attempt: newAttempt,
       answers: sanitizedNewAnswers,
       resumed: false,
-      assessment: {
-        id: assessment.id,
-        title: assessment.title,
-        assessment_type: assessment.assessment_type,
+      test: {
+        id: test.id,
+        title: test.title,
+        test_type: test.test_type,
+        test_subtype: test.test_subtype,
         working_duration_minutes: durationMinutes,
-        question_order: assessment.question_order || assessment.payload?.question_order || 'random'
+        question_order: test.question_order || test.payload?.question_order || 'random'
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
 
   } catch (err: any) {
-    console.error("start-Assessment error:", err);
+    console.error("start-test error:", err);
     return new Response(JSON.stringify({ error: err.message || "Internal server error." }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
 });
-

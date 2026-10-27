@@ -1,11 +1,11 @@
 /**
- * TopsCore — Assessment Result Viewer Module
+ * TopsCore — Test Result Viewer Module
  * v5.3.3 — 10 Feature Upgrades: Score Ring, Student Name, Motivation Msg,
  *           Rank in Batch, Attempt Counter, Improvement Delta, BG Particles,
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchAssessmentsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startAssessment, submitAssessment, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial } from './api.js?v=5.6.5';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startTest, submitTest, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial } from './api.js?v=5.6.5';
 import { getStudentSession, getAdminSession } from './session.js?v=5.5.8';
 import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=5.8.5';
 import { getSupabase } from './supabase.js?v=5.5.8';
@@ -43,7 +43,7 @@ if (!session) {
 
     const gradeColors = { S: '#a855f7', A: '#10b981', B: '#38bdf8', C: '#f59e0b', D: '#f97316', E: '#ef4444', F: '#ef4444' };
 
-    // Humanize raw assessment_type values from DB
+    // Humanize raw test_type values from DB
     function humanizeType(raw) {
       if (!raw) return '';
       const map = {
@@ -382,7 +382,7 @@ if (!session) {
         const batchId = st.batch_id || session.batch_id;
 
         const [allAssms, allAtts, classes] = await Promise.all([
-          fetchAssessmentsForStudentLevel(programId, levelId, institutionId).catch(() => []),
+          fetchTestsForStudentLevel(programId, levelId, institutionId).catch(() => []),
           fetchAllStudentAttempts(targetStudentId).catch(() => []),
           fetchStudentClasses(programId, institutionId, levelId).catch(() => [])
         ]);
@@ -391,14 +391,14 @@ if (!session) {
 
         const bestMap = {};
         (allAtts || []).forEach(a => {
-          const aid = a.assessment_id;
+          const aid = a.test_id;
           const p = parseFloat(a.percentage || 0);
           if (bestMap[aid] == null || p > bestMap[aid]) {
             bestMap[aid] = p;
           }
         });
 
-        const asmData = attempt.assessments || attempt.Assessments;
+        const asmData = attempt.tests || attempt.Tests;
         const currentClassId = asmData?.class_id;
 
         const published = (allAssms || []).filter(a => {
@@ -434,23 +434,23 @@ if (!session) {
           return;
         }
 
-        const isTest = (nextAsm.assessment_category || '').toUpperCase() === 'TEST' ||
-                       (nextAsm.assessment_type || '').toUpperCase().includes('TEST') ||
+        const isTest = (nextAsm.test_category || '').toUpperCase() === 'TEST' ||
+                       (nextAsm.test_type || '').toUpperCase().includes('TEST') ||
                        (nextAsm.title || '').toUpperCase().includes('TEST');
 
-        const nextName = nextAsm.title || nextAsm.shell_code || 'Next Assessment';
+        const nextName = nextAsm.title || nextAsm.shell_code || 'Next Test';
 
         if (!isTest) {
           container.innerHTML = `
             <button class="btn-next-milestone" id="btn-next-milestone" type="button">
-              <span class="next-btn-tag">GO TO NEXT ASSESSMENT:</span>
+              <span class="next-btn-tag">GO TO NEXT TEST:</span>
               <span class="next-btn-title">${escapeHtml(cleanTitle(nextName))} &rarr;</span>
             </button>
           `;
           document.getElementById('btn-next-milestone').onclick = () => {
-            sessionStorage.setItem('topscore_assessment_id', nextAsm.id);
+            sessionStorage.setItem('topscore_test_id', nextAsm.id);
             sessionStorage.removeItem('topscore_attempt_id');
-            window.location.href = `assessment.html?id=${nextAsm.id}`;
+            window.location.href = `test.html?id=${nextAsm.id}`;
           };
         } else {
           const activeSession = await fetchActiveTestSession(nextAsm.id, batchId).catch(() => null);
@@ -462,14 +462,14 @@ if (!session) {
           if (isUnlocked && isWhitelisted) {
             container.innerHTML = `
               <button class="btn-next-milestone btn-next-test" id="btn-next-milestone" type="button">
-                <span class="next-btn-tag">GO TO NEXT ASSESSMENT:</span>
+                <span class="next-btn-tag">GO TO NEXT TEST:</span>
                 <span class="next-btn-title">${escapeHtml(cleanTitle(nextName))} &rarr;</span>
               </button>
             `;
             document.getElementById('btn-next-milestone').onclick = () => {
-              sessionStorage.setItem('topscore_assessment_id', nextAsm.id);
+              sessionStorage.setItem('topscore_test_id', nextAsm.id);
               sessionStorage.removeItem('topscore_attempt_id');
-              window.location.href = `assessment.html?id=${nextAsm.id}`;
+              window.location.href = `test.html?id=${nextAsm.id}`;
             };
           } else {
             container.innerHTML = `
@@ -524,8 +524,8 @@ if (!session) {
         const isUnscored = !attempt.submitted_at || attempt.status === 'in_progress' || (answers.length > 0 && answers.every(a => a.student_answer == null));
         if (pendingPayload && pendingPayload.length > 0 && (attempt.status === 'auto_submitted' || isUnscored)) {
           try {
-            showLoading('Finalizing and calculating your assessment score...');
-            await submitAssessment(attemptId, pendingPayload, { status: 'submitted' });
+            showLoading('Finalizing and calculating your test score...');
+            await submitTest(attemptId, pendingPayload, { status: 'submitted' });
             sessionStorage.removeItem('topscore_fallback_payload_' + attemptId);
             localStorage.removeItem('topscore_local_answers_' + attemptId);
             
@@ -546,8 +546,8 @@ if (!session) {
         // Keep result-loading visible while all DOM data and asynchronous dependencies finish loading
 
 
-        const asmData = attempt.assessments || attempt.Assessments;
-        const assessmentId = attempt.assessment_id || attempt.Assessment_id;
+        const asmData = attempt.tests || attempt.Tests;
+        const testId = attempt.test_id || attempt.Test_id;
         const rawPct = parseFloat(attempt.percentage || 0);
         const isRemedial = Boolean(attempt.is_remedial_unlocked);
         const pct = isRemedial ? Math.min(rawPct, 60.0) : parseFloat(attempt.effective_score ?? rawPct);
@@ -750,7 +750,7 @@ if (!session) {
         }
 
         // Propagate tier color & border aura to all cards (Wireframe Rule)
-        const asmTitleWrap = document.getElementById('result-Assessment-name-container');
+        const asmTitleWrap = document.getElementById('result-Test-name-container');
         if (asmTitleWrap) {
           asmTitleWrap.dataset.tier = currentTier;
           asmTitleWrap.style.setProperty('--tier-color', gradeColor);
@@ -870,8 +870,8 @@ if (!session) {
         // Initialize score to 0% for animated count-up sequence
         pctEl.textContent = '0%';
 
-        // 2. Assessment Title: 2-Line Format (Line 1: Assessment Title, Line 2: Topic / Theme)
-        const asmRawTitle = asmData?.title || asmData?.name || 'Assessment';
+        // 2. Test Title: 2-Line Format (Line 1: Test Title, Line 2: Topic / Theme)
+        const asmRawTitle = asmData?.title || asmData?.name || 'Test';
         const parts = asmRawTitle.split(/\s*[-—]\s*/);
         let titleType = '';
         let titleTopic = '';
@@ -880,12 +880,12 @@ if (!session) {
           titleTopic = parts.slice(1).join(' - ').trim();
         } else {
           titleType = cleanTitle(asmRawTitle).trim();
-          titleTopic = asmData?.topic || asmData?.theme || asmData?.assessment_type || '';
+          titleTopic = asmData?.topic || asmData?.theme || asmData?.test_type || '';
         }
 
         const typeEl = document.getElementById('result-asm-type-row');
         const topicEl = document.getElementById('result-asm-topic-row');
-        const legacyNameEl = document.getElementById('result-Assessment-name');
+        const legacyNameEl = document.getElementById('result-Test-name');
         if (typeEl) typeEl.textContent = titleType.toUpperCase();
         if (topicEl) {
           if (titleTopic) {
@@ -959,7 +959,7 @@ if (!session) {
         if (crumbEl) {
           const className = asmData?.classes?.name || 'VOCABULARY';
           const levelName = asmData?.levels?.name || 'LEVEL 3';
-          const asmCategory = (asmData?.assessment_category || asmData?.assessment_type || 'TASK').toUpperCase();
+          const asmCategory = (asmData?.test_category || asmData?.test_type || 'TASK').toUpperCase();
           crumbEl.textContent = `${className.toUpperCase()} • ${levelName.toUpperCase()} • ${humanizeType(asmCategory).toUpperCase()}`;
         }
 
@@ -1032,19 +1032,19 @@ if (!session) {
         // Render answer breakdown
         renderAnswers(answers);
 
-        // Attempt history (all attempts for this assessment)
-        if (assessmentId) {
+        // Attempt history (all attempts for this test)
+        if (testId) {
           try {
             const allAttempts = await fetchAllStudentAttempts(targetStudentId);
-            const thisAssessmentAttempts = allAttempts
-              .filter(a => (a.assessment_id || a.Assessment_id) === assessmentId && ['submitted','auto_submitted','SUBMITTED','AUTO_SUBMITTED'].includes(a.status))
+            const thisTestAttempts = allAttempts
+              .filter(a => (a.test_id || a.Test_id) === testId && ['submitted','auto_submitted','SUBMITTED','AUTO_SUBMITTED'].includes(a.status))
               .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
 
             // FEATURE 6: Attempt counter + improvement indicator beside stamp
-            renderAttemptMeta(thisAssessmentAttempts, attemptId, pct);
+            renderAttemptMeta(thisTestAttempts, attemptId, pct);
 
-            if (thisAssessmentAttempts.length > 1) {
-              renderAttemptHistory(thisAssessmentAttempts, attemptId);
+            if (thisTestAttempts.length > 1) {
+              renderAttemptHistory(thisTestAttempts, attemptId);
             }
           } catch (histErr) {
             console.warn('Could not load attempt history:', histErr);
@@ -1052,7 +1052,7 @@ if (!session) {
         }
 
 
-        // Wire up Try Again button with V1 assessment_id
+        // Wire up Try Again button with V1 test_id
         const tryAgainBtn = document.getElementById('try-again-btn');
         const asmStatus = (asmData?.status || 'PUBLISHED').toUpperCase();
         const isPublished = (asmStatus === 'PUBLISHED' || asmStatus === 'ACTIVE');
@@ -1123,7 +1123,7 @@ if (!session) {
         const isBestRow = (a.is_best_score && parseFloat(a.percentage || 0) === maxPct) || (maxPct > 0 && a.id === bestAttempt?.id);
         const dateStr = a.submitted_at ? new Date(a.submitted_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
         const isRemRow = Boolean(a.is_remedial_unlocked || a.is_remedial);
-        const remTag = isRemRow ? '<sup class="asm-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : '';
+        const remTag = isRemRow ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : '';
         const aTheme = (typeof getGradeTheme === 'function' ? getGradeTheme(ag) : null) || GRADE_PALETTE[ag] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
         const isGradeS = (ag === '★' || ag === 'S' || ag === 'STAR');
         const displayGrade = isGradeS ? '★' : ag;
@@ -1180,7 +1180,7 @@ if (!session) {
           requestAnimationFrame(step);
         } else {
           const finalVal = (target % 1 === 0 ? Math.round(target) : target.toFixed(1)) + '%';
-          const remHtml = isRemedial ? '<sup class="asm-rem-sup" style="font-size:0.55em;vertical-align:super;font-weight:900;margin-left:2px;color:inherit;line-height:0;">R</sup>' : '';
+          const remHtml = isRemedial ? '<sup class="test-rem-sup" style="font-size:0.55em;vertical-align:super;font-weight:900;margin-left:2px;color:inherit;line-height:0;">R</sup>' : '';
           el.innerHTML = finalVal + remHtml;
           if (typeof onComplete === 'function') onComplete();
         }
@@ -1209,7 +1209,7 @@ if (!session) {
         const pctEl = document.getElementById('result-percentage');
         if (pctEl) {
           const finalVal = (targetPct % 1 === 0 ? Math.round(targetPct) : targetPct.toFixed(1)) + '%';
-          const remHtml = isRemedial ? '<sup class="asm-rem-sup" style="font-size:0.55em;vertical-align:super;font-weight:900;margin-left:2px;color:inherit;line-height:0;">R</sup>' : '';
+          const remHtml = isRemedial ? '<sup class="test-rem-sup" style="font-size:0.55em;vertical-align:super;font-weight:900;margin-left:2px;color:inherit;line-height:0;">R</sup>' : '';
           pctEl.innerHTML = finalVal + remHtml;
         }
         const gradeValEl = document.getElementById('result-grade-val');
@@ -1269,8 +1269,8 @@ if (!session) {
       if (idCard) idCard.classList.add('cascade-revealed');
       await sleep(180);
 
-      // Step 2: Assessment Title cascades in
-      const titleCard = document.getElementById('result-Assessment-name-container');
+      // Step 2: Test Title cascades in
+      const titleCard = document.getElementById('result-Test-name-container');
       if (titleCard) titleCard.classList.add('cascade-revealed');
       await sleep(180);
 

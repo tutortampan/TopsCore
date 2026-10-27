@@ -364,9 +364,9 @@ import {
   adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, clearAdminCache,
   adminFetchDeleted, adminRestore,
   mergeDuplicateStudents, detectDuplicateStudents, mergeStudentPair,
-  detectDuplicateQuestions, resequenceAssessmentQuestions, resolveDuplicateQuestionGroup, batchResolveAssessmentDuplicateQuestions,
+  detectDuplicateQuestions, resequenceTestQuestions, resolveDuplicateQuestionGroup, batchResolveTestDuplicateQuestions,
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
-  testSupabaseConnection, previewRecalibrateAssessment, applyRecalibrateAssessment, isPassing, calculatePercentage, toLevelLetter
+  testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter
 } from '../api.js?v=5.4.7';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.4.7';
 import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.4.7';
@@ -375,13 +375,13 @@ import { renderStudents as _renderStudentsModule } from './student-management.js
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.4.7';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.4.7';
 import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=5.4.7';
-import { renderAssessments } from './assessment-management.js?v=5.4.7';
-import { renderAssessmentAccess, renderClassTestSessions } from './assessment-access.js?v=5.8.0';
+import { renderTests } from './tests-management.js?v=5.4.7';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=5.8.0';
 import { renderVocabularyVault } from './vocab-vault.js?v=5.4.8';
 import { renderModules } from './modules.js?v=5.4.7';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.4.7';
 import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.4.7';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditAssessmentsModal, hashPin } from './crud-modals.js?v=5.4.9';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=5.4.9';
 import { renderCurriculum } from './curriculum-management.js?v=5.4.8';
 import { renderClassesHub } from './classes-hub.js?v=5.4.7';
 import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.4.7';
@@ -398,10 +398,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       curriculum: 'Curriculum & Level Master',
       'classes-hub': 'Curriculum & Level Master',
       'class-hub': 'Class Hub',
-      import_ai_assessments: 'Import AI Assessments',
+      import_ai_tests: 'Import AI Tests',
       institutions: 'Batches', students: 'Students', 'import-students': 'Students Registration', 'student-registration': 'Students Registration', 'students-registration': 'Students Registration', 'progress-view': 'Student Progress',
       Classes: 'Curriculum & Classes', classes: 'Classes', 'classes-org': 'Organization Hub', class_instances: 'Class Instances', levels: 'Levels', topics: 'Topics', questions: 'Question Bank', vocab_vault: 'Vocabulary Vault', modules: 'Modules (Core Blocks)', 'import-questions': 'Import Questions', 'export-questions': 'Export Questions',
-      assessments: 'Assessments Hub', 'assessment-access': 'Assessment Access', assignments: 'Assignments & Rosters', results: 'Assessment Results', recalibrator: 'Assessment Engine Recalibration', question_types: 'Validation Dictionary',
+      tests: 'Tests Hub', 'test-access': 'Test Access', assignments: 'Assignments & Rosters', results: 'Test Results', recalibrator: 'Test Engine Recalibration', question_types: 'Validation Dictionary',
       audit: 'Activity & Audit Logs', settings: 'Site Settings & Cost Guard', recycle: 'Recycle Bin', health: 'Data Health & Connectivity',
       'class-panel': 'Class Panel'
     };
@@ -412,7 +412,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       'classes-hub': 'ADMIN', curriculum: 'ADMIN',
       institutions: 'BOARD', students: 'BOARD', 'import-students': 'BOARD', 'student-registration': 'BOARD', 'students-registration': 'BOARD', 'progress-view': 'BOARD',
       Classes: 'CLASS', classes: 'CLASS', 'classes-org': 'CLASS', class_instances: 'CLASS', levels: 'CLASS', topics: 'CLASS', questions: 'CLASS', question_types: 'CLASS', 'import-questions': 'CLASS', 'export-questions': 'CLASS',
-      assessments: 'CLASS', 'assessment-access': 'CLASS', assignments: 'CLASS', results: 'CLASS', import_ai_assessments: 'CLASS',
+      tests: 'CLASS', 'test-access': 'CLASS', assignments: 'CLASS', results: 'CLASS', import_ai_tests: 'CLASS',
       'class-panel': 'CLASS', 'class-hub': 'CLASS', vocab_vault: 'CLASS',
       audit: 'DATA', settings: 'DATA', recycle: 'DATA', health: 'DATA', recalibrator: 'DATA', modules: 'DATA'
     };
@@ -420,8 +420,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
     // Mobile Bottom Tab Panels -> Primary Domain
     const domainToPanelMap = {
       ADMIN: 'admin', BOARD: 'board', CLASS: 'class', DATA: 'desk', DESK: 'desk',
-      ASSESSMENTS: 'class', // Legacy alias
-      DATABASE: 'board', STUDENT: 'board', Assessment: 'class',
+      TESTS: 'class', // Legacy alias
+      DATABASE: 'board', STUDENT: 'board', Test: 'class',
       ACADEMY: 'board'
     };
 
@@ -429,10 +429,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       admin: 'dashboard',
       board: 'institutions',
       class: 'classes',
-      assessments: 'classes', // Legacy alias
+      tests: 'classes', // Legacy alias
       desk: 'recycle',
       data: 'recycle',
-      database: 'classes', student: 'students', Assessment: 'assessments',
+      database: 'classes', student: 'students', Test: 'tests',
       academy: 'institutions'
     };
 
@@ -454,10 +454,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       'class-assignments': 'assignments',
       'class-results': 'results',
       'class-recalibrator': 'recalibrator',
-      'assessments-hub': 'assessments',
-      'assessments-assignments': 'assignments',
-      'assessments-results': 'results',
-      'assessments-recalibrator': 'recalibrator',
+      'tests-hub': 'tests',
+      'tests-assignments': 'assignments',
+      'tests-results': 'results',
+      'tests-recalibrator': 'recalibrator',
       'desk-audit': 'audit',
       'desk-settings': 'settings',
       'desk-recycle': 'recycle',
@@ -468,12 +468,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       try {
         const [stds, asms, atts, profs] = await Promise.all([
           adminFetchAll('students', 'id, deleted_at'),
-          adminFetchAll('assessments', 'id, status, deleted_at'),
+          adminFetchAll('tests', 'id, status, deleted_at'),
           adminFetchAll('attempts', 'id')
         ]);
         const kpiAcad = document.getElementById('kpi-board');
         if (kpiAcad) kpiAcad.textContent = stds.filter(s => !s.deleted_at).length;
-        const kpiChal = document.getElementById('kpi-class') || document.getElementById('kpi-assessments');
+        const kpiChal = document.getElementById('kpi-class') || document.getElementById('kpi-tests');
         if (kpiChal) kpiChal.textContent = asms.filter(a => !a.deleted_at && a.status === 'published').length;
         const kpiDesk = document.getElementById('kpi-desk');
         if (kpiDesk) kpiDesk.textContent = atts.length;
@@ -577,7 +577,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         loadSection(savedSec, false);
       } else {
         activatePrimaryTab('class');
-        loadSection('assessments', true);
+        loadSection('tests', true);
       }
       initConnectionBanner(); // Check live DB connection and show status banner
     }
@@ -811,15 +811,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         }
         area.dataset.currentClassId = classId || '';
 
-        // Fetch ALL data relevant to this class and detailed assessment mapping
+        // Fetch ALL data relevant to this class and detailed test mapping
         // OPTIMIZATION: Flat students query without heavy nested joins (prevents 500 statement timeouts)
-        const [allClasses, allAssessments, allStudents, allPrograms, allBatches, allQuestions, allLevels, allVault, allAttempts, allInstitutions] = await Promise.all([
+        const [allClasses, allTests, allStudents, allPrograms, allBatches, allQuestions, allLevels, allVault, allAttempts, allInstitutions] = await Promise.all([
           adminFetchAll('classes', 'id, name, program_id').catch(() => []),
-          adminFetchAll('assessments').catch(() => []), 
+          adminFetchAll('tests').catch(() => []), 
           adminFetchAll('students', 'id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id').catch(() => []),
           adminFetchAll('programs', 'id, name, institution_id').catch(() => []),
           adminFetchAll('batches', 'id, name, is_active, program_id, current_level_id').catch(() => []),
-          adminFetchAll('assessment_questions', 'id, assessment_id, answer_type').catch(() => []),
+          adminFetchAll('test_questions', 'id, test_id, answer_type').catch(() => []),
           adminFetchAll('levels').catch(() => []),
           adminFetchAll('vocabulary_vault', 'id, target_level, theme_code, topic_code, word_type, deleted_at').catch(() => []),
           adminFetchAll('attempts').catch(() => []),
@@ -849,8 +849,21 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         const levelMap = {};
         (allLevels || []).forEach(l => { levelMap[l.id] = l; });
 
-        const classAssessments = (allAssessments || []).filter(a => a.class_id === classId);
+        const classTests = (allTests || []).filter(a => a.class_id === classId);
         
+        // Helper to accurately identify weekly milestone exams vs daily tasks/quizzes
+        const isWeeklyExam = (asm) => {
+          if (!asm) return false;
+          if (asm.test_type === 'exam') return true;
+          if (asm.test_type === 'quiz') return false;
+          if (asm.test_category === 'TEST') return true;
+          if (asm.payload?.test_category === 'TEST') return true;
+          if (asm.payload?.is_unified_test === true) return true;
+          const shell = String(asm.shell_code || asm.payload?.shell_code || '').toUpperCase();
+          if (shell.endsWith('-TEST') || shell.includes('-TEST-')) return true;
+          if (shell.endsWith('-TASK') || shell.includes('-TASK-')) return false;
+          return /\bTEST\b/i.test(asm.title || '');
+        };
         // Find students that have access to this class's program
         const classProgramId = currentClass?.program_id;
         const programBatches = (allBatches || []).filter(b => b.program_id === classProgramId);
@@ -870,9 +883,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         const _vaultRows = (allVault || []).filter(v => !v.deleted_at);
         const vaultCountFor = (r, lvlNumber) => {
           const pl = r?.payload || {};
-          const isUnified = pl.category === 'unified' || pl.is_unified === true || pl.is_unified_test === true || r?.assessment_type === 'UNIFIED_TEST';
+          const isUnified = pl.category === 'unified' || pl.is_unified === true || pl.is_unified_test === true || r?.test_type === 'UNIFIED_TEST';
           const wantPhrases = pl.category === 'phrases';
-          const isTest = r?.assessment_category === 'TEST';
+          const isTest = r?.test_category === 'TEST';
           let themes = null;
           if (isTest && pl.theme_code) {
             const idx = _ALL_THEMES.indexOf(pl.theme_code);
@@ -904,25 +917,25 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
         const statusColors = { published: 'badge-success', draft: 'badge-neutral', unpublished: 'badge-warning', archived: 'badge-danger' };
 
-        // Calculate DataGrid format for Assessments (Rich/Detailed)
+        // Calculate DataGrid format for Tests (Rich/Detailed)
         window._classHubRecords = {};
-        const assessmentsGridData = classAssessments.map(r => {
+        const testsGridData = classTests.map(r => {
           window._classHubRecords[r.id] = r;
           const programName = (r?.program_id && classMap[r.program_id]?.name) ? classMap[r.program_id].name : 'All Programs';
-          const prereqId = r?.prerequisite_assessment_id || r?.prerequisite_id;
-          const prereqAssessment = (prereqId && allAssessments.find(a => a.id === prereqId)) || null;
+          const prereqId = r?.prerequisite_test_id || r?.prerequisite_id;
+          const prereqTest = (prereqId && allTests.find(a => a.id === prereqId)) || null;
           const boardName = (r?.class_id && boardClassMap[r.class_id]?.name) || r?.classes?.name || '—';
           const lvlObj = (r?.level_id && levelMap[r.level_id]) || r?.levels;
           const lvlNum = lvlObj?.level_number || 1;
           const levelDisplay = window.toLevelLetter ? window.toLevelLetter(lvlNum) : 'LVL ' + lvlNum;
-          const prereqTitle = prereqAssessment?.shell_code || prereqAssessment?.title || prereqAssessment?.name || r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
+          const prereqTitle = prereqTest?.shell_code || prereqTest?.title || prereqTest?.name || r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
           
           const title = r?.title || r?.display_name || r?.name || 'Untitled';
-          const status = r?.status || r?.assessment_type || 'draft';
-          const AssessmentCategory = r?.assessment_type || 'Daily';
+          const status = r?.status || r?.test_type || 'draft';
+          const TestCategory = r?.test_type || 'Daily';
           
           let answerType = r?.answer_type || '';
-          const asmQs = (allQuestions || []).filter(q => q?.assessment_id === r?.id);
+          const asmQs = (allQuestions || []).filter(q => q?.test_id === r?.id);
           if (!answerType && asmQs.length > 0) {
             const typeCounts = {};
             asmQs.forEach(q => {
@@ -937,7 +950,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           const minScore = r?.minimum_required_score || 60;
           const _isDyn = !!(r?.payload && r.payload.is_dynamic_shell) || r?.is_dynamic_shell === true;
           const _vaultQ = _isDyn ? vaultCountFor(r, lvlNum) : 0;
-          const qCount = (allQuestions || []).filter(q => q?.assessment_id === r?.id).length;
+          const qCount = (allQuestions || []).filter(q => q?.test_id === r?.id).length;
 
           return {
             id: r?.id || '',
@@ -949,7 +962,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             prereq: prereqTitle,
             answerType: formatAnswerType(answerType),
             questionOrder: r?.question_order === 'random' ? 'Random' : 'Seq',
-            AssessmentCategory,
+            TestCategory,
             timeLimit,
             minScore,
             qCount: _isDyn ? _vaultQ : qCount,
@@ -960,12 +973,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           };
         });
 
-        // Sort classAssessments sequentially by display_order / order_index
-        classAssessments.sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
+        // Sort classTests sequentially by display_order / order_index
+        classTests.sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
 
         const getAsmExpectedMax = (asm) => {
-          const isTest = asm.assessment_category === 'TEST' || 
-                         asm.payload?.assessment_category === 'TEST' || 
+          const isTest = asm.test_category === 'TEST' || 
+                         asm.payload?.test_category === 'TEST' || 
                          asm.payload?.is_unified_test === true ||
                          /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
                          /\bTEST\b/i.test(asm.title || '');
@@ -979,13 +992,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           return isPhrase ? 30 : 120;
         };
 
-        // Calculate total possible points in curriculum across all assessments for cumulative mastery
+        // Calculate total possible points in curriculum across all tests for cumulative mastery
         let curriculumTotalMaxPoints = 0;
-        classAssessments.forEach(asm => {
+        classTests.forEach(asm => {
           const q = Number(asm.total_questions || getAsmExpectedMax(asm));
           curriculumTotalMaxPoints += q;
         });
-        if (curriculumTotalMaxPoints === 0) curriculumTotalMaxPoints = (classAssessments.length || 20) * 50;
+        if (curriculumTotalMaxPoints === 0) curriculumTotalMaxPoints = (classTests.length || 20) * 50;
 
         // Calculate DataGrid format for Students
         window._classStudentsMap = {};
@@ -1033,20 +1046,21 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
           // Attempts and Progress calculation for this class
           const studentAttempts = (allAttempts || []).filter(a => a.student_id === s.id);
-          const classAssessmentIds = new Set(classAssessments.map(a => a.id));
-          const classAttempts = studentAttempts.filter(a => classAssessmentIds.has(a.assessment_id || a.Assessment_id));
+          const classTestIds = new Set(classTests.map(a => a.id));
+          const classAttempts = studentAttempts.filter(a => classTestIds.has(a.test_id || a.Test_id));
           
-          // Map best attempt per assessment (Rule 2.7: report card stores HIGHEST score)
+          // Map best attempt per test (Rule 2.7: report card stores HIGHEST score)
           const asmScores = {};
           const rowScoreSortVals = {};
 
-          let completedCount = 0;
-          let totalEarnedScore = 0;
-          let totalMaxPossible = 0;
-          let sumPercentages = 0;
+          let completedCount = 0;         // ALL activities (daily tasks/quizzes + weekly exams)
+          let completedWeeklyCount = 0;   // Weekly exams ONLY
+          let weeklyEarnedScore = 0;      // Points earned EXCLUSIVELY from weekly exams
+          let weeklyMaxPossible = 0;      // Max points possible EXCLUSIVELY from weekly exams
+          let sumWeeklyPercentages = 0;   // Sum of percentages EXCLUSIVELY from weekly exams
 
-          classAssessments.forEach(asm => {
-            const atts = classAttempts.filter(a => (a.assessment_id || a.Assessment_id) === asm.id);
+          classTests.forEach(asm => {
+            const atts = classAttempts.filter(a => (a.test_id || a.Test_id) === asm.id);
             const maxQ = getAsmExpectedMax(asm);
             let bestAtt = null;
             if (atts.length > 0) {
@@ -1087,46 +1101,55 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             const effEarned = isRem ? Math.min(rawEarned, maxRemPts) : rawEarned;
             const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
 
-            rowScoreSortVals[`asm_${asm.id}`] = bestAtt ? effEarned : -1;
-            rowScoreSortVals[`asm_${asm.id}_pts`] = bestAtt ? effEarned : -1;
-            rowScoreSortVals[`asm_${asm.id}_pct`] = bestAtt ? effPct : -1;
+            rowScoreSortVals[`test_${asm.id}`] = bestAtt ? effEarned : -1;
+            rowScoreSortVals[`test_${asm.id}_pts`] = bestAtt ? effEarned : -1;
+            rowScoreSortVals[`test_${asm.id}_pct`] = bestAtt ? effPct : -1;
 
             if (bestAtt) {
               const st = String(bestAtt.status || '').toLowerCase();
               if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
                 completedCount++;
-                totalEarnedScore += effEarned;
-                totalMaxPossible += totalQ;
-                sumPercentages += effPct;
+                if (isWeeklyExam(asm)) {
+                  completedWeeklyCount++;
+                  weeklyEarnedScore += effEarned;
+                  weeklyMaxPossible += totalQ;
+                  sumWeeklyPercentages += effPct;
+                }
               }
             }
           });
 
-          const totalClassAssessments = classAssessments.length || 40;
-          // Progress Calculation (PROG):
-          // completion_percentage = (completed_assessments_count / total_class_assessments) * 100
-          const progressPct = totalClassAssessments > 0 ? Math.round((completedCount / totalClassAssessments) * 100) : 0;
+          const totalClassTests = classTests.length || 40;
+          // 1. PROG % (Completion Rate): Maintain calculation across ALL activities (daily tasks/quizzes + weekly exams)
+          const progressPct = totalClassTests > 0 ? Math.round((completedCount / totalClassTests) * 100) : 0;
           const progressStr = `${progressPct}%`;
 
-          // Student Score (%) & Grade (GRD):
-          // Calculated ONLY on taken/unlocked assessments. Locked/unopened assessments do NOT drag down score.
-          // Formula: average_score = sum(best_percentage_on_taken) / count(taken_assessments)
-          // Grade: getGrade(average_score)
-          const averageScorePct = completedCount > 0
-            ? Math.round(sumPercentages / completedCount)
+          // 2. Global SCORE % & Global GRD (Academic Mastery) & Global PTS:
+          // Calculated EXCLUSIVELY from weekly exams (Theme TOT / milestone exam sessions).
+          // Daily tasks/quizzes are excluded entirely from academic mastery scoring.
+          // Edge-Case Handling (Unattempted Weekly Exams):
+          // If a student has only completed daily tasks without taking weekly exams:
+          // - PROG % reflects task completion.
+          // - SCORE % displays 0% (or "-").
+          // - GRD badge displays "-".
+          // - PTS evaluates to 0.
+          const averageScorePct = completedWeeklyCount > 0
+            ? Math.round(sumWeeklyPercentages / completedWeeklyCount)
             : 0;
           const overallPct = averageScorePct;
           const curriculumGradePct = averageScorePct;
+          const totalEarnedScore = completedWeeklyCount > 0 ? weeklyEarnedScore : 0;
+          const totalMaxPossible = completedWeeklyCount > 0 ? weeklyMaxPossible : 0;
 
           let grade = '—';
           let gradeColor = 'rgba(255,255,255,0.4)';
-          if (completedCount > 0) {
+          if (completedWeeklyCount > 0) {
             const g = typeof calculateGrade === 'function' ? calculateGrade(averageScorePct) : (typeof getGrade === 'function' ? getGrade(averageScorePct) : '—');
             grade = g;
             gradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(averageScorePct) : (typeof getGradeColor === 'function' ? getGradeColor(g) : '#EAB308');
           }
 
-          // Find latest submitted assessment
+          // Find latest submitted test
           let latestAsm = null;
           let latestScore = -1;
           const submittedAtts = classAttempts.filter(a => {
@@ -1140,7 +1163,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               return new Date(y.submitted_at || y.created_at || 0) - new Date(x.submitted_at || x.created_at || 0);
             });
             const la = submittedAtts[0];
-            const asm = classAssessments.find(a => a.id === (la.assessment_id || la.Assessment_id));
+            const asm = classTests.find(a => a.id === (la.test_id || la.Test_id));
             const code = asm?.shell_code || asm?.title || 'Task';
             const sc = la.score != null ? Number(la.score) : 0;
             const totalQ = Number(la.total_questions || (asm?.is_dynamic_shell || asm?.payload?.is_dynamic_shell ? vaultCountFor(asm, (levelMap[asm?.level_id]?.level_number || 1)) : 50));
@@ -1160,7 +1183,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
           const isBatchActive = s.batches ? s.batches.is_active !== false : false;
 
-          // Check if student has any unlocked remedial assessment
+          // Check if student has any unlocked remedial test
           const hasRemedial = Object.values(asmScores).some(att => Boolean(att?.is_remedial_unlocked));
 
           return {
@@ -1179,7 +1202,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             levelName,
             hasRemedial,
             completedCount,
-            totalClassAssessments,
+            completedWeeklyCount,
+            totalClassTests,
             progressPct,
             progressStr,
             averageScorePct,
@@ -1201,28 +1225,34 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           };
         });
 
-        // Default sort: PTS descending (highest total points first), ensuring students who completed the curriculum rank at the top
+        // Leaderboard Sort Order:
+        // Primary: PROG % DESC.
+        // Secondary: Global SCORE % DESC.
+        // Tertiary: Global PTS DESC.
         studentsGridData.sort((a, b) => {
           const aActive = a.isActive ? 1 : 0;
           const bActive = b.isActive ? 1 : 0;
           if (aActive !== bActive) return bActive - aActive;
 
-          const ptsA = Number(a.totalEarnedScore ?? 0);
-          const ptsB = Number(b.totalEarnedScore ?? 0);
-          if (ptsA !== ptsB) return ptsB - ptsA;
-
-          const scoreA = Number(a.averageScorePct ?? 0);
-          const scoreB = Number(b.averageScorePct ?? 0);
-          if (scoreA !== scoreB) return scoreB - scoreA;
-
+          // 1. Primary: PROG % DESC
           const progA = Number(a.progressPct ?? 0);
           const progB = Number(b.progressPct ?? 0);
           if (progA !== progB) return progB - progA;
 
+          // 2. Secondary: Global SCORE % DESC (unattempted weekly exams sort after completed)
+          const scoreA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
+          const scoreB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
+          if (scoreA !== scoreB) return scoreB - scoreA;
+
+          // 3. Tertiary: Global PTS DESC
+          const ptsA = Number(a.totalEarnedScore ?? 0);
+          const ptsB = Number(b.totalEarnedScore ?? 0);
+          if (ptsA !== ptsB) return ptsB - ptsA;
+
           return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
         });
 
-        // State for active tab (Order: 1. Students Grade and Score, 2. Test Sessions, 3. Class Assessments)
+        // State for active tab (Order: 1. Students Grade and Score, 2. Test Sessions, 3. Class Tests)
         if (!window._classHubActiveTab) window._classHubActiveTab = 'attendance';
 
         window._switchClassHubTab = (tabId) => {
@@ -1235,13 +1265,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           return b ? b.is_active !== false : true;
         });
 
-        const taskAssessments = classAssessments.filter(a => a.assessment_type === 'VOCAB_TASK' || a.assessment_type === 'PHRASE_TASK' || /\bTASK\b/i.test(a.title || ''));
-        const testAssessments = classAssessments.filter(a => a.assessment_type === 'VOCAB_TEST' || a.assessment_type === 'PHRASE_TEST' || /\bTEST\b/i.test(a.title || ''));
+        const taskTests = classTests.filter(a => a.test_type === 'VOCAB_TASK' || a.test_type === 'PHRASE_TASK' || /\bTASK\b/i.test(a.title || ''));
+        const testTests = classTests.filter(a => a.test_type === 'VOCAB_TEST' || a.test_type === 'PHRASE_TEST' || /\bTEST\b/i.test(a.title || ''));
 
         const classHubTabs = [
           { id: 'attendance', icon: '📊', val: activeBatchStudents.length, label: 'Students Grade and Score' },
           { id: 'test-sessions', icon: '🔐', val: 4, label: 'Test Sessions' },
-          { id: 'assessments', icon: '📝', val: classAssessments.length, label: 'Class Assessments' }
+          { id: 'tests', icon: '📝', val: classTests.length, label: 'Class Tests' }
         ];
 
         if (window.setTopbarTabs) {
@@ -1253,97 +1283,28 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             <div id="class-hub-tab-content">
               ${window._classHubActiveTab === 'test-sessions' ? `
                 <div id="class-test-sessions-container"></div>
-              ` : (window._classHubActiveTab === 'assessments' ? `
-                <div class="card" style="padding: 0.75rem 1rem; background: var(--clr-surface); margin: 0;">
-                  <!-- ⚙️ GLOBAL SETTINGS BOX FOR TASKS & TESTS -->
-                  <div class="global-asm-settings-box" id="class-global-asm-settings-box">
-                    <div class="global-asm-settings-header">
-                      <div class="global-asm-settings-title">
-                        <span>⚙️ Pengaturan Global Task &amp; Test</span>
-                        <span class="text-xs text-muted" style="font-weight: 400;">Ubah durasi, cara jawab, dan skor kelulusan secara massal untuk seluruh assessment di kelas ini.</span>
+              ` : (window._classHubActiveTab === 'tests' ? `
+                <div class="card" style="padding: 0.85rem 1rem; background: var(--clr-surface); margin: 0;">
+                  <!-- Sleek Tactical Toolbar for Class Tests -->
+                  <div class="class-asm-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--clr-text-1);">📝 Class Tests</h3>
+                      <div class="asm-meta-chips" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <span class="badge" style="background: rgba(250, 204, 21, 0.12); color: #facc15; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(250, 204, 21, 0.3);">⚡ ${taskTests.length} Tasks (5m)</span>
+                        <span class="badge" style="background: rgba(244, 114, 182, 0.12); color: #f472b6; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(244, 114, 182, 0.3);">📝 ${testTests.length} Tests (Sesi Ujian)</span>
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.3);">🎯 Min. 60%</span>
                       </div>
-                      <button type="button" class="btn btn-ghost btn-sm" id="btn-toggle-global-settings" style="font-size: 0.72rem; padding: 2px 8px;">
-                        <span id="icon-toggle-global-settings">▲</span> <span id="text-toggle-global-settings">Sembunyikan</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <button type="button" class="btn btn-secondary btn-sm" id="btn-open-blueprint-from-class" style="font-size: 0.75rem; font-weight: 600;" title="Buka Roadmap Kurikulum Lengkap di Test Blueprint">
+                        🗺️ Buka Test Blueprint ↗
+                      </button>
+                      <button type="button" class="btn btn-primary btn-sm" id="btn-open-generator-from-class" style="font-size: 0.75rem; font-weight: 700; background: #4f46e5; border-color: #4f46e5;" title="Buka Wizard Generator &amp; Pengaturan Kurikulum">
+                        ⚡ Generator &amp; Settings Wizard
                       </button>
                     </div>
-
-                    <div class="global-asm-settings-grid" id="global-settings-grid-body">
-                      <!-- 1. Task Harian Box -->
-                      <div class="global-asm-tier-card task-card">
-                        <div class="global-asm-tier-header">
-                          <span class="global-asm-tier-title" style="color: #facc15;">⚡ Task Harian (Daily Tasks)</span>
-                          <span class="badge" style="background: rgba(250, 204, 21, 0.15); color: #facc15; font-weight: 800; font-size: 0.72rem;">${taskAssessments.length} Tasks</span>
-                        </div>
-                        <div class="global-asm-row">
-                          <div class="global-asm-item">
-                            <label for="global-task-dur" class="global-asm-label">⏱️ Waktu (Mnt)</label>
-                            <input type="number" id="global-task-dur" min="1" max="180" value="5" placeholder="5" title="Waktu pengerjaan task (default 5 menit)" class="form-control global-asm-input" />
-                          </div>
-                          <div class="global-asm-item" style="flex: 1.4;">
-                            <label for="global-task-ans" class="global-asm-label">🗣️ Cara Jawab</label>
-                            <select id="global-task-ans" class="form-control global-asm-input" title="Tipe cara menjawab task">
-                              <option value="spoken" selected>🗣️ Spoken (Lisan)</option>
-                              <option value="written">✍️ Written (Mengetik)</option>
-                              <option value="selection">🔘 Selection (Pilgan)</option>
-                              <option value="mixed">🔀 Mixed (Campuran)</option>
-                            </select>
-                          </div>
-                          <div class="global-asm-item">
-                            <label for="global-task-min" class="global-asm-label">🎯 Min. Skor</label>
-                            <input type="number" id="global-task-min" min="1" max="100" value="60" placeholder="60" title="Skor minimal lulus (%)" class="form-control global-asm-input" />
-                          </div>
-                        </div>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-apply-global-tasks" style="font-weight: 700; font-size: 0.75rem; border-color: rgba(250, 204, 21, 0.4); color: #facc15;">
-                          ⚡ Simpan &amp; Terapkan ke Semua Task (${taskAssessments.length})
-                        </button>
-                      </div>
-
-                      <!-- 2. Test / Ujian Box -->
-                      <div class="global-asm-tier-card test-card">
-                        <div class="global-asm-tier-header">
-                          <span class="global-asm-tier-title" style="color: #f472b6;">📝 Test / Ujian (Themes A–D)</span>
-                          <span class="badge" style="background: rgba(244, 114, 182, 0.15); color: #f472b6; font-weight: 800; font-size: 0.72rem;">${testAssessments.length} Tests</span>
-                        </div>
-                        <div class="global-asm-row">
-                          <div class="global-asm-item">
-                            <label for="global-test-dur" class="global-asm-label">⏱️ Waktu (Mnt)</label>
-                            <input type="number" id="global-test-dur" min="1" max="360" value="120" placeholder="120" title="Waktu pengerjaan test (default 120 menit)" class="form-control global-asm-input" />
-                          </div>
-                          <div class="global-asm-item" style="flex: 1.4;">
-                            <label for="global-test-ans" class="global-asm-label">🗣️ Cara Jawab</label>
-                            <select id="global-test-ans" class="form-control global-asm-input" title="Tipe cara menjawab test">
-                              <option value="written" selected>✍️ Written (Mengetik)</option>
-                              <option value="selection">🔘 Selection (Pilgan)</option>
-                              <option value="spoken">🗣️ Spoken (Lisan)</option>
-                              <option value="mixed">🔀 Mixed (Campuran)</option>
-                            </select>
-                          </div>
-                          <div class="global-asm-item">
-                            <label for="global-test-min" class="global-asm-label">🎯 Min. Skor</label>
-                            <input type="number" id="global-test-min" min="1" max="100" value="60" placeholder="60" title="Skor minimal lulus (%)" class="form-control global-asm-input" />
-                          </div>
-                        </div>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-apply-global-tests" style="font-weight: 700; font-size: 0.75rem; border-color: rgba(244, 114, 182, 0.4); color: #f472b6;">
-                          📝 Simpan &amp; Terapkan ke Semua Test (${testAssessments.length})
-                        </button>
-                      </div>
-                    </div>
                   </div>
-
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                      <h3 style="margin: 0; font-size: 1.1rem;">📝 Class Assessments</h3>
-                      <div style="display: inline-flex; align-items: center; gap: 4px; border-left: 1px solid rgba(255,255,255,0.12); padding-left: 8px;">
-                        <span style="font-size: 0.68rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">PILIH CEPAT:</span>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-select-tasks" style="padding: 2px 8px; font-size: 0.72rem;">⚡ Semua Task (${taskAssessments.length})</button>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-select-tests" style="padding: 2px 8px; font-size: 0.72rem;">📝 Semua Test (${testAssessments.length})</button>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-select-all" style="padding: 2px 8px; font-size: 0.72rem;">🌐 Semua (${classAssessments.length})</button>
-                        <button type="button" class="btn btn-ghost btn-sm" id="btn-quick-clear-sel" style="padding: 2px 8px; font-size: 0.72rem;">✕ Batal</button>
-                      </div>
-                    </div>
-                    <button class="btn btn-primary btn-sm" onclick="window.loadSection('assessments')">Manage Assessments Hub</button>
-                  </div>
-                  <div id="class-assessments-grid"></div>
+                  <div id="class-tests-grid"></div>
                 </div>
               ` : `
                 <div id="class-attendance-container">
@@ -1360,7 +1321,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
                       <div class="attendance-view-mode-pills" id="attendance-view-mode-container" style="display:flex; align-items:center; gap:4px; border-left:1px solid rgba(255,255,255,0.12); padding-left:8px;">
                         <span style="font-size:0.68rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.03em;">DISPLAY:</span>
-                        <button type="button" class="attendance-theme-pill mode-fit ${(!window._attendanceViewMode || window._attendanceViewMode === 'fit') ? 'active' : ''}" onclick="window._toggleAttendanceViewMode('fit')" title="Scale assessments to fit comfortably on screen" data-mode="fit">🔍 FIT SCREEN</button>
+                        <button type="button" class="attendance-theme-pill mode-fit ${(!window._attendanceViewMode || window._attendanceViewMode === 'fit') ? 'active' : ''}" onclick="window._toggleAttendanceViewMode('fit')" title="Scale tests to fit comfortably on screen" data-mode="fit">🔍 FIT SCREEN</button>
                         <button type="button" class="attendance-theme-pill mode-scroll ${window._attendanceViewMode === 'scroll' ? 'active' : ''}" onclick="window._toggleAttendanceViewMode('scroll')" title="100% full scale with smooth horizontal scroll and mouse wheel" data-mode="scroll">↔️ 100% SCROLL</button>
                       </div>
 
@@ -1398,7 +1359,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               classId,
               className,
               currentClass,
-              classAssessments,
+              classTests,
               allStudents,
               classStudents,
               allBatches,
@@ -1408,19 +1369,19 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               levelMap
             });
           }
-        } else if (window._classHubActiveTab === 'assessments') {
+        } else if (window._classHubActiveTab === 'tests') {
           const classAsmGrid = new window.DataGrid({
-            container: document.getElementById('class-assessments-grid'),
-            data: assessmentsGridData,
+            container: document.getElementById('class-tests-grid'),
+            data: testsGridData,
             pageSize: 50,
-            searchKeys: ['title', 'shellCode', 'status', 'AssessmentCategory'],
+            searchKeys: ['title', 'shellCode', 'status', 'TestCategory'],
             bulkActions: true,
             customBulkActions: [
               {
                 label: '⚡ Bulk Edit',
                 className: 'btn-primary',
                 onClick: (selectedIds) => {
-                  window.openBulkEditAssessmentsModal(selectedIds, () => {
+                  window.openBulkEditTestsModal(selectedIds, () => {
                     window.renderClassHub(document.getElementById('admin-content-area'));
                   });
                 }
@@ -1481,11 +1442,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-primary); font-weight:600; white-space:nowrap;">${escapeHtml(row.level || '-')}</div>`
               },
               {
-                key: 'AssessmentCategory',
+                key: 'TestCategory',
                 label: 'TYPE',
                 sortable: true,
                 render: (val, row) => {
-                  let typeStr = escapeHtml(row.AssessmentCategory || 'Daily');
+                  let typeStr = escapeHtml(row.TestCategory || 'Daily');
                   typeStr = typeStr.replace(/(TASK)/ig, '<span style="color: #facc15; font-weight: 800;">$1</span>');
                   typeStr = typeStr.replace(/(TEST)/ig, '<span style="color: #f472b6; font-weight: 800;">$1</span>');
                   return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${typeStr}</div>`;
@@ -1547,14 +1508,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   const safeTitle = (row.title || '').replace(/['"\\]/g, ' ');
                   return `
                     <div class="d-flex gap-1 justify-end align-center">
-                      <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterAssessmentResults='${id}'; window.loadSection('results');">&#128202;</button>
-                      <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateAssessment='${id}'; window.loadSection('health');">&#9878;&#65039;</button>
-                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateAssessment('${id}')" title="Duplicate">&#128196;</button>
-                      <button class="btn ${pubBtnCls}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishAssessment('${id}', '${st}')">
+                      <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterTestResults='${id}'; window.loadSection('results');">&#128202;</button>
+                      <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateTest='${id}'; window.loadSection('health');">&#9878;&#65039;</button>
+                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateTest('${id}')" title="Duplicate">&#128196;</button>
+                      <button class="btn ${pubBtnCls}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishTest('${id}', '${st}')">
                         ${pubIcon}
                       </button>
-                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openCrudModal('assessments', window._classHubRecords['${id}'])">&#9999;&#65039;</button>
-                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; background-color: var(--clr-accent-1); color: white;" onclick="window._deleteRecord('assessments', '${id}', '${safeTitle}')">&#128465;&#65039;</button>
+                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openCrudModal('tests', window._classHubRecords['${id}'])">&#9999;&#65039;</button>
+                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; background-color: var(--clr-accent-1); color: white;" onclick="window._deleteRecord('tests', '${id}', '${safeTitle}')">&#128465;&#65039;</button>
                     </div>
                   `;
                 }
@@ -1562,146 +1523,25 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             ]
           });
 
-          const isTaskRow = (r) => r && (r.AssessmentCategory === 'VOCAB_TASK' || r.AssessmentCategory === 'PHRASE_TASK' || /\bTASK\b/i.test(r.title || '') || /\bTASK\b/i.test(r.AssessmentCategory || ''));
-          const isTestRow = (r) => r && (r.AssessmentCategory === 'VOCAB_TEST' || r.AssessmentCategory === 'PHRASE_TEST' || /\bTEST\b/i.test(r.title || '') || /\bTEST\b/i.test(r.AssessmentCategory || ''));
-
-          document.getElementById('btn-quick-select-tasks')?.addEventListener('click', () => {
-            classAsmGrid.selectAllRows(isTaskRow);
-          });
-          document.getElementById('btn-quick-select-tests')?.addEventListener('click', () => {
-            classAsmGrid.selectAllRows(isTestRow);
-          });
-          document.getElementById('btn-quick-select-all')?.addEventListener('click', () => {
-            classAsmGrid.selectAllRows();
-          });
-          document.getElementById('btn-quick-clear-sel')?.addEventListener('click', () => {
-            classAsmGrid.clearSelection();
+          // Open Test Blueprint in Vocabulary Vault
+          document.getElementById('btn-open-blueprint-from-class')?.addEventListener('click', () => {
+            window._activeVaultTab = 'blueprint';
+            window.location.hash = '#vocab_vault';
           });
 
-          // Global Settings Collapse Toggle
-          const toggleBtn = document.getElementById('btn-toggle-global-settings');
-          const gridBody = document.getElementById('global-settings-grid-body');
-          const toggleIcon = document.getElementById('icon-toggle-global-settings');
-          const toggleText = document.getElementById('text-toggle-global-settings');
-          if (toggleBtn && gridBody) {
-            toggleBtn.addEventListener('click', () => {
-              const isHidden = gridBody.classList.toggle('hidden');
-              if (toggleIcon) toggleIcon.textContent = isHidden ? '▼' : '▲';
-              if (toggleText) toggleText.textContent = isHidden ? 'Tampilkan' : 'Sembunyikan';
-            });
-          }
-
-          // Apply Global Settings to Tasks
-          document.getElementById('btn-apply-global-tasks')?.addEventListener('click', async () => {
-            const dur = parseInt(document.getElementById('global-task-dur')?.value || '5', 10);
-            const ans = document.getElementById('global-task-ans')?.value || 'spoken';
-            const min = parseInt(document.getElementById('global-task-min')?.value || '60', 10);
-            const taskIds = taskAssessments.map(t => t.id).filter(Boolean);
-
-            if (taskIds.length === 0) {
-              showToast('Tidak ada Task Harian yang ditemukan di kelas ini.', 'warning');
-              return;
-            }
-
-            if (!confirm(`Terapkan pengaturan ke seluruh ${taskIds.length} Task Harian di kelas ini?\n\n• Waktu Pengerjaan: ${dur} menit (Default: 5 menit)\n• Cara Jawab: ${ans}\n• Minimal Skor: ${min}%`)) {
-              return;
-            }
-
-            const applyBtn = document.getElementById('btn-apply-global-tasks');
-            const origText = applyBtn.innerHTML;
-            applyBtn.disabled = true;
-            applyBtn.innerHTML = '⏳ Menerapkan ke Task...';
-
+          // Open Test Generator & Settings Wizard
+          document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
             try {
-              const sb = await getSupabase();
-              for (const t of taskAssessments) {
-                const up = {
-                  working_duration_minutes: dur,
-                  duration_minutes: dur,
-                  answer_type: ans,
-                  minimum_required_score: min
-                };
-                if (t.payload && typeof t.payload === 'object') {
-                  up.payload = {
-                    ...t.payload,
-                    working_duration_minutes: dur,
-                    duration_minutes: dur,
-                    answer_type: ans,
-                    minimum_required_score: min
-                  };
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261027c');
+              await openAutoGenerateModal({
+                explicitClassId: classId,
+                onComplete: () => {
+                  window.renderClassHub(document.getElementById('admin-content-area'));
                 }
-                await adminUpdate('assessments', t.id, up);
-              }
-
-              if (ans && sb) {
-                await sb.from('assessment_questions').update({ answer_type: ans }).in('assessment_id', taskIds);
-              }
-
-              showToast(`Berhasil memperbarui ${taskIds.length} Task Harian (Durasi: ${dur} mnt, ${ans}, Min: ${min}%).`, 'success');
-              window.renderClassHub(document.getElementById('admin-content-area'));
+              });
             } catch (err) {
-              console.error('Apply global tasks failed:', err);
-              showToast('Gagal memperbarui task: ' + (err.message || 'Error'), 'danger');
-            } finally {
-              applyBtn.disabled = false;
-              applyBtn.innerHTML = origText;
-            }
-          });
-
-          // Apply Global Settings to Tests
-          document.getElementById('btn-apply-global-tests')?.addEventListener('click', async () => {
-            const dur = parseInt(document.getElementById('global-test-dur')?.value || '120', 10);
-            const ans = document.getElementById('global-test-ans')?.value || 'written';
-            const min = parseInt(document.getElementById('global-test-min')?.value || '60', 10);
-            const testIds = testAssessments.map(t => t.id).filter(Boolean);
-
-            if (testIds.length === 0) {
-              showToast('Tidak ada Test yang ditemukan di kelas ini.', 'warning');
-              return;
-            }
-
-            if (!confirm(`Terapkan pengaturan ke seluruh ${testIds.length} Test / Ujian di kelas ini?\n\n• Waktu Pengerjaan: ${dur} menit\n• Cara Jawab: ${ans}\n• Minimal Skor: ${min}%`)) {
-              return;
-            }
-
-            const applyBtn = document.getElementById('btn-apply-global-tests');
-            const origText = applyBtn.innerHTML;
-            applyBtn.disabled = true;
-            applyBtn.innerHTML = '⏳ Menerapkan ke Test...';
-
-            try {
-              const sb = await getSupabase();
-              for (const t of testAssessments) {
-                const up = {
-                  working_duration_minutes: dur,
-                  duration_minutes: dur,
-                  answer_type: ans,
-                  minimum_required_score: min
-                };
-                if (t.payload && typeof t.payload === 'object') {
-                  up.payload = {
-                    ...t.payload,
-                    working_duration_minutes: dur,
-                    duration_minutes: dur,
-                    answer_type: ans,
-                    minimum_required_score: min
-                  };
-                }
-                await adminUpdate('assessments', t.id, up);
-              }
-
-              if (ans && sb) {
-                await sb.from('assessment_questions').update({ answer_type: ans }).in('assessment_id', testIds);
-              }
-
-              showToast(`Berhasil memperbarui ${testIds.length} Test (Durasi: ${dur} mnt, ${ans}, Min: ${min}%).`, 'success');
-              window.renderClassHub(document.getElementById('admin-content-area'));
-            } catch (err) {
-              console.error('Apply global tests failed:', err);
-              showToast('Gagal memperbarui test: ' + (err.message || 'Error'), 'danger');
-            } finally {
-              applyBtn.disabled = false;
-              applyBtn.innerHTML = origText;
+              console.error(err);
+              showToast('Gagal membuka wizard: ' + err.message, 'error');
             }
           });
         } else {
@@ -1722,7 +1562,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
           const initialRosterData = filterRosterData(studentsGridData, rosterBatchFilter);
 
-          // Dynamically compute theme headers and colSpans from actual classAssessments
+          // Dynamically compute theme headers and colSpans from actual classTests
           const themeCounts = {};
           const themeAsmCounts = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
           const themeNames = {
@@ -1732,12 +1572,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             'D': 'HIGH-FREQUENCY'
           };
 
-          classAssessments.forEach(asm => {
-            const isTest = asm.assessment_category === 'TEST' || 
-                           asm.payload?.assessment_category === 'TEST' || 
-                           asm.payload?.is_unified_test === true ||
-                           /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
-                           /\bTEST\b/i.test(asm.title || '');
+          classTests.forEach(asm => {
+            const isTest = isWeeklyExam(asm);
             const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
             const themeCode = (rawTheme || 'A').toUpperCase();
             const colSpan = isTest ? 2 : 1;
@@ -1748,7 +1584,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             }
           });
 
-          // Update theme filter pills labels with accurate assessment counts
+          // Update theme filter pills labels with accurate test counts
           const themeContainer = document.getElementById('attendance-theme-pills-container');
           if (themeContainer) {
             const btnAll = themeContainer.querySelector('[data-theme="ALL"]');
@@ -1774,21 +1610,54 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               });
             }
 
-            const isTestAsm = (asm) => asm.assessment_category === 'TEST' || 
-                                       asm.payload?.assessment_category === 'TEST' || 
-                                       asm.payload?.is_unified_test === true ||
-                                       /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
-                                       /\bTEST\b/i.test(asm.title || '');
+            const isTestAsm = isWeeklyExam;
 
-            // Filter assessments if a specific theme is selected:
+            // Filter tests if a specific theme is selected:
             // When ALL: only show Checkpoint Tests across all themes! (8 tests = 16 columns)
             // When specific theme (A, B, C, D): show all tasks and tests for that theme!
-            const activeAssessments = selectedTheme === 'ALL'
-              ? classAssessments.filter(isTestAsm)
-              : classAssessments.filter(asm => {
+            const activeTests = selectedTheme === 'ALL'
+              ? classTests.filter(isTestAsm)
+              : classTests.filter(asm => {
                   const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
                   return (rawTheme || 'A').toUpperCase() === selectedTheme;
                 });
+
+            // Group activeTests by theme and compute dynamic columns
+            const themeGroups = {};
+            activeTests.forEach(asm => {
+              const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+              const tc = (rawTheme || 'A').toUpperCase();
+              if (!themeGroups[tc]) themeGroups[tc] = [];
+              themeGroups[tc].push(asm);
+            });
+
+            const sortedActiveThemes = Object.keys(themeGroups).sort();
+
+            // Pre-calculate theme total points for each student in studentsGridData
+            sortedActiveThemes.forEach(tc => {
+              const asmsInTheme = themeGroups[tc];
+              studentsGridData.forEach(row => {
+                let themeEarned = 0;
+                let hasAtt = false;
+                asmsInTheme.forEach(asm => {
+                  const att = row.asmScores?.[asm.id];
+                  if (att) {
+                    const st = String(att.status || '').toLowerCase();
+                    if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
+                      hasAtt = true;
+                      const isRem = Boolean(att.is_remedial_unlocked);
+                      const maxQ = getAsmExpectedMax(asm);
+                      const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
+                      const totalQ = Number(att.total_questions || maxQ);
+                      const maxRemPts = totalQ * 0.6;
+                      const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
+                      themeEarned += effSc;
+                    }
+                  }
+                });
+                row[`theme_${tc}_total_pts`] = hasAtt ? themeEarned : -1;
+              });
+            });
 
             // Dynamic super-headers
             const dynamicSuperHeaders = [
@@ -1806,11 +1675,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             if (selectedTheme === 'ALL') {
               sortedThemes.forEach(tc => {
                 const tName = themeNames[tc] ? ` (${themeNames[tc]})` : '';
-                const themeTests = activeAssessments.filter(asm => {
+                const themeTests = activeTests.filter(asm => {
                   const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
                   return (rawTheme || 'A').toUpperCase() === tc;
                 });
-                const colSpan = themeTests.length * 2; // PTS + SCORE for each test
+                const colSpan = themeTests.length > 0 ? (themeTests.length * 2) + 1 : 0; // SCORE + PTS per test, PLUS 1 for Theme Total Points
                 if (colSpan > 0) {
                   dynamicSuperHeaders.push({
                     label: `THEME ${tc}${tName}`,
@@ -1821,12 +1690,227 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               });
             } else {
               const tName = themeNames[selectedTheme] ? ` (${themeNames[selectedTheme]})` : '';
+              const colSpan = (themeCounts[selectedTheme] || activeTests.length) + 1; // All tasks + tests in theme, PLUS 1 for Theme Total Points
               dynamicSuperHeaders.push({
                 label: `THEME ${selectedTheme}${tName}`,
-                colSpan: themeCounts[selectedTheme] || activeAssessments.length,
+                colSpan: colSpan,
                 className: themeColorClasses[selectedTheme] || `super-hdr super-hdr-theme super-hdr-theme-${selectedTheme.toLowerCase()}`
               });
             }
+
+            // Build dynamic test and theme total columns
+            const dynamicAsmCols = [];
+            sortedActiveThemes.forEach(tc => {
+              const asmsInTheme = themeGroups[tc];
+
+              asmsInTheme.forEach(asm => {
+                const num = asm.display_order || (classTests.indexOf(asm) + 1);
+                const isTest = asm.test_category === 'TEST' || 
+                               asm.payload?.test_category === 'TEST' || 
+                               asm.payload?.is_unified_test === true ||
+                               /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
+                               /\bTEST\b/i.test(asm.title || '');
+                const code = asm.payload?.shell_code || asm.shell_code || asm.title;
+                const isPhrase = asm.payload?.category === 'phrases' || /PHRASES/i.test(code || '') || /phrase/i.test(asm.title || '');
+                const tag = isTest ? (isPhrase ? 'PHRASE TEST' : 'WORD TEST') : (isPhrase ? 'PHRASE TASK' : 'WORD TASK');
+                const cleanTitle = asm.title || asm.name || code || 'Test';
+                const headerTooltip = (code && cleanTitle && !cleanTitle.toLowerCase().startsWith(code.toLowerCase()))
+                  ? `${code}: ${cleanTitle}`
+                  : cleanTitle;
+
+                if (isTest) {
+                  // 1. SCORE COLUMN FIRST (User requirement: "score, baru point")
+                  dynamicAsmCols.push({
+                    key: `test_${asm.id}_pct`,
+                    className: 'col-asm col-exam col-exam-score',
+                    width: '50px',
+                    headerTitle: `${headerTooltip} (Score %)`,
+                    title: `${headerTooltip} (Score %)`,
+                    label: `
+                      <div class="asm-hdr-cell">
+                        <span class="test-num test-num-test" title="${escapeHtml(headerTooltip)}">${num}</span>
+                        <span class="test-subtag test-subtag-test-score">SCORE</span>
+                      </div>
+                    `,
+                    sortable: true,
+                    align: 'center',
+                    render: (val, row) => {
+                      const att = row.asmScores?.[asm.id];
+                      if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      const st = String(att.status || '').toLowerCase();
+                      if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:0.65rem;" title="In Progress">⏳</span>`;
+                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      const isRem = Boolean(att.is_remedial_unlocked);
+                      const maxQ = getAsmExpectedMax(asm);
+                      const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
+                      const totalQ = Number(att.total_questions || maxQ);
+                      const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
+                      const maxRemPts = totalQ * 0.6;
+                      const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
+                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                      const color = typeof getGradeColorByScore === 'function'
+                        ? getGradeColorByScore(effPct)
+                        : (effPct >= 100 ? '#22C55E' : (effPct >= 90 ? '#22C55E' : (effPct >= 80 ? '#BEF264' : (effPct >= 60 ? '#FDE047' : (effPct >= 30 ? '#FB923C' : '#F87171')))));
+                      const attId = att.id || att.attempt_id;
+                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+
+                      return `
+                        <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}" 
+                              style="color:${color}; ${cursorStyle} font-weight:700; font-size:var(--matrix-font-size, 0.74rem);" 
+                              ${clickAttr}
+                              title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Score: ${Math.round(effPct)}%` : `Score: ${Math.round(effPct)}%`}&#10;Click to open result">
+                          ${Math.round(effPct)}%${isRem ? '<sup class="test-rem-sup">R</sup>' : ''}
+                        </span>
+                      `;
+                    }
+                  });
+
+                  // 2. POINTS COLUMN SECOND
+                  dynamicAsmCols.push({
+                    key: `test_${asm.id}_pts`,
+                    className: 'col-asm col-exam col-exam-pts',
+                    width: '58px',
+                    headerTitle: `${headerTooltip} (Points)`,
+                    title: `${headerTooltip} (Points)`,
+                    label: `
+                      <div class="asm-hdr-cell">
+                        <span class="test-num test-num-test" title="${escapeHtml(headerTooltip)}">${num}</span>
+                        <span class="test-subtag test-subtag-test-pts">${isPhrase ? 'PHR' : 'WRD'} PTS</span>
+                      </div>
+                    `,
+                    sortable: true,
+                    align: 'center',
+                    render: (val, row) => {
+                      const att = row.asmScores?.[asm.id];
+                      if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      const st = String(att.status || '').toLowerCase();
+                      if (st === 'in_progress') return `<span style="color:#eab308; font-size:0.65rem;" title="In Progress">⏳</span>`;
+                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      const isRem = Boolean(att.is_remedial_unlocked);
+                      const maxQ = getAsmExpectedMax(asm);
+                      const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
+                      const totalQ = Number(att.total_questions || maxQ);
+                      const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
+                      const maxRemPts = totalQ * 0.6;
+                      const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
+                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                      const cleanEffSc = Math.round(effSc * 2) / 2;
+                      const displayVal = (cleanEffSc % 1 !== 0) ? cleanEffSc.toFixed(1) : cleanEffSc.toString();
+                      const color = typeof getGradeColorByScore === 'function'
+                        ? getGradeColorByScore(effPct)
+                        : (effPct >= 100 ? '#22C55E' : (effPct >= 90 ? '#22C55E' : (effPct >= 80 ? '#BEF264' : (effPct >= 60 ? '#FDE047' : (effPct >= 30 ? '#FB923C' : '#F87171')))));
+                      const attId = att.id || att.attempt_id;
+                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+
+                      return `
+                        <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}" 
+                              style="color:${color}; ${cursorStyle}" 
+                              ${clickAttr}
+                              title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`}&#10;Click to open result & manage remedial">
+                          <span style="font-weight:800; font-size:var(--matrix-font-size, 0.74rem); letter-spacing:-0.02em;">
+                            ${displayVal}
+                          </span>
+                        </span>
+                      `;
+                    }
+                  });
+                } else {
+                  // Daily task column
+                  dynamicAsmCols.push({
+                    key: `test_${asm.id}`,
+                    className: 'col-asm col-quiz',
+                    width: '42px',
+                    headerTitle: headerTooltip,
+                    title: headerTooltip,
+                    label: `
+                      <div class="asm-hdr-cell">
+                        <span class="test-num test-num-task" title="${escapeHtml(headerTooltip)}">${num}</span>
+                        <span class="test-subtag ${isPhrase ? 'test-subtag-phr' : 'test-subtag-wrd'}">${isPhrase ? 'PHR' : 'WRD'}</span>
+                      </div>
+                    `,
+                    sortable: true,
+                    align: 'center',
+                    render: (val, row) => {
+                      const att = row.asmScores?.[asm.id];
+                      if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      const st = String(att.status || '').toLowerCase();
+                      if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:0.65rem;" title="In Progress">⏳</span>`;
+                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      const isRem = Boolean(att.is_remedial_unlocked);
+                      const maxQ = getAsmExpectedMax(asm);
+                      const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
+                      const totalQ = Number(att.total_questions || maxQ);
+                      const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
+                      const maxRemPts = totalQ * 0.6;
+                      const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
+                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                      const cleanSc = Math.round(effSc * 2) / 2;
+                      const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
+                      const color = typeof getGradeColorByScore === 'function'
+                        ? getGradeColorByScore(effPct)
+                        : (effPct >= 100 ? '#22C55E' : (effPct >= 90 ? '#22C55E' : (effPct >= 80 ? '#BEF264' : (effPct >= 60 ? '#FDE047' : (effPct >= 30 ? '#FB923C' : '#F87171')))));
+                      const attId = att.id || att.attempt_id;
+                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+
+                      return `
+                        <span class="asm-score asm-score-task ${isRem ? 'asm-score-remedial' : ''}" 
+                              style="color:${color}; ${cursorStyle}" 
+                              ${clickAttr}
+                              title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`} (${Math.round(effPct)}%)&#10;Click to view result">
+                          ${displayVal}
+                        </span>
+                      `;
+                    }
+                  });
+                }
+              });
+
+              // 3. THEME TOTAL POINTS COLUMN (User requirement: "untuk tiap tema ada tambahan kolom berupa total point daro words dan phrases")
+              dynamicAsmCols.push({
+                key: `theme_${tc}_total_pts`,
+                className: 'col-asm col-exam col-exam-pts col-test-theme-total',
+                width: '60px',
+                headerTitle: `Theme ${tc} Total Points (Words + Phrases)`,
+                title: `Theme ${tc} Total Points (Words + Phrases)`,
+                label: `
+                  <div class="asm-hdr-cell">
+                    <span class="test-num test-num-test test-num-total" title="Theme ${tc} Total Points (Words + Phrases)">TOT</span>
+                    <span class="test-subtag test-subtag-test-pts">TOT PTS</span>
+                  </div>
+                `,
+                sortable: true,
+                align: 'center',
+                render: (val, row) => {
+                  const ptsVal = row[`theme_${tc}_total_pts`];
+                  if (ptsVal === undefined || ptsVal === null || ptsVal < 0) {
+                    return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                  }
+
+                  let themeMaxQ = 0;
+                  asmsInTheme.forEach(asm => {
+                    themeMaxQ += getAsmExpectedMax(asm);
+                  });
+
+                  const cleanTotal = Math.round(ptsVal * 2) / 2;
+                  const displayVal = (cleanTotal % 1 !== 0) ? cleanTotal.toFixed(1) : cleanTotal.toString();
+                  const themePct = themeMaxQ > 0 ? (ptsVal / themeMaxQ) * 100 : 0;
+                  const color = typeof getGradeColorByScore === 'function'
+                    ? getGradeColorByScore(themePct)
+                    : (themePct >= 100 ? '#22C55E' : (themePct >= 90 ? '#22C55E' : (themePct >= 80 ? '#BEF264' : (themePct >= 60 ? '#FDE047' : (themePct >= 30 ? '#FB923C' : '#F87171')))));
+
+                  return `
+                    <span class="asm-score asm-score-test test-score-theme-total" 
+                          style="color:${color}; font-weight:800; font-size:var(--matrix-font-size, 0.74rem); letter-spacing:-0.02em;"
+                          title="Theme ${tc} Total Points: ${displayVal}/${themeMaxQ} pts (${Math.round(themePct)}%)">
+                      ${displayVal}
+                    </span>
+                  `;
+                }
+              });
+            });
 
             // Clean destruction of previous instance if any
             const gridContainer = document.getElementById('class-attendance-grid');
@@ -1843,30 +1927,31 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               hideToolbar: true,
               rowClassName: (row) => row.hasRemedial ? 'row-remedial' : '',
               searchKeys: ['instName', 'instShort', 'progName', 'batch', 'displayName', 'name', 'pin'],
-              initialSortKey: 'totalEarnedScore',
+              initialSortKey: 'progressPct',
               initialSortAsc: false,
               superHeaders: dynamicSuperHeaders,
               summaryRow: (visibleCols, filteredData) => {
                 const totalStudents = filteredData.length;
                 if (totalStudents === 0) return '';
 
-                // Calculate class averages
+                // Calculate class averages aligned with weekly-only metrics
                 const avgProg = Math.round(filteredData.reduce((acc, s) => acc + (s.progressPct || 0), 0) / totalStudents);
-                const avgPts = Math.round(filteredData.reduce((acc, s) => acc + (s.totalEarnedScore || 0), 0) / totalStudents);
-                const completedStudents = filteredData.filter(s => (s.completedCount || 0) > 0);
-                const avgScore = completedStudents.length > 0 
-                  ? Math.round(completedStudents.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / completedStudents.length) 
+                
+                const weeklyCompletedStudents = filteredData.filter(s => (s.completedWeeklyCount || 0) > 0);
+                const avgScore = weeklyCompletedStudents.length > 0 
+                  ? Math.round(weeklyCompletedStudents.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / weeklyCompletedStudents.length) 
                   : 0;
-                const avgGrade = completedStudents.length > 0 
+                const avgPts = Math.round(filteredData.reduce((acc, s) => acc + (s.totalEarnedScore || 0), 0) / totalStudents);
+                const avgGrade = weeklyCompletedStudents.length > 0 
                   ? (typeof calculateGrade === 'function' ? calculateGrade(avgScore) : (typeof getGrade === 'function' ? getGrade(avgScore) : '—'))
                   : '—';
-                const avgGradeColor = completedStudents.length > 0 && typeof getGradeColorByScore === 'function'
+                const avgGradeColor = weeklyCompletedStudents.length > 0 && typeof getGradeColorByScore === 'function'
                   ? getGradeColorByScore(avgScore)
                   : '#94a3b8';
                 const isAvgGradeS = avgGrade === '★' || avgGrade === 'S';
                 const avgBadgeStyle = isAvgGradeS
-                  ? `background:rgba(192,132,252,0.18); color:#C084FC; font-weight:900; font-size:0.65rem; padding:0 5px; line-height:1.2; box-shadow:0 0 10px rgba(192,132,252,0.45); border:1px solid #C084FC;`
-                  : `background:${avgGradeColor}; color:#000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
+                  ? `background:rgba(34,197,94,0.18); color:#22C55E; font-weight:900; font-size:0.65rem; padding:0 5px; line-height:1.2; box-shadow:0 0 10px rgba(34,197,94,0.45); border:1px solid #22C55E;`
+                  : `background:${avgGradeColor}; color:#000000; font-weight:800; font-size:0.65rem; padding:0 4px; line-height:1.2;`;
 
                 let cellsHtml = '';
                 visibleCols.forEach(col => {
@@ -1884,26 +1969,42 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       </td>
                     `;
                   } else if (col.key === 'averageScorePct') {
-                    cellsHtml += `
-                      <td class="col-sticky col-sticky-6 text-center">
-                        <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; line-height:1.1; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(192,132,252,0.6)); color:#C084FC;' : ''}">${avgScore}%</div>
-                      </td>
-                    `;
+                    if (weeklyCompletedStudents.length === 0) {
+                      cellsHtml += `
+                        <td class="col-sticky col-sticky-6 text-center">
+                          <div class="fw-700 text-xs text-muted" style="color:#94a3b8; font-size:0.75rem; line-height:1.1;">—</div>
+                        </td>
+                      `;
+                    } else {
+                      cellsHtml += `
+                        <td class="col-sticky col-sticky-6 text-center">
+                          <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; line-height:1.1; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(34,197,94,0.6)); color:#22C55E;' : ''}">${avgScore}%</div>
+                        </td>
+                      `;
+                    }
                   } else if (col.key === 'grade') {
-                    const cleanAvgGrade = String(avgGrade || '').trim().toUpperCase();
-                    const lowerAvgG = cleanAvgGrade.toLowerCase();
-                    const avgTextColor = (cleanAvgGrade === 'B' || cleanAvgGrade === 'C') ? '#0f172a' : '#ffffff';
-                    cellsHtml += `
-                      <td class="col-sticky col-sticky-7 text-center">
-                        ${isAvgGradeS 
-                          ? '<span class="grade-circle grade-circle-star" title="Average Grade ★ (100%)">★</span>' 
-                          : `<span class="grade-circle grade-circle-${lowerAvgG}" style="background:${avgGradeColor}; color:${avgTextColor};" title="Average Grade ${cleanAvgGrade}">${cleanAvgGrade}</span>`}
-                      </td>
-                    `;
+                    if (weeklyCompletedStudents.length === 0 || avgGrade === '—' || avgGrade === '-') {
+                      cellsHtml += `
+                        <td class="col-sticky col-sticky-7 text-center">
+                          <span class="text-muted" style="font-size:0.75rem;">—</span>
+                        </td>
+                      `;
+                    } else {
+                      const cleanAvgGrade = String(avgGrade || '').trim().toUpperCase();
+                      const lowerAvgG = cleanAvgGrade.toLowerCase();
+                      const avgTextColor = '#000000';
+                      cellsHtml += `
+                        <td class="col-sticky col-sticky-7 text-center">
+                          ${isAvgGradeS 
+                            ? '<span class="grade-circle grade-circle-star" title="Average Grade ★ (100%)">★</span>' 
+                            : `<span class="grade-circle grade-circle-${lowerAvgG}" style="background:${avgGradeColor}; color:${avgTextColor};" title="Average Grade ${cleanAvgGrade}">${cleanAvgGrade}</span>`}
+                        </td>
+                      `;
+                    }
                   } else if (col.key === 'totalEarnedScore') {
                     cellsHtml += `
                       <td class="col-sticky col-sticky-8 col-sticky-last text-center">
-                        <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(192,132,252,0.6)); color:#C084FC;' : ''}">${avgPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
+                        <div class="fw-700 text-xs" style="color:${weeklyCompletedStudents.length > 0 ? avgGradeColor : '#94a3b8'}; font-size:0.75rem; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(34,197,94,0.6)); color:#22C55E;' : ''}">${avgPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
                       </td>
                     `;
                   } else if (col.key && col.key.startsWith('asm_')) {
@@ -1919,7 +2020,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                         count++;
                         const sc = att.score != null ? Number(att.score) : 0;
                         const isRem = Boolean(att.is_remedial_unlocked);
-                        const targetAsm = classAssessments.find(a => a.id === asmId);
+                        const targetAsm = classTests.find(a => a.id === asmId);
                         const tq = Number(att.total_questions || targetAsm?.total_questions || 50);
                         const maxRemPts = tq * 0.6;
                         const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
@@ -1929,15 +2030,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                         pctSum += effPct;
                       }
                     });
-                    const isTest = col.className && col.className.includes('col-asm-test');
-                    const targetAsm = classAssessments.find(a => a.id === asmId);
+                    const isTest = col.className && col.className.includes('col-exam');
+                    const targetAsm = classTests.find(a => a.id === asmId);
                     const totalQ = Number(targetAsm?.total_questions || (isTest ? 150 : 50));
                     if (count > 0) {
                       const avgSc = (scoreSum / count).toFixed(1).replace(/\.0$/, '');
                       const avgPct = Math.round(pctSum / count);
                       const avgCol = typeof getGradeColorByScore === 'function'
                         ? getGradeColorByScore(avgPct)
-                        : (avgPct >= 100 ? '#C084FC' : (avgPct >= 90 ? '#22C55E' : (avgPct >= 80 ? '#BEF264' : (avgPct >= 60 ? '#FDE047' : (avgPct >= 30 ? '#FB923C' : '#F87171')))));
+                        : (avgPct >= 100 ? '#22C55E' : (avgPct >= 90 ? '#22C55E' : (avgPct >= 80 ? '#BEF264' : (avgPct >= 60 ? '#FDE047' : (avgPct >= 30 ? '#FB923C' : '#F87171')))));
                       if (isTest && isPctCol) {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
@@ -1964,6 +2065,31 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                         </td>
                       `;
                     }
+                  } else if (col.key && col.key.startsWith('theme_') && col.key.endsWith('_total_pts')) {
+                    const tc = col.key.replace('theme_', '').replace('_total_pts', '');
+                    let count = 0;
+                    let totalPtsSum = 0;
+                    filteredData.forEach(s => {
+                      const val = s[col.key];
+                      if (val !== undefined && val !== null && val >= 0) {
+                        count++;
+                        totalPtsSum += Number(val);
+                      }
+                    });
+                    if (count > 0) {
+                      const avgThemePts = (totalPtsSum / count).toFixed(1).replace(/\.0$/, '');
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span style="color:#ffffff; font-weight:800; font-size:0.72rem; font-family:monospace;" title="Class Avg Theme ${tc} Points: ${avgThemePts} pts">${avgThemePts}</span>
+                        </td>
+                      `;
+                    } else {
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span style="color:rgba(255,255,255,0.22); font-weight:800; font-size:0.85rem; line-height:1;">&middot;</span>
+                        </td>
+                      `;
+                    }
                   } else {
                     cellsHtml += `<td></td>`;
                   }
@@ -1976,43 +2102,44 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 const bActive = b.isActive ? 1 : 0;
                 if (aActive !== bActive) return bActive - aActive;
 
-                if (sortKey === 'totalEarnedScore' || sortKey === 'PTS') {
-                  const sA = Number(a.totalEarnedScore ?? 0);
-                  const sB = Number(b.totalEarnedScore ?? 0);
-                  if (sA !== sB) return direction === 'asc' ? sA - sB : sB - sA;
-                  const scoreA = Number(a.averageScorePct ?? 0);
-                  const scoreB = Number(b.averageScorePct ?? 0);
-                  if (scoreA !== scoreB) return scoreB - scoreA;
-                  const pA = Number(a.progressPct ?? 0);
-                  const pB = Number(b.progressPct ?? 0);
-                  if (pA !== pB) return pB - pA;
-                }
-
+                // 1. Leaderboard Primary default sort: PROG % DESC, Secondary: Global SCORE % DESC, Tertiary: Global PTS DESC
                 if (sortKey === 'progressPct' || sortKey === 'PROG') {
                   const pA = Number(a.progressPct ?? 0);
                   const pB = Number(b.progressPct ?? 0);
                   if (pA !== pB) return direction === 'asc' ? pA - pB : pB - pA;
+                  const scoreA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
+                  const scoreB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
+                  if (scoreA !== scoreB) return scoreB - scoreA;
                   const sA = Number(a.totalEarnedScore ?? 0);
                   const sB = Number(b.totalEarnedScore ?? 0);
                   if (sA !== sB) return sB - sA;
-                  const scoreA = Number(a.averageScorePct ?? 0);
-                  const scoreB = Number(b.averageScorePct ?? 0);
-                  if (scoreA !== scoreB) return scoreB - scoreA;
                 }
 
                 if (sortKey === 'grade' || sortKey === 'GRD' || sortKey === 'SCORE' || sortKey === 'averageScorePct') {
-                  const gA = Number(a.averageScorePct ?? 0);
-                  const gB = Number(b.averageScorePct ?? 0);
+                  const gA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
+                  const gB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
                   if (gA !== gB) return direction === 'asc' ? gA - gB : gB - gA;
-                  const sA = Number(a.totalEarnedScore ?? 0);
-                  const sB = Number(b.totalEarnedScore ?? 0);
-                  if (sA !== sB) return sB - sA;
                   const pA = Number(a.progressPct ?? 0);
                   const pB = Number(b.progressPct ?? 0);
                   if (pA !== pB) return pB - pA;
+                  const sA = Number(a.totalEarnedScore ?? 0);
+                  const sB = Number(b.totalEarnedScore ?? 0);
+                  if (sA !== sB) return sB - sA;
                 }
 
-                if (sortKey && sortKey.startsWith('asm_')) {
+                if (sortKey === 'totalEarnedScore' || sortKey === 'PTS') {
+                  const sA = Number(a.totalEarnedScore ?? 0);
+                  const sB = Number(b.totalEarnedScore ?? 0);
+                  if (sA !== sB) return direction === 'asc' ? sA - sB : sB - sA;
+                  const pA = Number(a.progressPct ?? 0);
+                  const pB = Number(b.progressPct ?? 0);
+                  if (pA !== pB) return pB - pA;
+                  const scoreA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
+                  const scoreB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
+                  if (scoreA !== scoreB) return scoreB - scoreA;
+                }
+
+                if (sortKey && (sortKey.startsWith('asm_') || sortKey.startsWith('theme_'))) {
                   const scoreA = Number(a[sortKey] ?? -1);
                   const scoreB = Number(b[sortKey] ?? -1);
                   if (scoreA !== scoreB) {
@@ -2098,7 +2225,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   align: 'center',
                   width: '46px',
                   render: (val, row) => `
-                    <div class="fw-700 text-xs" style="color:var(--clr-text-1); font-size:var(--matrix-font-size, 0.75rem); line-height:1;" title="${row.completedCount}/${row.totalClassAssessments} Done (${row.progressPct}%)">${row.progressPct}%</div>
+                    <div class="fw-700 text-xs" style="color:var(--clr-text-1); font-size:var(--matrix-font-size, 0.75rem); line-height:1;" title="${row.completedCount}/${row.totalClassTests} Activities Done (${row.progressPct}%)">${row.progressPct}%</div>
                   `
                 },
                 {
@@ -2109,13 +2236,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   align: 'center',
                   width: '46px',
                   render: (val, row) => {
-                    if (row.completedCount === 0) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+                    if (!row.completedWeeklyCount || row.completedWeeklyCount === 0) {
+                      return '<span class="text-muted" style="font-size:0.75rem;" title="No weekly exams completed">—</span>';
+                    }
                     const isGradeS = row.grade === '★' || row.grade === 'S';
                     const scoreColor = (typeof getGradeColorByScore === 'function')
                       ? getGradeColorByScore(row.averageScorePct)
-                      : (isGradeS ? '#C084FC' : row.gradeColor);
+                      : (isGradeS ? '#22C55E' : row.gradeColor);
                     return `
-                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${scoreColor}; font-size:0.75rem; line-height:1.1;">${row.averageScorePct}%</div>
+                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${scoreColor}; font-size:0.75rem; line-height:1.1;" title="Weekly Exams Average: ${row.averageScorePct}% (${row.completedWeeklyCount} exams)">${row.averageScorePct}%</div>
                     `;
                   }
                 },
@@ -2127,19 +2256,21 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   align: 'center',
                   width: '36px',
                   render: (val, row) => {
-                    if (row.grade === '—' || row.grade === '-') return '<span class="text-muted" style="font-size:0.75rem;">&mdash;</span>';
+                    if (!row.completedWeeklyCount || row.completedWeeklyCount === 0 || row.grade === '—' || row.grade === '-') {
+                      return '<span class="text-muted" style="font-size:0.75rem;" title="No weekly exams completed">&mdash;</span>';
+                    }
                     const isGradeS = row.grade === 'S' || row.grade === '★';
                     if (isGradeS) {
-                      return `<span class="grade-circle grade-circle-star" title="Grade ★ (100% Excellent)">★</span>`;
+                      return `<span class="grade-circle grade-circle-star" title="Weekly Exam Grade ★ (100% Excellent)">★</span>`;
                     }
                     const cleanGrade = String(row.grade || '').trim().toUpperCase();
                     const lowerG = cleanGrade.toLowerCase();
                     const badgeColor = (typeof getGradeColorByScore === 'function')
                       ? getGradeColorByScore(row.averageScorePct)
                       : (row.gradeColor || '#94a3b8');
-                    const textColor = (cleanGrade === 'B' || cleanGrade === 'C') ? '#0f172a' : '#ffffff';
+                    const textColor = '#000000';
                     return `
-                      <span class="grade-circle grade-circle-${lowerG}" style="background:${badgeColor}; color:${textColor};" title="Grade ${cleanGrade}">${cleanGrade}</span>
+                      <span class="grade-circle grade-circle-${lowerG}" style="background:${badgeColor}; color:${textColor};" title="Weekly Exam Grade ${cleanGrade}">${cleanGrade}</span>
                     `;
                   }
                 },
@@ -2151,181 +2282,21 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   align: 'center',
                   width: '62px',
                   render: (val, row) => {
+                    if (!row.completedWeeklyCount || row.completedWeeklyCount === 0) {
+                      return `<div class="fw-700 text-xs text-muted" style="color:#94a3b8; font-size:0.75rem;" title="0 pts (No weekly exams completed)">0 <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>`;
+                    }
                     const isGradeS = row.grade === '★' || row.grade === 'S';
-                    const ptsColor = (row.completedCount > 0 && typeof getGradeColorByScore === 'function')
+                    const ptsColor = (typeof getGradeColorByScore === 'function')
                       ? getGradeColorByScore(row.averageScorePct)
-                      : (isGradeS ? '#C084FC' : ((row.grade !== '—' && row.gradeColor) ? row.gradeColor : 'var(--clr-text-1)'));
+                      : (isGradeS ? '#22C55E' : ((row.grade !== '—' && row.gradeColor) ? row.gradeColor : 'var(--clr-text-1)'));
                     const ptsVal = Number(row.totalEarnedScore ?? 0);
                     const formattedPts = (ptsVal % 1 !== 0) ? ptsVal.toFixed(1) : ptsVal;
                     return `
-                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${ptsColor}; font-size:0.75rem;">${formattedPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
+                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${ptsColor}; font-size:0.75rem;" title="Weekly Exam Points: ${formattedPts} pts">${formattedPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
                     `;
                   }
                 },
-                ...activeAssessments.flatMap((asm) => {
-                  const num = asm.display_order || (classAssessments.indexOf(asm) + 1);
-                  const isTest = asm.assessment_category === 'TEST' || 
-                                 asm.payload?.assessment_category === 'TEST' || 
-                                 asm.payload?.is_unified_test === true ||
-                                 /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
-                                 /\bTEST\b/i.test(asm.title || '');
-                  const code = asm.payload?.shell_code || asm.shell_code || asm.title;
-                  const isPhrase = asm.payload?.category === 'phrases' || /PHRASES/i.test(code || '') || /phrase/i.test(asm.title || '');
-                  const tag = isTest ? (isPhrase ? 'PHRASE TEST' : 'WORD TEST') : (isPhrase ? 'PHRASE TASK' : 'WORD TASK');
-                  const cleanTitle = asm.title || asm.name || code || 'Assessment';
-                  const headerTooltip = (code && cleanTitle && !cleanTitle.toLowerCase().startsWith(code.toLowerCase()))
-                    ? `${code}: ${cleanTitle}`
-                    : cleanTitle;
-
-                  if (isTest) {
-                    return [
-                      {
-                        key: `asm_${asm.id}_pts`,
-                        className: 'col-asm col-asm-test col-asm-test-pts',
-                        width: '58px',
-                        headerTitle: `${headerTooltip} (Points)`,
-                        title: `${headerTooltip} (Points)`,
-                        label: `
-                          <div class="asm-hdr-cell">
-                            <span class="asm-num asm-num-test" title="${escapeHtml(headerTooltip)}">${num}</span>
-                            <span class="asm-subtag asm-subtag-test-pts">${isPhrase ? 'PHR' : 'WRD'} PTS</span>
-                          </div>
-                        `,
-                        sortable: false,
-                        align: 'center',
-                        render: (val, row) => {
-                          const att = row.asmScores?.[asm.id];
-                          if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                          const st = String(att.status || '').toLowerCase();
-                          if (st === 'in_progress') return `<span style="color:#eab308; font-size:0.65rem;" title="In Progress">⏳</span>`;
-                          if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                          const isRem = Boolean(att.is_remedial_unlocked);
-                          const maxQ = getAsmExpectedMax(asm);
-                          const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
-                          const totalQ = Number(att.total_questions || maxQ);
-                          const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
-                          const maxRemPts = totalQ * 0.6;
-                          const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
-                          const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-                          const cleanEffSc = Math.round(effSc * 2) / 2;
-                          const displayVal = (cleanEffSc % 1 !== 0) ? cleanEffSc.toFixed(1) : cleanEffSc.toString();
-                          const color = typeof getGradeColorByScore === 'function'
-                            ? getGradeColorByScore(effPct)
-                            : (effPct >= 100 ? '#C084FC' : (effPct >= 90 ? '#22C55E' : (effPct >= 80 ? '#BEF264' : (effPct >= 60 ? '#FDE047' : (effPct >= 30 ? '#FB923C' : '#F87171')))));
-                          const attId = att.id || att.attempt_id;
-                          const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                          const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-
-                          return `
-                            <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}" 
-                                  style="color:${color}; ${cursorStyle}" 
-                                  ${clickAttr}
-                                  title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`}&#10;Click to open result & manage remedial">
-                              <span style="font-weight:800; font-size:var(--matrix-font-size, 0.74rem); letter-spacing:-0.02em;">
-                                ${displayVal}
-                              </span>
-                            </span>
-                          `;
-                        }
-                      },
-                      {
-                        key: `asm_${asm.id}_pct`,
-                        className: 'col-asm col-asm-test col-asm-test-score',
-                        width: '50px',
-                        headerTitle: `${headerTooltip} (Score %)`,
-                        title: `${headerTooltip} (Score %)`,
-                        label: `
-                          <div class="asm-hdr-cell">
-                            <span class="asm-num asm-num-test" title="${escapeHtml(headerTooltip)}">${num}</span>
-                            <span class="asm-subtag asm-subtag-test-score">SCORE</span>
-                          </div>
-                        `,
-                        sortable: false,
-                        align: 'center',
-                        render: (val, row) => {
-                          const att = row.asmScores?.[asm.id];
-                          if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                          const st = String(att.status || '').toLowerCase();
-                          if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:0.65rem;" title="In Progress">⏳</span>`;
-                          if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                          const isRem = Boolean(att.is_remedial_unlocked);
-                          const maxQ = getAsmExpectedMax(asm);
-                          const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
-                          const totalQ = Number(att.total_questions || maxQ);
-                          const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
-                          const maxRemPts = totalQ * 0.6;
-                          const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
-                          const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-                          const color = typeof getGradeColorByScore === 'function'
-                            ? getGradeColorByScore(effPct)
-                            : (effPct >= 100 ? '#C084FC' : (effPct >= 90 ? '#22C55E' : (effPct >= 80 ? '#BEF264' : (effPct >= 60 ? '#FDE047' : (effPct >= 30 ? '#FB923C' : '#F87171')))));
-                          const attId = att.id || att.attempt_id;
-                          const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                          const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-
-                          return `
-                            <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}" 
-                                  style="color:${color}; ${cursorStyle} font-weight:700; font-size:var(--matrix-font-size, 0.74rem);" 
-                                  ${clickAttr}
-                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Score: ${Math.round(effPct)}%` : `Score: ${Math.round(effPct)}%`}&#10;Click to open result">
-                              ${Math.round(effPct)}%${isRem ? '<sup class="asm-rem-sup">R</sup>' : ''}
-                            </span>
-                          `;
-                        }
-                      }
-                    ];
-                  }
-
-                  return [
-                    {
-                      key: `asm_${asm.id}`,
-                      className: 'col-asm col-asm-task',
-                      width: '42px',
-                      headerTitle: headerTooltip,
-                      title: headerTooltip,
-                      label: `
-                        <div class="asm-hdr-cell">
-                          <span class="asm-num asm-num-task" title="${escapeHtml(headerTooltip)}">${num}</span>
-                          <span class="asm-subtag ${isPhrase ? 'asm-subtag-phr' : 'asm-subtag-wrd'}">${isPhrase ? 'PHR' : 'WRD'}</span>
-                        </div>
-                      `,
-                      sortable: false,
-                      align: 'center',
-                      render: (val, row) => {
-                        const att = row.asmScores?.[asm.id];
-                        if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                        const st = String(att.status || '').toLowerCase();
-                        if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:0.65rem;" title="In Progress">⏳</span>`;
-                        if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                        const isRem = Boolean(att.is_remedial_unlocked);
-                        const maxQ = getAsmExpectedMax(asm);
-                        const sc = att.score != null ? Math.min(Number(att.score), maxQ) : 0;
-                        const totalQ = Number(att.total_questions || maxQ);
-                        const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
-                        const maxRemPts = totalQ * 0.6;
-                        const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
-                        const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-                        const cleanSc = Math.round(effSc * 2) / 2;
-                        const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
-                        const color = typeof getGradeColorByScore === 'function'
-                          ? getGradeColorByScore(effPct)
-                          : (effPct >= 100 ? '#C084FC' : (effPct >= 90 ? '#22C55E' : (effPct >= 80 ? '#BEF264' : (effPct >= 60 ? '#FDE047' : (effPct >= 30 ? '#FB923C' : '#F87171')))));
-                        const attId = att.id || att.attempt_id;
-                        const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                        const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-
-                        return `
-                          <span class="asm-score asm-score-task ${isRem ? 'asm-score-remedial' : ''}" 
-                                style="color:${color}; ${cursorStyle}" 
-                                ${clickAttr}
-                                title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`} (${Math.round(effPct)}%)&#10;Click to view result">
-                            ${displayVal}
-                          </span>
-                        `;
-                      }
-                    }
-                  ];
-                })
+                ...dynamicAsmCols
               ]
             });
 
@@ -2475,12 +2446,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
     async function renderClassDetail(area) {
       if (!window.currentClassContext) {
-        return loadSection('assessments');
+        return loadSection('tests');
       }
       
       const { cid, lid, cname, lname, program, institution } = window.currentClassContext;
       const title = `${cname} - ${lname}`;
-      const subtitle = program && institution ? `${institution} ➔ ${program}` : 'Manage assessments and vocabulary for this class';
+      const subtitle = program && institution ? `${institution} ➔ ${program}` : 'Manage tests and vocabulary for this class';
       
       area.innerHTML = `
         <div class="section-header">
@@ -2490,9 +2461,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           </div>
         </div>
         <div class="dashboard-grid mt-4">
-          <div class="stat-card" style="cursor:pointer;" onclick="window.loadSection('assessments')">
+          <div class="stat-card" style="cursor:pointer;" onclick="window.loadSection('tests')">
             <div class="stat-icon">&#128221;</div>
-            <div class="stat-value">Manage Assessments</div>
+            <div class="stat-value">Manage Tests</div>
             <div class="stat-label">View all tests & assignments</div>
           </div>
           <div class="stat-card" style="cursor:pointer;" onclick="window.loadSection('vocab_vault')">
@@ -2503,7 +2474,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         </div>
         <div class="card mt-4" style="padding: 2rem; text-align: center;">
           <h3 style="margin-bottom: 1rem;">Context Loaded: ${escapeHtml(title)}</h3>
-          <p class="text-muted">You can navigate to <strong>Manage Assessments</strong> or <strong>Vocab Vault</strong> from the buttons above, or use the sidebar.</p>
+          <p class="text-muted">You can navigate to <strong>Manage Tests</strong> or <strong>Vocab Vault</strong> from the buttons above, or use the sidebar.</p>
         </div>
       `;
     }
@@ -2530,7 +2501,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           admin: 'ADMIN',
           board: 'BOARD',
           class: 'CLASS',
-          assessments: 'CLASS', // Legacy fallback
+          tests: 'CLASS', // Legacy fallback
           desk: 'DATA',
           data: 'DATA',
           academy: 'BOARD' // Legacy fallback
@@ -2601,19 +2572,19 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       return '';
     }
 
-    function formatAssessmentDisplayName(Assessment, classContext = '') {
-      if (!Assessment) return 'â€”';
+    function formatTestDisplayName(Test, classContext = '') {
+      if (!Test) return 'â€”';
       const parts = [];
-      if (Assessment.institutions?.name) parts.push(`[${Assessment.institutions.name}]`);
+      if (Test.institutions?.name) parts.push(`[${Test.institutions.name}]`);
       if (classContext) parts.push(`[${classContext}]`);
-      if (Assessment.classes?.name) parts.push(Assessment.classes.name);
-      if (Assessment.levels?.name) {
-        const lvl = String(Assessment.levels.name);
+      if (Test.classes?.name) parts.push(Test.classes.name);
+      if (Test.levels?.name) {
+        const lvl = String(Test.levels.name);
         parts.push(lvl.toLowerCase().includes('level') ? lvl : `Level ${lvl}`);
       }
-      if (Assessment.assessment_type) parts.push(Assessment.assessment_type);
-      if (Assessment.title) parts.push(Assessment.title);
-      return parts.length > 0 ? parts.join(' &middot; ') : (Assessment.title || 'Assessment');
+      if (Test.test_type) parts.push(Test.test_type);
+      if (Test.title) parts.push(Test.title);
+      return parts.length > 0 ? parts.join(' &middot; ') : (Test.title || 'Test');
     }
 
     // â”€â”€ DB Connection Status Banner â”€â”€
@@ -2789,16 +2760,16 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           case 'recalibrator':
             window.location.hash = '#health';
             return loadSection('health');
-          case 'assessment-hub':      window.location.hash = '#assessments'; break;
+          case 'test-hub':      window.location.hash = '#tests'; break;
           case 'class-hub':           await renderClassHub(area); break;
-          case 'assessments':         await renderAssessments(area); break;
-          case 'assessment-access':
+          case 'tests':         await renderTests(area); break;
+          case 'test-access':
             window._classHubActiveTab = 'test-sessions';
             window.location.hash = '#class-hub';
             await renderClassHub(area);
             break;
           case 'class-panel':         await renderClassPanel(area); break;
-          case 'import_ai_assessments': window.location.hash = '#assessments'; break;
+          case 'import_ai_tests': window.location.hash = '#tests'; break;
           case 'dashboard':           await renderDashboard(area); break;
           case 'profile':             await renderAdminProfile(area); break;
           case 'schedule':            await renderAdminSchedule(area); break;
@@ -2915,7 +2886,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             <h2 style="margin:0 0 0.25rem; font-size:1.25rem; font-weight:700; color:var(--clr-text-1);">
               Classes <span style="font-size:0.78rem; font-weight:400; color:var(--clr-text-muted); margin-left:0.5rem;">${classes.length} total</span>
             </h2>
-            <p style="margin:0; font-size:0.82rem; color:var(--clr-text-muted);">Click a class to view its assessments</p>
+            <p style="margin:0; font-size:0.82rem; color:var(--clr-text-muted);">Click a class to view its tests</p>
           </div>
           <div style="overflow-y:auto;">
             <table style="width:100%; border-collapse:collapse;">
@@ -2984,18 +2955,18 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       }
     }
 
-    // ── ASSESSMENT HUB ──
-    async function renderAssessmentHub(area) {
-      area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading Assessment Hub...</p></div>';
+    // ── TEST HUB ──
+    async function renderTestHub(area) {
+      area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading Test Hub...</p></div>';
       try {
-        const [assessments, classes, results] = await Promise.all([
-          adminFetchAll('assessments', 'id, title, assessment_type, status, class_id, level_id, levels(name)'),
+        const [allTests, classes, results] = await Promise.all([
+          adminFetchAll('tests', 'id, title, test_type, status, class_id, level_id, levels(name)'),
           adminFetchAll('classes', 'id, name'),
-          adminFetchAll('assessment_results', 'final_score').catch(() => [])
+          adminFetchAll('test_results', 'final_score').catch(() => [])
         ]);
         
-        const tasks = (assessments || []).filter(a => a.assessment_category === 'TASK');
-        const tests = (assessments || []).filter(a => a.assessment_category === 'TEST');
+        const quizzes = (allTests || []).filter(a => a.test_type === 'quiz' || (a.test_subtype && a.test_subtype.includes('TASK')));
+        const exams = (allTests || []).filter(a => a.test_type === 'exam' || (a.test_subtype && a.test_subtype.includes('TEST')));
         
         let passRate = "N/A";
         if (results && results.length > 0) {
@@ -3003,13 +2974,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             passRate = Math.round((passed / results.length) * 100) + "%";
         }
 
-        let tableHtml = assessments.map(a => {
+        let tableHtml = (allTests || []).map(a => {
            const c = (classes||[]).find(x => x.id === a.class_id);
-           const badgeColor = a.assessment_category === 'TASK' ? 'background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);' : 'background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);';
+           const badgeColor = a.test_category === 'TASK' ? 'background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);' : 'background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);';
            return `
              <tr style="border-bottom:1px solid var(--clr-border);">
                <td style="padding:0.75rem 1rem;font-weight:600;color:var(--clr-text);">${escapeHtml(a.title || 'Untitled')}</td>
-               <td style="padding:0.75rem 1rem;"><span class="badge" style="${badgeColor}">${escapeHtml(a.assessment_category || 'TASK')}</span></td>
+               <td style="padding:0.75rem 1rem;"><span class="badge" style="${badgeColor}">${escapeHtml(a.test_category || 'TASK')}</span></td>
                <td style="padding:0.75rem 1rem;color:var(--clr-text-muted);font-size:0.8rem;">${escapeHtml(c?.name || '—')}</td>
                <td style="padding:0.75rem 1rem;color:var(--clr-text-muted);font-size:0.8rem;">${escapeHtml(a.levels?.name || '—')}</td>
                <td style="padding:0.75rem 1rem;">
@@ -3021,7 +2992,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
         area.innerHTML = `
           <div style="padding:1.5rem 2rem 1rem; border-bottom:1px solid var(--clr-border);">
-            <h2 style="margin:0 0 0.5rem; font-size:1.5rem;">Assessment Hub</h2>
+            <h2 style="margin:0 0 0.5rem; font-size:1.5rem;">Test Hub</h2>
             <p style="margin:0; color:var(--clr-text-muted); font-size:0.85rem;">Global view of all tasks and tests across classes.</p>
           </div>
           
@@ -3056,7 +3027,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               <table style="width:100%; border-collapse:collapse;">
                 <thead>
                   <tr style="background:var(--clr-bg-1); border-bottom:2px solid var(--clr-border);">
-                    <th style="padding:0.75rem 1rem; text-align:left; font-size:0.75rem; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Assessment</th>
+                    <th style="padding:0.75rem 1rem; text-align:left; font-size:0.75rem; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Test</th>
                     <th style="padding:0.75rem 1rem; text-align:left; font-size:0.75rem; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Type</th>
                     <th style="padding:0.75rem 1rem; text-align:left; font-size:0.75rem; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Class</th>
                     <th style="padding:0.75rem 1rem; text-align:left; font-size:0.75rem; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Level</th>
@@ -3064,7 +3035,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   </tr>
                 </thead>
                 <tbody>
-                  ${tableHtml || '<tr><td colspan="5" style="padding:2rem;text-align:center;color:var(--clr-text-muted);">No assessments found</td></tr>'}
+                  ${tableHtml || '<tr><td colspan="5" style="padding:2rem;text-align:center;color:var(--clr-text-muted);">No tests found</td></tr>'}
                 </tbody>
               </table>
             </div>
@@ -3072,7 +3043,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         `;
       } catch (e) {
         console.error(e);
-        area.innerHTML = `<div class="empty-state"><p style="color:#f87171;">Error loading Assessment Hub</p></div>`;
+        area.innerHTML = `<div class="empty-state"><p style="color:#f87171;">Error loading Test Hub</p></div>`;
       }
     }
 
@@ -3183,10 +3154,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               </div>
               <div style="display:flex; gap:0.5rem;">
                 ${isVocabClass ? `
-                  <button class="btn btn-sm" id="cpanel-auto-gen-words" style="background:var(--clr-primary);color:#fff;border:1px solid var(--clr-primary);font-weight:700;" title="Auto-Generate Vocabulary Assessments">⚡ Gen Words</button>
+                  <button class="btn btn-sm" id="cpanel-auto-gen-words" style="background:var(--clr-primary);color:#fff;border:1px solid var(--clr-primary);font-weight:700;" title="Auto-Generate Vocabulary Tests">⚡ Gen Words</button>
                   <button class="btn btn-sm" id="cpanel-auto-gen-phrases" style="background:#10b981;color:#fff;border:1px solid #10b981;font-weight:700;" title="Auto-Generate Phrases & Idioms">⚡ Gen Phrases</button>
                 ` : `
-                  <button class="btn btn-sm" id="cpanel-auto-generate-btn" style="background:var(--clr-primary);color:#fff;border:1px solid var(--clr-primary);font-weight:700;" title="Auto-Generate Vocabulary Assessments">⚡ Auto-Generate</button>
+                  <button class="btn btn-sm" id="cpanel-auto-generate-btn" style="background:var(--clr-primary);color:#fff;border:1px solid var(--clr-primary);font-weight:700;" title="Auto-Generate Vocabulary Tests">⚡ Auto-Generate</button>
                 `}
                 <button class="btn btn-sm" id="cpanel-add-task-btn" style="background:rgba(245,158,11,0.9);color:#1a1a1a;border:1px solid rgba(245,158,11,0.4);font-weight:700;">📋 Add Task</button>
                 <button class="btn btn-sm" id="cpanel-add-test-btn" style="background:rgba(239,68,68,0.9);color:#fff;border:1px solid rgba(239,68,68,0.4);font-weight:700;">🏆 Add Test</button>
@@ -3316,7 +3287,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=5.3.2');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261027c');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -3458,7 +3429,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('health')">&#9889; Recalibrator</button>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('import-questions')">&#128229; Import Questions</button>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('export-questions')">&#128228; Export Questions</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('import_ai_assessments')">&#129302; Import AI Assessments</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('import_ai_tests')">&#129302; Import AI Tests</button>
           </div>
         </div>
 
@@ -3653,7 +3624,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       }
     }
     window.openStudentProfile = openStudentProfile;
-    // --- Assessment MANAGEMENT HUB (Restored & Elevated) ---
+    // --- Test MANAGEMENT HUB (Restored & Elevated) ---
 
 
 // Global edit/delete handlers

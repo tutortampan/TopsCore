@@ -197,19 +197,19 @@ $$;
 ALTER FUNCTION "public"."merge_student_import"("import_filename" "text", "records" "jsonb") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."reorder_assessment"("p_assessment_id" "uuid", "p_new_order" integer, "p_class_id" "uuid") RETURNS "void"
+CREATE OR REPLACE FUNCTION "public"."reorder_test"("p_test_id" "uuid", "p_new_order" integer, "p_class_id" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 DECLARE
     v_old_order INTEGER;
 BEGIN
-    -- 1. Get the current order of the assessment
+    -- 1. Get the current order of the test
     SELECT display_order INTO v_old_order
-    FROM public.assessments
-    WHERE id = p_assessment_id AND class_id = p_class_id;
+    FROM public.tests
+    WHERE id = p_test_id AND class_id = p_class_id;
 
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Assessment not found in class %', p_class_id;
+        RAISE EXCEPTION 'Test not found in class %', p_class_id;
     END IF;
 
     -- 2. If no change, return
@@ -220,32 +220,32 @@ BEGIN
     -- 3. Shift intervening items
     IF v_old_order < p_new_order THEN
         -- Moving down: Shift items up (decrement) that are between old_order + 1 and new_order
-        UPDATE public.assessments
+        UPDATE public.tests
         SET display_order = display_order - 1
         WHERE class_id = p_class_id
           AND display_order > v_old_order
           AND display_order <= p_new_order
-          AND id != p_assessment_id;
+          AND id != p_test_id;
     ELSE
         -- Moving up: Shift items down (increment) that are between new_order and old_order - 1
-        UPDATE public.assessments
+        UPDATE public.tests
         SET display_order = display_order + 1
         WHERE class_id = p_class_id
           AND display_order >= p_new_order
           AND display_order < v_old_order
-          AND id != p_assessment_id;
+          AND id != p_test_id;
     END IF;
 
-    -- 4. Set the new order for the target assessment
-    UPDATE public.assessments
+    -- 4. Set the new order for the target test
+    UPDATE public.tests
     SET display_order = p_new_order
-    WHERE id = p_assessment_id;
+    WHERE id = p_test_id;
 
 END;
 $$;
 
 
-ALTER FUNCTION "public"."reorder_assessment"("p_assessment_id" "uuid", "p_new_order" integer, "p_class_id" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "public"."reorder_test"("p_test_id" "uuid", "p_new_order" integer, "p_class_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."touch_student_updated_at"() RETURNS "trigger"
@@ -366,7 +366,7 @@ CREATE TABLE IF NOT EXISTS "public"."additional_members" (
 ALTER TABLE "public"."additional_members" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."assessment_attempt_answers" (
+CREATE TABLE IF NOT EXISTS "public"."test_attempt_answers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "assessment_attempt_id" "uuid" NOT NULL,
     "question_id" "uuid",
@@ -387,10 +387,10 @@ CREATE TABLE IF NOT EXISTS "public"."assessment_attempt_answers" (
 );
 
 
-ALTER TABLE "public"."assessment_attempt_answers" OWNER TO "postgres";
+ALTER TABLE "public"."test_attempt_answers" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."assessment_attempts" (
+CREATE TABLE IF NOT EXISTS "public"."test_attempts" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "student_id" "uuid" NOT NULL,
     "assessment_instance_id" "uuid" NOT NULL,
@@ -412,12 +412,12 @@ CREATE TABLE IF NOT EXISTS "public"."assessment_attempts" (
 );
 
 
-ALTER TABLE "public"."assessment_attempts" OWNER TO "postgres";
+ALTER TABLE "public"."test_attempts" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."assessment_instances" (
+CREATE TABLE IF NOT EXISTS "public"."test_instances" (
     "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
-    "assessment_id" "uuid",
+    "test_id" "uuid",
     "class_instance_id" "uuid",
     "student_id" "uuid",
     "batch_id" "uuid",
@@ -435,12 +435,12 @@ CREATE TABLE IF NOT EXISTS "public"."assessment_instances" (
 );
 
 
-ALTER TABLE "public"."assessment_instances" OWNER TO "postgres";
+ALTER TABLE "public"."test_instances" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."assessment_questions" (
+CREATE TABLE IF NOT EXISTS "public"."test_items" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "assessment_id" "uuid" NOT NULL,
+    "test_id" "uuid" NOT NULL,
     "question_id" "uuid",
     "question_text_snapshot" "text" NOT NULL,
     "accepted_answers_snapshot" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
@@ -454,13 +454,13 @@ CREATE TABLE IF NOT EXISTS "public"."assessment_questions" (
 );
 
 
-ALTER TABLE "public"."assessment_questions" OWNER TO "postgres";
+ALTER TABLE "public"."test_items" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."assessment_results" (
+CREATE TABLE IF NOT EXISTS "public"."test_results" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "student_id" "uuid",
-    "assessment_id" "uuid",
+    "test_id" "uuid",
     "module_type" character varying(50) NOT NULL,
     "final_score" integer DEFAULT 0 NOT NULL,
     "raw_evaluation_json" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
@@ -470,32 +470,32 @@ CREATE TABLE IF NOT EXISTS "public"."assessment_results" (
 );
 
 
-ALTER TABLE "public"."assessment_results" OWNER TO "postgres";
+ALTER TABLE "public"."test_results" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."assessment_topics" (
+CREATE TABLE IF NOT EXISTS "public"."test_topics" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "assessment_id" "uuid" NOT NULL,
+    "test_id" "uuid" NOT NULL,
     "topic_id" "uuid" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
-ALTER TABLE "public"."assessment_topics" OWNER TO "postgres";
+ALTER TABLE "public"."test_topics" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."assessments" (
+CREATE TABLE IF NOT EXISTS "public"."tests" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "class_id" "uuid",
     "level_id" "uuid",
-    "assessment_type" "text" DEFAULT 'EVALUATION'::"text",
+    "test_type" "text" DEFAULT 'EVALUATION'::"text",
     "title" "text",
     "description" "text",
     "status" "text" DEFAULT 'DRAFT'::"text",
     "availability_start" timestamp with time zone,
     "availability_end" timestamp with time zone,
     "working_duration_minutes" integer DEFAULT 60,
-    "prerequisite_assessment_id" "uuid",
+    "prerequisite_test_id" "uuid",
     "created_by" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -503,7 +503,7 @@ CREATE TABLE IF NOT EXISTS "public"."assessments" (
     "institution_id" "uuid",
     "program_id" "uuid",
     "prerequisite_id" "uuid",
-    "assessment_category" character varying(10),
+    "test_category" character varying(10),
     "module_type" "text",
     "schedule_mode" "text" DEFAULT 'flexible'::"text",
     "window_start" timestamp with time zone,
@@ -516,21 +516,21 @@ CREATE TABLE IF NOT EXISTS "public"."assessments" (
     "is_dynamic_shell" boolean DEFAULT false NOT NULL,
     "display_order" integer DEFAULT 999,
     "topic_id" "uuid",
-    "category" "text" DEFAULT 'ASSESSMENT'::"text",
+    "category" "text" DEFAULT 'TEST'::"text",
     "display_name" "text",
     "minimum_required_score" numeric DEFAULT 0,
     "max_attempts" integer DEFAULT 0,
     "retake_allowed" boolean DEFAULT true,
-    CONSTRAINT "assessments_assessment_category_check" CHECK ((("assessment_category")::"text" = ANY ((ARRAY['TASK'::character varying, 'TEST'::character varying])::"text"[])))
+    CONSTRAINT "assessments_assessment_category_check" CHECK ((("test_category")::"text" = ANY ((ARRAY['TASK'::character varying, 'TEST'::character varying])::"text"[])))
 );
 
 
-ALTER TABLE "public"."assessments" OWNER TO "postgres";
+ALTER TABLE "public"."tests" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."assignments" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "assessment_id" "uuid" NOT NULL,
+    "test_id" "uuid" NOT NULL,
     "assignment_type" "text" NOT NULL,
     "batch_id" "uuid",
     "student_id" "uuid",
@@ -577,7 +577,7 @@ ALTER TABLE "public"."attempt_answers" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."attempts" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "student_id" "uuid" NOT NULL,
-    "assessment_id" "uuid" NOT NULL,
+    "test_id" "uuid" NOT NULL,
     "attempt_number" integer DEFAULT 1 NOT NULL,
     "started_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "expires_at" timestamp with time zone NOT NULL,
@@ -744,7 +744,7 @@ CREATE TABLE IF NOT EXISTS "public"."exam_history" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "submission_id" "uuid" NOT NULL,
     "student_id" "uuid" NOT NULL,
-    "assessment_id" "uuid" NOT NULL,
+    "test_id" "uuid" NOT NULL,
     "action_type" character varying(50) NOT NULL,
     "old_payload" "jsonb",
     "new_payload" "jsonb",
@@ -854,7 +854,7 @@ ALTER TABLE "public"."question_types" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."question_usage_history" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "question_id" "uuid",
-    "assessment_id" "uuid",
+    "test_id" "uuid",
     "attempt_id" "uuid",
     "student_id" "uuid",
     "used_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -1017,7 +1017,7 @@ ALTER TABLE "public"."student_requirement_progress" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."student_submissions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "student_id" "uuid" NOT NULL,
-    "assessment_id" "uuid" NOT NULL,
+    "test_id" "uuid" NOT NULL,
     "status" character varying(20) DEFAULT 'IN_PROGRESS'::character varying,
     "started_at" timestamp with time zone DEFAULT "now"(),
     "submitted_at" timestamp with time zone,
@@ -1182,32 +1182,32 @@ ALTER TABLE ONLY "public"."additional_members"
 
 
 
-ALTER TABLE ONLY "public"."assessment_instances"
+ALTER TABLE ONLY "public"."test_instances"
     ADD CONSTRAINT "assessment_instances_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."assessment_questions"
+ALTER TABLE ONLY "public"."test_items"
     ADD CONSTRAINT "assessment_questions_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."assessment_results"
+ALTER TABLE ONLY "public"."test_results"
     ADD CONSTRAINT "assessment_results_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."assessment_topics"
-    ADD CONSTRAINT "assessment_topics_assessment_id_topic_id_key" UNIQUE ("assessment_id", "topic_id");
+ALTER TABLE ONLY "public"."test_topics"
+    ADD CONSTRAINT "assessment_topics_assessment_id_topic_id_key" UNIQUE ("test_id", "topic_id");
 
 
 
-ALTER TABLE ONLY "public"."assessment_topics"
+ALTER TABLE ONLY "public"."test_topics"
     ADD CONSTRAINT "assessment_topics_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."assessments"
+ALTER TABLE ONLY "public"."tests"
     ADD CONSTRAINT "assessments_pkey" PRIMARY KEY ("id");
 
 
@@ -1242,12 +1242,12 @@ ALTER TABLE ONLY "public"."cec_app_state"
 
 
 
-ALTER TABLE ONLY "public"."assessment_attempt_answers"
+ALTER TABLE ONLY "public"."test_attempt_answers"
     ADD CONSTRAINT "challenge_attempt_answers_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."assessment_attempts"
+ALTER TABLE ONLY "public"."test_attempts"
     ADD CONSTRAINT "challenge_attempts_pkey" PRIMARY KEY ("id");
 
 
@@ -1457,71 +1457,71 @@ ALTER TABLE ONLY "public"."work_records"
 
 
 
-CREATE INDEX "idx_assessment_instances_assessment_id" ON "public"."assessment_instances" USING "btree" ("assessment_id");
+CREATE INDEX "idx_assessment_instances_assessment_id" ON "public"."test_instances" USING "btree" ("test_id");
 
 
 
-CREATE INDEX "idx_assessment_instances_batch_id" ON "public"."assessment_instances" USING "btree" ("batch_id");
+CREATE INDEX "idx_assessment_instances_batch_id" ON "public"."test_instances" USING "btree" ("batch_id");
 
 
 
-CREATE INDEX "idx_assessment_instances_student_id" ON "public"."assessment_instances" USING "btree" ("student_id");
+CREATE INDEX "idx_assessment_instances_student_id" ON "public"."test_instances" USING "btree" ("student_id");
 
 
 
-CREATE INDEX "idx_assessment_questions_assessment_id" ON "public"."assessment_questions" USING "btree" ("assessment_id");
+CREATE INDEX "idx_assessment_questions_assessment_id" ON "public"."test_items" USING "btree" ("test_id");
 
 
 
-CREATE INDEX "idx_assessment_results_assessment_id" ON "public"."assessment_results" USING "btree" ("assessment_id");
+CREATE INDEX "idx_assessment_results_assessment_id" ON "public"."test_results" USING "btree" ("test_id");
 
 
 
-CREATE INDEX "idx_assessment_results_module_type" ON "public"."assessment_results" USING "btree" ("module_type");
+CREATE INDEX "idx_assessment_results_module_type" ON "public"."test_results" USING "btree" ("module_type");
 
 
 
-CREATE INDEX "idx_assessment_results_student_id" ON "public"."assessment_results" USING "btree" ("student_id");
+CREATE INDEX "idx_assessment_results_student_id" ON "public"."test_results" USING "btree" ("student_id");
 
 
 
-CREATE INDEX "idx_assessment_topics_assessment_id" ON "public"."assessment_topics" USING "btree" ("assessment_id");
+CREATE INDEX "idx_assessment_topics_assessment_id" ON "public"."test_topics" USING "btree" ("test_id");
 
 
 
-CREATE INDEX "idx_assessments_assessment_category" ON "public"."assessments" USING "btree" ("assessment_category");
+CREATE INDEX "idx_assessments_assessment_category" ON "public"."tests" USING "btree" ("test_category");
 
 
 
-CREATE INDEX "idx_assessments_class_id" ON "public"."assessments" USING "btree" ("class_id");
+CREATE INDEX "idx_assessments_class_id" ON "public"."tests" USING "btree" ("class_id");
 
 
 
-CREATE INDEX "idx_assessments_created_by" ON "public"."assessments" USING "btree" ("created_by");
+CREATE INDEX "idx_assessments_created_by" ON "public"."tests" USING "btree" ("created_by");
 
 
 
-CREATE INDEX "idx_assessments_display_order" ON "public"."assessments" USING "btree" ("display_order");
+CREATE INDEX "idx_assessments_display_order" ON "public"."tests" USING "btree" ("display_order");
 
 
 
-CREATE INDEX "idx_assessments_prerequisite_id" ON "public"."assessments" USING "btree" ("prerequisite_id");
+CREATE INDEX "idx_assessments_prerequisite_id" ON "public"."tests" USING "btree" ("prerequisite_id");
 
 
 
-CREATE INDEX "idx_assessments_program_id" ON "public"."assessments" USING "btree" ("program_id");
+CREATE INDEX "idx_assessments_program_id" ON "public"."tests" USING "btree" ("program_id");
 
 
 
-CREATE INDEX "idx_assessments_shell_code" ON "public"."assessments" USING "btree" ("shell_code");
+CREATE INDEX "idx_assessments_shell_code" ON "public"."tests" USING "btree" ("shell_code");
 
 
 
-CREATE INDEX "idx_assessments_status" ON "public"."assessments" USING "btree" ("status");
+CREATE INDEX "idx_assessments_status" ON "public"."tests" USING "btree" ("status");
 
 
 
-CREATE INDEX "idx_assignments_assessment_id" ON "public"."assignments" USING "btree" ("assessment_id");
+CREATE INDEX "idx_assignments_assessment_id" ON "public"."assignments" USING "btree" ("test_id");
 
 
 
@@ -1533,7 +1533,7 @@ CREATE INDEX "idx_assignments_student_id" ON "public"."assignments" USING "btree
 
 
 
-CREATE INDEX "idx_attempts_assessment_id" ON "public"."attempts" USING "btree" ("assessment_id");
+CREATE INDEX "idx_attempts_assessment_id" ON "public"."attempts" USING "btree" ("test_id");
 
 
 
@@ -1557,7 +1557,7 @@ CREATE INDEX "idx_questions_topic_id" ON "public"."questions" USING "btree" ("to
 
 
 
-CREATE INDEX "idx_quh_assessment_id" ON "public"."question_usage_history" USING "btree" ("assessment_id");
+CREATE INDEX "idx_quh_assessment_id" ON "public"."question_usage_history" USING "btree" ("test_id");
 
 
 
@@ -1613,7 +1613,7 @@ CREATE OR REPLACE TRIGGER "scholarships_touch_updated_at" BEFORE UPDATE ON "publ
 
 
 
-CREATE OR REPLACE TRIGGER "trg_assessments_updated_at" BEFORE UPDATE ON "public"."assessments" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
+CREATE OR REPLACE TRIGGER "trg_assessments_updated_at" BEFORE UPDATE ON "public"."tests" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 
 
 
@@ -1695,68 +1695,68 @@ ALTER TABLE ONLY "public"."additional_members"
 
 
 
-ALTER TABLE ONLY "public"."assessment_questions"
-    ADD CONSTRAINT "assessment_questions_assessment_id_fkey" FOREIGN KEY ("assessment_id") REFERENCES "public"."assessments"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."test_items"
+    ADD CONSTRAINT "assessment_questions_assessment_id_fkey" FOREIGN KEY ("test_id") REFERENCES "public"."tests"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."assessment_results"
+ALTER TABLE ONLY "public"."test_results"
     ADD CONSTRAINT "assessment_results_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."assessment_topics"
-    ADD CONSTRAINT "assessment_topics_assessment_id_fkey" FOREIGN KEY ("assessment_id") REFERENCES "public"."assessments"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."test_topics"
+    ADD CONSTRAINT "assessment_topics_assessment_id_fkey" FOREIGN KEY ("test_id") REFERENCES "public"."tests"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."assessment_topics"
+ALTER TABLE ONLY "public"."test_topics"
     ADD CONSTRAINT "assessment_topics_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "public"."topics"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."assessments"
+ALTER TABLE ONLY "public"."tests"
     ADD CONSTRAINT "assessments_class_id_fkey" FOREIGN KEY ("class_id") REFERENCES "public"."classes"("id") ON DELETE CASCADE;
 
 
 
-ALTER TABLE ONLY "public"."assessments"
+ALTER TABLE ONLY "public"."tests"
     ADD CONSTRAINT "assessments_institution_id_fkey" FOREIGN KEY ("institution_id") REFERENCES "public"."institutions"("id") ON DELETE SET NULL;
 
 
 
-ALTER TABLE ONLY "public"."assessments"
+ALTER TABLE ONLY "public"."tests"
     ADD CONSTRAINT "assessments_level_id_fkey" FOREIGN KEY ("level_id") REFERENCES "public"."levels"("id") ON DELETE SET NULL;
 
 
 
-ALTER TABLE ONLY "public"."assessments"
+ALTER TABLE ONLY "public"."tests"
     ADD CONSTRAINT "assessments_module_id_fkey" FOREIGN KEY ("module_id") REFERENCES "public"."modules"("id");
 
 
 
-ALTER TABLE ONLY "public"."assessments"
-    ADD CONSTRAINT "assessments_prerequisite_assessment_id_fkey" FOREIGN KEY ("prerequisite_assessment_id") REFERENCES "public"."assessments"("id") ON DELETE SET NULL;
+ALTER TABLE ONLY "public"."tests"
+    ADD CONSTRAINT "assessments_prerequisite_assessment_id_fkey" FOREIGN KEY ("prerequisite_test_id") REFERENCES "public"."tests"("id") ON DELETE SET NULL;
 
 
 
-ALTER TABLE ONLY "public"."assessments"
-    ADD CONSTRAINT "assessments_prerequisite_id_fkey" FOREIGN KEY ("prerequisite_id") REFERENCES "public"."assessments"("id") ON DELETE SET NULL;
+ALTER TABLE ONLY "public"."tests"
+    ADD CONSTRAINT "assessments_prerequisite_id_fkey" FOREIGN KEY ("prerequisite_id") REFERENCES "public"."tests"("id") ON DELETE SET NULL;
 
 
 
-ALTER TABLE ONLY "public"."assessments"
+ALTER TABLE ONLY "public"."tests"
     ADD CONSTRAINT "assessments_program_id_fkey" FOREIGN KEY ("program_id") REFERENCES "public"."programs"("id") ON DELETE SET NULL;
 
 
 
-ALTER TABLE ONLY "public"."assessments"
+ALTER TABLE ONLY "public"."tests"
     ADD CONSTRAINT "assessments_topic_id_fkey" FOREIGN KEY ("topic_id") REFERENCES "public"."topics"("id") ON DELETE SET NULL;
 
 
 
 ALTER TABLE ONLY "public"."assignments"
-    ADD CONSTRAINT "assignments_assessment_id_fkey" FOREIGN KEY ("assessment_id") REFERENCES "public"."assessments"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "assignments_assessment_id_fkey" FOREIGN KEY ("test_id") REFERENCES "public"."tests"("id") ON DELETE CASCADE;
 
 
 
@@ -1776,7 +1776,7 @@ ALTER TABLE ONLY "public"."attempt_answers"
 
 
 ALTER TABLE ONLY "public"."attempts"
-    ADD CONSTRAINT "attempts_assessment_id_fkey" FOREIGN KEY ("assessment_id") REFERENCES "public"."assessments"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "attempts_assessment_id_fkey" FOREIGN KEY ("test_id") REFERENCES "public"."tests"("id") ON DELETE CASCADE;
 
 
 
@@ -1795,8 +1795,8 @@ ALTER TABLE ONLY "public"."batches"
 
 
 
-ALTER TABLE ONLY "public"."assessment_attempt_answers"
-    ADD CONSTRAINT "challenge_attempt_answers_challenge_attempt_id_fkey" FOREIGN KEY ("assessment_attempt_id") REFERENCES "public"."assessment_attempts"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."test_attempt_answers"
+    ADD CONSTRAINT "challenge_attempt_answers_challenge_attempt_id_fkey" FOREIGN KEY ("assessment_attempt_id") REFERENCES "public"."test_attempts"("id") ON DELETE CASCADE;
 
 
 
@@ -1876,7 +1876,7 @@ ALTER TABLE ONLY "public"."progress"
 
 
 ALTER TABLE ONLY "public"."question_usage_history"
-    ADD CONSTRAINT "question_usage_history_assessment_id_fkey" FOREIGN KEY ("assessment_id") REFERENCES "public"."assessments"("id") ON DELETE SET NULL;
+    ADD CONSTRAINT "question_usage_history_assessment_id_fkey" FOREIGN KEY ("test_id") REFERENCES "public"."tests"("id") ON DELETE SET NULL;
 
 
 
@@ -1970,7 +1970,7 @@ ALTER TABLE ONLY "public"."work_records"
 
 
 
-CREATE POLICY "Allow access to assessment_instances" ON "public"."assessment_instances" USING (true) WITH CHECK (true);
+CREATE POLICY "Allow access to assessment_instances" ON "public"."test_instances" USING (true) WITH CHECK (true);
 
 
 
@@ -1978,11 +1978,11 @@ CREATE POLICY "Allow audit writes" ON "public"."exam_history" USING (true);
 
 
 
-CREATE POLICY "Allow full access on assessments" ON "public"."assessments" USING (true);
+CREATE POLICY "Allow full access on tests" ON "public"."tests" USING (true);
 
 
 
-CREATE POLICY "Allow insert on assessment_results" ON "public"."assessment_results" FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow insert on assessment_results" ON "public"."test_results" FOR INSERT WITH CHECK (true);
 
 
 
@@ -2026,7 +2026,7 @@ CREATE POLICY "Allow read achievement_targets" ON "public"."achievement_targets"
 
 
 
-CREATE POLICY "Allow read on assessment_results" ON "public"."assessment_results" FOR SELECT USING (true);
+CREATE POLICY "Allow read on assessment_results" ON "public"."test_results" FOR SELECT USING (true);
 
 
 
@@ -2054,7 +2054,7 @@ CREATE POLICY "Allow students to read their own profile" ON "public"."students" 
 
 
 
-CREATE POLICY "Allow update on assessment_results" ON "public"."assessment_results" FOR UPDATE USING (true);
+CREATE POLICY "Allow update on assessment_results" ON "public"."test_results" FOR UPDATE USING (true);
 
 
 
@@ -2140,11 +2140,11 @@ ALTER TABLE "public"."achievement_targets" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."additional_members" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "admin_all_challenge_attempt_answers" ON "public"."assessment_attempt_answers" TO "anon" USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all_challenge_attempt_answers" ON "public"."test_attempt_answers" TO "anon" USING (true) WITH CHECK (true);
 
 
 
-CREATE POLICY "admin_all_challenge_attempts" ON "public"."assessment_attempts" TO "anon" USING (true) WITH CHECK (true);
+CREATE POLICY "admin_all_challenge_attempts" ON "public"."test_attempts" TO "anon" USING (true) WITH CHECK (true);
 
 
 
@@ -2172,15 +2172,15 @@ CREATE POLICY "admin_all_work_records" ON "public"."work_records" TO "anon" USIN
 
 
 
-CREATE POLICY "anon_read_assessment_questions" ON "public"."assessment_questions" FOR SELECT TO "anon" USING (true);
+CREATE POLICY "anon_read_assessment_questions" ON "public"."test_items" FOR SELECT TO "anon" USING (true);
 
 
 
-CREATE POLICY "anon_read_assessment_topics" ON "public"."assessment_topics" FOR SELECT TO "anon" USING (true);
+CREATE POLICY "anon_read_assessment_topics" ON "public"."test_topics" FOR SELECT TO "anon" USING (true);
 
 
 
-CREATE POLICY "anon_read_assessments" ON "public"."assessments" FOR SELECT TO "anon" USING (true);
+CREATE POLICY "anon_read_assessments" ON "public"."tests" FOR SELECT TO "anon" USING (true);
 
 
 
@@ -2204,15 +2204,15 @@ CREATE POLICY "anon_select_additional_members" ON "public"."additional_members" 
 
 
 
-CREATE POLICY "anon_select_assessment_questions" ON "public"."assessment_questions" FOR SELECT TO "anon" USING (true);
+CREATE POLICY "anon_select_assessment_questions" ON "public"."test_items" FOR SELECT TO "anon" USING (true);
 
 
 
-CREATE POLICY "anon_select_assessment_topics" ON "public"."assessment_topics" FOR SELECT TO "anon" USING (true);
+CREATE POLICY "anon_select_assessment_topics" ON "public"."test_topics" FOR SELECT TO "anon" USING (true);
 
 
 
-CREATE POLICY "anon_select_assessments" ON "public"."assessments" FOR SELECT TO "anon" USING (true);
+CREATE POLICY "anon_select_assessments" ON "public"."tests" FOR SELECT TO "anon" USING (true);
 
 
 
@@ -2300,25 +2300,25 @@ CREATE POLICY "app state update" ON "public"."cec_app_state" FOR UPDATE TO "auth
 
 
 
-ALTER TABLE "public"."assessment_attempt_answers" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."test_attempt_answers" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."assessment_attempts" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."test_attempts" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."assessment_instances" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."test_instances" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."assessment_questions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."test_items" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."assessment_results" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."test_results" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."assessment_topics" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."test_topics" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."assessments" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."tests" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."assignments" ENABLE ROW LEVEL SECURITY;
@@ -2337,15 +2337,15 @@ CREATE POLICY "auth_all_additional_members" ON "public"."additional_members" TO 
 
 
 
-CREATE POLICY "auth_all_assessment_questions" ON "public"."assessment_questions" TO "authenticated" USING (true) WITH CHECK (true);
+CREATE POLICY "auth_all_assessment_questions" ON "public"."test_items" TO "authenticated" USING (true) WITH CHECK (true);
 
 
 
-CREATE POLICY "auth_all_assessment_topics" ON "public"."assessment_topics" TO "authenticated" USING (true) WITH CHECK (true);
+CREATE POLICY "auth_all_assessment_topics" ON "public"."test_topics" TO "authenticated" USING (true) WITH CHECK (true);
 
 
 
-CREATE POLICY "auth_all_assessments" ON "public"."assessments" TO "authenticated" USING (true) WITH CHECK (true);
+CREATE POLICY "auth_all_assessments" ON "public"."tests" TO "authenticated" USING (true) WITH CHECK (true);
 
 
 
@@ -2528,15 +2528,15 @@ CREATE POLICY "service_role_all_additional_members" ON "public"."additional_memb
 
 
 
-CREATE POLICY "service_role_all_assessment_questions" ON "public"."assessment_questions" TO "service_role" USING (true) WITH CHECK (true);
+CREATE POLICY "service_role_all_assessment_questions" ON "public"."test_items" TO "service_role" USING (true) WITH CHECK (true);
 
 
 
-CREATE POLICY "service_role_all_assessment_topics" ON "public"."assessment_topics" TO "service_role" USING (true) WITH CHECK (true);
+CREATE POLICY "service_role_all_assessment_topics" ON "public"."test_topics" TO "service_role" USING (true) WITH CHECK (true);
 
 
 
-CREATE POLICY "service_role_all_assessments" ON "public"."assessments" TO "service_role" USING (true) WITH CHECK (true);
+CREATE POLICY "service_role_all_assessments" ON "public"."tests" TO "service_role" USING (true) WITH CHECK (true);
 
 
 
@@ -2560,11 +2560,11 @@ CREATE POLICY "service_role_all_batches" ON "public"."batches" TO "service_role"
 
 
 
-CREATE POLICY "service_role_all_challenge_attempt_answers" ON "public"."assessment_attempt_answers" TO "service_role" USING (true) WITH CHECK (true);
+CREATE POLICY "service_role_all_challenge_attempt_answers" ON "public"."test_attempt_answers" TO "service_role" USING (true) WITH CHECK (true);
 
 
 
-CREATE POLICY "service_role_all_challenge_attempts" ON "public"."assessment_attempts" TO "service_role" USING (true) WITH CHECK (true);
+CREATE POLICY "service_role_all_challenge_attempts" ON "public"."test_attempts" TO "service_role" USING (true) WITH CHECK (true);
 
 
 
@@ -2895,9 +2895,9 @@ GRANT ALL ON FUNCTION "public"."merge_student_import"("import_filename" "text", 
 
 
 
-GRANT ALL ON FUNCTION "public"."reorder_assessment"("p_assessment_id" "uuid", "p_new_order" integer, "p_class_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."reorder_assessment"("p_assessment_id" "uuid", "p_new_order" integer, "p_class_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."reorder_assessment"("p_assessment_id" "uuid", "p_new_order" integer, "p_class_id" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "public"."reorder_test"("p_test_id" "uuid", "p_new_order" integer, "p_class_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."reorder_test"("p_test_id" "uuid", "p_new_order" integer, "p_class_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."reorder_test"("p_test_id" "uuid", "p_new_order" integer, "p_class_id" "uuid") TO "service_role";
 
 
 
@@ -2952,45 +2952,45 @@ GRANT ALL ON TABLE "public"."additional_members" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."assessment_attempt_answers" TO "anon";
-GRANT ALL ON TABLE "public"."assessment_attempt_answers" TO "authenticated";
-GRANT ALL ON TABLE "public"."assessment_attempt_answers" TO "service_role";
+GRANT ALL ON TABLE "public"."test_attempt_answers" TO "anon";
+GRANT ALL ON TABLE "public"."test_attempt_answers" TO "authenticated";
+GRANT ALL ON TABLE "public"."test_attempt_answers" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."assessment_attempts" TO "anon";
-GRANT ALL ON TABLE "public"."assessment_attempts" TO "authenticated";
-GRANT ALL ON TABLE "public"."assessment_attempts" TO "service_role";
+GRANT ALL ON TABLE "public"."test_attempts" TO "anon";
+GRANT ALL ON TABLE "public"."test_attempts" TO "authenticated";
+GRANT ALL ON TABLE "public"."test_attempts" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."assessment_instances" TO "anon";
-GRANT ALL ON TABLE "public"."assessment_instances" TO "authenticated";
-GRANT ALL ON TABLE "public"."assessment_instances" TO "service_role";
+GRANT ALL ON TABLE "public"."test_instances" TO "anon";
+GRANT ALL ON TABLE "public"."test_instances" TO "authenticated";
+GRANT ALL ON TABLE "public"."test_instances" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."assessment_questions" TO "anon";
-GRANT ALL ON TABLE "public"."assessment_questions" TO "authenticated";
-GRANT ALL ON TABLE "public"."assessment_questions" TO "service_role";
+GRANT ALL ON TABLE "public"."test_items" TO "anon";
+GRANT ALL ON TABLE "public"."test_items" TO "authenticated";
+GRANT ALL ON TABLE "public"."test_items" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."assessment_results" TO "anon";
-GRANT ALL ON TABLE "public"."assessment_results" TO "authenticated";
-GRANT ALL ON TABLE "public"."assessment_results" TO "service_role";
+GRANT ALL ON TABLE "public"."test_results" TO "anon";
+GRANT ALL ON TABLE "public"."test_results" TO "authenticated";
+GRANT ALL ON TABLE "public"."test_results" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."assessment_topics" TO "anon";
-GRANT ALL ON TABLE "public"."assessment_topics" TO "authenticated";
-GRANT ALL ON TABLE "public"."assessment_topics" TO "service_role";
+GRANT ALL ON TABLE "public"."test_topics" TO "anon";
+GRANT ALL ON TABLE "public"."test_topics" TO "authenticated";
+GRANT ALL ON TABLE "public"."test_topics" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."assessments" TO "anon";
-GRANT ALL ON TABLE "public"."assessments" TO "authenticated";
-GRANT ALL ON TABLE "public"."assessments" TO "service_role";
+GRANT ALL ON TABLE "public"."tests" TO "anon";
+GRANT ALL ON TABLE "public"."tests" TO "authenticated";
+GRANT ALL ON TABLE "public"."tests" TO "service_role";
 
 
 
@@ -3424,7 +3424,7 @@ BEGIN
 
   -- Remedial cap check for summative tests (KKM 60% Cap)
   IF v_is_remedial THEN
-    SELECT assessment_type INTO v_assessment_type FROM public.assessments WHERE id = v_assessment_id;
+    SELECT assessment_type INTO v_assessment_type FROM public.tests WHERE id = v_assessment_id;
     IF (v_assessment_type IN ('EXAM', 'QUIZ', 'TEST', 'VOCAB_TEST', 'UNIFIED_TEST') OR v_assessment_type LIKE '%TEST%') AND v_effective_score > 60 THEN
       v_effective_score := 60;
     END IF;
@@ -3653,7 +3653,7 @@ BEGIN
 
   -- Remedial cap check for summative tests (KKM 60% Cap)
   IF v_is_remedial THEN
-    SELECT assessment_type INTO v_assessment_type FROM public.assessments WHERE id = v_assessment_id;
+    SELECT assessment_type INTO v_assessment_type FROM public.tests WHERE id = v_assessment_id;
     IF (v_assessment_type IN ('EXAM', 'QUIZ', 'TEST', 'VOCAB_TEST', 'UNIFIED_TEST') OR v_assessment_type LIKE '%TEST%') AND v_effective_score > 60 THEN
       v_effective_score := 60;
     END IF;

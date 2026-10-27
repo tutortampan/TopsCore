@@ -1,17 +1,17 @@
 import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '../api.js?v=5.3.2';
-import { openAssessmentBuilder } from './assessment-builder.js?v=5.3.2';
-import { openAssessmentBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.3.2';
+import { openTestBuilder } from './test-builder.js?v=5.3.2';
+import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.3.2';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.3.2';
 import { getSupabase } from '../supabase.js?v=5.3.2';
 import { DataGrid } from './datagrid.js?v=5.3.2';
 if (typeof window !== 'undefined') window.DataGrid = DataGrid;
 
-let AssessmentsGrid;
+let TestsGrid;
 
-window.updateAssessmentOrder = async (id, newOrd) => {
+window.updateTestOrder = async (id, newOrd) => {
   if (!id) return;
   try {
-    await adminUpdate('assessments', id, { ord: parseInt(newOrd, 10) });
+    await adminUpdate('tests', id, { ord: parseInt(newOrd, 10) });
     if (window.showToast) window.showToast('Order updated successfully', 'success');
   } catch (e) {
     console.error('Failed to update order', e);
@@ -19,10 +19,10 @@ window.updateAssessmentOrder = async (id, newOrd) => {
   }
 };
 
-export async function renderAssessments(area) {
+export async function renderTests(area) {
   const [rawData, allQuestions, allClasses, allLevels, allBoardClasses, allVault] = await Promise.all([
-    adminFetchAll('assessments'),
-    adminFetchAll('assessment_questions', 'id, assessment_id, answer_type'),
+    adminFetchAll('tests'),
+    adminFetchAll('test_questions', 'id, test_id, answer_type'),
     adminFetchAll('programs', 'id, name').catch(() => []),
     adminFetchAll('levels').catch(() => []),
     adminFetchAll('classes').catch(() => []),
@@ -35,15 +35,15 @@ export async function renderAssessments(area) {
   (allBoardClasses || []).forEach(c => { boardClassMap[c.id] = c; });
   const levelMap = {};
   (allLevels || []).forEach(l => { levelMap[l.id] = l; });
-  const AssessmentMap = {};
-  (rawData || []).forEach(e => { AssessmentMap[e.id] = e; });
+  const TestMap = {};
+  (rawData || []).forEach(e => { TestMap[e.id] = e; });
 
   const getDepth = (id, visited = new Set()) => {
     if (!id || visited.has(id)) return 0;
     visited.add(id);
-    const item = AssessmentMap[id];
+    const item = TestMap[id];
     if (!item) return 0;
-    const prereqId = item.prerequisite_assessment_id || item.prerequisite_id;
+    const prereqId = item.prerequisite_test_id || item.prerequisite_id;
     if (!prereqId) return 0;
     return 1 + getDepth(prereqId, visited);
   };
@@ -60,49 +60,49 @@ export async function renderAssessments(area) {
     return (a._depth || 0) - (b._depth || 0);
   });
 
-  // Calculate KPI metrics (Assessments table uses status, not assessment_type)
+  // Calculate KPI metrics (Tests table uses status, not test_type)
   const _norm = (v) => String(v || '').toLowerCase();
   const liveDataRaw = data.filter(e => !e.deleted_at);
   const liveData = liveDataRaw;
-  const totalAssessments = liveData.length;
+  const totalTests = liveData.length;
   const publishedCount = liveData.filter(e => _norm(e.status) === 'published').length;
   const draftCount = liveData.filter(e => !e.status || ['draft', 'unpublished'].includes(_norm(e.status))).length;
   const totalQuestions = allQuestions.length;
 
-  window._assessmentFilterTab = window._assessmentFilterTab || 'all';
+  window._testFilterTab = window._testFilterTab || 'all';
 
-  const assessmentTabs = [
-    { id: 'all', icon: '📋', val: totalAssessments, label: 'Total Assessments' },
-    { id: 'published', icon: '🟢', val: publishedCount, label: 'Published Assessments', valColor: 'var(--clr-success, #4ade80)' },
+  const testTabs = [
+    { id: 'all', icon: '📋', val: totalTests, label: 'Total Tests' },
+    { id: 'published', icon: '🟢', val: publishedCount, label: 'Published Tests', valColor: 'var(--clr-success, #4ade80)' },
     { id: 'draft', icon: '🔧', val: draftCount, label: 'Draft / Inactive', valColor: 'var(--clr-warning, #fbbf24)' },
     { id: 'questions', icon: '❓', val: totalQuestions, label: 'Questions in Bank', valColor: 'var(--clr-accent-1)' }
   ];
 
   if (window.setTopbarTabs) {
-    window.setTopbarTabs(assessmentTabs, window._assessmentFilterTab, 'window._switchAssessmentFilterTab');
+    window.setTopbarTabs(testTabs, window._testFilterTab, 'window._switchTestFilterTab');
   }
 
   area.innerHTML = `
     <div>
-      <div class="d-flex gap-2 mb-3 flex-wrap" id="assessment-filters">
-        <button class="btn btn-sm btn-primary filter-btn active" data-filter="all">All Assessments (${totalAssessments})</button>
-        <button class="btn btn-sm btn-secondary filter-btn" data-filter="core">Core Curriculum (${liveData.filter(e => !e.assessment_category || ['TASK', 'TEST', 'DAILY'].includes(String(e.assessment_category).toUpperCase()) && !e.payload?.is_standalone_tryout).length})</button>
-        <button class="btn btn-sm btn-secondary filter-btn" data-filter="standalone">Standalone & Try-Outs (${liveData.filter(e => ['TRYOUT', 'PLACEMENT', 'EXIT'].includes(String(e.assessment_category).toUpperCase()) || e.payload?.is_standalone_tryout).length})</button>
+      <div class="d-flex gap-2 mb-3 flex-wrap" id="test-filters">
+        <button class="btn btn-sm btn-primary filter-btn active" data-filter="all">All Tests (${totalTests})</button>
+        <button class="btn btn-sm btn-secondary filter-btn" data-filter="core">Core Curriculum (${liveData.filter(e => !e.test_category || ['TASK', 'TEST', 'DAILY'].includes(String(e.test_category).toUpperCase()) && !e.payload?.is_standalone_tryout).length})</button>
+        <button class="btn btn-sm btn-secondary filter-btn" data-filter="standalone">Standalone & Try-Outs (${liveData.filter(e => ['TRYOUT', 'PLACEMENT', 'EXIT'].includes(String(e.test_category).toUpperCase()) || e.payload?.is_standalone_tryout).length})</button>
       </div>
 
-      <div id="Assessments-grid-container" class="card" style="padding:1rem;"></div>
+      <div id="Tests-grid-container" class="card" style="padding:1rem;"></div>
     </div>
   `;
 
 
-  // Dynamic shells hold NO rows in assessment_questions; project the live vault count instead.
+  // Dynamic shells hold NO rows in test_questions; project the live vault count instead.
   const _ALL_THEMES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
   const _PHRASE_TYPES = ['expression', 'idiom', 'proverb', 'phrase'];
   const _vaultRows = (allVault || []).filter(v => !v.deleted_at);
   const vaultCountFor = (r, lvlNumber) => {
     const pl = r?.payload || {};
     const wantPhrases = pl.category === 'phrases';
-    const isTest = r?.assessment_category === 'TEST';
+    const isTest = r?.test_category === 'TEST';
     let themes = null;
     if (isTest && pl.theme_code) {
       const idx = _ALL_THEMES.indexOf(pl.theme_code);
@@ -123,22 +123,22 @@ export async function renderAssessments(area) {
   liveData.forEach(r => window._aRecords[r.id] = r);
 
   const gridData = liveData.map(r => {
-    const qCount = (allQuestions || []).filter(q => q?.assessment_id === r?.id).length;
-    // Assessments table uses program_id; map to program name
+    const qCount = (allQuestions || []).filter(q => q?.test_id === r?.id).length;
+    // Tests table uses program_id; map to program name
     const programName = (r?.program_id && classMap[r.program_id]?.name) ? classMap[r.program_id].name : 'All Programs';
-    const prereqId = r?.prerequisite_assessment_id || r?.prerequisite_id;
-    const prereqAssessment = (prereqId && AssessmentMap[prereqId]) ? AssessmentMap[prereqId] : null;
+    const prereqId = r?.prerequisite_test_id || r?.prerequisite_id;
+    const prereqTest = (prereqId && TestMap[prereqId]) ? TestMap[prereqId] : null;
     const boardName = (r?.class_id && boardClassMap[r.class_id]?.name) || r?.classes?.name || '—';
     const lvlObj = (r?.level_id && levelMap[r.level_id]) || r?.levels;
     const lvlNum = lvlObj?.level_number || 1;
     const levelDisplay = window.toLevelLetter ? window.toLevelLetter(lvlNum) : lvlNum;
-    const prereqTitle = prereqAssessment?.shell_code || prereqAssessment?.title || prereqAssessment?.name || r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
-    // Assessments table: title, status, assessment_type, answer_type, time_limit_minutes, minimum_required_score
+    const prereqTitle = prereqTest?.shell_code || prereqTest?.title || prereqTest?.name || r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
+    // Tests table: title, status, test_type, answer_type, time_limit_minutes, minimum_required_score
     const title = r?.title || r?.display_name || r?.name || 'Untitled';
-    const status = r?.status || r?.assessment_type || 'draft';
-    const AssessmentCategory = r?.assessment_type || 'Daily';
+    const status = r?.status || r?.test_type || 'draft';
+    const TestCategory = r?.test_type || 'Daily';
     let answerType = r?.answer_type || '';
-    const asmQs = (allQuestions || []).filter(q => q?.assessment_id === r?.id);
+    const asmQs = (allQuestions || []).filter(q => q?.test_id === r?.id);
     if (!answerType && asmQs.length > 0) {
       const typeCounts = {};
       asmQs.forEach(q => {
@@ -164,7 +164,7 @@ export async function renderAssessments(area) {
       prereq: prereqTitle,
       answerType: formatAnswerType(answerType),
       questionOrder: r?.question_order === 'random' ? 'Random' : 'Seq',
-      AssessmentCategory,
+      TestCategory,
       timeLimit,
       minScore,
       qCount: _isDyn ? _vaultQ : qCount,
@@ -178,8 +178,8 @@ export async function renderAssessments(area) {
 
   const statusColors = { published: 'badge-success', draft: 'badge-neutral', unpublished: 'badge-warning', archived: 'badge-danger' };
 
-  AssessmentsGrid = new (DataGrid || window.DataGrid)({
-    container: 'Assessments-grid-container',
+  TestsGrid = new (DataGrid || window.DataGrid)({
+    container: 'Tests-grid-container',
     data: gridData,
     pageSize: 50,
     searchKeys: ['title', 'programName', 'classBoard', 'status'],
@@ -188,11 +188,11 @@ export async function renderAssessments(area) {
       {
         label: 'Publish Selected',
         onClick: async (ids) => {
-          if (!confirm(`Publish ${ids.length} selected assessments?`)) return;
+          if (!confirm(`Publish ${ids.length} selected tests?`)) return;
           try {
-            for (const id of ids) await adminUpdate('assessments', id, { status: 'PUBLISHED' });
-            if (window.showToast) window.showToast(`Published ${ids.length} assessments`, 'success');
-            window.loadSection('assessments');
+            for (const id of ids) await adminUpdate('tests', id, { status: 'PUBLISHED' });
+            if (window.showToast) window.showToast(`Published ${ids.length} tests`, 'success');
+            window.loadSection('tests');
           } catch (e) {
             if (window.showToast) window.showToast('Error publishing: ' + e.message, 'error');
           }
@@ -201,11 +201,11 @@ export async function renderAssessments(area) {
       {
         label: 'Unpublish Selected',
         onClick: async (ids) => {
-          if (!confirm(`Unpublish ${ids.length} selected assessments?`)) return;
+          if (!confirm(`Unpublish ${ids.length} selected tests?`)) return;
           try {
-            for (const id of ids) await adminUpdate('assessments', id, { status: 'DRAFT' });
-            if (window.showToast) window.showToast(`Unpublished ${ids.length} assessments`, 'success');
-            window.loadSection('assessments');
+            for (const id of ids) await adminUpdate('tests', id, { status: 'DRAFT' });
+            if (window.showToast) window.showToast(`Unpublished ${ids.length} tests`, 'success');
+            window.loadSection('tests');
           } catch (e) {
             if (window.showToast) window.showToast('Error unpublishing: ' + e.message, 'error');
           }
@@ -214,11 +214,11 @@ export async function renderAssessments(area) {
       {
         label: 'Delete Selected',
         onClick: async (ids) => {
-          if (!confirm(`Are you sure you want to PERMANENTLY delete ${ids.length} selected assessments?`)) return;
+          if (!confirm(`Are you sure you want to PERMANENTLY delete ${ids.length} selected tests?`)) return;
           try {
-            for (const id of ids) await adminSoftDelete('assessments', id);
-            if (window.showToast) window.showToast(`Deleted ${ids.length} assessments`, 'success');
-            window.loadSection('assessments');
+            for (const id of ids) await adminSoftDelete('tests', id);
+            if (window.showToast) window.showToast(`Deleted ${ids.length} tests`, 'success');
+            window.loadSection('tests');
           } catch (e) {
             if (window.showToast) window.showToast('Error deleting: ' + e.message, 'error');
           }
@@ -239,9 +239,9 @@ export async function renderAssessments(area) {
         label: '⚡ Bulk Edit',
         className: 'btn-primary',
         onClick: (selectedIds) => {
-          if (window.openBulkEditAssessmentsModal) {
-            window.openBulkEditAssessmentsModal(selectedIds, () => {
-              renderAssessments(area);
+          if (window.openBulkEditTestsModal) {
+            window.openBulkEditTestsModal(selectedIds, () => {
+              renderTests(area);
             });
           }
         }
@@ -250,12 +250,12 @@ export async function renderAssessments(area) {
         label: '🗑️ Bulk Delete',
         className: 'btn-danger',
         onClick: async (selectedIds) => {
-          if (confirm(`Are you sure you want to permanently soft-delete ${selectedIds.length} Assessments?`)) {
+          if (confirm(`Are you sure you want to permanently soft-delete ${selectedIds.length} Tests?`)) {
             for (const id of selectedIds) {
-              await adminSoftDelete('Assessments', id);
+              await adminSoftDelete('Tests', id);
             }
-            showToast(`Deleted ${selectedIds.length} Assessments.`, 'success');
-            renderAssessments(area);
+            showToast(`Deleted ${selectedIds.length} Tests.`, 'success');
+            renderTests(area);
           }
         }
       }
@@ -266,7 +266,7 @@ export async function renderAssessments(area) {
       const body = `
         <div style="display:flex; flex-direction:column; gap:1rem;">
           <div>
-            <h4 style="margin:0; font-size:1.2rem;">${escapeHtml(r?.title || 'Untitled Assessment')}</h4>
+            <h4 style="margin:0; font-size:1.2rem;">${escapeHtml(r?.title || 'Untitled Test')}</h4>
             <div class="text-muted text-sm">Status: <strong class="${statusColors[String(r?.status || '').toLowerCase()] || 'text-muted'}" style="text-transform:uppercase;">${r?.status || 'draft'}</strong></div>
           </div>
           <hr style="border-color:var(--fm-border-subtle); margin:0;">
@@ -277,7 +277,7 @@ export async function renderAssessments(area) {
           </div>
           <div>
             <div class="text-sm text-muted mb-1">Structure</div>
-            <div class="fw-600">Type: ${escapeHtml(r?.AssessmentCategory || 'Daily')} &bull; ${r?.qIsVault ? '&#9889; ' + (r?.qCount || 0) + ' (Vault)' : (r?.qCount || 0) + ' Qs'}</div>
+            <div class="fw-600">Type: ${escapeHtml(r?.TestCategory || 'Daily')} &bull; ${r?.qIsVault ? '&#9889; ' + (r?.qCount || 0) + ' (Vault)' : (r?.qCount || 0) + ' Qs'}</div>
             <div class="fw-600">Answer: ${formatAnswerType(r?.answerType)}</div>
           </div>
           <div>
@@ -290,7 +290,7 @@ export async function renderAssessments(area) {
       `;
       // Footer: close only — Edit & Publish actions are in the grid row to avoid duplication
       const footer = `<button class="btn btn-secondary" onclick="closeRecordDrawer()">Close</button>`;
-      if (window.openRecordDrawer) window.openRecordDrawer('Assessment Details', body, footer);
+      if (window.openRecordDrawer) window.openRecordDrawer('Test Details', body, footer);
     },
     columns: [
       { 
@@ -300,7 +300,7 @@ export async function renderAssessments(area) {
         width: '32%',
         render: (val, row) => {
           const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
-          const title = (typeof val === 'string' ? val : r?.title) || 'Untitled Assessment';
+          const title = (typeof val === 'string' ? val : r?.title) || 'Untitled Test';
           let displayTitle = escapeHtml(title);
           // Highlight Task in Yellow, Test in Pink for immediate visual clarity
           displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: #facc15;">$1</span>');
@@ -310,12 +310,12 @@ export async function renderAssessments(area) {
         }
       },
       {
-        key: 'AssessmentCategory',
+        key: 'TestCategory',
         label: 'TYPE',
         sortable: true,
         render: (val, row) => {
           const r = (row && typeof row === 'object') ? row : {};
-          let typeStr = escapeHtml(r?.AssessmentCategory || 'Daily');
+          let typeStr = escapeHtml(r?.TestCategory || 'Daily');
           // Highlight TASK and TEST in the TYPE column as well
           typeStr = typeStr.replace(/(TASK)/ig, '<span style="color: #facc15; font-weight: 800;">$1</span>');
           typeStr = typeStr.replace(/(TEST)/ig, '<span style="color: #f472b6; font-weight: 800;">$1</span>');
@@ -370,14 +370,14 @@ export async function renderAssessments(area) {
           const id = r?.id || '';
           return `
             <div class="d-flex gap-1 justify-end align-center">
-              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterAssessmentResults='${id}'; window.loadSection('results');">&#128202;</button>
-              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateAssessment='${id}'; window.loadSection('health');">&#9878;&#65039;</button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateAssessment('${id}')" title="Duplicate">📄</button>
-              <button class="btn ${String(r?.status).toLowerCase() === 'published' ? 'btn-danger' : 'btn-success'}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishAssessment('${id}', '${r?.status || 'draft'}')">
+              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterTestResults='${id}'; window.loadSection('results');">&#128202;</button>
+              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateTest='${id}'; window.loadSection('health');">&#9878;&#65039;</button>
+              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateTest('${id}')" title="Duplicate">📄</button>
+              <button class="btn ${String(r?.status).toLowerCase() === 'published' ? 'btn-danger' : 'btn-success'}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishTest('${id}', '${r?.status || 'draft'}')">
                 ${String(r?.status).toLowerCase() === 'published' ? '👁️‍🗨️' : '👁️'}
               </button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openCrudModal('assessments', window._aRecords['${id}'])">✏️</button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; background-color: var(--clr-accent-1); color: white;" onclick="window._deleteRecord('assessments', '${id}', '${escapeHtml(r?.title || '')}')">🗑️</button>
+              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openCrudModal('tests', window._aRecords['${id}'])">✏️</button>
+              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; background-color: var(--clr-accent-1); color: white;" onclick="window._deleteRecord('tests', '${id}', '${escapeHtml(r?.title || '')}')">🗑️</button>
             </div>
           `;
         }
@@ -385,25 +385,25 @@ export async function renderAssessments(area) {
     ]
   });
 
-  const filterContainer = document.getElementById('assessment-filters');
+  const filterContainer = document.getElementById('test-filters');
   if (filterContainer) {
     filterContainer.addEventListener('click', (e) => {
       if (!e.target.classList.contains('filter-btn')) return;
-      document.querySelectorAll('#assessment-filters .filter-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('#test-filters .filter-btn').forEach(btn => btn.classList.remove('active'));
       e.target.classList.add('active');
       const filter = e.target.dataset.filter;
       if (filter === 'all') {
-        AssessmentsGrid.updateData(gridData);
+        TestsGrid.updateData(gridData);
       } else if (filter === 'core') {
-        AssessmentsGrid.updateData(gridData.filter(e => !e.AssessmentCategory || ['TASK', 'TEST', 'DAILY'].includes(String(e.AssessmentCategory).toUpperCase()) && !e._raw?.payload?.is_standalone_tryout));
+        TestsGrid.updateData(gridData.filter(e => !e.TestCategory || ['TASK', 'TEST', 'DAILY'].includes(String(e.TestCategory).toUpperCase()) && !e._raw?.payload?.is_standalone_tryout));
       } else if (filter === 'standalone') {
-        AssessmentsGrid.updateData(gridData.filter(e => ['TRYOUT', 'PLACEMENT', 'EXIT'].includes(String(e.AssessmentCategory).toUpperCase()) || e._raw?.payload?.is_standalone_tryout));
+        TestsGrid.updateData(gridData.filter(e => ['TRYOUT', 'PLACEMENT', 'EXIT'].includes(String(e.TestCategory).toUpperCase()) || e._raw?.payload?.is_standalone_tryout));
       }
     });
   }
 
-  window._switchAssessmentFilterTab = (tabId) => {
-    window._assessmentFilterTab = tabId;
+  window._switchTestFilterTab = (tabId) => {
+    window._testFilterTab = tabId;
     if (tabId === 'questions') {
       window.loadSection('questions');
       return;
@@ -412,11 +412,11 @@ export async function renderAssessments(area) {
       t.classList.toggle('active', t.dataset.tabId === tabId);
     });
     if (tabId === 'all') {
-      AssessmentsGrid.updateData(gridData);
+      TestsGrid.updateData(gridData);
     } else if (tabId === 'published') {
-      AssessmentsGrid.updateData(gridData.filter(e => String(e.status).toLowerCase() === 'published'));
+      TestsGrid.updateData(gridData.filter(e => String(e.status).toLowerCase() === 'published'));
     } else if (tabId === 'draft') {
-      AssessmentsGrid.updateData(gridData.filter(e => !e.status || ['draft', 'unpublished'].includes(String(e.status).toLowerCase())));
+      TestsGrid.updateData(gridData.filter(e => !e.status || ['draft', 'unpublished'].includes(String(e.status).toLowerCase())));
     }
   };
 }
@@ -436,55 +436,55 @@ function formatAnswerType(type) {
   }
 }
 
-window._publishAssessment = async (AssessmentId, currentStatus) => {
+window._publishTest = async (testId, currentStatus) => {
   const newStatus = (currentStatus || '').toUpperCase() === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';
   try {
-    await adminUpdate('assessments', AssessmentId, { status: newStatus });
-    showToast(`Assessment ${newStatus}.`, 'success');
-    window.loadSection('assessments');
+    await adminUpdate('tests', testId, { status: newStatus });
+    showToast(`Test ${newStatus}.`, 'success');
+    window.loadSection('tests');
   } catch(e) { showToast(e.message, 'error'); }
 };
 
-window._duplicateAssessment = async (AssessmentId) => {
-  if (!confirm(`Are you sure you want to duplicate this Assessment?`)) return;
+window._duplicateTest = async (testId) => {
+  if (!confirm(`Are you sure you want to duplicate this Test?`)) return;
   
-  showLoading('Duplicating Assessment and questions...');
+  showLoading('Duplicating Test and questions...');
   try {
     const sb = await getSupabase();
     
-    // 1. Fetch original Assessment
-    const { data: rec, error: recErr } = await sb.from('assessments')
-      .select('title, display_name, assessment_type, module_id, class_id, level_id, institution_id, working_duration_minutes, passing_score, instructions, status, settings, total_questions, dynamic_template, remedial_instructions, prerequisite_modules, unlock_conditions')
-      .eq('id', AssessmentId)
+    // 1. Fetch original Test
+    const { data: rec, error: recErr } = await sb.from('tests')
+      .select('title, display_name, test_type, module_id, class_id, level_id, institution_id, working_duration_minutes, passing_score, instructions, status, settings, total_questions, dynamic_template, remedial_instructions, prerequisite_modules, unlock_conditions')
+      .eq('id', testId)
       .single();
     if (recErr) throw new Error(recErr.message);
 
     // 2. Fetch original questions
     const { data: questions, error: qErr } = await sb.from('questions')
       .select('topic_id, question_text, question_type, points, correct_answer, accepted_answers, options, explanation, media_url, order_index, difficulty, metadata')
-      .eq('assessment_id', AssessmentId);
+      .eq('test_id', testId);
     if (qErr) throw new Error(qErr.message);
 
-    // 3. Duplicate Assessment
-    const newAssessment = { ...rec };
-    delete newAssessment.id;
-    delete newAssessment.created_at;
-    delete newAssessment.updated_at;
-    delete newAssessment.deleted_at;
-    delete newAssessment.classes;
-    delete newAssessment.levels;
-    delete newAssessment.institutions;
-    newAssessment.title = `${newAssessment.title || newAssessment.display_name || 'Assessment'} (Copy)`;
-    newAssessment.display_name = `${newAssessment.display_name || newAssessment.title} (Copy)`;
-    newAssessment.status = 'draft';
+    // 3. Duplicate Test
+    const newTest = { ...rec };
+    delete newTest.id;
+    delete newTest.created_at;
+    delete newTest.updated_at;
+    delete newTest.deleted_at;
+    delete newTest.classes;
+    delete newTest.levels;
+    delete newTest.institutions;
+    newTest.title = `${newTest.title || newTest.display_name || 'Test'} (Copy)`;
+    newTest.display_name = `${newTest.display_name || newTest.title} (Copy)`;
+    newTest.status = 'draft';
 
-    const { data: createdAssessment, error: eErr } = await sb.from('Assessments').insert([newAssessment]).select().single();
+    const { data: createdTest, error: eErr } = await sb.from('Tests').insert([newTest]).select().single();
     if (eErr) throw new Error(eErr.message);
 
     // 4. Duplicate Questions
     if (questions && questions.length > 0) {
       const newQuestions = questions.map(q => {
-        const newQ = { ...q, assessment_id: createdAssessment.id };
+        const newQ = { ...q, test_id: createdTest.id };
         delete newQ.id;
         delete newQ.created_at;
         delete newQ.updated_at;
@@ -496,44 +496,44 @@ window._duplicateAssessment = async (AssessmentId) => {
     }
 
     // 5. Duplicate Class Assignments
-    const { data: assignments } = await sb.from('Assessment_programs').select('program_id').eq('assessment_id', AssessmentId);
+    const { data: assignments } = await sb.from('Test_programs').select('program_id').eq('test_id', testId);
     if (assignments && assignments.length > 0) {
-       const newAssignments = assignments.map(a => ({ assessment_id: createdAssessment.id, program_id: a.program_id }));
-       const { error: assignErr } = await sb.from('Assessment_programs').insert(newAssignments);
+       const newAssignments = assignments.map(a => ({ test_id: createdTest.id, program_id: a.program_id }));
+       const { error: assignErr } = await sb.from('Test_programs').insert(newAssignments);
        if (assignErr) throw new Error(assignErr.message);
     }
     
-    clearAdminCache('Assessments');
+    clearAdminCache('Tests');
     clearAdminCache('questions');
-    clearAdminCache('Assessment_programs');
+    clearAdminCache('Test_programs');
 
-    showToast('Assessment duplicated successfully!', 'success');
-    window.loadSection('Assessments');
+    showToast('Test duplicated successfully!', 'success');
+    window.loadSection('Tests');
   } catch (e) {
     console.error(e);
-    showToast('Error duplicating Assessment: ' + e.message, 'error');
+    showToast('Error duplicating Test: ' + e.message, 'error');
   } finally {
     hideLoading();
   }
 };
 
-window.openAssessmentBuilder = async (AssessmentId) => {
-  await openAssessmentBuilder(AssessmentId);
+window.openTestBuilder = async (testId) => {
+  await openTestBuilder(testId);
 };
 
 export async function renderQuestions(area) {
-  const [questions, rawAssessments] = await Promise.all([
-    adminFetchAll('assessment_questions'),
-    adminFetchAll('assessments', 'id, title, assessment_type').catch(() => [])
+  const [questions, rawTests] = await Promise.all([
+    adminFetchAll('test_questions'),
+    adminFetchAll('tests', 'id, title, test_type').catch(() => [])
   ]);
 
-  const AssessmentMap = new Map((rawAssessments || []).map(e => [e.id, e]));
+  const TestMap = new Map((rawTests || []).map(e => [e.id, e]));
 
   area.innerHTML = `
     <div class="section-header">
       <div>
         <h2 class="section-title">Questions <span class="count-chip">${questions.length} Total</span></h2>
-        <p class="section-subtitle">Question item bank for Assessmentinations</p>
+        <p class="section-subtitle">Question item bank for Testinations</p>
       </div>
     </div>
     <div id="questions-grid-container" class="card mt-4" style="padding:1rem;"></div>
@@ -543,15 +543,15 @@ export async function renderQuestions(area) {
   questions.forEach(q => { window._qRecords[q.id] = q; });
 
   const gridData = questions.map(q => {
-    const matchedAssessment = AssessmentMap.get(q.assessment_id);
-    const AssessmentDisplay = matchedAssessment ? `${matchedAssessment.assessment_type ? matchedAssessment.assessment_type + ' — ' : ''}${matchedAssessment.title}` : (q.Assessments ? window.formatAssessmentDisplayName(q.Assessments) : '—');
+    const matchedTest = TestMap.get(q.test_id);
+    const TestDisplay = matchedTest ? `${matchedTest.test_type ? matchedTest.test_type + ' — ' : ''}${matchedTest.title}` : (q.Tests ? window.formatTestDisplayName(q.Tests) : '—');
     return {
       id: q.id,
       order: q.question_order,
       text: q.question_text || '',
       correctAnswer: q.correct_answer || '',
       type: q.answer_type,
-      AssessmentDisplay: AssessmentDisplay,
+      TestDisplay: TestDisplay,
       _raw: q
     };
   });
@@ -560,14 +560,14 @@ export async function renderQuestions(area) {
     container: 'questions-grid-container',
     data: gridData,
     pageSize: 50,
-    searchKeys: ['text', 'correctAnswer', 'AssessmentDisplay'],
+    searchKeys: ['text', 'correctAnswer', 'TestDisplay'],
     bulkActions: false,
     onRowClick: (row) => {
       const body = `
         <div style="display:flex; flex-direction:column; gap:1rem;">
           <div>
             <h4 style="margin:0; font-size:1.2rem;">Question #${row.order}</h4>
-            <div class="text-muted text-sm">Assessment: <strong style="color:var(--fm-text-primary);">${escapeHtml(row.AssessmentDisplay)}</strong></div>
+            <div class="text-muted text-sm">Test: <strong style="color:var(--fm-text-primary);">${escapeHtml(row.TestDisplay)}</strong></div>
           </div>
           <hr style="border-color:var(--fm-border-subtle); margin:0;">
           <div>
@@ -601,7 +601,7 @@ export async function renderQuestions(area) {
         return `<div class="text-sm" style="color:var(--clr-success,#4ade80);font-family:monospace;">${escapeHtml(str.slice(0, 40))}${str.length > 40 ? '...' : ''}</div>`;
       }},
       { key: 'type', label: 'Answer Type', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge badge-info">${formatAnswerType((row ? row.type : val) || '')}</span></div>` },
-      { key: 'AssessmentDisplay', label: 'Assessment Title', sortable: true, render: (val, row) => `<div class="text-muted text-sm">${escapeHtml(String((row ? row.AssessmentDisplay : val) || '—'))}</div>` },
+      { key: 'TestDisplay', label: 'Test Title', sortable: true, render: (val, row) => `<div class="text-muted text-sm">${escapeHtml(String((row ? row.TestDisplay : val) || '—'))}</div>` },
       { key: 'actions', label: 'Actions', sortable: false, render: (val, row) => {
         const r = row || (typeof val === 'object' ? val : {}) || {};
         return `
@@ -617,7 +617,7 @@ export async function renderQuestions(area) {
 
 export async function renderResults(area) {
   const [rawData, allPrograms, allClasses, allBatches] = await Promise.all([
-    adminFetchAll('attempts', '*, students!student_id(name, gender, batch_id, batches!batch_id(name), program_id, programs!program_id(name, institution_id, institutions!institution_id(name))), assessments!assessment_id(title, assessment_type), attempt_answers(id, evaluation_result, score)'),
+    adminFetchAll('attempts', '*, students!student_id(name, gender, batch_id, batches!batch_id(name), program_id, programs!program_id(name, institution_id, institutions!institution_id(name))), tests!test_id(title, test_type), attempt_answers(id, evaluation_result, score)'),
     adminFetchAll('institutions'),
     adminFetchAll('programs'),
     adminFetchAll('batches')
@@ -625,7 +625,7 @@ export async function renderResults(area) {
 
   const submittedOnly = rawData.filter(r => ['submitted', 'auto_submitted'].includes(r.status));
 
-  // Deduplicate by Student + Assessment, keeping highest score only
+  // Deduplicate by Student + Test, keeping highest score only
   const getEffectivePct = (att) => {
     const isRem = Boolean(att.is_remedial_unlocked);
     const raw = parseFloat(att.percentage || 0);
@@ -634,7 +634,7 @@ export async function renderResults(area) {
 
   const mergedResults = new Map();
   submittedOnly.forEach(r => {
-    const key = `${r.student_id}_${r.assessment_id}`;
+    const key = `${r.student_id}_${r.test_id}`;
     const existing = mergedResults.get(key);
     if (!existing) {
       mergedResults.set(key, r);
@@ -652,7 +652,7 @@ export async function renderResults(area) {
     <div class="section-header">
       <div>
         <h2 class="section-title">Results <span class="count-chip" id="res-count-chip">${deduplicated.length} Total</span></h2>
-        <p class="section-subtitle">Student Assessment attempt submissions</p>
+        <p class="section-subtitle">Student Test attempt submissions</p>
       </div>
     </div>
     <div id="results-grid-container" class="card mt-4" style="padding:1rem;"></div>
@@ -681,7 +681,7 @@ export async function renderResults(area) {
       program: r.students?.programs?.institutions?.name || '—',
       className: r.students?.programs?.name || '—',
       batch: r.students?.batches?.name || '—',
-      AssessmentTitle: r.assessments?.title || 'Unknown Assessment',
+      TestTitle: r.tests?.title || 'Unknown Test',
       score: effPct.toFixed(1) + (isRem ? ' (Remedial 60%)' : ''),
       grade: effGrade,
       correct: attCorrect,
@@ -696,14 +696,14 @@ export async function renderResults(area) {
     container: 'results-grid-container',
     data: gridData,
     pageSize: 50,
-    searchKeys: ['studentName', 'program', 'className', 'batch', 'AssessmentTitle'],
+    searchKeys: ['studentName', 'program', 'className', 'batch', 'TestTitle'],
     bulkActions: false,
     onRowClick: (row) => {
       const body = `
         <div style="display:flex; flex-direction:column; gap:1rem;">
           <div>
             <h4 style="margin:0; font-size:1.2rem;">${escapeHtml(row.studentName)}</h4>
-            <div class="text-muted text-sm">Assessment: <strong style="color:var(--fm-text-primary);">${escapeHtml(row.AssessmentTitle)}</strong></div>
+            <div class="text-muted text-sm">Test: <strong style="color:var(--fm-text-primary);">${escapeHtml(row.TestTitle)}</strong></div>
           </div>
           <hr style="border-color:var(--fm-border-subtle); margin:0;">
           <div>
@@ -745,7 +745,7 @@ export async function renderResults(area) {
       { key: 'program', label: 'Program', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
       { key: 'className', label: 'Class', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
       { key: 'batch', label: 'Batch', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
-      { key: 'AssessmentTitle', label: 'Assessment', sortable: true, render: (val) => `<div class="fw-600">${escapeHtml(val)}</div>` },
+      { key: 'TestTitle', label: 'Test', sortable: true, render: (val) => `<div class="fw-600">${escapeHtml(val)}</div>` },
       { key: 'score', label: 'Score', sortable: true, render: (val) => `<div class="text-center fw-800">${val}%</div>` },
       { key: 'grade', label: 'Grade', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge badge-primary fw-800" style="${(val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? 'background:rgba(168,85,247,0.18);color:#A855F7;border:1px solid #A855F7;' : ''}">${escapeHtml((val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? '★' : val)}</span></div>` },
       { key: 'correct', label: 'Correct', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-success' : 'badge-neutral'}">${val}</span></div>` },
@@ -758,25 +758,25 @@ export async function renderResults(area) {
 }
 
 /**
- * Open Session Modal - Tutor Live Control (AGENTS.md §2 - Assessment Timing)
- * Unlocks a published QUIZ or EXAM assessment for students with a timed window.
- * Sets session_unlocked_at and session_expires_at on the Assessments record.
+ * Open Session Modal - Tutor Live Control (AGENTS.md §2 - Test Timing)
+ * Unlocks a published QUIZ or EXAM test for students with a timed window.
+ * Sets session_unlocked_at and session_expires_at on the Tests record.
  */
 async function openSessionModal() {
   const { getSupabase } = await import('../supabase.js?v=5.3.2');
   const sb = await getSupabase();
-  const { data: assessments, error } = await sb
-    .from('Assessments')
-    .select('id, title, assessment_type, classes(name)')
-    .in('assessment_type', ['QUIZ', 'EXAM'])
+  const { data: tests, error } = await sb
+    .from('Tests')
+    .select('id, title, test_type, classes(name)')
+    .in('test_type', ['QUIZ', 'EXAM'])
     .eq('status', 'published')
     .order('title', { ascending: true });
-  if (error) { window.showToast('Failed to load assessments: ' + error.message, 'error'); return; }
+  if (error) { window.showToast('Failed to load tests: ' + error.message, 'error'); return; }
   const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const asmOptions = (assessments || []).map(a =>
-    '<option value="' + esc(a.id) + '">[' + esc(a.assessment_type) + '] ' + esc(a.title || a.id) + ' — ' + esc(a.classes?.name || '—') + '</option>'
+  const asmOptions = (tests || []).map(a =>
+    '<option value="' + esc(a.id) + '">[' + esc(a.test_type) + '] ' + esc(a.title || a.id) + ' — ' + esc(a.classes?.name || '—') + '</option>'
   ).join('');
-  if (!asmOptions) { window.showToast('No published QUIZ or EXAM assessments found.', 'warning'); return; }
+  if (!asmOptions) { window.showToast('No published QUIZ or EXAM tests found.', 'warning'); return; }
 
   const overlay = document.createElement('div');
   overlay.id = 'open-session-overlay';
@@ -791,8 +791,8 @@ async function openSessionModal() {
     '    <p style="color:#f59e0b;font-size:0.8rem;margin:0;">&#9888;&#65039; This unlocks the selected QUIZ/EXAM immediately. Students cannot begin once the session window closes.</p>',
     '  </div>',
     '  <div style="margin-bottom:1rem;">',
-    '    <label style="font-size:0.85rem;font-weight:600;color:var(--clr-text-2);display:block;margin-bottom:6px;">Assessment (QUIZ / EXAM)</label>',
-    '    <select id="session-asm-select" class="form-control" style="width:100%;"><option value="">-- Select Assessment --</option>' + asmOptions + '</select>',
+    '    <label style="font-size:0.85rem;font-weight:600;color:var(--clr-text-2);display:block;margin-bottom:6px;">Test (QUIZ / EXAM)</label>',
+    '    <select id="session-asm-select" class="form-control" style="width:100%;"><option value="">-- Select Test --</option>' + asmOptions + '</select>',
     '  </div>',
     '  <div style="margin-bottom:1.5rem;">',
     '    <label style="font-size:0.85rem;font-weight:600;color:var(--clr-text-2);display:block;margin-bottom:6px;">Session Duration (minutes)</label>',
@@ -814,10 +814,10 @@ async function openSessionModal() {
   document.getElementById('confirm-open-session').addEventListener('click', async () => {
     const asmId = document.getElementById('session-asm-select').value;
     const durationMin = parseInt(document.getElementById('session-duration').value) || 60;
-    if (!asmId) { window.showToast('Please select an assessment.', 'warning'); return; }
+    if (!asmId) { window.showToast('Please select an test.', 'warning'); return; }
     const now = new Date();
     const expiresAt = new Date(now.getTime() + durationMin * 60 * 1000).toISOString();
-    const { error: updErr } = await sb.from('Assessments')
+    const { error: updErr } = await sb.from('Tests')
       .update({ session_unlocked_at: now.toISOString(), session_expires_at: expiresAt })
       .eq('id', asmId);
     if (updErr) { window.showToast('Failed to open session: ' + updErr.message, 'error'); }
@@ -825,7 +825,7 @@ async function openSessionModal() {
   });
 }
 
-window.openAssessmentGatewayModal = async () => {
+window.openTestGatewayModal = async () => {
   showLoading('Loading Context...');
   let allClasses, allLevels;
   try {
@@ -853,11 +853,11 @@ window.openAssessmentGatewayModal = async () => {
   modal.innerHTML = `
     <div class="modal-content" style="max-width:500px;">
       <div class="modal-header d-flex justify-between align-center p-3">
-        <h3 class="fw-700 m-0 text-gradient" style="font-size:1.25rem;">Create New Assessment</h3>
+        <h3 class="fw-700 m-0 text-gradient" style="font-size:1.25rem;">Create New Test</h3>
         <button class="btn btn-ghost btn-sm" id="close-gateway-modal">&#10005;</button>
       </div>
       <div class="modal-body p-4">
-        <p class="text-muted text-sm mb-4">Please select the Class for this assessment. The system will automatically launch the correct assessment module based on the class type.</p>
+        <p class="text-muted text-sm mb-4">Please select the Class for this test. The system will automatically launch the correct test module based on the class type.</p>
         <div class="form-group mb-4">
           <label class="form-label">Target Class</label>
           <select id="gateway-class-select" class="form-control" style="width:100%;font-size:1.05rem;padding:0.75rem;">
@@ -891,9 +891,9 @@ window.openAssessmentGatewayModal = async () => {
 
     // Context-Aware Routing
     if ((className || '').toLowerCase().includes('vocab')) {
-      openVocabWizard(null, { classId: classId, className: className, assessmentType: 'VOCAB_MASTERY' });
+      openVocabWizard(null, { classId: classId, className: className, testType: 'VOCAB_MASTERY' });
     } else {
-      openAssessmentBuilder(null, classId);
+      openTestBuilder(null, classId);
     }
   });
 };

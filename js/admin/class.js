@@ -1,4 +1,4 @@
-// TOPS CORE Centralized Assessment System V1 Admin UI
+// TOPS CORE Centralized Test System V1 Admin UI
 import {
   fetchGlobalClasses,
   fetchWordTypes,
@@ -12,18 +12,18 @@ import {
   createCentralQuestion,
   updateCentralQuestion,
   deleteCentralQuestion,
-  fetchAssessmentDefinitions,
-  publishAssessmentDefinition,
-  fetchAssessmentInstances,
-  createAssessmentInstance,
+  fetchTestDefinitions,
+  publishTestDefinition,
+  fetchTestInstances,
+  createTestInstance,
   adminFetchAll,
   adminSoftDelete,
   clearAdminCache,
   fetchClasses,
   fetchClassInstances,
   adminUpdate,
-  previewRecalibrateAssessment,
-  applyRecalibrateAssessment,
+  previewRecalibrateTest,
+  applyRecalibrateTest,
   isPassing,
   calculatePercentage,
   formatStudentName,
@@ -736,8 +736,8 @@ export async function renderAssignments(area) {
   showLoading();
   try {
     const [instances, definitions, batches, classInsts, classes] = await Promise.all([
-      fetchAssessmentInstances(),
-      fetchAssessmentDefinitions(),
+      fetchTestInstances(),
+      fetchTestDefinitions(),
       adminFetchAll('batches'),
       fetchClassInstances(),
       fetchClasses()
@@ -747,11 +747,11 @@ export async function renderAssignments(area) {
     area.innerHTML = `
       <div class="section-header d-flex justify-between align-center flex-wrap gap-3 mb-4">
         <div>
-          <h2 class="section-title text-gradient">Assessment Assignments</h2>
-          <p class="section-subtitle">Control assessment access by Batch (Class Instance)</p>
+          <h2 class="section-title text-gradient">Test Assignments</h2>
+          <p class="section-subtitle">Control test access by Batch (Class Instance)</p>
         </div>
         <div>
-          <button class="btn btn-primary btn-sm" id="btn-assign-assessment">+ New Assignment</button>
+          <button class="btn btn-primary btn-sm" id="btn-assign-test">+ New Assignment</button>
         </div>
       </div>
 
@@ -759,7 +759,7 @@ export async function renderAssignments(area) {
         <table class="data-table">
           <thead>
             <tr>
-              <th>Assessment</th>
+              <th>Test</th>
               <th>Type</th>
               <th>Assigned Target</th>
               <th>Availability Window</th>
@@ -774,7 +774,7 @@ export async function renderAssignments(area) {
       </div>
     `;
 
-    document.getElementById('btn-assign-assessment').onclick = () => {
+    document.getElementById('btn-assign-test').onclick = () => {
       openAssignmentModal({ definitions, batches: (batches || []).filter(b => !b.deleted_at && b.is_active !== false), classInsts, classes }, async () => {
         await renderAssignments(area);
       });
@@ -784,7 +784,7 @@ export async function renderAssignments(area) {
       const delBtn = e.target.closest('.btn-revoke-assignment');
       if (delBtn) {
         const id = delBtn.dataset.id;
-        if (confirm('Revoke this assessment assignment?')) {
+        if (confirm('Revoke this test assignment?')) {
           showLoading();
           try {
             await adminSoftDelete('assignments', id);
@@ -807,7 +807,7 @@ export async function renderAssignments(area) {
 
 function renderAssignmentRows(list) {
   if (!list || !list.length) {
-    return `<tr><td colspan="6" class="text-center p-4 text-muted">No active assignments. Click "+ New Assignment" to assign an assessment.</td></tr>`;
+    return `<tr><td colspan="6" class="text-center p-4 text-muted">No active assignments. Click "+ New Assignment" to assign an test.</td></tr>`;
   }
   return list.map(a => {
     const targetName = a.batches?.name
@@ -820,8 +820,8 @@ function renderAssignmentRows(list) {
 
     return `
       <tr>
-        <td><strong>${escapeHtml(a.title_override || a.assessments?.title || 'Assessment')}</strong></td>
-        <td><span class="badge badge-info">${escapeHtml(a.assessments?.assessment_type || 'EVALUATION')}</span></td>
+        <td><strong>${escapeHtml(a.title_override || a.tests?.title || 'Test')}</strong></td>
+        <td><span class="badge badge-info">${escapeHtml(a.tests?.test_type || 'EVALUATION')}</span></td>
         <td>${targetName}</td>
         <td><small>${windowText}</small></td>
         <td><span class="badge badge-success">${escapeHtml(a.status || 'DRAFT')}</span></td>
@@ -839,13 +839,13 @@ function openAssignmentModal({ definitions, batches, classInsts, classes }, onSa
   modal.innerHTML = `
     <div class="modal-content" style="max-width:500px;">
       <div class="modal-header d-flex justify-between align-center p-3" style="border-bottom:1px solid var(--clr-border);">
-        <h3 class="modal-title" style="margin:0;font-size:1.2rem;">Assign Assessment</h3>
+        <h3 class="modal-title" style="margin:0;font-size:1.2rem;">Assign Test</h3>
         <button class="btn btn-ghost btn-sm" id="close-asgn-modal" style="font-size:1.2rem;">&times;</button>
       </div>
       <div class="modal-body p-4">
         <div class="form-group mb-3">
-          <label class="form-label">Select Assessment *</label>
-          <select class="form-control" id="asgn-assessment-id">
+          <label class="form-label">Select Test *</label>
+          <select class="form-control" id="asgn-test-id">
             ${definitions.map(a => `<option value="${a.id}" data-class="${a.class_id}">${escapeHtml(a.title)} (${escapeHtml(a.category)})</option>`).join('')}
           </select>
         </div>
@@ -860,7 +860,7 @@ function openAssignmentModal({ definitions, batches, classInsts, classes }, onSa
           <select class="form-control" id="asgn-batch-id">
             ${(batches || []).filter(b => !b.deleted_at && b.is_active !== false).map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('')}
           </select>
-          <small class="text-muted text-xs">Note: A Class Instance must exist for the selected Batch and the Assessment's Class.</small>
+          <small class="text-muted text-xs">Note: A Class Instance must exist for the selected Batch and the Test's Class.</small>
         </div>
         <div class="form-group mb-3">
           <label class="form-label">Availability Start (Optional)</label>
@@ -885,7 +885,7 @@ function openAssignmentModal({ definitions, batches, classInsts, classes }, onSa
   modal.querySelector('#cancel-asgn-btn').onclick = close;
 
   modal.querySelector('#save-asgn-btn').onclick = async () => {
-    const asmSelect = modal.querySelector('#asgn-assessment-id');
+    const asmSelect = modal.querySelector('#asgn-test-id');
     const definitionId = asmSelect.value;
     const classId = asmSelect.options[asmSelect.selectedIndex]?.dataset.class;
     const batchId = modal.querySelector('#asgn-batch-id').value;
@@ -894,15 +894,15 @@ function openAssignmentModal({ definitions, batches, classInsts, classes }, onSa
 
     const ci = classInsts.find(c => c.batch_id === batchId && c.class_id === classId);
     if (!ci) {
-      showToast('No Class Instance found for this Batch and the Assessment\'s Class. Please assign this batch to the class first.', 'error');
+      showToast('No Class Instance found for this Batch and the Test\'s Class. Please assign this batch to the class first.', 'error');
       return;
     }
 
     showLoading();
     try {
-      await createAssessmentInstance({
+      await createTestInstance({
         batch_id: batchId,
-        assessment_id: definitionId,
+        test_id: definitionId,
         assignment_type: 'BATCH',
         availability_start: startVal ? new Date(startVal).toISOString() : null,
         availability_end: endVal ? new Date(endVal).toISOString() : null,
@@ -1426,17 +1426,17 @@ Existing historical attempt records will NOT be modified.`;
 
 export async function renderResults(area) {
   const [rawData, allInstitutions, allPrograms, allBatches] = await Promise.all([
-    adminFetchAll('attempts', '*, students(name, gender, batch_id, batches(name), program_id, programs(name, institution_id, institutions(name))), assessments(id, title, assessment_type, prerequisite_assessment_id, prerequisite_min_score, shell_code), attempt_answers(id, evaluation_result, score)'),
+    adminFetchAll('attempts', '*, students(name, gender, batch_id, batches(name), program_id, programs(name, institution_id, institutions(name))), tests(id, title, test_type, prerequisite_test_id, prerequisite_min_score, shell_code), attempt_answers(id, evaluation_result, score)'),
     adminFetchAll('institutions'),
     adminFetchAll('programs'),
     adminFetchAll('batches')
   ]);
 
-  // Precalculate student best scores per assessment for prerequisite checking and highest score logic
+  // Precalculate student best scores per test for prerequisite checking and highest score logic
   const studentBestScoreMap = new Map();
   rawData.forEach(r => {
     if (!['submitted', 'auto_submitted'].includes(r.status)) return;
-    const defId = r.assessments?.id;
+    const defId = r.tests?.id;
     if (!r.student_id || !defId) return;
     const key = `${r.student_id}_${defId}`;
     const pct = parseFloat(r.percentage || 0);
@@ -1449,8 +1449,8 @@ export async function renderResults(area) {
   const submittedOnly = rawData.filter(r => ['submitted', 'auto_submitted'].includes(r.status));
   // Default: sort alphabetically by Student Name (A-Z)
   let allData = [...submittedOnly].sort((a, b) => (a.students?.name || '').localeCompare(b.students?.name || ''));
-  if (window._filterAssessmentResults) {
-    allData = allData.filter(r => r.assessments?.id === window._filterAssessmentResults);
+  if (window._filterTestResults) {
+    allData = allData.filter(r => r.tests?.id === window._filterTestResults);
   }
 
   let selectedProg = '';
@@ -1462,8 +1462,8 @@ export async function renderResults(area) {
   area.innerHTML = `
         <div class="section-header d-flex justify-between align-center flex-wrap gap-2">
           <div>
-            <h2 class="section-title">Assessment Results <span class="count-chip" id="res-count-chip">${allData.length} Total</span></h2>
-            <p class="section-subtitle">Student assessment attempt submissions displaying highest score records and prerequisite status</p>
+            <h2 class="section-title">Test Results <span class="count-chip" id="res-count-chip">${allData.length} Total</span></h2>
+            <p class="section-subtitle">Student test attempt submissions displaying highest score records and prerequisite status</p>
           </div>
           <div>
             <button class="btn btn-secondary btn-sm" id="export-gradebook-btn" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">
@@ -1472,10 +1472,10 @@ export async function renderResults(area) {
           </div>
         </div>
 
-        ${window._filterAssessmentResults ? `
+        ${window._filterTestResults ? `
           <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size:0.85rem;">
-            <span>&#9889; Filtered Results for Selected Assessment (${allData.length} attempts)</span>
-            <button class="btn btn-ghost btn-xs" id="clear-Assessment-results-btn" style="text-decoration:underline;color:#93c5fd;">Show All Assessment Results</button>
+            <span>&#9889; Filtered Results for Selected Test (${allData.length} attempts)</span>
+            <button class="btn btn-ghost btn-xs" id="clear-Test-results-btn" style="text-decoration:underline;color:#93c5fd;">Show All Test Results</button>
           </div>
         ` : ''}
 
@@ -1506,8 +1506,8 @@ export async function renderResults(area) {
           </div>
 
           <div style="flex:1;min-width:220px;">
-            <label class="text-xs text-muted d-block mb-1">Search Student / Assessment</label>
-            <input type="text" id="res-filter-search" class="form-control" placeholder="Type student name or assessment title&hellip;" style="padding:6px 10px;font-size:0.85rem;">
+            <label class="text-xs text-muted d-block mb-1">Search Student / Test</label>
+            <input type="text" id="res-filter-search" class="form-control" placeholder="Type student name or test title&hellip;" style="padding:6px 10px;font-size:0.85rem;">
           </div>
 
           <div class="d-flex align-end" style="padding-top:18px;">
@@ -1562,14 +1562,14 @@ export async function renderResults(area) {
       if (bId && r.students?.batch_id !== bId) return false;
       if (q) {
         const sName = (r.students?.name || '').toLowerCase();
-        const eTitle = (r.assessments?.title || '').toLowerCase();
-        const eType = (r.assessments?.assessment_type || '').toLowerCase();
+        const eTitle = (r.tests?.title || '').toLowerCase();
+        const eType = (r.tests?.test_type || '').toLowerCase();
         if (!sName.includes(q) && !eTitle.includes(q) && !eType.includes(q)) return false;
       }
       return true;
     });
 
-    // Deduplicate by Student + Assessment, keeping highest EFFECTIVE score only.
+    // Deduplicate by Student + Test, keeping highest EFFECTIVE score only.
     const getEffectivePct = (r) => {
       const rawPct = parseFloat(r.percentage || 0);
       if (r.is_remedial_unlocked && rawPct > 60) return 60;
@@ -1577,7 +1577,7 @@ export async function renderResults(area) {
     };
     const mergedResults = new Map();
     filtered.forEach(r => {
-      const key = `${r.student_id}_${r.assessments?.id}`;
+      const key = `${r.student_id}_${r.tests?.id}`;
       const existing = mergedResults.get(key);
       if (!existing) {
         mergedResults.set(key, r);
@@ -1605,17 +1605,17 @@ export async function renderResults(area) {
       container: 'results-grid-container',
       data: deduplicated,
       pageSize: 20,
-      searchKeys: ['students.name', 'assessments.title', 'assessments.shell_code', 'assessments.assessment_type', 'students.programs.name', 'students.programs.institutions.name'],
+      searchKeys: ['students.name', 'tests.title', 'tests.shell_code', 'tests.test_type', 'students.programs.name', 'students.programs.institutions.name'],
       columns: [
         { key: 'students.name', label: 'Student Name', sortable: true, render: (v, r) => `<span class="fw-600" style="color:var(--clr-text-1);">${formatStudentName(r.students?.name, r.students?.gender) || '&mdash;'}</span>` },
         { key: 'students.programs.institutions.name', label: 'Program', sortable: true, render: (v, r) => `<span class="text-muted text-sm">${escapeHtml(r.students?.programs?.institutions?.name || '&mdash;')}</span>` },
         { key: 'students.programs.name', label: 'Class', sortable: true, render: (v, r) => `<span class="text-muted text-sm">${escapeHtml(r.students?.programs?.name || '&mdash;')}</span>` },
         { key: 'students.batches.name', label: 'Batch', sortable: true, render: (v, r) => `<span class="badge ${r.students?.batches?.name ? 'badge-info' : 'badge-neutral'}" style="font-size:0.75rem;">${escapeHtml(r.students?.batches?.name || 'Unassigned')}</span>` },
         {
-          key: 'assessments.title', label: 'Assessment Title', sortable: true, render: (v, r) => {
-            const def = r.assessments || {};
+          key: 'tests.title', label: 'Test Title', sortable: true, render: (v, r) => {
+            const def = r.tests || {};
             const codeBadge = def.shell_code ? `<span class="badge" style="font-family:monospace;font-size:0.7rem;background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);margin-right:6px;padding:2px 5px;">${escapeHtml(def.shell_code)}</span>` : '';
-            return `<div class="d-flex align-items-center flex-wrap gap-1">${codeBadge}<span class="text-sm fw-600">${def.assessment_type ? escapeHtml(def.assessment_type) + ' &mdash; ' : ''}${escapeHtml(def.title || '&mdash;')}</span></div>`;
+            return `<div class="d-flex align-items-center flex-wrap gap-1">${codeBadge}<span class="text-sm fw-600">${def.test_type ? escapeHtml(def.test_type) + ' &mdash; ' : ''}${escapeHtml(def.title || '&mdash;')}</span></div>`;
           }
         },
         {
@@ -1627,7 +1627,7 @@ export async function renderResults(area) {
             return `
               <div class="text-center fw-700" style="display:flex;flex-direction:column;align-items:center;gap:3px;">
                 <div style="display:flex;align-items:center;gap:4px;" class="text-grade-${effectiveGrade}">
-                  <span>${effectivePct.toFixed(1)}%${isRemedial ? '<sup class="asm-rem-sup" style="font-size:0.7em;font-weight:900;margin-left:2px;">R</sup>' : ''}</span>
+                  <span>${effectivePct.toFixed(1)}%${isRemedial ? '<sup class="test-rem-sup" style="font-size:0.7em;font-weight:900;margin-left:2px;">R</sup>' : ''}</span>
                   <span class="badge badge-success text-xs" style="font-size:0.65rem;padding:1px 5px;" title="Highest score recorded across attempts">Highest</span>
                 </div>
               </div>
@@ -1645,8 +1645,8 @@ export async function renderResults(area) {
         },
         {
           key: 'prereq', label: 'Prerequisite', sortable: false, render: (v, r) => {
-            const def = r.assessments || {};
-            const prereqId = def.prerequisite_assessment_id;
+            const def = r.tests || {};
+            const prereqId = def.prerequisite_test_id;
             const minScore = Number(def.prerequisite_min_score) || 60;
             if (!prereqId) return '<div class="text-center"><span class="text-muted text-xs">&mdash;</span></div>';
             const studentPrereqBest = studentBestScoreMap.get(`${r.student_id}_${prereqId}`);
@@ -1712,7 +1712,7 @@ export async function renderResults(area) {
   searchInput.addEventListener('input', renderTable);
 
   document.getElementById('res-btn-reset')?.addEventListener('click', () => {
-    window._filterAssessmentResults = null;
+    window._filterTestResults = null;
     progSelect.value = '';
     classSelect.value = '';
     batchSelect.value = '';
@@ -1721,8 +1721,8 @@ export async function renderResults(area) {
     loadSection('results');
   });
 
-  document.getElementById('clear-Assessment-results-btn')?.addEventListener('click', () => {
-    window._filterAssessmentResults = null;
+  document.getElementById('clear-Test-results-btn')?.addEventListener('click', () => {
+    window._filterTestResults = null;
     loadSection('results');
   });
 
@@ -1740,7 +1740,7 @@ export async function renderResults(area) {
       return;
     }
     const exportData = rowsToExport.map(r => {
-      const def = r.assessments || {};
+      const def = r.tests || {};
       const rawPct = Number(r.percentage || r.effective_score || 0);
       const isRemedial = Boolean(r.is_remedial_unlocked);
       const exportPct = isRemedial ? Math.min(rawPct, 60.0) : (r.effective_score != null ? Number(r.effective_score) : rawPct);
@@ -1751,8 +1751,8 @@ export async function renderResults(area) {
         'Institution': r.students?.programs?.institutions?.name || '—',
         'Program': r.students?.programs?.name || '—',
         'Batch': r.students?.batches?.name || '—',
-        'Assessment Title': def.title || '—',
-        'Assessment Type': def.assessment_type || '—',
+        'Test Title': def.title || '—',
+        'Test Type': def.test_type || '—',
         'Score': r.score != null ? r.score : '—',
         'Raw Percentage (%)': rawPct != null ? `${rawPct}%` : '—',
         'Effective Percentage (%)': `${exportPct}%${isRemedial ? 'ᴿ' : ''}`,
@@ -1823,28 +1823,28 @@ export async function renderProgressView(area) {
         <div class="section-header">
           <div>
             <h2 class="section-title">Student Progress <span class="count-chip" id="prog-count-chip">Loading...</span></h2>
-            <p class="section-subtitle">Overview of student assessment completion filterable by Program, Class, and Batch</p>
+            <p class="section-subtitle">Overview of student test completion filterable by Program, Class, and Batch</p>
           </div>
         </div>
         <div class="p-5 text-center text-muted"><span class="loader"></span> Loading progression data...</div>
       `;
 
   try {
-    const [allStudents, allInstitutions, allPrograms, allBatches, allAssignments, allAssessments, allAttempts, allLevels] = await Promise.all([
+    const [allStudents, allInstitutions, allPrograms, allBatches, allAssignments, allTests, allAttempts, allLevels] = await Promise.all([
       adminFetchAll('students', '*, batches!batch_id(name, current_level_id, is_active), programs!program_id(name, institution_id, institutions!institution_id(name)), institutions!institution_id(name)'),
       adminFetchAll('institutions'),
       adminFetchAll('programs'),
       adminFetchAll('batches'),
-      adminFetchAll('assignments', 'student_id, batch_id, assessment_id'),
-      adminFetchAll('assessments', 'id, title, level_id, levels(name, level_number)'),
-      adminFetchAll('attempts', 'id, student_id, assessment_id, status, score, total_questions, percentage, grade, created_at, submitted_at'),
+      adminFetchAll('assignments', 'student_id, batch_id, test_id'),
+      adminFetchAll('tests', 'id, title, level_id, levels(name, level_number)'),
+      adminFetchAll('attempts', 'id, student_id, test_id, status, score, total_questions, percentage, grade, created_at, submitted_at'),
       adminFetchAll('levels').catch(() => [])
     ]);
 
     const allData = [];
 
     // Map V1 Data
-    const assessmentsMap = new Map((allAssessments || []).map(a => [a.id, a]));
+    const testsMap = new Map((allTests || []).map(a => [a.id, a]));
     const levelsMap = new Map((allLevels || []).map(l => [l.id, l.name]));
 
     // Map attempts by student_id for efficient lookup
@@ -1872,30 +1872,30 @@ export async function renderProgressView(area) {
       const studentBatch = allBatches.find(b => b.id === student.batch_id);
       const studentLevelId = student.level_id || studentBatch?.current_level_id;
       
-      // Auto-assign assessments based on Level (if batch has a level_id)
-      const levelAssesIds = studentLevelId ? (allAssessments || []).filter(a => a.level_id === studentLevelId).map(a => a.id) : [];
+      // Auto-assign tests based on Level (if batch has a level_id)
+      const levelAssesIds = studentLevelId ? (allTests || []).filter(a => a.level_id === studentLevelId).map(a => a.id) : [];
 
       // To avoid duplicates if both student and batch assigned
-      const assignedAssesIds = new Set([...sAssignments.map(a => a.assessment_id), ...levelAssesIds]);
+      const assignedAssesIds = new Set([...sAssignments.map(a => a.test_id), ...levelAssesIds]);
 
-      if (assignedAssesIds.size === 0) return; // Skip students with no assessments assigned
+      if (assignedAssesIds.size === 0) return; // Skip students with no tests assigned
 
       const sAttempts = attemptsByStudent.get(student.id) || [];
       const sAttemptsByAsm = new Map();
       sAttempts.forEach(att => {
-        if (!sAttemptsByAsm.has(att.assessment_id)) sAttemptsByAsm.set(att.assessment_id, []);
-        sAttemptsByAsm.get(att.assessment_id).push(att);
+        if (!sAttemptsByAsm.has(att.test_id)) sAttemptsByAsm.set(att.test_id, []);
+        sAttemptsByAsm.get(att.test_id).push(att);
       });
 
       let completedCount = 0;
       let inProgressCount = 0;
       const studentDetails = [];
 
-      assignedAssesIds.forEach(assessmentId => {
-        const assessment = assessmentsMap.get(assessmentId);
-        if (!assessment) return;
+      assignedAssesIds.forEach(testId => {
+        const test = testsMap.get(testId);
+        if (!test) return;
 
-        const asmAtts = sAttemptsByAsm.get(assessmentId) || [];
+        const asmAtts = sAttemptsByAsm.get(testId) || [];
         const isCompleted = asmAtts.some(att => {
           const st = String(att.status || '').toLowerCase();
           return ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
@@ -1909,15 +1909,15 @@ export async function renderProgressView(area) {
         else if (isInProgress) inProgressCount++;
 
         studentDetails.push({
-          assessmentTitle: assessment.title,
-          levelNumber: assessment.levels?.level_number || 1,
-          levelName: assessment.levels?.name || 'Unknown',
+          testTitle: test.title,
+          levelNumber: test.levels?.level_number || 1,
+          levelName: test.levels?.name || 'Unknown',
           is_completed: isCompleted,
           is_in_progress: isInProgress
         });
       });
 
-      // Calculate authoritative global grade & score across completed assessments (Rule 2.8 & 2.10)
+      // Calculate authoritative global grade & score across completed tests (Rule 2.8 & 2.10)
       let totalScoreObtained = 0;
       let totalMaxPossible = 0;
       let completedScoredCount = 0;
@@ -1954,8 +1954,8 @@ export async function renderProgressView(area) {
         }
       });
 
-      // Student Score (%) & Grade: Calculated ONLY from taken/unlocked assessments.
-      // Formula: average_score = sum(best_percentage_on_taken) / count(taken_assessments)
+      // Student Score (%) & Grade: Calculated ONLY from taken/unlocked tests.
+      // Formula: average_score = sum(best_percentage_on_taken) / count(taken_tests)
       const overallPct = completedScoredCount > 0 
         ? Math.round(sumPercentages / completedScoredCount) 
         : 0;
@@ -1984,7 +1984,7 @@ export async function renderProgressView(area) {
       // Sort details by level then alphabetically
       studentDetails.sort((a, b) => {
         if (a.levelNumber !== b.levelNumber) return a.levelNumber - b.levelNumber;
-        return (a.assessmentTitle || '').localeCompare(b.assessmentTitle || '');
+        return (a.testTitle || '').localeCompare(b.testTitle || '');
       });
 
       const instName = student.institutions?.name || student.programs?.institutions?.name || (allInstitutions.find(i => i.id === student.institution_id)?.name) || '—';
@@ -2048,7 +2048,7 @@ export async function renderProgressView(area) {
           <div class="section-header">
             <div>
               <h2 class="section-title">Student Progress <span class="count-chip" id="prog-count-chip">${allData.length} Students</span></h2>
-              <p class="section-subtitle">Overview of student assessment completion, global scores, and grades filterable by Batch, Program, and Status</p>
+              <p class="section-subtitle">Overview of student test completion, global scores, and grades filterable by Batch, Program, and Status</p>
             </div>
           </div>
 
@@ -2099,7 +2099,7 @@ export async function renderProgressView(area) {
                   <th class="text-left" style="min-width:180px;">Student Name</th>
                   <th class="text-center" style="width:65px;">Age</th>
                   <th class="text-center" style="width:80px;">Gender</th>
-                  <th class="text-center" style="width:95px;">Assessments</th>
+                  <th class="text-center" style="width:95px;">Tests</th>
                   <th class="text-center" style="width:70px;">Score</th>
                   <th class="text-center" style="width:65px;">Grade</th>
                   <th class="text-center" style="width:130px;">Completion</th>
@@ -2148,7 +2148,7 @@ export async function renderProgressView(area) {
        
        const detailsRows = rec.details.map(r => `
             <tr>
-              <td class="fw-600 text-sm">${escapeHtml(r.assessmentTitle || '—')}</td>
+              <td class="fw-600 text-sm">${escapeHtml(r.testTitle || '—')}</td>
               <td class="text-center"><span class="badge badge-primary">Level ${toLevelLetter(r.levelNumber)} ${escapeHtml(r.levelName || '')}</span></td>
               <td class="text-center">
                 <span class="badge ${r.is_completed ? 'badge-success' : r.is_in_progress ? 'badge-warning' : 'badge-neutral'}">
@@ -2161,7 +2161,7 @@ export async function renderProgressView(area) {
        modal.innerHTML = `
          <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border);border-radius:12px;width:100%;max-width:700px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,0.5);">
             <div style="padding:1.5rem;border-bottom:1px solid var(--clr-border);display:flex;justify-content:space-between;align-items:center;">
-              <h3 style="margin:0;">Assessment Details: ${escapeHtml(rec.displayName || rec.student.name)}</h3>
+              <h3 style="margin:0;">Test Details: ${escapeHtml(rec.displayName || rec.student.name)}</h3>
               <button class="btn-icon" onclick="document.getElementById('prog-details-modal').remove()" style="background:transparent;border:none;color:var(--clr-text-2);font-size:1.2rem;cursor:pointer;">&#10005;</button>
             </div>
             <div style="padding:1.5rem;overflow-y:auto;flex:1;">
@@ -2175,7 +2175,7 @@ export async function renderProgressView(area) {
                <table class="table-wrap" style="width:100%;">
                  <thead>
                    <tr>
-                     <th class="text-left">Assessment</th>
+                     <th class="text-left">Test</th>
                      <th class="text-center">Level</th>
                      <th class="text-center">Status</th>
                    </tr>
@@ -2355,7 +2355,7 @@ window.viewClassInstanceRoster = async function (classInstanceId) {
 };
 
 // ============================================================
-// Assessment RECALIBRATOR (Relocated to Domain D — Data Health)
+// Test RECALIBRATOR (Relocated to Domain D — Data Health)
 // ============================================================
 
 export async function renderRecalibrator(area) {

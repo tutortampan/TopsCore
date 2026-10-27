@@ -18,58 +18,54 @@ serve(async (req: Request) => {
     const { data: user, error: userError } = await supabaseClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (userError || !user) throw new Error("Unauthorized");
 
-    // Verify role (must be teacher or admin)
     const { data: userData } = await supabaseClient.from("users").select("role").eq("id", user.user.id).single();
     if (!userData || (userData.role !== "teacher" && userData.role !== "admin")) {
       return new Response(JSON.stringify({ error: "Forbidden: insufficient permissions" }), { status: 403 });
     }
 
-    const { assessmentId, newProgramId, newBatchId, overrideName } = await req.json();
-    if (!assessmentId) throw new Error("assessmentId is required");
+    const { testId, newProgramId, newBatchId, overrideName } = await req.json();
+    if (!testId) throw new Error("testId is required");
 
-    // Fetch existing assessment
+    // Fetch existing test
     const { data: original, error: fetchError } = await supabaseClient
-      .from("assessments")
+      .from("tests")
       .select("*")
-      .eq("id", assessmentId)
+      .eq("id", testId)
       .single();
 
-    if (fetchError || !original) throw new Error("Assessment not found");
+    if (fetchError || !original) throw new Error("Test not found");
 
-    // Construct new assessment
-    const newAssessment = {
+    const newTest = {
       module_id: original.module_id,
       institution_id: original.institution_id,
       program_id: newProgramId || original.program_id,
       batch_id: newBatchId || original.batch_id,
-      name: overrideName || `${original.name} (Copy)`,
-      auto_name_override: overrideName ? true : original.auto_name_override,
-      available_from: original.available_from,
-      available_until: original.available_until,
-      time_limit_seconds: original.time_limit_seconds,
+      title: overrideName || `${original.title} (Copy)`,
+      test_type: original.test_type,
+      test_subtype: original.test_subtype,
+      availability_start: original.availability_start,
+      availability_end: original.availability_end,
+      working_duration_minutes: original.working_duration_minutes,
       payload: original.payload,
-      prerequisite_rules: original.prerequisite_rules
+      prerequisite_test_id: original.prerequisite_test_id
     };
 
     const { data: duplicated, error: insertError } = await supabaseClient
-      .from("assessments")
-      .insert(newAssessment)
+      .from("tests")
+      .insert(newTest)
       .select()
       .single();
 
     if (insertError) throw insertError;
 
-    // Optional: Log duplication in an audit log
-    // ...
-
     return new Response(
-      JSON.stringify({ success: true, duplicatedAssessment: duplicated }),
+      JSON.stringify({ success: true, duplicatedTest: duplicated }),
       { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
     );
   } catch (error: any) {
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }, status: 400 }
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
     );
   }
 });

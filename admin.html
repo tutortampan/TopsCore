@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tutor's Room — TOPS CORE</title>
-  <meta name="description" content="Tutor's Room management console for TOPS CORE — manage institutions, programs, students, and assessments." />
+  <meta name="description" content="Tutor's Room management console for TOPS CORE — manage institutions, programs, students, and tests." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -94,7 +94,7 @@
           </script>
         </div>
 
-        <!-- DOMAIN C: Class (Curriculum & AI Assessment Engine) -->
+        <!-- DOMAIN C: Class (Curriculum & AI Test Engine) -->
         <div class="nav-domain-group" data-domain="class">
           <div class="nav-domain-header"><span class="domain-icon">&#9889;</span>C &mdash; Class</div>
           <div id="sidebar-classes-list"></div>
@@ -119,7 +119,7 @@
               } catch(e) {}
             })();
           </script>
-          <div class="admin-nav-item" data-sub="assessments" data-view="assessments"><span class="nav-icon">&#128221;</span>Assessment</div>
+          <div class="admin-nav-item" data-sub="tests" data-view="tests"><span class="nav-icon">&#128221;</span>Test</div>
           <div class="admin-nav-item" data-sub="vocab_vault"><span class="nav-icon">&#128214;</span>Vocabulary Vault</div>
         </div>
 
@@ -205,7 +205,7 @@
       <div class="modal-header modal-header-bordered">
         <div>
           <h3 id="dup-students-modal-title" class="modal-title-lg">&#128269; Duplicate Students Review &amp; Resolver</h3>
-          <p class="text-xs text-muted modal-subtitle">Compare duplicate student profiles side-by-side and safely unify their ASSESSMENT attempts and progress.</p>
+          <p class="text-xs text-muted modal-subtitle">Compare duplicate student profiles side-by-side and safely unify their TEST attempts and progress.</p>
         </div>
         <button class="btn btn-ghost btn-icon" id="close-dup-students-modal" aria-label="Close">✕</button>
       </div>
@@ -240,7 +240,7 @@
       <div class="modal-header modal-header-bordered">
         <div>
           <h3 id="dup-questions-modal-title" class="modal-title-lg">&#128269; Duplicate Questions Review &amp; Resequencer</h3>
-          <p class="text-xs text-muted modal-subtitle">Detect duplicate question texts within ASSESSMENTs and auto-resequence question orders seamlessly.</p>
+          <p class="text-xs text-muted modal-subtitle">Detect duplicate question texts within Tests and auto-resequence question orders seamlessly.</p>
         </div>
         <button class="btn btn-ghost btn-icon" id="close-dup-questions-modal" aria-label="Close">✕</button>
       </div>
@@ -249,25 +249,25 @@
       <div class="d-flex align-center justify-between flex-wrap gap-3 mb-4 p-3 rounded dup-filter-bar">
         <div class="d-flex align-center gap-3 flex-wrap flex-1">
           <div class="dup-filter-col">
-            <label class="text-xs text-muted d-block mb-1" for="dup-q-assessment-select">Filter by ASSESSMENT</label>
-            <select id="dup-q-assessment-select" class="form-control dup-select-control" title="Filter by ASSESSMENT" aria-label="Filter by ASSESSMENT">
-              <option value="">— All ASSESSMENTs —</option>
+            <label class="text-xs text-muted d-block mb-1" for="dup-q-test-select">Filter by Test</label>
+            <select id="dup-q-test-select" class="form-control dup-select-control" title="Filter by Test" aria-label="Filter by Test">
+              <option value="">— All Tests —</option>
             </select>
           </div>
           <div class="d-flex gap-2 pt-16">
-            <button class="btn btn-primary btn-sm dup-q-tab-btn" data-qtab="same_assessment" id="tab-btn-q-same">
-              &#9888;&#65039; Same-ASSESSMENT Duplicates (<span id="dup-q-same-count">0</span>)
+            <button class="btn btn-primary btn-sm dup-q-tab-btn" data-qtab="same_test" id="tab-btn-q-same">
+              &#9888;&#65039; Same-Test Duplicates (<span id="dup-q-same-count">0</span>)
             </button>
             <button class="btn btn-secondary btn-sm dup-q-tab-btn" data-qtab="order_conflicts" id="tab-btn-q-order">
               &#128290; Order Conflicts (<span id="dup-q-order-count">0</span>)
             </button>
-            <button class="btn btn-secondary btn-sm dup-q-tab-btn" data-qtab="cross_assessment" id="tab-btn-q-cross">
-              &#127760; Cross-ASSESSMENT Duplicates (<span id="dup-q-cross-count">0</span>)
+            <button class="btn btn-secondary btn-sm dup-q-tab-btn" data-qtab="cross_test" id="tab-btn-q-cross">
+              &#127760; Cross-Test Duplicates (<span id="dup-q-cross-count">0</span>)
             </button>
           </div>
         </div>
         <div class="d-flex align-end pt-16">
-          <button class="btn btn-danger btn-sm font-bold-nowrap" id="btn-batch-clean-assessment-questions">
+          <button class="btn btn-danger btn-sm font-bold-nowrap" id="btn-batch-clean-test-questions">
             &#9889; Clean All &amp; Resequence (1..N)
           </button>
         </div>
@@ -280,13 +280,13 @@
     </div>
   </div>
 
-  <!-- --- BULK EDIT ASSESSMENTS MODAL --- -->
-  <div class="modal-backdrop modal-z-1000 hidden" id="bulk-edit-assessments-modal" role="dialog" aria-modal="true" aria-labelledby="bulk-edit-asm-title">
+  <!-- --- BULK EDIT TESTS MODAL --- -->
+  <div class="modal-backdrop modal-z-1000 hidden" id="bulk-edit-tests-modal" role="dialog" aria-modal="true" aria-labelledby="bulk-edit-asm-title">
     <div class="modal-box modal-box-lg bulk-edit-modal-box">
       <div class="modal-header modal-header-bordered">
         <div>
-          <h3 id="bulk-edit-asm-title" class="modal-title-lg">⚡ Bulk Edit Assessments</h3>
-          <p class="text-xs text-muted modal-subtitle" id="bulk-edit-asm-subtitle">Ubah pengaturan waktu, cara jawab, dan skor kelulusan untuk beberapa assessment sekaligus.</p>
+          <h3 id="bulk-edit-asm-title" class="modal-title-lg">⚡ Bulk Edit Tests</h3>
+          <p class="text-xs text-muted modal-subtitle" id="bulk-edit-asm-subtitle">Ubah pengaturan waktu, cara jawab, dan skor kelulusan untuk beberapa test sekaligus.</p>
         </div>
         <button class="btn btn-ghost btn-icon" id="close-bulk-edit-asm-modal" aria-label="Close">✕</button>
       </div>
@@ -299,7 +299,7 @@
             <span class="badge badge-info bulk-edit-target-badge" id="bulk-edit-target-count">0 Selected</span>
           </div>
           <div id="bulk-edit-target-preview" class="bulk-edit-target-chips">
-            <!-- Assessment chips inserted dynamically -->
+            <!-- Test chips inserted dynamically -->
           </div>
         </div>
 
@@ -343,7 +343,7 @@
                 <option value="selection">🔘 Selection (Pilihan Ganda / Dropdown)</option>
                 <option value="mixed">🔀 Mixed (Campuran)</option>
               </select>
-              <p class="text-xs text-muted bulk-edit-help-text">Otomatis menyinkronkan seluruh soal di assessment_questions yang bersangkutan.</p>
+              <p class="text-xs text-muted bulk-edit-help-text">Otomatis menyinkronkan seluruh item soal di test_items yang bersangkutan.</p>
             </div>
           </div>
 
@@ -390,7 +390,7 @@
       <div class="modal-footer modal-footer-bordered bulk-edit-footer">
         <button type="button" class="btn btn-secondary" id="bulk-cancel-btn">Batal</button>
         <button type="button" class="btn btn-primary bulk-edit-save-btn" id="bulk-save-btn">
-          <span>💾 Terapkan Perubahan</span> (<span id="bulk-save-count">0</span> Assessment)
+          <span>💾 Terapkan Perubahan</span> (<span id="bulk-save-count">0</span> Test)
         </button>
       </div>
     </div>
@@ -507,14 +507,14 @@
   })();
 </script>
 <script type="module">
-    import { DataGrid } from './js/admin/datagrid.js?v=20261027';
+    import { DataGrid } from './js/admin/datagrid.js?v=20261027c';
     window.DataGrid = DataGrid;
   </script>
-  <script type="module" src="js/admin/app.js?v=20261027"></script>
+  <script type="module" src="js/admin/app.js?v=20261027c"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261027')
+        navigator.serviceWorker.register('sw.js?v=20261027c')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

@@ -1,14 +1,256 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-27 07:00 UTC+8
+Last Updated: 2026-10-27 16:30 UTC+8
 
-Current Phase: Phase 134: Global Task & Test Settings Box, 5-Minute Default Duration & Assessment Editing Polish [COMPLETE]
+Current Phase: Phase 144: Scoring, Points & Ranking Overhaul in Class Hub [COMPLETE]
 
-Current Task: Implement Global Settings Box in Class Hub assessments tab, enforce 5-minute default duration for tasks across system, optimize single assessment edit modal with presets, title, and status, and externalize all bulk edit modal inline styles with full accessibility compliance [COMPLETE]
+Current Task: Implement weekly-only SCORE, GRD, PTS with comprehensive PROG across all activities and leaderboard sorting (PROG > SCORE > PTS) [COMPLETE]
 
-Status: COMPLETE (Added Global Task & Test Settings Box in Class Hub with one-click mass update for tasks and tests; enforced 5-minute default for tasks in `js/api.js` and `js/admin/crud-modals.js`; added quick duration and passing score preset buttons to single edit modal; added Title and Status editing to single assessment form; removed all inline styles from `#bulk-edit-assessments-modal` in `admin.html` and added accessibility attributes; cache key bumped to `topscore-cache-mockup-v1`; 39/39 JS files syntax validated with 0 errors; strictly NO git commit/push).
+Status: COMPLETE (In js/admin/app.js: PROG % maintained across all activities; Global SCORE %, GRD, and PTS calculated exclusively from weekly milestone exams; unattempted weekly exams show clean '-' and 0 pts; leaderboard sort order strictly PROG % DESC > Global SCORE % DESC > Global PTS DESC; footer class average aligned with weekly-only metrics; sw.js bumped to topscore-cache-ranking-v1; 39/39 JS syntax valid; test suite 100% pass).
 
 ## Completed
+
+- **Phase 144: Scoring, Points & Ranking Overhaul in Class Hub**:
+  - **1. Objective & Alignment**:
+    - PROG % (Completion Rate): Maintained across ALL activities (32 daily quizzes/tasks + 8 weekly milestone exams).
+    - Global SCORE % & Global GRD (Academic Mastery): Calculated EXCLUSIVELY from weekly exams (milestone sessions). Daily practice drills excluded entirely.
+    - Global PTS (Points): Aggregates points earned EXCLUSIVELY from weekly exams.
+    - Edge-Case Handling: When a student has only completed daily drills without taking weekly exams: PROG reflects tasks, SCORE displays `—`, GRD displays `—`, and PTS evaluates to `0 pts`.
+    - Leaderboard Sort Order: Primary: `PROG % DESC` > Secondary: `Global SCORE % DESC` > Tertiary: `Global PTS DESC`.
+    - Footer "CLASS AVERAGE": Aligned with weekly-only metrics (only students with completed weekly exams enter class average score and grade).
+  - **2. Implementation Details**:
+    - `js/admin/app.js`:
+      - Added `isWeeklyExam` classification helper for `classTests`.
+      - Updated student loop to track `completedWeeklyCount`, `weeklyEarnedScore`, and `sumWeeklyPercentages` strictly from weekly exams while maintaining `completedCount` across all activities.
+      - Set `averageScorePct = completedWeeklyCount > 0 ? Math.round(sumWeeklyPercentages / completedWeeklyCount) : 0`.
+      - Set `totalEarnedScore = completedWeeklyCount > 0 ? weeklyEarnedScore : 0`.
+      - Set `grade = completedWeeklyCount > 0 ? calculateGrade(averageScorePct) : '—'`.
+      - Formatted table cells for SCORE, GRD, and PTS with clean unattempted presentation.
+      - Set initial sort key to `progressPct` and updated `sortComparator` and `studentsGridData.sort`.
+      - Updated `summaryRow` to compute class average SCORE and GRADE exclusively from students with completed weekly exams.
+    - `sw.js`: Bumped cache to `topscore-cache-ranking-v1`.
+  - **3. Verification**:
+    - `node scratch/test_scoring_and_ranking_overhaul.cjs`: 100% assertions passed across all 6 scenarios.
+    - `node scripts/check_all_js_syntax.cjs`: 39/39 JS files syntax valid.
+    - `node scratch/zero_residue_verification.cjs`: 0 occurrences of "assessment" across all active code files.
+
+- **Phase 143: Full System Terminology Overhaul, Database Migration & Legacy Purge**:
+  - **1. Objective & Mandate**:
+    - Absolute deprecation and total purge of "Assessment" / "Assessments" across the entire repository.
+    - Precision Rule: Singular "Test", Plural "Tests"; Sub-categories: "Quiz" (pl: "Quizzes", daily tasks/formative checks) and "Exam" (pl: "Exams", formal scheduled examinations).
+    - 100% data preservation of all historical student attempts and live tests.
+    - Zero residue: 0 occurrences of "assessment" across active code, HTML, CSS, Edge Functions, and Service Worker.
+  - **2. Database Layer**:
+    - Created `test_type` ENUM (`quiz`, `exam`).
+    - Created `public.tests` (40 rows: 32 quiz + 8 exam), `public.test_items`, `public.test_topics`, `public.test_results`.
+    - Added `test_id` column to `attempts`, `assignments`, `student_submissions`, `question_usage_history`.
+    - Backfilled 100% of historical attempt records (851/851 attempts) and set `attempts.test_id` to `NOT NULL` with foreign key cascade.
+    - Dropped legacy columns (`assessment_id`) and dropped legacy tables: `assessments`, `assessment_questions`, `assessment_topics`, `assessment_results`, `assessment_instances`, `assessment_attempts`, `assessment_attempt_answers`.
+    - Updated RPCs: `reorder_test` and `emergency_submit_attempt`.
+  - **3. Edge Functions**:
+    - Created `start-test`, `submit-test`, `duplicate-test`, `evaluate-test`.
+    - Deleted obsolete `start-assessment`, `submit-assessment`, `duplicate-assessment`, `evaluate-assessment`.
+    - Updated `import-questions` and `generate-module-template`.
+  - **4. Frontend Core & UI**:
+    - Renamed physical files: `test.html`, `css/test.css`, `js/test.js`, `js/admin/tests-management.js`, `js/admin/tests-access.js`, `js/admin/test-builder.js`.
+    - Refactored `js/api.js` and all 25 modules in `js/` to target `tests`, `test_items`, and `test_id`.
+    - Updated UI strings, headers, badges, modals, and buttons in `admin.html`, `dashboard.html`, `test.html`, `result.html`, `index.html`.
+    - Updated `sw.js` cache manifest to `topscore-cache-test-v1` registering `css/test.css` and `js/test.js`.
+  - **5. Verification**:
+    - `node scratch/zero_residue_verification.cjs`: 0 occurrences across all 62 scanned active code files.
+    - `node scripts/check_all_js_syntax.cjs`: 39/39 JS files syntax valid.
+    - `node scratch/test_complete_system.mjs`: 100% assertions passed.
+
+- **Phase 142: Experimental Color Mockup - Green Star & Black Letter Badges**:
+  - **1. Objective & Alignment**:
+    - Experimental color mockup: Star (100% ★) updated to Green (`#22C55E`), matching Grade A hue with radiant green glow, and all letters inside Grade Circle Badges (★, A, B, C, D, E) styled with high-contrast black text (`#000000`).
+  - **2. Codebase Changes**:
+    - `js/grading.js`:
+      - Set `STAR_THEME.color = '#22C55E'`, `STAR_THEME.glow = 'rgba(34, 197, 94, 0.45)'`.
+      - Updated `GRADE_PALETTE.STAR` to `#22C55E`.
+      - Updated `formatGradeBadgeHtml` to apply `#000000` text color for badges.
+    - `css/admin.css`:
+      - Updated `.grade-circle.grade-circle-star` background gradient to emerald/leaf green (`#4ade80` to `#22c55e`) with green drop shadow.
+      - Updated `.grade-circle.grade-circle-*` (A, B, C, D, E) color property to `#000000 !important;`.
+    - `css/style.css`:
+      - Updated `.score-high` to `#22C55E` with green drop-shadow glow.
+      - Updated `.grade-circle.grade-circle-star` to green gradient with white icon star.
+      - Updated `.grade-circle.grade-circle-*` text color to `#000000 !important;`.
+    - `js/admin/app.js`:
+      - Updated fallback color ternaries and matrix badges for Star to `#22C55E`.
+      - Standardized `avgTextColor` and `textColor` to `#000000` for all circle badge letters.
+    - `sw.js`:
+      - Bumped `CACHE_NAME` to `'topscore-cache-mockup-v4'`.
+  - **3. Verification**:
+    - Ran `node scripts/check_all_js_syntax.cjs`: 39/39 JS files passed syntax validation (exit code 0).
+    - Ran `node scratch/test_grading_suite.mjs`: 100% assertions passed.
+    - Verified `git status`: Working tree changes only (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
+- **Phase 141: Test Column Reordering & Theme Total Points Column in Class Hub**:
+  - **1. Objective & User Alignment**:
+    - Per user request ("urutannya jadikan score, baru point, kemudian untuk tiap tema ada tambahan kolom berupa total point daro words dan phrases"):
+      1. Reordered test assessment columns so that the **SCORE (%)** column appears first, followed by the **POINTS (PTS)** column.
+      2. Added a dedicated **Theme Total Points (TOT PTS)** column at the end of each Theme group, aggregating effective earned points across both Words and Phrases (tasks and tests) within that Theme.
+  - **2. Codebase Changes**:
+    - `js/admin/app.js`:
+      - Grouped active assessments by Theme (`themeGroups`) and pre-calculated student theme totals (`row['theme_${tc}_total_pts']`).
+      - Updated `dynamicSuperHeaders` colSpan to accurately account for the additional Theme Total column (`(themeTests.length * 2) + 1`).
+      - Reordered test columns: SCORE column generated first (`key: asm_${asm.id}_pct`), followed by POINTS column (`key: asm_${asm.id}_pts`).
+      - Appended Theme Total Points column (`key: theme_${tc}_total_pts`) with `TOT / TOT PTS` header badge and score-tiered dynamic color.
+      - Updated `summaryRow` to compute and display class average theme points (`avgThemePts`).
+      - Updated `sortComparator` to support sorting by `theme_${tc}_total_pts`.
+    - `css/admin.css`:
+      - Added CSS styling for `.col-asm-theme-total`, `.asm-num-total`, and `.asm-score-theme-total` with clean background separation and pure white headers.
+    - `sw.js`: Bumped cache name to `topscore-cache-mockup-v3`.
+  - **3. Verification**:
+    - Ran `node scripts/check_all_js_syntax.cjs`: 39/39 JS files passed syntax validation (exit code 0).
+    - Ran `node scratch/test_grading_suite.mjs`: 100% unit assertions passed.
+    - Verified `git status`: Local working tree changes only (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
+- **Phase 140: Pure White Datagrid Headers in Class Hub**:
+  - **1. Objective & User Alignment**:
+    - Per user request ("buat font pada header berwarna putih, jangan ada yang warna warni"), all font elements across the datagrid table headers in Class Hub (`#class-attendance-grid`) are now standardized to crisp, clean, pure white (`#ffffff !important;`).
+    - Eliminated colored text across all header tiers:
+      - Super headers: `STUDENT DETAILS` (previously `#94a3b8`) and Theme headers `THEME A`, `THEME B`, `THEME C`, `THEME D` (previously `#38bdf8`, `#c084fc`, `#fbbf24`, `#34d399`) are now pure white.
+      - Assessment column numbers: Task numbers (previously Cyan `#38bdf8`) and Test numbers (previously `#e2e8f0`) are now pure white.
+      - Assessment subheaders: `WRD` (previously Yellow `#FFFF00`), `PHR` (previously Cyan `#00FFFF`), `WRD PTS` / `PHR PTS` (previously `#e2e8f0`), and `SCORE` (previously `#cbd5e1`) are now pure white.
+      - Base sticky headers: `INST`, `PROGRAM`, `BATCH`, `STUDENT NAME`, `PROG`, `SCORE`, `GRD`, `PTS` and sort indicators are now pure white.
+  - **2. Codebase Changes**:
+    - `css/admin.css`:
+      - Added overarching `#class-attendance-grid thead, #class-attendance-grid thead th, #class-attendance-grid thead th *, #class-attendance-grid .datagrid-thead th, #class-attendance-grid .datagrid-thead th * { color: #ffffff !important; }`.
+      - Updated `#class-attendance-grid th.super-hdr*` color rules to `#ffffff !important;`.
+      - Updated `#class-attendance-grid th.col-asm-task .asm-num` and `#class-attendance-grid th.col-asm-test .asm-num` to `#ffffff !important;`.
+      - Updated `#class-attendance-grid .asm-subtag*` (`.asm-subtag-wrd`, `.asm-subtag-phr`, `.asm-subtag-test-pts`, `.asm-subtag-test-score`) to `#ffffff !important;`.
+    - `sw.js`: Bumped cache name to `topscore-cache-mockup-v2`.
+  - **3. Verification**:
+    - Ran `node scripts/check_all_js_syntax.cjs`: 39/39 JS files passed syntax validation (exit code 0).
+    - Ran `node scratch/test_grading_suite.mjs`: 100% assertions passed.
+    - Verified `git status`: Local working tree changes only (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
+- **Phase 139: High-Vibrancy Dark-Mode Color Mockup & Circle Badge Alignment**:
+  - **1. Objective & Design Fidelity**:
+    - Aligned all grade colors with the high-vibrancy dark-mode tablet reference mockup ("Grading 2.jpg").
+    - Eliminated color collision between Grade A and Grade B: Grade A is now distinct True Leaf Green (`#22C55E`), and Grade B is distinct Electric Bright Lime (`#BEF264`) with dark charcoal text (`#0f172a`) for maximum readability in circle badge pills.
+    - Standardized Star (100% ★) into a circular pill badge matching the form factor of grades A–E, using Bright Purple (`#C084FC`) with glowing violet gradient and border.
+  - **2. Color Tokens Implemented**:
+    - ★ (Star / 100%): `#C084FC` (Bright Purple)
+    - A (90% – 99%): `#22C55E` (True Leaf Green - visibly deeper than lime)
+    - B (80% – 89%): `#BEF264` (Electric Bright Lime - heavy yellow undertone, text `#0f172a`)
+    - C (60% – 79%): `#FDE047` (Pure Electric Lemon Yellow - zero orange cast, text `#0f172a`)
+    - D (30% – 59%): `#FB923C` (Clean Orange)
+    - E (0% – 29%): `#F87171` (Light Red)
+  - **3. Codebase Changes**:
+    - `js/grading.js`: Updated `STAR_THEME.color`, `GRADE_PALETTE`, `getGradeColorByScore`, and fallback resolver in `getGradeTheme`.
+    - `css/admin.css`: Updated `.form-pill.grade-*`, `.grade-circle.grade-circle-*`, and `.badge-grade-star-s`.
+    - `css/style.css`: Updated `.grade-circle.grade-circle-*` and text color utility classes.
+    - `sw.js`: Bumped cache name to `topscore-cache-mockup-v1`.
+  - **4. Verification & Testing**:
+    - Ran `node scripts/check_all_js_syntax.cjs`: 39/39 JS files syntax valid (exit code 0).
+    - Ran unit test suite `scratch/test_grading_suite.mjs`: All 7 score tiers, remedial behavior, and circle badge HTML assertions passed 100%.
+    - Verified `git status`: All changes remain uncommitted in local working tree (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
+
+- **Phase 138: Separate Words Task & Phrases Task Answer Types in Wizard & Auto-Gen**:
+  - **1. Objective & Architectural Alignment**:
+    - Previously, Daily Tasks (Section 1) had a single monolithic "Cara Jawab" dropdown (`#wizard-task-ans`) applying to both Words Tasks and Phrases Tasks, whereas Tests (Section 2) had separate controls (`Words Test` and `Phrases Test`).
+    - Now, tutors can independently configure the answer type for **Words Task** (e.g. Spoken) and **Phrases Task** (e.g. Spoken / Written / Selection / Mixed), giving complete pedagogical flexibility across the 4 assessment archetypes.
+  - **2. Smart Class Prefill Detection**:
+    - In `js/admin/auto-gen-modal.js`:
+      - Queries existing assessments for the locked class ID upon opening.
+      - Automatically detects current `answer_type` for Words Tasks, Phrases Tasks, Words Tests, and Phrases Tests, plus task duration and passing score.
+      - Pre-populates the select dropdowns and inputs so tutors see current configuration immediately rather than generic defaults.
+  - **3. UI & Modal Layout Enhancement**:
+    - Section 1 (Task Harian) updated into clean 2-row layout:
+      - Row 1: `⏱️ Waktu (Mnt)` (with 5m, 10m, 15m preset pills) & `🎯 Min. Skor (%)` (with 60%, 70% preset pills).
+      - Row 2: Distinct highlighted card with two independent dropdowns: `🗣️ Words Task` (`#wizard-task-ans-words`) and `🗣️ Phrases Task` (`#wizard-task-ans-phrases`).
+    - Added `Mixed (Campuran)` option to test selects for complete consistency.
+  - **4. Backend & API Synchronization (`js/api.js`)**:
+    - `updateClassAssessmentsConfig`: Added support for `wordsTaskAnswerType` and `phrasesTaskAnswerType` (with fallback to `taskAnswerType` or `'spoken'`). Correctly filters Phrase vs Word rows based on `shell_code`, `category`, and `title`.
+    - `autoGenerateAssessmentsHierarchy`: Pass `wordsTaskAns` to `VOCAB` (Words) tasks and `phrasesTaskAns` to `PHRASE` tasks.
+  - **5. Cache-Busting & Live Verification**:
+    - Updated `sw.js` to `topscore-cache-split-task-ans-v1`.
+    - Bumped query string to `?v=20261027c` across `admin.html`, `app.js`, `vocab-vault.js`, and `auto-gen-modal.js`.
+    - Executed live database verification on test class `ab33498a-90e6-44b7-83f4-5765f964543e`:
+      - Updated 40 assessments: 16 Words Tasks (`spoken`), 16 Phrases Tasks (`spoken`), 4 Words Tests (`written`), 4 Phrases Tests (`selection`) with zero errors.
+    - Verified syntax: `node scripts/check_all_js_syntax.cjs` returned exit code 0 (39/39 files valid).
+    - Verified `git status`: Local working tree only (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
+- **Phase 137: Auto-Gen Hierarchy `duration_minutes` Fix & Stale Module Cache-Bust**:
+  - **1. Error Root Cause**:
+    - During action `[🚀 Generate & Sinkronkan Soal]`, `auto-gen-modal.js` calls `autoGenerateAssessmentsHierarchy` -> `upsertDynamicAssessmentShell`.
+    - Both `auto-gen-modal.js` and `vocab-vault.js` imported modules via pinned `?v=5.3.2` URLs (`import('../api.js?v=5.3.2')`), serving stale cached JavaScript from browser disk cache where `duration_minutes` was sent in root table update.
+    - PostgREST threw `PGRST204: Could not find the 'duration_minutes' column of 'assessments' in the schema cache`.
+  - **2. Universal Defensive Database Sanitization**:
+    - In `js/api.js`:
+      - `adminInsert` & `adminUpdate`: Added automatic interceptor for `assessments` table that maps `duration_minutes` to `working_duration_minutes` if needed, and deletes `duration_minutes` from root object.
+      - `upsertDynamicAssessmentShell`: Added explicit `delete asmData.duration_minutes;`.
+  - **3. Complete Module Cache-Busting**:
+    - Updated query strings to `?v=20261027b` across:
+      - `admin.html` (DataGrid, app.js, sw.js)
+      - `sw.js` (cache bumped to `topscore-cache-fix-duration-col-v2`, asset URLs updated to `?v=20261027b`)
+      - `js/admin/auto-gen-modal.js` (`../api.js?v=20261027b`)
+      - `js/admin/vocab-vault.js` (`./auto-gen-modal.js?v=20261027b`, `../api.js?v=20261027b`)
+      - `js/admin/app.js` (`./auto-gen-modal.js?v=20261027b`)
+      - `js/admin/classes-management.js` (`../api.js?v=20261027b`, etc.)
+      - `js/admin/crud-modals.js` (`../api.js?v=20261027b`, etc.)
+  - **4. Verification & Testing**:
+    - Ran live execution test `scratch/test_full_autogen.cjs` on Supabase database:
+      - All 40 assessments (32 Tasks + 8 Tests) successfully processed and updated with **ZERO errors** (`{ tasks: 0, tests: 0, updated: 40, errors: [] }`).
+    - Verified all 39 JS files syntax: `node scripts/check_all_js_syntax.cjs` returned code 0 (100% valid).
+    - Verified `git status`: Local working tree only (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
+- **Phase 136: Fix Non-Existent `duration_minutes` Schema Cache Column (PGRST204)**:
+  - **1. Error Diagnosis**:
+    - Identified reason for browser console showing 40 red `Failed to load resource: the server responded with a status of 400 ()` errors during Wizard update.
+    - PostgREST returned error `PGRST204`: `"Could not find the 'duration_minutes' column of 'assessments' in the schema cache"`.
+    - Database schema for `assessments` table defines column as `working_duration_minutes`, whereas `duration_minutes` exists only inside JSON `payload`.
+  - **2. Core Code Fixes**:
+    - In `js/api.js`:
+      - `updateClassAssessmentsConfig`: Removed `updateData.duration_minutes = Number(taskDurationMinutes);`. Added check `if (updErr) throw updErr;`.
+      - `createAssessmentShell`: Removed root table column `duration_minutes` from `asmData`.
+    - In `js/admin/crud-modals.js`:
+      - Root payload sanitize: Added `delete payload.duration_minutes;` alongside `delete payload.display_name;`.
+      - Bulk edit loop: Removed `updatePayload.duration_minutes = durVal;` from root `updatePayload`.
+  - **3. Verification & Execution**:
+    - Tested `updateClassAssessmentsConfig` on live class `ab33498a-90e6-44b7-83f4-5765f964543e` (40 assessments).
+    - Result: 32 tasks updated to 5m, 8 tests updated to passing score 60% with zero errors.
+    - Bumped service worker cache to `topscore-cache-fix-duration-col-v1`.
+    - Ran `node scripts/check_all_js_syntax.cjs`: 39/39 JS files syntax valid.
+    - Strictly maintained NO git commit & NO git push constraint.
+
+- **Phase 135: Zero-Redundancy Assessment Blueprint & Class Wizard Architecture**:
+  - **1. Zero-Redundancy Architecture Analysis & Elimination**:
+    - Identified and eliminated 4 core redundancies:
+      - Merged "Interactive Generator" and "Global Settings" into ONE single guided Wizard.
+      - Removed duplicate static yellow/pink `.global-asm-settings-box` from Class Hub.
+      - Removed intrusive post-import auto-generator pop-up in `js/admin/vocab-vault.js` (lines 682-694).
+      - Removed duplicate `btn-manual-auto-generate` listener from Word & Phrase tables in Vault.
+  - **2. Intrinsic Test Duration Architecture**:
+    - Formally recognized that Tests (Themes A–D) do not have fixed internal timers in generator/settings because their availability and duration are governed dynamically by the Tutor's Test Session window (`test_session.expires_at`).
+    - Tasks strictly maintain independent 5-minute countdown timers (`duration_minutes: 5`).
+  - **3. Tactical Assessment Generator & Blueprint Wizard (`js/admin/auto-gen-modal.js`)**:
+    - Auto-detects and locks current class ID and name (`📘 Target Class: [ClassName] (Terkunci & Aman)`).
+    - Level selection checkboxes.
+    - Task settings: Duration (default 5m with presets `5m`, `10m`, `15m`), Answer Type select (`spoken`, `written`, `selection`, `mixed`), Passing score (default 60% with presets `60%`, `70%`).
+    - Test settings: No rigid duration input; clearly labelled callout: `⏱️ Durasi Ujian: Dikendalikan oleh Sesi Ujian (Test Session Window)`; Words Test answer type (`written`), Phrases Test answer type (`selection`), Passing score (default 60%).
+    - Scope filter: All (40), Words only (20), Phrases only (20).
+    - Two clean actions:
+      - `[⚡ Update Pengaturan Saja]`: Atomically updates duration, answer type, and passing score on existing assessments via `updateClassAssessmentsConfig`.
+      - `[🚀 Generate & Sinkronkan Soal]`: Generates or re-syncs all 40 assessments with selected settings via `autoGenerateAssessmentsHierarchy`.
+  - **4. Sleek Class Hub Workspace (`js/admin/app.js`)**:
+    - Replaced the large static global settings box with a high-density, modern tactical toolbar:
+      - Left: Metadata chips: `[⚡ 32 Tasks (5m)] [📝 8 Tests (Sesi Ujian)] [🎯 Min. 60%]`.
+      - Right: Two direct tactical action buttons: `[🗺️ Buka Assessment Blueprint ↗]` and `[⚡ Generator & Settings Wizard]`.
+    - Wired `[🗺️ Buka Assessment Blueprint ↗]` to switch directly to the Blueprint tab in Vocabulary Vault (`admin.html#vocab_vault`).
+    - Wired `[⚡ Generator & Settings Wizard]` to open the wizard modal with locked class context.
+  - **5. Backend & Data Layer Enhancements (`js/api.js`)**:
+    - Implemented and exported `updateClassAssessmentsConfig({ classId, taskDurationMinutes, taskAnswerType, taskPassingScore, wordsTestAnswerType, phrasesTestAnswerType, testPassingScore })`.
+    - Enhanced `autoGenerateAssessmentsHierarchy` and `upsertDynamicAssessmentShell` to accept custom task durations, answer types, and passing scores.
+  - **6. Cache & Verification**:
+    - Bumped `sw.js` cache name to `topscore-cache-blueprint-wizard-v1`.
+    - Validated all 39 JavaScript files with `node scripts/check_all_js_syntax.cjs` (0 errors, code 0).
+    - Verified `git status`: Changes in working tree only (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
 
 - **Phase 134: Global Task & Test Settings Box, 5-Minute Default Duration & Assessment Editing Polish**:
   - **1. Global Task & Test Settings Box in Class Hub (`js/admin/app.js` & `css/admin.css`)**:

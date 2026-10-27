@@ -1,7 +1,7 @@
 /**
  * panel-c-builder.js
- * Panel C (Class & Assessment Management) Dashboard
- * Handles Smart Auto-Naming, Assessment Duplication, Prerequisite Engine, and AI Module Templates
+ * Panel C (Class & Test Management) Dashboard
+ * Handles Smart Auto-Naming, Test Duplication, Prerequisite Engine, and AI Module Templates
  */
 import { adminFetchAll, adminSoftDelete } from "../api.js?v=5.3.2";
 import { getSupabase } from "../supabase.js?v=5.3.2";
@@ -91,10 +91,10 @@ export function generateSmartName(className, type, topicName, moduleName) {
   return `${c} - ${tp} - ${t} - ${m}`;
 }
 
-export async function duplicateAssessment(assessmentId) {
+export async function duplicateTest(testId) {
   try {
     const sb = await getSupabase();
-    const { data: asm, error: fetchErr } = await sb.from("assessments").select("*").eq("id", assessmentId).single();
+    const { data: asm, error: fetchErr } = await sb.from('tests').select("*").eq("id", testId).single();
     if (fetchErr) throw fetchErr;
 
     const clonedData = {
@@ -102,16 +102,16 @@ export async function duplicateAssessment(assessmentId) {
       id: undefined,
       created_at: undefined,
       updated_at: undefined,
-      name: `${asm.name || asm.title || 'Assessment'} (Clone)`
+      name: `${asm.name || asm.title || 'Test'} (Clone)`
     };
     
-    const { data: clone, error: insertErr } = await sb.from("assessments").insert(clonedData).select().single();
+    const { data: clone, error: insertErr } = await sb.from('tests').insert(clonedData).select().single();
     if (insertErr) throw insertErr;
     
-    showToast("Assessment cloned successfully!", "success");
+    showToast("Test cloned successfully!", "success");
     return clone;
   } catch (err) {
-    showToast("Failed to clone assessment: " + err.message, "error");
+    showToast("Failed to clone test: " + err.message, "error");
     return null;
   }
 }
@@ -146,14 +146,14 @@ export async function duplicateTopic(topicId, targetClassId = null) {
 }
 
 export function buildPrerequisiteJSON(prereqList, aggregateThreshold = 60) {
-  // prereqList: array of { assessment_id, min_score }
+  // prereqList: array of { test_id, min_score }
   return {
-    parents: prereqList.map(p => ({ assessment_id: p.assessment_id || p.parentId, min_score: parseInt(p.min_score || p.minScore, 10) || 60 })),
+    parents: prereqList.map(p => ({ test_id: p.test_id || p.parentId, min_score: parseInt(p.min_score || p.minScore, 10) || 60 })),
     aggregate_avg_threshold: prereqList.length > 0 ? (parseInt(aggregateThreshold, 10) || 60) : 0
   };
 }
 
-export async function renderAIAssessments(area) {
+export async function renderAITests(area) {
   const [classes, topics, modules] = await Promise.all([
     adminFetchAll('classes').catch(() => []),
     adminFetchAll('topics').catch(() => []),
@@ -167,19 +167,19 @@ export async function renderAIAssessments(area) {
   area.innerHTML = `
     <div class="section-header d-flex justify-between align-center flex-wrap gap-3 mb-4">
       <div>
-        <h2 class="section-title text-gradient">Class Curriculum &amp; AI Assessments (Panel C)</h2>
-        <p class="section-subtitle">Strict Hierarchy: <strong>CLASS (Level 1) &rarr; TOPIC (Level 2) &rarr; ASSESSMENT (Level 3)</strong></p>
+        <h2 class="section-title text-gradient">Class Curriculum &amp; AI Tests (Panel C)</h2>
+        <p class="section-subtitle">Strict Hierarchy: <strong>CLASS (Level 1) &rarr; TOPIC (Level 2) &rarr; TEST (Level 3)</strong></p>
       </div>
       <div class="d-flex gap-2">
-        <button class="btn btn-secondary btn-sm" onclick="window.loadSection('import_ai_assessments')">📥 Import Payload</button>
-        <button class="btn btn-primary btn-sm" id="btn-toggle-new-assessment">+ Create Assessment</button>
+        <button class="btn btn-secondary btn-sm" onclick="window.loadSection('import_ai_tests')">📥 Import Payload</button>
+        <button class="btn btn-primary btn-sm" id="btn-toggle-new-test">+ Create Test</button>
       </div>
     </div>
 
     <!-- 8 AI Modules Template Download Strip -->
     <div class="glass-card mb-4" style="padding: 1.25rem;">
       <div style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--clr-text-2); margin-bottom: 0.75rem;">
-        📥 Dynamic Excel Templates for 8 AI Assessment Modules
+        📥 Dynamic Excel Templates for 8 AI Test Modules
       </div>
       <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;" id="ai-template-chips">
         ${Object.keys(AI_MODULES).map(key => `
@@ -190,9 +190,9 @@ export async function renderAIAssessments(area) {
       </div>
     </div>
 
-    <!-- Smart Auto-Naming & Assessment Creator Form -->
-    <div class="glass-card mb-4" id="smart-assessment-creator" style="padding: 1.5rem; display: none;">
-      <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: var(--clr-primary);">⚡ Smart Auto-Naming Assessment Creator</h3>
+    <!-- Smart Auto-Naming & Test Creator Form -->
+    <div class="glass-card mb-4" id="smart-test-creator" style="padding: 1.5rem; display: none;">
+      <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: var(--clr-primary);">⚡ Smart Auto-Naming Test Creator</h3>
       
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
         <div class="form-group">
@@ -204,11 +204,11 @@ export async function renderAIAssessments(area) {
         </div>
 
         <div class="form-group">
-          <label class="form-label">Assessment Type *</label>
+          <label class="form-label">Test Type *</label>
           <select class="form-control" id="sn-type">
             <option value="Task">Task</option>
             <option value="Quiz">Quiz</option>
-            <option value="Assessment">Assessment</option>
+            <option value="Test">Test</option>
             <option value="Final">Final</option>
           </select>
         </div>
@@ -231,7 +231,7 @@ export async function renderAIAssessments(area) {
 
       <div class="form-group mb-3">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-          <label class="form-label" style="margin: 0;">Generated Assessment Name</label>
+          <label class="form-label" style="margin: 0;">Generated Test Name</label>
           <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer;">
             <input type="checkbox" id="sn-override-toggle" />
             <span class="text-warning">✏️ Manual Override</span>
@@ -243,16 +243,16 @@ export async function renderAIAssessments(area) {
 
       <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
         <button class="btn btn-ghost btn-sm" id="sn-cancel-btn">Cancel</button>
-        <button class="btn btn-primary btn-sm" id="sn-submit-btn">Create Assessment</button>
+        <button class="btn btn-primary btn-sm" id="sn-submit-btn">Create Test</button>
       </div>
     </div>
 
-    <!-- Active Assessments Table -->
+    <!-- Active Tests Table -->
     <div class="glass-card table-wrap">
-      <table class="table w-100" id="assessments-table">
+      <table class="table w-100" id="tests-table">
         <thead>
           <tr>
-            <th>Assessment Name</th>
+            <th>Test Name</th>
             <th>Hierarchy (Class &rarr; Topic)</th>
             <th>Type</th>
             <th>Payload Items</th>
@@ -274,8 +274,8 @@ export async function renderAIAssessments(area) {
   });
 
   // Toggle Creator Form
-  const creator = document.getElementById('smart-assessment-creator');
-  document.getElementById('btn-toggle-new-assessment')?.addEventListener('click', () => {
+  const creator = document.getElementById('smart-test-creator');
+  document.getElementById('btn-toggle-new-test')?.addEventListener('click', () => {
     creator.style.display = creator.style.display === 'none' ? 'block' : 'none';
   });
   document.getElementById('sn-cancel-btn')?.addEventListener('click', () => {
@@ -310,11 +310,11 @@ export async function renderAIAssessments(area) {
   });
   updateGeneratedName();
 
-  // Create Assessment Handler
+  // Create Test Handler
   document.getElementById('sn-submit-btn')?.addEventListener('click', async () => {
     const finalName = snResult.value.trim();
     if (!finalName) {
-      showToast('Assessment name cannot be empty.', 'warning');
+      showToast('Test name cannot be empty.', 'warning');
       return;
     }
     try {
@@ -341,7 +341,7 @@ export async function renderAIAssessments(area) {
         payload: { 
           items: autoItems, 
           module: snModule.value,        // module_type key
-          type: snType.value,            // assessment_type fallback
+          type: snType.value,            // test_type fallback
           _class_id: snClass.value || null,  // class_id fallback
           _topic_id: snTopic.value || null   // topic_id fallback
         }
@@ -350,14 +350,14 @@ export async function renderAIAssessments(area) {
       // Full insert with optional columns that may or may not exist after migration
       const fullInsert = { 
         ...baseInsert, 
-        assessment_type: snType.value,
+        test_type: snType.value,
         class_id: snClass.value || null, 
         topic_id: snTopic.value || null 
       };
       
-      let { error: aErr } = await sb.from('assessments').insert(fullInsert);
+      let { error: aErr } = await sb.from('tests').insert(fullInsert);
       // Catch both PostgreSQL 42703 and Supabase schema cache errors
-      // ("Could not find the 'X' column of 'assessments' in the schema cache")
+      // ("Could not find the 'X' column of 'tests' in the schema cache")
       const isMissingColumnErr = aErr && (
         aErr.code === '42703' ||
         aErr.message?.includes('does not exist') ||
@@ -366,33 +366,33 @@ export async function renderAIAssessments(area) {
       );
       if (isMissingColumnErr) {
         // Columns don't exist yet in the live DB — fall back to base insert (no optional cols)
-        console.warn('[Assessment] Column missing, falling back to base insert. Run migration!', aErr.message);
-        const retry = await sb.from('assessments').insert(baseInsert);
+        console.warn('[Test] Column missing, falling back to base insert. Run migration!', aErr.message);
+        const retry = await sb.from('tests').insert(baseInsert);
         aErr = retry.error;
       }
       if (aErr) {
-        console.error("Supabase Assessments Insert Error:", aErr);
-        throw new Error("Assessments error: " + aErr.message);
+        console.error("Supabase Tests Insert Error:", aErr);
+        throw new Error("Tests error: " + aErr.message);
       }
-      showToast('Assessment created successfully!', 'success');
+      showToast('Test created successfully!', 'success');
       creator.style.display = 'none';
-      renderAIAssessments(area);
+      renderAITests(area);
     } catch (err) {
       console.error(err);
-      showToast('Error creating assessment: ' + err.message, 'error');
+      showToast('Error creating test: ' + err.message, 'error');
     }
   });
 
-  // Fetch and display assessments
+  // Fetch and display tests
   try {
     let data = [];
-    data = await adminFetchAll('assessments', 'id, title, name, status, class_id, topic_id, module_id, created_at, working_duration_minutes, passing_score, total_questions, payload', {}, true);
+    data = await adminFetchAll('tests', 'id, title, name, status, class_id, topic_id, module_id, created_at, working_duration_minutes, passing_score, total_questions, payload', {}, true);
     // Sort newest first
     data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    const tbody = document.getElementById('assessments-table').querySelector('tbody');
+    const tbody = document.getElementById('tests-table').querySelector('tbody');
     if (!data || data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No assessments created yet. Use the button above to create one.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No tests created yet. Use the button above to create one.</td></tr>';
       return;
     }
 
@@ -408,22 +408,22 @@ export async function renderAIAssessments(area) {
       // Get module type from payload as fallback
       const moduleTypeFromPayload = r.payload?.module || '';
       
-      // assessment_type column may not exist yet — fall back to payload.type
-      const assessmentType = r.assessment_type || r.payload?.type || 'Assessment';
+      // test_type column may not exist yet — fall back to payload.type
+      const testType = r.test_type || r.payload?.type || 'Test';
       
       let displayName = r.name || 'Untitled';
       if (!r.auto_name_override) {
         displayName = generateSmartName(
           relClass?.name || 'Global',
-          assessmentType,
+          testType,
           relTopic?.name || 'No Topic',
           relModule?.name || moduleTypeFromPayload || 'Custom Module'
         );
       }
       
       let editContentBtn = '';
-      if (relModule?.module_type === 'LEGACY_Assessment') {
-        editContentBtn = `<button class="btn btn-outline-primary btn-sm" onclick="import('./assessment-builder.js?v=5.3.2').then(m => m.openAssessmentBuilder('${r.id}'))">Questions</button>`;
+      if (relModule?.module_type === 'LEGACY_Test') {
+        editContentBtn = `<button class="btn btn-outline-primary btn-sm" onclick="import('./test-builder.js?v=5.3.2').then(m => m.openTestBuilder('${r.id}'))">Questions</button>`;
       }
 
       const className = relClass?.name || '—';
@@ -437,7 +437,7 @@ export async function renderAIAssessments(area) {
             <span style="color: var(--clr-primary);">${className}</span>
             ${topicName !== '—' ? `<span style="color: var(--clr-text-3);"> → ${topicName}</span>` : ''}
           </td>
-          <td><span class="badge badge-neutral">${assessmentType}</span></td>
+          <td><span class="badge badge-neutral">${testType}</span></td>
           <td>
             <span class="badge badge-info">${itemsCount} Items</span>
             <span class="badge badge-neutral" style="font-size: 0.7rem; margin-left: 4px;">${moduleName}</span>
@@ -445,9 +445,9 @@ export async function renderAIAssessments(area) {
           <td style="text-align: right;">
             <div class="d-flex gap-2 justify-end">
               ${editContentBtn}
-              <button class="btn btn-secondary btn-sm" onclick="window.openAIAssessmentEditor('${r.id}')">Edit</button>
+              <button class="btn btn-secondary btn-sm" onclick="window.openAITestEditor('${r.id}')">Edit</button>
               <button class="btn btn-outline-primary btn-sm btn-clone-asm" data-id="${r.id}" data-name="${displayName}">⚡ Clone</button>
-              <button class="btn btn-danger btn-sm" onclick="window._deleteRecord ? window._deleteRecord('assessments', '${r.id}', '${displayName}') : alert('Delete')">Del</button>
+              <button class="btn btn-danger btn-sm" onclick="window._deleteRecord ? window._deleteRecord('tests', '${r.id}', '${displayName}') : alert('Delete')">Del</button>
             </div>
           </td>
         </tr>
@@ -459,29 +459,29 @@ export async function renderAIAssessments(area) {
       b.addEventListener('click', async (e) => {
         const id = e.currentTarget.dataset.id;
         const name = e.currentTarget.dataset.name;
-        if (confirm(`Clone assessment "${name}"?`)) {
-          await duplicateAssessment(id);
-          renderAIAssessments(area);
+        if (confirm(`Clone test "${name}"?`)) {
+          await duplicateTest(id);
+          renderAITests(area);
         }
       });
     });
 
   } catch (err) {
-    console.error('Error rendering AI assessments:', err);
+    console.error('Error rendering AI tests:', err);
   }
 }
 
-window.openAIAssessmentEditor = async (assessmentId) => {
+window.openAITestEditor = async (testId) => {
   const sb = await getSupabase();
-  const { data: asm, error } = await sb.from('assessments').select('*, classes(id, name), topics(id, name)').eq('id', assessmentId).single();
+  const { data: asm, error } = await sb.from('tests').select('*, classes(id, name), topics(id, name)').eq('id', testId).single();
   if (error || !asm) {
-    showToast("Error loading assessment", "error");
+    showToast("Error loading test", "error");
     return;
   }
   
-  if (asm.assessment_type && (asm.assessment_type.includes('VOCAB') || asm.assessment_type.includes('IDIOM'))) {
-    const { openAssessmentBuilderModal } = await import('./vocab-vault.js?v=5.3.2');
-    return openAssessmentBuilderModal(null, { editAssessment: asm });
+  if (asm.test_type && (asm.test_type.includes('VOCAB') || asm.test_type.includes('IDIOM'))) {
+    const { openTestBuilderModal } = await import('./vocab-vault.js?v=5.3.2');
+    return openTestBuilderModal(null, { editTest: asm });
   }
   
   const [classes, topics] = await Promise.all([
@@ -494,7 +494,7 @@ window.openAIAssessmentEditor = async (assessmentId) => {
   modal.innerHTML = `
     <div class="modal-content" style="max-width: 500px;">
       <div class="modal-header d-flex justify-between align-center p-3">
-        <h2 class="modal-title" style="font-size: 1.2rem;">Edit Assessment</h2>
+        <h2 class="modal-title" style="font-size: 1.2rem;">Edit Test</h2>
         <button class="btn btn-ghost" onclick="this.closest('.modal-backdrop').remove()">&times;</button>
       </div>
       <div class="modal-body p-4">
@@ -513,12 +513,12 @@ window.openAIAssessmentEditor = async (assessmentId) => {
           </select>
         </div>
         <div class="form-group mb-3">
-          <label class="form-label">Assessment Type</label>
+          <label class="form-label">Test Type</label>
           <select class="form-control" id="edit-asm-type">
-            <option value="Task" ${asm.assessment_type === 'Task' ? 'selected' : ''}>Task</option>
-            <option value="Quiz" ${asm.assessment_type === 'Quiz' ? 'selected' : ''}>Quiz</option>
-            <option value="Assessment" ${asm.assessment_type === 'Assessment' ? 'selected' : ''}>Assessment</option>
-            <option value="Final" ${asm.assessment_type === 'Final' ? 'selected' : ''}>Final</option>
+            <option value="Task" ${asm.test_type === 'Task' ? 'selected' : ''}>Task</option>
+            <option value="Quiz" ${asm.test_type === 'Quiz' ? 'selected' : ''}>Quiz</option>
+            <option value="Test" ${asm.test_type === 'Test' ? 'selected' : ''}>Test</option>
+            <option value="Final" ${asm.test_type === 'Final' ? 'selected' : ''}>Final</option>
           </select>
         </div>
         <div class="form-group mb-3">
@@ -551,41 +551,41 @@ window.openAIAssessmentEditor = async (assessmentId) => {
     const payload = {
       class_id: modal.querySelector('#edit-asm-class').value || null,
       topic_id: modal.querySelector('#edit-asm-topic').value || null,
-      assessment_type: modal.querySelector('#edit-asm-type').value,
+      test_type: modal.querySelector('#edit-asm-type').value,
       auto_name_override: overrideToggle.checked,
       name: overrideToggle.checked ? nameInput.value.trim() : null
     };
 
-    const { error: updErr } = await sb.from('assessments').update(payload).eq('id', assessmentId);
+    const { error: updErr } = await sb.from('tests').update(payload).eq('id', testId);
     if (updErr) {
-      showToast('Error updating assessment: ' + updErr.message, 'error');
+      showToast('Error updating test: ' + updErr.message, 'error');
     } else {
-      showToast('Assessment updated!', 'success');
+      showToast('Test updated!', 'success');
       modal.remove();
-      if (window.loadSection) window.loadSection('assessments');
+      if (window.loadSection) window.loadSection('tests');
     }
   });
 };
 
-export async function renderImportAIAssessments(area) {
+export async function renderImportAITests(area) {
   if (!area) {
-    console.warn('Import AI Assessments container not found in DOM.');
+    console.warn('Import AI Tests container not found in DOM.');
     return;
   }
   area.innerHTML = `
     <div class="section-header d-flex justify-between align-center flex-wrap gap-3 mb-4">
       <div>
-        <h2 class="section-title text-gradient">Import AI Assessment Payload</h2>
-        <p class="section-subtitle">Upload populated AI Module templates to inject into an Assessment payload.</p>
+        <h2 class="section-title text-gradient">Import AI Test Payload</h2>
+        <p class="section-subtitle">Upload populated AI Module templates to inject into an Test payload.</p>
       </div>
       <div>
-        <button class="btn btn-secondary btn-sm" onclick="window.loadSection('assessments')">Back to Assessments</button>
+        <button class="btn btn-secondary btn-sm" onclick="window.loadSection('tests')">Back to Tests</button>
       </div>
     </div>
     
     <div class="glass-card p-6" style="max-width: 600px;">
       <div class="form-group mb-4">
-        <label class="form-label">Target Assessment</label>
+        <label class="form-label">Target Test</label>
         <select id="ai-import-target" class="form-control">
           <option value="">- Loading... -</option>
         </select>
@@ -600,9 +600,9 @@ export async function renderImportAIAssessments(area) {
     </div>
   `;
 
-  const assessments = await adminFetchAll('assessments', '*');
+  const tests = await adminFetchAll('tests', '*');
   const select = document.getElementById('ai-import-target');
-  select.innerHTML = '<option value="">- Select Assessment -</option>' + assessments.map(a => 
+  select.innerHTML = '<option value="">- Select Test -</option>' + tests.map(a => 
     `<option value="${a.id}">${a.name} (${a.modules?.name || 'Unknown'})</option>`
   ).join('');
 
@@ -637,17 +637,17 @@ export async function renderImportAIAssessments(area) {
 
   importBtn.addEventListener('click', async () => {
     const targetId = select.value;
-    if(!targetId) return showToast('Select a target assessment!', 'warning');
+    if(!targetId) return showToast('Select a target test!', 'warning');
     if(!parsedRows) return showToast('No rows parsed!', 'warning');
 
     importBtn.disabled = true;
     importBtn.textContent = 'Saving...';
     try {
       const sb = await getSupabase();
-      const { error } = await sb.from('assessments').update({ payload: { items: parsedRows } }).eq('id', targetId);
+      const { error } = await sb.from('tests').update({ payload: { items: parsedRows } }).eq('id', targetId);
       if(error) throw error;
-      showToast('Successfully applied payload to assessment!', 'success');
-      window.loadSection('assessments');
+      showToast('Successfully applied payload to test!', 'success');
+      window.loadSection('tests');
     } catch(err) {
       showToast('Error: ' + err.message, 'error');
       importBtn.disabled = false;

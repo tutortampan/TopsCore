@@ -1,3 +1,330 @@
+## [2026-10-27 16:25] — Phase 144: Scoring, Points & Ranking Overhaul in Class Hub
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 144 (Scoring, Points & Ranking Overhaul - Direct Execution)
+**Status:** PASS
+
+### Why
+- Overhaul Class Hub business logic per requirements:
+  1. PROG % (Completion Rate): Calculated across ALL activities (daily tasks/quizzes + weekly exams).
+  2. Global SCORE % & Global GRD (Academic Mastery): Calculated EXCLUSIVELY from weekly exams. Daily drills excluded entirely.
+  3. Global PTS (Points): Aggregated points earned EXCLUSIVELY from weekly exams.
+  4. Edge-Case Handling (Unattempted Weekly Exams): When student only completed daily drills, PROG reflects tasks, SCORE shows `—`, GRD shows `—`, PTS evaluates to 0.
+  5. Leaderboard Sort Order: Primary: PROG % DESC > Secondary: Global SCORE % DESC > Tertiary: Global PTS DESC.
+  6. Footer "CLASS AVERAGE": Aligned with weekly-only metrics.
+
+### Changed
+- `js/admin/app.js`:
+  - Added `isWeeklyExam` classification helper for `classTests`.
+  - Updated student loop to track `completedWeeklyCount`, `weeklyEarnedScore`, and `sumWeeklyPercentages` strictly from weekly exams while maintaining `completedCount` across all activities.
+  - Set `averageScorePct` and `grade` to weekly-only averages; if 0 weekly exams completed, set `averageScorePct = 0`, `grade = '—'`, `totalEarnedScore = 0`.
+  - Updated DataGrid cells for `averageScorePct`, `grade`, and `totalEarnedScore` to cleanly display `—` / `0 pts` when unattempted.
+  - Configured `studentsGridData.sort`, `attendanceGridInstance.initialSortKey = 'progressPct'`, and `sortComparator` to strictly follow `PROG % DESC > Global SCORE % DESC > Global PTS DESC`.
+  - Updated `summaryRow` to compute class average SCORE and GRADE exclusively from students with completed weekly exams.
+- `sw.js`:
+  - Bumped cache manifest to `topscore-cache-ranking-v1`.
+
+### Tests
+- command: `node scratch/test_scoring_and_ranking_overhaul.cjs`
+- result: `PASS` (100% assertions verified across all 6 scenarios)
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (39/39 JS files syntax valid)
+- command: `node scratch/zero_residue_verification.cjs`
+- result: `PASS` (0 occurrences across all active code files)
+
+---
+
+## [2026-10-27 16:00] — Phase 143: Full System Terminology Overhaul, Database Migration & Legacy Purge
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 143 (Full System Terminology Overhaul, Database Migration & Zero-Residue Purge)
+**Status:** PASS
+
+### Why
+- Deprecate and completely purge the term "Assessment" / "Assessments" across the entire repository.
+- Singular/Plural Precision Rule:
+  - "Assessment" -> "Test" (singular)
+  - "Assessments" -> "Tests" (plural)
+- Sub-categories strictly split into:
+  - "Quiz" (pl: "Quizzes"): Daily tasks, formative checks, phrase runner drills, quick-feedback items.
+  - "Exam" (pl: "Exams"): Formal, scheduled, high-stakes, strictly-timed examinations.
+- Enforce ZERO RESIDUE (0 occurrences in active code, styles, HTML, Edge Functions, Service Worker) with 100% historical attempt and record data preservation.
+
+### Changed
+- **Database (Supabase PostgreSQL)**:
+  - Created enum `test_type` (`quiz`, `exam`).
+  - Created tables `public.tests`, `public.test_items`, `public.test_topics`, `public.test_results`.
+  - Added `test_id` column to `attempts`, `assignments`, `student_submissions`, `question_usage_history`. Backfilled 100% (851 attempts with 44,566 attempt answers).
+  - Enforced `NOT NULL` constraint and cascade foreign key on `attempts.test_id`.
+  - Dropped legacy columns (`attempts.assessment_id`, etc.) and dropped legacy tables: `assessments`, `assessment_questions`, `assessment_topics`, `assessment_results`, `assessment_instances`, `assessment_attempts`, `assessment_attempt_answers`.
+  - Synchronized repository schema files (`schema.sql`, `db_schema.sql`, `supabase_deploy/01_schema_and_functions.sql`).
+- **Backend / Edge Functions**:
+  - Deleted legacy functions: `start-assessment`, `submit-assessment`, `duplicate-assessment`, `evaluate-assessment`.
+  - Created new functions: `start-test`, `submit-test`, `duplicate-test`, `evaluate-test`.
+  - Updated `import-questions` and `generate-module-template`.
+- **Frontend Core & State**:
+  - Renamed files:
+    - `assessment.html` -> `test.html`
+    - `css/assessment.css` -> `css/test.css`
+    - `js/assessment.js` -> `js/test.js`
+    - `js/admin/assessment-management.js` -> `js/admin/tests-management.js`
+    - `js/admin/assessment-access.js` -> `js/admin/tests-access.js`
+    - `js/admin/assessment-builder.js` -> `js/admin/test-builder.js`
+  - Refactored `js/api.js` and 25 JavaScript modules in `js/` to use `.from('tests')`, `.from('test_items')`, `test_id`, and Edge Functions `start-test`, `submit-test`, `duplicate-test`, `evaluate-test`.
+  - Transformed all UI strings, badges, headers, modals, and buttons across `admin.html`, `dashboard.html`, `test.html`, `result.html`, `index.html`.
+  - Updated `sw.js` cache to `topscore-cache-test-v1` with `css/test.css` and `js/test.js`.
+
+### Tests
+- command: `node scratch/zero_residue_verification.cjs`
+- result: `PASS` (0 occurrences across all 62 active code, HTML, CSS, and Edge Function files)
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (39/39 JS files syntax valid)
+- command: `node scratch/test_complete_system.mjs`
+- result: `PASS` (100% assertions passed: 40 tests live in DB, 851 attempts intact, grading verified)
+
+---
+
+## [2026-10-27 12:28] — Phase 141: Test Column Reordering & Theme Total Points Column in Class Hub
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 141 (Test Column Reordering & Theme Total Points Column)
+**Status:** PASS
+
+### Why
+- User requested:
+  *"urutannya jadikan score, baru point, kemudian untuk tiap tema ada tambahan kolom berupa total point daro words dan phrases"*
+  1. For test assessments, display SCORE first, then POINTS second.
+  2. For each Theme group, add an extra summary column displaying the Total Points earned from words and phrases within that theme.
+
+### Changed
+- `js/admin/app.js`:
+  - Structured active assessments by theme group to pre-calculate total theme points (`row['theme_${tc}_total_pts']`).
+  - Adjusted `dynamicSuperHeaders` colSpan to include the extra Theme Total column per theme: `(themeTests.length * 2) + 1`.
+  - Reordered test assessment column generation: SCORE column (`asm_${asm.id}_pct`) generated first, followed by POINTS column (`asm_${asm.id}_pts`).
+  - Injected Theme Total Points column (`theme_${tc}_total_pts`) with `TOT / TOT PTS` super/subtag headers and score-tiered dynamic color formatting.
+  - Updated `summaryRow` computation to calculate class-wide average theme total points.
+  - Added comparator for `theme_${tc}_total_pts` in `sortComparator`.
+- `css/admin.css`:
+  - Added dedicated styling for `.col-asm-theme-total`, `.asm-num-total`, and `.asm-score-theme-total`.
+- `sw.js`:
+  - Incremented cache key to `topscore-cache-mockup-v3`.
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (39/39 JS files passed syntax validation)
+- command: `node scratch/test_grading_suite.mjs`
+- result: `PASS` (all assertions passed)
+- git: Local working tree changes only (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
+---
+
+## [2026-10-27 12:08] — Phase 140: Pure White Datagrid Headers in Class Hub
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 140 (Pure White Datagrid Headers in Class Hub)
+**Status:** PASS
+
+### Why
+- User requested all font in the table header to be pure white with zero colorful elements:
+  *"buat font pada header berwarna putih, jangan ada yang warna warni."*
+- Previous headers contained multi-color accents:
+  - Super headers: Theme A (cyan), Theme B (purple), Theme C (amber), Theme D (green), Student Details (slate).
+  - Assessment task column numbers: cyan `#38bdf8`.
+  - Assessment subtags: WRD (yellow `#FFFF00`), PHR (cyan `#00FFFF`), test pts/score (`#e2e8f0`, `#cbd5e1`).
+
+### Changed
+- `css/admin.css`:
+  - Enforced an overarching rule: `#class-attendance-grid thead, #class-attendance-grid thead th, #class-attendance-grid thead th *, #class-attendance-grid .datagrid-thead th, #class-attendance-grid .datagrid-thead th * { color: #ffffff !important; }`.
+  - Standardized `#class-attendance-grid th.super-hdr*` (`.super-hdr-student`, `.super-hdr-theme-a`, `.super-hdr-theme-b`, `.super-hdr-theme-c`, `.super-hdr-theme-d`) to `#ffffff !important;`.
+  - Standardized `#class-attendance-grid th.col-asm-task .asm-num` and `#class-attendance-grid th.col-asm-test .asm-num` to `#ffffff !important;`.
+  - Standardized `#class-attendance-grid .asm-subtag*` (`.asm-subtag-wrd`, `.asm-subtag-phr`, `.asm-subtag-test-pts`, `.asm-subtag-test-score`) to `#ffffff !important;`.
+- `sw.js`:
+  - Incremented cache key to `topscore-cache-mockup-v2`.
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (39/39 JS files passed syntax validation)
+- command: `node scratch/test_grading_suite.mjs`
+- result: `PASS` (all assertions passed)
+- git: Local working tree changes only (STRICTLY NO GIT COMMIT & NO GIT PUSH).
+
+---
+
+## [2026-10-27 12:00] — Phase 139: High-Vibrancy Experimental Color Mockup & Circle Badge Tuning
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 139 (Experimental Color Mockup & Circle Badge Tuning)
+**Status:** PASS
+
+### Why
+- User requested experimental high-vibrancy dark-mode color tokens across `js/grading.js` and `css/admin.css` to match the tablet mockup photograph reference:
+  - Star (100%): `#C084FC` (Bright Purple)
+  - Grade A (90-99%): `#22C55E` (True Leaf Green - visibly deeper than lime)
+  - Grade B (80-89%): `#BEF264` (Electric Bright Lime - heavy yellow undertone)
+  - Grade C (60-79%): `#FDE047` (Pure Electric Lemon Yellow - zero orange cast)
+  - Grade D (30-59%): `#FB923C` (Clean Orange)
+  - Grade E (0-29%): `#F87171` (Light Red)
+- Uniform circle badges across all grades, replacing naked star text with a styled glowing circle pill (`.grade-circle.grade-circle-star`).
+- Strict rule: NO git commit & NO git push, working tree changes only.
+
+### Changed
+- `js/grading.js`:
+  - Updated `STAR_THEME.color` to `#C084FC`.
+  - Updated `GRADE_PALETTE` for Star (`#C084FC`), A (`#22C55E`), B (`#BEF264`), C (`#FDE047`), D (`#FB923C`), E (`#F87171`).
+  - Updated `getGradeColorByScore` to return the 6 test tokens across all score intervals.
+- `css/admin.css`:
+  - Updated `.grade-circle.grade-circle-*` and `.form-pill.grade-*` classes with the new high-vibrancy tokens.
+  - Added `.grade-circle.grade-circle-star` glowing gradient pill rule.
+- `css/style.css`:
+  - Updated `.grade-circle.grade-circle-*` rules to match the new test tokens.
+  - Set crisp dark text (`#0f172a`) for Grade B and Grade C badges for optimal contrast on bright backgrounds.
+- `sw.js`:
+  - Incremented cache key to `topscore-cache-mockup-v1`.
+
+### Tests
+- Ran `node scratch/test_grading_suite.mjs`: All mockup grading unit assertions passed.
+- Ran `node scripts/check_all_js_syntax.cjs`: All 39 JavaScript files passed syntax checks (0 errors).
+- Verified `git status`: Local working tree only, strictly NO commit/push.
+
+## [2026-10-27 11:50] — Phase 138: Separate Words Task & Phrases Task Answer Types in Wizard & Auto-Gen
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 138 (Separate Words Task & Phrases Task Answer Types in Wizard & Auto-Gen)
+**Status:** PASS
+
+### Why
+- Previously, the "Task Harian" configuration in the Wizard applied a single answer type to all Daily Tasks, giving no way to differentiate Words Tasks from Phrases Tasks (even though Tests already had separate Words Test and Phrases Test controls).
+- Additionally, opening the modal did not prefill existing settings from the database for the active class.
+
+### Changed
+- `js/admin/auto-gen-modal.js`:
+  - Split Task Harian answer type into two independent select controls: `Words Task` (`#wizard-task-ans-words`) and `Phrases Task` (`#wizard-task-ans-phrases`).
+  - Added smart database detection: on open, fetches existing assessments for the locked class to prefill active task duration, passing score, and all 4 answer types (`wordsTask`, `phrasesTask`, `wordsTest`, `phrasesTest`).
+  - Added `Mixed (Campuran)` option to test selects for complete consistency.
+- `js/api.js`:
+  - `updateClassAssessmentsConfig`: Added `wordsTaskAnswerType` and `phrasesTaskAnswerType` support, correctly targeting Phrase vs Word rows based on `shell_code`, `category`, and `title`.
+  - `autoGenerateAssessmentsHierarchy`: Pass `wordsTaskAns` to `VOCAB` tasks and `phrasesTaskAns` to `PHRASE` tasks.
+- `admin.html`:
+  - Bumped script cache query strings to `?v=20261027c`.
+- `sw.js`:
+  - Bumped cache key to `topscore-cache-split-task-ans-v1`.
+- `js/admin/app.js` & `js/admin/vocab-vault.js`:
+  - Bumped dynamic imports of `auto-gen-modal.js` to `?v=20261027c`.
+
+### Tests
+- Tested `testUpdateClassConfig` on live Supabase class `ab33498a-90e6-44b7-83f4-5765f964543e`:
+  - Confirmed 16 Words Tasks and 16 Phrases Tasks can be updated independently with distinct answer types.
+- Ran `node scripts/check_all_js_syntax.cjs`: 39/39 JS files passed syntax check with 0 errors.
+- Verified `git status`: working tree changes only, strictly NO commit/push.
+
+## [2026-10-27 11:35] — Phase 137: Auto-Gen Hierarchy `duration_minutes` Fix & Stale Module Cache-Bust
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 137 (Auto-Gen Hierarchy `duration_minutes` Fix & Stale Module Cache-Bust)
+**Status:** PASS
+
+### Why
+- During "Generate & Sinkronkan Soal" in the Wizard, `auto-gen-modal.js` invokes `autoGenerateAssessmentsHierarchy` which calls `upsertDynamicAssessmentShell`.
+- In `upsertDynamicAssessmentShell`, `duration_minutes` was previously present on the root `asmData` object, triggering `PGRST204` on insert/update.
+- Furthermore, dynamic import statements in `auto-gen-modal.js` and `vocab-vault.js` were using pinned URLs `../api.js?v=5.3.2`, causing the browser to execute cached older copies of `api.js` from disk cache.
+
+### Changed
+- `js/api.js`:
+  - `adminInsert` & `adminUpdate`: Added universal table-level defensive interceptor for `assessments` to automatically migrate and delete any root `duration_minutes` field before calling Supabase.
+  - `upsertDynamicAssessmentShell`: Added explicit `delete asmData.duration_minutes;`.
+- `js/admin/auto-gen-modal.js`:
+  - Updated dynamic import of `api.js` to `?v=20261027b`.
+- `js/admin/vocab-vault.js`:
+  - Updated imports of `auto-gen-modal.js`, `api.js`, `app.js`, `supabase.js` to `?v=20261027b`.
+- `js/admin/app.js`:
+  - Updated dynamic imports of `auto-gen-modal.js` to `?v=20261027b`.
+- `js/admin/classes-management.js` & `js/admin/crud-modals.js`:
+  - Updated version query strings to `?v=20261027b`.
+- `admin.html`:
+  - Updated script tags to `?v=20261027b`.
+- `sw.js`:
+  - Bumped cache key to `topscore-cache-fix-duration-col-v2` and asset cache URLs to `?v=20261027b`.
+
+### Tests
+- Executed `scratch/test_full_autogen.cjs` in node against live Supabase database for Level 3 on class `ab33498a-90e6-44b7-83f4-5765f964543e`.
+- Result: 40/40 assessments (32 Tasks + 8 Tests) successfully processed with 0 errors (`{ tasks: 0, tests: 0, updated: 40, errors: [] }`).
+- Ran `node scripts/check_all_js_syntax.cjs`: 39/39 JS files passed syntax validation.
+- Verified `git status`: working tree changes only, strictly NO commit/push.
+
+## [2026-10-27 11:22] — Phase 136: Fix Non-Existent `duration_minutes` Schema Cache Column (PGRST204)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 136 (Fix Non-Existent `duration_minutes` Schema Cache Column)
+**Status:** PASS
+
+### Why
+- User submitted screenshot showing multiple red errors in DevTools console:
+  - `Failed to load resource: the server responded with a status of 400 ()`
+  - `PATCH https://oclajpyumehpojepcczg.supabase.co/rest/v1/assessments?id=eq... 400 (Bad Request)`
+  - Table displayed 40 records where only row 1 had 5m and remaining rows remained unchanged at 60m/120m.
+- Root cause:
+  - PostgREST error `PGRST204`: `"Could not find the 'duration_minutes' column of 'assessments' in the schema cache"`.
+  - The PostgreSQL schema defines the column on `assessments` as `working_duration_minutes`.
+  - The name `duration_minutes` exists only inside the JSONB `payload` column.
+  - Sending `duration_minutes` as a root column in table updates caused Supabase to reject the PATCH request with HTTP 400.
+
+### Changed
+- `js/api.js`:
+  - `updateClassAssessmentsConfig`: Removed `updateData.duration_minutes = Number(taskDurationMinutes);`. Preserved `updateData.working_duration_minutes` on root and `duration_minutes` inside `payload`. Added `if (updErr) throw updErr;`.
+  - `createAssessmentShell`: Removed root table column `duration_minutes` from `asmData`.
+- `js/admin/crud-modals.js`:
+  - Assessment save handler: Added `delete payload.duration_minutes;` to guarantee no non-existent table column is passed to Postgres.
+  - Assessment bulk edit: Removed `updatePayload.duration_minutes = durVal;` from root `updatePayload`.
+- `sw.js`:
+  - Bumped cache key to `topscore-cache-fix-duration-col-v1`.
+
+### Tests
+- Tested `updateClassAssessmentsConfig` on live class `ab33498a-90e6-44b7-83f4-5765f964543e` (40 assessments).
+- Result: 32 tasks updated to 5m, 8 tests updated to passing score 60% with 0 errors.
+- Verified syntax with `node scripts/check_all_js_syntax.cjs`: 39/39 JS files passed syntax validation.
+- Verified git status: working tree changes only, strictly NO commit/push.
+
+## [2026-10-27 10:58] — Phase 135: Zero-Redundancy Assessment Blueprint & Class Wizard Architecture
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 135 (Zero-Redundancy Assessment Blueprint & Class Wizard Architecture)
+**Status:** PASS
+
+### Why
+- User requested architectural streamlining:
+  - "coba perhatikan alur pembuatan assesment secara menyeluruh, sepertinya banyak yang tidak efisien, seperti bulk assesment, global setting, assesment generator, dan assesment blueprint, bukankan generator itu fungsinya untuk generate dan setting dari blueprint kurikulum? apa bedanya generator dan global setting? lalu kenapa di vault juga ada auto generate? bukankah generator itu harusnya satu aja? lalu waktu test itu kan tergantung dari sesi ujian, bukan dari settingan menit..."
+- Eliminates 4 redundant touchpoints:
+  1. Merged generator and global settings into ONE guided Wizard.
+  2. Removed duplicate static yellow/pink `.global-asm-settings-box` from Class Hub.
+  3. Removed intrusive post-import auto-generator pop-up in `js/admin/vocab-vault.js` (lines 682-694).
+  4. Removed duplicate `btn-manual-auto-generate` listener from Word & Phrase tables in Vault.
+  5. Reflected that Test durations are dynamically governed by the Tutor's active Test Session window, not arbitrary fixed timers.
+
+### Changed
+- `js/admin/auto-gen-modal.js`:
+  - Upgraded into comprehensive Assessment Generator & Blueprint Wizard.
+  - Locks class context (`📘 Target Class: [ClassName] (Terkunci & Aman)`).
+  - Task settings: 5m default duration with quick presets, answer type, and passing score.
+  - Test settings: Clean note on session-governed dynamic window, answer type for Words and Phrases, and passing score.
+  - Two discrete actions: `[⚡ Update Pengaturan Saja]` (updates existing without recreating) and `[🚀 Generate & Sinkronkan Soal]` (generates/syncs from Vault).
+- `js/admin/app.js`:
+  - Removed bulky `.global-asm-settings-box` from Class Hub assessments tab.
+  - Added sleek tactical toolbar with metadata chips: `[⚡ Tasks (5m)] [📝 Tests (Sesi Ujian)] [🎯 Min. 60%]`.
+  - Added direct buttons: `[🗺️ Buka Assessment Blueprint ↗]` and `[⚡ Generator & Settings Wizard]`.
+- `js/admin/vocab-vault.js`:
+  - Removed intrusive post-import auto-generator modal trigger.
+  - Removed duplicate `btn-manual-auto-generate` listener from words table.
+- `js/api.js`:
+  - Added `updateClassAssessmentsConfig({ classId, taskDurationMinutes, taskAnswerType, taskPassingScore, wordsTestAnswerType, phrasesTestAnswerType, testPassingScore })`.
+  - Added custom parameter support to `autoGenerateAssessmentsHierarchy`.
+- `sw.js`:
+  - Bumped cache to `topscore-cache-blueprint-wizard-v1`.
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (39/39 JS files syntax valid)
+- git status: `PASS` (changes in working tree only, strictly NO commit/push)
+
 ## [2026-10-27 07:00] — Phase 134: Global Task & Test Settings Box, 5-Minute Default Duration & Assessment Editing Polish
 
 **Agent/Session:** Antigravity
