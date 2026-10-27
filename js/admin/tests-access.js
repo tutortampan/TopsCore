@@ -23,9 +23,9 @@ import {
   fetchLiveTestSessionData,
   closeTestSession,
   getGrade
-} from '../api.js?v=5.3.2';
-import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=5.6.5';
-import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.3.2';
+} from '../api.js?v=20261027d';
+import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261027d';
+import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261027d';
 
 const THEME_DEFINITIONS = [
   { code: 'A', name: 'Workplace', color: '#3b82f6', bgRgba: 'rgba(59, 130, 246, 0.08)', borderRgba: 'rgba(59, 130, 246, 0.25)' },
@@ -86,24 +86,42 @@ export async function renderClassTestSessions(container, context = {}) {
       const pl = a.payload || {};
       const tc = (pl.theme_code || '').toUpperCase();
       const cat = (pl.category || '').toLowerCase();
-      const type = (a.test_type || '').toUpperCase();
-      const isTest = a.test_category === 'TEST' || type.includes('TEST');
-      return tc === code && isTest && (cat === 'words' || type === 'VOCAB_TEST');
+      const type = (a.test_type || '').toLowerCase();
+      const subtype = (a.test_subtype || '').toUpperCase();
+      const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
+      const title = (a.title || '').toLowerCase();
+
+      const isTask = type === 'quiz' || subtype.includes('TASK') || shell.includes('-TASK') || title.includes('task');
+      if (isTask) return false;
+
+      const isExam = type === 'exam' || subtype.includes('TEST') || shell.endsWith('-TEST') || title.includes('test');
+      return tc === code && isExam && (cat === 'words' || subtype === 'VOCAB_TEST' || shell.includes('WORDS-TEST') || title.includes('words test'));
     });
 
     const phrasesTest = classTests.find(a => {
       const pl = a.payload || {};
       const tc = (pl.theme_code || '').toUpperCase();
       const cat = (pl.category || '').toLowerCase();
-      const type = (a.test_type || '').toUpperCase();
-      const isTest = a.test_category === 'TEST' || type.includes('TEST');
-      return tc === code && isTest && (cat === 'phrases' || type === 'PHRASE_TEST');
+      const type = (a.test_type || '').toLowerCase();
+      const subtype = (a.test_subtype || '').toUpperCase();
+      const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
+      const title = (a.title || '').toLowerCase();
+
+      const isTask = type === 'quiz' || subtype.includes('TASK') || shell.includes('-TASK') || title.includes('task');
+      if (isTask) return false;
+
+      const isExam = type === 'exam' || subtype.includes('TEST') || shell.endsWith('-TEST') || title.includes('test');
+      return tc === code && isExam && (cat === 'phrases' || subtype === 'PHRASE_TEST' || shell.includes('PHRASES-TEST') || title.includes('phrases test'));
     });
 
     const tasks = classTests.filter(a => {
       const pl = a.payload || {};
       const tc = (pl.theme_code || '').toUpperCase();
-      const isTask = a.test_category === 'TASK' || (a.test_type || '').includes('TASK');
+      const type = (a.test_type || '').toLowerCase();
+      const subtype = (a.test_subtype || '').toUpperCase();
+      const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
+      const title = (a.title || '').toLowerCase();
+      const isTask = type === 'quiz' || a.category === 'TASK' || a.test_category === 'TASK' || subtype.includes('TASK') || shell.includes('-TASK') || title.includes('task');
       return tc === code && isTask;
     });
 
@@ -262,6 +280,10 @@ export async function renderClassTestSessions(container, context = {}) {
                 4. Enrolled Students (<span id="open-modal-student-count" style="color:#38bdf8;">0</span> Selected)
               </label>
               <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <label id="open-modal-override-wrapper" style="font-size:0.75rem; color:#fbbf24; display:inline-flex; align-items:center; gap:5px; cursor:pointer; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); padding:3px 6px; border-radius:4px;" title="Tutor Override allows students who haven't finished tasks yet to participate">
+                  <input type="checkbox" id="open-modal-override-checkbox" style="cursor:pointer; width:13px; height:13px;">
+                  <span>🛡️ Tutor Override</span>
+                </label>
                 <input type="text" id="open-modal-student-search" placeholder="🔍 Search student..." class="form-control" style="font-size:0.75rem; padding:4px 8px; width:110px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:4px;">
                 <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-sort" style="padding:4px 8px; font-size:0.75rem; font-weight:600;">🔤 A → Z</button>
                 <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-select-all" style="padding:4px 8px; font-size:0.75rem;">✅ All</button>
@@ -720,6 +742,9 @@ function openThemeSessionModal(container, theme, mode, context) {
   let studentSearchQuery = '';
   let studentSortOrder = 'asc';
   let showIneligible = false;
+  let tutorOverrideActive = false;
+
+  const overrideCheckbox = modal.querySelector('#open-modal-override-checkbox');
 
   const renderModalStudents = () => {
     const curBatchId = batchSelect.value;
@@ -739,17 +764,27 @@ function openThemeSessionModal(container, theme, mode, context) {
     const eligibleList = evaluated.filter(e => e.isEligible);
     const ineligibleList = evaluated.filter(e => !e.isEligible);
 
-    // Initial check all eligible by default if first time
-    if (checkedStudentIds.size === 0 && eligibleList.length > 0) {
-      eligibleList.forEach(e => checkedStudentIds.add(e.student.id));
+    // Tutor Override is strictly manual (never auto-activated) so prerequisites are always respected by default
+    tutorOverrideActive = Boolean(overrideCheckbox && overrideCheckbox.checked);
+
+    // Determine selectable list:
+    // If Tutor Override is active, include all students except those who already passed in Remedial mode
+    let selectableList = eligibleList;
+    if (tutorOverrideActive) {
+      selectableList = evaluated.filter(e => mode === 'normal' || !e.isAlreadyPassed);
+    }
+
+    // Initial check all selectable by default if first time
+    if (checkedStudentIds.size === 0 && selectableList.length > 0) {
+      selectableList.forEach(e => checkedStudentIds.add(e.student.id));
     }
 
     // Update count display
     const countEl = modal.querySelector('#open-modal-student-count');
-    if (countEl) countEl.textContent = `${checkedStudentIds.size} / ${eligibleList.length}`;
+    if (countEl) countEl.textContent = `${checkedStudentIds.size} / ${selectableList.length}`;
 
     // Filter by search
-    let displayList = eligibleList;
+    let displayList = selectableList;
     const q = studentSearchQuery.trim().toLowerCase();
     if (q) {
       displayList = displayList.filter(e => (e.student.name || '').toLowerCase().includes(q));
@@ -769,7 +804,7 @@ function openThemeSessionModal(container, theme, mode, context) {
     if (displayList.length === 0) {
       listContainer.innerHTML = `
         <div style="padding:16px; text-align:center; color:#94a3b8; font-size:0.8rem;">
-          ${q ? `No eligible students match "${escapeHtml(q)}".` : 'No eligible students found in this batch.'}
+          ${q ? `No students match "${escapeHtml(q)}".` : 'No eligible students found in this batch. Check 🛡️ Tutor Override to bypass task prerequisites.'}
         </div>
       `;
     } else {
@@ -786,6 +821,9 @@ function openThemeSessionModal(container, theme, mode, context) {
         } else if (item.statusType === 'amber') {
           badgeBg = 'rgba(245, 158, 11, 0.15)';
           badgeColor = '#fbbf24';
+        } else if (item.statusType === 'danger') {
+          badgeBg = 'rgba(239, 68, 68, 0.15)';
+          badgeColor = '#f87171';
         }
 
         return `
@@ -809,11 +847,15 @@ function openThemeSessionModal(container, theme, mode, context) {
     const ineligTextEl = modal.querySelector('#open-modal-ineligible-text');
     const ineligDetailsEl = modal.querySelector('#open-modal-ineligible-details');
     if (ineligTextEl) {
-      ineligTextEl.textContent = `ℹ️ ${ineligibleList.length} Ineligible students hidden.`;
+      if (tutorOverrideActive) {
+        ineligTextEl.textContent = `🛡️ Tutor Override Active (${selectableList.length} selectable). Prerequisite tasks bypassed.`;
+      } else {
+        ineligTextEl.textContent = `ℹ️ ${ineligibleList.length} Ineligible students hidden.`;
+      }
     }
     if (ineligDetailsEl) {
       if (ineligibleList.length === 0) {
-        ineligDetailsEl.innerHTML = `<span style="color:#94a3b8;">All students in this batch are eligible.</span>`;
+        ineligDetailsEl.innerHTML = `<span style="color:#94a3b8;">All students in this batch meet the eligibility criteria.</span>`;
       } else {
         ineligDetailsEl.innerHTML = ineligibleList.map(item => `
           <div style="display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04); color:#94a3b8;">
@@ -834,9 +876,19 @@ function openThemeSessionModal(container, theme, mode, context) {
     }
   });
 
+  // Override checkbox listener
+  if (overrideCheckbox) {
+    overrideCheckbox.onchange = (e) => {
+      overrideCheckbox.dataset.userInteracted = 'true';
+      tutorOverrideActive = e.target.checked;
+      renderModalStudents();
+    };
+  }
+
   // Batch changed
   batchSelect.onchange = () => {
     checkedStudentIds.clear();
+    if (overrideCheckbox) delete overrideCheckbox.dataset.userInteracted;
     renderModalStudents();
   };
 
@@ -867,7 +919,8 @@ function openThemeSessionModal(container, theme, mode, context) {
       allAttempts: context.allAttempts || [],
       mode
     });
-    evaluated.filter(e => e.isEligible).forEach(e => checkedStudentIds.add(e.student.id));
+    const targetList = tutorOverrideActive ? evaluated.filter(e => mode === 'normal' || !e.isAlreadyPassed) : evaluated.filter(e => e.isEligible);
+    targetList.forEach(e => checkedStudentIds.add(e.student.id));
     renderModalStudents();
   };
 
@@ -934,6 +987,10 @@ function openThemeSessionModal(container, theme, mode, context) {
           isRemedial: isRemedial,
           remedialStudentIds: isRemedial ? allowedStudentIds : []
         }));
+      }
+
+      if (promises.length === 0) {
+        throw new Error(`No Words or Phrases test modules found for Theme ${theme.code}.`);
       }
 
       await Promise.all(promises);
@@ -1701,7 +1758,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, p
       // Normal Mode:
       // - Prereq must be met.
       // - If already passed: STILL eligible per user rule ("siapa tahu dia ingin mencoba lagi untuk nilai yang lebih baik").
-      // - If prereq not met: NOT eligible.
+      // - If prereq not met: NOT eligible unless tutor overrides.
       if (!prereqMet) {
         isEligible = false;
         statusType = 'danger';
@@ -1715,34 +1772,35 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, p
           reason = `Passed with ${avgScore}%. Eligible to retake for higher score.`;
         } else {
           statusType = 'cyan';
-          statusLabel = `✓ Prerequisites Met (Exam Ready)`;
+          statusLabel = `✓ Tasks Completed (Exam Ready)`;
           reason = `All ${themeTasks.length} prerequisite tasks passed >= 60%.`;
         }
       }
     } else {
       // Remedial Mode:
-      // - Prereq must be met.
-      // - AND student has NOT passed (< 60% or not taken).
-      // - If already passed: NOT ELIGIBLE for remedial!
+      // - Must meet prerequisites first (all tasks >= 60%).
+      // - If prereq NOT met: NOT ELIGIBLE (must finish tasks first).
+      // - If already passed (>= 60%): NOT ELIGIBLE for remedial.
+      // - Eligible ONLY if prereq met AND previous exam score < 60% (needs remedial).
       if (!prereqMet) {
         isEligible = false;
         statusType = 'danger';
         statusLabel = `⚠️ Incomplete Tasks (${completedTaskCount}/${themeTasks.length})`;
-        reason = `Incomplete prerequisite tasks for Theme ${theme.code}.`;
+        reason = `Prerequisite tasks must be passed (≥60%) before taking remedial exam.`;
       } else if (isAlreadyPassed) {
         isEligible = false;
         statusType = 'warning';
-        statusLabel = `Already Passed (${avgScore}%) — Remedial Ineligible`;
+        statusLabel = `Passed (${avgScore}%) — Remedial Ineligible`;
         reason = `Student already passed normal exam (>= 60%), ineligible for remedial.`;
       } else {
         isEligible = true;
         statusType = 'amber';
         if (avgScore !== null) {
           statusLabel = `🟡 Remedial (Previous Score: ${avgScore}%)`;
-          reason = `Previous score ${avgScore}% (< 60%). Eligible for remedial.`;
+          reason = `Previous score ${avgScore}% (< 60%). Eligible for remedial exam.`;
         } else {
-          statusLabel = `🟡 Remedial (Never Tested)`;
-          reason = `Prerequisites completed, never taken normal exam.`;
+          statusLabel = `🟡 Remedial (Tasks Completed)`;
+          reason = `Prerequisites completed (≥60%), eligible for remedial/makeup exam.`;
         }
       }
     }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-ranking-v1';
+const CACHE_NAME = 'topscore-cache-strict-eligibility-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,25 +6,25 @@ const ASSETS_TO_CACHE = [
   './dashboard.html',
   './test.html',
   './result.html',
-  './css/style.css?v=20261027b',
-  './css/admin.css?v=20261027b',
-  './css/dashboard.css?v=20261027b',
-  './css/auth.css?v=20261027b',
-  './css/test.css?v=20261027b',
-  './css/result.css?v=20261027b',
-  './css/components/avatars.css?v=20261027b',
-  './js/app.js?v=20261027b',
-  './js/api.js?v=20261027b',
-  './js/auth.js?v=20261027b',
-  './js/dashboard.js?v=20261027b',
-  './js/test.js?v=20261027b',
-  './js/result.js?v=20261027b',
-  './js/session.js?v=20261027b',
-  './js/supabase.js?v=20261027b',
-  './js/grading.js?v=20261027b',
+  './css/style.css?v=20261027d',
+  './css/admin.css?v=20261027d',
+  './css/dashboard.css?v=20261027d',
+  './css/auth.css?v=20261027d',
+  './css/test.css?v=20261027d',
+  './css/result.css?v=20261027d',
+  './css/components/avatars.css?v=20261027d',
+  './js/app.js?v=20261027d',
+  './js/api.js?v=20261027d',
+  './js/auth.js?v=20261027d',
+  './js/dashboard.js?v=20261027d',
+  './js/test.js?v=20261027d',
+  './js/result.js?v=20261027d',
+  './js/session.js?v=20261027d',
+  './js/supabase.js?v=20261027d',
+  './js/grading.js?v=20261027d',
   './js/vendor/supabase.js',
-  './js/vendor/xlsx.full.min.js?v=20261027b',
-  './js/wake-lock.js?v=20261027b'
+  './js/vendor/xlsx.full.min.js?v=20261027d',
+  './js/wake-lock.js?v=20261027d'
 ];
 
 self.addEventListener('install', event => {

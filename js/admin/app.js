@@ -376,7 +376,7 @@ import { renderClasses as _renderClassesModule, loadClassLearningPath } from './
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.4.7';
 import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=5.4.7';
 import { renderTests } from './tests-management.js?v=5.4.7';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=5.8.0';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261027d';
 import { renderVocabularyVault } from './vocab-vault.js?v=5.4.8';
 import { renderModules } from './modules.js?v=5.4.7';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.4.7';
@@ -819,7 +819,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           adminFetchAll('students', 'id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id').catch(() => []),
           adminFetchAll('programs', 'id, name, institution_id').catch(() => []),
           adminFetchAll('batches', 'id, name, is_active, program_id, current_level_id').catch(() => []),
-          adminFetchAll('test_questions', 'id, test_id, answer_type').catch(() => []),
+          adminFetchAll('test_items', 'id, test_id, answer_type').catch(() => []),
           adminFetchAll('levels').catch(() => []),
           adminFetchAll('vocabulary_vault', 'id, target_level, theme_code, topic_code, word_type, deleted_at').catch(() => []),
           adminFetchAll('attempts').catch(() => []),

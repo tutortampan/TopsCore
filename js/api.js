@@ -814,13 +814,18 @@ export async function startTest(studentId, testId) {
     throw lockErr;
   }
 
-  // Guard: Test Session Access & Attendance Whitelist (for TEST category)
-  const isTest = (asmData.test_type || '').toUpperCase() === 'TEST' ||
-                 (asmData.test_subtype || a.test_type || '').toUpperCase().includes('TEST') ||
-                 (asmData.title || '').toUpperCase().includes('TEST');
+  // Guard: Test Session Access & Attendance Whitelist (for formal EXAM category)
+  const isExamSubtype = (asmData.test_subtype || '').toUpperCase().includes('TEST');
+  const isExamShell = (asmData.shell_code || '').toUpperCase().endsWith('-TEST');
+  const isExamTitle = (asmData.title || '').toLowerCase().includes('test') && !(asmData.title || '').toLowerCase().includes('task');
+  const isFormalExam = ((asmData.test_type || '').toLowerCase() === 'exam' || isExamSubtype || isExamShell || isExamTitle) &&
+                       !(asmData.shell_code || '').toUpperCase().includes('-TASK') &&
+                       !(asmData.test_subtype || '').toUpperCase().includes('TASK') &&
+                       !(asmData.title || '').toLowerCase().includes('task') &&
+                       (asmData.test_type || '').toLowerCase() !== 'quiz';
 
   let activeSession = null;
-  if (isTest) {
+  if (isFormalExam) {
     const accessCheck = await checkStudentTestAccess(studentId, testId);
     if (!accessCheck.allowed) {
       const err = new Error(accessCheck.message);
@@ -3262,18 +3267,23 @@ export async function checkStudentTestAccess(studentId, testId) {
   }
 
   const { data: asm, error: asmErr } = await sb.from('tests')
-    .select('id, title, status, test_type, test_subtype, payload')
+    .select('id, title, status, test_type, test_subtype, shell_code, payload')
     .eq('id', testId)
     .single();
   if (asmErr || !asm) {
     return { allowed: false, reason: 'NOT_FOUND', message: 'Test not found.' };
   }
 
-  const isTest = (asm.test_type || '').toUpperCase() === 'TEST' ||
-                 (asm.test_subtype || asm.test_type || '').toUpperCase().includes('TEST') ||
-                 (asm.title || '').toUpperCase().includes('TEST');
+  const isExamSubtype = (asm.test_subtype || '').toUpperCase().includes('TEST');
+  const isExamShell = (asm.shell_code || '').toUpperCase().endsWith('-TEST');
+  const isExamTitle = (asm.title || '').toLowerCase().includes('test') && !(asm.title || '').toLowerCase().includes('task');
+  const isFormalExam = ((asm.test_type || '').toLowerCase() === 'exam' || isExamSubtype || isExamShell || isExamTitle) &&
+                       !(asm.shell_code || '').toUpperCase().includes('-TASK') &&
+                       !(asm.test_subtype || '').toUpperCase().includes('TASK') &&
+                       !(asm.title || '').toLowerCase().includes('task') &&
+                       (asm.test_type || '').toLowerCase() !== 'quiz';
 
-  if (!isTest) {
+  if (!isFormalExam) {
     return { allowed: true, is_test: false };
   }
 
@@ -3298,16 +3308,19 @@ export async function checkStudentTestAccess(studentId, testId) {
     };
   }
 
+  const allowedList = session.allowed_student_ids || [];
   if (session.batch_id && student.batch_id && session.batch_id !== student.batch_id) {
-    return {
-      allowed: false,
-      is_test: true,
-      reason: 'WRONG_BATCH',
-      message: 'This test session is designated for a different batch.'
-    };
+    // If student is explicitly whitelisted in session, allow them even if batch_id differs
+    if (!allowedList.includes(studentId)) {
+      return {
+        allowed: false,
+        is_test: true,
+        reason: 'WRONG_BATCH',
+        message: 'This test session is designated for a different batch.'
+      };
+    }
   }
 
-  const allowedList = session.allowed_student_ids || [];
   if (Array.isArray(allowedList) && allowedList.length > 0 && !allowedList.includes(studentId)) {
     return {
       allowed: false,

@@ -774,7 +774,7 @@ export async function renderDataHealth(container) {
         adminFetchAll('students', 'id, name, deleted_at'),
         adminFetchAll('tests', 'id, title, deleted_at'),
         adminFetchAll('attempts', 'id, student_id, test_id, status, created_at'),
-        adminFetchAll('test_questions', 'id, test_id, question_text'),
+        adminFetchAll('test_items', 'id, test_id, question_text'),
         adminFetchAll('attempt_answers', 'id, attempt_id'),
         adminFetchAll('progress', 'id, student_id').catch(() => [])
       ]);

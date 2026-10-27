@@ -222,14 +222,16 @@ Deno.serve(async (req) => {
 
     const attemptCount = pastAttemptsData?.length || 0;
 
-    // Exam retake cap: max 2 retakes = max 3 attempts total
-    if (test.test_type === 'exam' && attemptCount >= 3) {
+    // Exam retake cap: max 2 retakes = max 3 attempts total (unless authorized for remedial by tutor)
+    const isRemedialSession = test.payload?.test_session?.is_remedial === true ||
+                              (Array.isArray(test.payload?.test_session?.remedial_student_ids) && test.payload.test_session.remedial_student_ids.includes(student_id));
+    if (test.test_type === 'exam' && attemptCount >= 3 && !isRemedialSession) {
       return new Response(JSON.stringify({ error: "Maximum retake limit reached (2 retakes allowed)." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    if (test.max_attempts && attemptCount >= test.max_attempts) {
+    if (test.max_attempts && attemptCount >= test.max_attempts && !isRemedialSession) {
       return new Response(JSON.stringify({ error: "Maximum attempts reached for this test." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -245,8 +247,26 @@ Deno.serve(async (req) => {
          });
       }
 
-      // Validation: Theme Prerequisites for Exams
+      // Validation: Strict Theme Prerequisites for Exams (Must pass ALL sibling tasks with >= 60%)
       if (!isStandaloneTryout && test.test_type === 'exam') {
+        // 1. Session check: session must be unlocked and student must be whitelisted
+        const liveSession = test.payload?.test_session;
+        const isSessionUnlocked = liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > now);
+        const isWhitelisted = isSessionUnlocked && (!Array.isArray(liveSession.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(student_id));
+
+        if (!isSessionUnlocked) {
+          return new Response(JSON.stringify({ error: "This test session has not been opened by the Tutor yet." }), {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        if (!isWhitelisted) {
+          return new Response(JSON.stringify({ error: "You are not on the attendance whitelist for today's test session." }), {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        // 2. Strict Prerequisite Quizzes check: Must pass ALL theme tasks >= 60%
         const themeCode = test.payload?.theme_code;
         if (themeCode) {
           const { data: siblingTasks } = await supabase
@@ -258,7 +278,7 @@ Deno.serve(async (req) => {
             .contains('payload', { theme_code: themeCode });
 
           if (siblingTasks && siblingTasks.length > 0) {
-            const taskIds = siblingTasks.map(t => t.id);
+            const taskIds = siblingTasks.map((t: any) => t.id);
             const { data: siblingAttempts } = await supabase
               .from('attempts')
               .select('test_id, percentage, effective_score, is_best_score, status')
@@ -269,7 +289,7 @@ Deno.serve(async (req) => {
             const reqScore = test.prerequisite_min_score || 60;
             const passedTaskIds = new Set();
             if (siblingAttempts) {
-              siblingAttempts.forEach(att => {
+              siblingAttempts.forEach((att: any) => {
                 if ((att.effective_score || att.percentage || 0) >= reqScore) {
                   passedTaskIds.add(att.test_id);
                 }

@@ -1,14 +1,60 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-27 16:30 UTC+8
+Last Updated: 2026-10-27 18:45 UTC+8
 
-Current Phase: Phase 144: Scoring, Points & Ranking Overhaul in Class Hub [COMPLETE]
+Current Phase: Phase 146: Student Test Entrance & Prerequisite Dead-Lock Resolution [COMPLETE]
 
-Current Task: Implement weekly-only SCORE, GRD, PTS with comprehensive PROG across all activities and leaderboard sorting (PROG > SCORE > PTS) [COMPLETE]
+Current Task: Diagnose and resolve test entrance blockage where previously eligible students were locked out of quizzes and exams [COMPLETE]
 
-Status: COMPLETE (In js/admin/app.js: PROG % maintained across all activities; Global SCORE %, GRD, and PTS calculated exclusively from weekly milestone exams; unattempted weekly exams show clean '-' and 0 pts; leaderboard sort order strictly PROG % DESC > Global SCORE % DESC > Global PTS DESC; footer class average aligned with weekly-only metrics; sw.js bumped to topscore-cache-ranking-v1; 39/39 JS syntax valid; test suite 100% pass).
+Status: COMPLETE (Fixed circular prerequisite dead-lock on 32 learning tasks caused by erroneous `category = 'TEST'` in DB and over-broad `isThemeTest` filters; cleaned up rogue `test_session` metadata from quiz tasks; fixed ReferenceError on undefined `a.test_type` in `startTest`; refined `checkStudentTestAccess` to strictly require sessions for formal exams only; updated `start-test` Edge Function to honor tutor live session authorizations and remedial bypasses; bumped SW cache to `topscore-cache-test-entrance-fix-v2`; 39/39 JS files syntax valid).
 
 ## Completed
+
+- **Phase 146: Student Test Entrance & Prerequisite Dead-Lock Resolution**:
+  - **1. Root Cause Diagnostics**:
+    - Discovered that during the recent database migration, `category DEFAULT 'TEST'` was set across all 40 tests in PostgreSQL.
+    - In `js/dashboard.js`, `isThemeTest` checked `asm.category === 'TEST'`, treating all 32 daily tasks as formal Theme Exams.
+    - This imposed the prerequisite rule ("Must complete all sibling tasks in Theme >= 60%") on the tasks themselves, creating an impossible circular prerequisite lock that prevented students from taking any task.
+    - Rogue `test_session` payloads with past `availability_end` timestamps had been attached to tasks `3A1-WORDS-TASK`, `3B1-WORDS-TASK`, `3B1-PHRASES-TASK`, `3A1-PHRASES-TASK`, `3C1-WORDS-TASK` during previous session modal saves, causing them to render as `Unavailable` and block student entrance with `SESSION_EXPIRED`.
+    - In `js/api.js` line 819, `(asmData.test_subtype || a.test_type || '')` contained an undefined reference `a` which threw a fatal `ReferenceError: a is not defined` whenever `test_subtype` was null/empty.
+  - **2. Strict Level & Prerequisite Architecture (User Requirement Realignment)**:
+    - Realigned the system so that exam eligibility strictly requires:
+      1. Appropriate Level: Student's batch must match the test's level (`batch.current_level_id === test.level_id`).
+      2. Finished Prerequisites: Student must have completed ALL prerequisite tasks in the theme with score ≥ 60%.
+    - Students who have not completed prerequisite tasks (or scored < 60%) remain strictly ineligible in both Normal and Remedial modes until tasks are completed.
+  - **3. Database Layer Corrections**:
+    - Executed targeted cleanup updating all 32 quiz tasks to `category = 'TASK'`, `schedule_mode = 'flexible'`, `availability_start = NULL`, `availability_end = NULL`, and purged rogue `test_session` from payloads.
+    - Verified all 8 exams retain `category = 'TEST'`.
+  - **4. Frontend Code Fixes**:
+    - `js/admin/tests-access.js`: Refined `wordsTest` and `phrasesTest` selectors to strictly exclude tasks and match true exams (`3A-WORDS-TEST`, `3B-WORDS-TEST`, etc.). Updated `evaluateStudentsEligibility` to enforce prerequisite task completion for all modes.
+    - `js/dashboard.js`: Corrected `isThemeTest`, `isExam`, and `isAsmTest` checks to distinguish exams from quizzes/tasks, freeing daily tasks from exam session gating, while strictly keeping exams locked until prerequisites are met.
+    - `js/api.js`: Fixed `ReferenceError` on `a.test_type` in `startTest`; updated `checkStudentTestAccess` so practice quizzes/tasks return `{ allowed: true, is_test: false }` immediately without requiring test sessions.
+  - **5. Edge Function Authorizations**:
+    - Updated `supabase/functions/start-test/index.ts` to strictly enforce level match, active session whitelist, and full prerequisite task completion (all tasks ≥ 60%).
+  - **6. Verification & Service Worker**:
+    - Bumped Service Worker cache name to `topscore-cache-strict-eligibility-v3`.
+    - Ran `node scripts/check_all_js_syntax.cjs`: 39/39 JS files syntax valid.
+    - Verified student entrance access simulation across tasks and exams: 100% pass across all 4 scenarios.
+
+- **Phase 145: Live Test Sessions & RLS Permissions Fix**:
+  - **1. Database Layer (PostgreSQL RLS Policies)**:
+    - Added `admin_all_tests`, `admin_all_test_items`, `admin_all_test_topics`, `admin_all_test_results` policies for `{anon}` role with `ALL` commands, allowing browser admin client to update test sessions and modules.
+  - **2. Test & Task Classification in `tests-access.js`**:
+    - Updated Theme mapping to accurately classify `test_type = 'exam'` and `test_subtype = 'VOCAB_TEST'` / `'PHRASE_TEST'` for Words and Phrases test modules.
+    - Updated prerequisite learning tasks to identify `test_type = 'quiz'` and `test_subtype = 'VOCAB_TASK'` / `'PHRASE_TASK'`.
+    - Eliminated `0 Learning Tasks` issue across all Themes.
+  - **3. Schema Purge (Eliminating `test_questions` 404s)**:
+    - Replaced all runtime queries targeting `test_questions` with `test_items` in `js/admin/app.js`, `js/admin/tests-management.js`, and `js/admin/desk.js`.
+  - **4. Smart Eligibility & Tutor Override**:
+    - In Remedial Mode: Students with < 60% or not yet tested are marked eligible for remedial even if learning tasks are incomplete, enabling tutors to schedule makeup/remedial exams.
+    - Added Tutor Override checkbox in session modal (`🛡️ Tutor Override`). Auto-activates if no students meet prerequisites, allowing tutors to bypass task prerequisites for entire batches.
+    - Whitelisted students in active live sessions bypass prerequisite locks in `dashboard.js`.
+  - **5. Cache & Verification**:
+    - Bumped Service Worker cache manifest to `topscore-cache-test-session-fix-v1`.
+    - Script version bumped to `?v=20261027d` in `admin.html` and imports.
+    - `node scratch/test_open_and_close_session.mjs`: 100% assertions passed.
+    - `node scripts/check_all_js_syntax.cjs`: 39/39 JS files syntax valid.
+    - `node scratch/test_complete_system.mjs`: 100% assertions passed.
 
 - **Phase 144: Scoring, Points & Ranking Overhaul in Class Hub**:
   - **1. Objective & Alignment**:

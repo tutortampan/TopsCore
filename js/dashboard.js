@@ -915,9 +915,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       const className = classMap[nextAsm.class_id]?.name || 'Class Module';
-      const isTest = (nextAsm.test_category || '').toUpperCase() === 'TEST' ||
-                     (nextAsm.test_type || '').toUpperCase().includes('TEST') ||
-                     (nextAsm.title || '').toUpperCase().includes('TEST');
+      const isTest = ((nextAsm.test_type || '').toLowerCase() === 'exam' ||
+                     (nextAsm.test_subtype || '').includes('TEST') ||
+                     (nextAsm.shell_code || '').endsWith('-TEST')) &&
+                     !(nextAsm.shell_code || '').includes('-TASK') &&
+                     !(nextAsm.test_subtype || '').includes('TASK') &&
+                     !(nextAsm.title || '').toLowerCase().includes('task') &&
+                     (nextAsm.test_type || '').toLowerCase() !== 'quiz';
 
       if (!isTest) {
         const hasAttempted = bestMap[nextAsm.id] != null;
@@ -1348,7 +1352,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                               padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">
                               ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%${isRemedialBest ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</span>`;
 
-              if (Test.test_type === 'EXAM' && !passed) {
+              const isExam = (Test.test_type || '').toLowerCase() === 'exam' ||
+                             (Test.test_subtype || '').includes('TEST') ||
+                             (Test.shell_code || '').endsWith('-TEST');
+
+              if (isExam && !passed) {
                 if (best.is_remedial_unlocked) {
                   actionBtn = `<button onclick="location.href='test.html?test_id=${Test.id}'"
                                 style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
@@ -1364,8 +1372,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 const isAsmPublished = ((Test.status || 'PUBLISHED').toUpperCase() === 'PUBLISHED' || (Test.status || '').toUpperCase() === 'ACTIVE');
                 if (
                   isAsmPublished && (
-                    Test.test_category === 'TRYOUT' ||
-                    Test.test_category === 'TASK' ||
+                    Test.category === 'TASK' ||
+                    (Test.test_type && Test.test_type.toLowerCase() === 'quiz') ||
                     (Test.test_type && Test.test_type.includes('TASK')) ||
                     (Test.title && Test.title.includes('Task')) ||
                     Test.payload?.is_standalone_tryout === true ||
@@ -1512,11 +1520,20 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let prereqMet = true;
         let prereqTitle = '';
 
-        if (asm.test_category === 'TEST' || asm.test_type === 'VOCAB_TEST' || asm.test_type === 'PHRASE_TEST') {
+        const isExamSubtype = asm.test_subtype === 'VOCAB_TEST' || asm.test_subtype === 'PHRASE_TEST';
+        const isExamShell = (asm.shell_code || '').endsWith('-TEST');
+        const isExamTitle = (asm.title || '').toLowerCase().includes('test') && !(asm.title || '').toLowerCase().includes('task');
+        const isThemeTest = ((asm.test_type || '').toLowerCase() === 'exam' || isExamSubtype || isExamShell || isExamTitle) &&
+                            !(asm.shell_code || '').includes('-TASK') &&
+                            !(asm.test_subtype || '').includes('TASK') &&
+                            !(asm.title || '').toLowerCase().includes('task') &&
+                            (asm.test_type || '').toLowerCase() !== 'quiz';
+
+        if (isThemeTest) {
           const themeCode = asm.payload?.theme_code;
           if (themeCode) {
             const siblingTasks = tests.filter(a => 
-              (a.test_category === 'TASK' || a.test_type === 'VOCAB_TASK' || a.test_type === 'PHRASE_TASK') && 
+              (a.test_type === 'quiz' || a.category === 'TASK' || a.test_category === 'TASK' || a.test_subtype === 'VOCAB_TASK' || a.test_subtype === 'PHRASE_TASK' || (a.shell_code || '').includes('-TASK')) && 
               a.payload?.theme_code === themeCode && 
               a.level_id === asm.level_id &&
               a.class_id === asm.class_id
@@ -1568,6 +1585,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           prereqTitle = pObj ? (pObj.title || pObj.Test_title || 'Prerequisite') : 'Prerequisite Test';
         }
 
+        // Live test session state
+        const liveSession = asm.payload?.test_session;
+        const isSessionUnlocked = liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > new Date());
+        const isWhitelisted = isSessionUnlocked && (!Array.isArray(liveSession?.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(user.id));
+
         // Availability window
         const now = new Date();
         const availStart = asm.availability_start ? new Date(asm.availability_start) : null;
@@ -1593,10 +1615,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           statusBadge = `<span class="badge" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);">\u25BA In Progress</span>`;
           actionBtn = `<button class="btn btn-warning btn-sm" data-aid="${asm.id}">Resume</button>`;
         } else if (isCompleted) {
-          const isAsmTest = (asm.test_category || '').toUpperCase() === 'TEST' ||
-                            (asm.test_type || '').toUpperCase() === 'EXAM' ||
-                            (asm.test_type || '').toUpperCase().includes('TEST') ||
-                            (asm.title || '').toUpperCase().includes('TEST');
+          const isAsmTest = ((asm.test_type || '').toLowerCase() === 'exam' ||
+                            (asm.test_subtype || '').includes('TEST') ||
+                            (asm.shell_code || '').endsWith('-TEST')) &&
+                            !(asm.shell_code || '').includes('-TASK') &&
+                            !(asm.test_subtype || '').includes('TASK') &&
+                            !(asm.title || '').toLowerCase().includes('task') &&
+                            (asm.test_type || '').toLowerCase() !== 'quiz';
 
           const session = asm.payload?.test_session;
           const isSessionUnlocked = session?.status === 'UNLOCKED' && (!session.auto_close_at || new Date(session.auto_close_at) > new Date());
@@ -1604,9 +1629,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           let retakesAllowed = asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.test_id || a.Test_id) === asm.id && (a.status || '').toUpperCase() !== 'IN_PROGRESS').length));
           
           if (isAsmTest) {
-            // For formal Tests: Never allow retake if already passed; if not passed, only allow if session is unlocked by Tutor
+            // For formal Tests: Retake allowed if session is unlocked by Tutor (or Normal session for score improvement)
             if (passed) {
-              retakesAllowed = false;
+              retakesAllowed = isSessionUnlocked && !session?.is_remedial;
             } else {
               retakesAllowed = retakesAllowed && isSessionUnlocked;
             }

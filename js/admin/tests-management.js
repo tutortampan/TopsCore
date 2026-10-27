@@ -22,7 +22,7 @@ window.updateTestOrder = async (id, newOrd) => {
 export async function renderTests(area) {
   const [rawData, allQuestions, allClasses, allLevels, allBoardClasses, allVault] = await Promise.all([
     adminFetchAll('tests'),
-    adminFetchAll('test_questions', 'id, test_id, answer_type'),
+    adminFetchAll('test_items', 'id, test_id, answer_type'),
     adminFetchAll('programs', 'id, name').catch(() => []),
     adminFetchAll('levels').catch(() => []),
     adminFetchAll('classes').catch(() => []),
@@ -95,7 +95,7 @@ export async function renderTests(area) {
   `;
 
 
-  // Dynamic shells hold NO rows in test_questions; project the live vault count instead.
+  // Dynamic shells hold NO rows in test_items; project the live vault count instead.
   const _ALL_THEMES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
   const _PHRASE_TYPES = ['expression', 'idiom', 'proverb', 'phrase'];
   const _vaultRows = (allVault || []).filter(v => !v.deleted_at);
@@ -523,7 +523,7 @@ window.openTestBuilder = async (testId) => {
 
 export async function renderQuestions(area) {
   const [questions, rawTests] = await Promise.all([
-    adminFetchAll('test_questions'),
+    adminFetchAll('test_items'),
     adminFetchAll('tests', 'id, title, test_type').catch(() => [])
   ]);
 
