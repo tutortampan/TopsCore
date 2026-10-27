@@ -1,5 +1,5 @@
 import { DataGrid } from './datagrid.js?v=5.3.2';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE } from '../app.js?v=20261027';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, isWeeklyExam } from '../app.js?v=20261027';
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
@@ -856,13 +856,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           if (!asm) return false;
           if (asm.test_type === 'exam') return true;
           if (asm.test_type === 'quiz') return false;
-          if (asm.test_category === 'TEST') return true;
-          if (asm.payload?.test_category === 'TEST') return true;
+          if (['EXAM', 'TEST'].includes(asm.category) || ['EXAM', 'TEST'].includes(asm.test_category)) return true;
+          if (['EXAM', 'TEST'].includes(asm.payload?.category) || ['EXAM', 'TEST'].includes(asm.payload?.test_category)) return true;
           if (asm.payload?.is_unified_test === true) return true;
           const shell = String(asm.shell_code || asm.payload?.shell_code || '').toUpperCase();
-          if (shell.endsWith('-TEST') || shell.includes('-TEST-')) return true;
-          if (shell.endsWith('-TASK') || shell.includes('-TASK-')) return false;
-          return /\bTEST\b/i.test(asm.title || '');
+          if (shell.endsWith('-EXAM') || shell.includes('-EXAM-') || shell.endsWith('-TEST') || shell.includes('-TEST-')) return true;
+          if (shell.endsWith('-QUIZ') || shell.includes('-QUIZ-') || shell.endsWith('-TASK') || shell.includes('-TASK-')) return false;
+          return /\b(EXAM|TEST)\b/i.test(asm.title || '');
         };
         // Find students that have access to this class's program
         const classProgramId = currentClass?.program_id;
@@ -1265,8 +1265,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           return b ? b.is_active !== false : true;
         });
 
-        const taskTests = classTests.filter(a => a.test_type === 'VOCAB_TASK' || a.test_type === 'PHRASE_TASK' || /\bTASK\b/i.test(a.title || ''));
-        const testTests = classTests.filter(a => a.test_type === 'VOCAB_TEST' || a.test_type === 'PHRASE_TEST' || /\bTEST\b/i.test(a.title || ''));
+        const taskTests = classTests.filter(a => a.test_type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || a.test_type === 'VOCAB_TASK' || a.test_type === 'PHRASE_TASK' || (a.test_subtype && a.test_subtype.includes('QUIZ')) || (a.test_subtype && a.test_subtype.includes('TASK')) || /\b(QUIZ|TASK)\b/i.test(a.title || ''));
+        const testTests = classTests.filter(a => a.test_type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || a.test_type === 'VOCAB_TEST' || a.test_type === 'PHRASE_TEST' || (a.test_subtype && a.test_subtype.includes('EXAM')) || (a.test_subtype && a.test_subtype.includes('TEST')) || /\b(EXAM|TEST)\b/i.test(a.title || ''));
 
         const classHubTabs = [
           { id: 'attendance', icon: '📊', val: activeBatchStudents.length, label: 'Students Grade and Score' },
@@ -1290,8 +1290,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                       <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--clr-text-1);">📝 Class Tests</h3>
                       <div class="asm-meta-chips" style="display: inline-flex; align-items: center; gap: 6px;">
-                        <span class="badge" style="background: rgba(250, 204, 21, 0.12); color: #facc15; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(250, 204, 21, 0.3);">⚡ ${taskTests.length} Tasks (5m)</span>
-                        <span class="badge" style="background: rgba(244, 114, 182, 0.12); color: #f472b6; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(244, 114, 182, 0.3);">📝 ${testTests.length} Tests (Sesi Ujian)</span>
+                        <span class="badge" style="background: rgba(250, 204, 21, 0.12); color: #facc15; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(250, 204, 21, 0.3);">⚡ ${taskTests.length} Quizzes (Daily)</span>
+                        <span class="badge" style="background: rgba(244, 114, 182, 0.12); color: #f472b6; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(244, 114, 182, 0.3);">📝 ${testTests.length} Exams (Theme)</span>
                         <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.3);">🎯 Min. 60%</span>
                       </div>
                     </div>
@@ -1312,7 +1312,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                       <div class="attendance-theme-pills" id="attendance-theme-pills-container">
                         <span style="font-size:0.7rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em; margin-right:2px;">THEME VIEW:</span>
-                        <button type="button" class="attendance-theme-pill ${(!window._classAttendanceThemeFilter || window._classAttendanceThemeFilter === 'ALL') ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('ALL')" data-theme="ALL">🌐 ALL (TESTS ONLY)</button>
+                        <button type="button" class="attendance-theme-pill ${(!window._classAttendanceThemeFilter || window._classAttendanceThemeFilter === 'ALL') ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('ALL')" data-theme="ALL">🌐 ALL (EXAMS ONLY)</button>
                         <button type="button" class="attendance-theme-pill theme-a ${window._classAttendanceThemeFilter === 'A' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('A')" data-theme="A">🟦 THEME A (8)</button>
                         <button type="button" class="attendance-theme-pill theme-b ${window._classAttendanceThemeFilter === 'B' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('B')" data-theme="B">🟪 THEME B (10)</button>
                         <button type="button" class="attendance-theme-pill theme-c ${window._classAttendanceThemeFilter === 'C' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('C')" data-theme="C">🟧 THEME C (12)</button>
@@ -1705,14 +1705,20 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
               asmsInTheme.forEach(asm => {
                 const num = asm.display_order || (classTests.indexOf(asm) + 1);
-                const isTest = asm.test_category === 'TEST' || 
+                const isTest = asm.test_type === 'exam' ||
+                               asm.category === 'EXAM' ||
+                               asm.test_category === 'EXAM' || 
+                               asm.test_category === 'TEST' || 
+                               asm.category === 'TEST' ||
+                               asm.payload?.test_category === 'EXAM' || 
                                asm.payload?.test_category === 'TEST' || 
+                               asm.payload?.tier === 'EXAM' ||
                                asm.payload?.is_unified_test === true ||
-                               /\bTEST\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
-                               /\bTEST\b/i.test(asm.title || '');
+                               /\b(EXAM|TEST)\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
+                               /\b(EXAM|TEST)\b/i.test(asm.title || '');
                 const code = asm.payload?.shell_code || asm.shell_code || asm.title;
                 const isPhrase = asm.payload?.category === 'phrases' || /PHRASES/i.test(code || '') || /phrase/i.test(asm.title || '');
-                const tag = isTest ? (isPhrase ? 'PHRASE TEST' : 'WORD TEST') : (isPhrase ? 'PHRASE TASK' : 'WORD TASK');
+                const tag = isTest ? (isPhrase ? 'PHRASE EXAM' : 'WORD EXAM') : (isPhrase ? 'PHRASE QUIZ' : 'WORD QUIZ');
                 const cleanTitle = asm.title || asm.name || code || 'Test';
                 const headerTooltip = (code && cleanTitle && !cleanTitle.toLowerCase().startsWith(code.toLowerCase()))
                   ? `${code}: ${cleanTitle}`

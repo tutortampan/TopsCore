@@ -710,11 +710,16 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
       try {
         let asmId = createdTestId;
         
+        const isExamType = String(typeVal).toLowerCase() === 'test' || String(typeVal).toLowerCase() === 'exam';
+        const resolvedType = isExamType ? 'exam' : 'quiz';
+        const resolvedCategory = isExamType ? 'TEST' : 'TASK';
+
         // If edit mode and published, we should not change type, class, answer_type or topics.
         const structuralData = (editTest && editTest.status === 'PUBLISHED') ? {} : {
             class_id: ClassId,
-            test_type: (editTest && editTest.test_type && !['EVALUATION', 'TEST'].includes(editTest.test_type.toUpperCase())) ? editTest.test_type : typeVal,
-            answer_type: answerType
+            test_type: resolvedType,
+            category: resolvedCategory,
+            answer_type: answerType || 'spoken'
         };
 
         const updatePayload = {

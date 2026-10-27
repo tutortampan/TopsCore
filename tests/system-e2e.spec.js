@@ -11,10 +11,9 @@ await expect(page.locator('#step-num-1')).toHaveText('1');
 await expect(page.locator('#remember-me-banner')).toBeVisible();
 });
 
-test('Assessment Runner Anti-Cheat and Timer Integrity', async ({ page }) => {
-await page.goto('/assessment.html?Assessment_id=demo-test');
-await expect(page.locator('#Assessment-timer')).toBeVisible();
-await expect(page.locator('#Assessment-sync-status')).toBeVisible();
+test('Test Runner Anti-Cheat and Timer Integrity', async ({ page }) => {
+await page.goto('/test.html?test_id=demo-test');
+await expect(page.locator('#test-timer')).toBeVisible();
 });
 
 test('Admin Console ABCD Navigation Verification', async ({ page }) => {

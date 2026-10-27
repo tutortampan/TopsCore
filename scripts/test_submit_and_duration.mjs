@@ -12,20 +12,20 @@ async function runTest() {
   const { data: wordsTasks, error: wtErr } = await sb
     .from('tests')
     .select('shell_code, working_duration_minutes, payload')
-    .ilike('shell_code', '%WORDS-TASK%');
+    .or('shell_code.ilike.%WORDS-QUIZ%,shell_code.ilike.%WORDS-TASK%');
 
   if (wtErr) throw wtErr;
-  console.log(`[1] Checking Words Tasks Durations (${wordsTasks.length} tasks found):`);
+  console.log(`[1] Checking Words Quizzes Durations (${wordsTasks.length} quizzes found):`);
   const non10Tasks = wordsTasks.filter(t => t.working_duration_minutes !== 10 || t.payload?.working_duration_minutes !== 10);
   if (non10Tasks.length === 0) {
-    console.log('  ✅ ALL 16 Words Tasks have strictly 10 minutes duration!');
+    console.log('  ✅ ALL Words Quizzes have strictly 10 minutes duration!');
   } else {
-    console.error('  ❌ Found tasks not 10 minutes:', non10Tasks.map(t => `${t.shell_code} (${t.working_duration_minutes}m)`));
+    console.error('  ❌ Found quizzes not 10 minutes:', non10Tasks.map(t => `${t.shell_code} (${t.working_duration_minutes}m)`));
   }
 
   // 2. Fetch a valid student and a test to test submission
   const { data: student } = await sb.from('students').select('id, name').limit(1).single();
-  const { data: test } = await sb.from('tests').select('id, shell_code, title').ilike('shell_code', '3A1-WORDS-TASK').single();
+  const { data: test } = await sb.from('tests').select('id, shell_code, title').or('shell_code.eq.3A1-WORDS-QUIZ,shell_code.eq.3A1-WORDS-TASK').single();
 
   console.log(`\n[2] Testing Submission with Student: ${student.name} on ${test.shell_code}`);
 

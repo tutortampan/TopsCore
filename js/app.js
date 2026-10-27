@@ -8,7 +8,8 @@ import {
   getScoreColor,
   getGradeTheme,
   formatGradeBadgeHtml,
-  getAchievementStatus
+  getAchievementStatus,
+  isWeeklyExam
 } from './grading.js';
 
 export {
@@ -21,7 +22,8 @@ export {
   getScoreColor,
   getGradeTheme,
   formatGradeBadgeHtml,
-  getAchievementStatus
+  getAchievementStatus,
+  isWeeklyExam
 };
 
 if (typeof window !== 'undefined') {
@@ -31,6 +33,7 @@ if (typeof window !== 'undefined') {
   window.getGradeColor = getGradeColor;
   window.getGradeSymbol = getGradeSymbol;
   window.GRADE_PALETTE = GRADE_PALETTE;
+  window.isWeeklyExam = isWeeklyExam;
 }
 
 // TOPS CORE — Toast Notification System

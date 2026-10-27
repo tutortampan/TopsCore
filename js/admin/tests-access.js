@@ -91,11 +91,11 @@ export async function renderClassTestSessions(container, context = {}) {
       const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
       const title = (a.title || '').toLowerCase();
 
-      const isTask = type === 'quiz' || subtype.includes('TASK') || shell.includes('-TASK') || title.includes('task');
+      const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
       if (isTask) return false;
 
-      const isExam = type === 'exam' || subtype.includes('TEST') || shell.endsWith('-TEST') || title.includes('test');
-      return tc === code && isExam && (cat === 'words' || subtype === 'VOCAB_TEST' || shell.includes('WORDS-TEST') || title.includes('words test'));
+      const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
+      return tc === code && isExam && (cat === 'words' || subtype === 'VOCAB_EXAM' || subtype === 'VOCAB_TEST' || shell.includes('WORDS-EXAM') || shell.includes('WORDS-TEST') || title.includes('words exam') || title.includes('words test'));
     });
 
     const phrasesTest = classTests.find(a => {
@@ -107,11 +107,11 @@ export async function renderClassTestSessions(container, context = {}) {
       const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
       const title = (a.title || '').toLowerCase();
 
-      const isTask = type === 'quiz' || subtype.includes('TASK') || shell.includes('-TASK') || title.includes('task');
+      const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
       if (isTask) return false;
 
-      const isExam = type === 'exam' || subtype.includes('TEST') || shell.endsWith('-TEST') || title.includes('test');
-      return tc === code && isExam && (cat === 'phrases' || subtype === 'PHRASE_TEST' || shell.includes('PHRASES-TEST') || title.includes('phrases test'));
+      const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
+      return tc === code && isExam && (cat === 'phrases' || subtype === 'PHRASE_EXAM' || subtype === 'PHRASE_TEST' || shell.includes('PHRASES-EXAM') || shell.includes('PHRASES-TEST') || title.includes('phrases exam') || title.includes('phrases test'));
     });
 
     const tasks = classTests.filter(a => {
@@ -121,7 +121,7 @@ export async function renderClassTestSessions(container, context = {}) {
       const subtype = (a.test_subtype || '').toUpperCase();
       const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
       const title = (a.title || '').toLowerCase();
-      const isTask = type === 'quiz' || a.category === 'TASK' || a.test_category === 'TASK' || subtype.includes('TASK') || shell.includes('-TASK') || title.includes('task');
+      const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || a.test_category === 'QUIZ' || a.test_category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
       return tc === code && isTask;
     });
 
@@ -207,7 +207,7 @@ export async function renderClassTestSessions(container, context = {}) {
       <!-- KPI Summary Pills -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px;">
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px;">
-          <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: #94a3b8;">Total Theme Tests</div>
+          <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: #94a3b8;">Total Theme Exams</div>
           <div style="font-size: 1.6rem; font-weight: 800; color: #ffffff; margin-top: 4px;">4 Themes <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">(8 Modules)</span></div>
         </div>
 
@@ -241,7 +241,7 @@ export async function renderClassTestSessions(container, context = {}) {
           <div>
             <div id="open-modal-theme-badge" style="display:inline-block; font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:2px 8px; border-radius:4px; margin-bottom:4px;">THEME A</div>
             <h3 id="open-modal-title" style="margin:0; font-size:1.25rem; font-weight:800; color:#ffffff;">Open Test Session</h3>
-            <div id="open-modal-subtitle" style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">Words Test & Phrases Test unlocked simultaneously.</div>
+            <div id="open-modal-subtitle" style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">Words Exam & Phrases Exam unlocked simultaneously.</div>
           </div>
           <button type="button" class="btn btn-ghost btn-icon" id="btn-close-open-modal" style="color:#94a3b8; font-size:1.25rem; padding:4px 8px;">✕</button>
         </div>
@@ -1392,10 +1392,10 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         let targetAtt = null;
         if (inProgressAtt) {
           targetAtt = inProgressAtt;
-          activeModule = (inProgressAtt.test_id === theme.wordsTest?.id) ? 'Words Test' : 'Phrases Test';
+          activeModule = (inProgressAtt.test_id === theme.wordsTest?.id) ? 'Words Exam' : 'Phrases Exam';
         } else if (hasSubmitted) {
           targetAtt = pAtt || wAtt;
-          activeModule = (wAtt && pAtt) ? 'Words & Phrases' : (wAtt ? 'Words Test' : 'Phrases Test');
+          activeModule = (wAtt && pAtt) ? 'Words & Phrases' : (wAtt ? 'Words Exam' : 'Phrases Exam');
         }
 
         // Answers belonging specifically to target attempt

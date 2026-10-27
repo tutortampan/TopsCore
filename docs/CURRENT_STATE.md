@@ -1,14 +1,128 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-27 20:35 UTC+8
+Last Updated: 2026-10-28 06:10 UTC+8
 
-Current Phase: Phase 150: Live Test Session Real-time Monitor, Dynamic Time Extension & Anti-Cheat Enhancements [COMPLETE]
+Current Phase: Phase 154: Student Dashboard Exam-Only Metrics & Ranking Parity [COMPLETE]
 
-Current Task: Fix live monitor question count display, realtime score calculations, dynamic running exam time extension (+5m, +10m, +15m, +30m, custom), anti-cheat alarm inspection and false-positive reset [COMPLETE]
+Current Task: Autonomously locate and align Student Dashboard (Lobby / Student View) and Batch Leaderboard with Tutor Class Hub: points, score %, and grade evaluated exclusively from weekly exams; multi-tier ranking (PROG % > Global SCORE % > Global PTS) enforced [COMPLETE]
 
-Status: COMPLETE (Added test session time extension modal and backend logic `extendTestSessionTime`, auto-syncing student countdown timers via heartbeat; resolved question count denominator discrepancy by backfilling 49 attempts in DB and updating live monitor logic; eliminated reload exploit and microphone false-alarms in anti-cheat system; added interactive alarm inspection modal with reset option; integrated Supabase Realtime channel for live attempt updates; 39/39 JS files syntax valid; 100% verified via automated integration test `test_live_monitor_and_time_extension.mjs`).
+Status: COMPLETE (All student dashboard components, hero stats, and batch standings leaderboard synchronized to exam-only metrics; daily quizzes strictly isolated to progress & completion badges; multi-tier tie-breakers verified; neutral styling for 0-exam students implemented; 39/39 JS syntax valid; test suite 100% PASS; ready for atomic git commit & push per task instructions).
 
 ## Completed
+
+- **Phase 154: Student Dashboard Exam-Only Metrics & Ranking Parity**:
+  - **1. Centralized Helper (`js/grading.js`, `js/app.js`, `js/api.js`)**:
+    - Implemented and exported canonical `isWeeklyExam(asm)` helper: classifies tests based on enum `test_type === 'exam'`, category `EXAM` / legacy `TEST`, shell code `*-EXAM` / `*-TEST`, and excludes daily quizzes (`*-QUIZ`, `*-TASK`).
+    - Re-exported in `js/app.js` and `js/api.js` to ensure 100% single-source-of-truth across admin and student views.
+  - **2. Student Hero Banner & Metrics (`js/dashboard.js:computeOverallStats`)**:
+    - Disconnected daily quizzes from Academic Score % (`#stat-overall-score`, `#bottom-stat-avg-score`) and Grade (`#stat-overall-grade-value`).
+    - Evaluates academic score exclusively from completed weekly exams.
+    - Added neutral edge-case handling for students with no weekly exams completed yet: displays `0%` score, `—` grade, and neutral `#dashboard-achievement-text` (`—`), preventing unfair penalties or false "FAIL" badges.
+    - Maintained total activities completed count (`completedCount`) for completion badges.
+  - **3. Batch Standings Leaderboard (`js/dashboard.js:loadBatchLeaderboard`)**:
+    - Updated query to select complete test metadata (`tests(id, title, test_type, category, test_subtype, shell_code, deleted_at, status, payload)`).
+    - Calculated `totalPoints` (PTS), `overallScore` (SCORE %), and `grade` (GRD) exclusively from weekly exams.
+    - Enforced exact multi-tier ranking hierarchy matching Class Hub:
+      1. `PROG % DESC` (overall curriculum completion)
+      2. `Global SCORE % DESC` (weekly exam mastery; unattempted weekly exams sort after completed)
+      3. `Global PTS DESC` (weekly exam points)
+      4. Earliest submission timestamp (ascending)
+      5. Alphabetical clean name (ascending)
+    - Updated table rows to display neutral `0` PTS, `—` avg, and `—` grade chip for students with 0 weekly exams.
+  - **4. Verification & Parity Test Suite**:
+    - Created and executed `scripts/test_student_dashboard_exam_parity.mjs`: tested quiz-only students, 0-activity students, and 3-way tie-breakers. 100% PASS.
+    - Verified all 39 JavaScript files syntax with `node --check`. 100% PASS.
+    - Updated Service Worker cache to `topscore-cache-option-a-v10`.
+
+- **Phase 153: Autonomous End-to-End System Audit & Integrity Verification**:
+  - **Vector 1 (Codebase & Leakage Audit)**:
+    - Scanned 45 active code files: ZERO instances of deprecated `assessment`/`assessments` in active code.
+    - Verified all ES module imports and exports: 100% of symbols and paths resolve.
+    - Verified elimination of Grade "S", "F", and "R": active functions return only official grading scale (`★`, `A`, `B`, `C`, `D`, `E`).
+    - Standardized `startTEST` → `startTest` in `js/test.js`.
+  - **Vector 2 (Database & RPC Contract Integrity)**:
+    - Connected to live Supabase PostgreSQL: verified RPCs `get_server_time_wita`, `reorder_test`, and `emergency_submit_attempt`.
+    - Parameter signatures and return types match frontend callers 100%.
+    - Validated 40 active tests: 100% have valid PostgreSQL enum `test_type` ('quiz' | 'exam') and positive working durations.
+    - Division-by-zero protection verified: zero submitted attempts have `total_questions = 0`.
+  - **Vector 3 (Scoring & Ranking Edge-Case Stress Test)**:
+    - Tested all 4 stress scenarios in Class Hub:
+      * Case 1 (Quiz-only, 0 exams): PROG = 25%, Global SCORE = 0%, Grade = "—", PTS = 0. Quiz points (250 pts) strictly isolated from Global SCORE % and Global PTS.
+      * Case 2 (0 total activity): Clean 0s and "—", no NaN, no null crashes.
+      * Case 3 (Tie-Breakers with identical PROG 50%): Correctly ranked Student C (SCORE 90%, PTS 250) → Student A (SCORE 90%, PTS 180) → Student B (SCORE 80%, PTS 160).
+      * Case 4 (CLASS AVERAGE row): Empty rosters safely handled without division-by-zero; 0-exam rosters display "—" for score & grade; mixed rosters average exams across completed students and PTS across all students.
+  - **Vector 4 (UI/UX & Runner Runtime Health)**:
+    - Validated DOM structure across `index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`: zero literal `undefined` or `NaN` rendered.
+    - ABCD navigation domains (`admin`, `board`, `class`, `desk`) verified in `admin.html`.
+    - Test runner critical components (`test-main`, `test-timer`, `confirm-submit-btn`, `danger-submit-btn`, `giveup-btn`, `global-submit-btn`, `submit-modal`, `cheat-overlay`) verified in `test.html`.
+    - Tested runner-to-API contracts for `submitTest` and `saveAnswer`.
+    - Updated legacy route in `tests/system-e2e.spec.js` from `/assessment.html` to `/test.html?test_id=demo-test`.
+    - Hardened `isWeeklyExam` in `js/admin/app.js` to match both Option A (`EXAM`, `QUIZ`) and legacy (`TEST`, `TASK`) tokens.
+  - **Vector 5 (Verification Suite & Zero Git Commit)**:
+    - `check_all_js_syntax.cjs`: 39/39 JS files passed syntax checks.
+    - `test_submit_and_duration.mjs`: 100% PASS on duration enforcement and emergency submit RPC.
+    - `test_live_monitor_and_time_extension.mjs`: 100% PASS on live monitor and evaluation engine.
+    - Strictly 0 git commits / 0 git push per user rule.
+
+- **Phase 152: Option A Domain Terminology Full Synchronization (Assessment → Test, Task → Quiz, Test → Exam)**:
+  - **1. Database Layer (`public.tests`)**:
+    - **32 Quizzes (previously Tasks)**:
+      - `title`: Replaced `"Words Task"` → `"Words Quiz"`, `"Phrases Task"` → `"Phrases Quiz"` (e.g. `'3rd Vocabulary A1 Words Quiz - Professional Identity'`).
+      - `shell_code`: Replaced `*-TASK` → `*-QUIZ` (e.g. `'3A1-WORDS-QUIZ'`).
+      - `category`: Set to `'QUIZ'`.
+      - `test_subtype`: Set to `'VOCAB_QUIZ'`, `'PHRASE_QUIZ'`.
+      - `payload`: Updated `{tier: "QUIZ", shell_code: "..."}`.
+    - **8 Exams (previously Tests)**:
+      - `title`: Replaced `"Words Test"` → `"Words Exam"`, `"Phrases Test"` → `"Phrases Exam"` (e.g. `'3rd Vocabulary A Words Exam - Workplace'`).
+      - `description`: Replaced `"Theme Test:"` → `"Theme Exam:"`.
+      - `shell_code`: Replaced `*-TEST` → `*-EXAM` (e.g. `'3A-WORDS-EXAM'`).
+      - `category`: Set to `'EXAM'`.
+      - `test_subtype`: Set to `'VOCAB_EXAM'`, `'PHRASE_EXAM'`.
+      - `payload`: Updated `{tier: "EXAM", shell_code: "..."}`.
+  - **2. API & Generator Synchronization (`js/api.js`)**:
+    - `upsertDynamicTestShell`: Shell codes generated as `*-QUIZ` and `*-EXAM`; titles generated as `... Words/Phrases Quiz ...` and `... Words/Phrases Exam ...`; `test_type` as `'quiz'` / `'exam'`; `category` as `'QUIZ'` / `'EXAM'`; `test_subtype` as `'VOCAB_QUIZ'` / `'PHRASE_QUIZ'` / `'VOCAB_EXAM'` / `'PHRASE_EXAM'`. Added legacy alias resolution supporting both new (`*-QUIZ`, `*-EXAM`) and older (`*-TASK`, `*-TEST`) shells.
+    - `autoGenerateTestsHierarchy`: Updated to pass `tier: 'QUIZ'` and `tier: 'EXAM'`, with descriptions formatted as `Theme Exam: <Theme Name>`.
+    - `updateClassTestsConfig`: Updated exam detection logic to check `EXAM`, `-EXAM`, `exam`, while maintaining backward compatibility for legacy `TEST` / `-TEST`.
+  - **3. Admin UI & Modals (`js/admin/`)**:
+    - `js/admin/app.js`: Updated Class Hub meta chips to display `${taskTests.length} Quizzes (Daily)` and `${testTests.length} Exams (Theme)`; updated Theme View filter to `ALL (EXAMS ONLY)`; updated dynamic table column tags to `PHRASE EXAM`, `WORD EXAM`, `PHRASE QUIZ`, `WORD QUIZ`.
+    - `js/admin/auto-gen-modal.js`: Updated wizard UI headers to `⚡ 1. PENGATURAN QUIZ HARIAN (DAILY QUIZZES)` and `📝 2. PENGATURAN EXAM / UJIAN (THEME EXAMS A–D)`; updated dropdown labels to `🗣️ Words Quiz`, `🗣️ Phrases Quiz`, `🗣️ Words Exam`, `🔘 Phrases Exam`; updated progress and toast notifications to report Quizzes and Exams.
+    - `js/admin/tests-access.js`: Updated live session card selectors (`wordsTest`, `phrasesTest`, `tasks`) to match `QUIZ`, `EXAM`, `VOCAB_EXAM`, `PHRASE_EXAM`, `WORDS-EXAM`, `PHRASES-EXAM`; updated KPI summary to `Total Theme Exams`; updated activeModule indicators in Live Monitor to `Words Exam` and `Phrases Exam`.
+    - `js/admin/crud-modals.js`: Updated test title placeholder to `'e.g. 3rd Vocabulary A1 Words Quiz'`.
+  - **4. Student Runner & Dashboard (`js/dashboard.js`, `js/result.js`)**:
+    - `js/dashboard.js`: Updated milestone prerequisite checks to identify theme quizzes (`siblingTasks` checking `QUIZ`, `quiz`, `VOCAB_QUIZ`, `PHRASE_QUIZ`, `-QUIZ`), ensuring exams unlock correctly once all daily quizzes reach ≥60%.
+    - `js/result.js`: Updated `humanizeType` map to cleanly render `'Quiz'`, `'Exam'`, `'Word Quiz'`, `'Phrase Quiz'`, `'Word Exam'`, `'Phrase Exam'`.
+  - **5. Verification & Service Worker**:
+    - `sw.js`: Bumped cache name to `topscore-cache-option-a-v9`.
+    - Validated all 39 JavaScript files syntax: 100% PASS (`scripts/check_all_js_syntax.cjs`).
+    - Verified submission flow and duration enforcement: 100% PASS (`scripts/test_submit_and_duration.mjs`).
+    - Verified live monitor, time extension, and attempt question counts: 100% PASS (`scripts/test_live_monitor_and_time_extension.mjs`).
+    - **Zero Git Commit / Push**: Strictly maintained all modifications in working directory per user directive.
+
+- **Phase 151: PostgreSQL Enum Alignment, Progression Queries & Zero-Written Resilience**:
+  - **1. Root Cause Analysis**:
+    - Discovered that PostgreSQL column `public.tests.test_type` is a strict database ENUM (`'quiz'`, `'exam'`).
+    - In `js/api.js` line 2798 (`upsertDynamicTestShell`), `test_type` was assigned `'TEST'` or `'TASK'`, which threw PostgreSQL 400 error `invalid input value for enum test_type: "TEST"`.
+    - In `js/api.js` line 2540 (`calculateLevelProgression`), query `.eq('test_type', 'TEST')` crashed PostgreSQL with the same enum error, blocking student level-up evaluations.
+    - In `js/admin/vocab-vault.js` lines 986 and 1020, queries `.eq('test_type', 'VOCAB_TASK')` and `.eq('test_type', 'VOCAB_QUIZ')` crashed because those values belong to `test_subtype`.
+    - In `js/api.js` line 2405 (`createTestShell`), `defaultAnswerType` defaulted to `'written'` despite Phase 148 mandate eliminating typing/written modes.
+    - In `js/test.js` line 2130, check `testData?.test_type === 'EXAM'` failed because database values are lowercase `'exam'`.
+    - In `public.attempts`, 4 attempts still had `total_questions = 0`.
+  - **2. Core Fixes**:
+    - `js/api.js`:
+      - `upsertDynamicTestShell`: Updated `test_type: isTest ? 'exam' : 'quiz'` and `category: isTest ? 'TEST' : 'TASK'`.
+      - `calculateLevelProgression`: Updated query to `.eq('category', 'TEST')`.
+      - `createTestShell`: Mapped `test_type` to `'quiz'` / `'exam'`, `category` to `'TASK'` / `'TEST'`, and standardized `defaultAnswerType` to `'spoken'`.
+    - `js/admin/vocab-vault.js`: Updated queries to `.eq('test_subtype', 'VOCAB_TASK')` and `.eq('test_subtype', 'VOCAB_QUIZ')`.
+    - `js/admin/test-builder.js`: Mapped radio values to `'quiz'` / `'exam'` for `test_type` and `'TASK'` / `'TEST'` for `category`.
+    - `js/admin/app.js`: Included `asm.category === 'TEST'` in `isWeeklyExam` check.
+    - `js/test.js`: Used case-insensitive comparison `String(testData?.test_type).toLowerCase() === 'exam' || testData?.category === 'TEST'` for automatic level-up trigger.
+    - Database: Backfilled all 4 remaining attempts in Supabase PostgreSQL where `total_questions = 0` to exact question counts.
+    - `sw.js`: Bumped cache name to `topscore-cache-enum-fix-v8`.
+  - **3. Verification**:
+    - Validated all 39 JS files syntax (`check_all_js_syntax.cjs`): 100% PASS.
+    - Verified submission and timeout scoring (`test_submit_and_duration.mjs`): 100% PASS.
+    - Verified live monitor and time extension (`test_live_monitor_and_time_extension.mjs`): 100% PASS.
+    - Strictly maintained NO git commit per user command.
 
 - **Phase 150: Live Test Session Real-time Monitor, Dynamic Time Extension & Anti-Cheat Enhancements**:
   - **1. Root Cause Analysis**:

@@ -983,7 +983,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
         const sb = await getSupabase();
         const { data: tasks } = await sb.from('tests')
           .select('id,title,description')
-          .eq('test_type', 'VOCAB_TASK')
+          .eq('test_subtype', 'VOCAB_TASK')
           .eq('class_id', state.classId)
           .eq('status', 'PUBLISHED')
           .is('deleted_at', null)
@@ -1017,7 +1017,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
         const sb = await getSupabase();
         const { data: quizzes } = await sb.from('tests')
           .select('id,title,description')
-          .eq('test_type', 'VOCAB_QUIZ')
+          .eq('test_subtype', 'VOCAB_QUIZ')
           .eq('class_id', state.classId)
           .eq('status', 'PUBLISHED')
           .is('deleted_at', null)

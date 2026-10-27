@@ -4,7 +4,7 @@ import { generateAvatarDataUri } from './utils/avatar-engine.js?v=5.3.2';
  * Extracted from test.html
  */
 
-import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=5.3.2';
+import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=5.3.2';
     import { requireStudentSession } from './session.js?v=5.3.2';
     import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=5.3.2';
     import { startCountdown, isExpired } from './timer.js?v=5.3.2';
@@ -530,7 +530,7 @@ import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         const fetchedConfig = await getSecuritySettings();
         if (fetchedConfig) securityConfig = fetchedConfig;
 
-        const result = await startTEST(session.student_id, testId);
+        const result = await startTest(session.student_id, testId);
         attemptData = result.attempt;
         testData = result.test || result.TEST || {};
         testsections = result.sections || [];
@@ -1325,9 +1325,10 @@ import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       }
 
       let displayCategory = snap?.category || snap?.metadata?.category || row?.category_snapshot || testData?.payload?.category || '';
-      if (!displayCategory && testData?.test_type) {
-        if (testData.test_type.includes('PHRASE')) displayCategory = 'phrases';
-        else if (testData.test_type.includes('VOCAB') || testData.test_type.includes('WORD')) displayCategory = 'words';
+      if (!displayCategory) {
+        const sub = (testData?.test_subtype || testData?.shell_code || testData?.test_type || '').toUpperCase();
+        if (sub.includes('PHRASE')) displayCategory = 'phrases';
+        else if (sub.includes('VOCAB') || sub.includes('WORD')) displayCategory = 'words';
       }
       if (!displayCategory && testData?.title) {
         if (/phrase/i.test(testData.title)) displayCategory = 'phrases';
@@ -2127,7 +2128,7 @@ import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         const targetStatus = isAuto ? 'auto_submitted' : 'submitted';
         const result = await submitTest(attemptData.id, payload, { status: targetStatus });
         
-        if (testData?.test_type === 'EXAM') {
+        if (String(testData?.test_type).toLowerCase() === 'exam' || ['EXAM', 'TEST'].includes(testData?.category)) {
           try {
             await checkAndTriggerLevelUp(session.student_id, testData.level_id);
           } catch (e) {

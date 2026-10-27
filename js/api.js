@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=5.3.2';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml } from './grading.js?v=5.6.5';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isWeeklyExam } from './grading.js?v=5.6.5';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=5.3.2';
 import { escapeHtml, escHtml } from './app.js?v=5.3.2';
 
@@ -9,7 +9,7 @@ export function getGrade(pct) {
   return calculateGrade(pct);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isWeeklyExam, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -481,7 +481,7 @@ export async function fetchAllStudentAttempts(studentId) {
   if (!studentId) return [];
   const sb = await getSupabase();
   const { data, error } = await sb.from('attempts')
-    .select('id, test_id, score, percentage, grade, status, is_best_score, submitted_at, tests(id, title, test_subtype, deleted_at, status, classes(name))')
+    .select('id, test_id, score, percentage, grade, status, is_best_score, submitted_at, tests(id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name))')
     .eq('student_id', studentId)
     .in('status', ['submitted', 'auto_submitted'])
     .order('submitted_at', { ascending: false });
@@ -500,7 +500,7 @@ export async function fetchAllStudentAttempts(studentId) {
   const testIds = [...new Set(attempts.map(a => a.test_id).filter(Boolean))];
   let testMap = {};
   if (testIds.length > 0) {
-    const { data: asmData } = await sb.from('tests').select('id, title, test_subtype, deleted_at, status, classes(name)').in('id', testIds);
+    const { data: asmData } = await sb.from('tests').select('id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name)').in('id', testIds);
     if (asmData) asmData.forEach(a => { testMap[a.id] = a; });
   }
 
@@ -1397,7 +1397,7 @@ export async function logCheatingEvent(studentId, testId, action, detail) {
 export async function fetchTests(filters = {}) {
   const sb = await getSupabase();
   try {
-    let query = sb.from('tests').select('id, title, display_name, test_subtype, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, working_duration_minutes, schedule_mode, test_type, is_dynamic_shell, shell_code, max_attempts, retake_allowed, created_at, deleted_at, classes(name), levels(name, level_number)');
+    let query = sb.from('tests').select('id, title, display_name, test_subtype, category, test_category, payload, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, working_duration_minutes, schedule_mode, test_type, is_dynamic_shell, shell_code, max_attempts, retake_allowed, created_at, deleted_at, classes(name), levels(name, level_number)');
     if (filters.class_id) query = query.eq('class_id', filters.class_id);
     if (!filters.include_deleted) {
       query = query.is('deleted_at', null);
@@ -2389,20 +2389,18 @@ export async function createVocabMasteryTest(config) {
     selectedWords = stratifiedSample(topicMap, customQuota);
   }
 
-  // Resolve the final test_type:
-  // - If caller explicitly passes 'TASK' or 'TEST', use that.
-  // - Otherwise derive from tier for backward-compat with old QUIZ/EXAM callers.
-  const resolvedCategory = test_type
-    ? test_type
-    : (tier === 'TASK' ? 'TASK' : 'TEST');
+  // Resolve the final test_type (PostgreSQL enum: 'quiz' | 'exam') and category ('TASK' | 'TEST'):
+  const isTaskTier = tier === 'TASK' || String(test_type).toLowerCase() === 'quiz' || test_type === 'TASK';
+  const resolvedType = isTaskTier ? 'quiz' : 'exam';
+  const resolvedCategory = isTaskTier ? 'TASK' : 'TEST';
 
   let defaultAnswerType = answerType;
   if (testType === 'IDIOM_PROVERB' ) {
       defaultAnswerType = 'phrase_recognition';
-  } else if (tier === 'TASK') {
+  } else if (isTaskTier) {
       defaultAnswerType = 'spoken';
   } else {
-      defaultAnswerType = 'written';
+      defaultAnswerType = 'spoken';
   }
 
   const testPayload = {
@@ -2411,7 +2409,8 @@ export async function createVocabMasteryTest(config) {
     class_id:                 classId,
     level_id:                 levelId,
     test_subtype:          'VOCAB_' + tier,
-    test_type:      resolvedCategory,
+    test_type:                resolvedType,
+    category:                 resolvedCategory,
     title:                    title,
     description:              'Vocabulary Mastery (' + tier + '). Topics: ' + sourceTopics.join(', '),
     status:                   'PUBLISHED',
@@ -2537,7 +2536,7 @@ export async function checkAndTriggerLevelUp(studentId, currentLevelId) {
     .select('id, title, display_order, shell_code, levels!inner(level_number)')
     .eq('level_id', currentLevelId)
     .neq('levels.level_number', 0)
-    .eq('test_type', 'TEST')
+    .eq('category', 'TEST')
     .eq('status', 'PUBLISHED')
     .order('display_order', { ascending: false })
     .order('created_at', { ascending: false })
@@ -2705,29 +2704,29 @@ export async function upsertDynamicTestShell(config) {
     displayOrder = 1
   } = config;
 
-  const isTest = tier === 'TEST';
+  const isTest = tier === 'TEST' || tier === 'EXAM';
   const isPhrase = category === 'phrases' || modulePrefix === 'PHRASE';
   const effectiveDurationMinutes = durationMinutes !== null && durationMinutes !== undefined
     ? Number(durationMinutes)
     : (isTest ? 120 : 5);
 
-  // Standardized Shell Code: e.g. 3A1-WORDS-TASK, 3A1-PHRASES-TASK, 3A-WORDS-TEST, 3A-PHRASES-TEST
+  // Standardized Shell Code: e.g. 3A1-WORDS-QUIZ, 3A1-PHRASES-QUIZ, 3A-WORDS-EXAM, 3A-PHRASES-EXAM
   const code = isPhrase
-    ? (isTest ? `${levelNum}${themeCode}-PHRASES-TEST` : `${levelNum}${themeCode}${topicCode || '1'}-PHRASES-TASK`)
-    : (isTest ? `${levelNum}${themeCode}-WORDS-TEST` : `${levelNum}${themeCode}${topicCode || '1'}-WORDS-TASK`);
+    ? (isTest ? `${levelNum}${themeCode}-PHRASES-EXAM` : `${levelNum}${themeCode}${topicCode || '1'}-PHRASES-QUIZ`)
+    : (isTest ? `${levelNum}${themeCode}-WORDS-EXAM` : `${levelNum}${themeCode}${topicCode || '1'}-WORDS-QUIZ`);
 
-  // Standardized Title: e.g. "3rd Vocabulary A1 Words Task - Professional Identity"
+  // Standardized Title: e.g. "3rd Vocabulary A1 Words Quiz - Professional Identity"
   const ordinal = toOrdinal(levelNum);
   const cleanTitle = (topicName || themeName || '').replace(/["']/g, '').trim();
   const generatedTitle = isPhrase
     ? (isTest
-        ? `${ordinal} Vocabulary ${themeCode} Phrases Test${cleanTitle ? ' - ' + cleanTitle : ''}`
-        : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Phrases Task${cleanTitle ? ' - ' + cleanTitle : ''}`)
+        ? `${ordinal} Vocabulary ${themeCode} Phrases Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
+        : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Phrases Quiz${cleanTitle ? ' - ' + cleanTitle : ''}`)
     : (isTest
-        ? `${ordinal} Vocabulary ${themeCode} Words Test${cleanTitle ? ' - ' + cleanTitle : ''}`
-        : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Words Task${cleanTitle ? ' - ' + cleanTitle : ''}`);
+        ? `${ordinal} Vocabulary ${themeCode} Words Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
+        : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Words Quiz${cleanTitle ? ' - ' + cleanTitle : ''}`);
 
-  // Default answer types: Spoken for Tasks (Words & Phrases), Spoken for Words Test, Selection for Phrases Test
+  // Default answer types: Spoken for Quizzes (Words & Phrases), Spoken for Words Exam, Selection for Phrases Exam
   const defaultAnswerType = isTest ? (isPhrase ? 'selection' : 'spoken') : 'spoken';
 
   // Expected question counts
@@ -2753,13 +2752,24 @@ export async function upsertDynamicTestShell(config) {
     .maybeSingle();
 
   if (!existing) {
-    // Check legacy aliases
+    // Check legacy aliases (including previous -TASK, -TEST, etc.)
     const legacyCodes = isPhrase
       ? [
+          `${levelNum}${themeCode}-PHRASES-EXAM`,
+          `${levelNum}${themeCode}-PHRASES-TEST`,
+          `${levelNum}${themeCode}${topicCode || '1'}-PHRASES-QUIZ`,
+          `${levelNum}${themeCode}${topicCode || '1'}-PHRASES-TASK`,
+          isTest ? `${levelNum}${themeCode} Phrases Exam` : `${levelNum}${themeCode}${topicCode || '1'} Phrases Quiz`,
           isTest ? `${levelNum}${themeCode} Phrases Test` : `${levelNum}${themeCode}${topicCode || '1'} Phrases Task`,
           isTest ? `3VOCAB-${themeCode}-TEST-PHR` : `3VOCAB-${themeCode}${topicCode || '1'}-PHR`
         ]
       : [
+          `${levelNum}${themeCode}-WORDS-EXAM`,
+          `${levelNum}${themeCode}-WORDS-TEST`,
+          `${levelNum}${themeCode}${topicCode || '1'}-WORDS-QUIZ`,
+          `${levelNum}${themeCode}${topicCode || '1'}-WORDS-TASK`,
+          isTest ? `${levelNum}${themeCode} Words Exam` : `${levelNum}${themeCode}${topicCode || '1'} Words Quiz`,
+          isTest ? `${levelNum}${themeCode} Words Test` : `${levelNum}${themeCode}${topicCode || '1'} Words Task`,
           isTest ? `${levelNum}${themeCode} Vocab Test` : `${levelNum}${themeCode}${topicCode || '1'} Vocab Task`,
           isTest ? `3VOCAB-${themeCode}-TEST-WOR` : `3VOCAB-${themeCode}${topicCode || '1'}-WOR`
         ];
@@ -2794,12 +2804,12 @@ export async function upsertDynamicTestShell(config) {
     class_id:                   classId || (existing ? existing.class_id : null),
     level_id:                   levelId,
     module_id:                  moduleId,
-    test_subtype:            isTest ? (isPhrase ? 'PHRASE_TEST' : 'VOCAB_TEST') : (isPhrase ? 'PHRASE_TASK' : 'VOCAB_TASK'),
-    test_type:                  isTest ? 'TEST' : 'TASK',
-    category:                   isTest ? 'TEST' : 'TASK',
+    test_subtype:               isTest ? (isPhrase ? 'PHRASE_EXAM' : 'VOCAB_EXAM') : (isPhrase ? 'PHRASE_QUIZ' : 'VOCAB_QUIZ'),
+    test_type:                  isTest ? 'exam' : 'quiz',
+    category:                   isTest ? 'EXAM' : 'QUIZ',
     shell_code:                 code,
     title:                      generatedTitle,
-    description:                description || `${tier}: ${themeCode}/${topicCode || 'ALL'} (${isPhrase ? 'Phrases' : 'Words'})`,
+    description:                description || `${isTest ? 'Exam' : 'Quiz'}: ${themeCode}/${topicCode || 'ALL'} (${isPhrase ? 'Phrases' : 'Words'})`,
     status:                     'PUBLISHED',
     working_duration_minutes:   effectiveDurationMinutes,
     minimum_required_score:     effectiveMinScore,
@@ -2819,6 +2829,7 @@ export async function upsertDynamicTestShell(config) {
       category: isPhrase ? 'phrases' : 'words', 
       answer_type: effectiveAnswerType, 
       shell_code: code,
+      tier: isTest ? 'EXAM' : 'QUIZ',
       working_duration_minutes: effectiveDurationMinutes,
       duration_minutes: effectiveDurationMinutes,
       minimum_required_score: effectiveMinScore,
@@ -2877,11 +2888,12 @@ export async function updateClassTestsConfig(params = {}) {
   let updatedTests = 0;
 
   for (const row of rows) {
-    const isTest = String(row.category).toUpperCase() === 'TEST'
-      || String(row.test_type).toUpperCase() === 'TEST'
+    const isTest = String(row.category).toUpperCase() === 'EXAM'
+      || String(row.category).toUpperCase() === 'TEST'
+      || String(row.test_type).toUpperCase() === 'EXAM'
       || String(row.test_type).toLowerCase() === 'exam'
-      || (row.shell_code && row.shell_code.endsWith('-TEST'))
-      || (row.title && row.title.toUpperCase().includes(' TEST'));
+      || (row.shell_code && (row.shell_code.endsWith('-EXAM') || row.shell_code.endsWith('-TEST')))
+      || (row.title && (row.title.toUpperCase().includes(' EXAM') || row.title.toUpperCase().includes(' TEST')));
     const isPhrase = row.category === 'phrases' 
       || (row.payload && row.payload.category === 'phrases') 
       || (row.shell_code && row.shell_code.toUpperCase().includes('PHRASE'))
@@ -3042,12 +3054,12 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         const topicObj = themeData.topics.get(topicCode);
         const topicName = topicObj.name;
         
-        // 1. Words Task (First in topic pair)
+        // 1. Words Quiz (First in topic pair)
         if (topicObj.hasVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
           hasAnyVocab = true;
           const { testId, action } = await upsertDynamicTestShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
-            tier: 'TASK', themeName: themeData.name, topicName: topicName,
+            tier: 'QUIZ', themeName: themeData.name, topicName: topicName,
             description: `Theme: ${themeData.name} | Topic: ${topicName}`,
             themeCode, topicCode,
             modulePrefix: 'VOCAB', category: 'words',
@@ -3063,12 +3075,12 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           lastTaskId = testId;
         }
 
-        // 2. Phrases Task (Second in topic pair, chained to Word Task)
+        // 2. Phrases Quiz (Second in topic pair, chained to Word Quiz)
         if (topicObj.hasPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
           hasAnyPhrases = true;
           const { testId, action } = await upsertDynamicTestShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
-            tier: 'TASK', themeName: themeData.name, topicName: topicName,
+            tier: 'QUIZ', themeName: themeData.name, topicName: topicName,
             description: `Theme: ${themeData.name} | Topic: ${topicName}`,
             themeCode, topicCode,
             modulePrefix: 'PHRASE', category: 'phrases',
@@ -3085,12 +3097,12 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         }
       }
 
-      // 3. Words Test (First in theme test pair)
+      // 3. Words Exam (First in theme exam pair)
       if (hasAnyVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
         const { testId, action } = await upsertDynamicTestShell({
           institutionId, programId, levelId, classId: targetClassId, levelNum,
-          tier: 'TEST', themeName: themeData.name, topicName: null,
-          description: `Theme Test: ${themeData.name}`,
+          tier: 'EXAM', themeName: themeData.name, topicName: null,
+          description: `Theme Exam: ${themeData.name}`,
           themeCode, topicCode: null,
           modulePrefix: 'VOCAB', category: 'words',
           moduleId: vocabModuleId,
@@ -3105,12 +3117,12 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         lastTaskId = testId;
       }
 
-      // 4. Phrases Test (Second in theme test pair, chained to Word Test)
+      // 4. Phrases Exam (Second in theme exam pair, chained to Word Exam)
       if (hasAnyPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
         const { testId, action } = await upsertDynamicTestShell({
           institutionId, programId, levelId, classId: targetClassId, levelNum,
-          tier: 'TEST', themeName: themeData.name, topicName: null,
-          description: `Theme Test: ${themeData.name}`,
+          tier: 'EXAM', themeName: themeData.name, topicName: null,
+          description: `Theme Exam: ${themeData.name}`,
           themeCode, topicCode: null,
           modulePrefix: 'PHRASE', category: 'phrases',
           moduleId: phraseModuleId,

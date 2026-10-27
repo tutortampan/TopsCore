@@ -240,6 +240,23 @@ export function calculateOverallStudentScore(takenPercentages = []) {
 }
 
 /**
+ * Authoritative Helper to accurately identify weekly milestone exams vs daily tasks/quizzes.
+ * Used for exam-only points, academic score, and grade isolation across Tutor Room and Student Dashboard.
+ */
+export function isWeeklyExam(asm) {
+  if (!asm) return false;
+  if (asm.test_type === 'exam') return true;
+  if (asm.test_type === 'quiz') return false;
+  if (['EXAM', 'TEST'].includes(asm.category) || ['EXAM', 'TEST'].includes(asm.test_category)) return true;
+  if (['EXAM', 'TEST'].includes(asm.payload?.category) || ['EXAM', 'TEST'].includes(asm.payload?.test_category)) return true;
+  if (asm.payload?.is_unified_test === true) return true;
+  const shell = String(asm.shell_code || asm.payload?.shell_code || '').toUpperCase();
+  if (shell.endsWith('-EXAM') || shell.includes('-EXAM-') || shell.endsWith('-TEST') || shell.includes('-TEST-')) return true;
+  if (shell.endsWith('-QUIZ') || shell.includes('-QUIZ-') || shell.endsWith('-TASK') || shell.includes('-TASK-')) return false;
+  return /\b(EXAM|TEST)\b/i.test(asm.title || '');
+}
+
+/**
  * Authoritative Grade & Score Palette (6 Clean Tiers: ★, A, B, C, D, E)
  * ★ Excellent  100%       Rich Green (White Star) #22C55E
  * A Very Good  90% – 99%  True Leaf Green         #22C55E
