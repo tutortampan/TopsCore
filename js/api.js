@@ -893,7 +893,7 @@ export async function startTest(studentId, testId) {
         status: 'in_progress',
         score: 0,
         percentage: 0,
-        grade: 'F',
+        grade: 'E',
         is_best_score: false,
         is_remedial_unlocked: isRemedialSession
       })
@@ -923,7 +923,7 @@ export async function startTest(studentId, testId) {
           theme_code: sq.theme_code || test.payload?.theme_code,
           category: sq.category_snapshot || test.payload?.category || 'vocab',
           display_order: sq.display_order ?? (idx + 1),
-          answer_type: sq.answer_type || 'written',
+          answer_type: sq.answer_type || 'spoken',
           options_snapshot: sq.options_snapshot || [],
           test_section: sq.test_section || null,
           section_label: sq.section_label || null,
@@ -943,8 +943,28 @@ export async function startTest(studentId, testId) {
           .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score')
           .eq('attempt_id', attempt.id);
         answers = refetched || [];
+
+        // Authoritative: Update total_questions on attempt in database and memory
+        if (answers.length > 0) {
+          await sb.from('attempts').update({
+            total_questions: answers.length,
+            updated_at: new Date().toISOString()
+          }).eq('id', attempt.id);
+          attempt.total_questions = answers.length;
+        }
       }
     }
+  }
+
+  // Self-heal: ensure attempt.total_questions matches answers.length
+  if (attempt && (!attempt.total_questions || attempt.total_questions === 0) && answers && answers.length > 0) {
+    try {
+      await sb.from('attempts').update({
+        total_questions: answers.length,
+        updated_at: new Date().toISOString()
+      }).eq('id', attempt.id);
+      attempt.total_questions = answers.length;
+    } catch (_) {}
   }
 
   if (answers && answers.length > 0) {
@@ -3532,6 +3552,109 @@ export async function removeStudentFromTestSession({ testId, studentId, action =
   return { success: true, updatedSession };
 }
 
+/**
+ * Extend active test session time and update active student attempts
+ */
+export async function extendTestSessionTime({ testIds = [], additionalMinutes = 10 }) {
+  const sb = await getSupabase();
+  const mins = parseInt(additionalMinutes, 10);
+  if (isNaN(mins) || mins <= 0) {
+    throw new Error('Additional minutes must be a positive number.');
+  }
+
+  if (!testIds.length) {
+    throw new Error('No tests specified to extend time.');
+  }
+
+  const { data: tests, error: fetchErr } = await sb.from('tests')
+    .select('id, working_duration_minutes, availability_end, payload')
+    .in('id', testIds);
+
+  if (fetchErr || !tests?.length) throw new Error('Tests not found: ' + (fetchErr?.message || ''));
+
+  let latestAutoClose = null;
+  const now = Date.now();
+
+  for (const t of tests) {
+    const currentSession = t.payload?.test_session;
+    if (!currentSession || currentSession.status !== 'UNLOCKED') continue;
+
+    const baseCloseTime = currentSession.auto_close_at 
+      ? new Date(currentSession.auto_close_at).getTime() 
+      : (t.availability_end ? new Date(t.availability_end).getTime() : (now + 30 * 60 * 1000));
+    
+    // Extend from existing auto_close_at (or now if already expired)
+    const newCloseMs = Math.max(now, baseCloseTime) + (mins * 60 * 1000);
+    const newCloseIso = new Date(newCloseMs).toISOString();
+
+    const updatedSession = {
+      ...currentSession,
+      auto_close_at: newCloseIso,
+      allocated_minutes: (currentSession.allocated_minutes || 0) + mins
+    };
+
+    const updatedPayload = {
+      ...(t.payload || {}),
+      test_session: updatedSession
+    };
+
+    await sb.from('tests').update({
+      availability_end: newCloseIso,
+      working_duration_minutes: (t.working_duration_minutes || 0) + mins,
+      payload: updatedPayload
+    }).eq('id', t.id);
+
+    if (!latestAutoClose || newCloseMs > latestAutoClose) {
+      latestAutoClose = newCloseMs;
+    }
+  }
+
+  // Also extend expires_at for all in_progress attempts belonging to these testIds
+  if (latestAutoClose) {
+    const { data: activeAttempts } = await sb.from('attempts')
+      .select('id, expires_at')
+      .in('test_id', testIds)
+      .eq('status', 'in_progress');
+
+    if (activeAttempts && activeAttempts.length > 0) {
+      for (const att of activeAttempts) {
+        const currentExp = att.expires_at ? new Date(att.expires_at).getTime() : now;
+        const newAttExp = Math.max(now, currentExp) + (mins * 60 * 1000);
+        await sb.from('attempts').update({
+          expires_at: new Date(newAttExp).toISOString(),
+          updated_at: new Date().toISOString()
+        }).eq('id', att.id);
+      }
+    }
+  }
+
+  const remainingMins = latestAutoClose ? Math.max(1, Math.ceil((latestAutoClose - now) / 60000)) : mins;
+
+  return {
+    success: true,
+    addedMinutes: mins,
+    newAutoCloseAt: latestAutoClose ? new Date(latestAutoClose).toISOString() : null,
+    remainingMinutes: remainingMins
+  };
+}
+
+/**
+ * Reset / forgive student anti-cheat alarms in active test session
+ */
+export async function resetStudentTestAlarms({ studentId, testIds = [] }) {
+  const sb = await getSupabase();
+  if (!studentId || !testIds.length) return { success: false };
+
+  const { error } = await sb.from('audit_logs')
+    .update({ action: 'CHEAT_FORGIVEN_BY_TUTOR' })
+    .eq('action', 'CHEAT_ATTEMPT')
+    .eq('actor_user_id', studentId)
+    .in('entity_id', testIds);
+
+  if (error) console.warn('Failed to forgive cheat logs:', error);
+  return { success: !error };
+}
+
 export async function fetchLiveTestSessionData({ testIds = [], studentIds = [], unlockedAt = null }) {
   const sb = await getSupabase();
   if (!testIds.length || !studentIds.length) {
@@ -3539,27 +3662,23 @@ export async function fetchLiveTestSessionData({ testIds = [], studentIds = [], 
   }
 
   let attemptsQuery = sb.from('attempts')
-    .select('id, student_id, test_id, status, score, correct_count, total_questions, percentage, effective_score, grade, started_at, submitted_at, updated_at')
+    .select('id, student_id, test_id, status, score, correct_count, total_questions, percentage, effective_score, grade, started_at, expires_at, submitted_at, updated_at')
     .in('test_id', testIds)
     .in('student_id', studentIds);
 
-  if (unlockedAt) {
-    const windowStart = new Date(new Date(unlockedAt).getTime() - 10 * 60 * 1000).toISOString();
-    attemptsQuery = attemptsQuery.gte('created_at', windowStart);
-  }
+  // Safe window start: if unlockedAt provided, use it; otherwise default to past 3 hours to prevent leaking ancient historical attempts
+  const safeUnlockedAt = unlockedAt || new Date(Date.now() - 3 * 3600 * 1000).toISOString();
+  const windowStart = new Date(new Date(safeUnlockedAt).getTime() - 10 * 60 * 1000).toISOString();
 
+  attemptsQuery = attemptsQuery.gte('created_at', windowStart);
   const { data: attempts } = await attemptsQuery;
 
   let cheatQuery = sb.from('audit_logs')
     .select('id, actor_user_id, entity_id, new_value, created_at')
     .eq('action', 'CHEAT_ATTEMPT')
     .in('entity_id', testIds)
-    .in('actor_user_id', studentIds);
-
-  if (unlockedAt) {
-    const windowStart = new Date(new Date(unlockedAt).getTime() - 10 * 60 * 1000).toISOString();
-    cheatQuery = cheatQuery.gte('created_at', windowStart);
-  }
+    .in('actor_user_id', studentIds)
+    .gte('created_at', windowStart);
 
   const { data: cheatLogs } = await cheatQuery;
 
@@ -3587,6 +3706,8 @@ if (typeof window !== 'undefined') {
   window.openTestSession = openTestSession;
   window.addLateStudentsToSession = addLateStudentsToSession;
   window.removeStudentFromTestSession = removeStudentFromTestSession;
+  window.extendTestSessionTime = extendTestSessionTime;
+  window.resetStudentTestAlarms = resetStudentTestAlarms;
   window.fetchLiveTestSessionData = fetchLiveTestSessionData;
   window.labelAttemptRemedial = labelAttemptRemedial;
   window.closeTestSession = closeTestSession;

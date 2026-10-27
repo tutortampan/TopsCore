@@ -1,14 +1,48 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-27 20:05 UTC+8
+Last Updated: 2026-10-27 20:35 UTC+8
 
-Current Phase: Phase 149: Assessment Submission & Auto-Close Scoring Resolution & Words Tasks 10-Minute Duration [COMPLETE]
+Current Phase: Phase 150: Live Test Session Real-time Monitor, Dynamic Time Extension & Anti-Cheat Enhancements [COMPLETE]
 
-Current Task: Resolve "assessment_id tidak ditemukan" submission crash, eliminate 0-score auto-close penalty when timer runs out, and enforce 10-minute duration for all 16 Words Tasks [COMPLETE]
+Current Task: Fix live monitor question count display, realtime score calculations, dynamic running exam time extension (+5m, +10m, +15m, +30m, custom), anti-cheat alarm inspection and false-positive reset [COMPLETE]
 
-Status: COMPLETE (Fixed PostgreSQL stored procedures `emergency_submit_attempt` and `auto_close_expired_attempts` on Supabase Cloud to strictly use `test_id` and evaluate/score all saved answers; enhanced `submitTest` in `js/api.js` with 3-tier fallback including direct client-side grading; updated all 16 Words Tasks in `public.tests` to 10 minutes working duration; updated generator defaults in `js/api.js` and `js/admin/auto-gen-modal.js` to 10 minutes for words; bumped SW cache to `topscore-cache-submit-fix-v6`; 39/39 JS files syntax valid; 100% verified via automated integration test `test_submit_and_duration.mjs`).
+Status: COMPLETE (Added test session time extension modal and backend logic `extendTestSessionTime`, auto-syncing student countdown timers via heartbeat; resolved question count denominator discrepancy by backfilling 49 attempts in DB and updating live monitor logic; eliminated reload exploit and microphone false-alarms in anti-cheat system; added interactive alarm inspection modal with reset option; integrated Supabase Realtime channel for live attempt updates; 39/39 JS files syntax valid; 100% verified via automated integration test `test_live_monitor_and_time_extension.mjs`).
 
 ## Completed
+
+- **Phase 150: Live Test Session Real-time Monitor, Dynamic Time Extension & Anti-Cheat Enhancements**:
+  - **1. Root Cause Analysis**:
+    - **Question Counts Discrepancy (`128 / 40 (100%)`)**: In `openThemeLiveMonitorModal`, fallback logic defaulted `totalQuestions = (wordsTest ? 20 : 0) + (phrasesTest ? 20 : 0) = 40` whenever `attempt.total_questions` was falsy or 0. Because `startTest` previously inserted attempts without `total_questions`, older active attempts had `total_questions = 0`, leading to absurd percentages such as `128 / 40 (100%)` for Theme B Words Test (which actually has 280 questions).
+    - **No Exam Time Extension Option**: There was no interactive UI or backend mechanism for tutors to extend the running exam time if students needed more time during a session.
+    - **Anti-Cheat Alarms Issues**:
+      - Historical alarms were queried without a lower time bound if `unlockedAt` was null/undefined, causing alarms from previous days/weeks to accumulate.
+      - `cheatStrikes` in `js/test.js` was stored in a local volatile JS variable, allowing students to clear their strike count simply by reloading the browser (F5).
+      - Android/Chrome speech recognition microphone permission switches or intents briefly blurred the browser window, falsely triggering cheating alarm strikes (`window._isSpeechRecognitionEngaged`).
+      - Tutors could not view what triggered the alarms or forgive/reset false-positive alarms.
+    - **Realtime Score Accuracy**: Real-time score calculations didn't handle fuzzy multi-delimiter answers or properly fall back when an attempt was submitted with previously recorded scores.
+  - **2. Database & API Layer Fixes (`js/api.js`)**:
+    - **Database Backfill**: Ran migration script updating all 49 existing attempts where `total_questions = 0` to their exact row count in `attempt_answers` (e.g. 280 for Theme B Words Test, 70 for Phrases Test).
+    - **`startTest`**: Guaranteed `total_questions` is saved upon attempt creation. Aligned default attempt grade to official `E` (eliminating legacy 'F').
+    - **`extendTestSessionTime({ testIds, additionalMinutes })`**: Created API and window-accessible helper that updates `auto_close_at`, `availability_end`, and `working_duration_minutes` in `public.tests`, and simultaneously extends `expires_at` for all active in-progress attempts.
+    - **`resetStudentTestAlarms({ studentId, testIds })`**: Added helper that updates audit logs with action `CHEAT_FORGIVEN_BY_TUTOR`.
+    - **`fetchLiveTestSessionData`**: Added `expires_at` column selection; added safe fallback `windowStart` (defaulting to last 3 hours if `unlockedAt` is absent) to avoid pulling historical alarms from days/weeks ago.
+  - **3. Student Test Runner Improvements (`js/test.js`)**:
+    - **Anti-Cheat Persistence**: Persisted `cheatStrikes` in `sessionStorage.getItem('topscore_strikes_' + attemptId)` and restored it on page load, stopping the reload exploit.
+    - **Speech Recognition Shield**: Added `window._isSpeechRecognitionEngaged` guard: ignores window blur events triggered by OS mic permission dialogs or audio intent switches during speech recognition.
+    - **Dynamic Time Extension Heartbeat**: Updated `_sessionHeartbeatTimer` (every 8s) to query `status, expires_at`. If `expires_at` is extended by tutor (>30s difference), it updates local `attemptData.expires_at`, re-executes `startTimer(currentSection)`, and displays toast: `⏱️ Waktu ujian Anda telah diperpanjang oleh Tutor (+X menit)!`.
+  - **4. Live Monitor Controller & UI (`js/admin/tests-access.js`)**:
+    - **Quick Add Time UI**: Added `#btn-live-modal-add-time` and dropdown menu (`+5m`, `+10m`, `+15m`, `+30m`, and Custom Minutes input) directly in the Live Monitor header.
+    - **Student Alarm Inspection Modal**: Added `#modal-student-alarm-detail` with clickable badges (`.btn-inspect-student-alarms`), displaying full timestamped incident history (in WITA), trigger reasons, and an interactive "Reset / Ampuni Alarm Siswa" button.
+    - **Accurate Question Count Fallback**: Integrated `THEME_EXPECTED_COUNTS` (Theme A: 120/30, B: 280/70, C: 480/120, D: 640/160; never 40).
+    - **True Realtime Supabase Channel**: Subscribed to Supabase channel `postgres_changes` on `attempts`, `attempt_answers`, and `audit_logs` with automatic debounced refresh and clean teardown on modal close.
+  - **5. Verification & Testing**:
+    - Automated integration test `scripts/test_live_monitor_and_time_extension.mjs`:
+      - Verified all active Theme B attempts have valid `total_questions` (280 for Words Test).
+      - Verified `extendTestSessionTime` successfully extends test session time.
+      - Verified real-time scoring engine correctly handles answers and remedial score caps.
+    - Bumped Service Worker cache to `topscore-cache-live-monitor-v7` in `sw.js`.
+    - Syntax validation: 39/39 JS files passed (`node --check`).
+
 
 - **Phase 149: Assessment Submission & Auto-Close Scoring Resolution & Words Tasks 10-Minute Duration**:
   - **1. Root Cause Analysis**:

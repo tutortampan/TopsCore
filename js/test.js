@@ -167,8 +167,24 @@ import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     let cheatDeadline = 0;
     let lastCheatTriggerTime = 0;
 
+    // Restore persistent strike count across page refreshes for this attempt
+    try {
+      const currentAttId = attemptData?.id || sessionStorage.getItem('topscore_attempt_id');
+      if (currentAttId) {
+        const savedStrikes = parseInt(sessionStorage.getItem(`topscore_strikes_${currentAttId}`), 10);
+        if (!isNaN(savedStrikes) && savedStrikes > 0) {
+          cheatStrikes = savedStrikes;
+        }
+      }
+    } catch (_) {}
+
     function triggerCheatAlert(reason) {
       if (!isTestActive || !securityConfig.enabled) return;
+
+      // Guard: Ignore blur events if speech recognition or mic is active (prevents false alarms on Android/Chrome OS intent)
+      if (window._isSpeechRecognitionEngaged && (reason.includes('focus') || reason.includes('blur'))) {
+        return;
+      }
 
       const now = Date.now();
       // Cooldown & Active Guard: Prevent multi-event cascade (e.g. popstate + blur + visibilitychange firing in 1s on side panel or return button)
@@ -179,6 +195,13 @@ import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       isCheatAlertActive = true;
 
       cheatStrikes++;
+      try {
+        const currentAttId = attemptData?.id || sessionStorage.getItem('topscore_attempt_id');
+        if (currentAttId) {
+          sessionStorage.setItem(`topscore_strikes_${currentAttId}`, String(cheatStrikes));
+        }
+      } catch (_) {}
+
       logCheatingEvent(session.student_id, testId, 'CHEAT_ATTEMPT', {
         reason: reason,
         strike: cheatStrikes,
@@ -764,9 +787,9 @@ import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         if (!isTestActive || !attemptData?.id) return;
         try {
           const sb = await getSupabase();
-          // 1. Check attempt status
+          // 1. Check attempt status & dynamic time extensions from tutor
           const { data: att } = await sb.from('attempts')
-            .select('status')
+            .select('status, expires_at')
             .eq('id', attemptData.id)
             .single();
 
@@ -785,6 +808,19 @@ import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
               alert('🚨 Sesi ujian Anda telah dikumpulkan oleh Pengawas / Tutor.');
               window.location.href = `result.html?attempt_id=${attemptData.id}`;
               return;
+            }
+
+            // Real-time time extension detection from Tutor Live Controller
+            if (att.expires_at) {
+              const serverExp = new Date(att.expires_at).getTime();
+              const localExp = attemptData.expires_at ? new Date(attemptData.expires_at).getTime() : 0;
+              if (serverExp > localExp + 30000) {
+                const addedMinutes = Math.round((serverExp - localExp) / 60000);
+                attemptData.expires_at = att.expires_at;
+                const currentSec = (testsections && testsections[currentSectionIndex]) || null;
+                startTimer(currentSec);
+                showToast(`⏱️ Waktu ujian Anda telah diperpanjang oleh Tutor (+${addedMinutes} menit)!`, 'success', 6000);
+              }
             }
           }
 
@@ -1734,6 +1770,7 @@ import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         speechSessionObj = createSpeechSession({
           lang: langSelect.value,
           onStart() {
+            window._isSpeechRecognitionEngaged = true;
             micBtn.style.background = 'linear-gradient(135deg, #ef4444, #b91c1c)';
             micBtn.style.borderColor = 'rgba(239,68,68,0.5)';
             micBtn.innerHTML = '<svg style="width:clamp(18px, 4.5vw, 24px); height:clamp(18px, 4.5vw, 24px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>';
@@ -1751,6 +1788,7 @@ import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             autoSave(row.id, transcript);
           },
           onEnd() {
+            setTimeout(() => { window._isSpeechRecognitionEngaged = false; }, 1500);
             micBtn.style.background = 'linear-gradient(135deg,#10b981 0%,#059669 100%)';
             micBtn.style.borderColor = 'rgba(52,211,153,0.45)';
             micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
@@ -1760,6 +1798,7 @@ import { startTEST, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             micHelp.textContent = 'Tap to Speak';
           },
           onError(msg) {
+            setTimeout(() => { window._isSpeechRecognitionEngaged = false; }, 1500);
             micBtn.style.background = 'linear-gradient(135deg,#10b981 0%,#059669 100%)';
             micBtn.style.borderColor = 'rgba(52,211,153,0.45)';
             micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';

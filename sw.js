@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-submit-fix-v6';
+const CACHE_NAME = 'topscore-cache-live-monitor-v7';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

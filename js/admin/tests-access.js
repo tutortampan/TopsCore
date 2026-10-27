@@ -400,6 +400,37 @@ export async function renderClassTestSessions(container, context = {}) {
               <span>⏳ Sisa:</span>
               <span id="live-modal-remaining" style="color:#ffffff; font-weight:800;">--m</span>
             </div>
+
+            <!-- Quick Add Time Dropdown -->
+            <div style="position:relative; display:inline-block;" id="live-modal-add-time-wrapper">
+              <button type="button" class="btn btn-sm" id="btn-live-modal-add-time" style="padding:5px 12px; font-size:0.8rem; font-weight:700; background:linear-gradient(135deg, #10b981, #059669); border:1px solid #34d399; color:#ffffff; border-radius:6px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(16,185,129,0.3); cursor:pointer;">
+                <span>⏱️ + Tambah Waktu</span>
+                <span style="font-size:0.65rem;">▼</span>
+              </button>
+              <div id="live-modal-add-time-menu" class="hidden" style="position:absolute; right:0; top:calc(100% + 5px); background:#0f172a; border:1px solid rgba(255,255,255,0.18); border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,0.85); z-index:99999; min-width:190px; padding:6px; display:none; flex-direction:column; gap:4px;">
+                <div style="font-size:0.7rem; font-weight:700; color:#94a3b8; padding:4px 8px; border-bottom:1px solid rgba(255,255,255,0.08);">Perpanjang Sisa Ujian:</div>
+                <button type="button" class="btn-add-time-option" data-mins="5" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:7px 10px; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
+                  <span>⚡ +5 Menit</span>
+                  <span style="font-size:0.7rem; color:#38bdf8;">Quick</span>
+                </button>
+                <button type="button" class="btn-add-time-option" data-mins="10" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:7px 10px; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
+                  <span>⏱️ +10 Menit</span>
+                  <span style="font-size:0.7rem; color:#34d399;">Populer</span>
+                </button>
+                <button type="button" class="btn-add-time-option" data-mins="15" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:7px 10px; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
+                  <span>⏱️ +15 Menit</span>
+                </button>
+                <button type="button" class="btn-add-time-option" data-mins="30" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:7px 10px; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
+                  <span>⏱️ +30 Menit</span>
+                </button>
+                <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:4px; margin-top:2px;">
+                  <button type="button" id="btn-add-time-custom" style="width:100%; text-align:left; background:transparent; border:none; color:#fbbf24; padding:7px 10px; border-radius:6px; font-size:0.8rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:background 0.15s;" onmouseover="this.style.background='rgba(251,191,36,0.15)'" onmouseout="this.style.background='transparent'">
+                    <span>⚙️ Kustom Menit...</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <button type="button" class="btn btn-secondary btn-sm" id="btn-live-modal-refresh" style="padding:5px 12px; font-size:0.8rem; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
               <span>🔄</span> Refresh
             </button>
@@ -497,6 +528,31 @@ export async function renderClassTestSessions(container, context = {}) {
           <button type="button" class="btn btn-danger" id="btn-confirm-kick" style="background:#dc2626; border-color:#b91c1c; font-weight:800; padding:8px 18px; display:inline-flex; align-items:center; gap:6px;">
             <span>🚫</span> Keluarkan Sekarang
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 5: Student Alarm Detail & Forgive Modal -->
+    <div id="modal-student-alarm-detail" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:10010; padding:16px;">
+      <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(239,68,68,0.35); border-radius:12px; width:100%; max-width:540px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
+        <div style="padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.12);">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:1.5rem;">🚨</span>
+            <div>
+              <h4 id="alarm-detail-student-name" style="margin:0; font-size:1.1rem; font-weight:800; color:#ffffff;">Log Alarm Anti-Cheat</h4>
+              <div id="alarm-detail-meta" style="font-size:0.75rem; color:#fca5a5; margin-top:2px;">Riwayat peringatan integritas ujian</div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-ghost btn-icon" id="btn-close-alarm-detail" style="color:#94a3b8; font-size:1.3rem;">✕</button>
+        </div>
+        <div id="alarm-detail-logs-list" style="padding:16px 20px; max-height:50vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+          <!-- Items injected dynamically -->
+        </div>
+        <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.3); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-sm" id="btn-clear-student-alarms" style="background:rgba(245,158,11,0.2); border:1px solid #f59e0b; color:#fbbf24; font-size:0.78rem; font-weight:700; padding:6px 12px; border-radius:6px; cursor:pointer;">
+            🔄 Reset / Ampuni Alarm Siswa
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-dismiss-alarm-detail" style="font-size:0.78rem; padding:6px 14px;">Tutup</button>
         </div>
       </div>
     </div>
@@ -1192,6 +1248,9 @@ let _liveMonitorSearchQuery = '';
 /**
  * Open Modal: Live Test Session Monitor & Student Controller
  */
+/**
+ * Open Modal: Live Test Session Monitor & Student Controller
+ */
 async function openThemeLiveMonitorModal(container, theme, context) {
   const modal = container.querySelector('#modal-theme-live-monitor');
   if (!modal) return;
@@ -1239,6 +1298,42 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   _liveMonitorActiveFilter = 'all';
 
   let processedStudents = [];
+  let _realtimeChannel = null;
+  let _realtimeDebounce = null;
+
+  // Question count reference per Theme (cumulative vault sizes)
+  const THEME_EXPECTED_COUNTS = {
+    'A': { words: 120, phrases: 30 },
+    'B': { words: 280, phrases: 70 },
+    'C': { words: 480, phrases: 120 },
+    'D': { words: 640, phrases: 160 }
+  };
+
+  function countCorrectAnswers(answersList) {
+    let count = 0;
+    (answersList || []).forEach(ans => {
+      const val = (ans.student_answer || '').trim().toLowerCase();
+      if (!val) return;
+      if (ans.is_correct === true || ans.score >= 1) {
+        count++;
+        return;
+      }
+      let accepted = ans.accepted_answers_snapshot || [];
+      if (typeof accepted === 'string') {
+        try { accepted = JSON.parse(accepted); } catch { accepted = []; }
+      }
+      if (!Array.isArray(accepted) && typeof accepted === 'string') {
+        accepted = [accepted];
+      }
+      const correctSnap = String(ans.correct_answer_snapshot || '').split(/[;/|,]/).map(s => s.trim().toLowerCase()).filter(Boolean);
+      const acceptedClean = (accepted || []).flatMap(s => String(s).split(/[;/|,]/)).map(s => s.trim().toLowerCase()).filter(Boolean);
+      const allValid = [...new Set([...correctSnap, ...acceptedClean])];
+      if (allValid.includes(val)) {
+        count++;
+      }
+    });
+    return count;
+  }
 
   async function loadLiveData(silent = false) {
     if (!silent) {
@@ -1261,6 +1356,9 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
       const allStudents = context.allStudents || [];
       const enrolledStudents = allStudents.filter(s => studentIds.includes(s.id));
+
+      const themeCodeUpper = (theme.code || 'B').toUpperCase();
+      const themeCounts = THEME_EXPECTED_COUNTS[themeCodeUpper] || { words: 280, phrases: 70 };
 
       processedStudents = enrolledStudents.map(student => {
         const studAttempts = (sessionData.attempts || []).filter(a => a.student_id === student.id);
@@ -1289,25 +1387,39 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           statusColor = '#ef4444';
         }
 
-        // Module
+        // Active module identification
         let activeModule = 'None';
+        let targetAtt = null;
         if (inProgressAtt) {
+          targetAtt = inProgressAtt;
           activeModule = (inProgressAtt.test_id === theme.wordsTest?.id) ? 'Words Test' : 'Phrases Test';
         } else if (hasSubmitted) {
+          targetAtt = pAtt || wAtt;
           activeModule = (wAtt && pAtt) ? 'Words & Phrases' : (wAtt ? 'Words Test' : 'Phrases Test');
         }
 
-        // Answers & Progress
-        const studAttIds = studAttempts.map(a => a.id);
-        const studAnswers = (sessionData.answers || []).filter(ans => studAttIds.includes(ans.attempt_id));
-        const answeredCount = studAnswers.filter(ans => ans.student_answer && ans.student_answer.trim()).length;
+        // Answers belonging specifically to target attempt
+        const targetAnswers = targetAtt
+          ? (sessionData.answers || []).filter(ans => ans.attempt_id === targetAtt.id)
+          : (studAttempts.length > 0 
+              ? (sessionData.answers || []).filter(ans => studAttempts.some(a => a.id === ans.attempt_id)) 
+              : []);
+
+        const answeredCount = targetAnswers.filter(ans => ans.student_answer && ans.student_answer.trim()).length;
         
+        // Accurate total questions calculation
         let totalQuestions = 0;
-        if (studAttempts.length > 0) {
+        if (targetAtt && targetAtt.total_questions > 0) {
+          totalQuestions = targetAtt.total_questions;
+        } else if (targetAnswers.length > 0) {
+          totalQuestions = targetAnswers.length;
+        } else if (studAttempts.length > 0) {
           totalQuestions = studAttempts.reduce((acc, a) => acc + (a.total_questions || 0), 0);
         }
+
         if (totalQuestions === 0) {
-          totalQuestions = (theme.wordsTest ? 20 : 0) + (theme.phrasesTest ? 20 : 0);
+          const isPhrases = inProgressAtt ? (inProgressAtt.test_id === theme.phrasesTest?.id) : false;
+          totalQuestions = isPhrases ? themeCounts.phrases : themeCounts.words;
         }
 
         const answeredPercent = totalQuestions > 0 ? Math.min(100, Math.round((answeredCount / totalQuestions) * 100)) : 0;
@@ -1320,26 +1432,28 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         if (status === 'submitted') {
           const validSub = [wAtt, pAtt].filter(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
           if (validSub.length > 0) {
-            const sumEff = validSub.reduce((acc, a) => acc + parseFloat(a.effective_score ?? a.percentage ?? 0), 0);
+            let sumEff = 0;
+            validSub.forEach(a => {
+              let eff = parseFloat(a.effective_score ?? a.percentage ?? 0);
+              // Self-heal: If recorded score is 0 but student answered questions, compute on the fly
+              if (eff === 0) {
+                const subAnswers = (sessionData.answers || []).filter(ans => ans.attempt_id === a.id);
+                const subAnswered = subAnswers.filter(ans => ans.student_answer && ans.student_answer.trim()).length;
+                if (subAnswered > 0) {
+                  const correct = countCorrectAnswers(subAnswers);
+                  const tq = a.total_questions || subAnswers.length || 1;
+                  const recomputedPct = Math.round((correct / tq) * 100);
+                  eff = theme.isRemedial ? Math.min(recomputedPct, 60) : recomputedPct;
+                }
+              }
+              sumEff += eff;
+            });
             effectiveScore = Math.round(sumEff / validSub.length);
             rawScore = effectiveScore;
             isEvaluated = true;
           }
-        } else if (status === 'in_progress') {
-          let correctCount = 0;
-          studAnswers.forEach(ans => {
-            const val = (ans.student_answer || '').trim().toLowerCase();
-            if (!val) return;
-            let accepted = ans.accepted_answers_snapshot || [];
-            if (typeof accepted === 'string') {
-              try { accepted = JSON.parse(accepted); } catch { accepted = []; }
-            }
-            const isMatch = (accepted || []).some(a => String(a).trim().toLowerCase() === val) ||
-              (ans.correct_answer_snapshot && String(ans.correct_answer_snapshot).trim().toLowerCase() === val) ||
-              ans.is_correct === true;
-            if (isMatch) correctCount++;
-          });
-
+        } else if (status === 'in_progress' && targetAtt) {
+          const correctCount = countCorrectAnswers(targetAnswers);
           rawScore = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
           effectiveScore = theme.isRemedial ? Math.min(rawScore, 60) : rawScore;
           isEvaluated = true;
@@ -1347,10 +1461,14 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
         const grade = getGrade(effectiveScore);
 
-        // Alarms / Anti-cheat
+        // Alarms / Anti-cheat details
         const studCheats = (sessionData.cheatLogs || []).filter(c => c.actor_user_id === student.id);
         const alarmCount = studCheats.length;
-        const alarmReasons = studCheats.map(c => c.new_value?.reason || 'Security Warning');
+        const alarmList = studCheats.map(c => ({
+          reason: c.new_value?.reason || 'Security Warning',
+          time: c.created_at,
+          strike: c.new_value?.strike || 1
+        }));
 
         return {
           student,
@@ -1366,7 +1484,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           isEvaluated,
           grade,
           alarmCount,
-          alarmReasons,
+          alarmList,
           hasAttempts: studAttempts.length > 0
         };
       });
@@ -1479,8 +1597,6 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         </div>
       `;
 
-      const alarmTooltip = item.alarmCount > 0 ? `Alarm dipicu ${item.alarmCount}x: ${item.alarmReasons.slice(0, 3).join(', ')}` : 'Aman / Tidak ada alarm';
-
       return `
         <div class="live-student-card" style="background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
           <!-- 1. Student Identity -->
@@ -1510,15 +1626,15 @@ async function openThemeLiveMonitorModal(container, theme, context) {
             </div>
           </div>
 
-          <!-- 3. Alarm / Anti-Cheat Status -->
-          <div style="min-width: 110px; text-align: center;">
+          <!-- 3. Alarm / Anti-Cheat Status (Clickable for details) -->
+          <div style="min-width: 120px; text-align: center;">
             ${item.alarmCount === 0 ? `
-              <span style="font-size: 0.75rem; font-weight: 700; color: #34d399; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #34d399; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                 🛡️ 0x Bersih
               </span>
             ` : `
-              <span style="font-size: 0.75rem; font-weight: 800; color: #ef4444; background: rgba(239,68,68,0.2); border: 1px solid #ef4444; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(239,68,68,0.3); cursor: help;" title="${escapeHtml(alarmTooltip)}">
-                🚨 ${item.alarmCount}x ALARM
+              <span class="btn-inspect-student-alarms" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="font-size: 0.75rem; font-weight: 800; color: #ef4444; background: rgba(239,68,68,0.2); border: 1px solid #ef4444; padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(239,68,68,0.3); cursor: pointer; transition: transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Klik untuk lihat rincian ${item.alarmCount}x alarm anti-cheat">
+                🚨 ${item.alarmCount}x ALARM 🔍
               </span>
             `}
           </div>
@@ -1564,6 +1680,19 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         });
       });
     });
+
+    // Attach inspect alarm detail listener
+    studentsContainer.querySelectorAll('.btn-inspect-student-alarms').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const studentId = e.currentTarget.getAttribute('data-student-id');
+        const found = processedStudents.find(p => p.student.id === studentId);
+        if (found) {
+          openStudentAlarmDetailModal(container, found.student, found.alarmList, theme, async () => {
+            await loadLiveData(true);
+          });
+        }
+      });
+    });
   }
 
   // Filter tab listeners
@@ -1587,11 +1716,125 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     refreshBtn.onclick = () => loadLiveData(false);
   }
 
+  // Time Extension Controls (+ Tambah Waktu)
+  const addTimeBtn = modal.querySelector('#btn-live-modal-add-time');
+  const addTimeMenu = modal.querySelector('#live-modal-add-time-menu');
+
+  if (addTimeBtn && addTimeMenu) {
+    addTimeBtn.onclick = (e) => {
+      e.stopPropagation();
+      const isHidden = addTimeMenu.style.display === 'none' || addTimeMenu.classList.contains('hidden');
+      addTimeMenu.style.display = isHidden ? 'flex' : 'none';
+      addTimeMenu.classList.toggle('hidden', !isHidden);
+    };
+
+    document.addEventListener('click', () => {
+      addTimeMenu.style.display = 'none';
+      addTimeMenu.classList.add('hidden');
+    });
+
+    modal.querySelectorAll('.btn-add-time-option').forEach(opt => {
+      opt.onclick = async (e) => {
+        e.stopPropagation();
+        const mins = parseInt(opt.getAttribute('data-mins'), 10);
+        addTimeMenu.style.display = 'none';
+        addTimeMenu.classList.add('hidden');
+        await doExtendTime(mins);
+      };
+    });
+
+    const customBtn = modal.querySelector('#btn-add-time-custom');
+    if (customBtn) {
+      customBtn.onclick = async (e) => {
+        e.stopPropagation();
+        addTimeMenu.style.display = 'none';
+        addTimeMenu.classList.add('hidden');
+        const inputStr = prompt('Masukkan jumlah menit tambahan (contoh: 20):', '20');
+        if (!inputStr) return;
+        const mins = parseInt(inputStr.trim(), 10);
+        if (isNaN(mins) || mins <= 0) {
+          alert('Jumlah menit harus berupa angka positif.');
+          return;
+        }
+        await doExtendTime(mins);
+      };
+    }
+  }
+
+  async function doExtendTime(mins) {
+    const testIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+    if (!testIds.length) {
+      showToast('Tidak ada tes yang aktif untuk diperpanjang.', 'error');
+      return;
+    }
+
+    try {
+      showToast(`Memperpanjang waktu ujian +${mins} menit...`, 'info', 3000);
+      const res = await extendTestSessionTime({ testIds, additionalMinutes: mins });
+      if (res.success) {
+        theme.remainingMinutes = res.remainingMinutes;
+        remainingEl.textContent = `${res.remainingMinutes}m`;
+        showToast(`⏱️ Waktu ujian berhasil diperpanjang +${mins} menit! Sisa waktu sekarang: ${res.remainingMinutes}m`, 'success', 5000);
+        await loadLiveData(true);
+        if (window.renderClassHub) {
+          // Background sync
+        }
+      }
+    } catch (err) {
+      console.error('Failed to extend test time:', err);
+      showToast('Gagal menambah waktu ujian: ' + err.message, 'error');
+    }
+  }
+
+  // Supabase Realtime Subscription setup
+  const debouncedRealtimeLoad = () => {
+    if (_realtimeDebounce) clearTimeout(_realtimeDebounce);
+    _realtimeDebounce = setTimeout(() => {
+      if (!modal.classList.contains('hidden')) {
+        loadLiveData(true);
+      }
+    }, 400);
+  };
+
+  async function setupRealtimeSubscription() {
+    try {
+      const sb = await getSupabase();
+      if (!sb || typeof sb.channel !== 'function') return;
+      const testIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+      if (!testIds.length) return;
+
+      const channelId = `live-monitor-${theme.code}-${Date.now()}`;
+      _realtimeChannel = sb.channel(channelId)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'attempts' }, (payload) => {
+          if (testIds.includes(payload.new?.test_id || payload.old?.test_id)) {
+            debouncedRealtimeLoad();
+          }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'attempt_answers' }, () => {
+          debouncedRealtimeLoad();
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'audit_logs' }, (payload) => {
+          if (payload.new?.action === 'CHEAT_ATTEMPT' && testIds.includes(payload.new?.entity_id)) {
+            debouncedRealtimeLoad();
+          }
+        })
+        .subscribe();
+    } catch (e) {
+      console.warn('Realtime subscription not available, falling back to auto-poll:', e);
+    }
+  }
+
   // Close handlers
   const closeModal = () => {
     if (_livePollingTimer) {
       clearInterval(_livePollingTimer);
       _livePollingTimer = null;
+    }
+    if (_realtimeChannel) {
+      try {
+        getSupabase().then(sb => sb.removeChannel(_realtimeChannel));
+      } catch (_) {}
+      _realtimeChannel = null;
     }
     modal.classList.add('hidden');
   };
@@ -1599,7 +1842,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   modal.querySelector('#btn-close-live-modal').onclick = closeModal;
   modal.querySelector('#btn-close-live-modal-footer').onclick = closeModal;
 
-  // Auto-poll interval handling
+  // Auto-poll interval handling (5s heartbeat safety)
   const setupAutoPoll = () => {
     if (_livePollingTimer) {
       clearInterval(_livePollingTimer);
@@ -1623,7 +1866,76 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
   await loadLiveData(false);
   setupAutoPoll();
+  setupRealtimeSubscription();
   modal.classList.remove('hidden');
+}
+
+/**
+ * Open Modal: Rincian Alarm Anti-Cheat & Opsi Reset / Ampuni Siswa
+ */
+function openStudentAlarmDetailModal(container, student, alarmsList = [], theme, onDone) {
+  const alarmModal = container.querySelector('#modal-student-alarm-detail');
+  if (!alarmModal) return;
+
+  const nameEl = alarmModal.querySelector('#alarm-detail-student-name');
+  const metaEl = alarmModal.querySelector('#alarm-detail-meta');
+  const listEl = alarmModal.querySelector('#alarm-detail-logs-list');
+
+  if (nameEl) nameEl.textContent = `${student.name || 'Siswa'} (${alarmsList.length}x ALARM)`;
+  if (metaEl) metaEl.textContent = `Batch ${theme.liveBatchName} • Theme ${theme.code} (${theme.name})`;
+
+  if (listEl) {
+    if (alarmsList.length === 0) {
+      listEl.innerHTML = `
+        <div style="text-align:center; color:#34d399; padding:24px 10px; font-weight:700;">
+          🛡️ Tidak ada catatan alarm integritas untuk siswa ini.
+        </div>
+      `;
+    } else {
+      listEl.innerHTML = alarmsList.map((item, idx) => {
+        const timeStr = item.time 
+          ? new Date(item.time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WITA' 
+          : '-';
+        return `
+          <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <div>
+              <div style="font-weight:700; color:#ffffff; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+                <span style="color:#ef4444;">⚠️ Incident #${idx + 1}</span>
+                <span style="font-size:0.75rem; color:#fca5a5;">(Strike ${item.strike || 1})</span>
+              </div>
+              <div style="font-size:0.78rem; color:#cbd5e1; margin-top:3px;">${escapeHtml(item.reason)}</div>
+            </div>
+            <div style="font-size:0.75rem; font-weight:700; color:#94a3b8; white-space:nowrap;">
+              ${timeStr}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  const closeAlarmModal = () => alarmModal.classList.add('hidden');
+  alarmModal.querySelector('#btn-close-alarm-detail').onclick = closeAlarmModal;
+  alarmModal.querySelector('#btn-dismiss-alarm-detail').onclick = closeAlarmModal;
+
+  const resetBtn = alarmModal.querySelector('#btn-clear-student-alarms');
+  if (resetBtn) {
+    resetBtn.onclick = async () => {
+      const testIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+      if (!confirm(`Reset semua alarm anti-cheat untuk ${student.name}? Tindakan ini akan menganggap peringatan sebelumnya sebagai false alarm.`)) return;
+
+      try {
+        await resetStudentTestAlarms({ studentId: student.id, testIds });
+        showToast(`✅ Seluruh alarm untuk ${student.name} berhasil di-reset.`, 'success');
+        closeAlarmModal();
+        if (onDone) onDone();
+      } catch (err) {
+        showToast('Gagal me-reset alarm: ' + err.message, 'error');
+      }
+    };
+  }
+
+  alarmModal.classList.remove('hidden');
 }
 
 /**

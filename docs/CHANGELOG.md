@@ -1,3 +1,50 @@
+## [2026-10-27 20:35] — Phase 150: Live Test Session Real-time Monitor, Dynamic Time Extension & Anti-Cheat Enhancements
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 150 (Live Test Session Real-time Monitor, Dynamic Time Extension & Anti-Cheat Enhancements)
+**Status:** PASS
+
+### Why
+- The user reported: "live view saat ujian belum benar2 real time. misal jumlah soalnya, anti cheat system,,, nilia realtime, dan berikan opsi menambahkan waktu sisa ujian saat sedang berlangsung,,, spertinya belum cock... coba cek!".
+- Investigation revealed:
+  1. **Question Counts Discrepancy**: Live view displayed `128 / 40 (100%)` because older attempts had `total_questions = 0` in the database, causing fallback calculation `(20 + 20) = 40`. The true question count for Theme B Words Test is 280.
+  2. **No Dynamic Time Extension**: Tutors had no UI or backend option to grant additional time to students during an active live session.
+  3. **Anti-Cheat System Bugs**:
+     - Queried audit logs without lower time bounds when `unlockedAt` was missing, pulling accumulated historical alarms from days/weeks ago.
+     - `cheatStrikes` in `test.js` was lost on page reload, allowing students to bypass strikes by refreshing the browser.
+     - Microphone engagement on mobile/Chrome during Speech Recognition blurred the window, causing false-positive alarm triggers.
+     - Tutors could not inspect what triggered the alarms or forgive/reset false-positive alarms.
+  4. **Realtime Score & Sync**: Scoring lacked multi-delimiter tolerance and Supabase Realtime channel integration was absent, relying solely on polling.
+
+### Changed
+- **Database (Supabase PostgreSQL)**:
+  - Backfilled all 49 existing active/completed attempts in `public.attempts` where `total_questions = 0` to their exact row count in `public.attempt_answers` (e.g. 280 for Theme B Words Test).
+- **Core API (`js/api.js`)**:
+  - `startTest`: Fixed attempt creation to populate `total_questions` upon initialization, and set default grade to official `E` (eliminating legacy 'F').
+  - Added `extendTestSessionTime({ testIds, additionalMinutes })`: updates `auto_close_at`, `availability_end`, and `working_duration_minutes` in `public.tests`, and updates `expires_at` on active in-progress attempts.
+  - Added `resetStudentTestAlarms({ studentId, testIds })`: logs tutor forgiveness in audit logs.
+  - `fetchLiveTestSessionData`: Added `expires_at` to query, and safe 3-hour fallback window to prevent historical alarm accumulation.
+- **Student Test Runner (`js/test.js`)**:
+  - `cheatStrikes`: Persisted in `sessionStorage` per attempt ID to eliminate the page reload exploit.
+  - `window._isSpeechRecognitionEngaged`: Guard prevents false cheating strikes during speech recognition mic dialogs.
+  - Heartbeat (`_sessionHeartbeatTimer`): Checks every 8s for changes to `expires_at`. When extended by tutor, dynamically updates local deadline, restarts countdown timer, and notifies student via toast.
+- **Admin Live Monitor (`js/admin/tests-access.js`)**:
+  - Header UI: Added Quick Add Time button (`#btn-live-modal-add-time`) and dropdown (`+5m`, `+10m`, `+15m`, `+30m`, custom input).
+  - Alarm Inspection Modal: Added `#modal-student-alarm-detail` with clickable badges (`.btn-inspect-student-alarms`), displaying incident logs and a "Reset / Ampuni Alarm Siswa" button.
+  - Fallback Question Counts: Enforced `THEME_EXPECTED_COUNTS` (Theme A: 120/30, B: 280/70, C: 480/120, D: 640/160; never 40).
+  - Supabase Realtime: Subscribed to `postgres_changes` on `attempts`, `attempt_answers`, and `audit_logs` with automatic debounced refresh and clean teardown.
+- **Service Worker (`sw.js`)**:
+  - Bumped cache name to `topscore-cache-live-monitor-v7`.
+
+### Tests
+- Integration test `scripts/test_live_monitor_and_time_extension.mjs`:
+  - Verified active Theme B attempts have valid `total_questions` (280 for Words Test): `PASS`.
+  - Tested `extendTestSessionTime` with +10m extension: `PASS` (`auto_close_at` and `expires_at` extended by 600s).
+  - Tested real-time scoring logic with raw and remedial caps: `PASS` (80% raw score capped at 60% with Grade C).
+- JavaScript syntax check: `node scripts/check_all_js_syntax.cjs`: 39/39 JS files passed syntax validation.
+
+---
+
 ## [2026-10-27 20:05] — Phase 149: Assessment Submission & Auto-Close Scoring Resolution & Words Tasks 10-Minute Duration
 
 **Agent/Session:** Antigravity
