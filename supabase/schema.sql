@@ -3269,9 +3269,9 @@ AS $$
 DECLARE
   v_attempt RECORD;
   v_student_id uuid;
-  v_assessment_id uuid;
+  v_test_id uuid;
   v_is_remedial boolean;
-  v_assessment_type text;
+  v_test_type text;
   v_ans RECORD;
   v_ans_elem jsonb;
   v_ans_id uuid;
@@ -3281,7 +3281,7 @@ DECLARE
   v_total_questions integer := 0;
   v_percentage numeric := 0;
   v_effective_score numeric := 0;
-  v_grade text := 'F';
+  v_grade text := 'E';
   v_result jsonb;
   v_norm_student text;
   v_is_match boolean;
@@ -3290,7 +3290,7 @@ DECLARE
   v_part text;
 BEGIN
   -- 1. Fetch Attempt
-  SELECT id, student_id, assessment_id, status, is_remedial_unlocked
+  SELECT id, student_id, test_id, status, is_remedial_unlocked
   INTO v_attempt
   FROM public.attempts
   WHERE id = p_attempt_id;
@@ -3300,11 +3300,11 @@ BEGIN
   END IF;
 
   v_student_id := v_attempt.student_id;
-  v_assessment_id := v_attempt.assessment_id;
+  v_test_id := v_attempt.test_id;
   v_is_remedial := COALESCE(v_attempt.is_remedial_unlocked, false);
 
   -- 2. Idempotency Check: if already submitted, return existing attempt
-  IF lower(v_attempt.status) IN ('submitted', 'auto_submitted', 'evaluated') THEN
+  IF lower(COALESCE(v_attempt.status, '')) IN ('submitted', 'auto_submitted', 'evaluated') THEN
     SELECT to_jsonb(a.*) INTO v_result FROM public.attempts a WHERE a.id = p_attempt_id;
     RETURN v_result;
   END IF;
@@ -3416,8 +3416,8 @@ BEGIN
 
   -- Remedial cap check for summative tests (KKM 60% Cap)
   IF v_is_remedial THEN
-    SELECT assessment_type INTO v_assessment_type FROM public.assessments WHERE id = v_assessment_id;
-    IF (v_assessment_type IN ('EXAM', 'QUIZ', 'TEST', 'VOCAB_TEST', 'UNIFIED_TEST') OR v_assessment_type LIKE '%TEST%') AND v_effective_score > 60 THEN
+    SELECT test_type::text INTO v_test_type FROM public.tests WHERE id = v_test_id;
+    IF (v_test_type IN ('exam', 'TEST') OR v_test_type LIKE '%TEST%') AND v_effective_score > 60 THEN
       v_effective_score := 60;
     END IF;
   END IF;
@@ -3447,29 +3447,36 @@ BEGIN
       percentage = v_percentage,
       grade = v_grade,
       effective_score = v_effective_score,
+      test_id = COALESCE(test_id, v_test_id),
       updated_at = NOW()
   WHERE id = p_attempt_id;
 
   -- 7. Best Score Resolution (§2.7)
-  UPDATE public.attempts
-  SET is_best_score = false
-  WHERE student_id = v_student_id AND assessment_id = v_assessment_id;
+  IF v_test_id IS NOT NULL THEN
+    UPDATE public.attempts
+    SET is_best_score = false
+    WHERE student_id = v_student_id AND test_id = v_test_id;
 
-  UPDATE public.attempts
-  SET is_best_score = true
-  WHERE id = (
-    SELECT id FROM public.attempts
-    WHERE student_id = v_student_id
-      AND assessment_id = v_assessment_id
-      AND lower(status) IN ('submitted', 'auto_submitted', 'evaluated')
-    ORDER BY COALESCE(effective_score, percentage, 0) DESC, submitted_at DESC
-    LIMIT 1
-  );
+    UPDATE public.attempts
+    SET is_best_score = true
+    WHERE id = (
+      SELECT id FROM public.attempts
+      WHERE student_id = v_student_id
+        AND test_id = v_test_id
+        AND lower(status) IN ('submitted', 'auto_submitted', 'evaluated')
+      ORDER BY COALESCE(effective_score, percentage, 0) DESC, submitted_at DESC
+      LIMIT 1
+    );
+  END IF;
 
   SELECT to_jsonb(a.*) INTO v_result FROM public.attempts a WHERE a.id = p_attempt_id;
   RETURN v_result;
 END;
 $$;
+
+GRANT ALL ON FUNCTION public.emergency_submit_attempt(p_attempt_id uuid, p_answers jsonb, p_status text) TO anon;
+GRANT ALL ON FUNCTION public.emergency_submit_attempt(p_attempt_id uuid, p_answers jsonb, p_status text) TO authenticated;
+GRANT ALL ON FUNCTION public.emergency_submit_attempt(p_attempt_id uuid, p_answers jsonb, p_status text) TO service_role;
 
 -- Grant execution permissions
 GRANT EXECUTE ON FUNCTION public.emergency_submit_attempt(uuid, jsonb, text) TO anon;

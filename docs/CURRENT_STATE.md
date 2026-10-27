@@ -1,14 +1,40 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-27 19:45 UTC+8
+Last Updated: 2026-10-27 20:05 UTC+8
 
-Current Phase: Phase 148: Spoken & Selection Answer Types Alignment (Zero Typing/Written) [COMPLETE]
+Current Phase: Phase 149: Assessment Submission & Auto-Close Scoring Resolution & Words Tasks 10-Minute Duration [COMPLETE]
 
-Current Task: Enforce that all daily quizzes/tasks are spoken, weekly tests are spoken (Words) & selection (Phrases), and completely eliminate typing/written mode across generator, database, runners, modals, and edge function [COMPLETE]
+Current Task: Resolve "assessment_id tidak ditemukan" submission crash, eliminate 0-score auto-close penalty when timer runs out, and enforce 10-minute duration for all 16 Words Tasks [COMPLETE]
 
-Status: COMPLETE (Updated all 40 tests/tasks in Supabase database: 32 daily tasks = spoken, 4 Words Tests = spoken, 4 Phrases Tests = selection, 0 written/typing; updated generator defaults in `js/api.js`, `upsertDynamicTestShell`, `updateClassTestsConfig`, and `autoGenerateTestsHierarchy`; updated `supabase/functions/start-test/index.ts` dynamicAnswerType defaults; updated `js/admin/auto-gen-modal.js` prefill and UI options; updated `js/admin/vocab-vault.js` blueprint rendering; updated `js/test.js` fallback; bumped SW cache to `topscore-cache-spoken-tests-v5`; 39/39 JS files syntax valid).
+Status: COMPLETE (Fixed PostgreSQL stored procedures `emergency_submit_attempt` and `auto_close_expired_attempts` on Supabase Cloud to strictly use `test_id` and evaluate/score all saved answers; enhanced `submitTest` in `js/api.js` with 3-tier fallback including direct client-side grading; updated all 16 Words Tasks in `public.tests` to 10 minutes working duration; updated generator defaults in `js/api.js` and `js/admin/auto-gen-modal.js` to 10 minutes for words; bumped SW cache to `topscore-cache-submit-fix-v6`; 39/39 JS files syntax valid; 100% verified via automated integration test `test_submit_and_duration.mjs`).
 
 ## Completed
+
+- **Phase 149: Assessment Submission & Auto-Close Scoring Resolution & Words Tasks 10-Minute Duration**:
+  - **1. Root Cause Analysis**:
+    - **"assessment_id tidak ditemukan"**: Edge Function `submit-test` was not deployed to Supabase Cloud, returning HTTP 404. `submitTest()` in `js/api.js` fell back to calling PostgreSQL RPC `emergency_submit_attempt`. That stored procedure contained legacy SQL referencing `COALESCE(test_id, assessment_id)` and `WHERE student_id = v_student_id AND (test_id = v_test_id OR assessment_id = v_test_id)`. Because the `attempts` table contains column `test_id` and no `assessment_id`, PostgreSQL aborted with error code `42703: column "assessment_id" does not exist`, causing submission toast errors.
+    - **Score 0 on Timer Expiry**: When the assessment countdown timer expired in `test.html`, `doSubmit(true)` was invoked. Because `submitTest()` crashed with the `assessment_id` error, the catch block executed `auto_close_expired_attempts(p_attempt_id)`. The old `auto_close_expired_attempts` procedure merely updated `status = 'auto_submitted'` without evaluating or scoring any saved answers in `attempt_answers`, leaving `score = 0`, `percentage = 0`, and `grade = 'E'`.
+    - **Words Task Duration**: 16 daily Words Tasks had 5 minutes (or legacy 60 minutes) duration instead of the requested 10 minutes.
+  - **2. Server & Database RPC Fixes**:
+    - **`emergency_submit_attempt`**: Rewritten and deployed to Supabase Cloud PostgreSQL with `SECURITY DEFINER`. Replaced all references to `assessment_id` and `public.assessments` with `test_id` and `public.tests`. Evaluates `attempt_answers`, calculates points, percentage, effective score, grade according to the official grading scale (★, A, B, C, D, E), and resolves `is_best_score`.
+    - **`auto_close_expired_attempts`**: Rewritten and deployed to Supabase Cloud PostgreSQL with `SECURITY DEFINER`. When called for an attempt ID or during batch sweeps, it delegates to `emergency_submit_attempt(p_attempt_id, NULL, 'auto_submitted')`, evaluating and scoring all saved answers so students never receive 0 points unfairly.
+  - **3. Frontend Client Resiliency**:
+    - **`js/api.js` (`submitTest`)**: Added 3-tier submission protection:
+      1. Edge Function `submit-test` (primary).
+      2. Server-authoritative PostgreSQL RPC `emergency_submit_attempt` (secondary).
+      3. Direct client-side grading fallback updating `attempt_answers` and `attempts` with TopsCore grading engine (tertiary fallback guaranteeing submission never fails).
+    - **Duration Configuration**:
+      - Updated all 16 Words Tasks in `public.tests` table: `working_duration_minutes = 10`, `payload.working_duration_minutes = 10`, `payload.duration_minutes = 10`.
+      - Updated `updateClassTestsConfig` in `js/api.js`: `dur = isPhrase ? Number(phrasesTaskDurationMinutes || 5) : Number(wordsTaskDurationMinutes || taskDurationMinutes || 10)`.
+      - Updated `autoGenerateTestsHierarchy` in `js/api.js`: `wordsTaskDur = config.wordsTaskDurationMinutes || (taskDur || 10)`.
+      - Updated `js/admin/auto-gen-modal.js`: `prefillTaskDur = 10`.
+    - **Cache**: Bumped Service Worker cache to `topscore-cache-submit-fix-v6` in `sw.js`.
+  - **4. Verification & Testing**:
+    - Automated integration test `scripts/test_submit_and_duration.mjs` executed:
+      - Verified all 16 Words Tasks have strictly 10 minutes duration.
+      - Simulated full test attempt and answer submission: RPC succeeded with 100%, Grade ★.
+      - Simulated timeout and auto-close: evaluated answers with 50%, Grade D, proving students no longer receive 0 when time expires.
+    - All 39 JavaScript files validated with `node --check`.
 
 - **Phase 148: Spoken & Selection Answer Types Alignment (Zero Typing/Written)**:
   - **1. User Intent Realignment**:

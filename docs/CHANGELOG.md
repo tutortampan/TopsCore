@@ -1,3 +1,44 @@
+## [2026-10-27 20:05] — Phase 149: Assessment Submission & Auto-Close Scoring Resolution & Words Tasks 10-Minute Duration
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 149 (Assessment Submission & Auto-Close Scoring Resolution & Words Tasks 10-Minute Duration)
+**Status:** PASS
+
+### Why
+- The user reported: "coba cek ulang semua perubahan Test, Quiz dan Exam secera menyeluruh!!! kalau ada masalah, [perbaiki,,, siswa gagal submit ,, assessment_id tidak ditemukan katanya,,, lalu saat waktu assesment habis, siswa mendapat skor 0,,, ekanpa begitu? untuk waktu quiz harian jadikan 10 menit untuk words cek dan cepat selsesiakan!!!".
+- Investigation revealed three distinct root causes:
+  1. **"assessment_id tidak ditemukan"**: Edge Function `submit-test` was not found (HTTP 404), triggering the client to fallback to PostgreSQL RPC `emergency_submit_attempt`. That stored procedure contained legacy references to `assessment_id` (e.g. `COALESCE(test_id, assessment_id)` and `AND (test_id = v_test_id OR assessment_id = v_test_id)`). Because `attempts` table only has `test_id`, PostgreSQL aborted with `column "assessment_id" does not exist`.
+  2. **Score 0 on Timer Expiry**: When the exam timer hits 0:00, `doSubmit(true)` attempted submission. Because `submitTest()` threw the `assessment_id` error, it fell back to `auto_close_expired_attempts(p_attempt_id)`. The old procedure only set `status = 'auto_submitted'` and did not evaluate or score answers, resulting in 0 points / Grade E.
+  3. **Words Task Duration**: Daily Words Tasks had 5 minutes instead of the requested 10 minutes.
+
+### Changed
+- **Database (Supabase PostgreSQL)**:
+  - Rewrote stored procedure `emergency_submit_attempt` using `test_id` and `public.tests` (zero references to `assessment_id`). Grants granted to `anon`, `authenticated`, `service_role`.
+  - Rewrote stored procedure `auto_close_expired_attempts`: Now evaluates and scores saved answers via `emergency_submit_attempt(p_attempt_id, NULL, 'auto_submitted')` so students never receive 0 points unfairly when time expires.
+  - Updated all 16 Words Tasks (`3A1-WORDS-TASK` through `3D4-WORDS-TASK`): set `working_duration_minutes = 10` and `payload.working_duration_minutes = 10`.
+  - Cleaned Phrases Tasks to ensure standard 5 minutes duration.
+- **Frontend Core (`js/api.js`)**:
+  - `submitTest`: Implemented 3-tier submission protection:
+    1. Edge Function `submit-test`.
+    2. PostgreSQL RPC `emergency_submit_attempt`.
+    3. Direct client-side grading fallback updating `attempt_answers` and `attempts` with authoritative TopsCore grading.
+  - `updateClassTestsConfig`: Words tasks duration default set to 10 minutes (`wordsTaskDurationMinutes || taskDurationMinutes || 10`).
+  - `autoGenerateTestsHierarchy`: Words tasks duration default set to 10 minutes (`wordsTaskDur || 10`).
+- **Admin Modal (`js/admin/auto-gen-modal.js`)**:
+  - Changed `prefillTaskDur` to 10 minutes and updated UI tooltip.
+- **Schema & Service Worker**:
+  - Updated `supabase/schema.sql` to keep migration files in sync with live DB.
+  - Bumped Service Worker cache to `topscore-cache-submit-fix-v6` in `sw.js`.
+
+### Tests
+- Automated script `scripts/test_submit_and_duration.mjs`:
+  - Verified 16/16 Words Tasks have 10-minute duration.
+  - Tested answer submission via RPC: `PASS` (Status: `submitted`, Score: 2/2, 100%, Grade: ★).
+  - Tested auto-close scoring behavior on timeout: `PASS` (Status: `auto_submitted`, Score: 1/2, 50%, Grade: D).
+- Syntax validation: `node scripts/check_all_js_syntax.cjs`: 39/39 JS files passed.
+
+---
+
 ## [2026-10-27 19:45] — Phase 148: Spoken & Selection Answer Types Alignment (Zero Typing/Written)
 
 **Agent/Session:** Antigravity

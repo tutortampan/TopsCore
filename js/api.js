@@ -1020,14 +1020,67 @@ export async function submitTest(attemptId, answersMap, options = {}) {
   if (!result) {
     // Server-authoritative fallback via PostgreSQL RPC (strictly server-side scoring & RLS compliance)
     const sb = await getSupabase();
-    const { data: rpcData, error: rpcErr } = await sb.rpc('emergency_submit_attempt', {
-      p_attempt_id: attemptId,
-      p_answers: answersMap,
-      p_status: targetStatus
-    });
+    try {
+      const { data: rpcData, error: rpcErr } = await sb.rpc('emergency_submit_attempt', {
+        p_attempt_id: attemptId,
+        p_answers: answersMap,
+        p_status: targetStatus
+      });
 
-    if (rpcErr) throw rpcErr;
-    result = rpcData;
+      if (rpcErr) throw rpcErr;
+      result = rpcData;
+    } catch (rpcErr) {
+      console.warn('PostgreSQL RPC fallback failed, executing direct client submit fallback:', rpcErr);
+
+      // Direct client evaluation fallback (guarantees student NEVER fails to submit or loses score)
+      const { data: attempt } = await sb.from('attempts').select('*').eq('id', attemptId).single();
+      const { data: attemptAnswers } = await sb.from('attempt_answers').select('*').eq('attempt_id', attemptId);
+
+      let totalPoints = 0;
+      let correctCount = 0;
+      const totalQuestions = (attemptAnswers && attemptAnswers.length) || 0;
+
+      const answersList = Array.isArray(answersMap) ? answersMap : [];
+      const answersDict = new Map(answersList.map(a => [a.attempt_answer_id, a.student_answer || '']));
+
+      for (const row of (attemptAnswers || [])) {
+        const studentAns = answersDict.has(row.id) ? answersDict.get(row.id) : (row.student_answer || '');
+        const evalRes = evaluateAnswer(studentAns, row.accepted_answers_snapshot || row.correct_answer_snapshot);
+        const score = evalRes.score || (evalRes.is_correct ? 1 : 0);
+        totalPoints += score;
+        if (score >= 1) correctCount++;
+
+        await sb.from('attempt_answers').update({
+          student_answer: studentAns,
+          score: score,
+          is_correct: score >= 1,
+          evaluation_result: score >= 1 ? 'correct' : (score > 0 ? 'minor' : 'incorrect'),
+          updated_at: new Date().toISOString()
+        }).eq('id', row.id);
+      }
+
+      const pct = totalQuestions > 0 ? Math.round((totalPoints / totalQuestions) * 10000) / 100 : 0;
+      let effectiveScore = pct;
+      if (attempt?.is_remedial_unlocked) {
+        effectiveScore = Math.min(pct, 60.0);
+      }
+      const grade = getGrade(effectiveScore);
+
+      const { data: updAttempt, error: updAttErr } = await sb.from('attempts').update({
+        status: targetStatus,
+        submitted_at: new Date().toISOString(),
+        score: totalPoints,
+        correct_count: correctCount,
+        total_questions: totalQuestions,
+        percentage: pct,
+        effective_score: effectiveScore,
+        grade: grade,
+        updated_at: new Date().toISOString()
+      }).eq('id', attemptId).select().single();
+
+      if (updAttErr) throw updAttErr;
+      result = updAttempt || { id: attemptId, status: targetStatus, percentage: pct, grade: grade };
+    }
   }
 
   // Authoritative Remedial Sync (Remedial retains earned score, grade follows score)
@@ -2777,7 +2830,9 @@ export async function updateClassTestsConfig(params = {}) {
   const sb = await getSupabase();
   const {
     classId,
-    taskDurationMinutes = 5,
+    taskDurationMinutes = 10,
+    wordsTaskDurationMinutes,
+    phrasesTaskDurationMinutes,
     taskAnswerType = 'spoken',
     wordsTaskAnswerType,
     phrasesTaskAnswerType,
@@ -2826,7 +2881,10 @@ export async function updateClassTestsConfig(params = {}) {
       }
       updatedTests++;
     } else {
-      updateData.working_duration_minutes = Number(taskDurationMinutes);
+      const dur = isPhrase 
+        ? Number(phrasesTaskDurationMinutes || 5) 
+        : Number(wordsTaskDurationMinutes || taskDurationMinutes || 10);
+      updateData.working_duration_minutes = dur;
       updateData.minimum_required_score = Number(taskPassingScore);
       const taskAns = isPhrase 
         ? (phrasesTaskAnswerType || taskAnswerType || 'spoken') 
@@ -2835,8 +2893,8 @@ export async function updateClassTestsConfig(params = {}) {
       if (row.payload && typeof row.payload === 'object') {
         updateData.payload = {
           ...row.payload,
-          working_duration_minutes: Number(taskDurationMinutes),
-          duration_minutes: Number(taskDurationMinutes),
+          working_duration_minutes: dur,
+          duration_minutes: dur,
           minimum_required_score: Number(taskPassingScore),
           answer_type: taskAns
         };
@@ -2941,7 +2999,9 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     let displayOrder = 1;
     let lastTaskId = null;
 
-    const taskDur = config.taskDurationMinutes !== undefined ? Number(config.taskDurationMinutes) : 5;
+    const taskDur = config.taskDurationMinutes !== undefined ? Number(config.taskDurationMinutes) : 10;
+    const wordsTaskDur = config.wordsTaskDurationMinutes !== undefined ? Number(config.wordsTaskDurationMinutes) : (taskDur || 10);
+    const phrasesTaskDur = config.phrasesTaskDurationMinutes !== undefined ? Number(config.phrasesTaskDurationMinutes) : 5;
     const taskAns = config.taskAnswerType || 'spoken';
     const wordsTaskAns = config.wordsTaskAnswerType || taskAns || 'spoken';
     const phrasesTaskAns = config.phrasesTaskAnswerType || taskAns || 'spoken';
@@ -2973,7 +3033,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
             modulePrefix: 'VOCAB', category: 'words',
             moduleId: vocabModuleId,
             answerType: wordsTaskAns,
-            durationMinutes: taskDur,
+            durationMinutes: wordsTaskDur,
             minimumRequiredScore: taskPass,
             prerequisiteId: lastTaskId,
             displayOrder: displayOrder++
@@ -2994,7 +3054,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
             modulePrefix: 'PHRASE', category: 'phrases',
             moduleId: phraseModuleId,
             answerType: phrasesTaskAns,
-            durationMinutes: taskDur,
+            durationMinutes: phrasesTaskDur,
             minimumRequiredScore: taskPass,
             prerequisiteId: lastTaskId,
             displayOrder: displayOrder++

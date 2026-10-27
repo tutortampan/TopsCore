@@ -49,7 +49,7 @@ export async function openAutoGenerateModal(options = {}) {
     const matchedClass = allClasses.find(c => String(c.id) === String(currentClassId));
     const className = matchedClass ? matchedClass.name : 'Vocabulary Class';
 
-    let prefillTaskDur = 5;
+    let prefillTaskDur = 10;
     let prefillWordsTaskAns = 'spoken';
     let prefillPhrasesTaskAns = 'spoken';
     let prefillTaskMin = 60;
@@ -178,7 +178,7 @@ export async function openAutoGenerateModal(options = {}) {
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
               <div>
                 <label for="wizard-task-dur" class="form-label" style="font-size:0.7rem; color:#94a3b8; margin-bottom:2px; display:block;">⏱️ Waktu (Mnt)</label>
-                <input type="number" id="wizard-task-dur" min="1" max="180" value="${escapeHtml(String(prefillTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan task (default 5 menit)" />
+                <input type="number" id="wizard-task-dur" min="1" max="180" value="${escapeHtml(String(prefillTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan task (default 10 menit)" />
                 <div style="display:flex; gap:3px; margin-top:4px;">
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-task-dur" data-val="5" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">5m</button>
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-task-dur" data-val="10" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">10m</button>
