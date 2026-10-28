@@ -9,3 +9,4 @@ Disallow: /tests-management.html
 Allow: /
 Allow: /index.html
 Allow: /dashboard.html
+

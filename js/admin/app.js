@@ -2621,9 +2621,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       }
     }
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Topbar Domain Switcher Click (removed â€” no domain pill elements exist) Ã¢â€â‚¬Ã¢â€â‚¬
+    // ──── Topbar Domain Switcher Click (removed — no domain pill elements exist) ────
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Mobile Bottom Tab Switching Ã¢â€â‚¬Ã¢â€â‚¬
+    // ──── Mobile Bottom Tab Switching ────
     mobileTabs.forEach(tab => {
       tab.addEventListener('click', () => {
         const panel = tab.dataset.panel;
@@ -2632,7 +2632,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       });
     });
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Sidebar Toggle for Mobile Ã¢â€â‚¬Ã¢â€â‚¬
+    // ──── Sidebar Toggle for Mobile ────
     const sidebarToggleBtn = document.getElementById('sidebar-toggle');
     const adminSidebar = document.getElementById('admin-sidebar');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
@@ -2653,7 +2653,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
     });
     sidebarOverlay?.addEventListener('click', closeSidebar);
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Sub-nav item click Ã¢â€â‚¬Ã¢â€â‚¬
+    // ──── Sub-nav item click ────
     document.querySelectorAll('.admin-nav-item').forEach(item => {
       item.addEventListener('click', () => {
         document.querySelectorAll('.admin-nav-item').forEach(i => i.classList.remove('active'));
@@ -2663,7 +2663,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       });
     });
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Global String & HTML Utilities Ã¢â€â‚¬Ã¢â€â‚¬
+    // ──── Global String & HTML Utilities ────
     // escapeHtml / escHtml imported canonically
 
     function getRowVal(row, possibleKeys) {
@@ -2684,7 +2684,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
     }
 
     function formatTestDisplayName(Test, classContext = '') {
-      if (!Test) return 'â€”';
+      if (!Test) return '—';
       const parts = [];
       if (Test.institutions?.name) parts.push(`[${Test.institutions.name}]`);
       if (classContext) parts.push(`[${classContext}]`);
@@ -2698,14 +2698,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       return parts.length > 0 ? parts.join(' &middot; ') : (Test.title || 'Test');
     }
 
-    // â”€â”€ DB Connection Status Banner â”€â”€
+    // ── DB Connection Status Banner ──
     async function initConnectionBanner() {
       const banner = document.getElementById('db-connection-banner');
       const statusDot = document.getElementById('db-status-dot');
       const statusText = document.getElementById('db-status-text');
       if (!banner) return;
 
-      // Show checking state â€” use CSS classes, not inline styles
+      // Show checking state — use CSS classes, not inline styles
       statusText.textContent = 'Checking database connection...';
 
       const result = await testSupabaseConnection();
@@ -2910,7 +2910,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       }
     }
 
-    // â”€â”€ INSTITUTIONS â”€â”€
+    // ── INSTITUTIONS ──
 
     // ── CLASS NAV PANEL (secondary left panel within CLASS domain) ──
     let _classNavLoaded = false;
@@ -3485,7 +3485,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       });
     }
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ CLASSES (Formerly Classes) Ã¢â€â‚¬Ã¢â€â‚¬
+    // ──── CLASSES (Formerly Classes) ────
     async function renderClasses(area) {
       const [rawData, institutions, levelsData] = await Promise.all([
         adminFetchAll('classes', '*, levels!classes_level_id_fkey(*)'),
@@ -3616,7 +3616,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       });
     }
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ LEVELS Ã¢â€â‚¬Ã¢â€â‚¬
+    // ──── LEVELS ────
     async function renderLevels(area) {
       const [rawData, allClasses] = await Promise.all([
         adminFetchAll('levels', '*'),
@@ -3672,13 +3672,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       });
 
       data.forEach(r => {
-        const progName = r.classes?.institutions?.name || 'â€”';
+        const progName = r.classes?.institutions?.name || '—';
         const programName = (r.program_id && classMap[r.program_id]?.name) ? classMap[r.program_id].name : 'All Programs';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><span class="badge badge-neutral">${escapeHtml(progName)}</span></td>
           <td><span class="badge badge-neutral">${escapeHtml(programName)}</span></td>
-          <td class="text-muted fw-600">${escapeHtml(r.classes?.name || 'â€”')}</td>
+          <td class="text-muted fw-600">${escapeHtml(r.classes?.name || '—')}</td>
           <td class="text-center"><span class="badge badge-primary">Level ${toLevelLetter(r.level_number)}</span></td>
           <td class="fw-600">${escapeHtml(r.name)}</td>
           <td class="text-center"><span class="badge ${r.is_active ? 'badge-success' : 'badge-neutral'}">${r.is_active ? 'Active' : 'Inactive'}</span></td>
@@ -3710,9 +3710,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
     // Helper function to calculate age from birth date string (YYYY-MM-DD)
     function calculateAgeFromBirthDate(birthDateStr) {
-      if (!birthDateStr) return 'â€”';
+      if (!birthDateStr) return '—';
       const birthDate = new Date(birthDateStr);
-      if (isNaN(birthDate.getTime())) return 'â€”';
+      if (isNaN(birthDate.getTime())) return '—';
       const today = new Date();
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -3723,7 +3723,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
     }
 
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ INDIVIDUAL STUDENT PROFILE (Detailed Progress, Correct/Incorrect Counts, Batch Navigation) Ã¢â€â‚¬Ã¢â€â‚¬
+    // ──── INDIVIDUAL STUDENT PROFILE (Detailed Progress, Correct/Incorrect Counts, Batch Navigation) ────
     // ─── INDIVIDUAL STUDENT PROFILE (Consolidated Modal Delegator) ───
     async function openStudentProfile(studentId, batchStudentIds = [], skipHistory = false) {
       if (typeof window.showStudentProfileModal === 'function') {

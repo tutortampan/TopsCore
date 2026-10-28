@@ -42,7 +42,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys => {
       return Promise.all(
         keys.filter(key => key !== CACHE_NAME)
-            .map(key => caches.delete(key))
+          .map(key => caches.delete(key))
       );
     })
   );
@@ -61,10 +61,10 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   const isDoc = event.request.destination === 'document' || url.pathname.endsWith('.html');
   const isScriptOrDoc = isDoc ||
-                        event.request.destination === 'script' || 
-                        event.request.destination === 'style' ||
-                        url.pathname.endsWith('.js') || 
-                        url.pathname.endsWith('.css');
+    event.request.destination === 'script' ||
+    event.request.destination === 'style' ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css');
 
   if (isScriptOrDoc) {
     // Network-first for scripts and documents so bug fixes and updates propagate immediately

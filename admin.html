@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tutor's Room â€” TOPS CORE</title>
-  <meta name="description" content="Tutor's Room management console for TOPS CORE â€” manage institutions, programs, students, and tests." />
+  <title>Tutor's Room — TOPS CORE</title>
+  <meta name="description" content="Tutor's Room management console for TOPS CORE — manage institutions, programs, students, and tests." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -29,7 +29,7 @@
       <div class="auth-brand">
         <div class="brand-icon">ðŸ›¡ï¸</div>
         <h1>TUTOR'S ROOM</h1>
-        <p>Tops Core â€” ABCD System</p>
+        <p>Tops Core — ABCD System</p>
       </div>
       <div class="form-group">
         <label class="form-label" for="admin-username">Username</label>
@@ -41,7 +41,7 @@
       </div>
       <button class="btn btn-primary btn-block" id="admin-login-btn">Sign In to Tutor's Room</button>
       <div class="auth-footer-link">
-        <a href="index.html">â† Student's Lobby</a>
+        <a href="index.html">← Student's Lobby</a>
       </div>
     </div>
   </div>
@@ -136,7 +136,7 @@
     <div class="modal-box">
       <div class="modal-header">
         <h3 id="crud-modal-title">Add Record</h3>
-        <button class="btn btn-ghost btn-icon" id="close-crud-modal" aria-label="Close">âœ•</button>
+        <button class="btn btn-ghost btn-icon" id="close-crud-modal" aria-label="Close">✕</button>
       </div>
       <form id="crud-form" novalidate></form>
       <div class="d-flex gap-3 justify-between mt-6">
@@ -167,7 +167,7 @@
           <h3 id="dup-students-modal-title" class="modal-title-lg">&#128269; Duplicate Students Review &amp; Resolver</h3>
           <p class="text-xs text-muted modal-subtitle">Compare duplicate student profiles side-by-side and safely unify their TEST attempts and progress.</p>
         </div>
-        <button class="btn btn-ghost btn-icon" id="close-dup-students-modal" aria-label="Close">âœ•</button>
+        <button class="btn btn-ghost btn-icon" id="close-dup-students-modal" aria-label="Close">✕</button>
       </div>
 
       <!-- Scope Switcher Tabs & Bulk Action -->
@@ -202,7 +202,7 @@
           <h3 id="dup-questions-modal-title" class="modal-title-lg">&#128269; Duplicate Questions Review &amp; Resequencer</h3>
           <p class="text-xs text-muted modal-subtitle">Detect duplicate question texts within Tests and auto-resequence question orders seamlessly.</p>
         </div>
-        <button class="btn btn-ghost btn-icon" id="close-dup-questions-modal" aria-label="Close">âœ•</button>
+        <button class="btn btn-ghost btn-icon" id="close-dup-questions-modal" aria-label="Close">✕</button>
       </div>
 
       <!-- Scope / Filter Bar -->
@@ -211,7 +211,7 @@
           <div class="dup-filter-col">
             <label class="text-xs text-muted d-block mb-1" for="dup-q-test-select">Filter by Test</label>
             <select id="dup-q-test-select" class="form-control dup-select-control" title="Filter by Test" aria-label="Filter by Test">
-              <option value="">â€” All Tests â€”</option>
+              <option value="">— All Tests —</option>
             </select>
           </div>
           <div class="d-flex gap-2 pt-16">
@@ -248,7 +248,7 @@
           <h3 id="bulk-edit-asm-title" class="modal-title-lg">âš¡ Bulk Edit Tests</h3>
           <p class="text-xs text-muted modal-subtitle" id="bulk-edit-asm-subtitle">Ubah pengaturan waktu, cara jawab, dan skor kelulusan untuk beberapa test sekaligus.</p>
         </div>
-        <button class="btn btn-ghost btn-icon" id="close-bulk-edit-asm-modal" aria-label="Close">âœ•</button>
+        <button class="btn btn-ghost btn-icon" id="close-bulk-edit-asm-modal" aria-label="Close">✕</button>
       </div>
 
       <div class="modal-body-scroll bulk-edit-body">
@@ -299,7 +299,7 @@
             <div id="bulk-wrap-answertype" class="bulk-edit-field-wrap">
               <select id="bulk-select-answertype" class="form-control bulk-edit-select" title="Pilih tipe cara menjawab" aria-label="Tipe Cara Menjawab">
                 <option value="spoken">ðŸ—£ï¸ Spoken (Speech to Text / Lisan)</option>
-                <option value="written">âœï¸ Written (Mengetik Tulisan Langsung)</option>
+                <option value="written">✍️ Written (Mengetik Tulisan Langsung)</option>
                 <option value="selection">ðŸ”˜ Selection (Pilihan Ganda / Dropdown)</option>
                 <option value="mixed">ðŸ”€ Mixed (Campuran)</option>
               </select>
@@ -356,7 +356,7 @@
     </div>
   </div>
 
-  <!-- âœ¨ RECORD DRAWER âœ¨ -->
+  <!-- ✨ RECORD DRAWER ✨ -->
   <div id="datagrid-drawer-overlay" class="datagrid-drawer-overlay hidden" onclick="closeRecordDrawer()"></div>
   <div id="datagrid-drawer" class="datagrid-drawer">
     <div class="datagrid-drawer-header">
@@ -381,7 +381,7 @@
           <h3 id="roster-modal-title" class="modal-title-lg">Class Roster</h3>
           <p class="text-xs text-muted modal-subtitle" id="roster-modal-subtitle">Auto-enrolled vs Manually Added Students</p>
         </div>
-        <button class="btn btn-ghost btn-icon" onclick="document.getElementById('roster-modal').classList.add('hidden')">âœ•</button>
+        <button class="btn btn-ghost btn-icon" onclick="document.getElementById('roster-modal').classList.add('hidden')">✕</button>
       </div>
       <div class="roster-add-bar">
         <select id="roster-add-student-select" class="form-control flex-1" title="Select student to add to roster" aria-label="Select student to add to roster">
@@ -410,7 +410,7 @@
           <h3 class="modal-title-lg">âž• Add Class</h3>
           <p class="text-xs text-muted modal-subtitle" id="add-class-level-label">Inheriting Level</p>
         </div>
-        <button class="btn btn-ghost btn-icon" onclick="document.getElementById('add-class-modal').classList.add('hidden')">âœ•</button>
+        <button class="btn btn-ghost btn-icon" onclick="document.getElementById('add-class-modal').classList.add('hidden')">✕</button>
       </div>
       <div class="form-group mb-4">
         <label class="form-label">Class Name</label>

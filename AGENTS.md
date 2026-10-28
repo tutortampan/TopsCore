@@ -1,4 +1,4 @@
-# TopsCore LMS â€” AGENTS.md
+# TopsCore LMS — AGENTS.md
 
 > **Purpose:** This file is the execution contract for an AI coding agent (including Antigravity) that builds, modifies, tests, and maintains the TopsCore LMS application.
 >
@@ -138,13 +138,13 @@ Never request or display Student ID in:
 
 ```text
 INSTITUTION
-  â†“
+  ↓
 PROGRAM
-  â†“
+  ↓
 STUDENT NAME
-  â†“
+  ↓
 PERSONAL PIN
-  â†“
+  ↓
 LOGIN
 ```
 
@@ -289,7 +289,7 @@ Required result labels:
 
 Default tolerance:
 - 0 errors → full point
-- 1â€“2 errors → half point
+- 1–2 errors → half point
 - 3+ errors → zero
 
 The tolerance engine must be deterministic, tested, and server-authoritative.
@@ -336,7 +336,7 @@ Server authoritative timer model:
 ```text
 server started_at
 server expected_end_at
-        â†“
+        ↓
 client visual countdown
 ```
 
@@ -424,20 +424,20 @@ Audit examples:
 
 ```text
                          NETLIFY / VERCEL
-                               â”‚
-                               â–¼
+                               │
+                               ▼
                   Static HTML / CSS / JS
-                               â”‚
+                               │
                  Supabase JS client / HTTPS
-                               â”‚
-                 â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-                 â–¼                           â–¼
+                               │
+                 ┌─────────────┴─────────────┐
+                 ▼                           ▼
          Supabase Auth              Supabase Edge Functions
-                                             â”‚
-                                             â–¼
+                                             │
+                                             ▼
                                      Supabase PostgreSQL
-                                             â”‚
-                                             â””â”€â”€ Supabase Storage
+                                             │
+                                             └── Supabase Storage
 ```
 
 ## 3.2 Explicitly out of scope for the current architecture
@@ -488,12 +488,12 @@ Target structure:
 
 ```text
 TOP-ENGLISH-PROGRAM/
-â”‚
-â”œâ”€â”€ .vscode/
-â”‚
-â”œâ”€â”€ assets/
-â”‚   â”œâ”€â”€ images/
-â”‚   â””â”€â”€ icons/
+│
+├── .vscode/
+│
+├── assets/
+│   ├── images/
+│   └── icons/
 │   ├── css/
 │   │   ├── style.css
 │   │   ├── auth.css
@@ -566,15 +566,15 @@ TOP-ENGLISH-PROGRAM/
 │   ├── program-management.html
 │   ├── student-management.html
 │   ├── tests-management.html
-â”œâ”€â”€ management.html
-â”œâ”€â”€ index.html
-â”‚
-â”œâ”€â”€ .env.example
-â”œâ”€â”€ .gitignore
-â”œâ”€â”€ netlify.toml
-â”œâ”€â”€ supabase-setup.sql
-â”œâ”€â”€ README.md
-â””â”€â”€ AGENTS.md
+├── management.html
+├── index.html
+│
+├── .env.example
+├── .gitignore
+├── netlify.toml
+├── supabase-setup.sql
+├── README.md
+└── AGENTS.md
 ```
 
 The project may start with fewer files, but the logical separation above must remain recognizable.
@@ -651,7 +651,7 @@ Record every meaningful code/schema/config/documentation change.
 Format:
 
 ```markdown
-## [YYYY-MM-DD HH:mm] â€” <short title>
+## [YYYY-MM-DD HH:mm] — <short title>
 
 **Agent/Session:** <identifier>
 **Phase:** <phase>
@@ -688,7 +688,7 @@ Record durable architecture/product decisions.
 Format:
 
 ```markdown
-## DECISION-001 â€” <title>
+## DECISION-001 — <title>
 
 Date: YYYY-MM-DD
 Status: ACCEPTED | SUPERSEDED | PROPOSED
@@ -809,15 +809,15 @@ Preferred unit:
 
 ```text
 ONE TASK
-  â†“
+  ↓
 IMPLEMENT
-  â†“
+  ↓
 TEST
-  â†“
+  ↓
 DOCUMENT
-  â†“
+  ↓
 MARK COMPLETE
-  â†“
+  ↓
 NEXT TASK
 ```
 
@@ -896,25 +896,25 @@ Additional support tables may be created when required, but do not duplicate bus
 ## 9.2 Suggested relationships
 
 ```text
-Institutions 1 â”€â”€â”€ N Programs
-Institutions 1 â”€â”€â”€ N subjects
-subjects 1 â”€â”€â”€ N levels
-Programs N â”€â”€â”€ N subjects       via class_subjects
+Institutions 1 ─── N Programs
+Institutions 1 ─── N subjects
+subjects 1 ─── N levels
+Programs N ─── N subjects       via class_subjects
 
-Institutions 1 â”€â”€â”€ N exams
-subjects 1 â”€â”€â”€ N exams
-levels 1 â”€â”€â”€ N exams
-exams N â”€â”€â”€ N Programs           via exam_classes
-exams 1 â”€â”€â”€ N questions
+Institutions 1 ─── N exams
+subjects 1 ─── N exams
+levels 1 ─── N exams
+exams N ─── N Programs           via exam_classes
+exams 1 ─── N questions
 
-students N â”€â”€â”€ 1 Programs
-students N â”€â”€â”€ 1 Institutions       direct column allowed for integrity/query convenience
-students N â”€â”€â”€ N? subjects     normally derived via class_subjects
+students N ─── 1 Programs
+students N ─── 1 Institutions       direct column allowed for integrity/query convenience
+students N ─── N? subjects     normally derived via class_subjects
 
-students 1 â”€â”€â”€ N attempts
-exams 1 â”€â”€â”€ N attempts
-attempts 1 â”€â”€â”€ N attempt_answers
-students 1 â”€â”€â”€ N progress
+students 1 ─── N attempts
+exams 1 ─── N attempts
+attempts 1 ─── N attempt_answers
+students 1 ─── N progress
 ```
 
 The exact cardinalities and constraints must be reflected in SQL migrations and RLS policies.
@@ -1184,23 +1184,23 @@ Flow:
 
 ```text
 Student selects Exam
-       â†“
+       ↓
 verify authentication
-       â†“
+       ↓
 verify exam published
-       â†“
+       ↓
 verify INSTITUTION/PROGRAM/subject access
-       â†“
+       ↓
 verify level eligibility
-       â†“
+       ↓
 verify prerequisite
-       â†“
+       ↓
 verify retake rules
-       â†“
+       ↓
 create Attempt
-       â†“
+       ↓
 create immutable question snapshots
-       â†“
+       ↓
 return attempt data
 ```
 
@@ -1216,11 +1216,11 @@ When Student reloads:
 
 ```text
 find active IN_PROGRESS attempt
-      â†“
+      ↓
 return same attempt
-      â†“
+      ↓
 restore answers
-      â†“
+      ↓
 recalculate remaining time from server timestamp
 ```
 
@@ -1234,28 +1234,28 @@ Conceptual flow:
 
 ```text
 POST submit-exam
-      â†“
+      ↓
 load attempt
-      â†“
+      ↓
 if already completed:
     return stored result
-      â†“
+      ↓
 validate ownership
-      â†“
+      ↓
 validate server time
-      â†“
+      ↓
 evaluate snapshot answers
-      â†“
+      ↓
 calculate percentage
-      â†“
+      ↓
 calculate grade
-      â†“
+      ↓
 persist result atomically
-      â†“
+      ↓
 recalculate relevant progress
-      â†“
+      ↓
 write audit event if applicable
-      â†“
+      ↓
 return result
 ```
 
@@ -1302,17 +1302,17 @@ Required sequence:
 
 ```text
 SELECT EXAM
-   â†“
+   ↓
 DETECT ANSWER TYPE
-   â†“
+   ↓
 UPLOAD
-   â†“
+   ↓
 VALIDATE
-   â†“
+   ↓
 PREVIEW
-   â†“
+   ↓
 CONFIRM
-   â†“
+   ↓
 INSERT
 ```
 
@@ -1408,19 +1408,19 @@ Workflow:
 
 ```text
 UPLOAD
- â†“
+ ↓
 VALIDATE
- â†“
+ ↓
 RELATION CHECK
- â†“
+ ↓
 DUPLICATE CHECK
- â†“
+ ↓
 PREVIEW
- â†“
+ ↓
 CONFIRM
- â†“
+ ↓
 IMPORT
- â†“
+ ↓
 SUMMARY
 ```
 
@@ -1432,22 +1432,22 @@ First login:
 
 ```text
 Student has no photo?
-        â†“ yes
+        ↓ yes
 require photo setup
-        â†“
+        ↓
 camera preferred
-        â†“
+        ↓
 upload fallback
-        â†“
+        ↓
 validate
-        â†“
+        ↓
 store canonical image
-        â†“
+        ↓
 continue to dashboard
 ```
 
 Target display/canonical processing:
-- approximately 300Ã—300 square
+- approximately 300×300 square
 - face-centered where possible
 - object-fit cover
 
@@ -1706,7 +1706,7 @@ Expand this matrix as implementation proceeds.
 
 Use these phases as the default build sequence. A phase may be split into smaller tasks, but phases must remain traceable.
 
-## PHASE 0 â€” Repository bootstrap
+## PHASE 0 — Repository bootstrap
 
 Deliver:
 - base folder structure
@@ -1723,7 +1723,7 @@ Exit criteria:
 - no secrets committed
 - documentation system exists
 
-## PHASE 1 â€” Supabase foundation
+## PHASE 1 — Supabase foundation
 
 Deliver:
 - project connection
@@ -1738,7 +1738,7 @@ Exit criteria:
 - schema inspectable
 - RLS policies documented
 
-## PHASE 2 â€” Core master data
+## PHASE 2 — Core master data
 
 Implement:
 - INSTITUTION
@@ -1753,7 +1753,7 @@ Exit criteria:
 - relational integrity enforced
 - soft delete/restore works where applicable
 
-## PHASE 3 â€” Authentication and role control
+## PHASE 3 — Authentication and role control
 
 Implement:
 - Admin auth
@@ -1766,7 +1766,7 @@ Exit criteria:
 - unauthorized access denied server-side
 - no plaintext PIN
 
-## PHASE 4 â€” Exam management
+## PHASE 4 — Exam management
 
 Implement:
 - create/edit exam
@@ -1787,7 +1787,7 @@ Exit criteria:
 - assignment works
 - published state works
 
-## PHASE 5 â€” Question management/import
+## PHASE 5 — Question management/import
 
 Implement:
 - question CRUD
@@ -1803,7 +1803,7 @@ Exit criteria:
 - all four answer types supported
 - invalid rows never silently skipped
 
-## PHASE 6 â€” Attempt engine
+## PHASE 6 — Attempt engine
 
 Implement:
 - eligibility
@@ -1820,7 +1820,7 @@ Exit criteria:
 - client cannot extend time
 - double submit safe
 
-## PHASE 7 â€” Scoring and results
+## PHASE 7 — Scoring and results
 
 Implement:
 - all answer evaluators
@@ -1834,7 +1834,7 @@ Exit criteria:
 - all score boundaries tested
 - snapshots prevent historical drift
 
-## PHASE 8 â€” Progression
+## PHASE 8 — Progression
 
 Implement:
 - highest attempt score
@@ -1845,7 +1845,7 @@ Implement:
 Exit criteria:
 - progression tests pass
 
-## PHASE 9 â€” Admin UI
+## PHASE 9 — Admin UI
 
 Complete:
 - DATABASE
@@ -1857,7 +1857,7 @@ Exit criteria:
 - primary navigation matches specification
 - CRUD/import/publish workflows usable
 
-## PHASE 10 â€” Student UI
+## PHASE 10 — Student UI
 
 Complete:
 - login
@@ -1870,7 +1870,7 @@ Complete:
 Exit criteria:
 - critical journey complete
 
-## PHASE 11 â€” Security hardening
+## PHASE 11 — Security hardening
 
 Perform:
 - RLS audit
@@ -1881,7 +1881,7 @@ Perform:
 - secret scan
 - client manipulation tests
 
-## PHASE 12 â€” Testing / regression
+## PHASE 12 — Testing / regression
 
 Run:
 - unit
@@ -1890,7 +1890,7 @@ Run:
 - migration tests
 - manual acceptance
 
-## PHASE 13 â€” Deployment
+## PHASE 13 — Deployment
 
 Implement:
 - Netlify/Vercel frontend deployment configuration
@@ -1900,7 +1900,7 @@ Implement:
 - storage rules
 - production smoke test
 
-## PHASE 14 â€” Final handoff
+## PHASE 14 — Final handoff
 
 Deliver:
 - README
@@ -1979,8 +1979,8 @@ Example:
 ```markdown
 ## Resume Point
 
-Phase: 6 â€” Attempt Engine
-Task: EXAM-014 â€” implement idempotent submit
+Phase: 6 — Attempt Engine
+Task: EXAM-014 — implement idempotent submit
 
 Completed:
 - attempt table created
@@ -2076,7 +2076,7 @@ When bootstrapping a new project, create `docs/CURRENT_STATE.md` with:
 # CURRENT STATE
 
 Last Updated: <timestamp>
-Current Phase: 0 â€” Repository bootstrap
+Current Phase: 0 — Repository bootstrap
 Status: IN_PROGRESS
 
 ## Completed
@@ -2200,23 +2200,23 @@ Every agent should behave like this:
 
 ```text
 READ STATE
-   â†“
+   ↓
 UNDERSTAND TASK
-   â†“
+   ↓
 INSPECT EXISTING CODE
-   â†“
+   ↓
 PLAN SMALLEST SAFE CHANGE
-   â†“
+   ↓
 IMPLEMENT
-   â†“
+   ↓
 TEST
-   â†“
+   ↓
 DOCUMENT
-   â†“
+   ↓
 UPDATE CURRENT STATE
-   â†“
+   ↓
 REPORT EXACT RESULT
-   â†“
+   ↓
 CONTINUE
 ```
 

@@ -7,12 +7,12 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
     import { setStudentSession, getStudentSession } from './session.js?v=5.3.2';
     import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=5.3.2';
 
-    // â”€â”€ Redirect if already logged in â”€â”€
+    // ── Redirect if already logged in ──
     if (getStudentSession()) {
       window.location.href = 'dashboard.html';
     }
 
-    // â”€â”€ State â”€â”€
+    // ── State ──
     const state = {
       institutionId: null, institutionName: null,
       programId: null, programName: null,
@@ -20,7 +20,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       studentId: null, studentName: null,
     };
 
-    // â”€â”€ Remember Me â”€â”€
+    // ── Remember Me ──
     const REMEMBER_KEY = 'topscore_saved_login_v2';
     let rememberEnabled = localStorage.getItem('topscore_remember_enabled') === 'true';
 
@@ -78,7 +78,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
 
     updateRememberUI();
 
-    // â”€â”€ Section helpers â”€â”€
+    // ── Section helpers ──
     function unlockSection(id) {
       const el = document.getElementById(id);
       if (el) {
@@ -116,7 +116,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       }
     }
 
-    // â”€â”€ Render options helper â”€â”€
+    // ── Render options helper ──
     function renderOptions(containerId, searchInputId, items, onSelect, selectedId = null) {
       const container = document.getElementById(containerId);
       const searchInput = document.getElementById(searchInputId);
@@ -173,7 +173,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
 
     // escHtml imported from app.js
 
-    // â”€â”€ Step 1: Load Institutions â”€â”€
+    // ── Step 1: Load Institutions ──
     async function loadInstitutions(autoSelectId = null) {
       const container = document.getElementById('list-institution');
       container.innerHTML = `<div class="opts-spinner"><div class="spinner"></div></div>`;
@@ -203,7 +203,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       }
     }
 
-    // â”€â”€ Step 2: Load Programs â”€â”€
+    // ── Step 2: Load Programs ──
     async function loadPrograms(autoSelectId = null) {
       unlockSection('sec-program');
       const container = document.getElementById('list-program');
@@ -231,7 +231,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       }
     }
 
-    // â”€â”€ Step 3: Load Batches â”€â”€
+    // ── Step 3: Load Batches ──
     async function loadBatches(autoSelectId = null) {
       unlockSection('sec-batch');
       const container = document.getElementById('list-batch');
@@ -265,7 +265,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       }
     }
 
-    // â”€â”€ Step 4: Load Students â”€â”€
+    // ── Step 4: Load Students ──
     async function loadStudents(autoSelectId = null) {
       unlockSection('sec-student');
       const container = document.getElementById('list-student');
@@ -290,7 +290,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       }
     }
 
-    // â”€â”€ Reset cascade from a given step downward â”€â”€
+    // ── Reset cascade from a given step downward ──
     function resetFrom(from) {
       const order = ['institution', 'program', 'batch', 'student', 'pin'];
       const idx = order.indexOf(from);
@@ -321,7 +321,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       document.getElementById('login-btn-text').textContent = 'Sign In';
     }
 
-    // â”€â”€ Change buttons â”€â”€
+    // ── Change buttons ──
     document.getElementById('change-institution-btn').addEventListener('click', () => {
       reopenSection('sec-institution');
       resetFrom('institution');
@@ -339,7 +339,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       resetFrom('pin');
     });
 
-    // â”€â”€ PIN Logic â”€â”€
+    // ── PIN Logic ──
     const pinInputs = [0,1,2,3].map(i => document.getElementById(`pin-${i}`));
     const loginBtn = document.getElementById('login-btn');
 
@@ -460,5 +460,5 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       setTimeout(() => document.getElementById('pin-0').focus(), 300);
     }
 
-    // â”€â”€ Init â”€â”€
+    // ── Init ──
     restoreSavedLogin();
