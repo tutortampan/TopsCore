@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /test.html
+Disallow: /result.html
+Disallow: /management.html
+Disallow: /program-management.html
+Disallow: /student-management.html
+Disallow: /tests-management.html
+Allow: /
+Allow: /index.html
+Allow: /dashboard.html

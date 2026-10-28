@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tutor's Room — TOPS CORE</title>
-  <meta name="description" content="Tutor's Room management console for TOPS CORE — manage institutions, programs, students, and tests." />
+  <title>Tutor's Room â€” TOPS CORE</title>
+  <meta name="description" content="Tutor's Room management console for TOPS CORE â€” manage institutions, programs, students, and tests." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -21,15 +21,15 @@
 
   <div id="toast-container"></div>
 
-  <!-- ═ ═ ═  ADMIN LOGIN ═ ═ ═  -->
+  <!-- â• â• â•  ADMIN LOGIN â• â• â•  -->
   <div id="admin-login-screen" class="auth-page">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
     <div class="auth-card">
       <div class="auth-brand">
-        <div class="brand-icon">🛡️</div>
+        <div class="brand-icon">ðŸ›¡ï¸</div>
         <h1>TUTOR'S ROOM</h1>
-        <p>Tops Core — ABCD System</p>
+        <p>Tops Core â€” ABCD System</p>
       </div>
       <div class="form-group">
         <label class="form-label" for="admin-username">Username</label>
@@ -41,12 +41,12 @@
       </div>
       <button class="btn btn-primary btn-block" id="admin-login-btn">Sign In to Tutor's Room</button>
       <div class="auth-footer-link">
-        <a href="index.html">← Student's Lobby</a>
+        <a href="index.html">â† Student's Lobby</a>
       </div>
     </div>
   </div>
 
-  <!-- ═ ═ ═  ADMIN CONSOLE ═ ═ ═  -->
+  <!-- â• â• â•  ADMIN CONSOLE â• â• â•  -->
   <div id="admin-console" class="admin-layout hidden">
 
     <!-- Sidebar -->
@@ -71,54 +71,14 @@
           <div class="nav-domain-header"><span class="domain-icon">&#128208;</span>B &mdash; Board</div>
           <div class="admin-nav-item" data-sub="student-registration"><span class="nav-icon">&#128203;</span>Students Registration</div>
           <div id="sidebar-programs-list"></div>
-          <script>
-            (function() {
-              try {
-                var raw = localStorage.getItem('topscore_cached_sidebar_programs');
-                if (raw) {
-                  var list = JSON.parse(raw);
-                  if (Array.isArray(list) && list.length > 0) {
-                    var selId = localStorage.getItem('topscore_selected_program_id') || list[0].id;
-                    var h = '<div class="sidebar-program-group" style="display:flex; flex-direction:column; gap:2px;">';
-                    list.forEach(function(prog) {
-                      var isActive = (selId === prog.id && location.hash === '#students') ? 'active' : '';
-                      h += '<div class="admin-nav-item sidebar-program-item ' + isActive + '" data-program-id="' + prog.id + '" data-program-name="' + (prog.name || '').replace(/"/g, '&quot;') + '" data-sub="students"><span class="nav-icon">👥</span><span>' + (prog.name || '') + '</span></div>';
-                    });
-                    h += '</div>';
-                    var el = document.getElementById('sidebar-programs-list');
-                    if (el) el.innerHTML = h;
-                  }
-                }
-              } catch(e) {}
-            })();
-          </script>
+          
         </div>
 
         <!-- DOMAIN C: Class (Curriculum & AI Test Engine) -->
         <div class="nav-domain-group" data-domain="class">
           <div class="nav-domain-header"><span class="domain-icon">&#9889;</span>C &mdash; Class</div>
           <div id="sidebar-classes-list"></div>
-          <script>
-            (function() {
-              try {
-                var raw = localStorage.getItem('topscore_cached_sidebar_classes');
-                if (raw) {
-                  var list = JSON.parse(raw);
-                  if (Array.isArray(list) && list.length > 0) {
-                    var selId = localStorage.getItem('topscore_selected_class_id') || list[0].id;
-                    var h = '<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:2px;">';
-                    list.forEach(function(cls) {
-                      var isActive = (selId === cls.id && location.hash === '#class-hub') ? 'active' : '';
-                      h += '<div class="admin-nav-item sidebar-class-item ' + isActive + '" data-class-id="' + cls.id + '" data-class-name="' + (cls.name || '').replace(/"/g, '&quot;') + '"><span class="nav-icon">📘</span><span>' + (cls.name || '') + '</span></div>';
-                    });
-                    h += '</div>';
-                    var el = document.getElementById('sidebar-classes-list');
-                    if (el) el.innerHTML = h;
-                  }
-                }
-              } catch(e) {}
-            })();
-          </script>
+          
           <div class="admin-nav-item" data-sub="tests" data-view="tests"><span class="nav-icon">&#128221;</span>Test</div>
           <div class="admin-nav-item" data-sub="vocab_vault"><span class="nav-icon">&#128214;</span>Vocabulary Vault</div>
         </div>
@@ -148,7 +108,7 @@
 
 
       <header class="admin-topbar" id="admin-topbar">
-        <button class="btn btn-ghost btn-icon" id="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+        <button class="btn btn-ghost btn-icon" id="sidebar-toggle" aria-label="Toggle sidebar">â˜°</button>
         <div class="topbar-tabs-container" id="topbar-tabs-container">
           <!-- Elevated sleek summary KPI tabs render dynamically here -->
         </div>
@@ -176,7 +136,7 @@
     <div class="modal-box">
       <div class="modal-header">
         <h3 id="crud-modal-title">Add Record</h3>
-        <button class="btn btn-ghost btn-icon" id="close-crud-modal" aria-label="Close">✕</button>
+        <button class="btn btn-ghost btn-icon" id="close-crud-modal" aria-label="Close">âœ•</button>
       </div>
       <form id="crud-form" novalidate></form>
       <div class="d-flex gap-3 justify-between mt-6">
@@ -207,7 +167,7 @@
           <h3 id="dup-students-modal-title" class="modal-title-lg">&#128269; Duplicate Students Review &amp; Resolver</h3>
           <p class="text-xs text-muted modal-subtitle">Compare duplicate student profiles side-by-side and safely unify their TEST attempts and progress.</p>
         </div>
-        <button class="btn btn-ghost btn-icon" id="close-dup-students-modal" aria-label="Close">✕</button>
+        <button class="btn btn-ghost btn-icon" id="close-dup-students-modal" aria-label="Close">âœ•</button>
       </div>
 
       <!-- Scope Switcher Tabs & Bulk Action -->
@@ -242,7 +202,7 @@
           <h3 id="dup-questions-modal-title" class="modal-title-lg">&#128269; Duplicate Questions Review &amp; Resequencer</h3>
           <p class="text-xs text-muted modal-subtitle">Detect duplicate question texts within Tests and auto-resequence question orders seamlessly.</p>
         </div>
-        <button class="btn btn-ghost btn-icon" id="close-dup-questions-modal" aria-label="Close">✕</button>
+        <button class="btn btn-ghost btn-icon" id="close-dup-questions-modal" aria-label="Close">âœ•</button>
       </div>
 
       <!-- Scope / Filter Bar -->
@@ -251,7 +211,7 @@
           <div class="dup-filter-col">
             <label class="text-xs text-muted d-block mb-1" for="dup-q-test-select">Filter by Test</label>
             <select id="dup-q-test-select" class="form-control dup-select-control" title="Filter by Test" aria-label="Filter by Test">
-              <option value="">— All Tests —</option>
+              <option value="">â€” All Tests â€”</option>
             </select>
           </div>
           <div class="d-flex gap-2 pt-16">
@@ -285,10 +245,10 @@
     <div class="modal-box modal-box-lg bulk-edit-modal-box">
       <div class="modal-header modal-header-bordered">
         <div>
-          <h3 id="bulk-edit-asm-title" class="modal-title-lg">⚡ Bulk Edit Tests</h3>
+          <h3 id="bulk-edit-asm-title" class="modal-title-lg">âš¡ Bulk Edit Tests</h3>
           <p class="text-xs text-muted modal-subtitle" id="bulk-edit-asm-subtitle">Ubah pengaturan waktu, cara jawab, dan skor kelulusan untuk beberapa test sekaligus.</p>
         </div>
-        <button class="btn btn-ghost btn-icon" id="close-bulk-edit-asm-modal" aria-label="Close">✕</button>
+        <button class="btn btn-ghost btn-icon" id="close-bulk-edit-asm-modal" aria-label="Close">âœ•</button>
       </div>
 
       <div class="modal-body-scroll bulk-edit-body">
@@ -310,7 +270,7 @@
             <div class="bulk-edit-field-header">
               <input type="checkbox" id="bulk-check-duration" class="bulk-edit-checkbox" title="Aktifkan perubahan durasi waktu" />
               <label for="bulk-check-duration" class="bulk-edit-field-label">
-                ⏱️ Ubah Waktu Pengerjaan (Menit)
+                â±ï¸ Ubah Waktu Pengerjaan (Menit)
               </label>
             </div>
             <div id="bulk-wrap-duration" class="bulk-edit-field-wrap">
@@ -319,11 +279,11 @@
                 <label for="bulk-input-duration" class="text-sm text-muted">Menit per sesi pengerjaan</label>
               </div>
               <div class="bulk-edit-preset-row">
-                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-5">⚡ 5 Menit (Task Harian)</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-5">âš¡ 5 Menit (Task Harian)</button>
                 <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-15">15 Menit</button>
                 <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-30">30 Menit</button>
                 <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-60">60 Menit</button>
-                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-120">📝 120 Menit (Test)</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-120">ðŸ“ 120 Menit (Test)</button>
               </div>
             </div>
           </div>
@@ -333,15 +293,15 @@
             <div class="bulk-edit-field-header">
               <input type="checkbox" id="bulk-check-answertype" class="bulk-edit-checkbox" title="Aktifkan perubahan cara jawab" />
               <label for="bulk-check-answertype" class="bulk-edit-field-label">
-                🗣️ Ubah Tipe Cara Menjawab (Answer Type)
+                ðŸ—£ï¸ Ubah Tipe Cara Menjawab (Answer Type)
               </label>
             </div>
             <div id="bulk-wrap-answertype" class="bulk-edit-field-wrap">
               <select id="bulk-select-answertype" class="form-control bulk-edit-select" title="Pilih tipe cara menjawab" aria-label="Tipe Cara Menjawab">
-                <option value="spoken">🗣️ Spoken (Speech to Text / Lisan)</option>
-                <option value="written">✍️ Written (Mengetik Tulisan Langsung)</option>
-                <option value="selection">🔘 Selection (Pilihan Ganda / Dropdown)</option>
-                <option value="mixed">🔀 Mixed (Campuran)</option>
+                <option value="spoken">ðŸ—£ï¸ Spoken (Speech to Text / Lisan)</option>
+                <option value="written">âœï¸ Written (Mengetik Tulisan Langsung)</option>
+                <option value="selection">ðŸ”˜ Selection (Pilihan Ganda / Dropdown)</option>
+                <option value="mixed">ðŸ”€ Mixed (Campuran)</option>
               </select>
               <p class="text-xs text-muted bulk-edit-help-text">Otomatis menyinkronkan seluruh item soal di test_items yang bersangkutan.</p>
             </div>
@@ -352,7 +312,7 @@
             <div class="bulk-edit-field-header">
               <input type="checkbox" id="bulk-check-minscore" class="bulk-edit-checkbox" title="Aktifkan perubahan batas kelulusan" />
               <label for="bulk-check-minscore" class="bulk-edit-field-label">
-                🎯 Ubah Batas Skor Kelulusan (Passing Score %)
+                ðŸŽ¯ Ubah Batas Skor Kelulusan (Passing Score %)
               </label>
             </div>
             <div id="bulk-wrap-minscore" class="bulk-edit-field-wrap">
@@ -373,13 +333,13 @@
             <div class="bulk-edit-field-header">
               <input type="checkbox" id="bulk-check-order" class="bulk-edit-checkbox" title="Aktifkan perubahan urutan soal" />
               <label for="bulk-check-order" class="bulk-edit-field-label">
-                🔀 Ubah Urutan Soal (Question Order)
+                ðŸ”€ Ubah Urutan Soal (Question Order)
               </label>
             </div>
             <div id="bulk-wrap-order" class="bulk-edit-field-wrap">
               <select id="bulk-select-order" class="form-control bulk-edit-select" title="Pilih urutan soal" aria-label="Urutan Soal">
-                <option value="random">🔀 Random (Soal Diacak)</option>
-                <option value="sequential">➡️ Sequential (Soal Berurutan)</option>
+                <option value="random">ðŸ”€ Random (Soal Diacak)</option>
+                <option value="sequential">âž¡ï¸ Sequential (Soal Berurutan)</option>
               </select>
             </div>
           </div>
@@ -390,13 +350,13 @@
       <div class="modal-footer modal-footer-bordered bulk-edit-footer">
         <button type="button" class="btn btn-secondary" id="bulk-cancel-btn">Batal</button>
         <button type="button" class="btn btn-primary bulk-edit-save-btn" id="bulk-save-btn">
-          <span>💾 Terapkan Perubahan</span> (<span id="bulk-save-count">0</span> Test)
+          <span>ðŸ’¾ Terapkan Perubahan</span> (<span id="bulk-save-count">0</span> Test)
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ✨ RECORD DRAWER ✨ -->
+  <!-- âœ¨ RECORD DRAWER âœ¨ -->
   <div id="datagrid-drawer-overlay" class="datagrid-drawer-overlay hidden" onclick="closeRecordDrawer()"></div>
   <div id="datagrid-drawer" class="datagrid-drawer">
     <div class="datagrid-drawer-header">
@@ -411,26 +371,7 @@
     </div>
   </div>
 
-  <script>
-    window.openRecordDrawer = function(title, bodyHTML, footerHTML) {
-      document.getElementById('drawer-title').textContent = title || 'Details';
-      document.getElementById('drawer-body').innerHTML = bodyHTML || '';
-      document.getElementById('drawer-footer').innerHTML = footerHTML || '<button class="btn btn-secondary" onclick="closeRecordDrawer()">Close</button>';
-      
-      document.getElementById('datagrid-drawer-overlay').classList.remove('hidden');
-      // small delay to allow transition
-      setTimeout(() => {
-        document.getElementById('datagrid-drawer').classList.add('open');
-      }, 10);
-    };
-
-    window.closeRecordDrawer = function() {
-      document.getElementById('datagrid-drawer').classList.remove('open');
-      setTimeout(() => {
-        document.getElementById('datagrid-drawer-overlay').classList.add('hidden');
-      }, 300);
-    };
-  </script>
+  
 
   <!-- Roster Modal -->
   <div class="modal-backdrop modal-z-1000 hidden" id="roster-modal" role="dialog" aria-modal="true" aria-labelledby="roster-modal-title">
@@ -440,7 +381,7 @@
           <h3 id="roster-modal-title" class="modal-title-lg">Class Roster</h3>
           <p class="text-xs text-muted modal-subtitle" id="roster-modal-subtitle">Auto-enrolled vs Manually Added Students</p>
         </div>
-        <button class="btn btn-ghost btn-icon" onclick="document.getElementById('roster-modal').classList.add('hidden')">✕</button>
+        <button class="btn btn-ghost btn-icon" onclick="document.getElementById('roster-modal').classList.add('hidden')">âœ•</button>
       </div>
       <div class="roster-add-bar">
         <select id="roster-add-student-select" class="form-control flex-1" title="Select student to add to roster" aria-label="Select student to add to roster">
@@ -466,10 +407,10 @@
     <div class="modal-box modal-box-add-class">
       <div class="modal-header modal-header-add-class">
         <div>
-          <h3 class="modal-title-lg">➕ Add Class</h3>
+          <h3 class="modal-title-lg">âž• Add Class</h3>
           <p class="text-xs text-muted modal-subtitle" id="add-class-level-label">Inheriting Level</p>
         </div>
-        <button class="btn btn-ghost btn-icon" onclick="document.getElementById('add-class-modal').classList.add('hidden')">✕</button>
+        <button class="btn btn-ghost btn-icon" onclick="document.getElementById('add-class-modal').classList.add('hidden')">âœ•</button>
       </div>
       <div class="form-group mb-4">
         <label class="form-label">Class Name</label>
@@ -494,35 +435,8 @@
     </div>
   </div>
 
-  <script>
-  (function() {
-    const hasSession = sessionStorage.getItem('topscore_admin_session') || localStorage.getItem('topscore_admin_session');
-    if (!hasSession) {
-      document.getElementById('admin-login-screen')?.classList.remove('hidden');
-      document.getElementById('admin-console')?.classList.add('hidden');
-    } else {
-      document.getElementById('admin-login-screen')?.classList.add('hidden');
-      document.getElementById('admin-console')?.classList.remove('hidden');
-    }
-  })();
-</script>
-<script type="module">
-    import { DataGrid } from './js/admin/datagrid.js?v=20261027d';
-    window.DataGrid = DataGrid;
-  </script>
+  <script type="module" src="./js/admin/admin-init.js?v=20261028_init"></script>
   <script type="module" src="js/admin/app.js?v=20261028_milestone_pts"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261028_milestone_pts')
-          .then(registration => {
-            registration.update();
-            console.log('ServiceWorker registered and updated with scope:', registration.scope);
-          })
-          .catch(error => console.warn('ServiceWorker registration failed:', error));
-      });
-    }
-  </script>
 
 
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v15';
+const CACHE_NAME = 'topscore-cache-option-a-v16';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const ASSETS_TO_CACHE = [
   './dashboard.html',
   './test.html',
   './result.html',
+  './offline.html',
   './css/style.css?v=20261028',
   './css/admin.css?v=20261028',
   './css/dashboard.css?v=20261028',
@@ -22,6 +23,7 @@ const ASSETS_TO_CACHE = [
   './js/session.js?v=20261028',
   './js/supabase.js?v=20261028',
   './js/grading.js?v=20261028',
+  './js/admin/admin-init.js?v=20261028_init',
   './js/vendor/supabase.js',
   './js/vendor/xlsx.full.min.js?v=20261027d',
   './js/wake-lock.js?v=20261027d'
@@ -57,12 +59,12 @@ self.addEventListener('fetch', event => {
   if (event.request.url.includes('supabase.co')) return;
 
   const url = new URL(event.request.url);
-  const isScriptOrDoc = event.request.destination === 'script' || 
-                        event.request.destination === 'document' || 
+  const isDoc = event.request.destination === 'document' || url.pathname.endsWith('.html');
+  const isScriptOrDoc = isDoc ||
+                        event.request.destination === 'script' || 
                         event.request.destination === 'style' ||
                         url.pathname.endsWith('.js') || 
-                        url.pathname.endsWith('.css') || 
-                        url.pathname.endsWith('.html');
+                        url.pathname.endsWith('.css');
 
   if (isScriptOrDoc) {
     // Network-first for scripts and documents so bug fixes and updates propagate immediately
@@ -73,7 +75,14 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
         }
         return response;
-      }).catch(() => caches.match(event.request))
+      }).catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        // If document navigation fails while completely offline, serve offline fallback
+        if (isDoc) {
+          return caches.match('./offline.html');
+        }
+      })
     );
     return;
   }

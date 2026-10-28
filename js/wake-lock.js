@@ -98,7 +98,7 @@ async function requestNativeLock() {
       }
     });
 
-    console.log('[WakeLock] Native Screen Wake Lock acquired.');
+    // Native lock acquired successfully
     return true;
   } catch (err) {
     wakeLockState.nativeActive = false;
@@ -172,7 +172,7 @@ export function releaseScreenWakeLock() {
     wakeLockState.fallbackActive = false;
   }
 
-  console.log('[WakeLock] Screen Wake Lock released.');
+  // Screen lock released
 }
 
 /**

@@ -1,0 +1,33 @@
+name: TopsCore CI / Quality Gates
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Validate JavaScript Syntax (All 40 Modules)
+      run: node scripts/check_all_js_syntax.cjs
+
+    - name: Validate Service Worker Cache Manifest
+      run: node scripts/generate_sw_manifest.mjs
+
+    - name: Run Student Dashboard Exam Parity Suite
+      run: node scripts/test_student_dashboard_exam_parity.mjs

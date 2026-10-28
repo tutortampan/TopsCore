@@ -1297,7 +1297,7 @@ Existing historical attempt records will NOT be modified.`;
                           finalTopicId = newTopic.id;
                           topicDictionary[normalizedExcelTopic] = newTopic.id; // Cache it so we don't duplicate
                           newTopicsCount++;
-                          console.log(`Auto-created missing topic: "${rawTopic.trim()}"`);
+                          // Auto-created missing topic
                       } else if (createErr) {
                           console.warn(`Failed to auto-create topic "${rawTopic.trim()}":`, createErr.message);
                       }

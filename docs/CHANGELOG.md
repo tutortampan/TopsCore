@@ -1,4 +1,40 @@
-﻿## [2026-10-28 16:50] - Phase 165: Implemented User-Selected Icons (1A Yellow Padlock, 2B Red Rotate Undo, 3C Green Circle Play)
+﻿## [2026-10-28 18:40] — Phase 166: Full System Maximization, Security Hardening & CI Pipeline
+
+**Agent/Session:** Antigravity / Gemini
+**Phase:** Phase 166
+**Status:** PASS
+
+### Why
+- Execute full system maximization based on architectural audit: add security headers (CSP, HSTS), configure search engine robots, replace over-fetching database queries with explicit column projections, extract inline scripts from admin.html into modular admin-init.js, provide offline fallback UX in Service Worker v16, create automated cache manifest validator, and configure GitHub Actions CI quality gates.
+
+### Changed
+- ercel.json & 
+etlify.toml: Added HSTS (Strict-Transport-Security), comprehensive Content-Security-Policy, and static asset cache-control headers.
+- obots.txt: Created crawler restriction for administrative and testing paths.
+- js/api.js: Replaced 7 non-generic select('*') calls with explicit column projections on ttempts, ttempt_answers, 	ests, word_types, levels, class_instances, and class_meetings.
+- dmin.html: Extracted all 6 inline script tags into modular js/admin/admin-init.js.
+- js/admin/admin-init.js: Centralized fast-boot routines: auth gate check, sidebar cache hydration, record drawer controller, DataGrid export, and service worker registration.
+- offline.html: Created dedicated offline fallback document with connection retry controls.
+- sw.js: Bumped cache to 	opscore-cache-option-a-v16, registered offline.html and dmin-init.js, and wired offline fallback for failed document requests.
+- scripts/generate_sw_manifest.mjs: Created automated script verifying 100% of declared SW assets exist on disk with file size telemetry.
+- .github/workflows/ci.yml: Created GitHub Actions CI workflow running JS syntax checks, manifest verification, and student parity test suites on push/PR.
+- package.json: Configured 
+pm test script chaining syntax checks, manifest verification, and student parity suites.
+- js/wake-lock.js & js/admin/class.js: Purged debug console.log statements.
+- .env.example: Created deployment environment template.
+- Removed empty 0-byte root files db_schema.sql and schema.sql.
+
+### Tests
+- command: 
+ode scripts/check_all_js_syntax.cjs -> 40/40 JS files PASS (100%)
+- command: 
+ode scripts/generate_sw_manifest.mjs -> 27/27 SW cache assets verified on disk
+- command: 
+pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
+
+---
+
+## [2026-10-28 16:50] - Phase 165: Implemented User-Selected Icons (1A Yellow Padlock, 2B Red Rotate Undo, 3C Green Circle Play)
 
 **Agent/Session:** Antigravity  
 **Phase:** Phase 165 (Apply User-Selected Action & Status Icons to Next Test Card)  

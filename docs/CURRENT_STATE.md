@@ -1,14 +1,46 @@
-﻿# CURRENT STATE
+# CURRENT STATE
 
-Last Updated: 2026-10-28 16:50 UTC+8
+Last Updated: 2026-10-28 18:40 UTC+8
 
-Current Phase: Phase 165: Implemented User-Selected Icons (1A Yellow Padlock, 2B Red Rotate Undo, 3C Green Circle Play) [COMPLETE]
+Current Phase: Phase 166: Full System Maximization, Security Hardening & CI Pipeline [COMPLETE]
 
-Current Task: Apply 1A, 2B, 3C Icons to Next Test Card [COMPLETE]
+Current Task: Implement All System Maximization Recommendations [COMPLETE]
 
-Status: COMPLETE (1A Yellow Padlock, 2B Red Rotate Undo, 3C Green Circle Play applied and verified; 39 JS files syntax valid)
+Status: COMPLETE (All optimization vectors implemented and verified: security headers, CSP/HSTS, robots.txt, 8x select('*') eliminated, admin.html inline scripts extracted to admin-init.js, offline fallback page, sw.js v16, automated manifest generator, GitHub Actions CI pipeline, npm test suite; 40 JS files syntax valid, 100% test pass)
 
 ## Completed
+
+- **Phase 166: Full System Maximization, Security Hardening & CI Pipeline**:
+  - **1. Security Headers & Host Configurations (`vercel.json`, `netlify.toml`, `robots.txt`)**:
+    - Added `Strict-Transport-Security: max-age=31536000; includeSubDomains` (HSTS).
+    - Added comprehensive `Content-Security-Policy` restricting script, style, font, image, media, and connect origins to `self`, Supabase (`*.supabase.co`), Google Fonts, and trusted CDNs.
+    - Added long-lived browser cache policies for versioned CSS (`max-age=86400, stale-while-revalidate`) and assets (`max-age=604800, stale-while-revalidate=2592000`).
+    - Added `robots.txt` restricting search engine crawlers from indexing `/admin.html`, `/test.html`, `/result.html`, `/management.html`.
+  - **2. Database Query Projections & Egress Optimization (`js/api.js`)**:
+    - Replaced all non-generic `select('*')` with explicit column projections:
+      * `attempts` client fallback: `select('id, is_remedial_unlocked')`
+      * `attempt_answers` client fallback: `select('id, student_answer, accepted_answers_snapshot, correct_answer_snapshot')`
+      * `tests` guard check: `select('id, module_id, class_id, level_id')`
+      * `word_types`: `select('id, name, is_active, class_id')`
+      * `levels` target resolution: `select('id, level_number')`
+      * `class_instances`: `select('id, batch_id, class_id, start_date, estimated_finish, actual_finish, recurring_schedule, status, created_at, updated_at')`
+      * `class_meetings`: `select('id, class_instance_id, meeting_number, scheduled_date, actual_date, status, created_at, updated_at')`
+  - **3. Extraction of All 6 Inline `<script>` Blocks from `admin.html`**:
+    - Created `js/admin/admin-init.js` containing `initAuthGate()`, `initSidebarCache()`, `initRecordDrawer()`, `window.DataGrid` export, and `registerServiceWorker()`.
+    - Removed all 6 inline script tags from `admin.html`. Cleaned HTML structure to zero inline scripts.
+  - **4. Code Hygiene & Secrets Decoupling**:
+    - Removed debug `console.log` statements in `js/wake-lock.js` and `js/admin/class.js`.
+    - Created `.env.example` defining `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `USE_LOCAL` for deployment teams.
+    - Removed obsolete 0-byte root files `db_schema.sql` and `schema.sql`.
+  - **5. Offline Fallback Page & Service Worker v16 (`offline.html`, `sw.js`)**:
+    - Designed and created standalone responsive `offline.html` notifying students when internet drops and reassuring them that answers and sessions are preserved locally.
+    - Updated `sw.js` cache to `topscore-cache-option-a-v16` incorporating `offline.html` and `admin-init.js`.
+    - Configured document fetch failure handler to gracefully serve `offline.html`.
+    - Unified SW registration query string across `dashboard.html`, `index.html`, `result.html`, `test.html`, and `admin-init.js` to `?v=20261028_v16`.
+  - **6. Automated SW Manifest Generator & GitHub Actions CI Pipeline**:
+    - Created `scripts/generate_sw_manifest.mjs` to auto-verify that 100% of declared SW cache assets exist on disk with file size telemetry.
+    - Added GitHub Actions workflow `.github/workflows/ci.yml` running syntax checks, manifest verification, and student parity test suites on push/PR.
+    - Configured `npm test` script executing the full suite in sequence (`npm.cmd test` = 100% PASS).
 
 - **Phase 163: Student Lobby & Result Page Ergonomics Alignment**:
   - **Decisions Implemented per User Review**:

@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test": "playwright test",
+    "test:syntax": "node scripts/check_all_js_syntax.cjs",
+    "test:manifest": "node scripts/generate_sw_manifest.mjs",
+    "test:parity": "node scripts/test_student_dashboard_exam_parity.mjs",
+    "test": "node scripts/check_all_js_syntax.cjs && node scripts/generate_sw_manifest.mjs && node scripts/test_student_dashboard_exam_parity.mjs",
     "build": "echo 'Static deploy ready'"
   },
   "devDependencies": {

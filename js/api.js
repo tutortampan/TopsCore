@@ -1101,8 +1101,8 @@ export async function submitTest(attemptId, answersMap, options = {}) {
       console.warn('PostgreSQL RPC fallback failed, executing direct client submit fallback:', rpcErr);
 
       // Direct client evaluation fallback (guarantees student NEVER fails to submit or loses score)
-      const { data: attempt } = await sb.from('attempts').select('*').eq('id', attemptId).single();
-      const { data: attemptAnswers } = await sb.from('attempt_answers').select('*').eq('attempt_id', attemptId);
+      const { data: attempt } = await sb.from('attempts').select('id, is_remedial_unlocked').eq('id', attemptId).single();
+      const { data: attemptAnswers } = await sb.from('attempt_answers').select('id, student_answer, accepted_answers_snapshot, correct_answer_snapshot').eq('attempt_id', attemptId);
 
       let totalPoints = 0;
       let correctCount = 0;
@@ -1370,7 +1370,7 @@ export async function adminUpdate(table, id, payload) {
         delete payload.duration_minutes;
       }
     }
-    const { data: existing } = await sb.from('tests').select('*').eq('id', id).single();
+    const { data: existing } = await sb.from('tests').select('id, module_id, class_id, level_id').eq('id', id).single();
     await enforceTestSystemGuard(sb, payload, existing);
   }
 
@@ -1785,7 +1785,7 @@ export async function deleteTopic(id) {
 export async function fetchWordTypes(classId) {
   const sb = await getSupabase();
   // word_types table has no deleted_at, order by name column
-  let query = sb.from('word_types').select('*').order('name');
+  let query = sb.from('word_types').select('id, name, is_active, class_id').order('name');
   if (classId) query = query.eq('class_id', classId);
   const { data, error } = await query;
   if (error) throw error;
@@ -1897,7 +1897,7 @@ export async function fetchTestInstances(filters = {}) {
 // --- Class instances (scheduling) ---
 export async function fetchClassInstances(filters = {}) {
   const sb = await getSupabase();
-  let query = sb.from('class_instances').select('*');
+  let query = sb.from('class_instances').select('id, batch_id, class_id, start_date, estimated_finish, actual_finish, recurring_schedule, status, created_at, updated_at');
   if (filters.class_id) query = query.eq('class_id', filters.class_id);
   if (filters.batch_id) query = query.eq('batch_id', filters.batch_id);
   const { data, error } = await query.order('created_at', { ascending: false });
@@ -1922,7 +1922,7 @@ export async function addAdditionalMember(instanceId, studentId) {
 // --- Additional Admin Functions ---
 export async function fetchClassMeetings(filters = {}) {
   const sb = await getSupabase();
-  let query = sb.from('class_meetings').select('*');
+  let query = sb.from('class_meetings').select('id, class_instance_id, meeting_number, scheduled_date, actual_date, status, created_at, updated_at');
   if (filters.class_instance_id) query = query.eq('class_instance_id', filters.class_instance_id);
   const { data, error } = await query.order('created_at', { ascending: false });
   if (error) throw error;
@@ -2336,7 +2336,7 @@ export async function createVocabMasteryTest(config) {
   let targetLevel = 1;
   let isAllLevels = false;
   try {
-    const { data: lvlData } = await sb.from('levels').select('*').eq('id', levelId).single();
+    const { data: lvlData } = await sb.from('levels').select('id, level_number').eq('id', levelId).single();
     if (lvlData) {
         targetLevel = typeof lvlData.level_number === 'number' ? lvlData.level_number : 1;
         if (lvlData.level_number == null) isAllLevels = true;
