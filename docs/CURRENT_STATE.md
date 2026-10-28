@@ -1,14 +1,31 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-28 14:05 UTC+8
+Last Updated: 2026-10-28 14:55 UTC+8
 
-Current Phase: Phase 162: Fix Non-Existent Column 'test_category' in API & Restore Student Lobby Progress, Hero Next Assignment, and Leaderboard Standings [COMPLETE]
+Current Phase: Phase 163: Student Lobby & Result Page Ergonomics Alignment (Top-Floated Assessments, Hidden Locked Drills, Attempt Counter Strip & Sub-line Progress) [COMPLETE]
 
-Current Task: Purge test_category from fetchTests and auto-gen-modal, verify Student Lobby UI in browser [COMPLETE]
+Current Task: Verify Result Page Attempt Meta Strip (Option B) and Dashboard Modal Sort Order [COMPLETE]
 
-Status: COMPLETE (Purged invalid column 'test_category' from fetchTests in js/api.js and js/admin/auto-gen-modal.js; restored full loading of all 40 tests on Student Lobby; 3rd Vocabulary progress restored from 0% to 45%; next assignment hero card restored from false 100% completion to 'Ready for Test: 3rd Vocabulary B Words Exam - Tourism (Waiting for Tutor)'; leaderboard milestone progression penalties restored for Risma & Pasya 18% Grade E; verified visually via Playwright screenshot suke_ajai_dashboard_verified.png; 39 JS files syntax validated; 0 git commit/push per rule).
+Status: COMPLETE (D-3: Leaderboard sub-line updated to 'Progress'; T-1: Hidden 'Written Test' label; T-2: Hidden '0 min' timer; Test List Modal: Last-attempted tests float to top, unattempted locked tests hidden; R-4/R-6: Attempt Meta Strip panel (Option B 20px) implemented and verified in live DOM; Service Worker bumped to v15; 39 JS files syntax valid).
 
 ## Completed
+
+- **Phase 163: Student Lobby & Result Page Ergonomics Alignment**:
+  - **Decisions Implemented per User Review**:
+    1. *D-3 Leaderboard sub-line copy*: Changed from `${hasExam ? `${st.overallScore}% avg` : '-'}` to `${hasExam ? `${st.overallScore}% Progress` : '-'}` in `js/dashboard.js`. Verified on Suke Ajai dashboard.
+    2. *T-1 Answer Type Label*: Updated `formatAnswerType(atype)` in `js/dashboard.js` to return empty string `''` when atype is null/unspecified. Card now omits the redundant/misleading "Written Test" label entirely.
+    3. *T-2 Timer Row Clean-up*: Updated card template in `js/dashboard.js` to only render timer div when `time_limit_minutes > 0`. Eliminated defunct "0 min" badge on completed/untimed tests.
+    4. *Test List Modal (Last Assessment Floated to Top & Locked Hidden)*:
+       - In `openClassModal` (`js/dashboard.js`), tests are sorted with `sortedTests` by most recent attempt timestamp (`submitted_at` or `started_at` DESC), floating the student's active/last-taken tests (e.g. `3rd Vocabulary B Words Exam - Tourism`) immediately to the top of the modal.
+       - Tests that have not been attempted and do not meet prerequisites (`!prereqMet && !best && !inProg`) are skipped, keeping future locked themes (Theme C, Theme D) cleanly hidden.
+    5. *R-4 / R-6 Attempt Meta Strip (Option B - 20px Panel)*:
+       - Added `<div id="result-attempt-meta" class="result-attempt-meta-strip cascade-item"></div>` in `result.html` between dual score/grade box and motivation message.
+       - Styled in `css/result.css` with 20px fixed height, centered flex layout, and chip typography (`Attempt 1/2` and `▲/▼ X% from last`).
+       - Revealed via `.cascade-revealed` in `runResultEntranceSequence` in `js/result.js`. Verified in Playwright (`opacity: 1`, `height: 20px`, visible in live browser rendering).
+    6. *Cache & Asset Synchronization*:
+       - Bumped `sw.js` cache name to `topscore-cache-option-a-v15`.
+       - Bumped query parameters in `result.html` and `dashboard.html`.
+       - All 39 JavaScript files syntax validated (`node --check`).
 
 - **Phase 162: Fix Non-Existent Column 'test_category' & Restore Student Lobby UI & Leaderboard**:
   - **Root Cause Analysis of 3 User-Reported Anomalies**:

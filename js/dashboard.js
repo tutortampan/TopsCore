@@ -1295,8 +1295,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Render
         let html = '';
         for (const lvl of sortedLevels) {
+          // Sort tests: last-attempted (most recent submitted_at / started_at) floats to top
+          const sortedTests = [...lvl.Tests].sort((a, b) => {
+            const aAtt = bestByTest[a.id] || inProgByTest[a.id];
+            const bAtt = bestByTest[b.id] || inProgByTest[b.id];
+            const aTime = aAtt ? new Date(aAtt.submitted_at || aAtt.started_at || 0).getTime() : 0;
+            const bTime = bAtt ? new Date(bAtt.submitted_at || bAtt.started_at || 0).getTime() : 0;
+            if (aTime !== bTime) return bTime - aTime; // most recently attempted first
+            return 0; // preserve original order for untouched tests
+          });
+
           let lvlHtml = '';
-          for (const Test of lvl.Tests) {
+          for (const Test of sortedTests) {
             const best      = bestByTest[Test.id];
             const inProg    = inProgByTest[Test.id];
             const isRem       = Boolean(best && (best.is_remedial_unlocked || best.is_remedial));
@@ -1361,6 +1371,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             let cardFilter = 'none';
 
             if (!prereqMet) {
+              // Hide locked tests that have never been attempted — student doesn't need to see them
+              if (!best && !inProg) continue;
+              // If previously attempted but now locked (e.g. remedial required): still show but dimmed
               cardOpacity = '0.5';
               cardFilter = 'grayscale(100%)';
               statusBadge = `<span style="background:rgba(255,255,255,0.1);color:#a1a1aa;border:1px solid rgba(255,255,255,0.2);
@@ -1446,12 +1459,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                   ${(Test.Test_title || Test.title || 'Test').replace(/^.*?-\s*\d+[a-z]{2}\s+Level\s*-\s*/i, '').replace(/Vocabulary Mastery /i, '')}
                 </div>
                 <div class="asm-modal-meta-group">
-                  <div style="font-size:0.72rem;color:var(--clr-text-3);">
-                  ${formatAnswerType(Test.answer_type)}
-                </div>
-                <div style="font-size:0.72rem;color:var(--clr-text-3);">
-                  ⏱️ ${Test.time_limit_minutes || 0} min
-                  </div>
+                  ${formatAnswerType(Test.answer_type) ? `<div style="font-size:0.72rem;color:var(--clr-text-3);">${formatAnswerType(Test.answer_type)}</div>` : ''}
+                  ${(Test.time_limit_minutes && Number(Test.time_limit_minutes) > 0) ? `<div style="font-size:0.72rem;color:var(--clr-text-3);">⏱ ${Test.time_limit_minutes} min</div>` : ''}
                 </div>
               </div>
               <div class="asm-modal-actions">
@@ -1483,7 +1492,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     }
 
     function formatAnswerType(atype) {
-      if (!atype) return 'Written Test';
+      if (!atype) return '';  // T-1: hide label when type is unknown — never show "Written Test"
       if (atype === 'speech_to_text' || atype === 'spoken') return 'Speaking Test';
       if (atype === 'written') return 'Written Test';
       if (atype === 'multiple_choice' || atype === 'selection') return 'Selection';
@@ -2548,7 +2557,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                     <span class="leaderboard-student-name">${escHtml(displayTitleName)}</span>
                     ${isMe ? '<span style="color:#38bdf8; font-size:0.7rem; font-weight:700;">(You)</span>' : ''}
                   </div>
-                  <span class="leaderboard-sub-info">${st.completedCount} completed &bull; ${hasExam ? `${st.overallScore}% avg` : '—'}</span>
+                  <span class="leaderboard-sub-info">${st.completedCount} completed &bull; ${hasExam ? `${st.overallScore}% Progress` : '—'}</span>
                 </div>
               </div>
               <div class="th-col th-point" style="display:flex; align-items:center; justify-content:flex-end;">

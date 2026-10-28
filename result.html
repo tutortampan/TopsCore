@@ -22,9 +22,9 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Outfit:wght@400;600;700;800;900&amp;display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261027" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261027" />
-  <link rel="stylesheet" href="css/result.css?v=20261027" />
+  <link rel="stylesheet" href="css/style.css?v=20261028" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261028" />
+  <link rel="stylesheet" href="css/result.css?v=20261028_strip" />
 </head>
 
 <body class="result-page">
@@ -123,6 +123,9 @@
         </div>
       </div>
 
+      <!-- 4b. Attempt Meta Strip (Attempt #N/Total + Improvement Delta) -->
+      <div id="result-attempt-meta" class="result-attempt-meta-strip cascade-item"></div>
+
       <!-- 5. Evaluation / Motivation Word Card (FAIL / LESS / ENOUGH / GOOD / VERY GOOD / EXCELLENT - 50px) -->
       <div class="result-evaluation-card cascade-item" id="result-motivation-msg">&mdash;</div>
 
@@ -160,7 +163,7 @@
     </div>
   </div>
 
-  <script type="module" src="./js/result.js?v=20261027"></script>
+  <script type="module" src="./js/result.js?v=20261028_strip"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

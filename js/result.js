@@ -208,26 +208,31 @@ if (!session) {
       const attemptNum = idx >= 0 ? attempts.length - idx : attempts.length;
       const totalAttempts = attempts.length;
 
+      // Delta vs previous attempt
       let deltaHtml = '';
-      // Previous attempt is the one after this one in the desc-sorted list
       if (idx >= 0 && idx < attempts.length - 1) {
         const prev = attempts[idx + 1];
         const prevPct = parseFloat(prev.percentage || 0);
         const delta = currentPct - prevPct;
         if (Math.abs(delta) > 0.05) {
+          const cls = delta > 0 ? 'delta-up' : 'delta-down';
           const sign = delta > 0 ? '▲' : '▼';
-          const color = delta > 0 ? '#10b981' : '#f87171';
           const absDelta = Math.abs(delta).toFixed(1);
-          deltaHtml = `<div style="font-size:0.68rem; font-weight:800; color:${color}; margin-top:3px;">${sign} ${absDelta}% from last</div>`;
+          deltaHtml = `<span class="meta-sep"></span>
+            <span class="meta-chip">
+              <span class="${cls}">${sign} ${absDelta}%</span>
+              <span class="chip-sub">from last</span>
+            </span>`;
         }
       }
 
+      // Render 20px fixed-height strip: [ Attempt 3/15 ] | [ ▲ 5% from last ]
       el.innerHTML = `
-        <div style="text-align:center; padding-left: 14px;">
-          <div style="font-size:0.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.06em;">Attempt</div>
-          <div style="font-size:1.1rem; font-weight:900; color:#f8fafc; line-height:1;">${attemptNum}<span style="font-size:0.72rem; color:#94a3b8;">/${totalAttempts}</span></div>
-          ${deltaHtml}
-        </div>
+        <span class="meta-chip">
+          <span class="chip-lbl">Attempt</span>
+          <span class="chip-val">${attemptNum}<span class="chip-sub">/${totalAttempts}</span></span>
+        </span>
+        ${deltaHtml}
       `;
     }
 
@@ -1347,6 +1352,12 @@ if (!session) {
       }
       if (isGradeSOr100 || targetPct >= 100) {
         launchConfetti();
+      }
+
+      // Step 5b: Reveal Attempt Meta Strip (Attempt #N/Total + Delta)
+      const attemptMeta = document.getElementById('result-attempt-meta');
+      if (attemptMeta) {
+        attemptMeta.classList.add('cascade-revealed');
       }
 
       // Step 6: 280ms after Grade Stamp -> Evaluation Word Card reveals

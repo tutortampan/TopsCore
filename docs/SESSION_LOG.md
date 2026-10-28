@@ -7619,3 +7619,57 @@ Agent: Antigravity
 
 
 
+
+## SESSION-20261028-1455
+
+Start: 2026-10-28 14:30 UTC+8
+End: 2026-10-28 14:55 UTC+8
+Agent: Antigravity
+
+### User Request
+Review dashboard, test list, result page; apply user decisions:
+- D-1: E is FAIL (kept)
+- D-2: Tiles stay as-is (kept)
+- D-3: Sub-line "Progress 43%"
+- T-1: Hide "Written Test" label
+- T-2: Hide "0 min" timer
+- Test List: Last assessment taken floats to top, locked ones hidden
+- R-3: Always show all 4 metrics rows (kept)
+- R-5: Admin view let it be (kept)
+- R-4 / R-6: Option B strip with 20px fixed height panel
+
+### Work Performed
+1. **Dashboard & Test List Modal (`js/dashboard.js`)**:
+   - `D-3`: Updated leaderboard sub-line to `${st.overallScore}% Progress`.
+   - `T-1`: Updated `formatAnswerType` to return `''` for unknown/null answer types, hiding the label.
+   - `T-2`: Guarded timer div so it only renders when `time_limit_minutes > 0`.
+   - `Test List`: Sorted tests by attempt timestamp (`submitted_at`/`started_at` DESC) so the student's latest active test floats to the top; skipped unattempted locked tests (`!prereqMet && !best && !inProg`).
+2. **Result Page Attempt Meta Strip (`result.html`, `js/result.js`, `css/result.css`)**:
+   - Added `#result-attempt-meta` between dual score/grade card and motivation message.
+   - Styled `.result-attempt-meta-strip` with fixed 20px height, centered flex layout, and chip typography.
+   - Wired `.cascade-revealed` in `runResultEntranceSequence` so the strip appears cleanly.
+3. **Cache & Verification**:
+   - Bumped `sw.js` cache name to `topscore-cache-option-a-v15`.
+   - Bumped query string versions in `result.html` and `dashboard.html`.
+   - Headless Playwright verification confirmed:
+     - Result page: Attempt Meta strip rendered at 20px height with `Attempt 1/2`.
+     - Dashboard test list modal: Last test floats to top (`3rd Vocabulary B Words Exam - Tourism`), 0 "Written Test" labels, 0 "0 min" labels, future locked tests hidden.
+   - All 39 JavaScript files syntax validated (`node --check`).
+
+### Files Changed
+- `js/dashboard.js`
+- `dashboard.html`
+- `result.html`
+- `js/result.js`
+- `css/result.css`
+- `sw.js`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- `scripts/inspect_modal_and_result.mjs`: PASSED 100%
+- Visual verification screenshots captured: `scratch/result_inspect_verified.png` and `scratch/dashboard_modal_verified.png`
+- `node scripts/check_all_js_syntax.cjs`: ALL 39 JS files syntax valid
+
+### Resume From
+Ready for user feedback.
