@@ -1,4 +1,74 @@
-﻿## [2026-10-28 15:58] - Phase 164: Remove Attempt Meta Strip from Result Page
+﻿## [2026-10-28 16:50] - Phase 165: Implemented User-Selected Icons (1A Yellow Padlock, 2B Red Rotate Undo, 3C Green Circle Play)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 165 (Apply User-Selected Action & Status Icons to Next Test Card)  
+**Status:** PASS  
+
+### Why
+- User reviewed the icon catalog showcase and selected options:
+  - **1A**: Solid Yellow Padlock for locked exam / waiting for tutor.
+  - **2B**: Red Button with Rotate Undo (curved return arrow) for retake.
+  - **3C**: Green Button with Circle Play for ready to take / start test.
+- Leading test icons (e.g. 🎯, 🔒) and "READY FOR TEST" banner were eliminated from the left side of the card so test names start at the left margin and display completely without truncation.
+
+### Changed
+- `js/dashboard.js`:
+  - Integrated `ICON_1A_YELLOW_LOCK` (solid yellow lock SVG with keyhole and gold glow).
+  - Integrated `ICON_2B_RED_RETAKE` (circular rotate undo arrow on red button).
+  - Integrated `ICON_3C_GREEN_PLAY` (circle play icon on emerald green button).
+  - Cleaned `.next-asm-left` to render only `.next-asm-title` with full title attribute.
+- `css/dashboard.css`:
+  - Added `.next-asm-go-btn.is-retake-red` (red gradient #ef4444 to #b91c1c with glow).
+  - Added `.next-asm-go-btn.is-start-green` (green gradient #10b981 to #047857 with glow).
+  - Added `.next-asm-status-icon.is-locked-yellow` with yellow drop-shadow.
+  - Set `.next-asm-left` to `gap: 0 !important;` and `.next-asm-icon` to `display: none !important;`.
+- `dashboard.html`:
+  - Bumped cache query strings to `v=20261028_selectedicons`.
+
+### Verification
+- 39/39 JS files syntax valid (`node scripts/check_all_js_syntax.cjs`).
+- Verified via Playwright headless browser rendering:
+  - Suke Ajai (waiting for tutor): Renders 1A Yellow Padlock.
+  - Muhammad Alimae Pasya (retake): Renders 2B Red Button with Rotate Undo Arrow.
+
+---
+## [2026-10-28 16:30] - Phase 165: Icon-Only Indicators & Full Title Display for Next Test Hero Card
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 165 (Hero Next Test Full Title & Icon-Only Action Badges)  
+**Status:** PASS  
+
+### Why
+- User requested that the next Test hero card on `dashboard.html` should display the test name directly without an icon on the left, and that all actions and states (Retake, Start/Next Test, Locked, Waiting for Tutor) should strictly use icons only.
+- In previous versions, the prefix icon (e.g. 🎯 or 🔒) and wide text buttons (e.g. "RETAKE ➔", "GO TEST ➔", "Waiting for Tutor") consumed significant horizontal space, causing long test titles to truncate with ellipsis.
+
+### Changed
+- `js/dashboard.js`:
+  - Removed all leading icon elements from `.next-asm-left`.
+  - Removed sub-banner ("READY FOR TEST") from title wrapper.
+  - Made action buttons icon-only:
+    - Retake quiz: `<button class="next-asm-go-btn is-retake" title="Retake">🔄</button>`
+    - Start test / Next test: `<button class="next-asm-go-btn is-start" title="Start Test">▶</button>`
+    - Waiting for tutor: `<span class="next-asm-status-icon" title="Waiting for Tutor">⏰</span>`
+    - Locked: `<span class="next-asm-status-icon" title="Locked">🔒</span>`
+    - 100% Completed: `<span class="next-asm-status-icon" title="All tasks completed (100%)">🎉</span>`
+- `css/dashboard.css`:
+  - `.next-asm-left`: `gap: 0 !important;` to give maximum width to the test title.
+  - `.next-asm-icon`: set to `display: none !important;`.
+  - `.next-asm-title`: `-webkit-line-clamp: 2` with clean multi-line wrapping and `line-height: 1.35`.
+  - `.next-asm-go-btn` & `.next-asm-status-icon`: standardized to a uniform 36px x 34px footprint with sleek gradient accents (amber for retake, emerald for start).
+- `dashboard.html`:
+  - Bumped cache query string to `v=20261028_icononly`.
+
+### Verification
+- 39/39 JS files passed syntax validation (`node scripts/check_all_js_syntax.cjs`).
+- Edge headless browser rendering verified for both states:
+  - Retake Quiz (Mr. Muhammad Alimae Pasya): Clean 2-line title "3rd Vocabulary B1 Words Quiz - Understanding Cultural Differences" + amber `🔄` button.
+  - Waiting for Tutor (Mr. Suke Ajai): Clean title "3rd Vocabulary B Words Exam - Tourism" + `⏰` status icon.
+- Screenshots verified: `pasya_next_hero_verified.png` and `suke_next_hero_verified.png`.
+
+---
+## [2026-10-28 15:58] - Phase 164: Remove Attempt Meta Strip from Result Page
 
 **Agent/Session:** Antigravity
 **Phase:** Phase 164 (Remove Attempt Meta Strip)

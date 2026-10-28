@@ -3006,15 +3006,13 @@ body.dashboard-page .next-test-card {
 body.dashboard-page .next-asm-left {
   display: flex !important;
   align-items: center !important;
-  gap: 8px !important;
+  gap: 0 !important;
   min-width: 0 !important;
   flex: 1 1 auto !important;
 }
 
 body.dashboard-page .next-asm-icon {
-  font-size: 1.15rem !important;
-  line-height: 1 !important;
-  flex-shrink: 0 !important;
+  display: none !important;
 }
 
 body.dashboard-page .next-asm-title {
@@ -3027,35 +3025,61 @@ body.dashboard-page .next-asm-title {
   display: -webkit-box !important;
   -webkit-line-clamp: 2 !important;
   -webkit-box-orient: vertical !important;
-  line-height: 1.3 !important;
+  line-height: 1.35 !important;
 }
 
 body.dashboard-page .next-asm-go-btn {
-  height: 32px !important;
-  min-height: 32px !important;
-  max-height: 32px !important;
-  padding: 0 18px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  padding: 0 !important;
   font-family: 'Outfit', sans-serif !important;
-  font-size: 0.82rem !important;
-  font-weight: 900 !important;
-  letter-spacing: 0.05em !important;
   border-radius: 8px !important;
-  white-space: nowrap !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0 !important;
-  background: linear-gradient(135deg, var(--tier-color, #10b981) 0%, #059669 100%) !important;
-  color: #ffffff !important;
-  border: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
   cursor: pointer !important;
-  box-shadow: 0 0 14px rgba(var(--tier-rgb, 16, 185, 129), 0.45) !important;
   transition: all 0.2s ease !important;
 }
 
 body.dashboard-page .next-asm-go-btn:hover {
   filter: brightness(1.15) !important;
-  transform: scale(1.03) !important;
+  transform: scale(1.05) !important;
+}
+
+/* 2B: Retake Red Button */
+body.dashboard-page .next-asm-go-btn.is-retake,
+body.dashboard-page .next-asm-go-btn.is-retake-red {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.55) !important;
+}
+
+/* 3C: Start Green Button */
+body.dashboard-page .next-asm-go-btn.is-start,
+body.dashboard-page .next-asm-go-btn.is-start-green {
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.55) !important;
+}
+
+/* 1A: Yellow Padlock Status */
+body.dashboard-page .next-asm-status-icon {
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  height: 34px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+body.dashboard-page .next-asm-status-icon.is-locked-yellow svg {
+  filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.65)) !important;
 }
 
 body.dashboard-page .class-deck-box {

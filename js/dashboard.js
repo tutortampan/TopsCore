@@ -918,19 +918,34 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const className = classMap[nextAsm.class_id]?.name || 'Class Module';
       const isTest = isWeeklyExam(nextAsm);
 
+      // Selected Icons: 1A (Solid Yellow Padlock), 2B (Red Rotate Undo), 3C (Green Circle Play)
+      const ICON_1A_YELLOW_LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="#facc15" stroke-width="2.6" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11.5" rx="3" fill="#facc15" stroke="#eab308" stroke-width="1"/><circle cx="12" cy="14.8" r="1.5" fill="#713f12"/><path d="M12 15.5v2.2" stroke="#713f12" stroke-width="1.6" stroke-linecap="round"/></svg>';
+      const ICON_2B_RED_RETAKE  = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
+      const ICON_3C_GREEN_PLAY  = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="#ffffff"/></svg>';
+
       if (!isTest) {
         const hasAttempted = bestMap[nextAsm.id] != null;
-        const btnText = hasAttempted ? 'RETAKE ➔' : 'GO ➔';
-
-        container.innerHTML = `
-          <div class="next-asm-left">
-            <span class="next-asm-icon">🎯</span>
-            <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Task')}">${escapeHtml(nextAsm.title || 'Task')}</span>
-          </div>
-          <button type="button" class="next-asm-go-btn" onclick="window.location.href='test.html?id=${nextAsm.id}'">
-            ${btnText}
-          </button>
-        `;
+        if (hasAttempted) {
+          // 2B: Retake (Red Button with Rotate Undo Arrow)
+          container.innerHTML = `
+            <div class="next-asm-left">
+              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Task')}">${escapeHtml(nextAsm.title || 'Task')}</span>
+            </div>
+            <button type="button" class="next-asm-go-btn is-retake-red" title="Retake Test" onclick="window.location.href='test.html?id=${nextAsm.id}'">
+              ${ICON_2B_RED_RETAKE}
+            </button>
+          `;
+        } else {
+          // 3C: Ready to take (Green Button with Circle Play)
+          container.innerHTML = `
+            <div class="next-asm-left">
+              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Task')}">${escapeHtml(nextAsm.title || 'Task')}</span>
+            </div>
+            <button type="button" class="next-asm-go-btn is-start-green" title="Start Test" onclick="window.location.href='test.html?id=${nextAsm.id}'">
+              ${ICON_3C_GREEN_PLAY}
+            </button>
+          `;
+        }
       } else {
         const activeSession = await fetchActiveTestSession(nextAsm.id, session.batch_id).catch(() => null);
         const isUnlocked = activeSession?.is_unlocked === true;
@@ -940,35 +955,38 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         if (isUnlocked && isWhitelisted) {
           const remMin = activeSession.remaining_minutes || 30;
+          // Unlocked exam -> 3C: Ready to take (Green Button with Circle Play)
           container.innerHTML = `
             <div class="next-asm-left">
-              <span class="next-asm-icon">🟢</span>
-              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">${escapeHtml(nextAsm.title || 'Official Exam')} (${remMin}m left)</span>
+              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">${escapeHtml(nextAsm.title || 'Official Exam')}</span>
             </div>
-            <button type="button" class="next-asm-go-btn" onclick="window.location.href='test.html?id=${nextAsm.id}'" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff;">
-              GO TEST ➔
+            <button type="button" class="next-asm-go-btn is-start-green" title="Start Exam (${remMin}m left)" onclick="window.location.href='test.html?id=${nextAsm.id}'">
+              ${ICON_3C_GREEN_PLAY}
             </button>
           `;
         } else if (isUnlocked && !isWhitelisted) {
+          // 1A: Locked (Yellow Padlock)
           container.innerHTML = `
             <div class="next-asm-left">
-              <span class="next-asm-icon">🚫</span>
               <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">${escapeHtml(nextAsm.title || 'Official Exam')}</span>
             </div>
-            <span style="font-size:1.2rem; line-height:1; flex-shrink:0;" title="Not Eligible">🚫</span>
+            <span class="next-asm-status-icon is-locked-yellow" title="Locked - Prerequisite Required">
+              ${ICON_1A_YELLOW_LOCK}
+            </span>
           `;
         } else {
+          // 1A: Waiting for Tutor (Yellow Padlock)
           container.innerHTML = `
             <div class="next-asm-left">
-              <span class="next-asm-icon">🔒</span>
-              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}"><span style="font-size:0.7rem;font-weight:700;color:#fbbf24;display:block;line-height:1;margin-bottom:2px;">READY FOR TEST</span>${escapeHtml(nextAsm.title || 'Official Exam')}</span>
+              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">${escapeHtml(nextAsm.title || 'Official Exam')}</span>
             </div>
-            <span style="font-size:1.2rem; line-height:1; flex-shrink:0;" title="Waiting for Tutor">⏰</span>
+            <span class="next-asm-status-icon is-locked-yellow" title="Waiting for Tutor (Locked)">
+              ${ICON_1A_YELLOW_LOCK}
+            </span>
           `;
         }
       }
     }
-
     function renderClasses(rawClasses, progress, allTests = [], allAttempts = []) {
       window._loadedClasses = rawClasses;
       window._classesProgress = progress;
