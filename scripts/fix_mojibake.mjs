@@ -69,3 +69,4 @@ for (const f of files) {
     console.log(`Cleaned mojibake in ${f}`);
   }
 }
+
