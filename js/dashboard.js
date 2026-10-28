@@ -955,7 +955,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               <span class="next-asm-icon">🚫</span>
               <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">${escapeHtml(nextAsm.title || 'Official Exam')}</span>
             </div>
-            <span style="font-size:0.72rem; font-weight:700; color:#f87171;">Not Eligible</span>
+            <span style="font-size:1.2rem; line-height:1; flex-shrink:0;" title="Not Eligible">🚫</span>
           `;
         } else {
           container.innerHTML = `
@@ -963,7 +963,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               <span class="next-asm-icon">🔒</span>
               <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}"><span style="font-size:0.7rem;font-weight:700;color:#fbbf24;display:block;line-height:1;margin-bottom:2px;">READY FOR TEST</span>${escapeHtml(nextAsm.title || 'Official Exam')}</span>
             </div>
-            <span style="font-size:0.72rem; font-weight:700; color:#fbbf24; white-space:nowrap; padding:2px 8px; border-radius:4px; background:rgba(245,158,11,0.15);">🔒 Waiting for Tutor</span>
+            <span style="font-size:1.2rem; line-height:1; flex-shrink:0;" title="Waiting for Tutor">⏰</span>
           `;
         }
       }
