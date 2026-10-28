@@ -62,7 +62,7 @@ export async function openAutoGenerateModal(options = {}) {
         const sb = await getSupabase();
         const { data: existingAsms } = await sb
           .from('tests')
-          .select('test_type, test_category, category, payload, shell_code, title, answer_type, working_duration_minutes, minimum_required_score')
+          .select('test_type, category, payload, shell_code, title, answer_type, working_duration_minutes, minimum_required_score')
           .eq('class_id', currentClassId)
           .is('deleted_at', null)
           .limit(40);
@@ -165,11 +165,11 @@ export async function openAutoGenerateModal(options = {}) {
             </div>
           </div>
 
-          <!-- Section 2: Quiz Harian Configuration (Default 5-10 Menit) -->
+          <!-- Section 2: Quiz Configuration -->
           <div style="background:#1e293b; border:1px solid rgba(250,204,21,0.25); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="font-size:0.82rem; font-weight:800; color:#facc15; display:inline-flex; align-items:center; gap:4px;">
-                ⚡ 1. PENGATURAN QUIZ HARIAN (DAILY QUIZZES)
+                ⚡ 1. PENGATURAN QUIZ (QUIZZES)
               </span>
               <span class="badge" style="background:rgba(250,204,21,0.15); color:#facc15; font-size:0.68rem; font-weight:700;">Mandiri</span>
             </div>
@@ -220,11 +220,11 @@ export async function openAutoGenerateModal(options = {}) {
             </div>
           </div>
 
-          <!-- Section 3: Exam / Ujian Configuration (No Rigid Duration - Session Governed) -->
+          <!-- Section 3: Exam Configuration (No Rigid Duration - Session Governed) -->
           <div style="background:#1e293b; border:1px solid rgba(244,114,182,0.25); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="font-size:0.82rem; font-weight:800; color:#f472b6; display:inline-flex; align-items:center; gap:4px;">
-                📝 2. PENGATURAN EXAM / UJIAN (THEME EXAMS A–D)
+                📝 2. PENGATURAN EXAM (EXAMS)
               </span>
               <span class="badge" style="background:rgba(244,114,182,0.15); color:#f472b6; font-size:0.68rem; font-weight:700;">Sesi Ujian</span>
             </div>

@@ -9,7 +9,8 @@ import {
   getGradeTheme,
   formatGradeBadgeHtml,
   getAchievementStatus,
-  isWeeklyExam
+  isWeeklyExam,
+  computeMilestoneExamMastery
 } from './grading.js';
 
 export {
@@ -23,7 +24,8 @@ export {
   getGradeTheme,
   formatGradeBadgeHtml,
   getAchievementStatus,
-  isWeeklyExam
+  isWeeklyExam,
+  computeMilestoneExamMastery
 };
 
 if (typeof window !== 'undefined') {
@@ -34,7 +36,9 @@ if (typeof window !== 'undefined') {
   window.getGradeSymbol = getGradeSymbol;
   window.GRADE_PALETTE = GRADE_PALETTE;
   window.isWeeklyExam = isWeeklyExam;
+  window.computeMilestoneExamMastery = computeMilestoneExamMastery;
 }
+
 
 // TOPS CORE — Toast Notification System
 let toastContainer = null;

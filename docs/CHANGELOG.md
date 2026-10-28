@@ -1,3 +1,369 @@
+## [2026-10-28 14:05] — Phase 162: Fix Non-Existent Column 'test_category' in API & Restore Student Lobby Progress, Hero Next Assignment, and Leaderboard Standings
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 162 (Restore Student Lobby Class Progress, Hero Next Assignment, and Leaderboard Standings)  
+**Status:** PASS  
+
+### Why
+- User submitted a screenshot of Student Lobby (`dashboard.html`) for student Mr. Suke Ajai reporting three critical bugs:
+  1. *Ranking anomaly*: Standings for classmates who only completed Theme 1 (Miss Risma and Mr. Muhammad Alimae Pasya) displayed `60% avg Grade C` rather than their proper milestone progression score `18% Grade E`.
+  2. *Class Progress badge showing 0%*: `3rd Vocabulary` displayed `0%` progress beside the class name despite 18 completed tasks.
+  3. *Hero Card declaring 100% completion*: Displayed `🏆 All tasks in this class completed! ✓ 100%` instead of guiding the student to their next assessment.
+- Root Cause:
+  * In `fetchTests` (`js/api.js` line 1453), column `test_category` was requested in the Supabase `.select(...)`.
+  * The column `tests.test_category` does not exist in the database (only `test_type`, `category`, and `test_subtype` exist).
+  * PostgREST returned error `42703: column tests.test_category does not exist`, causing `fetchTests` to fail silently and return `[]`.
+  * With 0 tests returned, `classAssms` became 0 (`pct = 0%`), `published` became 0 (`All tasks in this class completed!`), and `allBatchExams` became 0 (disabling the milestone progression engine in `loadBatchLeaderboard`).
+
+### Changed
+- `js/api.js`:
+  - Removed `test_category` from `fetchTests` select list (line 1453).
+- `js/admin/auto-gen-modal.js`:
+  - Removed `test_category` from `existingAsms` select list (line 65).
+- `docs/DECISIONS.md`:
+  - Recorded DECISION-027.
+- `docs/CURRENT_STATE.md`:
+  - Updated to Phase 162.
+- `scripts/verify_suke_ajai_dashboard_fix.mjs`:
+  - Verified in browser with Edge/Chromium:
+    * Class progress: **45%** (18/40).
+    * Hero assignment: **Ready for Test: 3rd Vocabulary B Words Exam - Tourism (🔒 Waiting for Tutor)**.
+    * Leaderboard standings: Miss Risma (90 pts, 18% avg, Grade E), Mr. Muhammad Alimae Pasya (90 pts, 18% avg, Grade E).
+    * Screenshot: `suke_ajai_dashboard_verified.png`.
+
+### Files
+- `js/api.js`
+- `js/admin/auto-gen-modal.js`
+- `docs/DECISIONS.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `scripts/verify_suke_ajai_dashboard_fix.mjs`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs` (39 files passed 100%)
+- `node scripts/verify_suke_ajai_dashboard_fix.mjs` (PASSED 100%)
+
+---
+
+## [2026-10-28 13:55] — Phase 161: Strict Sequential Intra-Theme Exam Prerequisites (Words Exam Pass ≥60% Required for Phrases Exam)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 161 (Strict Sequential Intra-Theme Exam Prerequisites)  
+**Status:** PASS  
+
+### Why
+- Tutor questioned why student Gagan Tara Deswari was able to take Test 18 (3B Phrases Exam) despite not passing Test 17 (3B Words Exam: 59%, 164 pts, Grade D).
+- Analysis revealed that on 2026-10-23 and 2026-10-27, both Words Exam and Phrases Exam were opened in the same test session and whitelisted to all students who had passed daily quizzes (B1–B4), without checking if the sibling Words Exam was passed first.
+- In Gagan's history, Gagan scored 164 pts (58.57% -> 59%, Grade D) on Words Exam Attempt 12, then retook a remedial Words Exam scoring 101 pts (capped at 60%). The gradebook selected Attempt 12 as best score (164 pts > 101 pts). Gagan then took Phrases Exam remedial scoring 69/70 (capped at 60% = 42 pts).
+- User confirmed the educational requirement: students must pass the Words Exam ($\ge 60\%$) within a theme before the Phrases Exam can be unlocked or taken.
+
+### Changed
+- `supabase/functions/start-test/index.ts`:
+  - Added Section 3 validation: If starting a Phrases Exam, queries for sibling Words Exams for the same class, level, and theme.
+  - If the student has not passed the sibling Words Exam with $\ge 60\%$, rejects with HTTP 403: `"Prerequisite not completed. You must pass the Words Exam (...) with at least 60% before taking the Phrases Exam."`.
+- `js/api.js`:
+  - Added identical sibling Words Exam $\ge 60\%$ check in client fallback database `startTest` method.
+- `js/dashboard.js`:
+  - In `openClassModal` and `renderThemeTests` / `renderWeeklyExams`, detects Phrases Exams and validates sibling Words Exam score. If not passed ($\ge 60\%$), locks card with `🔒 Locked`, 50% opacity, and message: `"Complete [Words Exam Title] (Score ≥60% required) to unlock this test."`.
+- `js/admin/tests-access.js`:
+  - In `evaluateStudentsEligibility`, tracks and exports `wordsPassed`.
+  - In `openThemeSessionModal` and `openThemeLateModal`, filters `allowedStudentIds` and `remedialStudentIds` for `theme.phrasesTest` so only students with `wordsPassed === true` are whitelisted, unless "Tutor Override" is checked.
+- `docs/DECISIONS.md`:
+  - Recorded DECISION-026: Strict Sequential Intra-Theme Exam Prerequisites.
+- `scripts/test_sequential_exam_prerequisite.mjs`:
+  - Validated that score 58.57% is blocked and 60% is allowed against Supabase data.
+
+### Files
+- `supabase/functions/start-test/index.ts`
+- `js/api.js`
+- `js/dashboard.js`
+- `js/admin/tests-access.js`
+- `docs/DECISIONS.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `scripts/test_sequential_exam_prerequisite.mjs`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs` (39 files passed 100%)
+- `node scripts/test_sequential_exam_prerequisite.mjs` (PASSED)
+- `node scripts/test_student_dashboard_exam_parity.mjs` (PASSED)
+
+---
+
+## [2026-10-28 13:00] — Phase 160: Auto-Close Stalled In-Progress Attempts & Queued Milestone Matrix 0% Visualization
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 160 (Auto-Close Stalled In-Progress Attempts & Queued Milestone Matrix 0% Visualization)  
+**Status:** PASS  
+
+### Why
+- User pointed out that Ari Wahyu Darma was stuck with a loading/hourglass icon (`⏳`) in the Class Hub matrix grid because during yesterday's exam his phone battery died ("semalam saat ujian HPnya matiii"). The client countdown timer died with the device, leaving the attempt record in `in_progress` status indefinitely even though its deadline had expired.
+- User mandated that when the timer expires, the attempt must be automatically submitted and evaluated with whatever answers were saved, even if the student was disconnected or couldn't click submit.
+- User noticed that students who finished Theme 1 exams (Sofa Maria Ulfa, Muhammad Alimae Pasya, Muhammad Tarmizi Tohir, Suharto) were showing gray unattempted dots (`·`) on Theme 2 exams, even though their global score had correctly queued Theme 2 into the calculation. User mandated that the table matrix must visibly show `0%` and `0` pts for those queued exams so tutors immediately see that the student should have taken them.
+- User noted the same rule applies to students who finished Theme 2 and took 1 exam in Theme 3 (Syazida Shinda Debi, Aunul Fikri Yasir, Ari Wahyu Darma): the remaining unattempted exam in that active milestone must show `0%` and `0` pts, not a dot `·`.
+
+### Changed
+- `js/grading.js`:
+  - Enhanced `computeMilestoneExamMastery(examEntries, allClassExams)`:
+    * Now returns `includedThemeCodes` (list of completed + queued active themes) and `includedExamIds` (Set of exam IDs that belong to the active themes).
+- `js/api.js`:
+  - Added automatic background invocation of `sb.rpc('auto_close_expired_attempts')` in `fetchAllStudentAttempts(studentId)` and `adminFetchAll('attempts')`.
+- `js/admin/app.js`:
+  - Added `sb.rpc('auto_close_expired_attempts')` execution in `renderClassHub(area)` / `loadClassDetails(classId)`.
+  - In student row mapping, extracted `includedThemeCodes` and `includedExamIds` from `mastery`.
+  - In Theme Total Points column, if `!hasAtt` but `includedThemeCodes.includes(tc)`, evaluates to `0` pts rather than `-1` (unreached dot).
+  - In Exam SCORE column, if `!att` or unsubmitted, checks `isQueued = row.includedExamIds?.has(asm.id)`. If queued, renders red `<span class="asm-score asm-score-test" style="color:#F87171;">0%</span>`.
+  - In Exam PTS column, if `!att` or unsubmitted and `isQueued`, renders red `0` pts.
+  - Added expiration check to in-progress check: if `att.expires_at < new Date()`, suppresses the hourglass `⏳` icon.
+  - Zero-Exam Students Theme 1 Baseline:
+    * Enrolled students who haven't taken any exams (Rifky Ahmad, Muhammad Alif Rezki Rahman) start at Theme 1 as their immediate active milestone.
+    * In `js/grading.js`: `computeMilestoneExamMastery()` defaults unattempted milestone queue to Theme 1 (denominator = 150 pts), yielding initial score = `0%`, Grade = `E`, and `0 pts`.
+    * In `js/admin/app.js`: Test 7 & 8 render red `0%` and `0` pts, Theme A TOT = `0`, Theme B/C/D remain `·`. Score renders `0%` (Red), Grade renders `E` badge.
+    * Summary row class average score now includes all 24 students (average score: 38% Grade D).
+- Database / PostgreSQL:
+  - Executed `auto_close_expired_attempts('f8df3538-47e6-4d20-bed8-02d366c7eead')` for Ari Wahyu Darma's Test 29. Result: 200 saved answers evaluated, 138 correct (69%, Grade C, 138 pts).
+  - Executed batch sweep `auto_close_expired_attempts()`. All expired attempts across the database are now cleanly finalized (0 remaining stalled).
+
+### Files
+- `js/grading.js`
+- `js/api.js`
+- `js/admin/app.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/DECISIONS.md`
+- `scripts/verify_queued_milestones_and_ari.mjs`
+- `scripts/test_student_dashboard_exam_parity.mjs`
+
+### Tests
+- `node scripts/verify_queued_milestones_and_ari.mjs`: Live headless Playwright run on `http://127.0.0.1:5500/admin.html#class-hub`:
+  * Ari Wahyu Darma: ZERO `⏳` icons, Test 29 = 69% (138 pts), Test 30 = 0% (0 pts), Total = 470 pts (Rank #2). PASS.
+  * Sofa Maria Ulfa: Test 18 = 0% (0 pts). PASS.
+  * Muhammad Alimae Pasya: Test 17 & 18 = 0% (0 pts). PASS.
+  * Suharto & Tarmizi Tohir: Test 17 & 18 = 0% (0 pts). PASS.
+  * Syazida Shinda Debi & Aunul Fikri Yasir: Test 30 = 0% (0 pts). PASS.
+  * Rifky Ahmad & Muhammad Alif Rezki Rahman: Theme 1 active at 0% (0 pts), Grade E, T7 & T8 = 0%, Theme B/C/D = `·`. PASS.
+  * Unreached future milestones remain clean dots `·`. PASS.
+- `node scripts/test_student_dashboard_exam_parity.mjs`: 100% PASS across 4 scenarios.
+- `node scripts/check_all_js_syntax.cjs`: 39/39 JS files syntax PASS.
+
+### Next Action
+- Present thorough Indonesian analysis, visual mapping, and operational findings to the user.
+
+---
+
+## [2026-10-28 12:30] — Phase 159: Points-First Leaderboard Ranking, Milestone Progression Engine & Admin Table Ergonomics
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 159 (Points-First Leaderboard Ranking & Milestone Progression Engine)  
+**Status:** PASS  
+
+### Why
+- User identified a ranking paradox where Mr. Suke Ajai (143 pts, 29% Grade E) was ranked above members with more points (e.g. Miss Sofa Maria Ulfa with 273.5 pts, 64% Grade C) due to the leaderboard sorting by task progress percentage (`PROG %`) first.
+- User required Points-First sorting: `Global PTS DESC` first; if points are tied, compare `Global SCORE % DESC`, then `PROG % DESC`, then earliest `lastSubmittedAt ASC`, then clean name alphabetical.
+- User identified that students who passed Theme 1 but did not take Exam 2 kept an inflated score (e.g. 60% Grade C). Required that passing Milestone Theme $N$ ($\ge 60\%$) immediately queues Milestone Theme $N+1$ into the denominator with 0 earned points, dynamically lowering global score and grade.
+- User requested that the Tutor's Room ("Students Grade and Score" table in `admin.html#class-hub`) and Student's Lobby (`dashboard.html` leaderboard) use the exact same ranking and calculation rules.
+- User requested stripping `Mr.` and `Miss` honorific titles from student names in the Admin Class Hub table to conserve horizontal screen space.
+- User requested that daily quiz matrix columns display Score % (`100%`, `98%`, etc.) instead of points, because points are exclusively for Milestone Exams.
+
+### Changed
+- `js/grading.js`:
+  - Implemented and exported `computeMilestoneExamMastery(examEntries, allClassExams)`:
+    * Calculates points earned strictly from exams.
+    * Groups class exams by sequential milestone themes (A, B, C, D).
+    * Evaluates theme pass threshold ($\ge 60\%$). If Milestone $N$ is passed, Milestone $N+1$ is queued into the active denominator with 0 earned points.
+    * Safely handles edge cases (zero exams completed returns Score 0, Grade `—`, 0 pts).
+- `js/api.js`:
+  - Imported and re-exported `computeMilestoneExamMastery`.
+- `js/app.js`:
+  - Imported, re-exported, and bound `computeMilestoneExamMastery` to `window`.
+- `js/admin/app.js`:
+  - Integrated `computeMilestoneExamMastery` into `studentsGridData` student mapping.
+  - Updated `displayName` to use `cleanStudentName(s.name)` (stripping `Mr.` and `Miss` honorifics).
+  - Updated `studentsGridData.sort` to Points-First hierarchy (`PTS DESC -> SCORE % DESC -> PROG % DESC -> lastSubmittedAt ASC -> name ASC`).
+  - Updated DataGrid initialization to `initialSortKey: 'totalEarnedScore'`.
+  - Updated DataGrid `sortComparator` to respect Points-First tie-breaker rules across `totalEarnedScore`, `grade`/`averageScorePct`, and `progressPct`.
+  - Updated Quiz column rendering in `renderAttendanceGridMatrix` to display `${Math.round(effPct)}%${isRem ? '<sup class="test-rem-sup">R</sup>' : ''}` with `width: 46px`.
+  - Updated Quiz summaryRow footer cell to display `${avgPct}%` with grade color.
+- `js/dashboard.js`:
+  - Imported `computeMilestoneExamMastery`.
+  - Integrated `computeMilestoneExamMastery` into `computeOverallStats()` and `loadBatchLeaderboard()`.
+  - Updated leaderboard sort comparator to Points-First hierarchy.
+- `scripts/test_student_dashboard_exam_parity.mjs`:
+  - Added Scenario 4 testing `computeMilestoneExamMastery` and Points-First sorting against Suke Ajai vs Sofa Maria Ulfa vs Pasya test cases.
+- `scripts/verify_admin_class_hub_ui.mjs`:
+  - Created automated headless browser verification testing the live Admin Class Hub matrix grid.
+- `sw.js`:
+  - Bumped service worker cache name to `'topscore-cache-option-a-v14'`.
+- `admin.html` & `dashboard.html`:
+  - Bumped script query strings to `v=20261028_milestone_pts`.
+
+### Verification
+- **Automated Parity Suite (`scripts/test_student_dashboard_exam_parity.mjs`):**
+  - Scenario 1 (Quiz Only): Score 0, Grade `—`, 0 pts, progress tracked. PASS.
+  - Scenario 2 (Zero Activity): Score 0, Grade `—`, 0 pts, 0% progress. PASS.
+  - Scenario 3 (Multi-tier tie-breakers): Verified Points > Score > Progress. PASS.
+  - Scenario 4 (Milestone progression & Suke vs Sofa):
+    * Sofa Maria Ulfa (273.5 pts) ranked #1 over Suke Ajai (143 pts) despite lower task count. PASS.
+    * Pasya milestone penalty enforced: 90 / 500 = 18%, Grade E. PASS.
+- **Syntax Validation (`scripts/check_all_js_syntax.cjs`):**
+  - All 39 JavaScript files validated with `node --check` with 0 syntax errors. PASS.
+- **Headless Browser Live DOM Test (`scripts/verify_admin_class_hub_ui.mjs`):**
+  - Default sort indicator: `PTS ↓` active on header. PASS.
+  - Honorific strip: All 24 student names rendered cleanly without "Mr." or "Miss". PASS.
+  - Quiz score cells: All daily quiz cells in Theme A strictly render Score % (`100%`, `94%`, `80%`, etc.). PASS.
+  - Ranking order in live DOM: Sofa Maria Ulfa (rank #11) ranked above Suke Ajai (rank #18). PASS.
+  - Screenshot captured: `admin_class_hub_verified.png`.
+
+---
+
+## [2026-10-28 12:00] — Phase 158: Multi-Pass Deep Repo Purge & Residue Audit
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 158 (Multi-Pass Deep Repo Purge & Residue Audit)
+**Status:** PASS
+
+### Why
+- The user requested repeated, recursive sweeps across the codebase, database definitions, and assets until 100% clean, with zero legacy residues, broken bindings, or obsolete terminology prefixes remaining.
+- Deprecated prefixes to purge: "daily quiz", "daily task", "weekly exam", "theme exam", "theme tot", and obsolete "assessment" references in active code.
+- Functional Scope:
+  - "Quiz": Formative practice, phrase runner drills, vocabulary checks. Strictly increments `PROG %`.
+  - "Exam": Milestone evaluative examinations. Strictly dictates `SCORE %`, `GRD`, and `PTS`.
+
+### Changed
+- `js/admin/app.js`:
+  - Purged all occurrences of "weekly exam", "daily task", and "theme tot" from column definitions, headers, subtags, and tooltips.
+  - Simplified Theme Total column header from `TOT PTS` to `EXAM PTS` and label to `TOT / EXAM PTS`.
+  - Updated tooltips across roster columns (`title="Exams Average: ..."` and `title="Exam Grade ..."`).
+  - Exported alias `isExam = isWeeklyExam`.
+- `js/admin/auto-gen-modal.js`:
+  - Simplified wizard headers to `⚡ 1. PENGATURAN QUIZ (QUIZZES)` and `📝 2. PENGATURAN EXAM (EXAMS)`.
+- `js/admin/crud-modals.js`:
+  - Updated comments and duration auto-select routines to clean Quiz terminology.
+- `js/admin/tests-access.js`:
+  - Updated KPI summary card label from "Total Theme Exams" to "Total Exams".
+- `js/api.js`:
+  - Simplified generated test descriptions from "Theme Exam: ..." to "Exam: ...".
+- `js/dashboard.js`:
+  - Cleaned up comments and student leaderboard tooltips to "No exams completed yet".
+  - Standardized leaderboard sorting and overall stats calculation comments to clean Quiz/Exam terminology.
+- `js/grading.js`:
+  - Exported `isExam = isWeeklyExam` alias and cleaned up helper documentation comments.
+- `supabase/functions/start-test/index.ts`:
+  - Simplified prerequisite rejection message to: `"Prerequisite not completed. You must score at least ${reqScore}% on all Quizzes before taking the Exam."`.
+- `admin.html` & `sw.js`:
+  - Bumped service worker cache to `'topscore-cache-option-a-v13'`.
+  - Bumped script query strings to `v=20261028_purge`.
+
+### Verification
+- **PASS 1 (Terminology & Residual Strings Sweep):** Scanned 60 production files across `js/`, `supabase/functions/`, `assets/`, `css/`, root HTML. Returned **0 hits**.
+- **PASS 2 (Database & RPC Integrity Sweep):** Verified all attempt grades are canonical (`★`, `A`, `B`, `C`, `D`, `E`), 32 quizzes, 8 exams, 0 orphaned attempts.
+- **PASS 3 (Client-Side Bindings & Runtime Sanity):** Playwright headless browser extraction against `http://127.0.0.1:5500/admin.html#class-hub` confirmed:
+  - Miss Syazida: 68% SCORE, Grade C, 472.5 pts
+  - Mr. Aunul: 59% SCORE, Grade D, 415.5 pts
+  - Mr. Unggul: 78% SCORE, Grade C, 387.5 pts
+  - Zero-exam students: SCORE `—`, GRD `—`, 0 pts
+  - Class Average: 56% SCORE, Grade D, 231 pts
+- **PASS 4 (Automated Gates & Grep Proof):**
+  - All 39 JS files syntax validated (`node --check`) with 0 errors.
+  - Parity test suite `test_student_dashboard_exam_parity.mjs` passed 100%.
+  - Terminal grep verification (`assessment`, `daily quiz`, `weekly exam`, `daily task`, `theme exam`, `theme tot`): **0 occurrences found**.
+
+## [2026-10-28 11:30] — Phase 157: Strict Exam ID/Type Filtering & True Weighted Score/Earned Points Calculation
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 157 (Strict Exam Filtering & True Earned Points/Weighted Score Engine)
+**Status:** PASS
+
+### Why
+- In `admin.html#class-hub`, previous iterations had instances where static slot totals or loose test categorizations leaked quiz scores into Global metrics, or computed unweighted averages.
+- The user requested strict enforcement of:
+  1. Strict Exam ID/Type Filtering: Strictly filter tests where `type = 'exam'` (the 8 Theme Exams: Words Exam + Phrases Exam for Themes A, B, C, D). Exclude all 32 daily quizzes (`type = 'quiz'`) from Global SCORE %, Global PTS, and Global GRD.
+  2. Global PTS Calculation: Sum of points ACTUALLY EARNED by the student across the 8 Exams:
+     `SUM(attempt.earned_points) WHERE test.type = 'exam' AND attempt.status = 'completed'`
+     Zero inclusion of static slot totals or quizzes.
+  3. Global SCORE % Calculation:
+     `(SUM(attempt.earned_score) / NULLIF(SUM(attempt.max_score), 0)) * 100` (strictly for `test.type = 'exam'`).
+     If 0 exams are taken, return `0%` (rendered as `—`) and grade badge `—`.
+  4. Class Hub & Dashboard Synchronization: Harmonize client aggregation functions across `admin/app.js` and `dashboard.js`.
+
+### Changed
+- `js/admin/app.js`:
+  - Enforced strict exam classification in `isWeeklyExam(asm)` by strictly checking `test_type === 'exam'` or shell code `*-EXAM`, eliminating any loose regex title fallback.
+  - Updated `studentsGridData` aggregation:
+    - Global PTS: strictly sums `weeklyEarnedScore` across completed exams.
+    - Global SCORE %: calculated as `Math.round((weeklyEarnedScore / weeklyMaxPossible) * 100)` when `completedWeeklyCount > 0 && weeklyMaxPossible > 0`, else `0` (formatted as `—`).
+- `js/grading.js`:
+  - Updated exported `isWeeklyExam(asm)` to remove regex fallback on titles, maintaining strict schema alignment.
+- `js/dashboard.js`:
+  - Updated `computeOverallStats()` and `loadBatchLeaderboard()` to store `{ effPct, effPoints, totalQ }` on best attempts.
+  - Calculated hero score and leaderboard overall score as:
+    `Math.round((sumEarnedExamScore / sumMaxExamScore) * 100)` (weighted earned/max across exams).
+- `sw.js`:
+  - Bumped cache version to `'topscore-cache-option-a-v12'` to bust any cached JS files in client browsers.
+- `admin.html`:
+  - Bumped asset query strings to `v=20261028_scorepts`.
+- `scripts/test_student_dashboard_exam_parity.mjs`:
+  - Updated test parity assertions and mock exam score to validate the weighted score calculation and 4-tier tie-breaker.
+
+### Verification
+- `audit_vector_1.cjs`, `audit_vector_2.cjs`, `audit_vector_3.cjs`, `audit_vector_4.cjs`: 100% PASS.
+- `test_student_dashboard_exam_parity.mjs`: 100% PASS across all parity metrics.
+- `scratch/verify_matrix_scores.mjs` (Headless Chrome extraction on `http://127.0.0.1:5500/admin.html#class-hub`):
+  - Miss Syazida Shinda Debi: 472.5 pts, SCORE 68%, Grade C
+  - Mr. Aunul Fikri Yasir: 415.5 pts, SCORE 59%, Grade D
+  - Mr. Unggul Wirakse: 387.5 pts, SCORE 78%, Grade C
+  - Mr. Ari Wahyu Darma: 332 pts, SCORE 66%, Grade C
+  - Mr. Gagan Tara Deswari: 296 pts, SCORE 59%, Grade D
+  - Zero-exam students (Mr. Muhammad Alif Rezki Rahmansyah, Mr. Rifky Ahmad): 0 pts, SCORE `—`, GRD `—`
+  - Footer CLASS AVERAGE: 231 pts, SCORE 56%, Grade D
+- Zero static weights, zero quiz leakage into Global PTS/SCORE.
+
+## [2026-10-28 10:35] — Phase 156: Scoring Engine Harmonization & Database Grade Normalization
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 156 (Scoring Engine Harmonization & Database Grade Normalization)
+**Status:** PASS
+
+### Why
+- An autonomous forensic audit was executed across the entire TopsCore scoring engine (Database, Backend RPCs, Frontend Aggregation, and UI Binding) following Phase 155.
+- The audit uncovered:
+  1. `D-1`: Dynamic PUBLISHED test count fallback in Student Dashboard `loadBatchLeaderboard` caused PROG% denominator divergence vs. Admin Class Hub.
+  2. `D-2 & D-3`: Hardcoded, diverging `gradeColors` dictionaries in `js/dashboard.js` and `js/result.js` bypassed canonical grading palette from `js/grading.js`.
+  3. `D-4`: Class Hub column definition in `js/admin/app.js` used an inline 11-condition `isTest` check instead of the unified `isWeeklyExam(asm)` helper.
+  4. `A-1`: Class Hub multi-tier sort omitted the 4th tie-breaker (earliest last submission timestamp `lastSubmittedAt`), leading to potential ranking tie resolution differences vs Dashboard leaderboard.
+  5. `R-1`: Auto-leveling logic in `supabase/functions/submit-test/index.ts` hardcoded a 75% threshold instead of respecting `minimum_required_score`.
+  6. `S-4 & S-5`: Historical attempt rows contained non-standard legacy grades (`'S'` = 159 rows, `'F'` = 40 rows) and lacked a strict database CHECK constraint.
+
+### Changed
+- `js/dashboard.js`:
+  - Fixed PROG% denominator in `loadBatchLeaderboard` to use fixed curriculum test count (`window._batchTests.length || 40`) matching Admin Class Hub.
+  - Imported `getGradeColorByScore` from `./grading.js`.
+  - Replaced all 3 hardcoded `gradeColors` maps with `getGradeColorByScore()` calls at test card best-score chips, test badges, and completed test tables.
+- `js/result.js`:
+  - Removed obsolete unused `gradeColors` dictionary on line 44.
+- `js/admin/app.js`:
+  - Replaced inline 11-clause `isTest` evaluation with unified `isWeeklyExam(asm)` on line 1726.
+  - Added `lastSubmittedAt` tracking to `studentsGridData` row generation.
+  - Added 4th tie-breaker (`lastSubmittedAt` ASC) to initial sort and DataGrid `sortComparator` for `progressPct`, `averageScorePct`, and `totalEarnedScore`.
+- `supabase/functions/submit-test/index.ts`:
+  - Selected `minimum_required_score` from `tests` and used `const levelUpThreshold = Number(testRec?.minimum_required_score ?? testRec?.payload?.minimum_required_score ?? 75);`.
+- `supabase/migrations/20261028110000_canonical_grades_backfill_and_constraint.sql`:
+  - Created and executed migration:
+    - Backfilled 159 legacy `'S'` grades to `'★'`.
+    - Backfilled 40 legacy `'F'` grades to `'E'`.
+    - Backfilled NULL grades using authoritative tier rules.
+    - Added `check_attempts_grade` constraint: `CHECK (grade IN ('★', 'A', 'B', 'C', 'D', 'E') OR grade IS NULL)`.
+    - Confirmed `attempts.test_id` NOT NULL constraint and 0 orphaned attempts.
+
+### Verification
+- Database audit: verified 100% of 956 attempt rows now hold canonical grades: `★`: 160, `A`: 238, `B`: 96, `C`: 50, `D`: 65, `E`: 347. Zero legacy 'S', zero 'F', zero NULLs.
+- `audit_vector_1.cjs` (45 active files scanned, ES module imports verified): 100% PASS.
+- `audit_vector_2.cjs` (Supabase RPCs, test_type enums, total_questions division-by-zero checks): 100% PASS.
+- `audit_vector_3.cjs` (Scoring & ranking edge-case stress test across 4 test scenarios): 100% PASS.
+- `audit_vector_4.cjs` (UI/UX DOM structure, ABCD navigation, test runner contracts): 100% PASS.
+- `test_student_dashboard_exam_parity.mjs` (Ranking engine parity, tie-breaker simulation): 100% PASS.
+- All 39 JavaScript files passed `node --check` syntax validation with 0 errors.
+
 ## [2026-10-28 06:35] — Phase 155: Class Hub Exam Point & Maximum Questions Restoration
 
 **Agent/Session:** Antigravity

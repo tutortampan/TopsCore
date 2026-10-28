@@ -8,7 +8,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=5.3.2';
     import { testMicrophoneCapability } from './speech.js?v=5.3.2';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=5.3.2';
-    import { GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getAchievementStatus, isWeeklyExam, calculateGrade } from './grading.js?v=5.6.8';
+    import { GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=5.6.8';
 
     window._isBatchChampion = false;
 
@@ -1304,8 +1304,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             const bestPct     = isRem && rawBestPct !== null ? Math.min(rawBestPct, 60.0) : rawBestPct;
             const passed      = bestPct !== null && bestPct >= (Test.minimum_required_score || Test.pass_threshold || 60);
             const grade       = bestPct !== null ? getGrade(bestPct) : null;
-            const gradeColors = { S: '#A855F7', A: '#10B981', B: '#84CC16', C: '#EAB308', D: '#F97316', E: '#EF4444', F: '#EF4444' };
-            const gradeColor  = grade ? (gradeColors[grade] || '#94a3b8') : null;
+            const gradeColor  = grade ? getGradeColorByScore(bestPct) : null;
 
             // Prerequisite Gating Logic
             let prereqMet = true;
@@ -1318,6 +1317,42 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                const pMinScore = pObj ? (pObj.minimum_required_score || pObj.pass_threshold || 60) : 60;
                prereqMet = prereqPct !== null && prereqPct >= pMinScore;
                prereqTitle = pObj ? (pObj.display_name || pObj.title || pObj.name || 'Prerequisite') : 'Prerequisite Test';
+            }
+
+            // Sequential Intra-Theme Exam Prerequisite: Phrases Exam requires sibling Words Exam >= 60%
+            const isPhrasesExam = Boolean(
+              (Test.category === 'phrases' || Test.test_subtype === 'PHRASE_EXAM' ||
+               (Test.title || '').toLowerCase().includes('phrase') ||
+               (Test.shell_code || '').toUpperCase().includes('PHRASE') ||
+               (Test.payload?.subtype || '').toUpperCase().includes('PHRASE')) &&
+              !((Test.test_type || '').toLowerCase() === 'quiz' || (Test.category || '').toLowerCase() === 'quiz')
+            );
+            if (prereqMet && isPhrasesExam) {
+              const siblingWordsExam = Tests.find(a => 
+                a.id !== Test.id &&
+                (
+                  (Test.payload?.theme_code && a.payload?.theme_code === Test.payload.theme_code) ||
+                  ((a.title || '').substring(0, 3).toLowerCase() === (Test.title || '').substring(0, 3).toLowerCase())
+                ) &&
+                (
+                  a.category === 'words' || a.test_subtype === 'VOCAB_EXAM' ||
+                  (a.title || '').toLowerCase().includes('word') ||
+                  (a.shell_code || '').toUpperCase().includes('WORD') ||
+                  (a.payload?.subtype || '').toUpperCase().includes('WORD')
+                ) &&
+                !((a.test_type || '').toLowerCase() === 'quiz' || (a.category || '').toLowerCase() === 'quiz')
+              );
+              if (siblingWordsExam) {
+                const wBest = bestByTest[siblingWordsExam.id];
+                const wRawPct = wBest ? parseFloat(wBest.percentage || 0) : null;
+                const wRem = Boolean(wBest && (wBest.is_remedial_unlocked || wBest.is_remedial));
+                const wPct = wRem && wRawPct !== null ? Math.min(wRawPct, 60.0) : wRawPct;
+                const wMin = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 60;
+                if (wPct === null || wPct < wMin) {
+                  prereqMet = false;
+                  prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
+                }
+              }
             }
 
             let statusBadge = '';
@@ -1501,7 +1536,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       });
 
-      const gradeColors = { S: '#A855F7', A: '#00FF00', B: '#00FFFF', C: '#FFFF00', D: '#FF8000', E: '#FF0000', F: '#FF0000' };
+      // Grade colors resolved via canonical getGradeColorByScore() from grading.js
 
       let cards = '';
       for (const asm of tests) {
@@ -1509,6 +1544,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const inProgAtt = inProgressByTest[asm.id];
         const bestPct = bestAtt ? parseFloat(bestAtt.percentage || 0) : null;
         const grade = bestPct !== null ? getGrade(bestPct) : null;
+        const gradeColor = bestPct !== null ? getGradeColorByScore(bestPct) : 'var(--clr-text-1)';
         const passed = bestPct !== null && bestPct >= (asm.pass_threshold || 60);
 
         // Check dynamic prerequisites (0 to N parents + min score thresholds + aggregate average)
@@ -1545,6 +1581,44 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 prereqMet = false;
                 prereqTitle = `All Theme Quizzes (Required: ≥${reqScore}%)`;
                 break;
+              }
+            }
+          }
+
+          // Sequential Intra-Theme Exam Prerequisite: Phrases Exam requires sibling Words Exam >= 60%
+          const isPhrasesExam = Boolean(
+            (asm.category === 'phrases' || asm.test_subtype === 'PHRASE_EXAM' ||
+             (asm.title || '').toLowerCase().includes('phrase') ||
+             (asm.shell_code || '').toUpperCase().includes('PHRASE') ||
+             (asm.payload?.subtype || '').toUpperCase().includes('PHRASE')) &&
+            !((asm.test_type || '').toLowerCase() === 'quiz' || (asm.category || '').toLowerCase() === 'quiz')
+          );
+          if (prereqMet && isPhrasesExam) {
+            const siblingWordsExam = tests.find(a => 
+              a.id !== asm.id &&
+              a.level_id === asm.level_id &&
+              a.class_id === asm.class_id &&
+              (
+                (themeCode && a.payload?.theme_code === themeCode) ||
+                (!themeCode && (a.title || '').substring(0, 3).toLowerCase() === (asm.title || '').substring(0, 3).toLowerCase())
+              ) &&
+              (
+                a.category === 'words' || a.test_subtype === 'VOCAB_EXAM' ||
+                (a.title || '').toLowerCase().includes('word') ||
+                (a.shell_code || '').toUpperCase().includes('WORD') ||
+                (a.payload?.subtype || '').toUpperCase().includes('WORD')
+              ) &&
+              !((a.test_type || '').toLowerCase() === 'quiz' || (a.category || '').toLowerCase() === 'quiz')
+            );
+            if (siblingWordsExam) {
+              const wBest = bestByTest[siblingWordsExam.id];
+              const wRawPct = wBest ? parseFloat(wBest.percentage || 0) : null;
+              const wRem = Boolean(wBest && (wBest.is_remedial_unlocked || wBest.is_remedial));
+              const wPct = wRem && wRawPct !== null ? Math.min(wRawPct, 60.0) : wRawPct;
+              const wMin = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 60;
+              if (wPct === null || wPct < wMin) {
+                prereqMet = false;
+                prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
               }
             }
           }
@@ -1690,12 +1764,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
               ${bestPct !== null ? `
                 <div style="text-align:center;">
-                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColors[grade] || 'var(--clr-text-1)'}${(grade === '★' || grade === 'S') ? ';text-shadow:0 0 10px rgba(168, 85, 247, 0.45);' : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</div>
+                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColor}${(grade === '★' || grade === 'S') ? ';text-shadow:0 0 10px rgba(168, 85, 247, 0.45);' : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</div>
                   <div style="font-size:0.7rem;color:var(--clr-text-3);">Best Score</div>
                 </div>
                 ${(grade === '★' || grade === 'S' || bestPct >= 100)
                   ? `<div class="grade-star" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(168, 85, 247, 0.45);color:#A855F7;border:1.5px solid #A855F7;">★</div>`
-                  : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColors[grade] || '#64748b'};color:${gradeColors[grade] || '#64748b'};">${getGradeSymbol(grade)}</div>`
+                  : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColor};color:${gradeColor};">${getGradeSymbol(grade)}</div>`
                 }
               ` : ''}
               ${actionBtn}
@@ -1733,8 +1807,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
     async function computeOverallStats(attempts, tests = []) {
       // Rule 2.8 & Exam-Only Metric Rule:
-      // Academic Score %, Grade, and Points are evaluated EXCLUSIVELY from weekly milestone Exams.
-      // Daily tasks/quizzes count strictly towards activity completion & badges, never inflating academic score.
+      // Academic Score %, Grade, and Points are evaluated EXCLUSIVELY from Exams.
+      // Quizzes count strictly towards activity completion & badges, never inflating academic score.
       const activeAsmMap = new Map((tests || []).map(a => [a.id, a]));
       const allBestMap = {};
       const examBestMap = {};
@@ -1755,8 +1829,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
 
         if (isWeeklyExam(asm)) {
-          if (examBestMap[uniqueKey] == null || effPct > examBestMap[uniqueKey]) {
-            examBestMap[uniqueKey] = effPct;
+          const totalQ = Number(att.total_questions || asm?.total_questions || asm?.payload?.total_questions || 50);
+          const rawScore = Number(att.score ?? 0);
+          const maxRemPts = totalQ * 0.6;
+          const effPoints = isRem ? Math.min(rawScore, maxRemPts) : rawScore;
+          if (examBestMap[uniqueKey] == null || effPoints > (examBestMap[uniqueKey].effPoints || 0)) {
+            examBestMap[uniqueKey] = { effPct, effPoints, totalQ, test: asm, testId: uniqueKey };
           }
         }
       });
@@ -1768,29 +1846,40 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const ovCountEl = document.getElementById('overview-Tests-count');
       if (ovCountEl) ovCountEl.textContent = completedCount;
 
-      // Academic Score & Grade: Calculated EXCLUSIVELY from weekly exams
-      const examScores = Object.entries(examBestMap)
+      // Academic Score & Grade: Calculated EXCLUSIVELY from Exams via Milestone Progression Engine
+      const examEntries = Object.entries(examBestMap)
         .filter(([k]) => !k.endsWith('_locked'))
-        .map(([, v]) => parseFloat(v) || 0);
+        .map(([, v]) => v);
 
-      const hasWeeklyExam = examScores.length > 0;
-      let avgPct = 0;
-      let overallGrade = '—';
-      let isGradeS = false;
+      const allClassExams = (Array.isArray(window._allTests) && window._allTests.length > 0)
+        ? window._allTests.filter(isWeeklyExam)
+        : (Array.isArray(tests) ? tests.filter(isWeeklyExam) : []);
+
+      const mastery = (typeof computeMilestoneExamMastery === 'function')
+        ? computeMilestoneExamMastery(examEntries, allClassExams)
+        : {
+            totalPoints: examEntries.reduce((acc, curr) => acc + (curr.effPoints || 0), 0),
+            overallScore: 0,
+            grade: '—',
+            denominator: 0,
+            completedWeeklyCount: examEntries.length
+          };
+
+      const hasWeeklyExam = mastery.completedWeeklyCount > 0;
+      let avgPct = mastery.overallScore;
+      let overallGrade = mastery.grade;
+      let isGradeS = overallGrade === '★' || overallGrade === 'S' || avgPct >= 100;
       let targetColor = '#94a3b8';
       let rgbColor = '148, 163, 184';
 
       if (hasWeeklyExam) {
-        const totalExamPct = examScores.reduce((acc, curr) => acc + curr, 0);
-        avgPct = Math.round(totalExamPct / examScores.length);
-        overallGrade = calculateGrade(avgPct);
-        isGradeS = overallGrade === '★' || overallGrade === 'S' || avgPct >= 100;
         const theme = (GRADE_PALETTE && GRADE_PALETTE[overallGrade]) ? GRADE_PALETTE[overallGrade] : {
           color: '#a855f7', dark: '#7e22ce', light: '#c084fc', rgb: '168, 85, 247', glow: 'rgba(168, 85, 247, 0.45)'
         };
         targetColor = theme.color;
         rgbColor = theme.rgb || '16, 185, 129';
       }
+
 
       const scoreEl = document.getElementById('stat-overall-score');
       if (scoreEl) {
@@ -2024,7 +2113,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const dateB = b.submitted_at ? new Date(b.submitted_at).getTime() : 0;
         return dateB - dateA;
       });
-      const gradeColors = { S: '#a855f7', '★': '#a855f7', A: '#10b981', B: '#84cc16', C: '#eab308', D: '#f97316', E: '#ef4444', F: '#ef4444' };
+      // Grade colors resolved via canonical getGradeColorByScore() from grading.js
 
       // Desktop Table
       let tableHtml = `
@@ -2060,7 +2149,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const pct = effPct.toFixed(1);
         const grade = a.grade || getGrade(effPct);
         const displayGrade = getGradeSymbol(grade, effPct, isRem);
-        const gradeColor = gradeColors[grade] || 'var(--clr-text-1)';
+        const gradeColor = getGradeColorByScore(effPct);
         const dateStr = a.submitted_at ? new Date(a.submitted_at).toLocaleDateString(undefined, {
           year: 'numeric',
           month: 'short',
@@ -2224,20 +2313,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           .in('student_id', studentIds)
           .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
 
-        // Fetch curriculum tests count for accurate PROG % computation
-        let totalClassTests = 40;
-        if (Array.isArray(window._batchTests) && window._batchTests.length > 0) {
-          totalClassTests = window._batchTests.length;
-        } else {
-          try {
-            const { count } = await sb
-              .from('tests')
-              .select('id', { count: 'exact', head: true })
-              .is('deleted_at', null)
-              .eq('status', 'PUBLISHED');
-            if (count && count > 0) totalClassTests = count;
-          } catch (_) {}
-        }
+        // PROG % denominator: use fixed curriculum test count (same source as Admin Class Hub)
+        // MUST NOT use dynamic PUBLISHED count — unpublishing a test would inflate PROG% in student view
+        // window._batchTests is set by the main load cycle from the same class test fetch
+        const totalClassTests = (Array.isArray(window._batchTests) && window._batchTests.length > 0)
+          ? window._batchTests.length
+          : 40; // Safe fallback — matches Class Hub classTests.length || 40 behaviour
 
         // 3. Compute best scores, points & overall averages per student (Exam-Only Rule)
         const studentStats = studentList.map(st => {
@@ -2287,6 +2368,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 rawPct,
                 points: effPoints,
                 rawPoints: rawScore,
+                totalQ,
                 isRemedial,
                 is_best_score: Boolean(att.is_best_score)
               };
@@ -2303,29 +2385,32 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             .filter(([k]) => !k.endsWith('_locked'))
             .map(([, v]) => v);
 
-          // Activity Completion & Progress % (counts both Daily Quizzes & Weekly Exams)
+          // Activity Completion & Progress % (counts both Quizzes & Exams)
           const completedCount = bestItems.length;
           const progressPct = totalClassTests > 0 ? Math.round((completedCount / totalClassTests) * 100) : 0;
 
           // Exam-Only Items: Milestone exams only
           const examItems = bestItems.filter(item => item.isExam);
-          const completedWeeklyCount = examItems.length;
+          const allBatchExams = (Array.isArray(window._batchTests) && window._batchTests.length > 0)
+            ? window._batchTests.filter(isWeeklyExam)
+            : (Array.isArray(window._allTests) && window._allTests.length > 0)
+              ? window._allTests.filter(isWeeklyExam)
+              : [];
 
-          // Points (PTS): Aggregate points earned EXCLUSIVELY from weekly Exams
-          const totalPoints = completedWeeklyCount > 0
-            ? Math.round(examItems.reduce((sum, v) => sum + (v.points || 0), 0) * 10) / 10
-            : 0;
+          const mastery = (typeof computeMilestoneExamMastery === 'function')
+            ? computeMilestoneExamMastery(examItems, allBatchExams)
+            : {
+                totalPoints: examItems.reduce((sum, v) => sum + (v.points || 0), 0),
+                overallScore: 0,
+                grade: '—',
+                denominator: 0,
+                completedWeeklyCount: examItems.length
+              };
 
-          // Score %: Average percentage EXCLUSIVELY from weekly Exams
-          const totalExamPct = examItems.reduce((sum, v) => sum + (v.effPct || 0), 0);
-          const overallScore = completedWeeklyCount > 0
-            ? Math.round(totalExamPct / completedWeeklyCount)
-            : 0;
-
-          // Grade (GRD): Derived dynamically based ONLY on the exam-only Score %
-          const grade = completedWeeklyCount > 0
-            ? (typeof calculateGrade === 'function' ? calculateGrade(overallScore) : getGrade(overallScore))
-            : '—';
+          const totalPoints = mastery.totalPoints;
+          const overallScore = mastery.overallScore;
+          const grade = mastery.grade;
+          const completedWeeklyCount = mastery.completedWeeklyCount;
 
           const cleanName = cleanStudentName(st.name || '');
 
@@ -2345,27 +2430,27 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           };
         });
 
-        // 4. Deterministic Multi-Tier Ranking (100% Parity with Class Hub):
-        // 1. PROG % DESC (overall completion)
-        // 2. Global SCORE % DESC (weekly exam mastery; unattempted weekly exams sort after completed)
-        // 3. Global PTS DESC (weekly exam points)
+        // 4. Deterministic Multi-Tier Ranking (Points-First, 100% Parity with Class Hub):
+        // 1. Global PTS DESC (exam points)
+        // 2. Global SCORE % DESC (exam mastery; unattempted exams sort after completed)
+        // 3. PROG % DESC (overall completion)
         // 4. Earliest last submission timestamp
         // 5. Alphabetical clean name
         studentStats.sort((a, b) => {
-          // 1. Primary: PROG % DESC
-          const progA = Number(a.progressPct ?? 0);
-          const progB = Number(b.progressPct ?? 0);
-          if (progA !== progB) return progB - progA;
+          // 1. Primary: Global PTS DESC
+          const ptsA = Number(a.totalPoints ?? 0);
+          const ptsB = Number(b.totalPoints ?? 0);
+          if (ptsA !== ptsB) return ptsB - ptsA;
 
-          // 2. Secondary: Global SCORE % DESC (unattempted weekly exams sort after completed)
+          // 2. Secondary: Global SCORE % DESC (unattempted exams sort after completed)
           const scoreA = (a.completedWeeklyCount > 0) ? Number(a.overallScore ?? 0) : -1;
           const scoreB = (b.completedWeeklyCount > 0) ? Number(b.overallScore ?? 0) : -1;
           if (scoreA !== scoreB) return scoreB - scoreA;
 
-          // 3. Tertiary: Global PTS DESC
-          const ptsA = Number(a.totalPoints ?? 0);
-          const ptsB = Number(b.totalPoints ?? 0);
-          if (ptsA !== ptsB) return ptsB - ptsA;
+          // 3. Tertiary: PROG % DESC
+          const progA = Number(a.progressPct ?? 0);
+          const progB = Number(b.progressPct ?? 0);
+          if (progA !== progB) return progB - progA;
 
           // 4. Earliest last submission timestamp
           if (a.lastSubmittedAt && b.lastSubmittedAt) {
@@ -2376,6 +2461,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           // 5. Alphabetical clean name
           return a.cleanName.localeCompare(b.cleanName, undefined, { sensitivity: 'base' });
         });
+
 
         // 5. Determine Ranks and Champion
         const totalStudents = studentStats.length;
@@ -2471,7 +2557,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 </span>
               </div>
               <div class="th-col th-grade" style="display:flex; align-items:center; justify-content:center;">
-                <div class="leaderboard-grade-chip" style="background:${hasExam ? theme.color : 'rgba(255,255,255,0.12)'}; width:22px; height:22px; border-radius:6px; font-size:0.72rem; font-weight:800; display:flex; align-items:center; justify-content:center; color:#fff;" title="${hasExam ? `Average: ${st.overallScore}%` : 'No weekly exams completed yet'}">${gradeSymbol}</div>
+                <div class="leaderboard-grade-chip" style="background:${hasExam ? theme.color : 'rgba(255,255,255,0.12)'}; width:22px; height:22px; border-radius:6px; font-size:0.72rem; font-weight:800; display:flex; align-items:center; justify-content:center; color:#fff;" title="${hasExam ? `Average: ${st.overallScore}%` : 'No exams completed yet'}">${gradeSymbol}</div>
               </div>
             </div>
           `;

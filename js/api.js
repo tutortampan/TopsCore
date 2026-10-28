@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=5.3.2';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isWeeklyExam } from './grading.js?v=5.6.5';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=5.6.5';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=5.3.2';
 import { escapeHtml, escHtml } from './app.js?v=5.3.2';
 
@@ -9,7 +9,7 @@ export function getGrade(pct) {
   return calculateGrade(pct);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isWeeklyExam, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -480,6 +480,9 @@ export async function fetchTestsForStudentLevel(programId, levelId, institutionI
 export async function fetchAllStudentAttempts(studentId) {
   if (!studentId) return [];
   const sb = await getSupabase();
+  try {
+    await sb.rpc('auto_close_expired_attempts');
+  } catch (_) {}
   const { data, error } = await sb.from('attempts')
     .select('id, test_id, score, percentage, grade, status, is_best_score, submitted_at, tests(id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name))')
     .eq('student_id', studentId)
@@ -806,6 +809,51 @@ export async function startTest(studentId, testId) {
       pErr.code = 'PREREQUISITE_NOT_MET';
       pErr.status = 403;
       throw pErr;
+    }
+  }
+
+  // Guard: Strict Sequential Exam Prerequisite: If this is a Phrases Exam, student MUST pass Words Exam first (>= 60%)
+  const isPhrasesExamFallback = asmData.payload?.category === 'phrases' || 
+                                /PHRASES/i.test(asmData.shell_code || asmData.payload?.shell_code || '') || 
+                                /phrase/i.test(asmData.title || '') ||
+                                asmData.test_subtype === 'PHRASE_EXAM' ||
+                                asmData.test_subtype === 'PHRASE_TEST';
+  const themeCodeFallback = asmData.payload?.theme_code;
+  if (isPhrasesExamFallback && themeCodeFallback && !isStandaloneTryout) {
+    const { data: siblingWordsExams } = await sb.from('tests')
+      .select('id, title, payload, shell_code, test_subtype')
+      .eq('class_id', asmData.class_id)
+      .eq('level_id', asmData.level_id)
+      .eq('test_type', 'exam')
+      .neq('id', asmData.id)
+      .contains('payload', { theme_code: themeCodeFallback });
+
+    const wordsExam = (siblingWordsExams || []).find(t => {
+      const cat = t.payload?.category;
+      const sc = t.shell_code || t.payload?.shell_code || '';
+      const ttl = t.title || '';
+      return cat === 'words' || /WORDS/i.test(sc) || /word/i.test(ttl) || t.test_subtype === 'VOCAB_EXAM' || t.test_subtype === 'VOCAB_TEST';
+    });
+
+    if (wordsExam) {
+      const { data: wordsAttempts } = await sb.from('attempts')
+        .select('percentage, effective_score, status')
+        .eq('student_id', studentId)
+        .eq('test_id', wordsExam.id)
+        .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
+
+      const reqScore = asmData.minimum_required_score || 60;
+      const hasPassedWords = (wordsAttempts || []).some(att => {
+        const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+        return pct >= reqScore;
+      });
+
+      if (!hasPassedWords) {
+        const pErr = new Error(`Prerequisite not completed. You must pass the Words Exam (${wordsExam.title}) with at least ${reqScore}% before taking the Phrases Exam.`);
+        pErr.code = 'WORDS_EXAM_REQUIRED';
+        pErr.status = 403;
+        throw pErr;
+      }
     }
   }
 
@@ -1201,6 +1249,11 @@ export async function adminFetchAll(table, select = '*', filters = {}, forceRefr
 
   try {
     const sb = await getSupabase();
+    if (normTable === 'attempts') {
+      try {
+        await sb.rpc('auto_close_expired_attempts');
+      } catch (_) {}
+    }
     let query = sb.from(normTable).select(select);
     
     const noDeletedAtTables = [
@@ -1397,7 +1450,7 @@ export async function logCheatingEvent(studentId, testId, action, detail) {
 export async function fetchTests(filters = {}) {
   const sb = await getSupabase();
   try {
-    let query = sb.from('tests').select('id, title, display_name, test_subtype, category, test_category, payload, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, working_duration_minutes, schedule_mode, test_type, is_dynamic_shell, shell_code, max_attempts, retake_allowed, created_at, deleted_at, classes(name), levels(name, level_number)');
+    let query = sb.from('tests').select('id, title, display_name, test_subtype, category, payload, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, working_duration_minutes, schedule_mode, test_type, is_dynamic_shell, shell_code, max_attempts, retake_allowed, created_at, deleted_at, classes(name), levels(name, level_number)');
     if (filters.class_id) query = query.eq('class_id', filters.class_id);
     if (!filters.include_deleted) {
       query = query.is('deleted_at', null);
@@ -3097,12 +3150,12 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         }
       }
 
-      // 3. Words Exam (First in theme exam pair)
+      // 3. Words Exam (First in exam pair)
       if (hasAnyVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
         const { testId, action } = await upsertDynamicTestShell({
           institutionId, programId, levelId, classId: targetClassId, levelNum,
           tier: 'EXAM', themeName: themeData.name, topicName: null,
-          description: `Theme Exam: ${themeData.name}`,
+          description: `Exam: ${themeData.name}`,
           themeCode, topicCode: null,
           modulePrefix: 'VOCAB', category: 'words',
           moduleId: vocabModuleId,
@@ -3117,12 +3170,12 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         lastTaskId = testId;
       }
 
-      // 4. Phrases Exam (Second in theme exam pair, chained to Word Exam)
+      // 4. Phrases Exam (Second in exam pair, chained to Word Exam)
       if (hasAnyPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
         const { testId, action } = await upsertDynamicTestShell({
           institutionId, programId, levelId, classId: targetClassId, levelNum,
           tier: 'EXAM', themeName: themeData.name, topicName: null,
-          description: `Theme Exam: ${themeData.name}`,
+          description: `Exam: ${themeData.name}`,
           themeCode, topicCode: null,
           modulePrefix: 'PHRASE', category: 'phrases',
           moduleId: phraseModuleId,

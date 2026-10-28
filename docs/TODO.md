@@ -1,3 +1,27 @@
+# ACTIVE DIRECTIVE: PHASE 159 — POINTS-FIRST LEADERBOARD RANKING, MILESTONE PROGRESSION & ADMIN TABLE ERGONOMICS [COMPLETE]
+
+- [x] Task 1: Milestone Progression Engine (`js/grading.js`, `js/api.js`, `js/app.js`)
+  - Created authoritative `computeMilestoneExamMastery(examEntries, allClassExams)`.
+  - Passing Milestone Theme $N$ ($\ge 60\%$) queues Milestone Theme $N+1$ into the denominator with 0 earned points.
+  - Zero-exam edge cases return neutral `—` for score/grade and `0 pts`.
+
+- [x] Task 2: Points-First Leaderboard Hierarchy (`js/admin/app.js`, `js/dashboard.js`)
+  - Solved Suke Ajai ranking inversion: primary sort is `Global PTS DESC`.
+  - Tie-breakers: 1st `PTS DESC` -> 2nd `SCORE % DESC` -> 3rd `PROG % DESC` -> 4th `lastSubmittedAt ASC` -> 5th Clean Name Alphabetical.
+  - Admin Class Hub DataGrid default sort key set to `initialSortKey: 'totalEarnedScore'`.
+
+- [x] Task 3: Admin Class Hub Ergonomics (`js/admin/app.js`)
+  - Stripped `Mr.` and `Miss` honorific titles from student name column in Admin Class Hub (`admin.html#class-hub`) using `cleanStudentName()`.
+  - Formatted daily quiz columns to display Score % (`100%`, `98%`, etc.) instead of points.
+  - Formatted quiz footer class average cells to display average percentage score.
+
+- [x] Task 4: Automated Verification & Live Browser Test
+  - Unit/parity test suite `scripts/test_student_dashboard_exam_parity.mjs` passed 100%.
+  - Playwright headless browser test `scripts/verify_admin_class_hub_ui.mjs` confirmed: PTS sorted DESC by default, no honorifics in names, quiz cells display %, Sofa Maria Ulfa ranked above Suke Ajai in live DOM.
+  - Verified 39 JS files syntax (`check_all_js_syntax.cjs`) passed with 0 errors.
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 58 — STRICT ACTIVE-ONLY BATCH DROPDOWNS & LEVEL 0 SEMANTICS ("UNDER LEVEL 1")
 
 - [x] Task 1: Enforce Strict Active-Only Filtering in Live Session Controller (`js/admin/assessment-access.js`)

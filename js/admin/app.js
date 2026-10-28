@@ -1,5 +1,5 @@
 import { DataGrid } from './datagrid.js?v=5.3.2';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, isWeeklyExam } from '../app.js?v=20261027';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261027';
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
@@ -811,6 +811,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         }
         area.dataset.currentClassId = classId || '';
 
+        // Background sweep to ensure expired in-progress attempts are authoritatively closed & evaluated
+        try {
+          const sb = await getSupabase();
+          await sb.rpc('auto_close_expired_attempts');
+        } catch (_) {}
+
         // Fetch ALL data relevant to this class and detailed test mapping
         // OPTIMIZATION: Flat students query without heavy nested joins (prevents 500 statement timeouts)
         const [allClasses, allTests, allStudents, allPrograms, allBatches, allQuestions, allLevels, allVault, allAttempts, allInstitutions] = await Promise.all([
@@ -851,19 +857,23 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
         const classTests = (allTests || []).filter(a => a.class_id === classId);
         
-        // Helper to accurately identify weekly milestone exams vs daily tasks/quizzes
+        // Helper to accurately identify milestone exams vs quizzes (Strict Exam Filter)
         const isWeeklyExam = (asm) => {
           if (!asm) return false;
-          if (asm.test_type === 'exam') return true;
-          if (asm.test_type === 'quiz') return false;
-          if (['EXAM', 'TEST'].includes(asm.category) || ['EXAM', 'TEST'].includes(asm.test_category)) return true;
-          if (['EXAM', 'TEST'].includes(asm.payload?.category) || ['EXAM', 'TEST'].includes(asm.payload?.test_category)) return true;
-          if (asm.payload?.is_unified_test === true) return true;
+          const t = String(asm.test_type || asm.type || '').toLowerCase();
+          if (t === 'exam') return true;
+          if (t === 'quiz') return false;
+          const c = String(asm.category || asm.test_category || asm.payload?.tier || asm.payload?.test_category || '').toUpperCase();
+          if (c === 'EXAM') return true;
+          if (c === 'QUIZ' || c === 'TASK') return false;
           const shell = String(asm.shell_code || asm.payload?.shell_code || '').toUpperCase();
-          if (shell.endsWith('-EXAM') || shell.includes('-EXAM-') || shell.endsWith('-TEST') || shell.includes('-TEST-')) return true;
-          if (shell.endsWith('-QUIZ') || shell.includes('-QUIZ-') || shell.endsWith('-TASK') || shell.includes('-TASK-')) return false;
-          return /\b(EXAM|TEST)\b/i.test(asm.title || '');
+          if (shell.endsWith('-EXAM') || shell.includes('-EXAM-')) return true;
+          if (shell.endsWith('-QUIZ') || shell.includes('-QUIZ-')) return false;
+          if (shell.endsWith('-TEST') || shell.includes('-TEST-')) return true;
+          if (shell.endsWith('-TASK') || shell.includes('-TASK-')) return false;
+          return false;
         };
+        const isExam = isWeeklyExam;
         // Find students that have access to this class's program
         const classProgramId = currentClass?.program_id;
         const programBatches = (allBatches || []).filter(b => b.program_id === classProgramId);
@@ -1056,11 +1066,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           const asmScores = {};
           const rowScoreSortVals = {};
 
-          let completedCount = 0;         // ALL activities (daily tasks/quizzes + weekly exams)
-          let completedWeeklyCount = 0;   // Weekly exams ONLY
-          let weeklyEarnedScore = 0;      // Points earned EXCLUSIVELY from weekly exams
-          let weeklyMaxPossible = 0;      // Max points possible EXCLUSIVELY from weekly exams
-          let sumWeeklyPercentages = 0;   // Sum of percentages EXCLUSIVELY from weekly exams
+          let completedCount = 0;         // ALL activities (quizzes + exams)
+          const studentExamEntries = [];
 
           classTests.forEach(asm => {
             const atts = classAttempts.filter(a => (a.test_id || a.Test_id) === asm.id);
@@ -1115,53 +1122,64 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
                 completedCount++;
                 if (isWeeklyExam(asm)) {
-                  completedWeeklyCount++;
-                  weeklyEarnedScore += effEarned;
-                  weeklyMaxPossible += totalQ;
-                  sumWeeklyPercentages += effPct;
+                  studentExamEntries.push({
+                    test: asm,
+                    effPoints: effEarned,
+                    effPct,
+                    totalQ
+                  });
                 }
               }
             }
           });
 
           const totalClassTests = classTests.length || 40;
-          // 1. PROG % (Completion Rate): Maintain calculation across ALL activities (daily tasks/quizzes + weekly exams)
+          // 1. PROG % (Completion Rate): Maintain calculation across ALL activities (quizzes + exams)
           const progressPct = totalClassTests > 0 ? Math.round((completedCount / totalClassTests) * 100) : 0;
           const progressStr = `${progressPct}%`;
 
-          // 2. Global SCORE % & Global GRD (Academic Mastery) & Global PTS:
-          // Calculated EXCLUSIVELY from weekly exams (Theme TOT / milestone exam sessions).
-          // Daily tasks/quizzes are excluded entirely from academic mastery scoring.
-          // Edge-Case Handling (Unattempted Weekly Exams):
-          // If a student has only completed daily tasks without taking weekly exams:
-          // - PROG % reflects task completion.
-          // - SCORE % displays 0% (or "-").
-          // - GRD badge displays "-".
-          // - PTS evaluates to 0.
-          const averageScorePct = completedWeeklyCount > 0
-            ? Math.round(sumWeeklyPercentages / completedWeeklyCount)
-            : 0;
+          // 2. Milestone Progression Engine (Next Exam 0% Penalty):
+          // Evaluates EXCLUSIVELY from Exams via authoritative computeMilestoneExamMastery.
+          // When a student passes Theme N (>= 60%), Theme N+1 is queued into the denominator with 0% score.
+          const allClassExams = classTests.filter(isWeeklyExam);
+          const mastery = (typeof computeMilestoneExamMastery === 'function')
+            ? computeMilestoneExamMastery(studentExamEntries, allClassExams)
+            : {
+                totalPoints: studentExamEntries.reduce((acc, c) => acc + (c.effPoints || 0), 0),
+                overallScore: 0,
+                grade: '—',
+                denominator: 0,
+                completedWeeklyCount: studentExamEntries.length
+              };
+
+          const completedWeeklyCount = mastery.completedWeeklyCount;
+          const averageScorePct = mastery.overallScore;
           const overallPct = averageScorePct;
           const curriculumGradePct = averageScorePct;
-          const totalEarnedScore = completedWeeklyCount > 0 ? weeklyEarnedScore : 0;
-          const totalMaxPossible = completedWeeklyCount > 0 ? weeklyMaxPossible : 0;
+          const totalEarnedScore = mastery.totalPoints;
+          const totalMaxPossible = mastery.denominator;
+          const grade = mastery.grade;
 
-          let grade = '—';
           let gradeColor = 'rgba(255,255,255,0.4)';
-          if (completedWeeklyCount > 0) {
-            const g = typeof calculateGrade === 'function' ? calculateGrade(averageScorePct) : (typeof getGrade === 'function' ? getGrade(averageScorePct) : '—');
-            grade = g;
-            gradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(averageScorePct) : (typeof getGradeColor === 'function' ? getGradeColor(g) : '#EAB308');
+          if (grade && grade !== '—' && grade !== '-') {
+            gradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(averageScorePct) : (typeof getGradeColor === 'function' ? getGradeColor(grade) : '#EF4444');
           }
 
           // Find latest submitted test
           let latestAsm = null;
           let latestScore = -1;
+          let lastSubmittedAt = null;
           const submittedAtts = classAttempts.filter(a => {
             const st = String(a.status || '').toLowerCase();
             return ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
           });
           if (submittedAtts.length > 0) {
+            for (const att of submittedAtts) {
+              const dt = att.submitted_at || att.created_at;
+              if (dt && (!lastSubmittedAt || new Date(dt) > new Date(lastSubmittedAt))) {
+                lastSubmittedAt = dt;
+              }
+            }
             submittedAtts.sort((x, y) => {
               const diff = Number(y.score ?? 0) - Number(x.score ?? 0);
               if (diff !== 0) return diff;
@@ -1194,7 +1212,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           return {
             id: s.id,
             name: s.name || 'Unknown',
-            displayName: (typeof formatStudentName === 'function') ? (formatStudentName(s.name, s.gender) || s.name || 'Unknown') : (s.name || 'Unknown'),
+            displayName: (typeof cleanStudentName === 'function') ? (cleanStudentName(s.name) || s.name || 'Unknown') : (s.name || 'Unknown'),
             instName,
             instShort,
             progName,
@@ -1220,7 +1238,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             gradeColor,
             latestAsm,
             latestScore,
+            lastSubmittedAt,
             asmScores,
+            includedThemeCodes: mastery.includedThemeCodes || [],
+            includedExamIds: mastery.includedExamIds || new Set(),
             pin: s.pin || '****',
             phone: s.phone || s.phone_number || '—',
             email: s.email || '—',
@@ -1230,32 +1251,41 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           };
         });
 
-        // Leaderboard Sort Order:
-        // Primary: PROG % DESC.
-        // Secondary: Global SCORE % DESC.
-        // Tertiary: Global PTS DESC.
+        // Leaderboard Sort Order (Points-First Hierarchy):
+        // 1. Primary: Global PTS DESC.
+        // 2. Secondary: Global SCORE % DESC.
+        // 3. Tertiary: PROG % DESC.
+        // 4. Quaternary: Earliest lastSubmittedAt ASC.
+        // 5. Clean student name ASC.
         studentsGridData.sort((a, b) => {
           const aActive = a.isActive ? 1 : 0;
           const bActive = b.isActive ? 1 : 0;
           if (aActive !== bActive) return bActive - aActive;
 
-          // 1. Primary: PROG % DESC
-          const progA = Number(a.progressPct ?? 0);
-          const progB = Number(b.progressPct ?? 0);
-          if (progA !== progB) return progB - progA;
-
-          // 2. Secondary: Global SCORE % DESC (unattempted weekly exams sort after completed)
-          const scoreA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
-          const scoreB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
-          if (scoreA !== scoreB) return scoreB - scoreA;
-
-          // 3. Tertiary: Global PTS DESC
+          // 1. Primary: Global PTS DESC
           const ptsA = Number(a.totalEarnedScore ?? 0);
           const ptsB = Number(b.totalEarnedScore ?? 0);
           if (ptsA !== ptsB) return ptsB - ptsA;
 
+          // 2. Secondary: Global SCORE % DESC (unattempted exams sort after completed)
+          const scoreA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
+          const scoreB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
+          if (scoreA !== scoreB) return scoreB - scoreA;
+
+          // 3. Tertiary: PROG % DESC
+          const progA = Number(a.progressPct ?? 0);
+          const progB = Number(b.progressPct ?? 0);
+          if (progA !== progB) return progB - progA;
+
+          // 4. Earliest last submission timestamp
+          if (a.lastSubmittedAt && b.lastSubmittedAt) {
+            const diff = new Date(a.lastSubmittedAt) - new Date(b.lastSubmittedAt);
+            if (diff !== 0) return diff;
+          }
+
           return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
         });
+
 
         // State for active tab (Order: 1. Students Grade and Score, 2. Test Sessions, 3. Class Tests)
         if (!window._classHubActiveTab) window._classHubActiveTab = 'attendance';
@@ -1638,7 +1668,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
             const sortedActiveThemes = Object.keys(themeGroups).sort();
 
-            // Pre-calculate theme total points for each student in studentsGridData
+            // Pre-calculate exam points for each student in studentsGridData
             sortedActiveThemes.forEach(tc => {
               const asmsInTheme = themeGroups[tc];
               const examAsmsInTheme = asmsInTheme.filter(isWeeklyExam);
@@ -1662,7 +1692,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     }
                   }
                 });
-                row[`theme_${tc}_total_pts`] = hasAtt ? themeEarned : -1;
+                const isThemeQueued = row.includedThemeCodes && row.includedThemeCodes.includes(tc);
+                row[`theme_${tc}_total_pts`] = hasAtt ? themeEarned : (isThemeQueued ? 0 : -1);
               });
             });
 
@@ -1686,7 +1717,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
                   return (rawTheme || 'A').toUpperCase() === tc;
                 });
-                const colSpan = themeTests.length > 0 ? (themeTests.length * 2) + 1 : 0; // SCORE + PTS per test, PLUS 1 for Theme Total Points
+                const colSpan = themeTests.length > 0 ? (themeTests.length * 2) + 1 : 0; // SCORE + PTS per test, PLUS 1 for Exam Points
                 if (colSpan > 0) {
                   dynamicSuperHeaders.push({
                     label: `THEME ${tc}${tName}`,
@@ -1697,7 +1728,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               });
             } else {
               const tName = themeNames[selectedTheme] ? ` (${themeNames[selectedTheme]})` : '';
-              const colSpan = (themeCounts[selectedTheme] || activeTests.length) + 1; // All tasks + tests in theme, PLUS 1 for Theme Total Points
+              const colSpan = (themeCounts[selectedTheme] || activeTests.length) + 1; // All tasks + tests in theme, PLUS 1 for Exam Points
               dynamicSuperHeaders.push({
                 label: `THEME ${selectedTheme}${tName}`,
                 colSpan: colSpan,
@@ -1705,24 +1736,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               });
             }
 
-            // Build dynamic test and theme total columns
+            // Build dynamic test and exam columns
             const dynamicAsmCols = [];
             sortedActiveThemes.forEach(tc => {
               const asmsInTheme = themeGroups[tc];
 
               asmsInTheme.forEach(asm => {
                 const num = asm.display_order || (classTests.indexOf(asm) + 1);
-                const isTest = asm.test_type === 'exam' ||
-                               asm.category === 'EXAM' ||
-                               asm.test_category === 'EXAM' || 
-                               asm.test_category === 'TEST' || 
-                               asm.category === 'TEST' ||
-                               asm.payload?.test_category === 'EXAM' || 
-                               asm.payload?.test_category === 'TEST' || 
-                               asm.payload?.tier === 'EXAM' ||
-                               asm.payload?.is_unified_test === true ||
-                               /\b(EXAM|TEST)\b/i.test(asm.shell_code || asm.payload?.shell_code || '') || 
-                               /\b(EXAM|TEST)\b/i.test(asm.title || '');
+                const isTest = isWeeklyExam(asm);
                 const code = asm.payload?.shell_code || asm.shell_code || asm.title;
                 const isPhrase = asm.payload?.category === 'phrases' || /PHRASES/i.test(code || '') || /phrase/i.test(asm.title || '');
                 const tag = isTest ? (isPhrase ? 'PHRASE EXAM' : 'WORD EXAM') : (isPhrase ? 'PHRASE QUIZ' : 'WORD QUIZ');
@@ -1748,11 +1769,39 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     sortable: true,
                     align: 'center',
                     render: (val, row) => {
+                      const isQueued = row.includedExamIds && row.includedExamIds.has(asm.id);
                       const att = row.asmScores?.[asm.id];
-                      if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      if (!att) {
+                        if (isQueued) {
+                          return `
+                            <span class="asm-score asm-score-test" 
+                                  style="color:#F87171; cursor:default; font-weight:700; font-size:var(--matrix-font-size, 0.74rem);" 
+                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Unattempted (Pending milestone exam counted as 0%)">
+                              0%
+                            </span>
+                          `;
+                        }
+                        return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      }
                       const st = String(att.status || '').toLowerCase();
-                      if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:0.65rem;" title="In Progress">⏳</span>`;
-                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      if (st === 'in_progress') {
+                        const isExpired = att.expires_at && new Date(att.expires_at) < new Date();
+                        if (!isExpired) {
+                          return `<span style="color:#FFFF00; font-size:0.65rem;" title="In Progress">⏳</span>`;
+                        }
+                      }
+                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
+                        if (isQueued) {
+                          return `
+                            <span class="asm-score asm-score-test" 
+                                  style="color:#F87171; cursor:default; font-weight:700; font-size:var(--matrix-font-size, 0.74rem);" 
+                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Unattempted (Pending milestone exam counted as 0%)">
+                              0%
+                            </span>
+                          `;
+                        }
+                        return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      }
                       const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                       const maxQ = getAsmExpectedMax(asm);
                       const totalQ = Number(att.total_questions || maxQ);
@@ -1795,14 +1844,47 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     sortable: true,
                     align: 'center',
                     render: (val, row) => {
+                      const isQueued = row.includedExamIds && row.includedExamIds.has(asm.id);
                       const att = row.asmScores?.[asm.id];
-                      if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                      const st = String(att.status || '').toLowerCase();
-                      if (st === 'in_progress') return `<span style="color:#eab308; font-size:0.65rem;" title="In Progress">⏳</span>`;
-                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                       const maxQ = getAsmExpectedMax(asm);
-                      const totalQ = Number(att.total_questions || maxQ);
+                      const totalQ = Number(att?.total_questions || maxQ);
+
+                      if (!att) {
+                        if (isQueued) {
+                          return `
+                            <span class="asm-score asm-score-test" 
+                                  style="color:#F87171; cursor:default;" 
+                                  title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Pending milestone exam: 0/${totalQ} pts">
+                              <span style="font-weight:800; font-size:var(--matrix-font-size, 0.74rem); letter-spacing:-0.02em;">
+                                0
+                              </span>
+                            </span>
+                          `;
+                        }
+                        return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      }
+                      const st = String(att.status || '').toLowerCase();
+                      if (st === 'in_progress') {
+                        const isExpired = att.expires_at && new Date(att.expires_at) < new Date();
+                        if (!isExpired) {
+                          return `<span style="color:#eab308; font-size:0.65rem;" title="In Progress">⏳</span>`;
+                        }
+                      }
+                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
+                        if (isQueued) {
+                          return `
+                            <span class="asm-score asm-score-test" 
+                                  style="color:#F87171; cursor:default;" 
+                                  title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Pending milestone exam: 0/${totalQ} pts">
+                              <span style="font-weight:800; font-size:var(--matrix-font-size, 0.74rem); letter-spacing:-0.02em;">
+                                0
+                              </span>
+                            </span>
+                          `;
+                        }
+                        return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      }
+                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                       const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
                       const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
                       const maxRemPts = totalQ * 0.6;
@@ -1830,13 +1912,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     }
                   });
                 } else {
-                  // Daily task column
+                  // Quiz column (Displays Score % per user requirement)
                   dynamicAsmCols.push({
                     key: `test_${asm.id}`,
                     className: 'col-asm col-quiz',
-                    width: '42px',
-                    headerTitle: headerTooltip,
-                    title: headerTooltip,
+                    width: '46px',
+                    headerTitle: `${headerTooltip} (Quiz Score %)`,
+                    title: `${headerTooltip} (Quiz Score %)`,
                     label: `
                       <div class="asm-hdr-cell">
                         <span class="test-num test-num-task" title="${escapeHtml(headerTooltip)}">${num}</span>
@@ -1870,10 +1952,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
                       return `
                         <span class="asm-score asm-score-task ${isRem ? 'asm-score-remedial' : ''}" 
-                              style="color:${color}; ${cursorStyle}" 
+                              style="color:${color}; ${cursorStyle} font-weight:700; font-size:var(--matrix-font-size, 0.74rem);" 
                               ${clickAttr}
-                              title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`} (${Math.round(effPct)}%)&#10;Click to view result">
-                          ${displayVal}
+                              title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Score: ${Math.round(effPct)}%` : `Score: ${Math.round(effPct)}%`} (${displayVal}/${totalQ} pts)&#10;Click to view result">
+                          ${Math.round(effPct)}%${isRem ? '<sup class="test-rem-sup">R</sup>' : ''}
                         </span>
                       `;
                     }
@@ -1881,17 +1963,17 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 }
               });
 
-              // 3. THEME TOTAL POINTS COLUMN (User requirement: "untuk tiap tema ada tambahan kolom berupa total point daro words dan phrases")
+              // 3. EXAM POINTS COLUMN
               dynamicAsmCols.push({
                 key: `theme_${tc}_total_pts`,
                 className: 'col-asm col-exam col-exam-pts col-test-theme-total',
                 width: '60px',
-                headerTitle: `Theme ${tc} Total Points (Words + Phrases)`,
-                title: `Theme ${tc} Total Points (Words + Phrases)`,
+                headerTitle: `Theme ${tc} Exam Points (Words + Phrases)`,
+                title: `Theme ${tc} Exam Points (Words + Phrases)`,
                 label: `
                   <div class="asm-hdr-cell">
-                    <span class="test-num test-num-test test-num-total" title="Theme ${tc} Total Points (Words + Phrases)">TOT</span>
-                    <span class="test-subtag test-subtag-test-pts">TOT PTS</span>
+                    <span class="test-num test-num-test test-num-total" title="Theme ${tc} Exam Points (Words + Phrases)">TOT</span>
+                    <span class="test-subtag test-subtag-test-pts">EXAM PTS</span>
                   </div>
                 `,
                 sortable: true,
@@ -1942,7 +2024,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               hideToolbar: true,
               rowClassName: (row) => row.hasRemedial ? 'row-remedial' : '',
               searchKeys: ['instName', 'instShort', 'progName', 'batch', 'displayName', 'name', 'pin'],
-              initialSortKey: 'progressPct',
+              initialSortKey: 'totalEarnedScore',
               initialSortAsc: false,
               superHeaders: dynamicSuperHeaders,
               summaryRow: (visibleCols, filteredData) => {
@@ -1951,16 +2033,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
                 // Calculate class averages aligned with weekly-only metrics
                 const avgProg = Math.round(filteredData.reduce((acc, s) => acc + (s.progressPct || 0), 0) / totalStudents);
-                
                 const weeklyCompletedStudents = filteredData.filter(s => (s.completedWeeklyCount || 0) > 0);
-                const avgScore = weeklyCompletedStudents.length > 0 
-                  ? Math.round(weeklyCompletedStudents.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / weeklyCompletedStudents.length) 
+                const avgScore = totalStudents > 0 
+                  ? Math.round(filteredData.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / totalStudents) 
                   : 0;
                 const avgPts = Math.round(filteredData.reduce((acc, s) => acc + (s.totalEarnedScore || 0), 0) / totalStudents);
-                const avgGrade = weeklyCompletedStudents.length > 0 
-                  ? (typeof calculateGrade === 'function' ? calculateGrade(avgScore) : (typeof getGrade === 'function' ? getGrade(avgScore) : '—'))
-                  : '—';
-                const avgGradeColor = weeklyCompletedStudents.length > 0 && typeof getGradeColorByScore === 'function'
+                const avgGrade = typeof calculateGrade === 'function' ? calculateGrade(avgScore) : (typeof getGrade === 'function' ? getGrade(avgScore) : '—');
+                const avgGradeColor = typeof getGradeColorByScore === 'function'
                   ? getGradeColorByScore(avgScore)
                   : '#94a3b8';
                 const isAvgGradeS = avgGrade === '★' || avgGrade === 'S';
@@ -1984,7 +2063,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       </td>
                     `;
                   } else if (col.key === 'averageScorePct') {
-                    if (weeklyCompletedStudents.length === 0) {
+                    if (totalStudents === 0) {
                       cellsHtml += `
                         <td class="col-sticky col-sticky-6 text-center">
                           <div class="fw-700 text-xs text-muted" style="color:#94a3b8; font-size:0.75rem; line-height:1.1;">—</div>
@@ -1998,7 +2077,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       `;
                     }
                   } else if (col.key === 'grade') {
-                    if (weeklyCompletedStudents.length === 0 || avgGrade === '—' || avgGrade === '-') {
+                    if (totalStudents === 0 || avgGrade === '—' || avgGrade === '-') {
                       cellsHtml += `
                         <td class="col-sticky col-sticky-7 text-center">
                           <span class="text-muted" style="font-size:0.75rem;">—</span>
@@ -2070,7 +2149,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       } else {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
-                            <span style="color:#e2e8f0; font-weight:700; font-size:0.72rem; font-family:monospace;" title="Avg: ${avgSc} pts (${count} students)">${avgSc}</span>
+                            <span style="color:${avgCol}; font-weight:700; font-size:0.68rem;" title="Class Avg Quiz Score: ${avgPct}% (${count} students)">${avgPct}%</span>
                           </td>
                         `;
                       }
@@ -2118,42 +2197,58 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 const bActive = b.isActive ? 1 : 0;
                 if (aActive !== bActive) return bActive - aActive;
 
-                // 1. Leaderboard Primary default sort: PROG % DESC, Secondary: Global SCORE % DESC, Tertiary: Global PTS DESC
-                if (sortKey === 'progressPct' || sortKey === 'PROG') {
-                  const pA = Number(a.progressPct ?? 0);
-                  const pB = Number(b.progressPct ?? 0);
-                  if (pA !== pB) return direction === 'asc' ? pA - pB : pB - pA;
+                // 1. Leaderboard Primary default sort: Global PTS DESC -> Global SCORE % DESC -> PROG % DESC
+                if (sortKey === 'totalEarnedScore' || sortKey === 'PTS') {
+                  const sA = Number(a.totalEarnedScore ?? 0);
+                  const sB = Number(b.totalEarnedScore ?? 0);
+                  if (sA !== sB) return direction === 'asc' ? sA - sB : sB - sA;
                   const scoreA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
                   const scoreB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
                   if (scoreA !== scoreB) return scoreB - scoreA;
-                  const sA = Number(a.totalEarnedScore ?? 0);
-                  const sB = Number(b.totalEarnedScore ?? 0);
-                  if (sA !== sB) return sB - sA;
+                  const pA = Number(a.progressPct ?? 0);
+                  const pB = Number(b.progressPct ?? 0);
+                  if (pA !== pB) return pB - pA;
+                  if (a.lastSubmittedAt && b.lastSubmittedAt) {
+                    const diff = new Date(a.lastSubmittedAt) - new Date(b.lastSubmittedAt);
+                    if (diff !== 0) return diff;
+                  }
+                  return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
                 }
 
                 if (sortKey === 'grade' || sortKey === 'GRD' || sortKey === 'SCORE' || sortKey === 'averageScorePct') {
                   const gA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
                   const gB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
                   if (gA !== gB) return direction === 'asc' ? gA - gB : gB - gA;
-                  const pA = Number(a.progressPct ?? 0);
-                  const pB = Number(b.progressPct ?? 0);
-                  if (pA !== pB) return pB - pA;
                   const sA = Number(a.totalEarnedScore ?? 0);
                   const sB = Number(b.totalEarnedScore ?? 0);
                   if (sA !== sB) return sB - sA;
-                }
-
-                if (sortKey === 'totalEarnedScore' || sortKey === 'PTS') {
-                  const sA = Number(a.totalEarnedScore ?? 0);
-                  const sB = Number(b.totalEarnedScore ?? 0);
-                  if (sA !== sB) return direction === 'asc' ? sA - sB : sB - sA;
                   const pA = Number(a.progressPct ?? 0);
                   const pB = Number(b.progressPct ?? 0);
                   if (pA !== pB) return pB - pA;
+                  if (a.lastSubmittedAt && b.lastSubmittedAt) {
+                    const diff = new Date(a.lastSubmittedAt) - new Date(b.lastSubmittedAt);
+                    if (diff !== 0) return diff;
+                  }
+                  return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
+                }
+
+                if (sortKey === 'progressPct' || sortKey === 'PROG') {
+                  const pA = Number(a.progressPct ?? 0);
+                  const pB = Number(b.progressPct ?? 0);
+                  if (pA !== pB) return direction === 'asc' ? pA - pB : pB - pA;
+                  const sA = Number(a.totalEarnedScore ?? 0);
+                  const sB = Number(b.totalEarnedScore ?? 0);
+                  if (sA !== sB) return sB - sA;
                   const scoreA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
                   const scoreB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
                   if (scoreA !== scoreB) return scoreB - scoreA;
+                  if (a.lastSubmittedAt && b.lastSubmittedAt) {
+                    const diff = new Date(a.lastSubmittedAt) - new Date(b.lastSubmittedAt);
+                    if (diff !== 0) return diff;
+                  }
+                  return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
                 }
+
 
                 if (sortKey && (sortKey.startsWith('test_') || sortKey.startsWith('asm_') || sortKey.startsWith('theme_'))) {
                   const scoreA = Number(a[sortKey] ?? -1);
@@ -2252,15 +2347,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   align: 'center',
                   width: '46px',
                   render: (val, row) => {
-                    if (!row.completedWeeklyCount || row.completedWeeklyCount === 0) {
-                      return '<span class="text-muted" style="font-size:0.75rem;" title="No weekly exams completed">—</span>';
+                    if (row.averageScorePct == null || row.grade === '—' || row.grade === '-') {
+                      return '<span class="text-muted" style="font-size:0.75rem;" title="No exams completed">—</span>';
                     }
                     const isGradeS = row.grade === '★' || row.grade === 'S';
                     const scoreColor = (typeof getGradeColorByScore === 'function')
                       ? getGradeColorByScore(row.averageScorePct)
                       : (isGradeS ? '#22C55E' : row.gradeColor);
                     return `
-                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${scoreColor}; font-size:0.75rem; line-height:1.1;" title="Weekly Exams Average: ${row.averageScorePct}% (${row.completedWeeklyCount} exams)">${row.averageScorePct}%</div>
+                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${scoreColor}; font-size:0.75rem; line-height:1.1;" title="Exams Average: ${row.averageScorePct}% (${row.completedWeeklyCount} exams)">${row.averageScorePct}%</div>
                     `;
                   }
                 },
@@ -2272,12 +2367,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   align: 'center',
                   width: '36px',
                   render: (val, row) => {
-                    if (!row.completedWeeklyCount || row.completedWeeklyCount === 0 || row.grade === '—' || row.grade === '-') {
-                      return '<span class="text-muted" style="font-size:0.75rem;" title="No weekly exams completed">&mdash;</span>';
+                    if (!row.grade || row.grade === '—' || row.grade === '-') {
+                      return '<span class="text-muted" style="font-size:0.75rem;" title="No exams completed">&mdash;</span>';
                     }
                     const isGradeS = row.grade === 'S' || row.grade === '★';
                     if (isGradeS) {
-                      return `<span class="grade-circle grade-circle-star" title="Weekly Exam Grade ★ (100% Excellent)">★</span>`;
+                      return `<span class="grade-circle grade-circle-star" title="Exam Grade ★ (100% Excellent)">★</span>`;
                     }
                     const cleanGrade = String(row.grade || '').trim().toUpperCase();
                     const lowerG = cleanGrade.toLowerCase();
@@ -2286,7 +2381,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       : (row.gradeColor || '#94a3b8');
                     const textColor = '#000000';
                     return `
-                      <span class="grade-circle grade-circle-${lowerG}" style="background:${badgeColor}; color:${textColor};" title="Weekly Exam Grade ${cleanGrade}">${cleanGrade}</span>
+                      <span class="grade-circle grade-circle-${lowerG}" style="background:${badgeColor}; color:${textColor};" title="Exam Grade ${cleanGrade}">${cleanGrade}</span>
                     `;
                   }
                 },
@@ -2299,7 +2394,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   width: '62px',
                   render: (val, row) => {
                     if (!row.completedWeeklyCount || row.completedWeeklyCount === 0) {
-                      return `<div class="fw-700 text-xs text-muted" style="color:#94a3b8; font-size:0.75rem;" title="0 pts (No weekly exams completed)">0 <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>`;
+                      return `<div class="fw-700 text-xs text-muted" style="color:#94a3b8; font-size:0.75rem;" title="0 pts (No exams completed)">0 <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>`;
                     }
                     const isGradeS = row.grade === '★' || row.grade === 'S';
                     const ptsColor = (typeof getGradeColorByScore === 'function')
@@ -2308,7 +2403,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     const ptsVal = Number(row.totalEarnedScore ?? 0);
                     const formattedPts = (ptsVal % 1 !== 0) ? ptsVal.toFixed(1) : ptsVal;
                     return `
-                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${ptsColor}; font-size:0.75rem;" title="Weekly Exam Points: ${formattedPts} pts">${formattedPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
+                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${ptsColor}; font-size:0.75rem;" title="Exam Points: ${formattedPts} pts">${formattedPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
                     `;
                   }
                 },

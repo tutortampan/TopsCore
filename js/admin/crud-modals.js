@@ -1693,7 +1693,7 @@ async function openBulkEditTestsModal(selectedIds = [], onComplete = null) {
     }
   });
 
-  // If all selected items are daily tasks, pre-select 5 minutes by default as convenience
+  // If all selected items are quizzes, pre-select 5 minutes by default as convenience
   const allAreTasks = _bulkEditSelectedIds.every(id => {
     const r = window._classHubRecords?.[id];
     return r ? (r.test_type === 'VOCAB_TASK' || r.test_type === 'PHRASE_TASK' || /\bTASK\b/i.test(r.title || '')) : false;

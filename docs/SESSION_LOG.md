@@ -1,3 +1,147 @@
+## SESSION-20261028-1245
+
+Start: 2026-10-28 11:30 UTC+8  
+End: 2026-10-28 12:45 UTC+8  
+Agent: Antigravity  
+
+### User Request
+1. Analyse and fix the ranking paradox where Mr. Suke Ajai was ranked higher than members with more points (e.g. Miss Sofa Maria Ulfa).
+2. Leaderboard hierarchy must prioritize Points first: `PTS DESC` -> `SCORE % DESC` -> `PROG % DESC` -> `lastSubmittedAt ASC` -> name ASC.
+3. Students who passed Exam 1 but haven't attempted Exam 2 must have Exam 2 queued with 0%, adjusting global score and grade dynamically.
+4. Ensure exact parity between Admin Class Hub ("Students Grade and Score") and Student Lobby (`dashboard.html` leaderboard).
+5. Remove `Mr.` and `Miss` honorific titles from student names in the Admin Class Hub table to save horizontal space.
+6. Replace quiz points display with Score (%) in the matrix grid, reserving points exclusively for Exams.
+
+### Objective
+Implement the Points-First ranking engine, Milestone Progression next-exam 0% penalty, clean student names, and quiz percentage formatting across both Tutor's Room and Student's Lobby.
+
+### Work Performed
+- **`js/grading.js`**: Implemented `computeMilestoneExamMastery(examEntries, allClassExams)` with sequential theme detection (A, B, C, D) and next milestone 0% penalty when previous theme is passed ($\ge 60\%$).
+- **`js/api.js` & `js/app.js`**: Exported and bound `computeMilestoneExamMastery`.
+- **`js/admin/app.js`**:
+  - Integrated `computeMilestoneExamMastery` into `studentsGridData`.
+  - Display name updated to `cleanStudentName(s.name)` (stripping "Mr." and "Miss").
+  - DataGrid default sort set to `initialSortKey: 'totalEarnedScore'` and `sortComparator` updated to Points-First.
+  - Daily quiz cells and footer summaryRow updated to display Score % (`${Math.round(effPct)}%`).
+- **`js/dashboard.js`**: Integrated `computeMilestoneExamMastery` into `computeOverallStats()` and `loadBatchLeaderboard()` with Points-First sorting.
+- **`sw.js` & HTML**: Bumped cache name to `topscore-cache-option-a-v14` and script version strings to `v=20261028_milestone_pts`.
+- **`scripts/test_student_dashboard_exam_parity.mjs`**: Added Scenario 4 verifying Sofa Maria Ulfa > Suke Ajai and Pasya penalty.
+- **`scripts/verify_admin_class_hub_ui.mjs`**: Automated browser verification script.
+- **Documentation**: Added `DECISION-024` to `docs/DECISIONS.md`, updated `docs/CHANGELOG.md`, `docs/CURRENT_STATE.md`, and `docs/TODO.md`.
+
+### Verification
+- `scripts/test_student_dashboard_exam_parity.mjs`: 100% PASS.
+- `scripts/check_all_js_syntax.cjs`: All 39 JS files syntax validated with 0 errors.
+- `scripts/verify_admin_class_hub_ui.mjs`: Headless browser test verified:
+  - PTS sorted DESC by default (`PTS ↓`).
+  - All 24 student names rendered without honorifics.
+  - All Theme A quiz cells display Score % (`100%`, `94%`, `80%`).
+  - Sofa Maria Ulfa (rank #11) ranked above Suke Ajai (rank #18).
+  - Screenshot saved: `admin_class_hub_verified.png`.
+
+---
+
+## SESSION-20261028-1130
+
+Start: 2026-10-28 10:36 UTC+8  
+End: 2026-10-28 11:30 UTC+8  
+Agent: Antigravity  
+
+### User Request
+[BUGFIX: MISALIGNED EXAM MAPPING & SCORE/PTS CALCULATION - CLASS HUB]
+1. Strict Exam ID/Type Filtering: Strictly filter tests where `type = 'exam'` (the 8 Theme Exams). Exclude all daily quizzes (`type = 'quiz'`) from Global SCORE %, Global PTS, and Global GRD.
+2. Global PTS Calculation: Calculate PTS as the SUM of points ACTUALLY EARNED by the student across the 8 Exams: `SUM(attempt.earned_points) WHERE test.type = 'exam' AND attempt.status = 'completed'`. Do NOT sum static/max slot totals.
+3. Global SCORE % Calculation: Formula `(SUM(attempt.earned_score) / NULLIF(SUM(attempt.max_score), 0)) * 100` (strictly for `test.type = 'exam'`). If no exams taken, return 0% (or "-") and grade badge "-".
+4. Recheck & Update: Trace the RPC / client aggregation function in `admin.html#class-hub`. Update calculation logic to ensure PTS and SCORE % reflect true student exam submissions.
+
+### Objective
+Enforce strict exam filtering and exact formula implementations across `admin.html#class-hub` and `dashboard.html`. Eliminate any static slot weights or quiz leakage.
+
+### Work Performed
+- **`js/admin/app.js`**:
+  - Tightened `isWeeklyExam(asm)` (L855–866) to strictly require `test_type === 'exam'` or shell code ending in `-EXAM`, eliminating loose title regex.
+  - Updated `studentsGridData` aggregation:
+    - Global PTS: strictly sums `weeklyEarnedScore` across completed exams.
+    - Global SCORE %: calculated as `completedWeeklyCount > 0 && weeklyMaxPossible > 0 ? Math.round((weeklyEarnedScore / weeklyMaxPossible) * 100) : 0` (rendered as `—` when 0 exams taken).
+    - Grade badge: evaluates `getGradePredicateByScore(averageScorePct)` (renders `—` when 0 exams taken).
+- **`js/grading.js`**:
+  - Aligned exported `isWeeklyExam(asm)` to remove title regex fallback.
+- **`js/dashboard.js`**:
+  - Updated `computeOverallStats()` and `loadBatchLeaderboard()` to store `{ effPct, effPoints, totalQ }` on best attempts and compute weighted average score: `Math.round((sumEarnedExamScore / sumMaxExamScore) * 100)`.
+- **`sw.js` & `admin.html`**:
+  - Bumped service worker cache name to `'topscore-cache-option-a-v12'`.
+  - Bumped script query strings to `v=20261028_scorepts`.
+- **`scripts/test_student_dashboard_exam_parity.mjs`**:
+  - Updated parity test simulation and assertions to validate the weighted score calculation and 4-tier tie-breaker.
+
+### Verification
+- `audit_vector_1.cjs`, `audit_vector_2.cjs`, `audit_vector_3.cjs`, `audit_vector_4.cjs`: 100% PASS.
+- `test_student_dashboard_exam_parity.mjs`: 100% PASS across all parity metrics.
+- Playwright headless extraction on live server (`http://127.0.0.1:5500/admin.html#class-hub`):
+  - Row 1: Miss Syazida Shinda Debi | 68% SCORE | Grade C | 472.5 pts
+  - Row 2: Mr. Aunul Fikri Yasir | 59% SCORE | Grade D | 415.5 pts
+  - Row 3: Mr. Unggul Wirakse | 78% SCORE | Grade C | 387.5 pts
+  - Row 4: Mr. Ari Wahyu Darma | 66% SCORE | Grade C | 332 pts
+  - Row 5: Mr. Gagan Tara Deswari | 59% SCORE | Grade D | 296 pts
+  - Row 23 & 24: Mr. Muhammad Alif Rezki Rahmansyah & Mr. Rifky Ahmad (0 exams): 0 pts, SCORE `—`, GRD `—`
+  - Footer CLASS AVERAGE: 56% SCORE | Grade D | 231 pts
+- Zero static weights, zero quiz leakage.
+
+### Resume From
+Phase 157 completed and verified in code, DB, browser, and documentation.
+
+---
+
+## SESSION-20261028-1035
+
+Start: 2026-10-28 10:15 UTC+8  
+End: 2026-10-28 10:35 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"continue" (implement fixes identified in Forensic Audit report following user's "go ahead")
+
+### Objective
+Execute the priority fixes identified in `SCORING_ENGINE_FORENSIC_AUDIT.md`:
+1. Harmonize PROG% denominator in Dashboard leaderboard with Admin Class Hub.
+2. Eliminate hardcoded, diverging grade color maps and unify all grade color resolution with canonical `getGradeColorByScore()`.
+3. Unify Class Hub column classification with `isWeeklyExam(asm)`.
+4. Add 4th tie-breaker (`lastSubmittedAt`) to Class Hub sorting.
+5. Fix auto-leveling threshold in `submit-test` edge function.
+6. Backfill legacy grades and apply PostgreSQL CHECK constraint.
+
+### Work Performed
+- **Student Dashboard (`js/dashboard.js`)**:
+  - Unmapped dynamic `status='PUBLISHED'` query fallback in `loadBatchLeaderboard` and locked denominator to `window._batchTests.length || 40` (Fix D-1).
+  - Imported `getGradeColorByScore` from `./grading.js`.
+  - Replaced all 3 hardcoded `gradeColors` dictionaries across test list modal, assigned tests cards, and completed tests table with `getGradeColorByScore()` (Fix D-2, D-3).
+- **Result Page (`js/result.js`)**:
+  - Removed dead, legacy `gradeColors` map on line 44.
+- **Admin Class Hub (`js/admin/app.js`)**:
+  - Replaced inline 11-condition `isTest` evaluation with unified `isWeeklyExam(asm)` (Fix D-4).
+  - Added `lastSubmittedAt` tracking to `studentsGridData` row generation.
+  - Implemented 4th tie-breaker (`lastSubmittedAt` ASC) in initial sort and DataGrid `sortComparator` for PROG%, SCORE%, and PTS (Fix A-1).
+- **Edge Functions (`supabase/functions/submit-test/index.ts`)**:
+  - Selected `minimum_required_score` from `tests` and used `Number(testRec?.minimum_required_score ?? testRec?.payload?.minimum_required_score ?? 75)` for level-up threshold (Fix R-1).
+- **Database Migration (`supabase/migrations/20261028110000_canonical_grades_backfill_and_constraint.sql`)**:
+  - Backfilled 159 legacy Grade `'S'` rows to `'★'`.
+  - Backfilled 40 legacy Grade `'F'` rows to `'E'`.
+  - Backfilled NULL grades based on percentage tiers.
+  - Applied strict PostgreSQL CHECK constraint: `CHECK (grade IN ('★', 'A', 'B', 'C', 'D', 'E') OR grade IS NULL)`.
+  - Verified 0 NULLs and 0 non-standard grades across all 956 attempt rows.
+- **Verification**:
+  - Ran `scratch/audit_vector_1.cjs` (Codebase & Leakage Audit): PASS.
+  - Ran `scratch/audit_vector_2.cjs` (Database & RPC Contract Integrity): PASS.
+  - Ran `scratch/audit_vector_3.cjs` (Scoring & Ranking Edge-Case Stress Test): PASS.
+  - Ran `scratch/audit_vector_4.cjs` (UI/UX & Runner Runtime Health): PASS.
+  - Ran `scripts/test_student_dashboard_exam_parity.mjs`: PASS.
+  - Syntax check on all 39 JS files: PASS.
+
+### Resume From
+All prioritized fixes from the forensic audit are fully implemented, verified, and active in both the codebase and the live database. Ready for user next directive.
+
+---
+
 ## SESSION-20261028-0635
 
 Start: 2026-10-28 06:14 UTC+8  

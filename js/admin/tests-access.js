@@ -207,7 +207,7 @@ export async function renderClassTestSessions(container, context = {}) {
       <!-- KPI Summary Pills -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px;">
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 16px;">
-          <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: #94a3b8;">Total Theme Exams</div>
+          <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: #94a3b8;">Total Exams</div>
           <div style="font-size: 1.6rem; font-weight: 800; color: #ffffff; margin-top: 4px;">4 Themes <span style="font-size: 0.85rem; font-weight: 500; color: #64748b;">(8 Modules)</span></div>
         </div>
 
@@ -802,6 +802,8 @@ function openThemeSessionModal(container, theme, mode, context) {
 
   const overrideCheckbox = modal.querySelector('#open-modal-override-checkbox');
 
+  let lastEvaluatedStudents = [];
+
   const renderModalStudents = () => {
     const curBatchId = batchSelect.value;
     const batchStudents = (context.allStudents || []).filter(s => s.batch_id === curBatchId && !s.deleted_at && s.is_active !== false);
@@ -816,6 +818,7 @@ function openThemeSessionModal(container, theme, mode, context) {
       allAttempts: context.allAttempts || [],
       mode
     });
+    lastEvaluatedStudents = evaluated;
 
     const eligibleList = evaluated.filter(e => e.isEligible);
     const ineligibleList = evaluated.filter(e => !e.isEligible);
@@ -1035,13 +1038,24 @@ function openThemeSessionModal(container, theme, mode, context) {
         }));
       }
       if (theme.phrasesTest) {
+        // Words Exam prerequisite rule:
+        // A student is whitelisted for Phrases Exam ONLY if they have passed Words Exam (>= 60%),
+        // UNLESS the tutor has explicitly enabled Tutor Override.
+        let phrasesAllowedIds = allowedStudentIds;
+        if (!tutorOverrideActive && theme.wordsTest) {
+          const evalMap = new Map(lastEvaluatedStudents.map(e => [e.student.id, e]));
+          phrasesAllowedIds = allowedStudentIds.filter(id => {
+            const ev = evalMap.get(id);
+            return ev && ev.wordsPassed;
+          });
+        }
         promises.push(openTestSession({
           testId: theme.phrasesTest.id,
           batchId: targetBatchId,
           allocatedMinutes: duration,
-          allowedStudentIds: allowedStudentIds,
+          allowedStudentIds: phrasesAllowedIds,
           isRemedial: isRemedial,
-          remedialStudentIds: isRemedial ? allowedStudentIds : []
+          remedialStudentIds: isRemedial ? phrasesAllowedIds : []
         }));
       }
 
@@ -1215,10 +1229,18 @@ function openThemeLateModal(container, theme, context) {
         }));
       }
       if (theme.phrasesTest) {
+        let phrasesLateIds = studentIds;
+        if (theme.wordsTest) {
+          const evalMap = new Map(evaluated.map(e => [e.student.id, e]));
+          phrasesLateIds = studentIds.filter(id => {
+            const ev = evalMap.get(id);
+            return ev && ev.wordsPassed;
+          });
+        }
         promises.push(addLateStudentsToSession({
           testId: theme.phrasesTest.id,
-          studentIds: studentIds,
-          remedialStudentIds: isRem ? studentIds : []
+          studentIds: phrasesLateIds,
+          remedialStudentIds: isRem ? phrasesLateIds : []
         }));
       }
 
@@ -2127,7 +2149,13 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, p
       completedTaskCount,
       totalTasks: themeTasks.length,
       prereqMet,
-      isAlreadyPassed
+      isAlreadyPassed,
+      wordsPassed,
+      phrasesPassed,
+      hasTakenWords,
+      hasTakenPhrases,
+      wBestPct,
+      pBestPct
     });
   });
 

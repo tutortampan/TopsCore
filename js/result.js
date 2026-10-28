@@ -41,7 +41,6 @@ if (!session) {
       return 'incorrect';
     }
 
-    const gradeColors = { S: '#a855f7', A: '#10b981', B: '#38bdf8', C: '#f59e0b', D: '#f97316', E: '#ef4444', F: '#ef4444' };
 
     // Humanize raw test_type values from DB
     function humanizeType(raw) {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v10';
+const CACHE_NAME = 'topscore-cache-option-a-v14';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

@@ -536,4 +536,176 @@ User requirements:
 - Leaderboard fairly elevates students with high curriculum completion first, followed by formal exam mastery and points.
 - Consistent, intuitive edge-case presentation for students before they take weekly exams.
 
+---
+
+## DECISION-023 — Terminology Simplification (Quiz vs Exam) & Dynamic Weighted Exam-Only Scoring Architecture
+
+Date: 2026-10-28
+Status: ACCEPTED
+
+### Context
+Previous implementations accumulated cluttered, conflicting terminology prefixes across the codebase ("Daily Quiz", "Daily Task", "Weekly Exam", "Theme Exam", "Theme TOT"). Furthermore, static slot ceilings (40, 10, 50) and unweighted averages leaked into point and score calculations, artificially capping student points on multi-section milestone exams and distorting class leaderboards.
+
+### Decision
+1. **Terminology Standardization**:
+   - Universal two-tier functional classification:
+     * **"Quiz" (pl: "Quizzes")**: Formative daily checks, vocabulary drills, phrase exercises (32 in Level 3).
+     * **"Exam" (pl: "Exams")**: Evaluative milestone examinations (8 in Level 3: Words & Phrases Exams per Theme).
+   - Fully deprecate and purge: "Daily Quiz", "Daily Task", "Weekly Exam", "Theme Exam", "Theme TOT", and "Assessment".
+2. **Metric Scope & Mathematical Rigor**:
+   - `PROG %`: Tracks curriculum completion across BOTH Quizzes and Exams: `Math.round((completedCount / totalScheduled) * 100)`.
+   - `Global SCORE %`: Calculated EXCLUSIVELY from Exams as true weighted mastery:
+     $$\text{Global SCORE \%} = \text{round}\left( \frac{\sum \text{Exam Earned Scores}}{\sum \text{Exam Max Possible}} \times 100 \right)$$
+   - `Global PTS`: Evaluated EXCLUSIVELY as the sum of actual points earned on Exams: $\sum \text{Exam Earned Points}$.
+   - `Global GRD`: Dynamic grade predicate mapping to Exam-only Score % (`★`, `A`, `B`, `C`, `D`, `E`).
+   - `Zero-Exam Edge Case`: When a student has completed only Quizzes without taking any Exams, render neutral indicators: Score `—`, Grade `—`, and `0 pts`.
+3. **Dynamic Exam Point Ceilings**:
+   - Replace hardcoded slot caps (40/10) with dynamic question resolution (`asm.payload?.total_questions || asm.total_questions`), reflecting actual exam scale (Words Exams: 120, 280, 480, 640; Phrases Exams: 30, 70, 120, 160).
+4. **Leaderboard Multi-Tier Sorting Hierarchy**:
+   - Tier 1: `PROG %` DESC (Curriculum progress)
+   - Tier 2: `Global SCORE %` DESC (True weighted exam mastery)
+   - Tier 3: `Global PTS` DESC (Cumulative points earned on exams)
+   - Tier 4: `lastSubmittedAt` ASC (Earliest submission time tie-breaker)
+   - Tier 5: Student Name ASC
+5. **Database Constraint & Canonical Grades**:
+   - Backfilled all historical grades in Supabase PostgreSQL to canonical symbols (`★`, `A`, `B`, `C`, `D`, `E`).
+   - Added PostgreSQL CHECK constraint: `CHECK (grade IN ('★', 'A', 'B', 'C', 'D', 'E') OR grade IS NULL)`.
+
+### Consequences
+- Zero ambiguity across Admin Class Hub, Student Dashboard, Edge Functions, and Database.
+- Strict parity between Admin Class Hub and Student Dashboard scoring engines.
+- True representation of student mastery with dynamic multi-question exam point ceilings.
+
+---
+
+## DECISION-024 — Points-First Leaderboard Hierarchy, Milestone Progression 0% Penalty & Admin Table Ergonomics
+
+Date: 2026-10-28
+Status: ACCEPTED (Partially supersedes DECISION-023 Tier 1 sorting)
+
+### Context
+1. **The Ranking Paradox**: Students with fewer exam points were ranking above students with vastly higher exam performance (e.g. Mr. Suke Ajai with 18 tasks / 143 pts was ranked above Miss Sofa Maria Ulfa with 17 tasks / 273.5 pts) because `PROG %` was previously evaluated as the primary sort key.
+2. **The Early-Stop Score Inflation**: A student who completed only Theme A (e.g. Mr. Pasya / Miss Risma with 90 pts out of 150) received 60% (Grade C) and stopped there, while students who advanced to harder subsequent themes (Theme B: 350 questions, Theme C: 600 questions) took risks on large question banks, resulting in lower scores or failing grades.
+3. **Admin Table Display Ergonomics**:
+   - The "Mr." and "Miss" honorific titles took up horizontal column space in the Admin Class Hub matrix grid where screen real estate is at a premium.
+   - Daily quizzes were displaying raw points (e.g. `40`, `10`), creating confusion because points are designed for weighted Milestone Exams, whereas quizzes are formative daily checks evaluated by percentage score.
+
+### Decision
+1. **Points-First Leaderboard Hierarchy**:
+   - Re-architected both Tutor's Room (`admin.html#class-hub`) and Student's Lobby (`dashboard.html`) to sort strictly by:
+     * **Tier 1 (Primary)**: `Global PTS DESC` (Highest cumulative exam points first).
+     * **Tier 2 (Secondary)**: `Global SCORE % DESC` (If points are tied, higher mastery percentage wins; unattempted exams sort after completed).
+     * **Tier 3 (Tertiary)**: `PROG % DESC` (If points and score are tied, higher syllabus completion wins).
+     * **Tier 4 (Time-breaker)**: `lastSubmittedAt ASC` (Earliest timestamp wins).
+     * **Tier 5 (Alphabetical)**: Student Clean Name ASC.
+   - Updated default DataGrid sort key in Admin Class Hub to `initialSortKey: 'totalEarnedScore'` (PTS column sorted DESC by default).
+2. **Sequential Milestone Progression & Next Exam 0% Penalty**:
+   - Implemented authoritative `computeMilestoneExamMastery(examEntries, allClassExams)` in `js/grading.js`:
+     * Once a student successfully passes Milestone Theme $N$ ($\ge 60\%$), Milestone Theme $N+1$ is immediately queued into the active denominator with 0 earned points (even if ineligible or unattempted).
+     * This dynamically reduces the global score and grade for students who attempt to pause their learning after early milestones, maintaining fairness against students tackling subsequent exams.
+3. **Admin Table Ergonomics**:
+   - **Clean Student Names**: Stripped `Mr.` and `Miss` honorifics from `displayName` in Admin Class Hub table using `cleanStudentName()` to maximize horizontal space. Student Dashboard retains honorifics in student-facing lobby views.
+   - **Quiz Percentage Display**: Daily quiz matrix cells and class average summary cells display **Score (%)** (e.g. `100%`, `98%`, `70%`) with canonical grade color and remedial indicators, preserving points exclusively for Milestone Exams.
+
+### Consequences
+- Eliminates the Suke Ajai ranking inversion: Miss Sofa Maria Ulfa (273.5 pts) is immediately ranked well above Mr. Suke Ajai (143 pts).
+- Pasya and students stopping after Theme A have Theme B queued at 0% ($90 / 500 = 18\%$, Grade E), accurately reflecting unfinished milestones.
+- 100% parity between Tutor's Room and Student's Lobby leaderboard sorting.
+- Clean, uncluttered student names and percentage-only daily quizzes in Admin Class Hub.
+
+---
+
+## DECISION-025 — Automatic Background Auto-Close of Expired Attempts & Active Queued Milestone 0% Matrix Visualization
+
+Date: 2026-10-28
+Status: ACCEPTED
+
+### Context
+1. **Disconnected / Battery Dead In-Progress Attempts**: When a student's device dies, crashes, or loses power mid-exam (e.g., Ari Wahyu Darma on Test 29), the browser client timer ceases to exist, preventing the client from firing the final `submit-test` API request. This left the attempt record stalled indefinitely in `in_progress` status with an hourglass `⏳` icon in the Class Hub matrix, even long after its `expires_at` deadline had passed.
+2. **Matrix Visibility of Queued Active Milestone Exams**: While the global score calculation correctly penalized students who completed Theme $N$ by adding Theme $N+1$ to the denominator at 0 earned points, the individual exam columns in the table matrix rendered gray unattempted dots (`·`). This confused tutors because it wasn't visually obvious which specific exams were actively counting as `0%` and pulling down the student's score.
+
+### Decision
+1. **Automated Background Sweep for Expired Attempts**:
+   - Integrated `sb.rpc('auto_close_expired_attempts')` into the primary data access lifecycle (`loadClassDetails` / `renderClassHub` in `js/admin/app.js`, `adminFetchAll('attempts')`, and `fetchAllStudentAttempts(studentId)` in `js/api.js`).
+   - Every time the Admin Class Hub loads or student data is queried, any expired `in_progress` attempts are automatically finalized and evaluated by `emergency_submit_attempt`, assigning full partial credit for all saved answers.
+   - Added an explicit client-side expiry check in `js/admin/app.js`: any attempt with `att.expires_at < new Date()` is never displayed with the `⏳` hourglass icon.
+2. **Queued Milestone Matrix Visualization (Red 0% & 0 Pts)**:
+   - Enhanced `computeMilestoneExamMastery()` in `js/grading.js` to return `includedThemeCodes` and `includedExamIds`.
+   - In `renderAttendanceGridMatrix()` in `js/admin/app.js`:
+     * For any unattempted exam belonging to an active or queued theme (`isQueued = row.includedExamIds.has(asm.id)`), the cell displays a distinct red `0%` (Score column) and red `0` (Points column).
+     * The theme total points column for that theme displays `0` pts rather than `-1` (unreached dot).
+     * Any unreached future themes (beyond the active queued milestone) remain clean gray dots (`·`).
+
+### Consequences
+- Ari Wahyu Darma's attempt (138/200, 69%, Grade C) is immediately graded and displayed as 138 pts, elevating him to Rank #2 (470 pts) with zero `⏳` icons.
+- If any future student's battery dies or disconnection occurs, their attempt is automatically finalized upon the tutor opening the class.
+- Tutors can immediately distinguish between:
+  1. Completed exams (color-coded percentage & points).
+  2. Active/queued milestone exams that the student must take (red `0%` and `0` pts).
+  3. Unreached future themes (gray `·`).
+
+---
+
+## DECISION-026 — Strict Sequential Intra-Theme Exam Prerequisites (Words Exam Pass ≥60% Required for Phrases Exam)
+
+Date: 2026-10-28
+Status: ACCEPTED
+
+### Context
+A tutor noticed that student Gagan Tara Deswari was able to take Test 18 (3B Phrases Exam: 60%ᴿ, 42 pts) despite having failed Test 17 (3B Words Exam: 59%, 164 pts, Grade D).
+Investigation revealed:
+1. Gagan took Words Exam on 2026-10-26 scoring 164/280 (58.57% -> 59%, Grade D).
+2. The tutor subsequently opened a Theme B test session that unlocked both Test 17 (Words) and Test 18 (Phrases) simultaneously, whitelisting all students who had completed the daily quizzes (B1–B4).
+3. The platform previously only verified that all daily quizzes were passed with $\ge 60\%$, without enforcing an intra-theme sequential gate between sibling milestone exams (Words Exam -> Phrases Exam).
+4. As a result, students could skip or fail the fundamental Words Exam and proceed directly to take the advanced Phrases Exam within the same theme.
+
+### Decision
+Enforce a strict 4-layer sequential gate across the entire platform:
+1. **Server Edge Function (`supabase/functions/start-test/index.ts`)**:
+   - Section 3 validation: When a student requests to start a Phrases Exam, the function queries for sibling Words Exams matching the same class, level, and theme.
+   - If the student has not completed and passed the sibling Words Exam with $\ge 60\%$ (respecting remedial score caps), execution is terminated with HTTP 403: `"Prerequisite not completed. You must pass the Words Exam (...) with at least 60% before taking the Phrases Exam."`
+2. **Client Fallback API (`js/api.js`)**:
+   - In `startTest`, the direct database fallback enforces the identical sequential sibling Words Exam query and validation before creating an attempt record.
+3. **Student Lobby UI (`js/dashboard.js`)**:
+   - In both `openClassModal` and `renderThemeTests` / `renderWeeklyExams`, any Phrases Exam whose sibling Words Exam is not passed ($\ge 60\%$) is rendered with `cardOpacity = 0.5`, `cardFilter = grayscale(100%)`, badge `🔒 Locked`, and action note: `"Complete [Words Exam Title] (Score ≥60% required) to unlock this test."`
+4. **Admin Test Sessions Whitelist (`js/admin/tests-access.js`)**:
+   - In `openThemeSessionModal` and `openThemeLateModal`, student eligibility evaluation calculates `wordsPassed`.
+   - When unlocking `theme.phrasesTest`, the `allowedStudentIds` and `remedialStudentIds` lists are automatically filtered to include only students with `wordsPassed === true`, unless the tutor explicitly checks the "Tutor Override" option.
+
+### Consequences
+- Gagan and all future students are strictly guided through the sequential learning path: Quizzes ($\ge 60\%$) $\rightarrow$ Words Exam ($\ge 60\%$) $\rightarrow$ Phrases Exam ($\ge 60\%$).
+
+---
+
+## DECISION-027 — Elimination of Non-Existent Column 'test_category' from Query Selects & Restoration of Student Lobby Class Progress and Hero Assignment Engine
+
+Date: 2026-10-28
+Status: ACCEPTED
+
+### Context
+A user reported three interrelated anomalies on the Student Lobby (`dashboard.html`) for student Mr. Suke Ajai:
+1. **Class Progress rendered 0%**: Beside the active class dropdown `3rd Vocabulary ▼`, the progress badge displayed `0%` despite the student having completed 18 of 40 class tasks.
+2. **Hero Assignment Banner falsely declared 100% completion**: The top hero card displayed `🏆 All tasks in this class completed! ✓ 100%` instead of displaying the student's next unpassed exam (`3rd Vocabulary B Words Exam - Tourism`).
+3. **Leaderboard Standings did not apply milestone progression penalties to classmates**: Students like Miss Risma and Mr. Muhammad Alimae Pasya displayed `60% avg Grade C` instead of the penalizing `18% avg Grade E` produced by the milestone progression engine in the Admin Class Hub.
+
+Investigation revealed:
+- In `fetchTests` (`js/api.js`), a legacy or invalid column `test_category` was included in the Supabase `.select(...)` statement.
+- Because `test_category` does not exist on the PostgreSQL `tests` table (which only has `test_type` and `category`), Supabase returned error `42703: column tests.test_category does not exist`.
+- `fetchTests` caught the error and returned an empty array `[]`.
+- As a consequence:
+  * `allTests` was `[]`, which caused `classAssms` to be 0, yielding `pct = 0%`.
+  * `renderNextAssignmentHero` found 0 published tests, triggering the empty array branch: `All tasks in this class completed!`.
+  * `loadBatchLeaderboard` received `allBatchExams = []`, causing `computeMilestoneExamMastery` to fall back to simple unpenalized averages for students pausing at Theme 1.
+
+### Decision
+1. Purge `test_category` from the Supabase `.select(...)` query in `fetchTests` (`js/api.js`) and `auto-gen-modal.js`.
+2. Standardize database querying to the canonical columns: `category`, `test_type`, and `test_subtype`.
+3. With all 40 tests reliably loaded:
+   * Suke Ajai's class progress accurately reflects `18 / 40 = 45%`.
+   * Next assignment hero card accurately renders `🔒 Ready for Test: 3rd Vocabulary B Words Exam - Tourism (Waiting for Tutor)`.
+   * Leaderboard standings correctly apply milestone progression to all classmates (Risma and Pasya correctly display `18% avg (Grade E)`).
+
+### Consequences
+- Resolves all three user-reported anomalies simultaneously with zero architectural overhead.
+- Restores 100% parity between Admin Class Hub and Student Lobby data and standings.
 

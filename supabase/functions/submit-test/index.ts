@@ -322,11 +322,12 @@ Deno.serve(async (req) => {
     // 8. Auto-Leveling Logic for Exams
     const { data: testRec } = await supabase
       .from("tests")
-      .select("test_type, test_subtype, class_id, level_id, payload, classes(level_id)")
+      .select("test_type, test_subtype, class_id, level_id, minimum_required_score, payload, classes(level_id)")
       .eq("id", targetTestId)
       .single();
 
-    if (testRec && testRec.test_type === 'exam' && roundedPct >= 75) {
+    const levelUpThreshold = Number(testRec?.minimum_required_score ?? testRec?.payload?.minimum_required_score ?? 75);
+    if (testRec && testRec.test_type === 'exam' && roundedPct >= levelUpThreshold) {
       if (testRec.classes && testRec.classes.level_id) {
          const { data: currLevel } = await supabase.from("levels").select("level_number").eq("id", testRec.classes.level_id).single();
          if (currLevel) {

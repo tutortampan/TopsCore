@@ -240,21 +240,26 @@ export function calculateOverallStudentScore(takenPercentages = []) {
 }
 
 /**
- * Authoritative Helper to accurately identify weekly milestone exams vs daily tasks/quizzes.
- * Used for exam-only points, academic score, and grade isolation across Tutor Room and Student Dashboard.
+ * Authoritative Helper to accurately identify milestone exams vs quizzes.
+ * Used for exam-only points, academic score, and grade isolation across Admin Class Hub and Student Dashboard.
  */
 export function isWeeklyExam(asm) {
   if (!asm) return false;
-  if (asm.test_type === 'exam') return true;
-  if (asm.test_type === 'quiz') return false;
-  if (['EXAM', 'TEST'].includes(asm.category) || ['EXAM', 'TEST'].includes(asm.test_category)) return true;
-  if (['EXAM', 'TEST'].includes(asm.payload?.category) || ['EXAM', 'TEST'].includes(asm.payload?.test_category)) return true;
-  if (asm.payload?.is_unified_test === true) return true;
+  const t = String(asm.test_type || asm.type || '').toLowerCase();
+  if (t === 'exam') return true;
+  if (t === 'quiz') return false;
+  const c = String(asm.category || asm.test_category || asm.payload?.tier || asm.payload?.test_category || '').toUpperCase();
+  if (c === 'EXAM') return true;
+  if (c === 'QUIZ' || c === 'TASK') return false;
   const shell = String(asm.shell_code || asm.payload?.shell_code || '').toUpperCase();
-  if (shell.endsWith('-EXAM') || shell.includes('-EXAM-') || shell.endsWith('-TEST') || shell.includes('-TEST-')) return true;
-  if (shell.endsWith('-QUIZ') || shell.includes('-QUIZ-') || shell.endsWith('-TASK') || shell.includes('-TASK-')) return false;
-  return /\b(EXAM|TEST)\b/i.test(asm.title || '');
+  if (shell.endsWith('-EXAM') || shell.includes('-EXAM-')) return true;
+  if (shell.endsWith('-QUIZ') || shell.includes('-QUIZ-')) return false;
+  if (shell.endsWith('-TEST') || shell.includes('-TEST-')) return true;
+  if (shell.endsWith('-TASK') || shell.includes('-TASK-')) return false;
+  return false;
 }
+
+export const isExam = isWeeklyExam;
 
 /**
  * Authoritative Grade & Score Palette (6 Clean Tiers: ★, A, B, C, D, E)
@@ -494,5 +499,159 @@ export function recalculateAttempt(answers, passingThreshold = 60) {
     answers: evaluatedAnswers
   };
 }
+
+/**
+ * Authoritative Milestone Progression & Exam Mastery Engine (Phase 159).
+ * 
+ * Rules:
+ * 1. Evaluated EXCLUSIVELY from Exams (Quizzes excluded from academic score/points).
+ * 2. Next Exam 0% Penalty:
+ *    - Exams are grouped into Themes (A, B, C, D) in sequential order.
+ *    - Once a student passes Milestone Theme N (>= 60%), Milestone Theme N+1 is
+ *      automatically queued into the active denominator with 0 earned points,
+ *      even if the student is not yet eligible to take it.
+ *    - If Milestone Theme N was attempted but not passed (< 60%), Theme N is included
+ *      in the denominator, but Theme N+1 is not queued yet.
+ * 3. Zero-Exam Edge Case:
+ *    - When 0 exams are completed, returns score: 0 (displays '—'), grade: '—', points: 0.
+ * 
+ * @param {Array<{ effPoints: number, effPct: number, totalQ: number, test: object }>} examEntries - Student's best exam attempts
+ * @param {Array<object>} allClassExams - All exam objects for the class
+ * @returns {{ totalPoints: number, overallScore: number, grade: string, denominator: number, completedWeeklyCount: number }}
+ */
+export function computeMilestoneExamMastery(examEntries = [], allClassExams = []) {
+  const completedWeeklyCount = Array.isArray(examEntries) ? examEntries.length : 0;
+
+  // 1. Total Points earned across all completed exams
+  const totalPoints = Math.round(examEntries.reduce((sum, e) => sum + (Number(e.effPoints ?? e.points ?? 0)), 0) * 10) / 10;
+
+  // Helper to extract theme code from test
+  const helperThemeCode = (t) => {
+    if (!t) return 'A';
+    if (t.payload?.theme_code) return String(t.payload.theme_code).toUpperCase();
+    const shell = String(t.shell_code || t.payload?.shell_code || '');
+    const m = shell.match(/^[0-9]+([A-Za-z])/);
+    if (m) return m[1].toUpperCase();
+    const titleM = String(t.title || '').match(/Theme\s+([A-Za-z])|Vocabulary\s+([A-Za-z])/i);
+    if (titleM) return (titleM[1] || titleM[2]).toUpperCase();
+    return 'A';
+  };
+
+  const getExpectedMax = (t) => {
+    if (t.payload?.total_questions) return Number(t.payload.total_questions);
+    if (t.total_questions) return Number(t.total_questions);
+    const ord = Number(t.display_order || 0);
+    if (ord === 7) return 120;
+    if (ord === 8) return 30;
+    if (ord === 17) return 280;
+    if (ord === 18) return 70;
+    if (ord === 29) return 480;
+    if (ord === 30) return 120;
+    if (ord === 39) return 640;
+    if (ord === 40) return 160;
+    return 100;
+  };
+
+  // Group class exams by theme
+  const themeExamsMap = {};
+  (allClassExams || []).forEach(t => {
+    if (!isWeeklyExam(t)) return;
+    const tc = helperThemeCode(t);
+    if (!themeExamsMap[tc]) themeExamsMap[tc] = [];
+    themeExamsMap[tc].push(t);
+  });
+
+  const sortedThemes = Object.keys(themeExamsMap).sort();
+  if (sortedThemes.length === 0) {
+    const sumEarned = examEntries.reduce((sum, e) => sum + (Number(e.effPoints ?? e.points ?? 0)), 0);
+    const sumMax = examEntries.reduce((sum, e) => sum + (Number(e.totalQ ?? 0)), 0);
+    const overallScore = sumMax > 0 ? Math.round((sumEarned / sumMax) * 100) : 0;
+    return {
+      totalPoints,
+      overallScore,
+      grade: calculateGrade(overallScore),
+      denominator: sumMax,
+      completedWeeklyCount
+    };
+  }
+
+  // Pre-calculate theme max questions and student earned points per theme
+  const themeStats = sortedThemes.map((tc, idx) => {
+    const examsInTheme = themeExamsMap[tc];
+    const maxQ = examsInTheme.reduce((acc, t) => acc + getExpectedMax(t), 0);
+    const examIds = new Set(examsInTheme.map(t => t.id));
+    
+    const studentAttemptsInTheme = examEntries.filter(e => {
+      const eId = e.test?.id || e.testId || e.test_id;
+      if (eId && examIds.has(eId)) return true;
+      const tcAttempt = helperThemeCode(e.test);
+      return tcAttempt === tc;
+    });
+
+    const earned = studentAttemptsInTheme.reduce((sum, e) => sum + (Number(e.effPoints ?? e.points ?? 0)), 0);
+    const attempted = studentAttemptsInTheme.length > 0;
+    const passed = attempted && maxQ > 0 && (earned / maxQ) >= 0.6;
+
+    return {
+      themeCode: tc,
+      index: idx,
+      maxQ,
+      earned,
+      attempted,
+      passed
+    };
+  });
+
+  let highestAttemptedIdx = -1;
+  themeStats.forEach((ts, idx) => {
+    if (ts.attempted) highestAttemptedIdx = Math.max(highestAttemptedIdx, idx);
+  });
+
+  themeStats.forEach((ts, idx) => {
+    if (idx < highestAttemptedIdx) {
+      ts.passed = true;
+    }
+  });
+
+  const includedIndices = new Set();
+  themeStats.forEach((ts, idx) => {
+    if (ts.attempted) includedIndices.add(idx);
+    if (ts.passed && idx + 1 < themeStats.length) {
+      includedIndices.add(idx + 1);
+    }
+  });
+
+  if (includedIndices.size === 0) {
+    // Initial milestone: All enrolled students start at Theme 1 (index 0) with unattempted exams counted as 0%
+    includedIndices.add(0);
+  }
+
+  let denominator = 0;
+  includedIndices.forEach(idx => {
+    denominator += themeStats[idx].maxQ;
+  });
+
+  const overallScore = denominator > 0 ? Math.round((totalPoints / denominator) * 100) : 0;
+  const grade = calculateGrade(overallScore);
+
+  const includedThemeCodes = Array.from(includedIndices).map(idx => themeStats[idx].themeCode);
+  const includedExamIds = new Set();
+  includedThemeCodes.forEach(tc => {
+    (themeExamsMap[tc] || []).forEach(t => {
+      if (t.id) includedExamIds.add(t.id);
+    });
+  });
+
+  return {
+    totalPoints,
+    overallScore,
+    grade,
+    denominator,
+    completedWeeklyCount,
+    includedThemeCodes,
+    includedExamIds
+  };
+}
+
 
 

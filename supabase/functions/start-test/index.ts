@@ -297,9 +297,54 @@ Deno.serve(async (req) => {
             }
 
             if (passedTaskIds.size < taskIds.length) {
-              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must score at least ${reqScore}% on ALL Theme Quizzes before taking the Theme Exam.` }), {
+              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must score at least ${reqScore}% on all Quizzes before taking the Exam.` }), {
                 status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
               });
+            }
+          }
+
+          // 3. Strict Sequential Exam Prerequisite: If this is a Phrases Exam, student MUST pass Words Exam first (>= 60%)
+          const isPhrasesExam = test.payload?.category === 'phrases' || 
+                                /PHRASES/i.test(test.shell_code || test.payload?.shell_code || '') || 
+                                /phrase/i.test(test.title || '') ||
+                                test.test_subtype === 'PHRASE_EXAM' ||
+                                test.test_subtype === 'PHRASE_TEST';
+          if (isPhrasesExam) {
+            const { data: siblingWordsExams } = await supabase
+              .from('tests')
+              .select('id, title, payload, shell_code, test_subtype')
+              .eq('class_id', test.class_id)
+              .eq('level_id', test.level_id)
+              .eq('test_type', 'exam')
+              .neq('id', test.id)
+              .contains('payload', { theme_code: themeCode });
+
+            const wordsExam = (siblingWordsExams || []).find((t: any) => {
+              const cat = t.payload?.category;
+              const sc = t.shell_code || t.payload?.shell_code || '';
+              const ttl = t.title || '';
+              return cat === 'words' || /WORDS/i.test(sc) || /word/i.test(ttl) || t.test_subtype === 'VOCAB_EXAM' || t.test_subtype === 'VOCAB_TEST';
+            });
+
+            if (wordsExam) {
+              const { data: wordsAttempts } = await supabase
+                .from('attempts')
+                .select('percentage, effective_score, status')
+                .eq('student_id', student_id)
+                .eq('test_id', wordsExam.id)
+                .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
+
+              const reqScore = test.prerequisite_min_score || 60;
+              const hasPassedWords = (wordsAttempts || []).some((att: any) => {
+                const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+                return pct >= reqScore;
+              });
+
+              if (!hasPassedWords) {
+                return new Response(JSON.stringify({ error: `Prerequisite not completed. You must pass the Words Exam (${wordsExam.title}) with at least ${reqScore}% before taking the Phrases Exam.` }), {
+                  status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+                });
+              }
             }
           }
         }
