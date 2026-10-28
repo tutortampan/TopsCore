@@ -197,46 +197,6 @@ if (!session) {
     }
     const getEvaluationWord = (grade, isRemedial = false, pct = null) => getAchievementStatus(grade, pct);
 
-    // ═══════════════════════════════════════════════════════════
-    // FEATURE 3 / 7: Improvement Indicator (delta vs last attempt)
-    // ═══════════════════════════════════════════════════════════
-    function renderAttemptMeta(attempts, currentAttemptId, currentPct) {
-      const el = document.getElementById('result-attempt-meta');
-      if (!el || !attempts || attempts.length === 0) return;
-
-      const idx = attempts.findIndex(a => a.id === currentAttemptId);
-      const attemptNum = idx >= 0 ? attempts.length - idx : attempts.length;
-      const totalAttempts = attempts.length;
-
-      // Delta vs previous attempt
-      let deltaHtml = '';
-      if (idx >= 0 && idx < attempts.length - 1) {
-        const prev = attempts[idx + 1];
-        const prevPct = parseFloat(prev.percentage || 0);
-        const delta = currentPct - prevPct;
-        if (Math.abs(delta) > 0.05) {
-          const cls = delta > 0 ? 'delta-up' : 'delta-down';
-          const sign = delta > 0 ? '▲' : '▼';
-          const absDelta = Math.abs(delta).toFixed(1);
-          deltaHtml = `<span class="meta-sep"></span>
-            <span class="meta-chip">
-              <span class="${cls}">${sign} ${absDelta}%</span>
-              <span class="chip-sub">from last</span>
-            </span>`;
-        }
-      }
-
-      // Render 20px fixed-height strip: [ Attempt 3/15 ] | [ ▲ 5% from last ]
-      el.innerHTML = `
-        <span class="meta-chip">
-          <span class="chip-lbl">Attempt</span>
-          <span class="chip-val">${attemptNum}<span class="chip-sub">/${totalAttempts}</span></span>
-        </span>
-        ${deltaHtml}
-      `;
-    }
-
-    // ═══════════════════════════════════════════════════════════
     // FEATURE 5: Rank in Batch (Suppressed per user request: "card 3 elemen tambahan itu buang saja")
     // ═══════════════════════════════════════════════════════════
     async function renderRankInBatch(targetStudentId, batchId) {
@@ -1049,9 +1009,6 @@ if (!session) {
               .filter(a => (a.test_id || a.Test_id) === testId && ['submitted','auto_submitted','SUBMITTED','AUTO_SUBMITTED'].includes(a.status))
               .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
 
-            // FEATURE 6: Attempt counter + improvement indicator beside stamp
-            renderAttemptMeta(thisTestAttempts, attemptId, pct);
-
             if (thisTestAttempts.length > 1) {
               renderAttemptHistory(thisTestAttempts, attemptId);
             }
@@ -1352,12 +1309,6 @@ if (!session) {
       }
       if (isGradeSOr100 || targetPct >= 100) {
         launchConfetti();
-      }
-
-      // Step 5b: Reveal Attempt Meta Strip (Attempt #N/Total + Delta)
-      const attemptMeta = document.getElementById('result-attempt-meta');
-      if (attemptMeta) {
-        attemptMeta.classList.add('cascade-revealed');
       }
 
       // Step 6: 280ms after Grade Stamp -> Evaluation Word Card reveals

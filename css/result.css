@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    TopsCore — css/result.css
    ============================================================ */
 
@@ -1677,87 +1677,6 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-
-    /* ===== ATTEMPT META STRIP (Option B — 20px fixed height panel) ===== */
-    #result-attempt-meta,
-    .result-attempt-meta-strip {
-      display: flex !important;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      height: 20px;
-      min-height: 20px;
-      max-height: 20px;
-      overflow: hidden;
-      padding: 0 12px;
-      margin: 4px 0 2px;
-      border-radius: 6px;
-      background: transparent;
-    }
-
-    #result-attempt-meta.cascade-revealed,
-    .result-attempt-meta-strip.cascade-revealed {
-      opacity: 1 !important;
-      visibility: visible !important;
-      transform: translateY(0) !important;
-    }
-
-    .result-attempt-meta-strip .meta-chip {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 0.68rem;
-      font-weight: 700;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      white-space: nowrap;
-    }
-
-    .result-attempt-meta-strip .meta-chip .chip-val {
-      color: #f8fafc;
-      font-size: 0.75rem;
-      font-weight: 900;
-    }
-
-    .result-attempt-meta-strip .meta-chip .chip-sub {
-      color: #64748b;
-      font-size: 0.62rem;
-      font-weight: 700;
-    }
-
-    .result-attempt-meta-strip .meta-sep {
-      width: 1px;
-      height: 12px;
-      background: rgba(255,255,255,0.12);
-      flex-shrink: 0;
-    }
-
-    .result-attempt-meta-strip .delta-up {
-      color: #10b981;
-      font-size: 0.68rem;
-      font-weight: 800;
-    }
-
-    .result-attempt-meta-strip .delta-down {
-      color: #f87171;
-      font-size: 0.68rem;
-      font-weight: 800;
-    }
-
-    /* ===== RANK IN BATCH BADGE (SUPPRESSED PER USER REQUEST) ===== */
-    .result-rank-badge,
-    #result-rank-badge {
-      display: none !important;
-    }
-
-    /* ===== ATTEMPT META (FEATURE 6 — Attempt Counter + Delta) ===== */
-    .result-attempt-meta {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 54px;
     }
 
     /* Ensure portrait stage stacks vertically for name label below ring */

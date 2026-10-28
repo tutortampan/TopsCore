@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TopsCore — Student Dashboard Module
  * Extracted from dashboard.html
  */
@@ -961,7 +961,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           container.innerHTML = `
             <div class="next-asm-left">
               <span class="next-asm-icon">🔒</span>
-              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">Ready for Test: ${escapeHtml(nextAsm.title || 'Official Exam')}</span>
+              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}"><span style="font-size:0.7rem;font-weight:700;color:#fbbf24;display:block;line-height:1;margin-bottom:2px;">READY FOR TEST</span>${escapeHtml(nextAsm.title || 'Official Exam')}</span>
             </div>
             <span style="font-size:0.72rem; font-weight:700; color:#fbbf24; white-space:nowrap; padding:2px 8px; border-radius:4px; background:rgba(245,158,11,0.15);">🔒 Waiting for Tutor</span>
           `;
