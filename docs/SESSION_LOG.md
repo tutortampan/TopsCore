@@ -1,3 +1,55 @@
+## SESSION-20261029-1546
+
+Start: 2026-10-29 15:35 UTC+8
+End: 2026-10-29 15:46 UTC+8
+Agent: Antigravity
+
+### User Request
+"remedial watchlist tidak perlu sepertinya,,, lalu list pertanyaan paling sering salah dengan jawaban apa yang banyak diberikan siswa untuk pertnyaan itu buat 10 minimal,, kalau bisa tampilkan per topik, tiap tema. pass rate, grade quality ratio, grade distribution juga ,,, spertinya sama saja,,, jadikan 1 saja,,, Grade/Score ratio. remedial/retake ratio sepertinya tidak perlu,,, coba anaisa" -> "coba terapkan"
+
+### Objective
+Implement the pedagogical transformation of Test Analytics by:
+1. Removing Remedial Watchlist & Remedial Load.
+2. Unifying Pass Rate (FAPR), Grade Quality, and Grade Distribution into a single high-density `Grade / Score Ratio` card.
+3. Elevating The Wall to display at least 10 question bottlenecks with the most common student error, filterable dynamically by Theme & Topic.
+4. Ensuring 100% zero-scroll layout across all resolutions.
+
+### Work Performed
+1. Updated question statistics engine in `js/admin/tests-management.js`:
+   - Extracted theme (`themeCode`) and topic (`topic`) per question.
+   - Tracked student error frequencies (`wrongAnswersCount`) and prioritized cognitive misconceptions over blank timeouts (`topWrong`, `topWrongCount`, `topWrongPct`).
+   - Populated unique topics map.
+2. Redesigned Row 1 to Tri-Core Analytics:
+   - Unified `Grade / Score Ratio (Rule 2.10)` card with horizontal stacked distribution bar.
+   - `Vocabulary Domain Split: Words vs Phrases` card.
+   - `Linguistic POS Matrix` card.
+3. Redesigned Main Section to The Wall Item Error & Misconception Diagnostics:
+   - 2-column × 5-row responsive grid (10 questions default).
+   - Filter bar: Theme pills (`All Themes`, `Theme A`, `Theme B`, `Theme C`, `Theme D`), Topic dropdown, and Domain pills.
+   - Added real-time filter controller `window._applyWallFilters()`.
+4. Bumped Service Worker cache in `sw.js` to `topscore-cache-option-a-v29` and script query parameters in `admin.html` to `?v=20261029_v29`.
+5. Automated verification with Playwright on Microsoft Edge across 3 desktop viewports (`scratch/test_zero_scroll_analytics.mjs`):
+   - 1440x900: `hasScroll: false` (`scrollHeight: 800px`, `clientHeight: 800px`).
+   - 1920x1080: `hasScroll: false` (`scrollHeight: 980px`, `clientHeight: 980px`).
+   - 1366x768: `hasScroll: false` (`scrollHeight: 668px`, `clientHeight: 668px`).
+6. Verified pedagogical test suite (`scratch/verify_streamlined_test_analytics.mjs`): 100% PASS.
+7. Verified full CI suite (`npm test`): 100% PASS.
+
+### Files Changed
+- `js/admin/tests-management.js`
+- `admin.html`
+- `sw.js`
+- `scratch/verify_streamlined_test_analytics.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- Viewport zero-scroll tests: 100% PASS (`hasScroll: false` on 1440x900, 1920x1080, 1366x768)
+- Full CI test suite: 100% PASS
+
+---
+
 ## SESSION-20261029-1530
 
 Start: 2026-10-29 15:24 UTC+8

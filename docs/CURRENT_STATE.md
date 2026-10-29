@@ -1,14 +1,46 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-29 15:30 UTC+8
+Last Updated: 2026-10-29 15:46 UTC+8
 
-Current Phase: Phase 185: Zero-Scroll Executive Cockpit Transformation for Test Analytics [COMPLETE]
+Current Phase: Phase 186: Pedagogical Test Analytics Transformation — Consolidated Grade/Score Ratio & Multi-Dimensional Error Diagnostics [COMPLETE]
 
-Current Task: Re-architect Test Analytics from vertically stacked document layout to an asymmetric 2-column zero-scroll executive cockpit grid, eliminating all scrolling across 1440x900, 1920x1080, and 1366x768 viewports [COMPLETE]
+Current Task: Remove Remedial Watchlist & Remedial Load, consolidate Pass Rate, Grade Quality, and Grade Distribution into a unified Grade/Score Ratio, and elevate The Wall to showcase at least 10 question bottlenecks with most frequent student misconceptions filterable by Theme & Topic [COMPLETE]
 
 Status: COMPLETE (0 scrollbars, 100% visible simultaneously, Playwright verified across 3 standard desktop viewports, npm test 100% PASS)
 
 ## Completed
+
+- **Phase 186: Pedagogical Test Analytics Transformation — Consolidated Grade/Score Ratio & Multi-Dimensional Error Diagnostics**:
+  - **User Request**: *"remedial watchlist tidak perlu sepertinya,,, lalu list pertanyaan paling sering salah dengan jawaban apa yang banyak diberikan siswa untuk pertnyaan itu buat 10 minimal,, kalau bisa tampilkan per topik, tiap tema. pass rate, grade quality ratio, grade distribution juga ,,, spertinya sama saja,,, jadikan 1 saja,,, Grade/Score ratio. remedial/retake ratio sepertinya tidak perlu,,, coba anaisa"* -> *"coba terapkan"*
+  - **Changes**:
+    1. **Eliminated Redundant Widgets**:
+       - Purged `Remedial Watchlist` (individual student monitoring belongs in `B — BOARD`).
+       - Purged `Remedial & Retake Load` card.
+    2. **Unified Grade / Score Ratio (Rule 2.10)**:
+       - Merged 1st-Pass Rate (FAPR), Grade Quality Ratio, and Grade Distribution into a single high-density card.
+       - Features headline pass & quality rates, total graded count, and an interactive horizontal stacked distribution bar (`★` Green `#22C55E`, `A` Emerald `#10B981`, `B` Lime `#84CC16`, `C` Yellow `#EAB308`, `D` Orange `#F97316`, `E` Red `#EF4444`).
+    3. **Tri-Core Row (~88px height)**:
+       - Card 1: `🏆 Grade / Score Ratio (Rule 2.10)`
+       - Card 2: `🧬 Domain Split: Words vs. Phrases`
+       - Card 3: `📊 Linguistic POS Matrix`
+    4. **The Wall — Item Error & Misconception Diagnostics (Main Section)**:
+       - Displays at least 10 bottleneck questions (2-column × 5-row responsive grid).
+       - Features **Most Frequent Wrong Student Answer** (`⚠️ Error Terbanyak: "come pay" (1x • 25%)` prioritizing cognitive misconceptions over blank timeouts).
+       - Added **Theme Filter Pills**: `🌐 All Themes`, `🅰️ Theme A`, `🅱️ Theme B`, `🅲 Theme C`, `🅳 Theme D`.
+       - Added **Topic Selector**: `<select>` dropdown dynamically populated with all curriculum topics.
+       - Added **Domain Filter Pills**: `🌐 All`, `🔤 Words`, `💬 Phrases`.
+       - Real-time client-side filter engine (`window._applyWallFilters()`).
+    5. **Cache & PWA Synchronization**:
+       - Bumped `sw.js` cache to `topscore-cache-option-a-v29`.
+       - Bumped `admin.html` script query strings to `?v=20261029_v29`.
+  - **Verification**:
+    * Playwright on Microsoft Edge across 3 resolutions:
+      - 1440x900 (Standard Laptop): `hasScroll: false` (`scrollHeight: 800px`, `clientHeight: 800px`).
+      - 1920x1080 (Full HD): `hasScroll: false` (`scrollHeight: 980px`, `clientHeight: 980px`).
+      - 1366x768 (Compact Laptop): `hasScroll: false` (`scrollHeight: 668px`, `clientHeight: 668px`).
+    * Pedagogical Verification Suite (`scratch/verify_streamlined_test_analytics.mjs`): 100% PASS (Tri-core cards, 10+ bottleneck items with student errors, theme & topic controls verified).
+    * Full CI Suite (`npm test`): 100% PASS.
+
 
 - **Phase 185: Zero-Scroll Executive Cockpit Transformation for Test Analytics**:
   - **User Request**: *"penepatannya masih kurangpas,,, saya ingin tdidak eprlu scroll,, semua terlihat sekaligus di halaman woorkspace"*

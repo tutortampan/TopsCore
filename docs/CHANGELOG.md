@@ -1,3 +1,41 @@
+## [2026-10-29 15:46] — Phase 186: Pedagogical Test Analytics Transformation — Consolidated Grade/Score Ratio & Multi-Dimensional Error Diagnostics
+
+**Agent/Session:** Antigravity / SESSION-20261029-1546
+**Phase:** Phase 186
+**Status:** PASS
+
+### Why
+- The user requested: *"remedial watchlist tidak perlu sepertinya,,, lalu list pertanyaan paling sering salah dengan jawaban apa yang banyak diberikan siswa untuk pertnyaan itu buat 10 minimal,, kalau bisa tampilkan per topik, tiap tema. pass rate, grade quality ratio, grade distribution juga ,,, spertinya sama saja,,, jadikan 1 saja,,, Grade/Score ratio. remedial/retake ratio sepertinya tidak perlu,,, coba anaisa"* -> *"coba terapkan"*.
+- Eliminate non-essential student tracking widgets (`Remedial Watchlist`, `Remedial Load`), consolidate redundant grade/score metrics into one authoritative card, and empower teachers with deep item diagnostics showcasing the exact wrong answers submitted by students grouped by Theme & Topic.
+
+### Changed
+- `js/admin/tests-management.js`:
+  - **Eliminated**: `Remedial Watchlist` and `Remedial & Retake Load`.
+  - **Consolidated `Grade / Score Ratio`**: Combined 1st-Pass Rate (FAPR), Grade Quality Ratio, and Grade Distribution into a single high-density card with an interactive horizontal stacked distribution bar adhering strictly to Rule 2.10 colors.
+  - **Tri-Core Header Row (~88px height)**:
+    * Card 1: `🏆 Grade / Score Ratio (Rule 2.10)`
+    * Card 2: `🧬 Domain Split: Words vs Phrases`
+    * Card 3: `📊 Linguistic POS Matrix`
+  - **The Wall — Item Error & Misconception Diagnostics (Main Section)**:
+    * Displays at least 10 bottleneck questions in a 2-column × 5-row responsive grid.
+    * Tracks and displays the **Most Frequent Wrong Student Answer** (e.g. `⚠️ Error Terbanyak: "come pay" (1x • 25%)`), prioritizing actual cognitive misconceptions over blank timeouts.
+    * Added **Theme Filter Pills**: `All Themes`, `Theme A`, `Theme B`, `Theme C`, `Theme D`.
+    * Added **Topic Selector Dropdown**: Dynamically populated from all curriculum topics.
+    * Added **Domain Filter Pills**: `All`, `Words`, `Phrases`.
+    * Implemented real-time multi-dimensional filter engine (`window._applyWallFilters()`).
+- `sw.js`: Bumped cache name to `topscore-cache-option-a-v29`.
+- `admin.html`: Bumped script version queries to `?v=20261029_v29`.
+
+### Verification
+- Playwright Edge verification across 3 standard viewports (`scratch/test_zero_scroll_analytics.mjs`):
+  * 1440x900: `hasScroll: false` (`scrollHeight: 800px`, `clientHeight: 800px`).
+  * 1920x1080: `hasScroll: false` (`scrollHeight: 980px`, `clientHeight: 980px`).
+  * 1366x768: `hasScroll: false` (`scrollHeight: 668px`, `clientHeight: 668px`).
+- Pedagogical Analytics Suite (`scratch/verify_streamlined_test_analytics.mjs`): 100% PASS.
+- Full CI Suite (`npm test`): 100% PASS (40/40 JS syntax checks, 27/27 cache manifest assets, student dashboard exam parity).
+
+---
+
 ## [2026-10-29 15:30] — Phase 185: Zero-Scroll Executive Cockpit Transformation for Test Analytics
 
 **Agent/Session:** Antigravity / SESSION-20261029-1530
