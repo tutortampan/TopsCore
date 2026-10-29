@@ -243,7 +243,7 @@ export function isPrerequisiteMet(studentBestPercentage, requiredPercentage = 60
 
 /**
  * Centralized Authoritative Grade Engine (Official Scale)
- * ★ (S) : 100%       - Excellent (Purple #A855F7)
+ * ★ (S) : 100%       - Excellent (Green / Hijau #22C55E)
  * A     : 90% – 99%  - Very Good (Rich Green #10B981)
  * B     : 80% – 89%  - Good (Lime / Yellow-Green #84CC16)
  * C     : 60% – 79%  - Enough (Yellow #EAB308)
@@ -337,11 +337,11 @@ export const GRADE_PALETTE = {
     symbol: 'A',
     label: 'Very Good',
     predicate: 'Very Good',
-    color: '#22C55E',       // True Leaf Green (90-99%)
-    dark: '#16a34a',
-    light: '#86efac',
-    rgb: '34, 197, 94',
-    glow: 'rgba(34, 197, 94, 0.35)',
+    color: '#10B981',       // True Leaf Green (90-99%)
+    dark: '#059669',
+    light: '#6ee7b7',
+    rgb: '16, 185, 129',
+    glow: 'rgba(16, 185, 129, 0.35)',
     name: 'Very Good (90-99%)',
     minScore: 90,
     maxScore: 99,

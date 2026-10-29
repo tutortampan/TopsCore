@@ -232,7 +232,7 @@ Centralized authoritative grading (Official Grading Scale):
 
 | Symbol | Predicate (Label) | Score Range | Main Color & Gradient | Hex Code |
 |:---:|:---:|:---:|:---:|:---:|
-| ★ | Excellent | 100% | Ungu (Purple) | `#A855F7` |
+| ★ | Excellent | 100% | Hijau (Rich Green) | `#22C55E` |
 | A | Very Good | 90% – 99% | Hijau (Rich Green) | `#10B981` |
 | B | Good | 80% – 89% | Lime (Hijau Muda / Yellow-Green) | `#84CC16` |
 | C | Enough | 60% – 79% | Kuning (Yellow) | `#EAB308` |

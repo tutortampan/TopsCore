@@ -20,7 +20,7 @@ TopsCore is an institutional, data-efficient, low-egress English Learning Manage
 - **Prerequisites**: Dynamic multi-level prerequisites supporting 0 to N parent assessments, minimum score thresholds, and aggregate average score thresholds.
 - **Stateless AI Media Pipeline**: Supabase stores ONLY structured text/JSON. Media (audio/photos) is processed transiently in the browser, sent directly to the AI API for evaluation via Edge Functions, and immediately discarded.
 - **Official Grading Scale (6 Tiers)**:
-  - `★` (100%): "Excellent" | Purple (`#A855F7`)
+  - `★` (100%): "Excellent" | Rich Green (`#22C55E`)
   - `A` (90% – 99%): "Very Good" | Deep/Rich Green (`#059669`)
   - `B` (80% – 89%): "Good" | Bright Lime (`#84CC16`)
   - `C` (60% – 79%): "Enough" | Yellow (`#EAB308`) — Passing threshold (KKM)

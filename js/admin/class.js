@@ -1961,7 +1961,7 @@ export async function renderProgressView(area) {
         : 0;
       const overallScoreStr = completedScoredCount > 0 ? `${overallPct}%` : '—';
       const globalGrade = completedScoredCount > 0 && typeof getGrade === 'function' ? getGrade(overallPct) : '—';
-      const cMap = { 'S': '#A855F7', 'A': '#10B981', 'B': '#84CC16', 'C': '#EAB308', 'D': '#F97316', 'E': '#EF4444', 'F': '#EF4444' };
+      const cMap = { '★': '#22C55E', 'S': '#22C55E', 'A': '#10B981', 'B': '#84CC16', 'C': '#EAB308', 'D': '#F97316', 'E': '#EF4444', 'F': '#EF4444' };
       const gradeColor = cMap[globalGrade] || 'rgba(255,255,255,0.4)';
 
       // Calculate age from birth_date
@@ -2251,12 +2251,12 @@ export async function renderProgressView(area) {
                 <span style="color:var(--clr-success); font-weight:700;">${r.completedCount}</span> / <span class="text-muted" style="font-size:0.75rem;">${r.totalAssigned}</span>
               </td>
               <td class="text-center">
-                <span class="fw-700 text-xs" style="color:${r.gradeColor}; font-size:0.8rem; ${r.globalGrade === 'S' || r.globalGrade === '★' ? 'filter:drop-shadow(0 0 6px rgba(168,85,247,0.6)); font-weight:900;' : ''}">${r.overallScoreStr}</span>
+                <span class="fw-700 text-xs" style="color:${r.gradeColor}; font-size:0.8rem; ${r.globalGrade === 'S' || r.globalGrade === '★' ? 'filter:drop-shadow(0 0 6px rgba(34,197,94,0.6)); font-weight:900;' : ''}">${r.overallScoreStr}</span>
               </td>
               <td class="text-center">
                 ${r.globalGrade !== '—' 
                   ? (r.globalGrade === 'S' || r.globalGrade === '★'
-                    ? `<span class="badge" style="background:rgba(168,85,247,0.18);color:#A855F7;font-weight:900;font-size:0.72rem;padding:2px 7px;box-shadow:0 0 10px rgba(168,85,247,0.45);border:1px solid #A855F7;">★</span>`
+                    ? `<span class="badge" style="background:rgba(34,197,94,0.18);color:#22C55E;font-weight:900;font-size:0.72rem;padding:2px 7px;box-shadow:0 0 10px rgba(34,197,94,0.45);border:1px solid #22C55E;">★</span>`
                     : `<span class="badge" style="background:${r.gradeColor};color:#000;font-weight:800;font-size:0.72rem;padding:2px 7px;">${r.globalGrade}</span>`
                   ) 
                   : '<span class="text-muted" style="font-size:0.75rem;">&mdash;</span>'

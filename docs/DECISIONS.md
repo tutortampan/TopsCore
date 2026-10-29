@@ -390,7 +390,7 @@ User issued an explicit directive regarding grade-based evaluation wording:
 ## DECISION-019 — Official Grading Scale & Remedial Max 60% Score Capping
 
 Date: 2026-10-26
-Status: ACCEPTED (SUPERSEDES DECISION-016 tier color mappings & prior score thresholds)
+Status: SUPERSEDED by DECISION-028 regarding Star tier color (Ungu/Purple -> Green #22C55E); otherwise ACCEPTED (SUPERSEDES DECISION-016 tier color mappings & prior score thresholds)
 
 ### Context
 User provided the official Grading Scale diagram (tablet & printout specifications) with exact score intervals, predicate labels, and color gradients:
@@ -425,7 +425,7 @@ User provided the official Grading Scale diagram (tablet & printout specificatio
 ## DECISION-020 — Elimination of Grades "S", "F", and "R" in Favor of Canonical 6-Tier Scale (★, A, B, C, D, E)
 
 Date: 2026-10-27
-Status: ACCEPTED (SUPERSEDES DECISION-019 regarding the letter representation of the 100% Star tier)
+Status: SUPERSEDED by DECISION-028 regarding Star tier color (#A855F7 -> #22C55E); otherwise ACCEPTED (SUPERSEDES DECISION-019 regarding the letter representation of the 100% Star tier)
 
 ### Context
 User requirement: "hilangkan grade 'S' dan 'F', serta 'R'".
@@ -708,4 +708,31 @@ Investigation revealed:
 ### Consequences
 - Resolves all three user-reported anomalies simultaneously with zero architectural overhead.
 - Restores 100% parity between Admin Class Hub and Student Lobby data and standings.
+
+---
+
+## DECISION-028 — Official Grading Scale Color Update: Star Tier (★ / 100%) Transition from Purple (#A855F7) to Green (#22C55E)
+
+Date: 2026-10-29
+Status: ACCEPTED (SUPERSEDES DECISION-019 and DECISION-020 regarding the color of the Star tier ★ / 100%)
+
+### Context
+User requirement: *"saya melihat ada aturan inti soal Grading Scale, masih ada warna UNGU,,, itu sudah diganti dengan HIJAU perbaiki"*.
+In the core TopsCore specifications (`AGENTS.md` §2.10, `ANTIGRAVITY_GUIDE.md`, `PRODUCT_SPEC.md`, `DATABASE.md`), the 100% Star tier (`★`) was previously documented with Purple (`#A855F7`). The user affirmed that the Star tier color has officially transitioned to Green (Hijau / `#22C55E`).
+
+### Decision
+1. Update `AGENTS.md` (Section 2.10 Official Grading Scale) table to specify:
+   `| ★ | Excellent | 100% | Hijau (Rich Green) | #22C55E |`
+2. Update `ANTIGRAVITY_GUIDE.md` to reflect `★ (100% - Hijau #22C55E)`.
+3. Update `docs/PRODUCT_SPEC.md` and `docs/DATABASE.md` to establish `#22C55E` as the authoritative color token for 100% / Star tier.
+4. Align all client styling, badges, SVG star vector gradients, drop-shadows, and fallback colors across:
+   - `css/style.css`, `css/result.css`, `css/dashboard.css`
+   - `js/grading.js`, `js/dashboard.js`, `js/result.js`
+   - `js/admin/class.js`, `js/admin/student-management.js`, `js/admin/tests-management.js`
+5. All Star tier / 100% / Grade S references strictly use Green (`#22C55E` / `rgba(34, 197, 94, ...)`) with vibrant green glows and gradients (`#86efac` -> `#22c55e` -> `#16a34a`).
+
+### Consequences
+- Absolute alignment between user specification, execution contract (`AGENTS.md`), developer guides, stylesheets, and JavaScript logic.
+- Preserves clean 6-tier grading scale (★, A, B, C, D, E) without introducing non-standard grades.
+- 100% passing test suites across all validation scripts.
 

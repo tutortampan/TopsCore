@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS "public"."attempts" (
 
 | Symbol | Predicate (Label) | Score Range | Color Name | Hex Code | Purpose |
 |:---:|:---:|:---:|:---:|:---:|:---|
-| **★** | Excellent | 100% | Purple | `#A855F7` | Perfect Score Tier |
+| **★** | Excellent | 100% | Green | `#22C55E` | Perfect Score Tier |
 | **A** | Very Good | 90% – 99% | Deep Green | `#059669` | High Distinction |
 | **B** | Good | 80% – 89% | Bright Lime | `#84CC16` | Above Average |
 | **C** | Enough | 60% – 79% | Yellow | `#EAB308` | Minimum Passing Grade (KKM) |

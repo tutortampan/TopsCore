@@ -1789,11 +1789,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
               ${bestPct !== null ? `
                 <div style="text-align:center;">
-                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColor}${(grade === '★' || grade === 'S') ? ';text-shadow:0 0 10px rgba(168, 85, 247, 0.45);' : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</div>
+                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColor}${(grade === '★' || grade === 'S') ? ';text-shadow:0 0 10px rgba(34, 197, 94, 0.45);' : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</div>
                   <div style="font-size:0.7rem;color:var(--clr-text-3);">Best Score</div>
                 </div>
                 ${(grade === '★' || grade === 'S' || bestPct >= 100)
-                  ? `<div class="grade-star" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(168, 85, 247, 0.45);color:#A855F7;border:1.5px solid #A855F7;">★</div>`
+                  ? `<div class="grade-star" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(34, 197, 94, 0.45);color:#22C55E;border:1.5px solid #22C55E;">★</div>`
                   : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColor};color:${gradeColor};">${getGradeSymbol(grade)}</div>`
                 }
               ` : ''}
@@ -1899,11 +1899,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let rgbColor = '148, 163, 184';
 
       if (hasExam) {
-        const theme = (GRADE_PALETTE && GRADE_PALETTE[overallGrade]) ? GRADE_PALETTE[overallGrade] : {
-          color: '#a855f7', dark: '#7e22ce', light: '#c084fc', rgb: '168, 85, 247', glow: 'rgba(168, 85, 247, 0.45)'
-        };
+        const theme = (GRADE_PALETTE && GRADE_PALETTE[overallGrade]) ? GRADE_PALETTE[overallGrade] : (GRADE_PALETTE['★'] || {
+          color: '#22C55E', dark: '#16a34a', light: '#86efac', rgb: '34, 197, 94', glow: 'rgba(34, 197, 94, 0.45)'
+        });
         targetColor = theme.color;
-        rgbColor = theme.rgb || '16, 185, 129';
+        rgbColor = theme.rgb || '34, 197, 94';
       }
 
 
@@ -1919,15 +1919,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           gradeBadgeValue.textContent = '—';
         } else if (isGradeS) {
           gradeBadgeValue.innerHTML = `
-            <svg class="pure-star-svg" width="46" height="46" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 24px rgba(192, 132, 252, 0.65)); display:inline-block; vertical-align:middle;">
+            <svg class="pure-star-svg" width="46" height="46" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 24px rgba(134, 239, 172, 0.65)); display:inline-block; vertical-align:middle;">
               <defs>
-                <linearGradient id="starPurpleDashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#C084FC" />
-                  <stop offset="50%" stop-color="#A855F7" />
-                  <stop offset="100%" stop-color="#7E22CE" />
+                <linearGradient id="starGreenDashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#86efac" />
+                  <stop offset="50%" stop-color="#22c55e" />
+                  <stop offset="100%" stop-color="#16a34a" />
                 </linearGradient>
               </defs>
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starPurpleDashGrad)" />
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGreenDashGrad)" />
             </svg>
           `;
         } else {
@@ -1942,7 +1942,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           achievementTextEl.textContent = statusWord;
           achievementTextEl.style.color = targetColor;
           if (isGradeS) {
-            achievementTextEl.style.filter = 'drop-shadow(0 0 10px rgba(168, 85, 247, 0.85))';
+            achievementTextEl.style.filter = 'drop-shadow(0 0 10px rgba(34, 197, 94, 0.85))';
           } else {
             achievementTextEl.style.filter = `drop-shadow(0 0 8px rgba(${rgbColor}, 0.6))`;
           }
@@ -1977,9 +1977,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           el.style.setProperty('--tier-color', targetColor);
           el.style.setProperty('--tier-rgb', rgbColor);
           if (hasExam && isGradeS) {
-            el.style.borderColor = 'rgba(168, 85, 247, 0.55)';
-            el.style.boxShadow = '0 0 25px rgba(168, 85, 247, 0.35), 0 8px 20px -6px rgba(0, 0, 0, 0.5)';
-            el.style.background = 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.22), transparent 75%), #0f172a';
+            el.style.borderColor = 'rgba(34, 197, 94, 0.55)';
+            el.style.boxShadow = '0 0 25px rgba(34, 197, 94, 0.35), 0 8px 20px -6px rgba(0, 0, 0, 0.5)';
+            el.style.background = 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(34, 197, 94, 0.22), transparent 75%), #0f172a';
           } else if (hasExam) {
             el.style.borderColor = `rgba(${rgbColor}, 0.45)`;
             el.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.2), 0 6px 18px -5px rgba(0, 0, 0, 0.35)`;
@@ -1997,9 +1997,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const avatarBox = document.getElementById('banner-avatar-container');
       if (avatarBox) {
         if (isGradeS) {
-          avatarBox.style.background = 'linear-gradient(135deg, #C084FC 0%, #A855F7 45%, #7E22CE 100%)';
-          avatarBox.style.boxShadow = '0 0 25px rgba(168, 85, 247, 0.85), 0 0 45px rgba(168, 85, 247, 0.45)';
-          avatarBox.style.border = '2.5px solid #a855f7';
+          avatarBox.style.background = 'linear-gradient(135deg, #86efac 0%, #22c55e 45%, #16a34a 100%)';
+          avatarBox.style.boxShadow = '0 0 25px rgba(34, 197, 94, 0.85), 0 0 45px rgba(34, 197, 94, 0.45)';
+          avatarBox.style.border = '2.5px solid #22c55e';
           avatarBox.classList.add('grade-star');
         } else {
           avatarBox.classList.remove('grade-star');
@@ -2014,7 +2014,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (scoreVal) {
         scoreVal.style.color = targetColor;
         if (isGradeS) {
-          scoreVal.style.filter = 'drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 24px rgba(168, 85, 247, 0.45))';
+          scoreVal.style.filter = 'drop-shadow(0 0 14px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 24px rgba(34, 197, 94, 0.45))';
           scoreVal.classList.add('text-grade-star');
         } else {
           scoreVal.classList.remove('text-grade-star');
@@ -2027,7 +2027,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (gradeVal) {
         gradeVal.style.color = targetColor;
         if (isGradeS) {
-          gradeVal.style.filter = 'drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 24px rgba(168, 85, 247, 0.45))';
+          gradeVal.style.filter = 'drop-shadow(0 0 14px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 24px rgba(34, 197, 94, 0.45))';
           gradeVal.classList.add('text-grade-star');
         } else {
           gradeVal.classList.remove('text-grade-star');
@@ -2038,16 +2038,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // 5. Border Accent on Score & Grade Cards (Symmetrical Boxes)
       const scoreCard = document.getElementById('banner-score-box');
       if (scoreCard) {
-        scoreCard.style.borderColor = isGradeS ? 'rgba(168, 85, 247, 0.6)' : `rgba(${rgbColor}, 0.35)`;
+        scoreCard.style.borderColor = isGradeS ? 'rgba(34, 197, 94, 0.6)' : `rgba(${rgbColor}, 0.35)`;
         scoreCard.style.boxShadow = isGradeS
-          ? '0 0 20px rgba(168, 85, 247, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25)'
+          ? '0 0 20px rgba(34, 197, 94, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25)'
           : `0 0 12px rgba(${rgbColor}, 0.15), 0 4px 14px rgba(0, 0, 0, 0.2)`;
       }
       const gradeCard = document.getElementById('banner-grade-box');
       if (gradeCard) {
-        gradeCard.style.borderColor = isGradeS ? 'rgba(168, 85, 247, 0.6)' : `rgba(${rgbColor}, 0.35)`;
+        gradeCard.style.borderColor = isGradeS ? 'rgba(34, 197, 94, 0.6)' : `rgba(${rgbColor}, 0.35)`;
         gradeCard.style.boxShadow = isGradeS
-          ? '0 0 20px rgba(168, 85, 247, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25)'
+          ? '0 0 20px rgba(34, 197, 94, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25)'
           : `0 0 12px rgba(${rgbColor}, 0.15), 0 4px 14px rgba(0, 0, 0, 0.2)`;
       }
 
@@ -2205,7 +2205,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               <span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(className)}</span>
             </td>
             <td>
-              <span class="fw-700 ${(grade === '★' || grade === 'S') ? 'text-grade-star' : `text-grade-${grade}`}" style="font-size:1rem; ${(grade === '★' || grade === 'S') ? 'filter:drop-shadow(0 0 6px rgba(168,85,247,0.6)); font-weight:900;' : ''}">${pct}%</span>
+              <span class="fw-700 ${(grade === '★' || grade === 'S') ? 'text-grade-star' : `text-grade-${grade}`}" style="font-size:1rem; ${(grade === '★' || grade === 'S') ? 'filter:drop-shadow(0 0 6px rgba(34,197,94,0.6)); font-weight:900;' : ''}">${pct}%</span>
             </td>
             <td>
               <span class="grade-badge ${(grade === '★' || grade === 'S') ? 'grade-star' : `grade-${grade}`}" style="width:28px;height:28px;font-size:0.82rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${(grade === '★' || grade === 'S') ? '' : `color:#fff;border:1.5px solid ${gradeColor};`}">${displayGrade}</span>
@@ -2229,7 +2229,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             
             <div class="Test-card-footer" style="margin-top: 0;">
               <div style="display:flex;align-items:center;gap:8px; font-size: 0.75rem;">
-                <span style="color:var(--clr-text-3);">Score: <strong style="color:${gradeColor}; ${(grade === '★' || grade === 'S') ? 'filter:drop-shadow(0 0 4px rgba(168,85,247,0.6)); font-weight:900;' : ''}">${pct}%</strong></span>
+                <span style="color:var(--clr-text-3);">Score: <strong style="color:${gradeColor}; ${(grade === '★' || grade === 'S') ? 'filter:drop-shadow(0 0 4px rgba(34,197,94,0.6)); font-weight:900;' : ''}">${pct}%</strong></span>
                 <span style="color:var(--clr-text-3);">&bull;</span>
                 <span>${statusBadgeMobile}</span>
               </div>

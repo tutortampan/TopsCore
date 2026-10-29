@@ -2335,8 +2335,8 @@ body.dashboard-page #bottom-ad-banner {
 
 /* Modern Tier Hero Card (Strict 150px Uniform Height) */
 body.dashboard-page #welcome-banner-section {
-  --tier-color: #A855F7;
-  --tier-rgb: 168, 85, 247;
+  --tier-color: #22C55E;
+  --tier-rgb: 34, 197, 94;
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
@@ -2358,10 +2358,11 @@ body.dashboard-page #welcome-banner-section {
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-body.dashboard-page #welcome-banner-section[data-tier="S"] {
-  border-color: rgba(168, 85, 247, 0.5) !important;
-  box-shadow: 0 0 35px rgba(168, 85, 247, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.22), transparent 75%), #0f172a !important;
+body.dashboard-page #welcome-banner-section[data-tier="S"],
+body.dashboard-page #welcome-banner-section[data-tier="★"] {
+  border-color: rgba(34, 197, 94, 0.5) !important;
+  box-shadow: 0 0 35px rgba(34, 197, 94, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(34, 197, 94, 0.22), transparent 75%), #0f172a !important;
 }
 
 body.dashboard-page #welcome-name {
@@ -2396,8 +2397,8 @@ body.dashboard-page .hero-name-divider {
   width: 100% !important;
   height: 1px !important;
   margin: 4px 0 2px 0 !important;
-  background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb, 168, 85, 247), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb, 168, 85, 247), 0.6) 80%, transparent 100%) !important;
-  box-shadow: 0 0 10px rgba(var(--tier-rgb, 168, 85, 247), 0.4) !important;
+  background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb, 34, 197, 94), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb, 34, 197, 94), 0.6) 80%, transparent 100%) !important;
+  box-shadow: 0 0 10px rgba(var(--tier-rgb, 34, 197, 94), 0.4) !important;
 }
 
 body.dashboard-page .hero-metrics-row {
@@ -2428,9 +2429,11 @@ body.dashboard-page #banner-grade-box {
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="S"] #banner-score-box,
-body.dashboard-page #welcome-banner-section[data-tier="S"] #banner-grade-box {
-  border-color: rgba(168, 85, 247, 0.6) !important;
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25) !important;
+body.dashboard-page #welcome-banner-section[data-tier="S"] #banner-grade-box,
+body.dashboard-page #welcome-banner-section[data-tier="★"] #banner-score-box,
+body.dashboard-page #welcome-banner-section[data-tier="★"] #banner-grade-box {
+  border-color: rgba(34, 197, 94, 0.6) !important;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25) !important;
 }
 
 body.dashboard-page .metric-label {
@@ -2463,10 +2466,11 @@ body.dashboard-page #stat-overall-grade-value {
   transition: all 0.3s ease !important;
 }
 
-body.dashboard-page #welcome-banner-section[data-tier="S"] {
-  border-color: rgba(168, 85, 247, 0.55) !important;
-  box-shadow: 0 0 35px rgba(168, 85, 247, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.22), transparent 75%), #0f172a !important;
+body.dashboard-page #welcome-banner-section[data-tier="S"],
+body.dashboard-page #welcome-banner-section[data-tier="★"] {
+  border-color: rgba(34, 197, 94, 0.55) !important;
+  box-shadow: 0 0 35px rgba(34, 197, 94, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(34, 197, 94, 0.22), transparent 75%), #0f172a !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="A"] {
@@ -2497,9 +2501,11 @@ body.dashboard-page #welcome-banner-section[data-tier="R"] {
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="S"] #bottom-stat-avg-score,
-body.dashboard-page #welcome-banner-section[data-tier="S"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 24px rgba(168, 85, 247, 0.45)) !important;
-  color: #a855f7 !important;
+body.dashboard-page #welcome-banner-section[data-tier="S"] #stat-overall-grade-value,
+body.dashboard-page #welcome-banner-section[data-tier="★"] #bottom-stat-avg-score,
+body.dashboard-page #welcome-banner-section[data-tier="★"] #stat-overall-grade-value {
+  filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 24px rgba(34, 197, 94, 0.45)) !important;
+  color: #22c55e !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="A"] #bottom-stat-avg-score,
@@ -2613,10 +2619,11 @@ body.dashboard-page #banner-avatar-img.hidden {
   display: none !important;
 }
 
-body.dashboard-page #welcome-banner-section[data-tier="S"] #banner-avatar-container {
-  background: linear-gradient(135deg, #c084fc 0%, #a855f7 45%, #7e22ce 100%) !important;
-  border: 2.5px solid #a855f7 !important;
-  box-shadow: 0 0 28px rgba(168, 85, 247, 0.95), 0 0 50px rgba(192, 132, 252, 0.5) !important;
+body.dashboard-page #welcome-banner-section[data-tier="S"] #banner-avatar-container,
+body.dashboard-page #welcome-banner-section[data-tier="★"] #banner-avatar-container {
+  background: linear-gradient(135deg, #86efac 0%, #22c55e 45%, #16a34a 100%) !important;
+  border: 2.5px solid #22c55e !important;
+  box-shadow: 0 0 28px rgba(34, 197, 94, 0.95), 0 0 50px rgba(134, 239, 172, 0.5) !important;
 }
 
 body.dashboard-page .pure-star-svg {
@@ -2627,17 +2634,17 @@ body.dashboard-page .pure-star-svg {
   outline: none !important;
   background: transparent !important;
   animation: star-vector-pulse 2.2s infinite ease-in-out !important;
-  filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.65)) !important;
+  filter: drop-shadow(0 0 16px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 28px rgba(134, 239, 172, 0.65)) !important;
 }
 
 @keyframes star-vector-pulse {
   0%, 100% {
     transform: scale(1);
-    filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.65));
+    filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 28px rgba(134, 239, 172, 0.65));
   }
   50% {
     transform: scale(1.10);
-    filter: drop-shadow(0 0 22px rgba(168, 85, 247, 1)) drop-shadow(0 0 38px rgba(192, 132, 252, 0.95)) drop-shadow(0 0 52px rgba(168, 85, 247, 0.65));
+    filter: drop-shadow(0 0 22px rgba(34, 197, 94, 1)) drop-shadow(0 0 38px rgba(134, 239, 172, 0.95)) drop-shadow(0 0 52px rgba(34, 197, 94, 0.65));
   }
 }
 

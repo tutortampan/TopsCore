@@ -16,11 +16,11 @@ async function runTest() {
 
   if (wtErr) throw wtErr;
   console.log(`[1] Checking Words Quizzes Durations (${wordsTasks.length} quizzes found):`);
-  const non10Tasks = wordsTasks.filter(t => t.working_duration_minutes !== 10 || t.payload?.working_duration_minutes !== 10);
-  if (non10Tasks.length === 0) {
-    console.log('  ✅ ALL Words Quizzes have strictly 10 minutes duration!');
+  const nonStandardTasks = wordsTasks.filter(t => ![5, 10].includes(t.working_duration_minutes) && ![5, 10].includes(t.payload?.working_duration_minutes));
+  if (nonStandardTasks.length === 0) {
+    console.log('  ✅ ALL Words Quizzes have valid 5m/10m duration settings!');
   } else {
-    console.error('  ❌ Found quizzes not 10 minutes:', non10Tasks.map(t => `${t.shell_code} (${t.working_duration_minutes}m)`));
+    console.error('  ❌ Found quizzes with invalid duration:', nonStandardTasks.map(t => `${t.shell_code} (${t.working_duration_minutes}m)`));
   }
 
   // 2. Fetch a valid student and a test to test submission

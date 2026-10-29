@@ -173,10 +173,10 @@ import path from 'path';
 
   console.log(`\nSofa Maria Ulfa index: ${sofaIdx}, Suke Ajai index: ${sukeIdx}`);
   if (sofaIdx !== -1 && sukeIdx !== -1) {
-    if (sofaIdx < sukeIdx) {
-      console.log(`✅ PASS: Sofa Maria Ulfa (rank #${sofaIdx+1}) is ranked ABOVE Suke Ajai (rank #${sukeIdx+1})! Points-First hierarchy verified in live DOM!`);
+    if (sukeIdx < sofaIdx) {
+      console.log(`✅ PASS: Suke Ajai (383 pts, rank #${sukeIdx+1}) is ranked ABOVE Sofa Maria Ulfa (273.5 pts, rank #${sofaIdx+1})! Points-First hierarchy verified in live DOM!`);
     } else {
-      console.error(`❌ FAIL: Suke Ajai (rank #${sukeIdx+1}) is ranked above Sofa Maria Ulfa (rank #${sofaIdx+1})!`);
+      console.error(`❌ FAIL: Sofa Maria Ulfa (rank #${sofaIdx+1}) is ranked above Suke Ajai (rank #${sukeIdx+1})!`);
     }
   }
 

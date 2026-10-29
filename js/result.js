@@ -88,7 +88,8 @@ if (!session) {
 
       // Color palette per grade (Matte Modern)
       const palettes = {
-        S: ['#a855f7', '#c084fc', '#9333ea', '#e9d5ff'],
+        '★': ['#22c55e', '#4ade80', '#16a34a', '#86efac'],
+        S: ['#22c55e', '#4ade80', '#16a34a', '#86efac'],
         A: ['#10b981', '#34d399', '#059669', '#6ee7b7'],
         B: ['#38bdf8', '#7dd3fc', '#0284c7', '#bae6fd'],
         C: ['#f59e0b', '#fbbf24', '#d97706', '#fde68a'],
@@ -146,7 +147,7 @@ if (!session) {
       circle.style.strokeDashoffset = circumference; // start empty
 
       const gradeRingColors = {
-        S: '#a855f7', A: '#10b981', B: '#84cc16',
+        '★': '#22c55e', S: '#22c55e', A: '#10b981', B: '#84cc16',
         C: '#eab308', D: '#f97316', E: '#ef4444', F: '#ef4444'
       };
       circle.style.stroke = gradeRingColors[grade] || '#84cc16';
@@ -211,7 +212,7 @@ if (!session) {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
 
-      const colors = ['#fbbf24', '#f59e0b', '#10b981', '#38bdf8', '#ec4899', '#a855f7', '#ffffff'];
+      const colors = ['#fbbf24', '#f59e0b', '#10b981', '#38bdf8', '#ec4899', '#22c55e', '#ffffff'];
       const particles = [];
       const count = 75;
       for (let i = 0; i < count; i++) {
@@ -644,27 +645,28 @@ if (!session) {
         }
 
         // Authoritative Standard Grading System (Official Scale)
-        // S = #a855f7, A = #10b981, B = #84cc16, C = #eab308, D = #f97316, E/F = #ef4444, R = #eab308 (capped at 60% / Grade C)
+        // ★ = #22c55e, A = #10b981, B = #84cc16, C = #eab308, D = #f97316, E/F = #ef4444, R = #eab308 (capped at 60% / Grade C)
         const standardGradeColors = {
-          S: '#a855f7', // 💜 Ungu / Purple (100% & Grade S)
-          A: '#10b981', // 💚 Hijau / Rich Green (90-99%)
-          B: '#84cc16', // 🍈 Lime / Hijau Muda (80-89%)
-          C: '#eab308', // 💛 Kuning / Yellow (60-79%)
-          D: '#f97316', // 🧡 Jingga / Orange (30-59%)
-          E: '#ef4444', // ❤️ Merah / Red (0-29%)
-          F: '#ef4444', // ❤️ Merah / Red
-          R: '#eab308'  // 💛 Remedial Max 60% falls in Grade C (Kuning)
+          '★': '#22c55e', // 💚 Hijau / Rich Green (100% Star)
+          S: '#22c55e',   // 💚 Hijau / Rich Green (100% & Grade S alias)
+          A: '#10b981',   // 💚 Hijau / Rich Green (90-99%)
+          B: '#84cc16',   // 🍈 Lime / Hijau Muda (80-89%)
+          C: '#eab308',   // 💛 Kuning / Yellow (60-79%)
+          D: '#f97316',   // 🧡 Jingga / Orange (30-59%)
+          E: '#ef4444',   // ❤️ Merah / Red (0-29%)
+          F: '#ef4444',   // ❤️ Merah / Red
+          R: '#eab308'    // 💛 Remedial Max 60% falls in Grade C (Kuning)
         };
 
         const hexToRgba = (hex, alpha) => {
-          let c = String(hex || '#a855f7').replace('#', '');
+          let c = String(hex || '#22c55e').replace('#', '');
           if (c.length === 3) c = c.split('').map(x => x + x).join('');
           const num = parseInt(c, 16);
           return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
         };
 
         const hexToRgbString = (hex) => {
-          let c = String(hex || '#a855f7').replace('#', '');
+          let c = String(hex || '#22c55e').replace('#', '');
           if (c.length === 3) c = c.split('').map(x => x + x).join('');
           const num = parseInt(c, 16);
           return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
@@ -672,7 +674,7 @@ if (!session) {
 
         const isGradeSOr100 = (pct >= 100 || grade === '★' || grade === 'S' || grade === 'STAR');
         const currentTier = isGradeSOr100 ? 'S' : grade;
-        let gradeColor = isGradeSOr100 ? '#a855f7' : (standardGradeColors[grade] || '#a855f7');
+        let gradeColor = isGradeSOr100 ? '#22c55e' : (standardGradeColors[grade] || '#22c55e');
         const rgbColor = hexToRgbString(gradeColor);
 
         // 5. Achievement Status (Rule DECISION-018: strictly FAIL, LESS, ENOUGH, GOOD, VERY GOOD, EXCELLENT)
@@ -687,15 +689,15 @@ if (!session) {
         }
 
         let displayGradeHtml = isGradeSOr100 ? `
-            <svg class="pure-star-svg" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.65)); display:inline-block; vertical-align:middle;">
+            <svg class="pure-star-svg" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 16px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 28px rgba(134, 239, 172, 0.65)); display:inline-block; vertical-align:middle;">
               <defs>
-                <linearGradient id="starPurpleHeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#c084fc" />
-                  <stop offset="50%" stop-color="#a855f7" />
-                  <stop offset="100%" stop-color="#7e22ce" />
+                <linearGradient id="starGreenHeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#86efac" />
+                  <stop offset="50%" stop-color="#22c55e" />
+                  <stop offset="100%" stop-color="#16a34a" />
                 </linearGradient>
               </defs>
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starPurpleHeroGrad)" />
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGreenHeroGrad)" />
             </svg>
           ` : `${grade}`;
 
@@ -706,9 +708,9 @@ if (!session) {
           identityCard.style.setProperty('--tier-color', gradeColor);
           identityCard.style.setProperty('--tier-rgb', rgbColor);
           if (isGradeSOr100) {
-            identityCard.style.borderColor = 'rgba(168, 85, 247, 0.55)';
-            identityCard.style.boxShadow = '0 0 35px rgba(168, 85, 247, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5)';
-            identityCard.style.background = 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.22), transparent 75%), #0f172a';
+            identityCard.style.borderColor = 'rgba(34, 197, 94, 0.55)';
+            identityCard.style.boxShadow = '0 0 35px rgba(34, 197, 94, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5)';
+            identityCard.style.background = 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(34, 197, 94, 0.22), transparent 75%), #0f172a';
           } else {
             identityCard.style.borderColor = `rgba(${rgbColor}, 0.55)`;
             identityCard.style.boxShadow = `0 0 20px rgba(${rgbColor}, 0.25), 0 10px 25px -5px rgba(0, 0, 0, 0.35)`;
@@ -741,9 +743,9 @@ if (!session) {
         if (avatarContainer) {
           avatarContainer.style.setProperty('--tier-color', gradeColor);
           if (isGradeSOr100) {
-            avatarContainer.style.background = 'linear-gradient(135deg, #c084fc 0%, #a855f7 45%, #7e22ce 100%)';
-            avatarContainer.style.boxShadow = '0 0 25px rgba(168, 85, 247, 0.85), 0 0 45px rgba(192, 132, 252, 0.45)';
-            avatarContainer.style.border = '2.5px solid #c084fc';
+            avatarContainer.style.background = 'linear-gradient(135deg, #86efac 0%, #22c55e 45%, #16a34a 100%)';
+            avatarContainer.style.boxShadow = '0 0 25px rgba(34, 197, 94, 0.85), 0 0 45px rgba(134, 239, 172, 0.45)';
+            avatarContainer.style.border = '2.5px solid #22c55e';
           } else {
             avatarContainer.style.background = 'rgba(15, 23, 42, 0.9)';
             avatarContainer.style.border = `2.5px solid ${gradeColor}`;
@@ -759,12 +761,12 @@ if (!session) {
               <span style="display:inline-flex; align-items:center;">
                 <svg class="star-accent-vector" width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <defs>
-                    <linearGradient id="starPurpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#C084FC" />
-                      <stop offset="100%" stop-color="#A855F7" />
+                    <linearGradient id="starGreenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#86efac" />
+                      <stop offset="100%" stop-color="#22c55e" />
                     </linearGradient>
                   </defs>
-                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starPurpleGrad)" />
+                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGreenGrad)" />
                 </svg>
               </span>
             `;
@@ -793,9 +795,9 @@ if (!session) {
         // 4. Score Box Accent
         const scoreBox = document.getElementById('result-score-box') || document.querySelector('.score-grade-box.score-box');
         if (scoreBox) {
-          scoreBox.style.borderColor = isGradeSOr100 ? 'rgba(168, 85, 247, 0.6)' : `rgba(${rgbColor}, 0.55)`;
+          scoreBox.style.borderColor = isGradeSOr100 ? 'rgba(34, 197, 94, 0.6)' : `rgba(${rgbColor}, 0.55)`;
           scoreBox.style.boxShadow = isGradeSOr100
-            ? '0 0 18px rgba(168, 85, 247, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25)'
+            ? '0 0 18px rgba(34, 197, 94, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25)'
             : `0 0 12px rgba(${rgbColor}, 0.25), 0 4px 14px rgba(0, 0, 0, 0.2)`;
         }
 
@@ -804,10 +806,10 @@ if (!session) {
         // 5. Grade Box & Value Accent (Kotak Grade simetris dengan Kotak Skor, TANPA .pure-star-nobox)
         const gradeBox = document.getElementById('result-grade-box') || document.querySelector('.score-grade-box.grade-box');
         if (gradeBox) {
-          gradeBox.style.borderColor = isGradeSOr100 ? 'rgba(168, 85, 247, 0.6)' : `rgba(${rgbColor}, 0.55)`;
+          gradeBox.style.borderColor = isGradeSOr100 ? 'rgba(34, 197, 94, 0.6)' : `rgba(${rgbColor}, 0.55)`;
           gradeBox.style.background = 'rgba(23, 33, 56, 0.8)';
           gradeBox.style.boxShadow = isGradeSOr100
-            ? '0 0 18px rgba(168, 85, 247, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25)'
+            ? '0 0 18px rgba(34, 197, 94, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25)'
             : `0 0 12px rgba(${rgbColor}, 0.25), 0 4px 14px rgba(0, 0, 0, 0.2)`;
           gradeBox.classList.remove('pure-star-nobox');
           gradeBox.classList.remove('box-stamped');
@@ -1092,13 +1094,13 @@ if (!session) {
         const isGradeS = (ag === '★' || ag === 'S' || ag === 'STAR');
         const displayGrade = isGradeS ? '★' : ag;
         const badgeStyle = isGradeS
-          ? 'background:rgba(168,85,247,0.18);color:#A855F7;border:1px solid #A855F7;box-shadow:0 0 10px rgba(168,85,247,0.45);'
+          ? 'background:rgba(34,197,94,0.18);color:#22C55E;border:1px solid #22C55E;box-shadow:0 0 10px rgba(34,197,94,0.45);'
           : `background:${aTheme.hex}18;border:1.5px solid ${aTheme.border};color:${aTheme.hex};box-shadow:0 0 8px ${aTheme.glow};`;
 
         return `
           <tr style="${isThis ? 'background:rgba(56,189,248,0.07);' : ''}">
             <td style="padding:8px 12px;font-size:0.82rem;color:var(--clr-text-3);">${escapeHtml(dateStr)}</td>
-            <td style="padding:8px 12px;font-weight:700;color:${isGradeS ? '#A855F7' : aTheme.hex};${isGradeS ? 'text-shadow:0 0 8px rgba(168,85,247,0.6);' : ''}">${apct}%${remTag}</td>
+            <td style="padding:8px 12px;font-weight:700;color:${isGradeS ? '#22C55E' : aTheme.hex};${isGradeS ? 'text-shadow:0 0 8px rgba(34,197,94,0.6);' : ''}">${apct}%${remTag}</td>
             <td style="padding:8px 12px;">
               <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;font-weight:800;font-size:0.85rem;${badgeStyle}">${displayGrade}</span>
             </td>

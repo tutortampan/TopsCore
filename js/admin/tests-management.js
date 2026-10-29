@@ -404,7 +404,7 @@ export async function renderTests(area) {
   function getGradeBadge(pct) {
     if (pct === null || pct === undefined) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
     let sym = 'E', color = '#EF4444';
-    if (pct >= 100) { sym = '★'; color = '#A855F7'; }
+    if (pct >= 100) { sym = '★'; color = '#22C55E'; }
     else if (pct >= 90) { sym = 'A'; color = '#10B981'; }
     else if (pct >= 80) { sym = 'B'; color = '#84CC16'; }
     else if (pct >= 60) { sym = 'C'; color = '#EAB308'; }
@@ -413,7 +413,7 @@ export async function renderTests(area) {
   }
 
   function getGradeColor(pct) {
-    if (pct >= 100) return '#A855F7';
+    if (pct >= 100) return '#22C55E';
     if (pct >= 90) return '#10B981';
     if (pct >= 80) return '#84CC16';
     if (pct >= 60) return '#EAB308';
@@ -536,13 +536,21 @@ export async function renderTests(area) {
   // Grade Palette for Visual Cards
   const totalGraded = Object.values(gradeCounts || {}).reduce((a, b) => a + b, 0) || 1;
   const gradePalette = [
-    { sym: '★', label: 'Excellent', range: '100%', color: '#A855F7', count: gradeCounts['★'] || 0 },
+    { sym: '★', label: 'Excellent', range: '100%', color: '#22C55E', count: gradeCounts['★'] || 0 },
     { sym: 'A', label: 'Very Good', range: '90%-99%', color: '#10B981', count: gradeCounts['A'] || 0 },
     { sym: 'B', label: 'Good', range: '80%-89%', color: '#84CC16', count: gradeCounts['B'] || 0 },
     { sym: 'C', label: 'Pass', range: '60%-79%', color: '#EAB308', count: gradeCounts['C'] || 0 },
     { sym: 'D', label: 'Less', range: '30%-59%', color: '#F97316', count: gradeCounts['D'] || 0 },
     { sym: 'E', label: 'Fail', range: '0%-29%', color: '#EF4444', count: gradeCounts['E'] || 0 },
   ];
+
+  const highGradeCount = (gradeCounts['★'] || 0) + (gradeCounts['A'] || 0) + (gradeCounts['B'] || 0);
+  const highGradePct = Math.round((highGradeCount / totalGraded) * 100);
+
+  const allCompletedAttempts = (allAttempts || []).filter(a => a.status === 'submitted' || a.status === 'auto_submitted' || a.submitted_at);
+  const totalRetakeAttempts = allCompletedAttempts.filter(a => a.attempt_number > 1).length;
+  const retakeRate = allCompletedAttempts.length > 0 ? Math.round((totalRetakeAttempts / allCompletedAttempts.length) * 100) : 0;
+  const studentsWithRetakes = Object.values(attemptsByStu).filter(cnt => cnt > 1).length;
 
   const maxHour = Math.max(...witaHourly, 1);
   const peakHour = witaHourly.indexOf(maxHour);
@@ -558,7 +566,7 @@ export async function renderTests(area) {
   ];
 
   (allBoardClasses || []).forEach(bc => {
-    if (!availableClasses.some(ac => ac.id === bc.id)) {
+    if (!availableClasses.some(ac => ac.id === bc.id || _norm(ac.name) === _norm(bc.name))) {
       const cnt = (rawData || []).filter(t => t.class_id === bc.id && !t.deleted_at).length;
       availableClasses.push({
         id: bc.id,
@@ -605,15 +613,14 @@ export async function renderTests(area) {
     <style id="test-analytics-styles">
       .test-analytics-dashboard { margin-bottom: 2rem; color: #f8fafc; }
 
-      /* Top 4 Hero KPIs */
+      /* Top 3 Pedagogical Hero KPIs */
       .tac-kpi-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 0.75rem;
         margin-bottom: 1rem;
       }
-      @media (max-width: 1200px) { .tac-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-      @media (max-width: 640px) { .tac-kpi-grid { grid-template-columns: 1fr; } }
+      @media (max-width: 900px) { .tac-kpi-grid { grid-template-columns: 1fr; } }
 
       .tac-card {
         background: rgba(15, 23, 42, 0.8);
@@ -634,10 +641,9 @@ export async function renderTests(area) {
         box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.2);
         border-color: rgba(255, 255, 255, 0.25);
       }
-      .tac-card.border-danger { border-left: 4px solid #ef4444; }
       .tac-card.border-success { border-left: 4px solid #10b981; }
-      .tac-card.border-info { border-left: 4px solid #06b6d4; }
-      .tac-card.border-blue { border-left: 4px solid #3b82f6; }
+      .tac-card.border-star { border-left: 4px solid #22c55e; }
+      .tac-card.border-purple { border-left: 4px solid #8b5cf6; }
 
       .tac-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; }
       .tac-card-title { font-weight: 700; font-size: 0.76rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -687,18 +693,18 @@ export async function renderTests(area) {
       .tac-vocab-box.words-box { border-left: 3px solid #38bdf8; }
       .tac-vocab-box.phrases-box { border-left: 3px solid #34d399; }
 
-      /* The Wall Bottleneck Items (Top 10) */
-      .tac-wall-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.55rem;
-        max-height: 490px;
-        overflow-y: auto;
-        padding-right: 4px;
+      /* The Wall Bottleneck Items (Full Width Responsive 2-Column Grid) */
+      .tac-wall-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.65rem;
+      }
+      @media (max-width: 900px) {
+        .tac-wall-grid { grid-template-columns: 1fr; }
       }
       .tac-wall-item {
         background: rgba(255, 255, 255, 0.03);
-        padding: 0.55rem 0.8rem;
+        padding: 0.65rem 0.85rem;
         border-radius: 6px;
         border: 1px solid rgba(255, 255, 255, 0.05);
         transition: all 0.15s ease;
@@ -754,50 +760,39 @@ export async function renderTests(area) {
       <!-- ANALYTICS MISSION CONTROL COCKPIT -->
       <div id="tac-analytics-content" style="opacity:${currentClassObj.count === 0 && window._activeTestClassId !== 'all' ? '0.35' : '1'}; transition:opacity 0.2s ease;">
 
-      <!-- TOP 4 HERO KPIS -->
+      <!-- TOP 3 HERO KPIS (Pedagogical Excellence) -->
       <div class="tac-kpi-grid">
-        <!-- 1. Integrity Radar -->
-        <div class="tac-card border-danger" onclick="window._openTestAnalyticsCardModal('radar')">
-          <div class="tac-card-header">
-            <span class="tac-card-title">&#9888;&#65039; Integrity Radar</span>
-            <span class="tac-badge badge-danger-soft">${cheatLogs.length} Flags</span>
-          </div>
-          <div class="tac-metric text-danger">${cheatLogs.length} <span class="tac-unit">focus losses</span></div>
-          <div class="tac-sub">${topCheaterCount > 0 ? topCheaterName : 'Clean'} &bull; ${topCheaterCount} events</div>
-          <div class="tac-card-footer"><span>&#9889; ${speedRunners} Speed-Runners</span><span style="color:#ef4444; font-weight:700;">Audit Detail &#10140;</span></div>
-        </div>
-
-        <!-- 2. Mastery & FAPR -->
+        <!-- 1. Mastery & FAPR -->
         <div class="tac-card border-success" onclick="window._openTestAnalyticsCardModal('fapr')">
           <div class="tac-card-header">
-            <span class="tac-card-title">&#127919; Mastery &amp; FAPR</span>
-            <span class="tac-badge badge-success-soft">70% Pass</span>
+            <span class="tac-card-title">&#127919; 1st-Pass Rate (FAPR)</span>
+            <span class="tac-badge ${fapr >= 70 ? 'badge-success-soft' : 'badge-warning-soft'}">${fapr}% Pass</span>
           </div>
-          <div class="tac-metric text-success">${fapr}% <span class="tac-unit">1st-Pass Rate</span></div>
-          <div class="tac-sub">Mastery before remedial retakes</div>
+          <div class="tac-metric text-success">${fapr}% <span class="tac-unit">First Attempt</span></div>
+          <div class="tac-sub">${faprPass} of ${firstAttempts.length} students passed on first attempt</div>
           <div class="tac-card-footer"><span>★ ${gradeCounts['★']} &bull; A ${gradeCounts['A']} &bull; B ${gradeCounts['B']}</span><span style="color:#10b981; font-weight:700;">Grade Health &#10140;</span></div>
         </div>
 
-        <!-- 3. Pacing Velocity -->
-        <div class="tac-card border-info" onclick="window._openTestAnalyticsCardModal('pacing')">
+        <!-- 2. Grade Quality Ratio (Rule 2.10) -->
+        <div class="tac-card border-star" onclick="window._openTestAnalyticsCardModal('fapr')">
           <div class="tac-card-header">
-            <span class="tac-card-title">&#128337; Pacing Velocity</span>
-            <span class="tac-badge badge-info-soft">${avgDurMin}m Avg</span>
+            <span class="tac-card-title">&#127942; Grade Quality Ratio</span>
+            <span class="tac-badge badge-success-soft" style="color:#22c55e; border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.12);">${highGradePct}% High Tiers</span>
           </div>
-          <div class="tac-metric text-info">${avgDurMin}m ${avgDurSec % 60}s <span class="tac-unit">avg speed</span></div>
-          <div class="tac-sub">~44% of time limit used</div>
-          <div class="tac-card-footer"><span>⌛ ${panicRatio}% Panic Submits</span><span style="color:#38bdf8; font-weight:700;">Traffic Heatmap &#10140;</span></div>
+          <div class="tac-metric" style="color:#22c55e;">${highGradePct}% <span class="tac-unit">★ / A / B</span></div>
+          <div class="tac-sub">${highGradeCount} of ${totalGraded} submissions in top grades</div>
+          <div class="tac-card-footer"><span>C ${gradeCounts['C']} &bull; D ${gradeCounts['D']} &bull; E ${gradeCounts['E']}</span><span style="color:#22c55e; font-weight:700;">Distribution &#10140;</span></div>
         </div>
 
-        <!-- 4. AI Speech Engine -->
-        <div class="tac-card border-blue" onclick="window._openTestAnalyticsCardModal('speech')">
+        <!-- 3. Remedial & Retake Load -->
+        <div class="tac-card border-purple" onclick="window._openTestAnalyticsCardModal('strugglers')">
           <div class="tac-card-header">
-            <span class="tac-card-title">🎙️ AI Speech Engine</span>
-            <span class="tac-badge badge-blue-soft">${speechAccuracy}% Pass</span>
+            <span class="tac-card-title">&#128101; Remedial &amp; Retake Load</span>
+            <span class="tac-badge badge-purple-soft">${retakeRate}% Retakes</span>
           </div>
-          <div class="tac-metric" style="color:#60a5fa;">${speechAccuracy}% <span class="tac-unit">Accuracy</span></div>
-          <div class="tac-sub">${spokenCorrect} / ${spokenCount} evaluated correct</div>
-          <div class="tac-card-footer"><span>🎧 Audio Audit Queue</span><span style="color:#60a5fa; font-weight:700;">Review Queue &#10140;</span></div>
+          <div class="tac-metric" style="color:#c084fc;">${studentsWithRetakes} <span class="tac-unit">Students in Retakes</span></div>
+          <div class="tac-sub">${totalRetakeAttempts} retake sessions capped at 60%ᴿ</div>
+          <div class="tac-card-footer"><span>&#128123; ${inactiveStudentsCount} Inactive Students</span><span style="color:#c084fc; font-weight:700;">Watchlist &#10140;</span></div>
         </div>
       </div>
 
@@ -889,84 +884,45 @@ export async function renderTests(area) {
         </div>
       </div>
 
-      <!-- ROW 2: 2 LARGE VISUAL CARDS (The Wall Top 10 Bottlenecks & WITA Heatmap) -->
-      <div class="tac-row-2col">
-        <!-- Card Left: The Wall Bottlenecks (Top 10 + Linguistic Filter Pills) -->
-        <div class="tac-panel-card" style="border-left:4px solid #f59e0b;">
-          <div class="tac-panel-header">
-            <div>
-              <span class="tac-panel-title">🧱 The Wall &mdash; Top 10 Persistent Bottlenecks</span>
-              <div class="text-xs text-muted">Curriculum items with highest student failure rates across tests</div>
-            </div>
-            <div class="d-flex align-center gap-1">
-              <button class="btn btn-xs btn-primary tac-wall-pill active" id="wall-pill-all" onclick="window._filterWallBottlenecks('all')">All Top 10</button>
-              <button class="btn btn-xs btn-secondary tac-wall-pill" id="wall-pill-words" onclick="window._filterWallBottlenecks('words')">🔤 Words</button>
-              <button class="btn btn-xs btn-secondary tac-wall-pill" id="wall-pill-phrases" onclick="window._filterWallBottlenecks('phrases')">💬 Phrases</button>
-              <button class="btn btn-ghost btn-xs text-warning" onclick="window._openTestAnalyticsCardModal('wall')">Top 20 &#10140;</button>
-            </div>
+      <!-- THE WALL — TOP 10 PERSISTENT BOTTLENECKS (FULL WIDTH 2-COLUMN GRID) -->
+      <div class="tac-panel-card" style="border-left:4px solid #f59e0b; margin-bottom:1rem;">
+        <div class="tac-panel-header">
+          <div>
+            <span class="tac-panel-title">🧱 The Wall &mdash; Top 10 Persistent Bottlenecks</span>
+            <div class="text-xs text-muted">Curriculum items with highest student failure rates across tests &mdash; prioritized focus for next live review</div>
           </div>
-
-          <div class="tac-wall-list" id="tac-wall-items-container">
-            ${hardestQsTop10.map((q, idx) => `
-              <div class="tac-wall-item" data-wall-domain="${q.domain}">
-                <div class="d-flex justify-between align-center mb-1 text-xs">
-                  <div class="d-flex align-center gap-1">
-                    <span style="font-weight:800; color:#f8fafc;">#${idx + 1}.</span>
-                    <span style="font-weight:700; color:#f8fafc;">"${escapeHtml(q.text)}"</span>
-                    <span class="tac-badge ${q.domain === 'phrase' ? 'badge-success-soft' : 'badge-blue-soft'}" style="font-size:0.6rem; padding:1px 5px;">${q.domain === 'phrase' ? '💬 ' + escapeHtml(q.wordType) : '🔤 ' + escapeHtml(q.wordType)}</span>
-                  </div>
-                  <span class="tac-badge ${q.failRate >= 70 ? 'badge-danger-soft' : 'badge-warning-soft'}">${q.failRate}% Fail (${q.fail}/${q.total})</span>
-                </div>
-                <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin-bottom:4px;">
-                  <div style="width:${q.failRate}%; height:100%; background:${q.failRate >= 70 ? '#ef4444' : '#f59e0b'}; border-radius:3px;"></div>
-                </div>
-                <div class="d-flex justify-between text-xs" style="font-size:0.68rem; color:#94a3b8;">
-                  <span>Target: <strong style="color:#34d399;">${escapeHtml(q.correct)}</strong> &bull; <span style="color:#64748b;">${escapeHtml(q.topic)}</span></span>
-                  ${q.wrongSamples && q.wrongSamples.length > 0 ? `<span style="color:#f87171;" title="Sample errors: ${q.wrongSamples.map(escapeHtml).join(', ')}">Errors: "${escapeHtml(q.wrongSamples[0])}"</span>` : ''}
-                </div>
-              </div>
-            `).join('')}
+          <div class="d-flex align-center gap-1">
+            <button class="btn btn-xs btn-primary tac-wall-pill active" id="wall-pill-all" onclick="window._filterWallBottlenecks('all')">All Top 10</button>
+            <button class="btn btn-xs btn-secondary tac-wall-pill" id="wall-pill-words" onclick="window._filterWallBottlenecks('words')">🔤 Words</button>
+            <button class="btn btn-xs btn-secondary tac-wall-pill" id="wall-pill-phrases" onclick="window._filterWallBottlenecks('phrases')">💬 Phrases</button>
+            <button class="btn btn-ghost btn-xs text-warning" onclick="window._openTestAnalyticsCardModal('wall')">Top 20 &#10140;</button>
           </div>
         </div>
 
-        <!-- Card Right: 24-Hour WITA Peak Traffic Heatmap -->
-        <div class="tac-panel-card" style="border-left:4px solid #06b6d4;">
-          <div class="tac-panel-header">
-            <span class="tac-panel-title">📊 24-Hour Exam Traffic Heatmap (WITA)</span>
-            <span class="tac-badge badge-rose-soft">&#128293; Peak: ${peakHour}:00 WITA</span>
-          </div>
-          <div class="text-xs text-muted mb-2">Hourly attempt density across 24 hours. Primary load occurs between 19:00 - 22:00 WITA.</div>
-
-          <!-- Vertical CSS Histogram -->
-          <div style="display:flex; align-items:flex-end; gap:3px; height:120px; padding-top:10px; border-bottom:1px solid rgba(255,255,255,0.12);">
-            ${witaHourly.map((cnt, h) => {
-              const hPct = Math.round((cnt / maxHour) * 100);
-              const isPeak = (h >= 19 && h <= 22) || h === 7;
-              const barColor = isPeak ? 'linear-gradient(180deg, #f43f5e 0%, #be123c 100%)' : 'linear-gradient(180deg, #38bdf8 0%, #0369a1 100%)';
-              return `
-                <div style="flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end;" title="${h}:00 WITA &mdash; ${cnt} attempts">
-                  <div style="font-size:0.52rem; color:${isPeak ? '#fb7185' : '#94a3b8'}; margin-bottom:2px; font-weight:700;">${cnt > 0 ? cnt : ''}</div>
-                  <div style="width:100%; height:${Math.max(hPct, 3)}%; background:${barColor}; border-radius:2px 2px 0 0;"></div>
+        <div class="tac-wall-grid" id="tac-wall-items-container">
+          ${hardestQsTop10.map((q, idx) => `
+            <div class="tac-wall-item" data-wall-domain="${q.domain}">
+              <div class="d-flex justify-between align-center mb-1 text-xs">
+                <div class="d-flex align-center gap-1">
+                  <span style="font-weight:800; color:#f8fafc;">#${idx + 1}.</span>
+                  <span style="font-weight:700; color:#f8fafc;">"${escapeHtml(q.text)}"</span>
+                  <span class="tac-badge ${q.domain === 'phrase' ? 'badge-success-soft' : 'badge-blue-soft'}" style="font-size:0.6rem; padding:1px 5px;">${q.domain === 'phrase' ? '💬 ' + escapeHtml(q.wordType) : '🔤 ' + escapeHtml(q.wordType)}</span>
                 </div>
-              `;
-            }).join('')}
-          </div>
-
-          <!-- Hour Labels -->
-          <div style="display:flex; gap:3px; margin-top:4px;">
-            ${witaHourly.map((_, h) => `
-              <div style="flex:1; text-align:center; font-size:0.5rem; color:#94a3b8; font-family:monospace;">${String(h).padStart(2, '0')}</div>
-            `).join('')}
-          </div>
-
-          <div class="d-flex justify-between align-center mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.06); font-size:0.72rem; color:#94a3b8;">
-            <span>Total Submissions: <strong style="color:#f8fafc;">${(allAttempts || []).length}</strong></span>
-            <span style="color:#fb7185; font-weight:700;">Peak Volume: ${maxHour} at ${peakHour}:00 WITA</span>
-          </div>
+                <span class="tac-badge ${q.failRate >= 70 ? 'badge-danger-soft' : 'badge-warning-soft'}">${q.failRate}% Fail (${q.fail}/${q.total})</span>
+              </div>
+              <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin-bottom:4px;">
+                <div style="width:${q.failRate}%; height:100%; background:${q.failRate >= 70 ? '#ef4444' : '#f59e0b'}; border-radius:3px;"></div>
+              </div>
+              <div class="d-flex justify-between text-xs" style="font-size:0.68rem; color:#94a3b8;">
+                <span>Target: <strong style="color:#34d399;">${escapeHtml(q.correct)}</strong> &bull; <span style="color:#64748b;">${escapeHtml(q.topic)}</span></span>
+                ${q.wrongSamples && q.wrongSamples.length > 0 ? `<span style="color:#f87171;" title="Sample errors: ${q.wrongSamples.map(escapeHtml).join(', ')}">Errors: "${escapeHtml(q.wrongSamples[0])}"</span>` : ''}
+              </div>
+            </div>
+          `).join('')}
         </div>
       </div>
 
-      <!-- ROW 3: 3 MEDIUM VISUAL CARDS (Remedial Watchlist, POS Matrix, Grade Distribution) -->
+      <!-- ROW: 3 PEDAGOGICAL DEEP-DIVE PANELS (Remedial Watchlist, POS Matrix, Grade Distribution) -->
       <div class="tac-row-3col">
         <!-- 1. Remedial Watchlist -->
         <div class="tac-panel-card" style="border-left:4px solid #8b5cf6;">
@@ -982,7 +938,7 @@ export async function renderTests(area) {
                   <span class="tac-badge badge-purple-soft">${s.count} Retakes</span>
                 </div>
                 <div class="d-flex justify-between mt-1 text-xs" style="color:#94a3b8; font-size:0.68rem;">
-                  <span>Initial: ${s.firstScore}% &bull; Best: <strong style="color:#34d399;">${s.maxScore}%<sup style="color:#eab308;">R</sup></strong></span>
+                  <span>Initial: ${s.firstScore}% &bull; Best: <strong style="color:#34d399;">${s.maxScore}%${s.maxScore <= 60 ? '<sup style="color:#eab308;">R</sup>' : ''}</strong></span>
                   <span style="color:#10b981; font-weight:700;">+${s.delta}%</span>
                 </div>
               </div>
@@ -1046,62 +1002,6 @@ export async function renderTests(area) {
           </div>
         </div>
       </div>
-
-      <!-- ROW 4: 2 CARDS (Audio Override Queue & Test Difficulty Spectrum) -->
-      <div class="tac-row-2col">
-        <!-- Card Left: Audio Review Queue with live 1-Click Override -->
-        <div class="tac-panel-card" style="border-left:4px solid #3b82f6;">
-          <div class="tac-panel-header">
-            <span class="tac-panel-title">🎧 Live Audio Review &amp; Teacher Override Queue</span>
-            <button class="btn btn-ghost btn-xs text-info" onclick="window._openTestAnalyticsCardModal('speech')">Full Queue &#10140;</button>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:0.4rem;">
-            ${spokenResponses.slice(0, 3).map(q => `
-              <div style="background:rgba(255,255,255,0.03); padding:0.5rem 0.75rem; border-radius:6px; border:1px solid rgba(255,255,255,0.05); font-size:0.75rem;">
-                <div class="d-flex justify-between align-center">
-                  <strong style="color:#f8fafc;">${escapeHtml(q.studentName)} &bull; "${escapeHtml(q.prompt)}"</strong>
-                  ${q.isCorrect 
-                    ? '<span class="tac-badge badge-success-soft">Validated</span>' 
-                    : '<button class="btn btn-xs btn-primary" id="btn-override-' + q.id + '" onclick="window._overrideSpeechAnswer(\'' + q.id + '\')" style="font-size:0.65rem; padding:2px 8px;">&#9889; Override 100%</button>'
-                  }
-                </div>
-                <div class="d-flex justify-between mt-1 text-xs" style="color:#94a3b8; font-size:0.68rem;">
-                  <span>Target: <strong style="color:#34d399;">${escapeHtml(q.expected)}</strong></span>
-                  <span id="status-cell-${q.id}">${q.isCorrect ? '✓ Correct' : 'AI: Needs Review'}</span>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- Card Right: Test Difficulty Spectrum -->
-        <div class="tac-panel-card" style="border-left:4px solid #f43f5e;">
-          <div class="tac-panel-header">
-            <span class="tac-panel-title">🔥 Test Difficulty Spectrum</span>
-            <button class="btn btn-ghost btn-xs text-rose" onclick="window._openTestAnalyticsCardModal('spectrum')">All 40 Ranked &#10140;</button>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:0.5rem;">
-            <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); border-radius:6px; padding:0.65rem;">
-              <div class="d-flex justify-between align-center mb-1">
-                <span style="color:#f87171; font-weight:800; font-size:0.75rem;">🔴 TOUGHEST TEST IN CURRICULUM</span>
-                <span class="tac-badge badge-danger-soft">${toughestTest?.avgScore || 0}% Avg</span>
-              </div>
-              <div style="font-weight:700; color:#f8fafc; font-size:0.8rem;">${escapeHtml(toughestTest?.title || '—')}</div>
-              <div class="text-xs text-muted mt-1">${toughestTest?.remRate || 0}% Remedial Retry Rate &bull; ${toughestTest?.total || 0} Submissions</div>
-            </div>
-
-            <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); border-radius:6px; padding:0.65rem;">
-              <div class="d-flex justify-between align-center mb-1">
-                <span style="color:#34d399; font-weight:800; font-size:0.75rem;">🟢 EASIEST TEST IN CURRICULUM</span>
-                <span class="tac-badge badge-success-soft">${easiestTest?.avgScore || 0}% Avg</span>
-              </div>
-              <div style="font-weight:700; color:#f8fafc; font-size:0.8rem;">${escapeHtml(easiestTest?.title || '—')}</div>
-              <div class="text-xs text-muted mt-1">${easiestTest?.remRate || 0}% Remedial Retry Rate &bull; ${easiestTest?.total || 0} Submissions</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       </div><!-- END tac-analytics-content -->
     </div>
   `;
@@ -1491,7 +1391,7 @@ export async function renderResults(area) {
           </div>
           <div>
             <div class="text-sm text-muted mb-1">Performance</div>
-            <div class="fw-600" style="font-size:1.5rem;">${row.score}% <span class="badge badge-primary text-sm ml-2" style="background:rgba(168,85,247,0.18);color:#A855F7;border:1px solid #A855F7;">${escapeHtml((row.grade === '★' || row.grade === 'S' || parseFloat(row.score) >= 100) ? '★' : row.grade)}</span></div>
+            <div class="fw-600" style="font-size:1.5rem;">${row.score}% <span class="badge badge-primary text-sm ml-2" style="background:rgba(34,197,94,0.18);color:#22C55E;border:1px solid #22C55E;">${escapeHtml((row.grade === '★' || row.grade === 'S' || parseFloat(row.score) >= 100) ? '★' : row.grade)}</span></div>
           </div>
           <div class="d-flex gap-2">
              <div class="p-2 rounded text-center" style="background:rgba(74,222,128,0.1);flex:1;">
@@ -1526,7 +1426,7 @@ export async function renderResults(area) {
       { key: 'batch', label: 'Batch', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
       { key: 'TestTitle', label: 'Test', sortable: true, render: (val) => `<div class="fw-600">${escapeHtml(val)}</div>` },
       { key: 'score', label: 'Score', sortable: true, render: (val) => `<div class="text-center fw-800">${val}%</div>` },
-      { key: 'grade', label: 'Grade', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge badge-primary fw-800" style="${(val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? 'background:rgba(168,85,247,0.18);color:#A855F7;border:1px solid #A855F7;' : ''}">${escapeHtml((val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? '★' : val)}</span></div>` },
+      { key: 'grade', label: 'Grade', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge badge-primary fw-800" style="${(val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? 'background:rgba(34,197,94,0.18);color:#22C55E;border:1px solid #22C55E;' : ''}">${escapeHtml((val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? '★' : val)}</span></div>` },
       { key: 'correct', label: 'Correct', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-success' : 'badge-neutral'}">${val}</span></div>` },
       { key: 'minor', label: 'Half', sortable: true, render: (val) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-warning' : 'badge-neutral'}">${val}</span></div>` },
       { key: 'wrong', label: 'Incorrect', sortable: true, render: (val) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-danger' : 'badge-neutral'}">${val}</span></div>` },
@@ -1795,7 +1695,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
 
     const totalGraded = Object.values(st.gradeCounts || {}).reduce((a, b) => a + b, 0) || 1;
     const gradePalette = [
-      { sym: '★', label: 'Excellent', range: '100%', color: '#A855F7', count: st.gradeCounts['★'] || 0 },
+      { sym: '★', label: 'Excellent', range: '100%', color: '#22C55E', count: st.gradeCounts['★'] || 0 },
       { sym: 'A', label: 'Very Good', range: '90% - 99%', color: '#10B981', count: st.gradeCounts['A'] || 0 },
       { sym: 'B', label: 'Good', range: '80% - 89%', color: '#84CC16', count: st.gradeCounts['B'] || 0 },
       { sym: 'C', label: 'Pass', range: '60% - 79%', color: '#EAB308', count: st.gradeCounts['C'] || 0 },
@@ -2224,7 +2124,7 @@ window._openTestCardDrawer = function(testId) {
   const getGradeBadge = (pct) => {
     if (pct === null || pct === undefined) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
     let sym = 'E', color = '#EF4444';
-    if (pct >= 100) { sym = '★'; color = '#A855F7'; }
+    if (pct >= 100) { sym = '★'; color = '#22C55E'; }
     else if (pct >= 90) { sym = 'A'; color = '#10B981'; }
     else if (pct >= 80) { sym = 'B'; color = '#84CC16'; }
     else if (pct >= 60) { sym = 'C'; color = '#EAB308'; }
