@@ -611,79 +611,109 @@ export async function renderTests(area) {
   // Render Full Dashboard HTML (Pure 100% Test Analytics Mission Control)
   area.innerHTML = `
     <style id="test-analytics-styles">
-      .test-analytics-dashboard { margin-bottom: 2rem; color: #f8fafc; }
+      .test-analytics-dashboard {
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 6px !important;
+        box-sizing: border-box !important;
+        color: #f8fafc;
+        overflow: hidden !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
 
       /* Top 3 Pedagogical Hero KPIs */
       .tac-kpi-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 0.75rem;
-        margin-bottom: 1rem;
+        gap: 8px;
+        flex-shrink: 0;
+        margin-bottom: 0;
       }
       @media (max-width: 900px) { .tac-kpi-grid { grid-template-columns: 1fr; } }
 
       .tac-card {
-        background: rgba(15, 23, 42, 0.8);
+        background: rgba(15, 23, 42, 0.85);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
-        padding: 0.85rem 1rem;
+        border-radius: 8px;
+        padding: 5px 10px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
         backdrop-filter: blur(12px);
         cursor: pointer;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        min-height: 110px;
+        min-height: 60px;
       }
       .tac-card:hover {
-        transform: translateY(-3px) scale(1.008);
-        box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.2);
-        border-color: rgba(255, 255, 255, 0.25);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.5), 0 0 12px rgba(99, 102, 241, 0.2);
+        border-color: rgba(255, 255, 255, 0.22);
       }
       .tac-card.border-success { border-left: 4px solid #10b981; }
       .tac-card.border-star { border-left: 4px solid #22c55e; }
       .tac-card.border-purple { border-left: 4px solid #8b5cf6; }
 
-      .tac-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; }
-      .tac-card-title { font-weight: 700; font-size: 0.76rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; }
-      .tac-badge { font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+      .tac-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.15rem; }
+      .tac-card-title { font-weight: 700; font-size: 0.72rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; }
+      .tac-badge { font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; text-transform: uppercase; }
       .badge-danger-soft { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
       .badge-success-soft { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
       .badge-warning-soft { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
       .badge-info-soft { background: rgba(6, 182, 212, 0.2); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3); }
+      .badge-blue-soft { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
       .badge-purple-soft { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
-      .badge-rose-soft { background: rgba(244, 63, 94, 0.2); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
 
-      .tac-metric { font-size: 1.45rem; font-weight: 800; line-height: 1.1; margin-bottom: 0.2rem; }
-      .tac-unit { font-size: 0.72rem; font-weight: 500; color: #94a3b8; }
-      .tac-sub { font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.25rem; }
-      .tac-card-footer { font-size: 0.68rem; color: #94a3b8; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 0.35rem; margin-top: 0.25rem; }
+      .tac-metric { font-size: 1.25rem; font-weight: 800; line-height: 1; }
+      .tac-unit { font-size: 0.68rem; font-weight: 500; color: #94a3b8; }
+      .tac-sub { font-size: 0.68rem; color: #94a3b8; }
+      .tac-card-footer { font-size: 0.62rem; color: #94a3b8; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 0.2rem; margin-top: 0.15rem; }
+
+      /* Main Cockpit Asymmetric Split (Left: Content / The Wall, Right: Students / POS / Grade) */
+      .tac-main-split {
+        flex: 1 !important;
+        min-height: 0 !important;
+        display: grid !important;
+        grid-template-columns: 1.2fr 0.8fr !important;
+        gap: 8px !important;
+        overflow: hidden !important;
+      }
+      @media (max-width: 1024px) {
+        .tac-main-split { grid-template-columns: 1fr !important; overflow-y: auto !important; }
+      }
+
+      /* Left Column: Curriculum & Bottlenecks */
+      .tac-col-left {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 6px !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
 
       /* Vocab Domain Split Card (Words vs Phrases Mastery) */
       .tac-vocab-split-card {
         background: rgba(15, 23, 42, 0.85);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-left: 4px solid #38bdf8;
-        border-radius: 10px;
-        padding: 1rem 1.15rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+        border-radius: 8px;
+        padding: 5px 8px;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       }
       .tac-vocab-split-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 0.85rem;
-        margin-top: 0.75rem;
-      }
-      @media (max-width: 900px) {
-        .tac-vocab-split-grid { grid-template-columns: 1fr; }
+        gap: 6px;
+        margin-top: 4px;
       }
       .tac-vocab-box {
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 8px;
-        padding: 0.85rem 1rem;
+        border-radius: 6px;
+        padding: 4px 8px;
         transition: all 0.2s ease;
       }
       .tac-vocab-box:hover {
@@ -693,20 +723,38 @@ export async function renderTests(area) {
       .tac-vocab-box.words-box { border-left: 3px solid #38bdf8; }
       .tac-vocab-box.phrases-box { border-left: 3px solid #34d399; }
 
-      /* The Wall Bottleneck Items (Full Width Responsive 2-Column Grid) */
-      .tac-wall-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.65rem;
+      /* The Wall Bottleneck Card (Flexes to fill remainder of Left Column) */
+      .tac-wall-card {
+        flex: 1 !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-left: 4px solid #f59e0b;
+        border-radius: 8px;
+        padding: 6px 8px;
+        overflow: hidden !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       }
-      @media (max-width: 900px) {
-        .tac-wall-grid { grid-template-columns: 1fr; }
+      .tac-wall-grid {
+        flex: 1 !important;
+        min-height: 0 !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        grid-template-rows: repeat(5, minmax(0, 1fr)) !important;
+        gap: 4px !important;
+        overflow-y: auto !important;
       }
       .tac-wall-item {
         background: rgba(255, 255, 255, 0.03);
-        padding: 0.65rem 0.85rem;
-        border-radius: 6px;
+        padding: 3px 6px;
+        border-radius: 5px;
         border: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 0;
         transition: all 0.15s ease;
       }
       .tac-wall-item:hover {
@@ -714,53 +762,56 @@ export async function renderTests(area) {
         border-color: rgba(255, 255, 255, 0.12);
       }
 
-      /* Multi-Column Layout Rows */
-      .tac-row-2col {
-        display: grid;
-        grid-template-columns: 1.15fr 0.85fr;
-        gap: 0.75rem;
-        margin-bottom: 1rem;
+      /* Right Column: Student Diagnostics & Distribution */
+      .tac-col-right {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 6px !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
       }
-      .tac-row-3col {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.75rem;
-        margin-bottom: 1rem;
-      }
-      @media (max-width: 1024px) {
-        .tac-row-2col, .tac-row-3col { grid-template-columns: 1fr; }
-      }
-
-      /* Detailed Container Cards */
-      .tac-panel-card {
-        background: rgba(15, 23, 42, 0.8);
+      .tac-subpanel {
+        flex: 1 !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: rgba(15, 23, 42, 0.85);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
-        padding: 1rem;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+        border-radius: 8px;
+        padding: 6px 8px;
+        overflow: hidden !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         backdrop-filter: blur(12px);
       }
+      .tac-subpanel-body {
+        flex: 1 !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-around !important;
+        overflow: hidden !important;
+      }
+
+      /* Common Panel Headers */
       .tac-panel-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 0.85rem;
-        padding-bottom: 0.5rem;
+        margin-bottom: 0.35rem;
+        padding-bottom: 0.25rem;
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        flex-shrink: 0;
       }
-      .tac-panel-title { font-size: 0.85rem; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 0.4rem; }
+      .tac-panel-title { font-size: 0.78rem; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 0.35rem; }
     </style>
 
-    <div class="test-analytics-dashboard" style="padding-top:0.25rem;">
+    <div class="test-analytics-dashboard">
       <!-- Empty track notification (shown when a track with 0 tests is selected) -->
-      <div id="tac-empty-track-section" style="display:${currentClassObj.count === 0 && window._activeTestClassId !== 'all' ? 'block' : 'none'}; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:8px; padding:0.85rem 1.15rem; margin-bottom:1rem; color:#fde68a; font-size:0.82rem;">
+      <div id="tac-empty-track-section" style="display:${currentClassObj.count === 0 && window._activeTestClassId !== 'all' ? 'block' : 'none'}; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:6px; padding:0.4rem 0.8rem; color:#fde68a; font-size:0.75rem; flex-shrink:0;">
         ℹ️ Active Track: <strong id="tac-empty-track-name" style="color:#fff;">${escapeHtml(currentClassObj.name)}</strong> has no published tests configured yet. Select <strong>3rd Vocabulary</strong> or <strong>All Classes</strong> in the top bar to inspect curriculum health and analytics.
       </div>
 
-      <!-- ANALYTICS MISSION CONTROL COCKPIT -->
-      <div id="tac-analytics-content" style="opacity:${currentClassObj.count === 0 && window._activeTestClassId !== 'all' ? '0.35' : '1'}; transition:opacity 0.2s ease;">
-
-      <!-- TOP 3 HERO KPIS (Pedagogical Excellence) -->
+      <!-- TOP 3 HERO KPIS (Pedagogical Excellence, Compact Zero-Scroll Cockpit) -->
       <div class="tac-kpi-grid">
         <!-- 1. Mastery & FAPR -->
         <div class="tac-card border-success" onclick="window._openTestAnalyticsCardModal('fapr')">
@@ -768,9 +819,14 @@ export async function renderTests(area) {
             <span class="tac-card-title">&#127919; 1st-Pass Rate (FAPR)</span>
             <span class="tac-badge ${fapr >= 70 ? 'badge-success-soft' : 'badge-warning-soft'}">${fapr}% Pass</span>
           </div>
-          <div class="tac-metric text-success">${fapr}% <span class="tac-unit">First Attempt</span></div>
-          <div class="tac-sub">${faprPass} of ${firstAttempts.length} students passed on first attempt</div>
-          <div class="tac-card-footer"><span>★ ${gradeCounts['★']} &bull; A ${gradeCounts['A']} &bull; B ${gradeCounts['B']}</span><span style="color:#10b981; font-weight:700;">Grade Health &#10140;</span></div>
+          <div class="d-flex align-center justify-between">
+            <div class="tac-metric text-success">${fapr}% <span class="tac-unit">First Attempt</span></div>
+            <div class="tac-sub" style="font-size:0.65rem;">${faprPass} of ${firstAttempts.length} passed</div>
+          </div>
+          <div class="tac-card-footer">
+            <span>★ ${gradeCounts['★']} &bull; A ${gradeCounts['A']} &bull; B ${gradeCounts['B']}</span>
+            <span style="color:#10b981; font-weight:700;">Grade Health &#10140;</span>
+          </div>
         </div>
 
         <!-- 2. Grade Quality Ratio (Rule 2.10) -->
@@ -779,9 +835,14 @@ export async function renderTests(area) {
             <span class="tac-card-title">&#127942; Grade Quality Ratio</span>
             <span class="tac-badge badge-success-soft" style="color:#22c55e; border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.12);">${highGradePct}% High Tiers</span>
           </div>
-          <div class="tac-metric" style="color:#22c55e;">${highGradePct}% <span class="tac-unit">★ / A / B</span></div>
-          <div class="tac-sub">${highGradeCount} of ${totalGraded} submissions in top grades</div>
-          <div class="tac-card-footer"><span>C ${gradeCounts['C']} &bull; D ${gradeCounts['D']} &bull; E ${gradeCounts['E']}</span><span style="color:#22c55e; font-weight:700;">Distribution &#10140;</span></div>
+          <div class="d-flex align-center justify-between">
+            <div class="tac-metric" style="color:#22c55e;">${highGradePct}% <span class="tac-unit">★ / A / B</span></div>
+            <div class="tac-sub" style="font-size:0.65rem;">${highGradeCount} of ${totalGraded} top grades</div>
+          </div>
+          <div class="tac-card-footer">
+            <span>C ${gradeCounts['C']} &bull; D ${gradeCounts['D']} &bull; E ${gradeCounts['E']}</span>
+            <span style="color:#22c55e; font-weight:700;">Distribution &#10140;</span>
+          </div>
         </div>
 
         <!-- 3. Remedial & Retake Load -->
@@ -790,220 +851,202 @@ export async function renderTests(area) {
             <span class="tac-card-title">&#128101; Remedial &amp; Retake Load</span>
             <span class="tac-badge badge-purple-soft">${retakeRate}% Retakes</span>
           </div>
-          <div class="tac-metric" style="color:#c084fc;">${studentsWithRetakes} <span class="tac-unit">Students in Retakes</span></div>
-          <div class="tac-sub">${totalRetakeAttempts} retake sessions capped at 60%ᴿ</div>
-          <div class="tac-card-footer"><span>&#128123; ${inactiveStudentsCount} Inactive Students</span><span style="color:#c084fc; font-weight:700;">Watchlist &#10140;</span></div>
+          <div class="d-flex align-center justify-between">
+            <div class="tac-metric" style="color:#c084fc;">${studentsWithRetakes} <span class="tac-unit">Students in Retakes</span></div>
+            <div class="tac-sub" style="font-size:0.65rem;">${totalRetakeAttempts} retakes capped at 60%ᴿ</div>
+          </div>
+          <div class="tac-card-footer">
+            <span>&#128123; ${inactiveStudentsCount} Inactive Students</span>
+            <span style="color:#c084fc; font-weight:700;">Watchlist &#10140;</span>
+          </div>
         </div>
       </div>
 
-      <!-- VOCABULARY DOMAIN SPLIT: WORDS VS. PHRASES MASTERY DEEP-DIVE -->
-      <div class="tac-vocab-split-card" id="tac-vocab-domain-section" style="display:${(window._activeTestClassId === 'ab33498a-90e6-44b7-83f4-5765f964543e' || window._activeTestClassId === 'all') ? 'block' : 'none'};">
-        <div class="tac-panel-header">
-          <div class="d-flex align-center gap-2">
-            <span style="font-size:1.15rem;">🧬</span>
-            <div>
-              <span class="tac-panel-title">Vocabulary Domain Split: Words vs. Phrases</span>
-              <div class="text-xs text-muted">Comparative mastery analytics between single-word vocabulary and multi-word conversational phrases</div>
-            </div>
-          </div>
-          <div class="d-flex gap-1" id="tac-vocab-filter-pills">
-            <button class="btn btn-xs btn-primary tac-vocab-btn active" id="btn-vocab-all" onclick="window._filterVocabDomain('all')">🌐 All Vocab (${totalTests})</button>
-            <button class="btn btn-xs btn-secondary tac-vocab-btn" id="btn-vocab-words" onclick="window._filterVocabDomain('words')">🔤 Words (${wordsTests.length})</button>
-            <button class="btn btn-xs btn-secondary tac-vocab-btn" id="btn-vocab-phrases" onclick="window._filterVocabDomain('phrases')">💬 Phrases (${phrasesTests.length})</button>
-          </div>
-        </div>
+      <!-- MAIN COCKPIT BODY SPLIT (LEFT: Curriculum/The Wall, RIGHT: Students/Diagnostics) -->
+      <div class="tac-main-split" id="tac-analytics-content" style="opacity:${currentClassObj.count === 0 && window._activeTestClassId !== 'all' ? '0.35' : '1'}; transition:opacity 0.2s ease;">
 
-        <div class="tac-vocab-split-grid">
-          <!-- Left Box: Words Mastery -->
-          <div class="tac-vocab-box words-box" id="tac-vocab-box-words">
-            <div class="d-flex justify-between align-center mb-2">
-              <span style="font-weight:800; font-size:0.82rem; color:#38bdf8;">🔤 SINGLE-WORD VOCABULARY</span>
-              <span class="tac-badge badge-blue-soft">${wordsTests.length} Tests &bull; ${wordsAttempts.length} Submissions</span>
+        <!-- LEFT COLUMN: Content & Curriculum Bottlenecks (~60% width) -->
+        <div class="tac-col-left">
+
+          <!-- VOCABULARY DOMAIN SPLIT: WORDS VS. PHRASES MASTERY -->
+          <div class="tac-vocab-split-card" id="tac-vocab-domain-section" style="display:${(window._activeTestClassId === 'ab33498a-90e6-44b7-83f4-5765f964543e' || window._activeTestClassId === 'all') ? 'block' : 'none'};">
+            <div class="tac-panel-header">
+              <div class="d-flex align-center gap-1">
+                <span style="font-size:0.95rem;">🧬</span>
+                <span class="tac-panel-title">Vocabulary Domain Split: Words vs. Phrases</span>
+              </div>
+              <div class="d-flex gap-1" id="tac-vocab-filter-pills">
+                <button class="btn btn-xs btn-primary tac-vocab-btn active" id="btn-vocab-all" onclick="window._filterVocabDomain('all')">🌐 All (${totalTests})</button>
+                <button class="btn btn-xs btn-secondary tac-vocab-btn" id="btn-vocab-words" onclick="window._filterVocabDomain('words')">🔤 Words (${wordsTests.length})</button>
+                <button class="btn btn-xs btn-secondary tac-vocab-btn" id="btn-vocab-phrases" onclick="window._filterVocabDomain('phrases')">💬 Phrases (${phrasesTests.length})</button>
+              </div>
             </div>
-            <div class="d-flex align-center gap-3 mb-2">
+
+            <div class="tac-vocab-split-grid">
+              <!-- Left Box: Words Mastery -->
+              <div class="tac-vocab-box words-box" id="tac-vocab-box-words">
+                <div class="d-flex justify-between align-center mb-1">
+                  <span style="font-weight:800; font-size:0.74rem; color:#38bdf8;">🔤 SINGLE-WORD VOCABULARY</span>
+                  <span class="tac-badge badge-blue-soft" style="font-size:0.6rem;">${wordsTests.length} Tests &bull; ${wordsAttempts.length} Subs</span>
+                </div>
+                <div class="d-flex align-center justify-between mb-1" style="font-size:0.75rem;">
+                  <div><strong style="color:#f97316; font-size:1.05rem;">${wordsAvg}%</strong> <span class="text-xs text-muted">[D] Avg</span></div>
+                  <div><strong style="color:#38bdf8; font-size:1.05rem;">${wordsFapr}%</strong> <span class="text-xs text-muted">FAPR</span></div>
+                  <div><strong style="color:#eab308; font-size:1.05rem;">${wordsRemRate}%<sup style="font-size:0.65em;">R</sup></strong> <span class="text-xs text-muted">Remedial</span></div>
+                </div>
+                <div class="text-xs text-muted mb-1" style="font-size:0.64rem; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                  16 Quizzes (5m) + 4 Exams (120m) &bull; Single-word Nouns, Verbs, Adjectives
+                </div>
+                <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
+                  <div style="width:${wordsAvg}%; height:100%; background:linear-gradient(90deg, #f97316, #fb923c); border-radius:2px;"></div>
+                </div>
+              </div>
+
+              <!-- Right Box: Phrases Mastery -->
+              <div class="tac-vocab-box phrases-box" id="tac-vocab-box-phrases">
+                <div class="d-flex justify-between align-center mb-1">
+                  <span style="font-weight:800; font-size:0.74rem; color:#34d399;">💬 PHRASES &amp; IDIOMS MASTERY</span>
+                  <span class="tac-badge badge-success-soft" style="font-size:0.6rem;">${phrasesTests.length} Tests &bull; ${phrasesAttempts.length} Subs</span>
+                </div>
+                <div class="d-flex align-center justify-between mb-1" style="font-size:0.75rem;">
+                  <div><strong style="color:#eab308; font-size:1.05rem;">${phrasesAvg}%</strong> <span class="text-xs text-muted">[C] Avg</span></div>
+                  <div><strong style="color:#34d399; font-size:1.05rem;">${phrasesFapr}%</strong> <span class="text-xs text-muted">FAPR</span></div>
+                  <div><strong style="color:#10b981; font-size:1.05rem;">${phrasesRemRate}%<sup style="font-size:0.65em;">R</sup></strong> <span class="text-xs text-muted">Remedial</span></div>
+                </div>
+                <div class="text-xs text-muted mb-1" style="font-size:0.64rem; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                  16 Quizzes (5m) + 4 Exams (120m) &bull; Contraction &amp; punctuation tolerant
+                </div>
+                <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
+                  <div style="width:${phrasesAvg}%; height:100%; background:linear-gradient(90deg, #10b981, #34d399); border-radius:2px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- THE WALL — TOP 10 PERSISTENT BOTTLENECKS (Fills remaining height) -->
+          <div class="tac-wall-card">
+            <div class="tac-panel-header">
               <div>
-                <div style="font-size:1.55rem; font-weight:800; color:#f97316;">${wordsAvg}% <span style="font-size:0.75rem; color:#94a3b8;">[D]</span></div>
-                <div class="text-xs text-muted">Average Score</div>
+                <span class="tac-panel-title">🧱 The Wall &mdash; Top 10 Persistent Bottlenecks</span>
               </div>
-              <div style="border-left:1px solid rgba(255,255,255,0.1); padding-left:12px;">
-                <div style="font-size:1.25rem; font-weight:800; color:#38bdf8;">${wordsFapr}%</div>
-                <div class="text-xs text-muted">1st-Pass Rate (FAPR)</div>
-              </div>
-              <div style="border-left:1px solid rgba(255,255,255,0.1); padding-left:12px;">
-                <div style="font-size:1.25rem; font-weight:800; color:#eab308;">${wordsRemRate}%<sup style="font-size:0.65em;">R</sup></div>
-                <div class="text-xs text-muted">Remedial Rate</div>
+              <div class="d-flex align-center gap-1">
+                <button class="btn btn-xs btn-primary tac-wall-pill active" id="wall-pill-all" onclick="window._filterWallBottlenecks('all')">All Top 10</button>
+                <button class="btn btn-xs btn-secondary tac-wall-pill" id="wall-pill-words" onclick="window._filterWallBottlenecks('words')">🔤 Words</button>
+                <button class="btn btn-xs btn-secondary tac-wall-pill" id="wall-pill-phrases" onclick="window._filterWallBottlenecks('phrases')">💬 Phrases</button>
+                <button class="btn btn-ghost btn-xs text-warning" onclick="window._openTestAnalyticsCardModal('wall')">Top 20 &#10140;</button>
               </div>
             </div>
-            <div class="text-xs text-muted mb-2" style="line-height:1.4;">
-              <strong>Format:</strong> 16 Quizzes (40 Qs &bull; 5m) + 4 Exams (120 Qs &bull; 120m). Rigorous single-word precision across Nouns, Verbs, and Adjectives.
-            </div>
-            <div>
-              <div class="d-flex justify-between text-xs mb-1">
-                <span style="color:#cbd5e1;">Mastery Index</span>
-                <span style="color:#f97316; font-weight:700;">${wordsAvg}%</span>
-              </div>
-              <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
-                <div style="width:${wordsAvg}%; height:100%; background:linear-gradient(90deg, #f97316, #fb923c); border-radius:3px;"></div>
-              </div>
-            </div>
-          </div>
 
-          <!-- Right Box: Phrases Mastery -->
-          <div class="tac-vocab-box phrases-box" id="tac-vocab-box-phrases">
-            <div class="d-flex justify-between align-center mb-2">
-              <span style="font-weight:800; font-size:0.82rem; color:#34d399;">💬 PHRASES &amp; IDIOMS MASTERY</span>
-              <span class="tac-badge badge-success-soft">${phrasesTests.length} Tests &bull; ${phrasesAttempts.length} Submissions</span>
-            </div>
-            <div class="d-flex align-center gap-3 mb-2">
-              <div>
-                <div style="font-size:1.55rem; font-weight:800; color:#eab308;">${phrasesAvg}% <span style="font-size:0.75rem; color:#94a3b8;">[C]</span></div>
-                <div class="text-xs text-muted">Average Score</div>
-              </div>
-              <div style="border-left:1px solid rgba(255,255,255,0.1); padding-left:12px;">
-                <div style="font-size:1.25rem; font-weight:800; color:#34d399;">${phrasesFapr}%</div>
-                <div class="text-xs text-muted">1st-Pass Rate (FAPR)</div>
-              </div>
-              <div style="border-left:1px solid rgba(255,255,255,0.1); padding-left:12px;">
-                <div style="font-size:1.25rem; font-weight:800; color:#10b981;">${phrasesRemRate}%<sup style="font-size:0.65em;">R</sup></div>
-                <div class="text-xs text-muted">Remedial Rate</div>
-              </div>
-            </div>
-            <div class="text-xs text-muted mb-2" style="line-height:1.4;">
-              <strong>Format:</strong> 16 Quizzes (10 Qs &bull; 5m) + 4 Exams (30 Qs &bull; 120m). Contraction-tolerant (I'm = I am, I'll = I will) &amp; punctuation-ignored.
-            </div>
-            <div>
-              <div class="d-flex justify-between text-xs mb-1">
-                <span style="color:#cbd5e1;">Mastery Index</span>
-                <span style="color:#34d399; font-weight:700;">${phrasesAvg}%</span>
-              </div>
-              <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
-                <div style="width:${phrasesAvg}%; height:100%; background:linear-gradient(90deg, #10b981, #34d399); border-radius:3px;"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- THE WALL — TOP 10 PERSISTENT BOTTLENECKS (FULL WIDTH 2-COLUMN GRID) -->
-      <div class="tac-panel-card" style="border-left:4px solid #f59e0b; margin-bottom:1rem;">
-        <div class="tac-panel-header">
-          <div>
-            <span class="tac-panel-title">🧱 The Wall &mdash; Top 10 Persistent Bottlenecks</span>
-            <div class="text-xs text-muted">Curriculum items with highest student failure rates across tests &mdash; prioritized focus for next live review</div>
-          </div>
-          <div class="d-flex align-center gap-1">
-            <button class="btn btn-xs btn-primary tac-wall-pill active" id="wall-pill-all" onclick="window._filterWallBottlenecks('all')">All Top 10</button>
-            <button class="btn btn-xs btn-secondary tac-wall-pill" id="wall-pill-words" onclick="window._filterWallBottlenecks('words')">🔤 Words</button>
-            <button class="btn btn-xs btn-secondary tac-wall-pill" id="wall-pill-phrases" onclick="window._filterWallBottlenecks('phrases')">💬 Phrases</button>
-            <button class="btn btn-ghost btn-xs text-warning" onclick="window._openTestAnalyticsCardModal('wall')">Top 20 &#10140;</button>
-          </div>
-        </div>
-
-        <div class="tac-wall-grid" id="tac-wall-items-container">
-          ${hardestQsTop10.map((q, idx) => `
-            <div class="tac-wall-item" data-wall-domain="${q.domain}">
-              <div class="d-flex justify-between align-center mb-1 text-xs">
-                <div class="d-flex align-center gap-1">
-                  <span style="font-weight:800; color:#f8fafc;">#${idx + 1}.</span>
-                  <span style="font-weight:700; color:#f8fafc;">"${escapeHtml(q.text)}"</span>
-                  <span class="tac-badge ${q.domain === 'phrase' ? 'badge-success-soft' : 'badge-blue-soft'}" style="font-size:0.6rem; padding:1px 5px;">${q.domain === 'phrase' ? '💬 ' + escapeHtml(q.wordType) : '🔤 ' + escapeHtml(q.wordType)}</span>
-                </div>
-                <span class="tac-badge ${q.failRate >= 70 ? 'badge-danger-soft' : 'badge-warning-soft'}">${q.failRate}% Fail (${q.fail}/${q.total})</span>
-              </div>
-              <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin-bottom:4px;">
-                <div style="width:${q.failRate}%; height:100%; background:${q.failRate >= 70 ? '#ef4444' : '#f59e0b'}; border-radius:3px;"></div>
-              </div>
-              <div class="d-flex justify-between text-xs" style="font-size:0.68rem; color:#94a3b8;">
-                <span>Target: <strong style="color:#34d399;">${escapeHtml(q.correct)}</strong> &bull; <span style="color:#64748b;">${escapeHtml(q.topic)}</span></span>
-                ${q.wrongSamples && q.wrongSamples.length > 0 ? `<span style="color:#f87171;" title="Sample errors: ${q.wrongSamples.map(escapeHtml).join(', ')}">Errors: "${escapeHtml(q.wrongSamples[0])}"</span>` : ''}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-
-      <!-- ROW: 3 PEDAGOGICAL DEEP-DIVE PANELS (Remedial Watchlist, POS Matrix, Grade Distribution) -->
-      <div class="tac-row-3col">
-        <!-- 1. Remedial Watchlist -->
-        <div class="tac-panel-card" style="border-left:4px solid #8b5cf6;">
-          <div class="tac-panel-header">
-            <span class="tac-panel-title">👥 Remedial Watchlist</span>
-            <button class="btn btn-ghost btn-xs" style="color:#c084fc;" onclick="window._openTestAnalyticsCardModal('strugglers')">View All &#10140;</button>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:0.45rem;">
-            ${strugglersDetailed.slice(0, 4).map((s, idx) => `
-              <div style="background:rgba(255,255,255,0.03); padding:0.45rem 0.65rem; border-radius:6px; border:1px solid rgba(255,255,255,0.05); font-size:0.75rem;">
-                <div class="d-flex justify-between align-center">
-                  <strong style="color:#f8fafc;">#${idx + 1}. ${escapeHtml(formatStudentShortName(s.name))}</strong>
-                  <span class="tac-badge badge-purple-soft">${s.count} Retakes</span>
-                </div>
-                <div class="d-flex justify-between mt-1 text-xs" style="color:#94a3b8; font-size:0.68rem;">
-                  <span>Initial: ${s.firstScore}% &bull; Best: <strong style="color:#34d399;">${s.maxScore}%${s.maxScore <= 60 ? '<sup style="color:#eab308;">R</sup>' : ''}</strong></span>
-                  <span style="color:#10b981; font-weight:700;">+${s.delta}%</span>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-          <div class="mt-2 text-xs text-muted" style="font-size:0.68rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:0.35rem;">
-            👻 ${inactiveStudentsCount} active students with 0 attempts
-          </div>
-        </div>
-
-        <!-- 2. Linguistic POS Matrix -->
-        <div class="tac-panel-card" style="border-left:4px solid #6366f1;">
-          <div class="tac-panel-header">
-            <span class="tac-panel-title">🧬 Linguistic POS Matrix</span>
-            <button class="btn btn-ghost btn-xs" style="color:#a5b4fc;" onclick="window._openTestAnalyticsCardModal('linguistic')">Details &#10140;</button>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:0.55rem;">
-            ${[
-              { name: 'Nouns', tot: posStats.Noun?.tot || 0, cor: posStats.Noun?.cor || 0, color: '#38bdf8' },
-              { name: 'Verbs', tot: posStats.Verb?.tot || 0, cor: posStats.Verb?.cor || 0, color: '#facc15' },
-              { name: 'Adjectives', tot: posStats.Adjective?.tot || 0, cor: posStats.Adjective?.cor || 0, color: '#c084fc' },
-              { name: 'Phrases / Idioms', tot: posStats.Phrase?.tot || 0, cor: posStats.Phrase?.cor || 0, color: '#34d399' }
-            ].map(p => {
-              const acc = p.tot > 0 ? Math.round((p.cor / p.tot) * 100) : 0;
-              return `
-                <div>
-                  <div class="d-flex justify-between align-center mb-1 text-xs">
-                    <span style="color:#cbd5e1; font-weight:600;">${p.name} (${p.tot} Qs)</span>
-                    <strong style="color:${p.color};">${acc}%</strong>
+            <div class="tac-wall-grid" id="tac-wall-items-container">
+              ${hardestQsTop10.map((q, idx) => `
+                <div class="tac-wall-item" data-wall-domain="${q.domain}">
+                  <div class="d-flex justify-between align-center text-xs" style="font-size:0.7rem;">
+                    <div class="d-flex align-center gap-1" style="overflow:hidden; white-space:nowrap;">
+                      <strong style="color:#f8fafc;">#${idx + 1}.</strong>
+                      <span style="font-weight:700; color:#f8fafc; overflow:hidden; text-overflow:ellipsis;">"${escapeHtml(q.text)}"</span>
+                      <span class="tac-badge ${q.domain === 'phrase' ? 'badge-success-soft' : 'badge-blue-soft'}" style="font-size:0.55rem; padding:1px 4px;">${escapeHtml(q.wordType)}</span>
+                    </div>
+                    <span class="tac-badge ${q.failRate >= 70 ? 'badge-danger-soft' : 'badge-warning-soft'}" style="font-size:0.6rem; flex-shrink:0;">${q.failRate}% Fail (${q.fail}/${q.total})</span>
                   </div>
-                  <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
-                    <div style="width:${acc}%; height:100%; background:${p.color}; border-radius:3px;"></div>
+                  <div style="height:3px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; margin:2px 0;">
+                    <div style="width:${q.failRate}%; height:100%; background:${q.failRate >= 70 ? '#ef4444' : '#f59e0b'}; border-radius:2px;"></div>
+                  </div>
+                  <div class="d-flex justify-between text-xs" style="font-size:0.64rem; color:#94a3b8; line-height:1.1;">
+                    <span style="overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">Target: <strong style="color:#34d399;">${escapeHtml(q.correct)}</strong></span>
+                    ${q.wrongSamples && q.wrongSamples.length > 0 ? `<span style="color:#f87171; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:45%; text-align:right;" title="Errors: ${q.wrongSamples.map(escapeHtml).join(', ')}">"${escapeHtml(q.wrongSamples[0])}"</span>` : ''}
                   </div>
                 </div>
-              `;
-            }).join('')}
+              `).join('')}
+            </div>
           </div>
-        </div>
 
-        <!-- 3. Official TopsCore Grade Distribution -->
-        <div class="tac-panel-card" style="border-left:4px solid #10b981;">
-          <div class="tac-panel-header">
-            <span class="tac-panel-title">🏆 Grade Distribution (Rule 2.10)</span>
-            <button class="btn btn-ghost btn-xs text-success" onclick="window._openTestAnalyticsCardModal('fapr')">Curve &#10140;</button>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:0.35rem;">
-            ${gradePalette.map(g => {
-              const pct = Math.round((g.count / totalGraded) * 100);
-              return `
-                <div style="font-size:0.72rem;">
-                  <div class="d-flex justify-between align-center mb-1">
-                    <span style="font-weight:700; color:${g.color};">${g.sym} &bull; ${g.label}</span>
-                    <span style="color:#94a3b8;">${g.count} (${pct}%)</span>
+        </div><!-- END tac-col-left -->
+
+        <!-- RIGHT COLUMN: Student Diagnostics & Distribution (~40% width) -->
+        <div class="tac-col-right tac-row-3col">
+
+          <!-- 1. Remedial Watchlist -->
+          <div class="tac-subpanel" style="border-left:4px solid #8b5cf6;">
+            <div class="tac-panel-header">
+              <span class="tac-panel-title">👥 Remedial Watchlist</span>
+              <button class="btn btn-ghost btn-xs" style="color:#c084fc; font-size:0.65rem;" onclick="window._openTestAnalyticsCardModal('strugglers')">View All &#10140;</button>
+            </div>
+            <div class="tac-subpanel-body">
+              ${strugglersDetailed.slice(0, 3).map((s, idx) => `
+                <div style="background:rgba(255,255,255,0.03); padding:3px 6px; border-radius:5px; border:1px solid rgba(255,255,255,0.05); font-size:0.7rem;">
+                  <div class="d-flex justify-between align-center">
+                    <strong style="color:#f8fafc;">#${idx + 1}. ${escapeHtml(formatStudentShortName(s.name))}</strong>
+                    <span class="tac-badge badge-purple-soft" style="font-size:0.58rem;">${s.count} Retakes</span>
                   </div>
-                  <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
-                    <div style="width:${pct}%; height:100%; background:${g.color}; border-radius:2px;"></div>
+                  <div class="d-flex justify-between mt-1 text-xs" style="color:#94a3b8; font-size:0.64rem;">
+                    <span>Initial: ${s.firstScore}% &bull; Best: <strong style="color:#34d399;">${s.maxScore}%${s.maxScore <= 60 ? '<sup style="color:#eab308;">R</sup>' : ''}</strong></span>
+                    <span style="color:#10b981; font-weight:700;">+${s.delta}%</span>
                   </div>
                 </div>
-              `;
-            }).join('')}
+              `).join('')}
+            </div>
+            <div style="font-size:0.62rem; color:#94a3b8; border-top:1px solid rgba(255,255,255,0.06); padding-top:0.2rem; margin-top:0.15rem; flex-shrink:0;">
+              👻 ${inactiveStudentsCount} active students with 0 attempts
+            </div>
           </div>
-        </div>
-      </div>
-      </div><!-- END tac-analytics-content -->
-    </div>
+
+          <!-- 2. Linguistic POS Matrix -->
+          <div class="tac-subpanel" style="border-left:4px solid #6366f1;">
+            <div class="tac-panel-header">
+              <span class="tac-panel-title">🧬 Linguistic POS Matrix</span>
+              <button class="btn btn-ghost btn-xs" style="color:#a5b4fc; font-size:0.65rem;" onclick="window._openTestAnalyticsCardModal('linguistic')">Details &#10140;</button>
+            </div>
+            <div class="tac-subpanel-body">
+              ${[
+                { name: 'Nouns', tot: posStats.Noun?.tot || 0, cor: posStats.Noun?.cor || 0, color: '#38bdf8' },
+                { name: 'Verbs', tot: posStats.Verb?.tot || 0, cor: posStats.Verb?.cor || 0, color: '#facc15' },
+                { name: 'Adjectives', tot: posStats.Adjective?.tot || 0, cor: posStats.Adjective?.cor || 0, color: '#c084fc' },
+                { name: 'Phrases / Idioms', tot: posStats.Phrase?.tot || 0, cor: posStats.Phrase?.cor || 0, color: '#34d399' }
+              ].map(p => {
+                const acc = p.tot > 0 ? Math.round((p.cor / p.tot) * 100) : 0;
+                return `
+                  <div>
+                    <div class="d-flex justify-between align-center text-xs" style="font-size:0.68rem; margin-bottom:1px;">
+                      <span style="color:#cbd5e1; font-weight:600;">${p.name} (${p.tot} Qs)</span>
+                      <strong style="color:${p.color};">${acc}%</strong>
+                    </div>
+                    <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
+                      <div style="width:${acc}%; height:100%; background:${p.color}; border-radius:2px;"></div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- 3. Official TopsCore Grade Distribution -->
+          <div class="tac-subpanel" style="border-left:4px solid #10b981;">
+            <div class="tac-panel-header">
+              <span class="tac-panel-title">🏆 Grade Distribution (Rule 2.10)</span>
+              <button class="btn btn-ghost btn-xs text-success" style="font-size:0.65rem;" onclick="window._openTestAnalyticsCardModal('fapr')">Curve &#10140;</button>
+            </div>
+            <div class="tac-subpanel-body">
+              ${gradePalette.map(g => {
+                const pct = Math.round((g.count / totalGraded) * 100);
+                return `
+                  <div style="font-size:0.66rem;">
+                    <div class="d-flex justify-between align-center" style="margin-bottom:1px;">
+                      <span style="font-weight:700; color:${g.color};">${g.sym} &bull; ${g.label}</span>
+                      <span style="color:#94a3b8;">${g.count} (${pct}%)</span>
+                    </div>
+                    <div style="height:3px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
+                      <div style="width:${pct}%; height:100%; background:${g.color}; border-radius:2px;"></div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+        </div><!-- END tac-col-right -->
+
+      </div><!-- END tac-main-split -->
+    </div><!-- END test-analytics-dashboard -->
   `;
 
   // Wire Class Switching Controller (synchronizes topbar tabs + header badge)

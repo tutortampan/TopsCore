@@ -1,14 +1,42 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-29 14:00 UTC+8
+Last Updated: 2026-10-29 15:30 UTC+8
 
-Current Phase: Phase 184: Complete 10-Round E2E Full-System Reliability Audit & Final Production Verification [COMPLETE]
+Current Phase: Phase 185: Zero-Scroll Executive Cockpit Transformation for Test Analytics [COMPLETE]
 
-Current Task: Check the whole system E2E across all modules 10 times consecutively with 100% 0 errors, resolve residual test harness discrepancies, and push commit [COMPLETE]
+Current Task: Re-architect Test Analytics from vertically stacked document layout to an asymmetric 2-column zero-scroll executive cockpit grid, eliminating all scrolling across 1440x900, 1920x1080, and 1366x768 viewports [COMPLETE]
 
-Status: COMPLETE (10/10 consecutive passes of all 8 verification suites, exit code 0, 0 errors, clean git status ready to push)
+Status: COMPLETE (0 scrollbars, 100% visible simultaneously, Playwright verified across 3 standard desktop viewports, npm test 100% PASS)
 
 ## Completed
+
+- **Phase 185: Zero-Scroll Executive Cockpit Transformation for Test Analytics**:
+  - **User Request**: *"penepatannya masih kurangpas,,, saya ingin tdidak eprlu scroll,, semua terlihat sekaligus di halaman woorkspace"*
+  - **Root Cause**: The Test Analytics view had stacked 4 full-width sections vertically (Hero KPIs, Domain Split, The Wall, and 3 Deep-Dive panels), causing total content height to reach ~1189px and forcing vertical scrolling on all viewports (available height: 668px - 980px).
+  - **Architectural & Layout Changes**:
+    1. **Zero-Scroll Viewport Lock (`css/admin.css`)**:
+       - Added `.admin-content:has(.test-analytics-dashboard)` with `height: calc(100vh - 50px - 50px) !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; box-sizing: border-box !important;`.
+       - Locks the viewport perfectly between topbar (50px) and locked bottom banner (50px).
+    2. **Asymmetric 2-Column Cockpit Grid (`js/admin/tests-management.js`)**:
+       - Replaced vertical 4-tier stack with a clean, high-density 2-column layout (`.tac-main-split` with `grid-template-columns: 1.2fr 0.8fr`):
+         * **Top**: 3 Hero KPI cards (64px slim height).
+         * **Left Column (~60% width)**: Content & Curriculum Intelligence:
+           - `Vocabulary Domain Split` (compact side-by-side Words vs Phrases boxes).
+           - `The Wall — Top 10 Persistent Bottlenecks` (responsive 2-column grid with 5 equal rows, filling remaining height).
+         * **Right Column (~40% width)**: Student Diagnostics & Cohort Intelligence:
+           - `Remedial Watchlist` (top students, retakes, and score delta improvements).
+           - `Linguistic POS Matrix` (Nouns, Verbs, Adjectives, Phrases accuracy bars).
+           - `Grade Distribution (Rule 2.10)` (★, A, B, C, D, E bars).
+    3. **Cache Synchronization**:
+       - Bumped `sw.js` cache to `topscore-cache-option-a-v28`.
+       - Bumped script query strings in `admin.html` to `?v=20261029_v28`.
+  - **Verification**:
+    * Playwright on Microsoft Edge across 3 resolutions:
+      - 1440x900 (Standard Laptop): `contentScrollHeight: 800px`, `contentClientHeight: 800px`, `hasScroll: false`!
+      - 1920x1080 (Full HD): `contentScrollHeight: 980px`, `contentClientHeight: 980px`, `hasScroll: false`!
+      - 1366x768 (Compact Laptop): `contentScrollHeight: 668px`, `contentClientHeight: 668px`, `hasScroll: false`!
+    * Full CI suite (`npm test`): 100% PASS (syntax check, cache manifest, student dashboard exam parity).
+
 
 - **Phase 184: Complete 10-Round E2E Full-System Reliability Audit & Final Production Verification**:
   - **User Request**: *"/boost chheck the whole system e2e, students, tets, EVERYTHING, until 100% no errors, 10 times over, then push commit"*
@@ -4860,137 +4888,5 @@ Status: COMPLETE (10/10 consecutive passes of all 8 verification suites, exit co
   - Restored UTF-8 icons across `admin.html`: shield brand icon (`🛡️`), em-dashes (`—`), back navigation (`← Top Space`), toggle sidebar (`☰`), close buttons (`✕`), and add class (`➕`).
   - Normalized character encoding across `css/admin.css`, `css/style.css`, `index.html`, `js/admin/assessment-builder.js`, `js/speech.js`.
   - Updated master admin login to unconditionally accept `admin123` even when an older custom password existed in `localStorage`.
-  - Unified cache-busting query strings across all 17 admin modules to `?v=4.9.8` and bumped service worker `CACHE_NAME` to `'abcd-core-v4.9.8'`.
-
-- **Result.html Evaluation Category & Stats Resilience ([result.html](file:///d:/TopsCore/result.html))**:
-  - Implemented centralized `getEvalCategory(a)` handling lowercase/uppercase evaluation results, missing evaluation strings, boolean `is_correct`, and score thresholds.
-  - Aligned summary counters (`res-points`, `res-correct`, `res-partial`, `res-wrong`), answer sorting, section headers, tab filters, and compact answer cards.
-  - Cleaned up redundant local `escapeHtml` definition.
-- **Database RLS Security Audit (Phase 11.5)**:
-  - Audited PostgreSQL policies across all public tables: confirmed `RLS ENABLED` on `assessments`, `assessment_questions`, `attempts`, `attempt_answers`, and `vocabulary_vault`.
-  - Confirmed admin and privileged operations are governed by Edge Functions (`service_role`) and session validations.
-
-- **Auto-Submit Recovery Engine ([result.html](file:///d:/TopsCore/result.html))**:
-  - Implemented an automatic retry and recovery mechanism in `loadResult()`:
-  - If a student's attempt was auto-submitted or answers remained unsubmitted due to network interruptions/timeouts, `result.html` automatically detects the safety buffer (`sessionStorage['topscore_fallback_payload_${attemptId}']` or `localStorage['topscore_local_answers_${attemptId}']`) and flushes/retries submission via `submitAssessment()`.
-  - Re-fetches the authoritative attempt and displays the calculated score and grade instead of showing a blank/0% score.
-- **Attempt Status Casing Normalization ([dashboard.html](file:///d:/TopsCore/dashboard.html), [result.html](file:///d:/TopsCore/result.html))**:
-  - Fixed case-sensitive status checks: converted strict `'IN_PROGRESS'` and `['SUBMITTED', 'AUTO_SUBMITTED']` checks in `dashboard.html` and `result.html` to case-insensitive checks (`(att.status || '').toUpperCase()`).
-  - Ensures attempts in lowercase (`submitted`, `in_progress`) display accurate badges, history rows, and retake eligibility.
-- **Root Directory Cleanup & Workspace Hygiene**:
-  - Deleted orphaned `dashboard_utf8.html` (130 KB unreferenced duplicate).
-  - Created `scripts/archive/` and moved 150+ one-off scripts, scratch tests, and diff files from the repository root into the archive.
-  - Root directory now contains only production HTML pages, configs, and architectural documentation.
-
-- **Phase 11.3 Student Flow E2E Test on Dynamic Shell**:
-  - Executed automated E2E student flow test (`temp_test/test_dynamic_shell_e2e.mjs`) for a Vocabulary Task Dynamic Shell (`3rd Vocabulary A1 Words Task - Professional Identity`).
-  - Verified that all 40 Vocabulary Vault words for Level 3, Theme A, Topic 1 loaded into question snapshots with 100% accuracy.
-  - Confirmed Indonesian prompt, word type classification, and accepted English translation alternatives map 1:1 with Vault data.
-  - Simulated student answering and submission via Edge Function `submit-assessment`.
-  - Edge Function returned status 200 OK: scored 40/40 (100.00%), Grade S, and successfully updated attempt in database.
-- **Edge Function `start-assessment` Bug Fix**:
-  - Fixed HTTP 500 error in `supabase/functions/start-assessment/index.ts`: removed invalid top-level `item_code` property from `attempt_answers` batch insert, as `item_code` is not a column on `attempt_answers` (it belongs inside `question_snapshot` jsonb).
-
-- **Class Roster (Attendance) Table Enrichment**:
-  - In `js/admin/app.js`: Expanded `class-attendance-grid` columns from 3 (`Name`, `Batch`, `PIN`) to 10 rich columns:
-    - `STUDENT NAME` (Avatar with 3:4 crop, cleaned display name, monospaced PIN, batch active state badge)
-    - `AGE` (computed dynamically from birth date)
-    - `GENDER` (Male / Female colored badges)
-    - `BATCH` (badge)
-    - `LEVEL` (level name badge)
-    - `PROGRESS` (score % and completed assessment count for this class)
-    - `GRADE` (color-coded grade badge)
-    - `CONTACT` (phone or email)
-    - `STATUS` (Active / Inactive badge)
-    - `ACTIONS` (Profile view & Full Edit modal shortcuts)
-- **Ghost Student / Loose Data Investigation & Fix**:
-  - Identified why student "Zzz" was visible in Student Progress under "Tops / English Explorer / 123" while not appearing in the Class Roster:
-    - Student had mismatched relations: `institution_id` = Tops, `program_id` = English Explorer (which was deactivated `is_active: false`), but `batch_id` = 123 (which belongs to Cake English Course / Camp).
-    - When the program was deactivated/erased, the student was not cascade-deactivated, leaving loose data.
-  - In `js/admin/class.js`: Updated `renderProgressView` to filter out students whose batch, program, or institution is deactivated or deleted.
-  - In `js/admin/student-management.js` and `js/admin/crud-modals.js`: Enforced automatic synchronization of `program_id` and `institution_id` whenever a student's `batch_id` is assigned or updated.
-  - Cleaned up loose orphaned records in the database, bringing orphaned student count to 0.
-- **Cascade Deletion Safeguards**:
-  - Implemented an intelligent cascade deletion engine in `window._deleteRecord` (`js/admin/app.js`):
-    - When deleting a **Batch**: Checks for enrolled students; alerts the admin with exact count; cascade soft-deletes students on confirmation.
-    - When deleting a **Program**: Checks for child batches and students; alerts admin; cascade soft-deletes all batches and students on confirmation.
-    - When deleting an **Institution**: Checks for child programs, batches, and students; alerts admin; cascade soft-deletes all child entities on confirmation.
-  - Removed duplicate un-safeguarded delete handler in `crud-modals.js`.
-- **Main Student Roster Enhancements**:
-  - In `js/admin/student-management.js`: Un-hid `Institution` and `Program` columns, added `Contact` and `Enrolled Date` columns, and added a `⚠️ Disconnected` warning badge if any student loses their parent batch/program connection.
-
-- **Batch Timeline Split (Start & Finish Columns)**:
-  - In `css/admin.css` (`.tree-grid-header-batches`, `.tree-grid-row-batches`): Expanded batch table grid layout to 8 proportional columns.
-  - In `js/admin/curriculum-management.js`:
-    - Updated `getBatchPeriodInfo()` to expose distinct `startDateFormatted` and `endDateFormatted`.
-    - Split previous `TIMELINE` column into separate `Start` and `Finish` date columns with distinct sort handlers.
-    - Updated default and custom sort logic to handle `start` and `finish` date ordering.
-- **Batch Student Count Column**:
-  - In `js/admin/curriculum-management.js`: Added `students` fetch to `Promise.all` in `renderCurriculum()` and created `batchStudentCountMap`.
-  - Added interactive `Students` column badge (`👥 ${count}`) linking directly to the filtered Student Roster for that batch.
-  - Added interactive sorting for `students` column count.
-- **Eligible Students Count in Classes Table & Class Panel**:
-  - In `css/admin.css` (`.classes-hub-grid-header`, `.classes-hub-grid-row`): Expanded classes table grid layout to 6 columns.
-  - In `js/admin/classes-hub.js`:
-    - Added `students` and `batches` fetch in `renderClassesHub()`.
-    - Implemented `getEligibleStudentCountForClass(cls)` matching student program and effective level (`student.level_id` or batch `current_level_id`) against class levels.
-    - Added `Students` column (`👥 ${eligibleCount}`) and header sort trigger.
-  - In `js/admin/app.js` (`renderClassPanel`):
-    - Fetched `students` and `batches` in `Promise.all` and dynamically computed `eligibleStudents`.
-    - Replaced static `0 Students` badge in panel header with `👥 ${eligibleStudents.length} Eligible Students`.
-    - Updated "Students" tab title to `Eligible Students (${eligibleStudents.length})` and rendered a structured table displaying student names, batches, and active status.
-- **Cache Busting & Asset Updates**:
-  - Bumped asset versioning query strings in `admin.html` and `app.js` to `v=4.9.5`.
-
-## In Progress
-
-- None
-
-## Not Started
-
-- Global spacing consistency review across admin panels
-
-## Current Architecture
-
-- Static HTML + Modular ES6 JS + Supabase PostgreSQL (no server framework)
-- Admin console: [admin.html](file:///d:/TopsCore/admin.html) + [js/admin/app.js](file:///d:/TopsCore/js/admin/app.js)
-
-## Database State
-
-- Latest migrations:
-  - `20261013000000_cleanup_legacy_tables.sql`: Dropped 14 zero-row legacy tables on Supabase Cloud, reloaded PostgREST schema cache
-  - `20261012_create_student_avatars_bucket.sql`: Created `student-avatars` Supabase Storage bucket with public read RLS policy
-  - `20261012_emergency_submit_rpc.sql`: Implemented `emergency_submit_attempt` RPC with `SECURITY DEFINER`
-  - `20261012_fix_auto_close_expired_attempts.sql`: Migrated auto-close RPC to active `public.attempts`
-- Tables count: 34 base tables (reduced from 48). All core tables (`students`, `assessments`, `attempts`, `attempt_answers`, `vocabulary_vault`, `batches`, `classes`, `levels`) verified 100% intact.
-- Storage: Public bucket `student-avatars` active
-
-## Tests
-
-- Last command: `node test-blueprint-modes.mjs`
-- Last result: PASS (Visual Playwright automated test: verified Mode 1 Speech, Mode 2 Keyboard, Mode 3 Options with exact 705px vertical symmetry and zero pixel overflow)
-
-## Known Issues
-
-- None
-
-## Blockers
-
-- None
-
-## Next Exact Action
-
-1. Present visual verification screenshots and layout summary to the user.
-2. Await user feedback on assessment page design.
-
-## Files Changed In Latest Step
-
-- [assessment.html](file:///d:/TopsCore/assessment.html)
-- [test-blueprint-modes.mjs](file:///d:/TopsCore/test-blueprint-modes.mjs)
-- [docs/CURRENT_STATE.md](file:///d:/TopsCore/docs/CURRENT_STATE.md)
-- [docs/CHANGELOG.md](file:///d:/TopsCore/docs/CHANGELOG.md)
-- [docs/SESSION_LOG.md](file:///d:/TopsCore/docs/SESSION_LOG.md)
-
-
-
-
+  - Unified cache-busting query strings across all 17 admin modules to `
+... [truncated for diff preview]

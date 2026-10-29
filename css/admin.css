@@ -3391,6 +3391,30 @@ tr.deleted-row td {
 }
 
 /* ============================================================
+   ZERO-SCROLL TEST ANALYTICS MISSION CONTROL VIEWPORT LOCK
+   ============================================================ */
+.admin-content:has(.test-analytics-dashboard) {
+  padding: 6px 10px 0 10px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  height: calc(100vh - 50px - 50px) !important;
+}
+
+.test-analytics-dashboard {
+  flex: 1 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* ============================================================
    ZERO-SCROLL VOCABULARY VAULT VIEWPORT LOCK
    ============================================================ */
 .admin-content:has(#vault-tab-content) {
