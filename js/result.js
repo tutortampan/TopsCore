@@ -6,6 +6,7 @@
  */
 
 import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startTest, submitTest, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial } from './api.js?v=5.6.5';
+import { isExam } from './grading.js?v=5.6.8';
 import { getStudentSession, getAdminSession } from './session.js?v=5.5.8';
 import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=5.8.5';
 import { getSupabase } from './supabase.js?v=5.5.8';
@@ -52,7 +53,6 @@ if (!session) {
         LISTENING: 'Listening',
         READING: 'Reading',
         WRITING: 'Writing',
-        TASK: 'Quiz',
         TEST: 'Exam',
         EXAM: 'Exam',
         QUIZ: 'Quiz',
@@ -397,15 +397,13 @@ if (!session) {
           container.innerHTML = `
             <div style="background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.22); border-radius:10px; padding:6px 12px; text-align:center; margin-bottom:4px;">
               <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:#34D399; font-weight:700;">🎉 Level Curriculum Complete</div>
-              <div style="font-size:12px; font-weight:600; color:#E2E8F0; margin-top:2px;">All tasks and tests completed!</div>
+              <div style="font-size:12px; font-weight:600; color:#E2E8F0; margin-top:2px;">All tests completed!</div>
             </div>
           `;
           return;
         }
 
-        const isTest = (nextAsm.test_category || '').toUpperCase() === 'TEST' ||
-                       (nextAsm.test_type || '').toUpperCase().includes('TEST') ||
-                       (nextAsm.title || '').toUpperCase().includes('TEST');
+        const isTest = isExam(nextAsm);
 
         const nextName = nextAsm.title || nextAsm.shell_code || 'Next Test';
 
@@ -928,7 +926,7 @@ if (!session) {
         if (crumbEl) {
           const className = asmData?.classes?.name || 'VOCABULARY';
           const levelName = asmData?.levels?.name || 'LEVEL 3';
-          const asmCategory = (asmData?.test_category || asmData?.test_type || 'TASK').toUpperCase();
+          const asmCategory = (asmData?.category || asmData?.test_type || 'QUIZ').toUpperCase();
           crumbEl.textContent = `${className.toUpperCase()} • ${levelName.toUpperCase()} • ${humanizeType(asmCategory).toUpperCase()}`;
         }
 

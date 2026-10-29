@@ -1,3 +1,546 @@
+## [2026-10-29 09:27] — Phase 180: Removal of Redundant In-Page Hero Header Banner
+
+**Agent/Session:** Antigravity / SESSION-20261029-0927
+**Phase:** Phase 180
+**Status:** PASS
+
+### Why
+- The user pointed out via screenshot (`media_1793236857059_e94ddd76.png`) that the `.tac-hero-header` ("Test Analytics Mission Control" title, subtitle, track badge, and refresh button) was redundant since the class tabs and counts already exist in the top bar and "Test Analytics" is already selected in the primary sidebar.
+- Removing this redundant banner eliminates ~80px of vertical dead space, matching the clean design pattern used in `Vocab Vault` and `Classes Hub`.
+
+### Changed
+- `js/admin/tests-management.js`:
+  - Removed `.tac-hero-header` HTML container (including title, subtitle, `#tac-header-level-badge`, and refresh button).
+  - Removed `.tac-hero-header`, `.tac-hero-title`, and `.tac-hero-subtitle` CSS definitions.
+  - Removed unused DOM update for `#tac-header-level-badge` from `window._switchClassTestAnalytics`.
+  - Content now starts immediately with the 4 Top Hero KPIs.
+- `sw.js`: Bumped cache name to `topscore-cache-option-a-v25`.
+- `admin.html`: Bumped cache busting query to `?v=20261029_v25`.
+
+### Verification
+- `scratch/verify_topbar_tabs_final.mjs`: Playwright on Microsoft Edge verified `.tac-hero-header` and `#tac-header-level-badge` are completely removed, and the 4 Hero KPIs render directly at the top. Topbar tab switching functions 100%. Screenshot saved to `test_analytics_no_redundant_header.png`.
+- `node --check js/admin/tests-management.js`: Syntax passed with 0 errors.
+
+---
+
+## [2026-10-29 09:15] — Phase 179: Elimination of Curriculum Tests Explorer & Full Topbar Class Tabs Integration
+
+**Agent/Session:** Antigravity / SESSION-20261029-0915
+**Phase:** Phase 179
+**Status:** PASS
+
+### Why
+- User Request: *"the curriculum test explorer is not needed,,, get rid of it,,, the top tabs needs to beplaced on the the top bar as other areas"*.
+- The user wanted to eliminate the redundant Curriculum Tests Explorer sub-tab/table and elevate the class selector tabs directly into the top bar (`#topbar-tabs-container`), exactly matching TopsCore's unified administrative pattern (as in Classes Hub, Vocab Vault, and Student Registration).
+- The Test Analytics view (`admin.html#tests`) becomes an executive Mission Control cockpit with zero UI duplication.
+
+### Changed
+- `js/admin/tests-management.js`:
+  - **Eliminated Curriculum Tests Explorer**:
+    * Removed `#test-view-curriculum`, `#curriculum-tests-table`, `.tac-curriculum-table-container`, and the Option A sub-tab view switcher (`.test-analytics-view-tabs`, `#tab-btn-analytics`, `#tab-btn-curriculum`).
+    * Removed the in-page `.tac-class-navbar` container from `area.innerHTML`.
+  - **Class Tabs Mounted to Top Bar (`#topbar-tabs-container`)**:
+    * Implemented `buildClassTopbarTabs(activeId)` using `setTopbarTabs(tabs, activeId, onSelect)`.
+    * Tabs rendered: `📚 3rd Vocabulary (40)` (Active default), `📖 1st Storytelling (0)`, `📖 2nd Storytelling (0)`, `🎙️ Speaking Projects (0)`, `🗣️ Public Speaking (0)`, `🔤 Basic English (0)`, and `🌐 All Classes (40)`.
+    * Synchronized `window._switchClassTestAnalytics(classId)`: clicking a topbar tab updates the active highlight in `#topbar-tabs-container`, updates the hero level badge (`#tac-header-level-badge`), toggles Vocab Words vs. Phrases split card visibility, and displays the empty track alert for classes with 0 tests.
+  - **Clean Test Analytics Cockpit Layout**:
+    * 4 Top Hero KPIs: Integrity Radar, Mastery & FAPR, The Wall (Top Bottlenecks), Pacing Velocity.
+    * Vocab Domain Split Deep-Dive: Single-Word Vocabulary vs Phrases & Idioms Mastery (with contraction and punctuation tolerance).
+    * The Wall Top 10 Bottlenecks with domain tagging, English target answers, topics, failure bars, and student error samples.
+    * 24-Hour Peak WITA Traffic Heatmap.
+    * 3 Visual Intelligence Cards: Remedial Watchlist, Linguistic POS Matrix, Official Grade Distribution (`★`, `A`, `B`, `C`, `D`, `E`).
+    * 2 Specialized Intelligence Cards: Speech Audio Review Queue with 1-click override, and Test Difficulty Spectrum.
+- `sw.js`: Bumped cache name to `topscore-cache-option-a-v24`.
+- `admin.html`: Bumped cache busting query to `?v=20261029_v24`.
+
+### Verification
+- `scratch/verify_topbar_tabs_final.mjs`: Live Microsoft Edge Playwright test verified:
+  1. Topbar tabs correctly placed in `#topbar-tabs-container` inside the top bar header with active tab `3rd Vocabulary (40)`: PASS.
+  2. Curriculum Tests Explorer and inline `.tac-class-navbar` are completely gone from the body: PASS.
+  3. Test Analytics Mission Control cockpit verified: 4 Hero KPIs, Vocab Domain Split Card, The Wall Top 10 Bottlenecks, 24-hour WITA heatmap: PASS.
+  4. Live topbar tab switching: Clicking `1st Storytelling (0)` updates active highlight in top bar, updates header badge to `1ST STORYTELLING • 0 TESTS`, displays empty track notice; switching back restores `3rd Vocabulary (40)` and full analytics: PASS.
+  5. Screenshot captured: `test_analytics_topbar_tabs_clean.png`.
+- `scripts/check_all_js_syntax.cjs`: All 40 JS files passed syntax validation (node --check): PASS.
+- `npm.cmd test`: All syntax, manifest assets, and student exam parity tests passed 100%: PASS.
+
+---
+
+## [2026-10-29 08:50] — Phase 178: Curriculum Class Cockpit, Vocab Words vs. Phrases Mastery, Expanded The Wall (Top 10), and Table View for Curriculum Explorer
+
+**Agent/Session:** Antigravity / SESSION-20261029-0850
+**Phase:** Phase 178
+**Status:** PASS
+
+### Why
+- The user requested four specific architectural enhancements to Test Analytics:
+  1. *"dalam tab test analysisi perlu dibuat pembagian tab atas berdsarkan nama kelas, sebab nanti ini akan jadi pusat semua test"*: Class-based upper selector tabs to make Test Analytics the central command center for all tests across curriculum classes.
+  2. *"perlu dibagi khusus untuk Vocab analisa words and phrase"*: Dedicated comparative breakdown between single-word vocabulary and multi-word conversational phrases for `3rd Vocabulary`.
+  3. *"the wall also need more content"*: Expand "The Wall" from 5 items to Top 10 Persistent Bottlenecks with domain tagging, English target answers, topics, failure rates, and real student mistake samples.
+  4. *"curriculum explorer jangan betuk kartu tapi tabel"*: Replace the test cards grid in Curriculum Tests Explorer with a clean, high-density, professional data table matching the reference layout in `media_1793230861362_8f9f2067.png`.
+
+### Changed
+- `js/admin/tests-management.js`:
+  - **Query Upgrade**: Updated `attempt_answers` query to fetch `topic_snapshot`, `correct_answer_snapshot`, `accepted_answers_snapshot`, and `student_answer` for precise bottleneck diagnostics.
+  - **Curriculum Class Upper Navigation Bar (`.tac-class-navbar`)**: Added class selector tabs dynamically generated from `allBoardClasses` (`3rd Vocabulary [40]`, `1st Storytelling [0]`, `2nd Storytelling [0]`, `Speaking Projects [0]`, `Public Speaking [0]`, `Basic English [0]`, and `🌐 All Classes [40]`). Implemented `window._switchClassTestAnalytics(classId)` for instant track filtering.
+  - **Vocabulary Domain Split: Words vs. Phrases Mastery Card (`#tac-vocab-domain-section`)**:
+    * Single-Word Mastery: 20 Tests, 602 submissions, 47% avg score, 73% FAPR, 53% remedial rate.
+    * Phrases & Idioms Mastery: 20 Tests, 389 submissions, 63% avg score, 81% FAPR, 37% remedial rate (with contraction tolerance & punctuation ignoring).
+    * Domain filter pills: `🌐 All Vocab`, `🔤 Words`, `💬 Phrases` with `window._filterVocabDomain(domainKey)`.
+  - **The Wall (Top 10 Persistent Bottlenecks)**:
+    * Expanded display to Top 10 curriculum bottlenecks with Rank (#1-#10), domain badges (`🔤 Word` / `💬 Phrase`), prompts, English target answers, curriculum topic origins, failure rates (`X% Fail (Y/Z)`), and sample student errors.
+    * Domain filter pills: `All Top 10`, `🔤 Words`, `💬 Phrases` with `window._filterWallBottlenecks(filterKey)`.
+  - **Curriculum Tests Explorer: Table View (`#curriculum-tests-table`)**:
+    * Replaced card grid with high-density table matching user specification.
+    * Columns: `#`, `TITLE`, `DOMAIN` (Words/Phrases badge), `TYPE` (Quiz/Exam badge), `DUR.`, `QS` (Vault/regular count), `TAKERS`, `AVG SCORE` (Rule 2.10 Grade badge), `REM. %` (with `R` superscript), `PACING`, `INTEGRITY` (Anti-cheat flags), `STATUS`, and `ACTIONS`.
+    * Maintained live search and category/domain filter pills (`Theme A-D`, `Quizzes`, `Exams`, `Words`, `Phrases`).
+    * Table row click opens the comprehensive Test Blueprint & Telemetry Drawer (`window._openTestCardDrawer`).
+- `sw.js`: Bumped cache name to `topscore-cache-option-a-v23`.
+- `admin.html`: Bumped cache busting query to `?v=20261029_v23`.
+
+### Verification
+- `scratch/verify_class_tabs_vocab_table.mjs`: Live Microsoft Edge Playwright test verified:
+  1. Class Navigation Bar: 7 tabs rendered, active track correctly set to `3rd Vocabulary (40 Tests)`: PASS.
+  2. Vocab Domain Split: Words box (47% [D], 73% FAPR) & Phrases box (63% [C], 81% FAPR), filter pills toggle view seamlessly: PASS.
+  3. The Wall Top 10 Bottlenecks: 10 items with target answers, topics, failure bars, and student mistake samples: PASS.
+  4. Curriculum Tests Table: `#curriculum-tests-table` with 13 columns, 40 rows rendered, Rule 2.10 badges, row click opens Drawer: PASS.
+  5. Class Switching: Switching to `1st Storytelling` shows empty track state, switching back restores 40 tests: PASS.
+- Visual Artifacts:
+  - `class_tabs_vocab_analytics.png`: Test Analytics with Class Navbar, Vocab Split card, and The Wall Top 10.
+  - `curriculum_tests_table_view.png`: Curriculum Tests Explorer in high-density professional table view.
+  - `class_switching_verified.png`: Class track switching verified.
+- `scripts/check_all_js_syntax.cjs`: All 40 JS files passed syntax validation (node --check): PASS.
+- `npm.cmd test`: All syntax, manifest assets, and student exam parity tests passed 100%: PASS.
+
+---
+
+## [2026-10-29 08:18] — Phase 177: Sub-Tab Separation for Test Analytics vs Curriculum Tests Explorer (Option A)
+
+**Agent/Session:** Antigravity / SESSION-20261029-0818
+**Phase:** Phase 177
+**Status:** PASS
+
+### Why
+- The user requested to separate **Test Analytics** from **Curriculum Tests Explorer** after reviewing the unified layout, choosing **Opsi A** (Sub-tab switcher at the top of the page).
+- This eliminates vertical scroll fatigue, gives the Analytics Mission Control an uncluttered executive appearance, and provides Curriculum Tests Explorer with its own dedicated cards management area without altering the ABCD sidebar hierarchy.
+
+### Changed
+- `js/admin/tests-management.js`:
+  - Added CSS styles for `.test-analytics-view-tabs`, `.tac-view-tab`, `.tac-view-tab.active`, and `.tac-tab-count`.
+  - Added segmented view switcher right beneath the header:
+    * `📊 Test Analytics & Health`
+    * `📚 Curriculum Tests Explorer` (with dynamic badge `40`)
+  - Segmented page into two independent view containers:
+    * `#test-view-analytics`: Holds Row 1 (Hero KPIs), Row 2 (The Wall & WITA Heatmap), Row 3 (Remedial Watchlist, POS Matrix, Grade Curve), and Row 4 (Audio Queue & Test Spectrum).
+    * `#test-view-curriculum`: Holds Row 5 (40 Curriculum Test Cards, Theme navigation pills, live search input, `+ Add Test` button).
+  - Implemented `window._switchTestAnalyticsView(viewKey)` managing active classes, DOM visibility toggling, state caching in `window._activeTestAnalyticsView`, and automatic card re-rendering when entering curriculum view.
+- `sw.js`: Bumped cache name to `topscore-cache-option-a-v22`.
+- `admin.html`: Bumped version query string to `?v=20261029_v22`.
+- `js/admin/app.js`: Bumped tests-management import query string to `?v=5.5.0`.
+
+### Verification
+- `scratch/verify_option_a_tabs.mjs`: Live Playwright Edge test verified:
+  * Default view is Analytics Mission Control with Curriculum section hidden: PASS
+  * Switching to Curriculum Tests Explorer reveals 40 cards and hides analytics panels: PASS
+  * Theme filter pills inside Tab 2 work seamlessly (Theme A: 8, Exams: 8): PASS
+  * Switching back to Analytics restores telemetry view instantly: PASS
+  * Page/Console Errors: 0
+- Visual Artifacts:
+  * `option_a_tab1_analytics.png`: Clean executive cockpit for Test Analytics & Health.
+  * `option_a_tab2_curriculum.png`: Dedicated Curriculum Tests Explorer.
+- `npm.cmd test`: All syntax, manifest assets, and student exam parity tests passed 100%.
+
+---
+
+## [2026-10-29 08:05] — Phase 176: 100% All-Cards Test Analytics Mission Control (Raw Table Eliminated)
+
+**Agent/Session:** Antigravity / SESSION-20261029-0805
+**Phase:** Phase 176
+**Status:** PASS
+
+### Why
+- User feedback indicated that the raw DataGrid table below the intelligence cards looked cluttered and unappealing: *"menurut saya ini belum bagsu"* and explicit mandate: *"janagn ada tabel di bawah itu,,, pakai kartu saja"* (Do NOT have a table below that... use cards only!).
+- The goal was to completely eliminate the table format and transform all 40 curriculum tests into interactive, modern diagnostic cards with instant Theme filtering, live search, telemetry badges, and blueprint inspection drawers.
+
+### Changed
+- `js/admin/tests-management.js`:
+  - **Raw Table Eliminated**: Completely removed `#Tests-grid-container` and its DataGrid table instantiation with columns `TITLE`, `TYPE`, `DUR.`, `QS`, `TAKERS`, `AVG SCORE`, `REM %`, `PACING`, `INTEGRITY`, `STATUS`, and action buttons.
+  - **Removed Redundant Topbar Boxes**: Cleared topbar counter boxes via `window.setTopbarTabs([])` so the page no longer has redundant double headers.
+  - **100% All-Cards Mission Control Architecture**:
+    * Rendered 4 Top Hero KPIs: Integrity Radar, Mastery & FAPR, Pacing Velocity, AI Speech Engine with modal drill-downs.
+    * Rendered 2 Large Visual Panels: The Wall (Top 5 Bottlenecks with fail bars and target answers) and 24-Hour Peak WITA Traffic Heatmap (visual histogram showing 147 peak attempts at 20:00 WITA).
+    * Rendered 3 Visual Panels: Remedial Watchlist (strugglers with delta improvements), Linguistic POS Matrix (Nouns, Verbs, Adjectives, Phrases), and Grade Distribution (Rule 2.10 palette).
+    * Rendered 2 Visual Panels: Audio Review Queue with 1-click `⚡ Override 100%` and Test Difficulty Spectrum (Toughest vs Easiest).
+    * Rendered **Curriculum Tests Explorer (Cards Grid)**:
+      - 40 tests rendered as high-density visual diagnostic cards (`.test-item-card`).
+      - Theme navigation pills: `All Tests (40)`, `Theme A · Workplace (8)`, `Theme B · Tourism (10)`, `Theme C · Culture (12)`, `Theme D · Society (10)`, `⚡ Quizzes Only (32)`, `🏆 Exams Only (8)`.
+      - Live search input: `🔍 Search 40 tests...` with real-time dynamic filtering.
+      - Each card features: Type badge (`⚡ QUIZ` / `🏆 EXAM`), Theme badge, Status, Duration, Question count (`⚡ Vault 40`), Takers count, Score with Rule 2.10 Grade badge, Remedial % with superscript (`86%ᴿ`), Security flags, Mini progress bar, Average pacing, and Quick Action buttons (`📊` Submissions, `📄` Duplicate, `👁️/👁️‍🗨️` Toggle publish, `✏️` Edit, `🗑️` Delete).
+      - Clicking any card opens the Test Blueprint & Telemetry Drawer with Top 3 Hardest Questions specific to that test and direct access to student submissions.
+- `sw.js`: Bumped cache name to `topscore-cache-option-a-v21`.
+- `admin.html`: Bumped version query string to `?v=20261029_v21`.
+- `js/admin/app.js`: Bumped tests-management import query string to `?v=5.4.9`.
+
+### Verification
+- `scratch/verify_all_cards_mission_control.mjs`: Live Edge Playwright end-to-end verification:
+  * Table `#Tests-grid-container` verified absent: PASS
+  * Topbar redundant tabs verified empty: PASS
+  * Total test cards in grid: 40 (PASS)
+  * Theme A filtered cards: 8 (PASS)
+  * Theme B filtered cards: 10 (PASS)
+  * Theme C filtered cards: 12 (PASS)
+  * Theme D filtered cards: 10 (PASS)
+  * Quizzes filtered cards: 32 (PASS)
+  * Exams filtered cards: 8 (PASS)
+  * Live search filtering: PASS
+  * Test Card Drawer with hardest questions: PASS
+  * Hero card drill-down modal: PASS
+  * Page/Console Errors: 0
+- Screenshot Artifacts:
+  * `test_analytics_all_cards.png`: Full mission control dashboard view.
+  * `test_analytics_curriculum_cards_view.png`: Scrolled view showing the Curriculum Tests Explorer card grid.
+  * `test_analytics_drawer_hardest_qs.png`: Test blueprint & telemetry drawer view.
+- `npm.cmd test`: All unit tests, manifest assets, and student dashboard ranking parity passed 100%.
+
+---
+
+## [2026-10-29 07:25] — Phase 175: Full Completion of Extended Test Analytics & Topic Merge Wizard
+
+**Agent/Session:** Antigravity / SESSION-20261029-0725
+**Phase:** Phase 175
+**Status:** PASS
+
+### Why
+- The user instructed to finish all 5 pending extended items from the 20-pass analytical ideation:
+  1. Interactive drill-down modals/drawers for all 8 Intelligence Cards.
+  2. Test-specific Top 3 Hardest Questions inside the Test Drawer.
+  3. Interactive Audio Review Queue with 1-click teacher manual override for speech evaluation.
+  4. 24-Hour WITA Peak Traffic Heatmap / Bar Chart.
+  5. Functional execution of "Merge Similar Topics" (with automated scanner and manual source/target selector) in Topic Blueprint.
+
+### Changed
+- `js/admin/tests-management.js`:
+  - Upgraded `attempt_answers` query to fetch `id, attempt_id, created_at, similarity_score, is_correct, question_snapshot` (limit 3,000) and indexed attempts by ID (`attemptMap`).
+  - Added click handlers (`onclick="window._openTestAnalyticsCardModal('...')"`), hover elevation, and `🔍 View` indicators to all 8 cards.
+  - Implemented `window._openTestAnalyticsCardModal(cardKey)`:
+    * `integrity`: Anti-Cheat Audit Inspector showing real-time focus loss/tab switch logs (WITA time) and speed-runners table (< 60s & fail).
+    * `fapr`: First-Attempt Pass Rate vs Retakes, plus official TopsCore grade distribution breakdown (`★`, `A`, `B`, `C`, `D`, `E`).
+    * `wall`: Top 20 hardest vocabulary questions across the curriculum with failure rate % and correct answers.
+    * `pacing`: Average velocity, panic timeout ratio, and the **24-Hour WITA Peak Traffic Heatmap** displaying hourly distribution with 19:00 - 22:00 WITA peak highlighting.
+    * `strugglers`: Top 15 students with highest retake volume, showing first-attempt score, highest score, growth delta, and remedial cap status, plus inactive ghost students.
+    * `spectrum`: Complete ranking of all 40 curriculum tests sorted from hardest to easiest with classification badges.
+    * `linguistic`: 4-quadrant POS matrix (Noun, Verb, Adjective, Phrase) with question counts, correct counts, and accuracy %.
+    * `speech`: Speech accuracy stats and the **Interactive Audio Review Queue** with 1-click `⚡ Override 100%` teacher privilege.
+  - Implemented `window._overrideSpeechAnswer(ansId)`: Authoritatively updates `attempt_answers.is_correct = true` and `similarity_score = 1.0` in Supabase, logs `TEACHER_OVERRIDE_SPEECH` in `audit_logs`, shows instant green toast, and updates UI live.
+  - Enhanced Test Details Drawer: Computes and displays **"Top 3 Hardest Questions in this Test"** specifically for the clicked test.
+- `js/admin/vocab-vault.js`:
+  - Upgraded `openTopicDuplicateCheckerModal`:
+    * Replaced early-exit when 0 automated duplicates are found.
+    * Added **"⚡ Manual Topic Merge"** section with Source Topic dropdown, Target Topic dropdown, word count preview, and 1-click execution calling `renameVaultTopic(src, tgt)`.
+- Version Bump:
+  - Synchronized `admin.html` and `app.js` with `?v=20261029_v20`.
+
+### Verification
+- `scratch/verify_all_extended_features.mjs`: Live Edge Playwright test verified:
+  * Card 1 Modal (`Anti-Cheat Inspector`): Opened and closed cleanly.
+  * Card 4 Modal (`Pacing & 24-Hour WITA Heatmap`): Opened with 24 histogram bars and peak hour badges.
+  * Card 8 Modal (`Speech & Audio Queue`): Opened with review table and override actions.
+  * Test Drawer: Verified `Top 3 Hardest Questions in this Test` rendered dynamically.
+  * Topic Blueprint: Verified `Topic Merge Wizard` with manual source/target selectors.
+  * **Result: 100% ALL 5 TESTS PASSED WITH 0 PAGE ERRORS**.
+- `npm.cmd test`: All 40 JS files passed syntax check, all 27 manifest assets verified, student exam parity 100% passed.
+
+---
+
+## [2026-10-29 07:00] — Phase 174: Elimination of Punctuation & Contraction Equivalence in Phrase Evaluation
+
+**Agent/Session:** Antigravity / SESSION-20261029-0700
+**Phase:** Phase 174
+**Status:** PASS
+
+### Why
+- The user requested that phrase answer evaluation ignore all punctuation (periods, commas, exclamation marks, question marks, hyphens/strips) and treat contractions (`I am` $\leftrightarrow$ `I'm`, `I will` $\leftrightarrow$ `I'll`, etc.) as completely equivalent with 100% full points.
+- Root cause analysis in Phase 173 revealed that `cleanPunctuationAndSymbols` stripped the apostrophe (`'`) *before* contraction normalization, turning `"I'm"` into `"i m"` and penalizing students with a 0.5-point spelling error instead of granting 1.0 point.
+
+### Changed
+- `js/grading.js`:
+  - Exported canonical `ENGLISH_CONTRACTIONS` dictionary covering:
+    * Pronouns + Be (`i'm` -> `i am`, `you're` -> `you are`, `he's` -> `he is`, `she's` -> `she is`, `it's` -> `it is`, `we're` -> `we are`, `they're` -> `they are`).
+    * Pronouns + Will (`i'll` -> `i will`, `you'll` -> `you will`, `he'll` -> `he will`, `she'll` -> `she will`, `it'll` -> `it will`, `we'll` -> `we will`, `they'll` -> `they will`).
+    * Pronouns + Have (`i've` -> `i have`, `you've` -> `you have`, `we've` -> `we have`, `they've` -> `they have`).
+    * Pronouns + Would/Had (`i'd` -> `i would`, `you'd` -> `you would`, `he'd` -> `he would`, etc.).
+    * Negations (`can't` -> `cannot`, `don't` -> `do not`, `won't` -> `will not`, `isn't` -> `is not`, `aren't` -> `are not`, `wasn't` -> `was not`, `weren't` -> `were not`, `haven't` -> `have not`, `hasn't` -> `has not`, `wouldn't` -> `would not`, etc.).
+    * Phrasal (`let's` -> `let us`, `that's` -> `that is`, `there's` -> `there is`, `what's` -> `what is`).
+  - Refactored `cleanPunctuationAndSymbols(text)`:
+    * Normalizes all smart/curly apostrophe variants (`’`, `‘`, `‚`, `‛`, `` ` ``, `´`) to ASCII `'`.
+    * Expands all contractions *before* stripping symbols.
+    * Normalizes common unpunctuated STT voice speech outputs (`im`, `ill`, `dont`, `cant`, `wont`, `youre`, `theyre`).
+    * Strips all punctuation: `.`, `,`, `!`, `?`, `-`, `–`, `—`, `_`, `;`, `:`, `(`, `)`, `[`, `]`, `{`, `}`, `"`, `'`, `` ` ``, `~`, `*`, `&`, `^`, `%`, `$`, `#`, `@`, `+`, `\`, `/`.
+    * Collapses multiple whitespace into a single space and trims.
+- `supabase/functions/submit-test/index.ts`:
+  - Integrated `ENGLISH_CONTRACTIONS` and the identical `cleanPunctuationAndSymbols` pipeline for 100% server-client evaluation parity.
+- Version Synchronization:
+  - Bumped Service Worker cache name to `topscore-cache-option-a-v20` in `sw.js`.
+  - Bumped SW registration queries to `v20` in `test.html`, `result.html`, `dashboard.html`, `index.html`, and `js/admin/admin-init.js`.
+
+### Verification
+- `scratch/test_phrase_eval.mjs`: Evaluated 10 phrase test cases including `"I am ready"` vs `"I'm ready."`, `"I will do it!"` vs `"I'll do it."`, `"Check-in, please?"` vs `"Check in please"`, and `"You won't believe it!"` vs `"You will not believe it."` -> **100% ALL 10 CASES PASSED WITH 1.0 (CORRECT)**.
+- `scripts/check_all_js_syntax.cjs`: 40/40 JS files passed syntax validation.
+- `scripts/test_student_dashboard_exam_parity.mjs`: 100% parity passed.
+- `scripts/generate_sw_manifest.mjs`: All 27 cache manifest assets verified on disk.
+
+---
+
+## [2026-10-29 06:45] — Phase 173: Vocabulary Quiz Duration Standardized to 5 Minutes Across Database & Auto-Generator
+
+**Agent/Session:** Antigravity / SESSION-20261029-0645
+**Phase:** Phase 173
+**Status:** PASS
+
+### Why
+- The user instructed to reduce the Quiz duration for the Vocabulary class to 5 minutes, both for all existing quizzes in the database and as the default setting in the auto-generator wizard.
+
+### Changed
+- **Database (`tests` table in Supabase PostgreSQL)**:
+  - Updated all 16 Words Quizzes from `working_duration_minutes = 10` down to `5` minutes (with synchronized payload duration).
+  - All 32 Quizzes in the curriculum are now verified at `working_duration_minutes = 5`.
+  - Exams (8 milestone tests) remain intact at 90m/120m.
+- `js/admin/auto-gen-modal.js`:
+  - Updated `prefillTaskDur` initial default to `5` (was `10`).
+  - Updated `#wizard-quiz-dur` input tooltip and default value to `5` minutes.
+- `js/api.js`:
+  - `updateClassTestsConfig`: updated default `taskDurationMinutes = 5` (was `10`) and fallback `taskDurationMinutes || 5`.
+  - `autoGenerateTestsHierarchy`: updated `taskDur` and `wordsTaskDur` default fallbacks to `5` minutes (was `10`).
+
+### Verification
+- Supabase query verification: 32/32 Quizzes verified at 5 minutes (`quizzes.every(q => q.working_duration_minutes === 5) === true`).
+- `scratch/verify_test_analytics.mjs`: Playwright headless Edge test confirmed all quizzes display `⏱️ 5m` in table, 0 console errors.
+- `scripts/check_all_js_syntax.cjs`: 40/40 JS files passed syntax validation.
+- `npm.cmd test`: Full CI test suite passed 100%.
+
+---
+
+## [2026-10-29 06:40] — Phase 172: Transformation of Test Management into "Test Analytics" Hub
+
+**Agent/Session:** Antigravity / SESSION-20261029-0640
+**Phase:** Phase 172
+**Status:** PASS
+
+### Why
+- The user observed that menu `C - CLASS` -> `Test` lacked special operational utility and proposed transforming it into a full Test Overview & Analytics Hub.
+- Following an exhaustive 20-pass analytical exploration across 991 attempts, 59,206 answers, and 1,311 audit logs, the ideas were consolidated into the 8 Most Essential & Functional Core Items.
+- The user explicitly requested: "namakan halmannya test analytics".
+
+### Changed
+- `admin.html`:
+  - Updated sidebar navigation label under Domain C from `Test` to `Test Analytics` with bar chart icon `&#128202;`.
+  - Bumped script query string to `app.js?v=20261029_v19`.
+- `js/admin/app.js`:
+  - Updated `sectionTitles.tests` from `'Tests Hub'` to `'Test Analytics'`.
+- `js/admin/admin-init.js`:
+  - Bumped Service Worker registration query to `sw.js?v=20261029_v19`.
+- `sw.js`:
+  - Bumped Service Worker cache name to `topscore-cache-option-a-v19`.
+- `js/admin/tests-management.js`:
+  - Refactored `renderTests(area)` into the **Test Analytics** operational engine:
+    * Integrated parallel telemetry fetching (`attempts`, `audit_logs`, `students`, recent `attempt_answers`).
+    * Deployed **8 High-Density Operational Intelligence Cards**:
+      1. `🚨 Integrity Radar`: Total cheat/blur flags, top focus-loss offender (Miss Siti Qori), and speed-runners.
+      2. `🎯 Mastery & FAPR`: First-attempt pass rate and TopsCore canonical 6-grade distribution curve (`★`, `A`, `B`, `C`, `D`, `E`).
+      3. `🧱 The Wall (Hardest Words)`: Top vocabulary words with highest fail rate ("Menyampaikan", "Menghormati", "Menarik").
+      4. `⏱️ Pacing Velocity`: Global average completion duration and panic submission ratio.
+      5. `👥 Remedial Watchlist`: High-struggle learners requiring multiple attempts (Mr. Aunul, Top, Miss Siti) and inactive ghost student detection.
+      6. `🔥 Test Spectrum`: Hardest test ranking by average score & remedial rate vs easiest ceiling test.
+      7. `🧬 Linguistic Mastery`: Part-of-Speech accuracy (Nouns, Verbs, Adjectives, Phrases) and 100% Vault utilization.
+      8. `🎙️ AI Speech Quality`: Spoken question accuracy and audio review queue status.
+    * Enriched 40 Tests DataGrid table with operational intelligence columns:
+      - `TAKERS`: unique student takers count.
+      - `AVG SCORE`: color-coded score percentage with official grade predicate badge (`[★]`, `[A]`, `[B]`, `[C]`, `[D]`, `[E]`).
+      - `REM %`: remedial rate with official superscript `R` notation (`%ᴿ`).
+      - `PACING`: average completion duration per test.
+      - `INTEGRITY`: security status badge (`🛡️ Clean` or `🚨 X fl`).
+    * Upgraded row-click drawer into the **Test Analytics & Blueprint Inspector** with real-time telemetry breakdown and instant link to view student results.
+
+### Verification
+- `scratch/verify_test_analytics.mjs`: Live Microsoft Edge headless browser test on `http://127.0.0.1:5688/admin.html#tests`:
+  * Verified Sidebar Navigation label: `📊 Test Analytics`.
+  * Verified all 8 Cards mounted and populated with real Supabase telemetry.
+  * Verified DataGrid table rendered all 40 test rows with new intelligence columns (`TAKERS`, `AVG SCORE`, `REM %`, `PACING`, `INTEGRITY`).
+  * Verified 0 console errors (`Page Errors: 0`).
+  * Screenshot artifact generated: `test_analytics_verified.png`.
+- `scripts/check_all_js_syntax.cjs`: 40/40 JavaScript files passed syntax validation (node --check).
+- `npm.cmd test`: Full CI test suite passed 100% (40 JS syntax checks, 27 SW cache assets, student dashboard parity).
+
+---
+
+## [2026-10-29 06:05] — Phase 171: Unification of Topic Manager & Test Blueprint into Zero-Scroll "Topic Blueprint"
+
+**Agent/Session:** Antigravity / SESSION-20261029-0605
+**Phase:** Phase 171
+**Status:** PASS
+
+### Why
+- The user observed that `Test Blueprint` and `Topic Manager` inside Vocabulary Vault served parallel and overlapping purposes (16 topics mapping to 32 quizzes and 8 exams).
+- The user requested merging both tabs into a single unified tab named `Topic Blueprint`, with the explicit requirement that the entire view must fit within the screen without vertical or horizontal scrollbars (zero-scroll).
+
+### Changed
+- `js/admin/vocab-vault.js`:
+  - Replaced separate `Test Blueprint` and `Topic Manager` tab items with a single unified `Topic Blueprint` tab.
+  - Implemented `_renderTopicBlueprintTab` featuring:
+    * Compact top toolbar with topic search, level badge, `Merge Similar Topics`, `Reset All`, and `⚡ Auto-Generate from Blueprint`.
+    * 4-column thematic kanban grid dividing themes side-by-side (`repeat(4, 1fr)`).
+    * Topic cards rendering topic number, name, inline rename (✏️) and delete (🗑️) triggers, and color-coded POS counts (`20V · 10A · 10N · 10P = 50`).
+    * Milestone Exam footers displaying cumulative exam scales (120/30, 280/70, 480/120, 640/160 Qs).
+    * Integrated bottom infobar synchronization.
+
+### Verification
+- `scratch/verify_topic_blueprint.mjs`: Live Microsoft Edge headless browser test on `http://127.0.0.1:5678/admin.html#vocab_vault`:
+  * 4 Theme Columns rendered cleanly.
+  * 16 Topic Cards rendered with POS chips.
+  * Zero console errors.
+  * `hasVerticalScroll: false`, `docScrollHeight === docClientHeight === 900px`.
+  * Verified screenshot saved to `scratch/topic_blueprint_verified.png` and artifact directory.
+- `npm.cmd test`: Full CI test suite passed 100% (40 JS syntax checks, 27 SW assets, student dashboard parity).
+
+---
+
+## [2026-10-29 05:25] — Phase 170: Resolution of Tutor's Room (Class Hub) Blank Rendering & ES Module Export Parity
+
+**Agent/Session:** Antigravity / SESSION-20261029-0525
+**Phase:** Phase 170
+**Status:** PASS
+
+### Why
+- The user reported that the Tutor's Room (Admin Class Hub at `admin.html#class-hub`) was completely empty and attached a screenshot showing a blank workspace.
+- Diagnostic inspection identified two cascading runtime errors:
+  1. `SyntaxError: The requested module '../app.js?v=20261027' does not provide an export named 'isExam'`.
+  2. `ReferenceError: weeklyCompletedStudents is not defined at js/admin/app.js:2106:68` inside DataGrid `summaryRow()`.
+
+### Changed
+- `js/app.js`: Added `isExam` to `import` and `export` from `./grading.js`, and bound `window.isExam = isExam; window.isWeeklyExam = isExam;`.
+- `js/api.js`: Re-exported `isExam` alongside `isWeeklyExam`.
+- `js/admin/app.js`:
+  - Updated import from `../app.js?v=20261029`.
+  - Added backward-compatible alias `const weeklyCompletedStudents = examCompletedStudents;` at line 2042.
+  - Refactored `summaryRow` col `totalEarnedScore` (line 2106) to use `hasExamCompletions` guard without referencing undeclared variables.
+- `admin.html`: Bumped script tag to `js/admin/app.js?v=20261029`.
+- `sw.js`: Bumped Service Worker cache name to `topscore-cache-option-a-v18` and updated cached asset query strings.
+
+### Verification
+- `scratch/verify_tutor_room.mjs`: Live headless Microsoft Edge Playwright test against `http://127.0.0.1:5500/admin.html#class-hub`:
+  * Page Title: `Tutor's Room — TOPS CORE`
+  * Total Table Rows Detected: 24 / 24 students
+  * Console Errors Count: 0 (Zero runtime exceptions)
+  * Data verification: Syazida Shinda Debi (472.5 pts), Ari Wahyu Darma (470 pts), Aunul Fikri Yasir (415.5 pts) loaded and verified.
+- `npm.cmd test`: All syntax checks (40/40 JS files), Service Worker manifest (27/27 files), and student dashboard parity tests passed 100%.
+- `node scripts/test_sequential_exam_prerequisite.mjs`: 100% PASS.
+
+---
+
+## [2026-10-29 00:30] — Phase 169: 10-Pass End-to-End System & Logic Stress Test [100% ALL PASS]
+
+**Agent/Session:** Antigravity / SESSION-20261029-0030
+**Phase:** Phase 169
+**Status:** PASS
+
+### Why
+- The user requested an exhaustive 10-pass end-to-end stress test across all systems and logic in TopsCore to guarantee that every single feature, workflow, database contract, and UI view works flawlessly and without error.
+
+### Verification Results Across All 10 Passes:
+1. **Pass 1 (Syntax & Code Integrity)**: 40/40 JavaScript files verified with 'node --check' (0 errors).
+2. **Pass 2 (Service Worker & Offline Capability)**: Cache 'topscore-cache-option-a-v17', all 27 manifest assets verified on disk, 'offline.html' fallback ready.
+3. **Pass 3 (Database Schema & RPC Contracts)**: Supabase PostgreSQL connected, WITA server clock verified ('get_server_time_wita'), 990 attempts validated with 0 non-canonical grades ('★', 'A', 'B', 'C', 'D', 'E').
+4. **Pass 4 (Student Auth & Entity Hierarchy)**: Verified 4-tier hierarchy (Institution -> Program -> Batch -> Student), secure SHA-256 'pin_hash' validation.
+5. **Pass 5 (Test Generation & Hierarchy Consistency)**: 40 tests in Level 3 verified (32 Quizzes with category 'QUIZ', 8 Exams with category 'EXAM').
+6. **Pass 6 (Access Control & Sequential Exam Gating)**: Verified 58.57% blocked, 60% allowed, phrases quizzes never falsely blocked by words exam.
+7. **Pass 7 (Test Runner & Attempt Scoring Logic)**: Duration countdown, emergency submit RPC, and auto-submit scoring verified.
+8. **Pass 8 (Centralized Grading & Remedial Rules)**: Official 6-tier grading scale validated ('★', 'A', 'B', 'C', 'D', 'E'), remedial 60% score cap and Grade C verified.
+9. **Pass 9 (Milestone Progression & Leaderboard Parity)**: Points-First sorting ('PTS DESC' -> 'SCORE % DESC' -> 'PROG % DESC') verified with 100% Admin Class Hub and Student Lobby parity.
+10. **Pass 10 (End-to-End Live Browser UI Validation)**: Headless Edge verified 'index.html', 'admin.html', 'dashboard.html', 'offline.html' with 0 console errors.
+
+### Files
+- 'scratch/run_full_system_10_iterations_audit.mjs'
+- 'docs/CURRENT_STATE.md'
+- 'docs/CHANGELOG.md'
+- 'docs/SESSION_LOG.md'
+
+### Tests
+- command: 'node scratch/run_full_system_10_iterations_audit.mjs'
+- result: 🏆 100% ALL 10 PASSES SUCCEEDED
+
+---
+
+## [2026-10-29 00:20] — Phase 168: System-Wide Nomenclature Standardization & Zero-Exception Terminology Purge
+
+**Agent/Session:** Antigravity / SESSION-20261029-0020
+**Phase:** Phase 168
+**Status:** PASS
+
+### Why
+- The user ordered a full, zero-exception purge across all admin and student interfaces to eliminate deprecated remnants of 'task', 'daily quiz', 'weekly exam', 'assessment', and non-existent database column 'test_category'.
+- Enforce strict TopsCore canonical terminology: Test (umbrella), Quiz (formative daily/topic drills), Exam (milestone/scheduled exams), and Class (curriculum entity).
+
+### Changed
+- Standardized 'isExam' as primary classification helper in 'js/grading.js' with 'isWeeklyExam' backwards compatibility alias.
+- Modernized leaderboard ranking and multi-tier sorting in 'js/dashboard.js' and 'js/admin/app.js' using 'completedExamCount'.
+- Updated copy in 'dashboard.html', 'admin.html', and 'js/result.js'.
+- Upgraded 'js/admin/classes-management.js' routers to 'handleAddQuiz' and 'handleAddExam' with 'tier: QUIZ' and 'tier: EXAM'.
+- Updated 'js/admin/auto-gen-modal.js' blueprint wizard IDs to '#wizard-quiz-dur', '#wizard-quiz-min', and variables 'quizDuration', 'quizPassing'.
+- Updated 'js/admin/vocab-vault.js' tier dropdowns to 'QUIZ' and 'EXAM', updated infobar chips and roadmap titles.
+- Updated 'js/admin/tests-access.js' and 'supabase/functions/start-test/index.ts' prerequisite engine from 'tasks' to 'quizzes'.
+- Purged all in-memory reads of non-existent column 'test_category' in 'js/api.js', 'js/admin/app.js', 'js/admin/tests-management.js', and 'supabase/functions/start-test/index.ts'.
+- Bumped Service Worker cache to 'topscore-cache-option-a-v17' in 'sw.js'.
+
+### Files
+- 'js/grading.js'
+- 'dashboard.html'
+- 'admin.html'
+- 'js/dashboard.js'
+- 'js/result.js'
+- 'js/admin/classes-management.js'
+- 'js/admin/auto-gen-modal.js'
+- 'js/admin/vocab-vault.js'
+- 'js/admin/tests-access.js'
+- 'js/admin/tests-management.js'
+- 'js/admin/app.js'
+- 'js/api.js'
+- 'supabase/functions/start-test/index.ts'
+- 'sw.js'
+- 'docs/CURRENT_STATE.md'
+- 'docs/CHANGELOG.md'
+- 'docs/SESSION_LOG.md'
+
+### Tests
+- command: 'npm.cmd test'
+- result: PASS (40/40 JS files syntax valid, 27/27 SW cache assets on disk, 100% student dashboard exam parity)
+
+### Next Action
+- Present execution report to user.
+
+---
+
+## [2026-10-28 23:15] — Phase 167: Fix False-Positive Exam Prerequisite Gating on Phrases Quizzes (Hafizi Batch 133)
+
+**Agent/Session:** Antigravity / Gemini
+**Phase:** Phase 167
+**Status:** PASS
+
+### Why
+- Student "Mr. Muhammad Masyan Hafizi" (Batch 133) failed to access his next assessment (Test 20: "3rd Vocabulary C1 Phrases Quiz - Cultural Identity & Tradition").
+- When accessing `test.html?id=ccfce187-d9be-42a3-9745-cd4852865481`, student was blocked with error toast: `"Prerequisite not completed. You must pass the Words Exam (3rd Vocabulary C Words Exam - CCU) with at least 60% before taking the Phrases Exam"` and automatically redirected back to `dashboard.html`.
+- Root cause: In Phase 161, sequential intra-theme gating was added to require Words Exam prior to Phrases Exam. In `js/api.js` (client DB fallback), `isPhrasesExamFallback` checked `payload?.category === 'phrases'`, `/PHRASES/i.test(shell_code)`, and `/phrase/i.test(title)`, without verifying that the assessment is an EXAM (`!isQuiz`). This caused daily quizzes (e.g. 3C1 Phrases Quiz) to be misclassified as a milestone Phrases Exam, falsely requiring the student to pass the end-of-theme milestone Words Exam (Test 29: CCU) before they could take their daily topic quiz!
+
+### Changed
+- `js/api.js`: Updated `isPhrasesExamFallback` to explicitly guard against quizzes (`isQuizFallback = test_type === 'quiz' || category === 'quiz' || shell_code.includes('QUIZ') || shell_code.includes('TASK')`). Ensures sequential intra-theme Words Exam prerequisites ONLY apply to milestone Exams, never daily Quizzes.
+- `supabase/functions/start-test/index.ts`: Added defensive `!isQuiz` guard to `isPhrasesExam` sequential check in Edge Function.
+- `scripts/test_sequential_exam_prerequisite.mjs`: Added automated regression test verifying that daily quizzes (such as Test 20: 3C1 Phrases Quiz) are strictly excluded from the Phrases Exam prerequisite check.
+
+### Tests
+- command: `node scripts/test_sequential_exam_prerequisite.mjs` -> PASS (Exam gating preserved, Quiz gating cleanly excluded)
+- command: `node scratch/test_hafizi_test_page.mjs` (Playwright headless Edge) -> Verified Test 20 loads successfully for Hafizi with 5-minute countdown and question item.
+- command: `npm.cmd test` -> ALL 3 SUITES PASSED (40/40 JS syntax valid, 27 SW assets verified, 100% parity tests passed).
+
+---
+
 ﻿## [2026-10-28 18:40] — Phase 166: Full System Maximization, Security Hardening & CI Pipeline
 
 **Agent/Session:** Antigravity / Gemini
@@ -10,7 +553,8 @@
 ### Changed
 - ercel.json & 
 etlify.toml: Added HSTS (Strict-Transport-Security), comprehensive Content-Security-Policy, and static asset cache-control headers.
-- obots.txt: Created crawler restriction for administrative and testing paths.
+- 
+obots.txt: Created crawler restriction for administrative and testing paths.
 - js/api.js: Replaced 7 non-generic select('*') calls with explicit column projections on ttempts, ttempt_answers, 	ests, word_types, levels, class_instances, and class_meetings.
 - dmin.html: Extracted all 6 inline script tags into modular js/admin/admin-init.js.
 - js/admin/admin-init.js: Centralized fast-boot routines: auth gate check, sidebar cache hydration, record drawer controller, DataGrid export, and service worker registration.
@@ -8783,7 +9327,9 @@ ull. This broke the dynamic aultCountFor question counter.
 - The nswer_type options array in the modal was missing dropdown, causing it to default to selection.
 
 ### Changed
-- Fixed populateLevelsForSection() in js/admin/crud-modals.js to correctly preserve the eadonly state and explicitly re-select the ecord.level_id.
+- Fixed populateLevelsForSection() in js/admin/crud-modals.js to correctly preserve the 
+eadonly state and explicitly re-select the 
+ecord.level_id.
 - Added the missing { value: 'dropdown', label: 'Drop-down' } option to the assessment form fields config.
 - Connected to Supabase via Node script and permanently deleted the corrupted level_id: null duplicate assessment record that broke the UI.
 
@@ -9439,7 +9985,7 @@ ull. This broke the dynamic aultCountFor question counter.
 ### Changed
 
 - Converted .login-page's justify-content to lex-start (with top padding) to anchor the layout towards the top area of the screen rather than centering it.
-- Reduced the inner padding on .pin-section from 1.25rem to  .25rem 0 0.5rem to eliminate double-padding from its parent .cascade-body.
+- Reduced the inner padding on .pin-section from 1.25rem to .25rem 0 0.5rem to eliminate double-padding from its parent .cascade-body.
 - Reduced .pin-row margin to slim down the PIN input vertical footprint.
 - Slimmed down the .remember-me-banner padding.
 
@@ -11812,7 +12358,7 @@ User explicitly instructed to "address everything" from the pending gap list. Th
 
 - check_encoding.ps1 parses correctly and correctly outputs the 8 files with issues.
 - uild_clean_challenges.ps1 runs without ArgumentNullException.
-- ix_mojibake.ps1 correctly fixes the 8 files, and running check_encoding.ps1 afterwards yields   encoding issues found.
+- ix_mojibake.ps1 correctly fixes the 8 files, and running check_encoding.ps1 afterwards yields  encoding issues found.
 
 ### Next Action
 
@@ -13580,62 +14126,62 @@ User explicitly instructed to "address everything" from the pending gap list. Th
 ### Files
 
 - dashboard.html`n- exam.html`n- js/app.js`n
-  # #   [ 2 0 2 6 - 0 9 - 1 2   0 0 : 1 5 ]     M o b i l e - F i r s t   U I   O v e r h a u l   &   C o m p a c t   L a y o u t   R e f a c t o r i n g 
-   
-   * * A g e n t / S e s s i o n : * *   A n t i g r a v i t y   /   S E S S I O N - 2 0 2 6 0 9 1 2 - 0 0 1 5 
-   * * P h a s e : * *   U I   R e f a c t o r i n g 
-   * * S t a t u s : * *   P A S S 
-   
-   # # #   W h y 
-   -   T h e   u s e r   r e q u e s t e d   a   c o m p l e t e   U I / U X   o v e r h a u l   o f   t h e   C E C   V o c a b u l a r y   E x a m i n a t i o n   S y s t e m   t o   m a x i m i z e   i n f o r m a t i o n   d e n s i t y ,   e l i m i n a t e   w a s t e d   s p a c e ,   a n d   o p t i m i z e   f o r   m o b i l e   d e v i c e s   w i t h o u t   e x c e s s i v e   s c r o l l i n g . 
-   
-   # # #   C h a n g e d 
-   -   * * S t u d e n t   E x a m   P a g e   ( \ e x a m . h t m l \ ) : * * 
-       -   D e s i g n e d   a   s t i c k y ,   s l i m   t o p b a r   w i t h   a   h a m b u r g e r   d r a w e r   t o g g l e   a n d   p r o g r e s s   i n d i c a t o r s . 
-       -   I m p l e m e n t e d   a   s l i d e - u p / s l i d e - i n   m o b i l e   d r a w e r   f o r   q u e s t i o n   n a v i g a t i o n   t o   r e p l a c e   t h e   s t a t i c   w i d e   s i d e b a r . 
-       -   A d d e d   a   p e r s i s t e n t   b o t t o m   n a v i g a t i o n   b a r   f o r   q u i c k   P r e v i o u s / N e x t   a n d   S u b m i t   a c t i o n s   o n   m o b i l e . 
-       -   S l i m m e d   d o w n   a l l   e l e m e n t s   ( s m a l l e r   h e a d i n g s ,   i n p u t   f i e l d s ,   a n d   a n s w e r   c a r d s ) . 
-   -   * * S t u d e n t   R e s u l t   P a g e   ( \ 
-   e s u l t . h t m l \ ) : * * 
-       -   M i n i m i z e d   h e r o   s e c t i o n   p a d d i n g   a n d   g r a d e   d i s p l a y   s i z i n g . 
-       -   C o m p a c t e d   t h e   a n s w e r   b r e a k d o w n   s u m m a r y   g r i d   b y   d r a s t i c a l l y   r e d u c i n g   c a r d   p a d d i n g   ( \ p - 3 \   t o   \ p - 2 \ )   a n d   m a r g i n s . 
-   -   * * A d m i n   C o n s o l e   ( \  d m i n . h t m l \   &   \ c s s / a d m i n . c s s \ ) : * * 
-       -   R e d u c e d   t a b l e   c e l l   p a d d i n g   ( \   h \ ,   \   d \ )   a n d   f o r m   i n p u t   s i z e s   f o r   d e n s e r   d a t a   l a y o u t . 
-       -   A p p l i e d   a   s t r i c t   5 0 - r o w   r e n d e r i n g   l i m i t   t o   t h e   E x c e l   I m p o r t   P r e v i e w s   f o r   b o t h   S t u d e n t s   a n d   Q u e s t i o n s ,   a p p e n d i n g   a   \ 
-   
-   + 
-   
-   X 
-   
-   m o r e 
-   
-   r o w s \   f o o t e r   t o   p r e v e n t   U I   l a g   o n   m a s s i v e   d a t a s e t   i m p o r t s . 
-   -   * * G l o b a l   S t y l i n g s   ( \ c s s / s t y l e . c s s \   &   \ c s s / d a s h b o a r d . c s s \ ) : * * 
-       -   O v e r h a u l e d   b r e a k p o i n t s   ( < =   7 6 8 p x )   a n d   m e d i a   q u e r i e s   t o   s u p p o r t   t h e   n e w   d r a w e r   a n d   m o b i l e - f i r s t   l a y o u t s . 
-   
-   # # #   F i l e s 
-   -   \ c s s / s t y l e . c s s \ 
-   -   \ c s s / d a s h b o a r d . c s s \ 
-   -   \ c s s / a d m i n . c s s \ 
-   -   \ e x a m . h t m l \ 
-   -   \ 
-   e s u l t . h t m l \ 
-   -   \  d m i n . h t m l \ 
-   
-   # # #   D a t a b a s e 
-   -   N o   s c h e m a   c h a n g e s . 
-   
-   # # #   T e s t s 
-   -   L o c a l   s t a t i c   v e r i f i c a t i o n   a p p l i e d . 
-   
-   # # #   R i s k s   /   F o l l o w - u p 
-   -   V a l i d a t e   t h a t   t h e   5 0 - r o w   l i m i t   o n   p r e v i e w s   c o v e r s   a l l   e d g e   c a s e s   p r o p e r l y . 
-   
-   # # #   N e x t   A c t i o n 
-   -   A w a i t   u s e r   f e e d b a c k   o n   t h e   n e w   c o m p a c t   l a y o u t . 
-   
-   
-   ## [2026-09-14 22:11] - Simplified Exam Creation and Hidden Locked Exams
+  ## [2026-09-12 00:15]  Mobile-First UI Overhaul & Compact Layout Refactoring
+  
+  **Agent/Session:** Antigravity / SESSION-20260912-0015
+  **Phase:** UI Refactoring
+  **Status:** PASS
+  
+  ### Why
+  - The user requested a complete UI/UX overhaul of the CEC Vocabulary Examination System to maximize information density, eliminate wasted space, and optimize for mobile devices without excessive scrolling.
+  
+  ### Changed
+  - **Student Exam Page (\exam.html\):**
+    - Designed a sticky, slim topbar with a hamburger drawer toggle and progress indicators.
+    - Implemented a slide-up/slide-in mobile drawer for question navigation to replace the static wide sidebar.
+    - Added a persistent bottom navigation bar for quick Previous/Next and Submit actions on mobile.
+    - Slimmed down all elements (smaller headings, input fields, and answer cards).
+  - **Student Result Page (\
+  esult.html\):**
+    - Minimized hero section padding and grade display sizing.
+    - Compacted the answer breakdown summary grid by drastically reducing card padding (\p-3\ to \p-2\) and margins.
+  - **Admin Console (\dmin.html\ & \css/admin.css\):**
+    - Reduced table cell padding (\ h\, \ d\) and form input sizes for denser data layout.
+    - Applied a strict 50-row rendering limit to the Excel Import Previews for both Students and Questions, appending a \
+  
+  +
+  
+  X
+  
+  more
+  
+  rows\ footer to prevent UI lag on massive dataset imports.
+  - **Global Stylings (\css/style.css\ & \css/dashboard.css\):**
+    - Overhauled breakpoints (<= 768px) and media queries to support the new drawer and mobile-first layouts.
+  
+  ### Files
+  - \css/style.css\
+  - \css/dashboard.css\
+  - \css/admin.css\
+  - \exam.html\
+  - \
+  esult.html\
+  - \dmin.html\
+  
+  ### Database
+  - No schema changes.
+  
+  ### Tests
+  - Local static verification applied.
+  
+  ### Risks / Follow-up
+  - Validate that the 50-row limit on previews covers all edge cases properly.
+  
+  ### Next Action
+  - Await user feedback on the new compact layout.
+  
+  
+  ## [2026-09-14 22:11] - Simplified Exam Creation and Hidden Locked Exams
 
 **Agent/Session:** Antigravity
 **Phase:** Phase 25 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ¯Â¿Â½ Exam Creation & Locked Exams
@@ -14089,7 +14635,7 @@ Instruct user to hard refresh and test the import view.
 ### Changed
 
 - Deleted the legacy \Top English Class\ backup directory containing outdated duplicates of the root files.
-- Deleted system-generated duplicate files (\  (1)\, \ix_mojibake (1).exe\, \global_replaceterms (1).exe\, \migration_abcd_phase9b (1).sql\, \
+- Deleted system-generated duplicate files (\ (1)\, \ix_mojibake (1).exe\, \global_replaceterms (1).exe\, \migration_abcd_phase9b (1).sql\, \
   ormalize_js (1).ps1\, \patch_relations (1).py\, \
   eplaceterms (1).exe\, \
   ewrite_central (1).ps1\).
@@ -14345,37 +14891,37 @@ Await user confirmation and test the unified flow.
 
 ### Next Action
 
-- Verify the UI layout and integration manually.# #   [ 2 0 2 6 - 0 9 - 2 8   2 1 : 3 8 ]   -   F i x   V o c a b   V a u l t   t a b l e   l a y o u t   [ U I - 0 0 2 ] 
-   
-   * * A g e n t / S e s s i o n : * *   A n t i g r a v i t y 
-   * * P h a s e : * *   F i x   U I 
-   * * S t a t u s : * *   P A S S 
-   
-   # # #   W h y 
-   -   T h e   V o c a b   V a u l t   d a t a   t a b l e   w a s   m i s s i n g   t h e   ' W O R D   T Y P E '   a n d   ' A C T I O N S '   c o l u m n s   o n   t h e   s c r e e n   b e c a u s e   t h e   l a y o u t   e n g i n e   w a s   l e t t i n g   t h e   ' E N G L I S H '   a n d   ' I N D O N E S I A N '   c o l u m n s   e x p a n d   i n f i n i t e l y ,   p u s h i n g   t h e   r i g h t m o s t   c o l u m n s   o f f - s c r e e n   w i t h o u t   a n   o b v i o u s   s c r o l l b a r . 
-   
-   # # #   C h a n g e d 
-   -   A d d e d     a b l e - l a y o u t :   f i x e d ;   w i d t h :   1 0 0 % ;   t o   t h e   # v a u l t - t a b l e   d e f i n i t i o n   i n   j s / a d m i n / v o c a b - v a u l t . j s . 
-   -   A d d e d   s p e c i f i c   p e r c e n t a g e   a n d   p i x e l   w i d t h s   t o   t h e     h e a d   h e a d e r s   t o   e n s u r e   p r o p o r t i o n a l   a n d   c o n s t r a i n e d   l a y o u t . 
-   
-   # # #   F i l e s 
-   -   \ j s / a d m i n / v o c a b - v a u l t . j s \ 
-   
-   # # #   D a t a b a s e 
-   -   m i g r a t i o n :   n o n e 
-   -   t a b l e s / c o l u m n s / p o l i c i e s   c h a n g e d :   n o n e 
-   
-   # # #   T e s t s 
-   -   c o m m a n d :   N / A 
-   -   r e s u l t :   P A S S 
-   
-   # # #   R i s k s   /   F o l l o w - u p 
-   -   N o n e . 
-   
-   # # #   N e x t   A c t i o n 
-   -   W a i t   f o r   u s e r   c o n f i r m a t i o n . 
-   
-   
+- Verify the UI layout and integration manually.## [2026-09-28 21:38] - Fix Vocab Vault table layout [UI-002]
+  
+  **Agent/Session:** Antigravity
+  **Phase:** Fix UI
+  **Status:** PASS
+  
+  ### Why
+  - The Vocab Vault data table was missing the 'WORD TYPE' and 'ACTIONS' columns on the screen because the layout engine was letting the 'ENGLISH' and 'INDONESIAN' columns expand infinitely, pushing the rightmost columns off-screen without an obvious scrollbar.
+  
+  ### Changed
+  - Added  able-layout: fixed; width: 100%; to the #vault-table definition in js/admin/vocab-vault.js.
+  - Added specific percentage and pixel widths to the  head headers to ensure proportional and constrained layout.
+  
+  ### Files
+  - \js/admin/vocab-vault.js\
+  
+  ### Database
+  - migration: none
+  - tables/columns/policies changed: none
+  
+  ### Tests
+  - command: N/A
+  - result: PASS
+  
+  ### Risks / Follow-up
+  - None.
+  
+  ### Next Action
+  - Wait for user confirmation.
+  
+  
 
 ## [2026-09-29 06:49] - Enforce Class-Only Assessment Creation (Disable Generic CRUD)
 
@@ -14401,62 +14947,62 @@ Await user confirmation and test the unified flow.
 ### Next Action
 
 - Await further instructions or handle remaining UI refinements.
-  # #   [ 2 0 2 6 - 1 0 - 0 4   0 2 : 5 4 ]   -   U I   O v e r h a u l   a n d   B l u e p r i n t   A d j u s t m e n t s 
-   
-   * * A g e n t / S e s s i o n : * *   A n t i g r a v i t y 
-   * * P h a s e : * *   U I   M o d e r n i z a t i o n   &   Q u a l i t y   C h e c k s 
-   * * S t a t u s : * *   P A S S 
-   
-   # # #   W h y 
-   -   U s e r   r e q u e s t e d   m o d e r n ,   s t r e a m l i n e d   ' F r o s t e d   G l a s s '   a e s t h e t i c s   f o r   t h e   s t u d e n t   a s s e s s m e n t   U I . 
-   -   U s e r   r e q u e s t e d   v i s u a l   l o c k s   o n   d a s h b o a r d   a s s e s s m e n t s   r a t h e r   t h a n   h i d i n g   t h e m   c o m p l e t e l y . 
-   -   U s e r   r e q u e s t e d   a   m o r e   c o m p a c t   l a y o u t   f o r   t h e   B l u e p r i n t   a n d   T o p i c   M a n a g e r   t a b s   t o   m i n i m i z e   s c r o l l i n g . 
-   -   U s e r   r e q u e s t e d   s t r i c t   T h e m e   a n d   T o p i c   c o d e   h i e r a r c h i c a l   s o r t i n g   a n d   c u m u l a t i v e   t a s k s   i n   B l u e p r i n t . 
-   
-   # # #   C h a n g e d 
-   -   U p d a t e d   \ d a s h b o a r d . h t m l \   t o   r e n d e r   u n f u l f i l l e d   p r e r e q u i s i t e   a s s e s s m e n t s   w i t h   a   g r a y e d - o u t   l o c k e d   c a r d   a n d   a   =ÃƒËœÃƒÂ  s t a t u s   b a d g e . 
-   -   U p d a t e d   \  s s e s s m e n t . h t m l \   w r i t t e n   a n d   d r o p d o w n   a n s w e r   a r e a s   t o   u s e   f r o s t e d   g l a s s   C S S   s t y l i n g . 
-   -   U p d a t e d   \ j s / a d m i n / v o c a b - v a u l t . j s \   t o   r e d u c e   p a d d i n g s / m a r g i n s   i n   B l u e p r i n t   a n d   T o p i c   M a n a g e r . 
-   -   U p d a t e d   \ j s / a d m i n / v o c a b - v a u l t . j s \   \ g e t H i e r a r c h y \   t o   p r o p e r l y   e x t r a c t   a n d   s o r t   b y   \   h e m e * c o d e \   a n d   \   o p i c * c o d e \ . 
-   -   U p d a t e d   T o p i c   M a n a g e r   i n   \  o c a b - v a u l t . j s \   t o   g r o u p   r o w s   b y   T h e m e   t o   p r e v e n t   r e d u n d a n t   t i t l e   d i s p l a y . 
-   
-   # # #   F i l e s 
-   -   \ d a s h b o a r d . h t m l \ 
-   -   \  s s e s s m e n t . h t m l \ 
-   -   \ j s / a d m i n / v o c a b - v a u l t . j s \ 
-   
-   # # #   D a t a b a s e 
-   -   N / A 
-   
-   # # #   N e x t   A c t i o n 
-   -   A w a i t   u s e r   v e r i f i c a t i o n   o f   t h e   E x c e l   i m p o r t   a n d   R e a l - T i m e   S y n c . 
-   
-   # #   [ 2 0 2 6 - 1 0 - 0 4   1 0 : 1 2 ]   -   F o c u s   M o d e   a n d   L o c k   A n i m a t i o n 
-   
-   * * A g e n t / S e s s i o n : * *   A n t i g r a v i t y 
-   * * P h a s e : * *   U I   M o d e r n i z a t i o n   &   Q u a l i t y   C h e c k s 
-   * * S t a t u s : * *   P A S S 
-   
-   # # #   W h y 
-   -   U s e r   a g r e e d   t o   t h e   s u g g e s t i o n s   f o r   F o c u s   M o d e   a n d   l o c k e d   c a r d   a n i m a t i o n s   b u t   s t r i c t l y   r e q u e s t e d   t h a t   c o r e   f u n c t i o n s   r e m a i n   u n t o u c h e d . 
-   
-   # # #   C h a n g e d 
-   -   U p d a t e d   \ d a s h b o a r d . h t m l \   t o   a l l o w   c l i c k s   o n   l o c k e d   c a r d s   a n d   a p p l y   a   \ s h a k e \   C S S   a n i m a t i o n   t o   p r o v i d e   f e e d b a c k   w h e n   i n t e r a c t i n g   w i t h   l o c k e d   a s s e s s m e n t s . 
-   -   U p d a t e d   \  s s e s s m e n t . h t m l \   w i t h   a   \  o c u s - m o d e \   C S S   c l a s s   o n   t h e   b o d y   t h a t   d i m s   h e a d e r s   a n d   n a v i g a t i o n .   A d d e d   n o n - i n t r u s i v e   g l o b a l   e v e n t   l i s t e n e r s   f o r   \  o c u s i n \ ,   \  o c u s o u t \ ,   a n d   m i c   b u t t o n   c l i c k s   t o   s e a m l e s s l y   t o g g l e   t h i s   s t a t e   w i t h o u t   a l t e r i n g   c o r e   a s s e s s m e n t   l o g i c . 
-   
-   # # #   F i l e s 
-   -   \ d a s h b o a r d . h t m l \ 
-   -   \  s s e s s m e n t . h t m l \ 
-   
-   # # #   D a t a b a s e 
-   -   N / A 
-   
-   # # #   N e x t   A c t i o n 
-   -   A w a i t   u s e r   v e r i f i c a t i o n   o f   t h e   E x c e l   i m p o r t   a n d   R e a l - T i m e   S y n c . 
-   
-   
-   
-   ## [2026-10-04 20:18] - Implement Triple Auto-Generate & System Guards
+  ## [2026-10-04 02:54] - UI Overhaul and Blueprint Adjustments
+  
+  **Agent/Session:** Antigravity
+  **Phase:** UI Modernization & Quality Checks
+  **Status:** PASS
+  
+  ### Why
+  - User requested modern, streamlined 'Frosted Glass' aesthetics for the student assessment UI.
+  - User requested visual locks on dashboard assessments rather than hiding them completely.
+  - User requested a more compact layout for the Blueprint and Topic Manager tabs to minimize scrolling.
+  - User requested strict Theme and Topic code hierarchical sorting and cumulative tasks in Blueprint.
+  
+  ### Changed
+  - Updated \dashboard.html\ to render unfulfilled prerequisite assessments with a grayed-out locked card and a =ÃƒËœÃƒÂ status badge.
+  - Updated \ssessment.html\ written and dropdown answer areas to use frosted glass CSS styling.
+  - Updated \js/admin/vocab-vault.js\ to reduce paddings/margins in Blueprint and Topic Manager.
+  - Updated \js/admin/vocab-vault.js\ \getHierarchy\ to properly extract and sort by \ heme*code\ and \ opic*code\.
+  - Updated Topic Manager in \ocab-vault.js\ to group rows by Theme to prevent redundant title display.
+  
+  ### Files
+  - \dashboard.html\
+  - \ssessment.html\
+  - \js/admin/vocab-vault.js\
+  
+  ### Database
+  - N/A
+  
+  ### Next Action
+  - Await user verification of the Excel import and Real-Time Sync.
+  
+  ## [2026-10-04 10:12] - Focus Mode and Lock Animation
+  
+  **Agent/Session:** Antigravity
+  **Phase:** UI Modernization & Quality Checks
+  **Status:** PASS
+  
+  ### Why
+  - User agreed to the suggestions for Focus Mode and locked card animations but strictly requested that core functions remain untouched.
+  
+  ### Changed
+  - Updated \dashboard.html\ to allow clicks on locked cards and apply a \shake\ CSS animation to provide feedback when interacting with locked assessments.
+  - Updated \ssessment.html\ with a \ocus-mode\ CSS class on the body that dims headers and navigation. Added non-intrusive global event listeners for \ocusin\, \ocusout\, and mic button clicks to seamlessly toggle this state without altering core assessment logic.
+  
+  ### Files
+  - \dashboard.html\
+  - \ssessment.html\
+  
+  ### Database
+  - N/A
+  
+  ### Next Action
+  - Await user verification of the Excel import and Real-Time Sync.
+  
+  
+  
+  ## [2026-10-04 20:18] - Implement Triple Auto-Generate & System Guards
 
 **Agent/Session:** Antigravity
 **Phase:** Class / Curriculum Logic
@@ -14505,47 +15051,47 @@ Await user confirmation and test the unified flow.
 ### Next Action
 
 - Discuss Class Name display with the user.
-  # #   [ 2 0 2 6 - 1 0 - 0 4   1 5 : 2 2 ]   -   F i x   A s s e s s m e n t   G e n e r a t i o n   &   M o d a l   F i l t e r i n g 
-   
-   * * A g e n t / S e s s i o n : * *   A n t i g r a v i t y 
-   
-   * * P h a s e : * *   D e b u g g i n g   &   C o r e   A r c h i t e c t u r e 
-   
-   * * S t a t u s : * *   P A S S 
-   
-   
-   
-   # # #   W h y 
-   
-   -   U s e r   r e p o r t e d   a s s e s s m e n t   c r e a t i o n   f a i l i n g   ( P h r a s e s   o v e r w r i t i n g   V o c a b ) . 
-   
-   -   D a s h b o a r d   m o d a l   l e a k e d   a s s e s s m e n t s   f r o m   o t h e r   l e v e l s . 
-   
-   -   L e g a c y   c o d e   i n   a d m i n   a p p . j s   w a s   s t i l l   r e l y i n g   o n   t i t l e - p a r s i n g   h e u r i s t i c s   i n s t e a d   o f   s t r i c t l y   u s i n g   t h e   n e w   \  s s e s s m e n t * c a t e g o r y \   t a x o n o m y . 
-   
-   
-   
-   # # #   C h a n g e d 
-   
-   -   M o d i f i e d   \ u p s e r t D y n a m i c A s s e s s m e n t S h e l l \   i n   \  p i . j s \   t o   p r e p e n d   \ m o d u l e P r e f i x \   t o   t h e   \ s h e l l * c o d e \   ( e . g .   \ V O C A B - T E S T \   i n s t e a d   o f   j u s t   \ T E S T \ )   t o   e n s u r e   i d e m p o t e n c y   k e y s   a r e   u n i q u e   b e t w e e n   m o d u l e s . 
-   
-   -   M o d i f i e d   \  e t c h A s s e s s m e n t s F o r S t u d e n t C l a s s \   i n   \  p i . j s \   t o   a c c e p t   \ l e v e l I d \   a n d   a p p l i e d   t h i s   f i l t e r . 
-   
-   -   U p d a t e d   \ d a s h b o a r d . h t m l \   t o   p a s s   \ s e s s i o n . l e v e l * i d \   i n t o   t h e   f e t c h   c a l l ,   r e s o l v i n g   t h e   m o d a l   f i l t e r i n g   i s s u e . 
-   
-   -   R e f a c t o r e d   \  p p . j s \   t o   s t r i c t l y   u s e   \  s s e s s m e n t * c a t e g o r y \   a n d   r e m o v e d   t h e   t i t l e   p a r s i n g   h e u r i s t i c . 
-   
-   
-   
-   # # #   F i l e s 
-   
-   -   \ j s / a p i . j s \ "   > >   d o c s \ C H A N G E L O G . m d ;   e c h o   
-   
-   - 
-   
-   \ j s / a d m i n / a p p . j s \ " 
-   
-   
+  ## [2026-10-04 15:22] - Fix Assessment Generation & Modal Filtering
+  
+  **Agent/Session:** Antigravity
+  
+  **Phase:** Debugging & Core Architecture
+  
+  **Status:** PASS
+  
+  
+  
+  ### Why
+  
+  - User reported assessment creation failing (Phrases overwriting Vocab).
+  
+  - Dashboard modal leaked assessments from other levels.
+  
+  - Legacy code in admin app.js was still relying on title-parsing heuristics instead of strictly using the new \ssessment*category\ taxonomy.
+  
+  
+  
+  ### Changed
+  
+  - Modified \upsertDynamicAssessmentShell\ in \pi.js\ to prepend \modulePrefix\ to the \shell*code\ (e.g. \VOCAB-TEST\ instead of just \TEST\) to ensure idempotency keys are unique between modules.
+  
+  - Modified \etchAssessmentsForStudentClass\ in \pi.js\ to accept \levelId\ and applied this filter.
+  
+  - Updated \dashboard.html\ to pass \session.level*id\ into the fetch call, resolving the modal filtering issue.
+  
+  - Refactored \pp.js\ to strictly use \ssessment*category\ and removed the title parsing heuristic.
+  
+  
+  
+  ### Files
+  
+  - \js/api.js\" >> docs\CHANGELOG.md; echo 
+  
+  -
+  
+  \js/admin/app.js\"
+  
+  
 
 ## [2026-10-04 16:02] â€” Fix Dynamic Shell Level Gate & Dropdown Distractor Pool
 
@@ -15135,7 +15681,7 @@ E2E static code trace discovered two critical bugs in start-assessment/index.ts:
 
 ### Changed
 
-- Replaced ypeof avgPct !== 'undefined' ? avgPct : 0 with   in the early-exit branch of dashboard.html.
+- Replaced ypeof avgPct !== 'undefined' ? avgPct : 0 with  in the early-exit branch of dashboard.html.
 - Simplified the second call at the end of the block to just pass vgPct directly.
 
 ### Files
@@ -15185,9 +15731,9 @@ E2E static code trace discovered two critical bugs in start-assessment/index.ts:
 
 - Wait for user instructions.
 
-L o g g i n g   f i x e s . . . 
- 
- 
+Logging fixes...
+
+
 
 ## [2026-10-10 17:09] - Fix student PIN saving bug
 

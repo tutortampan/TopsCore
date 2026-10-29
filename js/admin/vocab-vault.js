@@ -49,17 +49,17 @@ export async function renderVocabularyVault(area) {
     // FIX: normalize word_type to lowercase before comparison
     // DB stores PascalCase: "Proverb", "Idiom", "Expression" — phraseTypes list is lowercase
     const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase'];
-    const wordsCount  = (words || []).filter(w => !phraseTypes.includes((w.word_type || '').toLowerCase())).length;
-    const phrasesCount = (words || []).filter(w =>  phraseTypes.includes((w.word_type || '').toLowerCase())).length;
+    const wordsCount = (words || []).filter(w => !phraseTypes.includes((w.word_type || '').toLowerCase())).length;
+    const phrasesCount = (words || []).filter(w => phraseTypes.includes((w.word_type || '').toLowerCase())).length;
     const topicsCount = (topics || []).length;
 
     let activeVaultTab = window._activeVaultTab || 'blueprint';
+    if (activeVaultTab === 'topics') activeVaultTab = 'blueprint';
 
     const buildVaultTabs = (activeId) => [
-      { id: 'blueprint', icon: '🗺️', title: 'Blueprint', label: 'Test Blueprint' },
-      { id: 'topics',    icon: '📑', val: topicsCount,  label: 'Topic Manager' },
-      { id: 'vocab',     icon: '📦', val: wordsCount,   label: 'Vocabulary Words' },
-      { id: 'phrases',   icon: '💬', val: phrasesCount, label: 'Phrases & Idioms' }
+      { id: 'blueprint', icon: '🗺️', val: topicsCount, title: 'Topic Blueprint', label: 'Topic Blueprint' },
+      { id: 'vocab', icon: '📦', val: wordsCount, label: 'Vocabulary Words' },
+      { id: 'phrases', icon: '💬', val: phrasesCount, label: 'Phrases & Idioms' }
     ];
 
     // FIX: move tabs to topbar (same pattern as Test, Class Hub, Students)
@@ -82,10 +82,8 @@ export async function renderVocabularyVault(area) {
         window.setBottomInfobar(null, null);
       }
       tabContent.innerHTML = '';
-      if (activeVaultTab === 'blueprint') {
-        _renderBlueprintTab(tabContent, words);
-      } else if (activeVaultTab === 'topics') {
-        _renderTopicManager(tabContent, words, topics);
+      if (activeVaultTab === 'blueprint' || activeVaultTab === 'topics') {
+        _renderTopicBlueprintTab(tabContent, words, topics);
       } else if (activeVaultTab === 'vocab') {
         _renderVaultGrid(tabContent, words, topics, 'single_words');
       } else if (activeVaultTab === 'phrases') {
@@ -112,12 +110,12 @@ export async function renderVocabularyVault(area) {
 
 function _renderVaultGrid(area, words, topics, mode = 'single_words') {
   let title = mode === 'single_words' ? '📦 Words' : '💬 Phrases';
-  let desc = mode === 'single_words' 
+  let desc = mode === 'single_words'
     ? 'Standard vocabulary (Noun, Verb, Adjective, Adverb). Feeds Module 1.'
     : 'Expressions, idioms, and proverbs. Feeds Module 2.';
 
   // Determine allowed options in filter based on mode
-  const wordTypeOptions = mode === 'single_words' 
+  const wordTypeOptions = mode === 'single_words'
     ? `
       <option value="Vocab">Vocab / Vocabulary</option>
       <option value="Verb">Verb</option>
@@ -294,7 +292,8 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             indonesian: newIndo,
             english: newEng,
             word_type: newType,
-           target_level: newLevel}).then(() => {
+            target_level: newLevel
+          }).then(() => {
             showToast('Word updated successfully.', 'success');
             word.theme_code = newThemeCode || null;
             word.theme = newTheme || null;
@@ -376,7 +375,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
   });
   document.getElementById('vault-topic-filter')?.addEventListener('change', filterAndRender);
   document.getElementById('vault-wordtype-filter')?.addEventListener('change', filterAndRender);
-  
+
   document.getElementById('btn-export-vault')?.addEventListener('click', async () => {
     try {
       const btn = document.getElementById('btn-export-vault');
@@ -397,7 +396,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     _allWords = [..._allWords, ...newWords];
     filterAndRender();
   }, mode));
-  
+
   document.getElementById('btn-check-duplicates')?.addEventListener('click', () => {
     openDuplicateCheckerModal(_allWords, (updatedWords) => {
       _allWords = updatedWords;
@@ -490,15 +489,15 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
           normalized[k.trim().toUpperCase().replace(/\s+/g, ' ')] = String(v).trim();
         }
         return {
-          level:      normalized.LEVEL || normalized.TARGET_LEVEL || '1',
+          level: normalized.LEVEL || normalized.TARGET_LEVEL || '1',
           theme_code: (normalized['THEME CODE'] || normalized.THEME_CODE || '').toUpperCase(),
-          theme:      normalized['THEME NAME'] || normalized.THEME || '',
+          theme: normalized['THEME NAME'] || normalized.THEME || '',
           topic_code: (normalized['TOPIC CODE'] || normalized.TOPIC_CODE || '').toUpperCase(),
-          topic:      normalized['TOPIC NAME'] || normalized.TOPIC || '',
-          category:   normalized.CATEGORY || '',
-          word_type:  normalized.TYPE || normalized['WORD TYPE'] || normalized.WORD_TYPE || 'Vocab',
+          topic: normalized['TOPIC NAME'] || normalized.TOPIC || '',
+          category: normalized.CATEGORY || '',
+          word_type: normalized.TYPE || normalized['WORD TYPE'] || normalized.WORD_TYPE || 'Vocab',
           indonesian: normalized.INDONESIAN || '',
-          english:    normalized.ENGLISH || ''
+          english: normalized.ENGLISH || ''
         };
       }).filter(r => r.topic && r.indonesian && r.english);
 
@@ -507,7 +506,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       _parsedRows = _parsedRows.map(r => {
         const wt = (r.word_type || '').toLowerCase();
         const cat = (r.category || '').toLowerCase();
-        
+
         // If Category is explicitly provided, trust it first!
         let isPhrase = allowedPhraseTypes.includes(wt);
         if (cat.includes('phrase')) isPhrase = true;
@@ -540,8 +539,8 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       const uniqueTopics = new Set(_parsedRows.map(r => r.topic).filter(Boolean)).size;
       const vocabRows = _parsedRows.filter(r => !r._isPhrase);
       const phraseRows = _parsedRows.filter(r => r._isPhrase);
-      const vocabDupes = duplicateConflicts.filter(c => !allowedPhraseTypes.includes((c.row.word_type||'').toLowerCase())).length;
-      const phraseDupes = duplicateConflicts.filter(c => allowedPhraseTypes.includes((c.row.word_type||'').toLowerCase())).length;
+      const vocabDupes = duplicateConflicts.filter(c => !allowedPhraseTypes.includes((c.row.word_type || '').toLowerCase())).length;
+      const phraseDupes = duplicateConflicts.filter(c => allowedPhraseTypes.includes((c.row.word_type || '').toLowerCase())).length;
 
       const distributionBadge = `
         <div class="d-flex gap-2 flex-wrap mt-2">
@@ -690,11 +689,11 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 
       <!-- Step Indicators -->
       <div class="d-flex gap-2 mb-5 flex-wrap" id="step-indicators">
-        ${['Scope & Tier','Source','Order & Quota','Schedule'].map((s,i) => `
-          <div class="d-flex align-center gap-1 step-ind" data-step="${i+1}" style="font-size:0.78rem;color:${i===0?'var(--clr-primary)':'var(--clr-text-3)'};">
+        ${['Scope & Tier', 'Source', 'Order & Quota', 'Schedule'].map((s, i) => `
+          <div class="d-flex align-center gap-1 step-ind" data-step="${i + 1}" style="font-size:0.78rem;color:${i === 0 ? 'var(--clr-primary)' : 'var(--clr-text-3)'};">
             <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;
-              background:${i===0?'var(--clr-primary)':'rgba(255,255,255,0.1)'};color:${i===0?'#fff':'var(--clr-text-3)'};font-size:0.72rem;font-weight:700;">${i+1}</span>
-            ${s}${i<3?'<span style="color:var(--clr-border);margin-left:6px;">→</span>':''}
+              background:${i === 0 ? 'var(--clr-primary)' : 'rgba(255,255,255,0.1)'};color:${i === 0 ? '#fff' : 'var(--clr-text-3)'};font-size:0.72rem;font-weight:700;">${i + 1}</span>
+            ${s}${i < 3 ? '<span style="color:var(--clr-border);margin-left:6px;">→</span>' : ''}
           </div>
         `).join('')}
       </div>
@@ -721,7 +720,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
     classId: editAsm?.class_id || overrides.classId || '', className: overrides.className || '',
     levelId: editAsm?.level_id || overrides.levelId || '', levelName: overrides.levelName || '',
     testType: editAsm?.test_type || overrides.testType || 'VOCAB_MASTERY',
-    tier: editAsm ? (editAsm.test_type.includes('TASK') ? 'TASK' : (editAsm.test_type.includes('QUIZ') ? 'QUIZ' : 'EXAM')) : 'TASK',
+    tier: editAsm ? (editAsm.test_type?.includes('EXAM') ? 'EXAM' : 'QUIZ') : (overrides.tier || 'QUIZ'),
     title: editAsm?.title || '',
     sourceTopic: null,
     sourceTaskIds: [],
@@ -751,8 +750,8 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 
   function updateAutoTitle() {
     const parts = [state.institutionName, state.programName, state.levelName, state.className].filter(Boolean);
-    let suffix = state.tier === 'TASK' ? 'Task' : (state.tier === 'QUIZ' ? 'Quiz' : 'Exam');
-    if (state.tier === 'TASK' && state.sourceTopic) suffix += ` - ${state.sourceTopic}`;
+    let suffix = state.tier === 'EXAM' ? 'Exam' : 'Quiz';
+    if ((state.tier === 'QUIZ' || state.tier === 'TASK') && state.sourceTopic) suffix += ` - ${state.sourceTopic}`;
     if (parts.length > 0) {
       state.title = `${parts.join(' - ')} - ${suffix}`;
       const titleInput = document.getElementById('b-title');
@@ -800,12 +799,11 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             <label class="form-label">Test Tier</label>
             <div class="d-flex flex-column gap-3 mb-3">
               ${[
-                { val: 'TASK', icon: '&#128203;', label: 'Task', desc: 'Single topic drill' },
-                { val: 'QUIZ', icon: '&#128220;', label: 'Quiz', desc: 'Multi-topic aggregation' },
-                { val: 'EXAM', icon: '&#127891;', label: 'Exam', desc: 'Comprehensive aggregation' }
-              ].map(t => `
-                <label class="d-flex align-center gap-3 p-2 rounded" style="cursor:pointer;border:2px solid ${state.tier===t.val?'var(--clr-primary)':'var(--clr-border)'};background:${state.tier===t.val?'rgba(99,102,241,0.08)':'rgba(255,255,255,0.02)'};">
-                  <input type="radio" name="vocab-tier" value="${t.val}" ${state.tier===t.val?'checked':''} style="accent-color:var(--clr-primary);" />
+          { val: 'QUIZ', icon: '&#128221;', label: 'Quiz', desc: 'Single topic drill' },
+          { val: 'EXAM', icon: '&#127942;', label: 'Exam', desc: 'Milestone aggregated exam' }
+        ].map(t => `
+                <label class="d-flex align-center gap-3 p-2 rounded" style="cursor:pointer;border:2px solid ${(state.tier === t.val || (state.tier === 'TASK' && t.val === 'QUIZ')) ? 'var(--clr-primary)' : 'var(--clr-border)'};background:${(state.tier === t.val || (state.tier === 'TASK' && t.val === 'QUIZ')) ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)'};">
+                  <input type="radio" name="vocab-tier" value="${t.val}" ${(state.tier === t.val || (state.tier === 'TASK' && t.val === 'QUIZ')) ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
                   <div>
                     <div class="fw-700">${t.icon} ${t.label}</div>
                     <div class="text-muted text-xs mt-1">${t.desc}</div>
@@ -827,18 +825,18 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
       const bClass = document.getElementById('b-class');
       const bTitle = document.getElementById('b-title');
 
-            async function initContext() {
+      async function initContext() {
         if (!state.institutionId) return;
-        
+
         if (state.isEdit || state.classId) {
           const sb = await getSupabase();
-          const [{data:iData}, {data:pData}, {data:lData}, {data:cData}] = await Promise.all([
-            state.institutionId ? sb.from('institutions').select('name').eq('id', state.institutionId).single() : {data:null},
-            state.programId ? sb.from('programs').select('name').eq('id', state.programId).single() : {data:null},
-            state.levelId ? sb.from('levels').select('name,level_number').eq('id', state.levelId).single() : {data:null},
-            state.classId ? sb.from('classes').select('name').eq('id', state.classId).single() : {data:null}
+          const [{ data: iData }, { data: pData }, { data: lData }, { data: cData }] = await Promise.all([
+            state.institutionId ? sb.from('institutions').select('name').eq('id', state.institutionId).single() : { data: null },
+            state.programId ? sb.from('programs').select('name').eq('id', state.programId).single() : { data: null },
+            state.levelId ? sb.from('levels').select('name,level_number').eq('id', state.levelId).single() : { data: null },
+            state.classId ? sb.from('classes').select('name').eq('id', state.classId).single() : { data: null }
           ]);
-          
+
           state.institutionName = iData?.name || state.institutionName;
           state.programName = pData?.name || state.programName;
           if (lData) {
@@ -849,17 +847,17 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             state.levelName = lData.name || `${lData.level_number}${suffix}`;
           }
           state.className = cData?.name || state.className;
-          
+
           bInstitution.innerHTML = `<option value="${state.institutionId}">${escapeHtml(state.institutionName)}</option>`;
           bProgram.innerHTML = `<option value="${state.programId}">${escapeHtml(state.programName)}</option>`;
           bLevel.innerHTML = `<option value="${state.levelId}">${escapeHtml(state.levelName)}</option>`;
           bClass.innerHTML = `<option value="${state.classId}">${escapeHtml(state.className)}</option>`;
-          
+
           bInstitution.disabled = true;
           bProgram.disabled = true;
           bLevel.disabled = true;
           bClass.disabled = true;
-          
+
           updateAutoTitle();
         } else {
           bInstitution.value = state.institutionId;
@@ -874,8 +872,8 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
       });
 
       document.querySelectorAll('input[name="vocab-tier"]').forEach(r => {
-        r.addEventListener('change', () => { 
-          state.tier = r.value; 
+        r.addEventListener('change', () => {
+          state.tier = r.value;
           document.querySelectorAll('label[style*="border: 2px solid"]').forEach(l => {
             l.style.borderColor = 'var(--clr-border)';
             l.style.background = 'rgba(255,255,255,0.02)';
@@ -883,7 +881,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           const parent = r.closest('label');
           parent.style.borderColor = 'var(--clr-primary)';
           parent.style.background = 'rgba(99,102,241,0.08)';
-          updateAutoTitle(); 
+          updateAutoTitle();
         });
       });
 
@@ -916,17 +914,17 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
         if (!state.programId) return;
         const sb = await getSupabase();
         const { data } = await sb.from('levels')
-            .select('id,name,level_number')
-            .order('level_number', { ascending: true });
-        
+          .select('id,name,level_number')
+          .order('level_number', { ascending: true });
+
         let levelData = data || [];
         levelData = levelData.map(l => {
-            if (l.level_number === 0) return { ...l, name: 'Level 0 (Pre-Level)' };
-            let suffix = 'th Level';
-            if (l.level_number === 1) suffix = 'st Level';
-            else if (l.level_number === 2) suffix = 'nd Level';
-            else if (l.level_number === 3) suffix = 'rd Level';
-            return { ...l, name: l.name || `${l.level_number}${suffix}` };
+          if (l.level_number === 0) return { ...l, name: 'Level 0 (Pre-Level)' };
+          let suffix = 'th Level';
+          if (l.level_number === 1) suffix = 'st Level';
+          else if (l.level_number === 2) suffix = 'nd Level';
+          else if (l.level_number === 3) suffix = 'rd Level';
+          return { ...l, name: l.name || `${l.level_number}${suffix}` };
         });
 
         bLevel.innerHTML = '<option value="">- Select Level -</option>' + levelData.map(l => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.name)}</option>`).join('');
@@ -963,13 +961,13 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
       content.innerHTML = `<h4 class="fw-600 mb-3 text-sm" style="color:var(--clr-text-2);">Step 2 — Select Source</h4><div id="source-area"><div class="spinner"></div></div>`;
       const sourceArea = document.getElementById('source-area');
 
-      if (state.tier === 'TASK') {
+      if (state.tier === 'QUIZ' || state.tier === 'TASK') {
         sourceArea.innerHTML = `
-          <p class="text-muted text-sm mb-3">Select the Vault topic for this Task:</p>
+          <p class="text-muted text-sm mb-3">Select the Vault topic for this Quiz:</p>
           <div class="d-flex flex-column gap-2" style="max-height:280px;overflow-y:auto;" id="topic-radio-list">
             ${vaultTopics.map(t => `
-              <label class="d-flex align-center gap-2 p-2 rounded" style="cursor:pointer;border:1px solid ${state.sourceTopic===t?'var(--clr-primary)':'var(--clr-border)'};">
-                <input type="radio" name="vault-topic" value="${escapeHtml(t)}" ${state.sourceTopic===t?'checked':''} style="accent-color:var(--clr-primary);" />
+              <label class="d-flex align-center gap-2 p-2 rounded" style="cursor:pointer;border:1px solid ${state.sourceTopic === t ? 'var(--clr-primary)' : 'var(--clr-border)'};">
+                <input type="radio" name="vault-topic" value="${escapeHtml(t)}" ${state.sourceTopic === t ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
                 <span class="fw-600 text-sm">${escapeHtml(t)}</span>
               </label>
             `).join('')}
@@ -995,15 +993,15 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             <p class="text-muted text-sm mb-3">Select Tasks to aggregate for this Quiz:</p>
             <div class="d-flex flex-column gap-2" style="max-height:280px;overflow-y:auto;">
               ${tasks.map(t => {
-                const topicDesc = t.description?.split('Topics: ')?.[1] || '—';
-                return `
+            const topicDesc = t.description?.split('Topics: ')?.[1] || '—';
+            return `
                 <label class="d-flex align-center gap-2 p-2 rounded" style="cursor:pointer;border:1px solid var(--clr-border);">
-                  <input type="checkbox" class="source-task-cb" value="${escapeHtml(t.id)}" ${state.sourceTaskIds.includes(t.id)?'checked':''} style="accent-color:var(--clr-primary);" />
+                  <input type="checkbox" class="source-task-cb" value="${escapeHtml(t.id)}" ${state.sourceTaskIds.includes(t.id) ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
                   <span class="fw-600 text-sm">${escapeHtml(t.title)}</span>
                   <span class="text-xs text-muted ml-2">Topic: ${escapeHtml(topicDesc)}</span>
                 </label>
                 `;
-              }).join('')}
+          }).join('')}
             </div>
           `;
           document.querySelectorAll('.source-task-cb').forEach(cb => {
@@ -1029,15 +1027,15 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             <p class="text-muted text-sm mb-3">Select Quizzes to aggregate for this Exam:</p>
             <div class="d-flex flex-column gap-2" style="max-height:280px;overflow-y:auto;">
               ${quizzes.map(q => {
-                const topicDesc = q.description?.split('Topics: ')?.[1] || '—';
-                return `
+            const topicDesc = q.description?.split('Topics: ')?.[1] || '—';
+            return `
                 <label class="d-flex align-center gap-2 p-2 rounded" style="cursor:pointer;border:1px solid var(--clr-border);">
-                  <input type="checkbox" class="source-quiz-cb" value="${escapeHtml(q.id)}" ${state.sourceQuizIds.includes(q.id)?'checked':''} style="accent-color:var(--clr-primary);" />
+                  <input type="checkbox" class="source-quiz-cb" value="${escapeHtml(q.id)}" ${state.sourceQuizIds.includes(q.id) ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
                   <span class="fw-600 text-sm">${escapeHtml(q.title)}</span>
                   <span class="text-xs text-muted ml-2">Topics: ${escapeHtml(topicDesc)}</span>
                 </label>
                 `;
-              }).join('')}
+          }).join('')}
             </div>
           `;
           document.querySelectorAll('.source-quiz-cb').forEach(cb => {
@@ -1058,11 +1056,11 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           <label class="form-label">Question Order</label>
           <div class="d-flex gap-3 flex-wrap">
             <label class="d-flex align-center gap-2" style="cursor:pointer;">
-              <input type="radio" name="q-order" value="random" ${state.questionOrder==='random'?'checked':''} style="accent-color:var(--clr-primary);" />
+              <input type="radio" name="q-order" value="random" ${state.questionOrder === 'random' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
               <span>&#128256; Random (Default)</span>
             </label>
             <label class="d-flex align-center gap-2" style="cursor:pointer;">
-              <input type="radio" name="q-order" value="sequential" ${state.questionOrder==='sequential'?'checked':''} style="accent-color:var(--clr-primary);" />
+              <input type="radio" name="q-order" value="sequential" ${state.questionOrder === 'sequential' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
               <span>&#10132; Sequential (Vault Order)</span>
             </label>
           </div>
@@ -1072,16 +1070,16 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           <label class="form-label">Question Quota</label>
           <div class="d-flex flex-column gap-2">
             <label class="d-flex align-center gap-2" style="cursor:pointer;">
-              <input type="radio" name="q-quota" value="full" ${state.quotaMode==='full'?'checked':''} style="accent-color:var(--clr-primary);" />
+              <input type="radio" name="q-quota" value="full" ${state.quotaMode === 'full' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
               <span>&#9989; All Questions (100% Full — Default)</span>
             </label>
             <label class="d-flex align-center gap-2" style="cursor:pointer;">
-              <input type="radio" name="q-quota" value="custom" ${state.quotaMode==='custom'?'checked':''} style="accent-color:var(--clr-primary);" />
+              <input type="radio" name="q-quota" value="custom" ${state.quotaMode === 'custom' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
               <span>&#9881; Custom Sample (Stratified)</span>
             </label>
           </div>
-          <div id="custom-quota-area" style="display:${state.quotaMode==='custom'?'block':'none'};margin-top:0.75rem;">
-            <input type="number" class="form-control" id="custom-quota-input" min="1" placeholder="Number of questions to sample" value="${state.customQuota||''}" style="max-width:240px;" />
+          <div id="custom-quota-area" style="display:${state.quotaMode === 'custom' ? 'block' : 'none'};margin-top:0.75rem;">
+            <input type="number" class="form-control" id="custom-quota-input" min="1" placeholder="Number of questions to sample" value="${state.customQuota || ''}" style="max-width:240px;" />
             <p class="text-muted text-xs mt-1">Words will be sampled proportionally across all source topics (stratified sampling).</p>
           </div>
         </div>
@@ -1116,11 +1114,11 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           <label class="form-label">Schedule Mode</label>
           <div class="d-flex gap-3 flex-wrap">
             <label class="d-flex align-center gap-2" style="cursor:pointer;">
-              <input type="radio" name="sched-mode" value="batch" ${state.scheduleMode==='batch' || state.scheduleMode==='flexible' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
+              <input type="radio" name="sched-mode" value="batch" ${state.scheduleMode === 'batch' || state.scheduleMode === 'flexible' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
               <span>&#128336; Batch Duration (Flexible Self-Paced)</span>
             </label>
             <label class="d-flex align-center gap-2" style="cursor:pointer;">
-              <input type="radio" name="sched-mode" value="manual" ${state.scheduleMode==='manual'?'checked':''} style="accent-color:var(--clr-primary);" />
+              <input type="radio" name="sched-mode" value="manual" ${state.scheduleMode === 'manual' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
               <span>&#128197; Tutor Live Control (Manual Toggle / In-Class)</span>
             </label>
           </div>
@@ -1143,9 +1141,9 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
         <div class="mt-4 p-3 rounded" style="background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);">
           <p class="text-xs fw-700 mb-2" style="color:var(--clr-text-2);">TEST SUMMARY</p>
           <div class="text-sm" style="line-height:1.8;">
-            <div><strong>Title:</strong> ${escapeHtml(state.title||'(not set)')}</div>
+            <div><strong>Title:</strong> ${escapeHtml(state.title || '(not set)')}</div>
             <div><strong>Tier:</strong> ${escapeHtml(state.tier)}</div>
-            <div><strong>Quota:</strong> ${state.quotaMode === 'custom' ? `${state.customQuota||'?'} questions (stratified)` : 'All (100%)'}</div>
+            <div><strong>Quota:</strong> ${state.quotaMode === 'custom' ? `${state.customQuota || '?'} questions (stratified)` : 'All (100%)'}</div>
             <div><strong>Order:</strong> ${state.questionOrder}</div>
           </div>
         </div>
@@ -1175,13 +1173,10 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
         showToast('Please complete all scope fields.', 'warning'); return;
       }
     } else if (state.step === 2) {
-      if (state.tier === 'TASK' && !state.sourceTopic) {
+      if ((state.tier === 'QUIZ' || state.tier === 'TASK') && !state.sourceTopic) {
         showToast('Please select a Vault topic.', 'warning'); return;
       }
-      if (state.tier === 'QUIZ' && !state.sourceTaskIds.length) {
-        showToast('Please select at least one Task.', 'warning'); return;
-      }
-      if (state.tier === 'EXAM' && !state.sourceQuizIds.length) {
+      if (state.tier === 'EXAM' && !state.sourceQuizIds.length && !state.sourceTaskIds.length) {
         showToast('Please select at least one Quiz.', 'warning'); return;
       }
     } else if (state.step === 4) {
@@ -1253,497 +1248,399 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 }
 
 
-// ─── Blueprint / Roadmap Panel ─────────────────────────────
-function _renderBlueprintTab(area, words) {
-  const toOrdinal = (n) => {
-    const s = ["th", "st", "nd", "rd"];
-    const v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
-  };
+// ─── Unified Topic Blueprint Panel (Zero-Scroll Viewport) ───────────────
+function _renderTopicBlueprintTab(area, words, topics) {
+  const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase', 'phrasal verb'];
+  const isPhrase = (wt) => phraseTypes.includes(String(wt || '').toLowerCase());
 
-  const vocabWords = words.filter(w => !['expression', 'idiom', 'proverb'].includes((w.word_type || '').toLowerCase()));
-  const phraseWords = words.filter(w => ['expression', 'idiom', 'proverb'].includes((w.word_type || '').toLowerCase()));
-
-  // 1. Metric Summary Cards
-  const levelsSet = new Set(words.map(w => parseInt(w.target_level) || 1));
-  const totalLevels = levelsSet.size;
-  const totalItems = words.length;
-
-  function getHierarchy(wordSubset) {
-    const hierarchy = {};
-    wordSubset.forEach(w => {
-      const level = parseInt(w.target_level) || 1;
-      const themeName = (w.theme || '').trim() || 'Unassigned Theme';
-      const topicName = (w.topic || '').trim() || 'Unassigned Topic';
-      const themeCode = (w.theme_code || '').trim() || 'ZZZ';
-      const topicCode = (w.topic_code || '').trim() || 'ZZZ';
-      
-      if (!hierarchy[level]) hierarchy[level] = {};
-      if (!hierarchy[level][themeName]) hierarchy[level][themeName] = { code: themeCode, topics: {} };
-      if (!hierarchy[level][themeName].topics[topicName]) hierarchy[level][themeName].topics[topicName] = { code: topicCode, count: 0 };
-      
-      hierarchy[level][themeName].topics[topicName].count++;
-      
-      if (hierarchy[level][themeName].code === 'ZZZ' && themeCode !== 'ZZZ') {
-        hierarchy[level][themeName].code = themeCode;
-      }
-      if (hierarchy[level][themeName].topics[topicName].code === 'ZZZ' && topicCode !== 'ZZZ') {
-        hierarchy[level][themeName].topics[topicName].code = topicCode;
-      }
+  // 1. Topic metadata & POS breakdown map
+  const topicMap = new Map();
+  (topics || []).forEach(t => {
+    topicMap.set(t, {
+      name: t,
+      theme: 'Unassigned',
+      themeCode: 'ZZZ',
+      topicCode: 'ZZZ',
+      level: 3,
+      verbs: 0,
+      adjs: 0,
+      nouns: 0,
+      phrases: 0,
+      totalWords: 0,
+      totalPhrases: 0,
+      totalCount: 0
     });
-    return hierarchy;
-  }
-
-  const vocabHierarchy = getHierarchy(vocabWords);
-  const phraseHierarchy = getHierarchy(phraseWords);
-
-  let totalTasks = 0;
-  let totalTests = 0;
-  levelsSet.forEach(lvl => {
-     const vThemes = Object.keys(vocabHierarchy[lvl] || {});
-     vThemes.forEach(thm => {
-        totalTasks += Object.keys(vocabHierarchy[lvl][thm]?.topics || {}).length;
-        totalTests += 1;
-     });
-     const pThemes = Object.keys(phraseHierarchy[lvl] || {});
-     pThemes.forEach(thm => {
-        totalTasks += Object.keys(phraseHierarchy[lvl][thm]?.topics || {}).length;
-        totalTests += 1;
-     });
   });
 
-  // Elevate metric cards and action button to the bottom infobar (above locked footer banner)
+  (words || []).forEach(w => {
+    const tName = (w.topic || '').trim();
+    if (!tName) return;
+    if (!topicMap.has(tName)) {
+      topicMap.set(tName, {
+        name: tName,
+        theme: 'Unassigned',
+        themeCode: 'ZZZ',
+        topicCode: 'ZZZ',
+        level: parseInt(w.target_level) || 3,
+        verbs: 0,
+        adjs: 0,
+        nouns: 0,
+        phrases: 0,
+        totalWords: 0,
+        totalPhrases: 0,
+        totalCount: 0
+      });
+    }
+    const tObj = topicMap.get(tName);
+    tObj.totalCount++;
+    if (w.theme) tObj.theme = w.theme.trim();
+    if (w.theme_code) tObj.themeCode = w.theme_code.trim();
+    if (w.topic_code) tObj.topicCode = w.topic_code.trim();
+    if (w.target_level) tObj.level = parseInt(w.target_level) || 3;
+
+    const wt = String(w.word_type || '').toLowerCase();
+    if (wt === 'verb') tObj.verbs++;
+    else if (wt === 'adjective' || wt === 'adj') tObj.adjs++;
+    else if (wt === 'noun') tObj.nouns++;
+    else if (isPhrase(wt)) tObj.phrases++;
+
+    if (isPhrase(wt)) {
+      tObj.totalPhrases++;
+    } else {
+      tObj.totalWords++;
+    }
+  });
+
+  // 2. Levels detection
+  const levelsSet = new Set();
+  topicMap.forEach(t => levelsSet.add(t.level));
+  if (levelsSet.size === 0) levelsSet.add(3);
+  const levels = Array.from(levelsSet).sort((a, b) => a - b);
+  const activeLevel = window._blueprintSelectedLevel || levels[0] || 3;
+
+  // 3. Group topics by Theme for active level
+  const levelTopics = Array.from(topicMap.values()).filter(t => t.level === activeLevel);
+  const themeMap = new Map();
+  levelTopics.forEach(t => {
+    const thKey = t.themeCode + ' ' + t.theme;
+    if (!themeMap.has(thKey)) {
+      themeMap.set(thKey, {
+        code: t.themeCode,
+        name: t.theme,
+        topics: [],
+        totalWords: 0,
+        totalPhrases: 0,
+        totalCount: 0
+      });
+    }
+    const th = themeMap.get(thKey);
+    th.topics.push(t);
+    th.totalWords += t.totalWords;
+    th.totalPhrases += t.totalPhrases;
+    th.totalCount += t.totalCount;
+  });
+
+  // Sort themes by themeCode (A, B, C, D)
+  const sortedThemes = Array.from(themeMap.values()).sort((a, b) => {
+    if (a.code === 'ZZZ' && b.code !== 'ZZZ') return 1;
+    if (a.code !== 'ZZZ' && b.code === 'ZZZ') return -1;
+    return a.code.localeCompare(b.code);
+  });
+
+  // 4. Calculate cumulative exam question scale
+  let runningWords = 0;
+  let runningPhrases = 0;
+  let totalTasks = 0;
+  let totalTests = sortedThemes.length * 2; // 2 exams per theme (Words + Phrases)
+
+  sortedThemes.forEach(th => {
+    th.topics.sort((a, b) => {
+      const codeA = a.topicCode || 'ZZZ';
+      const codeB = b.topicCode || 'ZZZ';
+      const numA = parseInt(codeA, 10);
+      const numB = parseInt(codeB, 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return codeA.localeCompare(codeB);
+    });
+
+    totalTasks += th.topics.length * 2; // 2 quizzes per topic (Words + Phrases)
+    runningWords += th.totalWords;
+    runningPhrases += th.totalPhrases;
+    th.cumulativeWords = runningWords;
+    th.cumulativePhrases = runningPhrases;
+  });
+
+  const totalWordsCount = words.filter(w => !isPhrase(w.word_type)).length;
+  const totalPhrasesCount = words.filter(w => isPhrase(w.word_type)).length;
+
+  // 5. Setup bottom infobar chips and auto-generate button
   if (window.setBottomInfobar) {
     const leftHtml = `
-      <div class="bottom-info-chip"><span class="chip-label">Levels:</span><span class="chip-val">${totalLevels}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Drill Tasks:</span><span class="chip-val">${totalTasks}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Aggregated Tests:</span><span class="chip-val">${totalTests}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Vault Items:</span><span class="chip-val">${totalItems}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Levels:</span><span class="chip-val">${levelsSet.size}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Quizzes:</span><span class="chip-val">${totalTasks}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Exams:</span><span class="chip-val">${totalTests}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Vault Items:</span><span class="chip-val">${words.length}</span></div>
     `;
     const rightHtml = `
-      <button class="btn btn-primary btn-sm" id="btn-blueprint-auto-generate" style="background:var(--clr-primary); font-size:12px; padding:6px 14px; font-weight:600;">
+      <button class="btn btn-primary btn-sm" id="btn-blueprint-auto-generate-bottom" style="background:var(--clr-primary); font-size:12px; padding:6px 14px; font-weight:600; cursor:pointer;">
         ⚡ Auto-Generate from Blueprint
       </button>
     `;
     window.setBottomInfobar(leftHtml, rightHtml);
   }
 
+  // Theme Visual Colors
+  const themeVisuals = {
+    'A': { border: 'rgba(56, 189, 248, 0.4)', accent: '#38bdf8', pillBg: '#0284c7' },
+    'B': { border: 'rgba(52, 211, 153, 0.4)', accent: '#34d399', pillBg: '#059669' },
+    'C': { border: 'rgba(251, 191, 36, 0.4)', accent: '#fbbf24', pillBg: '#d97706' },
+    'D': { border: 'rgba(192, 132, 252, 0.4)', accent: '#c084fc', pillBg: '#7c3aed' }
+  };
+
+  // 6. Build Zero-Scroll Dashboard HTML
   let html = `
-    <div style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 20px; font-family: 'Inter', system-ui, sans-serif;">
-  `;
-
-  const levels = Array.from(levelsSet).sort((a, b) => a - b);
-  html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(48%, 1fr)); gap: 12px;">`;
-  levels.forEach(lvl => {
-     html += `
-       <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;">
-         <!-- Level Ribbon Header -->
-         <div style="background: #334155; padding: 6px 10px; border-bottom: 1px solid #475569;">
-           <h3 style="margin: 0; color: #ffffff; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">${lvl == 0 ? 'NO LEVEL' : `LEVEL ${lvl}`} ROADMAP</h3>
-         </div>
-         <div style="display: flex; flex-wrap: wrap; flex: 1; align-items: stretch;">
-           <!-- Left Column: Single Words -->
-           <div style="flex: 1; min-width: 250px; padding: 12px; border-right: 1px solid #334155; border-bottom: 1px solid #334155;">
-             <h4 style="margin: 0 0 12px 0; color: #ffffff; font-size: 12px; font-weight: 600;">📦 Single Words (Module 1)</h4>
-     `;
-
-     const renderThemeBlock = (themeName, topicsData, titleType, taskType, testType, runningTotal) => {
-        if (!topicsData) return { html: '', total: runningTotal };
-        const topics = Object.keys(topicsData).sort((a,b) => {
-           const cA = topicsData[a].code;
-           const cB = topicsData[b].code;
-           if (cA !== cB && cA !== 'ZZZ' && cB !== 'ZZZ') return cA.localeCompare(cB);
-           return a.localeCompare(b);
-        });
-        if (topics.length === 0) return { html: '', total: runningTotal };
-        let themeWordCount = 0;
-        
-        let blockHtml = `
-          <div style="background: #0f172a; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; margin-bottom: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);">
-            <div style="background: transparent; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 10px; display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: #94a3b8; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">THEME: ${escapeHtml(themeName)}</span>
-              <span style="color: #64748b; font-size: 10px; font-weight: 500;">${topics.length} Tasks</span>
-            </div>
-            <div style="display: flex; flex-direction: column;">
-        `;
-
-        // Tasks
-        topics.forEach(topicName => {
-           const count = topicsData[topicName].count;
-           themeWordCount += count;
-           const taskName = `${lvl == 0 ? 'No' : toOrdinal(lvl)} Level ${titleType} Task - ${topicName}`;
-           blockHtml += `
-              <div style="padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; justify-content: space-between; align-items: center; transition: background-color 150ms ease;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.03)'" onmouseout="this.style.backgroundColor='transparent'">
-                <span style="color: #ffffff; font-size: 12px; font-weight: 500; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(taskName)}">${escapeHtml(taskName)}</span>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                  <span style="background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 9.5px; padding: 3px 8px; border-radius: 4px; font-weight: 600; border: none;">${taskType}</span>
-                  <span style="color: #ffffff; font-size: 12px; font-weight: 700; width: 28px; text-align: right; font-variant-numeric: tabular-nums;">${count}</span>
-                </div>
-              </div>
-           `;
-        });
-
-        const newRunningTotal = runningTotal + themeWordCount;
-
-        // Test
-        const testName = `${lvl == 0 ? 'No' : toOrdinal(lvl)} Level ${titleType} Test - ${themeName}`;
-        blockHtml += `
-              <div style="padding: 8px 10px; background: transparent; border-top: 1px solid rgba(255,255,255,0.04); border-left: 2px solid #6366f1; display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #ffffff; font-size: 12px; font-weight: 700; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(testName)}">${escapeHtml(testName)}</span>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                  <span style="background: rgba(99, 102, 241, 0.25); color: #c7d2fe; font-size: 9.5px; padding: 3px 8px; border-radius: 4px; font-weight: 600; border: none;">${testType}</span>
-                  <span style="color: #ffffff; font-size: 13px; font-weight: 700; width: 28px; text-align: right; font-variant-numeric: tabular-nums;">${newRunningTotal}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-        return { html: blockHtml, total: newRunningTotal };
-     };
-
-     const vThemes = Object.keys(vocabHierarchy[lvl] || {}).sort((a,b) => {
-        const cA = vocabHierarchy[lvl][a].code || 'ZZZ';
-        const cB = vocabHierarchy[lvl][b].code || 'ZZZ';
-        // ZZZ (no code) always goes last
-        if (cA === 'ZZZ' && cB !== 'ZZZ') return 1;
-        if (cA !== 'ZZZ' && cB === 'ZZZ') return -1;
-        // Both have real codes — sort by code
-        const cmp = cA.localeCompare(cB, undefined, { numeric: true, sensitivity: 'base' });
-        if (cmp !== 0) return cmp;
-        // Same code — tiebreak by name
-        return a.localeCompare(b);
-     });
-     if (vThemes.length > 0) {
-        let currentTotal = 0;
-        vThemes.forEach(themeName => {
-           const result = renderThemeBlock(themeName, vocabHierarchy[lvl][themeName].topics, 'Vocabulary', 'Speech', 'Speech', currentTotal);
-           html += result.html;
-           currentTotal = result.total;
-        });
-     } else {
-        html += `<p style="color: #64748b; font-size: 12px; font-style: italic;">No Single Words configured for this level.</p>`;
-     }
-
-     html += `
-           </div>
-           <!-- Right Column: Phrases -->
-           <div style="flex: 1; min-width: 250px; padding: 12px; border-bottom: 1px solid #334155;">
-             <h4 style="margin: 0 0 12px 0; color: #ffffff; font-size: 12px; font-weight: 600;">💬 Phrases & Idioms (Module 2)</h4>
-     `;
-
-     const pThemes = Object.keys(phraseHierarchy[lvl] || {}).sort((a,b) => {
-        const cA = phraseHierarchy[lvl][a].code || 'ZZZ';
-        const cB = phraseHierarchy[lvl][b].code || 'ZZZ';
-        // ZZZ (no code) always goes last
-        if (cA === 'ZZZ' && cB !== 'ZZZ') return 1;
-        if (cA !== 'ZZZ' && cB === 'ZZZ') return -1;
-        // Both have real codes — sort by code
-        const cmp = cA.localeCompare(cB, undefined, { numeric: true, sensitivity: 'base' });
-        if (cmp !== 0) return cmp;
-        // Same code — tiebreak by name
-        return a.localeCompare(b);
-     });
-     if (pThemes.length > 0) {
-        let currentTotal = 0;
-        pThemes.forEach(themeName => {
-           const result = renderThemeBlock(themeName, phraseHierarchy[lvl][themeName].topics, 'Phrases', 'Speech', 'Selection', currentTotal);
-           html += result.html;
-           currentTotal = result.total;
-        });
-     } else {
-        html += `<p style="color: #64748b; font-size: 12px; font-style: italic;">No Phrases configured for this level.</p>`;
-     }
-
-     html += `
-           </div>
-         </div>
-       </div>
-     `;
-  });
-  
-  html += `</div></div>`; // Close grid and main container
-  area.innerHTML = html;
-
-  // Attach event listener (checking both area and bottom infobar in document)
-  const btnGen = document.getElementById('btn-blueprint-auto-generate');
-  if (btnGen) {
-    btnGen.onclick = async () => {
-      const importedLevels = Array.from(levelsSet).sort((a,b)=>a-b);
-      if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
-      try {
-        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261027c');
-        await openAutoGenerateModal({
-          availableLevels: importedLevels,
-          preSelectedLevels: importedLevels,
-          explicitClassId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
-          onComplete: (res) => {
-             // Success handled by modal
-          }
-        });
-      } catch (err) {
-        console.error(err);
-        if (window.showToast) window.showToast('Error opening generator: ' + err.message, 'error');
-      }
-    };
-  }
-}
-
-// ─── Domain D: Topic Management Panel ─────────────────────────────
-
-function _renderTopicManager(area, words, topics) {
-  const topicMap = new Map();
-  topics.forEach(t => topicMap.set(t, { theme: new Set(), themeCodes: new Set(), topicCodes: new Set(), count: 0, targetLevel: null, types: {} }));
-  words.forEach(w => {
-    if (!w.topic) return;
-    if (!topicMap.has(w.topic)) topicMap.set(w.topic, { theme: new Set(), themeCodes: new Set(), topicCodes: new Set(), count: 0, targetLevel: null, types: {} });
-    const tData = topicMap.get(w.topic);
-    tData.count++;
-    tData.targetLevel = w.target_level;
-    if (w.theme) tData.theme.add(w.theme);
-    if (w.theme_code) tData.themeCodes.add(w.theme_code);
-    if (w.topic_code) tData.topicCodes.add(w.topic_code);
-    const type = w.word_type || "Unknown";
-    tData.types[type] = (tData.types[type] || 0) + 1;
-  });
-  const topicEntries = Array.from(topicMap.entries()).sort((a,b) => {
-    const codeA = Array.from(a[1].themeCodes)[0] || 'ZZZ';
-    const codeB = Array.from(b[1].themeCodes)[0] || 'ZZZ';
-    const cmp = codeA.localeCompare(codeB);
-    if (cmp !== 0) return cmp;
-    const tCodeA = Array.from(a[1].topicCodes)[0] || 'ZZZ';
-    const tCodeB = Array.from(b[1].topicCodes)[0] || 'ZZZ';
-    return tCodeA.localeCompare(tCodeB);
-  });
-
-  area.innerHTML = `
-    <div style="display: flex; flex-direction: column; height: calc(100vh - 120px); box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
-      <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
-        <div style="padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div class="table-toolbar-unified">
-            <input type="search" id="vault-topic-search" placeholder="🔍 Search Topics & Themes..." class="toolbar-input-38" style="width: 250px;">
-            <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-topic-dup-checker">&#9874; Merge Similar Topics</button>
-            <button class="btn btn-danger btn-sm toolbar-btn-38" id="btn-reset-vault-header" title="Truncate all vault words" style="opacity:0.9; margin-left: 8px;">&#9888;&#65039; Reset All</button>
-          </div>
-          <div style="font-size: 12px; color: #64748b; font-weight: 500;">
-            Total Topics: <span style="color: #f8fafc; font-weight: 700;">${topicEntries.length}</span> &nbsp;|&nbsp; 
-            Total Words: <span style="color: #f8fafc; font-weight: 700;">${words.length}</span>
-          </div>
+    <div style="display: flex; flex-direction: column; height: 100%; max-height: calc(100vh - 120px); box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; gap: 6px; padding: 0 4px 6px 4px;">
+      <!-- Top Control Toolbar -->
+      <div style="flex-shrink: 0; padding: 2px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="search" id="vault-topic-search" placeholder="🔍 Search Topics & Themes..." style="width: 210px; height: 32px; font-size: 11.5px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
+          <span style="background: rgba(30,41,59,0.9); border: 1px solid rgba(255,255,255,0.12); color: #f8fafc; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; letter-spacing: 0.05em;">LEVEL ${activeLevel}</span>
+          <button class="btn btn-secondary btn-sm" id="btn-topic-dup-checker" style="height: 32px; font-size: 11px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.12); color: #f8fafc; border-radius: 6px; cursor: pointer;">⚒️ Merge Similar</button>
+          <button class="btn btn-danger btn-sm" id="btn-reset-vault-header" style="height: 32px; font-size: 11px; padding: 0 10px; opacity: 0.88; border-radius: 6px; cursor: pointer;" title="Truncate all vault words">⚠️ Reset All</button>
         </div>
-        <div class="table-wrap sticky-first" style="flex-grow: 1; overflow-y: auto;">
-          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;" id="vault-topic-table">
-            <thead style="background: rgba(15, 23, 42, 0.95); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-              <tr>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px;">Theme</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px;">Topic Title</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: center;">Verb</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: center;">Adjective</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: center;">Noun</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: center;">Phrases</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: center;">Count</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; width: 180px;">Structural Level</th>
-                <th style="padding: 8px 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; text-align: right;">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="vault-topic-tbody"></tbody>
-          </table>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Topics: <strong style="color:#ffffff;" id="topic-count-display">${topicMap.size}</strong></span>
+          <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Words: <strong style="color:#ffffff;">${totalWordsCount}</strong></span>
+          <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Phrases: <strong style="color:#ffffff;">${totalPhrasesCount}</strong></span>
+          <button class="btn btn-primary btn-sm" id="btn-blueprint-auto-generate" style="background: var(--clr-primary); font-size: 11.5px; padding: 0 14px; height: 32px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(99,102,241,0.35); border: none; cursor: pointer; border-radius: 5px;">⚡ Auto-Generate from Blueprint</button>
         </div>
       </div>
-    </div>
+
+      <!-- 4-Thematic Columns Board (Zero-Scroll Grid) -->
+      <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; overflow: hidden; padding-bottom: 2px;">
   `;
 
-  const tbody = document.getElementById("vault-topic-tbody");
-  function renderRows(filteredEntries) {
-    if (!filteredEntries.length) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="9">
-            <div class="smart-empty-state">
-              <span class="smart-empty-icon">🔍</span>
-              <div class="smart-empty-title">No topics match your search</div>
-              <div class="smart-empty-subtext">No topic or theme matched your current query.</div>
-              <button type="button" class="smart-empty-btn" onclick="document.getElementById('vault-topic-search').value=''; document.getElementById('vault-topic-search').dispatchEvent(new Event('input'));">✕ Clear Search</button>
+  sortedThemes.forEach(th => {
+    const vis = themeVisuals[th.code] || { border: 'rgba(99,102,241,0.4)', accent: '#818cf8', pillBg: '#4f46e5' };
+
+    html += `
+      <div class="theme-column-card" style="background: #0f172a; border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid ${vis.accent}; border-radius: 8px; display: flex; flex-direction: column; height: 100%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.35);">
+        <!-- Column Header -->
+        <div style="background: rgba(30, 41, 59, 0.85); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 6px 10px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+            <span style="background: ${vis.pillBg}; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.05em; flex-shrink: 0;">THEME ${escapeHtml(th.code)}</span>
+            <span style="color: #ffffff; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(th.name)}">${escapeHtml(th.name)}</span>
+          </div>
+          <span style="color: #94a3b8; font-size: 10.5px; font-weight: 600; flex-shrink: 0; margin-left: 4px;">${th.topics.length} Quizzes · ${th.totalCount} W</span>
+        </div>
+
+        <!-- Topics List Container -->
+        <div class="theme-topic-list" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px; overflow-y: auto; scrollbar-width: thin;">
+    `;
+
+    th.topics.forEach((t, idx) => {
+      const displayNum = t.topicCode && t.topicCode !== 'ZZZ' ? t.topicCode : (idx + 1);
+
+      html += `
+        <div class="topic-item-card" data-topic="${escapeHtml(t.name)}" data-theme="${escapeHtml(th.name)}" style="background: rgba(30, 41, 59, 0.55); border: 1px solid rgba(255,255,255,0.05); border-radius: 5px; padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; transition: background-color 120ms ease;">
+          <!-- Row 1: Number, Title, Actions -->
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 5px; min-width: 0; flex: 1;">
+              <span style="color: ${vis.accent}; font-size: 10px; font-weight: 800; width: 14px; text-align: center; flex-shrink: 0;">${displayNum}</span>
+              <span class="topic-title-text" style="color: #f8fafc; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>
             </div>
-          </td>
-        </tr>
+            <div style="display: flex; align-items: center; gap: 3px; flex-shrink: 0;">
+              <button class="btn-edit-topic-mini" data-topic="${escapeHtml(t.name)}" title="Rename Topic" style="background: transparent; border: none; cursor: pointer; color: #38bdf8; font-size: 11px; padding: 1px 3px; line-height: 1;">✏️</button>
+              <button class="btn-del-topic-mini" data-topic="${escapeHtml(t.name)}" title="Delete Topic" style="background: transparent; border: none; cursor: pointer; color: #ef4444; font-size: 11px; padding: 1px 3px; line-height: 1;">🗑️</button>
+            </div>
+          </div>
+          <!-- Row 2: POS chips & Total count -->
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 2.5px; align-items: center;">
+              <span style="background: rgba(34,197,94,0.18); color: #4ade80; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.verbs} Verbs">${t.verbs}V</span>
+              <span style="background: rgba(234,179,8,0.18); color: #facc15; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.adjs} Adjectives">${t.adjs}A</span>
+              <span style="background: rgba(56,189,248,0.18); color: #38bdf8; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.nouns} Nouns">${t.nouns}N</span>
+              <span style="background: rgba(168,85,247,0.18); color: #c084fc; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.phrases} Phrases">${t.phrases}P</span>
+            </div>
+            <div style="display: flex; gap: 4px; align-items: center;">
+              <span style="background: rgba(255,255,255,0.06); color: #94a3b8; font-size: 9px; font-weight: 600; padding: 1px 4px; border-radius: 3px;" title="40 Words + 10 Phrases">Quiz: 40+10</span>
+              <span style="background: rgba(255,255,255,0.12); color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px;" title="Total Items">${t.totalCount}</span>
+            </div>
+          </div>
+        </div>
       `;
-      return;
+    });
+
+    html += `
+        </div>
+
+        <!-- Exam Milestone Footer -->
+        <div style="background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(255,255,255,0.08); padding: 5px 8px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #c7d2fe; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; gap: 4px;">
+              <span>🏆</span> THEME ${escapeHtml(th.code)} EXAMS
+            </span>
+            <span style="color: #818cf8; font-size: 9px; font-weight: 700;">Cumul. Scale</span>
+          </div>
+          <div style="display: flex; gap: 5px; justify-content: space-between;">
+            <div style="background: rgba(99,102,241,0.18); border: 1px solid rgba(99,102,241,0.35); border-radius: 4px; padding: 3px 6px; flex: 1; display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #a5b4fc; font-size: 9.5px; font-weight: 600;">Words Exam</span>
+              <span style="color: #ffffff; font-size: 11px; font-weight: 800;">${th.cumulativeWords} Q</span>
+            </div>
+            <div style="background: rgba(244,114,182,0.18); border: 1px solid rgba(244,114,182,0.35); border-radius: 4px; padding: 3px 6px; flex: 1; display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #f472b6; font-size: 9.5px; font-weight: 600;">Phrases Exam</span>
+              <span style="color: #ffffff; font-size: 11px; font-weight: 800;">${th.cumulativePhrases} Q</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div></div>`; // Close grid & main container
+  area.innerHTML = html;
+
+  // 7. Wire Events
+  // Auto-Generate Trigger (both top and bottom buttons)
+  const triggerAutoGenerate = async () => {
+    const importedLevels = Array.from(levelsSet).sort((a, b) => a - b);
+    if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
+    try {
+      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261027c');
+      await openAutoGenerateModal({
+        availableLevels: importedLevels,
+        preSelectedLevels: importedLevels,
+        explicitClassId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
+        onComplete: (res) => {
+          // Success handled by modal
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      if (window.showToast) window.showToast('Error opening generator: ' + err.message, 'error');
     }
-    tbody.innerHTML = filteredEntries.map(([topic, data]) => {
-      const themesStr = Array.from(data.theme).join(', ') || '-';
-      const themeCodeStr = Array.from(data.themeCodes).join(', ') || '-';
-      const topicCodeStr = Array.from(data.topicCodes).join(', ') || '-';
-      
-      const themeDisplay = `<span style="color:#818cf8; font-weight:bold; margin-right:6px;">${escapeHtml(themeCodeStr)}</span> <span style="color:#ffffff;">${escapeHtml(themesStr)}</span>`;
-      const topicDisplay = `<span style="color:#34d399; font-weight:bold; margin-right:6px;">${escapeHtml(topicCodeStr)}</span> <span style="color:#ffffff; font-weight:600;">${escapeHtml(topic)}</span>`;
-      
-      const verbCount = data.types['Verb'] || 0;
-      const adjCount = data.types['Adjective'] || 0;
-      const nounCount = data.types['Noun'] || 0;
-      
-      let phraseCount = 0;
-      for (const [t, c] of Object.entries(data.types)) {
-        if (["idiom", "expression", "proverb", "phrase", "phrasal verb"].includes(t.toLowerCase())) {
-          phraseCount += c;
-        }
-      }
+  };
 
-      return `
-        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-          <td style="padding: 6px 10px; font-weight: 600; color: #ffffff; white-space: nowrap;">${themeDisplay}</td>
-          <td style="padding: 6px 10px; font-weight: 600; color: #ffffff; white-space: nowrap;">${topicDisplay}</td>
-          <td style="padding: 6px 10px; text-align: center; color: #ffffff; font-weight: 600;">${verbCount}</td>
-          <td style="padding: 6px 10px; text-align: center; color: #ffffff; font-weight: 600;">${adjCount}</td>
-          <td style="padding: 6px 10px; text-align: center; color: #ffffff; font-weight: 600;">${nounCount}</td>
-          <td style="padding: 6px 10px; text-align: center; color: #ffffff; font-weight: 600;">${phraseCount}</td>
-          <td style="padding: 6px 10px; text-align: center;"><span style="background: #334155; color: #ffffff; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; border: none;">${data.count}</span></td>
-          <td style="padding: 4px 8px;">
-            <select class="topic-level-select form-control" data-topic="${escapeHtml(topic)}" style="background: #0f172a; border: 1px solid #475569; color: #f8fafc; padding: 4px 8px; border-radius: 4px; font-size: 11px; width: 100%; outline: none; cursor: pointer;">
-              <option value="0" ${data.targetLevel === 0 ? "selected" : ""}>Level 0 (Pre-Level)</option>
-              <option value="1" ${data.targetLevel === 1 ? "selected" : ""}>Level 1</option>
-              <option value="2" ${data.targetLevel === 2 ? "selected" : ""}>Level 2</option>
-              <option value="3" ${data.targetLevel === 3 ? "selected" : ""}>Level 3</option>
-            </select>
-          </td>
-          <td style="padding: 4px 8px; text-align: right; white-space: nowrap;">
-            <button class="btn-edit-topic" data-topic="${escapeHtml(topic)}" style="background: transparent; border: none; cursor: pointer; color: #3b82f6; font-size: 12px; margin-right: 8px;" title="Rename Topic">&#9998; Rename</button>
-            <button class="btn-del-topic" data-topic="${escapeHtml(topic)}" style="background: transparent; border: none; cursor: pointer; color: #ef4444; font-size: 12px;" title="Delete Topic">&#128465; Delete</button>
-          </td>
-        </tr>
-      `;
-    }).join("");
+  const btnGenTop = document.getElementById('btn-blueprint-auto-generate');
+  if (btnGenTop) btnGenTop.onclick = triggerAutoGenerate;
 
-    tbody.querySelectorAll(".btn-edit-topic").forEach(btn => {
-      btn.addEventListener("click", async (e) => {
-        const oldTopic = e.currentTarget.getAttribute("data-topic");
-        const newTopic = prompt(`Rename topic "${oldTopic}" to:`, oldTopic);
-        if (!newTopic || newTopic.trim() === "" || newTopic === oldTopic) return;
-        
-        try {
-          const { showLoading, hideLoading, showToast } = await import('../app.js?v=5.3.2'); // unified v=4.7.12
-          showLoading();
-          await renameVaultTopic(oldTopic, newTopic.trim());
-          hideLoading();
-          showToast(`Topic renamed to "${newTopic.trim()}"`, "success");
-          
-          // Refresh Vault
-          if (typeof renderVocabularyVault === 'function') {
-            const container = document.getElementById('classes-detail-canvas');
-            if (container) renderVocabularyVault(container);
-          }
-        } catch (err) {
-          hideLoading();
-          showToast(`Failed to rename: ${err.message}`, "error");
-        }
-      });
-    });
+  const btnGenBottom = document.getElementById('btn-blueprint-auto-generate-bottom');
+  if (btnGenBottom) btnGenBottom.onclick = triggerAutoGenerate;
 
-    tbody.querySelectorAll(".btn-del-topic").forEach(btn => {
-      btn.addEventListener("click", async (e) => {
-        const topic = e.currentTarget.getAttribute("data-topic");
-        if (!confirm(`Are you sure you want to delete ALL words in the topic "${topic}"? This cannot be undone.`)) return;
-        
-        try {
-          const { showLoading, hideLoading, showToast } = await import('../app.js?v=5.3.2');
-          const { getSupabase } = await import('../supabase.js?v=5.3.2');
-          showLoading("Deleting topic...");
-          const sb = await getSupabase();
-          const { error } = await sb.from('vocabulary_vault').update({ deleted_at: new Date().toISOString() }).eq('topic', topic);
-          hideLoading();
-          if (error) throw error;
-          
-          showToast(`Topic "${topic}" deleted.`, "success");
-          if (typeof renderVocabularyVault === 'function') {
-            const container = document.getElementById('classes-detail-canvas');
-            if (container) renderVocabularyVault(container);
-          }
-        } catch (err) {
-          hideLoading();
-          showToast(`Failed to delete topic: ${err.message}`, "error");
-        }
-      });
-    });
-
-    tbody.querySelectorAll(".topic-level-select").forEach(select => {
-      select.addEventListener("change", async (e) => {
-        const topicName = e.target.getAttribute("data-topic");
-        const newLevel = parseInt(e.target.value, 10);
-        
-        // Dynamic import to avoid missing dependencies in older backup
-        const { moveVaultTopicsToLevel } = await import('../api.js?v=20261027b');
-        const { showLoading, hideLoading, showToast } = await import('../app.js?v=20261027b');
-        
+  // Rename Topic
+  area.querySelectorAll('.btn-edit-topic-mini').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const oldTopic = e.currentTarget.getAttribute('data-topic');
+      const newTopic = prompt(`Rename topic "${oldTopic}" to:`, oldTopic);
+      if (!newTopic || newTopic.trim() === '' || newTopic === oldTopic) return;
+      try {
         showLoading();
-        try {
-          await moveVaultTopicsToLevel([topicName], newLevel);
-          showToast(`Topic "${topicName}" bound to Level ${newLevel}`, "success");
-          const t = topicMap.get(topicName);
-          if(t) t.targetLevel = newLevel;
-        } catch (err) {
-          showToast(`Binding failed: ${err.message}`, "error");
-          const t = topicMap.get(topicName);
-          e.target.value = t ? t.targetLevel : 1;
-        } finally {
-          hideLoading();
+        await renameVaultTopic(oldTopic, newTopic.trim());
+        hideLoading();
+        showToast(`Topic renamed to "${newTopic.trim()}"`, 'success');
+        if (typeof renderVocabularyVault === 'function') {
+          const container = document.getElementById('classes-detail-canvas');
+          if (container) renderVocabularyVault(container);
+        }
+      } catch (err) {
+        hideLoading();
+        showToast(`Failed to rename: ${err.message}`, 'error');
+      }
+    });
+  });
+
+  // Delete Topic
+  area.querySelectorAll('.btn-del-topic-mini').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const topic = e.currentTarget.getAttribute('data-topic');
+      if (!confirm(`Are you sure you want to delete ALL words in the topic "${topic}"? This cannot be undone.`)) return;
+      try {
+        showLoading('Deleting topic...');
+        const sb = await getSupabase();
+        const { error } = await sb.from('vocabulary_vault').update({ deleted_at: new Date().toISOString() }).eq('topic', topic);
+        hideLoading();
+        if (error) throw error;
+        showToast(`Topic "${topic}" deleted.`, 'success');
+        if (typeof renderVocabularyVault === 'function') {
+          const container = document.getElementById('classes-detail-canvas');
+          if (container) renderVocabularyVault(container);
+        }
+      } catch (err) {
+        hideLoading();
+        showToast(`Failed to delete topic: ${err.message}`, 'error');
+      }
+    });
+  });
+
+  // Live Search Filter across all 4 Theme Columns
+  const searchInput = area.querySelector('#vault-topic-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase().trim();
+      const cards = area.querySelectorAll('.topic-item-card');
+      let visibleCount = 0;
+      cards.forEach(card => {
+        const topic = (card.getAttribute('data-topic') || '').toLowerCase();
+        const theme = (card.getAttribute('data-theme') || '').toLowerCase();
+        const match = !term || topic.includes(term) || theme.includes(term);
+        card.style.display = match ? 'flex' : 'none';
+        if (match) visibleCount++;
+      });
+      const countEl = area.querySelector('#topic-count-display');
+      if (countEl) countEl.innerText = term ? `${visibleCount}/${topicMap.size}` : topicMap.size;
+    });
+  }
+
+  // Merge Similar Topics
+  const btnDup = area.querySelector('#btn-topic-dup-checker');
+  if (btnDup) {
+    btnDup.addEventListener('click', () => {
+      const topicEntries = Array.from(topicMap.entries()).map(([k, v]) => [k, {
+        theme: new Set([v.theme]),
+        themeCodes: new Set([v.themeCode]),
+        topicCodes: new Set([v.topicCode]),
+        count: v.totalCount,
+        targetLevel: v.level,
+        types: { 'Verb': v.verbs, 'Adjective': v.adjs, 'Noun': v.nouns, 'Phrase': v.phrases }
+      }]);
+
+      openTopicDuplicateCheckerModal(topicEntries, words, () => {
+        if (typeof renderVocabularyVault === 'function') {
+          const container = document.getElementById('classes-detail-canvas');
+          if (container) renderVocabularyVault(container);
         }
       });
     });
   }
 
-  renderRows(topicEntries);
-
-  let _topicSearchDebounce = null;
-  document.getElementById("vault-topic-search")?.addEventListener("input", (e) => {
-    clearTimeout(_topicSearchDebounce);
-    const term = e.target.value.toLowerCase().trim();
-    _topicSearchDebounce = setTimeout(() => {
-      const filtered = topicEntries.filter(([topic, data]) => 
-        topic.toLowerCase().includes(term) || Array.from(data.theme).some(t => t.toLowerCase().includes(term))
-      );
-      renderRows(filtered);
-    }, 200);
-  });
-
-  document.getElementById("btn-topic-dup-checker")?.addEventListener("click", () => {
-    openTopicDuplicateCheckerModal(topicEntries, words, () => {
-      // Re-render whole vault view after merge
-      const area = document.getElementById('vault-tab-content').parentElement.parentElement;
-      if (area) {
-        // Trigger a fresh render by re-calling renderVocabularyVault
-        import('./vocab-vault.js?v=5.3.2').then(m => m.renderVocabularyVault(area));
+  // Reset All Vault Words
+  const btnReset = area.querySelector('#btn-reset-vault-header');
+  if (btnReset) {
+    btnReset.addEventListener('click', async () => {
+      if (!confirm('⚠️ DANGER: This will permanently delete ALL vault words from the database. This cannot be undone. Are you absolutely sure?')) return;
+      if (!confirm('Second confirmation required. Type OK in the next prompt to confirm.')) return;
+      const confirmText = prompt('Type RESET to confirm truncation of all vault words:');
+      if (confirmText?.trim().toUpperCase() !== 'RESET') {
+        showToast('Reset cancelled.', 'info');
+        return;
+      }
+      try {
+        showLoading('Resetting vault...');
+        const sb = await getSupabase();
+        const { error } = await sb.from('vocabulary_vault').update({ deleted_at: new Date().toISOString() }).neq('id', '00000000-0000-0000-0000-000000000000');
+        hideLoading();
+        if (error) throw error;
+        showToast('✓ Vault reset complete. All words deleted.', 'success');
+        if (typeof renderVocabularyVault === 'function') {
+          const container = document.getElementById('classes-detail-canvas');
+          if (container) renderVocabularyVault(container);
+        }
+      } catch (e) {
+        hideLoading();
+        showToast('Reset failed: ' + e.message, 'error');
       }
     });
-  });
-
-  document.getElementById('btn-reset-vault-header')?.addEventListener('click', async () => {
-    if (!confirm('⚠️ DANGER: This will permanently delete ALL vault words from the database. This cannot be undone. Are you absolutely sure?')) return;
-    if (!confirm('Second confirmation required. Type OK in the next prompt to confirm.')) return;
-    const confirmText = prompt('Type RESET to confirm truncation of all vault words:');
-    if (confirmText?.trim().toUpperCase() !== 'RESET') { 
-      const { showToast } = await import('../app.js?v=5.3.2');
-      showToast('Reset cancelled.', 'info'); 
-      return; 
-    }
-    try {
-      const { showLoading, hideLoading, showToast } = await import('../app.js?v=5.3.2');
-      const { getSupabase } = await import('../supabase.js?v=5.3.2');
-      showLoading('Resetting vault...');
-      const sb = await getSupabase();
-      const { error } = await sb.from('vocabulary_vault').update({ deleted_at: new Date().toISOString() }).neq('id', '00000000-0000-0000-0000-000000000000');
-      hideLoading();
-      if (error) throw error;
-      showToast('✓ Vault reset complete. All words deleted.', 'success');
-      
-      // Refresh Vault
-      if (typeof renderVocabularyVault === 'function') {
-        const container = document.getElementById('classes-detail-canvas');
-        if (container) renderVocabularyVault(container);
-      }
-    } catch (e) {
-      const { hideLoading, showToast } = await import('../app.js?v=5.3.2');
-      hideLoading();
-      showToast('Reset failed: ' + e.message, 'error');
-    }
-  });
+  }
 }
 
 // ─── Duplicate Checker Modal ──────────────────────────────────
@@ -1757,11 +1654,11 @@ function openDuplicateCheckerModal(allWords, onResolved) {
 
   const indoMap = {};
   const engMap = {};
-  
+
   allWords.forEach(w => {
     const ind = normStr(w.indonesian);
     const eng = normStr(w.english);
-    
+
     if (ind) {
       if (!indoMap[ind]) indoMap[ind] = [];
       indoMap[ind].push(w.id);
@@ -1792,11 +1689,11 @@ function openDuplicateCheckerModal(allWords, onResolved) {
       const group = [];
       const q = [w.id];
       visited.add(w.id);
-      
+
       while (q.length > 0) {
         const curr = q.shift();
         group.push(allWords.find(x => x.id === curr));
-        
+
         adj.get(curr).forEach(neighbor => {
           if (!visited.has(neighbor)) {
             visited.add(neighbor);
@@ -1804,7 +1701,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
           }
         });
       }
-      
+
       if (group.length > 1) {
         duplicateGroups.push(group);
       }
@@ -1833,7 +1730,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
           </td>
         </tr>
       `).join('');
-      
+
 
       const allSynonyms = new Set();
       group.forEach(w => {
@@ -1845,7 +1742,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
         }
       });
       const mergedEnglish = Array.from(allSynonyms).join(' / ');
-      
+
       return `
         <tbody data-group="${gi}">
           ${rows}
@@ -2083,7 +1980,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
             await updateVaultWord(keeper.id, { english: mergedEng, indonesian: mergedIndo });
             keeper.english = mergedEng;
             keeper.indonesian = mergedIndo;
-            
+
             for (const w of toDelete) {
               await deleteVaultWord(w.id);
               allWords = allWords.filter(x => x.id !== w.id);
@@ -2112,33 +2009,41 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
   const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const groups = {};
+  const allDistinctTopics = Array.from(new Set(topicEntries.map(([topic]) => topic).filter(Boolean))).sort();
+
   topicEntries.forEach(([topic]) => {
     const key = norm(topic);
     if (!groups[key]) groups[key] = [];
     groups[key].push(topic);
   });
-  
-  const duplicateGroups = Object.values(groups).filter(g => g.length > 1);
 
-  if (duplicateGroups.length === 0) {
-    showToast('&#10003; No similar topics found.', 'success');
-    return;
-  }
+  const duplicateGroups = Object.values(groups).filter(g => g.length > 1);
 
   const modal = document.createElement('div');
   modal.className = 'modal-backdrop';
   modal.id = 'vault-topic-dup-modal';
 
   function buildTable() {
+    if (duplicateGroups.length === 0) {
+      return `
+        <tbody>
+          <tr>
+            <td class="text-center text-muted text-xs" style="padding:16px;">
+              &#10003; No automated similar topic duplicates detected. You can use the manual topic merge tool below.
+            </td>
+          </tr>
+        </tbody>
+      `;
+    }
     return duplicateGroups.map((group, gi) => {
       const rows = group.map((t, ti) => `
         <tr data-gi="${gi}" data-ti="${ti}">
           <td style="padding:10px 8px;"><span class="badge" style="background:rgba(99,102,241,0.15);color:#a5b4fc;font-size:0.75rem;">${escapeHtml(t)}</span></td>
         </tr>
       `).join('');
-      
+
       const mergedTopic = group[0];
-      
+
       return `
         <tbody data-group="${gi}">
           ${rows}
@@ -2157,42 +2062,105 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
     }).join('');
   }
 
+  const topicOptions = allDistinctTopics.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+
   modal.innerHTML = `
-    <div class="modal-box" style="max-width:600px; max-height:85vh; display:flex; flex-direction:column;">
+    <div class="modal-box" style="max-width:640px; max-height:88vh; display:flex; flex-direction:column; padding:20px;">
       <div class="d-flex justify-between align-center mb-3">
         <div>
-          <h3 class="fw-700" style="margin:0;">&#9874; Topic Duplicate Checker</h3>
-          <p class="text-muted text-xs mt-1 mb-0">${duplicateGroups.length} group(s) of similar topics found.</p>
+          <h3 class="fw-700" style="margin:0; font-size:1.15rem; color:#f8fafc;">&#9874; Topic Merge &amp; Unification Wizard</h3>
+          <p class="text-muted text-xs mt-1 mb-0">${duplicateGroups.length} automated similar group(s) detected &bull; ${allDistinctTopics.length} total topics active</p>
         </div>
         <div class="d-flex gap-2">
-          <button class="btn btn-secondary btn-sm" id="dup-topic-merge-all" style="background:#4f46e5; color:white;">&#9889; Merge All</button>
-          <button class="btn btn-ghost btn-sm" id="dup-topic-modal-close">&#10005;</button>
+          ${duplicateGroups.length > 0 ? `<button class="btn btn-secondary btn-sm" id="dup-topic-merge-all" style="background:#4f46e5; color:white;">&#9889; Merge All</button>` : ''}
+          <button class="btn btn-ghost btn-sm" id="dup-topic-modal-close" style="font-size:1.1rem; line-height:1;">&#10005;</button>
         </div>
       </div>
-      <div style="overflow-y:auto; flex-grow:1;">
-        <table class="table w-100" id="dup-topic-table">
-          <thead>
-            <tr>
-              <th>Topics</th>
-            </tr>
-          </thead>
-          ${buildTable()}
-        </table>
+
+      <div style="overflow-y:auto; flex-grow:1; display:flex; flex-direction:column; gap:16px;">
+        <!-- 1. Automated Detection -->
+        <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px;">
+          <div class="text-xs fw-700 uppercase mb-2" style="color:#a5b4fc; letter-spacing:0.4px;">Automated Similarity Scanner</div>
+          <table class="table w-100" id="dup-topic-table" style="margin:0;">
+            ${buildTable()}
+          </table>
+        </div>
+
+        <!-- 2. Manual Topic Merge Tool -->
+        <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(99,102,241,0.3); border-radius:8px; padding:14px;">
+          <div class="d-flex justify-between align-center mb-2">
+            <strong style="color:#a5b4fc; font-size:0.85rem;">⚡ Manual Topic Merge</strong>
+            <span class="text-xs text-muted">Merge any two custom topics seamlessly</span>
+          </div>
+          <div class="d-flex gap-2 align-center flex-wrap">
+            <div style="flex:1; min-width:180px;">
+              <label class="text-xs text-muted d-block mb-1" for="manual-merge-source">Source Topic (Will be replaced)</label>
+              <select id="manual-merge-source" class="form-control" style="font-size:0.8rem; padding:6px 8px; width:100%;">
+                <option value="">-- Select Source Topic --</option>
+                ${topicOptions}
+              </select>
+            </div>
+            <div style="font-size:1.2rem; color:#94a3b8; align-self:flex-end; padding-bottom:6px;">➔</div>
+            <div style="flex:1; min-width:180px;">
+              <label class="text-xs text-muted d-block mb-1" for="manual-merge-target">Target Topic (Keeper)</label>
+              <select id="manual-merge-target" class="form-control" style="font-size:0.8rem; padding:6px 8px; width:100%;">
+                <option value="">-- Select Target Topic --</option>
+                ${topicOptions}
+              </select>
+            </div>
+          </div>
+          <div class="d-flex justify-between align-center mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.06);">
+            <div id="manual-merge-status" class="text-xs text-muted">All words in the source topic will be re-assigned to the target topic.</div>
+            <button class="btn btn-primary btn-sm" id="btn-execute-manual-merge" style="font-weight:700;">&#9889; Execute Merge</button>
+          </div>
+        </div>
       </div>
-      <div class="d-flex justify-end mt-3">
-        <button class="btn btn-secondary btn-sm" id="dup-topic-modal-done">Done</button>
+
+      <div class="d-flex justify-end mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.08);">
+        <button class="btn btn-secondary btn-sm" id="dup-topic-modal-done">Close</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
 
   function closeModal() {
-    document.body.removeChild(modal);
+    modal.remove();
     if (onResolved) onResolved();
   }
 
   modal.querySelector('#dup-topic-modal-close').addEventListener('click', closeModal);
   modal.querySelector('#dup-topic-modal-done').addEventListener('click', closeModal);
+
+  // Manual Merge Handler
+  const btnExecManual = modal.querySelector('#btn-execute-manual-merge');
+  const selSource = modal.querySelector('#manual-merge-source');
+  const selTarget = modal.querySelector('#manual-merge-target');
+
+  btnExecManual?.addEventListener('click', async () => {
+    const src = selSource.value;
+    const tgt = selTarget.value;
+    if (!src || !tgt) {
+      showToast('Please select both a Source and a Target topic.', 'warning');
+      return;
+    }
+    if (src === tgt) {
+      showToast('Source and Target topic cannot be the same.', 'warning');
+      return;
+    }
+    if (!confirm(`Are you sure you want to merge all words from "${src}" into "${tgt}"?`)) return;
+
+    btnExecManual.disabled = true;
+    btnExecManual.innerHTML = 'Merging...';
+    try {
+      await renameVaultTopic(src, tgt);
+      showToast(`✓ Topic "${src}" successfully merged into "${tgt}"!`, 'success');
+      closeModal();
+    } catch (err) {
+      showToast('Merge failed: ' + err.message, 'error');
+      btnExecManual.disabled = false;
+      btnExecManual.innerHTML = '&#9889; Execute Merge';
+    }
+  });
 
   async function performMerge(gi, mergedTopic) {
     const group = duplicateGroups[gi];
@@ -2211,14 +2179,15 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
     btn.addEventListener('click', async () => {
       const gi = parseInt(btn.dataset.gi);
       const mergedTopic = modal.querySelector('.merge-topic-input[data-gi="' + gi + '"]').value.trim();
-      
+
       btn.disabled = true;
       btn.innerHTML = '...';
       try {
         await performMerge(gi, mergedTopic);
         showToast('Topics merged.', 'success');
         if (duplicateGroups.length === 0) {
-          modal.querySelector('p.text-muted.text-xs').textContent = 'All topic duplicates resolved!';
+          const statusEl = modal.querySelector('p.text-muted.text-xs');
+          if (statusEl) statusEl.textContent = 'All automated topic duplicates resolved!';
         }
       } catch (e) {
         showToast('Topic merge failed: ' + e.message, 'error');
@@ -2240,7 +2209,8 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
           await performMerge(i, mergedTopic);
         }
         showToast('All topic groups merged.', 'success');
-        modal.querySelector('p.text-muted.text-xs').textContent = '&#10003; All duplicates resolved!';
+        const statusEl = modal.querySelector('p.text-muted.text-xs');
+        if (statusEl) statusEl.textContent = '&#10003; All duplicates resolved!';
       } catch (e) {
         showToast('Bulk Merge failed: ' + e.message, 'error');
       }

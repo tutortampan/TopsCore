@@ -1,3 +1,112 @@
+# ACTIVE DIRECTIVE: PHASE 174 — ELIMINATION OF PUNCTUATION & CONTRACTION EQUIVALENCE [COMPLETE]
+
+- [x] Task 1: English Contractions & Apostrophe Expansion Pipeline
+  - Built comprehensive `ENGLISH_CONTRACTIONS` dictionary in `js/grading.js`.
+  - Normalized curly/smart quotes (`’`, `‘`, `‚`, `‛`, `` ` ``, `´`) to ASCII `'`.
+  - Fixed order of operations: contractions expanded before symbol stripping.
+  - Handled speech-to-text transcriptions without apostrophes (`im`, `ill`, `dont`, `cant`, `wont`).
+
+- [x] Task 2: Comprehensive Punctuation & Typographical Symbol Elimination
+  - Stripped `.`, `,`, `!`, `?`, `-`, `–`, `—`, `_`, `;`, `:`, `(`, `)`, `[`, `]`, `{`, `}`, `"`, `'`, `` ` ``, `~`, `*`, `&`, `^`, `%`, `$`, `#`, `@`, `+`, `\`, `/`.
+  - Preserved whitespace collapsing and clean trimming.
+
+- [x] Task 3: Server Edge Function Parity
+  - Updated `cleanPunctuationAndSymbols` in `supabase/functions/submit-test/index.ts` with identical contractions mapping.
+  - Bumped Service Worker cache to `topscore-cache-option-a-v20` across all HTML entrypoints.
+
+- [x] Task 4: Automated Verification
+  - 10/10 test cases in `scratch/test_phrase_eval.mjs` passed with 1.0 point (Correct).
+  - 40/40 JS syntax checks passed.
+  - Full CI test suite passed 100%.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 173 — VOCABULARY QUIZ DURATION 5M STANDARDIZATION [COMPLETE]
+
+- [x] Task 1: Update Existing Database Quizzes
+  - Queried 40 tests in Supabase PostgreSQL; updated 16 Words Quizzes from 10m to 5m.
+  - Verified 32/32 Quizzes operate on 5 minutes (`quizzes.every(q => q.working_duration_minutes === 5) === true`).
+  - Verified Exams remain untouched (90m/120m).
+
+- [x] Task 2: Standardize Auto-Generator Default Setting
+  - Updated `js/admin/auto-gen-modal.js`: `prefillTaskDur = 5`, updated input default to 5 minutes.
+  - Updated `js/api.js`: `updateClassTestsConfig` and `autoGenerateTestsHierarchy` default fallbacks set to 5 minutes.
+
+- [x] Task 3: Automated Browser & CI Verification
+  - Live Edge test confirmed table shows `⏱️ 5m` for all quizzes, 0 errors.
+  - `npm.cmd test`: 100% ALL PASS.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 172 — TRANSFORMATION OF TEST MANAGEMENT INTO "TEST ANALYTICS" HUB [COMPLETE]
+
+- [x] Task 1: Navigation Nomenclature & Section Title Standardization
+  - Renamed menu item in `admin.html` under Domain C to `📊 Test Analytics`.
+  - Updated section title in `js/admin/app.js` to `'Test Analytics'`.
+  - Bumped SW cache to `v19` and registration queries.
+
+- [x] Task 2: 8 High-Density Operational Intelligence Cards Engine (`js/admin/tests-management.js`)
+  - Integrated parallel fetch of `attempts`, `audit_logs`, `students`, and recent `attempt_answers`.
+  - Built 8 Cards: Integrity Radar, Mastery & FAPR, The Wall (Hardest Words), Pacing Velocity, Remedial Watchlist, Test Spectrum, Linguistic Mastery, and AI Speech Quality.
+  - Implemented real Supabase calculations with safe fallback guards.
+
+- [x] Task 3: Enriched 40 Tests Performance DataGrid
+  - Added operational columns: `TAKERS`, `AVG SCORE` (with TopsCore official grade predicates), `REM %` (with official `%ᴿ`), `PACING`, and `INTEGRITY`.
+  - Upgraded onRowClick drawer to Test Analytics & Blueprint Inspector.
+
+- [x] Task 4: Automated Browser & CI Verification
+  - Playwright live Edge browser test: 8/8 cards detected, 40 test rows active, 0 console errors.
+  - Screenshot verified: `test_analytics_verified.png`.
+  - `npm.cmd test`: 100% PASS across 40 JS files and full test suite.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 171 — UNIFY TOPIC MANAGER & BLUEPRINT INTO ZERO-SCROLL "TOPIC BLUEPRINT" [COMPLETE]
+
+- [x] Task 1: Consolidate Vault Navigation Tabs (`js/admin/vocab-vault.js`)
+  - Merged `Test Blueprint` and `Topic Manager` into single tab `Topic Blueprint`.
+  - Streamlined topbar tabs to 3: `Topic Blueprint`, `Vocabulary Words`, `Phrases & Idioms`.
+
+- [x] Task 2: Implement 4-Thematic Columns Zero-Scroll Grid (`js/admin/vocab-vault.js`)
+  - Created `_renderTopicBlueprintTab` replacing legacy vertical lists.
+  - Divided viewport into 4 equal columns: Theme A Workplace, Theme B Tourism, Theme C CCU, Theme D High-Frequency.
+  - Rendered all 16 topic cards with inline action buttons (✏️ Rename, 🗑️ Delete) and POS breakdown chips (`20V · 10A · 10N · 10P = 50`).
+  - Added anchored Milestone Exam footers for Words Exam and Phrases Exam scales.
+  - Constrained height to `calc(100vh - 120px)`: 0 vertical scroll, 0 horizontal scroll.
+
+- [x] Task 3: Unified Toolbar & Action Controls
+  - Live topic/theme search filter.
+  - `Merge Similar Topics` modal trigger.
+  - `Reset All` vault words trigger.
+  - `⚡ Auto-Generate from Blueprint` trigger (top toolbar and bottom infobar).
+
+- [x] Task 4: Headless Browser & Zero-Scroll Automated Verification
+  - Live test confirmed: 4 columns, 16 topics, 0 console errors, `hasVerticalScroll: false`.
+  - Full test suite `npm.cmd test` passed 100%.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 170 — RESOLUTION OF TUTOR'S ROOM (CLASS HUB) BLANK RENDERING & ES MODULE PARITY [COMPLETE]
+
+- [x] Task 1: Fix ES Module Export Mismatch for `isExam` (`js/app.js`, `js/api.js`)
+  - Added `isExam` to import from `./grading.js` and export in `js/app.js` and `js/api.js`.
+  - Bound `window.isExam = isExam` and `window.isWeeklyExam = isExam`.
+
+- [x] Task 2: Fix Undeclared `weeklyCompletedStudents` in DataGrid summaryRow (`js/admin/app.js`)
+  - Added alias `const weeklyCompletedStudents = examCompletedStudents;` at line 2042.
+  - Hardened line 2106 to guard `totalEarnedScore` summary style with `hasExamCompletions`.
+
+- [x] Task 3: Cache Synchronization & Version Bumping (`admin.html`, `sw.js`)
+  - Updated `admin.html` script query parameter to `js/admin/app.js?v=20261029`.
+  - Bumped Service Worker cache name to `topscore-cache-option-a-v18`.
+
+- [x] Task 4: Headless Browser & Test Suite Verification
+  - Live Edge Playwright test on `http://127.0.0.1:5500/admin.html#class-hub`: 24/24 student rows detected, 0 console errors.
+  - `npm.cmd test`: 100% PASS (syntax check, SW manifest, student dashboard parity).
+  - Cleaned null bytes from `docs/CHANGELOG.md`.
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 159 — POINTS-FIRST LEADERBOARD RANKING, MILESTONE PROGRESSION & ADMIN TABLE ERGONOMICS [COMPLETE]
 
 - [x] Task 1: Milestone Progression Engine (`js/grading.js`, `js/api.js`, `js/app.js`)

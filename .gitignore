@@ -22,3 +22,4 @@ test-results/
 playwright-report/
 deploy_new_supabase.sql
 /*.png
+.antigravity/

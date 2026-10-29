@@ -9,6 +9,7 @@ import {
   getGradeTheme,
   formatGradeBadgeHtml,
   getAchievementStatus,
+  isExam,
   isWeeklyExam,
   computeMilestoneExamMastery
 } from './grading.js';
@@ -24,6 +25,7 @@ export {
   getGradeTheme,
   formatGradeBadgeHtml,
   getAchievementStatus,
+  isExam,
   isWeeklyExam,
   computeMilestoneExamMastery
 };
@@ -35,7 +37,8 @@ if (typeof window !== 'undefined') {
   window.getGradeColor = getGradeColor;
   window.getGradeSymbol = getGradeSymbol;
   window.GRADE_PALETTE = GRADE_PALETTE;
-  window.isWeeklyExam = isWeeklyExam;
+  window.isExam = isExam;
+  window.isWeeklyExam = isExam;
   window.computeMilestoneExamMastery = computeMilestoneExamMastery;
 }
 

@@ -6,8 +6,8 @@
  * 1. Unified Theme Test Cards (Theme A, B, C, D): Words Test & Phrases Test unified into 1 Theme Card.
  * 2. 2 Distinct Session Opening Triggers: "🟢 Buka Sesi Normal" & "🟡 Buka Sesi Remidi".
  * 3. Smart Eligibility Engine:
- *    - Normal Mode: Prerequisite tasks tuntas (>= 60%). Siswa yang sudah lulus tetap muncul untuk perbaikan nilai.
- *    - Remedial Mode: Prerequisite tasks tuntas (>= 60%) & belum lulus (< 60% atau belum pernah ikut). Siswa yang sudah lulus TIDAK masuk remidi.
+ *    - Normal Mode: Prerequisite quizzes tuntas (>= 60%). Siswa yang sudah lulus tetap muncul untuk perbaikan nilai.
+ *    - Remedial Mode: Prerequisite quizzes tuntas (>= 60%) & belum lulus (< 60% atau belum pernah ikut). Siswa yang sudah lulus TIDAK masuk remidi.
  * 4. Late Student Addition (+ Susulan):
  *    - HANYA menampilkan siswa eligible yang BELUM terdaftar di dalam sesi ujian.
  *    - Siswa yang sudah terdaftar 100% disembunyikan.
@@ -121,7 +121,7 @@ export async function renderClassTestSessions(container, context = {}) {
       const subtype = (a.test_subtype || '').toUpperCase();
       const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
       const title = (a.title || '').toLowerCase();
-      const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || a.test_category === 'QUIZ' || a.test_category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
+      const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
       return tc === code && isTask;
     });
 
@@ -280,7 +280,7 @@ export async function renderClassTestSessions(container, context = {}) {
                 4. Enrolled Students (<span id="open-modal-student-count" style="color:#38bdf8;">0</span> Selected)
               </label>
               <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-                <label id="open-modal-override-wrapper" style="font-size:0.75rem; color:#fbbf24; display:inline-flex; align-items:center; gap:5px; cursor:pointer; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); padding:3px 6px; border-radius:4px;" title="Tutor Override allows students who haven't finished tasks yet to participate">
+                <label id="open-modal-override-wrapper" style="font-size:0.75rem; color:#fbbf24; display:inline-flex; align-items:center; gap:5px; cursor:pointer; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); padding:3px 6px; border-radius:4px;" title="Tutor Override allows students who haven't finished quizzes yet to participate">
                   <input type="checkbox" id="open-modal-override-checkbox" style="cursor:pointer; width:13px; height:13px;">
                   <span>🛡️ Tutor Override</span>
                 </label>
@@ -610,7 +610,7 @@ function renderThemeCard(theme, context) {
           <span>🔒</span> LOCKED &bull; No Active Session
         </div>
         <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">
-          Prerequisites: ${tasks.length} Learning Tasks Theme ${code} (Min 60%)
+          Prerequisites: ${tasks.length} Quizzes Theme ${code} (Min 60%)
         </div>
       </div>
     `;
@@ -863,7 +863,7 @@ function openThemeSessionModal(container, theme, mode, context) {
     if (displayList.length === 0) {
       listContainer.innerHTML = `
         <div style="padding:16px; text-align:center; color:#94a3b8; font-size:0.8rem;">
-          ${q ? `No students match "${escapeHtml(q)}".` : 'No eligible students found in this batch. Check 🛡️ Tutor Override to bypass task prerequisites.'}
+          ${q ? `No students match "${escapeHtml(q)}".` : 'No eligible students found in this batch. Check 🛡️ Tutor Override to bypass quiz prerequisites.'}
         </div>
       `;
     } else {
@@ -907,7 +907,7 @@ function openThemeSessionModal(container, theme, mode, context) {
     const ineligDetailsEl = modal.querySelector('#open-modal-ineligible-details');
     if (ineligTextEl) {
       if (tutorOverrideActive) {
-        ineligTextEl.textContent = `🛡️ Tutor Override Active (${selectableList.length} selectable). Prerequisite tasks bypassed.`;
+        ineligTextEl.textContent = `🛡️ Tutor Override Active (${selectableList.length} selectable). Prerequisite quizzes bypassed.`;
       } else {
         ineligTextEl.textContent = `ℹ️ ${ineligibleList.length} Ineligible students hidden.`;
       }
@@ -2024,22 +2024,23 @@ function openKickConfirmationModal(container, studentId, studentName, theme, onD
 
 /**
  * Smart Eligibility Engine:
- * Evaluates whether students meet prerequisite tasks and prior exam status.
+ * Evaluates whether students meet prerequisite quizzes and prior exam status.
  */
-function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, phrasesTest, allAttempts = [], mode }) {
+function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes, wordsTest, phrasesTest, allAttempts = [], mode }) {
   const results = [];
+  const activeQuizzes = themeQuizzes || themeTasks || [];
 
   students.forEach(student => {
     const studAtts = (allAttempts || []).filter(a => a.student_id === student.id);
 
-    // 1. Prerequisite tasks check:
+    // 1. Prerequisite quizzes check:
     let prereqMet = true;
-    let completedTaskCount = 0;
+    let completedQuizCount = 0;
 
-    if (themeTasks.length > 0) {
-      for (const task of themeTasks) {
-        const taskAtts = studAtts.filter(a => (a.test_id || a.Test_id) === task.id);
-        const passedAtt = taskAtts.find(a => {
+    if (activeQuizzes.length > 0) {
+      for (const quiz of activeQuizzes) {
+        const quizAtts = studAtts.filter(a => (a.test_id || a.Test_id) === quiz.id);
+        const passedAtt = quizAtts.find(a => {
           const st = String(a.status || '').toLowerCase();
           const isSub = ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
           const pct = parseFloat(a.percentage ?? 0);
@@ -2047,7 +2048,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, p
         });
 
         if (passedAtt) {
-          completedTaskCount++;
+          completedQuizCount++;
         } else {
           prereqMet = false;
         }
@@ -2096,8 +2097,8 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, p
       if (!prereqMet) {
         isEligible = false;
         statusType = 'danger';
-        statusLabel = `⚠️ Incomplete Tasks (${completedTaskCount}/${themeTasks.length})`;
-        reason = `Incomplete prerequisite tasks for Theme ${theme.code}.`;
+        statusLabel = `⚠️ Incomplete Quizzes (${completedQuizCount}/${activeQuizzes.length})`;
+        reason = `Incomplete prerequisite quizzes for Theme ${theme.code}.`;
       } else {
         isEligible = true;
         if (isAlreadyPassed) {
@@ -2106,21 +2107,21 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, p
           reason = `Passed with ${avgScore}%. Eligible to retake for higher score.`;
         } else {
           statusType = 'cyan';
-          statusLabel = `✓ Tasks Completed (Exam Ready)`;
-          reason = `All ${themeTasks.length} prerequisite tasks passed >= 60%.`;
+          statusLabel = `✓ Quizzes Completed (Exam Ready)`;
+          reason = `All ${activeQuizzes.length} prerequisite quizzes passed >= 60%.`;
         }
       }
     } else {
       // Remedial Mode:
-      // - Must meet prerequisites first (all tasks >= 60%).
-      // - If prereq NOT met: NOT ELIGIBLE (must finish tasks first).
+      // - Must meet prerequisites first (all quizzes >= 60%).
+      // - If prereq NOT met: NOT ELIGIBLE (must finish quizzes first).
       // - If already passed (>= 60%): NOT ELIGIBLE for remedial.
       // - Eligible ONLY if prereq met AND previous exam score < 60% (needs remedial).
       if (!prereqMet) {
         isEligible = false;
         statusType = 'danger';
-        statusLabel = `⚠️ Incomplete Tasks (${completedTaskCount}/${themeTasks.length})`;
-        reason = `Prerequisite tasks must be passed (≥60%) before taking remedial exam.`;
+        statusLabel = `⚠️ Incomplete Quizzes (${completedQuizCount}/${activeQuizzes.length})`;
+        reason = `Prerequisite quizzes must be passed (≥60%) before taking remedial exam.`;
       } else if (isAlreadyPassed) {
         isEligible = false;
         statusType = 'warning';
@@ -2133,7 +2134,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, wordsTest, p
           statusLabel = `🟡 Remedial (Previous Score: ${avgScore}%)`;
           reason = `Previous score ${avgScore}% (< 60%). Eligible for remedial exam.`;
         } else {
-          statusLabel = `🟡 Remedial (Tasks Completed)`;
+          statusLabel = `🟡 Remedial (Quizzes Completed)`;
           reason = `Prerequisites completed (≥60%), eligible for remedial/makeup exam.`;
         }
       }

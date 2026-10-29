@@ -32,23 +32,67 @@ export function damerauLevenshtein(a, b) {
  * - collapse multiple whitespace to single space
  * - normalize contractions (e.g. i'm -> i am)
  */
+export const ENGLISH_CONTRACTIONS = {
+  // Pronoun + Be
+  "i'm": 'i am', "you're": 'you are', "he's": 'he is', "she's": 'she is',
+  "it's": 'it is', "we're": 'we are', "they're": 'they are',
+  // Pronoun + Will
+  "i'll": 'i will', "you'll": 'you will', "he'll": 'he will', "she'll": 'she will',
+  "it'll": 'it will', "we'll": 'we will', "they'll": 'they will',
+  // Pronoun + Have
+  "i've": 'i have', "you've": 'you have', "we've": 'we have', "they've": 'they have',
+  // Pronoun + Would / Had
+  "i'd": 'i would', "you'd": 'you would', "he'd": 'he would', "she'd": 'she would',
+  "we'd": 'we would', "they'd": 'they would',
+  // Negations
+  "can't": 'cannot', "cannot": 'cannot', "can not": 'cannot',
+  "don't": 'do not', "doesn't": 'does not', "didn't": 'did not',
+  "won't": 'will not', "isn't": 'is not', "aren't": 'are not',
+  "wasn't": 'was not', "weren't": 'were not',
+  "haven't": 'have not', "hasn't": 'has not', "hadn't": 'had not',
+  "wouldn't": 'would not', "shouldn't": 'should not', "couldn't": 'could not',
+  // Phrasal / Question
+  "let's": 'let us', "that's": 'that is', "there's": 'there is',
+  "what's": 'what is', "who's": 'who is', "where's": 'where is'
+};
+
 /**
- * Normalize answer text and strip punctuation:
+ * Normalize answer text, expand English contractions, and eliminate all punctuation:
  * - trim & lowercase
- * - collapse multiple whitespace to single space
- * - strip symbols/punctuation like (), [], {}, -, --, _, ., ,, ;, :, !, ?, ', ", etc.
- * - normalize contractions (e.g. i'm -> i am)
+ * - normalize smart/curly apostrophes to standard ASCII '
+ * - expand contractions (e.g. I'm -> I am, I'll -> I will, won't -> will not)
+ * - strip symbols & punctuation (. , ! ? - – — _ ; : ( ) [ ] { } " ' ` ~ * & ^ % $ # @ + \ /)
+ * - collapse multiple whitespaces into a single space
  */
 export function cleanPunctuationAndSymbols(text) {
-  return String(text ?? '')
-    .toLowerCase()
-    .trim()
-    .replace(/[()\[\]{}\-–—_.,;:!?'"`~*&^%$#@+\\/]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/\bi'm\b/g, 'i am')
-    .replace(/\bcan't\b/g, 'cannot')
-    .replace(/\bdon't\b/g, 'do not')
-    .trim();
+  if (text === null || text === undefined) return '';
+  let s = String(text).toLowerCase().trim();
+
+  // 1. Normalize all quote and apostrophe variants to standard ASCII single quote '
+  s = s.replace(/[\u2018\u2019\u201A\u201B\u0060\u00B4]/g, "'");
+
+  // 2. Normalize contractions BEFORE stripping punctuation
+  for (const [contracted, expanded] of Object.entries(ENGLISH_CONTRACTIONS)) {
+    const reg = new RegExp('\\b' + contracted.replace("'", "['’]?") + '\\b', 'gi');
+    s = s.replace(reg, expanded);
+  }
+
+  // Also handle common speech-to-text / typed contractions that omit apostrophe
+  s = s.replace(/\bim\b/g, 'i am');
+  s = s.replace(/\bill\b/g, 'i will');
+  s = s.replace(/\bdont\b/g, 'do not');
+  s = s.replace(/\bcant\b/g, 'cannot');
+  s = s.replace(/\bwont\b/g, 'will not');
+  s = s.replace(/\byoure\b/g, 'you are');
+  s = s.replace(/\btheyre\b/g, 'they are');
+  s = s.replace(/\bweve\b/g, 'we have');
+  s = s.replace(/\bive\b/g, 'i have');
+
+  // 3. Strip all punctuation and typographical symbols
+  s = s.replace(/[()[\]{}\-–—_.,;:!?'"`~*&^%$#@+\\/]/g, ' ');
+
+  // 4. Collapse multiple spaces and trim
+  return s.replace(/\s+/g, ' ').trim();
 }
 
 export function normalizeAnswerText(text) {
@@ -241,17 +285,18 @@ export function calculateOverallStudentScore(takenPercentages = []) {
 
 /**
  * Authoritative Helper to accurately identify milestone exams vs quizzes.
+ * Canonical nomenclature: isExam (replaces legacy isWeeklyExam).
  * Used for exam-only points, academic score, and grade isolation across Admin Class Hub and Student Dashboard.
  */
-export function isWeeklyExam(asm) {
-  if (!asm) return false;
-  const t = String(asm.test_type || asm.type || '').toLowerCase();
+export function isExam(test) {
+  if (!test) return false;
+  const t = String(test.test_type || test.type || '').toLowerCase();
   if (t === 'exam') return true;
   if (t === 'quiz') return false;
-  const c = String(asm.category || asm.test_category || asm.payload?.tier || asm.payload?.test_category || '').toUpperCase();
+  const c = String(test.category || test.payload?.tier || test.payload?.category || '').toUpperCase();
   if (c === 'EXAM') return true;
   if (c === 'QUIZ' || c === 'TASK') return false;
-  const shell = String(asm.shell_code || asm.payload?.shell_code || '').toUpperCase();
+  const shell = String(test.shell_code || test.payload?.shell_code || '').toUpperCase();
   if (shell.endsWith('-EXAM') || shell.includes('-EXAM-')) return true;
   if (shell.endsWith('-QUIZ') || shell.includes('-QUIZ-')) return false;
   if (shell.endsWith('-TEST') || shell.includes('-TEST-')) return true;
@@ -259,7 +304,7 @@ export function isWeeklyExam(asm) {
   return false;
 }
 
-export const isExam = isWeeklyExam;
+export const isWeeklyExam = isExam; // Backward compatibility alias
 
 /**
  * Authoritative Grade & Score Palette (6 Clean Tiers: ★, A, B, C, D, E)
@@ -517,10 +562,11 @@ export function recalculateAttempt(answers, passingThreshold = 60) {
  * 
  * @param {Array<{ effPoints: number, effPct: number, totalQ: number, test: object }>} examEntries - Student's best exam attempts
  * @param {Array<object>} allClassExams - All exam objects for the class
- * @returns {{ totalPoints: number, overallScore: number, grade: string, denominator: number, completedWeeklyCount: number }}
+ * @returns {{ totalPoints: number, overallScore: number, grade: string, denominator: number, completedExamCount: number, completedWeeklyCount: number }}
  */
 export function computeMilestoneExamMastery(examEntries = [], allClassExams = []) {
-  const completedWeeklyCount = Array.isArray(examEntries) ? examEntries.length : 0;
+  const completedExamCount = Array.isArray(examEntries) ? examEntries.length : 0;
+  const completedWeeklyCount = completedExamCount; // Backward compatibility alias
 
   // 1. Total Points earned across all completed exams
   const totalPoints = Math.round(examEntries.reduce((sum, e) => sum + (Number(e.effPoints ?? e.points ?? 0)), 0) * 10) / 10;
@@ -555,7 +601,7 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
   // Group class exams by theme
   const themeExamsMap = {};
   (allClassExams || []).forEach(t => {
-    if (!isWeeklyExam(t)) return;
+    if (!isExam(t)) return;
     const tc = helperThemeCode(t);
     if (!themeExamsMap[tc]) themeExamsMap[tc] = [];
     themeExamsMap[tc].push(t);
@@ -571,6 +617,7 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
       overallScore,
       grade: calculateGrade(overallScore),
       denominator: sumMax,
+      completedExamCount,
       completedWeeklyCount
     };
   }
@@ -647,6 +694,7 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
     overallScore,
     grade,
     denominator,
+    completedExamCount,
     completedWeeklyCount,
     includedThemeCodes,
     includedExamIds

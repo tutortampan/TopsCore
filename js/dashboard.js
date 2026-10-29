@@ -1,4 +1,4 @@
-﻿/**
+/**
  * TopsCore — Student Dashboard Module
  * Extracted from dashboard.html
  */
@@ -8,7 +8,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=5.3.2';
     import { testMicrophoneCapability } from './speech.js?v=5.3.2';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=5.3.2';
-    import { GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=5.6.8';
+    import { GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=5.6.8';
 
     window._isBatchChampion = false;
 
@@ -908,7 +908,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         container.innerHTML = `
           <div class="next-asm-left">
             <span class="next-asm-icon">🏆</span>
-            <span class="next-asm-title">All tasks in this class completed!</span>
+            <span class="next-asm-title">All tests in this class completed!</span>
           </div>
           <span style="font-size:0.75rem; font-weight:800; color:#10b981; padding:2px 8px; border-radius:4px; background:rgba(16,185,129,0.15);">✓ 100%</span>
         `;
@@ -916,7 +916,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       const className = classMap[nextAsm.class_id]?.name || 'Class Module';
-      const isTest = isWeeklyExam(nextAsm);
+      const isTest = isExam(nextAsm);
 
       // Selected Icons: 1A (Solid Yellow Padlock), 2B (Red Rotate Undo), 3C (Green Circle Play)
       const ICON_1A_YELLOW_LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="#facc15" stroke-width="2.6" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11.5" rx="3" fill="#facc15" stroke="#eab308" stroke-width="1"/><circle cx="12" cy="14.8" r="1.5" fill="#713f12"/><path d="M12 15.5v2.2" stroke="#713f12" stroke-width="1.6" stroke-linecap="round"/></svg>';
@@ -929,7 +929,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           // 2B: Retake (Red Button with Rotate Undo Arrow)
           container.innerHTML = `
             <div class="next-asm-left">
-              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Task')}">${escapeHtml(nextAsm.title || 'Task')}</span>
+              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Test')}">${escapeHtml(nextAsm.title || 'Test')}</span>
             </div>
             <button type="button" class="next-asm-go-btn is-retake-red" title="Retake Test" onclick="window.location.href='test.html?id=${nextAsm.id}'">
               ${ICON_2B_RED_RETAKE}
@@ -939,7 +939,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           // 3C: Ready to take (Green Button with Circle Play)
           container.innerHTML = `
             <div class="next-asm-left">
-              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Task')}">${escapeHtml(nextAsm.title || 'Task')}</span>
+              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Test')}">${escapeHtml(nextAsm.title || 'Test')}</span>
             </div>
             <button type="button" class="next-asm-go-btn is-start-green" title="Start Test" onclick="window.location.href='test.html?id=${nextAsm.id}'">
               ${ICON_3C_GREEN_PLAY}
@@ -1348,16 +1348,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             }
 
             // Sequential Intra-Theme Exam Prerequisite: Phrases Exam requires sibling Words Exam >= 60%
-            const isPhrasesExam = Boolean(
-              (Test.category === 'phrases' || Test.test_subtype === 'PHRASE_EXAM' ||
-               (Test.title || '').toLowerCase().includes('phrase') ||
-               (Test.shell_code || '').toUpperCase().includes('PHRASE') ||
-               (Test.payload?.subtype || '').toUpperCase().includes('PHRASE')) &&
-              !((Test.test_type || '').toLowerCase() === 'quiz' || (Test.category || '').toLowerCase() === 'quiz')
+            const isPhrasesExam = isExam(Test) && Boolean(
+              Test.category === 'phrases' || Test.test_subtype === 'PHRASE_EXAM' ||
+              (Test.title || '').toLowerCase().includes('phrase') ||
+              (Test.shell_code || '').toUpperCase().includes('PHRASE') ||
+              (Test.payload?.subtype || '').toUpperCase().includes('PHRASE')
             );
             if (prereqMet && isPhrasesExam) {
               const siblingWordsExam = Tests.find(a => 
                 a.id !== Test.id &&
+                isExam(a) &&
                 (
                   (Test.payload?.theme_code && a.payload?.theme_code === Test.payload.theme_code) ||
                   ((a.title || '').substring(0, 3).toLowerCase() === (Test.title || '').substring(0, 3).toLowerCase())
@@ -1367,8 +1367,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                   (a.title || '').toLowerCase().includes('word') ||
                   (a.shell_code || '').toUpperCase().includes('WORD') ||
                   (a.payload?.subtype || '').toUpperCase().includes('WORD')
-                ) &&
-                !((a.test_type || '').toLowerCase() === 'quiz' || (a.category || '').toLowerCase() === 'quiz')
+                )
               );
               if (siblingWordsExam) {
                 const wBest = bestByTest[siblingWordsExam.id];
@@ -1593,18 +1592,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (isThemeTest) {
           const themeCode = asm.payload?.theme_code;
           if (themeCode) {
-            const siblingTasks = tests.filter(a => 
-              (a.test_type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || a.test_category === 'QUIZ' || a.test_category === 'TASK' || a.test_subtype === 'VOCAB_QUIZ' || a.test_subtype === 'PHRASE_QUIZ' || a.test_subtype === 'VOCAB_TASK' || a.test_subtype === 'PHRASE_TASK' || (a.shell_code || '').includes('-QUIZ') || (a.shell_code || '').includes('-TASK')) && 
+            const siblingQuizzes = tests.filter(a => 
+              (a.test_type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || a.test_subtype === 'VOCAB_QUIZ' || a.test_subtype === 'PHRASE_QUIZ' || a.test_subtype === 'VOCAB_TASK' || a.test_subtype === 'PHRASE_TASK' || (a.shell_code || '').includes('-QUIZ') || (a.shell_code || '').includes('-TASK')) && 
               a.payload?.theme_code === themeCode && 
               a.level_id === asm.level_id &&
               a.class_id === asm.class_id
             );
             
             const reqScore = asm.prerequisite_min_score || 60;
-            for (const task of siblingTasks) {
-              const taskBest = bestByTest[task.id];
-              const taskPct = taskBest ? parseFloat(taskBest.percentage || 0) : null;
-              if (taskPct === null || taskPct < reqScore) {
+            for (const quiz of siblingQuizzes) {
+              const quizBest = bestByTest[quiz.id];
+              const quizPct = quizBest ? parseFloat(quizBest.percentage || 0) : null;
+              if (quizPct === null || quizPct < reqScore) {
                 prereqMet = false;
                 prereqTitle = `All Theme Quizzes (Required: ≥${reqScore}%)`;
                 break;
@@ -1613,16 +1612,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
 
           // Sequential Intra-Theme Exam Prerequisite: Phrases Exam requires sibling Words Exam >= 60%
-          const isPhrasesExam = Boolean(
-            (asm.category === 'phrases' || asm.test_subtype === 'PHRASE_EXAM' ||
-             (asm.title || '').toLowerCase().includes('phrase') ||
-             (asm.shell_code || '').toUpperCase().includes('PHRASE') ||
-             (asm.payload?.subtype || '').toUpperCase().includes('PHRASE')) &&
-            !((asm.test_type || '').toLowerCase() === 'quiz' || (asm.category || '').toLowerCase() === 'quiz')
+          const isPhrasesExam = isExam(asm) && Boolean(
+            asm.category === 'phrases' || asm.test_subtype === 'PHRASE_EXAM' ||
+            (asm.title || '').toLowerCase().includes('phrase') ||
+            (asm.shell_code || '').toUpperCase().includes('PHRASE') ||
+            (asm.payload?.subtype || '').toUpperCase().includes('PHRASE')
           );
           if (prereqMet && isPhrasesExam) {
             const siblingWordsExam = tests.find(a => 
               a.id !== asm.id &&
+              isExam(a) &&
               a.level_id === asm.level_id &&
               a.class_id === asm.class_id &&
               (
@@ -1634,8 +1633,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 (a.title || '').toLowerCase().includes('word') ||
                 (a.shell_code || '').toUpperCase().includes('WORD') ||
                 (a.payload?.subtype || '').toUpperCase().includes('WORD')
-              ) &&
-              !((a.test_type || '').toLowerCase() === 'quiz' || (a.category || '').toLowerCase() === 'quiz')
+              )
             );
             if (siblingWordsExam) {
               const wBest = bestByTest[siblingWordsExam.id];
@@ -1855,7 +1853,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           allBestMap[uniqueKey] = effPct;
         }
 
-        if (isWeeklyExam(asm)) {
+        if (isExam(asm)) {
           const totalQ = Number(att.total_questions || asm?.total_questions || asm?.payload?.total_questions || 50);
           const rawScore = Number(att.score ?? 0);
           const maxRemPts = totalQ * 0.6;
@@ -1879,8 +1877,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         .map(([, v]) => v);
 
       const allClassExams = (Array.isArray(window._allTests) && window._allTests.length > 0)
-        ? window._allTests.filter(isWeeklyExam)
-        : (Array.isArray(tests) ? tests.filter(isWeeklyExam) : []);
+        ? window._allTests.filter(isExam)
+        : (Array.isArray(tests) ? tests.filter(isExam) : []);
 
       const mastery = (typeof computeMilestoneExamMastery === 'function')
         ? computeMilestoneExamMastery(examEntries, allClassExams)
@@ -1889,17 +1887,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             overallScore: 0,
             grade: '—',
             denominator: 0,
+            completedExamCount: examEntries.length,
             completedWeeklyCount: examEntries.length
           };
 
-      const hasWeeklyExam = mastery.completedWeeklyCount > 0;
+      const hasExam = (mastery.completedExamCount ?? mastery.completedWeeklyCount ?? 0) > 0;
       let avgPct = mastery.overallScore;
       let overallGrade = mastery.grade;
       let isGradeS = overallGrade === '★' || overallGrade === 'S' || avgPct >= 100;
       let targetColor = '#94a3b8';
       let rgbColor = '148, 163, 184';
 
-      if (hasWeeklyExam) {
+      if (hasExam) {
         const theme = (GRADE_PALETTE && GRADE_PALETTE[overallGrade]) ? GRADE_PALETTE[overallGrade] : {
           color: '#a855f7', dark: '#7e22ce', light: '#c084fc', rgb: '168, 85, 247', glow: 'rgba(168, 85, 247, 0.45)'
         };
@@ -1910,13 +1909,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const scoreEl = document.getElementById('stat-overall-score');
       if (scoreEl) {
-        scoreEl.textContent = hasWeeklyExam ? `${avgPct}%` : '0%';
-        scoreEl.className = hasWeeklyExam ? `fw-800 banner-score-text text-grade-${overallGrade}` : 'fw-800 banner-score-text';
+        scoreEl.textContent = hasExam ? `${avgPct}%` : '0%';
+        scoreEl.className = hasExam ? `fw-800 banner-score-text text-grade-${overallGrade}` : 'fw-800 banner-score-text';
       }
 
       const gradeBadgeValue = document.getElementById('stat-overall-grade-value');
       if (gradeBadgeValue) {
-        if (!hasWeeklyExam) {
+        if (!hasExam) {
           gradeBadgeValue.textContent = '—';
         } else if (isGradeS) {
           gradeBadgeValue.innerHTML = `
@@ -1938,7 +1937,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const achievementTextEl = document.getElementById('dashboard-achievement-text');
       if (achievementTextEl) {
-        if (hasWeeklyExam) {
+        if (hasExam) {
           const statusWord = getAchievementStatus(overallGrade, avgPct);
           achievementTextEl.textContent = statusWord;
           achievementTextEl.style.color = targetColor;
@@ -1974,14 +1973,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       ];
       tierElements.forEach(el => {
         if (el) {
-          el.dataset.tier = !hasWeeklyExam ? 'none' : (isGradeS ? 'S' : overallGrade);
+          el.dataset.tier = !hasExam ? 'none' : (isGradeS ? 'S' : overallGrade);
           el.style.setProperty('--tier-color', targetColor);
           el.style.setProperty('--tier-rgb', rgbColor);
-          if (hasWeeklyExam && isGradeS) {
+          if (hasExam && isGradeS) {
             el.style.borderColor = 'rgba(168, 85, 247, 0.55)';
             el.style.boxShadow = '0 0 25px rgba(168, 85, 247, 0.35), 0 8px 20px -6px rgba(0, 0, 0, 0.5)';
             el.style.background = 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.22), transparent 75%), #0f172a';
-          } else if (hasWeeklyExam) {
+          } else if (hasExam) {
             el.style.borderColor = `rgba(${rgbColor}, 0.45)`;
             el.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.2), 0 6px 18px -5px rgba(0, 0, 0, 0.35)`;
             el.style.background = `radial-gradient(ellipse 90% 70% at 50% 0%, rgba(${rgbColor}, 0.14), transparent 75%), #0f172a`;
@@ -2367,7 +2366,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             const maxRemedialPts = totalQ * 0.6;
             const effPoints = isRemedial ? Math.min(rawScore, maxRemedialPts) : rawScore;
 
-            const isExam = isWeeklyExam(att.tests);
+            const isExamItem = isExam(att.tests);
 
             // Points-Centric comparison: Compare effPoints first
             let shouldReplace = false;
@@ -2390,7 +2389,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (shouldReplace) {
               bestMap[key] = {
                 test: att.tests,
-                isExam,
+                isExam: isExamItem,
                 effPct,
                 rawPct,
                 points: effPoints,
@@ -2419,9 +2418,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           // Exam-Only Items: Milestone exams only
           const examItems = bestItems.filter(item => item.isExam);
           const allBatchExams = (Array.isArray(window._batchTests) && window._batchTests.length > 0)
-            ? window._batchTests.filter(isWeeklyExam)
+            ? window._batchTests.filter(isExam)
             : (Array.isArray(window._allTests) && window._allTests.length > 0)
-              ? window._allTests.filter(isWeeklyExam)
+              ? window._allTests.filter(isExam)
               : [];
 
           const mastery = (typeof computeMilestoneExamMastery === 'function')
@@ -2431,13 +2430,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 overallScore: 0,
                 grade: '—',
                 denominator: 0,
+                completedExamCount: examItems.length,
                 completedWeeklyCount: examItems.length
               };
 
           const totalPoints = mastery.totalPoints;
           const overallScore = mastery.overallScore;
           const grade = mastery.grade;
-          const completedWeeklyCount = mastery.completedWeeklyCount;
+          const completedExamCount = mastery.completedExamCount ?? mastery.completedWeeklyCount ?? examItems.length;
 
           const cleanName = cleanStudentName(st.name || '');
 
@@ -2450,7 +2450,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             totalPoints,
             overallScore,
             completedCount,
-            completedWeeklyCount,
+            completedExamCount,
+            completedWeeklyCount: completedExamCount,
             progressPct,
             lastSubmittedAt,
             grade
@@ -2470,8 +2471,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (ptsA !== ptsB) return ptsB - ptsA;
 
           // 2. Secondary: Global SCORE % DESC (unattempted exams sort after completed)
-          const scoreA = (a.completedWeeklyCount > 0) ? Number(a.overallScore ?? 0) : -1;
-          const scoreB = (b.completedWeeklyCount > 0) ? Number(b.overallScore ?? 0) : -1;
+          const examCountA = a.completedExamCount ?? a.completedWeeklyCount ?? 0;
+          const examCountB = b.completedExamCount ?? b.completedWeeklyCount ?? 0;
+          const scoreA = (examCountA > 0) ? Number(a.overallScore ?? 0) : -1;
+          const scoreB = (examCountB > 0) ? Number(b.overallScore ?? 0) : -1;
           if (scoreA !== scoreB) return scoreB - scoreA;
 
           // 3. Tertiary: PROG % DESC
@@ -2500,7 +2503,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (st.id === session.student_id) {
             myRank = st.rank;
           }
-          if (st.rank === 1 && (st.totalPoints > 0 || (st.completedWeeklyCount > 0 && st.overallScore > 0))) {
+          const hasExamCompleted = (st.completedExamCount ?? st.completedWeeklyCount ?? 0) > 0;
+          if (st.rank === 1 && (st.totalPoints > 0 || (hasExamCompleted && st.overallScore > 0))) {
             champion = st;
           }
         });
@@ -2528,7 +2532,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let html = '';
         studentStats.forEach(st => {
           const isMe = st.id === session.student_id;
-          const isRank1 = st.rank === 1 && (st.totalPoints > 0 || (st.completedWeeklyCount > 0 && st.overallScore > 0));
+          const hasExamCompleted = (st.completedExamCount ?? st.completedWeeklyCount ?? 0) > 0;
+          const isRank1 = st.rank === 1 && (st.totalPoints > 0 || (hasExamCompleted && st.overallScore > 0));
           const rowClass = `standings-row ${isMe ? 'my-row' : ''} ${isRank1 ? 'rank-1-row' : ''}`;
           
           let rankBadgeClass = 'leaderboard-rank-badge';
@@ -2553,7 +2558,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             else if (st.gender === 'female') displayTitleName = `Miss ${rawClean}`;
           }
 
-          const hasExam = st.completedWeeklyCount > 0;
+          const hasExam = (st.completedExamCount ?? st.completedWeeklyCount ?? 0) > 0;
           const initChar = st.cleanName ? st.cleanName.charAt(0).toUpperCase() : 'S';
           const memberPhoto = st.avatar_url || st.photo_url;
           const theme = hasExam ? (GRADE_PALETTE[st.grade] || GRADE_PALETTE.E) : { color: '#94a3b8', rgb: '148, 163, 184' };

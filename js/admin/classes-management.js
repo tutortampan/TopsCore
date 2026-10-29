@@ -5,10 +5,9 @@ import { DataGrid } from './datagrid.js?v=20261027b';
 import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261027b';
 
 // ─────────────────────────────────────────────────────────────
-// SMART CLASS-AWARE TASK / TEST ROUTERS
+// SMART CLASS-AWARE QUIZ / EXAM ROUTERS
 // Detects class type by name → opens the correct wizard.
-// All new tests use test_category: 'TASK' or 'TEST'
-// (QUIZ/EXAM are @deprecated — do NOT use for new classes)
+// All tests use category: 'QUIZ' or 'EXAM'
 // ─────────────────────────────────────────────────────────────
 
 /** Detects class type from its name */
@@ -24,14 +23,14 @@ function detectClassType(className) {
   return 'GENERIC';
 }
 
-/** 🟡 ADD TASK — opens the correct Task wizard for the class */
-window.handleAddTask = (classId, className) => {
+/** 🟡 ADD QUIZ — opens the correct Quiz wizard for the class */
+window.handleAddQuiz = (classId, className) => {
   const type = detectClassType(className);
   switch (type) {
     case 'VOCABULARY':
-      // Vocab/Phrase Task → use existing Vocab Vault wizard (tier: TASK)
-      const asmTypeTask = 'VOCAB_MASTERY';
-      openVocabWizard(null, { classId, className, testType: asmTypeTask, tier: 'TASK', category: 'TASK' });
+      // Vocab/Phrase Quiz → use existing Vocab Vault wizard (tier: QUIZ)
+      const asmTypeQuiz = 'VOCAB_MASTERY';
+      openVocabWizard(null, { classId, className, testType: asmTypeQuiz, tier: 'QUIZ', category: 'QUIZ' });
       break;
     case 'BASIC_ENGLISH':
     case 'TELLING_STORY':
@@ -40,20 +39,21 @@ window.handleAddTask = (classId, className) => {
     case 'STORYTELLING_L1':
     case 'GENERIC':
     default:
-      // All other Task types → generic Test Builder (with category pre-set to TASK)
-      openTestBuilder(null, classId, { category: 'TASK' });
+      // All other Quiz types → generic Test Builder (with category pre-set to QUIZ)
+      openTestBuilder(null, classId, { category: 'QUIZ' });
       break;
   }
 };
+window.handleAddTask = window.handleAddQuiz; // Backwards compatibility
 
-/** 🔴 ADD TEST — opens the correct Test wizard for the class */
-window.handleAddTest = (classId, className) => {
+/** 🔴 ADD EXAM — opens the correct Exam wizard for the class */
+window.handleAddExam = (classId, className) => {
   const type = detectClassType(className);
   switch (type) {
     case 'VOCABULARY':
-      // Vocab Test → Aggregator mode (combines Task words into one Test)
-      const asmTypeTest = 'VOCAB_MASTERY';
-      openVocabWizard(null, { classId, className, testType: asmTypeTest, tier: 'TEST', category: 'TEST' });
+      // Vocab Exam → Aggregator mode (combines Quiz words into one Exam)
+      const asmTypeExam = 'VOCAB_MASTERY';
+      openVocabWizard(null, { classId, className, testType: asmTypeExam, tier: 'EXAM', category: 'EXAM' });
       break;
     case 'BASIC_ENGLISH':
     case 'TELLING_STORY':
@@ -62,16 +62,17 @@ window.handleAddTest = (classId, className) => {
     case 'STORYTELLING_L1':
     case 'GENERIC':
     default:
-      // All other Test types → generic Test Builder (with category pre-set to TEST)
-      openTestBuilder(null, classId, { category: 'TEST' });
+      // All other Exam types → generic Test Builder (with category pre-set to EXAM)
+      openTestBuilder(null, classId, { category: 'EXAM' });
       break;
   }
 };
+window.handleAddTest = window.handleAddExam; // Backwards compatibility
 
-/** @deprecated — Use handleAddTask / handleAddTest instead */
+/** @deprecated — Use handleAddQuiz / handleAddExam instead */
 window.handleCreateClassTest = (classId, className) => {
-  console.warn('[DEPRECATED] handleCreateClassTest — use handleAddTask or handleAddTest');
-  window.handleAddTask(classId, className);
+  console.warn('[DEPRECATED] handleCreateClassTest — use handleAddQuiz or handleAddExam');
+  window.handleAddQuiz(classId, className);
 };
 
 
@@ -514,13 +515,13 @@ function renderClassDetail(cls) {
                &#9889; Sync Phrases (Dropdown 10)
              </button>
            ` : ''}
-           <button class="btn btn-primary btn-sm" onclick="window.handleAddTask('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
+           <button class="btn btn-primary btn-sm" onclick="window.handleAddQuiz('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
              style="background:rgba(245,158,11,0.9); color:#1a1a1a; border:1px solid rgba(245,158,11,0.4); font-weight:700;">
-             &#128203; Add Task
+             &#128221; Add Quiz
            </button>
-           <button class="btn btn-secondary btn-sm" onclick="window.handleAddTest('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
+           <button class="btn btn-secondary btn-sm" onclick="window.handleAddExam('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
              style="background:rgba(239,68,68,0.9); color:#fff; border:1px solid rgba(239,68,68,0.4); font-weight:700;">
-             &#127942; Add Test
+             &#127942; Add Exam
            </button>
            <button class="btn btn-danger btn-sm" id="btn-del-active-class">Delete</button>
         </div>
@@ -538,7 +539,7 @@ function renderClassDetail(cls) {
     <div style="padding:2rem;">
       <div id="class-learning-path-container" class="tab-content" style="display:block;">
          <div class="empty-state" style="padding:3rem; text-align:center;">
-           <p class="text-muted text-sm">Learning path is empty. This area will display the auto-generated task tree (Tasks 1-7 & Quiz).</p>
+           <p class="text-muted text-sm">Learning path is empty. This area will display the auto-generated quiz & exam tree.</p>
          </div>
       </div>
       <div id="class-students-container" class="tab-content" style="display:none;">
@@ -597,7 +598,7 @@ function renderClassDetail(cls) {
         res = await autoGeneratePhrasesTests(payload);
       }
       
-      showToast(`Success: Created ${res.tasks} Tasks, ${res.tests} Tests. Updated ${res.updated}.`, 'success');
+      showToast(`Success: Created ${res.quizzes || res.tasks || 0} Quizzes, ${res.exams || res.tests || 0} Exams. Updated ${res.updated || 0}.`, 'success');
       loadClassLearningPath(cls.id); // Refresh view
     } catch (e) {
       console.error(e);
@@ -658,32 +659,34 @@ export async function loadClassLearningPath(classId) {
          <div class="empty-state" style="padding:3rem; text-align:center;">
            <div style="font-size:2.5rem; margin-bottom:1rem;">&#128203;</div>
            <h4 style="color:var(--clr-text-1); margin:0 0 0.5rem 0;">No tests yet</h4>
-           <p class="text-muted text-sm">Use the <strong>Add Task</strong> or <strong>Add Test</strong> buttons above to start building the curriculum for this class.</p>
+           <p class="text-muted text-sm">Use the <strong>Add Quiz</strong> or <strong>Add Exam</strong> buttons above to start building the curriculum for this class.</p>
          </div>`;
       return;
     }
     
-    let taskCount = 0;
-    let testCount = 0;
+    let quizCount = 0;
+    let examCount = 0;
     let tryoutCount = 0;
 
     tests.forEach(asm => {
-      const cat = asm.test_category
-        || (asm.test_type && (asm.test_type.includes('EXAM') || asm.test_type.includes('TEST')) ? 'TEST' : null)
-        || (asm.title && (asm.title.toLowerCase().includes('test') || asm.title.toLowerCase().includes('exam')) ? 'TEST' : 'TASK');
-      
-      const isTryout = asm.test_category === 'TRYOUT' || (asm.payload?.shell_code || '').startsWith('TRYOUT');
+      const typeStr = (asm.test_type || '').toUpperCase();
+      const catStr = (asm.category || '').toUpperCase();
+      const shell = (asm.shell_code || asm.payload?.shell_code || '').toUpperCase();
+      const titleLower = (asm.title || '').toLowerCase();
+
+      const isExam = catStr === 'EXAM' || typeStr === 'EXAM' || shell.endsWith('-EXAM') || titleLower.includes('exam');
+      const isTryout = catStr === 'TRYOUT' || shell.startsWith('TRYOUT');
       
       if (isTryout) {
         tryoutCount++;
-      } else if (cat === 'TEST') {
-        testCount++;
+      } else if (isExam) {
+        examCount++;
       } else {
-        taskCount++;
+        quizCount++;
       }
     });
 
-    const totalCount = taskCount + testCount + tryoutCount;
+    const totalCount = quizCount + examCount + tryoutCount;
 
     const summaryHtml = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap;">
@@ -691,8 +694,8 @@ export async function loadClassLearningPath(classId) {
         </div>
         <div style="display:flex; gap:0.5rem;">
           <button class="btn btn-sm" id="filter-all" style="background:var(--clr-primary); color:#fff;">All (${totalCount})</button>
-          <button class="btn btn-sm btn-secondary" id="filter-tasks">Tasks (${taskCount})</button>
-          <button class="btn btn-sm btn-secondary" id="filter-tests">Tests (${testCount})</button>
+          <button class="btn btn-sm btn-secondary" id="filter-quizzes">Quizzes (${quizCount})</button>
+          <button class="btn btn-sm btn-secondary" id="filter-exams">Exams (${examCount})</button>
           <button class="btn btn-sm btn-secondary" id="filter-tryouts">Try-Outs (${tryoutCount})</button>
         </div>
       </div>
@@ -701,9 +704,14 @@ export async function loadClassLearningPath(classId) {
     container.innerHTML = summaryHtml;
 
     const gridData = tests.map((r, idx) => {
-      const isTest = (r.test_category === 'TEST') || (r.title || '').toLowerCase().includes('test');
-      const isTryout = r.test_category === 'TRYOUT' || (r.payload?.shell_code || '').startsWith('TRYOUT');
-      const isTask = !isTest && !isTryout;
+      const typeStr = (r.test_type || '').toUpperCase();
+      const catStr = (r.category || '').toUpperCase();
+      const shell = (r.shell_code || r.payload?.shell_code || '').toUpperCase();
+      const titleLower = (r.title || '').toLowerCase();
+
+      const isExam = catStr === 'EXAM' || typeStr === 'EXAM' || shell.endsWith('-EXAM') || titleLower.includes('exam');
+      const isTryout = catStr === 'TRYOUT' || shell.startsWith('TRYOUT');
+      const isQuiz = !isExam && !isTryout;
       
       const _isDyn = r?.payload?.is_dynamic_shell;
       const _vaultQ = r?.payload?.snapshot_question_count || r?.payload?.total_questions || 0;
@@ -723,7 +731,8 @@ export async function loadClassLearningPath(classId) {
         qIsVault: _isDyn,
         qCount: _isDyn ? _vaultQ : (r.questions ? r.questions.length : 0),
         status: r.status,
-        isTest, isTryout, isTask,
+        isExam, isQuiz, isTryout,
+        isTest: isExam, isTask: isQuiz, // backwards compatibility
         display_order: r.display_order,
         _raw: r
       };
@@ -850,12 +859,12 @@ export async function loadClassLearningPath(classId) {
     });
 
     const filterAll = document.getElementById('filter-all');
-    const filterTasks = document.getElementById('filter-tasks');
-    const filterTests = document.getElementById('filter-tests');
+    const filterQuizzes = document.getElementById('filter-quizzes') || document.getElementById('filter-tasks');
+    const filterExams = document.getElementById('filter-exams') || document.getElementById('filter-tests');
     const filterTryouts = document.getElementById('filter-tryouts');
 
     const updateFilters = (btn, filterFn) => {
-      [filterAll, filterTasks, filterTests, filterTryouts].forEach(b => {
+      [filterAll, filterQuizzes, filterExams, filterTryouts].forEach(b => {
         if (!b) return;
         b.style.background = 'transparent';
         b.style.color = 'var(--clr-text)';
@@ -871,8 +880,8 @@ export async function loadClassLearningPath(classId) {
     };
 
     if (filterAll) filterAll.onclick = () => updateFilters(filterAll, () => true);
-    if (filterTasks) filterTasks.onclick = () => updateFilters(filterTasks, r => r.isTask);
-    if (filterTests) filterTests.onclick = () => updateFilters(filterTests, r => r.isTest);
+    if (filterQuizzes) filterQuizzes.onclick = () => updateFilters(filterQuizzes, r => r.isQuiz || r.isTask);
+    if (filterExams) filterExams.onclick = () => updateFilters(filterExams, r => r.isExam || r.isTest);
     if (filterTryouts) filterTryouts.onclick = () => updateFilters(filterTryouts, r => r.isTryout);
 
   } catch (err) {

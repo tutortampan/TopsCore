@@ -29,17 +29,53 @@ function damerauLevenshtein(a: string, b: string): number {
   return dp[la][lb];
 }
 
+const ENGLISH_CONTRACTIONS: Record<string, string> = {
+  "i'm": "i am", "you're": "you are", "he's": "he is", "she's": "she is",
+  "it's": "it is", "we're": "we are", "they're": "they are",
+  "i'll": "i will", "you'll": "you will", "he'll": "he will", "she'll": "she will",
+  "it'll": "it will", "we'll": "we will", "they'll": "they will",
+  "i've": "i have", "you've": "you have", "we've": "we have", "they've": "they have",
+  "i'd": "i would", "you'd": "you would", "he'd": "he would", "she'd": "she would",
+  "we'd": "we would", "they'd": "they would",
+  "can't": "cannot", "cannot": "cannot", "can not": "cannot",
+  "don't": "do not", "doesn't": "does not", "didn't": "did not",
+  "won't": "will not", "isn't": "is not", "aren't": "are not",
+  "wasn't": "was not", "weren't": "were not",
+  "haven't": "have not", "hasn't": "has not", "hadn't": "had not",
+  "wouldn't": "would not", "shouldn't": "should not", "couldn't": "could not",
+  "let's": "let us", "that's": "that is", "there's": "there is",
+  "what's": "what is", "who's": "who is", "where's": "where is"
+};
+
 function cleanPunctuationAndSymbols(text: string): string {
   if (!text) return "";
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[()\[\]{}\-–—_.,;:!?'"`~*&^%$#@+\\/]/g, " ")
-    .replace(/\s+/g, " ")
-    .replace(/\bi'm\b/g, "i am")
-    .replace(/\bcan't\b/g, "cannot")
-    .replace(/\bdon't\b/g, "do not")
-    .trim();
+  let s = text.toLowerCase().trim();
+
+  // 1. Normalize all quote and apostrophe variants to standard ASCII single quote '
+  s = s.replace(/[\u2018\u2019\u201A\u201B\u0060\u00B4]/g, "'");
+
+  // 2. Normalize contractions BEFORE stripping punctuation
+  for (const [contracted, expanded] of Object.entries(ENGLISH_CONTRACTIONS)) {
+    const reg = new RegExp('\\b' + contracted.replace("'", "['’]?") + '\\b', 'gi');
+    s = s.replace(reg, expanded);
+  }
+
+  // Also handle common speech-to-text / typed contractions that omit apostrophe
+  s = s.replace(/\bim\b/g, 'i am');
+  s = s.replace(/\bill\b/g, 'i will');
+  s = s.replace(/\bdont\b/g, 'do not');
+  s = s.replace(/\bcant\b/g, 'cannot');
+  s = s.replace(/\bwont\b/g, 'will not');
+  s = s.replace(/\byoure\b/g, 'you are');
+  s = s.replace(/\btheyre\b/g, 'they are');
+  s = s.replace(/\bweve\b/g, 'we have');
+  s = s.replace(/\bive\b/g, 'i have');
+
+  // 3. Strip all punctuation and typographical symbols
+  s = s.replace(/[()[\]{}\-–—_.,;:!?'"`~*&^%$#@+\\/]/g, " ");
+
+  // 4. Collapse multiple spaces and trim
+  return s.replace(/\s+/g, " ").trim();
 }
 
 function stripAllPunctuationAndSpaces(text: string): string {

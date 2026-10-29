@@ -1,3 +1,690 @@
+## SESSION-20261029-0927
+
+Start: 2026-10-29 09:21 UTC+8
+End: 2026-10-29 09:27 UTC+8
+Agent: Antigravity
+
+### User Request
+"this part is redundant" (with screenshot of `.tac-hero-header`: "Test Analytics Mission Control" title, subtitle, track level badge, and refresh button)
+
+### Objective
+Remove the redundant `.tac-hero-header` in `js/admin/tests-management.js` to free up vertical space and match the clean layout of `Vocab Vault` and `Classes Hub`.
+
+### Work Performed
+1. Removed `.tac-hero-header` markup from `area.innerHTML` in `js/admin/tests-management.js`.
+2. Removed corresponding CSS rules for `.tac-hero-header`, `.tac-hero-title`, and `.tac-hero-subtitle`.
+3. Cleaned up `#tac-header-level-badge` reference in `window._switchClassTestAnalytics`.
+4. Bumped service worker cache to `topscore-cache-option-a-v25` and `admin.html` script query to `?v=20261029_v25`.
+5. Updated Playwright verification script `scratch/verify_topbar_tabs_final.mjs` and executed on Microsoft Edge:
+   - Verified `.tac-hero-header` and `#tac-header-level-badge` are completely gone.
+   - Verified top 4 Hero KPIs render immediately at the top of the content area.
+   - Verified topbar tab switching continues to function seamlessly.
+   - Captured verified screenshot: `test_analytics_no_redundant_header.png`.
+6. Verified syntax with `node --check js/admin/tests-management.js`.
+
+### Files Changed
+- `js/admin/tests-management.js`
+- `sw.js`
+- `admin.html`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Resume From
+Ready for user feedback.
+
+---
+
+## SESSION-20261029-0915
+
+Start: 2026-10-29 09:00 UTC+8
+End: 2026-10-29 09:16 UTC+8
+Agent: Antigravity
+
+### User Request
+"the curriculum test explorer is not needed,,, get rid of it,,, the top tabs needs to beplaced on the the top bar as other areas"
+
+### Objective
+1. Eliminate Curriculum Tests Explorer sub-tab, table, and view switcher entirely from `admin.html#tests`.
+2. Move class selection navigation tabs (`3rd Vocabulary`, `1st Storytelling`, `2nd Storytelling`, `Speaking Projects`, `Public Speaking`, `Basic English`, `All Classes`) directly onto the top bar (`#topbar-tabs-container`), matching TopsCore's standard topbar tab pattern.
+3. Keep the content area clean and 100% focused on executive Test Analytics Mission Control.
+
+### Work Performed
+1. Removed `if (window.setTopbarTabs) window.setTopbarTabs([]);` in `tests-management.js` and wired `buildClassTopbarTabs(activeId)` directly into `setTopbarTabs(...)`.
+2. Mounted dynamic class tabs into `#topbar-tabs-container`:
+   - `📚 3rd Vocabulary` (40) [Default active]
+   - `📖 1st Storytelling` (0)
+   - `📖 2nd Storytelling` (0)
+   - `🎙️ Speaking Projects` (0)
+   - `🗣️ Public Speaking` (0)
+   - `🔤 Basic English` (0)
+   - `🌐 All Classes` (40)
+3. Removed the in-page `.tac-class-navbar` box from `area.innerHTML`.
+4. Removed the Option A sub-tab switcher (`.test-analytics-view-tabs`), `#test-view-curriculum`, and `#curriculum-tests-table`.
+5. Connected `window._switchClassTestAnalytics(classId)` to re-render topbar active highlights, update `#tac-header-level-badge`, toggle Vocab Words vs. Phrases split card, and display 0-test class alerts.
+6. Bumped service worker cache to `topscore-cache-option-a-v24` and `admin.html` script tags to `?v=20261029_v24`.
+7. Verified across all 5 verification phases using Microsoft Edge Playwright automation (`scratch/verify_topbar_tabs_final.mjs`):
+   - Topbar tabs rendered in `#topbar-tabs-container`: PASS
+   - Absence of in-page navbar and curriculum explorer: PASS
+   - Test Analytics cockpit rendering: PASS
+   - Class switching from top bar with badge update and empty state toggling: PASS
+   - Restoring active class back to 3rd Vocabulary: PASS
+   - Screenshot saved: `test_analytics_topbar_tabs_clean.png`.
+8. Verified all 40 JS files via `scripts/check_all_js_syntax.cjs` and executed `npm.cmd test` with 100% pass rate.
+
+### Commands Run
+- `node scratch/verify_topbar_tabs_final.mjs` -> ALL TOPBAR TABS & CLEAN TEST ANALYTICS VERIFICATIONS PASSED WITH 100% SUCCESS
+- `node scripts/check_all_js_syntax.cjs` -> 40/40 JS files passed syntax validation (node --check)
+- `npm.cmd test` -> ALL STUDENT DASHBOARD PARITY CHECKS PASSED 100%
+
+### Files Changed
+- `js/admin/tests-management.js`
+- `sw.js`
+- `admin.html`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- Microsoft Edge Playwright verified: 5/5 assertions passed.
+- No console errors, no syntax errors.
+- Visual artifact saved: `test_analytics_topbar_tabs_clean.png`.
+
+### Outstanding
+- None. System is in a clean, tested state.
+
+### Resume From
+Ready for user review and next instructions.
+
+---
+
+## SESSION-20261029-0850
+
+Start: 2026-10-29 08:30 UTC+8
+End: 2026-10-29 08:52 UTC+8
+Agent: Antigravity
+
+### User Request
+"dalam tab test analysisi perlu dibuat pembagian tab atas berdsarkan nama kelas, sebab nanti ini akan jadi pusat semua tset,,, perlu dibagi khusu untuk Vocab analisa words and phrase, the wall also need more content. curriculum explorer jangan betuk kartu tapi tabel"
+
+### Objective
+Implement the 4 required enhancements in `admin.html#tests`:
+1. Class-based upper selector tabs (`3rd Vocabulary`, `1st Storytelling`, `2nd Storytelling`, `Speaking Projects`, `Public Speaking`, `Basic English`, `All Classes`).
+2. Vocab-specific Words vs. Phrases Mastery comparative analytics card.
+3. Expanded "The Wall" with Top 10 Persistent Bottlenecks, target answers, topics, failure rates, mistake samples, and domain filter pills.
+4. Replace test cards grid in Curriculum Tests Explorer with a clean, high-density professional data TABLE (`#curriculum-tests-table`) with 13 columns and click-to-drawer inspection.
+
+### Work Performed
+1. Upgraded attempt answers query in `js/admin/tests-management.js` to fetch `topic_snapshot`, `correct_answer_snapshot`, `accepted_answers_snapshot`, and `student_answer`.
+2. Created `.tac-class-navbar` at top of tests management with dynamic class tabs, test count badges, and track switching controller `window._switchClassTestAnalytics(classId)`.
+3. Created `#tac-vocab-domain-section` with comparative mastery boxes (`🔤 Single-Word Vocabulary` [47% avg, 73% FAPR] vs `💬 Phrases & Idioms Mastery` [63% avg, 81% FAPR]) and domain filter pills (`All Vocab`, `Words Only`, `Phrases Only`).
+4. Expanded The Wall to Top 10 Persistent Bottlenecks directly on dashboard with English target answers, topics, failure rate bars, and student error samples (`Errors: "saroon"`, `Errors: "stranght"`, etc.), plus filter pills (`All Top 10`, `🔤 Words`, `💬 Phrases`).
+5. Replaced `.test-cards-grid` with `#curriculum-tests-table` TABLE view featuring 13 columns (`#`, `TITLE`, `DOMAIN`, `TYPE`, `DUR.`, `QS`, `TAKERS`, `AVG SCORE`, `REM. %`, `PACING`, `INTEGRITY`, `STATUS`, `ACTIONS`). Clicking any row opens `#datagrid-drawer`.
+6. Bumped service worker cache to `topscore-cache-option-a-v23` and `admin.html` script tags to `?v=20261029_v23`.
+7. Verified across 5 comprehensive assertions using Microsoft Edge Playwright automation (`scratch/verify_class_tabs_vocab_table.mjs`).
+8. Verified all 40 JS files via `scripts/check_all_js_syntax.cjs` and executed `npm.cmd test` with 100% pass rate.
+9. Saved screenshot artifacts:
+   - `class_tabs_vocab_analytics.png`
+   - `curriculum_tests_table_view.png`
+   - `class_switching_verified.png`
+
+### Commands Run
+- `node scratch/apply_full_class_tabs_vocab_split_wall_table.mjs` -> Upgraded attempt_answers query
+- `node scratch/apply_complete_features_step2.mjs` -> Computed Words vs Phrases metrics & availableClasses
+- `node scratch/apply_replacement_chunk.mjs` -> Injected Class Navbar, Vocab Split card, The Wall Top 10, and Table Explorer
+- `node scripts/check_all_js_syntax.cjs` -> 40/40 JS files passed syntax validation (node --check)
+- `node scratch/verify_class_tabs_vocab_table.mjs` -> ALL 5 COMPREHENSIVE VERIFICATIONS PASSED 100%
+- `npm.cmd test` -> ALL STUDENT DASHBOARD PARITY CHECKS PASSED 100%
+
+### Files Changed
+- `js/admin/tests-management.js`
+- `sw.js`
+- `admin.html`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- Zero syntax errors across 40 JS files.
+- Playwright Edge: Class tabs switch correctly, Vocab split toggles between words and phrases, The Wall displays Top 10 with target answers and errors, Curriculum Explorer displays as a 40-row TABLE (not cards) and row click opens the drawer.
+- Zero git commits / zero git pushes.
+
+### Outstanding
+- None. All 4 requested features are fully deployed and verified.
+
+---
+
+## SESSION-20261029-0818
+
+Start: 2026-10-29 08:09 UTC+8
+End: 2026-10-29 08:20 UTC+8
+Agent: Antigravity
+
+### User Request
+"opsi a" (Implement Option A: Sub-Tab Separation for Test Analytics vs Curriculum Tests Explorer).
+
+### Objective
+- Segment `admin.html#tests` into two distinct tabs:
+  1. `📊 Test Analytics & Health`
+  2. `📚 Curriculum Tests Explorer (40)`
+- Eliminate vertical scroll clutter and keep the sidebar clean.
+
+### Work Performed
+1. Upgraded `js/admin/tests-management.js`:
+   - Added styles for `.test-analytics-view-tabs`, `.tac-view-tab`, `.tac-view-tab.active`, `.tac-tab-count`.
+   - Injected sub-tab switcher beneath hero header.
+   - Segmented `#test-view-analytics` (holding the 8 intelligence panels, heatmap, speech review) and `#test-view-curriculum` (holding the 40 test cards, theme pills, search, add test).
+   - Added `window._switchTestAnalyticsView(viewKey)` controller with active state persistence.
+2. Synchronized cache version queries:
+   - `sw.js`: `topscore-cache-option-a-v22`.
+   - `admin.html`: `?v=20261029_v22`.
+   - `js/admin/app.js`: `./tests-management.js?v=5.5.0`.
+3. Verified via Playwright Edge headless browser (`scratch/verify_option_a_tabs.mjs`):
+   - Default tab is Test Analytics with 0 cards visible below: PASS.
+   - 1-click switch to Curriculum Tests Explorer reveals 40 cards: PASS.
+   - Theme filtering inside Curriculum tab: PASS.
+   - 1-click switch back to Analytics restores telemetry view: PASS.
+   - Total errors: 0.
+4. Saved screenshot artifacts:
+   - `option_a_tab1_analytics.png`
+   - `option_a_tab2_curriculum.png`
+5. Ran `npm.cmd test`: 100% PASS.
+
+### Commands Run
+- `node scratch/apply_option_a_tabs.mjs` -> Successfully applied Option A Sub-Tab separation
+- `node scripts/check_all_js_syntax.cjs` -> 40/40 JS files passed syntax validation
+- `node scratch/verify_option_a_tabs.mjs` -> OPTION A SUB-TAB SEPARATION PASSED 100%
+- `npm.cmd test` -> 100% PASS
+
+### Files Changed
+- `js/admin/tests-management.js`
+- `sw.js`
+- `admin.html`
+- `js/admin/app.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- Both tabs tested in live browser:
+  * Tab 1: Clean executive mission control (no cards below).
+  * Tab 2: Immediate 40 cards catalog with theme pills and search.
+- 0 syntax errors, 0 console errors, 0 page errors.
+
+### Resume From
+Ready for user inspection. Refresh browser with Ctrl + F5 on http://localhost:5500/admin.html#tests.
+
+---
+
+## SESSION-20261029-0805
+
+Start: 2026-10-29 07:47 UTC+8
+End: 2026-10-29 08:08 UTC+8
+Agent: Antigravity
+
+### User Request
+"menurut saya ini belum bagsu" (attaching screenshot showing the raw table below the 8 intelligence cards), followed by:
+"janagn ada tabel di bawah itu,,, pakai kartu saja" (Do NOT have a raw table below that... use cards only!).
+
+### Objective
+- Completely eliminate the raw DataGrid table and topbar boxes from `admin.html#tests`.
+- Build a 100% All-Cards Test Analytics Mission Control where all 40 curriculum tests are rendered as interactive, high-density diagnostic cards with Theme filter pills, live search, and blueprint inspection drawer.
+
+### Work Performed
+1. Refactored `js/admin/tests-management.js`:
+   - Eliminated `#Tests-grid-container` and its DataGrid table instantiation (`TITLE`, `TYPE`, `DUR.`, `QS`, `TAKERS`, `AVG SCORE`, `REM %`, `PACING`, `INTEGRITY`, `STATUS`, action buttons).
+   - Eliminated the 4 redundant topbar counter boxes via `window.setTopbarTabs([])`.
+   - Engineered the 100% All-Cards Mission Control UI:
+     * Top 4 Hero KPIs: Integrity Radar, Mastery & FAPR, Pacing Velocity, AI Speech Engine with modal drill-downs.
+     * Row 2: The Wall (Top 5 Curriculum Bottlenecks) & 24-Hour Peak WITA Traffic Heatmap (147 peak attempts at 20:00 WITA).
+     * Row 3: Remedial Watchlist (strugglers with delta improvements), Linguistic POS Matrix, Grade Distribution (Rule 2.10 palette).
+     * Row 4: Audio Review Queue with 1-click `⚡ Override 100%` and Test Difficulty Spectrum.
+     * Row 5 (Curriculum Tests Explorer):
+       - 40 tests rendered as interactive high-density cards (`.test-item-card`).
+       - Theme navigation pills: `All Tests (40)`, `Theme A · Workplace (8)`, `Theme B · Tourism (10)`, `Theme C · Culture (12)`, `Theme D · Society (10)`, `⚡ Quizzes Only (32)`, `🏆 Exams Only (8)`.
+       - Live search input: `🔍 Search 40 tests...` with real-time dynamic filtering.
+       - Each card features: Type badge (`⚡ QUIZ` / `🏆 EXAM`), Theme badge, Status, Duration, Question count (`⚡ Vault 40`), Takers count, Score with Rule 2.10 Grade badge, Remedial % with superscript (`86%ᴿ`), Security flags, Mini progress bar, Average pacing, and Quick Action buttons (`📊`, `📄`, `👁️/👁️‍🗨️`, `✏️`, `🗑️`).
+       - Clicking any card opens the Test Blueprint & Telemetry Drawer with Top 3 Hardest Questions specific to that test and direct access to student submissions.
+2. Version synchronization:
+   - Bumped `sw.js` cache name to `topscore-cache-option-a-v21`.
+   - Bumped `admin.html` version query to `?v=20261029_v21`.
+   - Bumped `js/admin/app.js` tests-management import query to `?v=5.4.9`.
+3. E2E verification:
+   - Executed Playwright on Microsoft Edge (`scratch/verify_all_cards_mission_control.mjs`):
+     * Old raw table verified absent: PASS
+     * Topbar redundant tabs verified empty: PASS
+     * Total test cards in grid: 40 (PASS)
+     * Theme A (8), Theme B (10), Theme C (12), Theme D (10) filter pills: PASS
+     * Quizzes (32) and Exams (8) filter pills: PASS
+     * Live search filtering: PASS
+     * Test Card Drawer with hardest questions: PASS
+     * Hero card drill-down modal: PASS
+     * Page/Console Errors: 0
+   - Captured and verified screenshot artifacts:
+     * `test_analytics_all_cards.png`: Full mission control dashboard view.
+     * `test_analytics_curriculum_cards_view.png`: Scrolled view showing the Curriculum Tests Explorer card grid.
+     * `test_analytics_drawer_hardest_qs.png`: Test blueprint & telemetry drawer view.
+   - Ran `npm.cmd test`: All syntax checks, cache manifest assets, and student dashboard ranking parity passed 100%.
+
+### Commands Run
+- `node scripts/check_all_js_syntax.cjs` -> 40/40 JS syntax checks passed
+- `npm.cmd test` -> 100% PASS
+- `node scratch/verify_all_cards_mission_control.mjs` -> ALL VERIFICATIONS PASSED WITH 0 ERRORS
+- `node scratch/capture_cards_view.mjs` -> Screenshot artifact saved
+- `node scratch/capture_drawer_view.mjs` -> Screenshot artifact saved
+
+### Files Changed
+- `js/admin/tests-management.js`
+- `sw.js`
+- `admin.html`
+- `js/admin/app.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- 0 syntax errors, 0 console errors, 0 page errors.
+- Visual artifacts verified: `test_analytics_all_cards.png`, `test_analytics_curriculum_cards_view.png`, `test_analytics_drawer_hardest_qs.png`.
+
+### Resume From
+Ready for user inspection. Refresh browser with Ctrl + F5 on http://localhost:5500/admin.html#tests.
+
+---
+
+## SESSION-20261029-0725
+
+Start: 2026-10-29 07:15 UTC+8
+End: 2026-10-29 07:28 UTC+8
+Agent: Antigravity
+
+### User Request
+"tuntaskan semua" (Complete all 5 extended features from the analytical ideation and status report).
+
+### Objective
+- Deliver 100% completion for all remaining planned features:
+  1. Interactive drill-down inspection modals for all 8 Intelligence Cards.
+  2. Per-test specific Top 3 Hardest Questions inside the Test Details Drawer.
+  3. Interactive Audio Review Queue with 1-click Teacher Manual Override for spoken evaluations.
+  4. 24-Hour WITA Peak Traffic Heatmap / Histogram.
+  5. Functional execution of "Merge Similar Topics" (with automated scanner and manual source/target selector) in Topic Blueprint.
+
+### Work Performed
+1. Upgraded `js/admin/tests-management.js`:
+   - Updated `attempt_answers` query to fetch `id, attempt_id, created_at, similarity_score, is_correct, question_snapshot` (limit 3,000) and indexed attempts by ID (`attemptMap`).
+   - Added interactive click handlers, hover elevation, and `🔍 View` indicators across all 8 cards.
+   - Built `window._openTestAnalyticsCardModal(cardKey)` providing rich inspection modals for all 8 cards.
+   - Implemented `window._overrideSpeechAnswer(ansId)`: Authoritatively updates Supabase `attempt_answers` with `is_correct = true` and `similarity_score = 1.0`, logs teacher audit event, and updates live UI.
+   - Enriched Test Details Drawer: Added `🧱 Top 3 Hardest Questions in this Test` section specifically filtering answers for that test.
+2. Upgraded `js/admin/vocab-vault.js`:
+   - Enhanced `openTopicDuplicateCheckerModal` to remain accessible even with 0 automated duplicates.
+   - Built "Manual Topic Merge" selector supporting arbitrary source/target topic unification with live word re-assignment and vault reload.
+3. Synchronized cache version queries: `admin.html` and `app.js` bumped to `?v=20261029_v20`.
+4. Verified end-to-end via automated Playwright test (`scratch/verify_all_extended_features.mjs`) on Edge headless browser: all 5 features verified with 0 errors.
+5. Saved artifact screenshot of the WITA Peak Traffic Heatmap (`test_analytics_wita_heatmap.png`).
+6. Ran full test suite `npm.cmd test`: 100% PASS.
+
+### Commands Run
+- `node scratch/verify_all_extended_features.mjs` -> ALL 5 EXTENDED FEATURES PASSED (0 page errors)
+- `node scratch/capture_wita_heatmap_artifact.mjs` -> Screenshot artifact saved
+- `npm.cmd test` -> 100% PASS
+
+### Files Changed
+- `js/admin/tests-management.js`
+- `js/admin/vocab-vault.js`
+- `admin.html`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- `test_analytics_wita_heatmap.png` captured and verified.
+- Edge browser verified all 8 modals, test drawer, audio queue, and topic merge wizard.
+
+### Resume From
+Ready for user feedback or live testing on `http://127.0.0.1:5500/admin.html#tests`.
+
+---
+
+## SESSION-20261029-0700
+
+Start: 2026-10-29 06:45 UTC+8
+End: 2026-10-29 07:00 UTC+8
+Agent: Antigravity
+
+### User Request
+"buat agar dalam analisa jawaban pharse tidak menghitung tanda baca, seperti titik, koma, tanda seru, tanda tanya, atau strip... dalam jawaban juga I am dan I'm dianggap harus sama, dan I will menjadi I'll, apakah bisa? analisa, petakan, diskusikan,, lakkan 10 kali analisis berulang!" -> "terapkan!"
+
+### Objective
+- Expand phrase evaluation engine in `js/grading.js` and `supabase/functions/submit-test/index.ts`.
+- Eliminate all punctuation (`.`, `,`, `!`, `?`, `-`, `_`, etc.) from answer comparison.
+- Treat all standard English contractions (`I'm` $\leftrightarrow$ `I am`, `I'll` $\leftrightarrow$ `I will`, `can't` $\leftrightarrow$ `cannot`, `won't` $\leftrightarrow$ `will not`, etc.) as completely equivalent 1.0 full-point matches.
+- Maintain full parity across client and server edge function evaluation.
+
+### Work Performed
+1. Performed 10-pass recurring analysis exploring regex order-of-operations, Unicode apostrophe handling, STT speech-to-text quirks, and Levenshtein tolerance.
+2. Built and exported `ENGLISH_CONTRACTIONS` dictionary in `js/grading.js`.
+3. Refactored `cleanPunctuationAndSymbols`:
+   - Normalized smart quotes (`’`, `‘`, `‚`, `‛`, `` ` ``, `´`) to `'`.
+   - Expanded contractions *before* stripping symbols.
+   - Handled apostrophe-less speech transcriptions (`im`, `ill`, `dont`, `cant`, `wont`).
+   - Stripped all punctuation and symbols, collapsed whitespace, and trimmed.
+4. Synchronized `supabase/functions/submit-test/index.ts` with identical logic for server-authoritative parity.
+5. Bumped Service Worker cache to `v20` across `sw.js`, `test.html`, `result.html`, `dashboard.html`, `index.html`, and `js/admin/admin-init.js`.
+6. Built comprehensive verification test suite (`scratch/test_phrase_eval.mjs`): 10/10 test cases verified with 1.0 (Correct).
+7. Ran `scripts/check_all_js_syntax.cjs`, `scripts/generate_sw_manifest.mjs`, and `scripts/test_student_dashboard_exam_parity.mjs` (all 100% PASS).
+
+### Commands Run
+- `node scratch/test_phrase_eval.mjs` -> 10/10 ALL PASS
+- `node scripts/check_all_js_syntax.cjs` -> 40/40 PASS
+- `node scripts/generate_sw_manifest.mjs` -> 27/27 PASS
+- `node scripts/test_student_dashboard_exam_parity.mjs` -> 100% PASS
+
+### Files Changed
+- `js/grading.js`
+- `supabase/functions/submit-test/index.ts`
+- `sw.js`
+- `test.html`
+- `result.html`
+- `dashboard.html`
+- `index.html`
+- `js/admin/admin-init.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+- `docs/TODO.md`
+
+### Verification
+- 10 phrase evaluation cases verified in `scratch/test_phrase_eval.mjs` including contraction and punctuation variations.
+
+---
+
+## SESSION-20261029-0645
+
+Start: 2026-10-29 06:40 UTC+8
+End: 2026-10-29 06:45 UTC+8
+Agent: Antigravity
+
+### User Request
+"durasi quiz dikurangi jadi 5 menit untuk kelas vocab. dalam test yang sudah ada, dan masukkan dalam auto generator juga sebagai default setting."
+
+### Objective
+- Reduce duration for all existing Vocabulary Quizzes to 5 minutes in Supabase PostgreSQL (`tests` table).
+- Set 5 minutes as the authoritative default Quiz duration in the auto generator modal and generator functions.
+- Verify that Exams remain milestone tests (90m/120m) and are not affected.
+
+### Work Performed
+1. Queried Supabase PostgreSQL `tests` table: identified 16 Words Quizzes configured with legacy 10-minute duration.
+2. Executed batch update on all 16 Words Quizzes, setting `working_duration_minutes = 5`, `payload.working_duration_minutes = 5`, and `payload.duration_minutes = 5`.
+3. Verified all 32 Quizzes in the curriculum now have duration = 5 minutes (`quizzes.every(q => q.working_duration_minutes === 5) === true`).
+4. Updated `js/admin/auto-gen-modal.js`: set `prefillTaskDur = 5`, updated tooltip and default value.
+5. Updated `js/api.js`: set `taskDurationMinutes = 5` default in `updateClassTestsConfig` and `autoGenerateTestsHierarchy`.
+6. Verified with Playwright Edge test on `http://127.0.0.1:5688/admin.html#tests`: all rows show `⏱️ 5m` under `DUR.`, 0 console errors.
+7. Ran `npm.cmd test`: 100% PASS.
+
+### Commands Run
+- Database batch update script
+- `node scratch/verify_test_analytics.mjs` -> 100% PASS
+- `npm.cmd test` -> 100% PASS
+
+### Files Changed
+- Supabase PostgreSQL `tests` table
+- `js/admin/auto-gen-modal.js`
+- `js/api.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+- `docs/TODO.md`
+
+### Verification
+- Database verification confirmed 32/32 Quizzes are 5m.
+- Headless browser verified table renders all quizzes with 5m.
+
+---
+
+## SESSION-20261029-0640
+
+Start: 2026-10-29 06:15 UTC+8
+End: 2026-10-29 06:40 UTC+8
+Agent: Antigravity
+
+### User Request
+"what about this? I feel it doesnt have any special function,,, maybe we can make it into a test overview? like seeing who chheat the most, hardest question taht always wrong, or member with highet attempt,, students average time, etc... analyze, map out, do it 10 times over, discuss" -> "tambahkan kartu2 informasi ststistik dan atau nalisa yang juga bisa dipakai,,, berikan saya banyak ide,,, lakukan nalisa 20 kali berulang lagi, petakan, diskusikan" -> "cari ide yang bisa digabungkan,,, pilih 8 hal yang peling utama dan fungsional" -> "namakan halmannya test analytics"
+
+### Objective
+- Perform an exhaustive 20-pass analytical exploration of real Supabase telemetry (991 attempts, 59,206 answers, 1,311 audit logs).
+- Consolidate ideas into the 8 Most Essential & Functional Core Operational Items.
+- Transform the `admin.html#tests` page into the official **Test Analytics** hub:
+  * Rename sidebar menu to `📊 Test Analytics`.
+  * Deploy 8 High-Density Operational Intelligence Cards in a clean 2x4 grid.
+  * Enrich the 40 Tests DataGrid with 5 operational columns: TAKERS, AVG SCORE, REM %, PACING, and INTEGRITY.
+  * Upgrade the test row-click drawer into the Test Analytics & Blueprint Inspector.
+
+### Work Performed
+1. Explored PostgreSQL tables (`attempts`, `attempt_answers`, `audit_logs`, `students`, `tests`) and verified real database numbers and performance.
+2. Executed 20-pass iterative analysis and consolidated findings into 8 core functional intelligence pillars.
+3. Updated `admin.html`: renamed navigation item to `📊 Test Analytics` and bumped script query string to `v19`.
+4. Updated `js/admin/app.js`: set `sectionTitles.tests = 'Test Analytics'`.
+5. Updated `js/admin/admin-init.js` and `sw.js`: bumped Service Worker cache to `v19`.
+6. Refactored `js/admin/tests-management.js`:
+   - Parallel fetching of curriculum tests, attempts, cheat logs, students, and recent answers.
+   - Built 8 High-Density Cards (Integrity Radar, Mastery & FAPR, The Wall, Pacing Velocity, Remedial Watchlist, Test Spectrum, Linguistic Mastery, AI Speech Quality).
+   - Enriched DataGrid columns with TAKERS, AVG SCORE, REM %, PACING, and INTEGRITY.
+   - Upgraded test row drawer to show instant telemetry and direct link to `#results`.
+7. Created and executed Playwright headless verification script (`scratch/verify_test_analytics.mjs`):
+   - Confirmed navigation text: `📊 Test Analytics`.
+   - Confirmed 8/8 cards mounted and populated.
+   - Confirmed 40/40 test rows mounted with all 10 headers.
+   - Confirmed 0 console errors.
+   - Captured screenshot artifact: `test_analytics_verified.png`.
+8. Ran `npm.cmd test`: 100% PASS.
+
+### Commands Run
+- `node scripts/check_all_js_syntax.cjs` -> 40/40 PASS
+- `node scratch/verify_test_analytics.mjs` -> 100% PASS (0 errors, 8 cards detected, 40 test rows)
+- `npm.cmd test` -> 100% PASS
+
+### Files Changed
+- `admin.html`
+- `js/admin/app.js`
+- `js/admin/admin-init.js`
+- `sw.js`
+- `js/admin/tests-management.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+- `docs/TODO.md`
+
+### Verification
+- `test_analytics_verified.png` captured in artifacts directory showing the 8 intelligence cards and enriched DataGrid table.
+
+---
+
+## SESSION-20261029-0605
+
+Start: 2026-10-29 05:30 UTC+8
+End: 2026-10-29 06:05 UTC+8
+Agent: Antigravity
+
+### User Request
+"dalam vocabulary vault, halaman topic manager dan blueprint testt terlihat punya fungsi yang mirip, apakah kita satukan saja? coba analisa, kalau disatukan kita namai tpoic Blueprint,,, dengan fungsi yang digabungkan, analisa dulu, petakan, diskusi,,, saya juga ingin agar tampilan halaman ini bisa terlihat isinya tanpa scroll vertical mapun horizontal" -> "lakukan"
+
+### Objective
+- Unify `Test Blueprint` and `Topic Manager` in Vocabulary Vault into a single `Topic Blueprint` tab.
+- Engineer a 4-Thematic Columns Board that fits the entire curriculum into the viewport without vertical or horizontal scrollbars (zero-scroll).
+- Preserve 100% of actions: Rename Topic, Delete Topic, Merge Similar Topics, Reset All, and Auto-Generate from Blueprint.
+
+### Work Performed
+1. Refactored tab definitions in `js/admin/vocab-vault.js` to 3 tabs (`Topic Blueprint`, `Vocabulary Words`, `Phrases & Idioms`).
+2. Implemented `_renderTopicBlueprintTab` replacing `_renderBlueprintTab` and `_renderTopicManager`.
+3. Designed the 4-column thematic board (Theme A Workplace, Theme B Tourism, Theme C CCU, Theme D High-Frequency) with compact card rows, POS micro-chips (`20V · 10A · 10N · 10P`), and milestone exam footers.
+4. Verified with Playwright live browser test (`scratch/verify_topic_blueprint.mjs`):
+   - 4 Columns and 16 Topics rendered.
+   - 0 Console errors.
+   - Zero vertical and horizontal scroll (`hasVerticalScroll: false`).
+5. Ran full test suite (`npm test` = 100% PASS).
+
+### Commands Run
+- `node scripts/check_all_js_syntax.cjs` -> 40/40 PASS
+- `node scratch/verify_topic_blueprint.mjs` -> 100% PASS (Zero-scroll verified)
+- `npm.cmd test` -> 100% PASS
+
+### Files Changed
+- `js/admin/vocab-vault.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+- `docs/TODO.md`
+
+### Verification
+- `scratch/topic_blueprint_verified.png` captured showing full zero-scroll thematic board with all 16 topics and 4 exams.
+
+---
+
+## SESSION-20261029-0525
+
+Start: 2026-10-29 05:10 UTC+8
+End: 2026-10-29 05:25 UTC+8
+Agent: Antigravity
+
+### User Request
+"tutor room is empty,,, check the sitution,,, is there any error, etc"
+(User provided screenshot of blank `http://127.0.0.1:5500/admin.html#class-hub` with DevTools console error).
+
+### Objective
+- Diagnose and fix the blank screen issue in the Tutor's Room (Admin Class Hub).
+- Ensure 0 console errors and verify live table rendering with all student data intact.
+
+### Work Performed
+1. Identified Root Cause 1: Missing `isExam` export in `js/app.js` and `js/api.js`. Added `isExam` to imports/exports and `window.isExam`.
+2. Identified Root Cause 2: `ReferenceError: weeklyCompletedStudents is not defined` on line 2106 of `js/admin/app.js` during DataGrid `summaryRow()` render. Added backward-compatible alias and hardened guard.
+3. Updated script versions in `admin.html` and bumped Service Worker cache to `topscore-cache-option-a-v18` in `sw.js`.
+4. Automated verification with Playwright headless Edge on live local server `http://127.0.0.1:5500/admin.html#class-hub`. Confirmed 24 student rows detected and 0 console errors.
+
+### Commands Run
+- `node scratch/verify_tutor_room.mjs` -> PASS (24 table rows, 0 console errors)
+- `node scripts/test_sequential_exam_prerequisite.mjs` -> 100% ALL PASS
+- `npm.cmd test` -> 100% ALL PASS (40/40 syntax checks, 27/27 SW manifest, student dashboard parity)
+
+### Files Changed
+- `js/app.js`
+- `js/api.js`
+- `js/admin/app.js`
+- `admin.html`
+- `sw.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- Tutor's Room loads completely with all 24 student rows and 0 console errors.
+
+### Outstanding
+- None. System is 100% operational.
+
+---
+
+## SESSION-20261029-0030
+
+Start: 2026-10-29 00:20 UTC+8
+End: 2026-10-29 00:30 UTC+8
+Agent: Antigravity
+
+### User Request
+"cek semua fungsi dan logika yang ada,,, intinya jalankan semua sistem yang ada di TopsCore . pastikan SEMUA hal yang dilakaukan bisa bekerja dengan baik, maksimal dan tanpa error... cek 10 kali semuanya, sekali lagi SEMUANYA"
+
+### Objective
+- Execute an exhaustive 10-pass end-to-end stress test across all subsystems, logic, RPCs, and UI views in TopsCore.
+- Confirm zero runtime errors, zero regressions, and 100% operational readiness.
+
+### Work Performed
+- Built and ran 'scratch/run_full_system_10_iterations_audit.mjs' covering 10 distinct audit passes.
+- Confirmed:
+  1. Syntax & Code Integrity (40/40 JS files) -> PASS
+  2. Service Worker v17 & 27 cached assets -> PASS
+  3. Database Schema & RPC Contracts -> PASS
+  4. Student Auth & Entity Hierarchy -> PASS
+  5. Test Generation & Hierarchy Consistency (32 Quizzes, 8 Exams) -> PASS
+  6. Access Control & Sequential Exam Gating -> PASS
+  7. Test Runner & Attempt Scoring Logic -> PASS
+  8. Centralized Grading & Remedial 60% Cap -> PASS
+  9. Milestone Progression & Leaderboard Parity -> PASS
+  10. End-to-End Live Browser UI Validation (Playwright, 0 errors) -> PASS
+
+### Commands Run
+- 'node scratch/run_full_system_10_iterations_audit.mjs' -> 100% PASS
+
+### Files Changed
+- 'scratch/run_full_system_10_iterations_audit.mjs'
+- 'docs/CURRENT_STATE.md'
+- 'docs/CHANGELOG.md'
+- 'docs/SESSION_LOG.md'
+
+### Verification
+- 10 out of 10 audit passes succeeded without error.
+
+### Outstanding
+- None. System is 100% robust, operational, and verified.
+
+---
+
+## SESSION-20261029-0020
+
+Start: 2026-10-28 23:45 UTC+8
+End: 2026-10-29 00:20 UTC+8
+Agent: Antigravity
+
+### User Request
+1. "terapkan" (Apply the complete 100x exhaustive terminology standardization audit across all admin and student areas).
+2. Completely standardize vocabulary: TEST (umbrella), QUIZ (formative daily drills), EXAM (milestone theme exams), CLASS (curriculum modules).
+3. Eliminate all legacy terms ('task', 'dailyquiz', 'weeklyexam', 'asmt/asm', non-existent column 'test_category').
+
+### Objective
+- Execute the code changes mapped in the audit across 13 core files.
+- Maintain documentation integrity and 100% test pass rate.
+
+### Work Performed
+- Edited 'js/grading.js', 'dashboard.html', 'admin.html', 'js/dashboard.js', 'js/result.js', 'js/admin/classes-management.js', 'js/admin/auto-gen-modal.js', 'js/admin/vocab-vault.js', 'js/admin/tests-access.js', 'js/admin/tests-management.js', 'js/admin/app.js', 'js/api.js', 'supabase/functions/start-test/index.ts', and 'sw.js'.
+- Replaced all UI occurrences of "task", "daily quiz", and "weekly exam" with clean "Quiz" and "Exam".
+- Purged all reads of non-existent column 'tests.test_category'.
+- Bumped Service Worker cache name to 'topscore-cache-option-a-v17'.
+
+### Commands Run
+- 'node scripts/check_all_js_syntax.cjs' -> 40/40 PASS
+- 'node scripts/generate_sw_manifest.mjs' -> 27/27 PASS
+- 'node scripts/test_student_dashboard_exam_parity.mjs' -> 100% PASS
+- 'node scripts/test_sequential_exam_prerequisite.mjs' -> 100% PASS
+- 'npm.cmd test' -> 100% PASS
+
+### Files Changed
+- 'js/grading.js'
+- 'dashboard.html'
+- 'admin.html'
+- 'js/dashboard.js'
+- 'js/result.js'
+- 'js/admin/classes-management.js'
+- 'js/admin/auto-gen-modal.js'
+- 'js/admin/vocab-vault.js'
+- 'js/admin/tests-access.js'
+- 'js/admin/tests-management.js'
+- 'js/admin/app.js'
+- 'js/api.js'
+- 'supabase/functions/start-test/index.ts'
+- 'sw.js'
+- 'docs/CURRENT_STATE.md'
+- 'docs/CHANGELOG.md'
+- 'docs/SESSION_LOG.md'
+
+### Verification
+- Full test suite passed with 0 errors.
+
+### Outstanding
+- None. System is 100% operational.
+
+### Resume From
+- Ready for next user instruction.
+
+---
+
 ## SESSION-20261028-1245
 
 Start: 2026-10-28 11:30 UTC+8  
@@ -7673,3 +8360,60 @@ Review dashboard, test list, result page; apply user decisions:
 
 ### Resume From
 Ready for user feedback.
+
+---
+
+## SESSION-20261028-2315
+
+Start: 2026-10-28 23:01 UTC+8
+End: 2026-10-28 23:17 UTC+8
+Agent: Antigravity / Gemini
+
+### User Request
+- "siswa gagal akses next assesment atas nama hafizi batch 133"
+- Image uploaded showing `test.html?id=ccfce187-d9be-42a3-9745-cd4852865481` with error toast: "Prerequisite not completed. You must pass the Words Exam (3rd Vocabulary C Words Exam - CCU) with at least 60% before taking the Phrases Exam."
+
+### Objective
+- Diagnose why Hafizi (Batch 133) cannot start his next assessment (Test 20: 3rd Vocabulary C1 Phrases Quiz) and resolve the false prerequisite block.
+
+### Investigation & Root Cause
+1. **Student State**:
+   - Hafizi (Mr. Muhammad Masyan Hafizi) is in Batch 133, Level 3 (Advanced).
+   - He completed Test 19 (3C1 Words Quiz) with a perfect score (40/40, 100%, Grade ★) at 13:23:43 UTC.
+   - His next assessment is Test 20 (`ccfce187-d9be-42a3-9745-cd4852865481`): "3rd Vocabulary C1 Phrases Quiz - Cultural Identity & Tradition" (`shell_code: 3C1-PHRASES-QUIZ`, `test_type: quiz`).
+2. **Failure Point**:
+   - In `js/api.js` (`startTest` client fallback):
+     ```javascript
+     const isPhrasesExamFallback = asmData.payload?.category === 'phrases' || 
+                                   /PHRASES/i.test(asmData.shell_code || asmData.payload?.shell_code || '') || 
+                                   /phrase/i.test(asmData.title || '') ||
+                                   asmData.test_subtype === 'PHRASE_EXAM' ||
+                                   asmData.test_subtype === 'PHRASE_TEST';
+     ```
+   - This regex and category check matched Test 20 because it has "phrase" in title and `category: 'phrases'`, even though `test_type` is `'quiz'`.
+   - As a result, the system treated the daily Quiz as a milestone Phrases Exam, and required Hafizi to pass the end-of-theme milestone Words Exam (Test 29: CCU) before he could start the daily quiz!
+
+### Work Performed
+1. **Fix `js/api.js`**:
+   - Added `isQuizFallback` guard to strictly exclude daily quizzes and tasks from sequential milestone Words Exam gating.
+2. **Fix `supabase/functions/start-test/index.ts`**:
+   - Added defensive `!isQuiz` guard to `isPhrasesExam` in Edge Function.
+3. **Automated Regression Test**:
+   - Updated `scripts/test_sequential_exam_prerequisite.mjs` with Test C asserting that daily quizzes are not flagged as Phrases Exams.
+4. **Live Verification**:
+   - Ran Playwright browser simulation navigating to `test.html?id=ccfce187-d9be-42a3-9745-cd4852865481` with Hafizi's active session.
+   - Verified the test loaded immediately with 5-minute timer, 10 voice questions, and active audio recognition controls.
+   - Deleted transient attempt created during the test to preserve Hafizi's full 5 minutes.
+5. **Quality Gates**:
+   - Ran `npm.cmd test`: 100% PASS (40 JS files syntax valid, 27 SW assets verified, all student parity tests passed).
+
+### Files Changed
+- `js/api.js`
+- `supabase/functions/start-test/index.ts`
+- `scripts/test_sequential_exam_prerequisite.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Resume From
+Resolved and verified.

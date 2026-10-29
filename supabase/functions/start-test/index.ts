@@ -247,7 +247,7 @@ Deno.serve(async (req) => {
          });
       }
 
-      // Validation: Strict Theme Prerequisites for Exams (Must pass ALL sibling tasks with >= 60%)
+      // Validation: Strict Theme Prerequisites for Exams (Must pass ALL sibling quizzes with >= 60%)
       if (!isStandaloneTryout && test.test_type === 'exam') {
         // 1. Session check: session must be unlocked and student must be whitelisted
         const liveSession = test.payload?.test_session;
@@ -266,10 +266,10 @@ Deno.serve(async (req) => {
           });
         }
 
-        // 2. Strict Prerequisite Quizzes check: Must pass ALL theme tasks >= 60%
+        // 2. Strict Prerequisite Quizzes check: Must pass ALL theme quizzes >= 60%
         const themeCode = test.payload?.theme_code;
         if (themeCode) {
-          const { data: siblingTasks } = await supabase
+          const { data: siblingQuizzes } = await supabase
             .from('tests')
             .select('id')
             .eq('class_id', test.class_id)
@@ -277,26 +277,26 @@ Deno.serve(async (req) => {
             .eq('test_type', 'quiz')
             .contains('payload', { theme_code: themeCode });
 
-          if (siblingTasks && siblingTasks.length > 0) {
-            const taskIds = siblingTasks.map((t: any) => t.id);
+          if (siblingQuizzes && siblingQuizzes.length > 0) {
+            const quizIds = siblingQuizzes.map((t: any) => t.id);
             const { data: siblingAttempts } = await supabase
               .from('attempts')
               .select('test_id, percentage, effective_score, is_best_score, status')
               .eq('student_id', student_id)
-              .in('test_id', taskIds)
+              .in('test_id', quizIds)
               .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
               
             const reqScore = test.prerequisite_min_score || 60;
-            const passedTaskIds = new Set();
+            const passedQuizIds = new Set();
             if (siblingAttempts) {
               siblingAttempts.forEach((att: any) => {
                 if ((att.effective_score || att.percentage || 0) >= reqScore) {
-                  passedTaskIds.add(att.test_id);
+                  passedQuizIds.add(att.test_id);
                 }
               });
             }
 
-            if (passedTaskIds.size < taskIds.length) {
+            if (passedQuizIds.size < quizIds.length) {
               return new Response(JSON.stringify({ error: `Prerequisite not completed. You must score at least ${reqScore}% on all Quizzes before taking the Exam.` }), {
                 status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
               });
@@ -304,11 +304,17 @@ Deno.serve(async (req) => {
           }
 
           // 3. Strict Sequential Exam Prerequisite: If this is a Phrases Exam, student MUST pass Words Exam first (>= 60%)
-          const isPhrasesExam = test.payload?.category === 'phrases' || 
+          const isQuiz = (test.test_type || '').toLowerCase() === 'quiz' || 
+                         (test.category || '').toLowerCase() === 'quiz' ||
+                         (test.shell_code || '').toUpperCase().includes('QUIZ') ||
+                         (test.shell_code || '').toUpperCase().includes('TASK') ||
+                         (test.payload?.shell_code || '').toUpperCase().includes('QUIZ');
+
+          const isPhrasesExam = !isQuiz && (test.payload?.category === 'phrases' || 
                                 /PHRASES/i.test(test.shell_code || test.payload?.shell_code || '') || 
                                 /phrase/i.test(test.title || '') ||
                                 test.test_subtype === 'PHRASE_EXAM' ||
-                                test.test_subtype === 'PHRASE_TEST';
+                                test.test_subtype === 'PHRASE_TEST');
           if (isPhrasesExam) {
             const { data: siblingWordsExams } = await supabase
               .from('tests')
@@ -365,7 +371,7 @@ Deno.serve(async (req) => {
 
       let query = supabase.from("vocabulary_vault").select("*").is("deleted_at", null).eq("target_level", levelNum).range(0, 4999);
       
-      const isThemeTest = (test.category === 'TEST' || test.test_category === 'TEST' || String(test.test_type).toLowerCase() === 'exam' || String(test.test_type).toUpperCase() === 'TEST' || test.test_subtype === 'VOCAB_TEST' || test.test_subtype === 'PHRASE_TEST' || (test.shell_code && test.shell_code.includes('-TEST'))) && !topicCode;
+      const isThemeTest = (test.category === 'EXAM' || test.category === 'TEST' || String(test.test_type).toLowerCase() === 'exam' || test.test_subtype === 'VOCAB_EXAM' || test.test_subtype === 'PHRASE_EXAM' || test.test_subtype === 'VOCAB_TEST' || test.test_subtype === 'PHRASE_TEST' || (test.shell_code && (test.shell_code.includes('-EXAM') || test.shell_code.includes('-TEST')))) && !topicCode;
 
       const themes = test.payload?.themes;
       if (themes && Array.isArray(themes) && themes.length > 0) {

@@ -188,7 +188,7 @@
         <div class="modal-header">
           <div>
             <h3 id="classes-selector-modal-title">📚 Select Class</h3>
-            <p class="text-muted text-xs classes-selector-modal-desc">Switch class to focus your next task and test</p>
+            <p class="text-muted text-xs classes-selector-modal-desc">Switch class to view your quizzes and exams</p>
           </div>
           <button class="btn btn-ghost btn-icon btn-sm" id="close-classes-selector-modal" aria-label="Close">✕</button>
         </div>
@@ -517,7 +517,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261028_v16')
+        navigator.serviceWorker.register('sw.js?v=20261029_v20')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

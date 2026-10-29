@@ -1,5 +1,5 @@
 import { DataGrid } from './datagrid.js?v=5.3.2';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261027';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261029';
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
@@ -375,7 +375,7 @@ import { renderStudents as _renderStudentsModule } from './student-management.js
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.4.7';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.4.7';
 import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=5.4.7';
-import { renderTests } from './tests-management.js?v=5.4.7';
+import { renderTests } from './tests-management.js?v=5.5.0';
 import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261027d';
 import { renderVocabularyVault } from './vocab-vault.js?v=5.4.8';
 import { renderModules } from './modules.js?v=5.4.7';
@@ -401,7 +401,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       import_ai_tests: 'Import AI Tests',
       institutions: 'Batches', students: 'Students', 'import-students': 'Students Registration', 'student-registration': 'Students Registration', 'students-registration': 'Students Registration', 'progress-view': 'Student Progress',
       Classes: 'Curriculum & Classes', classes: 'Classes', 'classes-org': 'Organization Hub', class_instances: 'Class Instances', levels: 'Levels', topics: 'Topics', questions: 'Question Bank', vocab_vault: 'Vocabulary Vault', modules: 'Modules (Core Blocks)', 'import-questions': 'Import Questions', 'export-questions': 'Export Questions',
-      tests: 'Tests Hub', 'test-access': 'Test Access', assignments: 'Assignments & Rosters', results: 'Test Results', recalibrator: 'Test Engine Recalibration', question_types: 'Validation Dictionary',
+      tests: 'Test Analytics', 'test-access': 'Test Access', assignments: 'Assignments & Rosters', results: 'Test Results', recalibrator: 'Test Engine Recalibration', question_types: 'Validation Dictionary',
       audit: 'Activity & Audit Logs', settings: 'Site Settings & Cost Guard', recycle: 'Recycle Bin', health: 'Data Health & Connectivity',
       'class-panel': 'Class Panel'
     };
@@ -863,7 +863,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           const t = String(asm.test_type || asm.type || '').toLowerCase();
           if (t === 'exam') return true;
           if (t === 'quiz') return false;
-          const c = String(asm.category || asm.test_category || asm.payload?.tier || asm.payload?.test_category || '').toUpperCase();
+          const c = String(asm.category || asm.payload?.tier || asm.payload?.category || '').toUpperCase();
           if (c === 'EXAM') return true;
           if (c === 'QUIZ' || c === 'TASK') return false;
           const shell = String(asm.shell_code || asm.payload?.shell_code || '').toUpperCase();
@@ -895,7 +895,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           const pl = r?.payload || {};
           const isUnified = pl.category === 'unified' || pl.is_unified === true || pl.is_unified_test === true || r?.test_type === 'UNIFIED_TEST';
           const wantPhrases = pl.category === 'phrases';
-          const isTest = (r?.category === 'TEST' || r?.test_category === 'TEST' || String(r?.test_type).toUpperCase() === 'TEST' || String(r?.test_type).toLowerCase() === 'exam' || (r?.shell_code && (r.shell_code.includes('-TEST') || r.shell_code.includes('-EXAM'))) || r?.test_subtype === 'VOCAB_TEST' || r?.test_subtype === 'PHRASE_TEST') && !pl.topic_code;
+          const isTest = (r?.category === 'EXAM' || r?.category === 'TEST' || String(r?.test_type).toLowerCase() === 'exam' || (r?.shell_code && (r.shell_code.includes('-TEST') || r.shell_code.includes('-EXAM'))) || r?.test_subtype?.includes('EXAM') || r?.test_subtype?.includes('TEST')) && !pl.topic_code;
           let themes = (pl.themes && Array.isArray(pl.themes) && pl.themes.length > 0) ? pl.themes : null;
           if (!themes && isTest && pl.theme_code) {
             const idx = _ALL_THEMES.indexOf(String(pl.theme_code).toUpperCase());
@@ -942,7 +942,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           
           const title = r?.title || r?.display_name || r?.name || 'Untitled';
           const status = r?.status || r?.test_type || 'draft';
-          const TestCategory = r?.test_type || 'Daily';
+          const TestCategory = (r?.category || r?.test_type || 'Quiz');
           
           let answerType = r?.answer_type || '';
           const asmQs = (allQuestions || []).filter(q => q?.test_id === r?.id);
@@ -1141,7 +1141,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           // 2. Milestone Progression Engine (Next Exam 0% Penalty):
           // Evaluates EXCLUSIVELY from Exams via authoritative computeMilestoneExamMastery.
           // When a student passes Theme N (>= 60%), Theme N+1 is queued into the denominator with 0% score.
-          const allClassExams = classTests.filter(isWeeklyExam);
+          const allClassExams = classTests.filter(isExam);
           const mastery = (typeof computeMilestoneExamMastery === 'function')
             ? computeMilestoneExamMastery(studentExamEntries, allClassExams)
             : {
@@ -1149,10 +1149,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 overallScore: 0,
                 grade: '—',
                 denominator: 0,
+                completedExamCount: studentExamEntries.length,
                 completedWeeklyCount: studentExamEntries.length
               };
 
-          const completedWeeklyCount = mastery.completedWeeklyCount;
+          const completedExamCount = mastery.completedExamCount ?? mastery.completedWeeklyCount ?? studentExamEntries.length;
+          const completedWeeklyCount = completedExamCount;
           const averageScorePct = mastery.overallScore;
           const overallPct = averageScorePct;
           const curriculumGradePct = averageScorePct;
@@ -1225,6 +1227,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             levelName,
             hasRemedial,
             completedCount,
+            completedExamCount,
             completedWeeklyCount,
             totalClassTests,
             progressPct,
@@ -1268,8 +1271,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           if (ptsA !== ptsB) return ptsB - ptsA;
 
           // 2. Secondary: Global SCORE % DESC (unattempted exams sort after completed)
-          const scoreA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
-          const scoreB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
+          const examCountA = a.completedExamCount ?? a.completedWeeklyCount ?? 0;
+          const examCountB = b.completedExamCount ?? b.completedWeeklyCount ?? 0;
+          const scoreA = (examCountA > 0) ? Number(a.averageScorePct ?? 0) : -1;
+          const scoreB = (examCountB > 0) ? Number(b.averageScorePct ?? 0) : -1;
           if (scoreA !== scoreB) return scoreB - scoreA;
 
           // 3. Tertiary: PROG % DESC
@@ -1325,8 +1330,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                       <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--clr-text-1);">📝 Class Tests</h3>
                       <div class="asm-meta-chips" style="display: inline-flex; align-items: center; gap: 6px;">
-                        <span class="badge" style="background: rgba(250, 204, 21, 0.12); color: #facc15; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(250, 204, 21, 0.3);">⚡ ${taskTests.length} Quizzes (Daily)</span>
-                        <span class="badge" style="background: rgba(244, 114, 182, 0.12); color: #f472b6; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(244, 114, 182, 0.3);">📝 ${testTests.length} Exams (Theme)</span>
+                        <span class="badge" style="background: rgba(250, 204, 21, 0.12); color: #facc15; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(250, 204, 21, 0.3);">⚡ ${taskTests.length} Quizzes</span>
+                        <span class="badge" style="background: rgba(244, 114, 182, 0.12); color: #f472b6; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(244, 114, 182, 0.3);">📝 ${testTests.length} Exams</span>
                         <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.3);">🎯 Min. 60%</span>
                       </div>
                     </div>
@@ -1481,9 +1486,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 label: 'TYPE',
                 sortable: true,
                 render: (val, row) => {
-                  let typeStr = escapeHtml(row.TestCategory || 'Daily');
-                  typeStr = typeStr.replace(/(TASK)/ig, '<span style="color: #facc15; font-weight: 800;">$1</span>');
-                  typeStr = typeStr.replace(/(TEST)/ig, '<span style="color: #f472b6; font-weight: 800;">$1</span>');
+                  let typeStr = escapeHtml(row.TestCategory || 'Quiz');
+                  typeStr = typeStr.replace(/(QUIZ|TASK)/ig, '<span style="color: #facc15; font-weight: 800;">$1</span>');
+                  typeStr = typeStr.replace(/(EXAM|TEST)/ig, '<span style="color: #f472b6; font-weight: 800;">$1</span>');
                   return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${typeStr}</div>`;
                 }
               },
@@ -2033,7 +2038,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
                 // Calculate class averages aligned with weekly-only metrics
                 const avgProg = Math.round(filteredData.reduce((acc, s) => acc + (s.progressPct || 0), 0) / totalStudents);
-                const weeklyCompletedStudents = filteredData.filter(s => (s.completedWeeklyCount || 0) > 0);
+                const examCompletedStudents = filteredData.filter(s => (s.completedExamCount || s.completedWeeklyCount || 0) > 0);
+                const weeklyCompletedStudents = examCompletedStudents;
                 const avgScore = totalStudents > 0 
                   ? Math.round(filteredData.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / totalStudents) 
                   : 0;
@@ -2096,9 +2102,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       `;
                     }
                   } else if (col.key === 'totalEarnedScore') {
+                    const hasExamCompletions = (examCompletedStudents.length > 0 || (typeof weeklyCompletedStudents !== 'undefined' && weeklyCompletedStudents.length > 0));
                     cellsHtml += `
                       <td class="col-sticky col-sticky-8 col-sticky-last text-center">
-                        <div class="fw-700 text-xs" style="color:${weeklyCompletedStudents.length > 0 ? avgGradeColor : '#94a3b8'}; font-size:0.75rem; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(34,197,94,0.6)); color:#22C55E;' : ''}">${avgPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
+                        <div class="fw-700 text-xs" style="color:${hasExamCompletions ? avgGradeColor : '#94a3b8'}; font-size:0.75rem; ${isAvgGradeS ? 'filter:drop-shadow(0 0 6px rgba(34,197,94,0.6)); color:#22C55E;' : ''}">${avgPts} <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>
                       </td>
                     `;
                   } else if (col.key && (col.key.startsWith('test_') || col.key.startsWith('asm_'))) {
@@ -2202,8 +2209,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   const sA = Number(a.totalEarnedScore ?? 0);
                   const sB = Number(b.totalEarnedScore ?? 0);
                   if (sA !== sB) return direction === 'asc' ? sA - sB : sB - sA;
-                  const scoreA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
-                  const scoreB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
+                  const countA = a.completedExamCount ?? a.completedWeeklyCount ?? 0;
+                  const countB = b.completedExamCount ?? b.completedWeeklyCount ?? 0;
+                  const scoreA = (countA > 0) ? Number(a.averageScorePct ?? 0) : -1;
+                  const scoreB = (countB > 0) ? Number(b.averageScorePct ?? 0) : -1;
                   if (scoreA !== scoreB) return scoreB - scoreA;
                   const pA = Number(a.progressPct ?? 0);
                   const pB = Number(b.progressPct ?? 0);
@@ -2216,8 +2225,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 }
 
                 if (sortKey === 'grade' || sortKey === 'GRD' || sortKey === 'SCORE' || sortKey === 'averageScorePct') {
-                  const gA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
-                  const gB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
+                  const countA = a.completedExamCount ?? a.completedWeeklyCount ?? 0;
+                  const countB = b.completedExamCount ?? b.completedWeeklyCount ?? 0;
+                  const gA = (countA > 0) ? Number(a.averageScorePct ?? 0) : -1;
+                  const gB = (countB > 0) ? Number(b.averageScorePct ?? 0) : -1;
                   if (gA !== gB) return direction === 'asc' ? gA - gB : gB - gA;
                   const sA = Number(a.totalEarnedScore ?? 0);
                   const sB = Number(b.totalEarnedScore ?? 0);
@@ -2239,8 +2250,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   const sA = Number(a.totalEarnedScore ?? 0);
                   const sB = Number(b.totalEarnedScore ?? 0);
                   if (sA !== sB) return sB - sA;
-                  const scoreA = (a.completedWeeklyCount > 0) ? Number(a.averageScorePct ?? 0) : -1;
-                  const scoreB = (b.completedWeeklyCount > 0) ? Number(b.averageScorePct ?? 0) : -1;
+                  const countA = a.completedExamCount ?? a.completedWeeklyCount ?? 0;
+                  const countB = b.completedExamCount ?? b.completedWeeklyCount ?? 0;
+                  const scoreA = (countA > 0) ? Number(a.averageScorePct ?? 0) : -1;
+                  const scoreB = (countB > 0) ? Number(b.averageScorePct ?? 0) : -1;
                   if (scoreA !== scoreB) return scoreB - scoreA;
                   if (a.lastSubmittedAt && b.lastSubmittedAt) {
                     const diff = new Date(a.lastSubmittedAt) - new Date(b.lastSubmittedAt);
@@ -2355,7 +2368,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       ? getGradeColorByScore(row.averageScorePct)
                       : (isGradeS ? '#22C55E' : row.gradeColor);
                     return `
-                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${scoreColor}; font-size:0.75rem; line-height:1.1;" title="Exams Average: ${row.averageScorePct}% (${row.completedWeeklyCount} exams)">${row.averageScorePct}%</div>
+                      <div class="fw-700 text-xs ${isGradeS ? 'text-gold-champion' : ''}" style="color:${scoreColor}; font-size:0.75rem; line-height:1.1;" title="Exams Average: ${row.averageScorePct}% (${row.completedExamCount ?? row.completedWeeklyCount ?? 0} exams)">${row.averageScorePct}%</div>
                     `;
                   }
                 },
@@ -2393,7 +2406,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   align: 'center',
                   width: '62px',
                   render: (val, row) => {
-                    if (!row.completedWeeklyCount || row.completedWeeklyCount === 0) {
+                    if (!(row.completedExamCount || row.completedWeeklyCount)) {
                       return `<div class="fw-700 text-xs text-muted" style="color:#94a3b8; font-size:0.75rem;" title="0 pts (No exams completed)">0 <span style="font-size:0.6rem; color:#94a3b8; font-weight:normal;">pts</span></div>`;
                     }
                     const isGradeS = row.grade === '★' || row.grade === 'S';
@@ -3087,11 +3100,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
         let tableHtml = (allTests || []).map(a => {
            const c = (classes||[]).find(x => x.id === a.class_id);
-           const badgeColor = a.test_category === 'TASK' ? 'background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);' : 'background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);';
+           const isExam = isWeeklyExam(a);
+           const catLabel = isExam ? 'EXAM' : 'QUIZ';
+           const badgeColor = !isExam ? 'background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);' : 'background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);';
            return `
              <tr style="border-bottom:1px solid var(--clr-border);">
                <td style="padding:0.75rem 1rem;font-weight:600;color:var(--clr-text);">${escapeHtml(a.title || 'Untitled')}</td>
-               <td style="padding:0.75rem 1rem;"><span class="badge" style="${badgeColor}">${escapeHtml(a.test_category || 'TASK')}</span></td>
+               <td style="padding:0.75rem 1rem;"><span class="badge" style="${badgeColor}">${catLabel}</span></td>
                <td style="padding:0.75rem 1rem;color:var(--clr-text-muted);font-size:0.8rem;">${escapeHtml(c?.name || '—')}</td>
                <td style="padding:0.75rem 1rem;color:var(--clr-text-muted);font-size:0.8rem;">${escapeHtml(a.levels?.name || '—')}</td>
                <td style="padding:0.75rem 1rem;">

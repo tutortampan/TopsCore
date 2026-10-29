@@ -84,6 +84,31 @@ async function runTest() {
     process.exit(1);
   }
 
+  // Test case C: Daily Quiz (Test 20: 3C1 Phrases Quiz) MUST NOT be classified as Phrases Exam
+  const test20Id = 'ccfce187-d9be-42a3-9745-cd4852865481';
+  const { data: test20 } = await supabase.from('tests').select('*').eq('id', test20Id).single();
+  if (test20) {
+    const isQuizFallback = (test20.test_type || '').toLowerCase() === 'quiz' || 
+                           (test20.category || '').toLowerCase() === 'quiz' ||
+                           (test20.shell_code || '').toUpperCase().includes('QUIZ') ||
+                           (test20.shell_code || '').toUpperCase().includes('TASK') ||
+                           (test20.payload?.shell_code || '').toUpperCase().includes('QUIZ');
+
+    const isTest20PhrasesExam = !isQuizFallback && Boolean(
+      test20.payload?.category === 'phrases' || 
+      /PHRASES/i.test(test20.shell_code || test20.payload?.shell_code || '') || 
+      /phrase/i.test(test20.title || '') ||
+      test20.test_subtype === 'PHRASE_EXAM' ||
+      test20.test_subtype === 'PHRASE_TEST'
+    );
+
+    console.log(`Test C (3C1 Phrases Quiz isPhrasesExam): ${isTest20PhrasesExam ? 'FAILED (Incorrectly flagged as exam)' : 'PASSED (Cleanly recognized as Quiz)'}`);
+    if (isTest20PhrasesExam) {
+      console.error('Test C failed: 3C1 Phrases Quiz must not be classified as Phrases Exam!');
+      process.exit(1);
+    }
+  }
+
   console.log('✅ ALL SEQUENTIAL PRE-REQUISITE TESTS PASSED SUCCESSFULLY!');
 }
 

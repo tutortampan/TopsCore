@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=5.3.2';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=5.6.5';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=5.6.5';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=5.3.2';
 import { escapeHtml, escHtml } from './app.js?v=5.3.2';
 
@@ -9,7 +9,7 @@ export function getGrade(pct) {
   return calculateGrade(pct);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -543,7 +543,7 @@ export async function generateTestQuestions(sb, test) {
       if (levelRec?.level_number) levelNum = levelRec.level_number;
     }
     
-    const isThemeTest = (test.category === 'TEST' || test.test_category === 'TEST' || String(test.test_type).toUpperCase() === 'TEST' || String(test.test_type).toLowerCase() === 'exam' || (test.shell_code && test.shell_code.includes('-TEST')) || test.test_subtype === 'VOCAB_TEST' || test.test_subtype === 'PHRASE_TEST') && !topicCode;
+    const isThemeTest = (test.category === 'EXAM' || test.category === 'TEST' || String(test.test_type).toLowerCase() === 'exam' || (test.shell_code && (test.shell_code.includes('-EXAM') || test.shell_code.includes('-TEST'))) || test.test_subtype === 'VOCAB_EXAM' || test.test_subtype === 'PHRASE_EXAM' || test.test_subtype === 'VOCAB_TEST' || test.test_subtype === 'PHRASE_TEST') && !topicCode;
 
     // Resilient vocabulary query: try with category column first, fallback without category column
     let vaultData = null;
@@ -813,15 +813,23 @@ export async function startTest(studentId, testId) {
   }
 
   // Guard: Strict Sequential Exam Prerequisite: If this is a Phrases Exam, student MUST pass Words Exam first (>= 60%)
-  const isPhrasesExamFallback = asmData.payload?.category === 'phrases' || 
-                                /PHRASES/i.test(asmData.shell_code || asmData.payload?.shell_code || '') || 
-                                /phrase/i.test(asmData.title || '') ||
-                                asmData.test_subtype === 'PHRASE_EXAM' ||
-                                asmData.test_subtype === 'PHRASE_TEST';
+  const isQuizFallback = (asmData.test_type || '').toLowerCase() === 'quiz' || 
+                         (asmData.category || '').toLowerCase() === 'quiz' ||
+                         (asmData.shell_code || '').toUpperCase().includes('QUIZ') ||
+                         (asmData.shell_code || '').toUpperCase().includes('TASK') ||
+                         (asmData.payload?.shell_code || '').toUpperCase().includes('QUIZ');
+
+  const isPhrasesExamFallback = !isQuizFallback && isWeeklyExam(asmData) && Boolean(
+    asmData.payload?.category === 'phrases' || 
+    /PHRASES/i.test(asmData.shell_code || asmData.payload?.shell_code || '') || 
+    /phrase/i.test(asmData.title || '') ||
+    asmData.test_subtype === 'PHRASE_EXAM' ||
+    asmData.test_subtype === 'PHRASE_TEST'
+  );
   const themeCodeFallback = asmData.payload?.theme_code;
   if (isPhrasesExamFallback && themeCodeFallback && !isStandaloneTryout) {
     const { data: siblingWordsExams } = await sb.from('tests')
-      .select('id, title, payload, shell_code, test_subtype')
+      .select('id, title, payload, shell_code, test_subtype, test_type, category')
       .eq('class_id', asmData.class_id)
       .eq('level_id', asmData.level_id)
       .eq('test_type', 'exam')
@@ -829,6 +837,7 @@ export async function startTest(studentId, testId) {
       .contains('payload', { theme_code: themeCodeFallback });
 
     const wordsExam = (siblingWordsExams || []).find(t => {
+      if (!isWeeklyExam(t)) return false;
       const cat = t.payload?.category;
       const sc = t.shell_code || t.payload?.shell_code || '';
       const ttl = t.title || '';
@@ -2442,15 +2451,15 @@ export async function createVocabMasteryTest(config) {
     selectedWords = stratifiedSample(topicMap, customQuota);
   }
 
-  // Resolve the final test_type (PostgreSQL enum: 'quiz' | 'exam') and category ('TASK' | 'TEST'):
-  const isTaskTier = tier === 'TASK' || String(test_type).toLowerCase() === 'quiz' || test_type === 'TASK';
-  const resolvedType = isTaskTier ? 'quiz' : 'exam';
-  const resolvedCategory = isTaskTier ? 'TASK' : 'TEST';
+  // Resolve the final test_type (PostgreSQL enum: 'quiz' | 'exam') and category ('QUIZ' | 'EXAM'):
+  const isQuizTier = tier === 'QUIZ' || tier === 'TASK' || String(test_type).toLowerCase() === 'quiz' || test_type === 'TASK';
+  const resolvedType = isQuizTier ? 'quiz' : 'exam';
+  const resolvedCategory = isQuizTier ? 'QUIZ' : 'EXAM';
 
   let defaultAnswerType = answerType;
   if (testType === 'IDIOM_PROVERB' ) {
       defaultAnswerType = 'phrase_recognition';
-  } else if (isTaskTier) {
+  } else if (isQuizTier) {
       defaultAnswerType = 'spoken';
   } else {
       defaultAnswerType = 'spoken';
@@ -2461,11 +2470,11 @@ export async function createVocabMasteryTest(config) {
     program_id:               programId,
     class_id:                 classId,
     level_id:                 levelId,
-    test_subtype:          'VOCAB_' + tier,
+    test_subtype:          'VOCAB_' + (isQuizTier ? 'QUIZ' : 'EXAM'),
     test_type:                resolvedType,
     category:                 resolvedCategory,
     title:                    title,
-    description:              'Vocabulary Mastery (' + tier + '). Topics: ' + sourceTopics.join(', '),
+    description:              'Vocabulary Mastery (' + (isQuizTier ? 'Quiz' : 'Exam') + '). Topics: ' + sourceTopics.join(', '),
     status:                   'PUBLISHED',
     availability_start:       windowStart || null,
     availability_end:         windowEnd || null,
@@ -2914,7 +2923,7 @@ export async function updateClassTestsConfig(params = {}) {
   const sb = await getSupabase();
   const {
     classId,
-    taskDurationMinutes = 10,
+    taskDurationMinutes = 5,
     wordsTaskDurationMinutes,
     phrasesTaskDurationMinutes,
     taskAnswerType = 'spoken',
@@ -2968,7 +2977,7 @@ export async function updateClassTestsConfig(params = {}) {
     } else {
       const dur = isPhrase 
         ? Number(phrasesTaskDurationMinutes || 5) 
-        : Number(wordsTaskDurationMinutes || taskDurationMinutes || 10);
+        : Number(wordsTaskDurationMinutes || taskDurationMinutes || 5);
       updateData.working_duration_minutes = dur;
       updateData.minimum_required_score = Number(taskPassingScore);
       const taskAns = isPhrase 
@@ -3084,8 +3093,8 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     let displayOrder = 1;
     let lastTaskId = null;
 
-    const taskDur = config.taskDurationMinutes !== undefined ? Number(config.taskDurationMinutes) : 10;
-    const wordsTaskDur = config.wordsTaskDurationMinutes !== undefined ? Number(config.wordsTaskDurationMinutes) : (taskDur || 10);
+    const taskDur = config.taskDurationMinutes !== undefined ? Number(config.taskDurationMinutes) : 5;
+    const wordsTaskDur = config.wordsTaskDurationMinutes !== undefined ? Number(config.wordsTaskDurationMinutes) : (taskDur || 5);
     const phrasesTaskDur = config.phrasesTaskDurationMinutes !== undefined ? Number(config.phrasesTaskDurationMinutes) : 5;
     const taskAns = config.taskAnswerType || 'spoken';
     const wordsTaskAns = config.wordsTaskAnswerType || taskAns || 'spoken';

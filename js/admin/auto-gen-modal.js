@@ -49,7 +49,7 @@ export async function openAutoGenerateModal(options = {}) {
     const matchedClass = allClasses.find(c => String(c.id) === String(currentClassId));
     const className = matchedClass ? matchedClass.name : 'Vocabulary Class';
 
-    let prefillTaskDur = 10;
+    let prefillTaskDur = 5;
     let prefillWordsTaskAns = 'spoken';
     let prefillPhrasesTaskAns = 'spoken';
     let prefillTaskMin = 60;
@@ -69,9 +69,10 @@ export async function openAutoGenerateModal(options = {}) {
 
         if (existingAsms && existingAsms.length > 0) {
           for (const a of existingAsms) {
-            const isTest = String(a.category || a.test_category || a.test_type).toUpperCase() === 'TEST' 
+            const isTest = String(a.category || a.test_type).toUpperCase() === 'EXAM'
+              || String(a.category || a.test_type).toUpperCase() === 'TEST' 
               || String(a.test_type).toLowerCase() === 'exam' 
-              || (a.shell_code && a.shell_code.endsWith('-TEST'));
+              || (a.shell_code && (a.shell_code.endsWith('-EXAM') || a.shell_code.endsWith('-TEST')));
             const isPhrase = a.category === 'phrases' 
               || (a.payload && a.payload.category === 'phrases') 
               || (a.shell_code && a.shell_code.toUpperCase().includes('PHRASE'))
@@ -121,7 +122,7 @@ export async function openAutoGenerateModal(options = {}) {
               <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:#f8fafc;">Test Generator &amp; Blueprint Wizard</h3>
             </div>
             <div style="font-size:0.72rem; color:#94a3b8; margin-top:2px;">
-              Konfigurasi blueprint kurikulum, durasi task, cara jawab, dan passing score.
+              Konfigurasi blueprint kurikulum, durasi quiz, cara jawab, dan passing score.
             </div>
           </div>
           <button type="button" class="btn btn-ghost btn-sm" id="wizard-close-btn" style="color:#94a3b8; font-size:1.1rem; padding:2px 8px;">✕</button>
@@ -177,21 +178,21 @@ export async function openAutoGenerateModal(options = {}) {
             <!-- Row 1: Durasi Pengerjaan & Nilai Minimal -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
               <div>
-                <label for="wizard-task-dur" class="form-label" style="font-size:0.7rem; color:#94a3b8; margin-bottom:2px; display:block;">⏱️ Waktu (Mnt)</label>
-                <input type="number" id="wizard-task-dur" min="1" max="180" value="${escapeHtml(String(prefillTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan quiz (default 10 menit)" />
+                <label for="wizard-quiz-dur" class="form-label" style="font-size:0.7rem; color:#94a3b8; margin-bottom:2px; display:block;">⏱️ Waktu (Mnt)</label>
+                <input type="number" id="wizard-quiz-dur" min="1" max="180" value="${escapeHtml(String(prefillTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan quiz (default 5 menit)" />
                 <div style="display:flex; gap:3px; margin-top:4px;">
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-task-dur" data-val="5" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">5m</button>
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-task-dur" data-val="10" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">10m</button>
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-task-dur" data-val="15" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">15m</button>
+                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-dur" data-val="5" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">5m</button>
+                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-dur" data-val="10" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">10m</button>
+                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-dur" data-val="15" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">15m</button>
                 </div>
               </div>
 
               <div>
-                <label for="wizard-task-min" class="form-label" style="font-size:0.7rem; color:#94a3b8; margin-bottom:2px; display:block;">🎯 Min. Skor (%)</label>
-                <input type="number" id="wizard-task-min" min="1" max="100" value="${escapeHtml(String(prefillTaskMin))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Batas tuntas kelulusan quiz" />
+                <label for="wizard-quiz-min" class="form-label" style="font-size:0.7rem; color:#94a3b8; margin-bottom:2px; display:block;">🎯 Min. Skor (%)</label>
+                <input type="number" id="wizard-quiz-min" min="1" max="100" value="${escapeHtml(String(prefillTaskMin))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Batas tuntas kelulusan quiz" />
                 <div style="display:flex; gap:3px; margin-top:4px;">
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-task-min" data-val="60" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">60%</button>
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-task-min" data-val="70" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">70%</button>
+                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-min" data-val="60" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">60%</button>
+                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-min" data-val="70" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">70%</button>
                 </div>
               </div>
             </div>
@@ -199,8 +200,8 @@ export async function openAutoGenerateModal(options = {}) {
             <!-- Row 2: Cara Jawab Terpisah (Words Quiz vs Phrases Quiz) -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:rgba(0,0,0,0.22); padding:8px 10px; border-radius:6px; border:1px solid rgba(250,204,21,0.2);">
               <div>
-                <label for="wizard-task-ans-words" class="form-label" style="font-size:0.7rem; color:#facc15; font-weight:700; margin-bottom:2px; display:block;">🗣️ Words Quiz</label>
-                <select id="wizard-task-ans-words" class="form-control" style="background:#090d16; color:#f8fafc; font-size:0.78rem; height:32px;">
+                <label for="wizard-quiz-ans-words" class="form-label" style="font-size:0.7rem; color:#facc15; font-weight:700; margin-bottom:2px; display:block;">🗣️ Words Quiz</label>
+                <select id="wizard-quiz-ans-words" class="form-control" style="background:#090d16; color:#f8fafc; font-size:0.78rem; height:32px;">
                   <option value="spoken" ${prefillWordsTaskAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / AI)</option>
                   <option value="written" ${prefillWordsTaskAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik)</option>
                   <option value="selection" ${prefillWordsTaskAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan)</option>
@@ -209,8 +210,8 @@ export async function openAutoGenerateModal(options = {}) {
               </div>
 
               <div>
-                <label for="wizard-task-ans-phrases" class="form-label" style="font-size:0.7rem; color:#facc15; font-weight:700; margin-bottom:2px; display:block;">🗣️ Phrases Quiz</label>
-                <select id="wizard-task-ans-phrases" class="form-control" style="background:#090d16; color:#f8fafc; font-size:0.78rem; height:32px;">
+                <label for="wizard-quiz-ans-phrases" class="form-label" style="font-size:0.7rem; color:#facc15; font-weight:700; margin-bottom:2px; display:block;">🗣️ Phrases Quiz</label>
+                <select id="wizard-quiz-ans-phrases" class="form-control" style="background:#090d16; color:#f8fafc; font-size:0.78rem; height:32px;">
                   <option value="spoken" ${prefillPhrasesTaskAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / AI)</option>
                   <option value="written" ${prefillPhrasesTaskAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik)</option>
                   <option value="selection" ${prefillPhrasesTaskAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan)</option>
@@ -310,10 +311,15 @@ export async function openAutoGenerateModal(options = {}) {
       const selectedLevels = Array.from(overlay.querySelectorAll('.wizard-level-chk:checked')).map(cb => parseInt(cb.value, 10));
       const progId = overlay.querySelector('#wizard-prog-id').value;
       const category = overlay.querySelector('#wizard-scope-select').value;
-      const taskDuration = parseInt(overlay.querySelector('#wizard-task-dur').value, 10) || 5;
-      const wordsTaskAnswer = overlay.querySelector('#wizard-task-ans-words') ? overlay.querySelector('#wizard-task-ans-words').value : 'spoken';
-      const phrasesTaskAnswer = overlay.querySelector('#wizard-task-ans-phrases') ? overlay.querySelector('#wizard-task-ans-phrases').value : 'spoken';
-      const taskPassing = parseInt(overlay.querySelector('#wizard-task-min').value, 10) || 60;
+      const durEl = overlay.querySelector('#wizard-quiz-dur') || overlay.querySelector('#wizard-task-dur');
+      const minEl = overlay.querySelector('#wizard-quiz-min') || overlay.querySelector('#wizard-task-min');
+      const wordsAnsEl = overlay.querySelector('#wizard-quiz-ans-words') || overlay.querySelector('#wizard-task-ans-words');
+      const phrasesAnsEl = overlay.querySelector('#wizard-quiz-ans-phrases') || overlay.querySelector('#wizard-task-ans-phrases');
+
+      const quizDuration = parseInt(durEl?.value, 10) || 5;
+      const wordsQuizAnswer = wordsAnsEl ? wordsAnsEl.value : 'spoken';
+      const phrasesQuizAnswer = phrasesAnsEl ? phrasesAnsEl.value : 'spoken';
+      const quizPassing = parseInt(minEl?.value, 10) || 60;
       const wordsTestAnswer = overlay.querySelector('#wizard-test-ans-words').value;
       const phrasesTestAnswer = overlay.querySelector('#wizard-test-ans-phrases').value;
       const testPassing = parseInt(overlay.querySelector('#wizard-test-min').value, 10) || 60;
@@ -322,10 +328,14 @@ export async function openAutoGenerateModal(options = {}) {
         selectedLevels,
         progId,
         category,
-        taskDuration,
-        wordsTaskAnswer,
-        phrasesTaskAnswer,
-        taskPassing,
+        quizDuration,
+        taskDuration: quizDuration,
+        wordsQuizAnswer,
+        wordsTaskAnswer: wordsQuizAnswer,
+        phrasesQuizAnswer,
+        phrasesTaskAnswer: phrasesQuizAnswer,
+        quizPassing,
+        taskPassing: quizPassing,
         wordsTestAnswer,
         phrasesTestAnswer,
         testPassing,
@@ -406,7 +416,7 @@ export async function openAutoGenerateModal(options = {}) {
         });
 
         overlay.remove();
-        const msg = `Auto-Gen Sukses: ${res.tasks} Quiz, ${res.tests} Exam dibuat (${res.updated} disinkronkan)!`;
+        const msg = `Auto-Gen Sukses: ${res.quizzes ?? res.tasks ?? 0} Quiz, ${res.exams ?? res.tests ?? 0} Exam dibuat (${res.updated ?? 0} disinkronkan)!`;
         if (window.showToast) window.showToast(msg, 'success');
         else alert(msg);
 

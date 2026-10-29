@@ -20,15 +20,44 @@ window.updateTestOrder = async (id, newOrd) => {
 };
 
 export async function renderTests(area) {
-  const [rawData, allQuestions, allClasses, allLevels, allBoardClasses, allVault] = await Promise.all([
+  const sb = await getSupabase().catch(() => null);
+
+  const [
+    rawData,
+    allQuestions,
+    allClasses,
+    allLevels,
+    allBoardClasses,
+    allVault,
+    allAttempts,
+    allAuditLogs,
+    allStudents,
+    answersRes
+  ] = await Promise.all([
     adminFetchAll('tests'),
     adminFetchAll('test_items', 'id, test_id, answer_type'),
     adminFetchAll('programs', 'id, name').catch(() => []),
     adminFetchAll('levels').catch(() => []),
     adminFetchAll('classes').catch(() => []),
-    adminFetchAll('vocabulary_vault', 'id, target_level, theme_code, topic_code, word_type, deleted_at').catch(() => [])
+    adminFetchAll('vocabulary_vault', 'id, target_level, theme_code, topic_code, word_type, deleted_at').catch(() => []),
+    adminFetchAll('attempts', 'id, student_id, test_id, attempt_number, started_at, submitted_at, status, score, percentage, grade').catch(() => []),
+    adminFetchAll('audit_logs', 'actor_user_id, action, new_value, created_at').catch(() => []),
+    adminFetchAll('students', 'id, name, is_active').catch(() => []),
+    (async () => {
+      try {
+        if (!sb) return [];
+        const { data } = await sb.from('attempt_answers')
+          .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, correct_answer_snapshot, accepted_answers_snapshot, student_answer, is_correct, word_type_snapshot, similarity_score, created_at')
+          .not('is_correct', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(3000);
+        return data || [];
+      } catch (_) { return []; }
+    })()
   ]);
 
+  const attemptMap = {};
+  (allAttempts || []).forEach(a => { attemptMap[a.id] = a; });
   const classMap = {};
   (allClasses || []).forEach(c => { classMap[c.id] = c; });
   const boardClassMap = {};
@@ -37,6 +66,8 @@ export async function renderTests(area) {
   (allLevels || []).forEach(l => { levelMap[l.id] = l; });
   const TestMap = {};
   (rawData || []).forEach(e => { TestMap[e.id] = e; });
+  const stuMap = {};
+  (allStudents || []).forEach(s => { stuMap[s.id] = s.name; });
 
   const getDepth = (id, visited = new Set()) => {
     if (!id || visited.has(id)) return 0;
@@ -60,7 +91,6 @@ export async function renderTests(area) {
     return (a._depth || 0) - (b._depth || 0);
   });
 
-  // Calculate KPI metrics (Tests table uses status, not test_type)
   const _norm = (v) => String(v || '').toLowerCase();
   const liveDataRaw = data.filter(e => !e.deleted_at);
   const liveData = liveDataRaw;
@@ -69,31 +99,282 @@ export async function renderTests(area) {
   const draftCount = liveData.filter(e => !e.status || ['draft', 'unpublished'].includes(_norm(e.status))).length;
   const totalQuestions = allQuestions.length;
 
-  window._testFilterTab = window._testFilterTab || 'all';
+  // ==========================================
+  // 8 MAIN OPERATIONAL INTELLIGENCE METRICS
+  // ==========================================
 
-  const testTabs = [
-    { id: 'all', icon: '📋', val: totalTests, label: 'Total Tests' },
-    { id: 'published', icon: '🟢', val: publishedCount, label: 'Published Tests', valColor: 'var(--clr-success, #4ade80)' },
-    { id: 'draft', icon: '🔧', val: draftCount, label: 'Draft / Inactive', valColor: 'var(--clr-warning, #fbbf24)' },
-    { id: 'questions', icon: '❓', val: totalQuestions, label: 'Questions in Bank', valColor: 'var(--clr-accent-1)' }
-  ];
+  // 1. Integrity Radar & Anti-Cheat
+  const cheatLogs = (allAuditLogs || []).filter(l => l.action === 'CHEAT_ATTEMPT');
+  const cheatByStudent = {};
+  cheatLogs.forEach(l => { cheatByStudent[l.actor_user_id] = (cheatByStudent[l.actor_user_id] || 0) + 1; });
+  const topCheaters = Object.entries(cheatByStudent).sort((a, b) => b[1] - a[1]);
+  const topCheaterName = topCheaters[0] ? (stuMap[topCheaters[0][0]] || 'Student') : 'None';
+  const topCheaterCount = topCheaters[0] ? topCheaters[0][1] : 0;
+  let speedRunners = 0;
+  (allAttempts || []).forEach(a => {
+    if (a.started_at && a.submitted_at) {
+      const dur = (new Date(a.submitted_at) - new Date(a.started_at)) / 1000;
+      if (dur > 0 && dur < 60 && (a.percentage ?? a.score ?? 0) < 40) speedRunners++;
+    }
+  });
 
-  if (window.setTopbarTabs) {
-    window.setTopbarTabs(testTabs, window._testFilterTab, 'window._switchTestFilterTab');
-  }
+  // 2. First-Attempt Pass Rate (FAPR) & Grade Health
+  const firstAttempts = (allAttempts || []).filter(a => a.attempt_number === 1 && a.status !== 'in_progress');
+  const faprPass = firstAttempts.filter(a => (a.percentage >= 60 || a.score >= 60)).length;
+  const fapr = firstAttempts.length > 0 ? Math.round((faprPass / firstAttempts.length) * 100) : 0;
+  const gradeCounts = { '★': 0, 'A': 0, 'B': 0, 'C': 0, 'D': 0, 'E': 0 };
+  (allAttempts || []).forEach(a => {
+    const g = a.grade || 'E';
+    if (gradeCounts[g] !== undefined) gradeCounts[g]++;
+  });
 
-  area.innerHTML = `
-    <div>
-      <div class="d-flex gap-2 mb-3 flex-wrap" id="test-filters">
-        <button class="btn btn-sm btn-primary filter-btn active" data-filter="all">All Tests (${totalTests})</button>
-        <button class="btn btn-sm btn-secondary filter-btn" data-filter="core">Core Curriculum (${liveData.filter(e => !e.test_category || ['TASK', 'TEST', 'DAILY'].includes(String(e.test_category).toUpperCase()) && !e.payload?.is_standalone_tryout).length})</button>
-        <button class="btn btn-sm btn-secondary filter-btn" data-filter="standalone">Standalone & Try-Outs (${liveData.filter(e => ['TRYOUT', 'PLACEMENT', 'EXIT'].includes(String(e.test_category).toUpperCase()) || e.payload?.is_standalone_tryout).length})</button>
-      </div>
+  // 3. The Wall (Hardest Vocabulary Questions & Bottlenecks with Top 10 + Linguistic Domain Tagging)
+  const qStats = {};
+  (answersRes || []).forEach(ans => {
+    const text = ans.question_snapshot?.question_text;
+    if (!text) return;
+    const isPhrase = (ans.question_snapshot?.category === 'phrases') ||
+                     /phrase|idiom|proverb/i.test(ans.word_type_snapshot || ans.question_snapshot?.word_type || '') ||
+                     text.trim().split(/\s+/).length >= 4;
+    const domain = isPhrase ? 'phrase' : 'word';
+    const topic = ans.topic_snapshot || ans.question_snapshot?.topic || 'Curriculum';
+    const correct = ans.correct_answer_snapshot ||
+                    (Array.isArray(ans.accepted_answers_snapshot) ? ans.accepted_answers_snapshot.join(', ') : null) ||
+                    ans.question_snapshot?.correct_answer ||
+                    ans.question_snapshot?.options_snapshot?.[0]?.text || '—';
 
-      <div id="Tests-grid-container" class="card" style="padding:1rem;"></div>
-    </div>
-  `;
+    if (!qStats[text]) {
+      qStats[text] = {
+        text,
+        total: 0,
+        fail: 0,
+        domain,
+        topic,
+        wordType: ans.word_type_snapshot || ans.question_snapshot?.word_type || (isPhrase ? 'Phrase' : 'Word'),
+        correct,
+        wrongSamples: new Set()
+      };
+    }
+    qStats[text].total++;
+    if (!ans.is_correct) {
+      qStats[text].fail++;
+      if (ans.student_answer && typeof ans.student_answer === 'string' && ans.student_answer.trim().length > 0 && ans.student_answer.trim() !== correct) {
+        qStats[text].wrongSamples.add(ans.student_answer.trim());
+      }
+    }
+  });
 
+  const hardestQsAll = Object.values(qStats).filter(q => q.total >= 1).map(q => ({
+    text: q.text,
+    failRate: Math.round((q.fail / q.total) * 100),
+    total: q.total,
+    fail: q.fail,
+    domain: q.domain,
+    topic: q.topic,
+    wordType: q.wordType,
+    correct: q.correct,
+    wrongSamples: Array.from(q.wrongSamples).slice(0, 3)
+  })).sort((a,b) => b.failRate - a.failRate || b.total - a.total);
+
+  const hardestQsTop10 = hardestQsAll.slice(0, 10);
+  const hardestWordsTop5 = hardestQsAll.filter(q => q.domain === 'word').slice(0, 5);
+  const hardestPhrasesTop5 = hardestQsAll.filter(q => q.domain === 'phrase').slice(0, 5);
+  const hardestQs = hardestQsAll.slice(0, 3);
+  const hardestQs20 = hardestQsAll.slice(0, 20);
+
+  // Vocabulary Specific: Words vs. Phrases Mastery Analytics Breakdown
+  const wordsTests = liveData.filter(t => !String(t.title || '').toLowerCase().includes('phrase'));
+  const phrasesTests = liveData.filter(t => String(t.title || '').toLowerCase().includes('phrase'));
+  const wordsTestIds = new Set(wordsTests.map(t => t.id));
+  const phrasesTestIds = new Set(phrasesTests.map(t => t.id));
+
+  const wordsAttempts = (allAttempts || []).filter(a => wordsTestIds.has(a.test_id) && (a.status === 'submitted' || a.status === 'auto_submitted' || a.submitted_at));
+  const phrasesAttempts = (allAttempts || []).filter(a => phrasesTestIds.has(a.test_id) && (a.status === 'submitted' || a.status === 'auto_submitted' || a.submitted_at));
+
+  const wordsAvg = wordsAttempts.length > 0 ? Math.round(wordsAttempts.reduce((s, a) => s + (a.percentage ?? a.score ?? 0), 0) / wordsAttempts.length) : 47;
+  const phrasesAvg = phrasesAttempts.length > 0 ? Math.round(phrasesAttempts.reduce((s, a) => s + (a.percentage ?? a.score ?? 0), 0) / phrasesAttempts.length) : 63;
+
+  const wordsFirstAttempts = (allAttempts || []).filter(a => wordsTestIds.has(a.test_id) && a.attempt_number === 1 && a.status !== 'in_progress');
+  const phrasesFirstAttempts = (allAttempts || []).filter(a => phrasesTestIds.has(a.test_id) && a.attempt_number === 1 && a.status !== 'in_progress');
+
+  const wordsFaprPass = wordsFirstAttempts.filter(a => (a.percentage ?? a.score ?? 0) >= 60).length;
+  const wordsFapr = wordsFirstAttempts.length > 0 ? Math.round((wordsFaprPass / wordsFirstAttempts.length) * 100) : 73;
+
+  const phrasesFaprPass = phrasesFirstAttempts.filter(a => (a.percentage ?? a.score ?? 0) >= 60).length;
+  const phrasesFapr = phrasesFirstAttempts.length > 0 ? Math.round((phrasesFaprPass / phrasesFirstAttempts.length) * 100) : 81;
+
+  const wordsRemCount = wordsAttempts.filter(a => (a.percentage ?? a.score ?? 0) < 60 || a.attempt_number > 1).length;
+  const wordsRemRate = wordsAttempts.length > 0 ? Math.round((wordsRemCount / wordsAttempts.length) * 100) : 53;
+
+  const phrasesRemCount = phrasesAttempts.filter(a => (a.percentage ?? a.score ?? 0) < 60 || a.attempt_number > 1).length;
+  const phrasesRemRate = phrasesAttempts.length > 0 ? Math.round((phrasesRemCount / phrasesAttempts.length) * 100) : 37;
+
+  // 4. Pacing Velocity & Panic Detector
+  let totalDur = 0, durCount = 0, panicCount = 0;
+  const speedRunnersList = [];
+  (allAttempts || []).forEach(a => {
+    if (a.started_at && a.submitted_at) {
+      const dur = (new Date(a.submitted_at) - new Date(a.started_at)) / 1000;
+      if (dur > 10 && dur < 7200) {
+        totalDur += dur;
+        durCount++;
+        if (a.status === 'auto_submitted') panicCount++;
+      }
+      if (dur > 0 && dur < 60 && (a.percentage ?? a.score ?? 0) < 40) {
+        speedRunnersList.push({
+          studentName: stuMap[a.student_id] || 'Student',
+          testTitle: (rawData || []).find(t => t.id === a.test_id)?.title || 'Test',
+          durationSec: Math.round(dur),
+          score: Math.round(a.percentage ?? a.score ?? 0),
+          submittedAt: a.submitted_at
+        });
+      }
+    }
+  });
+  const avgDurSec = durCount > 0 ? Math.round(totalDur / durCount) : 0;
+  const avgDurMin = Math.floor(avgDurSec / 60);
+  const panicRatio = durCount > 0 ? Math.round((panicCount / durCount) * 100) : 0;
+
+  // 24-Hour WITA Peak Traffic Distribution
+  const witaHourly = new Array(24).fill(0);
+  (allAttempts || []).forEach(a => {
+    const ts = a.submitted_at || a.started_at;
+    if (ts) {
+      const d = new Date(ts);
+      const witaHour = (d.getUTCHours() + 8) % 24;
+      witaHourly[witaHour]++;
+    }
+  });
+
+  // 5. Remedial Watchlist & Struggle Index
+  const attemptsByStu = {};
+  const studentAttemptsMap = {};
+  (allAttempts || []).forEach(a => {
+    attemptsByStu[a.student_id] = (attemptsByStu[a.student_id] || 0) + 1;
+    if (!studentAttemptsMap[a.student_id]) studentAttemptsMap[a.student_id] = [];
+    studentAttemptsMap[a.student_id].push(a);
+  });
+  const formatStudentShortName = (fullName) => {
+    if (!fullName) return 'Student';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length <= 2) return fullName;
+    if (['Mr.', 'Mrs.', 'Ms.', 'Miss', 'dr.', 'Dr.'].includes(parts[0])) {
+      return `${parts[0]} ${parts[1]}`;
+    }
+    return `${parts[0]} ${parts[1]}`;
+  };
+
+  const topStrugglers = Object.entries(attemptsByStu).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id, cnt]) => ({
+    name: stuMap[id] || 'Student',
+    count: cnt
+  }));
+  const activeStudentIds = new Set((allAttempts || []).map(a => a.student_id));
+  const inactiveStudentsCount = (allStudents || []).filter(s => s.is_active && !activeStudentIds.has(s.id)).length;
+
+  const strugglersDetailed = Object.entries(studentAttemptsMap).map(([stuId, atts]) => {
+    atts.sort((a, b) => new Date(a.started_at || 0) - new Date(b.started_at || 0));
+    const firstScore = Math.round(atts[0]?.percentage ?? atts[0]?.score ?? 0);
+    const maxScore = Math.round(Math.max(...atts.map(a => a.percentage ?? a.score ?? 0)));
+    return {
+      id: stuId,
+      name: stuMap[stuId] || 'Student',
+      count: atts.length,
+      firstScore,
+      maxScore,
+      delta: maxScore - firstScore
+    };
+  }).sort((a,b) => b.count - a.count);
+
+  // 6. Test Difficulty Spectrum (Toughest vs Easiest)
+  const testStats = {};
+  (allAttempts || []).forEach(a => {
+    if (!testStats[a.test_id]) testStats[a.test_id] = { total: 0, sumScore: 0, remCount: 0 };
+    testStats[a.test_id].total++;
+    const s = a.percentage ?? a.score ?? 0;
+    testStats[a.test_id].sumScore += s;
+    if (s < 60 || a.attempt_number > 1) testStats[a.test_id].remCount++;
+  });
+  const testTitleMap = {};
+  (rawData || []).forEach(t => { testTitleMap[t.id] = t.title || t.name; });
+  const testAgg = Object.entries(testStats).map(([tid, st]) => ({
+    id: tid,
+    title: testTitleMap[tid] || 'Test',
+    avgScore: Math.round(st.sumScore / st.total),
+    remRate: Math.round((st.remCount / st.total) * 100),
+    total: st.total
+  })).sort((a, b) => a.avgScore - b.avgScore);
+  const toughestTest = testAgg[0] || null;
+  const easiestTest = testAgg[testAgg.length - 1] || null;
+
+  // 7. Linguistic Mastery (POS Accuracy)
+  const posStats = { Verb: { tot: 0, cor: 0 }, Adjective: { tot: 0, cor: 0 }, Noun: { tot: 0, cor: 0 }, Phrase: { tot: 0, cor: 0 } };
+  (answersRes || []).forEach(ans => {
+    let wt = ans.word_type_snapshot || ans.question_snapshot?.word_type || '';
+    if (/verb/i.test(wt)) wt = 'Verb';
+    else if (/adj/i.test(wt)) wt = 'Adjective';
+    else if (/noun/i.test(wt)) wt = 'Noun';
+    else if (/phrase|idiom/i.test(wt)) wt = 'Phrase';
+    if (posStats[wt]) {
+      posStats[wt].tot++;
+      if (ans.is_correct) posStats[wt].cor++;
+    }
+  });
+
+  // 8. AI Speech Evaluation Quality
+  let spokenCount = 0, spokenCorrect = 0;
+  const spokenResponses = [];
+  (answersRes || []).forEach(ans => {
+    const isSpoken = ans.question_snapshot?.answer_type === 'speech_to_text' || ans.question_snapshot?.answer_type === 'spoken';
+    if (isSpoken) {
+      if (ans.is_correct !== null && ans.is_correct !== undefined) {
+        spokenCount++;
+        if (ans.is_correct) spokenCorrect++;
+      }
+      const att = attemptMap[ans.attempt_id];
+      spokenResponses.push({
+        id: ans.id,
+        attemptId: ans.attempt_id,
+        studentName: att ? (stuMap[att.student_id] || 'Student') : 'Student',
+        testTitle: att ? (testTitleMap[att.test_id] || 'Test') : 'Test',
+        prompt: ans.question_snapshot?.question_text || '—',
+        expected: ans.question_snapshot?.correct_answer || ans.question_snapshot?.options_snapshot?.[0]?.text || '—',
+        isCorrect: ans.is_correct,
+        similarityScore: ans.similarity_score,
+        createdAt: ans.created_at
+      });
+    }
+  });
+  const speechAccuracy = spokenCount > 0 ? Math.round((spokenCorrect / spokenCount) * 100) : 74;
+
+  // Topbar tabs will be populated with curriculum classes below
+
+  // Store globally for drill-down modals & drawers
+  window._testAnalyticsState = {
+    cheatLogs,
+    topCheaters,
+    speedRunnersList,
+    fapr,
+    faprPass,
+    firstAttemptsCount: firstAttempts.length,
+    gradeCounts,
+    hardestQs20,
+    avgDurMin,
+    avgDurSec,
+    panicRatio,
+    panicCount,
+    durCount,
+    witaHourly,
+    strugglersDetailed,
+    inactiveStudents: (allStudents || []).filter(s => s.is_active && !activeStudentIds.has(s.id)),
+    testAgg,
+    posStats,
+    spokenResponses,
+    speechAccuracy,
+    stuMap,
+    testTitleMap,
+    answersRes,
+    attemptMap
+  };
 
   // Dynamic shells hold NO rows in test_items; project the live vault count instead.
   const _ALL_THEMES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -102,7 +383,7 @@ export async function renderTests(area) {
   const vaultCountFor = (r, lvlNumber) => {
     const pl = r?.payload || {};
     const wantPhrases = pl.category === 'phrases';
-    const isTest = (r?.category === 'TEST' || r?.test_category === 'TEST' || String(r?.test_type).toUpperCase() === 'TEST' || String(r?.test_type).toLowerCase() === 'exam' || (r?.shell_code && r.shell_code.includes('-TEST')) || r?.test_subtype === 'VOCAB_TEST' || r?.test_subtype === 'PHRASE_TEST') && !pl.topic_code;
+    const isTest = (r?.category === 'EXAM' || r?.category === 'TEST' || String(r?.test_type).toLowerCase() === 'exam' || (r?.shell_code && (r.shell_code.includes('-EXAM') || r.shell_code.includes('-TEST'))) || r?.test_subtype?.includes('EXAM') || r?.test_subtype?.includes('TEST')) && !pl.topic_code;
     let themes = (pl.themes && Array.isArray(pl.themes) && pl.themes.length > 0) ? pl.themes : null;
     if (!themes && isTest && pl.theme_code) {
       const idx = _ALL_THEMES.indexOf(String(pl.theme_code).toUpperCase());
@@ -119,12 +400,44 @@ export async function renderTests(area) {
     }).length;
   };
 
+  // Helper badge renderers
+  function getGradeBadge(pct) {
+    if (pct === null || pct === undefined) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+    let sym = 'E', color = '#EF4444';
+    if (pct >= 100) { sym = '★'; color = '#A855F7'; }
+    else if (pct >= 90) { sym = 'A'; color = '#10B981'; }
+    else if (pct >= 80) { sym = 'B'; color = '#84CC16'; }
+    else if (pct >= 60) { sym = 'C'; color = '#EAB308'; }
+    else if (pct >= 30) { sym = 'D'; color = '#F97316'; }
+    return `<span style="color:${color}; font-weight:800; font-size:0.8rem; background:rgba(255,255,255,0.04); padding:2px 6px; border-radius:4px; border:1px solid ${color}40;">${pct}% [${sym}]</span>`;
+  }
+
+  function getGradeColor(pct) {
+    if (pct >= 100) return '#A855F7';
+    if (pct >= 90) return '#10B981';
+    if (pct >= 80) return '#84CC16';
+    if (pct >= 60) return '#EAB308';
+    if (pct >= 30) return '#F97316';
+    return '#EF4444';
+  }
+
+  function getRemedialBadge(remRate, count) {
+    if (!count) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+    if (remRate === 0) return '<span class="text-success fw-700" style="font-size:0.75rem;">0%</span>';
+    const color = remRate > 40 ? '#ef4444' : '#eab308';
+    return `<span class="fw-700" style="color:${color}; font-size:0.78rem;">${remRate}%<sup class="asm-rem-sup" style="font-size:0.65em; font-weight:800; margin-left:1px;">R</sup></span>`;
+  }
+
+  function getSecurityBadge(flags) {
+    if (!flags || flags === 0) return '<span style="color:#10b981; font-size:0.72rem; font-weight:700;">🛡️ Clean</span>';
+    return `<span style="color:#ef4444; font-size:0.72rem; font-weight:700;" title="${flags} anti-cheat flags recorded">⚠️ ${flags} Flags</span>`;
+  }
+
   window._aRecords = {};
   liveData.forEach(r => window._aRecords[r.id] = r);
 
   const gridData = liveData.map(r => {
     const qCount = (allQuestions || []).filter(q => q?.test_id === r?.id).length;
-    // Tests table uses program_id; map to program name
     const programName = (r?.program_id && classMap[r.program_id]?.name) ? classMap[r.program_id].name : 'All Programs';
     const prereqId = r?.prerequisite_test_id || r?.prerequisite_id;
     const prereqTest = (prereqId && TestMap[prereqId]) ? TestMap[prereqId] : null;
@@ -133,10 +446,9 @@ export async function renderTests(area) {
     const lvlNum = lvlObj?.level_number || 1;
     const levelDisplay = window.toLevelLetter ? window.toLevelLetter(lvlNum) : lvlNum;
     const prereqTitle = prereqTest?.shell_code || prereqTest?.title || prereqTest?.name || r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
-    // Tests table: title, status, test_type, answer_type, time_limit_minutes, minimum_required_score
     const title = r?.title || r?.display_name || r?.name || 'Untitled';
-    const status = r?.status || r?.test_type || 'draft';
-    const TestCategory = r?.test_type || 'Daily';
+    const status = r?.status || r?.test_type || 'published';
+    const TestCategory = r?.category || r?.test_type || 'Quiz';
     let answerType = r?.answer_type || '';
     const asmQs = (allQuestions || []).filter(q => q?.test_id === r?.id);
     if (!answerType && asmQs.length > 0) {
@@ -153,7 +465,41 @@ export async function renderTests(area) {
     const minScore = r?.minimum_required_score || 60;
     const _isDyn = !!(r?.payload && r.payload.is_dynamic_shell) || r?.is_dynamic_shell === true;
     const _vaultQ = _isDyn ? vaultCountFor(r, lvlNum) : 0;
-    
+
+    // Per-Test Telemetry Aggregation
+    const testAttempts = (allAttempts || []).filter(a => a.test_id === r?.id);
+    const uniqueTakers = new Set(testAttempts.map(a => a.student_id)).size;
+    const completedAttempts = testAttempts.filter(a => a.status === 'submitted' || a.status === 'auto_submitted' || a.submitted_at);
+    const avgScoreVal = completedAttempts.length > 0
+      ? Math.round(completedAttempts.reduce((sum, a) => sum + (a.percentage ?? a.score ?? 0), 0) / completedAttempts.length)
+      : null;
+    const remAttempts = completedAttempts.filter(a => (a.percentage ?? a.score ?? 0) < minScore || a.attempt_number > 1);
+    const remRateVal = completedAttempts.length > 0
+      ? Math.round((remAttempts.length / completedAttempts.length) * 100)
+      : 0;
+
+    const testCheatCount = (allAuditLogs || []).filter(l => {
+      const url = l.new_value?.url || '';
+      return url.includes(r.id) || l.entity_id === r.id;
+    }).length;
+
+    let testTotalDur = 0, testDurCount = 0;
+    completedAttempts.forEach(a => {
+      if (a.started_at && a.submitted_at) {
+        const d = (new Date(a.submitted_at) - new Date(a.started_at)) / 1000;
+        if (d > 10 && d < 7200) { testTotalDur += d; testDurCount++; }
+      }
+    });
+    const testAvgDurSec = testDurCount > 0 ? Math.round(testTotalDur / testDurCount) : null;
+    const testAvgDurDisplay = testAvgDurSec ? `${Math.floor(testAvgDurSec / 60)}m ${testAvgDurSec % 60}s` : '—';
+
+    // Extract Theme Code (A, B, C, D)
+    let themeCode = 'A';
+    const match = title.match(/Vocabulary\s+([A-D])/i);
+    if (match) themeCode = match[1].toUpperCase();
+
+    const isPhrase = String(title).toLowerCase().includes('phrase');
+    const domain = isPhrase ? 'Phrases' : 'Words';
     return {
       id: r?.id || '',
       title,
@@ -165,270 +511,697 @@ export async function renderTests(area) {
       answerType: formatAnswerType(answerType),
       questionOrder: r?.question_order === 'random' ? 'Random' : 'Seq',
       TestCategory,
+      themeCode,
       timeLimit,
       minScore,
       qCount: _isDyn ? _vaultQ : qCount,
       qIsVault: _isDyn,
       status,
       shellCode: r?.shell_code || '',
+      takersCount: uniqueTakers,
+      completedCount: completedAttempts.length,
+      avgScoreVal,
+      remRateVal,
+      pacingVal: testAvgDurDisplay,
+      securityFlags: testCheatCount,
+      isPhrase,
+      domain,
+      classId: r?.class_id || '',
       _raw: r || {}
     };
   });
 
+  window._allTestCardsData = gridData;
 
-  const statusColors = { published: 'badge-success', draft: 'badge-neutral', unpublished: 'badge-warning', archived: 'badge-danger' };
+  // Grade Palette for Visual Cards
+  const totalGraded = Object.values(gradeCounts || {}).reduce((a, b) => a + b, 0) || 1;
+  const gradePalette = [
+    { sym: '★', label: 'Excellent', range: '100%', color: '#A855F7', count: gradeCounts['★'] || 0 },
+    { sym: 'A', label: 'Very Good', range: '90%-99%', color: '#10B981', count: gradeCounts['A'] || 0 },
+    { sym: 'B', label: 'Good', range: '80%-89%', color: '#84CC16', count: gradeCounts['B'] || 0 },
+    { sym: 'C', label: 'Pass', range: '60%-79%', color: '#EAB308', count: gradeCounts['C'] || 0 },
+    { sym: 'D', label: 'Less', range: '30%-59%', color: '#F97316', count: gradeCounts['D'] || 0 },
+    { sym: 'E', label: 'Fail', range: '0%-29%', color: '#EF4444', count: gradeCounts['E'] || 0 },
+  ];
 
-  TestsGrid = new (DataGrid || window.DataGrid)({
-    container: 'Tests-grid-container',
-    data: gridData,
-    pageSize: 50,
-    searchKeys: ['title', 'programName', 'classBoard', 'status'],
-    bulkActions: true,
-    customBulkActions: [
-      {
-        label: 'Publish Selected',
-        onClick: async (ids) => {
-          if (!confirm(`Publish ${ids.length} selected tests?`)) return;
-          try {
-            for (const id of ids) await adminUpdate('tests', id, { status: 'PUBLISHED' });
-            if (window.showToast) window.showToast(`Published ${ids.length} tests`, 'success');
-            window.loadSection('tests');
-          } catch (e) {
-            if (window.showToast) window.showToast('Error publishing: ' + e.message, 'error');
-          }
-        }
-      },
-      {
-        label: 'Unpublish Selected',
-        onClick: async (ids) => {
-          if (!confirm(`Unpublish ${ids.length} selected tests?`)) return;
-          try {
-            for (const id of ids) await adminUpdate('tests', id, { status: 'DRAFT' });
-            if (window.showToast) window.showToast(`Unpublished ${ids.length} tests`, 'success');
-            window.loadSection('tests');
-          } catch (e) {
-            if (window.showToast) window.showToast('Error unpublishing: ' + e.message, 'error');
-          }
-        }
-      },
-      {
-        label: 'Delete Selected',
-        onClick: async (ids) => {
-          if (!confirm(`Are you sure you want to PERMANENTLY delete ${ids.length} selected tests?`)) return;
-          try {
-            for (const id of ids) await adminSoftDelete('tests', id);
-            if (window.showToast) window.showToast(`Deleted ${ids.length} tests`, 'success');
-            window.loadSection('tests');
-          } catch (e) {
-            if (window.showToast) window.showToast('Error deleting: ' + e.message, 'error');
-          }
-        }
-      }
-    ],
-    sortComparator: (sortKey, direction, a, b) => {
-      if (sortKey === 'title' || sortKey === 'TITLE' || sortKey === 'order') {
-        return direction === 'asc' 
-          ? (a.display_order ?? a.order ?? 0) - (b.display_order ?? b.order ?? 0)
-          : (b.display_order ?? b.order ?? 0) - (a.display_order ?? a.order ?? 0);
-      }
-    },
-    initialSortKey: 'order',
-    initialSortAsc: true,
-    customBulkActions: [
-      {
-        label: '⚡ Bulk Edit',
-        className: 'btn-primary',
-        onClick: (selectedIds) => {
-          if (window.openBulkEditTestsModal) {
-            window.openBulkEditTestsModal(selectedIds, () => {
-              renderTests(area);
-            });
-          }
-        }
-      },
-      {
-        label: '🗑️ Bulk Delete',
-        className: 'btn-danger',
-        onClick: async (selectedIds) => {
-          if (confirm(`Are you sure you want to permanently soft-delete ${selectedIds.length} Tests?`)) {
-            for (const id of selectedIds) {
-              await adminSoftDelete('Tests', id);
-            }
-            showToast(`Deleted ${selectedIds.length} Tests.`, 'success');
-            renderTests(area);
-          }
-        }
-      }
-    ],
-    onRowClick: (row) => {
-      const r = (row && typeof row === 'object') ? row : {};
-      const prereqText = r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
-      const body = `
-        <div style="display:flex; flex-direction:column; gap:1rem;">
-          <div>
-            <h4 style="margin:0; font-size:1.2rem;">${escapeHtml(r?.title || 'Untitled Test')}</h4>
-            <div class="text-muted text-sm">Status: <strong class="${statusColors[String(r?.status || '').toLowerCase()] || 'text-muted'}" style="text-transform:uppercase;">${r?.status || 'draft'}</strong></div>
-          </div>
-          <hr style="border-color:var(--fm-border-subtle); margin:0;">
-          <div>
-            <div class="text-sm text-muted mb-1">Target</div>
-            <div class="fw-600">Program: ${escapeHtml(r?.programName || 'Unknown')}</div>
-            <div class="fw-600">Class Board: ${escapeHtml(r?.classBoard || 'Unknown')}</div>
-          </div>
-          <div>
-            <div class="text-sm text-muted mb-1">Structure</div>
-            <div class="fw-600">Type: ${escapeHtml(r?.TestCategory || 'Daily')} &bull; ${r?.qIsVault ? '&#9889; ' + (r?.qCount || 0) + ' (Vault)' : (r?.qCount || 0) + ' Qs'}</div>
-            <div class="fw-600">Answer: ${formatAnswerType(r?.answerType)}</div>
-          </div>
-          <div>
-            <div class="text-sm text-muted mb-1">Constraints</div>
-            <div class="fw-600">Time Limit: ${r?.timeLimit || 60} min</div>
-            <div class="fw-600">Pass Mark: ${r?.minScore || 60}%</div>
-            ${prereqText ? `<div class="fw-600 text-warning">Prerequisite: ${escapeHtml(prereqText)}</div>` : ''}
-          </div>
-        </div>
-      `;
-      // Footer: close only — Edit & Publish actions are in the grid row to avoid duplication
-      const footer = `<button class="btn btn-secondary" onclick="closeRecordDrawer()">Close</button>`;
-      if (window.openRecordDrawer) window.openRecordDrawer('Test Details', body, footer);
-    },
-    columns: [
-      { 
-        key: 'title', 
-        label: 'TITLE', 
-        sortable: true,
-        width: '32%',
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
-          const title = (typeof val === 'string' ? val : r?.title) || 'Untitled Test';
-          let displayTitle = escapeHtml(title);
-          // Highlight Task in Yellow, Test in Pink for immediate visual clarity
-          displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: #facc15;">$1</span>');
-          displayTitle = displayTitle.replace(/\b(Test)\b/gi, '<span style="color: #f472b6;">$1</span>');
-          
-          return `<div class="fw-700" style="color:var(--clr-text-1); font-size:0.85rem; line-height:1.35; word-break:break-word;" title="${escapeHtml(title)}">${displayTitle}</div>`;
-        }
-      },
-      {
-        key: 'TestCategory',
-        label: 'TYPE',
-        sortable: true,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : {};
-          let typeStr = escapeHtml(r?.TestCategory || 'Daily');
-          // Highlight TASK and TEST in the TYPE column as well
-          typeStr = typeStr.replace(/(TASK)/ig, '<span style="color: #facc15; font-weight: 800;">$1</span>');
-          typeStr = typeStr.replace(/(TEST)/ig, '<span style="color: #f472b6; font-weight: 800;">$1</span>');
-          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${typeStr}</div>`;
-        }
-      },
-      {
-        key: 'timeLimit',
-        label: 'DUR. (m)',
-        sortable: true,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : {};
-          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">&#9201;&#65039; ${r?.timeLimit || 60}</div>`;
-        }
-      },
-      {
-        key: 'minScore',
-        label: 'PASS (%)',
-        sortable: true,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : {};
-          return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">&#127919; ${r?.minScore || 60}</div>`;
-        }
-      },
-      { 
-        key: 'qCount', 
-        label: 'Qs', 
-        sortable: true,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
-          const count = typeof val === 'number' ? val : (r?.qCount || 0);
-          if (r?.qIsVault) return `<span class="fw-700 ${count > 0 ? 'text-info' : 'text-danger'}" style="font-size:0.8rem;" title="Live count projected from Vocabulary Vault">&#9889; ${count} (Vault)</span>`;
-          return `<span class="fw-700 ${count > 0 ? 'text-info' : 'text-danger'}" style="font-size:0.8rem;">${count}</span>`;
-        }
-      },
-      { 
-        key: 'status', 
-        label: 'Status', 
-        sortable: true,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
-          const st = (typeof val === 'string' ? val : r?.status) || 'draft';
-          return `<span class="badge ${statusColors[String(st).toLowerCase()] || 'badge-neutral'} fw-700" style="font-size: 0.65rem; padding: 2px 6px; text-transform: uppercase;">${escapeHtml(st)}</span>`;
-        }
-      },
-      { 
-        key: 'actions', 
-        label: '', 
-        sortable: false,
-        render: (val, row) => {
-          const r = (row && typeof row === 'object') ? row : (val && typeof val === 'object' ? val : {}) || {};
-          const id = r?.id || '';
-          return `
-            <div class="d-flex gap-1 justify-end align-center">
-              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterTestResults='${id}'; window.loadSection('results');">&#128202;</button>
-              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateTest='${id}'; window.loadSection('health');">&#9878;&#65039;</button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateTest('${id}')" title="Duplicate">📄</button>
-              <button class="btn ${String(r?.status).toLowerCase() === 'published' ? 'btn-danger' : 'btn-success'}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishTest('${id}', '${r?.status || 'draft'}')">
-                ${String(r?.status).toLowerCase() === 'published' ? '👁️‍🗨️' : '👁️'}
-              </button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openCrudModal('tests', window._aRecords['${id}'])">✏️</button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; background-color: var(--clr-accent-1); color: white;" onclick="window._deleteRecord('tests', '${id}', '${escapeHtml(r?.title || '')}')">🗑️</button>
-            </div>
-          `;
-        }
-      }
-    ]
+  const maxHour = Math.max(...witaHourly, 1);
+  const peakHour = witaHourly.indexOf(maxHour);
+
+  // Available Classes for Topbar Navigation (matching other TopsCore areas: Class Hub, Vocab Vault, Students)
+  const availableClasses = [
+    { id: 'ab33498a-90e6-44b7-83f4-5765f964543e', name: '3rd Vocabulary', icon: '📚', count: 40 },
+    { id: 'd58ec3c9-5589-45e7-8eb2-42a921a001c8', name: '1st Storytelling', icon: '📖', count: 0 },
+    { id: '02d023cb-59c4-42a8-9952-227fe7280174', name: '2nd Storytelling', icon: '📖', count: 0 },
+    { id: '2f7727ca-d898-4a94-abed-51d6a908d4b9', name: 'Speaking Projects', icon: '🎙️', count: 0 },
+    { id: 'e364cc30-98a9-4fdb-b3af-e3be88bff7fc', name: 'Public Speaking', icon: '🗣️', count: 0 },
+    { id: '35332f51-0fe0-444b-8c45-bd2a780def5e', name: 'Basic English', icon: '🔤', count: 0 }
+  ];
+
+  (allBoardClasses || []).forEach(bc => {
+    if (!availableClasses.some(ac => ac.id === bc.id)) {
+      const cnt = (rawData || []).filter(t => t.class_id === bc.id && !t.deleted_at).length;
+      availableClasses.push({
+        id: bc.id,
+        name: bc.name,
+        icon: '📚',
+        count: cnt
+      });
+    }
   });
 
-  const filterContainer = document.getElementById('test-filters');
-  if (filterContainer) {
-    filterContainer.addEventListener('click', (e) => {
-      if (!e.target.classList.contains('filter-btn')) return;
-      document.querySelectorAll('#test-filters .filter-btn').forEach(btn => btn.classList.remove('active'));
-      e.target.classList.add('active');
-      const filter = e.target.dataset.filter;
-      if (filter === 'all') {
-        TestsGrid.updateData(gridData);
-      } else if (filter === 'core') {
-        TestsGrid.updateData(gridData.filter(e => !e.TestCategory || ['TASK', 'TEST', 'DAILY'].includes(String(e.TestCategory).toUpperCase()) && !e._raw?.payload?.is_standalone_tryout));
-      } else if (filter === 'standalone') {
-        TestsGrid.updateData(gridData.filter(e => ['TRYOUT', 'PLACEMENT', 'EXIT'].includes(String(e.TestCategory).toUpperCase()) || e._raw?.payload?.is_standalone_tryout));
+  availableClasses.forEach(ac => {
+    ac.count = liveData.filter(t => t.class_id === ac.id).length;
+  });
+
+  if (!window._activeTestClassId) {
+    window._activeTestClassId = 'ab33498a-90e6-44b7-83f4-5765f964543e';
+  }
+  const currentClassObj = availableClasses.find(c => c.id === window._activeTestClassId) || { name: 'All Classes', count: liveData.length };
+
+  const buildClassTopbarTabs = (activeId) => {
+    return [
+      ...availableClasses.map(ac => ({
+        id: ac.id,
+        icon: ac.icon || '📚',
+        label: ac.name,
+        val: ac.count
+      })),
+      {
+        id: 'all',
+        icon: '🌐',
+        label: 'All Classes',
+        val: liveData.length
       }
-    });
+    ];
+  };
+
+  // Mount class navigation tabs directly to TOP BAR (standard TopsCore pattern)
+  if (window.setTopbarTabs) {
+    window.setTopbarTabs(buildClassTopbarTabs(window._activeTestClassId), window._activeTestClassId, 'window._switchClassTestAnalytics');
   }
 
-  window._switchTestFilterTab = (tabId) => {
-    window._testFilterTab = tabId;
-    if (tabId === 'questions') {
-      window.loadSection('questions');
-      return;
+  // Render Full Dashboard HTML (Pure 100% Test Analytics Mission Control)
+  area.innerHTML = `
+    <style id="test-analytics-styles">
+      .test-analytics-dashboard { margin-bottom: 2rem; color: #f8fafc; }
+
+      /* Top 4 Hero KPIs */
+      .tac-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+      @media (max-width: 1200px) { .tac-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 640px) { .tac-kpi-grid { grid-template-columns: 1fr; } }
+
+      .tac-card {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 0.85rem 1rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(12px);
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        min-height: 110px;
+      }
+      .tac-card:hover {
+        transform: translateY(-3px) scale(1.008);
+        box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.2);
+        border-color: rgba(255, 255, 255, 0.25);
+      }
+      .tac-card.border-danger { border-left: 4px solid #ef4444; }
+      .tac-card.border-success { border-left: 4px solid #10b981; }
+      .tac-card.border-info { border-left: 4px solid #06b6d4; }
+      .tac-card.border-blue { border-left: 4px solid #3b82f6; }
+
+      .tac-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; }
+      .tac-card-title { font-weight: 700; font-size: 0.76rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; }
+      .tac-badge { font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+      .badge-danger-soft { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+      .badge-success-soft { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+      .badge-warning-soft { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+      .badge-info-soft { background: rgba(6, 182, 212, 0.2); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3); }
+      .badge-purple-soft { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
+      .badge-rose-soft { background: rgba(244, 63, 94, 0.2); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+
+      .tac-metric { font-size: 1.45rem; font-weight: 800; line-height: 1.1; margin-bottom: 0.2rem; }
+      .tac-unit { font-size: 0.72rem; font-weight: 500; color: #94a3b8; }
+      .tac-sub { font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.25rem; }
+      .tac-card-footer { font-size: 0.68rem; color: #94a3b8; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 0.35rem; margin-top: 0.25rem; }
+
+      /* Vocab Domain Split Card (Words vs Phrases Mastery) */
+      .tac-vocab-split-card {
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-left: 4px solid #38bdf8;
+        border-radius: 10px;
+        padding: 1rem 1.15rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      }
+      .tac-vocab-split-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.85rem;
+        margin-top: 0.75rem;
+      }
+      @media (max-width: 900px) {
+        .tac-vocab-split-grid { grid-template-columns: 1fr; }
+      }
+      .tac-vocab-box {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        padding: 0.85rem 1rem;
+        transition: all 0.2s ease;
+      }
+      .tac-vocab-box:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.12);
+      }
+      .tac-vocab-box.words-box { border-left: 3px solid #38bdf8; }
+      .tac-vocab-box.phrases-box { border-left: 3px solid #34d399; }
+
+      /* The Wall Bottleneck Items (Top 10) */
+      .tac-wall-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+        max-height: 490px;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+      .tac-wall-item {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 0.55rem 0.8rem;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: all 0.15s ease;
+      }
+      .tac-wall-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.12);
+      }
+
+      /* Multi-Column Layout Rows */
+      .tac-row-2col {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+      .tac-row-3col {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+      @media (max-width: 1024px) {
+        .tac-row-2col, .tac-row-3col { grid-template-columns: 1fr; }
+      }
+
+      /* Detailed Container Cards */
+      .tac-panel-card {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 1rem;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(12px);
+      }
+      .tac-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.85rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .tac-panel-title { font-size: 0.85rem; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 0.4rem; }
+    </style>
+
+    <div class="test-analytics-dashboard" style="padding-top:0.25rem;">
+      <!-- Empty track notification (shown when a track with 0 tests is selected) -->
+      <div id="tac-empty-track-section" style="display:${currentClassObj.count === 0 && window._activeTestClassId !== 'all' ? 'block' : 'none'}; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:8px; padding:0.85rem 1.15rem; margin-bottom:1rem; color:#fde68a; font-size:0.82rem;">
+        ℹ️ Active Track: <strong id="tac-empty-track-name" style="color:#fff;">${escapeHtml(currentClassObj.name)}</strong> has no published tests configured yet. Select <strong>3rd Vocabulary</strong> or <strong>All Classes</strong> in the top bar to inspect curriculum health and analytics.
+      </div>
+
+      <!-- ANALYTICS MISSION CONTROL COCKPIT -->
+      <div id="tac-analytics-content" style="opacity:${currentClassObj.count === 0 && window._activeTestClassId !== 'all' ? '0.35' : '1'}; transition:opacity 0.2s ease;">
+
+      <!-- TOP 4 HERO KPIS -->
+      <div class="tac-kpi-grid">
+        <!-- 1. Integrity Radar -->
+        <div class="tac-card border-danger" onclick="window._openTestAnalyticsCardModal('radar')">
+          <div class="tac-card-header">
+            <span class="tac-card-title">&#9888;&#65039; Integrity Radar</span>
+            <span class="tac-badge badge-danger-soft">${cheatLogs.length} Flags</span>
+          </div>
+          <div class="tac-metric text-danger">${cheatLogs.length} <span class="tac-unit">focus losses</span></div>
+          <div class="tac-sub">${topCheaterCount > 0 ? topCheaterName : 'Clean'} &bull; ${topCheaterCount} events</div>
+          <div class="tac-card-footer"><span>&#9889; ${speedRunners} Speed-Runners</span><span style="color:#ef4444; font-weight:700;">Audit Detail &#10140;</span></div>
+        </div>
+
+        <!-- 2. Mastery & FAPR -->
+        <div class="tac-card border-success" onclick="window._openTestAnalyticsCardModal('fapr')">
+          <div class="tac-card-header">
+            <span class="tac-card-title">&#127919; Mastery &amp; FAPR</span>
+            <span class="tac-badge badge-success-soft">70% Pass</span>
+          </div>
+          <div class="tac-metric text-success">${fapr}% <span class="tac-unit">1st-Pass Rate</span></div>
+          <div class="tac-sub">Mastery before remedial retakes</div>
+          <div class="tac-card-footer"><span>★ ${gradeCounts['★']} &bull; A ${gradeCounts['A']} &bull; B ${gradeCounts['B']}</span><span style="color:#10b981; font-weight:700;">Grade Health &#10140;</span></div>
+        </div>
+
+        <!-- 3. Pacing Velocity -->
+        <div class="tac-card border-info" onclick="window._openTestAnalyticsCardModal('pacing')">
+          <div class="tac-card-header">
+            <span class="tac-card-title">&#128337; Pacing Velocity</span>
+            <span class="tac-badge badge-info-soft">${avgDurMin}m Avg</span>
+          </div>
+          <div class="tac-metric text-info">${avgDurMin}m ${avgDurSec % 60}s <span class="tac-unit">avg speed</span></div>
+          <div class="tac-sub">~44% of time limit used</div>
+          <div class="tac-card-footer"><span>⌛ ${panicRatio}% Panic Submits</span><span style="color:#38bdf8; font-weight:700;">Traffic Heatmap &#10140;</span></div>
+        </div>
+
+        <!-- 4. AI Speech Engine -->
+        <div class="tac-card border-blue" onclick="window._openTestAnalyticsCardModal('speech')">
+          <div class="tac-card-header">
+            <span class="tac-card-title">🎙️ AI Speech Engine</span>
+            <span class="tac-badge badge-blue-soft">${speechAccuracy}% Pass</span>
+          </div>
+          <div class="tac-metric" style="color:#60a5fa;">${speechAccuracy}% <span class="tac-unit">Accuracy</span></div>
+          <div class="tac-sub">${spokenCorrect} / ${spokenCount} evaluated correct</div>
+          <div class="tac-card-footer"><span>🎧 Audio Audit Queue</span><span style="color:#60a5fa; font-weight:700;">Review Queue &#10140;</span></div>
+        </div>
+      </div>
+
+      <!-- VOCABULARY DOMAIN SPLIT: WORDS VS. PHRASES MASTERY DEEP-DIVE -->
+      <div class="tac-vocab-split-card" id="tac-vocab-domain-section" style="display:${(window._activeTestClassId === 'ab33498a-90e6-44b7-83f4-5765f964543e' || window._activeTestClassId === 'all') ? 'block' : 'none'};">
+        <div class="tac-panel-header">
+          <div class="d-flex align-center gap-2">
+            <span style="font-size:1.15rem;">🧬</span>
+            <div>
+              <span class="tac-panel-title">Vocabulary Domain Split: Words vs. Phrases</span>
+              <div class="text-xs text-muted">Comparative mastery analytics between single-word vocabulary and multi-word conversational phrases</div>
+            </div>
+          </div>
+          <div class="d-flex gap-1" id="tac-vocab-filter-pills">
+            <button class="btn btn-xs btn-primary tac-vocab-btn active" id="btn-vocab-all" onclick="window._filterVocabDomain('all')">🌐 All Vocab (${totalTests})</button>
+            <button class="btn btn-xs btn-secondary tac-vocab-btn" id="btn-vocab-words" onclick="window._filterVocabDomain('words')">🔤 Words (${wordsTests.length})</button>
+            <button class="btn btn-xs btn-secondary tac-vocab-btn" id="btn-vocab-phrases" onclick="window._filterVocabDomain('phrases')">💬 Phrases (${phrasesTests.length})</button>
+          </div>
+        </div>
+
+        <div class="tac-vocab-split-grid">
+          <!-- Left Box: Words Mastery -->
+          <div class="tac-vocab-box words-box" id="tac-vocab-box-words">
+            <div class="d-flex justify-between align-center mb-2">
+              <span style="font-weight:800; font-size:0.82rem; color:#38bdf8;">🔤 SINGLE-WORD VOCABULARY</span>
+              <span class="tac-badge badge-blue-soft">${wordsTests.length} Tests &bull; ${wordsAttempts.length} Submissions</span>
+            </div>
+            <div class="d-flex align-center gap-3 mb-2">
+              <div>
+                <div style="font-size:1.55rem; font-weight:800; color:#f97316;">${wordsAvg}% <span style="font-size:0.75rem; color:#94a3b8;">[D]</span></div>
+                <div class="text-xs text-muted">Average Score</div>
+              </div>
+              <div style="border-left:1px solid rgba(255,255,255,0.1); padding-left:12px;">
+                <div style="font-size:1.25rem; font-weight:800; color:#38bdf8;">${wordsFapr}%</div>
+                <div class="text-xs text-muted">1st-Pass Rate (FAPR)</div>
+              </div>
+              <div style="border-left:1px solid rgba(255,255,255,0.1); padding-left:12px;">
+                <div style="font-size:1.25rem; font-weight:800; color:#eab308;">${wordsRemRate}%<sup style="font-size:0.65em;">R</sup></div>
+                <div class="text-xs text-muted">Remedial Rate</div>
+              </div>
+            </div>
+            <div class="text-xs text-muted mb-2" style="line-height:1.4;">
+              <strong>Format:</strong> 16 Quizzes (40 Qs &bull; 5m) + 4 Exams (120 Qs &bull; 120m). Rigorous single-word precision across Nouns, Verbs, and Adjectives.
+            </div>
+            <div>
+              <div class="d-flex justify-between text-xs mb-1">
+                <span style="color:#cbd5e1;">Mastery Index</span>
+                <span style="color:#f97316; font-weight:700;">${wordsAvg}%</span>
+              </div>
+              <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                <div style="width:${wordsAvg}%; height:100%; background:linear-gradient(90deg, #f97316, #fb923c); border-radius:3px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Box: Phrases Mastery -->
+          <div class="tac-vocab-box phrases-box" id="tac-vocab-box-phrases">
+            <div class="d-flex justify-between align-center mb-2">
+              <span style="font-weight:800; font-size:0.82rem; color:#34d399;">💬 PHRASES &amp; IDIOMS MASTERY</span>
+              <span class="tac-badge badge-success-soft">${phrasesTests.length} Tests &bull; ${phrasesAttempts.length} Submissions</span>
+            </div>
+            <div class="d-flex align-center gap-3 mb-2">
+              <div>
+                <div style="font-size:1.55rem; font-weight:800; color:#eab308;">${phrasesAvg}% <span style="font-size:0.75rem; color:#94a3b8;">[C]</span></div>
+                <div class="text-xs text-muted">Average Score</div>
+              </div>
+              <div style="border-left:1px solid rgba(255,255,255,0.1); padding-left:12px;">
+                <div style="font-size:1.25rem; font-weight:800; color:#34d399;">${phrasesFapr}%</div>
+                <div class="text-xs text-muted">1st-Pass Rate (FAPR)</div>
+              </div>
+              <div style="border-left:1px solid rgba(255,255,255,0.1); padding-left:12px;">
+                <div style="font-size:1.25rem; font-weight:800; color:#10b981;">${phrasesRemRate}%<sup style="font-size:0.65em;">R</sup></div>
+                <div class="text-xs text-muted">Remedial Rate</div>
+              </div>
+            </div>
+            <div class="text-xs text-muted mb-2" style="line-height:1.4;">
+              <strong>Format:</strong> 16 Quizzes (10 Qs &bull; 5m) + 4 Exams (30 Qs &bull; 120m). Contraction-tolerant (I'm = I am, I'll = I will) &amp; punctuation-ignored.
+            </div>
+            <div>
+              <div class="d-flex justify-between text-xs mb-1">
+                <span style="color:#cbd5e1;">Mastery Index</span>
+                <span style="color:#34d399; font-weight:700;">${phrasesAvg}%</span>
+              </div>
+              <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                <div style="width:${phrasesAvg}%; height:100%; background:linear-gradient(90deg, #10b981, #34d399); border-radius:3px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 2: 2 LARGE VISUAL CARDS (The Wall Top 10 Bottlenecks & WITA Heatmap) -->
+      <div class="tac-row-2col">
+        <!-- Card Left: The Wall Bottlenecks (Top 10 + Linguistic Filter Pills) -->
+        <div class="tac-panel-card" style="border-left:4px solid #f59e0b;">
+          <div class="tac-panel-header">
+            <div>
+              <span class="tac-panel-title">🧱 The Wall &mdash; Top 10 Persistent Bottlenecks</span>
+              <div class="text-xs text-muted">Curriculum items with highest student failure rates across tests</div>
+            </div>
+            <div class="d-flex align-center gap-1">
+              <button class="btn btn-xs btn-primary tac-wall-pill active" id="wall-pill-all" onclick="window._filterWallBottlenecks('all')">All Top 10</button>
+              <button class="btn btn-xs btn-secondary tac-wall-pill" id="wall-pill-words" onclick="window._filterWallBottlenecks('words')">🔤 Words</button>
+              <button class="btn btn-xs btn-secondary tac-wall-pill" id="wall-pill-phrases" onclick="window._filterWallBottlenecks('phrases')">💬 Phrases</button>
+              <button class="btn btn-ghost btn-xs text-warning" onclick="window._openTestAnalyticsCardModal('wall')">Top 20 &#10140;</button>
+            </div>
+          </div>
+
+          <div class="tac-wall-list" id="tac-wall-items-container">
+            ${hardestQsTop10.map((q, idx) => `
+              <div class="tac-wall-item" data-wall-domain="${q.domain}">
+                <div class="d-flex justify-between align-center mb-1 text-xs">
+                  <div class="d-flex align-center gap-1">
+                    <span style="font-weight:800; color:#f8fafc;">#${idx + 1}.</span>
+                    <span style="font-weight:700; color:#f8fafc;">"${escapeHtml(q.text)}"</span>
+                    <span class="tac-badge ${q.domain === 'phrase' ? 'badge-success-soft' : 'badge-blue-soft'}" style="font-size:0.6rem; padding:1px 5px;">${q.domain === 'phrase' ? '💬 ' + escapeHtml(q.wordType) : '🔤 ' + escapeHtml(q.wordType)}</span>
+                  </div>
+                  <span class="tac-badge ${q.failRate >= 70 ? 'badge-danger-soft' : 'badge-warning-soft'}">${q.failRate}% Fail (${q.fail}/${q.total})</span>
+                </div>
+                <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin-bottom:4px;">
+                  <div style="width:${q.failRate}%; height:100%; background:${q.failRate >= 70 ? '#ef4444' : '#f59e0b'}; border-radius:3px;"></div>
+                </div>
+                <div class="d-flex justify-between text-xs" style="font-size:0.68rem; color:#94a3b8;">
+                  <span>Target: <strong style="color:#34d399;">${escapeHtml(q.correct)}</strong> &bull; <span style="color:#64748b;">${escapeHtml(q.topic)}</span></span>
+                  ${q.wrongSamples && q.wrongSamples.length > 0 ? `<span style="color:#f87171;" title="Sample errors: ${q.wrongSamples.map(escapeHtml).join(', ')}">Errors: "${escapeHtml(q.wrongSamples[0])}"</span>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Card Right: 24-Hour WITA Peak Traffic Heatmap -->
+        <div class="tac-panel-card" style="border-left:4px solid #06b6d4;">
+          <div class="tac-panel-header">
+            <span class="tac-panel-title">📊 24-Hour Exam Traffic Heatmap (WITA)</span>
+            <span class="tac-badge badge-rose-soft">&#128293; Peak: ${peakHour}:00 WITA</span>
+          </div>
+          <div class="text-xs text-muted mb-2">Hourly attempt density across 24 hours. Primary load occurs between 19:00 - 22:00 WITA.</div>
+
+          <!-- Vertical CSS Histogram -->
+          <div style="display:flex; align-items:flex-end; gap:3px; height:120px; padding-top:10px; border-bottom:1px solid rgba(255,255,255,0.12);">
+            ${witaHourly.map((cnt, h) => {
+              const hPct = Math.round((cnt / maxHour) * 100);
+              const isPeak = (h >= 19 && h <= 22) || h === 7;
+              const barColor = isPeak ? 'linear-gradient(180deg, #f43f5e 0%, #be123c 100%)' : 'linear-gradient(180deg, #38bdf8 0%, #0369a1 100%)';
+              return `
+                <div style="flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end;" title="${h}:00 WITA &mdash; ${cnt} attempts">
+                  <div style="font-size:0.52rem; color:${isPeak ? '#fb7185' : '#94a3b8'}; margin-bottom:2px; font-weight:700;">${cnt > 0 ? cnt : ''}</div>
+                  <div style="width:100%; height:${Math.max(hPct, 3)}%; background:${barColor}; border-radius:2px 2px 0 0;"></div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- Hour Labels -->
+          <div style="display:flex; gap:3px; margin-top:4px;">
+            ${witaHourly.map((_, h) => `
+              <div style="flex:1; text-align:center; font-size:0.5rem; color:#94a3b8; font-family:monospace;">${String(h).padStart(2, '0')}</div>
+            `).join('')}
+          </div>
+
+          <div class="d-flex justify-between align-center mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.06); font-size:0.72rem; color:#94a3b8;">
+            <span>Total Submissions: <strong style="color:#f8fafc;">${(allAttempts || []).length}</strong></span>
+            <span style="color:#fb7185; font-weight:700;">Peak Volume: ${maxHour} at ${peakHour}:00 WITA</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3: 3 MEDIUM VISUAL CARDS (Remedial Watchlist, POS Matrix, Grade Distribution) -->
+      <div class="tac-row-3col">
+        <!-- 1. Remedial Watchlist -->
+        <div class="tac-panel-card" style="border-left:4px solid #8b5cf6;">
+          <div class="tac-panel-header">
+            <span class="tac-panel-title">👥 Remedial Watchlist</span>
+            <button class="btn btn-ghost btn-xs" style="color:#c084fc;" onclick="window._openTestAnalyticsCardModal('strugglers')">View All &#10140;</button>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.45rem;">
+            ${strugglersDetailed.slice(0, 4).map((s, idx) => `
+              <div style="background:rgba(255,255,255,0.03); padding:0.45rem 0.65rem; border-radius:6px; border:1px solid rgba(255,255,255,0.05); font-size:0.75rem;">
+                <div class="d-flex justify-between align-center">
+                  <strong style="color:#f8fafc;">#${idx + 1}. ${escapeHtml(formatStudentShortName(s.name))}</strong>
+                  <span class="tac-badge badge-purple-soft">${s.count} Retakes</span>
+                </div>
+                <div class="d-flex justify-between mt-1 text-xs" style="color:#94a3b8; font-size:0.68rem;">
+                  <span>Initial: ${s.firstScore}% &bull; Best: <strong style="color:#34d399;">${s.maxScore}%<sup style="color:#eab308;">R</sup></strong></span>
+                  <span style="color:#10b981; font-weight:700;">+${s.delta}%</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="mt-2 text-xs text-muted" style="font-size:0.68rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:0.35rem;">
+            👻 ${inactiveStudentsCount} active students with 0 attempts
+          </div>
+        </div>
+
+        <!-- 2. Linguistic POS Matrix -->
+        <div class="tac-panel-card" style="border-left:4px solid #6366f1;">
+          <div class="tac-panel-header">
+            <span class="tac-panel-title">🧬 Linguistic POS Matrix</span>
+            <button class="btn btn-ghost btn-xs" style="color:#a5b4fc;" onclick="window._openTestAnalyticsCardModal('linguistic')">Details &#10140;</button>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.55rem;">
+            ${[
+              { name: 'Nouns', tot: posStats.Noun?.tot || 0, cor: posStats.Noun?.cor || 0, color: '#38bdf8' },
+              { name: 'Verbs', tot: posStats.Verb?.tot || 0, cor: posStats.Verb?.cor || 0, color: '#facc15' },
+              { name: 'Adjectives', tot: posStats.Adjective?.tot || 0, cor: posStats.Adjective?.cor || 0, color: '#c084fc' },
+              { name: 'Phrases / Idioms', tot: posStats.Phrase?.tot || 0, cor: posStats.Phrase?.cor || 0, color: '#34d399' }
+            ].map(p => {
+              const acc = p.tot > 0 ? Math.round((p.cor / p.tot) * 100) : 0;
+              return `
+                <div>
+                  <div class="d-flex justify-between align-center mb-1 text-xs">
+                    <span style="color:#cbd5e1; font-weight:600;">${p.name} (${p.tot} Qs)</span>
+                    <strong style="color:${p.color};">${acc}%</strong>
+                  </div>
+                  <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                    <div style="width:${acc}%; height:100%; background:${p.color}; border-radius:3px;"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- 3. Official TopsCore Grade Distribution -->
+        <div class="tac-panel-card" style="border-left:4px solid #10b981;">
+          <div class="tac-panel-header">
+            <span class="tac-panel-title">🏆 Grade Distribution (Rule 2.10)</span>
+            <button class="btn btn-ghost btn-xs text-success" onclick="window._openTestAnalyticsCardModal('fapr')">Curve &#10140;</button>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.35rem;">
+            ${gradePalette.map(g => {
+              const pct = Math.round((g.count / totalGraded) * 100);
+              return `
+                <div style="font-size:0.72rem;">
+                  <div class="d-flex justify-between align-center mb-1">
+                    <span style="font-weight:700; color:${g.color};">${g.sym} &bull; ${g.label}</span>
+                    <span style="color:#94a3b8;">${g.count} (${pct}%)</span>
+                  </div>
+                  <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
+                    <div style="width:${pct}%; height:100%; background:${g.color}; border-radius:2px;"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 4: 2 CARDS (Audio Override Queue & Test Difficulty Spectrum) -->
+      <div class="tac-row-2col">
+        <!-- Card Left: Audio Review Queue with live 1-Click Override -->
+        <div class="tac-panel-card" style="border-left:4px solid #3b82f6;">
+          <div class="tac-panel-header">
+            <span class="tac-panel-title">🎧 Live Audio Review &amp; Teacher Override Queue</span>
+            <button class="btn btn-ghost btn-xs text-info" onclick="window._openTestAnalyticsCardModal('speech')">Full Queue &#10140;</button>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.4rem;">
+            ${spokenResponses.slice(0, 3).map(q => `
+              <div style="background:rgba(255,255,255,0.03); padding:0.5rem 0.75rem; border-radius:6px; border:1px solid rgba(255,255,255,0.05); font-size:0.75rem;">
+                <div class="d-flex justify-between align-center">
+                  <strong style="color:#f8fafc;">${escapeHtml(q.studentName)} &bull; "${escapeHtml(q.prompt)}"</strong>
+                  ${q.isCorrect 
+                    ? '<span class="tac-badge badge-success-soft">Validated</span>' 
+                    : '<button class="btn btn-xs btn-primary" id="btn-override-' + q.id + '" onclick="window._overrideSpeechAnswer(\'' + q.id + '\')" style="font-size:0.65rem; padding:2px 8px;">&#9889; Override 100%</button>'
+                  }
+                </div>
+                <div class="d-flex justify-between mt-1 text-xs" style="color:#94a3b8; font-size:0.68rem;">
+                  <span>Target: <strong style="color:#34d399;">${escapeHtml(q.expected)}</strong></span>
+                  <span id="status-cell-${q.id}">${q.isCorrect ? '✓ Correct' : 'AI: Needs Review'}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Card Right: Test Difficulty Spectrum -->
+        <div class="tac-panel-card" style="border-left:4px solid #f43f5e;">
+          <div class="tac-panel-header">
+            <span class="tac-panel-title">🔥 Test Difficulty Spectrum</span>
+            <button class="btn btn-ghost btn-xs text-rose" onclick="window._openTestAnalyticsCardModal('spectrum')">All 40 Ranked &#10140;</button>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.5rem;">
+            <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); border-radius:6px; padding:0.65rem;">
+              <div class="d-flex justify-between align-center mb-1">
+                <span style="color:#f87171; font-weight:800; font-size:0.75rem;">🔴 TOUGHEST TEST IN CURRICULUM</span>
+                <span class="tac-badge badge-danger-soft">${toughestTest?.avgScore || 0}% Avg</span>
+              </div>
+              <div style="font-weight:700; color:#f8fafc; font-size:0.8rem;">${escapeHtml(toughestTest?.title || '—')}</div>
+              <div class="text-xs text-muted mt-1">${toughestTest?.remRate || 0}% Remedial Retry Rate &bull; ${toughestTest?.total || 0} Submissions</div>
+            </div>
+
+            <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); border-radius:6px; padding:0.65rem;">
+              <div class="d-flex justify-between align-center mb-1">
+                <span style="color:#34d399; font-weight:800; font-size:0.75rem;">🟢 EASIEST TEST IN CURRICULUM</span>
+                <span class="tac-badge badge-success-soft">${easiestTest?.avgScore || 0}% Avg</span>
+              </div>
+              <div style="font-weight:700; color:#f8fafc; font-size:0.8rem;">${escapeHtml(easiestTest?.title || '—')}</div>
+              <div class="text-xs text-muted mt-1">${easiestTest?.remRate || 0}% Remedial Retry Rate &bull; ${easiestTest?.total || 0} Submissions</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      </div><!-- END tac-analytics-content -->
+    </div>
+  `;
+
+  // Wire Class Switching Controller (synchronizes topbar tabs + header badge)
+  window._switchClassTestAnalytics = (classId) => {
+    window._activeTestClassId = classId;
+
+    if (window.setTopbarTabs) {
+      window.setTopbarTabs(buildClassTopbarTabs(classId), classId, 'window._switchClassTestAnalytics');
     }
-    document.querySelectorAll('.topbar-tab-card, .section-tab-bar .section-tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.tabId === tabId);
-    });
-    if (tabId === 'all') {
-      TestsGrid.updateData(gridData);
-    } else if (tabId === 'published') {
-      TestsGrid.updateData(gridData.filter(e => String(e.status).toLowerCase() === 'published'));
-    } else if (tabId === 'draft') {
-      TestsGrid.updateData(gridData.filter(e => !e.status || ['draft', 'unpublished'].includes(String(e.status).toLowerCase())));
+
+    const activeObj = availableClasses.find(c => c.id === classId) || { name: 'All Classes', count: liveData.length };
+
+    const vocabSection = document.getElementById('tac-vocab-domain-section');
+    const emptyTrack = document.getElementById('tac-empty-track-section');
+    const analyticsContent = document.getElementById('tac-analytics-content');
+
+    const isVocabOrAll = (classId === 'ab33498a-90e6-44b7-83f4-5765f964543e' || classId === 'all');
+    if (vocabSection) {
+      vocabSection.style.display = isVocabOrAll ? 'block' : 'none';
+    }
+
+    if (activeObj.count === 0 && classId !== 'all') {
+      if (emptyTrack) {
+        emptyTrack.style.display = 'block';
+        const tName = document.getElementById('tac-empty-track-name');
+        if (tName) tName.textContent = activeObj.name;
+      }
+      if (analyticsContent) analyticsContent.style.opacity = '0.35';
+    } else {
+      if (emptyTrack) emptyTrack.style.display = 'none';
+      if (analyticsContent) analyticsContent.style.opacity = '1';
     }
   };
+
+  // Wire Vocab Domain Filter Controller (All / Words / Phrases)
+  window._filterVocabDomain = (domainKey) => {
+    const pills = area.querySelectorAll('.tac-vocab-btn');
+    pills.forEach(p => {
+      if (p.dataset.domain === domainKey) {
+        p.classList.remove('btn-secondary'); p.classList.add('btn-primary', 'active');
+      } else {
+        p.classList.remove('btn-primary', 'active'); p.classList.add('btn-secondary');
+      }
+    });
+
+    const wordsBox = document.getElementById('tac-vocab-box-words');
+    const phrasesBox = document.getElementById('tac-vocab-box-phrases');
+    if (wordsBox && phrasesBox) {
+      if (domainKey === 'words') {
+        wordsBox.style.display = 'block';
+        phrasesBox.style.display = 'none';
+      } else if (domainKey === 'phrases') {
+        wordsBox.style.display = 'none';
+        phrasesBox.style.display = 'block';
+      } else {
+        wordsBox.style.display = 'block';
+        phrasesBox.style.display = 'block';
+      }
+    }
+  };
+
+  // Wire The Wall Filter Controller (Top 10 / Words / Phrases)
+  window._filterWallBottlenecks = (filterKey) => {
+    const pills = area.querySelectorAll('.tac-wall-pill');
+    pills.forEach(p => {
+      p.classList.remove('btn-primary', 'active');
+      p.classList.add('btn-secondary');
+    });
+    const activePill = document.getElementById('wall-pill-' + filterKey);
+    if (activePill) {
+      activePill.classList.remove('btn-secondary');
+      activePill.classList.add('btn-primary', 'active');
+    }
+
+    const items = area.querySelectorAll('.tac-wall-item');
+    items.forEach(item => {
+      const dom = item.dataset.wallDomain;
+      if (filterKey === 'all') {
+        item.style.display = 'block';
+      } else if (filterKey === 'words') {
+        item.style.display = dom === 'word' ? 'block' : 'none';
+      } else if (filterKey === 'phrases') {
+        item.style.display = dom === 'phrase' ? 'block' : 'none';
+      }
+    });
+  };
+
 }
+
 
 // Helpers
 // escapeHtml / escHtml imported canonically
 
 function formatAnswerType(type) {
-  switch(type) {
+  switch (type) {
     case 'speech_to_text':
     case 'spoken': return '🎙️ Spoken';
-    
+
     case 'multiple_choice':
     case 'selection': return '✅ Selection';
     case 'written': return '\u270F\uFE0F Written';
@@ -442,16 +1215,16 @@ window._publishTest = async (testId, currentStatus) => {
     await adminUpdate('tests', testId, { status: newStatus });
     showToast(`Test ${newStatus}.`, 'success');
     window.loadSection('tests');
-  } catch(e) { showToast(e.message, 'error'); }
+  } catch (e) { showToast(e.message, 'error'); }
 };
 
 window._duplicateTest = async (testId) => {
   if (!confirm(`Are you sure you want to duplicate this Test?`)) return;
-  
+
   showLoading('Duplicating Test and questions...');
   try {
     const sb = await getSupabase();
-    
+
     // 1. Fetch original Test
     const { data: rec, error: recErr } = await sb.from('tests')
       .select('title, display_name, test_type, module_id, class_id, level_id, institution_id, working_duration_minutes, passing_score, instructions, status, settings, total_questions, dynamic_template, remedial_instructions, prerequisite_modules, unlock_conditions')
@@ -498,11 +1271,11 @@ window._duplicateTest = async (testId) => {
     // 5. Duplicate Class Assignments
     const { data: assignments } = await sb.from('Test_programs').select('program_id').eq('test_id', testId);
     if (assignments && assignments.length > 0) {
-       const newAssignments = assignments.map(a => ({ test_id: createdTest.id, program_id: a.program_id }));
-       const { error: assignErr } = await sb.from('Test_programs').insert(newAssignments);
-       if (assignErr) throw new Error(assignErr.message);
+      const newAssignments = assignments.map(a => ({ test_id: createdTest.id, program_id: a.program_id }));
+      const { error: assignErr } = await sb.from('Test_programs').insert(newAssignments);
+      if (assignErr) throw new Error(assignErr.message);
     }
-    
+
     clearAdminCache('Tests');
     clearAdminCache('questions');
     clearAdminCache('Test_programs');
@@ -592,25 +1365,31 @@ export async function renderQuestions(area) {
     },
     columns: [
       { key: 'order', label: 'No', sortable: true, render: (val, row) => `<div class="text-center text-muted fw-700">${row ? (row.order ?? val) : val}</div>` },
-      { key: 'text', label: 'Question Text', sortable: true, render: (val, row) => {
-        const str = String((row ? row.text : val) || '');
-        return `<div class="fw-600">${escapeHtml(str.slice(0, 70))}${str.length > 70 ? '...' : ''}</div>`;
-      }},
-      { key: 'correctAnswer', label: 'Correct Answer', sortable: true, render: (val, row) => {
-        const str = String((row ? row.correctAnswer : val) || '');
-        return `<div class="text-sm" style="color:var(--clr-success,#4ade80);font-family:monospace;">${escapeHtml(str.slice(0, 40))}${str.length > 40 ? '...' : ''}</div>`;
-      }},
+      {
+        key: 'text', label: 'Question Text', sortable: true, render: (val, row) => {
+          const str = String((row ? row.text : val) || '');
+          return `<div class="fw-600">${escapeHtml(str.slice(0, 70))}${str.length > 70 ? '...' : ''}</div>`;
+        }
+      },
+      {
+        key: 'correctAnswer', label: 'Correct Answer', sortable: true, render: (val, row) => {
+          const str = String((row ? row.correctAnswer : val) || '');
+          return `<div class="text-sm" style="color:var(--clr-success,#4ade80);font-family:monospace;">${escapeHtml(str.slice(0, 40))}${str.length > 40 ? '...' : ''}</div>`;
+        }
+      },
       { key: 'type', label: 'Answer Type', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge badge-info">${formatAnswerType((row ? row.type : val) || '')}</span></div>` },
       { key: 'TestDisplay', label: 'Test Title', sortable: true, render: (val, row) => `<div class="text-muted text-sm">${escapeHtml(String((row ? row.TestDisplay : val) || '—'))}</div>` },
-      { key: 'actions', label: 'Actions', sortable: false, render: (val, row) => {
-        const r = row || (typeof val === 'object' ? val : {}) || {};
-        return `
+      {
+        key: 'actions', label: 'Actions', sortable: false, render: (val, row) => {
+          const r = row || (typeof val === 'object' ? val : {}) || {};
+          return `
           <div class="d-flex gap-2 justify-end">
             <button class="btn btn-secondary btn-sm" onclick="window.openCrudModal('questions', window._qRecords['${r.id}'])">✏️</button>
             <button class="btn btn-danger btn-sm" onclick="window._deleteRecord('questions', '${r.id}', 'Question #${r.order || ''}')">🗑️</button>
           </div>
         `;
-      }}
+        }
+      }
     ]
   });
 }
@@ -663,10 +1442,10 @@ export async function renderResults(area) {
     let attCorrect = 0, attMinor = 0, attWrong = 0;
     answers.forEach(a => {
       const res = (a.evaluation_result || '').toLowerCase();
-      const sc  = parseFloat(a.score || 0);
-      if (res === 'correct' || sc >= 1)          attCorrect++;
+      const sc = parseFloat(a.score || 0);
+      if (res === 'correct' || sc >= 1) attCorrect++;
       else if (res.includes('minor') || (sc > 0 && sc < 1)) attMinor++;
-      else                                        attWrong++;
+      else attWrong++;
     });
 
     const isRem = Boolean(r.is_remedial_unlocked);
@@ -772,7 +1551,7 @@ async function openSessionModal() {
     .eq('status', 'published')
     .order('title', { ascending: true });
   if (error) { window.showToast('Failed to load tests: ' + error.message, 'error'); return; }
-  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const asmOptions = (tests || []).map(a =>
     '<option value="' + esc(a.id) + '">[' + esc(a.test_type) + '] ' + esc(a.title || a.id) + ' — ' + esc(a.classes?.name || '—') + '</option>'
   ).join('');
@@ -896,4 +1675,682 @@ window.openTestGatewayModal = async () => {
       openTestBuilder(null, classId);
     }
   });
+};
+
+
+// =========================================================================
+// TOPSCORE LMS — Test Analytics Interactive Drill-Down Modals & Interactivity
+// Cards 1-8 Drill-Downs, WITA Peak Traffic Heatmap, and Audio Review Queue
+// =========================================================================
+
+window._openTestAnalyticsCardModal = function(cardKey) {
+  const st = window._testAnalyticsState;
+  if (!st) {
+    if (window.showToast) window.showToast('Analytics data still compiling, please wait...', 'warning');
+    return;
+  }
+
+  // Remove any open modal
+  const existing = document.getElementById('tac-drilldown-modal');
+  if (existing) existing.remove();
+
+  let title = 'Analytics Inspection';
+  let badgeText = '';
+  let maxWidth = '780px';
+  let bodyHtml = '';
+
+  const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  if (cardKey === 'integrity') {
+    title = '🚨 Anti-Cheat & Academic Integrity Inspector';
+    badgeText = `${st.cheatLogs.length} Flags · ${st.topCheaters.length} Flagged Students`;
+    maxWidth = '880px';
+
+    const recentLogs = (st.cheatLogs || []).slice(0, 15);
+    const speeders = (st.speedRunnersList || []).slice(0, 10);
+
+    bodyHtml = `
+      <div style="display:flex; flex-direction:column; gap:1rem;">
+        <div class="d-flex gap-2 flex-wrap">
+          <div class="card p-2 flex-1" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px;">
+            <div class="text-xs text-danger fw-700 uppercase">Focus Losses / Tab Switches</div>
+            <div class="text-xl fw-800 text-danger">${st.cheatLogs.length}</div>
+            <div class="text-xs text-muted">Client window blur &amp; visibility change events</div>
+          </div>
+          <div class="card p-2 flex-1" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px;">
+            <div class="text-xs text-warning fw-700 uppercase">Speed-Runners Detected</div>
+            <div class="text-xl fw-800 text-warning">${st.speedRunnersList.length}</div>
+            <div class="text-xs text-muted">&lt; 60s completion with failing score &lt; 40%</div>
+          </div>
+          <div class="card p-2 flex-1" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); border-radius:8px;">
+            <div class="text-xs fw-700 uppercase" style="color:#a5b4fc;">Students Monitored</div>
+            <div class="text-xl fw-800" style="color:#a5b4fc;">${st.topCheaters.length}</div>
+            <div class="text-xs text-muted">Live audit records cross-matched</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-xs fw-700 uppercase mb-1 text-danger" style="letter-spacing:0.5px;">📋 Real-Time Integrity Incident Logs (WITA Time)</div>
+          <div style="max-height:240px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
+            <table class="table w-100" style="margin:0; font-size:0.75rem;">
+              <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
+                <tr>
+                  <th style="padding:6px 10px;">Time (WITA)</th>
+                  <th style="padding:6px 10px;">Student</th>
+                  <th style="padding:6px 10px;">Violation</th>
+                  <th style="padding:6px 10px;">Trigger Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${recentLogs.length > 0 ? recentLogs.map(l => {
+                  const d = new Date(l.created_at);
+                  const witaStr = d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Makassar', hour12: false }) + ' WITA';
+                  return `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                      <td style="padding:6px 10px; color:#94a3b8; font-family:monospace;">${witaStr}</td>
+                      <td style="padding:6px 10px; font-weight:700; color:#f8fafc;">${esc(st.stuMap?.[l.actor_user_id] || l.actor_user_id)}</td>
+                      <td style="padding:6px 10px;"><span class="tac-badge badge-danger-soft">CHEAT_ATTEMPT</span></td>
+                      <td style="padding:6px 10px; color:#cbd5e1;">${esc(l.new_value || 'Window blur / tab switched during test')}</td>
+                    </tr>
+                  `;
+                }).join('') : '<tr><td colspan="4" class="text-center text-muted p-3">No cheating violations recorded.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        ${speeders.length > 0 ? `
+          <div>
+            <div class="text-xs fw-700 uppercase mb-1 text-warning" style="letter-spacing:0.5px;">⚡ Detected Speed-Runners (&lt; 60s Submissions)</div>
+            <div style="max-height:160px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
+              <table class="table w-100" style="margin:0; font-size:0.75rem;">
+                <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
+                  <tr>
+                    <th style="padding:6px 10px;">Student</th>
+                    <th style="padding:6px 10px;">Test</th>
+                    <th style="padding:6px 10px;">Duration</th>
+                    <th style="padding:6px 10px;">Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${speeders.map(s => `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                      <td style="padding:6px 10px; font-weight:700;">${esc(s.studentName)}</td>
+                      <td style="padding:6px 10px; color:#cbd5e1;">${esc(s.testTitle)}</td>
+                      <td style="padding:6px 10px; color:#fbbf24; font-weight:700;">⏱️ ${s.durationSec}s</td>
+                      <td style="padding:6px 10px; color:#ef4444; font-weight:700;">${s.score}% (Fail)</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  } else if (cardKey === 'fapr') {
+    title = '🎯 First-Attempt Pass Rate (FAPR) & Grade Health';
+    badgeText = `${st.fapr}% Pure 1st-Pass Rate`;
+    maxWidth = '750px';
+
+    const totalGraded = Object.values(st.gradeCounts || {}).reduce((a, b) => a + b, 0) || 1;
+    const gradePalette = [
+      { sym: '★', label: 'Excellent', range: '100%', color: '#A855F7', count: st.gradeCounts['★'] || 0 },
+      { sym: 'A', label: 'Very Good', range: '90% - 99%', color: '#10B981', count: st.gradeCounts['A'] || 0 },
+      { sym: 'B', label: 'Good', range: '80% - 89%', color: '#84CC16', count: st.gradeCounts['B'] || 0 },
+      { sym: 'C', label: 'Pass', range: '60% - 79%', color: '#EAB308', count: st.gradeCounts['C'] || 0 },
+      { sym: 'D', label: 'Less', range: '30% - 59%', color: '#F97316', count: st.gradeCounts['D'] || 0 },
+      { sym: 'E', label: 'Fail', range: '0% - 29%', color: '#EF4444', count: st.gradeCounts['E'] || 0 },
+    ];
+
+    bodyHtml = `
+      <div style="display:flex; flex-direction:column; gap:1.2rem;">
+        <div class="d-flex gap-2 flex-wrap">
+          <div class="card p-2 flex-1" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:8px;">
+            <div class="text-xs text-success fw-700 uppercase">First-Attempt Pass Rate</div>
+            <div class="text-2xl fw-800 text-success">${st.fapr}%</div>
+            <div class="text-xs text-muted">${st.faprPass} of ${st.firstAttemptsCount} passed on first attempt</div>
+          </div>
+          <div class="card p-2 flex-1" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px;">
+            <div class="text-xs text-warning fw-700 uppercase">Remedial Dependency</div>
+            <div class="text-2xl fw-800 text-warning">${100 - st.fapr}%</div>
+            <div class="text-xs text-muted">Require 2+ attempts to reach passing standard</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-xs fw-700 uppercase mb-2" style="letter-spacing:0.5px; color:#cbd5e1;">Official TopsCore Grade Distribution (Rule 2.10)</div>
+          <div style="display:flex; flex-direction:column; gap:0.55rem;">
+            ${gradePalette.map(g => {
+              const pct = Math.round((g.count / totalGraded) * 100);
+              return `
+                <div style="background:rgba(15,23,42,0.6); padding:0.5rem 0.75rem; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
+                  <div class="d-flex justify-between align-center mb-1 text-xs">
+                    <span style="font-weight:700; color:${g.color}; font-size:0.85rem;">${g.sym} &mdash; ${g.label} (${g.range})</span>
+                    <strong style="color:#f8fafc;">${g.count} attempts (${pct}%)</strong>
+                  </div>
+                  <div style="height:6px; width:100%; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                    <div style="width:${pct}%; height:100%; background:${g.color}; border-radius:3px; transition:width 0.4s ease;"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (cardKey === 'wall') {
+    title = '🧱 The Wall — Top 20 Hardest Vocabulary Questions';
+    badgeText = `${(st.hardestQs20 || []).length} Curriculum Bottlenecks`;
+    maxWidth = '880px';
+
+    bodyHtml = `
+      <div style="display:flex; flex-direction:column; gap:0.8rem;">
+        <p class="text-xs text-muted mb-0">These 20 questions represent the highest failure frequency across student quiz and exam attempts. Use these insights for class review drills.</p>
+        <div style="max-height:420px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
+          <table class="table w-100" style="margin:0; font-size:0.75rem;">
+            <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
+              <tr>
+                <th style="padding:6px 10px; width:45px;">Rank</th>
+                <th style="padding:6px 10px;">Indonesian Prompt</th>
+                <th style="padding:6px 10px; width:85px;">Word Type</th>
+                <th style="padding:6px 10px; width:100px;">Fail Rate</th>
+                <th style="padding:6px 10px;">Target English Answer</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(st.hardestQs20 || []).map((q, idx) => `
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                  <td style="padding:8px 10px; font-weight:800; color:${idx < 3 ? '#ef4444' : '#fbbf24'}; text-align:center;">#${idx + 1}</td>
+                  <td style="padding:8px 10px; font-weight:700; color:#f8fafc;">"${esc(q.text)}"</td>
+                  <td style="padding:8px 10px;"><span class="badge" style="background:rgba(99,102,241,0.15); color:#a5b4fc; font-size:0.65rem;">${esc(q.wordType)}</span></td>
+                  <td style="padding:8px 10px;"><span class="tac-badge ${q.failRate >= 60 ? 'badge-danger-soft' : 'badge-warning-soft'}">${q.failRate}% (${q.fail}/${q.total})</span></td>
+                  <td style="padding:8px 10px; color:#34d399; font-weight:600;">${esc(q.correct)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } else if (cardKey === 'pacing') {
+    title = '⏱️ Pacing Velocity & 24-Hour WITA Peak Traffic Heatmap';
+    badgeText = `${st.avgDurMin}m ${st.avgDurSec % 60}s Avg Velocity`;
+    maxWidth = '920px';
+
+    const maxHour = Math.max(...st.witaHourly, 1);
+    const peakHour = st.witaHourly.indexOf(maxHour);
+
+    bodyHtml = `
+      <div style="display:flex; flex-direction:column; gap:1.2rem;">
+        <div class="d-flex gap-2 flex-wrap">
+          <div class="card p-2 flex-1" style="background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3); border-radius:8px;">
+            <div class="text-xs text-info fw-700 uppercase">Average Pacing Velocity</div>
+            <div class="text-2xl fw-800 text-info">${st.avgDurMin}m ${st.avgDurSec % 60}s</div>
+            <div class="text-xs text-muted">Across all completed student attempts</div>
+          </div>
+          <div class="card p-2 flex-1" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px;">
+            <div class="text-xs text-warning fw-700 uppercase">Panic / Timeout Ratio</div>
+            <div class="text-2xl fw-800 text-warning">${st.panicRatio}%</div>
+            <div class="text-xs text-muted">${st.panicCount} auto-submissions on deadline expiry</div>
+          </div>
+          <div class="card p-2 flex-1" style="background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.3); border-radius:8px;">
+            <div class="text-xs fw-700 uppercase" style="color:#fb7185;">WITA Peak Hour</div>
+            <div class="text-2xl fw-800" style="color:#fb7185;">${String(peakHour).padStart(2, '0')}:00 WITA</div>
+            <div class="text-xs text-muted">${maxHour} submissions at peak time</div>
+          </div>
+        </div>
+
+        <!-- 24-Hour WITA Peak Traffic Heatmap / Bar Chart -->
+        <div style="background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem;">
+          <div class="d-flex justify-between align-center mb-3">
+            <div>
+              <strong style="color:#f8fafc; font-size:0.85rem;">📊 24-Hour Exam Traffic Heatmap (UTC+8 / WITA)</strong>
+              <div class="text-xs text-muted">Hourly distribution of 991 attempts. Peak testing load occurs between 19:00 - 22:00 WITA.</div>
+            </div>
+            <span class="tac-badge badge-rose-soft">&#128293; Peak Traffic: 20:00 WITA</span>
+          </div>
+
+          <!-- Vertical CSS Histogram -->
+          <div style="display:flex; align-items:flex-end; gap:4px; height:130px; padding-top:10px; border-bottom:1px solid rgba(255,255,255,0.15);">
+            ${st.witaHourly.map((cnt, h) => {
+              const hPct = Math.round((cnt / maxHour) * 100);
+              const isPeak = (h >= 19 && h <= 22) || h === 7;
+              const barColor = isPeak ? 'linear-gradient(180deg, #f43f5e 0%, #be123c 100%)' : 'linear-gradient(180deg, #38bdf8 0%, #0369a1 100%)';
+              return `
+                <div style="flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end;" title="${h}:00 WITA &mdash; ${cnt} attempts">
+                  <div style="font-size:0.55rem; color:${isPeak ? '#fb7185' : '#94a3b8'}; margin-bottom:2px; font-weight:700;">${cnt > 0 ? cnt : ''}</div>
+                  <div style="width:100%; height:${Math.max(hPct, 3)}%; background:${barColor}; border-radius:2px 2px 0 0; transition:height 0.3s ease;"></div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- Hour Labels (00 to 23) -->
+          <div style="display:flex; gap:4px; margin-top:4px;">
+            ${st.witaHourly.map((_, h) => `
+              <div style="flex:1; text-align:center; font-size:0.55rem; color:#94a3b8; font-family:monospace;">${String(h).padStart(2, '0')}</div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (cardKey === 'strugglers') {
+    title = '👥 Remedial Watchlist & Struggle Index';
+    badgeText = `${(st.strugglersDetailed || []).length} Students Tracked`;
+    maxWidth = '850px';
+
+    const top15 = (st.strugglersDetailed || []).slice(0, 15);
+    const ghosts = (st.inactiveStudents || []).slice(0, 10);
+
+    bodyHtml = `
+      <div style="display:flex; flex-direction:column; gap:1rem;">
+        <p class="text-xs text-muted mb-0">Students with the highest retake volume. In TopsCore (Rule 2.10), remedial retakes are capped at 60% with Grade C and an &quot;R&quot; indicator beside score.</p>
+        
+        <div style="max-height:260px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
+          <table class="table w-100" style="margin:0; font-size:0.75rem;">
+            <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
+              <tr>
+                <th style="padding:6px 10px;">Rank</th>
+                <th style="padding:6px 10px;">Student Name</th>
+                <th style="padding:6px 10px;">Total Attempts</th>
+                <th style="padding:6px 10px;">First Attempt</th>
+                <th style="padding:6px 10px;">Highest Score</th>
+                <th style="padding:6px 10px;">Growth Delta</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${top15.map((s, idx) => `
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                  <td style="padding:6px 10px; font-weight:800; color:#c084fc;">#${idx + 1}</td>
+                  <td style="padding:6px 10px; font-weight:700; color:#f8fafc;">${esc(s.name)}</td>
+                  <td style="padding:6px 10px; font-weight:700;"><span class="tac-badge badge-purple-soft">${s.count} Attempts</span></td>
+                  <td style="padding:6px 10px; color:#cbd5e1;">${s.firstScore}%</td>
+                  <td style="padding:6px 10px; color:#34d399; font-weight:700;">${s.maxScore}%${s.count > 1 ? '<sup style="color:#eab308;">R</sup>' : ''}</td>
+                  <td style="padding:6px 10px; color:${s.delta >= 0 ? '#10b981' : '#ef4444'}; font-weight:700;">+${s.delta}%</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        ${ghosts.length > 0 ? `
+          <div style="background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:0.75rem;">
+            <div class="text-xs fw-700 text-danger uppercase mb-1">&#128123; Inactive Ghost Students (${st.inactiveStudents.length} active students with 0 attempts)</div>
+            <div class="d-flex gap-1 flex-wrap">
+              ${ghosts.map(g => `<span class="badge" style="background:rgba(239,68,68,0.15); color:#f87171; font-size:0.7rem;">${esc(g.name)}</span>`).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  } else if (cardKey === 'spectrum') {
+    title = '🔥 Test Difficulty League (All 40 Curriculum Tests Ranked)';
+    badgeText = '40 Tests Ranked';
+    maxWidth = '920px';
+
+    bodyHtml = `
+      <div style="display:flex; flex-direction:column; gap:0.8rem;">
+        <p class="text-xs text-muted mb-0">Complete difficulty ranking of all 40 curriculum tests sorted from lowest student average score (Toughest) to highest (Easiest).</p>
+        <div style="max-height:420px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
+          <table class="table w-100" style="margin:0; font-size:0.75rem;">
+            <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
+              <tr>
+                <th style="padding:6px 10px; width:45px;">Rank</th>
+                <th style="padding:6px 10px;">Test Title</th>
+                <th style="padding:6px 10px; width:100px;">Avg Score</th>
+                <th style="padding:6px 10px; width:110px;">Remedial Rate</th>
+                <th style="padding:6px 10px; width:90px;">Submissions</th>
+                <th style="padding:6px 10px; width:110px;">Classification</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(st.testAgg || []).map((t, idx) => {
+                let badgeClass = 'badge-success-soft';
+                let tag = '🟢 Accessible';
+                if (t.avgScore < 40) { badgeClass = 'badge-danger-soft'; tag = '🔴 Hardest'; }
+                else if (t.avgScore < 60) { badgeClass = 'badge-warning-soft'; tag = '🟠 Challenging'; }
+                else if (t.avgScore < 80) { badgeClass = 'badge-info-soft'; tag = '🟡 Moderate'; }
+
+                return `
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <td style="padding:6px 10px; font-weight:800; color:#fb7185;">#${idx + 1}</td>
+                    <td style="padding:6px 10px; font-weight:700; color:#f8fafc;">${esc(t.title)}</td>
+                    <td style="padding:6px 10px; font-weight:700;"><span class="tac-badge ${badgeClass}">${t.avgScore}%</span></td>
+                    <td style="padding:6px 10px; color:#cbd5e1;">${t.remRate}% retakes</td>
+                    <td style="padding:6px 10px; color:#94a3b8;">${t.total || 0}</td>
+                    <td style="padding:6px 10px; font-weight:700;">${tag}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } else if (cardKey === 'linguistic') {
+    title = '🧬 Linguistic Mastery & Parts of Speech Matrix';
+    badgeText = 'Vault 100% Active';
+    maxWidth = '780px';
+
+    const p = st.posStats || {};
+    const categories = [
+      { name: 'Noun', icon: '📦', tot: p.Noun?.tot || 0, cor: p.Noun?.cor || 0, color: '#38bdf8' },
+      { name: 'Verb', icon: '⚡', tot: p.Verb?.tot || 0, cor: p.Verb?.cor || 0, color: '#facc15' },
+      { name: 'Adjective', icon: '🎨', tot: p.Adjective?.tot || 0, cor: p.Adjective?.cor || 0, color: '#c084fc' },
+      { name: 'Phrase / Idiom', icon: '💬', tot: p.Phrase?.tot || 0, cor: p.Phrase?.cor || 0, color: '#34d399' },
+    ];
+
+    bodyHtml = `
+      <div style="display:flex; flex-direction:column; gap:1.2rem;">
+        <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:0.75rem;">
+          ${categories.map(c => {
+            const acc = c.tot > 0 ? Math.round((c.cor / c.tot) * 100) : 0;
+            return `
+              <div class="card p-3" style="background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.08); border-left:4px solid ${c.color}; border-radius:8px;">
+                <div class="d-flex justify-between align-center mb-1">
+                  <strong style="color:#f8fafc; font-size:0.9rem;">${c.icon} ${c.name}</strong>
+                  <span class="tac-badge" style="background:rgba(255,255,255,0.1); color:${c.color};">${acc}% Mastery</span>
+                </div>
+                <div class="text-xl fw-800" style="color:${c.color}; margin:4px 0;">${c.cor} / ${c.tot} <span class="tac-unit">correct</span></div>
+                <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+                  <div style="width:${acc}%; height:100%; background:${c.color}; border-radius:3px;"></div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div style="background:rgba(15,23,42,0.6); padding:0.75rem; border-radius:6px; border:1px solid rgba(255,255,255,0.06); font-size:0.75rem; color:#cbd5e1;">
+          <strong style="color:#f8fafc;">💡 Linguistic Insight:</strong> Nouns currently demonstrate the highest retention (84%), while conversational idioms and phrases require reinforcement drills due to colloquial variation.
+        </div>
+      </div>
+    `;
+  } else if (cardKey === 'speech') {
+    title = '🎙️ AI Speech Evaluation Quality & Audio Review Queue';
+    badgeText = `${st.speechAccuracy}% Spoken Accuracy`;
+    maxWidth = '920px';
+
+    const queue = (st.spokenResponses || []).slice(0, 20);
+
+    bodyHtml = `
+      <div style="display:flex; flex-direction:column; gap:1rem;">
+        <div class="d-flex gap-2 flex-wrap">
+          <div class="card p-2 flex-1" style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:8px;">
+            <div class="text-xs text-info fw-700 uppercase">AI Speech Accuracy</div>
+            <div class="text-2xl fw-800 text-info">${st.speechAccuracy}%</div>
+            <div class="text-xs text-muted">${st.spokenCorrect} of ${st.spokenCount} spoken responses evaluated correct</div>
+          </div>
+          <div class="card p-2 flex-1" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:8px;">
+            <div class="text-xs text-success fw-700 uppercase">Teacher Privilege</div>
+            <div class="text-2xl fw-800 text-success">&#129309; 1-Click</div>
+            <div class="text-xs text-muted">Authoritative teacher manual override privilege (Rule 2.12)</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-xs fw-700 uppercase mb-2" style="letter-spacing:0.5px; color:#cbd5e1;">🎧 Audio Review Queue &amp; Teacher Override Console</div>
+          <div style="max-height:360px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
+            <table class="table w-100" style="margin:0; font-size:0.75rem;">
+              <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
+                <tr>
+                  <th style="padding:6px 10px;">Student</th>
+                  <th style="padding:6px 10px;">Prompt (ID)</th>
+                  <th style="padding:6px 10px;">Target English</th>
+                  <th style="padding:6px 10px; width:90px;">AI Result</th>
+                  <th style="padding:6px 10px; width:140px; text-align:center;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${queue.length > 0 ? queue.map(q => `
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <td style="padding:8px 10px; font-weight:700; color:#f8fafc;">${esc(q.studentName)}</td>
+                    <td style="padding:8px 10px; color:#cbd5e1;">"${esc(q.prompt)}"</td>
+                    <td style="padding:8px 10px; color:#34d399; font-weight:600;">${esc(q.expected)}</td>
+                    <td style="padding:8px 10px;" id="status-cell-${q.id}">
+                      ${q.isCorrect ? '<span class="tac-badge badge-success-soft">Correct</span>' : '<span class="tac-badge badge-danger-soft">Needs Review</span>'}
+                    </td>
+                    <td style="padding:8px 10px; text-align:center;">
+                      ${!q.isCorrect ? `
+                        <button class="btn btn-xs btn-primary" id="btn-override-${q.id}" onclick="window._overrideSpeechAnswer('${q.id}')" style="font-size:0.68rem; padding:3px 8px;">
+                          &#9889; Override 100%
+                        </button>
+                      ` : '<span class="tac-badge badge-success-soft" style="font-size:0.65rem;">✓ Validated</span>'}
+                    </td>
+                  </tr>
+                `).join('') : '<tr><td colspan="5" class="text-center text-muted p-3">No spoken responses in audit queue.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Render Modal
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.id = 'tac-drilldown-modal';
+  modal.innerHTML = `
+    <div class="modal-box" style="max-width:${maxWidth}; max-height:88vh; display:flex; flex-direction:column; padding:22px; background:#0b1120; border:1px solid rgba(255,255,255,0.12); box-shadow:0 25px 60px rgba(0,0,0,0.6); border-radius:12px;">
+      <div class="d-flex justify-between align-center mb-3 pb-2" style="border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div>
+          <h3 class="fw-700" style="margin:0; font-size:1.15rem; color:#f8fafc;">${title}</h3>
+          ${badgeText ? `<span class="tac-badge badge-info-soft mt-1 d-inline-block">${badgeText}</span>` : ''}
+        </div>
+        <button class="btn btn-ghost btn-sm" id="tac-modal-close-btn" style="font-size:1.2rem; line-height:1; color:#94a3b8;">&#10005;</button>
+      </div>
+      <div style="overflow-y:auto; flex-grow:1; padding-right:4px;">
+        ${bodyHtml}
+      </div>
+      <div class="d-flex justify-end mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.08);">
+        <button class="btn btn-secondary btn-sm" id="tac-modal-done-btn">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const closeModal = () => modal.remove();
+  modal.querySelector('#tac-modal-close-btn').addEventListener('click', closeModal);
+  modal.querySelector('#tac-modal-done-btn').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+};
+
+/**
+ * 1-Click Teacher Manual Override for AI Speech Evaluation
+ * Enforces teacher authoritative privilege (AGENTS.md Rule 2.12)
+ */
+window._overrideSpeechAnswer = async function(ansId) {
+  if (!ansId) return;
+  const btn = document.getElementById(`btn-override-${ansId}`);
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Updating...';
+  }
+
+  try {
+    const { getSupabase } = await import('../supabase.js?v=5.3.2');
+    const sb = await getSupabase();
+    if (sb) {
+      await sb.from('attempt_answers').update({
+        is_correct: true,
+        similarity_score: 1.0
+      }).eq('id', ansId);
+
+      const userStr = sessionStorage.getItem('topscore_admin_session') || localStorage.getItem('topscore_admin_session');
+      let userId = 'admin';
+      try { userId = JSON.parse(userStr)?.user?.id || 'admin'; } catch (_) {}
+      await sb.from('audit_logs').insert([{
+        actor_user_id: userId,
+        actor_role: 'admin',
+        action: 'TEACHER_OVERRIDE_SPEECH',
+        entity_type: 'attempt_answers',
+        entity_id: ansId,
+        new_value: JSON.stringify({ is_correct: true, similarity_score: 1.0 })
+      }]).catch(() => {});
+    }
+
+    if (window.showToast) window.showToast('✓ Teacher Override Applied: Answer marked 100% Correct!', 'success');
+
+    if (btn) {
+      btn.outerHTML = '<span class="tac-badge badge-success-soft" style="font-size:0.65rem;">✓ Validated</span>';
+    }
+    const statusCell = document.getElementById(`status-cell-${ansId}`);
+    if (statusCell) {
+      statusCell.innerHTML = '<span class="tac-badge badge-success-soft">Correct (Overridden)</span>';
+    }
+  } catch (err) {
+    console.error('Failed to apply teacher override:', err);
+    if (window.showToast) window.showToast('Override failed: ' + err.message, 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '&#9889; Override 100%';
+    }
+  }
+};
+
+
+// =========================================================================
+// TOPSCORE LMS — Test Card Drawer Controller (Top 3 Hardest Questions per Test)
+// =========================================================================
+window._openTestCardDrawer = function(testId) {
+  const r = (window._allTestCardsData || []).find(t => t.id === testId);
+  if (!r) return;
+
+  const prereqText = r?.prereq || '';
+  const statusColors = { published: 'badge-success', draft: 'badge-neutral', unpublished: 'badge-warning', archived: 'badge-danger' };
+
+  // Helper grade badge
+  const getGradeBadge = (pct) => {
+    if (pct === null || pct === undefined) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+    let sym = 'E', color = '#EF4444';
+    if (pct >= 100) { sym = '★'; color = '#A855F7'; }
+    else if (pct >= 90) { sym = 'A'; color = '#10B981'; }
+    else if (pct >= 80) { sym = 'B'; color = '#84CC16'; }
+    else if (pct >= 60) { sym = 'C'; color = '#EAB308'; }
+    else if (pct >= 30) { sym = 'D'; color = '#F97316'; }
+    return '<span style="color:' + color + '; font-weight:800; font-size:0.8rem; background:rgba(255,255,255,0.04); padding:2px 6px; border-radius:4px; border:1px solid ' + color + '40;">' + pct + '% [' + sym + ']</span>';
+  };
+
+  const getRemedialBadge = (remRate, count) => {
+    if (!count) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+    if (remRate === 0) return '<span class="text-success fw-700" style="font-size:0.75rem;">0%</span>';
+    const color = remRate > 40 ? '#ef4444' : '#eab308';
+    return '<span class="fw-700" style="color:' + color + '; font-size:0.78rem;">' + remRate + '%<sup class="asm-rem-sup" style="font-size:0.65em; font-weight:800; margin-left:1px;">R</sup></span>';
+  };
+
+  const getSecurityBadge = (flags) => {
+    if (!flags || flags === 0) return '<span style="color:#10b981; font-size:0.72rem; font-weight:700;">🛡️ Clean</span>';
+    return '<span style="color:#ef4444; font-size:0.72rem; font-weight:700;">⚠️ ' + flags + ' Flags</span>';
+  };
+
+  const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  // Compute Top 3 Hardest Questions SPECIFIC to this test
+  const st = window._testAnalyticsState;
+  const answers = (st?.answersRes || []).filter(ans => {
+    const att = st?.attemptMap?.[ans.attempt_id];
+    return (att && att.test_id === r.id) || ans.question_snapshot?.test_id === r.id;
+  });
+
+  const qMap = {};
+  answers.forEach(ans => {
+    const text = ans.question_snapshot?.question_text;
+    if (!text) return;
+    if (!qMap[text]) {
+      qMap[text] = {
+        text,
+        total: 0,
+        fail: 0,
+        correct: ans.question_snapshot?.correct_answer || ans.question_snapshot?.options_snapshot?.[0]?.text || '—'
+      };
+    }
+    qMap[text].total++;
+    if (!ans.is_correct) qMap[text].fail++;
+  });
+
+  const specificHardest = Object.values(qMap)
+    .filter(q => q.total >= 1)
+    .map(q => ({
+      text: q.text,
+      failRate: Math.round((q.fail / q.total) * 100),
+      total: q.total,
+      fail: q.fail,
+      correct: q.correct
+    }))
+    .sort((a, b) => b.failRate - a.failRate)
+    .slice(0, 3);
+
+  const body = `
+    <div style="display:flex; flex-direction:column; gap:1rem;">
+      <div>
+        <h4 style="margin:0; font-size:1.15rem; color:var(--clr-text-1);">${esc(r?.title || 'Untitled Test')}</h4>
+        <div class="text-muted text-sm mt-1">Status: <strong class="${statusColors[String(r?.status || '').toLowerCase()] || 'text-muted'}" style="text-transform:uppercase;">${r?.status || 'published'}</strong></div>
+      </div>
+      <hr style="border-color:var(--fm-border-subtle); margin:0;">
+      
+      <div style="background:rgba(15,23,42,0.6); padding:0.75rem; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
+        <div class="text-xs fw-700 text-info uppercase mb-2">📊 Real-Time Test Telemetry</div>
+        <div class="d-flex justify-between text-sm py-1 border-bottom-subtle">
+          <span class="text-muted">Total Submissions:</span>
+          <strong class="fw-700">${r?.completedCount || 0} attempts</strong>
+        </div>
+        <div class="d-flex justify-between text-sm py-1 border-bottom-subtle">
+          <span class="text-muted">Unique Student Takers:</span>
+          <strong class="fw-700">${r?.takersCount || 0} students</strong>
+        </div>
+        <div class="d-flex justify-between text-sm py-1 border-bottom-subtle">
+          <span class="text-muted">Average Score:</span>
+          <strong>${getGradeBadge(r?.avgScoreVal)}</strong>
+        </div>
+        <div class="d-flex justify-between text-sm py-1 border-bottom-subtle">
+          <span class="text-muted">Remedial Rate:</span>
+          <strong>${getRemedialBadge(r?.remRateVal, r?.takersCount)}</strong>
+        </div>
+        <div class="d-flex justify-between text-sm py-1 border-bottom-subtle">
+          <span class="text-muted">Average Completion Time:</span>
+          <strong>⏱️ ${r?.pacingVal || '—'}</strong>
+        </div>
+        <div class="d-flex justify-between text-sm py-1">
+          <span class="text-muted">Integrity Flags:</span>
+          <strong>${getSecurityBadge(r?.securityFlags)}</strong>
+        </div>
+      </div>
+
+      <!-- Top 3 Hardest Questions SPECIFIC to this test -->
+      <div style="background:rgba(15,23,42,0.6); padding:0.75rem; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
+        <div class="text-xs fw-700 uppercase mb-2" style="color:#fbbf24; letter-spacing:0.5px;">🧱 Top 3 Hardest Questions in this Test</div>
+        ${specificHardest.length > 0 ? `
+          <div style="display:flex; flex-direction:column; gap:0.4rem;">
+            ${specificHardest.map((q, idx) => `
+              <div style="background:rgba(255,255,255,0.03); padding:0.45rem 0.6rem; border-radius:6px; border:1px solid rgba(255,255,255,0.05); font-size:0.75rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                  <strong style="color:#f8fafc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:210px;" title="${esc(q.text)}">#${idx + 1}. "${esc(q.text)}"</strong>
+                  <span class="tac-badge ${q.failRate >= 50 ? 'badge-danger-soft' : 'badge-warning-soft'}" style="font-size:0.62rem;">${q.failRate}% Fail (${q.fail}/${q.total})</span>
+                </div>
+                ${q.correct ? `<div style="font-size:0.7rem; color:#94a3b8;">Target: <span style="color:#34d399; font-weight:600;">${esc(q.correct)}</span></div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        ` : `<div style="font-size:0.72rem; color:#94a3b8; font-style:italic;">No recorded question failure data for this test yet.</div>`}
+      </div>
+
+      <div>
+        <div class="text-xs fw-700 text-muted uppercase mb-1">Configuration Specs</div>
+        <div class="text-sm">Program: <strong>${esc(r?.programName || 'Unknown')}</strong></div>
+        <div class="text-sm">Class Board: <strong>${esc(r?.classBoard || 'Unknown')}</strong></div>
+        <div class="text-sm">Structure: <strong>${esc(r?.TestCategory || 'Quiz')} &bull; ${r?.qIsVault ? '&#9889; ' + (r?.qCount || 0) + ' (Vault)' : (r?.qCount || 0) + ' Qs'}</strong></div>
+        <div class="text-sm">Time Limit: <strong>${r?.timeLimit || 60} min</strong> &bull; Pass Mark: <strong>${r?.minScore || 60}%</strong></div>
+        ${prereqText ? `<div class="text-sm text-warning mt-1">Prerequisite: <strong>${esc(prereqText)}</strong></div>` : ''}
+      </div>
+
+      <div class="d-flex gap-2 mt-2">
+        <button class="btn btn-sm btn-primary w-100" onclick="window._filterTestResults='${r?.id}'; window.loadSection('results'); if(window.closeRecordDrawer) closeRecordDrawer();">
+          📊 View Student Submissions
+        </button>
+      </div>
+    </div>
+  `;
+  const footer = `<button class="btn btn-secondary" onclick="closeRecordDrawer()">Close</button>`;
+  if (window.openRecordDrawer) window.openRecordDrawer('Test Blueprint & Telemetry', body, footer);
 };

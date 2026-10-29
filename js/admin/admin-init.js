@@ -87,7 +87,7 @@ export function initRecordDrawer() {
   };
 }
 
-export function registerServiceWorker(swPath = 'sw.js?v=20261028_v16') {
+export function registerServiceWorker(swPath = 'sw.js?v=20261029_v20') {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register(swPath)
