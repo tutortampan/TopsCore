@@ -2908,7 +2908,9 @@ export async function upsertDynamicTestShell(config) {
     const { error } = await sb.from('tests').update(asmData).eq('id', existing.id);
     if (error) throw error;
     if (effectiveAnswerType) {
-      await sb.from('test_items').update({ answer_type: effectiveAnswerType }).eq('test_id', existing.id).catch(() => {});
+      try {
+        await sb.from('test_items').update({ answer_type: effectiveAnswerType }).eq('test_id', existing.id);
+      } catch (_) {}
     }
     return { testId: existing.id, action: 'updated' };
   } else {
@@ -3001,7 +3003,9 @@ export async function updateClassTestsConfig(params = {}) {
 
     // Keep test_questions in sync if answer_type changed
     if (updateData.answer_type) {
-      await sb.from('test_items').update({ answer_type: updateData.answer_type }).eq('test_id', row.id).catch(() => {});
+      try {
+        await sb.from('test_items').update({ answer_type: updateData.answer_type }).eq('test_id', row.id);
+      } catch (_) {}
     }
   }
 

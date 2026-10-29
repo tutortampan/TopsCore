@@ -1,0 +1,24 @@
+{
+  "recommendations": [
+    // ─── CORE CODE QUALITY & ENGINE ─────────────────────────────────
+    "denoland.vscode-deno",               // Supabase Edge Functions (Deno 2 TypeScript)
+    "esbenp.prettier-vscode",             // Auto-formatter on save
+    "dbaeumer.vscode-eslint",             // JavaScript linter & bug prevention
+    "usernamehw.errorlens",               // Inline error & warning visualizer
+
+    // ─── BACKEND, DATABASE & API TESTING ────────────────────────────
+    "ckolkman.vscode-postgres",           // Direct PostgreSQL runner for Supabase Cloud
+    "rangav.vscode-thunder-client",       // In-IDE REST API tester for Edge Functions
+
+    // ─── FRONTEND & DEV SERVER ──────────────────────────────────────
+    "yandeu.five-server",                 // Live server with auto-reload for TopsCore static HTML
+    "christian-kohler.path-intellisense", // Relative path autocomplete for modules & assets
+
+    // ─── TESTING & GIT INTELLIGENCE ─────────────────────────────────
+    "ms-playwright.playwright",           // E2E test explorer & trace inspector
+    "eamodio.gitlens",                    // Phase-by-phase commit tracking & blame
+
+    // ─── IDE STABILITY ──────────────────────────────────────────────
+    "kanezal.better-antigravity"          // Antigravity IDE stability
+  ]
+}

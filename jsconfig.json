@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "checkJs": false,
+    "strict": false,
+    "noEmit": true,
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "/js/*": ["./js/*"],
+      "/css/*": ["./css/*"]
+    }
+  },
+  "include": [
+    "js/**/*.js",
+    "scripts/**/*.mjs",
+    "scripts/**/*.cjs",
+    "sw.js",
+    "playwright.config.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "supabase/functions"
+  ]
+}

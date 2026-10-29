@@ -376,7 +376,7 @@ import { renderClasses as _renderClassesModule, loadClassLearningPath } from './
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.4.7';
 import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=5.4.7';
 import { renderTests } from './tests-management.js?v=5.5.0';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261027d';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261029_v31';
 import { renderVocabularyVault } from './vocab-vault.js?v=5.4.8';
 import { renderModules } from './modules.js?v=5.4.7';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.4.7';

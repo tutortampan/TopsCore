@@ -2028,7 +2028,7 @@ function openKickConfirmationModal(container, studentId, studentName, theme, onD
  */
 function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes, wordsTest, phrasesTest, allAttempts = [], mode }) {
   const results = [];
-  const activeQuizzes = themeQuizzes || themeTasks || [];
+  const activeQuizzes = themeQuizzes || themeTasks || theme?.quizzes || theme?.tasks || [];
 
   students.forEach(student => {
     const studAtts = (allAttempts || []).filter(a => a.student_id === student.id);
@@ -2147,8 +2147,10 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
       statusType,
       reason,
       avgScore,
-      completedTaskCount,
-      totalTasks: themeTasks.length,
+      completedQuizCount,
+      completedTaskCount: completedQuizCount,
+      totalQuizzes: activeQuizzes.length,
+      totalTasks: activeQuizzes.length,
       prereqMet,
       isAlreadyPassed,
       wordsPassed,

@@ -1,11 +1,120 @@
 {
+  // ─── DENO (Supabase Edge Functions only — isolated) ─────────────────
   "deno.enable": true,
   "deno.enablePaths": [
     "supabase/functions"
   ],
   "deno.lint": true,
-  "deno.unstable": true,
+  "deno.unstable": [
+    "broadcast-channel",
+    "net",
+    "kv"
+  ],
+
+  // ─── FILE ASSOCIATIONS ──────────────────────────────────────────────
   "files.associations": {
-    "*.sql": "pgsql"
-  }
+    "*.sql": "pgsql",
+    "*.mjs": "javascript",
+    "*.cjs": "javascript"
+  },
+
+  // ─── FORMATTING (Prettier on Save) ──────────────────────────────────
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": false,
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[sql]": {
+    "editor.formatOnSave": false
+  },
+
+  // ─── ESLINT ─────────────────────────────────────────────────────────
+  "eslint.enable": true,
+  "eslint.validate": [
+    "javascript"
+  ],
+  "eslint.run": "onSave",
+
+  // ─── ERROR LENS (Inline instant error/warning visualizer) ────────────
+  "errorLens.enabled": true,
+  "errorLens.followCursor": "allLines",
+  "errorLens.delay": 200,
+  "errorLens.fontStyleItalic": true,
+
+  // ─── GITLENS (Phase & commit tracking) ──────────────────────────────
+  "gitlens.currentLine.enabled": true,
+  "gitlens.codeLens.enabled": false,
+  "gitlens.hovers.enabled": true,
+
+  // ─── FIVE SERVER (Live Preview for TopsCore HTML/CSS/JS) ────────────
+  "fiveServer.port": 5500,
+  "fiveServer.openTerminal": false,
+  "fiveServer.highlight": true,
+
+  // ─── THUNDER CLIENT (REST API Tester for Edge Functions) ───────────
+  "thunder-client.saveToWorkspace": true,
+  "thunder-client.workspaceRelativePath": ".thunder-client",
+
+  // ─── PLAYWRIGHT ─────────────────────────────────────────────────────
+  "playwright.reuseBrowser": false,
+  "playwright.showTrace": true,
+
+  // ─── PATH INTELLISENSE ──────────────────────────────────────────────
+  "path-intellisense.showHiddenFiles": false,
+  "path-intellisense.autoSlashAfterDirectory": true,
+
+  // ─── EDITOR UX ──────────────────────────────────────────────────────
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.wordWrap": "on",
+  "editor.minimap.enabled": false,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.linkedEditing": true,
+  "editor.stickyScroll.enabled": true,
+
+  // ─── FILES & SEARCH EXCLUSIONS ──────────────────────────────────────
+  "files.eol": "\n",
+  "files.encoding": "utf8",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.supabase-cli": true,
+    "**/scratch": true,
+    "**/playwright-report": true,
+    "**/test-results": true,
+    "**/audit_screenshots": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/scratch": true,
+    "**/.git": true,
+    "**/playwright-report": true
+  },
+
+  // ─── TERMINAL ───────────────────────────────────────────────────────
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.enableMultiLinePasteWarning": "never",
+
+  // ─── WINDOW ─────────────────────────────────────────────────────────
+  "diffEditor.ignoreTrimWhitespace": false,
+  "window.menuBarVisibility": "compact",
+  "workbench.startupEditor": "none"
 }

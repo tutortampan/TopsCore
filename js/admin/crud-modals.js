@@ -1,5 +1,5 @@
 import {
-  adminFetchAll, adminInsert, adminUpdate, adminSoftDelete,
+  adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, clearAdminCache, clearApiCache,
   mergeDuplicateStudents, detectDuplicateStudents, mergeStudentPair,
   detectDuplicateQuestions, resequenceTestQuestions, resolveDuplicateQuestionGroup, batchResolveTestDuplicateQuestions,
   toLevelLetter
@@ -1483,6 +1483,38 @@ function _initBulkEditModal() {
   wireToggle('bulk-check-minscore', 'bulk-wrap-minscore');
   wireToggle('bulk-check-order', 'bulk-wrap-order');
 
+  // Helper to auto-activate checkbox when user interacts with input/select
+  const activateField = (chkId, wrapId) => {
+    const chk = document.getElementById(chkId);
+    const wrap = document.getElementById(wrapId);
+    if (chk && !chk.checked) {
+      chk.checked = true;
+      chk.dispatchEvent(new Event('change'));
+    } else if (wrap) {
+      wrap.style.opacity = '1';
+      wrap.style.pointerEvents = 'auto';
+    }
+  };
+
+  // Wire auto-activation on user input/change
+  document.getElementById('bulk-input-duration')?.addEventListener('input', () => activateField('bulk-check-duration', 'bulk-wrap-duration'));
+  document.getElementById('bulk-select-answertype')?.addEventListener('change', () => activateField('bulk-check-answertype', 'bulk-wrap-answertype'));
+  document.getElementById('bulk-input-minscore')?.addEventListener('input', () => activateField('bulk-check-minscore', 'bulk-wrap-minscore'));
+  document.getElementById('bulk-select-order')?.addEventListener('change', () => activateField('bulk-check-order', 'bulk-wrap-order'));
+
+  // Wire header clicks to toggle checkbox
+  document.querySelectorAll('.bulk-edit-field-header').forEach(hdr => {
+    hdr.style.cursor = 'pointer';
+    hdr.addEventListener('click', (e) => {
+      if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') return;
+      const chk = hdr.querySelector('input[type="checkbox"]');
+      if (chk) {
+        chk.checked = !chk.checked;
+        chk.dispatchEvent(new Event('change'));
+      }
+    });
+  });
+
   // Presets
   const setDur = (mins) => {
     const chk = document.getElementById('bulk-check-duration');
@@ -1548,7 +1580,7 @@ function _initBulkEditModal() {
       const chkOrd = document.getElementById('bulk-check-order')?.checked;
 
       if (!chkDur && !chkAns && !chkMin && !chkOrd) {
-        showToast('Pilih setidaknya satu opsi centang yang ingin diubah.', 'warning');
+        showToast('Pilih setidaknya satu opsi centang (⏱️ Waktu, 🗣️ Cara Jawab, atau 🎯 Batas Kelulusan) yang ingin diubah.', 'warning');
         return;
       }
 
@@ -1570,63 +1602,67 @@ function _initBulkEditModal() {
         const sb = getSupabase();
         if (!sb) throw new Error('Database client tidak tersedia.');
 
-        // 1. Fetch current records to check dynamic shells & payloads
-        const { data: currentRows, error: fetchErr } = await sb
+        // Build atomic bulk update payload
+        const commonUpdate = {
+          updated_at: new Date().toISOString()
+        };
+        if (chkDur && durVal != null) {
+          commonUpdate.working_duration_minutes = durVal;
+        }
+        if (chkAns && ansVal) {
+          commonUpdate.answer_type = ansVal;
+        }
+        if (chkMin && minVal != null) {
+          commonUpdate.minimum_required_score = minVal;
+        }
+        if (chkOrd && ordVal) {
+          commonUpdate.question_order = ordVal;
+        }
+
+        // 1. Direct atomic batch update across all selected tests in one single statement
+        const { error: batchErr } = await sb
           .from('tests')
-          .select('id, title, payload, is_dynamic_shell, working_duration_minutes, answer_type, minimum_required_score, question_order')
+          .update(commonUpdate)
           .in('id', _bulkEditSelectedIds);
 
-        if (fetchErr) throw fetchErr;
+        if (batchErr) throw batchErr;
 
-        // 2. Perform updates
-        for (const row of (currentRows || [])) {
-          const updatePayload = {};
-          if (chkDur && durVal != null) {
-            updatePayload.working_duration_minutes = durVal;
-          }
-          if (chkAns && ansVal) {
-            updatePayload.answer_type = ansVal;
-          }
-          if (chkMin && minVal != null) {
-            updatePayload.minimum_required_score = minVal;
-          }
-          if (chkOrd && ordVal) {
-            updatePayload.question_order = ordVal;
-          }
+        // 2. Concurrently sync nested JSON payload for dynamic shells
+        const { data: currentRows } = await sb
+          .from('tests')
+          .select('id, payload')
+          .in('id', _bulkEditSelectedIds);
 
-          // If dynamic shell / has JSON payload, sync payload properties
-          if (row.payload && typeof row.payload === 'object') {
-            const nextPayload = { ...row.payload };
-            if (chkDur && durVal != null) {
-              nextPayload.working_duration_minutes = durVal;
-              nextPayload.duration_minutes = durVal;
-            }
-            if (chkAns && ansVal) {
-              nextPayload.answer_type = ansVal;
-            }
-            if (chkMin && minVal != null) {
-              nextPayload.minimum_required_score = minVal;
-            }
-            if (chkOrd && ordVal) {
-              nextPayload.question_order = ordVal;
-            }
-            updatePayload.payload = nextPayload;
+        if (currentRows && currentRows.length > 0) {
+          const payloadUpdates = currentRows
+            .filter(r => r.payload && typeof r.payload === 'object')
+            .map(r => {
+              const nextPayload = { ...r.payload, ...commonUpdate };
+              if (chkDur && durVal != null) {
+                nextPayload.duration_minutes = durVal;
+              }
+              return sb.from('tests').update({ payload: nextPayload }).eq('id', r.id);
+            });
+          if (payloadUpdates.length > 0) {
+            await Promise.all(payloadUpdates);
           }
-
-          await adminUpdate('tests', row.id, updatePayload);
         }
 
-        // 3. If answer_type changed, also sync test_questions for those test IDs
+        // 3. If answer_type changed, also sync test_items in one atomic batch
         if (chkAns && ansVal) {
-          const { error: qErr } = await sb
-            .from('test_items')
-            .update({ answer_type: ansVal })
-            .in('test_id', _bulkEditSelectedIds);
-
-          if (qErr) {
-            console.warn('[BulkEdit] Note: test_questions sync returned:', qErr);
+          try {
+            await sb
+              .from('test_items')
+              .update({ answer_type: ansVal })
+              .in('test_id', _bulkEditSelectedIds);
+          } catch (qErr) {
+            console.warn('[BulkEdit] Note: test_items sync returned:', qErr);
           }
         }
+
+        // Invalidate caches so UI immediately displays new values
+        clearAdminCache('tests');
+        clearApiCache('tests');
 
         showToast(`Berhasil memperbarui ${count} test secara massal.`, 'success');
         closeModal();
@@ -1636,7 +1672,7 @@ function _initBulkEditModal() {
         }
       } catch (err) {
         console.error('[BulkEdit] Failed:', err);
-        showToast('Gagal menerapkan perubahan: ' + (err.message || 'Unknown error'), 'danger');
+        showToast('Gagal menerapkan perubahan: ' + (err.message || 'Unknown error'), 'error');
       } finally {
         saveBtn.disabled = false;
         saveBtn.innerHTML = origText;
@@ -1672,7 +1708,7 @@ async function openBulkEditTestsModal(selectedIds = [], onComplete = null) {
     _bulkEditSelectedIds.forEach(id => {
       const rec = recordsMap[id];
       const title = rec?.title || rec?.shell_code || `ID: ${id.slice(0, 8)}...`;
-      const isTask = /\bTASK\b/i.test(title) || rec?.test_type === 'VOCAB_TASK' || rec?.test_type === 'PHRASE_TASK';
+      const isTask = /\b(TASK|QUIZ)\b/i.test(title) || rec?.test_type === 'quiz' || rec?.test_type === 'VOCAB_TASK' || rec?.test_type === 'PHRASE_TASK';
       const chip = document.createElement('span');
       chip.className = `badge ${isTask ? 'badge-task-chip' : 'badge-test-chip'}`;
       chip.textContent = title;
@@ -1693,13 +1729,13 @@ async function openBulkEditTestsModal(selectedIds = [], onComplete = null) {
     }
   });
 
-  // If all selected items are quizzes, pre-select 5 minutes by default as convenience
-  const allAreTasks = _bulkEditSelectedIds.every(id => {
+  // If all selected items are quizzes/tasks, pre-select 5 minutes by default as convenience
+  const allAreQuizzes = _bulkEditSelectedIds.every(id => {
     const r = window._classHubRecords?.[id];
-    return r ? (r.test_type === 'VOCAB_TASK' || r.test_type === 'PHRASE_TASK' || /\bTASK\b/i.test(r.title || '')) : false;
+    return r ? (r.test_type === 'quiz' || r.test_type === 'VOCAB_TASK' || r.test_type === 'PHRASE_TASK' || /\b(QUIZ|TASK)\b/i.test(r.title || '') || r.category === 'quiz') : false;
   });
 
-  if (allAreTasks) {
+  if (allAreQuizzes) {
     const durChk = document.getElementById('bulk-check-duration');
     const durWrap = document.getElementById('bulk-wrap-duration');
     const durInput = document.getElementById('bulk-input-duration');

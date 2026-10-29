@@ -6,7 +6,12 @@
     "test:syntax": "node scripts/check_all_js_syntax.cjs",
     "test:manifest": "node scripts/generate_sw_manifest.mjs",
     "test:parity": "node scripts/test_student_dashboard_exam_parity.mjs",
+    "test:grading": "node scripts/verify_green_star_grading.mjs",
+    "test:duration": "node scripts/test_submit_and_duration.mjs",
+    "test:prereq": "node scripts/test_sequential_exam_prerequisite.mjs",
+    "test:e2e": "playwright test",
     "test": "node scripts/check_all_js_syntax.cjs && node scripts/generate_sw_manifest.mjs && node scripts/test_student_dashboard_exam_parity.mjs",
+    "serve": "serve . -p 5500",
     "build": "echo 'Static deploy ready'"
   },
   "devDependencies": {
