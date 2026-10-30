@@ -53,7 +53,7 @@ export async function renderVocabularyVault(area) {
     const phrasesCount = (words || []).filter(w => phraseTypes.includes((w.word_type || '').toLowerCase())).length;
     const topicsCount = (topics || []).length;
 
-    let activeVaultTab = window._activeVaultTab || 'blueprint';
+    let activeVaultTab = window._activeVaultTab || localStorage.getItem('topscore_admin_vault_tab') || 'blueprint';
     if (activeVaultTab === 'topics') activeVaultTab = 'blueprint';
 
     const buildVaultTabs = (activeId) => [
@@ -94,6 +94,12 @@ export async function renderVocabularyVault(area) {
     window._switchVaultTab = (tabId) => {
       activeVaultTab = tabId;
       window._activeVaultTab = tabId; // persist across re-renders
+      try {
+        localStorage.setItem('topscore_admin_vault_tab', tabId);
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, '', `#vocab_vault?tab=${tabId}`);
+        }
+      } catch (_) {}
       renderActiveVaultView();
     };
 
@@ -1506,7 +1512,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
     const importedLevels = Array.from(levelsSet).sort((a, b) => a - b);
     if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
     try {
-      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261027c');
+      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261031_v56');
       await openAutoGenerateModal({
         availableLevels: importedLevels,
         preSelectedLevels: importedLevels,

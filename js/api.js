@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=5.3.2';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261030_v41';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261031_v58';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=5.3.2';
 import { escapeHtml, escHtml } from './app.js?v=5.3.2';
 
@@ -9,7 +9,7 @@ export function getGrade(pct) {
   return calculateGrade(pct);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -2738,11 +2738,57 @@ export async function exportVaultWords(mode = 'all') {
 
 export async function adminUnlockRemedialExam(attemptId) {
   const sb = await getSupabase();
+  const { data: currentAtt } = await sb.from('attempts').select('id, student_id, test_id, is_remedial_unlocked').eq('id', attemptId).single();
   const { data, error } = await sb.from('attempts')
     .update({ is_remedial_unlocked: true, updated_at: new Date().toISOString() })
     .eq('id', attemptId)
     .select().single();
   if (error) throw error;
+
+  // Rule 2.10: Paired Theme Exam Remedial Synchronization ("Satu Paket")
+  // If this exam belongs to a theme package, also synchronize its paired sibling exam for this student
+  if (currentAtt?.test_id && currentAtt?.student_id) {
+    try {
+      const { data: currentTest } = await sb.from('tests').select('id, class_id, shell_code, payload').eq('id', currentAtt.test_id).single();
+      if (currentTest?.shell_code && currentTest.shell_code.includes('-EXAM')) {
+        const rawTheme = currentTest.payload?.theme_code || currentTest.shell_code.replace(/^[0-9]+/, '').charAt(0) || 'A';
+        const tc = rawTheme.toUpperCase();
+        const { data: siblingTests } = await sb.from('tests')
+          .select('id, shell_code, payload')
+          .eq('class_id', currentTest.class_id)
+          .ilike('shell_code', `%${tc}-%-EXAM%`)
+          .neq('id', currentTest.id);
+
+        if (siblingTests && siblingTests.length > 0) {
+          for (const sTest of siblingTests) {
+            const { data: siblingAtts } = await sb.from('attempts')
+              .select('id, score, total_questions')
+              .eq('student_id', currentAtt.student_id)
+              .eq('test_id', sTest.id);
+
+            if (siblingAtts && siblingAtts.length > 0) {
+              for (const sAtt of siblingAtts) {
+                const totalQ = Number(sAtt.total_questions || 70);
+                const maxRemPts = totalQ * 0.6;
+                const effScore = Math.min(Number(sAtt.score ?? 0), maxRemPts);
+                await sb.from('attempts')
+                  .update({
+                    is_remedial_unlocked: true,
+                    effective_score: effScore,
+                    grade: 'C',
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', sAtt.id);
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[adminUnlockRemedialExam] Sibling exam remedial sync warning:', e);
+    }
+  }
+
   clearAdminCache('attempts');
   return data;
 }
@@ -2927,9 +2973,9 @@ export async function updateClassTestsConfig(params = {}) {
   const sb = await getSupabase();
   const {
     classId,
-    taskDurationMinutes = 5,
-    wordsTaskDurationMinutes,
-    phrasesTaskDurationMinutes,
+    taskDurationMinutes = 15,
+    wordsTaskDurationMinutes = 15,
+    phrasesTaskDurationMinutes = 10,
     taskAnswerType = 'spoken',
     wordsTaskAnswerType,
     phrasesTaskAnswerType,
@@ -2980,8 +3026,8 @@ export async function updateClassTestsConfig(params = {}) {
       updatedTests++;
     } else {
       const dur = isPhrase 
-        ? Number(phrasesTaskDurationMinutes || 5) 
-        : Number(wordsTaskDurationMinutes || taskDurationMinutes || 5);
+        ? Number(phrasesTaskDurationMinutes || 10) 
+        : Number(wordsTaskDurationMinutes || taskDurationMinutes || 15);
       updateData.working_duration_minutes = dur;
       updateData.minimum_required_score = Number(taskPassingScore);
       const taskAns = isPhrase 
@@ -3099,9 +3145,9 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     let displayOrder = 1;
     let lastTaskId = null;
 
-    const taskDur = config.taskDurationMinutes !== undefined ? Number(config.taskDurationMinutes) : 5;
-    const wordsTaskDur = config.wordsTaskDurationMinutes !== undefined ? Number(config.wordsTaskDurationMinutes) : (taskDur || 5);
-    const phrasesTaskDur = config.phrasesTaskDurationMinutes !== undefined ? Number(config.phrasesTaskDurationMinutes) : 5;
+    const taskDur = config.taskDurationMinutes !== undefined ? Number(config.taskDurationMinutes) : 15;
+    const wordsTaskDur = config.wordsTaskDurationMinutes !== undefined ? Number(config.wordsTaskDurationMinutes) : (taskDur || 15);
+    const phrasesTaskDur = config.phrasesTaskDurationMinutes !== undefined ? Number(config.phrasesTaskDurationMinutes) : 10;
     const taskAns = config.taskAnswerType || 'spoken';
     const wordsTaskAns = config.wordsTaskAnswerType || taskAns || 'spoken';
     const phrasesTaskAns = config.phrasesTaskAnswerType || taskAns || 'spoken';

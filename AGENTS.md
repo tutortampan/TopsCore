@@ -279,25 +279,25 @@ Rules:
 - Direct English Only for all user interfaces, prompts, and system messages.
 - Manual Override: Teachers have optional manual override privileges.
 
-## 2.13 Written answer tolerance
+## 2.13 Answer Tolerance & Partial Credit Engine
 
-For vocabulary-style written evaluation, normalize at minimum:
-- leading/trailing whitespace
-- repeated spaces
-- case
-- unnecessary punctuation according to the specification
+Authoritative evaluation rules for vocabulary and phrase assessments across Spoken and Written modes:
 
-Use a per-word Damerau-Levenshtein or equivalent edit-distance approach where configured.
+### Modality Tolerance Matrix
+| Mistake Type | Spoken (Speech-to-Text) | Written (Typed) | Result Code |
+| :--- | :---: | :---: | :---: |
+| Exact match (normalized punctuation/case) | 1.0 pt | 1.0 pt | `correct` |
+| 1–2 character edit distance (Damerau-Levenshtein $\le 2$) | 1.0 pt | 0.5 pt | Spoken: `correct`<br>Written: `minor_spelling_error` |
+| Function word dropped/added in 4+ word idiom (`a`, `the`, `in`, etc.) | 1.0 pt | N/A | `correct` |
+| Plural-s / -es mismatch across multi-word idiom | 1.0 pt | N/A | `correct` |
+| Word form / Part-of-speech mismatch sharing common root (stem $\ge 5$) | 0.5 pt | 0.5 pt | `minor_word_form_error` |
+| Pronoun substitution or semantic mismatch | 0.0 pt | 0.0 pt | `incorrect` |
 
-Required result labels:
-- `Correct`
-- `Minor Spelling Error`
-- `Incorrect`
-
-Default tolerance:
-- 0 errors → full point
-- 1–2 errors → half point
-- 3+ errors → zero
+Rules:
+- Normalization: Always strip non-alphanumeric punctuation and expand contractions before evaluation.
+- Pronoun Protection: Pronouns (`my`, `your`, `his`, `her`, `our`, `their`, `its`) are protected content words and must never be stripped as function words.
+- Pedagogical Alignment: Beginners are granted 0.5 pt partial credit for producing the correct root/word family (`minor_word_form_error`) in both spoken and written modes.
+- Single Source of Truth: Implemented strictly within `evaluateAnswer()` in `js/grading.js`.
 
 The tolerance engine must be deterministic, tested, and server-authoritative.
 
@@ -422,6 +422,16 @@ Audit examples:
 - modify PROGRAM/CLASS/level
 - security changes
 - admin authentication events where appropriate
+
+## 2.20 Screen, Sub-Tab, and Route State Persistence on Reload/Refresh (/learn)
+
+The application MUST strictly preserve and restore the user's active screen, URL hash, active sub-tabs, and selected contextual filters whenever a browser refresh, page reload, background data sync, or CRUD update takes place.
+
+Rules:
+- **No Disorienting Redirects**: Under NO circumstances may an action, update, or reload reset the user's view or silently redirect them to a default screen (such as `#tests` or default dashboard) while they are working in another view (e.g., Class Hub, Vocabulary Vault, System Settings, Batches, Student Registration, Curriculum).
+- **Sub-Tab & Filter Synchronization**: Contextual sub-states (e.g., active tabs in Class Hub, Vocabulary Vault tabs, System Settings tabs, Student Registration tabs, Test Analytics class track filters, and Student Dashboard selected class / active modal) MUST be persisted in URL hash and bidirectional `localStorage` / `sessionStorage`.
+- **Modal & Detail State Continuity**: Opening modals or detail views (such as `#profile-<studentId>`, `#levels-<classId>`, `#select-class`, `#profile-history`) must maintain clean background view state and restore the prior view cleanly upon modal dismissal without flashing blank canvases or switching screens.
+- **Authoritative Contract**: Any future module or screen added to TopsCore MUST implement this route and state persistence pattern.
 
 ---
 

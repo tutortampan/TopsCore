@@ -186,13 +186,105 @@ export function parseCorrectAnswers(rawAnswer) {
 }
 
 /**
+ * Known derivational suffixes for morphological stem matching (Part-of-Speech variants).
+ * Matches word-form transformations like locate/location, dedicate/dedicated, create/creative.
+ */
+const POS_DERIVATIONAL_SUFFIXES = new Set([
+  'tion', 'sion', 'ion', 'ation', 'ition', 'ution', 'ication',
+  'ment', 'ness', 'ity', 'ety', 'ing', 'ed', 'er', 'or',
+  'ly', 'ful', 'iful', 'y', 'able', 'ible', 'ive', 'al',
+  'ous', 'ious', 'ize', 'ise', 'ate', 'est', 's', 'es',
+  'ance', 'ence', 'ant', 'ent', 'ic', 'ical', 'less', 'ss',
+  't', 'ce', 'se', 'd', 'e'
+]);
+
+/**
+ * Irregular morphological word families sharing common conceptual roots.
+ */
+const IRREGULAR_WORD_FAMILIES = [
+  ['succeed', 'success', 'successful', 'successfully'],
+  ['choose', 'choice'],
+  ['decide', 'decision', 'decisive'],
+  ['describe', 'description', 'descriptive'],
+  ['conclude', 'conclusion', 'conclusive'],
+  ['provide', 'provision'],
+  ['apply', 'application', 'applicant'],
+  ['know', 'knowledge'],
+  ['fly', 'flight'],
+  ['die', 'death', 'dead'],
+  ['grow', 'growth'],
+  ['strong', 'strength'],
+  ['long', 'length'],
+  ['wide', 'width'],
+  ['deep', 'depth'],
+  ['high', 'height'],
+];
+
+/**
+ * Check if two single words share a morphological root / part-of-speech family.
+ */
+export function isSingleWordFormMatch(sW, tW) {
+  if (!sW || !tW || sW === tW) return false;
+
+  for (const fam of IRREGULAR_WORD_FAMILIES) {
+    if (fam.includes(sW) && fam.includes(tW)) return true;
+  }
+
+  if (sW.length < 4 || tW.length < 4) return false;
+
+  let commonPrefixLen = 0;
+  while (
+    commonPrefixLen < sW.length &&
+    commonPrefixLen < tW.length &&
+    sW[commonPrefixLen] === tW[commonPrefixLen]
+  ) {
+    commonPrefixLen++;
+  }
+
+  if (commonPrefixLen >= 4) {
+    const sRest = sW.slice(commonPrefixLen);
+    const tRest = tW.slice(commonPrefixLen);
+    const isSuffix = (rest) => rest === '' || POS_DERIVATIONAL_SUFFIXES.has(rest);
+    if (isSuffix(sRest) && isSuffix(tRest)) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Check if two answer phrases share morphological word-form stems across their words.
+ */
+export function isWordFormAnswerMatch(studentText, optText) {
+  const s = String(studentText || '').toLowerCase().trim();
+  const t = String(optText || '').toLowerCase().trim();
+  if (!s || !t || s === t) return false;
+
+  const sWords = s.split(/\s+/).filter(Boolean);
+  const tWords = t.split(/\s+/).filter(Boolean);
+  if (sWords.length !== tWords.length || sWords.length === 0) return false;
+
+  let hasFormDiff = false;
+  for (let i = 0; i < sWords.length; i++) {
+    const sw = sWords[i];
+    const tw = tWords[i];
+    if (sw === tw) continue;
+    if (isSingleWordFormMatch(sw, tw)) {
+      hasFormDiff = true;
+    } else {
+      return false;
+    }
+  }
+  return hasFormDiff;
+}
+
+/**
  * Single Authoritative Answer Evaluation (Written, Speech, Dropdown, Multiple Choice)
  * Evaluates student answer against raw correct answer snapshot.
  *
  * @param {string} studentAnswer
  * @param {string|string[]} rawCorrectAnswer
  * @param {string} answerType ('written' | 'speech_to_text' | 'spoken' | 'dropdown' | 'multiple_choice')
- * @returns {{ result: 'correct'|'minor_spelling_error'|'incorrect', score: number, matchedAnswer: string }}
+ * @returns {{ result: 'correct'|'minor_spelling_error'|'minor_word_form_error'|'incorrect', score: number, matchedAnswer: string }}
  */
 export function evaluateAnswer(studentAnswer, rawCorrectAnswer, answerType = 'written') {
   const normStudent = cleanPunctuationAndSymbols(studentAnswer);
@@ -224,7 +316,21 @@ export function evaluateAnswer(studentAnswer, rawCorrectAnswer, answerType = 'wr
       return { result: 'correct', score: 1.0, matchedAnswer: opt };
     }
 
-    // 2. Edit distance (Damerau-Levenshtein)
+    // 2. Word Form / Part-of-Speech Matching (Morphological Stem Matching)
+    // Awards 0.5 pt partial credit when beginner student demonstrates knowledge of the
+    // root word family but produces an intentional grammatical variation (e.g. "success"
+    // vs "succeed", "dedicate" vs "dedicated", "location" vs "locate").
+    // Evaluated before acoustic typo leniency to distinguish morphological errors from
+    // acoustic microphone noise. Applies across BOTH spoken and written modalities.
+    const isWordForm = isWordFormAnswerMatch(normStudent, normOpt);
+    if (isWordForm) {
+      if (bestResult.score < 0.5) {
+        bestResult = { result: 'minor_word_form_error', score: 0.5, matchedAnswer: opt };
+      }
+      continue; // do not treat intentional grammatical word form variations as acoustic typos
+    }
+
+    // 3. Edit distance (Damerau-Levenshtein)
     const distNorm = damerauLevenshtein(normStudent, normOpt);
     const distCompact = damerauLevenshtein(compactStudent, compactOpt);
     const dist = Math.min(distNorm, distCompact);
@@ -243,6 +349,57 @@ export function evaluateAnswer(studentAnswer, rawCorrectAnswer, answerType = 'wr
         // FOR WRITTEN: standard minor spelling error (0.5 pt)
         if (bestResult.score < 0.5) {
           bestResult = { result: 'minor_spelling_error', score: 0.5, matchedAnswer: opt };
+        }
+      }
+    }
+
+    // 4. Function-Word + Plural-S Tolerance (spoken only, multi-word idioms/phrases)
+    // Covers STT dropping/inserting unstressed articles, prepositions, conjunctions,
+    // and minor plural-s mismatches across multiple content words.
+    // e.g. "cost an arm and leg" vs "cost an arm and a leg"        (function word)
+    //      "back to drawing board" vs "back to the drawing board"   (function word)
+    //      "cats dogs and birds"  vs "cat dog and bird"             (plural-s on 3 words, LD=3)
+    //      "differences and similarities" vs "difference and similarity" (plural-s)
+    // Only applied when the target is 4+ words to avoid false positives on short answers.
+    if (isSpeech) {
+      const FW_RE = /\b(a|an|the|to|in|on|of|at|for|from|with|by|as|up|out|off|over|into|onto|upon|and|or|but|so|yet|nor|both|just|very|too)\b/g;
+      const optWordCount = normOpt.split(/\s+/).length;
+
+      if (optWordCount >= 4) {
+        // Strip function words first
+        const contentStudent = normStudent.replace(FW_RE, ' ').replace(/\s+/g, ' ').trim();
+        const contentOpt    = normOpt.replace(FW_RE, ' ').replace(/\s+/g, ' ').trim();
+
+        // S-stem: strip trailing -s / -es / -ies from words ≥4 chars (safe — avoids "bus"→"bu")
+        // "ies" → "y" (e.g. similarities→similarity), "es" → "" (e.g. boxes→box), "s" → "" (e.g. cats→cat)
+        const sstem = (str) =>
+          str.split(/\s+/).map(w =>
+            w.length >= 4
+              ? w.endsWith('ies') ? w.slice(0, -3) + 'y'
+              : w.endsWith('es')  ? w.slice(0, -2)
+              : w.endsWith('s')   ? w.slice(0, -1)
+              : w
+              : w
+          ).join(' ');
+
+        const stemStudent = sstem(contentStudent);
+        const stemOpt     = sstem(contentOpt);
+
+        if (contentStudent && contentOpt) {
+          // Pass A — exact content-word match (function words stripped only)
+          if (contentStudent === contentOpt) {
+            return { result: 'correct', score: 1.0, matchedAnswer: opt };
+          }
+          // Pass B — exact stem match (function words + plural-s stripped)
+          if (stemStudent === stemOpt) {
+            return { result: 'correct', score: 1.0, matchedAnswer: opt };
+          }
+          // Pass C — near-miss on stems (≤2 LD) → correct (speech leniency)
+          const stemDist   = damerauLevenshtein(stemStudent, stemOpt);
+          const stemMinLen = Math.min(stemStudent.length, stemOpt.length);
+          if (stemDist <= 2 && stemMinLen >= 4) {
+            return { result: 'correct', score: 1.0, matchedAnswer: opt };
+          }
         }
       }
     }
@@ -518,7 +675,7 @@ export function getScoreColor(percentage, isRemedial = false) {
 export function getEvaluationColor(category) {
   const c = String(category || '').toLowerCase();
   if (c === 'correct' || c === 'full') return TOPSCORE_COLORS.CORRECT;
-  if (c === 'minor_spelling_error' || c === 'partial' || c === 'half')
+  if (c === 'minor_spelling_error' || c === 'minor_word_form_error' || c === 'partial' || c === 'half')
     return TOPSCORE_COLORS.PARTIAL;
   return TOPSCORE_COLORS.INCORRECT;
 }

@@ -1,3 +1,762 @@
+## [2026-10-31 07:15] — Phase 224: Student Dashboard `attTime` ReferenceError Fix & v61 Cache Bump
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 224
+**Status:** PASS
+
+### Why
+- User reported `Failed to load dashboard: attTime is not defined` on the student lobby (`dashboard.html`) for Muhammad Tarmizi Tohir, halting dashboard data hydration and causing Rank Standings to spin indefinitely.
+- Root cause: In `js/dashboard.js` line 1913 inside the `attempts.forEach` loop, `attTime` was evaluated in an attempt comparison condition before being declared in that scope.
+
+### Changed
+- `js/dashboard.js`:
+  - Declared `const attTime = new Date(att.submitted_at || att.created_at || 0).getTime();` within `attempts.forEach` (line 1900), resolving the ReferenceError.
+  - Added Paired Theme Exam Remedial Synchronization in `dashboard.js` assessment rendering loop so student lobby reflects the "Satu Paket" rule.
+- `js/api.js`:
+  - Removed invalid reference to non-existent database column `is_remedial` during attempt update queries, retaining official column `is_remedial_unlocked`.
+- `dashboard.html`:
+  - Bumped cache buster to `v=20261031_v61`.
+
+### Tests
+- `scripts/verify_tarmizi_dashboard.mjs`: Successfully loaded Muhammad Tarmizi Tohir's 48 attempts in Node environment, computed 2 exams and 9 activities with 0 errors.
+- `scripts/check_all_js_syntax.cjs`: 40/40 JS files PASS with 0 syntax errors.
+
+---
+
+## [2026-10-31 07:05] — Phase 223: Paired Exam Remedial Synchronization ("Satu Paket"), Anti-Crowding Table Fix & 5-Factor Diagnostics
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 223
+**Status:** PASS
+
+### Why
+- Per user instruction: in every theme (A, B, C, D), Words Exam and Phrases Exam are "satu paket" (one complete package). If a student has remedial status on one, both must reflect remedial status (`60%ᴿ` cap) so there is no contradictory or mismatched state on the Class Hub attendance grid.
+- Anti-crowding optimization: in "Fit Screen" mode, numbers and labels (`SCORE`, `THEME TOT EXAM PTS`, `60%ᴿ`, `WRD PTS`) were tight and slightly overlapping. Reduced dynamic font size calculation and calibrated column widths to prevent collision.
+- Completed Phase 222: added 5th diagnostic factor chip (`Vocab Gap`) to Test Analytics header alongside `Spelling`, `Literal`, `Word Form`, and `Timed Out`.
+
+### Changed
+- `js/admin/app.js`:
+  - Enforced Paired Theme Exam Remedial Synchronization in `studentsGridData` construction and `renderAttendanceGridMatrix`. If either Words or Phrases Exam in a theme is remedial (`is_remedial_unlocked || is_remedial`), both are synchronized with `is_remedial_unlocked = true`, effective score capped at 60%, and `60%ᴿ` displayed.
+  - Dynamically scaled matrix font size: `Math.min(10.0, Math.max(7.5, rowHeight * 0.35))` and badge font `Math.min(8.5, Math.max(6.5, rowHeight * 0.28))`.
+  - Widened columns: Score columns to `54px`, PTS columns to `60px`.
+- `js/api.js`:
+  - Upgraded `adminUnlockRemedialExam(attemptId)`: unlocking an exam attempt in a theme package automatically finds and authorizes the sibling exam attempt for that student, applying effective score capping (60%) and Grade C.
+- `js/admin/tests-management.js`:
+  - Added 5th diagnostic factor (`vocab_gap`) to `diagPcts`, `diagLabels`, and header chips in the Test Analytics dashboard.
+- `css/admin.css`:
+  - Added `.tac-diag-chip.chip-vocabgap` purple styling.
+  - Enhanced header cell badges (`.asm-hdr-cell`, `.test-num-total`, `.test-subtag`) with flex centering, 1.0 line height, and negative letter-spacing to prevent text collisions.
+- Cache busters:
+  - Bumped to `v=20261031_v60` in `admin.html`, `js/admin/app.js`.
+- `docs/DECISIONS.md`:
+  - Added `DECISION-035: Paired Theme Exam Remedial Synchronization ("Satu Paket" Rule)`.
+
+### Tests
+- `scripts/find_remedial_mismatches.mjs`: 0 mismatches found across the entire database.
+- `scripts/test_paired_remedial_sync_logic.mjs`: 3/3 logic tests PASS with 100% accuracy.
+- `scripts/check_all_js_syntax.cjs`: 40/40 JS files PASS with 0 syntax errors.
+
+---
+
+## [2026-10-31 06:35] — Phase 221b: Live Database Score Restoration (PostgREST Pagination Fix)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 221b
+**Status:** PASS
+
+### Why
+- An initial adjustment script fetched attempts answers via `.in('attempt_id', chunk)` which silently hit PostgREST's default 1,000-row limit on exams with 120/280/480 questions, causing artificially deflated scores in the live database (e.g. Aunul Fikri Yasir dropped to 3.5 pts / 1.25%).
+- User immediately flagged this anomaly; thorough 3-cycle root-cause analysis identified the PostgREST query truncation.
+
+### Changed
+- Built and executed `scripts/restore_all_attempt_scores.mjs`:
+  - Implemented strict per-attempt pagination using `.range(page * 1000, (page + 1) * 1000 - 1)` until `answers.length < 1000`.
+  - Re-evaluated all 337 live exam attempts with true complete question sets and the authoritative tolerance engine.
+- Successfully restored all 337 attempts in live Supabase (+1942.00 pts restored).
+- Executed `scripts/sync_db_theme_remedials.mjs` to synchronize the 4 Theme B remedial pairs in the database.
+
+### Tests
+- Verified Aunul Fikri Yasir: restored to 190/280 (67.86%, Grade C) ✅
+- Verified Unggul Wirakse: restored to 407.5/480 (84.9%, Grade B) ✅
+- Verified Syazida Shinda Debi: restored to 213.5/280 (76.25%, Grade C) ✅
+- Verified Gagan Tara Deswari: restored to 332/480 (69.17%, Grade C) ✅
+
+---
+
+## [2026-10-31 06:06] — Phase 221: Word Form Partial Credit Engine & System Rule Codification (/learn)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 221
+**Status:** PASS
+
+### Why
+- Per user request and `/learn` command following empirical test analysis (999 attempts, 81k answers), codified a permanent project invariant: beginner students are granted 0.5 pt partial credit (`minor_word_form_error`) when producing the correct root word family (e.g. "success" for "succeed", "dedicate" for "dedicated", "location" for "locate") across BOTH Spoken and Written modes.
+- Distinguishes morphological grammatical variants from phonetic microphone noise (STT typos get 1.0 pt; intentional word-form variations get 0.5 pt).
+
+### Changed
+- `AGENTS.md` — Section 2.13 expanded from "Written answer tolerance" to "2.13 Answer Tolerance & Partial Credit Engine", formalizing the complete tolerance matrix (exact match, acoustic LD <= 2, function-word drops on idioms, plural-s tolerance, word-form partial credit, pronoun protection).
+- `docs/DECISIONS.md` — Added `DECISION-034: Beginner-Friendly Vocabulary Tolerance Matrix & Word Form Partial Credit`.
+- `js/grading.js`:
+  - Added `POS_DERIVATIONAL_SUFFIXES` and `IRREGULAR_WORD_FAMILIES` lookup set.
+  - Added exported helpers `isSingleWordFormMatch()` and `isWordFormAnswerMatch()`.
+  - Added Step 2 in `evaluateAnswer()` for Morphological Word Form matching (0.5 pt `minor_word_form_error`), evaluated before generic edit distance to prevent grammatical variants from being treated as acoustic typos.
+  - Updated `getEvaluationColor()` to support `minor_word_form_error` returning `TOPSCORE_COLORS.PARTIAL` (#FFFF00).
+- `js/result.js`:
+  - Updated `getEvalCategory()` to categorize `minor_word_form_error` as partial with yellow styling.
+- `js/admin/tests-management.js`:
+  - Updated `classifyStudentError()` to recognize `minor_word_form_error` directly mapping to `word_form` diagnostics.
+- Cache busters:
+  - Bumped `grading.js` and `result.js` imports across all consumer files to `?v=20261031_v58`.
+
+### Tests
+- `scratch/test_evaluate_answer.mjs` — 14/14 test cases PASS:
+  - Spoken & Written word forms (`success`/`succeed`, `dedicate`/`dedicated`, `location`/`locate`, `qualification`/`qualify`) -> 0.5 pt `minor_word_form_error` ✅
+  - Spoken acoustic typo (`suceed`/`succeed`) -> 1.0 pt `correct` ✅
+  - Written typo (`suceed`/`succeed`) -> 0.5 pt `minor_spelling_error` ✅
+  - Multi-word function-word tolerance -> 1.0 pt `correct` ✅
+  - Complete semantic mismatch (`wait`/`goal`) -> 0.0 pt `incorrect` ✅
+- Full JS check: 40/40 files PASS with 0 syntax errors.
+
+### Next Action
+- Phase 222: Verify 5-factor error diagnostics in Test Analytics header (`spelling`, `word_form`, `literal`, `timeout`, `vocab_gap`).
+
+---
+
+## [2026-10-31 05:48] — Phase 220b: evaluateAnswer() — Plural-S Tolerance added to Step 3
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 220b (extension of Phase 220)
+**Status:** PASS
+
+### Why
+- Students occasionally produce plural-s mismatches across multiple content words in 4+ word spoken phrases (e.g. "cats dogs and birds" vs "cat dog and bird", LD=3 — previously uncaught).
+- Combined function-word + plural mismatch also uncaught (e.g. "costs an arm and legs" vs "cost an arm and a leg").
+
+### Changed
+- `js/grading.js` — Step 3 enhanced with S-stemming sub-pass:
+  - Strips `-ies`→`-y`, `-es`→`""`, `-s`→`""` from content words ≥4 chars (safe: avoids "bus"→"bu").
+  - Pass A: exact content-word match (function-words stripped). Pass B: exact stem match (FW + plural stripped). Pass C: LD ≤2 on stems.
+  - Pronouns (`my`, `your`, `his`, `her`, etc.) deliberately excluded from FW strip — meaning changes preserved.
+  - Guard unchanged: spoken answers only, target 4+ words only.
+
+### Tests
+- Smoke test: 11 cases — all PASS (including correct FAIL for pronoun mismatch).
+- Full JS syntax: 40/40 PASS, 0 failures.
+
+### Next Action
+- Phase 221: Word Form / Part-of-Speech partial credit (0.5pt)
+
+---
+
+## [2026-10-31 05:40] — Phase 220: evaluateAnswer() — Function-Word Tolerance + Punctuation Confirmed
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 220
+**Status:** PASS
+
+### Why
+- Empirical data showed 2.6% of active wrong answers were students dropping unstressed function words from spoken idioms (articles, prepositions: "a", "the", "in", "of", etc.) — e.g. "cost an arm and leg" vs "cost an arm and a leg", "back to drawing board" vs "back to the drawing board".
+- Punctuation failures (0.8%) were confirmed already handled by existing `cleanPunctuationAndSymbols` + `stripAllPunctuationAndSpaces` pipeline (hyphens, commas, apostrophes, periods all stripped before comparison).
+
+### Changed
+- `js/grading.js` — `evaluateAnswer()`: Added Step 3 inside the `for (const opt of possibleAnswers)` loop — Function-Word Tolerance pass for spoken answers on 4+ word targets. Strips unstressed function words (a, an, the, to, in, on, of, at, for, from, with, by, as, up, out, off, over, into, onto, upon, and, or, but, so, yet, nor, both, just, very, too) from both sides, then compares content words. Exact content-word match → `correct 1.0`. Near-miss LD ≤2 on content words → `correct 1.0` (speech leniency).
+- `js/admin/tests-access.js` — grading.js import bumped to `?v=20261031_v57`
+- `js/admin/tests-management.js` — grading.js import bumped to `?v=20261031_v57`
+- `js/api.js` — grading.js import bumped to `?v=20261031_v57`
+- `js/dashboard.js` — grading.js import bumped to `?v=20261031_v57`
+- `js/result.js` — grading.js import bumped to `?v=20261031_v57`
+
+### Tests
+- command: `node --check js/grading.js` + full JS syntax sweep
+- result: PASS — 0 failures / 40 files
+
+### Risks / Follow-up
+- Function-word tolerance only activates for `isSpeech` (answerType === 'spoken' or 'speech_to_text') and only when target has 4+ words — safe, no false positives on short vocabulary words.
+
+### Next Action
+- Phase 221: Word Form / Part-of-Speech partial credit (0.5pt) — morphological stem matching in `evaluateAnswer()`
+
+---
+
+## [2026-10-31 05:34] — Phase 219: Empirical Pacing Fix — Words Quiz 15m, Phrases Quiz 10m
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 219
+**Status:** PASS
+
+### Why
+- Empirical analysis of 999 submitted attempts and 81,446 attempt_answers revealed:
+  - 84.5% of all incorrect answers are blank/timed-out (not linguistic errors).
+  - Words Quiz (40 Qs, spoken): students average **27–52 s/question**, needing 18–35 minutes. Timer was 10 minutes.
+  - Phrases Quiz (10 Qs, spoken): students average **37–137 s/question** for B-series, needing 8–23 minutes. Timer was 5 minutes.
+  - Only Themes C/D were within budget. Theme A/B students were being auto-submitted halfway through.
+
+### Decision
+- Words Quiz (`VOCAB_QUIZ`): **15 minutes** (was 10 minutes)
+- Phrases Quiz (`PHRASE_QUIZ`): **10 minutes** (was 5 minutes)
+
+### Changed
+- **Database**: Bulk-updated `working_duration_minutes` on all 16 `VOCAB_QUIZ` tests → 15m and 16 `PHRASE_QUIZ` tests → 10m. Also patched `payload.working_duration_minutes` and `payload.duration_minutes` on all 32 tests.
+- `js/api.js`: Updated `updateClassTestsConfig` defaults (wordsTaskDurationMinutes=15, phrasesTaskDurationMinutes=10). Updated `autoGenerateTestsHierarchy` defaults (wordsTaskDur fallback=15, phrasesTaskDur fallback=10).
+- `js/admin/auto-gen-modal.js`: Split single duration input into two separate fields — **Words Quiz (Mnt)** and **Phrases Quiz (Mnt)** — each with empirically-calibrated defaults (15m, 10m). `getWizardConfig()` now returns `wordsTaskDuration` and `phrasesTaskDuration` separately. Both `updateClassTestsConfig` and `autoGenerateTestsHierarchy` calls now pass split duration params.
+- `js/admin/app.js`: Bumped `auto-gen-modal.js` import cache buster to `?v=20261031_v56`.
+- `js/admin/vocab-vault.js`: Bumped `auto-gen-modal.js` import cache buster to `?v=20261031_v56`.
+- `admin.html`: Bumped `admin-init.js` and `app.js` to `?v=20261031_v56`.
+
+### Files
+- `js/api.js`
+- `js/admin/auto-gen-modal.js`
+- `js/admin/app.js`
+- `js/admin/vocab-vault.js`
+- `admin.html`
+
+### Database
+- `tests` table: `working_duration_minutes` updated on 32 tests (16 VOCAB_QUIZ + 16 PHRASE_QUIZ)
+- `tests.payload`: `working_duration_minutes` and `duration_minutes` patched on all 32
+
+### Tests
+- command: `node --check` on all JS files
+- result: PASS (40/40)
+- DB verification: VOCAB_QUIZ at 15m: 16/16 ✅ | PHRASE_QUIZ at 10m: 16/16 ✅
+
+### Next Action
+- Move to Issue 2: Spoken Idiom Function-Word Tolerance (articles/prepositions dropped in 4+ word phrases)
+
+---
+
+## [2026-10-31 04:56] — Phase 218: Result Page `attemptPct` ReferenceError Fix
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 218
+**Status:** PASS
+
+### Why
+- User reported: "the result page is not showing" with screenshot showing:
+  `❌ Could not load results`
+  `attemptPct is not defined`
+  at `result.html?attempt_id=3c61e205-89d3-47d7-8bee-b61d1878e920&admin=1`.
+
+### Root Cause
+- In `js/result.js` at line 897:
+  `const ptsColor = getGradeColorByScore(attemptPct);`
+  The variable `attemptPct` was referenced, but the variable holding the effective attempt score percentage in scope is named `pct`. This threw a `ReferenceError`, stopping result rendering.
+
+### Changed
+- `js/result.js`: Changed `getGradeColorByScore(attemptPct)` to `getGradeColorByScore(pct)`.
+- `result.html`: Bumped cache buster to `?v=20261031_v55`.
+
+### Files
+- `js/result.js`
+- `result.html`
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (40/40 files)
+- command: Node simulation with attempt `3c61e205-89d3-47d7-8bee-b61d1878e920`
+- result: `PASS` (evaluated score, grade, points, points color, and 480 answers with 0 errors)
+
+---
+
+## [2026-10-31 04:50] — Phase 217: Class Exam Points Authoritative Parity & Compact Gender M/F
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 217
+**Status:** PASS
+
+### Why
+- User requested:
+  1. "keterangan gender cukup pakai M/F": The Gender column was taking excess table width with `♂ Male` / `♀ Female`.
+  2. "setelah saya pertimbangkan di bagian point disini, taruh saja total point dari SEMUA Exam di kelas Vocab yang diikuti": The PTS column under each class superheader in `admin.html#students` was previously summing quizzes + exams (e.g. 1557.5 pts for Aunul), causing a discrepancy with the Class Hub Attendance view where PTS represents total earned points from milestone exams (e.g. 482 pts for Aunul).
+
+### Changed
+- `js/admin/student-management.js`:
+  - Decoupled per-class calculations from quizzes and anchored them exclusively to class weekly exams (`isWeeklyExam`).
+  - Implemented authoritative `computeMilestoneExamMastery(studentClassExamEntries, targetExams)` for each class so that `pts`, `avgPct`, and `grade` under class superheaders reflect the student's milestone exam achievement.
+  - Flattened per-class metric keys (`_cls_score_...`, `_cls_grade_...`, `_cls_pts_...`, `_cls_tests_...`) onto the student row and added sort comparators to DataGrid.
+  - Formatted gender column to compact M/F (`♂ M` / `♀ F` at 55px width).
+  - Renamed class column label from 'Tests' to 'Exams'.
+  - Updated superHeaders `fixed_after` to 4 for exact column alignment.
+- `js/admin/app.js`: Bumped `student-management.js` import query param to `?v=20261031_v54`.
+- `admin.html`: Bumped cache busters to `?v=20261031_v54`.
+
+### Files
+- `js/admin/student-management.js`
+- `js/admin/app.js`
+- `admin.html`
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (40/40 files)
+- command: `node scripts/test_student_dashboard_exam_parity.mjs`
+- result: `PASS` (100% parity verified)
+
+---
+
+## [2026-10-31 04:30] — Phase 216: Result Page Missing Export (`getGradeColorByScore`) Import Fix
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 216
+**Status:** PASS
+
+### Why
+- User reported `result page has error` with screenshot of browser console:
+  `Uncaught SyntaxError: The requested module './api.js?v=20261030_v32' does not provide an export named 'getGradeColorByScore' (at result.js?v=20261030_v38:8:238)`
+- Result page was halted in loading state ("Loading your results...") because the module failed to link.
+
+### Root Cause
+- In `js/result.js`, `getGradeColorByScore` was imported from `./api.js`.
+- However, `api.js` imported and re-exported only some functions from `grading.js`, omitting `getGradeColorByScore`.
+
+### Changed
+- `js/api.js`:
+  - Added `getGradeColorByScore` to imports from `grading.js` (line 4).
+  - Added `getGradeColorByScore` to re-exports (line 12).
+- `js/result.js`:
+  - Changed `getGradeColorByScore` to be imported directly from `./grading.js?v=20261031_v53`.
+  - Updated `api.js` import to `?v=20261031_v53`.
+
+### Files
+- `js/api.js`
+- `js/result.js`
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (40/40 files)
+- command: Node dynamic import & evaluation of `js/result.js`
+- result: `PASS` (evaluated completely with zero import errors)
+
+---
+
+## [2026-10-31 04:25] — Phase 215: Seamless Theme Exam Transition & Live Session Lockout Elimination
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 215
+**Status:** PASS
+
+### Why
+- User instruction: "di side question ada task, analisa, kerjakan"
+- Addressed the side questions from the plan & previous discussions:
+  1. Students who took Words Exam during an active live session were previously blocked from taking Phrases Exam if their Words score was < 60% due to an intra-theme prerequisite check in `js/dashboard.js`.
+  2. In the student dashboard lobby (`nextAsm`), if a student attempted Words Exam with < 60%, the lobby banner got stuck on Words Exam instead of advancing to Phrases Exam.
+  3. In `result.html`, after completing Words Exam, the Next Milestone button was not dynamically pointing to sibling Phrases Exam if Words score was < 60%.
+
+### Changed
+- `js/dashboard.js`:
+  - Added live session authorization check in `openClassModal` (line 1655) and `openLevelModal` (line 1383): when a tutor actively unlocks a test session for this student/batch, `isSessLive` marks `prereqMet = true`. This ensures students taking an active exam session are never blocked from completing Phrases Exam. Outside live sessions, standard curriculum prerequisites remain in effect.
+  - Added Theme Exam Pair Transition in `renderNextAssessment` (line 905): if `nextAsm` was Words Exam and student already has an attempt on it, the lobby automatically advances to unattempted sibling Phrases Exam.
+- `js/result.js`:
+  - Added Theme Exam Pair Transition in `renderSmartNextAction` (line 397): after submitting Words Exam, the Next Milestone button immediately displays `GO TO NEXT TEST: Phrases Exam ->`, offering direct 1-click continuation.
+- `dashboard.html` & `result.html`:
+  - Bumped cache busters to `?v=20261031_v53`.
+
+### Files
+- `js/dashboard.js`
+- `js/result.js`
+- `dashboard.html`
+- `result.html`
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (40/40 files)
+- command: `node scripts/test_student_dashboard_exam_parity.mjs`
+- result: `PASS` (100%)
+- command: `node scripts/test_analytics_classifier.mjs`
+- result: `PASS` (100%)
+- command: `node scripts/test_batch_133_student_lobby_standings.mjs`
+- result: `PASS` (100%)
+
+---
+
+## [2026-10-31 02:35] — Phase 214: Student Roster Dynamic Per-Class Column Groups & SuperHeaders
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 214
+**Status:** PASS
+
+### Why
+- User request: Student Roster columns (Tests, Score, Grade, PTS) were global / static and assumed single-class enrollment. The system needed multi-class readiness so each active class attended by students receives its own distinct column group (e.g. 3rd Vocabulary -> Score, Grd, PTS, Tests; and additional active classes get their own columns dynamically).
+
+### Changed
+- `js/admin/student-management.js`:
+  - Added parallel fetch for `classes` table with active status filter.
+  - Built pre-grouped test maps by `class_id` and calculated student's per-class scores, grades, points, and test completions cleanly.
+  - Dynamically discovered all active classes present in the current student filter.
+  - Generated dynamic DataGrid column sets for each active class: `Score`, `Grd`, `PTS`, `Tests`.
+  - Configured `superHeaders` in DataGrid to display the Class Name as a unified header spanning the 4 metrics.
+  - Preserved a compact global Progress bar and sticky student identification columns.
+- `admin.html`: bumped cache buster to `?v=20261031_v53`.
+
+### Files
+- `js/admin/student-management.js`
+- `admin.html`
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (40/40 files)
+- command: `node scripts/test_student_dashboard_exam_parity.mjs`
+- result: `PASS` (100%)
+
+---
+
+## [2026-10-31 02:30] — Phase 213: Live Test Session Dual Exam Whitelist & Resilient Status Synchronization
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 213
+**Status:** PASS
+
+### Why
+- User reported that when opening a Theme test session, students could access Words exam, but after completing Words, they were unable to access Phrases exam.
+- User asked: "di test session, saat saya buka session, siswa hanya bisa akses 1 exam, misalnya mereka akses words, setelah itu selesai, mereka tidak bisa akses phrase exam. kenapa? dan coba analisa, petakan, diskusikan. dan apakah sebaiknya exam ini digabungkan saja antara word dan phrase? bagaimana menurutmu?"
+
+### Root Cause
+- In `tests-access.js`, when opening a session or adding late students, `phrasesAllowedIds` was prematurely filtered with `ev.wordsPassed`. At the time of opening the session, students had not yet taken Words Exam, so `phrasesAllowedIds` was saved as empty `[]`. Even after a student completed Words Exam, their ID was not in `phrasesTest` session whitelist in Supabase.
+- Additionally, the Theme Card live detection only evaluated one session (`sessW` or `sessP`) in fixed priority, which caused card status desynchronization if one session closed before the other.
+
+### Changed
+- `js/admin/tests-access.js`:
+  - Removed premature `ev.wordsPassed` filter on session open and late-add so all selected eligible students are whitelisted for both Words and Phrases exams. The sequential prerequisite (requiring Words Exam >= 60%) is dynamically and accurately enforced in real-time by `js/dashboard.js` when the student attempts to take Phrases Exam.
+  - Enhanced session detection logic: evaluates both Words and Phrases sessions independently, recognizes the theme as LIVE if either is active, picks the longest remaining window, and merges student whitelists.
+- Both exams remain distinct modules within 1 unified Theme session card, perfectly maintaining Grade Matrix compatibility, question banks, and attempt histories without risky schema alterations.
+
+### Files
+- `js/admin/tests-access.js`
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (40/40 files)
+- command: `node scripts/test_batch_133_student_lobby_standings.mjs`
+- result: `PASS` (100%)
+
+---
+
+## [2026-10-31 02:20] — Phase 212: Birthdate Required Validation + Missing DOB Roster Warning
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 212
+**Status:** PASS
+
+### Why
+- Some students showed "—" in the Age column because Date of Birth was never collected at registration
+- Form had no validation enforcing birthdate — it was optional with no indication it mattered
+- User request: "beberapa siswa tidak punya keterangan usia, tolong diperbaiki. seharusnya tanggal lahir dimasukkan saat siswa pertama kali masuk ke sistem"
+
+### Changed
+- `js/admin/student-management.js`:
+  - Added red asterisk `*` and "Required" label to Date of Birth field in Add/Edit Student form
+  - Added `required` attribute to `#bfe-birth` input
+  - Added helper text: "Required — used to calculate student age in the roster"
+  - Added save guard: validates `birthVal` before allowing save, shows error toast and focuses the input if empty
+  - Updated Age column (col 6) render to show `⚠ No DOB` badge (orange, with tooltip) when `row.birth_date` is falsy
+  - Column width adjusted to 75px to accommodate the badge
+- `admin.html`: bumped cache buster to `?v=20261031_v52`
+
+### Files
+- `js/admin/student-management.js`
+- `admin.html`
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs`
+- result: `PASS` (40/40 files)
+
+### Risks / Follow-up
+- Students already in DB without birth_date will show ⚠ badge until edited
+- Admin must edit and save each student to backfill the missing DOB
+- No bulk DOB backfill feature created (out of scope)
+
+### Next Action
+- Await user approval on `test_session_plan.md` artifact for Phase 213 (Test Session dual unlock)
+- Optional: proceed with Phase 214 — Per-Class column restructure in Student Roster
+
+## [2026-10-31 02:05] — Phase 211: Class Attendance DataGrid Font Scale & Typography Harmony
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 211
+**Status:** PASS (no commit per standing rule)
+
+### Why
+- User observed typographical disharmony in `#class-hub` attendance matrix:
+  "saya lihat font di halaamn ini bereebda2 ukuranynya,,, antara bagian nama dan angka,,, kita perlu rapikan"
+- Forensic audit revealed significant size and style fragmentation across table cells:
+  1. Student name (`STUDENT NAME`) was hardcoded to `0.76rem` (`12.16px`), whereas test matrix numbers used `var(--matrix-font-size, 0.74rem)` which dynamically shrank down to `9.5px`–`11px` via `fitMatrixToScreen()`, causing names and numbers to be out of proportion.
+  2. Grade (`GRD`) was rendered excessively large at `0.86rem`–`0.92rem` (`font-weight: 800/900`).
+  3. INST, summary test points, and summary theme points had rogue `font-family: monospace` overrides creating awkward, misaligned digit widths.
+  4. Footer summary row had arbitrary font-size jumps (`0.68rem`, `0.72rem`, `0.75rem`, `0.85rem`).
+
+### Changed
+- `js/admin/app.js`:
+  * Unified base row data font-size to `var(--matrix-font-size, 0.75rem)` across both student names (`col-sticky-4`) and numeric data cells (PROG, PTS, quiz scores, exam scores, points, theme scores, theme points, summary averages).
+  * Harmonized metadata columns (`INST`, `PROGRAM`, `BATCH`) to `calc(var(--matrix-font-size, 0.75rem) * 0.92)` and purged all `font-family: monospace` inline styles.
+  * Harmonized `GRD` typography to `calc(var(--matrix-font-size, 0.75rem) * 1.05)` (letters) and `calc(var(--matrix-font-size, 0.75rem) * 1.15)` (Star ★) at clean `font-weight: 700`.
+  * Standardized data font-weight to `600` and headers/grades to `700`.
+  * Calibrated dynamic responsive font sizing in `fitMatrixToScreen()` so all rows, text, and numbers scale in lockstep.
+- `css/admin.css`:
+  * Standardized `.test-num`, `.test-score`, `.asm-score`, `.asm-dot`, `.test-dot`, and `.grid-grade-val` typography.
+  * Enforced `font-family: 'Inter', system-ui, -apple-system, sans-serif !important;` across all table elements.
+  * Enforced `font-variant-numeric: tabular-nums !important;` across all numeric cells and columns.
+- `admin.html`:
+  * Bumped cache busters to `?v=20261031_v51`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs` -> PASS (40/40 JS files PASS)
+- `node scripts/test_student_dashboard_exam_parity.mjs` -> PASS (100%)
+- `node scripts/test_analytics_classifier.mjs` -> PASS (100%)
+- `node scripts/test_batch_133_student_lobby_standings.mjs` -> PASS (100%)
+
+---
+
+## [2026-10-31 01:36] — Phase 210: Full Route & Sub-Tab State Persistence Alignment (Rule 2.20)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 210
+**Status:** PASS (no commit per standing rule)
+
+### Why
+- User request:
+  "saat saya membuka layar tertentu, lalu ada refresh atau loading, atau lainnya,,, seringkali saya di arahkan ke halaman lain,,, pastikan saat saya ada di sebuah halaman, lalu ada refresh atau update, maka saya kembali ke halaman yang terakhir saya lihat. Pastikan itu /learn /boost"
+- User continued:
+  "continue everything"
+- Codified and completed full route & sub-tab synchronization to eliminate all disorienting redirects.
+
+### Changed
+- `js/admin/app.js`:
+  * Updated `_switchClassHubTab` and `_switchSettingTab` to synchronize `history.replaceState` with sub-tab query params (`#class-hub?tab=...`, `#settings?tab=...`).
+- `js/admin/vocab-vault.js`:
+  * Updated `_switchVaultTab` to synchronize `history.replaceState` (`#vocab_vault?tab=...`).
+- `js/admin/student-registration.js`:
+  * Updated `_switchStudentRegTab` to synchronize `history.replaceState` (`#student-registration?tab=...`).
+- `js/admin/tests-management.js`:
+  * Updated `_switchClassTestAnalytics` to synchronize `history.replaceState` (`#tests?class_id=...`).
+- `admin.html`:
+  * Bumped cache busters to `?v=20261031_v50`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs` -> PASS (40/40 JS files PASS)
+- `node scripts/test_student_dashboard_exam_parity.mjs` -> PASS (100%)
+
+---
+
+## [2026-10-31 01:31] — Phase 209: Class Hub DataGrid Clean Typography Grade Alignment
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 209
+**Status:** PASS (no commit per standing rule)
+
+### Why
+- User asked in side question:
+  "disini grade menggunakan star, atau huruf yang diberikan lingkaran,,, apakah menurutmu sebaiknya kita biarkan, atau kita rubah menadi huruf saja dengan warna? kalau menurutmu lebih abik begini, maka biarakn, tapi kalau menurutmu lebih baik bintang atau huruf berwarna maka coba rubah menjadi itu."
+- Evaluated UX / UI impact: Filled 19px circular badges in a 20+ row high-density table created a heavy visual "fence" of bright dots right between `STUDENT NAME` and `PROG`. Moreover, neighbor columns `PROG` (95%) and `PTS` (482 pts) use clean colored typography without badges.
+- Transitioning `GRD` to bold colored glyphs (**★**, **A**, **B**, **C**, **D**, **E**) establishes a cohesive, modern typographic hierarchy, improves letter readability, eliminates visual noise, and highlights the Star tier with prestige.
+
+### Changed
+- `css/admin.css`:
+  * Added `.grid-grade-val` and `.grid-grade-val.grid-grade-star` rules for sharp tabular typography.
+- `js/admin/app.js`:
+  * Replaced `.grade-circle` with `.grid-grade-val` in column `GRD` render function.
+  * Updated summary footer row (`avgGradeBadge`) to use `.grid-grade-val`.
+- `admin.html`:
+  * Bumped cache busters to `?v=20261031_v49`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs` -> PASS (40/40 JS files PASS)
+- `node scripts/test_student_dashboard_exam_parity.mjs` -> PASS (100%)
+
+---
+
+## [2026-10-31 01:05] — Phase 208: Test Analytics Drill-Down State Alignment & Screenshot Parity Verification
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 208
+**Status:** PASS (no commit per standing rule)
+
+### Why
+- The user submitted two visual screenshots to verify implementation parity:
+  1. Image 1: Test Analytics bottleneck cards displaying `⏳ Timed Out / Blank` answers, timeout-only bottleneck entries, and pacing-dominated diagnosis.
+  2. Image 2: Class Attendance table with inverted column order (`STUDENT NAME | PROG | GRD | PTS`) and `PROG` percentage text color incorrectly inheriting the student's exam grade (e.g. Nurhaliza's 73% showing Red).
+- Ensured secondary drawer inspection and drill-down modal states also receive the exact active-error Top 20 ranking and strict submitted-attempt filter.
+
+### Changed
+- `js/admin/tests-management.js`:
+  * Attached `hardestQs20` and `themeTop20` directly onto `window._testAnalyticsState` for drill-down modal parity.
+  * Updated `_openTestDetailDrawer` to filter submitted attempts only and exclude timeout blanks from per-test hardest question calculations.
+- `admin.html`:
+  * Bumped cache busters for `css/admin.css`, `js/admin/admin-init.js`, and `js/admin/app.js` to `?v=20261031_v48`.
+- `js/admin/app.js`:
+  * Bumped import cache buster for `tests-management.js` to `?v=20261031_v48`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs` -> PASS (40/40 JS files PASS)
+- `node scripts/test_analytics_classifier.mjs` -> PASS (100%)
+- `node scripts/test_student_dashboard_exam_parity.mjs` -> PASS (100%)
+
+---
+
+## [2026-10-31 00:54] — Phase 207: Test Analytics Submitted-Attempt Isolation
+
+**Agent/Session:** Antigravity / SIDE-QUEST-TEST-ANALYTICS
+**Phase:** Phase 207
+**Status:** PASS (no commit per standing rule)
+
+### Why
+- User request from side quest:
+  "disini saya melihat jawaban yang salah dihitung yang belum diserahkan, atau masih dalam proses menjawab, atau bagaimana? apakah ini memang jawaban setelah siswa submit? saya ingin jawaban setelah submit yang dihitung,,, agar nanti mudah untuk dianalisa apa yang terjadi pada saat siswa menjawab. kamu paham?"
+- Iterated mandate: "tadi saya bertnya tentang test analytics di side quest, tentang itu coba cari di ertnayaan saya, analisa, petakan, analisa, petakan lagi, pahami, terapkan"
+
+### Analysis & Mapping
+1. **Analisa 1**: Tabel `attempt_answers` menyimpan jawaban setiap kali siswa menjawab soal (*auto-save & auto-eval*). Namun di `tests-management.js`, iterasi agregasi tidak memeriksa apakah `attempt_id` tersebut berasal dari sesi yang sudah resmi diserahkan atau masih `in_progress`.
+2. **Petakan 1**: Sesi siswa yang sedang aktif mengetik/bicara atau sesi tertutup tanpa diserahkan (*abandoned*) ikut terhitung ke dalam kegagalan soal, memunculkan bottleneck semu.
+3. **Analisa 2**: Di TopsCore, hasil ujian siswa hanya sah jika `status` adalah `submitted`, `auto_submitted`, `graded`, `evaluated`, atau memiliki timestamp `submitted_at`.
+4. **Petakan 2**: Memasang filter validasi attempt di awal iterasi jawaban siswa. Jawaban dari sesi yang belum diserahkan langsung dilewati (*early return*).
+5. **Pahami**: Test Analytics adalah instrumen evaluasi pedagogis pasca-ujian; hanya hasil pengerjaan final siswa yang relevan dan valid untuk dianalisis.
+
+### Changed
+1. `js/admin/tests-management.js`:
+   - Ditambahkan guard ketat di loop `answersRes.forEach`:
+     ```javascript
+     const att = attemptMap[ans.attempt_id];
+     if (!att) return;
+     const isSubmitted = (
+       att.status === 'submitted' ||
+       att.status === 'auto_submitted' ||
+       att.status === 'graded' ||
+       att.status === 'evaluated' ||
+       Boolean(att.submitted_at)
+     );
+     if (!isSubmitted) return;
+     ```
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: ALL 40 JS files passed syntax validation.
+- `node scripts/test_analytics_classifier.mjs`: Total Failed: 0 (100% PASS).
+
+### Next Action
+- Laporkan proses: Cari -> Analisa -> Petakan -> Analisa -> Petakan Lagi -> Pahami -> Terapkan. No git commit.
+
+## [2026-10-31 00:52] — Phase 206: Screen, Sub-Tab & Route State Persistence on Reload / Dynamic Update
+
+**Agent/Session:** Antigravity / SESSION-20261031-0052
+**Phase:** Phase 206
+**Status:** PASS (no commit per standing rule)
+
+### Why
+- User request:
+  "saat saya membuka layar tertentu, lalu ada refresh atau loading, atau lainnya,,, seringkali saya di arahkan ke halaman lain,,, pastikan saat saya ada di sebuah halaman, lalu ada refresh atau update, maka saya kembali ke halaman yang terakhir saya lihat. Pastikan itu /learn /boost"
+  "coba cek seting yang bisa memaksimalkan pekerjaan kita, kamu analisa, petakan, terapkan"
+- When a user was viewing a specific section (e.g. Class Hub, Test Analytics, Vocabulary Vault), sub-tab, or selected class, refreshing the page or triggering data updates previously caused unexpected redirection to default screens (e.g. `#tests`) due to unparsed hash query parameters, missing aliases, or memory-only tab states.
+- Strict user constraints: NO GIT COMMIT, NO GIT PUSH, document `/learn` proposal.
+
+### Changed
+1. `js/admin/app.js`:
+   - Added `parseHashRoute` to separate base section from query strings (`?`) and sub-tabs (`/` or `:`).
+   - Added comprehensive alias mappings in `aliasSectionMap` and registered them in `sectionTitles`.
+   - Added `applySubRouteState` to synchronize sub-tab and filter states across reloads.
+   - Updated `showConsole()`, `hashchange`, `popstate`, and `loadSection()` to prioritize the exact active route, then `localStorage`, eliminating erroneous fallback resets.
+   - Persisted active sub-tab in Class Hub (`topscore_admin_class_hub_tab`) and Settings (`topscore_admin_settings_tab`).
+2. `js/admin/student-management.js`:
+   - Replaced hardcoded `loadSection('students')` in remedial toggle and bulk operations with `window._activeSectionAlias || window._currentSection || 'students'`.
+   - Synchronized `#profile-<studentId>` and `#dossier-<studentId>` with URL hash on modal open, and restored prior section upon modal dismissal.
+3. `js/admin/tests-management.js`:
+   - Persisted active class track filter (`topscore_admin_tests_class_id`) and restored it upon reload.
+   - Prevented `_publishTest` and `_duplicateTest` from resetting view to `'tests'` when invoked from Class Hub.
+4. `js/admin/vocab-vault.js`:
+   - Persisted active tab (`topscore_admin_vault_tab`) across reloads.
+5. `js/admin/student-registration.js`:
+   - Persisted active tab (`topscore_admin_student_reg_tab`) across reloads.
+6. `js/dashboard.js`:
+   - Persisted active selected class (`topscore_student_last_class_id`) so student refreshes retain the viewed class.
+   - Synchronized URL hash and back/forward navigation for Student Profile (`#profile`), Exam History (`#profile-history`), Class Level Modal (`#levels-<classId>`), and Class Selector (`#select-class`).
+7. `AGENTS.md`:
+   - Codified Rule 2.20: "Screen, Sub-Tab, and Route State Persistence on Reload/Refresh (/learn)".
+8. `docs/DECISIONS.md`:
+   - Updated DECISION-033 to formalize multi-tier state synchronization, modal restoration, and `/learn` contract rule.
+9. `.vscode/settings.json`:
+   - Added productivity settings: smooth scrolling, smooth caret, bracket guides, function calls completion, side-by-side diffing, and disabled background git autofetch.
+10. Cache busters bumped to `?v=20261031_v47` across `admin.html`, `dashboard.html`, and JS modules.
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs` -> PASS (40/40 JS files)
+- command: `node scripts/test_student_dashboard_exam_parity.mjs` -> PASS (100% parity)
+
+---
+
+## [2026-10-31 00:30] — Phase 205: Progress-Value Independent Grading Scale Coloring & GRD Column Repositioning
+
+**Agent/Session:** Antigravity / SESSION-20261031-0030
+**Phase:** Phase 205
+**Status:** PASS (no commit per standing rule)
+
+### Why
+- User request:
+  "ini ada kolom progress,,, warnanya itu jangan ikuti warna Grade atau point yang diperoleh, tapi maksud saya adalah buat warnanya mengikuti warna kalau score ada presentase yang sama,,, jaid dia punya warnanya sendiri yang sama seperti warna presentase nilai,,, dan pindahkan kokolom grade ke selebah nama siswa dii tabel, apakah kamu paham?"
+- The user clarified:
+  1. Progress % should NOT inherit its text color from the student's exam score or points. It must be colored independently based on its own percentage value evaluated on the official TopsCore grading scale (`getGradeColorByScore(row.progressPct)`).
+  2. Move the `GRD` column right beside `STUDENT NAME` in the table (new order: `INST | PROGRAM | BATCH | STUDENT NAME | GRD | PROG | PTS`).
+  3. Strict user constraint: NO GIT COMMIT, NO GIT PUSH.
+
+### Changed
+1. `css/admin.css`:
+   - Updated sticky column offsets and widths for the new 7-column arrangement:
+     * `col-sticky-4` (`STUDENT NAME`): `left: 150px`, `width: 140px`
+     * `col-sticky-5` (`GRD`): `left: 290px`, `width: 38px`
+     * `col-sticky-6` (`PROG`): `left: 328px`, `width: 46px`
+     * `col-sticky-7` (`PTS`): `left: 374px`, `width: 46px` (`col-sticky-last`)
+     * Total sticky panel width remains exactly 420px.
+2. `js/admin/app.js`:
+   - In `columns`:
+     * Reordered columns: `grade` (`col-sticky-5`, 38px) is now placed immediately after `displayName` (`col-sticky-4`), followed by `progressPct` (`col-sticky-6`, 46px) and `totalEarnedScore` (`col-sticky-7`, 46px).
+     * In `progressPct.render`: evaluated color via `getGradeColorByScore(row.progressPct)` instead of `row.averageScorePct`.
+   - In `summaryRow`:
+     * Aligned cell generation so `grade` renders at `col-sticky-5` and `progressPct` renders at `col-sticky-6` with its own `getGradeColorByScore(avgProg)`.
+3. `admin.html`:
+   - Bumped cache busters for `css/admin.css` and `js/admin/app.js` to `?v=20261031_v46`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: ALL 40 JS files passed syntax validation.
+- `node scripts/test_student_dashboard_exam_parity.mjs`: PASS 100%.
+
+### Next Action
+- Present confirmation to user with visual explanation. No git commit.
+
+## [2026-10-31 00:24] — Phase 204: Test Analytics Authentic Active Error Filtering & Top 20 Bottlenecks Expansion
+
+**Agent/Session:** Antigravity / SESSION-20261031-0024
+**Phase:** Phase 204
+**Status:** PASS (no commit per standing rule)
+
+### Why
+- User request:
+  "here I see a lot of question yang gagl dijawab karena waktu habis,,, jangan ditaruh dalam daftar, taruh jawaban yang salah karena siswa salah jawab saja, baik karea mengetik, atau karena speak, maupun karena memilih. sesuai dengan 3 cara jawab di VOCABULARY Class,, berikan 20 pertnaayn paling sering salah, jangan 10"
+- Questions that were merely unanswered due to timer expiration (`[Blank / Timed Out]`) were cluttering the bottlenecks board as false 100% failures with `[⏳ Timeout]` tags.
+- The user required:
+  1. Only questions where students actively answered incorrectly (via Typing, Speaking, or Selecting) must appear on the bottleneck list.
+  2. Question cards must only list real wrong answers (e.g. `❌ "remain"`), never `⏳ Timed Out / Blank`.
+  3. Expand bottleneck list from Top 10 to Top 20 questions per theme.
+  4. Ensure diagnostic error percentages reflect actual student linguistic mistakes.
+  5. Strict user constraint: NO GIT COMMIT, NO GIT PUSH.
+
+### Changed
+1. `js/admin/tests-management.js`:
+   - Updated answer classification in `(answersRes || []).forEach(ans => ...)`:
+     * Added comprehensive blank/timeout detection (`isTimeout`: null, empty, `[Blank / Timed Out]`, `-`, `—`, `–`, `undefined`, `none`, `timeout`).
+     * Excluded unanswered timeouts from `wrongAnswersCount` and `activeFail`.
+     * Questions with 0 active failures are filtered out: `allQs = Object.values(...).filter(q => (q.activeFail || 0) >= 1)`.
+   - Expanded to Top 20: `themeTop20[t] = ranked.slice(0, 20)`.
+   - Card errors rendering: completely removed `is-timeout` and `⏳ Timed Out / Blank` entries from `q.topErrors`.
+   - Dominant error logic: strictly resolves active linguistic categories (`spelling`, `literal`, `word_form`), eliminating `[⏳ Timeout]`.
+   - Decoupled diagnostic percentages in top header chips: Spelling, Literal, and Word Form now calculate over total active errors (summing to 100%), with `Timed Out` separated as a session pacing metric `(Pacing)`.
+   - Bumped import cache buster to `?v=20261031_v45`.
+2. `js/admin/app.js`:
+   - Bumped `tests-management.js` import to `?v=20261031_v45`.
+3. `admin.html`:
+   - Bumped `app.js` script tag to `?v=20261031_v45`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: ALL 40 JS files passed syntax validation.
+- `node scripts/test_analytics_classifier.mjs`: Total Failed: 0 (100% PASS).
+- `node scripts/test_student_dashboard_exam_parity.mjs`: PASS 100%.
+
+### Next Action
+- Present visual and structural summary to the user. No git commit.
+
 ## [2026-10-30 20:12] — Phase 203: Progress-First Ranking, Left Panel PTS Column, Dynamic Progress Color & Unbroken Theme Dividers
 
 **Agent/Session:** Antigravity / SESSION-20261030-2012
@@ -1561,9 +2320,9 @@
 - Execute full system maximization based on architectural audit: add security headers (CSP, HSTS), configure search engine robots, replace over-fetching database queries with explicit column projections, extract inline scripts from admin.html into modular admin-init.js, provide offline fallback UX in Service Worker v16, create automated cache manifest validator, and configure GitHub Actions CI quality gates.
 
 ### Changed
-- ercel.json & 
+- ercel.json &
 etlify.toml: Added HSTS (Strict-Transport-Security), comprehensive Content-Security-Policy, and static asset cache-control headers.
-- 
+-
 obots.txt: Created crawler restriction for administrative and testing paths.
 - js/api.js: Replaced 7 non-generic select('*') calls with explicit column projections on ttempts, ttempt_answers, 	ests, word_types, levels, class_instances, and class_meetings.
 - dmin.html: Extracted all 6 inline script tags into modular js/admin/admin-init.js.
@@ -1572,27 +2331,27 @@ obots.txt: Created crawler restriction for administrative and testing paths.
 - sw.js: Bumped cache to 	opscore-cache-option-a-v16, registered offline.html and dmin-init.js, and wired offline fallback for failed document requests.
 - scripts/generate_sw_manifest.mjs: Created automated script verifying 100% of declared SW assets exist on disk with file size telemetry.
 - .github/workflows/ci.yml: Created GitHub Actions CI workflow running JS syntax checks, manifest verification, and student parity test suites on push/PR.
-- package.json: Configured 
+- package.json: Configured
 pm test script chaining syntax checks, manifest verification, and student parity suites.
 - js/wake-lock.js & js/admin/class.js: Purged debug console.log statements.
 - .env.example: Created deployment environment template.
 - Removed empty 0-byte root files db_schema.sql and schema.sql.
 
 ### Tests
-- command: 
+- command:
 ode scripts/check_all_js_syntax.cjs -> 40/40 JS files PASS (100%)
-- command: 
+- command:
 ode scripts/generate_sw_manifest.mjs -> 27/27 SW cache assets verified on disk
-- command: 
+- command:
 pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ---
 
 ## [2026-10-28 16:50] - Phase 165: Implemented User-Selected Icons (1A Yellow Padlock, 2B Red Rotate Undo, 3C Green Circle Play)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 165 (Apply User-Selected Action & Status Icons to Next Test Card)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 165 (Apply User-Selected Action & Status Icons to Next Test Card)
+**Status:** PASS
 
 ### Why
 - User reviewed the icon catalog showcase and selected options:
@@ -1624,9 +2383,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 ---
 ## [2026-10-28 16:30] - Phase 165: Icon-Only Indicators & Full Title Display for Next Test Hero Card
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 165 (Hero Next Test Full Title & Icon-Only Action Badges)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 165 (Hero Next Test Full Title & Icon-Only Action Badges)
+**Status:** PASS
 
 ### Why
 - User requested that the next Test hero card on `dashboard.html` should display the test name directly without an icon on the left, and that all actions and states (Retake, Start/Next Test, Locked, Waiting for Tutor) should strictly use icons only.
@@ -1695,9 +2454,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 ---
 ## [2026-10-28 14:05] — Phase 162: Fix Non-Existent Column 'test_category' in API & Restore Student Lobby Progress, Hero Next Assignment, and Leaderboard Standings
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 162 (Restore Student Lobby Class Progress, Hero Next Assignment, and Leaderboard Standings)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 162 (Restore Student Lobby Class Progress, Hero Next Assignment, and Leaderboard Standings)
+**Status:** PASS
 
 ### Why
 - User submitted a screenshot of Student Lobby (`dashboard.html`) for student Mr. Suke Ajai reporting three critical bugs:
@@ -1742,9 +2501,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-28 13:55] — Phase 161: Strict Sequential Intra-Theme Exam Prerequisites (Words Exam Pass ≥60% Required for Phrases Exam)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 161 (Strict Sequential Intra-Theme Exam Prerequisites)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 161 (Strict Sequential Intra-Theme Exam Prerequisites)
+**Status:** PASS
 
 ### Why
 - Tutor questioned why student Gagan Tara Deswari was able to take Test 18 (3B Phrases Exam) despite not passing Test 17 (3B Words Exam: 59%, 164 pts, Grade D).
@@ -1787,9 +2546,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-28 13:00] — Phase 160: Auto-Close Stalled In-Progress Attempts & Queued Milestone Matrix 0% Visualization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 160 (Auto-Close Stalled In-Progress Attempts & Queued Milestone Matrix 0% Visualization)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 160 (Auto-Close Stalled In-Progress Attempts & Queued Milestone Matrix 0% Visualization)
+**Status:** PASS
 
 ### Why
 - User pointed out that Ari Wahyu Darma was stuck with a loading/hourglass icon (`⏳`) in the Class Hub matrix grid because during yesterday's exam his phone battery died ("semalam saat ujian HPnya matiii"). The client countdown timer died with the device, leaving the attempt record in `in_progress` status indefinitely even though its deadline had expired.
@@ -1848,9 +2607,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-28 12:30] — Phase 159: Points-First Leaderboard Ranking, Milestone Progression Engine & Admin Table Ergonomics
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 159 (Points-First Leaderboard Ranking & Milestone Progression Engine)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 159 (Points-First Leaderboard Ranking & Milestone Progression Engine)
+**Status:** PASS
 
 ### Why
 - User identified a ranking paradox where Mr. Suke Ajai (143 pts, 29% Grade E) was ranked above members with more points (e.g. Miss Sofa Maria Ulfa with 273.5 pts, 64% Grade C) due to the leaderboard sorting by task progress percentage (`PROG %`) first.
@@ -5976,8 +6735,8 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-21 00:15] — Phase 60: Result Page Enhancements & Academic Continuity Overhaul
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 60 (Result Page Enhancements & Navigation Overhaul)  
+**Agent/Session:** Antigravity
+**Phase:** Phase 60 (Result Page Enhancements & Navigation Overhaul)
 **Status:** PASS (STRICT NO COMMIT/PUSH HELD)
 
 ### Why
@@ -6033,8 +6792,8 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-20 22:00] — Phase 59: Unified Assessment Question Count Fix & Mr. Test 100% Real Simulation
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 59 (Unified Question Counts & Real End-to-End Simulation)  
+**Agent/Session:** Antigravity
+**Phase:** Phase 59 (Unified Question Counts & Real End-to-End Simulation)
 **Status:** PASS (STRICT NO COMMIT/PUSH HELD)
 
 ### Why
@@ -6078,9 +6837,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-20 08:25] — Phase 58: Strict Active-Only Batch Dropdowns & Level 0 Semantics ("Under Level 1")
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 58 (Active-Only Batch Dropdowns & Level 0 Semantics)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 58 (Active-Only Batch Dropdowns & Level 0 Semantics)
+**Status:** PASS
 
 ### Why
 - User request:
@@ -6122,9 +6881,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-20 08:05] — Phase 57: Legacy Task 1 Words/Phrases Merge Recalibration & Attendance Matrix Score Restoration
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 57 (Legacy Task 1 Score Recalibration & Matrix Restoration)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 57 (Legacy Task 1 Score Recalibration & Matrix Restoration)
+**Status:** PASS
 
 ### Why
 - User request:
@@ -6169,9 +6928,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-20 07:27] — Phase 56: Soft-Deleted Assessment Filtering & Student Dashboard Recovery
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 56 (Soft-Deleted Assessment Filtering & Dashboard Recovery)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 56 (Soft-Deleted Assessment Filtering & Dashboard Recovery)
+**Status:** PASS
 
 ### Why
 - User request:
@@ -6200,10 +6959,10 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
 
 ## [2026-10-20 01:46] — Phase 55: Alphabetical Sorting & Filtering for Student Whitelist, Batches & Tests
- 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 55 (Alphabetical Sorting & Filtering)  
-**Status:** PASS  
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 55 (Alphabetical Sorting & Filtering)
+**Status:** PASS
 
 ### Why
 - User request:
@@ -6234,10 +6993,10 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
 
 ## [2026-10-20 01:30] — Phase 54: Assessment Access Batch Loading & Smart Categorization
- 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 54 (Assessment Access Batch Loading & Smart Categorization)  
-**Status:** PASS  
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 54 (Assessment Access Batch Loading & Smart Categorization)
+**Status:** PASS
 
 ### Why
 - User request:
@@ -6267,10 +7026,10 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
 
 ## [2026-10-20 01:15] — Phase 53: Remove Top Header & Zero-Scroll Dynamic Viewport Scaling for Class Attendance Matrix
- 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 53 (Remove Top Header & Zero-Scroll Dynamic Sizing)  
-**Status:** PASS  
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 53 (Remove Top Header & Zero-Scroll Dynamic Sizing)
+**Status:** PASS
 
 ### Why
 - User request:
@@ -6299,10 +7058,10 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
 
 ## [2026-10-20 01:05] — Phase 52: Split SCORE and GRD Columns in Class Attendance Matrix
- 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 52 (Split SCORE and GRD Columns)  
-**Status:** PASS  
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 52 (Split SCORE and GRD Columns)
+**Status:** PASS
 
 ### Why
 - User request:
@@ -6325,10 +7084,10 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
 
 ## [2026-10-20 00:35] — Phase 51: Active Students Enrolled Tab & Task Points 50-Point Max Alignment
- 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 51 (Active Students Tab & Task Points Alignment)  
-**Status:** PASS  
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 51 (Active Students Tab & Task Points Alignment)
+**Status:** PASS
 
 ### Why
 - User request:
@@ -6358,10 +7117,10 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
 
 ## [2026-10-20 00:20] — Phase 50: Class Roster Attendance Matrix Points (Poin) Display & PTS Accumulation
- 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 50 (Points Display & PTS Accumulation)  
-**Status:** PASS  
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 50 (Points Display & PTS Accumulation)
+**Status:** PASS
 
 ### Why
 - User feedback:
@@ -6388,10 +7147,10 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
   - Strict git freeze honored: 0 commits, 0 pushes. All changes remain local.
 
 ## [2026-10-20 00:10] — Phase 49: Class Roster Attendance Matrix 20-Column Layout & Scoring Normalization
- 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 49 (Class Roster Attendance Matrix)  
-**Status:** PASS  
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 49 (Class Roster Attendance Matrix)
+**Status:** PASS
 
 ### Why
 - User submitted a screenshot of the "Class Roster (Attendance)" datagrid in `admin.html#class-hub` with the prompt: `"fix this"`.
@@ -6424,9 +7183,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-19 23:55] — Phase 48: Unified Vocabulary Task & Test System, Spoken/Written Answer Types & Student Score Merge
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 48 (Unified Vocabulary Task & Test System)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 48 (Unified Vocabulary Task & Test System)
+**Status:** PASS
 
 ### Why
 - User Request:
@@ -6457,9 +7216,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-19 23:35] — Phase 47: Assessment Access, Live Test Sessions & Unified Words/Phrases Test
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 47 (Assessment Access, Live Test Sessions & Unified Words/Phrases Test)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 47 (Assessment Access, Live Test Sessions & Unified Words/Phrases Test)
+**Status:** PASS
 
 ### Why
 - User Requirements:
@@ -6510,9 +7269,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-19 22:25] — Phase 46: Draft Assessment Retake Lockout & Multi-Tier Access Protection
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 46 (Draft Assessment Retake Lockout & Multi-Tier Access Protection)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 46 (Draft Assessment Retake Lockout & Multi-Tier Access Protection)
+**Status:** PASS
 
 ### Why
 - User Request: "I made some assesment into draft a while ago,,, but the student can still do a retake on it,,,I want them to be unable to access certain assessment that I choose whan I chose to. maybe we can arrange some kind of locking mechanism for test, which is different with the task. after you implement any previous suggestion, lets talk about that next".
@@ -6545,9 +7304,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-19 21:55] — Comprehensive End-to-End System Audit, Database Hygiene & Asset Synchronization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 45 (Comprehensive End-to-End System Audit & Asset Synchronization)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 45 (Comprehensive End-to-End System Audit & Asset Synchronization)
+**Status:** PASS
 
 ### Why
 - User Request: "check the whole sysstem end to end and see any errors or possible improvements".
@@ -6613,9 +7372,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-19 20:30] — Keyboard Ergonomics Locked Anchor & 3:3:1 Proportional Space Distribution
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 44 (Keyboard Ergonomics & 3:3:1 Proportional Space Distribution)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 44 (Keyboard Ergonomics & 3:3:1 Proportional Space Distribution)
+**Status:** PASS
 
 ### Why
 - User Directive:
@@ -6650,7 +7409,7 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ---
 
-## [2026-10-19 19:55] — Authentic Native Gboard Mobile Keyboard & Zero Scrollbar Containment  
+## [2026-10-19 19:55] — Authentic Native Gboard Mobile Keyboard & Zero Scrollbar Containment
 
 ### Why
 - The user requested:
@@ -6696,9 +7455,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-19 19:40] — Elimination of Answer Box Pop-up / Float & Static Layout Anchor
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 42 (Static Layout Anchor)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 42 (Static Layout Anchor)
+**Status:** PASS
 
 ### Why
 - The user requested:
@@ -6718,7 +7477,7 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ---
 
-## [2026-10-19 19:25] — Service Worker Network-First CSS & Cache Invalidation to v5.3.2  
+## [2026-10-19 19:25] — Service Worker Network-First CSS & Cache Invalidation to v5.3.2
 
 ### Why
 - The user reported: *"masih begini kelihatannya"* with screenshot showing the old cramped 34px keyboard layout with ~70px dead space below `, Space . ↵`.
@@ -6752,9 +7511,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-19 18:55] — Assessment Body Direct 22-8-22-48 Ratio & 58px Virtual Keyboard Keys
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 40 (Virtual Keyboard 22-8-22-48 Direct Layout & Key Expansion)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 40 (Virtual Keyboard 22-8-22-48 Direct Layout & Key Expansion)
+**Status:** PASS
 
 ### Why
 - The user reported:
@@ -6796,9 +7555,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-19 18:30] — Red Flashing Anti-Cheat Warning with Police Siren, Countdown Timer, & 3-Strike Limit
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 39 (Red Flashing Anti-Cheat Warning, Mobile Police Siren, & 3 Strikes)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 39 (Red Flashing Anti-Cheat Warning, Mobile Police Siren, & 3 Strikes)
+**Status:** PASS
 
 ### Why
 - The user clarified and mandated the exact anti-cheat warning behavior:
@@ -6843,9 +7602,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-19 18:10] — Return Button & Side Panel Warning Sign (Zero Auto-Submit)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 38 (Return Button & Side Panel Warning Sign)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 38 (Return Button & Side Panel Warning Sign)
+**Status:** PASS
 
 ### Why
 - The user reported: *"when my student push the return button or accidentally push side panel, show the wraning sign intead of auto submit"*.
@@ -6879,9 +7638,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-19 17:40] — Assessment Virtual Keyboard 22-8-22-48 Ergonomic Ratio Scaling
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 37 (Assessment Virtual Keyboard Ergonomic Scaling)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 37 (Assessment Virtual Keyboard Ergonomic Scaling)
+**Status:** PASS
 
 ### Why
 - The user reported: "there are compalints abaout the keyboard being too small,,, do you have any suggestions? should we make the keyboard float? or we change the ratio? now its 30-10-30-30 for the assesment body,,, lets discuss"
@@ -6916,9 +7675,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-19 16:40] — Fix Assessment Count Discrepancy, Edit Modal Class Wiping & Auto-Gen Dedup
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 36 (Fix Assessment Count Discrepancy, Edit Modal Class Wiping & Auto-Gen Dedup)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 36 (Fix Assessment Count Discrepancy, Edit Modal Class Wiping & Auto-Gen Dedup)
+**Status:** PASS
 
 ### Why
 - The user reported: "why the number of assesemnts are diffrent? I edited one of the assesement, the A words test, from written to spoken, and its suddenly missing,, when I gnerate the assesement again it shows in assesment hub, but not in the class assesemnt,,, analyze, and fix"
@@ -6958,9 +7717,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-19 16:00] — Fix Best Score Demotion, Up Next False Failure & Batch Leaderboard Deflation
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 35 (Fix Best Score Demotion, Up Next False Failure & Batch Leaderboard Deflation)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 35 (Fix Best Score Demotion, Up Next False Failure & Batch Leaderboard Deflation)
+**Status:** PASS
 
 ### Why
 - Students who completed tasks and achieved Grade B (e.g. King Test with 90%) or Grade A were prompted with "Needs Improvement (30.0%)" and "Retake Now" instead of advancing in the learning path.
@@ -7001,7 +7760,7 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 - command: `node scratch/audit_students.mjs`
 - result: `PASS` (156 pairs audited, 0 corrupted records).
 
-## [2026-10-19 14:55] — Fix Virtual Keyboard Lifecycle & Multi-Question Persistence  
+## [2026-10-19 14:55] — Fix Virtual Keyboard Lifecycle & Multi-Question Persistence
 
 ### Why
 - When students answered assessments requiring keyboard input, the virtual keyboard appeared on question 1, but disappeared on question 2 and all subsequent questions.
@@ -7030,9 +7789,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-18 16:55] — Refactor Topbar to Compact Summary Tabs & Purge Redundant Action Buttons
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 33 (Topbar Compact KPI Tabs, Row C Purge & Domain D Recalibrator)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 33 (Topbar Compact KPI Tabs, Row C Purge & Domain D Recalibrator)
+**Status:** PASS
 
 ### Why
 - Modernize the admin topbar across TopsCore LMS into compact summary KPI tabs.
@@ -7084,9 +7843,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-18 16:25] — Student Dashboard Avatar Scaling, Glow Hierarchy, Batch Leaderboard & Royal Crown Mechanics
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 32 (Dashboard Avatar Scaling, Glow Hierarchy & Leaderboard)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 32 (Dashboard Avatar Scaling, Glow Hierarchy & Leaderboard)
+**Status:** PASS
 
 ### Why
 - Enhance student dashboard visual hierarchy and engagement:
@@ -7133,9 +7892,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-18 15:48] — Typography Polish, Tabular Numbers, & Attendance Matrix Refinements
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 31 (Typography, Tabular Nums & Attendance Matrix Refinements)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 31 (Typography, Tabular Nums & Attendance Matrix Refinements)
+**Status:** PASS
 
 ### Why
 - Implement global typography refinements (tabular numbers for numeric alignment, elevated text contrast).
@@ -7174,9 +7933,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-18 15:30] — Mobile Zero-Scroll Dashboard Modernization & Synchronized Tier Theming
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 30 (Mobile Dashboard Modernization)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 30 (Mobile Dashboard Modernization)
+**Status:** PASS
 
 ### Why
 - Modernize student mobile dashboard with strict design boundaries:
@@ -7225,9 +7984,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-18 15:10] — Student Roster View Polish (Program Column, Sanitized Age, Spaced Actions)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 29 (Student Roster View Polish)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 29 (Student Roster View Polish)
+**Status:** PASS
 
 ### Why
 - User Directive: Minor polish on Student Roster view (`http://127.0.0.1:5500/admin.html#students`):
@@ -7271,9 +8030,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-18 13:58] — Distinct 7-Color Progression & Glow Exclusivity for Grade S (Emas)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 28 (Distinct 7-Color Progression & Glow Exclusivity for Grade S)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 28 (Distinct 7-Color Progression & Glow Exclusivity for Grade S)
+**Status:** PASS
 
 ### Why
 - User requirement: Implement the exact 7-color sequence from F to S:
@@ -7330,9 +8089,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-18 13:30] — Harmonious Tier Color Palette & Sparkling Gold Grade S Atmosphere (Phase 28)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 28 (Harmonious Tier Color Palette & Sparkling Gold Grade S Atmosphere)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 28 (Harmonious Tier Color Palette & Sparkling Gold Grade S Atmosphere)
+**Status:** PASS
 
 ### Why
 - Establish an authoritative, harmonious Option 1 color palette across all tiers: S (Gold Champion), A (Emerald Master), B (Sky Diamond), C (Warm Topaz), D (Flame Orange), E (Rose Coral), F (Crimson Alert).
@@ -7390,9 +8149,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-18 12:50] — Calibrate Student Score & Grade Strictly on Taken Assessments (Phase 27)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 27 (Unlocked/Takeable Assessment Calibration & Flexible Sorting)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 27 (Unlocked/Takeable Assessment Calibration & Flexible Sorting)
+**Status:** PASS
 
 ### Why
 - Enforce the core business logic rule (AGENTS.md §2.8): Student SCORE (%) and GRADE (S, A, B, C, D, E, F) must ONLY be calculated based on assessments that are currently accessible/unlocked/takeable. Locked or unopened assessments must NOT influence, penalize, or drag down student score and grade.
@@ -7438,9 +8197,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-18 09:35] — Academic Engine, Sequential Prerequisites & 40-Column Dense Roster Matrix (Phase 26)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 26 (Academic Engine, Sequential Prerequisites & Roster Matrix)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 26 (Academic Engine, Sequential Prerequisites & Roster Matrix)
+**Status:** PASS
 
 ### Why
 - Implement dense, high-efficiency Class Hub Roster Matrix in `admin.html` with:
@@ -7500,9 +8259,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-18 00:45] — Heuristic Audit Remediation & Modular Architecture Refactoring (Phase 24 & 25)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 24 (Core Stability & Integrity) & Phase 25 (Modularization & Architecture Refactoring)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 24 (Core Stability & Integrity) & Phase 25 (Modularization & Architecture Refactoring)
+**Status:** PASS
 
 ### Why
 - An autonomous heuristic, architectural, and performance scan revealed technical debt, including:
@@ -7556,9 +8315,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-17 16:42] — Student Profile Modal & Official Academic Performance Dossier (B — BOARD)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - The user selected Option 1: "Build the Student Profile & Print Dossier Modal (`👤 Profile` & `🖨️ Dossier`) under Domain B (`B — BOARD`)".
@@ -7605,9 +8364,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-17 08:45] — Dynamic Active Program Navigation in Left Sidebar (B — BOARD)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - The user instructed: "not there, but on the side panel" regarding program switching.
@@ -7642,9 +8401,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-17 08:25] — Dynamic Program Tabs & 1-Program-1-Table Isolation in Student Management
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - Students from multiple institutions and programs previously appeared together in one table, mixing distinct curricula and cohorts.
@@ -7677,9 +8436,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-17 07:35] — Consolidate Student Roster & Student Progress into Single Master Table
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - The user requested merging the two previously separate administrative tables (`#students` / Student Roster and `#progress-view` / Student Progress) into ONE single comprehensive table containing all elements from both.
@@ -7728,9 +8487,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-17 02:50] — Streamline Student Management View (Prune PIN & Contact, Relocate Import/Export, Slim Filter Bar)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - The Student Management view (`admin.html#students`) suffered from visual and vertical clutter:
@@ -7769,7 +8528,7 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 ### Strict Git Freeze
 - Standing rule enforced: 0 commits, 0 pushes.
 
-## [2026-10-17 02:25] — Complete 3-Way Scoring & Global Grade Unification Across Platform  
+## [2026-10-17 02:25] — Complete 3-Way Scoring & Global Grade Unification Across Platform
 
 ### Why
 - Following user approval ("proceed") of the comprehensive analysis findings:
@@ -7815,9 +8574,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-17 01:58] — Global Grade Synchronization Across Platform & Student Progress Table Upgrade
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - User Request: "disni ada 2 grade yang beda... grade itu secara global,,, dihitung berdasarkan assesemant yang bisa diambil, coba pelarai da perbaiki,,, lalu di student proress,,, saya belum melihat ada info yang seperti di tael siswa yang lain."
@@ -7848,9 +8607,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-17 01:25] — Batch Active/Inactive Toggle Fix & Past Batch Student Filtering
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - User Request: "saya ingin edit batch yang aktif dan tidka, agar siswa batch yang sudah berlalu bisa tidak perlu tampil dalam list, tapi gagal"
@@ -7886,9 +8645,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-17 00:35] — Instant Old Photo Erasure on Student Upload & Zero-Latency Avatar Sync
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - User Request: "saat siwa mengupload foto bau menggantikan foto lama, saya terkadang masih melihta foto lama terlihat sekilas,,, apakah bisa dihilangkan? agar saat uplaod foto baru, maka foto lama langsung dihapus"
@@ -7912,9 +8671,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-17 00:17] — Existing Student Photos Batch Compression Migration
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - User Request: "bagaimana dengan foto yang sudah ada?" -> "lakuakn"
@@ -7933,9 +8692,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-17 00:10] — Client-Side Avatar Compression (Option 1: Lightweight WebP Base64 < 30KB)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - User Request: "pakah kita bisa melakuka kompresi terhhadap foto yang diupload?" -> "Saya mau pastikan kalau kita pilih opsi 1"
@@ -7959,9 +8718,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 23:45] — Roster Columns Revision, Progress/Grade Formula Repair & Zero Horizontal Scroll Matrix
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - Directive: `[DIRECTIVE: REVISE ROSTER COLUMNS, REPAIR PROGRESS/GRADE FORMULA & ELIMINATE HORIZONTAL SCROLL]`
@@ -8009,9 +8768,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 23:25] — Sidebar Class Tab Delay & Class Hub Loading Performance Optimization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - User Request: "kenapa tab untuk kelas selalu lama muncul? bahkan saat saya awal masuk, tab ini kadang hilang dan lalu muncul setelah beberapa ssat. sementara tab lain lasngusng"
@@ -8046,9 +8805,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 22:53] — Distinct Colors & Visual Banding for TASK vs TEST Columns
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - User Request: "Buat kolom task dan test berwarna berbeda agar terlihat pembagiannya"
@@ -8071,9 +8830,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 22:42] — Numbered Assessment Columns 1-40 & Full Zero-Scroll Screen Fit
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - User Request: "apakah tidal bisa semua kolom terlihat? cukup gunakan angka untuk nama kolomnya,,,"
@@ -8095,9 +8854,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 22:30] — 40 Assessment Columns (Points Only) & Streamlined Enrollment Table
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - User Request: "dalam table student enrollment itu saya ingin ada tambahan 40 kolom yang menunjukkan semua ssesment... isi kolomnya adalah point yang didapat,,, bukan score atau grade . sebeb score atau grade ada kolomnya sendiri. untuk nama Institusi bisa menggunakan singkatan CEC atau TOP. kolom gender, usia, contact itu bisa dihapus dai table yang ini"
@@ -8125,9 +8884,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 21:58] — Fix Supabase Connection Default & Full Console UI Recovery
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - User Report: "the whole system is full of errors. And I dont see the table that you showed me.even the class is missing!"
@@ -8150,9 +8909,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 21:50] — Streamline Class Roster Score Columns & Zero-Error Verification
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - User Request: "waht did you do? I only ask to add a few more colums to the table. cek any errors"
@@ -8182,9 +8941,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 21:25] — Class Roster Assessment Point Columns & Instant Score Visibility
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - User Request: "CAN we show on the table colums consist of the points the students got from an assessmnt so I can see their score immediatly"
@@ -8216,9 +8975,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 20:55] — Standardize Assessment Codes & Enforce Strict Sequential Prerequisites
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - Directive: `[DIRECTIVE: STANDARDIZE ASSESSMENT CODES & ENFORCE STRICT SEQUENTIAL PREREQUISITES]`
@@ -8260,9 +9019,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 20:30] — Code Refactoring & Dead-Code Cleanup
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - Directive: `[DIRECTIVE: CODE REFACTORING & DEAD-CODE CLEANUP]`
@@ -8303,9 +9062,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 20:20] — Resolve Discovered Stress-Test Defects in Top Office (121 Features 100% Pass)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 23 Top Office System Audit & Stress-Test Hardening
+**Status:** PASS
 
 ### Why
 - Directive: `[DIRECTIVE: RESOLVE DISCOVERED STRESS-TEST DEFECTS IN TOP OFFICE]`
@@ -8344,9 +9103,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 19:10] — Responsive 95% Width Shell, Proportional Percentage Heights & Global Footer Banner Audit
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint
+**Status:** PASS
 
 ### Why
 - Directive: `[DIRECTIVE: COMPREHENSIVE RESPONSIVE 95% WIDTH, PERCENTAGE HEIGHTS & GLOBAL BANNER AUDIT]`
@@ -8392,7 +9151,7 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 ### Next Action
 - Await user review and confirmation.
 
-## [2026-10-16 18:50] — Fix Assessment Question Order Randomization  
+## [2026-10-16 18:50] — Fix Assessment Question Order Randomization
 
 ### Why
 - User reported that questions appearing in assessments are still alphabetical rather than randomized ("soal yang muncul dalam assessment masih belum acak,,, masih secara alpabetis,,, bisa dicek").
@@ -8426,9 +9185,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 18:32] — Focus on Metadata, 100% Global Banner, and Audit Screenshots
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint
+**Status:** PASS
 
 ### Why
 - User directive: `[DIRECTIVE: FOCUS ONLY ON METADATA, 100% GLOBAL BANNER, AND AUDIT SCREENSHOTS]`
@@ -8471,9 +9230,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 07:46] — Precise Pixel Specification Enforcement Based on Latest 3-Panel Wireframe
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint
+**Status:** PASS
 
 ### Why
 - User directive: `[DIRECTIVE: PRECISE PIXEL SPECIFICATION ENFORCEMENT BASED ON LATEST 3-PANEL WIREFRAME]`
@@ -8523,9 +9282,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 07:27] — Fix Question Card Metadata Position & Eliminate Empty Void in Speech Mode
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint
+**Status:** PASS
 
 ### Why
 - User directive: `[DIRECTIVE: FIX QUESTION CARD METADATA POSITION & ELIMINATE EMPTY VOID]`
@@ -8560,9 +9319,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 05:45] — Lock Question Card Height & Make Only Answer Region Dynamic
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint
+**Status:** PASS
 
 ### Why
 - User directive: `[DIRECTIVE: LOCK QUESTION CARD HEIGHT & MAKE ONLY ANSWER REGION DYNAMIC]`
@@ -8591,9 +9350,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 05:25] — Eliminate Empty Void & Unclip Microphone Button in Speech Mode
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 22 Mobile Assessment Page UI / Wireframe Blueprint
+**Status:** PASS
 
 ### Why
 - User directive: `[DIRECTIVE: ELIMINATE EMPTY VOID & UNCLIP MIC BUTTON IN SPEECH MODE]`
@@ -8620,9 +9379,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 01:05] — Fix Assessment Not Loading ("No Questions Found" & ViewTransition Conflict)
 
-**Agent/Session:** Antigravity  
-**Phase:** Assessment Engine Bug Recovery & Self-Healing  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Assessment Engine Bug Recovery & Self-Healing
+**Status:** PASS
 
 ### Why
 - User reported: "asessment tidak termuat" (Assessment not loading / "No Questions Found" empty state displayed on `assessment.html` with console error `InvalidStateError: Transition was aborted because of invalid state. ViewTransition opt-in disabled`).
@@ -8652,9 +9411,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 00:35] — Assessment Page UI Modern & Sleek Overhaul (Glassmorphism & Dark Mode)
 
-**Agent/Session:** Antigravity  
-**Phase:** UI/UX & Assessment Page Re-engineering  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** UI/UX & Assessment Page Re-engineering
+**Status:** PASS
 
 ### Why
 - User feedback on the wireframe layout: "tampilannya terlihat kuno, ukurannya cocok, tapi perlu dibuat modern dan sleek" (the sizes are suitable, but the visual style looks outdated/retro and needs to be made modern and sleek).
@@ -8690,9 +9449,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-16 00:22] — Assessment Page Layout Overhaul (Wireframe Blueprint Implementation)
 
-**Agent/Session:** Antigravity  
-**Phase:** UI/UX & Assessment Page Re-engineering  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** UI/UX & Assessment Page Re-engineering
+**Status:** PASS
 
 ### Why
 - User requested implementing the newly provided 3-mode wireframe blueprint for `assessment.html`.
@@ -8733,9 +9492,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-15 23:55] — Permanent Bottom Banner Audit & Contrast Enhancement
 
-**Agent/Session:** Antigravity  
-**Phase:** UI/UX Polish & Brand Presentation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** UI/UX Polish & Brand Presentation
+**Status:** PASS
 
 ### Why
 - User reported that the permanent banner at the bottom was occasionally not visible.
@@ -8759,9 +9518,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-15 23:45] — Dual-Engine Screen Wake Lock (Native W3C API + NoSleep Fallback)
 
-**Agent/Session:** Antigravity  
-**Phase:** Assessment Resiliency & Mobile Optimization  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Assessment Resiliency & Mobile Optimization
+**Status:** PASS
 
 ### Why
 - User reported screen still dimming on mobile devices during testing.
@@ -8793,9 +9552,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-15 23:35] — Switched Active Environment to Docker Local Supabase Stack
 
-**Agent/Session:** Antigravity  
-**Phase:** Local Infrastructure & Docker Environment  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Local Infrastructure & Docker Environment
+**Status:** PASS
 
 ### Why
 - User requested ensuring the system runs on the local Docker environment instead of remote cloud.
@@ -8821,9 +9580,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-15 23:20] — Mobile Home Button Anti-Cheat Debounce & 10s Countdown Protection
 
-**Agent/Session:** Antigravity  
-**Phase:** Anti-Cheat System & Mobile Lifecycle Integrity  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Anti-Cheat System & Mobile Lifecycle Integrity
+**Status:** PASS
 
 ### Why
 - On mobile devices (Android/iOS), pressing the Home button or minimizing the browser fired multiple lifecycle events simultaneously (`popstate`, `blur`, `visibilitychange`, and `pagehide`) in less than 2 seconds.
@@ -8848,9 +9607,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 17:05] — Screen Wake Lock, 0-Score Rescore Fix & Student Progression Gating
 
-**Agent/Session:** Antigravity  
-**Phase:** Assessment Resiliency & Grading Integrity  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Assessment Resiliency & Grading Integrity
+**Status:** PASS
 
 ### Why
 - Students reported screens going to sleep during assessments causing sudden auto-submit and lost exam attempts.
@@ -8878,9 +9637,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 13:05] — 412x810 Exact Wireframe Blueprint Implementation Across All 3 Assessment Modes
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes
+**Status:** PASS
 
 ### Why
 - The user provided a pixel-exact wireframe blueprint diagram (`412px` width x `810px` height) specifying exact heights for all components across Speech, Keyboard, and MCQ modes.
@@ -8916,9 +9675,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 12:35] — Header Redesign: 71px Row with 71x71 Centered Avatar, Left Flag & Give Up, Right Timer, 27px Assessment Title, and Malay Text Fix
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes
+**Status:** PASS
 
 ### Why
 - The user requested:
@@ -8950,9 +9709,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 11:24] — Pixel-Perfect Alignment to User 412x840 Wireframe Blueprint Across All 3 Modes
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes
+**Status:** PASS
 
 ### Why
 - The user provided a hand-drawn grid blueprint with explicit pixel dimensions (`412px` width x `840px` height) across all 3 modes to eliminate excessive page length / vertical stretching ("kamu membuatnya terlalu panjang").
@@ -8987,9 +9746,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 10:20] — Bugfix: Toast Repositioning, Speech Mode Vertical Distribution, and Dedicated Bottom Banner
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes
+**Status:** PASS
 
 ### Why
 - The user reported 3 layout issues visible in mobile audit screenshots:
@@ -9020,9 +9779,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 09:50] — Full Mobile App Shell Implementation Across All 3 Assessment Modes
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 19 Uniform Mobile App Shell Across All 3 Assessment Modes
+**Status:** PASS
 
 ### Why
 - The user issued a directive:
@@ -9062,9 +9821,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 06:55] — Multi-Resolution Chrome Ratio Audit, Dead Space Elimination, and Mr. Test Theme A E2E Completion
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 18 Proportional Mobile App-Shell Architecture & E2E Exam Execution  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 18 Proportional Mobile App-Shell Architecture & E2E Exam Execution
+**Status:** PASS
 
 ### Why
 - The user requested:
@@ -9094,9 +9853,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 05:55] — Full Question Modes Screenshot & DOM Height Audit (MCQ, Speech, Physical, Virtual, Matrix)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 18 Proportional Mobile App-Shell Architecture & E2E Exam Execution  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 18 Proportional Mobile App-Shell Architecture & E2E Exam Execution
+**Status:** PASS
 
 ### Why
 - The user issued a mandate to implement and thoroughly audit the Mobile App Shell pattern using `100dvh` across all distinct assessment question modes:
@@ -9125,9 +9884,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 05:15] — Proportional Mobile App-Shell Architecture & E2E Exam Execution
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 18 Proportional Mobile App-Shell Architecture & E2E Exam Execution  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 18 Proportional Mobile App-Shell Architecture & E2E Exam Execution
+**Status:** PASS
 
 ### Why
 - The previous compaction artificially crushed UI components (MCQ buttons down to 36px, title to 15px) merely to hit a static 0px scroll metric, creating an overly squashed aesthetic.
@@ -9158,9 +9917,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 04:35] — Mobile Viewport & Proportional Layout Optimization (440x810 px / Chrome Mobile 440x675 px)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 17 Mobile Viewport & Proportional Layout Optimization  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 17 Mobile Viewport & Proportional Layout Optimization
+**Status:** PASS
 
 ### Why
 - The user reported that on mobile phones, the bottom navigation bar (`Prev`, `0/40 answered`, `Next`) was continually pushed below the fold, forcing students to scroll down after every answer to proceed.
@@ -9193,9 +9952,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 03:25] — Institution Entity Hygiene & Strict Prerequisite Progression
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 16 Institution Hygiene & Strict Prerequisite Progression  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 16 Institution Hygiene & Strict Prerequisite Progression
+**Status:** PASS
 
 ### Why
 - The user reported two operational issues:
@@ -9232,9 +9991,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 02:30] — System Performance Streamlining & Supabase Egress Optimization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 15 Performance Streamlining & Egress Optimization  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 15 Performance Streamlining & Egress Optimization
+**Status:** PASS
 
 ### Why
 - An exhaustive codebase and database audit revealed significant Supabase egress waste (~450 KB per attempt on `attempt_answers`), 14 zero-row unreferenced legacy tables, dead evaluation engine client code (18.1 KB), and O(N) keystroke DOM re-renders in the assessment runner.
@@ -9272,9 +10031,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 01:50] — Local Supabase Docker Environment & Full Offline Ready
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 14 Local Offline Environment Setup  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 14 Local Offline Environment Setup
+**Status:** PASS
 
 ### Why
 - The user requested configuring and connecting local Docker Supabase so development and testing can be conducted completely offline.
@@ -9291,9 +10050,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 00:50] — Dynamic Class Progress Calculation & Status Display Fix
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 14 Production Polish & UI Bugfix  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 14 Production Polish & UI Bugfix
+**Status:** PASS
 
 ### Why
 - The Class progress bar on `dashboard.html` was permanently frozen at 0% / "In Progress" regardless of student assessment activity.
@@ -9317,9 +10076,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 00:25] — 4 Corners Question Metadata Layout (Theme Name, Topic, Category, Type)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 14 Production Polish & UI Enhancement  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 14 Production Polish & UI Enhancement
+**Status:** PASS
 
 ### Why
 - User requested UI layout update:
@@ -9363,9 +10122,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-13 00:00] — Center Written Input Placeholder & Add Question Metadata Info (Theme, Topic, Type)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 14 Production Polish & UI Enhancement  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 14 Production Polish & UI Enhancement
+**Status:** PASS
 
 ### Why
 - User requested UI enhancement:
@@ -9395,9 +10154,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 23:35] — Production Sync & Assessment Bug Recovery (Netlify & Supabase Cloud)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 14 Production Recovery & Live Verification  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 14 Production Recovery & Live Verification
+**Status:** PASS
 
 ### Why
 - Fix cascaded production errors preventing assessment loading on `https://tops-core.netlify.app`:
@@ -9437,9 +10196,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 15:52] — Supabase Cloud Migration Preparation (Project: oclajpyumehpojepcczg)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 13 Production Deployment & Cloud Supabase Migration  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 13 Production Deployment & Cloud Supabase Migration
+**Status:** PASS
 
 ### Why
 - Switch to fresh Supabase Cloud project (`https://oclajpyumehpojepcczg.supabase.co`) due to previous cloud project quota exhaustion.
@@ -9462,9 +10221,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 15:26] — Mobile E2E: Complete All 40 Level 3 Assignments with Detailed Screenshots (Miss Siti Qori)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation & E2E Verification  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation & E2E Verification
+**Status:** PASS
 
 ### Why
 - Complete strict mobile-viewport E2E automation (`width: 393, height: 852`, touch-enabled) completing all 40 Level 3 published assignments for student "Miss Siti Qori".
@@ -9487,9 +10246,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 06:30] — E2E: Full Realistic Assessment Test Run & Bug Fixing (Miss Siti Qori)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation & E2E Verification  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation & E2E Verification
+**Status:** PASS
 
 ### Why
 - Execute a full end-to-end real browser automated test using real student "Miss Siti Qori" to simulate Attempt 1 (Failure + Anti-cheat stress test) and Attempt 2 (Retake/Remedial success with Damerau-Levenshtein 0.5/1.0 scoring & hyphenated tolerance).
@@ -9517,9 +10276,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 03:20] — MASTER: Full Audit Remediation Verification Suite (TASK-01 to TASK-11)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation
+**Status:** PASS
 
 ### Why
 - Verify all 11 remediation areas identified in `TOPSCORE_SYSTEM_AUDIT_DETAILED.md` end-to-end to ensure zero regressions across security, performance, storage, anti-cheat, session guards, and data sorting.
@@ -9538,9 +10297,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 03:14] — TASK-10 & TASK-11: Student Profile Media & Storage Migration + Honorific Prefix Stripping
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation
+**Status:** PASS
 
 ### Why
 - Resolves Area 9 defect: Avatar uploads embedded raw Base64 data strings into PostgreSQL rows causing excessive egress; lack of CDN bucket storage.
@@ -9569,9 +10328,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 03:04] — TASK-09: Debounced Autosave Buffer for Real-Time Keystrokes & Transcripts
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation
+**Status:** PASS
 
 ### Why
 - Resolves Area 6 defect: Rapid typing in written textarea and Speech recognition events triggered synchronous `localStorage.setItem` writes on every keystroke, causing main-thread stuttering on lower-end devices.
@@ -9591,9 +10350,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 03:01] — TASK-08: Database Query Projection Auditing (Replace `.select('*')`)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation
+**Status:** PASS
 
 ### Why
 - Resolves Area 5 defect: Broad `.select('*')` queries across high-volume tables (`students`, `assessments`, `attempt_answers`, `audit_logs`) increased network egress and exposed sensitive fields (`pin_hash`).
@@ -9613,9 +10372,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 02:45] — TASK-07: Conceal Answer Keys in Exam Network Payload & Sanitize Snapshots
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation
+**Status:** PASS
 
 ### Why
 - Resolves Area 4 defect: Active exam payloads returned `accepted_answers_snapshot` and `correct_answer_snapshot` to the student's browser during exam start, allowing answers to be inspected in DevTools Network tab.
@@ -9635,9 +10394,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 02:38] — TASK-06: Anti-Cheat Hardening (Clipboard, DevTools & Mobile Inputs)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation
+**Status:** PASS
 
 
 ### Why
@@ -9662,9 +10421,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 02:32] — TASK-04 & TASK-05: Server-Authoritative Emergency Submission Fallback RPC & Client Scoring Deprecation
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation
+**Status:** PASS
 
 ### Why
 - Resolves Area 2 & Area 8 defects: When Edge Function `submit-assessment` was unavailable or offline, `js/api.js` fell back to calculating scores and grades inside the student browser and attempting direct `attempts.update()` writes, violating AGENTS.md §1.4.
@@ -9687,9 +10446,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 02:22] — TASK-03: PostgreSQL Stored Procedure auto_close_expired_attempts Correction
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation
+**Status:** PASS
 
 ### Why
 - Resolves Area 3 defect: The existing stored procedure `public.auto_close_expired_attempts()` targeted the deprecated `challenge_attempts` table instead of active `public.attempts`.
@@ -9710,9 +10469,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 02:16] — TASK-02: Cache-Busting Alignment & Service Worker URL Pattern Fix
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation
+**Status:** PASS
 
 ### Why
 - Resolves Area 7 defect: Discrepancies existed across entry points (some scripts using `?v=4.7.12`, `?v=4.7.6`, unversioned CSS links).
@@ -9735,9 +10494,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 02:05] — TASK-01: FOUC Prevention & Synchronous Head Session Guards
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation
+**Status:** PASS
 
 ### Why
 - Resolves Area 8 defect: `dashboard.html`, `assessment.html`, and `result.html` previously only checked session inside deferred `<script type="module">` tags. The browser rendered the protected layout DOM body before evaluating authentication, resulting in a visible Flash of Unauthenticated Content (FOUC).
@@ -9758,9 +10517,9 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ## [2026-10-12 02:00] — Master Remediation Task List & Progress Tracker Setup (TASK_LIST.md)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 12 Deep System Audit Remediation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 12 Deep System Audit Remediation
+**Status:** PASS
 
 ### Why
 - Created a persistent master task list and interactive checklist (`TASK_LIST.md`) in the project root so the user and coding agents can track and monitor all 11 technical remediation items from the main IDE window.
@@ -10332,13 +11091,13 @@ pm.cmd test -> ALL 3 SUITES PASSED (Syntax, Manifest, Student Dashboard Parity)
 
 ### Why
 - The user reported that editing an assessment caused its question count to drop to zero and the answer type to format incorrectly.
-- Analysis revealed that the Edit Modal incorrectly re-enabled the read-only level_id field and forgot to pre-select its value, causing it to save as 
+- Analysis revealed that the Edit Modal incorrectly re-enabled the read-only level_id field and forgot to pre-select its value, causing it to save as
 ull. This broke the dynamic aultCountFor question counter.
 - The nswer_type options array in the modal was missing dropdown, causing it to default to selection.
 
 ### Changed
-- Fixed populateLevelsForSection() in js/admin/crud-modals.js to correctly preserve the 
-eadonly state and explicitly re-select the 
+- Fixed populateLevelsForSection() in js/admin/crud-modals.js to correctly preserve the
+eadonly state and explicitly re-select the
 ecord.level_id.
 - Added the missing { value: 'dropdown', label: 'Drop-down' } option to the assessment form fields config.
 - Connected to Supabase via Node script and permanently deleted the corrupted level_id: null duplicate assessment record that broke the UI.
@@ -15137,14 +15896,14 @@ User explicitly instructed to "address everything" from the pending gap list. Th
 
 - dashboard.html`n- exam.html`n- js/app.js`n
   ## [2026-09-12 00:15]  Mobile-First UI Overhaul & Compact Layout Refactoring
-  
+
   **Agent/Session:** Antigravity / SESSION-20260912-0015
   **Phase:** UI Refactoring
   **Status:** PASS
-  
+
   ### Why
   - The user requested a complete UI/UX overhaul of the CEC Vocabulary Examination System to maximize information density, eliminate wasted space, and optimize for mobile devices without excessive scrolling.
-  
+
   ### Changed
   - **Student Exam Page (\exam.html\):**
     - Designed a sticky, slim topbar with a hamburger drawer toggle and progress indicators.
@@ -15158,17 +15917,17 @@ User explicitly instructed to "address everything" from the pending gap list. Th
   - **Admin Console (\dmin.html\ & \css/admin.css\):**
     - Reduced table cell padding (\ h\, \ d\) and form input sizes for denser data layout.
     - Applied a strict 50-row rendering limit to the Excel Import Previews for both Students and Questions, appending a \
-  
+
   +
-  
+
   X
-  
+
   more
-  
+
   rows\ footer to prevent UI lag on massive dataset imports.
   - **Global Stylings (\css/style.css\ & \css/dashboard.css\):**
     - Overhauled breakpoints (<= 768px) and media queries to support the new drawer and mobile-first layouts.
-  
+
   ### Files
   - \css/style.css\
   - \css/dashboard.css\
@@ -15177,20 +15936,20 @@ User explicitly instructed to "address everything" from the pending gap list. Th
   - \
   esult.html\
   - \dmin.html\
-  
+
   ### Database
   - No schema changes.
-  
+
   ### Tests
   - Local static verification applied.
-  
+
   ### Risks / Follow-up
   - Validate that the 50-row limit on previews covers all edge cases properly.
-  
+
   ### Next Action
   - Await user feedback on the new compact layout.
-  
-  
+
+
   ## [2026-09-14 22:11] - Simplified Exam Creation and Hidden Locked Exams
 
 **Agent/Session:** Antigravity
@@ -15902,36 +16661,36 @@ Await user confirmation and test the unified flow.
 ### Next Action
 
 - Verify the UI layout and integration manually.## [2026-09-28 21:38] - Fix Vocab Vault table layout [UI-002]
-  
+
   **Agent/Session:** Antigravity
   **Phase:** Fix UI
   **Status:** PASS
-  
+
   ### Why
   - The Vocab Vault data table was missing the 'WORD TYPE' and 'ACTIONS' columns on the screen because the layout engine was letting the 'ENGLISH' and 'INDONESIAN' columns expand infinitely, pushing the rightmost columns off-screen without an obvious scrollbar.
-  
+
   ### Changed
   - Added  able-layout: fixed; width: 100%; to the #vault-table definition in js/admin/vocab-vault.js.
   - Added specific percentage and pixel widths to the  head headers to ensure proportional and constrained layout.
-  
+
   ### Files
   - \js/admin/vocab-vault.js\
-  
+
   ### Database
   - migration: none
   - tables/columns/policies changed: none
-  
+
   ### Tests
   - command: N/A
   - result: PASS
-  
+
   ### Risks / Follow-up
   - None.
-  
+
   ### Next Action
   - Wait for user confirmation.
-  
-  
+
+
 
 ## [2026-09-29 06:49] - Enforce Class-Only Assessment Creation (Disable Generic CRUD)
 
@@ -15958,60 +16717,60 @@ Await user confirmation and test the unified flow.
 
 - Await further instructions or handle remaining UI refinements.
   ## [2026-10-04 02:54] - UI Overhaul and Blueprint Adjustments
-  
+
   **Agent/Session:** Antigravity
   **Phase:** UI Modernization & Quality Checks
   **Status:** PASS
-  
+
   ### Why
   - User requested modern, streamlined 'Frosted Glass' aesthetics for the student assessment UI.
   - User requested visual locks on dashboard assessments rather than hiding them completely.
   - User requested a more compact layout for the Blueprint and Topic Manager tabs to minimize scrolling.
   - User requested strict Theme and Topic code hierarchical sorting and cumulative tasks in Blueprint.
-  
+
   ### Changed
   - Updated \dashboard.html\ to render unfulfilled prerequisite assessments with a grayed-out locked card and a =ÃƒËœÃƒÂ status badge.
   - Updated \ssessment.html\ written and dropdown answer areas to use frosted glass CSS styling.
   - Updated \js/admin/vocab-vault.js\ to reduce paddings/margins in Blueprint and Topic Manager.
   - Updated \js/admin/vocab-vault.js\ \getHierarchy\ to properly extract and sort by \ heme*code\ and \ opic*code\.
   - Updated Topic Manager in \ocab-vault.js\ to group rows by Theme to prevent redundant title display.
-  
+
   ### Files
   - \dashboard.html\
   - \ssessment.html\
   - \js/admin/vocab-vault.js\
-  
+
   ### Database
   - N/A
-  
+
   ### Next Action
   - Await user verification of the Excel import and Real-Time Sync.
-  
+
   ## [2026-10-04 10:12] - Focus Mode and Lock Animation
-  
+
   **Agent/Session:** Antigravity
   **Phase:** UI Modernization & Quality Checks
   **Status:** PASS
-  
+
   ### Why
   - User agreed to the suggestions for Focus Mode and locked card animations but strictly requested that core functions remain untouched.
-  
+
   ### Changed
   - Updated \dashboard.html\ to allow clicks on locked cards and apply a \shake\ CSS animation to provide feedback when interacting with locked assessments.
   - Updated \ssessment.html\ with a \ocus-mode\ CSS class on the body that dims headers and navigation. Added non-intrusive global event listeners for \ocusin\, \ocusout\, and mic button clicks to seamlessly toggle this state without altering core assessment logic.
-  
+
   ### Files
   - \dashboard.html\
   - \ssessment.html\
-  
+
   ### Database
   - N/A
-  
+
   ### Next Action
   - Await user verification of the Excel import and Real-Time Sync.
-  
-  
-  
+
+
+
   ## [2026-10-04 20:18] - Implement Triple Auto-Generate & System Guards
 
 **Agent/Session:** Antigravity
@@ -16062,46 +16821,46 @@ Await user confirmation and test the unified flow.
 
 - Discuss Class Name display with the user.
   ## [2026-10-04 15:22] - Fix Assessment Generation & Modal Filtering
-  
+
   **Agent/Session:** Antigravity
-  
+
   **Phase:** Debugging & Core Architecture
-  
+
   **Status:** PASS
-  
-  
-  
+
+
+
   ### Why
-  
+
   - User reported assessment creation failing (Phrases overwriting Vocab).
-  
+
   - Dashboard modal leaked assessments from other levels.
-  
+
   - Legacy code in admin app.js was still relying on title-parsing heuristics instead of strictly using the new \ssessment*category\ taxonomy.
-  
-  
-  
+
+
+
   ### Changed
-  
+
   - Modified \upsertDynamicAssessmentShell\ in \pi.js\ to prepend \modulePrefix\ to the \shell*code\ (e.g. \VOCAB-TEST\ instead of just \TEST\) to ensure idempotency keys are unique between modules.
-  
+
   - Modified \etchAssessmentsForStudentClass\ in \pi.js\ to accept \levelId\ and applied this filter.
-  
+
   - Updated \dashboard.html\ to pass \session.level*id\ into the fetch call, resolving the modal filtering issue.
-  
+
   - Refactored \pp.js\ to strictly use \ssessment*category\ and removed the title parsing heuristic.
-  
-  
-  
+
+
+
   ### Files
-  
-  - \js/api.js\" >> docs\CHANGELOG.md; echo 
-  
+
+  - \js/api.js\" >> docs\CHANGELOG.md; echo
+
   -
-  
+
   \js/admin/app.js\"
-  
-  
+
+
 
 ## [2026-10-04 16:02] â€” Fix Dynamic Shell Level Gate & Dropdown Distractor Pool
 

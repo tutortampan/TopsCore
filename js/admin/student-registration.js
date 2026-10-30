@@ -9,7 +9,7 @@ import { showToast, showLoading, hideLoading, updateLoadingProgress, escapeHtml,
 import { getSupabase } from '../supabase.js?v=5.3.2';
 
 export async function renderStudentsRegistration(area) {
-  let activeTab = window._activeStudentRegTab || 'bulk';
+  let activeTab = window._activeStudentRegTab || localStorage.getItem('topscore_admin_student_reg_tab') || 'bulk';
 
   const regTabs = [
     { id: 'bulk', icon: '📥', title: 'Bulk Excel Import', label: 'Bulk Import (Excel / CSV)' },
@@ -19,6 +19,12 @@ export async function renderStudentsRegistration(area) {
   window._switchStudentRegTab = async (tabId) => {
     activeTab = tabId;
     window._activeStudentRegTab = tabId;
+    try {
+      localStorage.setItem('topscore_admin_student_reg_tab', tabId);
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', `#student-registration?tab=${tabId}`);
+      }
+    } catch (_) {}
     if (window.setTopbarTabs) {
       window.setTopbarTabs(regTabs, activeTab, 'window._switchStudentRegTab');
     }

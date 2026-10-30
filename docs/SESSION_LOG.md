@@ -1,3 +1,549 @@
+## SESSION-20261031-0715
+
+Start: 2026-10-31 07:10 UTC+8
+End: 2026-10-31 07:15 UTC+8
+Agent: Antigravity
+
+### User Request
+"ada masalah disini, tolong diperbaiki" (with screenshot showing `Failed to load dashboard: attTime is not defined` and infinite spinner on Rank Standings for student Muhammad Tarmizi Tohir).
+
+### Objective
+- Resolve the `attTime is not defined` ReferenceError in `js/dashboard.js`.
+- Verify student dashboard hydration in Node using Muhammad Tarmizi Tohir's real Supabase attempts.
+- Bump cache buster in `dashboard.html` to `v=20261031_v61`.
+- Maintain 0 git commit policy.
+
+### Work Performed
+1. **Identified Root Cause**:
+   - In `js/dashboard.js` line 1913, `attTime` was evaluated in an attempt comparison condition before being declared in that scope.
+2. **Resolution**:
+   - Declared `const attTime = new Date(att.submitted_at || att.created_at || 0).getTime();` within `attempts.forEach` loop.
+   - Fixed update query in `js/api.js` to avoid referencing non-existent database column `is_remedial`.
+   - Bumped `dashboard.html` script tag to `?v=20261031_v61`.
+3. **Verification**:
+   - Ran `scripts/verify_tarmizi_dashboard.mjs`: loaded 48 attempts for Muhammad Tarmizi Tohir, successfully mapped 2 exams and 9 activities with 0 errors.
+   - `scripts/check_all_js_syntax.cjs`: 40/40 JS files PASS with 0 syntax errors.
+
+---
+
+## SESSION-20261031-0710
+
+Start: 2026-10-31 06:15 UTC+8
+End: 2026-10-31 07:10 UTC+8
+Agent: Antigravity
+
+### User Request
+1. "mundur sebentar, kenaap setelah disesuaikan, niali beberapa siswa jadi berantakan? malah turun drastis? coba cek dengan benar,,,cek berkali2 sampai 3 kali, analisa, cek, analisa, cek, pelajari, cek analisa, perbaiki, terapkan, baru lanjut." (with screenshot of Class Hub grid)
+2. "di setiap exam, ada 2 jenis words dan phrase,,, nah ada beberapa nilai yang satu remidi dan satu bukan, ini harus diperbaiki, karena seharusnya word remidi maka phrase remidi, sebab satu paket, bisa tolong ini dibuatkan sistem agar saat exam yang satu pasang di satu tema maka ststus normal dan remidinya disamakan. dan perkecil sedikit ukuran font di tabel ini, beberap huruf berdekatan agak tumpang tindih, perbaiki juga."
+3. "continue whats left"
+
+### Objective
+- Investigate and repair the score reduction root cause: PostgREST 1,000-row batch truncation during adjustment query.
+- Completely restore all affected attempts across the live database with true question counts and strict pagination.
+- Enforce the Paired Theme Exam Remedial Synchronization rule ("Satu Paket") in both live Supabase DB and `js/admin/app.js` / `js/api.js`.
+- Optimize Class Hub matrix table typography and column widths to eliminate character crowding and text overlap in "Fit Screen" mode.
+- Complete Phase 222: 5-Factor Error Diagnostics (`vocab_gap` chip) in Test Analytics header.
+
+### Work Performed
+1. **Root Cause Analysis & Score Restoration**:
+   - Identified that `execute_score_adjustment.mjs` used `.in('attempt_id', chunk)` which truncated answers at PostgREST's 1,000-row limit for 120/280/480 question exams.
+   - Built and ran `scripts/restore_all_attempt_scores.mjs` using strict `.range(p*1000, ...)` pagination. Restored all 337 attempts in Supabase (+1942 pts restored).
+2. **Paired Theme Exam Remedial Synchronization ("Satu Paket")**:
+   - Synchronized Theme B remedial records in database via `scripts/sync_db_theme_remedials.mjs`.
+   - Updated `js/admin/app.js`: student score compilation pass and matrix renderers now strictly synchronize remedial status between Words Exam and Phrases Exam for every theme package.
+   - Upgraded `adminUnlockRemedialExam(attemptId)` in `js/api.js` to automatically authorize paired sibling exams in the same theme.
+3. **Table Anti-Crowding Optimization**:
+   - Adjusted `--matrix-font-size` calculation in `app.js` to `Math.min(10.0, Math.max(7.5, rowHeight * 0.35))`.
+   - Widened score columns from 50px to 54px, and total points columns from 58px to 60px.
+   - Updated `css/admin.css` with flex centering, 1.0 line height, and -0.02em letter spacing for header cells.
+4. **Phase 222 (5-Factor Error Diagnostics)**:
+   - Added `vocab_gap` chip and telemetry in `js/admin/tests-management.js` and `css/admin.css`.
+5. **Cache Busters**:
+   - Bumped to `v=20261031_v60` in `admin.html`, `js/admin/app.js`.
+
+### Verification
+- `scripts/verify_screenshot_students.mjs`: Aunul Fikri Yasir restored to 190/280 (67.86%, Grade C); Unggul Wirakse restored to 407.5/480 (84.9%, Grade B); Syazida Shinda Debi restored to 213.5/280 (76.25%, Grade C).
+- `scripts/find_remedial_mismatches.mjs`: 0 mismatches found across the entire database.
+- `scripts/test_paired_remedial_sync_logic.mjs`: 3/3 logic test cases PASS with 100% accuracy.
+- `scripts/check_all_js_syntax.cjs`: 40/40 JS files PASS with 0 syntax errors.
+
+---
+
+## SESSION-20261031-0456
+
+Start: 2026-10-31 04:50 UTC+8
+End: 2026-10-31 04:56 UTC+8
+Agent: Antigravity
+
+### User Request
+"the result page is not showing" (with screenshot showing `Could not load results - attemptPct is not defined` at `result.html?attempt_id=3c61e205-89d3-47d7-8bee-b61d1878e920&admin=1`)
+
+### Objective
+- Resolve the `attemptPct is not defined` ReferenceError in `js/result.js`.
+- Verify full result loading with attempt `3c61e205-89d3-47d7-8bee-b61d1878e920`.
+- Bump cache buster to `v55` in `result.html`.
+- Maintain 0 git commit, 0 git push.
+
+### Work Performed
+1. **Root Cause Analysis**:
+   - In `js/result.js` at line 897, `const ptsColor = getGradeColorByScore(attemptPct);` was using `attemptPct` instead of the scope variable `pct`.
+2. **Resolution**:
+   - Fixed line 897 to `const ptsColor = getGradeColorByScore(pct);`.
+   - Bumped `result.html` to `?v=20261031_v55`.
+3. **Verification**:
+   - Ran `node scripts/check_all_js_syntax.cjs` — 40/40 PASS.
+   - Tested attempt `3c61e205-89d3-47d7-8bee-b61d1878e920` in Node environment — successfully evaluated score (53.96%), grade (D), points (259/480 pts), ptsColor (#FF8C00), and all 480 questions breakdown with 0 errors.
+
+---
+
+## SESSION-20261031-0450
+
+Start: 2026-10-31 04:30 UTC+8
+End: 2026-10-31 04:50 UTC+8
+Agent: Antigravity
+
+### User Request
+1. "keterangan gender cukup pakai M/F" (with crop of Name, Age, Gender columns)
+2. "setelah saya pertimbangkan di bagian point disini, taruh saja total point dari SEMUA Exam di kelas Vocab yang diikuti." (with screenshot of Class Hub attendance PTS column)
+3. "continue whats in progress"
+
+### Objective
+- Render Gender as compact `♂ M` / `♀ F` in `admin.html#students` with width 55px.
+- Align per-class PTS calculation in `student-management.js` so it calculates points strictly from ALL EXAMS in that class via authoritative `computeMilestoneExamMastery`, reaching exact parity with Class Hub attendance PTS.
+- Label the class completion column 'Exams' (completed exams / total exams in that class).
+- Add sorting comparators for per-class exam PTS, Score, Grade, and Exams.
+- Bump cache busters to `v54` and verify all tests and syntax checks pass 100%.
+
+### Work Performed
+1. **Gender Compact M/F**:
+   - Replaced verbose `♂ Male` / `♀ Female` with compact `♂ M` / `♀ F` in `student-management.js` (width 55px).
+2. **Authoritative Class Exam PTS Parity**:
+   - In `student-management.js`, decoupled per-class metrics from quizzes.
+   - For each active class, extracted all weekly exams (`isWeeklyExam`) and evaluated the student's exam entries with `computeMilestoneExamMastery`.
+   - Populated `pts`, `avgPct`, and `grade` under the class super-header exclusively from the class's exams (e.g. Aunul = 482 pts, Latifa = 450 pts, Wardatul = 423 pts).
+   - Changed class sub-column header to 'Exams' (e.g. `6 / 8`).
+   - Attached flattened sort keys onto each row and added `sortComparator` branches for `_cls_pts_`, `_cls_score_`, `_cls_grade_`, `_cls_tests_`.
+3. **Cache Busting**:
+   - Bumped `admin.html`, `js/admin/app.js`, and `js/admin/student-management.js` to `?v=20261031_v54`.
+4. **Verification**:
+   - `node scripts/check_all_js_syntax.cjs` — 40/40 PASS.
+   - `node scripts/test_student_dashboard_exam_parity.mjs` — PASS 100%.
+   - Strict adherence: 0 git commit, 0 git push.
+
+---
+
+## SESSION-20261031-0430
+
+Start: 2026-10-31 04:25 UTC+8
+End: 2026-10-31 04:30 UTC+8
+Agent: Antigravity
+
+### User Request
+"result page has error" (with screenshot of console showing `Uncaught SyntaxError: The requested module './api.js' does not provide an export named 'getGradeColorByScore' at result.js:8:238`)
+
+### Objective
+- Resolve the missing export error in `result.js`.
+- Ensure `getGradeColorByScore` is properly exported and imported.
+- Verify full evaluation of `result.js` without runtime syntax/binding errors.
+
+### Work Performed
+- Diagnosed root cause: `result.js` imported `getGradeColorByScore` from `./api.js`. `api.js` imported several grading functions from `grading.js` but omitted `getGradeColorByScore`.
+- Re-exported `getGradeColorByScore` in `js/api.js` (lines 4 & 12).
+- Updated `js/result.js` to import `getGradeColorByScore` directly from `./grading.js?v=20261031_v53`.
+- Verified in Node.js with mocked DOM environment: `result.js` evaluated cleanly with zero syntax/binding errors.
+- Verified 40/40 JS files syntax check (`node scripts/check_all_js_syntax.cjs`) PASS.
+
+---
+
+## SESSION-20261031-0425
+
+Start: 2026-10-31 04:11 UTC+8
+End: 2026-10-31 04:25 UTC+8
+Agent: Antigravity
+
+### User Request
+"di side question ada task, analisa, kerjakan"
+
+### Objective
+- Analyze the tasks and open questions embedded in the side questions of the plan & discussions:
+  1. Eliminate the intra-theme lockout where students finishing Words Exam with < 60% were blocked from Phrases Exam during an active live test session.
+  2. Implement Theme Exam Pair Transition in Student Lobby (`dashboard.js`) and Result Sheet (`result.js`) so the next milestone automatically advances to Phrases Exam after Words Exam attempt.
+  3. Keep the 40-column matrix and evaluation engine intact without destructive schema merges.
+  4. Bump cache busters to `v53` across `dashboard.html` and `result.html`.
+  5. Verify 40/40 JS syntax checks and 100% test suite pass, adhering to 0 git commit, 0 git push.
+
+### Work Performed
+1. **Intra-Theme Prerequisite Bypass during Live Test Sessions**:
+   - In `js/dashboard.js` (`openClassModal` line 1655 and `openLevelModal` line 1383), verified whether a test session is actively unlocked by the tutor for this student (`isSessLive`).
+   - If a live session is active, marked `prereqMet = true`, bypassing the `wPct >= 60%` barrier so students are never blocked from completing Phrases Exam during class.
+   - Outside of tutor-supervised live sessions, curriculum integrity remains intact.
+2. **Theme Exam Pair Transition in Lobby & Result Page**:
+   - In `js/dashboard.js` (`renderNextAssessment` line 905): if `nextAsm` was Words Exam and student has an attempt on it, the lobby automatically advances to unattempted sibling Phrases Exam.
+   - In `js/result.js` (`renderSmartNextAction` line 397): immediately displays `GO TO NEXT TEST: Phrases Exam ->` upon Words Exam submission.
+3. **Cache Busting**:
+   - Bumped `dashboard.html` and `result.html` to `?v=20261031_v53`.
+4. **Verification**:
+   - `node scripts/check_all_js_syntax.cjs` -> 40/40 PASS.
+   - `node scripts/test_student_dashboard_exam_parity.mjs` -> 100% PASS.
+   - `node scripts/test_analytics_classifier.mjs` -> 100% PASS.
+   - `node scripts/test_batch_133_student_lobby_standings.mjs` -> 100% PASS.
+
+### Resume From
+Ready for testing in browser across Student Dashboard (`dashboard.html`), Result Sheet (`result.html`), and Admin Panel (`admin.html`).
+
+---
+
+## SESSION-20261031-0235
+
+Start: 2026-10-31 02:10 UTC+8
+End: 2026-10-31 02:35 UTC+8
+Agent: Antigravity
+
+### User Request
+1. "di test session, saat saya buka session, siswa hanya bisa akses 1 exma, misalnya mereka akses words, setelah itu selesai, mereka tidak bisa akses phrase exam. kenapa? dan coba anaisa, petakan, diskusikan. dan apakah sebaiknya exam ini digabungkan saja antara word dan pharse? bagaimana menurutmu? /plan"
+2. "beberapa siswa tidak punya keterangan usia, tolong diperbaiki. seharusnya tanggal lahir dimasukkan saat siswa pertama kali masuk ke sistem, dan sistem cek apakah tannggal lahir da atau tidak, tolong itu ujuga diperbaiki"
+3. "disni saya lihat ada kolom untuk tests, nilai, score, point, garede, progress, dll. ini sepertiya untuk vocabulary class,,, saya ingin agar klolom ini lebih siap untuk siswa yang akan punya banyak kelas,,, jadi berikan kolom berdasarkan KELAS yang diikitui. misalnya kelas 3rd Vocabulary, taruhkan nilainya disana. misalnya ada 4 test maka berikan nilai 4 test tersebut. lalu kalau ada kelas lain yang diikut, maka buatakan kolom untuk kelas itu juga (jika kelasnya aktif). coba analisa, pelajari, petakan, analisa, terapkan."
+4. "finished all task in side quest too" / "Continue everything"
+
+### Objective
+- Request 1 (Phase 213): Diagnose and resolve Phrases exam access lockout in Live Test Sessions, unify Words and Phrases session access without breaking modular architecture, and ensure resilient dual session status detection.
+- Request 2 (Phase 212): Add required Date of Birth validation and visual indicators (`⚠ No DOB`) in Student Roster and Student Add/Edit form.
+- Request 3 (Phase 214): Restructure Student Roster columns from static single-class metrics to dynamic multi-class column groups (Score, Grd, PTS, Tests) with SuperHeaders for each active class.
+
+### Work Performed
+1. **Phase 212 (Birthdate Validation & Warning)**:
+   - Modified `js/admin/student-management.js` to mark Date of Birth as required with red asterisk `*` and helper text.
+   - Added validation guard on form save: blocks saving with an alert toast and focuses input if DOB is empty.
+   - Updated Age column in Student DataGrid to display an orange `⚠ No DOB` badge with hover tooltip when birthdate is missing.
+2. **Phase 213 (Live Test Session Dual Exam Whitelist & Status Sync)**:
+   - Diagnosed root cause: `tests-access.js` was filtering `phrasesAllowedIds` at session opening based on whether students had *already* passed Words Exam (`ev.wordsPassed`). Since students take Words Exam *during* the live session, `phrasesAllowedIds` was empty `[]`, locking students out permanently.
+   - Removed premature filter on session open and late-add so all eligible students are whitelisted for both Words and Phrases exams.
+   - Sequential prerequisite (requiring Words Exam >= 60%) is dynamically enforced at attempt time in `js/dashboard.js`.
+   - Merged session detection in `tests-access.js` to evaluate both Words and Phrases sessions independently, maintaining accurate `LIVE` status and merging allowed student IDs.
+3. **Phase 214 (Student Roster Dynamic Per-Class Columns)**:
+   - Added parallel fetch for `classes` in `renderStudents`.
+   - Mapped attempts by class and calculated student per-class scores, grades, points, and test completion.
+   - Replaced static columns with dynamic column definitions for each active class: `Score`, `Grd`, `PTS`, `Tests`.
+   - Leveraged DataGrid `superHeaders` to display clean class-name banners above each class's 4 metrics.
+   - Bumped cache busters across `admin.html` to `?v=20261031_v53`.
+   - Verified 40/40 JS syntax checks PASS and 100% test suite pass.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs` -> 40/40 PASS
+- `node scripts/test_student_dashboard_exam_parity.mjs` -> 100% PASS
+- `node scripts/test_analytics_classifier.mjs` -> 100% PASS
+- `node scripts/test_batch_133_student_lobby_standings.mjs` -> 100% PASS
+- Adhered strictly to 0 git commit, 0 git push.
+
+### Resume From
+Ready for testing in browser across `#students` and `#class-hub?tab=test-sessions`.
+
+---
+
+## SESSION-20261031-0205
+
+Start: 2026-10-31 01:53 UTC+8
+End: 2026-10-31 02:05 UTC+8
+Agent: Antigravity
+
+### User Request
+"saya lihat font di halaamn ini bereebda2 ukuranynya,,, antara bagian nama dan angka,,, kita perlu rapikan"
+
+### Objective
+- Inspect the font size discrepancies between student names and numerical cells in the Class Hub attendance matrix (`#class-hub`).
+- Harmonize the typography scale across the entire data grid so names, numbers, scores, points, percentages, and footer averages have proportional, synchronized font sizes.
+- Eliminate fragmented `monospace` font families and unify all cells to `Inter` with `tabular-nums`.
+- Calibrate dynamic screen scaling (`fitMatrixToScreen`) so text and numbers scale in lockstep.
+- Bump cache buster to `v51`.
+- Verify 40/40 JS syntax and parity test suites.
+- Strictly adhere to 0 git commit, 0 git push.
+
+### Work Performed
+- Diagnosed root causes:
+  * Student names were hardcoded to `0.76rem` (`12.16px`), whereas test matrix numbers used `var(--matrix-font-size, 0.74rem)` which shrank down dynamically to `9.5px`–`11px` via `fitMatrixToScreen()`, creating an obvious size mismatch.
+  * `GRD` was oversized at `0.86rem`–`0.92rem` (`font-weight: 800/900`).
+  * `INST`, summary exam points, and theme points had rogue `font-family: monospace` overrides.
+  * Summary footer row had scattered font sizes (`0.68rem`, `0.72rem`, `0.75rem`, `0.85rem`).
+- Harmonized typography:
+  * Unified base row data font-size to `var(--matrix-font-size, 0.75rem)` across both student names and all numerical cells.
+  * Standardized metadata (`INST`, `PROGRAM`, `BATCH`) to `calc(var(--matrix-font-size, 0.75rem) * 0.92)` and eliminated all monospace overrides.
+  * Standardized `GRD` typography to `calc(var(--matrix-font-size, 0.75rem) * 1.05)` (letters) and `calc(var(--matrix-font-size, 0.75rem) * 1.15)` (Star ★) at clean `font-weight: 700`.
+  * Standardized data font-weight to `600` and headers/grades to `700`.
+  * Enforced `font-variant-numeric: tabular-nums` for crisp vertical alignment.
+  * Calibrated dynamic responsive font sizing in `fitMatrixToScreen()`.
+- Bumped cache busters across `admin.html` to `?v=20261031_v51`.
+- Verified 40/40 JS files syntax PASS and 100% test parity PASS.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs` -> PASS (40/40 JS files PASS)
+- `node scripts/test_student_dashboard_exam_parity.mjs` -> PASS (100%)
+- `node scripts/test_analytics_classifier.mjs` -> PASS (100%)
+- `node scripts/test_batch_133_student_lobby_standings.mjs` -> PASS (100%)
+- 0 git commit, 0 git push maintained.
+
+### Resume From
+Awaiting next user instruction, test feedback, or feature request.
+
+---
+
+## SESSION-20261031-0137
+
+Start: 2026-10-31 01:30 UTC+8
+End: 2026-10-31 01:37 UTC+8
+Agent: Antigravity
+
+### User Request
+1. Side Question: "disini grade menggunakan star, atau huruf yang diberikan lingkaran,,, apakah menurutmu sebaiknya kita biarkan, atau kita rubah menadi huruf saja dengan warna? kalau menurutmu lebih abik begini, maka biarakn, tapi kalau menurutmu lebih baik bintang atau huruf berwarna maka coba rubah menjadi itu."
+2. Continuation: "continue" & "continue everything"
+
+### Objective
+- Evaluate UX / UI typography and layout for the `GRD` column in Class Attendance DataGrid.
+- Implement clean colored typography (★ and letters A-E) without circular badges in the grid to reduce visual noise and harmonize with `PROG` and `PTS`.
+- Wire `history.replaceState` into all sub-tab switchers across Admin views (`_switchClassHubTab`, `_switchSettingTab`, `_switchVaultTab`, `_switchStudentRegTab`, `_switchClassTestAnalytics`).
+- Bump cache buster to `v50`.
+- Verify full JS syntax (40/40 PASS) and run test suites.
+- Strictly adhere to 0 git commit, 0 git push.
+
+### Work Performed
+- `css/admin.css`: Added `.grid-grade-val` and `.grid-grade-star` rules for sharp tabular typography.
+- `js/admin/app.js`: Replaced `.grade-circle` in `GRD` column and summary footer with `.grid-grade-val`. Added `history.replaceState` into `_switchClassHubTab` and `_switchSettingTab`.
+- `js/admin/vocab-vault.js`: Added `history.replaceState` into `_switchVaultTab`.
+- `js/admin/student-registration.js`: Added `history.replaceState` into `_switchStudentRegTab`.
+- `js/admin/tests-management.js`: Added `history.replaceState` into `_switchClassTestAnalytics`.
+- `admin.html`: Bumped cache busters to `?v=20261031_v50`.
+- All 40 JS files passed syntax validation (`node scripts/check_all_js_syntax.cjs`).
+- Student Dashboard parity tests passed 100% (`scripts/test_student_dashboard_exam_parity.mjs`).
+
+### Verification
+- 40/40 JS files PASS syntax check.
+- Parity and tie-breaker tests PASS 100%.
+- 0 git commit, 0 git push maintained.
+
+### Resume From
+Awaiting next user instruction, test feedback, or feature request.
+
+---
+
+## SESSION-20261031-0130
+
+Start: 2026-10-31 01:20 UTC+8
+End: 2026-10-31 01:30 UTC+8
+Agent: Antigravity
+
+### User Request
+1. Guidance request: "/terkadang saya mengetik perintah kurang tepat kata2nya,,, apa yang bisa saya lakukan agar kamu bisa memahami dengan baik?"
+2. Instruction: "continue everything" (Ensuring full route and state persistence across page refresh/reload, verifying all system components).
+
+### Objective
+- Provide a clear, actionable, stress-free prompt guide for the user to communicate intent effortlessly even with typos, informal phrasing, or incomplete technical terms.
+- Re-verify and confirm route and state persistence integrity across `admin.html` and `dashboard.html` in accordance with Rule 2.20 of `AGENTS.md`.
+- Run comprehensive syntax and parity test suites.
+- Strictly maintain 0 git commit, 0 git push.
+
+### Work Performed
+1. Verified Route & State Persistence (Rule 2.20):
+   - Confirmed bi-directional state synchronization in `js/admin/app.js` (`parseHashRoute`, `applySubRouteState`, `loadSection`) and `js/dashboard.js`.
+   - All sub-tabs (`class-hub?tab=attendance|test-sessions|tests`, `tests?class_id=...`, `vocab_vault?tab=...`, `settings?tab=...`, `student-registration?tab=...`) and active modal views restore correctly on browser reload without fallback redirects to default `#tests`.
+2. Communication Guide Prepared:
+   - Formulated 5 practical, user-friendly tips: Screenshot-first strategy, Target Location + Action pattern, Before vs After structure, relying on Antigravity's typo-resilience, and utilizing the `/grill-me` interactive interview mode when requirements are open-ended.
+3. Automated Test Verification:
+   - Executed `node scripts/check_all_js_syntax.cjs` -> 40/40 JS files passed.
+   - Executed `node scripts/test_student_dashboard_exam_parity.mjs` -> 100% PASS.
+   - Executed `node scripts/test_analytics_classifier.mjs` -> 100% PASS (0 failed).
+4. Adhered strictly to 0 git commit, 0 git push.
+
+### Verification
+- All test suites PASS (40/40 syntax, 100% parity, 100% classifier).
+- No console/syntax errors.
+
+### Outstanding
+- None. System is ready and standing by for the user's next feature or command.
+
+### Resume From
+Awaiting next user instruction or feedback.
+
+## SESSION-20261031-0105
+
+Start: 2026-10-31 00:55 UTC+8
+End: 2026-10-31 01:05 UTC+8
+Agent: Antigravity
+
+### User Request
+- Visual inspection and verification of two user screenshots:
+  1. Image 1: Test Analytics Bottlenecks (`admin.html#tests`) showing `⏳ Timed Out / Blank` answers, timeout-only bottleneck entries, and pacing-dominated diagnosis.
+  2. Image 2: Class Attendance table with inverted column order (`STUDENT NAME | PROG | GRD | PTS`) and `PROG` percentage text color incorrectly inheriting the student's exam grade (e.g. Nurhaliza's 73% showing Red).
+
+### Objective
+- Compare visual screenshots against the active codebase state.
+- Ensure test detail drawer (`_openTestDetailDrawer`) and card drill-down modal (`cardKey === 'wall'`) align with submitted-attempt and timeout-exclusion rules.
+- Verify 40/40 JS syntax checks, analytics classifier, and dashboard parity.
+- Provide comprehensive comparative breakdown to the user.
+- Strictly maintain 0 git commit, 0 git push.
+
+### Work Performed
+1. Verified Image 1 Resolution:
+   - Filtered out `[Blank / Timed Out]` from `wrongAnswersCount` and active error metrics.
+   - Enforced strict submitted-attempt filter (`att.status === 'submitted' || att.status === 'auto_submitted' || att.submitted_at`).
+   - Expanded bottleneck lists to Top 20 per theme column (Theme A, B, C, D).
+   - Eliminated `[⏳ Timeout]` from card dominant tags; only genuine linguistic tags (`[🔤 Spelling]`, `[🇮🇩 Literal Translation]`, `[🔄 Word Form]`) appear.
+   - Decoupled pacing timeouts into a standalone header metric `N (Pacing)`.
+   - Wired `hardestQs20` onto `window._testAnalyticsState` for drill-down modal parity.
+2. Verified Image 2 Resolution:
+   - Repositioned `GRD` (`col-sticky-5`, 38px, left: 290px) directly beside `STUDENT NAME` (`col-sticky-4`, 140px, left: 150px).
+   - Moved `PROG` to `col-sticky-6` (46px, left: 328px).
+   - Retained `PTS` at `col-sticky-7` (46px, left: 374px).
+   - Decoupled `PROG` color from exam grade, binding it to `getGradeColorByScore(row.progressPct)` (e.g. Nurhaliza's 73% is now pure yellow `#FFFF00`, not red).
+   - Aligned summary footer row cells and colors accordingly.
+3. Cache Busting:
+   - Updated cache busters to `?v=20261031_v48` across `admin.html` and `js/admin/app.js`.
+4. Verification:
+   - 40/40 JS files passed syntax validation (`node scripts/check_all_js_syntax.cjs`).
+   - 100% classifier tests passed (`scripts/test_analytics_classifier.mjs`).
+   - 100% dashboard parity tests passed (`scripts/test_student_dashboard_exam_parity.mjs`).
+   - 0 git commit, 0 git push.
+
+### Resume From
+Awaiting user visual confirmation after hard refresh (`Ctrl + F5`) or further instructions.
+
+---
+
+## SESSION-20261031-0052
+
+Start: 2026-10-31 00:35 UTC+8
+End: 2026-10-31 00:52 UTC+8
+Agent: Antigravity
+
+### User Request
+1. "saat saya membuka layar tertentu, lalu ada refresh atau loading, atau lainnya,,, seringkali saya di arahkan ke halaman lain,,, pastikan saat saya ada di sebuah halaman, lalu ada refresh atau update, maka saya kembali ke halaman yang terakhir saya lihat. Pastikan itu /learn /boost"
+2. "coba cek seting yang bisa memaksimalkan pekerjaan kita, kamu analisa, petakan, terapkan"
+
+### Objective
+- Ensure that refreshing the page, background data loading, or updating views preserves the exact screen, section, sub-tab, and filter state without redirecting or falling back to default pages.
+- Map and apply workspace / editor settings to maximize productivity, performance, and developer experience.
+- Implement `/learn` protocol proposal in artifacts.
+- Bump cache busters to v47 across HTML and JS modules.
+- Preserve the standing NO GIT COMMIT, NO GIT PUSH directive.
+
+### Work Performed
+1. Resilient Route Parsing & State Synchronization:
+   - Added `parseHashRoute` in `js/admin/app.js` to parse URL hashes, sub-tabs (`/` or `:`), and query parameters (`?`).
+   - Mapped all section aliases in `aliasSectionMap` and `sectionTitles` (`vocabulary`, `system-settings`, `test-analytics`, `test-sessions`, `batches`, `programs`).
+   - Implemented `applySubRouteState` to preserve sub-tabs and active filters.
+   - Updated `showConsole()`, `hashchange`, and `loadSection()` to prioritize the active URL hash, then `localStorage` fallback, eliminating unintended redirects.
+2. Sub-Tab & Filter Persistence:
+   - Class Hub (`topscore_admin_class_hub_tab`, `topscore_selected_class_id`).
+   - Test Analytics (`topscore_admin_tests_class_id`).
+   - Vocabulary Vault (`topscore_admin_vault_tab`).
+   - System Settings (`topscore_admin_settings_tab`).
+   - Students Registration (`topscore_admin_student_reg_tab`).
+   - Student Dashboard active class selection (`topscore_student_last_class_id`).
+3. Modal Hash Routing & Background Continuity:
+   - `js/admin/student-management.js`: Integrated `#profile-<studentId>` and `#dossier-<studentId>` with URL hash and restored background section on close. Preserved active section in remedial and bulk updates.
+   - `js/dashboard.js`: Synchronized URL hash for `#profile`, `#profile-history`, `#levels-<classId>`, and `#select-class` with `restoreDashboardHashRoute()`.
+4. Master Rule Codification (/learn):
+   - Added Section 2.20 to `AGENTS.md`: "Screen, Sub-Tab, and Route State Persistence on Reload/Refresh (/learn)".
+   - Added DECISION-033 to `docs/DECISIONS.md`.
+5. Workspace Settings Optimization:
+   - In `.vscode/settings.json`: Added smooth scrolling, smooth cursor, function calls auto-completion, side-by-side diff view, and disabled background git autofetch.
+6. Testing & Verification:
+   - 40/40 JS files passed syntax validation (`node scripts/check_all_js_syntax.cjs`).
+   - 100% Student Dashboard Parity tests passed (`scripts/test_student_dashboard_exam_parity.mjs`).
+7. Adherence to Rules:
+   - 0 git commit, 0 git push.
+
+---
+
+## SESSION-20261031-0030
+
+Start: 2026-10-31 00:25 UTC+8
+End: 2026-10-31 00:31 UTC+8
+Agent: Antigravity
+
+### User Request
+"ini ada kolom progress,,, warnanya itu jangan ikuti warna Grade atau point yang diperoleh, tapi maksud saya adalah buat warnanya mengikuti warna kalau score ada presentase yang sama,,, jaid dia punya warnanya sendiri yang sama seperti warna presentase nilai,,, dan pindahkan kokolom grade ke selebah nama siswa dii tabel, apakah kamu paham?"
+
+### Objective
+- Reposition `GRD` column directly beside `STUDENT NAME` in the left sticky panel of the Class Hub DataGrid.
+- Calculate `PROG` percentage text color using its own value evaluated on the official TopsCore grading scale (`getGradeColorByScore(row.progressPct)`), completely independent of exam score/grade.
+- Update sticky column offsets and widths in `css/admin.css` and `summaryRow` footer cells.
+- Bump cache busters to v46.
+- Strictly adhere to standing NO GIT COMMIT, NO GIT PUSH directive.
+
+### Work Performed
+1. Moved `GRD` Column Beside `STUDENT NAME`:
+   - In `js/admin/app.js`: Reordered columns array so `grade` (`GRD`, 38px) is column 5 (`col-sticky-5`), right next to `displayName` (`STUDENT NAME`, 140px, column 4).
+   - Moved `progressPct` (`PROG`, 46px) to column 6 (`col-sticky-6`).
+   - Retained `totalEarnedScore` (`PTS`, 46px) as column 7 (`col-sticky-7 col-sticky-last`).
+   - In `css/admin.css`: Updated sticky left offsets:
+     * `col-sticky-4` (NAME): left 150px, width 140px
+     * `col-sticky-5` (GRD): left 290px, width 38px
+     * `col-sticky-6` (PROG): left 328px, width 46px
+     * `col-sticky-7` (PTS): left 374px, width 46px
+     * Total width: 420px.
+2. Independent Progress % Text Coloring:
+   - In `js/admin/app.js`: In `progressPct.render`, color is now determined by `getGradeColorByScore(row.progressPct)`:
+     * 95% -> Pure Green (`#00c000ff`)
+     * 85% -> Electric Lime (`#95ff00ff`)
+     * 73% & 70% -> Pure Yellow (`#FFFF00`) (e.g. Nurhaliza & Shelia are now Yellow, not Red/Orange)
+     * 50%, 45%, 43% -> Dark Orange (`#FF8C00`)
+     * 23%, 5% -> Pure Red (`#FF0000`)
+   - In `summaryRow`: `avgProg` text is evaluated independently via `getGradeColorByScore(avgProg)` (60% -> Yellow `#FFFF00`).
+3. Cache Busters Bumped:
+   - Bumped to `?v=20261031_v46` in `admin.html` for CSS and JS.
+
+### Commands Run
+- `node scripts/check_all_js_syntax.cjs` -> ALL 40 JS files PASS
+- `node scripts/test_student_dashboard_exam_parity.mjs` -> PASS 100%
+- `git status` -> Working tree updated, 0 commits staged.
+
+### Resume From
+Ready for user review on `admin.html#class-hub` with hard refresh (`Ctrl + F5`).
+
+## SESSION-20261031-0024
+
+Start: 2026-10-31 00:17 UTC+8
+End: 2026-10-31 00:25 UTC+8
+Agent: Antigravity
+
+### User Request
+"here I see a lot of question yang gagl dijawab karena waktu habis,,, jangan ditaruh dalam daftar, taruh jawaban yang salah karena siswa salah jawab saja, baik karea mengetik, atau karena speak, maupun karena memilih. sesuai dengan 3 cara jawab di VOCABULARY Class,, berikan 20 pertnaayn paling sering salah, jangan 10"
+
+### Objective
+- Filter out all unanswered/timed-out questions from the Test Analytics bottleneck board.
+- Restrict question error tracking to authentic student mistakes across the 3 Vocabulary answering methods (Typing, Speaking, Selecting).
+- Expand bottleneck lists from Top 10 to Top 20 most missed questions per theme.
+- Eliminate `⏳ Timed Out / Blank` from question cards and remove `[⏳ Timeout]` dominant error pills.
+- Isolate session pacing timeouts in the diagnostic header chips so linguistic error percentages accurately reflect 100% of student mistakes.
+- Bump cache busters to v45.
+- Strictly adhere to standing NO GIT COMMIT, NO GIT PUSH directive.
+
+### Work Performed
+1. Excluded Timed-Out Unanswered Questions:
+   - In `js/admin/tests-management.js`: Added comprehensive blank/timeout detection (`isTimeout`).
+   - If an answer is timed out or left blank, it is tracked under `timeoutCount` / `totalGlobalTimeouts`, but strictly excluded from `wrongAnswersCount` and `activeFail`.
+   - Filtered out all questions that have 0 active student mistakes: `allQs = Object.values(...).filter(q => (q.activeFail || 0) >= 1)`.
+2. Expanded to Top 20 Bottleneck Questions:
+   - Changed `themeTop10` to `themeTop20`, taking up to 20 questions per theme column (`ranked.slice(0, 20)`).
+   - Ranked primarily by highest active fail count (`b.fail - a.fail`), then fail rate (`b.failRate - a.failRate`), then total student attempts.
+3. Cleaned Card Display & Diagnosis Pills:
+   - `topErrors` now strictly displays actual student wrong answers (e.g. `❌ "remain"`), completely eliminating `⏳ Timed Out / Blank`.
+   - Card footer diagnostic pills now strictly resolve into `[🔤 Spelling]`, `[🇮🇩 Literal Translation]`, or `[🔄 Word Form]`, completely eliminating `[⏳ Timeout]`.
+   - Fail stat renders `${q.failRate}% Fail (${q.fail}/${q.total})` representing authentic student answers.
+4. Decoupled Diagnostic Error Header:
+   - `diagPcts` now calculates over `totalActiveErrors`, ensuring active student linguistic categories (Spelling, Literal, Word Form) sum to 100%.
+   - Added dedicated `Timed Out: N (Pacing)` chip for session pacing context without diluting linguistic error rates.
+5. Cache Busters Bumped:
+   - Bumped to `?v=20261031_v45` across `js/admin/tests-management.js`, `js/admin/app.js`, and `admin.html`.
+
+### Commands Run
+- `node scripts/check_all_js_syntax.cjs` -> ALL 40 JS files PASS
+- `node scripts/test_analytics_classifier.mjs` -> PASS (0 failed)
+- `node scripts/test_student_dashboard_exam_parity.mjs` -> PASS 100%
+- `git status` -> Working tree updated, 0 commits staged.
+
+### Resume From
+Ready for user review on `admin.html#tests` with hard refresh (`Ctrl + F5`).
+
 ## SESSION-20261030-2012
 
 Start: 2026-10-30 19:56 UTC+8
@@ -8655,290 +9201,5 @@ End: 2026-09-25 18:21
 Agent: Antigravity
 
 ### User Request
-MASTER DIRECTIVE: RUNTIME BUG FIXES, ARCHITECTURAL ALIGNMENT & UI LOCALIZATION
-
-### Objective
-Resolve immediate runtime exceptions, enforce Model A architectural rules, and verify strict English UI across `assessment.html`, `student-management.js`, `vocab-vault.js`, and `result.html`.
-
-### Work Performed
-- Fixed mainBox ReferenceError in assessment.html
-- Fixed Property Casing in js/admin/student-management.js
-- Enforced Step 5 Timing & Payload Logic in js/admin/vocab-vault.js
-- Exam Retake Guard in result.html & dashboard.html
-
-### Files Changed
-- assessment.html
-- js/admin/student-management.js
-- js/admin/vocab-vault.js
-- result.html
-- dashboard.html
-
-### Verification
-- Code successfully updated and verified visually.
-
-### Outstanding
-- None.
-
-### Resume From
-Wait for user feedback.
-
-## SESSION-20260925-0320
-
-Start: 2026-09-25 03:00 UTC
-End: 2026-09-25 03:20 UTC
-Agent: Antigravity
-
-### User Request
-Selesaikan lalu analisa ulang semua dan list error yang ada, double button dll. Pastikan tabs arranged alphabetically.
-
-### Objective
-Complete Step 3 (Timer logic in assessment.html) and Step 6 (Remedial unlock button in admin.html), verify alphabetical ordering in Domain C, and audit for double buttons.
-
-### Work Performed
-- **Audit**: Checked `dashboard.html`, `admin.html`, `js/admin/class.js` for any duplicate action buttons and found none. Verified Domain C sidebar navigation is alphabetized (Assessments Hub, Classes & Blueprint, Vocabulary Vault).
-- **Step 6**: Added 'Izinkan Remedi' button to the `actions` column in `js/admin/class.js` specifically for EXAM results that failed (<60% score). Hooked up Supabase call to set `is_remedial_unlocked = true`.
-- **Step 3**: Completely rewrote `startTimer()` in `assessment.html` to conditionally run a floating countdown for `TASK`s (based on working_duration_minutes) and an absolute hard-deadline countdown for `QUIZ`/`EXAM`s (based on attempt `expires_at` which corresponds to the window_end).
-
-### Commands Run
-- Read `js/admin/class.js`
-- Executed `patch_remedi_unlock.mjs`
-- Executed `patch_startTimer.mjs`
-
-### Results
-- Both Timer and Remedial Unlock logic have been fully integrated. Double buttons have been confirmed absent.
-
-### Files Changed
-- `js/admin/class.js`
-- `assessment.html`
-- `docs/CHANGELOG.md`
-- `docs/CURRENT_STATE.md`
-
-### Resume From
-Wait for the user to manually verify these implementations.
-
-## SESSION-20260926-0007
-
-Start: 2026-09-26 00:07
-End: 2026-09-26 00:07
-Agent: Antigravity
-
-### User Request
-"is there anything we can do to improve the navigations? check any duplicates entries, rredundant tables, and I feel like we can combine some panels into one, like the board overview and the excecutive dashboard"
-
-### Objective
-Combine Board Overview and Executive Dashboard, prune redundant navigation logic.
-
-### Work Performed
-- Analyzed \pp.js\, \oard.js\, \dmin-deck.js\, and \dmin.html\.
-- Migrated KPI metrics (Students, Batches, Programs, Institutions), Recently Added Students, and Organization Hierarchy from Board Overview to Executive Dashboard (\dmin-deck.js\).
-- Removed redundant Smart Bulk Importer form from \oard.js\ (deferred entirely to Import Students page).
-- Removed \oard_overview\ from \dmin.html\ sidebar and \pp.js\ routing.
-- Updated \docs/CURRENT_STATE.md\ and \docs/CHANGELOG.md\.
-
-### Files Changed
-- \d:\TopsCore\js\admin\admin-deck.js\`n- \d:\TopsCore\js\admin\app.js\`n- \d:\TopsCore\js\admin\board.js\`n- \d:\TopsCore\admin.html\`n- \d:\TopsCore\docs\CURRENT_STATE.md\`n- \d:\TopsCore\docs\CHANGELOG.md\`n
-### Outstanding
-- Verify in the browser to ensure no layout breakages occur in the Master Dashboard.
-
-### Resume From
-- Review the UI on Master Dashboard, confirm the consolidated views work as expected.
-
-## SESSION-20260926-0011
-
-Start: 2026-09-26 00:11
-End: 2026-09-26 00:11
-Agent: Antigravity
-
-### User Request
-"The system name is TopsCore, sometimes I see the old name like Top English Class still around, in the local storage, or in the sytem,, I wnat it to be thrown away, and get rid of. Also some tabels in SQL are obselete, like the challenges, the old terms,,, I want it to be cleared NOW. so we can asses only the current system , and foucus on it..."
-
-### Objective
-Rename legacy system references to 'TopsCore' and purge obsolete SQL tables.
-
-### Work Performed
-- Executed global workspace search and replace for 'Top English Class', 'Top English Program', and 'Top English Academy' to 'TopsCore'.
-- Replaced local/session storage prefixes from \	ec_\ to \	opscore_\.
-- Stripped obsolete \challenge_*\ table creation scripts from \supabase-setup.sql\.
-- Authored migration script (\20260926_drop_obsolete_tables.sql\) to safely DROP obsolete tables from the live database.
-
-### Files Changed
-- Multiple \.js\, \.html\, \.css\, and \.md\ files.
-- \d:\TopsCore\supabase-setup.sql\`n- \d:\TopsCore\supabase\migrations\20260926_drop_obsolete_tables.sql\ (New)
-- \d:\TopsCore\docs\CHANGELOG.md\`n
-### Outstanding
-- None.
-
-### Resume From
-- Continue with any other tasks.
-
-## SESSION-20260926-0016
-
-Start: 2026-09-26 00:16
-End: 2026-09-26 00:16
-Agent: Antigravity
-
-### User Request
-"why there is a folder named "top English Class" insisde my main folder?when I opened it these are the contents,,, I want you to cek it delete the older duplicates. onlykeep the latest ones to avoid furure problems"
-
-### Objective
-Clean up older backup directories and duplicate files in the root folder.
-
-### Work Performed
-- Listed contents of \Top English Class\ directory and confirmed they were older legacy backups of root files.
-- Searched for duplicate files generated by Windows (e.g. \ile (1).exe\, \ile (1).sql\).
-- Deleted the legacy \Top English Class\ directory entirely.
-- Deleted all \* (1)*\ duplicate files from the root directory.
-- Updated \CHANGELOG.md\.
-
-### Files Changed
-- \d:\TopsCore\Top English Class\\\ (Deleted)
-- \d:\TopsCore\* (1)*\ files (Deleted)
-- \d:\TopsCore\docs\CHANGELOG.md\`n
-### Outstanding
-- None.
-
-### Resume From
-- Continue with any other requested system fixes.
-
-## SESSION-20260927-0653
-
-Start: 2026-09-27 05:00 UTC
-End: 2026-09-27 06:53 UTC
-Agent: Antigravity
-
-### User Request
-"TARGETED DIRECTIVE: DOMAIN C (CLASSES & CURRICULUM) LEVEL-FIRST TABBED WORKSPACE REFACTOR" followed by a smoke test.
-
-### Objective
-Transform Domain C (`admin.html#classes`) into a "Level-First Tabbed Workspace" enforcing level-based filtering and rendering.
-
-### Work Performed
-- Implemented horizontal tab navigation for Levels in `js/admin/classes-management.js`.
-- Added `.level-tabs` and `.level-tab-btn` styling to `css/admin.css`.
-- Updated state-based rendering to isolate assessments by active Level tab.
-- Contextualized `[+ Build]` and `[📖 Open Vault ↗]` buttons to lock to the active level.
-- Ran manual smoke test with user, which passed.
-
-### Files Changed
-- `js/admin/classes-management.js`
-- `css/admin.css`
-- `supabase/migrations/20260927_add_deleted_at_to_curriculum.sql`
-
-### Outstanding
-- Application of `20260926_auto_assignment_architecture.sql` and `20260927_add_deleted_at_to_curriculum.sql` in the live Supabase environment (requires manual execution by user).
-
-### Resume From
-- Await user's next directive or confirmation of SQL migration execution.
-## SESSION-20260927-1857
-
-Start: 2026-09-27 18:52
-End: 2026-09-27 18:57
-Agent: Antigravity
-
-### User Request
-"assesement created should belong to a level, class, proram, institution... no matter which one I choose the result in empty, no assesment available"
-
-### Objective
-Enforce institution/program linking on Assessment creation inside the Vocab Vault Assessment Builder.
-
-### Work Performed
-- Diagnosed the UI state issue where institutionId and programId were initialized as empty strings and never set.
-- Re-wired ocab-vault.js Step 1 UI to fetch and render Institution and Program dropdowns.
-- Created 20260927_repair_orphaned_assessments.sql to help user link previously created, invisible tests.
-
-### Resume From
-Wait for user to manually run pending SQL scripts in Supabase and confirm UI works as expected.
-## SESSION-20261004-1522
-
-Start: 2026-10-04 15:00 UTC
-End: 2026-10-04 15:22 UTC
-Agent: Antigravity
-
-### User Request
-Address the user's report of assessment generation failure.
-
-### Objective
-Debug and fix Assessment Generation, Modal Level Leakage, and Legacy Taxonomy Heuristics.
-
-### Work Performed
-- Investigated assessment generation bug where Phrases were overwriting Vocab tasks/tests.
-- Prepending modulePrefix to shell_code in upsertDynamicAssessmentShell (js/api.js).
-- Fixed Dashboard Modal filtering to restrict by session.level_id (js/api.js, dashboard.html).
-- Eliminated legacy title parsing heuristics in js/admin/app.js and enforced strict ssessment_category.
-
-### Commands Run
-- Select-String searches.
-
-### Files Changed
-- js/api.js
-- dashboard.html
-- js/admin/app.js
-- docs/CHANGELOG.md
-- docs/CURRENT_STATE.md
-- docs/SESSION_LOG.md
-
-### Outstanding
-- None related to bugs.
-- Student Flow E2E Test (Task 11.3) remains to be performed.
-
-### Resume From
-Conduct Student Flow End-to-End Test (Task 11.3)
-## SESSION-20261004-1543
-
-Start: 2026-10-04 15:40 UTC
-End: 2026-10-04 15:43 UTC
-Agent: Antigravity
-
-### User Request
-Implement Dyna
-- `scratch/capture_result_views.mjs`
-- `docs/CURRENT_STATE.md`
-- `docs/SESSION_LOG.md`
-
----
-
-## SESSION-20261021-1050
-
-Start: 2026-10-21 10:35 UTC+8
-End: 2026-10-21 10:50 UTC+8
-Agent: Antigravity
-
-### User Request
-"kita perlu buat agar semuanya terlihat di layar, tanpa ada scrolling sama sekali. saat siswa klik answer breakdown, jangan munculkan di bawah, tapi berupa pop up yang lalu discroll,,, apakah kamu paham?"
-
-### Objective
-1. Enforce strict **Zero-Scroll** architecture on the main Result Screen:
-   - All elements (header brand, academic breadcrumb, test name pill, enlarged photo, animated score counter, rubber stamp, dedicated points row, unified answer metrics, action buttons, security notice, and bottom footer) MUST be 100% visible on screen at once without ANY scrolling on both desktop and mobile (`isZeroScroll: true`).
-2. Redesign **Answer Breakdown as a Pop-Up Modal (`#answers-section`)**:
-   - Instead of expanding downward and pushing the page, clicking "View Answer Breakdown" or any of the 3 summary metric pills (`Correct`, `Partial`, `Incorrect`) opens an elegant glassmorphic pop-up dialog.
-   - On desktop: Centered card with smooth pop-in animation.
-   - On mobile: Sleek bottom-sheet modal (`max-height: 88dvh`).
-   - The question list scrolls comfortably *inside* the modal (`.answers-modal-scroll-body`).
-   - Dismissible via `✕` button, `Close Breakdown` button, backdrop click, or `Escape` key.
-3. Move `renderAttemptHistory` inside the modal scroll body so past attempts never break the zero-scroll layout.
-4. Programmatically verify zero-scroll and run full 17/17 E2E system audit.
-
-### Work Performed
-1. **HTML Updates (`result.html`)**:
-   - Replaced inline `<section id="answers-section">` with `<div class="answers-modal-backdrop hidden" id="answers-section" role="dialog" aria-modal="true">` containing `.answers-modal-card`, `.answers-modal-header` with `#close-answers-modal-btn`, `.answers-modal-scroll-body` with `#answers-list-container`, and `.answers-modal-footer` with `#done-answers-modal-btn`.
-2. **CSS Styling Updates (`css/result.css`)**:
-   - Added Zero-Scroll Page Architecture rules (`html, body.result-page` locked to `height: 100dvh; overflow: hidden !important;`).
-   - Calibrated `.result-hero`, `#result-content`, and all sub-components using responsive `vh`/`vw` clamp dimensions.
-   - Added full glassmorphic styling for `.answers-modal-backdrop`, `.answers-modal-card`, header, close button, scrollable body, and footer.
-3. **Engine Script Updates (`js/result.js`)**:
-   - Created `openAnswersModal(filterType)` and `closeAnswersModal()`.
-   - Wired open triggers to `#toggle-answers-btn`, `#card-filter-correct`, `#card-filter-partial`, and `#card-filter-wrong`.
-   - Wired close triggers to `#close-answers-modal-btn`, `#done-answers-modal-btn`, backdrop overlay click, and `Escape` key.
-   - Updated `renderAttemptHistory` to mount inside the modal scroll body.
-4. **Verification**:
-   - Programmatic Zero-Scroll Check: Desktop `isZeroScroll: true` (`scrollHeight: 850, windowHeight: 850`), Mobile `isZeroScroll: true` (`scrollHeight: 844, windowHeight: 844`).
-   - Unit tests (`scratch/test_result_page_improvements.mjs`): 13/13 PASSED.
-   - Full system audit (`scratch/full_e2e_system_audit.mjs`): 17/17 PASSED, 0 failures, 0 console errors.
-   - Captured high-res screenshots for desktop & mobile (hero & modal popup).
-   - Strict git freeze honored: 0 commits, 0 pushes.
-
-### Files Changed
-- `result.html`
-- `css/result.css`
-- `js/r
+MASTER DIRECTIVE: RUNTIME BUG FIXES, ARCHITECTURA
 ... [truncated for diff preview]

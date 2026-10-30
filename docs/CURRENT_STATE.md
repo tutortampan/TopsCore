@@ -1,14 +1,188 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-30 20:12 UTC+8
+Last Updated: 2026-10-31 07:15 UTC+8
 
-Current Phase: Phase 203: Progress-First Ranking, Left Panel PTS Column, Dynamic Progress Color & Unbroken Theme Dividers [COMPLETE]
+Current Phase: Phase 224: Student Dashboard `attTime` ReferenceError Fix & v61 Cache Bump [COMPLETE]
 
-Current Task: Implement Progress-First leaderboard ranking order (PROG % -> latest exam package points Words+Phrases -> score % -> timestamp), add latest exam points (PTS) beside GRD in left sticky panel, dynamically color progress % text from exam score, enforce unbroken 3px theme dividers from header through tbody and tfoot, bump cache busters to v44, and preserve standing NO GIT COMMIT directive [COMPLETE]
+Current Task: Resolved runtime ReferenceError in `js/dashboard.js` (`attTime is not defined`) for student dashboard (`dashboard.html`). Declared `attTime` timestamp within `attempts.forEach`, verified complete data hydration with Muhammad Tarmizi Tohir's 48 attempts in Node environment, and bumped `dashboard.html` cache buster to `v=20261031_v61`. 40/40 JS files syntax PASS, 0 git commit.
 
-Status: COMPLETE (All JS syntax checks PASS, 100% dashboard parity verified, 24/24 students verified in Batch 133, 0 git commit)
+Status: COMPLETE (All 40 JS syntax checks PASS, 100% dashboard calculation verified, 0 git commit)
+
+## Next Exact Action
+1. User hard-refresh Student Lobby (`Ctrl + F5` on `dashboard.html`) to confirm:
+   - Error banner is gone.
+   - Profile, academic score, exam status, and Rank Standings load immediately without spinning.
+
+## Files Changed In Latest Step
+- `js/dashboard.js` — declared `attTime` in `attempts.forEach` loop; added paired theme exam sync in student view
+- `js/api.js` — fixed update payload to avoid querying non-existent `is_remedial` column
+- `dashboard.html` — bumped cache buster to `?v=20261031_v61`
+- `docs/CHANGELOG.md`, `docs/CURRENT_STATE.md`, `docs/SESSION_LOG.md`
 
 ## Completed
+
+- **Phase 218: Result Page `attemptPct` ReferenceError Fix**:
+  - **Identified Root Cause**: In `js/result.js` line 897, `const ptsColor = getGradeColorByScore(attemptPct);` referenced an undefined variable `attemptPct`. This triggered a `ReferenceError: attemptPct is not defined` inside the result loading pipeline, causing the try-catch block to display "Could not load results - attemptPct is not defined".
+  - **Resolution**: Replaced `attemptPct` with `pct`, which is the correctly defined score percentage in that scope.
+  - **Verification**: Verified using the exact attempt from the user's screenshot (`3c61e205-89d3-47d7-8bee-b61d1878e920`) in Node.js, confirming all score, points, color, and answers calculations complete with 0 errors. Bumped `result.html` to `?v=20261031_v55`.
+
+- **Phase 217: Class Exam Points Authoritative Parity & Compact Gender M/F**:
+  - **Gender M/F Streamlining**: Replaced long `♂ Male` / `♀ Female` strings with sleek, compact `♂ M` / `♀ F` badges (`width: 55px`), saving horizontal datagrid space while preserving colored gender distinction.
+  - **Class Exam Points Parity**: In `student-management.js`, decoupled per-class metrics from quizzes and anchored them exclusively to class weekly exams (`isWeeklyExam`). Utilized `computeMilestoneExamMastery` to calculate class `pts`, `avgPct`, and `grade`. Roster PTS now reflects the total points of ALL exams in that class (e.g. Aunul = 482 pts, Latifa = 450 pts), achieving 100% parity with the Class Hub Attendance view.
+  - **Class Exams Column Label**: Replaced generic 'Tests' with 'Exams' under the class super-header to clearly denote milestone exam completion count (e.g. `6 / 8`).
+  - **Sorting Comparators**: Added DataGrid comparator branches for `_cls_pts_`, `_cls_score_`, `_cls_grade_`, and `_cls_tests_` so tutors can sort by individual class exam points and performance metrics.
+  - **Cache Busting**: Bumped `admin.html` and `app.js` to `?v=20261031_v54`.
+  - **Verification**: 40/40 JS files passed syntax validation (node --check) and 100% dashboard parity verified.
+
+- **Phase 216: Result Page Missing Export (`getGradeColorByScore`) Import Fix**:
+  - **Identified Root Cause**: In `result.js`, `getGradeColorByScore` was imported from `./api.js`. However, `api.js` only imported and exported a subset of grading helpers from `grading.js`, omitting `getGradeColorByScore`. The browser threw `Uncaught SyntaxError: The requested module './api.js' does not provide an export named 'getGradeColorByScore'`, preventing `result.js` from executing and halting the page at "Loading your results...".
+  - **Resolution**: Added `getGradeColorByScore` to `js/api.js` import/export list and re-targeted `result.js` to import it directly from `./grading.js?v=20261031_v53`.
+  - **Verification**: Verified full module import and evaluation under mocked environment, and 40/40 JS files syntax PASS.
+
+- **Phase 215: Seamless Theme Exam Transition & Live Session Lockout Elimination**:
+  - **Live Session Lockout Bypass**: In `js/dashboard.js`, when a tutor actively unlocks a test session for a batch/student, `isSessLive` marks `prereqMet = true`. This prevents students who scored < 60% on Words Exam (or taking during the active session) from being locked out of Phrases Exam. Outside of live sessions, standard curriculum prerequisites remain intact.
+  - **Theme Exam Pair Transition**: In both `dashboard.js` (`renderNextAssessment`) and `result.js` (`renderSmartNextAction`), if `nextAsm` was Words Exam and the student has already attempted it, the next milestone advances to unattempted sibling Phrases Exam. Students are immediately presented with a direct 1-click button to take Phrases Exam.
+  - **Cache Busting**: Bumped `dashboard.html` and `result.html` to `?v=20261031_v53`.
+
+- **Phase 214: Student Roster Dynamic Per-Class Column Groups & SuperHeaders**:
+  - **Dynamic Multi-Class Architecture**: Fetched active classes alongside students, attempts, and progress. Instead of static single-class columns, the DataGrid automatically detects all active classes attended by students and constructs dedicated column sets: `[Class Name: Score | Grd | PTS | Tests]`.
+  - **SuperHeaders Grouping**: Leveraged DataGrid `superHeaders` to create visual banner groupings for each class name spanning its 4 metrics, preserving clean layout and alignment.
+  - **Fallback Safety**: Retains a compact global Progress column and gracefully displays `—` for students not enrolled in a given active class.
+
+- **Phase 213: Live Test Session Dual Exam Whitelist & Resilient Status Synchronization**:
+  - **Identified Root Cause of Phrases Exam Lockout**: At session opening and late-add, `tests-access.js` was filtering `phrasesAllowedIds` based on whether students had *already* passed Words Exam (`ev.wordsPassed`). Since students take Words Exam *during* the live session, `phrasesAllowedIds` was locked with `[]`, permanently locking students out of Phrases Exam even after passing Words Exam.
+  - **Unification**: Whitelisted all eligible batch students for both Words and Phrases tests upon opening a Theme session. Sequential progression (Phrases requiring Words Exam >= 60%) continues to be dynamically enforced in real-time by `js/dashboard.js`.
+  - **Resilient Dual Session Detection**: Merged session status so the Theme Card correctly shows `LIVE` if either Words or Phrases session is open, picking the longest window and merging active student IDs.
+
+- **Phase 212: Birthdate Required Validation + Missing DOB Roster Warning**:
+  - Added required asterisk and helper text on Date of Birth field.
+  - Enforced save validation guard in Add/Edit Student modal.
+  - Rendered `⚠ No DOB` badge with hover tooltip in the Age column for students with missing birth dates.
+
+## Completed
+
+- **Phase 211: Class Attendance DataGrid Font Scale & Typography Harmony**:
+  - **Identified Root Causes**:
+    * Student names were hardcoded to `0.76rem` (`12.16px`), while numbers across the test matrix used `var(--matrix-font-size, 0.74rem)` which scaled dynamically down to `9.5px`–`11px` via `fitMatrixToScreen()`, causing names and numbers to be mismatched.
+    * Grade (`GRD`) was rendered excessively large at `0.86rem`–`0.92rem` (`font-weight: 800/900`).
+    * Metadata badges (`INST`, `BATCH`), summary exam points, and theme points had rogue `font-family: monospace` overrides.
+    * Summary footer row had scattered font sizes (`0.68rem`, `0.72rem`, `0.75rem`, `0.85rem`).
+  - **Unified Base Scale**:
+    * Unified student names (`col-sticky-4`) and all numerical cells (PROG, PTS, quiz scores, exam scores, points, theme scores, theme points, summary averages) to `var(--matrix-font-size, 0.75rem)` so they are 100% synchronized in size and baseline.
+    * Harmonized metadata (`INST`, `PROGRAM`, `BATCH`) to `calc(var(--matrix-font-size, 0.75rem) * 0.92)` and purged all `font-family: monospace` inline styles.
+    * Harmonized `GRD` typography to `calc(var(--matrix-font-size, 0.75rem) * 1.05)` (letters) and `calc(var(--matrix-font-size, 0.75rem) * 1.15)` (Star ★) at clean `font-weight: 700`.
+    * Standardized data font-weight to `600` and headers/grades to `700`.
+    * Enforced `font-variant-numeric: tabular-nums` for crisp vertical digit alignment.
+  - **Cache Busting**:
+    * Bumped cache busters across `admin.html` to `?v=20261031_v51`.
+  - **Verification**:
+    * 40/40 JS syntax checks PASS, 100% dashboard parity verified, 0 git commit.
+
+- **Phase 210: Full Route & Sub-Tab State Persistence Alignment (Rule 2.20)**:
+  - **Bidirectional Sub-Tab Hash Sync**: Added `window.history.replaceState` into `_switchClassHubTab` (`#class-hub?tab=...`), `_switchSettingTab` (`#settings?tab=...`), `_switchVaultTab` (`#vocab_vault?tab=...`), `_switchStudentRegTab` (`#student-registration?tab=...`), and `_switchClassTestAnalytics` (`#tests?class_id=...`).
+  - **No Disorienting Redirects**: On browser F5 refresh, page reload, or background sync, `parseHashRoute` extracts exact section, sub-tab, and parameters, restoring the user's view seamlessly.
+  - **Cache Busting**: Bumped cache busters across `admin.html` to `?v=20261031_v50`.
+  - **Verification**: 40/40 JS syntax checks PASS, Parity checks PASS 100%, 0 git commit.
+
+- **Phase 209: Class Hub DataGrid Clean Typography Grade Alignment**:
+  - **Design Enhancement**: Replaced dense filled circular badges (`grade-circle`) in the Class Attendance DataGrid with sleek, bold colored typography (`.grid-grade-val`).
+  - **Typographic Harmony**: Aligned `GRD`, `PROG`, and `PTS` into a unified typography-driven hierarchy without heavy button-like circle distractions in the data rows.
+  - **Star (★) Presence**: Rendered the Star tier with pure green color (`--grade-star`) and subtle glow (`--grade-star-glow`) at `0.92rem` font size.
+  - **Letter Clarity**: Letters A, B, C, D, E are rendered crisp at `0.86rem` (`font-weight: 800`) with dynamic score coloring.
+  - **Summary Footer Alignment**: Updated `avgGradeBadge` in the datagrid summary row to match the clean typography standard.
+  - **Cache Busting**: Bumped cache busters to `?v=20261031_v49` in `admin.html`.
+  - **Verification**: 40/40 JS syntax checks PASS, Parity checks PASS 100%, 0 git commit.
+
+- **Phase 208: Test Analytics Drill-Down State Alignment & Cache Refresh**:
+  - Attached `hardestQs20` and `themeTop20` directly onto `window._testAnalyticsState` so the Curriculum Bottlenecks drill-down modal (`cardKey === 'wall'`) receives the exact active-error Top 20 ranking.
+  - Added strict submission and timeout filtering to `_openTestDetailDrawer` so individual test inspection drawers exclude abandoned drafts and timeout blanks.
+  - Bumped cache busters across `admin.html` and `js/admin/app.js` to `?v=20261031_v48`.
+  - Verified 40/40 JS files syntax passing cleanly.
+
+- **Phase 207: Test Analytics Submitted-Attempt Isolation**:
+  - **Identified & Mapped Side Quest Root Cause**:
+    * Sesi siswa yang sedang berlangsung (`in_progress`) atau sesi terbengkalai tanpa penyerahan (`submitted_at == null`) sebelumnya ikut terhitung ke dalam metrik bottleneck karena ketiadaan filter status pada iterasi `answersRes`.
+  - **Implemented Strict Submission Filter**:
+    * In `js/admin/tests-management.js`: Added authoritative guard `if (!att) return; if (!isSubmitted) return;` at the start of `answersRes.forEach`.
+    * Sesi hanya diproses jika `status === 'submitted'`, `status === 'auto_submitted'`, `status === 'graded'`, `status === 'evaluated'`, atau memiliki `submitted_at`.
+    * Memastikan analitik murni merefleksikan hasil ujian final siswa, bebas dari distorsi draf sementara.
+  - **Verification**:
+    * 40/40 JS syntax checks PASS (`node scripts/check_all_js_syntax.cjs`).
+    * Analytics Classifier tests PASS 100% (`scripts/test_analytics_classifier.mjs`).
+    * Strict adherence: 0 git commit, 0 git push.
+
+- **Phase 206: Screen, Sub-Tab & Route State Persistence on Reload / Dynamic Update**:
+  - **Decoupled URL Hash Route & Query Parsing (`parseHashRoute`)**:
+    * Created robust parser in `js/admin/app.js` extracting base sections, sub-tabs (`/` or `:`), and URL search parameters (`?`).
+    * Expanded `aliasSectionMap` and `sectionTitles` to comprehensively recognize all aliases (`vocabulary`, `vocab`, `system-settings`, `test-analytics`, `test-sessions`, `batches`, `programs`, etc.), completely eliminating erroneous redirects to default `#tests`.
+    * Synchronized background route restoration when opening `#profile-<studentId>` so closing the modal returns to the active view rather than a blank canvas.
+  - **Sub-Tab & Active Filter State Synchronization**:
+    * **Class Hub (`class-hub`)**: Restores and persists active sub-tab (`topscore_admin_class_hub_tab`: `attendance`, `test-sessions`, `tests`) and selected class ID (`topscore_selected_class_id`).
+    * **Test Analytics (`tests`)**: Restores and persists selected class track filter (`topscore_admin_tests_class_id`) across reloads instead of defaulting to Vocabulary.
+    * **Vocabulary Vault (`vocab_vault`)**: Restores and persists active tab (`topscore_admin_vault_tab`: `blueprint`, `vocab`, `phrases`).
+    * **System Settings (`settings`)**: Restores and persists active tab (`topscore_admin_settings_tab`: `site`, `audit`, `health`, `recycle`).
+    * **Students Registration (`student-registration`)**: Restores and persists active tab (`topscore_admin_student_reg_tab`: `bulk`, `individual`).
+    * **Student Management (`student-management`)**: Preserved active section alias across remedial status updates and bulk student updates. Added `#profile-<studentId>` and `#dossier-<studentId>` hash routing and prior section restoration upon modal closing.
+    * **Student Dashboard (`dashboard.html` / `js/dashboard.js`)**: Restores and persists active class selection (`topscore_student_last_class_id`) upon reload or background sync. Restores and synchronizes URL hash and back/forward browser navigation for Student Profile (`#profile`), Exam History (`#profile-history`), Class Level Modal (`#levels-<classId>`), and Class Selector (`#select-class`).
+  - **Codified Master Rule 2.20 in AGENTS.md (/learn)**:
+    * Formally enacted non-negotiable contract Rule 2.20 enforcing state and route preservation across all future screens and updates.
+  - **Productivity & Developer Settings Optimization (`.vscode/settings.json`)**:
+    * Configured smooth scrolling, smooth caret animation, bracket pair guides, complete function calls suggestion, side-by-side diffing, and disabled background git autofetch to honor the user's strict 0 git commit policy.
+  - **Cache Busting**:
+    * Bumped cache busters to `?v=20261031_v47` across `admin.html`, `dashboard.html`, `js/admin/app.js`, `js/admin/tests-management.js`, `js/admin/vocab-vault.js`, `js/admin/student-registration.js`, and `js/dashboard.js`.
+  - **Verification**:
+    * 40/40 JS syntax checks PASS (`node scripts/check_all_js_syntax.cjs`).
+    * Student Dashboard Parity tests PASS 100% (`scripts/test_student_dashboard_exam_parity.mjs`).
+    * Strict adherence: 0 git commit, 0 git push.
+
+- **Phase 205: Progress-Value Independent Grading Scale Coloring & GRD Column Repositioning**:
+  - **Repositioned GRD Column Directly Beside STUDENT NAME**:
+    * Moved `grade` (`GRD`) to column 5 (`col-sticky-5`, width 38px, left 290px), immediately adjacent to `STUDENT NAME` (`col-sticky-4`, left 150px, width 140px).
+    * Moved `progressPct` (`PROG`) to column 6 (`col-sticky-6`, width 46px, left 328px).
+    * Retained `totalEarnedScore` (`PTS`) as column 7 (`col-sticky-7 col-sticky-last`, width 46px, left 374px).
+    * Total sticky panel width remains exactly 420px.
+    * Left panel hierarchy now reads naturally:
+      $$\text{INST} \mid \text{PROGRAM} \mid \text{BATCH} \mid \text{STUDENT NAME} \mid \mathbf{\text{GRD}} \mid \mathbf{\text{PROG}} \mid \text{PTS}$$
+  - **Independent Progress % Coloring from Its Own Percentage**:
+    * Decoupled `PROG` percentage text color from the student's exam score (`averageScorePct`).
+    * `row.progressPct` is now evaluated independently against the official TopsCore grading scale (`getGradeColorByScore(row.progressPct)`):
+      - 100%: Green Star / Pure Green (`#00c000ff`)
+      - 90% – 99%: Pure Green (`#00c000ff`) (e.g. 95% -> Green)
+      - 80% – 89%: Electric Lime (`#95ff00ff`) (e.g. 85% -> Lime)
+      - 60% – 79%: Pure Yellow (`#FFFF00`) (e.g. Nurhaliza's 73% & Shelia's 70% are now correctly Yellow, not Red)
+      - 30% – 59%: Dark Orange (`#FF8C00`) (e.g. 50%, 45%, 43% -> Orange)
+      - 0% – 29%: Pure Red (`#FF0000`)
+    * In summary footer row: `avgProg` text is evaluated independently via `getGradeColorByScore(avgProg)` (60% -> Yellow `#FFFF00`).
+  - **Cache Busting**:
+    * Bumped cache busters to `?v=20261031_v46` across `admin.html` (CSS & JS).
+  - **Verification**:
+    * 40/40 JS syntax checks PASS (`node scripts/check_all_js_syntax.cjs`).
+    * Student Dashboard Parity tests PASS 100% (`scripts/test_student_dashboard_exam_parity.mjs`).
+    * Strict adherence: 0 git commit, 0 git push.
+
+- **Phase 204: Test Analytics Authentic Active Error Filtering & Top 20 Bottlenecks**:
+  - **Unanswered / Timed Out Question Filtering**:
+    * Strictly filtered out questions where students never provided an answer (`[Blank / Timed Out]`, empty, `-`, `—`, `null`).
+    * Excluded timeout blanks from `wrongAnswersCount` and question failure metrics.
+    * Bottlenecks board now exclusively displays questions with authentic student mistakes across the 3 Vocabulary Class answering modes:
+      1. **Typing (Written)**: Evaluated for spelling typos, word form/POS confusion, or Indonesian literal translation.
+      2. **Speaking (Speech Recognition)**: Evaluated for phonemic/word substitutions or literal translation.
+      3. **Selecting (Multiple Choice)**: Evaluated for distractor/semantic misconceptions.
+  - **Top 20 Most Missed Questions Expansion**:
+    * Expanded `themeTop10` to `themeTop20`, displaying up to 20 pedagogical bottlenecks per theme column (Theme A, B, C, D) instead of 10.
+    * Ranked primarily by highest active student failure count (`b.fail - a.fail`), then failure rate (`b.failRate - a.failRate`), then total student attempts.
+    * Cleaned question cards: `topErrors` now strictly lists actual student wrong answers (e.g. `❌ "remain" (1x • 50%)`), completely eliminating `⏳ Timed Out / Blank`.
+    * Card footer diagnostic tags now exclusively show active linguistic categories (`[🔤 Spelling]`, `[🇮🇩 Literal Translation]`, `[🔄 Word Form]`), completely eliminating the misleading `[⏳ Timeout]` tag.
+  - **Pacing Timeout Decoupling in Diagnostic Header**:
+    * Student Error Diagnosis percentages (Spelling, Literal, Word Form) are now calculated over active student mistakes, accurately representing 100% of linguistic misconceptions.
+    * Session timeouts are decoupled into a dedicated `Timed Out: N (Pacing)` metric.
+  - **Cache Busting**:
+    * Bumped cache busters to `?v=20261031_v45` across `js/admin/tests-management.js`, `js/admin/app.js`, and `admin.html`.
+  - **Verification**:
+    * 40/40 JS syntax checks PASS (`node scripts/check_all_js_syntax.cjs`).
+    * Student Dashboard Parity tests PASS 100% (`scripts/test_student_dashboard_exam_parity.mjs`).
+    * Analytics Classifier tests PASS 100% (`scripts/test_analytics_classifier.mjs`).
+    * Strict adherence: 0 git commit, 0 git push.
 
 - **Phase 203: Progress-First Ranking, Left Panel PTS Column & Unbroken Theme Dividers**:
   - **Progress-First Leaderboard Ranking Hierarchy**:
@@ -4655,450 +4829,5 @@ Status: COMPLETE (All JS syntax checks PASS, 100% dashboard parity verified, 24/
        - Updated attempt answer ordering to prioritize `a.question_snapshot?.display_order ?? a.question_snapshot?.question_order`.
     2. **`assessment.html`**:
        - Made `shuffleWithSeed(array, seedStr)` defensive with string conversion and empty array protection.
-       - Updated `bootAssessment()` to case-insensitively check `orderSetting === 'random'` with a default to `'random'`, ensuring seeded shuffle is always applied.
-       - Immediately synchronized `window.allAnswerRows = allAnswerRows;` after shuffle so UI components and global references share the shuffled sequence.
-    3. **`supabase/functions/start-assessment/index.ts`**:
-       - Handled `question_order === 'random'` case-insensitively and shuffled `vaultWords` / `snapQuestions`.
-       - Included `question_order` in the returned `assessment` object for both new attempts and resumed attempts.
-  - **Verification via Automated Test**:
-    - Randomization verified: Alphabetical input was shuffled (`Hasil kerja, Gigih, Jujur, Efektif, Inovatif, Ambisi...`).
-    - Deterministic resumption verified: Refreshing with the same attempt ID produced the exact identical sequence.
-    - Distinct attempt seeds verified: Different attempt IDs produce unique permutations.
-    - First rendered UI question prompt matched the first shuffled question (`Hasil kerja`).
-  - **Strict Git Freeze Enforced**: 0 commits, 0 pushes.
-
-- **Question Metadata Clean-Up, 100% Full-Width Global Banner, and Verification Screenshots [100% VERIFIED]**:
-  - **Question Metadata Clean-Up (Direct Values Only)**:
-    - In `renderQuestion()`, completely stripped all static label prefixes (`THEME`, `CATHEGORY`, `TOPIC`, `TYPE`).
-    - Configured the 40px table (2 rows x 20px) directly below the Question Box with centered dynamic badges:
-      - Row 1 (20px): Left = Theme name only (e.g., `Workplace`) | Right = Category name only (e.g., `Words` / `Phrases`)
-      - Row 2 (20px): Left = Topic name only (e.g., `Building Your Professional Identity`) | Right = Type name only (e.g., `Noun` / `Expression`)
-    - Styling: Font size 10.5px, font-weight 700, centered text (`text-align: center; justify-content: center;`), clean ellipsis text-overflow (`overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`), zero redundant label text.
-  - **100% Full-Width Global Footer Banner**:
-    - `#bottom-ad-banner` updated to span 100% of viewport width edge-to-edge (full bleed wall-to-wall):
-      - CSS: `width: 100% !important; width: 100vw !important; max-width: 100vw !important; margin: 0 !important; left: 0 !important; right: 0 !important;`
-      - Stripped side margins and rounded corners: `border-radius: 0 !important; border-left: none !important; border-right: none !important; border-bottom: none !important; border-top: 1px solid rgba(56, 189, 248, 0.25) !important;`
-      - Height & padding: Exactly 28px height with `padding-bottom: max(3px, env(safe-area-inset-bottom, 0px)) !important;`
-    - Content: Uniform global branding text identical across all pages (`index.html`, `dashboard.html`, `result.html`, `admin.html`):
-      `<span style="color:#38bdf8; font-weight:800; letter-spacing:0.04em;">TopsCore</span>&nbsp;&copy; 2026&nbsp;<span style="opacity:0.4; margin:0 6px;">|</span>&nbsp;<span style="color:#cbd5e1;">Created by Mr. Top</span>`
-    - Adjusted `body.assessment-page` padding to `0 !important;` and assigned `padding: 0 8px; box-sizing: border-box;` to `<header>`, `.assessment-body`, `.bottom-nav-bar`, and progress container to preserve the 400px centered layout for content while allowing the bottom footer banner to bleed 100% edge-to-edge.
-  - **Automated Verification Across Android Chrome Viewports (`412x915` & `360x800`)**:
-    - Ran Playwright mobile runner test (`test-metadata-banner-audit.mjs`):
-      - `412x915`: Banner width = 412px (100% width, 28px height), scrollHeight = 915px (zero vertical overflow).
-      - `360x800`: Banner width = 360px (100% width, 28px height), scrollHeight = 800px (zero vertical overflow).
-      - Metadata badges verified: `['Workplace', 'Phrases', 'Building Your Professional Identity', 'Expression']`.
-    - Generated fresh visual proof across all 3 modes:
-      - `audit_412x915_mcq.png`, `audit_412x915_keyboard.png`, `audit_412x915_speech.png`
-      - `audit_360x800_mcq.png`, `audit_360x800_keyboard.png`, `audit_360x800_speech.png`
-  - **Strict Git Freeze Enforced**: 0 commits, 0 pushes.
-
-- **Precise Pixel Specification Enforcement Based on Latest 3-Panel Wireframe [100% VERIFIED]**:
-  - **Directive**: Updated assessment layout and element heights strictly according to the latest 3-panel wireframe blueprint:
-    - **Header Block (Preserved Layout with Exact Spacers)**:
-      - Top spacer: Exactly 10px height (`height: 10px; min-height: 10px; max-height: 10px; flex-shrink: 0;`).
-      - Top utility row: Exactly 60px height (`height: 60px; min-height: 60px; max-height: 60px;`) with [Give up!] button on left, centered student avatar photo (60x60px), and [Timer 18:02] on right.
-      - Middle spacer: Exactly 10px height (`height: 10px; min-height: 10px; max-height: 10px; flex-shrink: 0;`).
-      - Assessment title box: Exactly 54px height (`height: 54px; min-height: 54px; max-height: 54px;`), centered text, 2-line clamp.
-      - Bottom spacer: Exactly 10px height (`height: 10px; min-height: 10px; max-height: 10px; flex-shrink: 0;`).
-    - **Question Box & Metadata Table (Exact Heights)**:
-      - Question Box: Exactly 135px height (`height: 135px; min-height: 135px; max-height: 135px; flex-shrink: 0;`), solely holding centered prompt text with zero metadata clutter inside.
-      - Metadata Table (placed directly below Question Box):
-        - Exactly 40px total height, split into 2 rows of 20px each.
-        - Left column: Theme (20px) stacked above Topic (20px).
-        - Right column: Cathegory (20px) stacked above Type (20px).
-    - **Interaction & Answer Zone**:
-      - Mode 1 (Speech):
-        - Upper: Answer box (`flex: 1; min-height: 80px; overflow-y: auto;`).
-        - Lower: MIC container locked at fixed height 135px (`height: 135px; min-height: 135px; max-height: 135px; flex-shrink: 0; width: 100%; max-width: 400px;`) with centered microphone button and helper label.
-      - Mode 2 (Keyboard):
-        - Upper: Answer box (`flex: 1; min-height: 80px; overflow-y: auto;`).
-        - Lower: Keyboard container locked at fixed height 135px (`height: 135px; min-height: 135px; max-height: 135px; flex-shrink: 0; width: 100%; max-width: 400px;`).
-      - Mode 3 (MCQ):
-        - Options container set to dynamic flex (`flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; justify-content: space-between;`) housing options A through E.
-    - **Docked Bottom Section**:
-      - Upper spacer: Exactly 10px height.
-      - Navigation row: Exactly 54px height (`height: 54px; min-height: 54px; max-height: 54px;`) containing [Prev], [0/40 Answered], and [Next].
-      - PROGRESS LINE: Exactly 10px height docked container (`height: 10px; min-height: 10px; max-height: 10px;`).
-      - Lower spacer: Exactly 10px height.
-      - Bottom banner: Exactly 28px height with "banner TopsCore" text and safe-area padding.
-  - **Automated Verification Across Android Chrome Viewports (`360x800` & `412x915`)**:
-    - Tested with Playwright automated test script:
-      - `360x800`: Zero overflow below fold (`scrollHeight: 800px, windowHeight: 800px`) across all 3 modes.
-      - `412x915`: Zero overflow below fold (`scrollHeight: 915px, windowHeight: 915px`) across all 3 modes.
-      - Identical layout alignment and exact height measurements confirmed for every element across all modes.
-    - Captured high-resolution visual proof: `blueprint_speech_360x800.png`, `blueprint_keyboard_360x800.png`, `blueprint_mcq_360x800.png`, `blueprint_speech_412x915.png`, `blueprint_keyboard_412x915.png`, `blueprint_mcq_412x915.png`.
-  - **Strict Git Freeze Enforced**: 0 commits, 0 pushes.
-
-- **Fix Question Card Metadata Position & Eliminate Empty Void [100% VERIFIED]**:
-  - **Directive**: Repositioned all metadata badges to the bottom of the Question Card directly underneath the prompt text, and eliminated the empty void in Speech Mode by replacing `justify-content: space-between` with `justify-content: center; gap: 12px;`.
-  - **Question Card Structure (`topSection`)**:
-    - **Upper Area (`flex: 1; display: flex; align-items: center; justify-content: center;`)**: Holds the prompt word/phrase (e.g., "ambisi") large (`clamp(18px, 4.8vw, 24px)`), centered, with white Outfit typography. No badges appear above the prompt text.
-    - **Lower Area**: Single clean horizontal row (`display: flex; justify-content: center; align-items: center; gap: 6px;`) sitting neatly under the prompt text at the bottom of the card, containing all 4 dynamic badges:
-      - Theme (`displayTheme`, electric cyan pill `rgba(56,189,248,0.12)`)
-      - Topic (`displayTopic`, slate pill `rgba(255,255,255,0.06)`)
-      - Category (`displayCategory`, emerald pill `rgba(52,211,153,0.12)`)
-      - Type (`displayType`, muted pill `rgba(255,255,255,0.05)`)
-    - Card height remains strictly locked at `135px; min-height: 135px; max-height: 135px; flex-shrink: 0;` ensuring zero layout shift across assessment modes.
-  - **Eliminate Massive Gap in Speech Mode (`#interaction-container`)**:
-    - Removed `justify-content: space-between;` from `#interaction-container`.
-    - Applied `justify-content: center; gap: 12px;` so the Answer Box (transcript) and the MIC zone sit naturally grouped together without an enormous empty void between them.
-  - **Automated Multi-Viewport Verification (Playwright)**:
-    - Tested on `360x665` (Compact Mobile) and `412x915` (Tall Mobile):
-      - `promptIsAboveBadges: true` (Prompt at y: ~185px, Badges at y: ~244px).
-      - `speechInnerGap: 12px` (Exact 12px gap between transcript box and microphone card).
-      - `overflowBelowFold: 0px` across both viewports.
-      - `topSection` invariant: Top = 140px, Height = 135px across all 3 modes (Speech, Keyboard, MCQ).
-    - Visual screenshots verified: `screenshot_locked_speech_360x665.png`, `screenshot_locked_speech_412x915.png`, `screenshot_locked_keyboard_360x665.png`, `screenshot_locked_mcq_360x665.png`.
-  - **Strict Git Freeze Enforced**: 0 commits, 0 pushes.
-
-- **Lock Question Card Height & Make Only Answer Region Dynamic [100% VERIFIED]**:
-  - **Directive**: Prevented layout shift across assessment modes by locking Question Card height while allowing only the Answer/Interaction zone to flex dynamically.
-  - **Question Card (`topSection`)**:
-    - Locked to fixed, compact height: `height: 135px; min-height: 135px; max-height: 135px; flex-shrink: 0;`.
-    - Prominently centered prompt text in white with Outfit font.
-    - 4 corner metadata badges without static prefix labels:
-      - Top-Left: Theme (`displayTheme`, electric cyan pill)
-      - Top-Right: Category (`displayCategory`, emerald pill)
-      - Bottom-Left: Topic (`displayTopic`, slate pill)
-      - Bottom-Right: Type (`displayType`, muted pill)
-  - **Dynamic Answer & Interactive Zone (`interactionContainer`)**:
-    - Created flexible container: `flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; overflow-y: auto; gap: 8px;`.
-    - **Speech Mode**: Compact transcript box (`height: clamp(80px, 14vh, 100px)`) + responsive mic button (`clamp(56px, 14vw, 72px)`) + "Tap to Speak" helper.
-    - **Keyboard Mode**: Compact input box (`flex: 0.9; min-height: 65px; max-height: 110px`) + responsive virtual keyboard container (`flex: 1.2; min-height: 140px; max-height: 220px;`) with keycaps (`clamp(28px, 4vh, 38px)`).
-    - **MCQ Mode**: Flexible options container (`flex: 1; min-height: 0; overflow-y: auto;`) with 5 ergonomic option cards (A-E) at `min-height: 38px; height: clamp(38px, 5.5vh, 50px);`.
-  - **Verification Across Viewports (Playwright Automated Tests)**:
-    - Tested across `360x665` (compact) and `412x915` (tall).
-    - **Zero Layout Shift Invariant**: `topSection` top position is exactly **140px** and height is **135px** across all 3 modes (Speech, Keyboard, MCQ).
-    - **Zero Overflow Below Fold**: `overflowBelowFold = 0px` across all viewports and modes.
-    - Visual artifacts captured: `screenshot_locked_speech_360x665.png`, `screenshot_locked_keyboard_360x665.png`, `screenshot_locked_mcq_360x665.png`, `screenshot_locked_speech_412x915.png`, `screenshot_locked_keyboard_412x915.png`, `screenshot_locked_mcq_412x915.png`.
-  - **Strict Git Freeze Enforced**: 0 commits, 0 pushes.
-
-- **Eliminate Empty Void & Unclip Mic Button in Speech Mode [100% VERIFIED]**:
-  - **Directive**: Removed blank dark void and restored unclipped microphone button in Speech Mode on mobile devices.
-  - **Removed Hardcoded Dummy Spacers**:
-    - Deleted all 4 dummy 10px spacer divs (`<!-- (space 10px) --> <div style="height:10px;"></div>`) around `<header>` and `#fixed-bottom-area` in `assessment.html`.
-    - Integrated native CSS flexbox gaps: `gap: 8px; margin-bottom: 8px;` on `<header>` and `gap: 6px; padding-top: 6px;` on `#fixed-bottom-area`.
-  - **Eliminated Rigid Heights in Speech Mode (`renderQuestion`)**:
-    - Replaced rigid `controlArea.style.cssText` (`height: 135px; min-height: 135px;`) with auto-scaling `width: 100%; max-width: 400px; height: auto; margin: 0 auto; padding: 12px 0;`.
-    - Compacted `answerArea.style.cssText` (transcript box) to `height: 95px; min-height: 90px; max-height: 100px;`.
-    - Updated container `#assessment-main` to `justify-content: space-between; height: 100%; min-height: 100%;` to dynamically pin the mic container directly above `#fixed-bottom-area` with zero dead space.
-  - **Fixed Container Overflow**:
-    - Updated `.assessment-body` and `.assessment-main-content` styles from `overflow: hidden;` to `overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch !important;`.
-    - Microphone button (62px) and "Tap to Speak" helper text sit completely unclipped with a natural 21px gap above the bottom navigation bar.
-  - **Multi-Viewport Testing Verified (Playwright)**:
-    - Tested on `412x915` (Modern Android full-screen): Mic bottom at 773.6px, "Tap to Speak" bottom at 798px, bottom navigation top at 819px (`gap: 21px`), 0 clipping (`screenshot_speech_412x915.png`).
-    - Tested on `360x800` (Standard Android mobile): Mic bottom at 658.6px, "Tap to Speak" bottom at 683px, bottom navigation top at 704px (`gap: 21px`), 0 clipping (`screenshot_speech_360x800.png`).
-  - **Strict Git Freeze Enforced**: 0 commits, 0 pushes.
-
-- **Assessment Loading & Question Generation Fix [100% VERIFIED]**:
-  - **Root Cause 1 (Missing DB Column in Local Docker Postgres)**: `vocabulary_vault` in local Postgres was missing the `category` column (`words` / `phrases`), which caused the query `.select('..., category')` in `js/api.js` to fail with PostgreSQL error `42703 (column vocabulary_vault.category does not exist)`. This returned an empty array of words, causing attempts to be created with 0 questions.
-    - **Fix**: Executed SQL migration adding `category VARCHAR(32) DEFAULT 'words'`, backfilled rows based on `word_type` (166 phrases, 649 words), and created trigger `trg_set_vocabulary_vault_category`. Created tracked migration file `supabase/migrations/20261016000000_add_vocabulary_vault_category.sql`.
-  - **Root Cause 2 (No Self-Healing for In-Progress Attempts with 0 Questions)**: When an attempt was interrupted or initially created with 0 questions, `startAssessment` bypassed question generation on resume (`if (!attempt)` was skipped), permanently locking the attempt with 0 answers and displaying "No Questions Found".
-    - **Fix**: Refactored `generateAssessmentQuestions` in `js/api.js` with dual-mode schema resilience (supports schemas with or without `category` column, and fallback to level words if strict filters match 0 rows). In `startAssessment`, implemented self-healing: if an in-progress attempt has 0 answers, it dynamically populates and inserts questions. Cleaned up corrupt empty attempts.
-  - **Root Cause 3 (ViewTransition Opt-In Abort)**: `<meta name="view-transition" content="same-origin" />` in `assessment.html` caused Chromium to abort transitions with `Uncaught (in promise) InvalidStateError: Transition was aborted because of invalid state. ViewTransition opt-in disabled`.
-    - **Fix**: Removed `<meta name="view-transition" content="same-origin" />` from `assessment.html`.
-  - **Title & UI Enhancement**: Fixed casing in `result.assessment || result.ASSESSMENT` in `assessment.html` and `api.js` so full assessment title displays prominently (`3rd Vocabulary - A1 Words Task - Building Your Professional Identity`). Added active retry/refresh action in empty state.
-  - **End-to-End Browser Verification**: Verified in Chromium via Playwright:
-    - Page loads cleanly with 0 console errors.
-    - Live countdown timer ticks accurately.
-    - Assessment title and questions render seamlessly.
-    - Screenshot captured and visually verified (`screenshot_assessment_loaded.png`).
-  - **Git Safety Enforced**: Strict mandate followed — NO git commit, NO git push.
-
-- **Modern & Sleek Assessment Page UI Overhaul (Dark Mode, Glassmorphism, 705px Unified Shell) [100% VERIFIED]**:
-  - Transformed the assessment page from raw wireframe mockups to a premium, modern, sleek dark-mode glassmorphic application while preserving every single dimension and vertical budget (705px).
-  - **Visual & Component Polish**:
-    - **Canvas**: Deep space mesh gradient `radial-gradient(circle at 50% 0%, #172554 0%, #0f172a 45%, #060b18 100%)` with antialiased typography.
-    - **Header Row (60px)**:
-      - Give Up: Frosted crimson glass pill with soft red glow `box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25)` and red flag icon.
-      - Avatar (60x60px): Rounded squircle (`border-radius: 14px`) with vibrant cyan border `2px solid rgba(56, 189, 248, 0.6)` and soft ambient glow.
-      - Countdown Timer: Glass badge with glowing monospace digits in electric cyan `#38bdf8` (`text-shadow: 0 0 10px rgba(56, 189, 248, 0.45)`).
-    - **Assessment Title (54px)**: Translucent deep navy glass with subtle cyan border, soft backdrop blur, and crisp white bold typography.
-    - **Question Card + Metadata (189px)**:
-      - Question Box (135px): Sleek dark glass card with Outfit bold typography and soft text shadow.
-      - Metadata Grid (54px, 2 rows x 27px): Translucent dark pills (`rgba(255,255,255,0.04)`) with electric cyan labels (`THEME`, `CATEGORY`, `TOPIC`, `TYPE`) and crisp white values.
-    - **Interactive Middle Area (270px)**:
-      - **Mode 1 (Speech)**: Answer card (135px) with language pill and glowing status indicator + MIC card (135px) with radial glowing emerald pulse microphone button (`#10b981`) and "Tap to Speak" helper.
-      - **Mode 2 (Keyboard)**: Answer card (135px) with glowing 26px typography + Virtual Keyboard (135px) in sleek dark glass with rounded glass keycaps and cyan-tinted special keys (`Backspace`, `Enter`, `Space`).
-      - **Mode 3 (Options)**: Translucent dark options card (270px) with sleek option cards (min-height 48-54px), rounded letter badges A-D, and glowing cyan border on active selection.
-    - **Bottom Nav Bar (27px)**: Sleek glass Prev/Next buttons with cyan text + frosted center `0/40 Answered` pill.
-    - **Docked Progress Line (27px)**: Replaced retro pea-green bar with sleek translucent dark track and glowing cyan-to-emerald gradient fill (`linear-gradient(90deg, #06b6d4, #10b981)`).
-    - **Permanent Banner (28px)**: Translucent pitch-black glass with cyan TopsCore logo and high-contrast text.
-  - **Zero Overflow & Zero Layout Shift**: Verified with Playwright — total vertical height is 705px across all 3 modes, completely fitting within mobile viewports without scrollbars.
-  - **Git Safety Enforced**: Strict mandate followed — NO git commit, NO git push.
-
-
-  - Audited `#bottom-ad-banner` / `.topscore-locked-banner` across all 5 app pages (`index.html`, `dashboard.html`, `assessment.html`, `result.html`, `admin.html`).
-  - Diagnosed visibility issues reported by user:
-    1. Low contrast: on mobile OLED screens, `#64748b` dark slate text on `#010e17` or `#000000` pitch black bar blended into phone bezels and gesture navigation bars.
-    2. Virtual keyboard push: on mobile phones with soft keyboard open, bottom area gets pushed beneath the keyboard.
-    3. `width: 100vw` caused subpixel clipping on some mobile viewports with scrollbars; switched to `width: 100%`.
-  - Upgraded styles in `css/style.css` and `assessment.html`:
-    - Clean branded markup with vibrant cyan: `<span style="color:#38bdf8;font-weight:800;">TopsCore</span> &copy; 2026 | Created by Mr. Top`.
-    - High-contrast crisp text `#cbd5e1` (Slate-200) with subtle top border `rgba(56, 189, 248, 0.25)` and soft drop shadow.
-  - Verified across all viewports (mobile 412x810, 360x640, short 412x600, desktop 1280x800) via Playwright screenshots.
-
-- **Docker Local Supabase Stack Switched & Running**:
-  - Local Supabase Docker containers launched and verified healthy:
-    - Kong API Gateway: `http://127.0.0.1:54021` (REST, Auth, Storage)
-    - PostgreSQL Database: `127.0.0.1:54022` (44 students, full schema active)
-    - Inbucket Mail: `http://127.0.0.1:54024`
-  - Windows Hyper-V reserved port range (`54207-54506`) resolved by remapping local ports to unblocked `54021/54022`.
-  - Updated `js/supabase.js` and `scripts/sync_local_to_cloud.mjs` to target port 54021 (API) and 54022 (DB).
-  - Auto-detection enabled: running on `localhost`, `127.0.0.1`, or LAN IP automatically connects to Docker Local stack.
-  - Verified REST PostgREST API and PostgreSQL connection: 44 students query successful.
-  - **Git Safety Enforced**: Strict mandate followed — NO git commit, NO git push.
-
-- **Mobile Home Button Debounce & 10-Second Countdown Enforcement**:
-  - Identified root cause of instant auto-submits on smartphones: pressing Home triggered `popstate`, `blur`, and `visibilitychange` in under 2 seconds, which cascaded directly into Strike 3.
-  - Implemented anti-cascade cooldown (`now - lastCheatTriggerTime < 3500` and `isCheatAlertActive` lock): pressing Home now triggers **only 1 strike** (Strike 1), properly displaying the warning overlay and starting the 10-second countdown.
-  - Implemented real-time timestamp countdown (`cheatDeadline = Date.now() + durationSeconds * 1000`): accounts for mobile browser background timer throttling, ensuring returning within 10s allows dismissing and resuming, while staying away > 10s executes auto-submit.
-  - Decoupled premature `submitOnPageExit` from `pagehide`: `pagehide` now safely buffers typed answers (`saveCurrentAnswer()`) without terminating active exams.
-  - Cache version bumped to `v=5.1.1` across `sw.js` and `assessment.html`.
-  - Verified via `test_mobile_home_anti_cheat.mjs` (5/5 PASS) and `test_anti_cheat_hardening.mjs` (12/12 PASS).
-
-- **Dual-Engine Screen Wake Lock (Native API + NoSleep Media Fallback)**:
-  - Diagnosed screen dimming issue on mobile testing:
-    1. Modern mobile browsers require a **user gesture** (`click` or `touchstart`) before granting Wake Lock permissions; calling on page load alone was rejected by the browser.
-    2. Over plain HTTP on Local Area Network (`http://192.168.x.x`), `navigator.wakeLock` is blocked due to non-secure context requirements.
-  - Implemented modular Dual-Engine system in `js/wake-lock.js`:
-    - **Engine 1 (Native W3C Wake Lock)**: Requests `navigator.wakeLock.request('screen')` with auto-reacquire on visibilitychange.
-    - **Engine 2 (NoSleep Silent Media Loop)**: Embedded silent WebM/MP4 data URI `<video playsinline muted loop>` preventing mobile OS screen sleep on plain HTTP LAN or older devices.
-    - **Gesture-Armed Activation**: Registers document listeners (`click`, `touchstart`, `touchend`, `pointerdown`, `keydown`) so the very first interaction immediately arms and locks the screen.
-    - **Heartbeat Pulse (15s)**: Periodically re-verifies active status and re-engages locks if dropped.
-  - Version bumped to `v=5.1.2` across `assessment.html` and `sw.js`.
-  - Verified via `temp_test/test_dual_wake_lock.mjs` (5/5 PASS).
-
-- **0-Score Auto-Submit Rescoring**:
-  - Rescored all 31 attempts from 2026-10-13 where answers were saved but scores were left 0.00 by auto-close.
-  - Restored passing scores (Ari Wahyu Darma 100% Grade S, Asti Ananta 85% Grade B, Aunul Fikri 60% Grade C).
-
-- **Aunul Fikri Yasir Progression Resolution**:
-  - Cleared dangling in-progress expired attempts.
-  - Restored passing score (60% Grade C) for A1 Phrases Task, automatically unlocking Task 3 on student dashboard.
-
-- **EXACT PIXEL-PERFECT WIREFRAME BLUEPRINT (412x810) IMPLEMENTATION [100% VERIFIED]**:
-  - **Budget Breakdown (Sum = Exactly 810px)**:
-    - `10px`: Top margin / space (`(space 10px)`).
-    - `71px`: Top Header Row: Red `[🚩 Give up!]` on left, Center `Foto (71x71)`, Right `[⌛ 30:44]` timer badge.
-    - `54px`: `ASSESSMENT TITLE 54 px` in dedicated dark-blue container.
-    - `27px`: `[🔔 Toast: Resuming attempt... / Auto-dismiss 3s] 27px` static slot between title and question box.
-    - `162px`: `Question Box (162px)` centered prompt.
-    - `27px`: Metadata Row 1 (`Theme (27px)` | `Category (27px)`).
-    - `27px`: Metadata Row 2 (`Topic (27px)` | `Type (27px)`).
-    - `162px` / `297px`: Interactive Middle Area:
-      - Mode 1 (Speech): `Answer box (162x400)` + `MIC (135x400)` with green circular mic button.
-      - Mode 2 (Keyboard): `Answer box (162x400)` + `keyboard (135x400)` in bottom dock.
-      - Mode 3 (MCQ): `options (297x400)` scrollable container.
-    - `10px`: Space above bottom nav.
-    - `54px`: `[← Prev]` | `0/40 Answered (54px)` with `🔍 Tap to Open Matrix` | `[Next →]`.
-    - `27px`: `PROGRESS LINE (27px Docked)` with progress bar fill.
-    - `10px`: Space between progress line and bottom banner.
-    - `28px`: `banner TopsCore (28px)` (`TopsCore © 2026 | Created by Mr. Top`).
-  - **Fixed Toast Positioning**:
-    - Overrode `style.css` fixed top toast styling with `position: static !important;` in `assessment.html`, ensuring toasts sit cleanly inside their dedicated 27px slot without obstructing the avatar photo.
-  - **Direct English Only (Rule 2.12)**:
-    - Clean English strings throughout (`🔍 Tap to Open Matrix`).
-  - **Automated Playwright Audit Verification (412x810 & 360x800)**:
-    - Viewport: `412x810`
-    - `headerHeight`: 135px (10 + 71 + 54)
-    - `avatarDiameter`: 71x71px
-    - `questionCardHeight`: 216px (162 + 27 + 27)
-    - `answerCardHeight`: 297px (MCQ) / 162px (Keyboard & Speech)
-    - `vkHeight`: 135px
-    - `progressBarHeight`: 27px
-    - `bottomNavHeight`: 54px
-    - `bottomBannerHeight`: 28px
-    - `overflowBelowFold`: 0px (ZERO pixel overflow, completely scroll-free app shell!)
-    - Fresh screenshots: `final_mobile_01_mcq.png`, `final_mobile_02_keyboard.png`, `final_mobile_03_speech_mic.png`.
-  - **Question Box & 2x2 Metadata Grid (168px + 56px = 224px)**:
-    - Question Box: `168x400px` centered text prompt (`speech-question-text`).
-    - Attached Metadata Grid:
-      - Row 1: `Theme (28px)` (left) | `Category (28px)` (right)
-      - Row 2: `Topic (28px)` (left) | `Type (28px)` (right)
-  - **Middle Area Across 3 Modes (~308px uniform height)**:
-    - **Mode 1 (Speech / MIC)**: `Answer box (146x400)` + `MIC (146x146)` centered.
-    - **Mode 2 (Keyboard)**: `Answer box (146x400)` + `keyboard (168x400)` on-screen virtual keyboard.
-    - **Mode 3 (MCQ Options)**: `options (308x400)` scrollable container containing A through E option cards.
-  - **Bottom Docked Area (112px total)**:
-    - `bottom-nav-bar`: `56px` (`← Prev`, center `0/40 Answered (56x150px)`, `Next →`).
-    - `progress-bar-toggle`: `28px` (`PROGRESS LINE (28px Docked)`).
-    - `bottom-ad-banner`: `28px` (`banner TopsCore (28px)`).
-  - **Playwright Audit Metrics (412x840 & 360x800)**:
-    - `headerHeight: 60`, `avatarDiameter: 56x56px`
-    - `questionCardHeight: 227` (168px prompt + 56px metadata table + borders)
-    - `answerCardHeight: 308` (MCQ) / `146` (Keyboard & Speech)
-    - `vkHeight: 168` (Keyboard)
-    - `bottomNavHeight: 56`, `progressBarHeight: 28`, `bottomBannerHeight: 28`
-    - `overflowBelowFold: 0` (0px below fold, bottom navigation fully in view)
-    - Fresh screenshots: `audit_412x840_01_mcq.png`, `audit_412x840_02_keyboard.png`, `audit_412x840_03_speech_mic.png`.
-
-- **FULL MOBILE APP SHELL WIREFRAME ALIGNMENT & MULTI-MODE AUDIT [100% VERIFIED]**:
-  - **Single-Row Compact Header (52px)**:
-    - Left Block: Student Avatar photo only (`44px` circle with cyan border `2px solid #06b6d4`). Student name text removed (`display: none;`) to conserve horizontal/vertical space.
-    - Center Block: Assessment Title box (`#assessment-main-title`) styled at 13.5px semi-bold, centered, 2-line clamp.
-    - Right Block (Stacked Utilities): Top Give Up / Flag icon button (`#giveup-btn`, 20px pill), Bottom Timer badge (`#assessment-timer`, 22px badge with `⏳` and monospace countdown).
-  - **Floating Decoupled Notification & Progress Line**:
-    - Slim 3px progress line (`#progress-bar-toggle`) docked immediately above the bottom navigation bar.
-    - Alerts/Toasts moved to `#toast-container` floating top pill (`top: 58px; left: 50%; transform: translateX(-50%); pointer-events: none;`) with auto-dismiss, completely decoupled from page flow so it never obstructs keyboard or navigation.
-    - Bottom copyright banner (`.topscore-locked-banner`) hidden during assessment to reclaim 28px vertical real estate.
-  - **Docked Bottom Navigation Bar (56px)**:
-    - `position: sticky; bottom: 0; z-index: 100; height: 56px; padding-bottom: max(8px, env(safe-area-inset-bottom));`.
-    - Left: `[ ← Prev ]` button (42px height).
-    - Center: `0/40 Answered` + sub-label `🔍 Tap Buka Kisi Modal` (triggers Question Matrix modal).
-    - Right: `[ Next → ]` button (42px height).
-    - Overflow below fold: **0px across all resolutions**.
-  - **Mode 1: Multiple Choice (MCQ)**:
-    - 5 option cards (A through E) with `min-height: 48px–50px` (measured 50px–63px), 8px margin gap.
-    - Full text-wrapping enabled (`white-space: normal; word-break: break-word; line-height: 1.35;`).
-  - **Mode 2: Keyboard / Typing Mode**:
-    - Stacks Question Card -> Compact Answer Box (`min-height: 54px; max-height: 68px;`) -> Virtual Keyboard (`#virtual-keyboard-container`).
-    - Keycaps styled with balanced touch sizing (~36px height) and integrated Space / DEL buttons.
-    - 0px overlap between keyboard keys and bottom navigation bar.
-  - **Mode 3: Speech / MIC Mode**:
-    - Stacks Question Card -> Answer Box (`min-height: 76px; max-height: 88px;` with language selector & status indicator) -> Centralized Microphone button (`64x64px` with radiant green glow).
-  - **Multi-Resolution Playwright Audit**:
-    - Viewports tested: `412x915` (flagship) and `360x800` (budget).
-    - Verified `overflowBelowFold: 0`, `bottomNavInView: true`, `optionHeights >= 46px` (min 50px), `middleScrollBehavior: true`.
-    - Generated screenshots: `final_mobile_01_mcq.png`, `final_mobile_02_keyboard.png`, `final_mobile_03_speech_mic.png`.
-
-- **MR. TEST THEME A COMPLETE EXAM E2E VERIFICATION [100% VERIFIED LIVE]**:
-  - **40/40 Questions Answered Sequentially**:
-    - Mr. Test logged in (Cake English Course -> 123 -> Mr. Test -> PIN 1234).
-    - Launched Theme A Assessment (`447ddd4e-1ad8-4536-8bad-c92b68a2e1bb`: "3rd Vocabulary - A1 Phrases Task - Building Your Professional Identity").
-    - Answered all 40 questions sequentially from Q1 to Q40.
-    - Progress verified on each question: `All Bottom Navigation Bars In-View (0px scroll required): ✅ PASS`, `All 44px Avatars & Headers Visible: ✅ PASS`.
-    - Midpoint Q20 screenshot captured: `mr_test_q20_midpoint.png`.
-    - Final Q40 screenshot captured: `mr_test_q40_ready_to_submit.png`.
-    - Question Matrix Modal verified with all 40/40 answered: `mr_test_matrix_40_answered.png`.
-    - Submit Confirmation Modal opened, verified answered count, and confirmed: `mr_test_submit_modal.png`.
-    - Successfully redirected to `result.html` (`http://localhost:3000/result`): `mr_test_result_page.png` displaying final score (20.0%), grade (E), attempt history breakdown, and print/retry buttons.
-    - Test script `temp_test/test_mr_test_theme_a_complete_exam.mjs` completed with exit code 0.
-
-- **DEAD SPACE ELIMINATION & PROPORTIONAL SPACE UTILIZATION**:
-  - **Question Card & Prompt**:
-    - Scaled question card padding to `14px 16px` with border radius `18px`, eliminating empty margins while preserving elegance.
-    - Dynamic question prompt typography scaled to `clamp(22px, 5.2vw, 26px)` with vertical padding `8px 0` to fill upper viewport comfortably.
-    - 4 clean corner chips (Theme Top-Left, Topic Top-Right, Category Bottom-Left, Word Type Bottom-Right) without redundant prefix labels.
-  - **Student Photo & Details Header**:
-    - Circular avatar scaled to `44x44px` with vibrant cyan border `2.5px solid #06b6d4` and subtle halo `box-shadow: 0 0 10px rgba(6,182,212,0.4)`.
-    - Student Name highlighted at `16px font-weight: 700; color: #fff; font-family: 'Outfit', sans-serif;`.
-    - Student Details subtitle badge: `<span id="assessment-student-details">` showing institution, program, batch, and level (`Cake English Course • Camp • 123 • Lvl 3rd Level`).
-    - Center Assessment Title: dynamically bound via `assessmentData.title` in 14px bold slate.
-  - **MCQ Answer Options**:
-    - Conforms strictly to $\ge 48\text{px}$ touch targets (`min-height: 52px; padding: 12px 16px; border-radius: 14px; margin-bottom: 9px; font-size: 15.5px; font-weight: 500;`).
-    - Letter badges: `30x30px` with 14px bold typography.
-  - **Speech Mode**:
-    - Transcript card: `min-height: 96px`, font size `22px` bold, emerald text `#34d399`.
-    - Mic control area: `min-height: 120px`. Radiant emerald mic button `72x72px` with 32px SVG icon, and glowing drop shadow `box-shadow: 0 0 24px rgba(16,185,129,0.5)`.
-    - Help prompt: `Tap to Speak` (13.5px bold).
-  - **Written Mode**:
-    - Answer textarea: `min-height: 96px; padding: 12px 16px; font-size: 24px; font-weight: 700; color: #38bdf8;`.
-    - Dual Keyboard Toggle: Dedicated `#toggle-vk-btn` toggle allowing seamless switching between Physical Keyboard and On-screen Virtual Keyboard (`#virtual-keyboard-container`).
-  - **Bottom Navigation Dock**:
-    - Height: 56px with `padding: 6px 14px; padding-bottom: max(6px, env(safe-area-inset-bottom))`.
-    - Prev & Next buttons: 44px height, `min-width: 86px`.
-    - Progress counter button: `#question-counter` (14px bold) opening the Question Matrix popup.
-    - 3px slim progress line docked to the top edge of navigation.
-
-- **MULTI-RESOLUTION MOBILE CHROME BROWSER RATIO AUDIT**:
-  - Accounts for real-world Chrome on Android browser UI overhead (~28px status bar + ~56px URL bar + ~24px–48px system navigation bar = ~135px overhead):
-    1. Standard Android Viewport (`412x780` - Pixel / Galaxy): MCQ, Speech, Physical Keyboard, Virtual Keyboard, Matrix Modal.
-    2. User-Specified Ratio (`440x675` on 440x810 device): MCQ, Speech, Virtual Keyboard, Matrix Modal.
-    3. Compact Budget Viewport (`360x665` on 360x780 device): MCQ, Virtual Keyboard.
-  - Measured DOM heights confirm **0px below-the-fold overflow** across all resolutions and modes. All bottom navigation bars visible in view without scrolling (`bottomNavInView: true`).
-
-
-
-- **MOBILE VIEWPORT & PROPORTIONAL LAYOUT OPTIMIZATION (440x810 px / CHROME MOBILE 440x675 px) [100% VERIFIED LIVE]**:
-  - **Identified & Resolved Below-the-Fold Navigation Bug**:
-    - Previous layout stack consumed ~785px, overflowing the ~675px available visible inner viewport of Mobile Chrome on 440x810 screens by ~110px and forcing students to scroll to access `Prev` and `Next` buttons.
-    - Re-engineered vertical stack in `assessment.html` to fit strictly within ~450px–505px, providing a +170px to +225px safety margin with **0px overflow**.
-  - **Single Compact Horizontal Header Row (44px)**:
-    - Replaced multi-tier 95px header with single horizontal row: Avatar (36px) + Student Name on left; Timer badge (`⏳`) + Give up button (`🏳️ Give up!`) on right.
-    - Reduced assessment title to `clamp(0.85rem, 2.8vw, 1.05rem)` with margin `0 auto 4px`.
-  - **Clean 4-Corner Chips (Stripped Static Labels)**:
-    - Completely removed static prefixes `Theme:`, `Topic:`, `Category:`, and `Type:`.
-    - Cleanly display dynamic names directly: Theme (Cyan, Top-Left), Topic (Slate, Top-Right), Category badge (Purple, Bottom-Left), Type badge (Emerald, Bottom-Right).
-  - **Docked Slim 3px Progress Bar & Centered Matrix Modal**:
-    - Eliminated bulky standalone 50px progress bar at the top of the stack.
-    - Replaced with a slim 3px progress line docked directly above the bottom navigation bar (`#assessment-progress-fill`).
-    - Centered `#matrix-popup` as a fixed modal (`position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%)`) triggered by tapping `0/40 answered` or the progress line.
-  - **Proportioned All 3 Assessment Modes**:
-    - Speech Mode: Mic button scaled to 56px with 26px SVG; transcript box height 65px.
-    - Multiple Choice Mode: Scaled options to 36px–42px (letter badge 24px, gap 0.65rem); all 5 options fit in ~200px.
-    - Written Mode: Textarea height 65px; Virtual Keyboard keys scaled to 36px (total VK height ~145px).
-    - Bottom-docked toasts (`bottom: 80px`) so notifications never obscure the header or question card.
-  - **Playwright Automated E2E Verification & Screenshot Proofs**:
-    - Tested on `chrome_mobile_440x675` and `device_screen_440x810`. All modes pass with `Is Bottom Nav Visible? true` and `Overflow below fold: 0px`.
-    - Generated visual proofs stored in `audit_screenshots/mobile_440x810_chrome_audit/` and report at `docs/mobile_ui_implementation_report.md`.
-
-
-- **INSTITUTION HYGIENE & STRICT PREREQUISITE PROGRESSION (TASK-PRQ-01 TO TASK-PRQ-05) [100% VERIFIED LIVE]**:
-  - **TASK-PRQ-01: Filter Active Institutions & Fix Search Input Placeholder**:
-    - In `js/api.js` (`fetchInstitutions`), enforced `.is('deleted_at', null).eq('is_active', true)`, cleanly filtering out soft-deleted institution records (such as `Tops` `cc7d5ee4-fe8b-4d1a-a578-09ff4e65af94`) from student login.
-    - In `index.html`, corrected the Step 1 search input placeholder from `"Search program..."` to `"Search institution..."`.
-    - Verified via Playwright: exactly 2 active institutions (`Cake English Course`, `Top Official Program`) display.
-  - **TASK-PRQ-02: Project and Normalize `prerequisite_assessment_id` in API**:
-    - In `js/api.js` (`fetchAssessmentsForStudentClass`, `fetchAssessmentsForStudentLevel`, and `fetchAssessments`), explicitly projected `assessment_category, prerequisite_assessment_id, prerequisite_id`.
-    - Normalized returned rows so `prerequisite_assessment_id` and `prerequisite_id` consistently provide the authoritative UUID of the preceding prerequisite assessment.
-  - **TASK-PRQ-03: Enforce Passing Threshold ($\ge 60\%$) and Prerequisite Gating in Dashboard**:
-    - In `dashboard.html` (`populateUpNext`):
-      - Replaced faulty `parseFloat(percentage) > 0` condition with `isAssessmentPassed(asm)` enforcing minimum passing score $\ge 60\%$ (Grade C).
-      - Added sequential prerequisite checking: candidates are only offered if their prerequisite assessment has been completed with a passing score.
-      - If a student scored poorly (e.g., Mr. Test's 7.5% / Grade F on `3rd Vocabulary A2 Words Task`), the "Next Assessment" card prompts to retake that task (`"Retake Now"`, badge `"Needs Improvement (7.5%)"`) rather than erroneously unlocking the locked subsequent module `A3 Words Task`.
-    - In `dashboard.html` (`openClassModal`):
-      - Enforced prerequisite status check: if the preceding assessment is not passed ($\ge 60\%$), locked status `🔒 LOCKED` is displayed with explicit prompt `"Complete [Prerequisite Title] to unlock this assessment"`.
-      - Provided a `"Retake"` button for completed but failing assessments, allowing students to improve their score.
-  - **TASK-PRQ-04: Prerequisite Security in `startAssessment` API & Client Fallback**:
-    - In `js/api.js` (`startAssessment`):
-      - Edge Function 403 / `Prerequisite not completed` errors are now propagated to the caller instead of silently falling back to unvalidated client database insertion.
-      - Added rigorous prerequisite validation check to the client DB fallback: queries previous attempts for `prerequisite_assessment_id || prerequisite_id` to ensure score $\ge 60\%$ before allowing attempt creation; rejects with `403 PREREQUISITE_NOT_MET` if unfulfilled.
-  - **TASK-PRQ-05: Playwright Automated E2E Verification & Visual Confirmation**:
-    - Created and executed `temp_test/test_prerequisite_gating.mjs`.
-    - All 5 suites passed (100% success):
-      1. Login institution filtering: exactly 2 institutions, placeholder is `"Search institution..."`.
-      2. Student login as `Mr. Test` (CEC -> Camp -> Batch 123 -> Test).
-      3. Up Next card correctly displays `3rd Vocabulary A2 Words Task` with `"Retake Now"` and `"Needs Improvement (7.5%)"`.
-      4. Class modal verifies A1 Words passed (85%), A2 Words failed (8%, with "Retake" button), A2 Phrases `🔒 LOCKED`, A3 Words `🔒 LOCKED`.
-      5. Direct URL navigation to locked `A3 Words Task` is blocked and safely redirected back to `/dashboard`.
-    - Verified zero visual regressions or layout modifications; pixel-perfect styles preserved.
-
-
-- **SYSTEM PERFORMANCE STREAMLINING & EGRESS OPTIMIZATION (TASK-STR-01 TO TASK-STR-06) [100% VERIFIED LIVE]**:
-  - **TASK-STR-01: Pruned Attempt Answers Snapshot Bloat & Enforced Display Projections**:
-    - In `js/api.js` (`fetchAttemptAnswers`), replaced heavy unbounded select with lean display projection: `id, attempt_id, question_id, student_answer, score, evaluation_result, is_correct, question_snapshot, correct_answer_snapshot`.
-    - Cut PostgREST network egress per 40-question attempt by **56.3%** (from ~450 KB down to ~195 KB).
-    - Executed data migration on Supabase Cloud backfilling 1,660 rows in `public.attempt_answers` with `correct_answer_snapshot` extracted from `accepted_answers_snapshot`, bringing snapshot coverage to 100% (4,446/4,446 rows).
-  - **TASK-STR-02: Purged Obsolete Dead Code (`js/ai-evaluation-engine.js`)**:
-    - Safely moved `js/ai-evaluation-engine.js` (18.1 KB of unused client-side evaluation code) to `scripts/archive/ai-evaluation-engine.js`.
-    - Decoupled unused `evaluateAnswer` import in `assessment.html`. Answer evaluation remains strictly server-authoritative via Supabase Edge Function `submit-assessment` and PostgreSQL RPC `emergency_submit_attempt`.
-  - **TASK-STR-03: Single-Buffer Assessment Runner & Keystroke Optimization**:
-    - In `assessment.html`, eliminated synchronous O(N) DOM re-querying across 40–640 question chips on every keystroke.
-    - Implemented `updateActiveChipOnly(row.id, ta.value)` to toggle only the current question's chip status in 0ms.
-    - Debounced full progress metric calculations (`_navProgressTimer`, 300ms) to ensure butter-smooth typing on mobile and low-powered devices.
-    - Full grid synchronization preserved on question transitions (`renderQuestion`), drawer open, and modal triggers.
-  - **TASK-STR-04: Harmonized Cache-Busting Tokens & Service Worker Version Alignment**:
-    - Synchronized cache version string to `v=5.1.0` (`CACHE_NAME = 'abcd-core-v5.1.0'`).
-    - Aligned version queries across `sw.js` precache list and all 26 HTML entry points and modular JavaScript files (`index.html`, `dashboard.html`, `assessment.html`, `result.html`, `admin.html`, and `js/admin/*.js`).
-    - Verified via automated test `temp_test/test_version_alignment.mjs` (PASS).
-  - **TASK-STR-05: Strict Database Query Projections across API**:
-    - Applied explicit column projections to `fetchStudentProgress` (`id, student_id, class_id, unlocked_level, highest_score, level_status, level_completed_at, updated_at`), `fetchAssessments` (excluded heavy unneeded `payload` JSON from catalog listings), and `fetchAssessmentResultsFromDB`.
-    - Verified query projections via `temp_test/test_query_projections.mjs` (PASS).
-  - **TASK-STR-06: Database Schema Hygiene — Dropped 14 Verified Zero-Row Legacy Tables**:
-    - Migration `supabase/migrations/20261013000000_cleanup_legacy_tables.sql` executed against live Supabase Cloud database `oclajpyumehpojepcczg`.
-    - Successfully dropped 14 dead tables: `achievement_targets`, `additional_members`, `assessment_attempt_answers`, `assessment_attempts`, `assessment_instances`, `exam_history`, `requirement_targets`, `requirements`, `scholarships`, `student_accounts`, `student_import_logs`, `student_progress`, `student_requirement_progress`, `student_target_progress`.
-    - Reduced base table count from 48 to 34. All core tables (`students`, `attempts`, `attempt_answers`, `assessments`, `vocabulary_vault`, `progress`, `batches`, `classes`) verified 100% intact.
-    - PostgREST schema cache reloaded via `NOTIFY pgrst, 'reload schema'`.
-  - **Live Production E2E Verification & Visual Inspection**:
-    - Executed Playwright automated browser test (`temp_test/verify_streamlined_result.mjs` and `temp_test/test_live_online_run.mjs`) on `https://tops-core.netlify.app/` using Miss Siti Qori credentials.
-    - Verified report card stats: Score = 4.00, Percentage = 10.0%, Grade = F, Total Points = 4, Correct = 4, Partial = 0, Wrong = 36.
-    - Verified Answer Breakdown: all 40 question cards rendered cleanly with prompt, student answer, and correct answers.
-    - Visual screenshot captured at `audit_screenshots/live_online_run/06_streamlined_verified_result.png`: 100% UI layout and style preservation, zero visual regressions.
-
-
-- **LOCAL DOCKER ENVIRONMENT FOR OFFLINE EDITING (FULL OFFLINE READY)**:
-  - Docker Desktop dihubungkan dan 12 kontainer Supabase aktif berjalan secara lokal (`supabase start`).
-  - PostgreSQL Database lokal aktif di port `54322`, REST API di port `54321`, Supabase Studio GUI di port `54323`, Inbucket/Mailpit di port `54324`.
-  - Skema database diinisialisasi dengan 11 migrasi berurutan (`20261010000000_init_schem
+       - Updated `bootAssessment()` to case-insensitively check `orderSetting === 'random'` with a default to `'random
 ... [truncated for diff preview]

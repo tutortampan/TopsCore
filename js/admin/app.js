@@ -60,11 +60,11 @@ document.addEventListener('click', (e) => {
   if (!th) return;
   const table = th.closest('table');
   if (!table) return;
-  
+
   // Ignore datagrid, explicitly ignored tables, or custom sortable tables
   if (table.classList.contains('datagrid-table') || table.classList.contains('no-sort')) return;
   if (th.classList.contains('sortable') || th.classList.contains('no-sort')) return;
-  
+
   const text = th.textContent.replace(/▲|▼/g, '').trim().toLowerCase();
   if (!text || text === 'actions' || text === 'action') return;
 
@@ -73,9 +73,9 @@ document.addEventListener('click', (e) => {
 
   const tr = th.closest('tr');
   const index = Array.from(tr.children).indexOf(th);
-  
+
   const isAsc = th.dataset.sortDir !== 'asc';
-  
+
   // Reset other headers
   table.querySelectorAll('th').forEach(header => {
     if (header !== th) {
@@ -84,7 +84,7 @@ document.addEventListener('click', (e) => {
       if (icon) icon.remove();
     }
   });
-  
+
   th.dataset.sortDir = isAsc ? 'asc' : 'desc';
   let icon = th.querySelector('.global-sort-icon');
   if (!icon) {
@@ -106,11 +106,11 @@ document.addEventListener('click', (e) => {
     const tdA = a.children[index];
     const tdB = b.children[index];
     if (!tdA || !tdB) return 0;
-    
+
     // Dataset sort-val takes precedence over text content
     let valA = tdA.dataset.sortVal !== undefined ? tdA.dataset.sortVal : tdA.textContent.trim();
     let valB = tdB.dataset.sortVal !== undefined ? tdB.dataset.sortVal : tdB.textContent.trim();
-    
+
     // Try numeric sort first
     const numA = parseFloat(valA.replace(/,/g, ''));
     const numB = parseFloat(valB.replace(/,/g, ''));
@@ -121,7 +121,7 @@ document.addEventListener('click', (e) => {
       valA = String(valA).toLowerCase();
       valB = String(valB).toLowerCase();
     }
-    
+
     if (valA < valB) return isAsc ? -1 : 1;
     if (valA > valB) return isAsc ? 1 : -1;
     return 0;
@@ -194,25 +194,25 @@ document.addEventListener('drop', (e) => {
   if (!th || !th.closest('table:not(.datagrid-table)')) return;
   e.preventDefault();
   th.style.borderLeft = '';
-  
+
   const table = th.closest('table');
   const sourceTh = table.querySelector('th[data-drag-source-idx]');
   if (!sourceTh) return;
-  
+
   const fromIdx = parseInt(sourceTh.dataset.dragSourceIdx, 10);
   sourceTh.removeAttribute('data-drag-source-idx');
-  
+
   const tr = th.closest('tr');
   const toIdx = Array.from(tr.children).indexOf(th);
-  
+
   if (fromIdx === toIdx) return;
-  
+
   if (toIdx > fromIdx) {
     tr.insertBefore(sourceTh, th.nextSibling);
   } else {
     tr.insertBefore(sourceTh, th);
   }
-  
+
   table.querySelectorAll('tbody tr').forEach(row => {
     const cells = Array.from(row.children);
     if (cells.length > Math.max(fromIdx, toIdx)) {
@@ -264,7 +264,7 @@ export function buildSectionTabBar({ tabs = [], activeId = null, onSelect = null
   const itemsHtml = tabs.map(tab => {
     const isActive = !isStatOnly && activeId && String(tab.id) === String(activeId);
     const isClickable = !isStatOnly && tab.clickable !== false && !!onSelect;
-    
+
     let clickAttr = '';
     if (isClickable) {
       if (typeof onSelect === 'string') {
@@ -367,17 +367,17 @@ import {
   detectDuplicateQuestions, resequenceTestQuestions, resolveDuplicateQuestionGroup, batchResolveTestDuplicateQuestions,
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter
-} from '../api.js?v=5.4.7';
+} from '../api.js?v=20261031_v60';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.4.7';
 import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.4.7';
 import { getSupabase } from '../supabase.js?v=5.4.7';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261030_v37';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261031_v54';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.4.7';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.4.7';
 import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=5.4.7';
-import { renderTests } from './tests-management.js?v=20261030_v40';
+import { renderTests } from './tests-management.js?v=20261031_v60';
 import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261030_v34';
-import { renderVocabularyVault } from './vocab-vault.js?v=5.4.8';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261031_v47';
 import { renderModules } from './modules.js?v=5.4.7';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.4.7';
 import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.4.7';
@@ -385,8 +385,8 @@ import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal,
 import { renderCurriculum } from './curriculum-management.js?v=5.4.8';
 import { renderClassesHub } from './classes-hub.js?v=5.4.7';
 import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.4.7';
-import { openStudentFullEdit } from './student-management.js?v=20261030_v37';
-import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
+import { openStudentFullEdit } from './student-management.js?v=20261031_v54';
+import { renderStudentsRegistration } from './student-registration.js?v=20261031_v47';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -427,42 +427,176 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
     const tabDefaultSections = {
       admin: 'dashboard',
-      board: 'institutions',
-      class: 'classes',
-      tests: 'classes', // Legacy alias
-      desk: 'recycle',
-      data: 'recycle',
-      database: 'classes', student: 'students', Test: 'tests',
-      academy: 'institutions'
+      board: 'students',
+      class: 'class-hub',
+      tests: 'tests', // Legacy alias
+      desk: 'settings',
+      data: 'settings',
+      database: 'class-hub', student: 'students', Test: 'tests',
+      academy: 'students'
     };
 
-    // Section alias map to guarantee 100% backward compatibility
+    // Section alias map to guarantee 100% backward compatibility & resilient routing
     const aliasSectionMap = {
-      'academy-institutions': 'institutions',
-      'academy-programs': 'programs',
-      'academy-batches': 'batches',
+      // Vocabulary Vault
+      'vocabulary': 'vocab_vault',
+      'vocab': 'vocab_vault',
+      'vault': 'vocab_vault',
+      'vocab-vault': 'vocab_vault',
+
+      // Settings & System Data
+      'system-settings': 'settings',
+      'system_settings': 'settings',
+      'site-settings': 'settings',
+      'desk-settings': 'settings',
+      'audit': 'settings',
+      'desk-audit': 'settings',
+      'health': 'settings',
+      'desk-health': 'settings',
+      'recycle': 'settings',
+      'desk-recycle': 'settings',
+      'recalibrator': 'settings',
+      'class-recalibrator': 'settings',
+      'tests-recalibrator': 'settings',
+
+      // Curriculum & Classes
+      'curriculum': 'classes-hub',
+      'curriculum-org': 'organization',
+      'classes': 'class-hub',
+      'class': 'class-hub',
+      'Classes': 'class-hub',
+      'board-Classes': 'class-hub',
+      'test-access': 'class-hub',
+      'class-panel': 'class-hub',
+      'class-detail': 'class-hub',
+
+      // Tests & Analytics
+      'tests-hub': 'tests',
+      'test-hub': 'tests',
+      'test': 'tests',
+      'analytics': 'tests',
+      'test-analytics': 'tests',
+      'import_ai_tests': 'tests',
+
+      // Students
+      'student': 'students',
+      'progress-view': 'students',
       'academy-students': 'students',
+
+      // Registration
       'academy-import': 'student-registration',
       'import-students': 'student-registration',
       'students-registration': 'student-registration',
-      'board-Classes': 'classes',
-      'board-topics': 'topics',
+
+      // Batches & Programs
+      'batches': 'institutions',
+      'batch': 'institutions',
+      'programs': 'institutions',
+      'program': 'institutions',
+      'academy-institutions': 'institutions',
+      'academy-programs': 'institutions',
+      'academy-batches': 'institutions',
+
+      // Questions & Topics
       'board-bank': 'questions',
       'board-wordtypes': 'question_types',
+      'board-topics': 'topics',
       'board-import': 'import-questions',
       'board-export': 'export-questions',
       'class-assignments': 'assignments',
-      'class-results': 'results',
-      'class-recalibrator': 'recalibrator',
-      'tests-hub': 'tests',
       'tests-assignments': 'assignments',
+      'class-results': 'results',
       'tests-results': 'results',
-      'tests-recalibrator': 'recalibrator',
-      'desk-audit': 'audit',
-      'desk-settings': 'settings',
-      'desk-recycle': 'recycle',
-      'desk-health': 'health'
+      'levels': 'class-hub',
+      'import-ai-tests': 'tests',
+      'question-types': 'question_types',
+      'word-types': 'question_types',
+      'wordtypes': 'question_types',
+      'work-records': 'work_records',
+      'cv': 'cv_generator',
+      'cv-generator': 'cv_generator'
     };
+
+    function parseHashRoute(hashStr) {
+      let raw = (hashStr || '').replace(/^#\/?/, '').trim();
+      if (!raw) return { section: '', subTab: null, params: {} };
+
+      if (raw.startsWith('profile-') || raw.startsWith('dossier-')) {
+        return { section: 'profile-student', studentId: raw.replace(/^(profile|dossier)-/, ''), subTab: null, params: {} };
+      }
+
+      let sectionPart = raw;
+      let queryPart = '';
+      if (raw.includes('?')) {
+        const parts = raw.split('?');
+        sectionPart = parts[0];
+        queryPart = parts[1] || '';
+      }
+
+      let subTab = null;
+      if (sectionPart.includes('/')) {
+        const slashParts = sectionPart.split('/');
+        sectionPart = slashParts[0];
+        subTab = slashParts[1] || null;
+      } else if (sectionPart.includes(':')) {
+        const colonParts = sectionPart.split(':');
+        sectionPart = colonParts[0];
+        subTab = colonParts[1] || null;
+      }
+
+      const params = {};
+      if (queryPart) {
+        try {
+          const sp = new URLSearchParams(queryPart);
+          for (const [k, v] of sp.entries()) {
+            params[k] = v;
+            if (k === 'tab' && !subTab) subTab = v;
+          }
+        } catch (_) {}
+      }
+
+      return { section: sectionPart, subTab, params };
+    }
+
+    function applySubRouteState(targetSec, subTab, params = {}, rawSec = '') {
+      if (targetSec === 'settings') {
+        const tab = (rawSec === 'health' || rawSec === 'desk-health' || rawSec === 'recalibrator' || rawSec === 'class-recalibrator' || rawSec === 'tests-recalibrator') ? 'health'
+          : (rawSec === 'audit' || rawSec === 'desk-audit') ? 'audit'
+          : (rawSec === 'recycle' || rawSec === 'desk-recycle') ? 'recycle'
+          : (subTab || localStorage.getItem('topscore_admin_settings_tab') || 'site');
+        window._activeSettingTab = tab;
+        try { localStorage.setItem('topscore_admin_settings_tab', tab); } catch(_) {}
+      } else if (targetSec === 'class-hub') {
+        const tab = (rawSec === 'test-access') ? 'test-sessions'
+          : (subTab || localStorage.getItem('topscore_admin_class_hub_tab') || 'attendance');
+        window._classHubActiveTab = tab;
+        try { localStorage.setItem('topscore_admin_class_hub_tab', tab); } catch(_) {}
+        if (params && params.class_id) {
+          window._selectedClassId = params.class_id;
+          try { localStorage.setItem('topscore_selected_class_id', params.class_id); } catch(_) {}
+        }
+      } else if (targetSec === 'vocab_vault') {
+        const tab = subTab || localStorage.getItem('topscore_admin_vault_tab') || 'blueprint';
+        window._activeVaultTab = tab;
+        try { localStorage.setItem('topscore_admin_vault_tab', tab); } catch(_) {}
+      } else if (targetSec === 'student-registration') {
+        const tab = subTab || localStorage.getItem('topscore_admin_student_reg_tab') || 'bulk';
+        window._activeStudentRegTab = tab;
+        try { localStorage.setItem('topscore_admin_student_reg_tab', tab); } catch(_) {}
+      } else if (targetSec === 'tests') {
+        if (params && params.class_id) {
+          window._activeTestClassId = params.class_id;
+          try { localStorage.setItem('topscore_admin_tests_class_id', params.class_id); } catch(_) {}
+        } else if (!window._activeTestClassId) {
+          window._activeTestClassId = localStorage.getItem('topscore_admin_tests_class_id') || 'all';
+        }
+      } else if (targetSec === 'students') {
+        if (params && params.program_id) {
+          window._filterProgramId = params.program_id;
+          try { localStorage.setItem('topscore_selected_program_id', params.program_id); } catch(_) {}
+        }
+      }
+    }
 
     async function updateAdminKpiBanner() {
       try {
@@ -556,25 +690,42 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       document.getElementById('admin-login-screen').classList.remove('hidden');
     });
 
-    function showConsole() {
+    async function showConsole() {
       document.getElementById('admin-login-screen').classList.add('hidden');
       document.getElementById('admin-console').classList.remove('hidden');
       updateAdminKpiBanner();
       if (window.loadSidebarClasses) window.loadSidebarClasses();
       if (window.loadSidebarPrograms) window.loadSidebarPrograms();
-      const hash = window.location.hash.substring(1);
-      const targetSec = aliasSectionMap[hash] || hash;
-      const savedSec = localStorage.getItem('topscore_admin_last_section');
-      const savedTargetSec = aliasSectionMap[savedSec] || savedSec;
 
-      if (targetSec && (sectionTitles[targetSec] || targetSec === 'students')) {
+      const rawHash = window.location.hash;
+      const parsed = parseHashRoute(rawHash);
+
+      // 1. If hash is student profile (#profile-studentId)
+      if (parsed.section === 'profile-student' && parsed.studentId) {
+        const savedSec = localStorage.getItem('topscore_admin_last_section') || sessionStorage.getItem('topscore_admin_last_section') || 'students';
+        const bgParsed = parseHashRoute(savedSec);
+        const bgTarget = aliasSectionMap[bgParsed.section] || bgParsed.section || 'students';
+        applySubRouteState(bgTarget, bgParsed.subTab, bgParsed.params, bgParsed.section);
+        await loadSection(bgTarget, true);
+        openStudentProfile(parsed.studentId, [], true);
+        initConnectionBanner();
+        return;
+      }
+
+      // 2. Direct section from URL hash or fallback to last saved section
+      const targetSec = aliasSectionMap[parsed.section] || parsed.section;
+      const savedSec = localStorage.getItem('topscore_admin_last_section') || sessionStorage.getItem('topscore_admin_last_section');
+      const savedParsed = parseHashRoute(savedSec);
+      const savedTargetSec = aliasSectionMap[savedParsed.section] || savedParsed.section;
+
+      const isValidSection = (sec) => !!(sec && (sectionTitles[sec] || sec === 'students' || sec === 'class-hub' || sec === 'settings' || sec === 'vocab_vault' || sec === 'classes-hub' || sec === 'classes' || sec === 'institutions' || sec === 'modules' || sec === 'organization' || sec === 'curriculum'));
+
+      if (isValidSection(targetSec)) {
+        applySubRouteState(targetSec, parsed.subTab, parsed.params, parsed.section);
         loadSection(targetSec, true);
-      } else if (hash && hash.startsWith('profile-')) {
-        const studentId = (hash || '').replace('profile-', '');
-        activatePrimaryTab('board');
-        openStudentProfile(studentId, [], true);
-      } else if (savedTargetSec && (sectionTitles[savedTargetSec] || savedTargetSec === 'students')) {
-        loadSection(savedSec, false);
+      } else if (isValidSection(savedTargetSec)) {
+        applySubRouteState(savedTargetSec, savedParsed.subTab, savedParsed.params, savedParsed.section);
+        loadSection(savedTargetSec, false);
       } else {
         activatePrimaryTab('class');
         loadSection('tests', true);
@@ -584,8 +735,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
     window.addEventListener('hashchange', () => {
       const h = window.location.hash.substring(1);
-      if (h && h !== window._activeSectionAlias && h !== _currentSection) {
-        loadSection(h, true);
+      const parsed = parseHashRoute(h);
+      if (parsed.section === 'profile-student' && parsed.studentId) {
+        openStudentProfile(parsed.studentId, [], true);
+        return;
+      }
+      const targetSec = aliasSectionMap[parsed.section] || parsed.section;
+      if (targetSec && (targetSec !== _currentSection || window._activeSectionAlias !== parsed.section)) {
+        applySubRouteState(targetSec, parsed.subTab, parsed.params, parsed.section);
+        loadSection(targetSec, true);
       }
     });
 
@@ -720,7 +878,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       const renderClasses = (classes) => {
         const sortedClasses = (classes || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const activeId = window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || sortedClasses[0]?.id;
-        
+
         let html = `<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:2px;">`;
         if (sortedClasses.length === 0) {
           html += `<div style="padding: 12px; color: var(--clr-text-muted); font-size: 0.8rem;">No classes found.</div>`;
@@ -796,7 +954,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
       let classId = window._selectedClassId;
       let className = window._selectedClassName || 'Vocabulary';
-      
+
       try {
         const breadcrumb = document.getElementById('admin-breadcrumb');
         if (breadcrumb) {
@@ -821,7 +979,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         // OPTIMIZATION: Flat students query without heavy nested joins (prevents 500 statement timeouts)
         const [allClasses, allTests, allStudents, allPrograms, allBatches, allQuestions, allLevels, allVault, allAttempts, allInstitutions] = await Promise.all([
           adminFetchAll('classes', 'id, name, program_id').catch(() => []),
-          adminFetchAll('tests').catch(() => []), 
+          adminFetchAll('tests').catch(() => []),
           adminFetchAll('students', 'id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id').catch(() => []),
           adminFetchAll('programs', 'id, name, institution_id').catch(() => []),
           adminFetchAll('batches', 'id, name, is_active, program_id, current_level_id').catch(() => []),
@@ -832,7 +990,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           adminFetchAll('institutions', 'id, name').catch(() => [])
         ]);
 
-        if (!classId && allClasses && allClasses.length > 0) {
+        if ((!classId || !allClasses.some(c => c.id === classId)) && allClasses && allClasses.length > 0) {
           const sorted = allClasses.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
           window._selectedClassId = sorted[0].id;
           window._selectedClassName = sorted[0].name;
@@ -856,7 +1014,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         (allLevels || []).forEach(l => { levelMap[l.id] = l; });
 
         const classTests = (allTests || []).filter(a => a.class_id === classId);
-        
+
         // Helper to accurately identify milestone exams vs quizzes (Strict Exam Filter)
         const isWeeklyExam = (asm) => {
           if (!asm) return false;
@@ -879,6 +1037,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         const programBatches = (allBatches || []).filter(b => b.program_id === classProgramId);
         const classStudents = (allStudents || []).filter(s => {
           if (s.deleted_at) return false;
+          if (s.is_active === false) return false;
           const batchObj = (allBatches || []).find(b => b.id === s.batch_id);
           const batchProgId = batchObj?.program_id;
           if (classProgramId && (s.program_id === classProgramId || batchProgId === classProgramId)) return true;
@@ -939,11 +1098,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           const lvlNum = lvlObj?.level_number || 1;
           const levelDisplay = window.toLevelLetter ? window.toLevelLetter(lvlNum) : 'LVL ' + lvlNum;
           const prereqTitle = prereqTest?.shell_code || prereqTest?.title || prereqTest?.name || r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
-          
+
           const title = r?.title || r?.display_name || r?.name || 'Untitled';
           const status = r?.status || r?.test_type || 'draft';
           const TestCategory = (r?.category || r?.test_type || 'Quiz');
-          
+
           let answerType = r?.answer_type || '';
           const asmQs = (allQuestions || []).filter(q => q?.test_id === r?.id);
           if (!answerType && asmQs.length > 0) {
@@ -1061,7 +1220,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           const studentAttempts = (allAttempts || []).filter(a => a.student_id === s.id);
           const classTestIds = new Set(classTests.map(a => a.id));
           const classAttempts = studentAttempts.filter(a => classTestIds.has(a.test_id || a.Test_id));
-          
+
           // Map best attempt per test (Rule 2.7: report card stores HIGHEST score)
           const asmScores = {};
           const rowScoreSortVals = {};
@@ -1069,6 +1228,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           let completedCount = 0;         // ALL activities (quizzes + exams)
           const studentExamEntries = [];
 
+          // Step 1: Map best attempt per activity
           classTests.forEach(asm => {
             const atts = classAttempts.filter(a => (a.test_id || a.Test_id) === asm.id);
             const maxQ = getAsmExpectedMax(asm);
@@ -1103,11 +1263,44 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               }
             }
 
-            asmScores[asm.id] = bestAtt;
+            asmScores[asm.id] = bestAtt ? { ...bestAtt } : null;
+          });
+
+          // Step 2: Rule 2.10 Paired Theme Exam Remedial Synchronization ("Satu Paket")
+          // In each theme (A, B, C, D), Words Exam and Phrases Exam are one package.
+          // If either is remedial, BOTH are synchronized as remedial.
+          const themeExamMap = {};
+          classTests.filter(isWeeklyExam).forEach(asm => {
+            const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+            const tc = (rawTheme || 'A').toUpperCase();
+            if (!themeExamMap[tc]) themeExamMap[tc] = [];
+            themeExamMap[tc].push(asm);
+          });
+          Object.values(themeExamMap).forEach(asms => {
+            if (asms.length < 2) return;
+            const hasThemeRem = asms.some(asm => {
+              const att = asmScores[asm.id];
+              return Boolean(att?.is_remedial_unlocked || att?.is_remedial);
+            });
+            if (hasThemeRem) {
+              asms.forEach(asm => {
+                const att = asmScores[asm.id];
+                if (att) {
+                  att.is_remedial_unlocked = true;
+                  att.is_remedial = true;
+                }
+              });
+            }
+          });
+
+          // Step 3: Compute effective scores, completion, and sort values
+          classTests.forEach(asm => {
+            const bestAtt = asmScores[asm.id];
+            const maxQ = getAsmExpectedMax(asm);
             const totalQ = Number(bestAtt?.total_questions || maxQ);
             const rawEarned = bestAtt?.score != null ? Math.min(Number(bestAtt.score), totalQ) : 0;
             const rawPct = bestAtt ? (bestAtt.percentage != null ? Number(bestAtt.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
-            
+
             const isRem = Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial);
             const maxRemPts = totalQ * 0.6;
             const effEarned = isRem ? Math.min(rawEarned, maxRemPts) : rawEarned;
@@ -1294,10 +1487,18 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
 
         // State for active tab (Order: 1. Students Grade and Score, 2. Test Sessions, 3. Class Tests)
-        if (!window._classHubActiveTab) window._classHubActiveTab = 'attendance';
+        if (!window._classHubActiveTab) {
+          window._classHubActiveTab = localStorage.getItem('topscore_admin_class_hub_tab') || 'attendance';
+        }
 
         window._switchClassHubTab = (tabId) => {
           window._classHubActiveTab = tabId;
+          try {
+            localStorage.setItem('topscore_admin_class_hub_tab', tabId);
+            if (window.history && window.history.replaceState) {
+              window.history.replaceState(null, '', `#class-hub?tab=${tabId}`);
+            }
+          } catch(_) {}
           window.renderClassHub(document.getElementById('admin-content-area'));
         };
 
@@ -1430,7 +1631,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             ],
             sortComparator: (sortKey, direction, a, b) => {
               if (sortKey === 'title' || sortKey === 'TITLE' || sortKey === 'order') {
-                return direction === 'asc' 
+                return direction === 'asc'
                   ? (a.order ?? 0) - (b.order ?? 0)
                   : (b.order ?? 0) - (a.order ?? 0);
               }
@@ -1438,9 +1639,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             initialSortKey: 'order',
             initialSortAsc: true,
             columns: [
-              { 
-                key: 'title', 
-                label: 'TITLE', 
+              {
+                key: 'title',
+                label: 'TITLE',
                 sortable: true,
                 render: (val, row) => {
                   let displayTitle = escapeHtml(row.title);
@@ -1460,9 +1661,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">ORD: ${row.order || '-'}</div>`;
                 }
               },
-              { 
-                key: 'prereq', 
-                label: 'PREREQUISITE', 
+              {
+                key: 'prereq',
+                label: 'PREREQUISITE',
                 sortable: true,
                 render: (val, row) => {
                   const prereqDisplay = row.prereq || '';
@@ -1493,9 +1694,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${typeStr}</div>`;
                 }
               },
-              { 
-                key: 'answerType', 
-                label: 'ANSWER', 
+              {
+                key: 'answerType',
+                label: 'ANSWER',
                 sortable: true,
                 render: (val, row) => `<div class="fw-600 text-info" style="font-size:0.75rem; white-space:nowrap;">${escapeHtml(row.answerType || 'Multiple Choice')}</div>`
               },
@@ -1517,9 +1718,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 sortable: true,
                 render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">&#127919; ${row.minScore || 60}</div>`
               },
-              { 
-                key: 'qCount', 
-                label: 'QS', 
+              {
+                key: 'qCount',
+                label: 'QS',
                 sortable: true,
                 render: (val, row) => {
                   const count = row.qCount || 0;
@@ -1527,18 +1728,18 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   return `<span class="fw-700 ${count > 0 ? 'text-info' : 'text-danger'}" style="font-size:0.8rem;">${count}</span>`;
                 }
               },
-              { 
-                key: 'status', 
-                label: 'STATUS', 
+              {
+                key: 'status',
+                label: 'STATUS',
                 sortable: true,
                 render: (val, row) => {
                   const st = row.status || 'draft';
                   return `<span class="badge ${statusColors[String(st).toLowerCase()] || 'badge-neutral'} fw-700" style="font-size: 0.65rem; padding: 2px 6px; text-transform: uppercase;">${escapeHtml(st)}</span>`;
                 }
               },
-              { 
-                key: 'actions', 
-                label: '', 
+              {
+                key: 'actions',
+                label: '',
                 sortable: false,
                 render: (val, row) => {
                   const id = row.id || '';
@@ -1573,7 +1774,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           // Open Test Generator & Settings Wizard
           document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
             try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261027c');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261031_v56');
               await openAutoGenerateModal({
                 explicitClassId: classId,
                 onComplete: () => {
@@ -1592,12 +1793,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             if (filterVal === 'active') {
               return data.filter(s => {
                 const b = batchMap[s._raw?.batch_id];
-                return b ? b.is_active !== false : true;
+                return (b ? b.is_active !== false : true) && ((s._raw || s).is_active !== false);
               });
             } else if (filterVal === 'all') {
-              return data;
+              return data.filter(s => ((s._raw || s).is_active !== false));
             } else {
-              return data.filter(s => s._raw?.batch_id === filterVal);
+              return data.filter(s => s._raw?.batch_id === filterVal && ((s._raw || s).is_active !== false));
             }
           };
 
@@ -1685,6 +1886,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 let hasAtt = false;
                 let studentThemeMaxQ = 0;
 
+                // Rule 2.10: Paired Theme Exam Remedial Synchronization ("Satu Paket")
+                const hasThemeRem = targetAsms.some(asm => {
+                  const att = row.asmScores?.[asm.id];
+                  return Boolean(att?.is_remedial_unlocked || att?.is_remedial);
+                });
+
                 targetAsms.forEach(asm => {
                   const att = row.asmScores?.[asm.id];
                   const fallbackMax = getAsmExpectedMax(asm);
@@ -1692,7 +1899,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     const st = String(att.status || '').toLowerCase();
                     if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
                       hasAtt = true;
-                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+                      const isRem = hasThemeRem || Boolean(att.is_remedial_unlocked || att.is_remedial);
                       const totalQ = Number(att.total_questions || fallbackMax);
                       studentThemeMaxQ += totalQ;
                       const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
@@ -1774,7 +1981,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   dynamicAsmCols.push({
                     key: `test_${asm.id}_pct`,
                     className: 'col-asm col-exam col-exam-score',
-                    width: '50px',
+                    width: '54px',
                     headerTitle: `${headerTooltip} (Score %)`,
                     title: `${headerTooltip} (Score %)`,
                     label: `
@@ -1791,35 +1998,43 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       if (!att) {
                         if (isQueued) {
                           return `
-                            <span class="asm-score asm-score-test" 
-                                  style="color:${TOPSCORE_COLORS.E}; cursor:default; font-weight:700; font-size:var(--matrix-font-size, 0.74rem);" 
+                            <span class="asm-score asm-score-test"
+                                  style="color:${TOPSCORE_COLORS.E}; cursor:default; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
                                   title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Unattempted (Pending milestone exam counted as 0%)">
                               0%
                             </span>
                           `;
                         }
-                        return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                        return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       }
                       const st = String(att.status || '').toLowerCase();
                       if (st === 'in_progress') {
                         const isExpired = att.expires_at && new Date(att.expires_at) < new Date();
                         if (!isExpired) {
-                          return `<span style="color:${TOPSCORE_COLORS.C}; font-size:0.65rem;" title="In Progress">⏳</span>`;
+                          return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
                         }
                       }
                       if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
                         if (isQueued) {
                           return `
-                            <span class="asm-score asm-score-test" 
-                                  style="color:${TOPSCORE_COLORS.E}; cursor:default; font-weight:700; font-size:var(--matrix-font-size, 0.74rem);" 
+                            <span class="asm-score asm-score-test"
+                                  style="color:${TOPSCORE_COLORS.E}; cursor:default; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
                                   title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Unattempted (Pending milestone exam counted as 0%)">
                               0%
                             </span>
                           `;
                         }
-                        return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                        return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       }
-                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+                      // Rule 2.10: Theme Exam Remedial Synchronization
+                      const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+                      const tc = (rawTheme || 'A').toUpperCase();
+                      const siblingExams = (themeGroups[tc] || []).filter(isWeeklyExam);
+                      const hasThemeRem = siblingExams.some(sAsm => {
+                        const sAtt = row.asmScores?.[sAsm.id];
+                        return Boolean(sAtt?.is_remedial_unlocked || sAtt?.is_remedial);
+                      });
+                      const isRem = hasThemeRem || Boolean(att.is_remedial_unlocked || att.is_remedial);
                       const maxQ = getAsmExpectedMax(asm);
                       const totalQ = Number(att.total_questions || maxQ);
                       const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
@@ -1835,8 +2050,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
 
                       return `
-                        <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}" 
-                              style="color:${color}; ${cursorStyle} font-weight:700; font-size:var(--matrix-font-size, 0.74rem);" 
+                        <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}"
+                              style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
                               ${clickAttr}
                               title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Score: ${Math.round(effPct)}%` : `Score: ${Math.round(effPct)}%`}&#10;Click to open result">
                           ${Math.round(effPct)}%${isRem ? '<sup class="test-rem-sup">R</sup>' : ''}
@@ -1849,7 +2064,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   dynamicAsmCols.push({
                     key: `test_${asm.id}_pts`,
                     className: 'col-asm col-exam col-exam-pts',
-                    width: '58px',
+                    width: '60px',
                     headerTitle: `${headerTooltip} (Points)`,
                     title: `${headerTooltip} (Points)`,
                     label: `
@@ -1869,37 +2084,37 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       if (!att) {
                         if (isQueued) {
                           return `
-                            <span class="asm-score asm-score-test" 
-                                  style="color:${TOPSCORE_COLORS.E}; cursor:default;" 
+                            <span class="asm-score asm-score-test"
+                                  style="color:${TOPSCORE_COLORS.E}; cursor:default;"
                                   title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Pending milestone exam: 0/${totalQ} pts">
-                              <span style="font-weight:800; font-size:var(--matrix-font-size, 0.74rem); letter-spacing:-0.02em;">
+                              <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;">
                                 0
                               </span>
                             </span>
                           `;
                         }
-                        return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                        return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       }
                       const st = String(att.status || '').toLowerCase();
                       if (st === 'in_progress') {
                         const isExpired = att.expires_at && new Date(att.expires_at) < new Date();
                         if (!isExpired) {
-                          return `<span style="color:${TOPSCORE_COLORS.C}; font-size:0.65rem;" title="In Progress">⏳</span>`;
+                          return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
                         }
                       }
                       if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
                         if (isQueued) {
                           return `
-                            <span class="asm-score asm-score-test" 
-                                  style="color:${TOPSCORE_COLORS.E}; cursor:default;" 
+                            <span class="asm-score asm-score-test"
+                                  style="color:${TOPSCORE_COLORS.E}; cursor:default;"
                                   title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Pending milestone exam: 0/${totalQ} pts">
-                              <span style="font-weight:800; font-size:var(--matrix-font-size, 0.74rem); letter-spacing:-0.02em;">
+                              <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;">
                                 0
                               </span>
                             </span>
                           `;
                         }
-                        return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                        return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       }
                       const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                       const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
@@ -1917,11 +2132,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
 
                       return `
-                        <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}" 
-                              style="color:${color}; ${cursorStyle}" 
+                        <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}"
+                              style="color:${color}; ${cursorStyle}"
                               ${clickAttr}
                               title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`}&#10;Click to open result & manage remedial">
-                          <span style="font-weight:800; font-size:var(--matrix-font-size, 0.74rem); letter-spacing:-0.02em;">
+                          <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;">
                             ${displayVal}
                           </span>
                         </span>
@@ -1946,11 +2161,19 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     align: 'center',
                     render: (val, row) => {
                       const att = row.asmScores?.[asm.id];
-                      if (!att) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                      if (!att) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       const st = String(att.status || '').toLowerCase();
-                      if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:0.65rem;" title="In Progress">⏳</span>`;
-                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" title="Unattempted">&middot;</span>';
-                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+                      if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
+                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+                      // Rule 2.10: Theme Exam Remedial Synchronization
+                      const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+                      const tc = (rawTheme || 'A').toUpperCase();
+                      const siblingExams = (themeGroups[tc] || []).filter(isWeeklyExam);
+                      const hasThemeRem = siblingExams.some(sAsm => {
+                        const sAtt = row.asmScores?.[sAsm.id];
+                        return Boolean(sAtt?.is_remedial_unlocked || sAtt?.is_remedial);
+                      });
+                      const isRem = hasThemeRem || Boolean(att.is_remedial_unlocked || att.is_remedial);
                       const maxQ = getAsmExpectedMax(asm);
                       const totalQ = Number(att.total_questions || maxQ);
                       const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
@@ -1968,8 +2191,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
 
                       return `
-                        <span class="asm-score asm-score-task ${isRem ? 'asm-score-remedial' : ''}" 
-                              style="color:${color}; ${cursorStyle} font-weight:700; font-size:var(--matrix-font-size, 0.74rem);" 
+                        <span class="asm-score asm-score-task ${isRem ? 'asm-score-remedial' : ''}"
+                              style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
                               ${clickAttr}
                               title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Score: ${Math.round(effPct)}%` : `Score: ${Math.round(effPct)}%`} (${displayVal}/${totalQ} pts)&#10;Click to view result">
                           ${Math.round(effPct)}%${isRem ? '<sup class="test-rem-sup">R</sup>' : ''}
@@ -1984,7 +2207,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               dynamicAsmCols.push({
                 key: `theme_${tc}_score`,
                 className: `col-asm col-exam col-exam-score col-test-theme-score col-test-theme-score-${tc.toLowerCase()}`,
-                width: '52px',
+                width: '54px',
                 headerTitle: `Theme ${tc} Combined Score % (Words + Phrases)`,
                 title: `Theme ${tc} Combined Score % (Words + Phrases)`,
                 label: `
@@ -1998,14 +2221,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 render: (val, row) => {
                   const scoreVal = row[`theme_${tc}_score`];
                   if (scoreVal === undefined || scoreVal === null || scoreVal < 0) {
-                    return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                    return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                   }
                   const color = typeof getGradeColorByScore === 'function'
                     ? getGradeColorByScore(scoreVal)
                     : '#94a3b8';
                   return `
-                    <span class="asm-score asm-score-test test-score-theme-pct" 
-                          style="color:${color}; font-weight:600; font-size:var(--matrix-font-size, 0.76rem); font-variant-numeric:tabular-nums; letter-spacing:-0.01em;"
+                    <span class="asm-score asm-score-test test-score-theme-pct"
+                          style="color:${color}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
                           title="Theme ${tc} Combined Score: ${scoreVal}%">
                       ${scoreVal}%
                     </span>
@@ -2017,7 +2240,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               dynamicAsmCols.push({
                 key: `theme_${tc}_total_pts`,
                 className: `col-asm col-exam col-exam-pts col-test-theme-total col-test-theme-total-${tc.toLowerCase()}`,
-                width: '58px',
+                width: '60px',
                 headerTitle: `Theme ${tc} Exam Points (Words + Phrases)`,
                 title: `Theme ${tc} Exam Points (Words + Phrases)`,
                 label: `
@@ -2031,7 +2254,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 render: (val, row) => {
                   const ptsVal = row[`theme_${tc}_total_pts`];
                   if (ptsVal === undefined || ptsVal === null || ptsVal < 0) {
-                    return '<span class="asm-dot" title="Unattempted">&middot;</span>';
+                    return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                   }
 
                   let fallbackMaxQ = 0;
@@ -2052,8 +2275,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                     : (themePct >= 60 ? '#FFFF00' : '#FF0000');
 
                   return `
-                    <span class="asm-score asm-score-test test-score-theme-total" 
-                          style="color:${color}; font-weight:600; font-size:var(--matrix-font-size, 0.76rem); font-variant-numeric:tabular-nums; letter-spacing:-0.01em;"
+                    <span class="asm-score asm-score-test test-score-theme-total"
+                          style="color:${color}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
                           title="Theme ${tc} Total Points: ${displayVal}/${studentThemeMaxQ} pts (${Math.round(themePct)}%)">
                       ${displayVal}
                     </span>
@@ -2088,8 +2311,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 const avgProg = Math.round(filteredData.reduce((acc, s) => acc + (s.progressPct || 0), 0) / totalStudents);
                 const examCompletedStudents = filteredData.filter(s => (s.completedExamCount || s.completedWeeklyCount || 0) > 0);
                 const weeklyCompletedStudents = examCompletedStudents;
-                const avgScore = totalStudents > 0 
-                  ? Math.round(filteredData.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / totalStudents) 
+                const avgScore = totalStudents > 0
+                  ? Math.round(filteredData.reduce((acc, s) => acc + (s.averageScorePct || 0), 0) / totalStudents)
                   : 0;
                 const avgPts = Math.round(filteredData.reduce((acc, s) => acc + (s.totalEarnedScore || 0), 0) / totalStudents);
                 const avgGrade = typeof calculateGrade === 'function' ? calculateGrade(avgScore) : (typeof getGrade === 'function' ? getGrade(avgScore) : '—');
@@ -2104,44 +2327,43 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 let cellsHtml = '';
                 visibleCols.forEach(col => {
                   if (col.key === 'instName') {
-                    cellsHtml += `<td class="col-sticky col-sticky-1 text-center" style="font-weight:800; color:#FFFF00; font-size:0.75rem;">★</td>`;
+                    cellsHtml += `<td class="col-sticky col-sticky-1 text-center" style="font-weight:700; color:#FFFF00; font-size:var(--matrix-font-size, 0.75rem);">★</td>`;
                   } else if (col.key === 'progName' || col.key === 'batch') {
                     const stickyCls = col.key === 'progName' ? 'col-sticky-2' : 'col-sticky-3';
-                    cellsHtml += `<td class="col-sticky ${stickyCls} text-center" style="color:#94a3b8; font-size:0.7rem;">—</td>`;
+                    cellsHtml += `<td class="col-sticky ${stickyCls} text-center" style="color:#94a3b8; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.92);">—</td>`;
                   } else if (col.key === 'displayName') {
-                    cellsHtml += `<td class="col-sticky col-sticky-4" style="font-weight:800; color:#FFFF00; font-size:0.75rem; white-space:nowrap; text-transform:uppercase; letter-spacing:0.02em;">★ CLASS AVERAGE</td>`;
-                  } else if (col.key === 'progressPct') {
-                    cellsHtml += `
-                      <td class="col-sticky col-sticky-5 text-center">
-                        <div class="fw-700 text-xs" style="color:${avgGradeColor}; font-size:0.75rem;">${avgProg}%</div>
-                      </td>
-                    `;
+                    cellsHtml += `<td class="col-sticky col-sticky-4" style="font-weight:700; color:#FFFF00; font-size:var(--matrix-font-size, 0.75rem); white-space:nowrap; text-transform:uppercase; letter-spacing:0.02em;">★ CLASS AVERAGE</td>`;
                   } else if (col.key === 'grade') {
                     if (totalStudents === 0 || avgGrade === '—' || avgGrade === '-') {
                       cellsHtml += `
-                        <td class="col-sticky col-sticky-6 text-center">
-                          <span class="text-muted" style="font-size:0.75rem;">—</span>
+                        <td class="col-sticky col-sticky-5 text-center">
+                          <span class="text-muted" style="font-size:var(--matrix-font-size, 0.75rem);">—</span>
                         </td>
                       `;
                     } else {
                       const cleanAvgGrade = String(avgGrade || '').trim().toUpperCase();
-                      const lowerAvgG = cleanAvgGrade.toLowerCase();
-                      const avgTextColor = TOPSCORE_COLORS.TEXT_DARK;
                       cellsHtml += `
-                        <td class="col-sticky col-sticky-6 text-center">
-                          ${isAvgGradeS 
-                            ? '<span class="grade-circle grade-circle-star" title="Average Grade ★ (100%)">★</span>' 
-                            : `<span class="grade-circle grade-circle-${lowerAvgG}" style="background:${avgGradeColor}; color:${avgTextColor};" title="Average Grade ${cleanAvgGrade}">${cleanAvgGrade}</span>`}
+                        <td class="col-sticky col-sticky-5 text-center">
+                          ${isAvgGradeS
+                            ? '<span class="grid-grade-val grid-grade-star" style="color:var(--grade-star, #00c000); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(0,192,0,0.4)); line-height:1;" title="Average Grade ★ (100%)">★</span>'
+                            : `<span class="grid-grade-val" style="color:${avgGradeColor}; font-weight:700; font-size:calc(var(--matrix-font-size, 0.75rem) * 1.05); line-height:1;" title="Average Grade ${cleanAvgGrade}">${cleanAvgGrade}</span>`}
                         </td>
                       `;
                     }
+                  } else if (col.key === 'progressPct') {
+                    const avgProgColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgProg) : '#ffffff';
+                    cellsHtml += `
+                      <td class="col-sticky col-sticky-6 text-center">
+                        <div style="color:${avgProgColor}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; line-height:1;">${avgProg}%</div>
+                      </td>
+                    `;
                   } else if (col.key === 'totalEarnedScore') {
                     const avgPtsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgScore) : '#ffffff';
                     cellsHtml += `
                       <td class="col-sticky col-sticky-7 col-sticky-last text-right" style="padding-right:4px;">
-                        <div style="font-weight:700; font-size:0.75rem; font-variant-numeric:tabular-nums; line-height:1; display:flex; align-items:baseline; justify-content:flex-end; gap:2px;" title="Class Avg Latest Exam Points: ${avgPts} pts">
+                        <div style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; line-height:1; display:flex; align-items:baseline; justify-content:flex-end; gap:2px;" title="Class Avg Latest Exam Points: ${avgPts} pts">
                           <span style="color:${avgPtsColor};">${avgPts}</span>
-                          <span style="font-size:0.55rem; color:var(--clr-text-3);">pts</span>
+                          <span style="font-size:0.60rem; color:var(--clr-text-3); font-weight:500;">pts</span>
                         </div>
                       </td>
                     `;
@@ -2181,26 +2403,26 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       if (isTest && isPctCol) {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
-                            <span style="color:${avgCol}; font-weight:700; font-size:0.68rem;" title="Class Avg Score: ${avgPct}%">${avgPct}%</span>
+                            <span style="color:${avgCol}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Score: ${avgPct}%">${avgPct}%</span>
                           </td>
                         `;
                       } else if (isTest && isPtsCol) {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
-                            <span style="color:#e2e8f0; font-weight:700; font-size:0.72rem; font-family:monospace;" title="Class Avg Points: ${avgSc}/${totalQ} pts">${avgSc}</span>
+                            <span style="color:#e2e8f0; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Points: ${avgSc}/${totalQ} pts">${avgSc}</span>
                           </td>
                         `;
                       } else {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
-                            <span style="color:${avgCol}; font-weight:700; font-size:0.68rem;" title="Class Avg Quiz Score: ${avgPct}% (${count} students)">${avgPct}%</span>
+                            <span style="color:${avgCol}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Quiz Score: ${avgPct}% (${count} students)">${avgPct}%</span>
                           </td>
                         `;
                       }
                     } else {
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:rgba(255,255,255,0.22); font-weight:800; font-size:0.85rem; line-height:1;">&middot;</span>
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:var(--matrix-font-size, 0.75rem); line-height:1;" title="Unattempted">&middot;</span>
                         </td>
                       `;
                     }
@@ -2220,13 +2442,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       const avgScoreCol = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgThemeScore) : '#FFFF00';
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:${avgScoreCol}; font-weight:800; font-size:0.72rem;" title="Class Avg Theme ${tc} Score: ${avgThemeScore}%">${avgThemeScore}%</span>
+                          <span style="color:${avgScoreCol}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Score: ${avgThemeScore}%">${avgThemeScore}%</span>
                         </td>
                       `;
                     } else {
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:rgba(255,255,255,0.22); font-weight:800; font-size:0.85rem; line-height:1;">&middot;</span>
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:var(--matrix-font-size, 0.75rem); line-height:1;" title="Unattempted">&middot;</span>
                         </td>
                       `;
                     }
@@ -2245,13 +2467,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                       const avgThemePts = (totalPtsSum / count).toFixed(1).replace(/\.0$/, '');
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:#ffffff; font-weight:800; font-size:0.72rem; font-family:monospace;" title="Class Avg Theme ${tc} Points: ${avgThemePts} pts">${avgThemePts}</span>
+                          <span style="color:#ffffff; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Points: ${avgThemePts} pts">${avgThemePts}</span>
                         </td>
                       `;
                     } else {
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:rgba(255,255,255,0.22); font-weight:800; font-size:0.85rem; line-height:1;">&middot;</span>
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:var(--matrix-font-size, 0.75rem); line-height:1;" title="Unattempted">&middot;</span>
                         </td>
                       `;
                     }
@@ -2370,7 +2592,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   sortable: true,
                   align: 'center',
                   width: '48px',
-                  render: (val, row) => `<span class="badge" style="background:rgba(255,255,255,0.08); font-weight:700; font-family:monospace; font-size:0.7rem; padding:2px 4px;" title="${escapeHtml(row.instName)}">${escapeHtml(row.instShort || row.instName)}</span>`
+                  render: (val, row) => `<span class="badge" style="background:rgba(255,255,255,0.08); font-weight:600; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.92); padding:1px 4px; border-radius:3px;" title="${escapeHtml(row.instName)}">${escapeHtml(row.instShort || row.instName)}</span>`
                 },
                 {
                   key: 'progName',
@@ -2379,7 +2601,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   sortable: true,
                   align: 'center',
                   width: '54px',
-                  render: (val, row) => `<div class="text-xs" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:50px;" title="${escapeHtml(row.progName)}">${escapeHtml(row.progName)}</div>`
+                  render: (val, row) => `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:50px; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.92); font-weight:500; color:var(--clr-text-2);" title="${escapeHtml(row.progName)}">${escapeHtml(row.progName)}</div>`
                 },
                 {
                   key: 'batch',
@@ -2388,7 +2610,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   sortable: true,
                   align: 'center',
                   width: '48px',
-                  render: (val, row) => `<span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-weight:700; font-size:0.7rem; padding:2px 5px; border-radius:10px;">${escapeHtml(row.batch)}</span>`
+                  render: (val, row) => `<span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-weight:600; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.92); padding:1px 5px; border-radius:10px;" title="Batch ${escapeHtml(row.batch)}">${escapeHtml(row.batch)}</span>`
                 },
                 {
                   key: 'displayName',
@@ -2398,52 +2620,50 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   width: '140px',
                   render: (val, row) => `
                     <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:135px;" title="${escapeHtml(row.displayName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Student has remedial score' : ''}">
-                      <span style="color:var(--clr-text-1); font-size:0.76rem; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                      <span style="color:var(--clr-text-1); font-size:var(--matrix-font-size, 0.75rem); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                         ${escapeHtml(row.displayName)}
                       </span>
                     </div>
                   `
                 },
                 {
-                  key: 'progressPct',
-                  label: 'PROG',
-                  className: 'col-sticky col-sticky-5',
-                  sortable: true,
-                  align: 'center',
-                  width: '46px',
-                  render: (val, row) => {
-                    const isExamTaken = (row.completedExamCount || row.completedWeeklyCount || 0) > 0;
-                    const progColor = isExamTaken && typeof getGradeColorByScore === 'function'
-                      ? getGradeColorByScore(row.averageScorePct)
-                      : (row.completedCount > 0 ? '#38bdf8' : 'var(--clr-text-3)');
-                    return `
-                      <div style="color:${progColor}; font-size:0.76rem; font-weight:600; font-variant-numeric:tabular-nums; line-height:1;" title="${row.completedCount}/${row.totalClassTests} Activities Done (${row.progressPct}%)">${row.progressPct}%</div>
-                    `;
-                  }
-                },
-                {
                   key: 'grade',
                   label: 'GRD',
-                  className: 'col-sticky col-sticky-6',
+                  className: 'col-sticky col-sticky-5',
                   sortable: true,
                   align: 'center',
                   width: '38px',
                   render: (val, row) => {
                     if (!row.grade || row.grade === '—' || row.grade === '-') {
-                      return '<span class="text-muted" style="font-size:0.76rem;" title="No exams completed">&mdash;</span>';
+                      return '<span class="text-muted" style="font-size:var(--matrix-font-size, 0.75rem);" title="No exams completed">&mdash;</span>';
                     }
                     const isGradeS = row.grade === 'S' || row.grade === '★';
                     if (isGradeS) {
-                      return `<span class="grade-circle grade-circle-star" title="Exam Grade ★ (100% Excellent)">★</span>`;
+                      return `<span class="grid-grade-val grid-grade-star" style="color:var(--grade-star, #00c000); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(0,192,0,0.4)); line-height:1;" title="Exam Grade ★ (100% Excellent)">★</span>`;
                     }
                     const cleanGrade = String(row.grade || '').trim().toUpperCase();
-                    const lowerG = cleanGrade.toLowerCase();
-                    const badgeColor = (typeof getGradeColorByScore === 'function')
+                    const gradeColor = (typeof getGradeColorByScore === 'function')
                       ? getGradeColorByScore(row.averageScorePct)
                       : (row.gradeColor || '#94a3b8');
-                    const textColor = TOPSCORE_COLORS.TEXT_DARK;
                     return `
-                      <span class="grade-circle grade-circle-${lowerG}" style="background:${badgeColor}; color:${textColor}; font-weight:600; font-size:0.74rem;" title="Exam Grade ${cleanGrade}">${cleanGrade}</span>
+                      <span class="grid-grade-val" style="color:${gradeColor}; font-weight:700; font-size:calc(var(--matrix-font-size, 0.75rem) * 1.05); line-height:1;" title="Exam Grade ${cleanGrade}">${cleanGrade}</span>
+                    `;
+                  }
+                },
+                {
+                  key: 'progressPct',
+                  label: 'PROG',
+                  className: 'col-sticky col-sticky-6',
+                  sortable: true,
+                  align: 'center',
+                  width: '46px',
+                  render: (val, row) => {
+                    const progVal = Number(row.progressPct ?? 0);
+                    const progColor = (row.completedCount > 0 && typeof getGradeColorByScore === 'function')
+                      ? getGradeColorByScore(progVal)
+                      : 'var(--clr-text-3)';
+                    return `
+                      <div style="color:${progColor}; font-size:var(--matrix-font-size, 0.75rem); font-weight:600; font-variant-numeric:tabular-nums; line-height:1;" title="${row.completedCount}/${row.totalClassTests} Activities Done (${row.progressPct}%)">${row.progressPct}%</div>
                     `;
                   }
                 },
@@ -2457,16 +2677,16 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                   render: (val, row) => {
                     const isExamTaken = (row.completedExamCount || row.completedWeeklyCount || 0) > 0;
                     if (!isExamTaken && (!val || val === 0)) {
-                      return '<span class="text-muted" style="font-size:0.75rem; padding-right:6px;">—</span>';
+                      return '<span class="text-muted" style="font-size:var(--matrix-font-size, 0.75rem); padding-right:6px;">—</span>';
                     }
-                    const scoreColor = (typeof getGradeColorByScore === 'function') 
-                      ? getGradeColorByScore(row.averageScorePct) 
+                    const scoreColor = (typeof getGradeColorByScore === 'function')
+                      ? getGradeColorByScore(row.averageScorePct)
                       : '#ffffff';
                     const displayScore = Number(val || 0).toFixed(1).replace(/\.0$/, '');
                     return `
-                      <div style="font-weight:600; font-size:0.76rem; font-variant-numeric:tabular-nums; line-height:1; display:flex; align-items:baseline; justify-content:flex-end; gap:2px; padding-right:4px;" title="Latest Exam Points (Words + Phrases): ${displayScore} pts">
+                      <div style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; line-height:1; display:flex; align-items:baseline; justify-content:flex-end; gap:2px; padding-right:4px;" title="Latest Exam Points (Words + Phrases): ${displayScore} pts">
                         <span style="color:${scoreColor};">${displayScore}</span>
-                        <span style="font-size:0.55rem; color:var(--clr-text-3); font-weight:500;">pts</span>
+                        <span style="font-size:0.60rem; color:var(--clr-text-3); font-weight:500;">pts</span>
                       </div>
                     `;
                   }
@@ -2501,10 +2721,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             const rowHeight = Math.max(16, (availHeight - headerHeight - footerHeight - scrollbarHeight) / count);
 
             grid.style.setProperty('--matrix-row-height', `${rowHeight.toFixed(2)}px`);
-            
-            const fontSize = Math.min(13, Math.max(8.5, rowHeight * 0.44));
-            const badgeFont = Math.min(11, Math.max(7.5, rowHeight * 0.38));
-            const padY = Math.max(0, Math.min(3, Math.floor((rowHeight - 16) / 3)));
+
+            // Anti-crowding: optimize font size and cell padding for Fit Screen mode
+            const fontSize = Math.min(10.0, Math.max(7.5, rowHeight * 0.35));
+            const badgeFont = Math.min(8.5, Math.max(6.5, rowHeight * 0.28));
+            const padY = Math.max(0, Math.min(2, Math.floor((rowHeight - 16) / 4)));
 
             grid.style.setProperty('--matrix-font-size', `${fontSize.toFixed(1)}px`);
             grid.style.setProperty('--matrix-badge-font', `${badgeFont.toFixed(1)}px`);
@@ -2516,7 +2737,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             if (wrap && tbl) {
               const currentFilter = window._classAttendanceThemeFilter || 'ALL';
               const isFitMode = (!window._attendanceViewMode || window._attendanceViewMode === 'fit');
-              
+
               if (isFitMode && currentFilter === 'ALL') {
                 wrap.style.overflowX = 'hidden';
                 tbl.style.zoom = '1';
@@ -2621,13 +2842,22 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
 
     async function renderClassDetail(area) {
       if (!window.currentClassContext) {
-        return loadSection('tests');
+        try {
+          const savedCtx = sessionStorage.getItem('topscore_current_class_context');
+          if (savedCtx) window.currentClassContext = JSON.parse(savedCtx);
+        } catch (_) {}
       }
-      
+      if (!window.currentClassContext) {
+        return loadSection('class-hub');
+      }
+
       const { cid, lid, cname, lname, program, institution } = window.currentClassContext;
+      try {
+        sessionStorage.setItem('topscore_current_class_context', JSON.stringify(window.currentClassContext));
+      } catch (_) {}
       const title = `${cname} - ${lname}`;
       const subtitle = program && institution ? `${institution} ➔ ${program}` : 'Manage tests and vocabulary for this class';
-      
+
       area.innerHTML = `
         <div class="section-header">
           <div>
@@ -2653,16 +2883,19 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         </div>
       `;
     }
-    
+
     window.addEventListener('popstate', (e) => {
       const hash = window.location.hash.substring(1);
-      const targetSec = aliasSectionMap[hash] || hash;
-      if (targetSec && (sectionTitles[targetSec] || targetSec === 'students')) {
-        loadSection(targetSec, true);
-      } else if (hash && hash.startsWith('profile-')) {
-        const studentId = (hash || '').replace('profile-', '');
+      const parsed = parseHashRoute(hash);
+      if (parsed.section === 'profile-student' && parsed.studentId) {
         const batchStudentIds = e.state?.batchStudentIds || [];
-        openStudentProfile(studentId, batchStudentIds, true);
+        openStudentProfile(parsed.studentId, batchStudentIds, true);
+        return;
+      }
+      const targetSec = aliasSectionMap[parsed.section] || parsed.section;
+      if (targetSec) {
+        applySubRouteState(targetSec, parsed.subTab, parsed.params, parsed.section);
+        loadSection(targetSec, true);
       }
     });
 
@@ -2802,11 +3035,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
     var _loadSectionSeq = 0;
     async function loadSection(section, skipHistory = false) {
       if (!section) return;
-      const rawSection = section;
-      section = aliasSectionMap[section] || section;
+      const parsed = parseHashRoute(section);
+      const rawSection = parsed.section || section;
+      section = aliasSectionMap[rawSection] || rawSection;
+      applySubRouteState(section, parsed.subTab, parsed.params, rawSection);
+
       const thisSeq = ++_loadSectionSeq;
       try {
         localStorage.setItem('topscore_admin_last_section', rawSection);
+        sessionStorage.setItem('topscore_admin_last_section', rawSection);
       } catch (err) {}
       if (!skipHistory && window.location.hash.substring(1) !== rawSection) {
         window.history.pushState(null, '', `#${rawSection}`);
@@ -2852,8 +3089,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       // Reset topbar container with default section title (or views will elevate their KPI tabs)
       const topbarTabsEl = document.getElementById('topbar-tabs-container');
       if (topbarTabsEl) {
-        const secTitle = (rawSection === 'students' && (window._selectedProgramName || localStorage.getItem('topscore_selected_program_name'))) 
-          ? (window._selectedProgramName || localStorage.getItem('topscore_selected_program_name')) 
+        const secTitle = (rawSection === 'students' && (window._selectedProgramName || localStorage.getItem('topscore_selected_program_name')))
+          ? (window._selectedProgramName || localStorage.getItem('topscore_selected_program_name'))
           : (sectionTitles[section] || section);
         topbarTabsEl.innerHTML = `<div class="topbar-default-title" id="topbar-title">${secTitle}</div>`;
       }
@@ -2879,11 +3116,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           case 'institutions':
           await renderUnifiedInstitutions(area);
           break;
+          case 'levels':
           case 'classes':             await renderClassList(area); break;
           case 'classes-org':         await _renderClassesModule(area); break;
           case 'class_instances':     await renderClassInstances(area); break;
           case 'class-detail':        await renderClassDetail(area); break;
-          case 'levels':              window.location.hash = '#classes'; break;
           case 'topics':              await renderTopics(area); break;
           case 'question_types':          await renderWordTypes(area); break;
           case 'vocab_vault':             await renderVocabularyVault(area); break;
@@ -2896,7 +3133,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           case 'questions':           await renderCentralQuestionBank(area); break;
 
           case 'results':             await renderResults(area); break;
-          case 'progress-view':       window.location.hash = '#students'; return loadSection('students');
+          case 'progress-view':       return loadSection('students');
           case 'audit':               await renderAuditLog(area); break;
           case 'health':              await renderDataHealth(area); break;
           case 'recycle':             await renderRecycleBin(area); break;
@@ -2907,7 +3144,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               { id: 'health',  icon: '🩺',  title: 'Data Health',     label: 'Integrity Diagnostics' },
               { id: 'recycle', icon: '🗑️', title: 'Recycle Bin',     label: 'Restoration Vault' }
             ];
-            let activeSettingTab = window._activeSettingTab || 'site';
+            let activeSettingTab = window._activeSettingTab || localStorage.getItem('topscore_admin_settings_tab') || 'site';
             const renderSettingSection = async () => {
               // Elevate settings navigation to topbar
               if (window.setTopbarTabs) {
@@ -2923,6 +3160,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             window._switchSettingTab = async (tabId) => {
               activeSettingTab = tabId;
               window._activeSettingTab = tabId;
+              try {
+                localStorage.setItem('topscore_admin_settings_tab', tabId);
+                if (window.history && window.history.replaceState) {
+                  window.history.replaceState(null, '', `#settings?tab=${tabId}`);
+                }
+              } catch (_) {}
               await renderSettingSection();
             };
             await renderSettingSection();
@@ -2933,18 +3176,19 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           case 'import-questions':    await renderCentralQuestionImport(area); break;
           case 'export-questions':    renderExportQuestions(area); break;
           case 'recalibrator':
-            window.location.hash = '#health';
-            return loadSection('health');
-          case 'test-hub':      window.location.hash = '#tests'; break;
+            window._activeSettingTab = 'health';
+            try { localStorage.setItem('topscore_admin_settings_tab', 'health'); } catch (_) {}
+            return loadSection('settings');
+          case 'test-hub':
+          case 'import_ai_tests':
+          case 'tests':               await renderTests(area); break;
           case 'class-hub':           await renderClassHub(area); break;
-          case 'tests':         await renderTests(area); break;
           case 'test-access':
             window._classHubActiveTab = 'test-sessions';
-            window.location.hash = '#class-hub';
+            try { localStorage.setItem('topscore_admin_class_hub_tab', 'test-sessions'); } catch (_) {}
             await renderClassHub(area);
             break;
           case 'class-panel':         await renderClassPanel(area); break;
-          case 'import_ai_tests': window.location.hash = '#tests'; break;
           case 'dashboard':           await renderDashboard(area); break;
           case 'profile':             await renderAdminProfile(area); break;
           case 'schedule':            await renderAdminSchedule(area); break;
@@ -3139,10 +3383,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
           adminFetchAll('classes', 'id, name'),
           adminFetchAll('test_results', 'final_score').catch(() => [])
         ]);
-        
+
         const quizzes = (allTests || []).filter(a => a.test_type === 'quiz' || (a.test_subtype && a.test_subtype.includes('TASK')));
         const exams = (allTests || []).filter(a => a.test_type === 'exam' || (a.test_subtype && a.test_subtype.includes('TEST')));
-        
+
         let passRate = "N/A";
         if (results && results.length > 0) {
             const passed = results.filter(r => (r.final_score || 0) >= 70).length;
@@ -3172,7 +3416,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
             <h2 style="margin:0 0 0.5rem; font-size:1.5rem;">Test Hub</h2>
             <p style="margin:0; color:var(--clr-text-muted); font-size:0.85rem;">Global view of all tasks and tests across classes.</p>
           </div>
-          
+
           <div style="padding:2rem;">
             <!-- Metric Cards -->
             <div style="display:flex; gap:1.5rem; margin-bottom:2rem; flex-wrap:wrap;">
@@ -3340,7 +3584,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 <button class="btn btn-sm" id="cpanel-add-test-btn" style="background:rgba(239,68,68,0.9);color:#fff;border:1px solid rgba(239,68,68,0.4);font-weight:700;">🏆 Add Test</button>
               </div>
             </div>
-            
+
             <!-- Tabs -->
             <div style="display:flex; gap:1.5rem; border-bottom:2px solid transparent;">
               <div class="cpanel-tab active" data-target="tab-path" style="padding:0.75rem 0; cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--clr-primary); border-bottom:2px solid var(--clr-primary); margin-bottom:-1px;">Learning Path & Tasks</div>
@@ -3348,14 +3592,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               <div class="cpanel-tab" data-target="tab-gradebook" style="padding:0.75rem 0; cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--clr-text-muted); border-bottom:2px solid transparent; margin-bottom:-1px;">Gradebook</div>
             </div>
           </div>
-          
+
           <!-- Content -->
           <div style="padding:2rem;">
             <!-- Learning Path Tab -->
             <div id="tab-path" class="cpanel-content-area" style="display:block;">
               <div id="class-learning-path-container"></div>
             </div>
-            
+
             <!-- Students Tab -->
             <div id="tab-students" class="cpanel-content-area" style="display:none;">
               ${eligibleStudents.length === 0 ? `
@@ -3401,7 +3645,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
                 </div>
               `}
             </div>
-            
+
             <!-- Gradebook Tab -->
             <div id="tab-gradebook" class="cpanel-content-area" style="display:none;">
               <div class="empty-state"><div style="font-size:2rem;margin-bottom:1rem;">📈</div><p>Gradebook will appear here.</p></div>
@@ -3420,11 +3664,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
               t.style.borderBottomColor = 'transparent';
             });
             contents.forEach(c => c.style.display = 'none');
-            
+
             tab.classList.add('active');
             tab.style.color = 'var(--clr-primary)';
             tab.style.borderBottomColor = 'var(--clr-primary)';
-            
+
             area.querySelector('#' + tab.dataset.target).style.display = 'block';
           });
         });
@@ -3464,7 +3708,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261027c');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261031_v56');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -3558,7 +3802,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         adminFetchAll('institutions'),
         adminFetchAll('levels', '*', { order: 'level_number', ascending: true })
       ]);
-      
+
       // Group levels by name to merge duplicate tabs
       const uniqueLevels = [];
       const seen = new Set();
@@ -3574,12 +3818,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
         window._activeClassLevelTab = uniqueLevels[0].name;
       }
       const activeTabName = window._activeClassLevelTab;
-      
+
       const data = [...rawData].filter(r => r.levels?.name === activeTabName || r.level_id === activeTabName).sort((a, b) => {
         return (a.name || '').localeCompare(b.name || '');
       });
 
-      const tabsHtml = uniqueLevels.map(l => 
+      const tabsHtml = uniqueLevels.map(l =>
         `<button class="btn ${activeTabName === l.name ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="window._activeClassLevelTab='${l.name.replace(/'/g, "\\\'")}'; window.loadSection('classes');">${escapeHtml(l.name)}</button>`
       ).join(' ');
 
@@ -3728,7 +3972,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       `;
       const tbody = document.getElementById('tbl-levels');
       if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-4">No levels yet.</td></tr>'; return; }
-      
+
       window._levelRecords = {};
       data.forEach(r => {
         if (!r.institution_id && r.classes?.institution_id) {
@@ -3795,7 +4039,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=5.6.1';
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261030_v37');
+      const sm = await import('./student-management.js?v=20261031_v54');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }

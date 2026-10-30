@@ -62,7 +62,7 @@ export function compareStudentsHierarchical(a, b) {
 }
 
 export async function renderStudents(area) {
-    const [rawData, allAttempts, allLevels, allProgress, allPrograms, allBatches, allAssignments, allTests] = await Promise.all([
+    const [rawData, allAttempts, allLevels, allProgress, allPrograms, allBatches, allAssignments, allTests, allClasses] = await Promise.all([
     adminFetchAll('students', 'id, name, gender, birth_date, photo_url, photo_status, is_active, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)'),
     adminFetchAll('attempts', 'id, student_id, test_id, status, score, total_questions, percentage, effective_score, created_at, is_remedial_unlocked, tests(test_type, title, class_id)'),
     adminFetchAll('levels', 'id, name, level_number'),
@@ -70,12 +70,24 @@ export async function renderStudents(area) {
     adminFetchAll('programs', 'id, name, institution_id, is_active'),
     adminFetchAll('batches', 'id, name, program_id, is_active, current_level_id'),
     adminFetchAll('assignments', 'student_id, batch_id, test_id').catch(() => []),
-    adminFetchAll('tests', 'id, title, test_type, shell_code, payload, total_questions, display_order, category, level_id, class_id, levels(name, level_number)').catch(() => [])
+    adminFetchAll('tests', 'id, title, test_type, shell_code, payload, total_questions, display_order, category, level_id, class_id, levels(name, level_number)').catch(() => []),
+    adminFetchAll('classes', 'id, name, is_active').catch(() => [])
   ]);
   const levelsMap = new Map();
   (allLevels || []).forEach(l => levelsMap.set(l.id, l));
 
   const testsMap = new Map((allTests || []).map(a => [a.id, a]));
+
+  // Classes map: id → class object (only active classes)
+  const classesMap = new Map((allClasses || []).filter(c => c.is_active !== false).map(c => [c.id, c]));
+
+  // Pre-build: tests grouped by class_id
+  const testsByClass = new Map();
+  (allTests || []).forEach(t => {
+    if (!t.class_id) return;
+    if (!testsByClass.has(t.class_id)) testsByClass.set(t.class_id, []);
+    testsByClass.get(t.class_id).push(t);
+  });
 
   const attemptsByStudent = new Map();
   (allAttempts || []).forEach(att => {
@@ -291,6 +303,78 @@ export async function renderStudents(area) {
         : (typeof getGradeColor === 'function' ? getGradeColor(globalGrade) : TOPSCORE_COLORS.STAR);
     }
 
+    // ── Per-Class Stats (Phase 214 & Phase 217) ─────────────────────────────
+    // For each active class, compute Score %, Grade, and Total PTS strictly
+    // from the EXAMS in that class (Rule 2.7, 2.8, 2.10 & User Directive:
+    // "taruh saja total point dari SEMUA Exam di kelas Vocab yang diikuti").
+    const perClassFinal = new Map();
+
+    classesMap.forEach((cls, cId) => {
+      const classAllTests = testsByClass.get(cId) || [];
+      if (classAllTests.length === 0) return;
+
+      const classExams = classAllTests.filter(t => isWeeklyExam(t));
+      const targetExams = classExams.length > 0 ? classExams : classAllTests;
+
+      const studentClassExamEntries = [];
+      targetExams.forEach(examTest => {
+        const best = bestByAsm.get(examTest.id);
+        if (best) {
+          studentClassExamEntries.push({
+            test: examTest,
+            effPoints: best.score,
+            effPct: best.percentage,
+            totalQ: best.totalQuestions
+          });
+        }
+      });
+
+      // Does the student have any activity or enrollment in this class?
+      const hasAttemptsInClass = studentAttempts.some(a => {
+        const tObj = testsMap.get(a.test_id);
+        return (tObj?.class_id || a.tests?.class_id) === cId;
+      });
+      const hasProgressInClass = (allProgress || []).some(p => p.student_id === s.id && p.class_id === cId);
+      const isEnrolledInClass = hasAttemptsInClass || hasProgressInClass;
+
+      if (!isEnrolledInClass && studentClassExamEntries.length === 0) {
+        return; // Student doesn't belong to this class, leave undefined so table shows '—'
+      }
+
+      if (studentClassExamEntries.length > 0) {
+        const classMastery = (typeof computeMilestoneExamMastery === 'function')
+          ? computeMilestoneExamMastery(studentClassExamEntries, targetExams)
+          : {
+              totalPoints: studentClassExamEntries.reduce((acc, c) => acc + (c.effPoints || 0), 0),
+              overallScore: Math.round(studentClassExamEntries.reduce((acc, c) => acc + (c.effPct || 0), 0) / studentClassExamEntries.length),
+              grade: '—',
+              completedExamCount: studentClassExamEntries.length
+            };
+
+        const effScorePct = classMastery.overallScore;
+        const ptsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(effScorePct) : '#94a3b8';
+
+        perClassFinal.set(cId, {
+          completed: studentClassExamEntries.length,
+          totalTests: targetExams.length,
+          avgPct: effScorePct,
+          grade: classMastery.grade,
+          pts: classMastery.totalPoints,
+          color: ptsColor
+        });
+      } else {
+        // Enrolled or started quizzes but no completed exams yet
+        perClassFinal.set(cId, {
+          completed: 0,
+          totalTests: targetExams.length,
+          avgPct: null,
+          grade: '—',
+          pts: null,
+          color: '#94a3b8'
+        });
+      }
+    });
+
 
     // Compute age from birth_date
     let ageDisplay = '—';
@@ -345,7 +429,7 @@ export async function renderStudents(area) {
       } catch { joinDate = '—'; }
     }
 
-    return {
+    const rowObj = {
       ...s,
       displayName: cleanStudentName(s.name),
       sortName: cleanStudentName(s.name).toLowerCase(),
@@ -372,8 +456,19 @@ export async function renderStudents(area) {
       isOrphaned,
       joinDate,
       phone: s.phone || s.phone_number || '—',
-      email: s.email || '—'
+      email: s.email || '—',
+      perClassFinal   // Map<classId, {completed,totalTests,avgPct,grade,pts,color}>
     };
+
+    // Flatten per-class metrics so DataGrid can search & sort seamlessly
+    perClassFinal.forEach((cs, cId) => {
+      rowObj[`_cls_score_${cId}`] = cs.avgPct ?? -1;
+      rowObj[`_cls_grade_${cId}`] = cs.grade ?? '—';
+      rowObj[`_cls_pts_${cId}`] = cs.pts ?? -1;
+      rowObj[`_cls_tests_${cId}`] = cs.completed ?? 0;
+    });
+
+    return rowObj;
   });
 
   // Hierarchical sort comparator: Active first, then Institution -> Program -> Batch -> Level -> Name (A-Z)
@@ -424,9 +519,9 @@ export async function renderStudents(area) {
   const filteredGridData = programStudents.filter(s => {
     if (window._filterBatchId && s.batch_id !== window._filterBatchId) return false;
     if (currentBatchStatus === 'active') {
-      return s.batches ? s.batches.is_active !== false : true;
+      return (s.batches ? s.batches.is_active !== false : true) && ((s._raw || s).is_active !== false);
     } else if (currentBatchStatus === 'inactive') {
-      return s.batches ? s.batches.is_active === false : false;
+      return (s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false);
     }
     return true;
   });
@@ -507,8 +602,8 @@ export async function renderStudents(area) {
         Filters:
       </span>
       <select id="students-filter-batch-status" class="form-input-slim">
-        <option value="active" ${currentBatchStatus === 'active' ? 'selected' : ''}>Status: Active Batches</option>
-        <option value="all" ${currentBatchStatus === 'all' ? 'selected' : ''}>Status: All Batches</option>
+        <option value="active" ${currentBatchStatus === 'active' ? 'selected' : ''}>Status: Active Only</option>
+        <option value="all" ${currentBatchStatus === 'all' ? 'selected' : ''}>Status: All (Active & Inactive)</option>
         <option value="inactive" ${currentBatchStatus === 'inactive' ? 'selected' : ''}>Status: Inactive / Past</option>
       </select>
       <select id="students-filter-batch" class="form-input-slim">
@@ -770,7 +865,7 @@ export async function renderStudents(area) {
           showToast(targetRemedial ? '🏷️ Successfully labeled as Remedial.' : '↩️ Remedial status reverted to Normal.', 'success');
           modal.remove();
           if (typeof window.loadSection === 'function') {
-            await window.loadSection('students');
+            await window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
           }
           setTimeout(() => {
             window.showStudentProgressDetails(studentId);
@@ -841,6 +936,15 @@ export async function renderStudents(area) {
     if (existingP) existingP.remove();
     const existingD = document.getElementById('student-dossier-modal');
     if (existingD) existingD.remove();
+
+    if (window.location.hash && !window.location.hash.startsWith('#profile-') && !window.location.hash.startsWith('#dossier-')) {
+      window._lastSectionBeforeProfile = window.location.hash.substring(1);
+    }
+    try {
+      if (window.location.hash !== '#profile-' + studentId) {
+        window.location.hash = '#profile-' + studentId;
+      }
+    } catch (_) {}
 
     const backdrop = document.createElement('div');
     backdrop.id = 'student-profile-modal';
@@ -1209,28 +1313,32 @@ export async function renderStudents(area) {
     });
 
     // Close button
-    const cleanupKeys = () => {
+    const cleanupKeys = (isReverting = true) => {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
+      if (isReverting && window.location.hash === `#profile-${studentId}`) {
+        const fallback = window._lastSectionBeforeProfile || localStorage.getItem('topscore_admin_last_section') || 'students';
+        try { window.location.hash = '#' + fallback; } catch (_) {}
+      }
     };
     const closeBtn = backdrop.querySelector('#btn-close-profile-modal');
-    if (closeBtn) closeBtn.onclick = () => { backdrop.remove(); cleanupKeys(); };
-    backdrop.onclick = (e) => { if (e.target === backdrop) { backdrop.remove(); cleanupKeys(); } };
+    if (closeBtn) closeBtn.onclick = () => { backdrop.remove(); cleanupKeys(true); };
+    backdrop.onclick = (e) => { if (e.target === backdrop) { backdrop.remove(); cleanupKeys(true); } };
 
     // Keyboard navigation
     const onKey = (e) => {
       if (e.key === 'Escape') {
         backdrop.remove();
-        cleanupKeys();
+        cleanupKeys(true);
       } else if (e.key === 'ArrowLeft' && hasPrev) {
         e.preventDefault();
         backdrop.remove();
-        cleanupKeys();
+        cleanupKeys(false);
         window.showStudentProfileModal(prevId);
       } else if (e.key === 'ArrowRight' && hasNext) {
         e.preventDefault();
         backdrop.remove();
-        cleanupKeys();
+        cleanupKeys(false);
         window.showStudentProfileModal(nextId);
       }
     };
@@ -1239,11 +1347,11 @@ export async function renderStudents(area) {
     // Carousel buttons
     const prevBtn = backdrop.querySelector('#btn-modal-prev-student');
     if (prevBtn && hasPrev) {
-      prevBtn.onclick = () => { backdrop.remove(); cleanupKeys(); window.showStudentProfileModal(prevId); };
+      prevBtn.onclick = () => { backdrop.remove(); cleanupKeys(false); window.showStudentProfileModal(prevId); };
     }
     const nextBtn = backdrop.querySelector('#btn-modal-next-student');
     if (nextBtn && hasNext) {
-      nextBtn.onclick = () => { backdrop.remove(); cleanupKeys(); window.showStudentProfileModal(nextId); };
+      nextBtn.onclick = () => { backdrop.remove(); cleanupKeys(false); window.showStudentProfileModal(nextId); };
     }
 
     // Switch to Dossier button
@@ -1251,7 +1359,7 @@ export async function renderStudents(area) {
     if (openDossierBtn) {
       openDossierBtn.onclick = () => {
         backdrop.remove();
-        cleanupKeys();
+        cleanupKeys(false);
         window.showStudentDossierModal(studentId);
       };
     }
@@ -1313,6 +1421,15 @@ export async function renderStudents(area) {
     if (existingP) existingP.remove();
     const existingD = document.getElementById('student-dossier-modal');
     if (existingD) existingD.remove();
+
+    if (window.location.hash && !window.location.hash.startsWith('#profile-') && !window.location.hash.startsWith('#dossier-')) {
+      window._lastSectionBeforeProfile = window.location.hash.substring(1);
+    }
+    try {
+      if (window.location.hash !== '#profile-' + studentId) {
+        window.location.hash = '#profile-' + studentId;
+      }
+    } catch (_) {}
 
     const backdrop = document.createElement('div');
     backdrop.id = 'student-dossier-modal';
@@ -1539,20 +1656,24 @@ export async function renderStudents(area) {
     document.body.appendChild(backdrop);
 
     // Event wiring
-    const cleanupDossier = () => {
+    const cleanupDossier = (isReverting = true) => {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
+      if (isReverting && (window.location.hash === `#profile-${studentId}` || window.location.hash === `#dossier-${studentId}`)) {
+        const fallback = window._lastSectionBeforeProfile || localStorage.getItem('topscore_admin_last_section') || 'students';
+        try { window.location.hash = '#' + fallback; } catch (_) {}
+      }
     };
 
     const closeBtn = backdrop.querySelector('#btn-close-dossier-modal');
-    if (closeBtn) closeBtn.onclick = () => { backdrop.remove(); cleanupDossier(); };
-    backdrop.onclick = (e) => { if (e.target === backdrop) { backdrop.remove(); cleanupDossier(); } };
+    if (closeBtn) closeBtn.onclick = () => { backdrop.remove(); cleanupDossier(true); };
+    backdrop.onclick = (e) => { if (e.target === backdrop) { backdrop.remove(); cleanupDossier(true); } };
 
     const toProfileBtn = backdrop.querySelector('#btn-dossier-to-profile');
     if (toProfileBtn) {
       toProfileBtn.onclick = () => {
         backdrop.remove();
-        cleanupDossier();
+        cleanupDossier(false);
         window.showStudentProfileModal(studentId);
       };
     }
@@ -1567,7 +1688,7 @@ export async function renderStudents(area) {
     const onKey = (e) => {
       if (e.key === 'Escape') {
         backdrop.remove();
-        cleanupDossier();
+        cleanupDossier(true);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -1577,6 +1698,111 @@ export async function renderStudents(area) {
   const gridContainer = area.querySelector('#student-grid-container') || document.getElementById('student-grid-container');
   if (!gridContainer) return;
 
+  // ── Per-Class Column Discovery (Phase 214) ──────────────────────────────────
+  // Collect all active class IDs that appear in the filtered student set,
+  // then build dynamic columns for each.
+  const activeClassIdsInGrid = new Set();
+  filteredGridData.forEach(row => {
+    if (row.perClassFinal) row.perClassFinal.forEach((_, cId) => {
+      if (classesMap.has(cId)) activeClassIdsInGrid.add(cId);
+    });
+  });
+  // Also include classes where any student in the batch has progress (enrolled but no attempts yet)
+  (allProgress || []).forEach(p => {
+    if (p.class_id && classesMap.has(p.class_id)) {
+      const studentRow = filteredGridData.find(r => r.id === p.student_id);
+      if (studentRow) activeClassIdsInGrid.add(p.class_id);
+    }
+  });
+
+  // Sort classes by name for consistent column order
+  const activeClassColumns = [...activeClassIdsInGrid]
+    .map(cId => classesMap.get(cId))
+    .filter(Boolean)
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+  // Build dynamic per-class DataGrid column definitions
+  const perClassColDefs = activeClassColumns.flatMap(cls => [
+    {
+      key: `_cls_score_${cls.id}`,
+      label: 'Score',
+      sortable: true,
+      align: 'center',
+      width: '68px',
+      _classId: cls.id,
+      render: (row) => {
+        const cs = row.perClassFinal?.get(cls.id);
+        if (!cs || cs.avgPct === null) return `<span class="text-muted" style="font-size:0.72rem;">—</span>`;
+        return `<span class="fw-700" style="font-size:0.85rem;color:${cs.color};">${cs.avgPct}%</span>`;
+      }
+    },
+    {
+      key: `_cls_grade_${cls.id}`,
+      label: 'Grd',
+      sortable: true,
+      align: 'center',
+      width: '52px',
+      _classId: cls.id,
+      render: (row) => {
+        const cs = row.perClassFinal?.get(cls.id);
+        if (!cs || cs.grade === '—') return `<span class="text-muted" style="font-size:0.72rem;">—</span>`;
+        const isStar = cs.grade === '★' || cs.grade === 'S';
+        if (isStar) return `<span class="grade-circle grade-circle-star" style="font-size:0.8rem;" title="Grade ★ Excellent">★</span>`;
+        const textColor = (TOPSCORE_COLORS && TOPSCORE_COLORS.TEXT_DARK) ? TOPSCORE_COLORS.TEXT_DARK : '#0F172A';
+        return `<span class="grade-circle grade-circle-${cs.grade.toLowerCase()}" style="background:${cs.color};color:${textColor};font-weight:800;font-size:0.78rem;" title="Grade ${cs.grade}">${cs.grade}</span>`;
+      }
+    },
+    {
+      key: `_cls_pts_${cls.id}`,
+      label: 'PTS',
+      sortable: true,
+      align: 'center',
+      width: '65px',
+      _classId: cls.id,
+      render: (row) => {
+        const cs = row.perClassFinal?.get(cls.id);
+        if (!cs || cs.pts === null) return `<span class="text-muted" style="font-size:0.72rem;">—</span>`;
+        const formatted = (cs.pts % 1 !== 0) ? cs.pts.toFixed(1) : cs.pts;
+        return `<div class="fw-700" style="font-size:0.82rem;color:${cs.color};">${formatted}<span style="font-size:0.58rem;color:#94a3b8;font-weight:normal;"> pts</span></div>`;
+      }
+    },
+    {
+      key: `_cls_tests_${cls.id}`,
+      label: 'Exams',
+      sortable: true,
+      align: 'center',
+      width: '58px',
+      _classId: cls.id,
+      render: (row) => {
+        const cs = row.perClassFinal?.get(cls.id);
+        const done = cs?.completed ?? 0;
+        const total = cs?.totalTests ?? 0;
+        if (done === 0 && total === 0) return `<span class="text-muted" style="font-size:0.72rem;">—</span>`;
+        return `<div class="fw-600" style="font-size:0.82rem;color:var(--clr-text-1);">${done}<span class="text-muted" style="font-weight:400;font-size:0.72rem;"> / ${total}</span></div>`;
+      }
+    }
+  ]);
+
+  // Build superHeaders: span class-name across its 4 sub-columns (Score/Grd/PTS/Exams)
+  // Plus span blank headers for the fixed columns before (inst/prog/batch/lvl/name/age/gender)
+  // and after (progress/enrolled/status/actions).
+  const buildSuperHeaders = () => {
+    if (activeClassColumns.length === 0) return null;
+    const fixed_before = 7; // inst, prog, batch, level, name, age, gender
+    const fixed_after = 4;  // progress, enrolled, status, actions
+    const sh = [];
+    sh.push({ label: '', colSpan: fixed_before, style: 'background:var(--clr-bg-2);border:none;' });
+    activeClassColumns.forEach(cls => {
+      sh.push({
+        label: escapeHtml(cls.name),
+        colSpan: 4,
+        style: `background:rgba(99,102,241,0.1); border-bottom:2px solid #6366f1; color:#a5b4fc; font-weight:800; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; text-align:center;`
+      });
+    });
+    sh.push({ label: '', colSpan: fixed_after, style: 'background:var(--clr-bg-2);border:none;' });
+    return sh;
+  };
+
   studentGrid = new DataGrid({
     container: gridContainer,
     data: filteredGridData,
@@ -1585,6 +1811,7 @@ export async function renderStudents(area) {
     initialSortKey: 'instName',
     initialSortAsc: true,
     stickyActionCol: true,
+    superHeaders: buildSuperHeaders(),
     sortComparator: (sortKey, direction, a, b) => {
       // Active students ALWAYS on top, inactive at bottom
       const aActive = ((a._raw || a).is_active !== false) ? 1 : 0;
@@ -1598,7 +1825,24 @@ export async function renderStudents(area) {
       }
 
       // Column-specific comparison
-      if (sortKey === 'completedTests') {
+      if (sortKey.startsWith('_cls_pts_')) {
+        const scA = a[sortKey] ?? -1;
+        const scB = b[sortKey] ?? -1;
+        if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
+      } else if (sortKey.startsWith('_cls_score_')) {
+        const scA = a[sortKey] ?? -1;
+        const scB = b[sortKey] ?? -1;
+        if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
+      } else if (sortKey.startsWith('_cls_grade_')) {
+        const rank = { '★': 7, 'S': 7, 'A': 6, 'B': 5, 'C': 4, 'D': 3, 'E': 2, 'F': 1 };
+        const rA = rank[a[sortKey]] || 0;
+        const rB = rank[b[sortKey]] || 0;
+        if (rA !== rB) return direction === 'asc' ? rA - rB : rB - rA;
+      } else if (sortKey.startsWith('_cls_tests_')) {
+        const scA = a[sortKey] ?? 0;
+        const scB = b[sortKey] ?? 0;
+        if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
+      } else if (sortKey === 'completedTests') {
         const scA = a.completedTests ?? 0;
         const scB = b.completedTests ?? 0;
         if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
@@ -1746,7 +1990,7 @@ export async function renderStudents(area) {
         clearAdminCache('students');
         close();
         showToast(`Updated ${selectedIds.length} students.`, 'success');
-        if (typeof window.loadSection === 'function') window.loadSection('students'); else renderStudents(area);
+        if (typeof window.loadSection === 'function') window.loadSection(window._activeSectionAlias || window._currentSection || 'students'); else renderStudents(area);
       };
 
       overlay.querySelector('#bulk-activate').onclick = async () => {
@@ -1866,100 +2110,63 @@ export async function renderStudents(area) {
         label: 'Age',
         sortable: true,
         align: 'center',
-        width: '65px',
-        render: (row) => `<span class="text-sm fw-600">${row.ageDisplay}</span>`
+        width: '75px',
+        render: (row) => {
+          if (!row.birth_date) {
+            return `<span title="Date of Birth not set — edit this student to add it" style="display:inline-flex;align-items:center;gap:3px;cursor:help;">
+              <span style="font-size:0.75rem;color:#f59e0b;font-weight:700;">⚠</span>
+              <span style="font-size:0.68rem;color:#f59e0b;font-weight:600;">No DOB</span>
+            </span>`;
+          }
+          return `<span class="text-sm fw-600">${row.ageDisplay}</span>`;
+        }
       },
-      // 7. Gender
+      // 7. Gender (User requirement: "keterangan gender cukup pakai M/F")
       {
         key: 'gender',
         label: 'Gender',
         sortable: true,
         align: 'center',
-        width: '80px',
-        render: (row) => (row.gender || '').toLowerCase() === 'male'
-          ? `<span class="fw-600" style="color:#38bdf8;font-size:0.8rem;">&#9794; Male</span>`
-          : (row.gender || '').toLowerCase() === 'female'
-          ? `<span class="fw-600" style="color:#f472b6;font-size:0.8rem;">&#9792; Female</span>`
-          : `<span class="text-muted fw-600" style="font-size:0.8rem;">&mdash;</span>`
+        width: '55px',
+        render: (row) => {
+          const g = (row.gender || '').trim().toLowerCase();
+          if (g === 'male' || g === 'm') {
+            return `<span class="fw-700" style="color:#38bdf8;font-size:0.8rem;" title="Male">&#9794; M</span>`;
+          }
+          if (g === 'female' || g === 'f') {
+            return `<span class="fw-700" style="color:#f472b6;font-size:0.8rem;" title="Female">&#9792; F</span>`;
+          }
+          return `<span class="text-muted fw-600" style="font-size:0.8rem;">&mdash;</span>`;
+        }
       },
-      // 8. Tests (Completed / Assigned)
+      // 8–11. Dynamic Per-Class Columns (Score / Grade / PTS / Tests per active class)
+      // Replaces the previous static global Tests / Score / Grade / PTS / Completion columns.
+      // If no active classes have data, falls back to a single Completion column.
+      ...(perClassColDefs.length > 0 ? perClassColDefs : [
+        {
+          key: 'completedTests',
+          label: 'Tests',
+          sortable: true,
+          align: 'center',
+          width: '95px',
+          render: (row) => `
+            <div class="fw-700" style="font-size:0.9rem;color:var(--clr-text-1);">
+              ${row.completedTests} <span class="text-xs text-muted" style="font-weight:400;">/ ${row.totalAssigned}</span>
+            </div>
+          `
+        }
+      ]),
+
+      // Completion bar (always shown, compact)
       {
-        key: 'completedTests',
-        label: 'Tests',
+        key: 'completionPct',
+        label: 'Progress',
         sortable: true,
         align: 'center',
         width: '95px',
         render: (row) => `
-          <div class="fw-700" style="font-size:0.9rem;color:var(--clr-text-1);">
-            ${row.completedTests} <span class="text-xs text-muted" style="font-weight:400;">/ ${row.totalAssigned}</span>
-          </div>
-        `
-      },
-      // 9. Score (Overall %)
-      {
-        key: 'overallScoreStr',
-        label: 'Score',
-        sortable: true,
-        align: 'center',
-        width: '70px',
-        render: (row) => `<span class="fw-700" style="font-size:0.92rem;color:${row.overallColor || 'var(--clr-text-1)'};">${row.overallScoreStr}</span>`
-      },
-      // 10. Grade
-      {
-        key: 'globalGrade',
-        label: 'Grade',
-        sortable: true,
-        align: 'center',
-        width: '65px',
-        render: (row) => {
-          if (!row.globalGrade || row.globalGrade === '-' || row.globalGrade === '—') {
-            return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
-          }
-          const isStar = row.globalGrade === '★' || row.globalGrade === 'S';
-          if (isStar) {
-            return `<span class="grade-circle grade-circle-star" title="Grade ★ (100% Excellent)">★</span>`;
-          }
-          const cleanGrade = String(row.globalGrade).trim().toUpperCase();
-          const lowerG = cleanGrade.toLowerCase();
-          const badgeColor = row.overallColor || (typeof getGradeColor === 'function' ? getGradeColor(cleanGrade) : '#FFFF00');
-          const textColor = (TOPSCORE_COLORS && TOPSCORE_COLORS.TEXT_DARK) ? TOPSCORE_COLORS.TEXT_DARK : '#0F172A';
-          return `<span class="grade-circle grade-circle-${lowerG}" style="background:${badgeColor}; color:${textColor}; font-weight:800;" title="Grade ${cleanGrade}">${cleanGrade}</span>`;
-        }
-      },
-      // 10.5. PTS (Total Exam Points)
-      {
-        key: 'totalEarnedScore',
-        label: 'PTS',
-        sortable: true,
-        align: 'center',
-        width: '75px',
-        render: (row) => {
-          if (!row.completedExamCount && row.totalEarnedScore === 0) {
-            return `<span class="text-muted" style="font-size:0.75rem;" title="0 pts (No exams completed)">—</span>`;
-          }
-          const ptsVal = Number(row.totalEarnedScore ?? 0);
-          const formattedPts = (ptsVal % 1 !== 0) ? ptsVal.toFixed(1) : ptsVal;
-          const isStar = row.globalGrade === '★' || row.globalGrade === 'S';
-          const ptsColor = row.overallPct >= 0
-            ? (isStar ? TOPSCORE_COLORS.STAR : (row.overallColor || 'var(--clr-text-1)'))
-            : '#94a3b8';
-          return `
-            <div class="fw-700 text-xs ${isStar ? 'text-gold-champion' : ''}" style="color:${ptsColor}; font-size:0.88rem;" title="Exam Points: ${formattedPts} pts">
-              ${formattedPts} <span style="font-size:0.62rem; color:#94a3b8; font-weight:normal;">pts</span>
-            </div>
-          `;
-        }
-      },
-      // 11. Completion (Level Progress Bar)
-      {
-        key: 'completionPct',
-        label: 'Completion',
-        sortable: true,
-        align: 'center',
-        width: '115px',
-        render: (row) => `
-          <div class="d-flex align-center gap-2 justify-center" style="min-width:105px;">
-            <div style="flex:1;max-width:65px;background:rgba(255,255,255,0.1);height:6px;border-radius:3px;overflow:hidden;">
+          <div class="d-flex align-center gap-2 justify-center" style="min-width:85px;">
+            <div style="flex:1;max-width:55px;background:rgba(255,255,255,0.1);height:5px;border-radius:3px;overflow:hidden;">
               <div style="width:${row.completionPct}%;background:var(--fm-accent-tactical, #6366f1);height:100%;border-radius:3px;"></div>
             </div>
             <span class="text-xs fw-600" style="color:var(--clr-text-2);min-width:28px;">${row.completionPct}%</span>
@@ -2066,9 +2273,9 @@ export async function renderStudents(area) {
       let newData = programStudents;
       if (bid) newData = newData.filter(s => s.batch_id === bid);
       if (bStatus === 'active') {
-        newData = newData.filter(s => s.batches ? s.batches.is_active !== false : true);
+        newData = newData.filter(s => (s.batches ? s.batches.is_active !== false : true) && ((s._raw || s).is_active !== false));
       } else if (bStatus === 'inactive') {
-        newData = newData.filter(s => s.batches ? s.batches.is_active === false : false);
+        newData = newData.filter(s => (s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false));
       }
       studentGrid.updateData(newData);
       const countEl = document.querySelector('.section-title .count-chip');
@@ -2246,8 +2453,9 @@ export async function openStudentFullEdit(student, onSaved) {
         </div>
 
         <div class="form-group">
-          <label class="form-label">Date of Birth</label>
-          <input type="date" class="form-control" id="bfe-birth" value="${escHtml(initialBirth)}">
+          <label class="form-label">Date of Birth <span style="color:#f87171;font-weight:800;" title="Required">*</span></label>
+          <input type="date" class="form-control" id="bfe-birth" value="${escHtml(initialBirth)}" required>
+          <div style="font-size:0.72rem;color:#94a3b8;margin-top:3px;">Required — used to calculate student age in the roster.</div>
         </div>
 
         <div class="form-group">
@@ -2353,6 +2561,13 @@ export async function openStudentFullEdit(student, onSaved) {
   newSaveBtn.onclick = async () => {
     const name = document.getElementById('bfe-name').value.trim();
     if (!name) { showToast('Student name is required.', 'error'); return; }
+
+    const birthVal = document.getElementById('bfe-birth').value.trim();
+    if (!birthVal) {
+      showToast('Date of Birth is required. Please enter the student\'s birthdate.', 'error');
+      document.getElementById('bfe-birth').focus();
+      return;
+    }
 
     const selectedBatchId = document.getElementById('bfe-batch').value || null;
     let selectedProgramId = student?.program_id || null;

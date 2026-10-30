@@ -21,15 +21,22 @@ export function initAuthGate() {
 
 export function initSidebarCache() {
   try {
+    const curHash = location.hash ? location.hash.substring(1).split('?')[0].split('/')[0] : (localStorage.getItem('topscore_admin_last_section') || '');
+    if (curHash && curHash !== 'dashboard') {
+      const dashItem = document.querySelector('.admin-nav-item[data-sub="dashboard"]');
+      if (dashItem) dashItem.classList.remove('active');
+    }
+
     // 1. Programs Hydration
     const rawProg = localStorage.getItem('topscore_cached_sidebar_programs');
     if (rawProg) {
       const list = JSON.parse(rawProg);
       if (Array.isArray(list) && list.length > 0) {
         const selId = localStorage.getItem('topscore_selected_program_id') || list[0].id;
+        const isProgActive = curHash === 'students';
         let h = '<div class="sidebar-program-group" style="display:flex; flex-direction:column; gap:2px;">';
         list.forEach(prog => {
-          const isActive = (selId === prog.id && location.hash === '#students') ? 'active' : '';
+          const isActive = (selId === prog.id && isProgActive) ? 'active' : '';
           h += `<div class="admin-nav-item sidebar-program-item ${isActive}" data-program-id="${prog.id}" data-program-name="${(prog.name || '').replace(/"/g, '&quot;')}" data-sub="students"><span class="nav-icon">👥</span><span>${prog.name || ''}</span></div>`;
         });
         h += '</div>';
@@ -44,9 +51,10 @@ export function initSidebarCache() {
       const list = JSON.parse(rawClass);
       if (Array.isArray(list) && list.length > 0) {
         const selId = localStorage.getItem('topscore_selected_class_id') || list[0].id;
+        const isClassActive = curHash === 'class-hub' || curHash === 'classes';
         let h = '<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:2px;">';
         list.forEach(cls => {
-          const isActive = (selId === cls.id && location.hash === '#class-hub') ? 'active' : '';
+          const isActive = (selId === cls.id && isClassActive) ? 'active' : '';
           h += `<div class="admin-nav-item sidebar-class-item ${isActive}" data-class-id="${cls.id}" data-class-name="${(cls.name || '').replace(/"/g, '&quot;')}"><span class="nav-icon">📘</span><span>${cls.name || ''}</span></div>`;
         });
         h += '</div>';

@@ -24,7 +24,7 @@ import {
   closeTestSession,
   getGrade
 } from '../api.js?v=20261030_v34';
-import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261030_v34';
+import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261031_v58';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261030_v34';
 
 const THEME_DEFINITIONS = [
@@ -125,11 +125,35 @@ export async function renderClassTestSessions(container, context = {}) {
       return tc === code && isTask;
     });
 
-    // Check live state
+    // Check live state — evaluate BOTH Words and Phrases sessions independently,
+    // then merge: the theme is LIVE if either session is still within its window.
+    // This ensures that when Words closes and Phrases is still open (or vice-versa),
+    // the theme card correctly shows LIVE.
     const now = Date.now();
     const sessW = wordsTest?.payload?.test_session;
     const sessP = phrasesTest?.payload?.test_session;
-    const sess = (sessW && sessW.status === 'UNLOCKED') ? sessW : ((sessP && sessP.status === 'UNLOCKED') ? sessP : null);
+
+    // Helper: check if a raw session object is currently live
+    const _sessIsLive = (s) => {
+      if (!s || s.status !== 'UNLOCKED') return false;
+      const ac = s.auto_close_at ? new Date(s.auto_close_at).getTime() : 0;
+      return ac > now;
+    };
+
+    const wLive = _sessIsLive(sessW);
+    const pLive = _sessIsLive(sessP);
+
+    // Prefer whichever has the longer remaining time; fall back to any live session
+    let sess = null;
+    if (wLive && pLive) {
+      const wEnd = new Date(sessW.auto_close_at).getTime();
+      const pEnd = new Date(sessP.auto_close_at).getTime();
+      sess = wEnd >= pEnd ? sessW : sessP; // pick the one closing last
+    } else if (wLive) {
+      sess = sessW;
+    } else if (pLive) {
+      sess = sessP;
+    }
 
     let isLive = false;
     let remainingMinutes = 0;
@@ -138,16 +162,17 @@ export async function renderClassTestSessions(container, context = {}) {
     let allowedStudentIds = [];
     let isRemedial = false;
 
-    if (sess && sess.status === 'UNLOCKED') {
-      const autoClose = sess.auto_close_at ? new Date(sess.auto_close_at).getTime() : 0;
-      if (autoClose > now) {
-        isLive = true;
-        remainingMinutes = Math.max(1, Math.ceil((autoClose - now) / 60000));
-        liveBatchId = sess.batch_id;
-        liveBatchName = batchMap[sess.batch_id]?.name || 'Batch ' + (sess.batch_id || '');
-        allowedStudentIds = sess.allowed_student_ids || [];
-        isRemedial = Boolean(sess.is_remedial);
-      }
+    if (sess) {
+      const autoClose = new Date(sess.auto_close_at).getTime();
+      isLive = true;
+      remainingMinutes = Math.max(1, Math.ceil((autoClose - now) / 60000));
+      liveBatchId = sess.batch_id;
+      liveBatchName = batchMap[sess.batch_id]?.name || 'Batch ' + (sess.batch_id || '');
+      // Merge allowed student IDs from both active sessions so monitor shows everyone
+      const wIds = (wLive ? (sessW.allowed_student_ids || []) : []);
+      const pIds = (pLive ? (sessP.allowed_student_ids || []) : []);
+      allowedStudentIds = [...new Set([...wIds, ...pIds])];
+      isRemedial = Boolean(sess.is_remedial);
     }
 
     return {
@@ -1038,24 +1063,17 @@ function openThemeSessionModal(container, theme, mode, context) {
         }));
       }
       if (theme.phrasesTest) {
-        // Words Exam prerequisite rule:
-        // A student is whitelisted for Phrases Exam ONLY if they have passed Words Exam (>= 60%),
-        // UNLESS the tutor has explicitly enabled Tutor Override.
-        let phrasesAllowedIds = allowedStudentIds;
-        if (!tutorOverrideActive && theme.wordsTest) {
-          const evalMap = new Map(lastEvaluatedStudents.map(e => [e.student.id, e]));
-          phrasesAllowedIds = allowedStudentIds.filter(id => {
-            const ev = evalMap.get(id);
-            return ev && ev.wordsPassed;
-          });
-        }
+        // Unify Theme Test Access: Whitelist all selected students for both Words and Phrases.
+        // Sequential prerequisite (Phrases requires Words Exam >= 60%) is dynamically enforced
+        // on the student dashboard at test attempt time, so students can seamlessly take Phrases
+        // as soon as they finish Words within this active session.
         promises.push(openTestSession({
           testId: theme.phrasesTest.id,
           batchId: targetBatchId,
           allocatedMinutes: duration,
-          allowedStudentIds: phrasesAllowedIds,
+          allowedStudentIds: allowedStudentIds,
           isRemedial: isRemedial,
-          remedialStudentIds: isRemedial ? phrasesAllowedIds : []
+          remedialStudentIds: isRemedial ? allowedStudentIds : []
         }));
       }
 
@@ -1229,18 +1247,10 @@ function openThemeLateModal(container, theme, context) {
         }));
       }
       if (theme.phrasesTest) {
-        let phrasesLateIds = studentIds;
-        if (theme.wordsTest) {
-          const evalMap = new Map(evaluated.map(e => [e.student.id, e]));
-          phrasesLateIds = studentIds.filter(id => {
-            const ev = evalMap.get(id);
-            return ev && ev.wordsPassed;
-          });
-        }
         promises.push(addLateStudentsToSession({
           testId: theme.phrasesTest.id,
-          studentIds: phrasesLateIds,
-          remedialStudentIds: isRem ? phrasesLateIds : []
+          studentIds: studentIds,
+          remedialStudentIds: isRem ? studentIds : []
         }));
       }
 
@@ -1377,7 +1387,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       });
 
       const allStudents = context.allStudents || [];
-      const enrolledStudents = allStudents.filter(s => studentIds.includes(s.id));
+      const enrolledStudents = allStudents.filter(s => studentIds.includes(s.id) && !s.deleted_at && s.is_active !== false);
 
       const themeCodeUpper = (theme.code || 'B').toUpperCase();
       const themeCounts = THEME_EXPECTED_COUNTS[themeCodeUpper] || { words: 280, phrases: 70 };

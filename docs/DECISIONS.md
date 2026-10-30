@@ -869,6 +869,106 @@ The user requested:
 - Preserves high-level competency visibility at a glance via `PROG` and `GRD` while eliminating redundant left metrics.
 - 100% adherence to product owner direct instructions.
 
+---
+
+## DECISION-033 — Resilient Navigation, Route Normalization & Dual-Tier State Persistence Across Reloads
+
+Date: 2026-10-31
+Status: ACCEPTED
+
+### Context
+When navigating TopsCore LMS (`admin.html` and `dashboard.html`), users frequently switch between sections (Class Hub, Test Analytics, Vocabulary Vault, Students Registration, System Settings), sub-tabs (e.g., Attendance vs Test Sessions vs Class Tests), and specific filters (e.g., active Class or Program).
+Previously, refreshing the browser (`F5`), triggering background data syncs, or handling dynamic route changes frequently resulted in unintended resets or fallbacks to default views (such as `#tests` or default first tabs) due to:
+1. Missing section aliases in `aliasSectionMap` and `sectionTitles` (e.g., `#vocabulary`, `#system-settings`).
+2. Query parameters in hashes (e.g. `#class-hub?class_id=...`) causing title lookup mismatches.
+3. Sub-tabs and filter selections stored only in transient memory (`window._classHubActiveTab`, `window._activeTestClassId`, `window._selectedClassId`).
+
+### Decision
+1. **Dual-Tier State Synchronization**:
+   - Every primary view navigation updates both the URL hash (`window.location.hash`) and a dedicated `localStorage` key (`topscore_admin_last_section`).
+   - Every sub-tab transition persists its active tab ID to `localStorage`:
+     - Class Hub: `topscore_admin_class_hub_tab` (`attendance`, `test-sessions`, `tests`).
+     - Vocabulary Vault: `topscore_admin_vault_tab` (`blueprint`, `vocab`, `phrases`).
+     - System Settings: `topscore_admin_settings_tab` (`site`, `audit`, `health`, `recycle`).
+     - Student Registration: `topscore_admin_student_reg_tab` (`bulk`, `individual`).
+   - Every active filter selection persists to `localStorage`:
+     - Class Hub active Class: `topscore_selected_class_id`.
+     - Test Analytics active Class: `topscore_admin_tests_class_id`.
+     - Student Dashboard active Class: `topscore_student_last_class_id`.
+2. **Route Normalization & Parameter Parsing (`parseHashRoute`)**:
+   - Unified parser extracts base section names, sub-tabs (`/` or `:`), and URL search parameters (`?`).
+   - Comprehensive alias mapping ensures no valid user hash is rejected or dumped to `#tests`.
+   - On `#profile-<studentId>` or `#dossier-<studentId>`, restores underlying background section so closing the profile returns to active view rather than a blank canvas.
+3. **Student Dashboard (`dashboard.html`) Modal & Hash Parity**:
+   - URL hash synchronization for Student Profile (`#profile`), Exam History (`#profile-history`), Class Selector (`#select-class`), and Class Level Modal (`#levels-<classId>`).
+   - Browser refresh or navigation back/forward accurately restores active modals without page displacement.
+4. **Permanent Contract Rule (/learn)**:
+   - Formally codified into `AGENTS.md` Rule 2.20 as a non-negotiable architectural invariant.
+
+### Consequences
+- Eliminates frustrating page resets and unintended redirects on browser reload, updates, or tab switching.
+- Preserves exact tutor and student workflow context effortlessly.
+- Full compliance with user `/learn` and `/boost` directives.
+
+---
+
+## DECISION-034 — Beginner-Friendly Vocabulary Tolerance Matrix & Word Form Partial Credit
+
+Date: 2026-10-31
+Status: ACCEPTED
+
+### Context
+Empirical audit of 999 student attempts (81,446 answers) in TopsCore vocabulary and phrase classes revealed that beginner students frequently demonstrate real vocabulary comprehension but produce morphological word-form variants (e.g. answering "success" when the target is "succeed", or "location" for "locate"). In spoken assessments, microphone STT frequently drops unstressed function words ("the", "a", "in") or misrecognizes plural endings across multi-word idioms.
+
+Penalizing word-form differences with 0 points discourages beginners, while awarding full credit (1.0 pt) undermines grammatical distinction.
+
+### Decision
+1. Codified the authoritative Beginner-Friendly Answer Tolerance Matrix in `AGENTS.md` §2.13 and implemented it within `evaluateAnswer()` in `js/grading.js`:
+   - Exact match (normalized): 1.0 pt (`correct`).
+   - 1–2 character Damerau-Levenshtein distance:
+     - Spoken: 1.0 pt (`correct`) to absorb microphone STT acoustic noise.
+     - Written: 0.5 pt (`minor_spelling_error`).
+   - Function-word drops on 4+ word spoken idioms (`a`, `an`, `the`, `to`, `in`, `on`, `of`, etc.): 1.0 pt (`correct`).
+   - Multi-word plural-s/es mismatches: 1.0 pt (`correct`).
+   - Morphological word form / Part-of-speech mismatches sharing a common root (stem length $\ge 5$ chars): 0.5 pt (`minor_word_form_error`) for **both Spoken and Written** modalities.
+   - Semantic changes and pronoun modifications (e.g. "my" vs "your"): Strictly 0.0 pt (`incorrect`).
+2. The partial credit badge is visually styled and recorded in attempt answer logs as `minor_word_form_error` with `score: 0.5`.
+
+### Consequences
+- Transparent, encouraging, and pedagogically sound grading tailored for beginner students.
+- Preserves strict grammatical standards while avoiding artificial zeroes for sound vocabulary knowledge.
+- Deterministic, client-safe, and unified across both spoken and written test formats.
+
+---
+
+## DECISION-035 — Paired Theme Exam Remedial Synchronization ("Satu Paket" Rule)
+
+Date: 2026-10-31
+Status: ACCEPTED
+
+### Context
+In TopsCore vocabulary classes, each theme (A, B, C, D) comprises two integrated assessments: a Words Exam and a Phrases Exam. Because words and phrases within a single theme form an inseparable pedagogical package ("satu paket"), exhibiting remedial need in either assessment signifies incomplete mastery of that theme's vocabulary core. Previously, remedial flags were handled per-test attempt, occasionally causing a student to display remedial status (60%ᴿ) on Words while displaying an uncapped passing score (e.g. 96% or 100%) on Phrases, or vice versa, creating instructional inconsistency on the Class Hub attendance grid. Additionally, dense text in the matrix table caused adjacent characters to crowd in "Fit Screen" mode.
+
+### Decision
+1. **Paired Exam Remedial Synchronization ("Satu Paket")**:
+   - In both database records and frontend display matrices (`js/admin/app.js`), if ANY exam in a theme package is unlocked or flagged as remedial (`is_remedial_unlocked || is_remedial`), BOTH the Words and Phrases exams for that student in that theme are strictly synchronized as remedial.
+   - Both exams are capped at the official 60% remedial ceiling (`Math.min(score, total_questions * 0.6)` and `Math.min(pct, 60.0%)`) and display the official remedial `ᴿ` notation (`60%ᴿ`).
+   - Admin unlock endpoint `adminUnlockRemedialExam(attemptId)` in `js/api.js` automatically detects sibling exams in the same theme package and authorizes both, updating effective score and grade accordingly.
+2. **Class Hub Anti-Crowding Visual Scaling**:
+   - Dynamic matrix font size calculation adjusted to `Math.min(10.0, Math.max(7.5, rowHeight * 0.35))` and badge font to `Math.min(8.5, Math.max(6.5, rowHeight * 0.28))`.
+   - Column widths expanded to 54px for score columns and 60px for points columns.
+   - Header badge flex centering, negative letter spacing, and line-height controls prevent text collision in Fit Screen mode.
+3. **5-Factor Error Diagnostics (Phase 222)**:
+   - Full diagnostic taxonomy (`timeout`, `spelling`, `literal`, `word_form`, `vocab_gap`) integrated into Test Analytics header chips with empirical telemetry.
+
+### Consequences
+- Absolute pedagogical and visual consistency across paired theme exams.
+- Tutors and students see harmonious remedial statuses with zero confusion.
+- Clean, legible matrix rendering in Class Hub regardless of screen resolution.
+
+
+
+
 
 
 

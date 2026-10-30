@@ -8,7 +8,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=5.3.2';
     import { testMicrophoneCapability } from './speech.js?v=5.3.2';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=5.3.2';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=20261030_v43';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=20261031_v58';
 
     window._isBatchChampion = false;
 
@@ -902,7 +902,23 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         return score >= req;
       };
 
-      const nextAsm = published.find(a => !isPassed(a));
+      let nextAsm = published.find(a => !isPassed(a));
+
+      // Theme Exam Pair Transition: If nextAsm is Words Exam but student already has an attempt on it,
+      // and sibling Phrases Exam has NO attempt yet, prioritize Phrases Exam so the student
+      // completes both parts of the theme exam package!
+      if (nextAsm && isExam(nextAsm) && bestMap[nextAsm.id] != null) {
+        const tc = nextAsm.payload?.theme_code;
+        const siblingPhrase = published.find(a =>
+          a.id !== nextAsm.id && isExam(a) &&
+          (tc ? a.payload?.theme_code === tc : (a.title || '').substring(0, 3).toLowerCase() === (nextAsm.title || '').substring(0, 3).toLowerCase()) &&
+          (a.category === 'phrases' || a.test_subtype === 'PHRASE_EXAM' || (a.title || '').toLowerCase().includes('phrase') || (a.shell_code || '').toUpperCase().includes('PHRASE')) &&
+          bestMap[a.id] == null
+        );
+        if (siblingPhrase) {
+          nextAsm = siblingPhrase;
+        }
+      }
 
       if (!nextAsm) {
         container.innerHTML = `
@@ -1118,7 +1134,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       window._activeClasses = activeClasses;
       if (!window._selectedClassId && activeClasses.length > 0) {
-        window._selectedClassId = activeClasses[0].id;
+        const savedCid = localStorage.getItem('topscore_student_last_class_id');
+        const found = savedCid && activeClasses.find(c => c.id === savedCid);
+        window._selectedClassId = found ? found.id : activeClasses[0].id;
       }
 
       updateClassesBarUI();
@@ -1159,6 +1177,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const cid = box.dataset.cid;
           if (!cid) return;
           window._selectedClassId = cid;
+          try { localStorage.setItem('topscore_student_last_class_id', cid); } catch (_) {}
           renderClassesBoxes(window._activeClasses);
           updateClassesBarUI();
           renderNextAssignmentHero(window._allTests, window._allAttempts, window._loadedClasses);
@@ -1208,6 +1227,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         item.addEventListener('click', () => {
           const cid = item.dataset.cid;
           window._selectedClassId = cid;
+          try { localStorage.setItem('topscore_student_last_class_id', cid); } catch (_) {}
           updateClassesBarUI();
           populateClassesSelectorModal(window._activeClasses);
           renderNextAssignmentHero(window._allTests, window._allAttempts, window._loadedClasses);
@@ -1216,32 +1236,44 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       });
 
       // Wire modal events once
+      const openSelectorModal = () => {
+        populateClassesSelectorModal(window._activeClasses);
+        document.getElementById('classes-selector-modal')?.classList.remove('hidden');
+        try { window.location.hash = '#select-class'; } catch (_) {}
+      };
+
+      const closeSelectorModal = () => {
+        document.getElementById('classes-selector-modal')?.classList.add('hidden');
+        if (window.location.hash === '#select-class') {
+          try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
+        }
+      };
+
       const classesBar = document.getElementById('dashboard-classes-bar');
       if (classesBar && !classesBar._hasClickListener) {
         classesBar._hasClickListener = true;
-        classesBar.addEventListener('click', () => {
-          populateClassesSelectorModal(window._activeClasses);
-          document.getElementById('classes-selector-modal')?.classList.remove('hidden');
-        });
+        classesBar.addEventListener('click', openSelectorModal);
         classesBar.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            populateClassesSelectorModal(window._activeClasses);
-            document.getElementById('classes-selector-modal')?.classList.remove('hidden');
-          }
+          if (e.key === 'Enter' || e.key === ' ') openSelectorModal();
         });
       }
       const closeBtn = document.getElementById('close-classes-selector-modal');
       if (closeBtn && !closeBtn._hasClickListener) {
         closeBtn._hasClickListener = true;
-        closeBtn.addEventListener('click', () => {
-          document.getElementById('classes-selector-modal')?.classList.add('hidden');
+        closeBtn.addEventListener('click', closeSelectorModal);
+      }
+      const selectorModal = document.getElementById('classes-selector-modal');
+      if (selectorModal && !selectorModal._hasBackdropListener) {
+        selectorModal._hasBackdropListener = true;
+        selectorModal.addEventListener('click', (e) => {
+          if (e.target === selectorModal) closeSelectorModal();
         });
       }
       const btnOpenLevels = document.getElementById('btn-open-class-levels');
       if (btnOpenLevels && !btnOpenLevels._hasClickListener) {
         btnOpenLevels._hasClickListener = true;
         btnOpenLevels.addEventListener('click', () => {
-          document.getElementById('classes-selector-modal')?.classList.add('hidden');
+          closeSelectorModal();
           const cur = (window._activeClasses || []).find(c => c.id === window._selectedClassId) || (window._activeClasses || [])[0];
           if (cur) openClassModal(cur, window._classesProgress);
         });
@@ -1264,6 +1296,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         <div class="spinner" style="margin:0 auto 1rem;"></div>
         <p>Loading Tests…</p></div>`;
       modal.classList.remove('hidden');
+      try { window.location.hash = '#levels-' + subj.id; } catch (_) {}
 
       try {
         const Tests = await fetchTestsForStudentClass(
@@ -1327,7 +1360,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           for (const Test of sortedTests) {
             const best      = bestByTest[Test.id];
             const inProg    = inProgByTest[Test.id];
-            const isRem       = Boolean(best && (best.is_remedial_unlocked || best.is_remedial));
+            // Rule 2.10: Paired Theme Exam Remedial Synchronization ("Satu Paket")
+            let hasThemeRemedial = false;
+            if (isExam(Test)) {
+              const rawTheme = Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+              const tc = (rawTheme || 'A').toUpperCase();
+              const siblingExams = sortedTests.filter(t => isExam(t) && ((t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A')).toUpperCase() === tc));
+              hasThemeRemedial = siblingExams.some(sTest => {
+                const sBest = bestByTest[sTest.id];
+                return Boolean(sBest && (sBest.is_remedial_unlocked || sBest.is_remedial));
+              });
+            }
+            const isRem       = hasThemeRemedial || Boolean(best && (best.is_remedial_unlocked || best.is_remedial));
             const rawBestPct  = best ? parseFloat(best.percentage || 0) : null;
             const bestPct     = isRem && rawBestPct !== null ? Math.min(rawBestPct, 60.0) : rawBestPct;
             const passed      = bestPct !== null && bestPct >= (Test.minimum_required_score || Test.pass_threshold || 60);
@@ -1348,13 +1392,21 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             }
 
             // Sequential Intra-Theme Exam Prerequisite: Phrases Exam requires sibling Words Exam >= 60%
+            // Note: If tutor has actively unlocked a live test session for this student, access is authorized by tutor!
+            const liveSess = (Test.payload?.test_session);
+            const isSessLive = liveSess?.status === 'UNLOCKED' &&
+              (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > new Date()) &&
+              (!Array.isArray(liveSess.allowed_student_ids) || liveSess.allowed_student_ids.length === 0 || liveSess.allowed_student_ids.includes(session?.student_id));
+
             const isPhrasesExam = isExam(Test) && Boolean(
               Test.category === 'phrases' || Test.test_subtype === 'PHRASE_EXAM' ||
               (Test.title || '').toLowerCase().includes('phrase') ||
               (Test.shell_code || '').toUpperCase().includes('PHRASE') ||
               (Test.payload?.subtype || '').toUpperCase().includes('PHRASE')
             );
-            if (prereqMet && isPhrasesExam) {
+            if (isSessLive) {
+              prereqMet = true;
+            } else if (prereqMet && isPhrasesExam) {
               const siblingWordsExam = Tests.find(a => 
                 a.id !== Test.id &&
                 isExam(a) &&
@@ -1612,13 +1664,21 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
 
           // Sequential Intra-Theme Exam Prerequisite: Phrases Exam requires sibling Words Exam >= 60%
+          // Note: If tutor has actively unlocked a live test session for this student, access is authorized by tutor!
+          const liveSess = (asm.payload?.test_session);
+          const isSessLive = liveSess?.status === 'UNLOCKED' &&
+            (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > new Date()) &&
+            (!Array.isArray(liveSess.allowed_student_ids) || liveSess.allowed_student_ids.length === 0 || liveSess.allowed_student_ids.includes(user?.id));
+
           const isPhrasesExam = isExam(asm) && Boolean(
             asm.category === 'phrases' || asm.test_subtype === 'PHRASE_EXAM' ||
             (asm.title || '').toLowerCase().includes('phrase') ||
             (asm.shell_code || '').toUpperCase().includes('PHRASE') ||
             (asm.payload?.subtype || '').toUpperCase().includes('PHRASE')
           );
-          if (prereqMet && isPhrasesExam) {
+          if (isSessLive) {
+            prereqMet = true;
+          } else if (prereqMet && isPhrasesExam) {
             const siblingWordsExam = tests.find(a => 
               a.id !== asm.id &&
               isExam(a) &&
@@ -1848,6 +1908,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const rawPct = parseFloat(att.percentage || 0);
         const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
         const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+        const attTime = new Date(att.submitted_at || att.created_at || 0).getTime();
 
         if (allBestMap[uniqueKey] == null || effPct > allBestMap[uniqueKey]) {
           allBestMap[uniqueKey] = effPct;
@@ -2679,7 +2740,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const paneProfile = document.getElementById('tab-pane-profile');
       const paneHistory = document.getElementById('tab-pane-history');
 
-      function switchProfileTab(tab) {
+      function switchProfileTab(tab, updateHash = true) {
         if (tab === 'history') {
           tabBtnHistory?.classList.add('active');
           tabBtnHistory?.setAttribute('aria-selected', 'true');
@@ -2687,6 +2748,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           tabBtnProfile?.setAttribute('aria-selected', 'false');
           paneHistory?.classList.remove('hidden');
           paneProfile?.classList.add('hidden');
+          if (updateHash) {
+            try { window.location.hash = '#profile-history'; } catch (_) {}
+          }
         } else {
           tabBtnProfile?.classList.add('active');
           tabBtnProfile?.setAttribute('aria-selected', 'true');
@@ -2694,8 +2758,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           tabBtnHistory?.setAttribute('aria-selected', 'false');
           paneProfile?.classList.remove('hidden');
           paneHistory?.classList.add('hidden');
+          if (updateHash) {
+            try { window.location.hash = '#profile'; } catch (_) {}
+          }
         }
       }
+      window._switchProfileTab = switchProfileTab;
 
       tabBtnProfile?.addEventListener('click', () => switchProfileTab('profile'));
       tabBtnHistory?.addEventListener('click', () => switchProfileTab('history'));
@@ -2879,48 +2947,47 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       });
 
-      openBtn.addEventListener('click', () => {
+      const openProfile = (tab = 'profile') => {
         applyStudentGenderUI(session.gender);
-        switchProfileTab('profile');
+        switchProfileTab(tab, true);
         window.isProfileDirty = false;
         if(changePinForm) changePinForm.reset();
         modal.classList.remove('hidden');
-      });
-      closeBtn.addEventListener('click', () => {
+      };
+
+      openBtn.addEventListener('click', () => openProfile('profile'));
+
+      const closeProfile = () => {
         if (window.isProfileDirty) {
           if (!confirm('You have unsaved changes. Are you sure you want to close?')) return;
         }
         window.isProfileDirty = false;
         if(changePinForm) changePinForm.reset();
         modal.classList.add('hidden');
-      });
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          if (window.isProfileDirty) {
-            if (!confirm('You have unsaved changes. Are you sure you want to close?')) return;
-          }
-          window.isProfileDirty = false;
-          if(changePinForm) changePinForm.reset();
-          modal.classList.add('hidden');
+        if (window.location.hash.startsWith('#profile') || window.location.hash === '#history') {
+          try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
         }
+      };
+
+      closeBtn.addEventListener('click', closeProfile);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeProfile();
       });
 
       // Header avatar also opens profile modal
-      document.getElementById('header-avatar')?.addEventListener('click', () => {
-        applyStudentGenderUI(session.gender);
-        switchProfileTab('profile');
-        window.isProfileDirty = false;
-        if(changePinForm) changePinForm.reset();
-        modal.classList.remove('hidden');
-      });
+      document.getElementById('header-avatar')?.addEventListener('click', () => openProfile('profile'));
     }
 
     // --- Level Modal close ---
-    document.getElementById('close-level-modal')?.addEventListener('click', () => {
-      document.getElementById('level-modal').classList.add('hidden');
-    });
+    const closeLevelModal = () => {
+      document.getElementById('level-modal')?.classList.add('hidden');
+      if (window.location.hash.startsWith('#levels')) {
+        try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
+      }
+    };
+    document.getElementById('close-level-modal')?.addEventListener('click', closeLevelModal);
     document.getElementById('level-modal')?.addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+      if (e.target === e.currentTarget) closeLevelModal();
     });
 
     // --- Gamification: Show Level Up Popup ---
@@ -2956,6 +3023,45 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
     });
 
+    function restoreDashboardHashRoute() {
+      const hash = window.location.hash || '';
+      if (!hash) {
+        document.getElementById('profile-modal')?.classList.add('hidden');
+        document.getElementById('classes-selector-modal')?.classList.add('hidden');
+        document.getElementById('level-modal')?.classList.add('hidden');
+        return;
+      }
+      if (hash === '#profile') {
+        const modal = document.getElementById('profile-modal');
+        if (modal) {
+          applyStudentGenderUI(session.gender);
+          if (typeof window._switchProfileTab === 'function') window._switchProfileTab('profile', false);
+          modal.classList.remove('hidden');
+        }
+      } else if (hash === '#profile-history' || hash === '#history') {
+        const modal = document.getElementById('profile-modal');
+        if (modal) {
+          applyStudentGenderUI(session.gender);
+          if (typeof window._switchProfileTab === 'function') window._switchProfileTab('history', false);
+          modal.classList.remove('hidden');
+        }
+      } else if (hash === '#select-class') {
+        populateClassesSelectorModal(window._activeClasses || []);
+        document.getElementById('classes-selector-modal')?.classList.remove('hidden');
+      } else if (hash.startsWith('#levels')) {
+        const parts = hash.split('-');
+        const targetCid = parts.length > 1 ? parts.slice(1).join('-') : window._selectedClassId;
+        const cur = (window._activeClasses || []).find(c => c.id === targetCid) || (window._activeClasses || []).find(c => c.id === window._selectedClassId) || (window._activeClasses || [])[0];
+        if (cur) {
+          openClassModal(cur, window._classesProgress);
+        }
+      }
+    }
+
+    window.addEventListener('hashchange', restoreDashboardHashRoute);
+
     setupDockTabs();
     setupProfileModal([]);
-    loadDashboard();
+    loadDashboard().then(() => {
+      restoreDashboardHashRoute();
+    });

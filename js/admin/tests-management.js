@@ -2,7 +2,7 @@ import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '..
 import { openTestBuilder } from './test-builder.js?v=5.3.2';
 import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.3.2';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.3.2';
-import { TOPSCORE_COLORS, getGradeColor, getGradeColorByScore, calculateGrade, isWeeklyExam, damerauLevenshtein } from '../grading.js?v=20261030_v34';
+import { TOPSCORE_COLORS, getGradeColor, getGradeColorByScore, calculateGrade, isWeeklyExam, damerauLevenshtein, isWordFormAnswerMatch } from '../grading.js?v=20261031_v58';
 import { getSupabase } from '../supabase.js?v=5.3.2';
 import { DataGrid } from './datagrid.js?v=5.3.2';
 if (typeof window !== 'undefined') window.DataGrid = DataGrid;
@@ -20,7 +20,18 @@ window.updateTestOrder = async (id, newOrd) => {
   }
 };
 
-// Student Error Classifier
+// Student Error Classifier (5-Factor Pedagogical Diagnostics)
+const INDO_COMMON_WORDS = new Set([
+  'yang', 'dan', 'di', 'ke', 'dari', 'ini', 'itu', 'untuk', 'pada', 'adalah',
+  'sebagai', 'dengan', 'bisa', 'tidak', 'ada', 'akan', 'juga', 'sudah', 'saya',
+  'mereka', 'kita', 'kami', 'dia', 'kamu', 'apa', 'siapa', 'karena', 'lebih',
+  'sangat', 'orang', 'waktu', 'hari', 'rumah', 'jalan', 'tempat', 'cara', 'hidup',
+  'keluarga', 'sendiri', 'pilihan', 'selera', 'bebas', 'aman', 'berkuasa', 'timur',
+  'barat', 'perbedaan', 'budaya', 'kebiasaan', 'penting', 'berhasil', 'tujuan',
+  'karier', 'mendedikasi', 'kualifikasi', 'sopan', 'akurat', 'jeli', 'rute',
+  'merelokasi', 'merefleksikan', 'wisata', 'ancaman'
+]);
+
 function classifyStudentError(studentAnswer, targetCorrect, evaluationResult, questionPrompt) {
   const ans = String(studentAnswer || '').trim();
   const target = String(targetCorrect || '').trim();
@@ -31,17 +42,26 @@ function classifyStudentError(studentAnswer, targetCorrect, evaluationResult, qu
     return 'timeout';
   }
 
-  // 2. Minor Spelling Error / Typo (explicit engine evaluation)
+  // 2. Explicit Evaluation Result from Engine
   const normEval = String(evaluationResult || '').toLowerCase();
+  if (normEval === 'minor_word_form_error') {
+    return 'word_form';
+  }
   if (normEval === 'minor_spelling_error' || normEval === 'partial' || normEval === 'half') {
     return 'spelling';
   }
 
   const cleanAns = ans.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-  const cleanTarget = target.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
   const targetVariants = target.split(/[;,/]/).map(t => t.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()).filter(Boolean);
 
-  // Check 1-2 edit distance typos directly against all target variants
+  // 3. Word Form / Part-of-Speech Confusion (Morphological Root Match)
+  for (const variant of targetVariants) {
+    if (isWordFormAnswerMatch(cleanAns, variant)) {
+      return 'word_form';
+    }
+  }
+
+  // 4. Minor Spelling Error / Typo (1-2 char edit distance)
   for (const variant of targetVariants) {
     const vDist = damerauLevenshtein(cleanAns, variant);
     if (vDist > 0 && vDist <= 2) {
@@ -49,55 +69,17 @@ function classifyStudentError(studentAnswer, targetCorrect, evaluationResult, qu
     }
   }
 
-  // 3. Word Form / Part-of-Speech Confusion
-  const posSuffixes = ['tion', 'sion', 'ion', 'ation', 'ition', 'ment', 'ness', 'ity', 'ing', 'ed', 'er', 'or', 'ly', 'ful', 'iful', 'y', 'able', 'ible', 'ive', 'al', 'ous', 'ize', 'ise', 'ate', 'est', 's', 'es', 'ance', 'ence', 'ant', 'ent'];
-  const hasStemMatch = targetVariants.some(tv => {
-    const tvWords = tv.split(/\s+/);
-    const ansWords = cleanAns.split(/\s+/);
-    if (tvWords.length !== ansWords.length) return false;
-
-    return tvWords.some((tvW, idx) => {
-      const ansW = ansWords[idx] || '';
-      if (tvW.length >= 3 && ansW.length >= 3 && tvW !== ansW) {
-        let commonPrefixLen = 0;
-        while (commonPrefixLen < tvW.length && commonPrefixLen < ansW.length && tvW[commonPrefixLen] === ansW[commonPrefixLen]) {
-          commonPrefixLen++;
-        }
-        if (commonPrefixLen >= 3) {
-          const tvRest = tvW.slice(commonPrefixLen);
-          const ansRest = ansW.slice(commonPrefixLen);
-          const isTvSuffix = tvRest === '' || tvRest === 'e' || posSuffixes.some(s => tvRest === s);
-          const isAnsSuffix = ansRest === '' || ansRest === 'e' || posSuffixes.some(s => ansRest === s);
-          if (isTvSuffix && isAnsSuffix) {
-            return true;
-          }
-        }
-      }
-      return false;
-    });
-  });
-
-  if (hasStemMatch) {
-    return 'word_form';
-  }
-
-  // 4. Literal Translation (Indonesian echo, circumlocution, or common translation patterns)
+  // 5. Literal Translation (Indonesian Echo or Indonesian Stopword)
   const cleanPrompt = prompt.toLowerCase();
-  const isIndoEcho = cleanPrompt.split(/\s+/).some(w => w.length >= 3 && cleanAns.includes(w));
-  const isCircumlocution = cleanAns.split(/\s+/).length >= 2 && cleanTarget.split(/\s+/).length === 1;
-  const commonLiteralWords = ['again', 'back', 'take', 'make', 'do', 'give', 'get', 'story', 'tell', 'talk', 'walk', 'put', 'hand', 'eye', 'heart', 'house', 'water', 'road', 'time', 'day', 'wind', 'enter', 'out'];
-  const containsLiteral = commonLiteralWords.some(w => cleanAns.split(/\s+/).includes(w));
-
-  if (isIndoEcho || isCircumlocution || containsLiteral) {
+  const promptWords = cleanPrompt.split(/\s+/).filter(w => w.length >= 3);
+  const ansWords = cleanAns.split(/\s+/);
+  const hasIndoWord = ansWords.some(w => INDO_COMMON_WORDS.has(w) || promptWords.includes(w));
+  if (hasIndoWord) {
     return 'literal';
   }
 
-  const dist = damerauLevenshtein(cleanAns, cleanTarget);
-  if (dist <= Math.max(3, Math.floor(cleanTarget.length * 0.35))) {
-    return 'spelling';
-  }
-
-  return 'literal';
+  // 6. Vocab Gap (Student produced an unrelated English word or unknown phrase)
+  return 'vocab_gap';
 }
 
 export async function renderTests(area) {
@@ -216,15 +198,27 @@ export async function renderTests(area) {
   // 2. ERROR CLASSIFICATION & 4-THEME COMPARISON AGGREGATION
   // ========================================================
   const themeQuestionsMap = { A: {}, B: {}, C: {}, D: {} };
-  const globalErrorDiagCounts = { spelling: 0, literal: 0, word_form: 0, timeout: 0 };
-  let totalGlobalErrors = 0;
+  const globalErrorDiagCounts = { spelling: 0, word_form: 0, vocab_gap: 0, literal: 0 };
+  let totalGlobalActiveErrors = 0;
+  let totalGlobalTimeouts = 0;
 
   (answersRes || []).forEach(ans => {
     const text = ans.question_snapshot?.question_text;
     if (!text) return;
 
     const att = attemptMap[ans.attempt_id];
-    const testObj = att ? TestMap[att.test_id] : null;
+    // ONLY count answers from attempts that have been formally submitted (submitted / auto_submitted)
+    if (!att) return;
+    const isSubmitted = (
+      att.status === 'submitted' ||
+      att.status === 'auto_submitted' ||
+      att.status === 'graded' ||
+      att.status === 'evaluated' ||
+      Boolean(att.submitted_at)
+    );
+    if (!isSubmitted) return; // Skip in-progress drafts or abandoned sessions
+
+    const testObj = TestMap[att.test_id];
     const testTitle = testObj ? (testObj.title || testObj.name || '') : '';
     const shellCode = testObj ? (testObj.shell_code || '') : '';
 
@@ -258,10 +252,12 @@ export async function renderTests(area) {
         domain,
         wordType,
         correct,
-        total: 0,
-        fail: 0,
+        totalPresented: 0,
+        answeredTotal: 0,
+        activeFail: 0,
+        timeoutCount: 0,
         wrongAnswersCount: {},
-        diagCounts: { spelling: 0, literal: 0, word_form: 0, timeout: 0 },
+        diagCounts: { spelling: 0, word_form: 0, vocab_gap: 0, literal: 0 },
         durations: []
       };
     } else {
@@ -276,7 +272,7 @@ export async function renderTests(area) {
       }
     }
 
-    qMap[text].total++;
+    qMap[text].totalPresented = (qMap[text].totalPresented || 0) + 1;
 
     if (att && att.started_at && att.submitted_at) {
       const durSec = (new Date(att.submitted_at) - new Date(att.started_at)) / 1000;
@@ -287,60 +283,75 @@ export async function renderTests(area) {
       }
     }
 
-    if (!ans.is_correct) {
-      qMap[text].fail++;
-      totalGlobalErrors++;
+    // Identify unanswered / timed out / empty submissions
+    let rawAns = (ans.student_answer != null && typeof ans.student_answer === 'string') ? ans.student_answer.trim() : '';
+    const isTimeout = !rawAns ||
+                      rawAns === '[Blank / Timed Out]' ||
+                      rawAns === '—' ||
+                      rawAns === '-' ||
+                      rawAns === '–' ||
+                      rawAns.toLowerCase() === 'null' ||
+                      rawAns.toLowerCase() === 'undefined' ||
+                      rawAns.toLowerCase() === 'none' ||
+                      rawAns.toLowerCase() === '[blank]' ||
+                      rawAns.toLowerCase() === '[timeout]' ||
+                      rawAns.toLowerCase() === 'timed out' ||
+                      rawAns.toLowerCase() === 'timeout';
 
-      const diagCat = classifyStudentError(ans.student_answer, correct, ans.evaluation_result, text);
-      qMap[text].diagCounts[diagCat] = (qMap[text].diagCounts[diagCat] || 0) + 1;
-      globalErrorDiagCounts[diagCat] = (globalErrorDiagCounts[diagCat] || 0) + 1;
+    if (isTimeout) {
+      qMap[text].timeoutCount = (qMap[text].timeoutCount || 0) + 1;
+      totalGlobalTimeouts++;
+    } else {
+      // Student actively attempted the question via Typing, Speaking, or Selecting
+      qMap[text].answeredTotal = (qMap[text].answeredTotal || 0) + 1;
 
-      let rawAns = (ans.student_answer != null && typeof ans.student_answer === 'string') ? ans.student_answer.trim() : '';
-      if (!rawAns || rawAns === '[Blank / Timed Out]' || rawAns === '—' || rawAns === '-' || rawAns.toLowerCase() === 'null') {
-        rawAns = '[Blank / Timed Out]';
+      if (!ans.is_correct) {
+        qMap[text].activeFail = (qMap[text].activeFail || 0) + 1;
+        totalGlobalActiveErrors++;
+
+        const diagCat = classifyStudentError(rawAns, correct, ans.evaluation_result, text);
+        const safeDiag = (diagCat === 'timeout') ? 'literal' : diagCat;
+        qMap[text].diagCounts[safeDiag] = (qMap[text].diagCounts[safeDiag] || 0) + 1;
+        globalErrorDiagCounts[safeDiag] = (globalErrorDiagCounts[safeDiag] || 0) + 1;
+
+        // Record real student wrong answer
+        qMap[text].wrongAnswersCount[rawAns] = (qMap[text].wrongAnswersCount[rawAns] || 0) + 1;
       }
-      qMap[text].wrongAnswersCount[rawAns] = (qMap[text].wrongAnswersCount[rawAns] || 0) + 1;
     }
   });
 
-  // Top 10 Most Missed Questions per Theme (Filter questions with actual student errors)
-  const themeTop10 = {};
+  // Top 20 Most Missed Questions per Theme (Filter questions with actual student errors from typing, speaking, or selecting)
+  const themeTop20 = {};
   ['A', 'B', 'C', 'D'].forEach(t => {
-    const allQs = Object.values(themeQuestionsMap[t]).filter(q => q.total >= 1 && q.fail >= 1);
+    // Exclude questions that only failed due to timeout — only keep questions where students actively answered wrong
+    const allQs = Object.values(themeQuestionsMap[t]).filter(q => (q.activeFail || 0) >= 1);
     const ranked = allQs.map(q => {
-      const failRate = Math.round((q.fail / q.total) * 100);
+      const failRate = Math.round((q.activeFail / Math.max(1, q.answeredTotal)) * 100);
       const avgTimeSec = q.durations.length > 0
         ? (Math.round((q.durations.reduce((a, b) => a + b, 0) / q.durations.length) * 10) / 10)
         : 15.2;
 
-      const sortedErrors = Object.entries(q.wrongAnswersCount).sort((a, b) => {
-        if (b[1] !== a[1]) return b[1] - a[1];
-        const aIsBlank = a[0] === '[Blank / Timed Out]';
-        const bIsBlank = b[0] === '[Blank / Timed Out]';
-        if (aIsBlank && !bIsBlank) return 1;
-        if (!aIsBlank && bIsBlank) return -1;
-        return 0;
-      });
+      // Sort actual student wrong answers by frequency descending
+      const sortedErrors = Object.entries(q.wrongAnswersCount).sort((a, b) => b[1] - a[1]);
 
       const topErrors = sortedErrors.slice(0, 3).map(([ansText, cnt]) => ({
         answer: ansText,
         count: cnt,
-        pct: q.fail > 0 ? Math.round((cnt / q.fail) * 100) : 0,
-        isBlank: ansText === '[Blank / Timed Out]'
+        pct: q.activeFail > 0 ? Math.round((cnt / q.activeFail) * 100) : 0,
+        isBlank: false
       }));
 
       const dc = q.diagCounts;
       let dominantError = 'literal';
-      let maxCnt = dc.literal;
-      if (dc.timeout > maxCnt) { dominantError = 'timeout'; maxCnt = dc.timeout; }
-      if (dc.spelling > maxCnt) { dominantError = 'spelling'; maxCnt = dc.spelling; }
-      if (dc.word_form > maxCnt) { dominantError = 'word_form'; maxCnt = dc.word_form; }
+      let maxCnt = dc.literal || 0;
+      if ((dc.spelling || 0) > maxCnt) { dominantError = 'spelling'; maxCnt = dc.spelling; }
+      if ((dc.word_form || 0) > maxCnt) { dominantError = 'word_form'; maxCnt = dc.word_form; }
 
       const diagLabels = {
         spelling: '[🔤 Spelling]',
         literal: '[🇮🇩 Literal Translation]',
         word_form: '[🔄 Word Form]',
-        timeout: '[⏳ Timeout]'
+        vocab_gap: '[💡 Vocab Gap]'
       };
 
       return {
@@ -349,8 +360,9 @@ export async function renderTests(area) {
         topic: q.topic,
         wordType: q.wordType,
         correct: q.correct,
-        total: q.total,
-        fail: q.fail,
+        total: q.answeredTotal,
+        totalPresented: q.totalPresented,
+        fail: q.activeFail,
         failRate,
         avgTimeSec,
         topErrors,
@@ -359,15 +371,15 @@ export async function renderTests(area) {
       };
     }).sort((a, b) => b.fail - a.fail || b.failRate - a.failRate || b.total - a.total);
 
-    themeTop10[t] = ranked.slice(0, 10);
+    themeTop20[t] = ranked.slice(0, 20);
   });
 
-  const totalErrors = Math.max(1, totalGlobalErrors);
+  const totalActiveErrors = Math.max(1, totalGlobalActiveErrors);
   const diagPcts = {
-    spelling: Math.round((globalErrorDiagCounts.spelling / totalErrors) * 100),
-    literal: Math.round((globalErrorDiagCounts.literal / totalErrors) * 100),
-    word_form: Math.round((globalErrorDiagCounts.word_form / totalErrors) * 100),
-    timeout: Math.round((globalErrorDiagCounts.timeout / totalErrors) * 100)
+    spelling: Math.round(((globalErrorDiagCounts.spelling || 0) / totalActiveErrors) * 100),
+    literal: Math.round(((globalErrorDiagCounts.literal || 0) / totalActiveErrors) * 100),
+    word_form: Math.round(((globalErrorDiagCounts.word_form || 0) / totalActiveErrors) * 100),
+    vocab_gap: Math.round(((globalErrorDiagCounts.vocab_gap || 0) / totalActiveErrors) * 100)
   };
 
   // ========================================================
@@ -536,7 +548,9 @@ export async function renderTests(area) {
     stuMap,
     testTitleMap,
     answersRes,
-    attemptMap
+    attemptMap,
+    themeTop20,
+    hardestQs20: Object.values(themeTop20).flat().sort((a, b) => (b.fail || 0) - (a.fail || 0) || (b.failRate || 0) - (a.failRate || 0)).slice(0, 20)
   };
 
   window._allTestCardsData = drawerRows;
@@ -559,7 +573,9 @@ export async function renderTests(area) {
   });
 
   if (!window._activeTestClassId) {
-    window._activeTestClassId = 'ab33498a-90e6-44b7-83f4-5765f964543e';
+    const savedTestClassId = localStorage.getItem('topscore_admin_tests_class_id');
+    const isValidClass = savedTestClassId && (savedTestClassId === 'all' || availableClasses.some(c => c.id === savedTestClassId));
+    window._activeTestClassId = isValidClass ? savedTestClassId : 'ab33498a-90e6-44b7-83f4-5765f964543e';
   }
   const currentClassObj = availableClasses.find(c => c.id === window._activeTestClassId) || { name: 'All Classes', count: liveData.length };
 
@@ -579,6 +595,10 @@ export async function renderTests(area) {
       }
     ];
   };
+
+  if (!window._activeTestClassId) {
+    window._activeTestClassId = localStorage.getItem('topscore_admin_tests_class_id') || 'all';
+  }
 
   if (window.setTopbarTabs) {
     window.setTopbarTabs(buildClassTopbarTabs(window._activeTestClassId), window._activeTestClassId, 'window._switchClassTestAnalytics');
@@ -1052,6 +1072,7 @@ export async function renderTests(area) {
       }
       .diag-pill-spelling { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); }
       .diag-pill-literal { background: rgba(251, 113, 133, 0.12); color: #fb7185; border: 1px solid rgba(251, 113, 133, 0.25); }
+      .diag-pill-vocab_gap { background: rgba(251, 146, 60, 0.12); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.25); }
       .diag-pill-word_form { background: rgba(167, 139, 250, 0.12); color: #c4b5fd; border: 1px solid rgba(167, 139, 250, 0.25); }
       .diag-pill-timeout { background: rgba(251, 191, 36, 0.12); color: #fde68a; border: 1px solid rgba(251, 191, 36, 0.25); }
 
@@ -1228,12 +1249,12 @@ export async function renderTests(area) {
         <div class="tac-diagnosis-group">
           <div class="tac-diag-title">⚠️ Student Error Diagnosis:</div>
           <div class="tac-diag-chips">
-            <div class="tac-diag-chip chip-spelling" title="Minor typos and near-matches">
+            <div class="tac-diag-chip chip-spelling" title="Minor typos and near-matches from typing or speaking">
               <span>🔤</span>
               <span>Spelling:</span>
               <strong>${globalErrorDiagCounts.spelling} (${diagPcts.spelling}%)</strong>
             </div>
-            <div class="tac-diag-chip chip-literal" title="Literal word-for-word Indonesian translation">
+            <div class="tac-diag-chip chip-literal" title="Literal Indonesian translation, semantic mistake, or incorrect selection">
               <span>🇮🇩</span>
               <span>Literal:</span>
               <strong>${globalErrorDiagCounts.literal} (${diagPcts.literal}%)</strong>
@@ -1241,12 +1262,17 @@ export async function renderTests(area) {
             <div class="tac-diag-chip chip-wordform" title="Root stem correct, wrong grammatical part of speech">
               <span>🔄</span>
               <span>Word Form:</span>
-              <strong>${globalErrorDiagCounts.word_form} (${diagPcts.word_form}%)</strong>
+              <strong>${globalErrorDiagCounts.word_form || 0} (${diagPcts.word_form || 0}%)</strong>
             </div>
-            <div class="tac-diag-chip chip-timeout" title="Unanswered or timer deadline expired">
+            <div class="tac-diag-chip chip-vocabgap" title="Unrelated English word, unknown phrase, or vocabulary deficit">
+              <span>💡</span>
+              <span>Vocab Gap:</span>
+              <strong>${globalErrorDiagCounts.vocab_gap || 0} (${diagPcts.vocab_gap || 0}%)</strong>
+            </div>
+            <div class="tac-diag-chip chip-timeout" title="Unanswered or timer deadline expired (Session pacing, not student answer)">
               <span>⏳</span>
               <span>Timed Out:</span>
-              <strong>${globalErrorDiagCounts.timeout} (${diagPcts.timeout}%)</strong>
+              <strong>${totalGlobalTimeouts} (Pacing)</strong>
             </div>
           </div>
         </div>
@@ -1258,11 +1284,11 @@ export async function renderTests(area) {
         </button>
       </div>
 
-      <!-- 4-COLUMN SIDE-BY-SIDE THEME COMPARISON BOARD -->
+      <!-- 4-COLUMN SIDE-BY-SIDE THEME COMPARISON BOARD (TOP 20 PER THEME) -->
       <div class="tac-theme-board" id="tac-theme-board">
         ${['A', 'B', 'C', 'D'].map(t => {
           const meta = themeMeta[t];
-          const questions = themeTop10[t] || [];
+          const questions = themeTop20[t] || [];
 
           return `
             <div class="tac-theme-col ${meta.colClass}">
@@ -1297,13 +1323,13 @@ export async function renderTests(area) {
                       <span class="tac-qcard-target-text">${escapeHtml(q.correct)}</span>
                     </div>
 
-                    <!-- Actual Student Error Answers -->
+                    <!-- Actual Student Error Answers (Excluding Timeouts) -->
                     ${q.topErrors.length > 0 ? `
                       <div class="tac-qcard-errors">
                         ${q.topErrors.map(e => `
                           <div class="tac-qcard-error-item">
-                            <span class="tac-qcard-error-text ${e.isBlank ? 'is-timeout' : ''}" title="${escapeHtml(e.answer)}">
-                              ${e.isBlank ? '⏳ Timed Out / Blank' : `❌ "${escapeHtml(e.answer)}"`}
+                            <span class="tac-qcard-error-text" title="${escapeHtml(e.answer)}">
+                              ❌ "${escapeHtml(e.answer)}"
                             </span>
                             <span class="tac-qcard-error-stat">(${e.count}x &bull; ${e.pct}%)</span>
                           </div>
@@ -1427,6 +1453,12 @@ export async function renderTests(area) {
 
   window._switchClassTestAnalytics = (classId) => {
     window._activeTestClassId = classId;
+    try {
+      localStorage.setItem('topscore_admin_tests_class_id', classId);
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', `#tests?class_id=${encodeURIComponent(classId)}`);
+      }
+    } catch (_) {}
     if (window.setTopbarTabs) {
       window.setTopbarTabs(buildClassTopbarTabs(classId), classId, 'window._switchClassTestAnalytics');
     }
@@ -1469,7 +1501,7 @@ window._publishTest = async (testId, currentStatus) => {
   try {
     await adminUpdate('tests', testId, { status: newStatus });
     showToast(`Test ${newStatus}.`, 'success');
-    window.loadSection('tests');
+    window.loadSection(window._activeSectionAlias || window._currentSection || 'tests');
   } catch (e) { showToast(e.message, 'error'); }
 };
 
@@ -1536,7 +1568,7 @@ window._duplicateTest = async (testId) => {
     clearAdminCache('Test_programs');
 
     showToast('Test duplicated successfully!', 'success');
-    window.loadSection('Tests');
+    window.loadSection(window._activeSectionAlias || window._currentSection || 'tests');
   } catch (e) {
     console.error(e);
     showToast('Error duplicating Test: ' + e.message, 'error');
@@ -2497,17 +2529,37 @@ window._openTestCardDrawer = function(testId) {
 
   const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-  // Compute Top 3 Hardest Questions SPECIFIC to this test
+  // Compute Top 3 Hardest Questions SPECIFIC to this test (Submitted Attempts Only, Excluding Timeouts)
   const st = window._testAnalyticsState;
   const answers = (st?.answersRes || []).filter(ans => {
     const att = st?.attemptMap?.[ans.attempt_id];
-    return (att && att.test_id === r.id) || ans.question_snapshot?.test_id === r.id;
+    if (!att) return false;
+    const isSubmitted = (
+      att.status === 'submitted' ||
+      att.status === 'auto_submitted' ||
+      att.status === 'graded' ||
+      att.status === 'evaluated' ||
+      Boolean(att.submitted_at)
+    );
+    if (!isSubmitted) return false;
+    return (att.test_id === r.id) || ans.question_snapshot?.test_id === r.id;
   });
 
   const qMap = {};
   answers.forEach(ans => {
     const text = ans.question_snapshot?.question_text;
     if (!text) return;
+
+    let rawAns = (ans.student_answer != null && typeof ans.student_answer === 'string') ? ans.student_answer.trim() : '';
+    const isTimeout = !rawAns ||
+                      rawAns === '[Blank / Timed Out]' ||
+                      rawAns === '—' ||
+                      rawAns === '-' ||
+                      rawAns.toLowerCase() === 'null' ||
+                      rawAns.toLowerCase() === '[blank]' ||
+                      rawAns.toLowerCase() === '[timeout]';
+    if (isTimeout) return; // Exclude timeouts from hardest active student errors
+
     if (!qMap[text]) {
       qMap[text] = {
         text,

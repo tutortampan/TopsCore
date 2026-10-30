@@ -1,24 +1,18 @@
 {
   "recommendations": [
-    // ─── CORE CODE QUALITY & ENGINE ─────────────────────────────────
-    "denoland.vscode-deno",               // Supabase Edge Functions (Deno 2 TypeScript)
-    "esbenp.prettier-vscode",             // Auto-formatter on save
-    "dbaeumer.vscode-eslint",             // JavaScript linter & bug prevention
-    "usernamehw.errorlens",               // Inline error & warning visualizer
+    // ─── LANGUAGE SERVERS & RUNTIME (SUPABASE & JS) ─────────────────
+    "denoland.vscode-deno",         // Supabase Edge Functions (Deno 2 TypeScript runtime & types)
+    "dbaeumer.vscode-eslint",       // JavaScript code quality & error prevention
 
-    // ─── BACKEND, DATABASE & API TESTING ────────────────────────────
-    "ckolkman.vscode-postgres",           // Direct PostgreSQL runner for Supabase Cloud
-    "rangav.vscode-thunder-client",       // In-IDE REST API tester for Edge Functions
+    // ─── FORMATTING & DIAGNOSTICS ───────────────────────────────────
+    "esbenp.prettier-vscode",       // Clean code formatting to keep AI git diffs minimal
+    "usernamehw.errorlens",         // Immediate inline error alerts directly in editor
 
-    // ─── FRONTEND & DEV SERVER ──────────────────────────────────────
-    "yandeu.five-server",                 // Live server with auto-reload for TopsCore static HTML
-    "christian-kohler.path-intellisense", // Relative path autocomplete for modules & assets
-
-    // ─── TESTING & GIT INTELLIGENCE ─────────────────────────────────
-    "ms-playwright.playwright",           // E2E test explorer & trace inspector
-    "eamodio.gitlens",                    // Phase-by-phase commit tracking & blame
+    // ─── TESTING & VISUAL PREVIEW ───────────────────────────────────
+    "yandeu.five-server",           // 1-Click live preview web server for testing TopsCore UI
+    "bierner.markdown-mermaid",     // Mermaid architecture diagram renderer in markdown docs
 
     // ─── IDE STABILITY ──────────────────────────────────────────────
-    "kanezal.better-antigravity"          // Antigravity IDE stability
+    "kanezal.better-antigravity"    // Antigravity IDE optimizations
   ]
 }

@@ -49,7 +49,13 @@ export async function openAutoGenerateModal(options = {}) {
     const matchedClass = allClasses.find(c => String(c.id) === String(currentClassId));
     const className = matchedClass ? matchedClass.name : 'Vocabulary Class';
 
-    let prefillTaskDur = 5;
+    // Default quiz durations based on empirical pacing data (Phase 219):
+    // Words Quiz (40 Qs, spoken): students need ~27s/q → 15 minutes
+    // Phrases Quiz (10 Qs, spoken): students need ~37s/q → 10 minutes
+    // Prefill is overridden below if existing class tests have a recorded duration.
+    let prefillTaskDur = 15;
+    let prefillWordsTaskDur = 15;
+    let prefillPhrasesTaskDur = 10;
     let prefillWordsTaskAns = 'spoken';
     let prefillPhrasesTaskAns = 'spoken';
     let prefillTaskMin = 60;
@@ -89,7 +95,11 @@ export async function openAutoGenerateModal(options = {}) {
                 else prefillWordsTestAns = ans;
               }
             } else {
-              if (dur) prefillTaskDur = dur;
+              if (dur) {
+                if (isPhrase) prefillPhrasesTaskDur = dur;
+                else prefillWordsTaskDur = dur;
+                prefillTaskDur = dur;
+              }
               if (minSc) prefillTaskMin = minSc;
               if (ans) {
                 if (isPhrase) prefillPhrasesTaskAns = ans;
@@ -175,15 +185,25 @@ export async function openAutoGenerateModal(options = {}) {
               <span class="badge" style="background:rgba(250,204,21,0.15); color:#facc15; font-size:0.68rem; font-weight:700;">Mandiri</span>
             </div>
 
-            <!-- Row 1: Durasi Pengerjaan & Nilai Minimal -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <!-- Row 1: Durasi Pengerjaan Terpisah (Words vs Phrases) & Nilai Minimal -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
               <div>
-                <label for="wizard-quiz-dur" class="form-label" style="font-size:0.7rem; color:#94a3b8; margin-bottom:2px; display:block;">⏱️ Waktu (Mnt)</label>
-                <input type="number" id="wizard-quiz-dur" min="1" max="180" value="${escapeHtml(String(prefillTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan quiz (default 5 menit)" />
+                <label for="wizard-quiz-words-dur" class="form-label" style="font-size:0.7rem; color:#facc15; font-weight:700; margin-bottom:2px; display:block;">⏱️ Words Quiz (Mnt)</label>
+                <input type="number" id="wizard-quiz-words-dur" min="1" max="180" value="${escapeHtml(String(prefillWordsTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan Words Quiz (40 Soal, default 15 menit)" />
                 <div style="display:flex; gap:3px; margin-top:4px;">
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-dur" data-val="5" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">5m</button>
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-dur" data-val="10" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">10m</button>
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-dur" data-val="15" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">15m</button>
+                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-words-dur" data-val="10" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">10m</button>
+                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-words-dur" data-val="15" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">15m</button>
+                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-words-dur" data-val="20" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">20m</button>
+                </div>
+              </div>
+
+              <div>
+                <label for="wizard-quiz-phrases-dur" class="form-label" style="font-size:0.7rem; color:#facc15; font-weight:700; margin-bottom:2px; display:block;">⏱️ Phrases Quiz (Mnt)</label>
+                <input type="number" id="wizard-quiz-phrases-dur" min="1" max="180" value="${escapeHtml(String(prefillPhrasesTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan Phrases Quiz (10 Soal, default 10 menit)" />
+                <div style="display:flex; gap:3px; margin-top:4px;">
+                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-phrases-dur" data-val="5" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">5m</button>
+                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-phrases-dur" data-val="10" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">10m</button>
+                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-phrases-dur" data-val="15" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">15m</button>
                 </div>
               </div>
 
@@ -312,11 +332,15 @@ export async function openAutoGenerateModal(options = {}) {
       const progId = overlay.querySelector('#wizard-prog-id').value;
       const category = overlay.querySelector('#wizard-scope-select').value;
       const durEl = overlay.querySelector('#wizard-quiz-dur') || overlay.querySelector('#wizard-task-dur');
+      const wordsDurEl = overlay.querySelector('#wizard-quiz-words-dur');
+      const phrasesDurEl = overlay.querySelector('#wizard-quiz-phrases-dur');
       const minEl = overlay.querySelector('#wizard-quiz-min') || overlay.querySelector('#wizard-task-min');
       const wordsAnsEl = overlay.querySelector('#wizard-quiz-ans-words') || overlay.querySelector('#wizard-task-ans-words');
       const phrasesAnsEl = overlay.querySelector('#wizard-quiz-ans-phrases') || overlay.querySelector('#wizard-task-ans-phrases');
 
-      const quizDuration = parseInt(durEl?.value, 10) || 5;
+      const wordsQuizDuration = parseInt(wordsDurEl?.value, 10) || parseInt(durEl?.value, 10) || 15;
+      const phrasesQuizDuration = parseInt(phrasesDurEl?.value, 10) || 10;
+      const quizDuration = wordsQuizDuration;
       const wordsQuizAnswer = wordsAnsEl ? wordsAnsEl.value : 'spoken';
       const phrasesQuizAnswer = phrasesAnsEl ? phrasesAnsEl.value : 'spoken';
       const quizPassing = parseInt(minEl?.value, 10) || 60;
@@ -330,6 +354,8 @@ export async function openAutoGenerateModal(options = {}) {
         category,
         quizDuration,
         taskDuration: quizDuration,
+        wordsTaskDuration: wordsQuizDuration,
+        phrasesTaskDuration: phrasesQuizDuration,
         wordsQuizAnswer,
         wordsTaskAnswer: wordsQuizAnswer,
         phrasesQuizAnswer,
@@ -359,6 +385,8 @@ export async function openAutoGenerateModal(options = {}) {
         const res = await updateClassTestsConfig({
           classId: cfg.targetClassId,
           taskDurationMinutes: cfg.taskDuration,
+          wordsTaskDurationMinutes: cfg.wordsTaskDuration,
+          phrasesTaskDurationMinutes: cfg.phrasesTaskDuration,
           wordsTaskAnswerType: cfg.wordsTaskAnswer,
           phrasesTaskAnswerType: cfg.phrasesTaskAnswer,
           taskPassingScore: cfg.taskPassing,
@@ -368,7 +396,7 @@ export async function openAutoGenerateModal(options = {}) {
         });
 
         overlay.remove();
-        const msg = `Pengaturan berhasil diterapkan: ${res.updatedTasks} Quiz (durasi ${cfg.taskDuration}m, Words: ${cfg.wordsTaskAnswer}, Phrases: ${cfg.phrasesTaskAnswer}), ${res.updatedTests} Exam diperbarui!`;
+        const msg = `Pengaturan berhasil diterapkan: ${res.updatedTasks} Quiz (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m), ${res.updatedTests} Exam diperbarui!`;
         if (window.showToast) window.showToast(msg, 'success');
         else alert(msg);
 
@@ -396,7 +424,7 @@ export async function openAutoGenerateModal(options = {}) {
           <div class="spinner" style="margin:0 auto 1.25rem; width:36px; height:36px; border:3px solid rgba(255,255,255,0.2); border-radius:50%; border-top-color:#38bdf8; animation:spin 1s ease-in-out infinite;"></div>
           <h3 style="margin:0 0 6px 0; font-size:1.1rem; font-weight:700;">Men-generate Test Kurikulum</h3>
           <p style="color:#94a3b8; font-size:0.8rem; margin:0; line-height:1.4;">
-            Sedang membangun hierarki Quiz (durasi ${cfg.taskDuration}m, Words: ${cfg.wordsTaskAnswer}, Phrases: ${cfg.phrasesTaskAnswer}) &amp; Exam untuk Level ${cfg.selectedLevels.join(', ')} pada kelas ${escapeHtml(className)}...
+            Sedang membangun hierarki Quiz (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m) &amp; Exam untuk Level ${cfg.selectedLevels.join(', ')} pada kelas ${escapeHtml(className)}...
           </p>
         </div>
       `;
@@ -407,6 +435,8 @@ export async function openAutoGenerateModal(options = {}) {
           explicitClassId: cfg.targetClassId,
           category: cfg.category,
           taskDurationMinutes: cfg.taskDuration,
+          wordsTaskDurationMinutes: cfg.wordsTaskDuration,
+          phrasesTaskDurationMinutes: cfg.phrasesTaskDuration,
           wordsTaskAnswerType: cfg.wordsTaskAnswer,
           phrasesTaskAnswerType: cfg.phrasesTaskAnswer,
           taskPassingScore: cfg.taskPassing,

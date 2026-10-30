@@ -5,8 +5,8 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeTheme, labelAttemptRemedial } from './api.js?v=20261030_v32';
-import { isExam } from './grading.js?v=20261030_v36';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial } from './api.js?v=20261031_v53';
+import { isExam, getGradeColorByScore } from './grading.js?v=20261031_v58';
 import { getStudentSession, getAdminSession } from './session.js?v=5.5.8';
 import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=5.8.5';
 import { getSupabase } from './supabase.js?v=5.5.8';
@@ -36,7 +36,7 @@ if (!session) {
       if (res === 'correct' || (!res && (a.is_correct === true || score >= 1))) {
         return 'correct';
       }
-      if (res === 'minor_spelling_error' || res === 'partial' || (!res && score > 0 && score < 1)) {
+      if (res === 'minor_spelling_error' || res === 'minor_word_form_error' || res === 'partial' || (!res && score > 0 && score < 1)) {
         return 'minor_spelling_error';
       }
       return 'incorrect';
@@ -394,7 +394,23 @@ if (!session) {
           return score >= req;
         };
 
-        const nextAsm = published.find(a => !isPassed(a));
+        let nextAsm = published.find(a => !isPassed(a));
+
+        // Theme Exam Pair Transition: If nextAsm is Words Exam but student already has an attempt on it,
+        // and sibling Phrases Exam has NO attempt yet, prioritize Phrases Exam so the student
+        // completes both parts of the theme exam package!
+        if (nextAsm && isExam(nextAsm) && bestMap[nextAsm.id] != null) {
+          const tc = nextAsm.payload?.theme_code;
+          const siblingPhrase = published.find(a =>
+            a.id !== nextAsm.id && isExam(a) &&
+            (tc ? a.payload?.theme_code === tc : (a.title || '').substring(0, 3).toLowerCase() === (nextAsm.title || '').substring(0, 3).toLowerCase()) &&
+            (a.category === 'phrases' || a.test_subtype === 'PHRASE_EXAM' || (a.title || '').toLowerCase().includes('phrase') || (a.shell_code || '').toUpperCase().includes('PHRASE')) &&
+            bestMap[a.id] == null
+          );
+          if (siblingPhrase) {
+            nextAsm = siblingPhrase;
+          }
+        }
         if (!nextAsm) {
           container.innerHTML = `
             <div style="background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.22); border-radius:10px; padding:6px 12px; text-align:center; margin-bottom:4px;">
@@ -878,7 +894,7 @@ if (!session) {
           if (isRemedial) {
             resPointsEl.title = `Remedial capped at max 60% (${formattedPoints}/${attemptTotalQ} pts). Raw: ${rawTotalPoints} pts.`;
           }
-          const ptsColor = getGradeColorByScore(attemptPct);
+          const ptsColor = getGradeColorByScore(pct);
           resPointsEl.style.color = ptsColor;
           resPointsEl.style.fontWeight = '800';
         }

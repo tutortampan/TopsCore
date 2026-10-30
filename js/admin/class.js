@@ -1857,6 +1857,7 @@ export async function renderProgressView(area) {
 
     (allStudents || []).filter(s => {
       if (s.deleted_at) return false;
+      if (s.is_active === false) return false;
       const bObj = (allBatches || []).find(b => b.id === s.batch_id);
       if (bObj && bObj.deleted_at) return false;
       const pObj = (allPrograms || []).find(p => p.id === s.program_id);

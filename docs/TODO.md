@@ -1,3 +1,73 @@
+# ACTIVE DIRECTIVE: PHASE 210 — FULL ROUTE & SUB-TAB STATE PERSISTENCE ALIGNMENT (RULE 2.20) [COMPLETE]
+
+- [x] Task 1: Synchronized `history.replaceState` into `_switchClassHubTab` (`#class-hub?tab=...`), `_switchSettingTab` (`#settings?tab=...`), `_switchVaultTab` (`#vocab_vault?tab=...`), `_switchStudentRegTab` (`#student-registration?tab=...`), and `_switchClassTestAnalytics` (`#tests?class_id=...`).
+- [x] Task 2: Verified bidirectional sync between URL address bar, `localStorage`, and view rendering.
+- [x] Task 3: Eliminated disorienting redirects on browser refresh (F5) or background data sync.
+- [x] Task 4: Bumped cache busters across `admin.html` to `?v=20261031_v50`.
+- [x] Task 5: Verified 40/40 JS syntax checks PASS, 100% dashboard parity, 0 git commit / 0 git push.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 209 — CLASS HUB DATAGRID CLEAN TYPOGRAPHY GRADE ALIGNMENT [COMPLETE]
+
+- [x] Task 1: Replaced dense filled circular badges (`grade-circle`) in Class Attendance DataGrid with sleek, bold colored typography (`.grid-grade-val`).
+- [x] Task 2: Harmonized `GRD`, `PROG`, and `PTS` into a unified typography hierarchy without button-like circle distractions in data rows.
+- [x] Task 3: Rendered Star tier (★) with pure green color (`--grade-star`) and subtle glow (`--grade-star-glow`) at `0.92rem`.
+- [x] Task 4: Rendered Letters A-E crisp at `0.86rem` with `font-weight: 800`.
+- [x] Task 5: Updated summary footer row (`avgGradeBadge`) to match clean typography standard.
+- [x] Task 6: Added `.grid-grade-val` and `.grid-grade-val.grid-grade-star` rules in `css/admin.css`.
+- [x] Task 7: Verified 40/40 JS syntax checks PASS, 100% parity PASS.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 208 — TEST ANALYTICS DRILL-DOWN STATE ALIGNMENT & CACHE REFRESH [COMPLETE]
+
+- [x] Task 1: Attached `hardestQs20` and `themeTop20` directly onto `window._testAnalyticsState` for drill-down modal parity (`cardKey === 'wall'`).
+- [x] Task 2: Updated `_openTestDetailDrawer` to filter submitted attempts only and exclude timeout blanks from per-test hardest question calculations.
+- [x] Task 3: Bumped cache busters across `admin.html` and `js/admin/app.js` to `?v=20261031_v48`.
+- [x] Task 4: Verified 40/40 JS files syntax passing cleanly, 0 git commit / 0 git push.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 207 — TEST ANALYTICS SUBMITTED-ATTEMPT ISOLATION [COMPLETE]
+
+- [x] Task 1: Isolated Test Analytics question and error calculations to officially submitted student attempts (`att.status === 'submitted' || att.status === 'auto_submitted' || att.submitted_at`).
+- [x] Task 2: Filtered out unsubmitted drafts and abandoned in-progress sessions.
+- [x] Task 3: Automated verification: 40/40 JS syntax checks PASS, 100% classifier tests PASS.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 206 — SCREEN, SUB-TAB & ROUTE STATE PERSISTENCE ON RELOAD / DYNAMIC UPDATE [COMPLETE]
+
+- [x] Task 1: Decoupled URL Hash Route & Query Parsing (`parseHashRoute` in `js/admin/app.js`)
+  - Extracted base sections, sub-tabs (`/` or `:`), and URL search parameters (`?`).
+  - Expanded `aliasSectionMap` and `sectionTitles` for 100% route recognition (`vocabulary`, `system-settings`, `test-analytics`, `test-sessions`, `batches`, `programs`).
+  - Synchronized background route restoration when opening `#profile-<studentId>`.
+
+- [x] Task 2: Sub-Tab & Active Filter State Synchronization across Admin Views
+  - Class Hub: Persisted active sub-tab (`topscore_admin_class_hub_tab`) and selected class ID (`topscore_selected_class_id`).
+  - Test Analytics: Persisted selected class track filter (`topscore_admin_tests_class_id`).
+  - Vocabulary Vault: Persisted active tab (`topscore_admin_vault_tab`).
+  - System Settings: Persisted active tab (`topscore_admin_settings_tab`).
+  - Student Registration: Persisted active tab (`topscore_admin_student_reg_tab`).
+
+- [x] Task 3: Modal Hash Routing & Background Continuity across Admin and Student Dashboard
+  - Admin (`js/admin/student-management.js`): Integrated `#profile-<studentId>` and `#dossier-<studentId>` with URL hash and restored background section on close. Preserved active section in remedial and bulk updates.
+  - Student Dashboard (`js/dashboard.js`): Persisted active class selection (`topscore_student_last_class_id`) upon reload and background sync. Synchronized URL hash for `#profile`, `#profile-history`, `#levels-<classId>`, and `#select-class` with `restoreDashboardHashRoute()`.
+  - Codified Section 2.20 in `AGENTS.md` per user `/learn` mandate.
+
+- [x] Task 4: Workspace Settings Optimization & Git Discipline (`.vscode/settings.json`)
+  - Configured smooth scrolling, smooth cursor, bracket guides, function calls completion, side-by-side diff view.
+  - Set `git.autofetch: false` and `git.confirmSync: true` adhering to standing 0 git commit directive.
+
+- [x] Task 5: Testing, Parity Verification & Cache Busting
+  - 40/40 JS syntax checks PASS (`node scripts/check_all_js_syntax.cjs`).
+  - 100% Student Dashboard Parity tests PASS (`scripts/test_student_dashboard_exam_parity.mjs`).
+  - Bumped cache busters to `?v=20261031_v47` across entrypoints.
+  - Logged architectural decision `DECISION-033`.
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 184 — 10-ROUND FULL-SYSTEM E2E AUDIT & RELIABILITY GATE [COMPLETE]
 
 - [x] Task 1: 10-Round Verification Battery (`scratch/run_full_system_10_iterations_audit.mjs`)

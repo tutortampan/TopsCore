@@ -35,7 +35,7 @@
   --fm-font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Dimensions */
-  --fm-sidebar-w: 250px;
+  --fm-sidebar-w: 200px;
   --fm-topbar-h: 50px;
   --fm-bottom-tab-h: 50px;
   --fm-radius-sm: 4px;
@@ -3685,13 +3685,13 @@ body.sidebar-collapsed .admin-main {
   z-index: 25 !important;
 }
 
-/* Individual Sticky Column Left Offsets & Widths (7 Columns: INST, PROG, BATCH, NAME, PROG, GRD, PTS) */
+/* Individual Sticky Column Left Offsets & Widths (7 Columns: INST, PROGRAM, BATCH, STUDENT NAME, GRD, PROG, PTS) */
 #class-attendance-grid .col-sticky-1 { left: 0px !important; width: 48px !important; min-width: 48px !important; max-width: 48px !important; }
 #class-attendance-grid .col-sticky-2 { left: 48px !important; width: 54px !important; min-width: 54px !important; max-width: 54px !important; }
 #class-attendance-grid .col-sticky-3 { left: 102px !important; width: 48px !important; min-width: 48px !important; max-width: 48px !important; }
 #class-attendance-grid .col-sticky-4 { left: 150px !important; width: 140px !important; min-width: 140px !important; max-width: 140px !important; }
-#class-attendance-grid .col-sticky-5 { left: 290px !important; width: 46px !important; min-width: 46px !important; max-width: 46px !important; }
-#class-attendance-grid .col-sticky-6 { left: 336px !important; width: 38px !important; min-width: 38px !important; max-width: 38px !important; }
+#class-attendance-grid .col-sticky-5 { left: 290px !important; width: 38px !important; min-width: 38px !important; max-width: 38px !important; }
+#class-attendance-grid .col-sticky-6 { left: 328px !important; width: 46px !important; min-width: 46px !important; max-width: 46px !important; }
 #class-attendance-grid .col-sticky-7 { left: 374px !important; width: 46px !important; min-width: 46px !important; max-width: 46px !important; }
 
 /* Sticky Border & Shadow Separator on Last Sticky Column (PTS) */
@@ -3719,27 +3719,31 @@ body.sidebar-collapsed .admin-main {
 
 /* Base number & score */
 #class-attendance-grid th.col-test .test-num {
-  font-size: var(--matrix-badge-font, 0.7rem);
-  font-weight: 800;
-  font-family: monospace;
+  font-size: var(--matrix-badge-font, 0.68rem) !important;
+  font-weight: 700 !important;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   display: inline-block;
   cursor: help;
   line-height: 1.1;
 }
 
-#class-attendance-grid td.col-test .test-score {
-  font-size: var(--matrix-font-size, 0.76rem);
-  font-weight: 700;
-  font-family: monospace;
+#class-attendance-grid td.col-test .test-score,
+#class-attendance-grid td.col-test .asm-score {
+  font-size: var(--matrix-font-size, 0.75rem) !important;
+  font-weight: 600 !important;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: "tnum" 1 !important;
   display: inline-block;
   cursor: help;
   line-height: 1.1;
 }
 
-#class-attendance-grid .test-dot {
+#class-attendance-grid .test-dot,
+#class-attendance-grid .asm-dot {
   color: rgba(255, 255, 255, 0.22);
-  font-weight: 800;
-  font-size: var(--matrix-font-size, 0.76rem);
+  font-weight: 700 !important;
+  font-size: var(--matrix-font-size, 0.75rem) !important;
   line-height: 1;
   display: inline-block;
 }
@@ -3875,22 +3879,39 @@ body.sidebar-collapsed .admin-main {
   filter: brightness(1.2);
 }
 
-/* Header Cell Badges (Pure White Text) */
-#class-attendance-grid .test-hdr-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  line-height: 1.05;
+/* Header Cell Badges (Pure White Text & Anti-Crowding) */
+#class-attendance-grid .test-hdr-cell,
+#class-attendance-grid .asm-hdr-cell {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1.0 !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  padding: 0 1px !important;
+}
+
+#class-attendance-grid .test-num-total {
+  font-size: 0.58rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.1 !important;
 }
 
 #class-attendance-grid .test-subtag {
-  font-size: 0.50rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  margin-top: 1px;
-  line-height: 1;
+  font-size: 0.44rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+  margin-top: 1px !important;
+  line-height: 1 !important;
   color: #ffffff !important;
+  white-space: nowrap !important;
+}
+
+#class-attendance-grid .asm-score {
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 #class-attendance-grid .test-subtag-wrd { color: #ffffff !important; }
@@ -3920,12 +3941,13 @@ body.sidebar-collapsed .admin-main {
 }
 
 .test-rem-sup {
-  font-size: 0.7em !important;
-  opacity: 0.85 !important;
+  font-size: 0.60em !important;
+  opacity: 0.9 !important;
   color: inherit !important;
-  font-weight: 800 !important;
-  margin-left: 1.5px !important;
+  font-weight: 900 !important;
+  margin-left: 0.5px !important;
   vertical-align: super !important;
+  line-height: 0 !important;
 }
 
 .badge-remedial-tag {
@@ -3968,38 +3990,53 @@ body.sidebar-collapsed .admin-main {
 #class-attendance-grid,
 #class-attendance-grid table,
 #class-attendance-grid th,
-#class-attendance-grid td {
+#class-attendance-grid td,
+#class-attendance-grid span,
+#class-attendance-grid div {
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
-#class-attendance-grid td.col-sticky-4,
-#class-attendance-grid td.col-sticky-5,
-#class-attendance-grid td.col-sticky-6,
-#class-attendance-grid td.col-sticky-7,
-#class-attendance-grid td.col-sticky-8,
-#class-attendance-grid td.col-exam-score,
-#class-attendance-grid td.col-exam-pts,
-#class-attendance-grid td.col-test-theme-score,
-#class-attendance-grid td.col-test-theme-total,
+#class-attendance-grid tbody td,
+#class-attendance-grid tfoot td,
 #class-attendance-grid tr.datagrid-summary-row td {
-  font-size: 0.76rem !important;
+  font-size: var(--matrix-font-size, 0.75rem);
 }
 
 #class-attendance-grid td.col-sticky-5,
 #class-attendance-grid td.col-sticky-6,
-#class-attendance-grid td.col-sticky-8,
+#class-attendance-grid td.col-sticky-7,
 #class-attendance-grid td.col-exam-score,
 #class-attendance-grid td.col-exam-pts,
 #class-attendance-grid td.col-test-theme-score,
 #class-attendance-grid td.col-test-theme-total,
+#class-attendance-grid td.col-quiz,
 #class-attendance-grid tr.datagrid-summary-row td {
   font-variant-numeric: tabular-nums !important;
   font-feature-settings: "tnum" 1 !important;
 }
 
 /* ============================================================
-   GRADE CIRCLE BADGES (Uniform Round Pills for ★, A, B, C, D, E)
+   GRADE CIRCLE BADGES & CLEAN DATA-GRID GRADE TYPOGRAPHY
    ============================================================ */
+.grid-grade-val {
+  display: inline-block !important;
+  text-align: center !important;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-weight: 700 !important;
+  font-size: calc(var(--matrix-font-size, 0.75rem) * 1.05) !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+  font-variant-numeric: tabular-nums !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+.grid-grade-val.grid-grade-star {
+  font-size: calc(var(--matrix-font-size, 0.75rem) * 1.15) !important;
+  font-weight: 700 !important;
+  letter-spacing: normal !important;
+}
+
 .grade-circle {
   display: inline-flex !important;
   align-items: center !important;
@@ -5248,3 +5285,10 @@ body.sidebar-collapsed .admin-main {
 
 
 
+
+/* 5-Factor Error Diagnostics: Vocab Gap Chip */
+.tac-diag-chip.chip-vocabgap {
+  background: rgba(168, 85, 247, 0.12) !important;
+  border-color: rgba(168, 85, 247, 0.3) !important;
+  color: #c084fc !important;
+}
