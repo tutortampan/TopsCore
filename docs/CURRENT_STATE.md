@@ -1,14 +1,320 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-29 19:18 UTC+8
+Last Updated: 2026-10-30 20:12 UTC+8
 
-Current Phase: Phase 190: Test Sessions Unified Access Resolution — completedTaskCount ReferenceError Fix [COMPLETE]
+Current Phase: Phase 203: Progress-First Ranking, Left Panel PTS Column, Dynamic Progress Color & Unbroken Theme Dividers [COMPLETE]
 
-Current Task: Fix "ReferenceError: completedTaskCount is not defined" in evaluateStudentsEligibility inside tests-access.js when opening Test Sessions modal [COMPLETE]
+Current Task: Implement Progress-First leaderboard ranking order (PROG % -> latest exam package points Words+Phrases -> score % -> timestamp), add latest exam points (PTS) beside GRD in left sticky panel, dynamically color progress % text from exam score, enforce unbroken 3px theme dividers from header through tbody and tfoot, bump cache busters to v44, and preserve standing NO GIT COMMIT directive [COMPLETE]
 
-Status: COMPLETE (npm test 100% PASS, 40/40 JS syntax checks valid, 27/27 SW manifest assets verified, cache bumped to v31)
+Status: COMPLETE (All JS syntax checks PASS, 100% dashboard parity verified, 24/24 students verified in Batch 133, 0 git commit)
 
 ## Completed
+
+- **Phase 203: Progress-First Ranking, Left Panel PTS Column & Unbroken Theme Dividers**:
+  - **Progress-First Leaderboard Ranking Hierarchy**:
+    * Implemented user specification for Vocabulary class:
+      1. Primary: **PROG % DESC** (curriculum completion rate).
+      2. Secondary: **Latest Exam Package Points DESC** (`totalEarnedScore` / `latestAttemptedTheme.earned` combining Words + Phrases).
+      3. Tertiary: **Global SCORE % DESC** (`averageScorePct`).
+      4. Quaternary: **Earliest submission timestamp ASC** (`lastSubmittedAt`).
+      5. Quinary: Clean student name alphabetical.
+    * Applied consistently across:
+      - `js/admin/app.js` (`studentsGridData.sort`, `sortComparator`, `initialSortKey: 'progressPct'`, `initialSortAsc: false`).
+      - `js/dashboard.js` (`loadBatchLeaderboard` studentStats sorting).
+      - `scripts/test_student_dashboard_exam_parity.mjs` and `scripts/test_batch_133_student_lobby_standings.mjs`.
+  - **Restored Exam Points (`PTS`) Beside `GRD` in Left Sticky Panel**:
+    * Added `totalEarnedScore` as column 7 (`PTS`, `col-sticky-7 col-sticky-last`, width 46px).
+    * Sticky panel now contains 7 columns:
+      `INST (48px) | PROGRAM (54px) | BATCH (48px) | STUDENT NAME (140px) | PROG (46px) | GRD (38px) | PTS (46px)`.
+    * Total sticky width: 420px (maintaining +60px space saving for test grid).
+    * `dynamicSuperHeaders[0].colSpan = 7`.
+    * Rendered with score-based dynamic color (`getGradeColorByScore`) and clean `pts` suffix.
+  - **Progress % Text Color Inherited from Score**:
+    * Updated `PROG` column in `js/admin/app.js`: if exams are attempted, progress text color dynamically inherits `getGradeColorByScore(row.averageScorePct)`.
+    * In `summaryRow` footer: `avgProg` text dynamically inherits `getGradeColorByScore(avgScore)`.
+  - **Unbroken 3px Vertical Theme Separator Borders**:
+    * Resolved CSS cascade conflict where `td.col-exam-pts` previously applied `border-right: none !important` over `td.col-test-theme-total`.
+    * Scoped to `td.col-exam-pts:not(.col-test-theme-total)` and applied firm 3px solid borders in signature theme colors (`#38bdf8`, `#c084fc`, `#fbbf24`, `#34d399`) across super-headers, headers, tbody cells, and tfoot summary row cells with distinct box-shadows.
+  - **Cache Busting**:
+    * Bumped cache busters to `?v=20261030_v44` across HTML, JS, and CSS files.
+  - **Verification**:
+    * 40/40 JS syntax checks PASS (`node scripts/check_all_js_syntax.cjs`).
+    * Parity and standings tests PASS 100% (`scripts/test_student_dashboard_exam_parity.mjs`).
+    * Absolute standing ban: 0 git commit, 0 git push.
+
+- **Phase 202: Class Hub Matrix Streamlining & Rule 2.7 Restoration**:
+  - **Retained GRD (Grade) in Left Sticky Panel (DECISION-032)**:
+    * User explicitly confirmed: *"biarkan grade"*.
+    * Kolom `GRD` dipertahankan sebagai kolom sticky ke-6 (`col-sticky-last`) dengan visual separator cyan `border-right: 3px solid rgba(56, 189, 248, 0.75)` dan badge warna dinamis sesuai capaian nilai siswa.
+    * Struktur kolom panel kiri tetap: `INST | PROGRAM | BATCH | STUDENT NAME | PROG | GRD`.
+  - **Removed Active Theme Badges Beside Student Names**:
+    * Cleaned up the `STUDENT NAME` column in `js/admin/app.js` (`renderClassHub`), removing `<span class="badge-active-theme">` per user request (`"keterangan tentang thema yang sedang di ambil di samping nama tidak perlu"`).
+  - **Streamlined Left Sticky Panel (Removed SCORE and PTS)**:
+    * Removed `averageScorePct` (`SCORE`) and `totalEarnedScore` (`PTS`) sticky columns from `initialRosterData` and table rendering in `js/admin/app.js`.
+    * Sticky column structure is now clean and concise:
+      `INST (col 1, 48px) | PROGRAM (col 2, 54px) | BATCH (col 3, 48px) | STUDENT NAME (col 4, 140px) | PROG (col 5, 46px) | GRD (col 6, 40px)`.
+    * Updated `dynamicSuperHeaders[0].colSpan = 6` (was 8) and updated `col-sticky-last` with clean cyan accent border on `GRD`.
+    * Left panel width reduced from 480px to 376px, saving +104px of horizontal space for the test matrix.
+  - **Diagnosed and Restored Disappearing / 0% Scores (Rule 2.7 Restoration)**:
+    * **Root Cause**: An automated system cron sweep (`auto_close_expired_attempts`) had automatically submitted idle/expired sessions on Oct 28 & 30 with 0 points. When attempt sorting was temporarily altered to sort by `submitted_at`, these newer 0-point auto-close entries overwrote students' real historical high scores (Aunul Fikri's Theme C quizzes became 0%, Asmul Kholid's Test 17 218 pts became 0 pts, Laura Fardila's Test 17 119 pts became 5 pts, Frengki's Test 17 68.5 pts became 0 pts).
+    * **Fix**: Restored TopsCore Rule 2.7 (highest valid score & capped score priority) across `js/admin/app.js`, `js/dashboard.js`, and `js/admin/student-management.js`. Now valid student submissions always take precedence over empty auto-close sessions.
+    * **Theme Totals Clarification**: Explained that students showing dots (`·`) under Theme C total columns (e.g. Suke Ajai, Asti Ananta, Shelia) have completed daily formative quizzes (19–28) but have not yet taken the weekly exams (29 & 30) that define the theme score.
+  - **Cache Busting**:
+    * Bumped cache busters to `?v=20261030_v43` across all relevant HTML, JS, and CSS files.
+  - **Verification**:
+    * 40/40 JS syntax checks PASS (`node scripts/check_all_js_syntax.cjs`).
+    * Student Dashboard Parity tests PASS 100% (`scripts/test_student_dashboard_exam_parity.mjs`).
+    * Batch 133 Standings verified 100% (`scripts/test_batch_133_student_lobby_standings.mjs`).
+    * Absolute standing ban: 0 git commit, 0 git push.
+
+- **Phase 201: Dynamic Package Denominator Calibration & Matrix Typographic Polish**:
+  - **Dynamic Package Denominator Calibration**:
+    * Resolved score calculation anomalies for students with dynamic shell snapshots (e.g. Syazida Shinda Debi & Ari Wahyu Darma).
+    * Previously, `themeMaxQ` statically hardcoded 600 questions (480 words + 120 phrases) for Theme C, penalizing Syazida (tested on 200 words + 120 phrases = 320 questions) by dividing her 262 points by 600 (yielding 44% D) and Ari Wahyu (tested on 200 words + 120 phrases = 320 questions) by dividing his 256 points by 600 (yielding 43% D).
+    * Upgraded `computeMilestoneExamMastery()` in `js/grading.js` and `renderClassHub()` in `js/admin/app.js`:
+      - For each exam in the theme package: if the student attempted it, their attempt's actual `total_questions` is used; if unattempted, the test's expected questions (`getExpectedMax`) are added to the denominator with 0 points earned, strictly adhering to the user's rule: *"nilai tiap tema adalah 1 paket, jadi kalau belum dikerjakan, maka tetap dihitung"*.
+      - Syazida correctly achieves **82% Grade B (262 pts / 320 max)**.
+      - Ari Wahyu correctly achieves **80% Grade B (256 pts / 320 max)**.
+      - Aunul Fikri achieves **80% Grade B (482 pts / 600 max)**.
+      - Gagan Tara achieves **75% Grade C (451 pts / 600 max)**.
+      - Unggul Wirakse achieves **66% Grade C (393 pts / 600 max)**.
+      - Wardatul Husna achieves **51% Grade D (304 pts / 600 max)**.
+      - Muhammad Masyan achieves **49% Grade D (293 pts / 600 max)**.
+  - **Firm 3px Theme Dividers (Unmistakable Theme Boundaries)**:
+    * In `css/admin.css` and `js/admin/app.js`:
+      - Super-headers: `super-hdr-theme-a` (3px #38bdf8), `super-hdr-theme-b` (3px #c084fc), `super-hdr-theme-c` (3px #fbbf24), `super-hdr-theme-d` (3px #34d399).
+      - Grid columns: `col-test-theme-total` updated with theme-specific classes (`col-test-theme-total-a`, `col-test-theme-total-b`, `col-test-theme-total-c`, `col-test-theme-total-d`) rendering a firm 3px solid border in the theme's accent color all the way down through tbody rows and summary footer.
+  - **Typographic Refinement & Font Unification**:
+    * Softened excessive boldness (`font-weight: 800/900` -> `font-weight: 600` semibold) across `#class-attendance-grid`, headers, scores, and points.
+    * Standardized font sizes across student names and numerical cells to `0.76rem` (`--matrix-font-size: 0.76rem;`).
+    * Unified font family across all table cells to `'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;`.
+    * Enforced `font-variant-numeric: tabular-nums !important; font-feature-settings: "tnum" 1 !important;` across all numerical columns for precise vertical digit alignment.
+  - **Active Theme Badges**:
+    * Added compact active milestone pill badge beside student names in Class Hub: `<span class="badge-active-theme badge-active-theme-c">TH-C</span>`, clearly communicating the active benchmark theme to tutors.
+  - **Cache Busting**:
+    * Upgraded cache buster parameter to `?v=20261030_v42` across `admin.html`, `dashboard.html`, `js/admin/app.js`, `js/dashboard.js`, `js/admin/student-management.js`, and `css/admin.css`.
+  - **Verification**:
+    * Ran `npm test`: 40/40 JS syntax checks PASS, 100% dashboard parity verified.
+    * Ran `test_batch_133_student_lobby_standings.mjs`: 100% match across Class Hub, Student Dashboard, and Student Management.
+    * Verified zero git commit or push per user instruction.
+
+- **Phase 200: Vocabulary Evaluation Engine: Non-Cumulative Latest Attempt & Latest Theme Session Benchmark**:
+  - **Eliminated Cumulative Point Accumulation & Past History Dilution**:
+    * Updated `computeMilestoneExamMastery()` in `js/grading.js`:
+      - `totalPoints` now represents the points earned on the student's **latest active theme exam session** (`latestAttemptedTheme.earned`), completely eliminating historical point summing (e.g. Aunul Fikri now shows 362 pts instead of 683.5 pts).
+      - `overallScore` strictly reflects the percentage score achieved on that latest theme exam session (`latestAttemptedTheme.scorePct`).
+      - `grade` accurately reflects `calculateGrade(overallScore)`.
+      - `cumulativePoints` preserved as an explicit secondary attribute for audit/telemetry records.
+  - **Latest Attempt Selection for Multiple Attempts / Retakes**:
+    * In `js/admin/app.js` (`renderClassHub`), `js/dashboard.js` (`computeOverallStats`, `loadBatchLeaderboard`), and `js/admin/student-management.js`:
+      - Replaced high-score priority (`effPoints > current`) with latest timestamp sorting (`new Date(y.submitted_at || y.created_at) - new Date(x.submitted_at || x.created_at)`), ensuring that student retakes and remediations evaluate the student's *current retention* and actual contemporary competence.
+  - **Strict Adherence to Unified Color Vault (Single Source of Truth)**:
+    * In `admin.html#class-hub` matrix:
+      - `SCORE` and `PTS` dynamically colored via `getGradeColorByScore(row.averageScorePct)`.
+      - Tooltips upgraded to inform tutors of the active theme: `Latest Exam Score: ${score}% (Theme ${activeThemeCode})` and `Latest Exam Points: ${pts} pts (Theme ${activeThemeCode})`.
+      - `CLASS AVERAGE` footer row: Average score and average points dynamically colored via `getGradeColorByScore(avgScore)`.
+    * In `dashboard.html` (Student Lobby):
+      - Leaderboard points column dynamically colored via `getGradeColorByScore(st.overallScore)`.
+      - Grade chips strictly enforce Star ★ white text and slate dark `#0F172A` for grades A-E.
+  - **Verification & Parity**:
+    * Ran `npm test`: 40/40 JS syntax checks PASS, all 27 SW assets exist, 100% dashboard parity verified.
+    * Ran `test_batch_133_student_lobby_standings.mjs`: 100% match between Class Hub simulation and Student Dashboard standings.
+    * Verified zero git commit or push per user instruction.
+
+- **Phase 199: Test Analytics Cockpit Overhaul & Theme Comparison Board**:
+  - **Eliminated Visual Clutter & "Crash / Alarm" Elements**:
+    * Completely removed the jarring neon-red horizontal bars running across cards.
+    * Purged all internal engineering jargon from the UI (e.g. "RULE 2.10", "FAPR", "LINGUISTIC POS MATRIX", "THE WALL") across main view and drill-down modals.
+    * Upgraded layout to modern dark-mode card aesthetic with soft rounded corners (`border-radius: 8px` / `10px`), subtle emerald target answer accents (`#34d399`), soft coral/amber mistake highlights (`#fda4af` / `#fde68a`), and soft blue word-type pills (`#38bdf8`).
+  - **Top Executive Header Bar**:
+    * ⏱️ **Class Answering Pacing**: Overall average answering time per question (`avgQuestionPacingSec` e.g. `14.8s / question`) & average test completion duration (`avgTestDurDisplay` e.g. `19m 11s / test`).
+    * ⚠️ **Student Error Diagnosis Breakdown**: Real-time classification into 4 explicit pedagogical categories:
+      - 🔤 Spelling / Typos
+      - 🇮🇩 Literal Translation
+      - 🔄 Word Form / Part-of-Speech Confusion
+      - ⏳ Timed Out / Blank
+    * Prominent action button: `⏱️ Test Pacing & Duration Drawer ➔` smoothly opening the telemetry drawer.
+  - **4-Column Side-by-Side Theme Comparison Board**:
+    * Displays 4 side-by-side columns: **Theme A** (Workplace), **Theme B** (Tourism), **Theme C** (Culture), and **Theme D** (Advanced Mastery).
+    * Each column shows the **Top 10 Most Missed Questions** for that theme, filtered by `q.fail >= 1` and ranked by error volume & fail rate (`b.fail - a.fail || b.failRate - a.failRate`).
+    * Question card components:
+      - Rank & Indonesian prompt with word-type badge (`Verb`, `Noun`, `Phrase`, `Adjective`).
+      - Target correct answer in soft emerald green (`Target: retell; recount`).
+      - **Actual Student Error Answers**: Grouped list of what students actually typed with counts and percentages (e.g. `❌ "story again" (8x • 44%)`, `❌ "telling back" (4x • 22%)`, or `⏳ Timed Out / Blank (3x • 17%)`).
+      - ⏱️ Average Question Answering Time badge (`⏱️ 16.4s`).
+      - 🏷️ Dominant Diagnosis Tag (`[🇮🇩 Literal Translation]`, `[🔤 Spelling]`, `[🔄 Word Form]`, `[⏳ Timeout]`).
+      - Failure rate & counts (`88% Fail (7/8)`).
+      - Responsive container with modern custom scrollbars and smooth side-by-side scrollability.
+  - **Slide-Out Drawer: Test-by-Test Completion & Pacing**:
+    * Right-side slide-out drawer with dark backdrop, smooth transition, Escape key dismissal, and backdrop click-outside close with body scroll locking.
+    * Search box & filter pills (`All Tests`, `Quizzes`, `Exams`, `High Timeout`) with `#tac-pacing-no-results` empty-state row.
+    * Comprehensive telemetry table across all 40 tests:
+      - Test Title & Shell Code badge (e.g. `3A1-WORDS-QUIZ`, `3D-PHRASES-EXAM`).
+      - Type (`⚡ Daily Quiz` vs `🎓 Weekly Exam`).
+      - Submissions count.
+      - Average completion duration vs limit (`4m 12s / 8m`) with visual pacing ratio bar.
+      - Pass Rate % dynamically colored via `getGradeColorByScore`.
+      - Timeout Rate % & count.
+      - Pacing Status badge (`🟢 Comfortable`, `🔵 Normal`, `🟠 Rushed`, `⚠️ High Timeout`, `⚪ No Data`).
+      - Row inspect button seamlessly triggering detailed test telemetry drawer with full telemetry stats.
+  - **Data Processing Engine & Hardening (`js/admin/tests-management.js`)**:
+    * Upgraded `attempt_answers` query to retrieve balanced empirical answers across themes A, B, C, D (up to 4,000 records).
+    * Switched to TopsCore authoritative `damerauLevenshtein` engine from `grading.js`.
+    * Refined error classifier with accurate multi-word circumlocution detection, `partial`/`half` evaluation result recognition, and comprehensive derivational suffix matching with silent 'e' drop.
+    * Populated all telemetry fields on `drawerRows` (`takersCount`, `avgScoreVal`, `remRateVal`, `pacingVal`, `securityFlags`, `status`, `programName`, `classBoard`, `TestCategory`, `qCount`, `minScore`, `prereq`) ensuring the Inspect drawer is completely functional.
+    * Fixed case-sensitive table crashes in `_duplicateTest` and `openSessionModal` (`sb.from('Tests')` -> `sb.from('tests')`).
+    * Replaced native `alert()` with `showToast`.
+    * Updated cache version query parameter in `js/admin/app.js` (`tests-management.js?v=20261030_v40`).
+
+
+- **Phase 198: P0 Infrastructure & Reliability Hardening**:
+  - **Student Level-Up Progression Engine (`js/api.js`)**:
+    * In `checkAndTriggerLevelUp()`, updated gating exam query from `.eq('category', 'TEST')` to `.in('category', ['EXAM', 'TEST'])`, enabling milestone exams to trigger level advancement upon achieving $\ge 60\%$.
+    * Removed query references to non-existent `levels.program_id` column (selecting `id, level_number` and querying `nextLevel` by `level_number`), resolving runtime PostgreSQL error 42703.
+    * Upgraded attempt score check to inspect `effective_score ?? percentage` across submitted/auto_submitted attempts, ensuring remediated exam completions are accurately counted.
+    * Fixed critical regression in `fetchStudentLevel()`: now queries `level_id, levels:level_id(...)` alongside batch defaults so individual student level-ups are preserved on dashboard reload.
+    * Added comprehensive automated regression test `scripts/test_levelup_logic.mjs` verifying milestone exam detection, 60% threshold, remedial effective scores, and dual-check level resolution.
+  - **Database Performance Indexing**:
+    * Created migration `supabase/migrations/20261030160000_performance_indexes.sql`:
+      - `idx_attempts_student_test` ON `public.attempts(student_id, test_id)`
+      - `idx_attempt_answers_attempt_id` ON `public.attempt_answers(attempt_id)`
+      - `idx_students_batch_id` ON `public.students(batch_id)`
+      - `idx_students_program_id` ON `public.students(program_id)`
+    * Applied directly to Supabase Cloud PostgreSQL database via `scripts/apply_performance_indexes.mjs` and verified in `pg_indexes`.
+    * Hardened `scripts/apply_performance_indexes.mjs` to accept `SUPABASE_DB_HOST`, `SUPABASE_DB_PORT`, `SUPABASE_DB_USER`, `SUPABASE_DB_NAME` environment variables.
+  - **CDN Route Security & Credential Protection**:
+    * `netlify.toml`: Added forced 404 redirects for `/scripts/*`, `/scripts`, `/supabase/*`, `/supabase`, `/docs/*`, `/docs`, `/scratch/*`, `/scratch`, `/supabase_deploy/*`, `/supabase_deploy` to prevent public directory traversal.
+    * `vercel.json`: Added route redirects for bare paths and wildcards (`/scripts`, `/scripts/:path*`, `/supabase`, `/supabase/:path*`, `/docs`, `/docs/:path*`, `/scratch`, `/scratch/:path*`, `/supabase_deploy`, `/supabase_deploy/:path*`) to `/`.
+    * `scripts/fix_emergency_submit.mjs` & `scripts/sync_local_to_cloud.mjs`: Redacted hardcoded plaintext password (`100%TopsCore`), dynamically reading from `process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD` with validation guards.
+  - **Verification**:
+    * All test suites executed and passing: `test:syntax` (40/40 JS syntax checks), `test:grading` (100%), `test:manifest` (27/27 SW cache items), `test:parity` (100% dashboard parity), `test:prereq` (sequential exam prerequisites), `test:duration` (RPC emergency submit & auto-close, 8m duration verified). Zero visual or layout regressions.
+
+
+- **Phase 197: Comprehensive Grading & Typography Color Unification Across CSS & JS**:
+  - **User Mandate**: Full, in-depth execution of color unification across the codebase without git commit or push: *"Saya ingin kamu data semua warna di grading scoring dan SEMUA font atau teks yang memakai warna,,, kita pakai kesempatan ini untuk menyatukan warna agar tidak muncul warna yang tiba2 berbeda.... oh ya, no push commit!"*
+  - **Single Source of Truth Enforced**:
+    * Star Tier (`★` / 100%): `#00c000ff` (rgb: `0, 192, 0`, badge text `#FFFFFF`, elegant green glow)
+    * Grade A (90–99%): `#00c000ff` (rgb: `0, 192, 0`, badge text `#0F172A`)
+    * Grade B (80–89%): `#95ff00ff` (rgb: `149, 255, 0`, badge text `#0F172A`)
+    * Grade C (60–79%): `#FFFF00` (rgb: `255, 255, 0`, badge text `#0F172A`)
+    * Grade D (30–59%): `#FF8C00` (rgb: `255, 140, 0`, badge text `#0F172A`)
+    * Grade E (0–29%): `#FF0000` (rgb: `255, 0, 0`, badge text `#0F172A`)
+    * Question Evaluations: Correct `#00c000ff`, Partial `#FFFF00`, Incorrect `#FF0000`
+    * Remedial: Max effective score capped at 60%, inherits capped score color, small `R` only on score percentage (`60%ᴿ`).
+  - **Forensic Codebase Changes & Deep Sweep Remediation**:
+    1. `css/style.css`: Updated `--clr-success: #00c000ff;`, `.grade-star` gradient start to `#86efac`, purged dead `.grade-F` and `.text-grade-F`, standardized button and badge RGB opacities to canonical tokens (`--grade-star-rgb`, `--grade-e-rgb`, `--grade-d-rgb`), toast message colors (`.toast-success`, `.toast-error`, `.toast-warning`), and added `.grade-circle-★` / `.grade-circle-s` aliases.
+    2. `css/result.css`: Eliminated obsolete `.grade-S` gold gradient, aligned result grade displays with canonical green star styling, replaced hardcoded Tailwind stamp overrides (`#22C55E`, `#10B981`, `#84CC16`, `#EAB308`, `#F97316`, `#EF4444`) with `var(--grade-*)` tokens, replaced emerald fallbacks with `var(--grade-star)`, unified metric stacked rows (Correct, Partial, Incorrect) to `var(--eval-*)`, unified accuracy segments/labels to `var(--eval-*)`, replaced all legacy `rgba(34, 197, 94, ...)` drop-shadows and dividers with `rgba(var(--grade-star-rgb), ...)`, standardized `.remedial-segment-btn.segment-remidi.active` to `var(--grade-c)`, and standardized `.answers-modal-close-btn:hover` to `var(--grade-e)`.
+    3. `css/dashboard.css`: Aligned `--tier-color` and welcome banner section to `var(--grade-star)` and `var(--grade-star-rgb)`, purged all legacy `rgba(34, 197, 94, ...)` and `rgba(16, 185, 129, ...)` references, standardized Next Assessment green button to canonical Star green gradient and glow, standardized `.header-logout-btn` / `:hover` to `var(--grade-e)`, `.cheat-box` and countdown to `var(--grade-e)`, and `.next-asm-go-btn.is-retake` to `var(--grade-e)`.
+    4. `css/test.css`: Standardized `.speech-mic-btn-lg` normal, hover, and listening states to `var(--grade-star)` and `var(--grade-e)`, `.speech-unanswered-chip` to `var(--grade-e)`, `.speech-all-answered-msg` to `var(--clr-success)`, `.mc-option.selected` to `var(--grade-star)` and text `#0F172A`, form input focus to `var(--grade-star)`, cheat dialog elements to `var(--grade-e)`, `.btn-danger-submit` to `var(--grade-e)`, `.btn-confirm-submit` to `var(--grade-star)`, and `.test-progress-fill` to `var(--grade-star)`.
+    5. `css/admin.css`: Standardized `.text-gold-champion` and champion cards to `var(--grade-star)` with `var(--grade-star-glow)`, aliased `--fm-*` design tokens to root variables (`--fm-text-muted: var(--clr-text-3);`), standardized `.badge-success`, `.badge-warning`, `.badge-danger`, `.status-dot.*`, and `pulse*` keyframes to root tokens, `.btn-warning` to `var(--grade-d)`, `.purge-modal-box` to `var(--clr-danger)`, badge ongoing/upcoming to `var(--clr-success)` / `var(--grade-d)`, attendance pill active to `var(--grade-star)`, and student action danger button to `var(--grade-e)`.
+    6. `css/auth.css`: Standardized clear session link hover to `var(--clr-danger)`, cascade step numbering done state to `var(--grade-star)`, and card radio check to `var(--grade-star)`.
+    7. Cleaned all 37 legacy `#009A00` / `0, 154, 0` and rogue `#77FF00` instances across `js/dashboard.js`, `js/result.js`, `js/admin/app.js`, `js/admin/class.js`, `js/admin/student-management.js`, and `js/admin/tests-management.js`.
+    8. Prior attempt blindspots remediation:
+       - `js/test.js`: Standardized cheat strike badge red (`#dc2626` & shadow &rarr; `var(--grade-e)`), MC options background gradient (`rgba(16,185,129,0.2)` &rarr; `rgba(var(--grade-star-rgb), 0.2)`), speech recognition mic button, recording states, and offline syncDot indicators to canonical tokens.
+       - `js/admin/tests-management.js`: Fixed target correct answers (lines 982, 2034, 2252) and security badges to `TOPSCORE_COLORS.CORRECT` / `TOPSCORE_COLORS.E`.
+       - `js/admin/student-management.js`: Dynamically colored failed test score percentage via `getGradeColorByScore`, and standardized remediation alert container and PIN security status.
+       - `js/admin/vocab-vault.js`: Standardized topic delete button and verb part-of-speech chips.
+       - `js/admin/crud-modals.js`: Standardized student and question duplicate resolution tables and candidate badges.
+       - `js/admin/curriculum-management.js`: Standardized program batch count badges and Add Batch button.
+       - `js/admin/admin-deck.js`: Standardized KPI card metric colors and bio character counter danger fallback.
+       - `js/auth.js`: Standardized error message styling across all 4 cascade steps to `var(--clr-danger, #FF0000)`.
+       - `js/admin/desk.js`: Standardized storage metric, scan integrity buttons, recalibration metrics cards, confirmation modal, heartbeat status text, and database relational constraint issue cards to canonical tokens.
+       - `docs/DECISIONS.md`: Updated line 766 DECISION-029 color vault reference to reflect canonical palette.
+    9. Badge text contrast & rogue colors: Guaranteed Star (`★`) displays `#FFFFFF` and letter grades (A-E) display `#0F172A` in `dashboard.js`, `class.js`, and `tests-access.js`. Fixed `tests-access.js` circle class generator for Star tier. Replaced remedial `#fbbf24` in `tests-access.js` with `inherit`. Replaced rogue `#22c55e` male gender badge with `#38bdf8`.
+    10. Standardized `js/grading.js` fallbacks to canonical `#006400` / `rgba(0, 192, 0, 0.5)`. Exposed `TOPSCORE_COLORS` on `window` in `js/app.js`.
+    11. Preserved print styling in `cv-export.js` / `dossier_export.js` and curriculum track themes in `tests-access.js`.
+    12. Cache & Version: Bumped `sw.js` to `topscore-cache-option-a-v38` and asset query params to `?v=20261030_v38` in `admin.html`, `dashboard.html`, `result.html`, `test.html`.
+  - **Verification**:
+    * `npm test`: 100% PASS (40/40 JS syntax checks, 27/27 SW manifest assets, full student dashboard parity suite).
+    * `node scripts/verify_green_star_grading.mjs`: 100% PASS.
+    * Strictly NO git commit, NO git push.
+
+- **Phase 196: Vocab Single Scoring Model & Exact Multi-Page Parity**:
+  - **Audit Findings**:
+    1. In Screenshot 1 (`admin.html#students`), Student Roster lacked exam parity because `adminFetchAll('tests', ...)` only retrieved `id, title, level_id`, leaving `test_type` and `shell_code` undefined. This caused `isWeeklyExam` to evaluate to `false` for every test, returning 0 exams and empty scores, while the browser displayed an older cached version.
+    2. Fixed `student-management.js` to fetch full test metadata (`id, title, test_type, shell_code, payload, total_questions, display_order, category, level_id, class_id, levels(name, level_number)`), ensuring `isWeeklyExam` correctly classifies milestone exams.
+    3. `computeMilestoneExamMastery()` in `js/grading.js` evaluates Global Score % and Grade strictly from the **Latest Active Theme** (`latestAttemptedTheme.scorePct`). This eliminates the future milestone 0% penalty (e.g. Pasya achieves 60% Grade C instead of 18% Grade E; Sofa Maria Ulfa achieves 47% Grade D instead of 31% Grade D).
+    4. Students with 0 completed exams (e.g. Rifky Ahmad) display neutral `—` for Score, Grade, and PTS across Student Roster, Class Hub, and Student Dashboard, while maintaining curriculum progress pacing (`TESTS: 2/40`, `COMPLETION: 5%`).
+    5. In `js/admin/app.js` (Class Hub): added Theme Combined Score (`SCORE %`: `theme_${tc}_score`) column right before Theme Total Points (`TOT`: `theme_${tc}_total_pts`) in the Attendance Matrix.
+    6. Master color vault in `js/grading.js` standardized strictly to user-defined official palette: Star ★ `#00c000ff`, A `#00c000ff`, B `#95ff00ff`, C `#FFFF00`, D `#FF8C00`, E `#FF0000`. Verified 100% PASS on `node scripts/verify_green_star_grading.mjs`.
+    7. Cache and query string version bumped to `?v=20261030_v37` across `admin.html`, `dashboard.html`, `result.html`, `js/admin/app.js`, and `sw.js` (`topscore-cache-option-a-v37`).
+  - **Verification**:
+    * `npm test`: 100% PASS (40/40 JS syntax checks, 27/27 SW manifest assets, student dashboard exam-only parity test suite).
+    * `node scripts/verify_green_star_grading.mjs`: 100% PASS.
+
+- **Phase 195: Academic Scoring Parity & Unified Milestone Engine in Student Roster**:
+  - **User Requests**:
+    * *"Apakah Anda ingin saya menyelaraskan halaman Student Roster agar menggunakan mesin resmi yang sama persis dengan Class Hub & Student Dashboard? Nilai Score & Grade di Student Roster akan 100% sama dan sinkron dengan Class Hub & Student Dashboard. Kolom Tests (misal 9/40) dan Completion % tetap menghitung seluruh aktivitas kuis + ujian sebagai indikator pacing belajar siswa. jawabannya IYA. harus disamakan sistem grading, scoring, di seliuruh sistem... coba diskusikan... kita atur dengan baik /grill-me"*
+  - **Architectural Alignment (/grill-me Consensus)**:
+    1. **Authoritative Engine Unified**: `student-management.js` now uses `computeMilestoneExamMastery(studentExamEntries, studentLevelExams)` matching `app.js` (Class Hub) and `dashboard.js` (Student Dashboard).
+    2. **0-Exam Handling**: Students who only completed quizzes (e.g. Rifky Ahmad) display neutral `—` for Score & Grade with clean tooltips, eliminating false 100% ★ quiz inflation.
+    3. **Dedicated PTS Column**: Added `PTS` column to Student Roster DataGrid displaying exam points earned (`totalEarnedScore`), dynamically colored with `getGradeColorByScore`.
+    4. **Remedial 60%ᴿ Marker**: Added `60%ᴿ` indicator on capped overall score and remedial tags on exam items.
+    5. **Student Detail Drawer Split**: `showStudentProgressDetails` upgraded with a KPI summary showing Mastery Score, Academic Grade, Exam Points, and Curriculum Pace, plus two distinct tables: 🎓 Weekly Exams and ⚡ Daily Quizzes.
+  - **Color Centralization Fixes**:
+    * Cleaned Tailwind `#F87171` in milestone pending exam cells to `TOPSCORE_COLORS.E` (`#FF0000`).
+    * Replaced `#eab308` in in-progress badge with `TOPSCORE_COLORS.C` (`#FFFF00`).
+    * Replaced `#000000` text in Class Average grade circle with `TOPSCORE_COLORS.TEXT_DARK` (`#0F172A`).
+    * Cleaned `#eab308` and hardcoded colors in `tests-management.js`.
+    * Bumped Service Worker cache name to `topscore-cache-option-a-v35`.
+  - **Verification**:
+    * `npm test`: 100% PASS (40/40 JS syntax checks, 27/27 SW manifest assets, full student dashboard parity suite).
+
+- **Phase 194: Full System Exhaustive Audit, Color Centralization & Test Session Cache Fix**:
+  - **User Requests**:
+    * *"Susunan palet baru: ★ & A (#009a00ff), B (#77FF00), C (#FFFF00), D (#FF8C00), E (#FF0000). cek apakah ini, cek SEMUA lagi"*
+    * User shared screenshot of `Uncaught tests-access.js?v=20261027d:2150 ReferenceError: completedTaskCount is not defined`
+  - **Exhaustive Color Audit & Centralization**:
+    * Palette standardized: ★ & A: `#009A00` (`#009a00ff`), B: `#77FF00`, C: `#FFFF00`, D: `#FF8C00`, E: `#FF0000`.
+    * Cleaned `js/result.js`: Eliminated `gradeRingColors` and `standardGradeColors` local dicts; routed SVG Score Ring and Hero Banner directly to `getGradeColor()`.
+    * Cleaned `js/admin/student-management.js`: Eliminated `cMap` dictionary in student roster; routed `overallColor` to `getGradeColorByScore(overallPct)` and upgraded Grade column to canonical `.grade-circle`.
+    * Cleaned `js/admin/class.js`: Eliminated `cMap` dictionary in `renderStudentsRoster`; routed to `getGradeColor()` and `getGradeColorByScore()`.
+    * Cleaned `js/admin/app.js`: Replaced legacy ternary fallback chains with `getGradeColorByScore()`.
+    * Cleaned `js/admin/tests-management.js`: Replaced hardcoded `#22c55e` / `#10b981` / `#84cc16` in `gradePalette` and `getGradeBadge(pct)` with `TOPSCORE_COLORS` and `getGradeColorByScore(pct)`.
+    * Cleaned `js/dashboard.js`: Replaced legacy fallbacks with canonical `#009A00` / `0, 154, 0`.
+    * Updated `AGENTS.md` and `.antigravityrules` Rule 11.
+    * Configured instant file saves in `.vscode/settings.json`.
+  - **Test Session ReferenceError & Cache Busting**:
+    * Resolved client-side cache mismatch where stale `?v=20261027d` was loaded.
+    * Upgraded `tests-access.js` imports to `?v=20261030_v34`.
+    * Bumped `sw.js` cache name to `topscore-cache-option-a-v34`.
+    * Bumped version queries in `admin.html`, `result.html`, `dashboard.html`.
+  - **Verification**:
+    * `node scripts/verify_green_star_grading.mjs`: 100% PASS (35 assertions).
+    * `npm test`: 100% PASS (40/40 JS syntax checks, 27/27 SW manifest assets, full parity test).
+
+- **Phase 192: Centralized Single-Source-of-Truth Color Architecture**:
+  - **User Request**: User `/grill-me` session: *"I want to check the Grading, scoring, point colour in system, I feel like some colour doesnt match between the one in the result page, and in the admin page, also student page... can we make a better, stricter rule on it? we need to make sure the colouring syte is from one set of rule. apakah nanti kode warna ini ada di satu tempat? semuanya nanti menacu kesana... selaiin itu ini juga dipakai saat menghitung poin jawaban yang correct, partial dan incorrect dalam halaman result..."*
+  - **Single Source of Truth Vault**:
+    * Created `TOPSCORE_COLORS` frozen constant in `js/grading.js`:
+      - ★ & A: `#16A34A` (Rich Jungle Green)
+      - B: `#84CC16` (Lime 500)
+      - C: `#F59E0B` (Amber 500)
+      - D: `#F97316` (Orange 500)
+      - E: `#EF4444` (Crimson Red 500)
+      - Correct: `#16A34A` (Full point)
+      - Partial: `#F59E0B` (Half point)
+      - Incorrect: `#EF4444` (Zero point)
+      - Badge Text Star: `#FFFFFF` (White star)
+      - Badge Text Dark: `#0F172A` (Dark slate for A, B, C, D, E)
+    * Injected CSS variables `--grade-*`, `--eval-*`, and `--badge-text-*` into `:root` in `css/style.css`.
+    * Linked `css/admin.css` and `css/result.css` to read exclusively from `:root` CSS variables.
+    * Dynamically styled Points (PTS) on `result.html`, `admin.html`, and `dashboard.html` with `getGradeColorByScore()`.
+    * Synchronized Rule 2.10 in `AGENTS.md` and Rule 11 in `.antigravityrules`.
+    * Normalized `css/result.css` line endings to LF.
+    * Bumped Service Worker cache to `topscore-cache-option-a-v32`.
+  - **Verification**:
+    * `node scripts/verify_green_star_grading.mjs`: 100% PASS (35 assertions).
+    * `npm test`: 100% PASS (syntax, manifest, parity).
+
+- **Phase 191: 100% AI Workflow Maximization Suite**:
+  - **User Request**: *"coba terPKAN SARAN2MU"*
+  - **Implementation**:
+    1. **Antigravity Supercomplete & Tab Integration**: Configured `editor.inlineSuggest.enabled`, `editor.suggestSelection: "first"`, `editor.acceptSuggestionOnEnter: "smart"`, and `editor.quickSuggestions` in `.vscode/settings.json`.
+    2. **Persistent AI Review Tabs**: Set `workbench.editor.enablePreview: false` so that files reviewed or modified during AI tasks stay pinned in the editor tabs.
+    3. **One-Touch CI Health Tasks**: Created `.vscode/tasks.json` with `<Ctrl+Shift+B>` mapped directly to `npm test` and quick syntax/grading tests.
+    4. **Governance Hardening**: Enforced Rule 9 (PostgREST async handling) and Rule 10 (Defensive variable scoping) in `.antigravityrules`.
+  - **Verification**: `npm test` 100% PASS (syntax check, SW manifest, dashboard parity).
 
 - **Phase 190: Test Sessions Unified Access Resolution — completedTaskCount ReferenceError Fix**:
   - **User Request**: *"perbaiki ini!"* with screenshot `media_1793272213636_98449015.png` showing `Uncaught tests-access.js?v=20261027d:2150 ReferenceError: completedTaskCount is not defined` when opening Theme Test Session modal on `admin#class-hub`.
@@ -4794,217 +5100,5 @@ Status: COMPLETE (npm test 100% PASS, 40/40 JS syntax checks valid, 27/27 SW man
 - **LOCAL DOCKER ENVIRONMENT FOR OFFLINE EDITING (FULL OFFLINE READY)**:
   - Docker Desktop dihubungkan dan 12 kontainer Supabase aktif berjalan secara lokal (`supabase start`).
   - PostgreSQL Database lokal aktif di port `54322`, REST API di port `54321`, Supabase Studio GUI di port `54323`, Inbucket/Mailpit di port `54324`.
-  - Skema database diinisialisasi dengan 11 migrasi berurutan (`20261010000000_init_schema.sql` s/d `20261012060000_normalize_attempt_status.sql`).
-  - Seluruh data kurikulum, institusi, batch, kelas, siswa, dan soal ujian berhasil di-seed ke database lokal via `supabase/seed.sql`.
-  - Frontend [js/supabase.js](file:///d:/TopsCore/js/supabase.js) otomatis mengalihkan koneksi ke `http://127.0.0.1:54321` saat diakses via `localhost` / `127.0.0.1`.
-  - Terverifikasi query REST lokal berhasil mengembalikan data kelas dan institusi.
-
-- **UI FIX: DYNAMIC CLASS PROGRESS & STATUS BAR**:
-  - Perbaiki bug typo `p.Class_id` (kapital) -> `(p.class_id || p.Class_id)`.
-  - Perbaiki pengecekan status kelulusan level: `p.level_status === 'Level Completed'`.
-  - Hitung persentase progress kelas secara dinamis berdasarkan total assessment yang diselesaikan siswa terhadap total assessment yang tersedia di kelas tersebut.
-  - Tampilkan status `"Completed"` dan 100% emerald bar saat kelas tuntas, serta persentase riil (misal `"25%"`) saat siswa sedang mengerjakan.
-  - Verifikasi otomatis via Playwright (`temp_test/test_dashboard_progress.mjs`) dengan screenshot di `audit_screenshots/ui_enhancement/04_dashboard_classes_progress.png`.
-
-- **UI ENHANCEMENT: 4 CORNERS QUESTION METADATA LAYOUT**:
-  - Tampilkan **Theme Name** (bukan hanya kode Theme A, melainkan nama lengkap seperti `High-Frequency (Theme D)`, `Workplace`, dsb.) pada **sudut kiri atas (Top-Left)**.
-  - Tampilkan **Topic Name** pada **sudut kanan atas (Top-Right)**.
-  - Tampilkan teks pertanyaan (*Question prompt*) besar, tebal, dan terpusat di tengah card.
-  - Tampilkan **Category** (`Phrases`, `Words`, dsb.) pada **sudut kiri bawah (Bottom-Left, di bawah pertanyaan)** dengan badge lavender.
-  - Tampilkan **Type** (`Proverb`, `Noun`, `Idiom`, dsb.) pada **sudut kanan bawah (Bottom-Right, di bawah pertanyaan)** dengan badge emerald.
-  - Posisikan placeholder `"Type here..."` dan teks ketikan tetap tepat di tengah kotak jawaban (vertikal & horizontal) secara presisi dengan flexbox & styling transparan.
-  - Perbarui `js/api.js` untuk memproyeksikan kolom `theme` dari `vocabulary_vault` dan menyematkan `theme_code` serta `category` ke dalam snapshot.
-  - Bump versi script cache-busting ke `v=5.0.3`.
-  - Verifikasi otomatis menggunakan Playwright dan tangkapan layar di `audit_screenshots/ui_enhancement/`.
-
-- **PRODUCTION SYNC & BUG RECOVERY COMPLETED (100% VERIFIED LIVE)**:
-  - **Task 1: Resolved 400 Bad Request on `vocabulary_vault`**:
-    - Identified root cause: `js/api.js` query projected `category` column (`select('id, english, indonesian, word_type, topic, topic_code, theme_code, target_level, category')`), which was missing in production Supabase Cloud project `oclajpyumehpojepcczg`.
-    - Executed schema migration adding `category VARCHAR(32) DEFAULT 'words'` to `public.vocabulary_vault`.
-    - Backfilled all 870 rows: `'phrases'` if `word_type IN ('Expression', 'Idiom', 'Proverb', 'Phrase')`, else `'words'`.
-    - Added trigger `trg_set_vocabulary_vault_category` to auto-classify all future inserts/updates.
-    - Executed `NOTIFY pgrst, 'reload schema';`.
-    - Verified query returns 200 items (40 phrases, 160 words) with 200 OK via Supabase client.
-  - **Task 2: Seed & Synchronize Questions and Dynamic Vault**:
-    - Verified production `vocabulary_vault` has all 870 rows populated across all 4 themes (A, B, C, D) and levels.
-    - Ensured phrases distractor queries return 160 phrases without error.
-  - **Task 3: Edge Function & Client Fallback Hardening**:
-    - Updated `supabase/functions/start-assessment/index.ts` with explicit CORS headers (`Access-Control-Allow-Methods`, 200 status for `OPTIONS` preflight).
-    - Enhanced `startAssessment` in `js/api.js` to catch 401/404/network errors seamlessly into the robust client DB fallback.
-    - Fixed `section_id` question mapping bug in `assessment.html`: snapshot rows missing `section_id` now default to `'default'`, ensuring `renderQuestion(0)` renders all questions properly without getting filtered out into an empty array.
-    - Added trigger `trg_ensure_attempt_answers_section_id` and backfilled 3,066 rows in `public.attempt_answers` in production DB so `section_id = 'default'` is guaranteed at the database level.
-  - **Task 4: Live Automated Verification Run**:
-    - Executed Playwright automated browser test against `https://tops-core.netlify.app/` using Miss Siti Qori's real session.
-    - Verified student login (PIN 1234), dashboard loading, assessment runner initiation, question rendering, and countdown timer.
-    - Successfully rendered both Words Task ("tangguh") and Theme D Phrases Test ("Ada banyak cara untuk mencapai tujuan yang sama.") on `https://tops-core.netlify.app/assessment.html`.
-    - Successfully submitted attempt and rendered live graded report card on `https://tops-core.netlify.app/result.html`.
-    - Captured high-resolution verification screenshots in `audit_screenshots/live_online_run/`.
-
-- **SUPABASE CLOUD PROJECT FULLY MIGRATED & VERIFIED (Target: oclajpyumehpojepcczg)**:
-  - Project URL: `https://oclajpyumehpojepcczg.supabase.co`
-  - Anon Key: `sb_publishable_L9T-SJpuAqK5291UEVhKMg_i7lvWFGB`
-  - Database PostgreSQL Version: 17.11 (AWS Cloud).
-  - All 48 tables, extensions, indexes, RPCs (`emergency_submit_attempt`, `auto_close_expired_attempts`), storage bucket `student-avatars`, and RLS policies deployed.
-  - Comprehensive Row Counts Migrated & Audited:
-    - `institutions`: 3 rows (100%)
-    - `programs`: 4 rows (100%)
-    - `batches`: 8 rows (100%)
-    - `levels`: 4 rows (100%)
-    - `classes`: 12 rows (100%)
-    - `class_levels`: 11 rows (100%)
-    - `subjects`: 6 rows (100%)
-    - `topics`: 1 row (100%)
-    - `modules`: 13 rows (100%)
-    - `question_types`: 13 rows (100%)
-    - `word_types`: 13 rows (100%)
-    - `site_settings`: 5 rows (100%)
-    - `cec_app_state`: 1 row (100%)
-    - `students`: 72 rows (100%, includes Miss Siti Qori with PIN `1234`)
-    - `enrollments`: 44 rows (100%)
-    - `assessments`: 40 rows (100%, Level 3 prerequisite chain intact)
-    - `vocabulary_vault`: 870 rows (100% vocabulary dictionary)
-    - `progress`: 46 rows (100%, Level 3 marked 'Level Completed')
-    - `attempts`: 49 rows (100%, includes Miss Siti Qori's 41 attempts)
-    - `attempt_answers`: 2,866 rows (100%)
-    - `audit_logs`: 361 rows (100%)
-  - Client SDK Connectivity: Verified live query via `@supabase/supabase-js` using publishable anon key.
-  - Production Frontend Ready: [js/supabase.js](file:///d:/TopsCore/js/supabase.js) configured and connected to production cloud endpoint.
-  - Full Offline Docker Auto-Detection: Configured in [js/supabase.js](file:///d:/TopsCore/js/supabase.js) so localhost/127.0.0.1 automatically uses Docker Local (port 54321), while production deployment uses Supabase Cloud.
-  - One-Step Cloud Syncer: Created [scripts/sync_local_to_cloud.mjs](file:///d:/TopsCore/scripts/sync_local_to_cloud.mjs) for instant, collision-free synchronization of local additions to cloud.
-
-- **FULL MOBILE-VIEW E2E AUTOMATION — COMPLETE ALL LEVEL 3 ASSIGNMENTS (100% PASS)**:
-  - Executed strict mobile-viewport Playwright E2E simulation against real student **"Miss Siti Qori"** (`301be589-aba1-43be-a999-aa8ddaf6c509`, Batch 131, Institution: Cake English Course, Program: Camp, PIN: 1234).
-  - Emulation Parameters: `viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2` (iPhone 14 Pro / Pixel 7 mobile profile).
-  - Sequentially executed and cleared **all 40 published assignments in Level 3** (linear prerequisite chain from Task 1 to Task 40).
-  - Captured **175 high-resolution mobile proof screenshots** in [audit_screenshots/mobile_lvl3_run/](file:///d:/TopsCore/audit_screenshots/mobile_lvl3_run/):
-    - `01_mobile_login_selection.png`: Cascading mobile selection (CEC -> Camp -> 131 -> Miss Siti Qori -> 4-digit PIN pad).
-    - `02_mobile_dashboard_initial.png`: Mobile dashboard landing with roster and Level 3 status.
-    - `03_mobile_assessment_[01-40]_start.png`: Initial runner view with timer, question prompt, and mobile controls.
-    - `04_mobile_assessment_01_anticheat.png`: Anti-cheat warning modal triggered and dismissed.
-    - `05_mobile_assessment_[id]_keyboard_input.png`: Mobile virtual keyboard layout in action.
-    - `06_mobile_assessment_[01-40]_answers_filled.png`: Questions answered before submit.
-    - `07_mobile_assessment_[01-40]_result.png`: Authoritative graded report card.
-    - `07_mobile_assessment_01_result_failed.png`: Intentional remedial failure test card (12.5%, Grade E).
-    - `07_mobile_assessment_01_result_passed.png`: Remedial retake pass report card (100.0%, Grade S).
-    - `08_mobile_dashboard_progress_[01-40]_updated.png`: Dashboard progress update after each completed task.
-    - `XX_mobile_level3_all_cleared_final.png`: Final mobile dashboard displaying 100% completion of Level 3 with Overall Score 99% and Grade A.
-  - Verified Server-Authoritative Pipeline & Database State:
-    - Total Attempts Recorded: 41 (1 initial failure + 40 passed with grades A/S).
-    - `public.progress`: `unlocked_level: 3, highest_score: 100.00, level_Status: COMPLETE (1A Yellow Padlock, 2B Red Rotate Undo, 3C Green Circle Play applied and verified; 39 JS files syntax valid)
-  - Autonomous Bug Fixes Applied:
-    - Synchronized `window.answeredMap` with `answeredMap` in [assessment.html](file:///d:/TopsCore/assessment.html) across `openSubmitModal()`, `updateNavGrid()`, and `doSubmit()`.
-    - Exposed `window.updateNavGrid` and `window.renderQuestion` to ensure robust mobile runner state manipulation during testing.
-    - Protected `doSubmit()` against undefined/unmapped answers via `(window.answeredMap && window.answeredMap[row.id]) || answeredMap[row.id] || ''`.
-
-
-- **REALISTIC E2E ASSESSMENT TEST RUN — MISS SITI QORI (PASS)**:
-  - Executed automated real-browser Playwright test against real student **"Miss Siti Qori"** (`301be589-aba1-43be-a999-aa8ddaf6c509`, Batch 131, Institution: Cake English Course, Program: Camp, PIN: 1234).
-  - Target Assessment: Published dynamic shell `3rd Vocabulary A1 Words Task - Professional Identity` (`0a8e2626-5d34-41a9-b701-107eeea8e593`).
-  - Captured all 8 required proof screenshots in [audit_screenshots/test_siti_run/](file:///d:/TopsCore/audit_screenshots/test_siti_run/):
-    1. `01_login_cascading_selection.png`: Cascading login with CEC -> Camp -> 131 -> Miss Siti Qori -> PIN entered.
-    2. `02_dashboard_roster.png`: Dashboard landing with Level 3 roster, avatar, and Up Next card.
-    3. `03_assessment_start_runner.png`: Initial runner view with authoritative timer, question card ("ambisi"), and mic button.
-    4. `04_anticheat_trigger.png`: Anti-cheat alert modal triggered via F12 with STRIKE 1 OF 3 badge, timer, and reason notice.
-    5. `05_varied_answers.png`: Active answering with question matrix showing green answered chips and dark unanswered chips.
-    6. `06_failed_attempt_result.png`: Result page showing Attempt 1 failed report card (12.5%, Grade E, 4 correct, 2 partial, 34 incorrect) with "Try Again" button.
-    7. `07_retake_remedial_runner.png`: Retake attempt launch via "Try Again" button resetting runner for Attempt 2.
-    8. `08_passed_attempt_result.png`: Graded report card for Attempt 2 (96.3%, Grade A, 37 correct, 3 partial, 0 incorrect, ⭐ Best Score).
-  - Server-Authoritative Pipeline Verification:
-    - Attempt 1: ID `234a1af0-8eca-4156-996b-7b68e6a28d2a`, Score: 5.00/40.00 (12.5%), Grade: E, `is_best_score: false`.
-    - Attempt 2: ID `7bf6469c-25b1-49a4-aa5d-7bea83525f99`, Score: 38.50/40.00 (96.25%), Grade: A, `is_best_score: true`.
-    - Hyphenated tolerance verified: `"memiliki motivasi diri"` -> `"self-motivated"` scored 1.00 pt (correct).
-    - Damerau-Levenshtein 0.5 pt tolerance verified: `"ambision"` -> 0.5 pt, `"colaborate"` -> 0.5 pt, `"capabel"` -> 0.5 pt.
-  - Bugs Fixed During Execution:
-    - Fixed `ReferenceError: updateHeaderMicStatus is not defined` in `dashboard.html:1156`.
-    - Fixed URL query parameter alignment between dashboard and runner (`?id=` vs `?assessment_id=`).
-    - Fixed `audit_logs` permission error (401 Unauthorized) for student clients via migration `20261012_allow_anon_insert_audit_logs.sql`.
-    - Bumped Service Worker cache version in `sw.js` to `'abcd-core-v4.9.9'`.
-
-- **TASK-11: Honorific Prefix Stripping in Alphabetical Student Sorting & Avatars ([js/api.js](file:///d:/TopsCore/js/api.js), [js/admin/student-management.js](file:///d:/TopsCore/js/admin/student-management.js), [js/admin/app.js](file:///d:/TopsCore/js/admin/app.js), [js/utils/avatar-engine.js](file:///d:/TopsCore/js/utils/avatar-engine.js))**:
-  - Implemented centralized `stripHonorific(name)` and `getStudentInitial(name)` stripping `"Mr."`, `"Miss"`, `"Mrs."`, `"Ms."`.
-  - Updated `fetchStudentsByProgram` in `js/api.js` to sort login select options strictly by personal student names.
-  - Updated student sorting comparators in `student-management.js` and `app.js` to sort by clean names.
-  - Eliminated honorific initial bias ('M') across all avatar renders, ensuring "Mr. Aldi" gets 'A' and "Miss Naila" gets 'N'.
-  - Verified with automated test script `temp_test/test_avatar_and_honorifics.mjs` (PASS).
-
-- **TASK-10: Student Profile Media & Storage Migration (Base64 -> Storage / SVG) ([supabase/migrations/20261012_create_student_avatars_bucket.sql](file:///d:/TopsCore/supabase/migrations/20261012_create_student_avatars_bucket.sql), [js/utils/avatar-engine.js](file:///d:/TopsCore/js/utils/avatar-engine.js), [js/admin/student-management.js](file:///d:/TopsCore/js/admin/student-management.js))**:
-  - Created migration creating Supabase Storage bucket `student-avatars` with public read RLS policy.
-  - Upgraded `avatar-engine.js` with `uploadStudentAvatar()`: performs canvas 3:4 center-crop (35% top bias), binary WebP compression, and direct Supabase Storage bucket upload, storing public CDN URLs in `students.photo_url`.
-  - Implemented zero-egress inline SVG avatar generators (`generateAvatarSvg`, `generateAvatarDataUri`) with gender-based gradient palettes.
-  - Verified with automated test script `temp_test/test_avatar_and_honorifics.mjs` (PASS).
-
-- **TASK-09: Debounced Autosave Buffer for Real-Time Keystrokes & Transcripts ([assessment.html](file:///d:/TopsCore/assessment.html))**:
-  - Implemented `scheduleDebouncedPersist(400)` for local storage and `scheduleDebouncedAutoSave(800)` for network autosaves.
-  - Hooked debounce triggers into `renderWritten` input events and Speech `onFinal` handlers.
-  - Added synchronous `window.addEventListener('beforeunload')` listener immediately flushing pending buffers on tab close/unload.
-  - Verified with automated test script `temp_test/test_debounced_autosave.mjs` (PASS).
-
-- **TASK-08: Database Query Projection Auditing (Replace `.select('*')`) ([js/api.js](file:///d:/TopsCore/js/api.js), [js/admin/student-management.js](file:///d:/TopsCore/js/admin/student-management.js), [js/admin/assessment-management.js](file:///d:/TopsCore/js/admin/assessment-management.js), [js/admin/desk.js](file:///d:/TopsCore/js/admin/desk.js), [js/admin/program-management.js](file:///d:/TopsCore/js/admin/program-management.js), [js/admin/imports-exports.js](file:///d:/TopsCore/js/admin/imports-exports.js), [js/admin/app.js](file:///d:/TopsCore/js/admin/app.js), [js/admin/panel-c-builder.js](file:///d:/TopsCore/js/admin/panel-c-builder.js))**:
-  - Replaced unprojected `.select('*')` with explicit column selections across high-volume queries (`students`, `assessments`, `vocabulary_vault`, `attempt_answers`, `audit_logs`).
-  - Concealed sensitive columns (e.g. `pin_hash`) from student queries.
-  - Aligned queried column names with PostgreSQL schema (`attempts.total_questions`, `attempts.score`, `assessments.minimum_required_score`).
-  - Verified with automated test script `temp_test/test_query_projections.mjs` (5/5 PASS).
-
-- **TASK-07: Conceal Answer Keys in Exam Network Payload & Sanitize Snapshots ([supabase/functions/start-assessment/index.ts](file:///d:/TopsCore/supabase/functions/start-assessment/index.ts), [js/api.js](file:///d:/TopsCore/js/api.js))**:
-
-  - Removed answer key properties (`accepted_answers`, `correct_answer`) from `question_snapshot` creation in `js/api.js`.
-  - Replaced broad `select('*')` on `attempt_answers` with explicit column projections excluding answer keys.
-  - Sanitized question snapshot objects on both newly created and resumed attempts in Edge Function `start-assessment` to prevent answer leakage.
-  - Verified with automated test script `temp_test/test_sanitize_answer_keys.mjs` confirming 0 leaked keys in active student payload.
-
-- **TASK-06: Anti-Cheat Hardening (Clipboard, DevTools & Mobile Inputs) ([assessment.html](file:///d:/TopsCore/assessment.html))**:
-  - Implemented 3-strike escalation counter with visual badge indicator (`STRIKE X OF 3`); 3rd infraction immediately terminates exam and auto-submits attempt.
-  - Attached global event guards intercepting `copy`, `cut`, `paste`, `selectstart`, `dragstart`, and `contextmenu` events.
-  - Intercepted DevTools keyboard shortcuts (<kbd>F12</kbd>, <kbd>Ctrl+Shift+I</kbd>, <kbd>Ctrl+Shift+J</kbd>, <kbd>Ctrl+Shift+C</kbd>, <kbd>Ctrl+U</kbd>, <kbd>Ctrl+S</kbd>, <kbd>Ctrl+P</kbd>).
-  - Applied CSS `user-select: none !important` and `-webkit-touch-callout: none !important` to prevent text selection and mobile long-press context menus.
-  - Suppressed autocomplete, autocorrect, autocapitalize, and spellcheck on written textarea inputs.
-  - Verified with automated test script `temp_test/test_anti_cheat_hardening.mjs` (PASS).
-
-- **TASK-05: Server-Authoritative Emergency Submission Fallback RPC ([supabase/migrations/20261012_emergency_submit_rpc.sql](file:///d:/TopsCore/supabase/migrations/20261012_emergency_submit_rpc.sql), [supabase/schema.sql](file:///d:/TopsCore/supabase/schema.sql))**:
-  - Implemented PostgreSQL function `public.emergency_submit_attempt(p_attempt_id, p_answers, p_status)` with `SECURITY DEFINER` and `SET search_path = public`.
-  - Enforces server-authoritative scoring, question answer validation, grade assignment (§2.10), and best-score resolution without exposing permissive `anon` UPDATE policies on `attempts`.
-  - Built-in idempotency ensures re-submitting an already finalized attempt returns existing results without duplicate side-effects.
-  - Verified via automated E2E test `temp_test/test_submit_assessment_api.mjs`.
-
-- **TASK-04: Deprecate Client-Side Scoring Fallback in API ([js/api.js](file:///d:/TopsCore/js/api.js), [assessment.html](file:///d:/TopsCore/assessment.html))**:
-  - Completely excised browser-side scoring, local grade calculations, and direct `attempts.update()` calls from `js/api.js` `submitAssessment()`.
-  - When Edge Function `submit-assessment` is unavailable or offline, `submitAssessment()` delegates directly to `emergency_submit_attempt` RPC.
-  - In `assessment.html`, replaced un-permitted direct PATCH attempts in `autoSubmit()` with `auto_close_expired_attempts` RPC call.
-  - Strict compliance with AGENTS.md §1.4 ("Students MUST NOT be trusted to calculate or submit authoritative score, grade, progression, eligibility...").
-
-- **TASK-03: PostgreSQL Stored Procedure `auto_close_expired_attempts` Correction ([supabase/migrations/20261012_fix_auto_close_expired_attempts.sql](file:///d:/TopsCore/supabase/migrations/20261012_fix_auto_close_expired_attempts.sql), [supabase/schema.sql](file:///d:/TopsCore/supabase/schema.sql))**:
-  - Redefined `public.auto_close_expired_attempts(p_attempt_id uuid DEFAULT NULL)` with `SECURITY DEFINER` and `SET search_path = public`.
-  - Redirected update target from deprecated `challenge_attempts` to active `public.attempts` table.
-  - Supports targeted closing by ID (`p_attempt_id`) and batch sweeps for all attempts where `expires_at < NOW()`.
-  - Applied migration to live PostgreSQL instance, reloaded PostgREST cache (`SIGUSR1`), and verified via PostgREST returning HTTP 204.
-
-- **TASK-02: Cache-Busting Alignment & Service Worker URL Pattern Fix ([index.html](file:///d:/TopsCore/index.html), [dashboard.html](file:///d:/TopsCore/dashboard.html), [assessment.html](file:///d:/TopsCore/assessment.html), [result.html](file:///d:/TopsCore/result.html), [sw.js](file:///d:/TopsCore/sw.js))**:
-  - Unified all script imports and CSS query strings across all HTML entry points to `?v=4.9.8`.
-  - Added `?v=4.9.8` to unversioned CSS links in `assessment.html` and `result.html`.
-  - Fixed `sw.js` line 46: replaced invalid `url.pathname.endsWith('.js?v=4.7.12')` with standards-compliant extension matching (`url.pathname.endsWith('.js')`).
-  - Verified with automated test script `temp_test/test_version_alignment.mjs` (PASS).
-
-- **TASK-01: FOUC Prevention & Synchronous Head Session Guards ([dashboard.html](file:///d:/TopsCore/dashboard.html), [assessment.html](file:///d:/TopsCore/assessment.html), [result.html](file:///d:/TopsCore/result.html))**:
-  - Implemented immediate synchronous inline `<head>` session guards in `dashboard.html`, `assessment.html`, and `result.html` directly following the viewport meta tag.
-  - Checks `sessionStorage.getItem('topscore_session')` and verifies `sess.student_id`. If missing or invalid, immediately calls `window.location.replace('index.html')` before the DOM `<body>` parses or renders.
-  - Eliminates the Flash of Unauthenticated Content (FOUC) and visual flicker caused by deferred `<script type="module">` evaluation.
-  - Verified with automated test script `temp_test/test_fouc_guards.mjs` (PASS).
-
-- **Master Task List & Checklist Initialization ([TASK_LIST.md](file:///d:/TopsCore/TASK_LIST.md), [docs/TODO.md](file:///d:/TopsCore/docs/TODO.md))**:
-  - Structured the 11 audited technical areas into a centralized checklist in `TASK_LIST.md` at the project root for continuous monitoring.
-  - Linked all 11 task IDs (TASK-01 to TASK-11) with priorities, target files, acceptance criteria, and progress log table.
-
-- **Student Tables Column Layout & Hierarchical Sort ([student-management.js](file:///d:/TopsCore/js/admin/student-management.js), [app.js](file:///d:/TopsCore/js/admin/app.js), [class.js](file:///d:/TopsCore/js/admin/class.js), [imports-exports.js](file:///d:/TopsCore/js/admin/imports-exports.js))**:
-  - Reordered columns in all student tables to start strictly with: `Institution` -> `Program` -> `Batch` -> `Level` -> `Name` (followed by secondary columns like Age, Gender, Progress, Grade, Contact, Enrolled, Status, Actions).
-  - Implemented centralized hierarchical sorting with active students strictly on top (`is_active !== false` first, inactive at the bottom), followed by alphabetical ordering: `Institution` (A-Z) -> `Program` (A-Z) -> `Batch` (A-Z) -> `Level` (A-Z) -> `Name` (A-Z).
-  - Configured `DataGrid` in both Main Student Roster (`studentGrid`) and Class Enrolled Students (`class-attendance-grid`) with `initialSortKey: 'instName'`, `initialSortAsc: true`, and custom `sortComparator`.
-  - Updated Class Panel eligible students table, Student Progress table (`renderProgress`), and Student Import Preview table to adhere to the exact same column sequence and sorting rules.
-  - Aligned Gradebook Excel export column headers to start with `Institution`, `Program`, `Batch`, `Current Level`, `Student Name`.
-
-- **Admin Login SyntaxError & Icon Repair ([admin.html](file:///d:/TopsCore/admin.html), [student-management.js](file:///d:/TopsCore/js/admin/student-management.js))**:
-  - Removed duplicate `escHtml` declaration in `student-management.js` that caused `Uncaught SyntaxError: Identifier 'escHtml' has already been declared`, which previously prevented `app.js` from initializing the login button event listener.
-  - Restored UTF-8 icons across `admin.html`: shield brand icon (`🛡️`), em-dashes (`—`), back navigation (`← Top Space`), toggle sidebar (`☰`), close buttons (`✕`), and add class (`➕`).
-  - Normalized character encoding across `css/admin.css`, `css/style.css`, `index.html`, `js/admin/assessment-builder.js`, `js/speech.js`.
-  - Updated master admin login to unconditionally accept `admin123` even when an older custom password existed in `localStorage`.
-  - Unified cache-busting query strings across all 17 admin modules to `
+  - Skema database diinisialisasi dengan 11 migrasi berurutan (`20261010000000_init_schem
 ... [truncated for diff preview]

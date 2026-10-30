@@ -232,12 +232,19 @@ Centralized authoritative grading (Official Grading Scale):
 
 | Symbol | Predicate (Label) | Score Range | Main Color & Gradient | Hex Code |
 |:---:|:---:|:---:|:---:|:---:|
-| ★ | Excellent | 100% | Hijau (Rich Green) | `#22C55E` |
-| A | Very Good | 90% – 99% | Hijau (Rich Green) | `#10B981` |
-| B | Good | 80% – 89% | Lime (Hijau Muda / Yellow-Green) | `#84CC16` |
-| C | Enough | 60% – 79% | Kuning (Yellow) | `#EAB308` |
-| D | Less | 30% – 59% | Jingga / Orange | `#F97316` |
-| E | Fail | 0% – 29% | Merah (Red) | `#EF4444` |
+| ★ | Excellent | 100% | Pure Green | `#00c000ff` (`#00c000`) |
+| A | Very Good | 90% – 99% | Pure Green | `#00c000ff` (`#00c000`) |
+| B | Good | 80% – 89% | Electric Lime | `#95ff00ff` (`#95ff00`) |
+| C | Enough | 60% – 79% | Pure Yellow | `#FFFF00` |
+| D | Less | 30% – 59% | Dark Orange | `#FF8C00` |
+| E | Fail | 0% – 29% | Pure Red | `#FF0000` |
+
+### Unified Color Rules (Single Source of Truth)
+- **Single Source of Truth**: All colors must be imported from `TOPSCORE_COLORS` in `js/grading.js` and referenced via CSS variables in `css/style.css` (`--grade-*`, `--eval-*`). No hardcoded competing hex codes are permitted anywhere in the codebase.
+- **Star (★) and Grade A Uniformity**: Both share the exact same base color (`#00c000ff`). Star is distinguished by the `★` symbol and an elegant green glow, while Grade A uses clean solid `#00c000ff` with the letter "A".
+- **Grade Badge Text Contrast**: Inside the round badges/circles, the Star symbol `★` is WHITE (`#FFFFFF`), while letters for grades A, B, C, D, and E are deep DARK slate (`#0F172A`) for optimal, non-glare readability.
+- **Dynamic Points (PTS) Coloring**: On all pages (`result.html`, `admin.html`, and `dashboard.html`), numeric points (PTS) dynamically inherit the student's exam score grade color (`getGradeColorByScore`).
+- **Answer Evaluation Colors (Result Page)**: Correct = `#00c000ff` (Full point), Partial = `#FFFF00` (Half point), Incorrect = `#FF0000` (Zero).
 
 ### Non-Standard Grades Elimination
 - **No Grade "S"**: 100% Star tier is strictly represented by the symbol `★` (U+2605). Grade "S" is eliminated.

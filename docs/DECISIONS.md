@@ -736,3 +736,140 @@ In the core TopsCore specifications (`AGENTS.md` §2.10, `ANTIGRAVITY_GUIDE.md`,
 - Preserves clean 6-tier grading scale (★, A, B, C, D, E) without introducing non-standard grades.
 - 100% passing test suites across all validation scripts.
 
+---
+
+## DECISION-029 — Unified Vocab Scoring Engine (Single Model Across All Levels): Latest Active Theme Score & Grade with Cumulative Exam Points
+
+Date: 2026-10-30
+Status: ACCEPTED (SUPERSEDES DECISION-024 regarding future milestone 0% penalty on global score)
+
+### Context
+User requirement: *"Kita perlu bahas sosal penialian sekali lagi,,, saya lihat nilai siswa di kelas Vocab sangat rendah (D,C) saaya tidak mau membuat mereka tidak besemnagat,,, bagaimana kalau kita pakai nilai rata2 dari Exam terkahir yang mereka pakai untuk sebagai nilai global, apakah bisa? tapi sebelumnya kita atur dulu cara kita Scoring dan Grading degan maksmial dan 1 model untuk kelas vocab SEMUA LEVEL, yang menggunakan sistem quiz dan Exam /grill-me"*
+
+Previously, when a student completed Theme A (150 pts max), passing it queued Theme B (350 pts max) into the denominator with a 0% score. This caused students who scored 60% or 80% on Theme A to immediately plummet down to 18% - 30% (Grade E or D), creating significant demotivation.
+
+### Decision
+1. **Single Model for Vocab Scoring (All Levels)**:
+   - Each theme consists of 2 Exams (Word Exam + Phrase Exam), both scaled to 100%.
+   - In Class Hub Attendance Matrix: each theme displays `WRD SCORE %`, `WRD PTS`, `PHR SCORE %`, `PHR PTS`, followed by Theme Combined `SCORE %` (`theme_${tc}_score`) and Theme Combined `TOT` (`theme_${tc}_total_pts`).
+2. **Latest Active Theme for Global Score & Grade**:
+   - The authoritative `computeMilestoneExamMastery()` evaluates the student's global `SCORE %` and `GRADE` strictly from their **Latest Active Theme** (`latestAttemptedTheme.scorePct`).
+   - Removes the demotivating future milestone 0% penalty on Global Score (e.g. Pasya shows 60% Grade C instead of 18% Grade E; Sofa Maria Ulfa shows 47% Grade D instead of 31% Grade D).
+3. **Cumulative Global Points**:
+   - The left `PTS` column in Class Hub, Student Roster, and Student Dashboard displays the cumulative total points earned across ALL completed exams (e.g. Sofa = 273.5 pts, Suke = 143 pts, Pasya = 90 pts).
+4. **0-Exam Handling (Quiz-Only Students)**:
+   - Students who completed only quizzes and 0 exams (e.g. Rifky Ahmad) display neutral `—` for Global Score, Grade, and PTS, preventing false quiz score inflation or unfair 0% E penalization.
+   - Pacing is reflected cleanly in `TESTS` (e.g. `2/40`) and `PROG %` (`5%`).
+5. **Exact System-Wide Parity**:
+   - Class Hub (`admin.html#class-hub`), Student Roster (`admin.html#students`), and Student Dashboard (`dashboard.html`) all use `computeMilestoneExamMastery()` with identical data queries (fetching full test metadata `test_type`, `shell_code`, `payload`, etc.).
+6. **Strict Unified Color Vault**:
+   - Master colors in `js/grading.js` (`TOPSCORE_COLORS`): ★ `#00c000ff` with white star, A `#00c000ff`, B `#95ff00ff`, C `#FFFF00`, D `#FF8C00`, E `#FF0000` (superseded by DECISION-030).
+
+### Consequences
+- Prevents artificial grade deflation while maintaining academic rigor.
+- Fully aligns Class Hub, Student Roster, and Student Dashboard.
+
+---
+
+## DECISION-030 — User-Defined Official Color Palette: Star & Grade A (#00c000ff) and Grade B (#95ff00ff)
+
+Date: 2026-10-30
+Status: ACCEPTED (SUPERSEDES DECISION-028 regarding base hex values for Star, A, and B)
+
+### Context
+User requirement: *"2. palet warna saya yang rubah,,, saya pakai yang STAR dan A #00c000ff dan B #95ff00ff."*
+
+The user explicitly defined the primary color hex codes for the highest achievement tiers:
+- **Star Tier (★ / 100%)**: `#00c000ff` (Pure Rich Green with Alpha)
+- **Grade A (90% – 99%)**: `#00c000ff` (Pure Rich Green with Alpha, identical base to Star)
+- **Grade B (80% – 89%)**: `#95ff00ff` (Vibrant Electric Lime with Alpha)
+- **Grade C (60% – 79%)**: `#FFFF00` (Pure Yellow)
+- **Grade D (30% – 59%)**: `#FF8C00` (Dark Orange)
+- **Grade E (0% – 29%)**: `#FF0000` (Pure Red)
+
+### Decision
+1. Update `TOPSCORE_COLORS` and `GRADE_PALETTE` in `js/grading.js`:
+   - `STAR: '#00c000ff'`, `A: '#00c000ff'`, `CORRECT: '#00c000ff'`.
+   - `B: '#95ff00ff'`.
+   - RGB equivalents: `STAR_RGB = '0, 192, 0'`, `A_RGB = '0, 192, 0'`, `B_RGB = '149, 255, 0'`.
+2. Update CSS variables in `css/style.css`:
+   - `--grade-star: #00c000ff;` (RGB: `0, 192, 0`)
+   - `--grade-a: #00c000ff;` (RGB: `0, 192, 0`)
+   - `--grade-b: #95ff00ff;` (RGB: `149, 255, 0`)
+   - `--eval-correct: #00c000ff;`
+3. Update `AGENTS.md` Section 2.10 table and `scripts/verify_green_star_grading.mjs` test assertions.
+
+### Consequences
+- Absolute adherence to the product owner's explicit aesthetic decision per AGENTS.md §0 (Execution Authority Level 1: Direct User Requirements).
+- 100% PASS on all automated color vault verification tests.
+
+---
+
+## DECISION-031 — Vocabulary Evaluation Engine: Non-Cumulative Latest Attempt & Latest Theme Session as Primary Benchmark
+
+Date: 2026-10-30
+Status: ACCEPTED (SUPERSEDES DECISION-029 item 3 regarding cumulative points)
+
+### Context
+User requirement: *"Dalam sistem evaluasi ujian kosakata (vocabulary) ini, penilaian hasil belajar tidak didasarkan pada rata-rata kumulatif ataupun penjumlahan total poin dari seluruh sesi sebelumnya. Karena penguasaan kosakata bersifat retensi dan capaian kompetensi akhir, tolok ukur utama yang digunakan sebagai nilai acuan siswa adalah hasil dari sesi tes terbaru (latest attempt) pada jadwal ujian yang telah ditentukan. Dengan skema ini, riwayat tes sebelumnya murni berfungsi sebagai rekam jejak proses belajar, sedangkan kolom ringkasan nilai dan poin di panel utama wajib merefleksikan pencapaian aktual pada tes mutakhir tersebut, bukan akumulasi riwayat yang berpotensi mendistorsi gambaran kemampuan riil siswa saat ini."*
+
+Previously, `PTS` (Total Points) was calculating cumulative sums across all completed historical themes (e.g. Aunul Fikri = 683.5 pts summing Theme A + B + C), and in some scenarios average scores mixed past sessions into current competency, distorting the student's real current retention level.
+
+### Decision
+1. **Latest Attempt & Latest Theme Session Benchmark**:
+   - Because vocabulary mastery measures **memory retention and final competency**, the primary benchmark in the main summary panel (`admin.html#class-hub`), Student Lobby (`dashboard.html`), and Student Roster (`admin.html#students`) is strictly the **result of the latest scheduled test session** (`latestAttemptedTheme`).
+   - `PTS`: Displays points earned on the latest test session (e.g. Theme C = 362 pts or 482 pts), completely eliminating cumulative summation of past themes.
+   - `SCORE`: Displays the percentage score of the latest test session (`latestAttemptedTheme.scorePct`).
+   - `GRD`: Displays the grade corresponding to the latest test session score (`calculateGrade(overallScore)`).
+2. **Retake & Attempt Resolution**:
+   - When a student attempts a test multiple times, the **latest attempt (by timestamp)** is chosen, directly reflecting current retention rather than expired past attempts.
+3. **Previous Test History Role**:
+   - All historical tests (Theme A, Theme B, earlier attempts) remain intact in the individual theme columns as an immutable learning track record for teachers and audit purposes.
+4. **Color & Contrast Rules**:
+   - Both `SCORE` and `PTS` inherit dynamic color from `getGradeColorByScore(score)` per TOPSCORE_COLORS rules.
+   - Grade badges strictly preserve white text for Star ★ and `#0F172A` slate dark for grades A-E.
+5. **Exact System-Wide Parity**:
+   - Admin Class Hub, Student Dashboard / Lobby, and Student Roster all utilize `computeMilestoneExamMastery()` ensuring identical standings and stats.
+
+### Consequences
+- Eliminates distorted cumulative point inflation and historical score dilution.
+- Fairly and accurately assesses student retention at the latest scheduled milestone.
+- 100% PASS across all test suites without staging or committing to git per user instruction.
+
+---
+
+## DECISION-032 — Class Hub Matrix Layout: Removal of Left Score/Points and Retention of Left GRD (Grade) Sticky Column
+
+Date: 2026-10-30
+Status: ACCEPTED
+
+### Context
+In `admin.html#class-hub`, the left sticky panel originally contained 8 columns:
+`INST | PROGRAM | BATCH | STUDENT NAME | PROG | SCORE | GRD | PTS`.
+The user requested:
+1. *"keterangan tentang thema yang sedang di ambil di samping nama tidak perlu"* -> Remove active theme indicator badge beside student names.
+2. *"kolom score dan point di sebelah kri ini spertinya tidak perlu"* -> Remove SCORE and PTS from the left sticky panel, because detailed score and points are already displayed in the theme columns.
+3. User decision: *"biarkan grade"* -> Retain the `GRD` (Grade) column in the left sticky panel alongside `PROG`.
+
+### Decision
+1. **Streamline Left Sticky Panel**:
+   - Remove `averageScorePct` (`SCORE`) and `totalEarnedScore` (`PTS`) from the left sticky panel.
+   - Retain `grade` (`GRD`) as the final sticky column (`col-sticky-6 col-sticky-last`).
+   - Sticky panel column order:
+     `INST (col 1, 48px) | PROGRAM (col 2, 54px) | BATCH (col 3, 48px) | STUDENT NAME (col 4, 140px) | PROG (col 5, 46px) | GRD (col 6, 40px)`.
+2. **Visual Separator**:
+   - `col-sticky-last` (`GRD`) carries a firm cyan border `border-right: 3px solid rgba(56, 189, 248, 0.75)` and `box-shadow: 4px 0 10px rgba(0, 0, 0, 0.4)` to cleanly separate student identity/overall standing from the horizontal scrollable test matrix.
+3. **Screen Real Estate Optimization**:
+   - Total sticky width reduced from 480px to 376px (+104px screen width saved for the test matrix grid).
+4. **Clean Student Name**:
+   - Active theme badges (`TH-A`, `TH-B`, etc.) removed from the `STUDENT NAME` cell.
+
+### Consequences
+- Cleaner, more ergonomic, and highly responsive table layout for tutors.
+- Preserves high-level competency visibility at a glance via `PROG` and `GRD` while eliminating redundant left metrics.
+- 100% adherence to product owner direct instructions.
+
+
+
+
+

@@ -199,7 +199,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
           }, 100);
         }
       } catch (e) {
-        container.innerHTML = `<div class="opts-empty" style="color:#f87171;">Failed to load institutions: ${e.message}</div>`;
+        container.innerHTML = `<div class="opts-empty" style="color:var(--clr-danger, #FF0000);">Failed to load institutions: ${e.message}</div>`;
       }
     }
 
@@ -227,7 +227,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
           }, 100);
         }
       } catch (e) {
-        container.innerHTML = `<div class="opts-empty" style="color:#f87171;">Failed to load programs.</div>`;
+        container.innerHTML = `<div class="opts-empty" style="color:var(--clr-danger, #FF0000);">Failed to load programs.</div>`;
       }
     }
 
@@ -261,7 +261,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
           }, 100);
         }
       } catch (e) {
-        container.innerHTML = `<div class="opts-empty" style="color:#f87171;">Failed to load batches.</div>`;
+        container.innerHTML = `<div class="opts-empty" style="color:var(--clr-danger, #FF0000);">Failed to load batches.</div>`;
       }
     }
 
@@ -286,7 +286,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
           if (match) { state.studentId = match.id; state.studentName = match.name; }
         }
       } catch (e) {
-        container.innerHTML = `<div class="opts-empty" style="color:#f87171;">Failed to load students.</div>`;
+        container.innerHTML = `<div class="opts-empty" style="color:var(--clr-danger, #FF0000);">Failed to load students.</div>`;
       }
     }
 

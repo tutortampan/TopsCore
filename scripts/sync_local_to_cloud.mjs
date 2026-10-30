@@ -3,11 +3,11 @@ const { Client } = pg;
 
 // Supabase Production Cloud Credentials
 const CLOUD_CONFIG = {
-  host: 'db.oclajpyumehpojepcczg.supabase.co',
-  port: 5432,
-  user: 'postgres',
-  password: '100%TopsCore',
-  database: 'postgres',
+  host: process.env.SUPABASE_DB_HOST || 'db.oclajpyumehpojepcczg.supabase.co',
+  port: parseInt(process.env.SUPABASE_DB_PORT || '5432', 10),
+  user: process.env.SUPABASE_DB_USER || 'postgres',
+  password: process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD || '',
+  database: process.env.SUPABASE_DB_NAME || 'postgres',
   ssl: { rejectUnauthorized: false }
 };
 
@@ -22,6 +22,11 @@ const LOCAL_CONFIG = {
 
 async function syncLocalToCloud() {
   console.log('=== TOPSCORE: SYNC LOCAL DOCKER -> SUPABASE CLOUD ===');
+  
+  if (!CLOUD_CONFIG.password) {
+    console.error('Error: SUPABASE_DB_PASSWORD or PGPASSWORD environment variable is required.');
+    process.exit(1);
+  }
   
   const local = new Client(LOCAL_CONFIG);
   await local.connect();

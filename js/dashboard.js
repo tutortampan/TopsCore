@@ -8,7 +8,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=5.3.2';
     import { testMicrophoneCapability } from './speech.js?v=5.3.2';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=5.3.2';
-    import { GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=5.6.8';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=20261030_v43';
 
     window._isBatchChampion = false;
 
@@ -910,7 +910,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             <span class="next-asm-icon">🏆</span>
             <span class="next-asm-title">All tests in this class completed!</span>
           </div>
-          <span style="font-size:0.75rem; font-weight:800; color:#10b981; padding:2px 8px; border-radius:4px; background:rgba(16,185,129,0.15);">✓ 100%</span>
+          <span style="font-size:0.75rem; font-weight:800; color:${TOPSCORE_COLORS.STAR}; padding:2px 8px; border-radius:4px; background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.15);">✓ 100%</span>
         `;
         return;
       }
@@ -1105,7 +1105,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
                 <div class="text-xs text-muted mb-0">${statusText}</div>
                 <div class="score-bar-wrap" style="width: 80px;" title="${pct}%">
-                  <div class="score-bar" style="width:${pct}%; background: ${isCompleted ? 'var(--clr-success, #10b981)' : 'var(--clr-primary, #6366f1)'};"></div>
+                  <div class="score-bar" style="width:${pct}%; background: ${isCompleted ? 'var(--clr-success, #00c000ff)' : 'var(--clr-primary, #6366f1)'};"></div>
                 </div>
               </div>
             `;
@@ -1399,15 +1399,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                              <span style="font-size:0.7rem;color:var(--clr-text-3);">Complete <b>${prereqTitle}</b><br>to unlock this test.</span>
                            </div>`;
             } else if (inProg) {
-              statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);
+              statusBadge = `<span style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.35);
                               padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">&#9203; In Progress</span>`;
               actionBtn   = `<button onclick="location.href='test.html?attempt_id=${inProg.id}&test_id=${inProg.test_id || ''}'"
                               style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
                               font-size:0.78rem;font-weight:700;cursor:pointer;">Resume ←’</button>`;
             } else if (best) {
               const isRemedialBest = Boolean(best.is_remedial_unlocked || best.is_remedial);
-              const badgeBg = passed ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.12)';
-              const badgeClr= passed ? (gradeColor || '#10B981') : '#EF4444';
+              const badgeBg = passed ? `rgba(${TOPSCORE_COLORS.STAR_RGB},0.15)` : `rgba(${TOPSCORE_COLORS.E_RGB},0.12)`;
+              const badgeClr= passed ? (gradeColor || TOPSCORE_COLORS.STAR) : TOPSCORE_COLORS.E;
               statusBadge = `<span style="background:${badgeBg};color:${badgeClr};border:1px solid ${badgeClr}44;
                               padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">
                               ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%${isRemedialBest ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</span>`;
@@ -1709,7 +1709,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           statusBadge = `<span class="badge" style="background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.3);">Not Yet Available</span>`;
           actionBtn = `<button class="btn btn-sm" disabled style="opacity:0.45;cursor:not-allowed;background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);">Unavailable</button>`;
         } else if (inProgAtt) {
-          statusBadge = `<span class="badge" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);">\u25BA In Progress</span>`;
+          statusBadge = `<span class="badge" style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.3);">&#9658; In Progress</span>`;
           actionBtn = `<button class="btn btn-warning btn-sm" data-aid="${asm.id}">Resume</button>`;
         } else if (isCompleted) {
           const isAsmTest = ((asm.test_type || '').toLowerCase() === 'exam' ||
@@ -1735,15 +1735,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
 
           statusBadge = passed
-            ? `<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);">✓ Passed</span>`
-            : `<span class="badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);">Needs Improvement</span>`;
+            ? `<span class="badge" style="background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.15);color:${TOPSCORE_COLORS.STAR};border:1px solid rgba(${TOPSCORE_COLORS.STAR_RGB},0.3);">✓ Passed</span>`
+            : `<span class="badge" style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.3);">Needs Improvement</span>`;
 
           const canRetake = retakesAllowed && (!isAsmTest || !passed);
 
           if (canRetake) {
             actionBtn = `<div style="display:flex;gap:6px;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><button class="btn btn-sm btn-primary" style="padding:4px 8px;" data-aid="${asm.id}">Retake</button></div>`;
           } else if (isAsmTest && !passed && !isSessionUnlocked) {
-            actionBtn = `<div style="display:flex;gap:6px;align-items:center;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><span style="font-size:0.7rem;color:#f59e0b;font-weight:700;padding:3px 6px;border-radius:4px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);">🔒 Locked</span></div>`;
+            actionBtn = `<div style="display:flex;gap:6px;align-items:center;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><span style="font-size:0.7rem;color:${TOPSCORE_COLORS.D};font-weight:700;padding:3px 6px;border-radius:4px;background:rgba(${TOPSCORE_COLORS.D_RGB},0.1);border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.25);">🔒 Locked</span></div>`;
           } else {
             actionBtn = `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);" data-aid-result="${bestAtt?.id}">View Result</button>`;
           }
@@ -1789,11 +1789,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
               ${bestPct !== null ? `
                 <div style="text-align:center;">
-                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColor}${(grade === '★' || grade === 'S') ? ';text-shadow:0 0 10px rgba(34, 197, 94, 0.45);' : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</div>
+                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColor}${(grade === '★' || grade === 'S') ? `;text-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);` : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</div>
                   <div style="font-size:0.7rem;color:var(--clr-text-3);">Best Score</div>
                 </div>
                 ${(grade === '★' || grade === 'S' || bestPct >= 100)
-                  ? `<div class="grade-star" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(34, 197, 94, 0.45);color:#22C55E;border:1.5px solid #22C55E;">★</div>`
+                  ? `<div class="grade-star" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);color:${TOPSCORE_COLORS.STAR};border:1.5px solid ${TOPSCORE_COLORS.STAR};">★</div>`
                   : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColor};color:${gradeColor};">${getGradeSymbol(grade)}</div>`
                 }
               ` : ''}
@@ -1858,8 +1858,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const rawScore = Number(att.score ?? 0);
           const maxRemPts = totalQ * 0.6;
           const effPoints = isRem ? Math.min(rawScore, maxRemPts) : rawScore;
-          if (examBestMap[uniqueKey] == null || effPoints > (examBestMap[uniqueKey].effPoints || 0)) {
-            examBestMap[uniqueKey] = { effPct, effPoints, totalQ, test: asm, testId: uniqueKey };
+          const curPts = examBestMap[uniqueKey]?.effPoints ?? -1;
+          const curPct = examBestMap[uniqueKey]?.effPct ?? -1;
+          const curTime = examBestMap[uniqueKey]?.attTime || 0;
+          if (examBestMap[uniqueKey] == null || effPoints > curPts || (effPoints === curPts && effPct > curPct) || (effPoints === curPts && attTime > curTime)) {
+            examBestMap[uniqueKey] = { effPct, effPoints, totalQ, test: asm, testId: uniqueKey, attTime };
           }
         }
       });
@@ -1900,10 +1903,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       if (hasExam) {
         const theme = (GRADE_PALETTE && GRADE_PALETTE[overallGrade]) ? GRADE_PALETTE[overallGrade] : (GRADE_PALETTE['★'] || {
-          color: '#22C55E', dark: '#16a34a', light: '#86efac', rgb: '34, 197, 94', glow: 'rgba(34, 197, 94, 0.45)'
+          color: TOPSCORE_COLORS.STAR, dark: '#006400', light: '#86efac', rgb: TOPSCORE_COLORS.STAR_RGB, glow: `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`
         });
         targetColor = theme.color;
-        rgbColor = theme.rgb || '34, 197, 94';
+        rgbColor = theme.rgb || TOPSCORE_COLORS.STAR_RGB;
       }
 
 
@@ -1919,12 +1922,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           gradeBadgeValue.textContent = '—';
         } else if (isGradeS) {
           gradeBadgeValue.innerHTML = `
-            <svg class="pure-star-svg" width="46" height="46" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 24px rgba(134, 239, 172, 0.65)); display:inline-block; vertical-align:middle;">
+            <svg class="pure-star-svg" width="46" height="46" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 14px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)) drop-shadow(0 0 24px rgba(134, 239, 172, 0.65)); display:inline-block; vertical-align:middle;">
               <defs>
                 <linearGradient id="starGreenDashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="#86efac" />
-                  <stop offset="50%" stop-color="#22c55e" />
-                  <stop offset="100%" stop-color="#16a34a" />
+                  <stop offset="50%" stop-color="${TOPSCORE_COLORS.STAR}" />
+                  <stop offset="100%" stop-color="#006400" />
                 </linearGradient>
               </defs>
               <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGreenDashGrad)" />
@@ -1942,7 +1945,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           achievementTextEl.textContent = statusWord;
           achievementTextEl.style.color = targetColor;
           if (isGradeS) {
-            achievementTextEl.style.filter = 'drop-shadow(0 0 10px rgba(34, 197, 94, 0.85))';
+            achievementTextEl.style.filter = `drop-shadow(0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.85))`;
           } else {
             achievementTextEl.style.filter = `drop-shadow(0 0 8px rgba(${rgbColor}, 0.6))`;
           }
@@ -1977,9 +1980,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           el.style.setProperty('--tier-color', targetColor);
           el.style.setProperty('--tier-rgb', rgbColor);
           if (hasExam && isGradeS) {
-            el.style.borderColor = 'rgba(34, 197, 94, 0.55)';
-            el.style.boxShadow = '0 0 25px rgba(34, 197, 94, 0.35), 0 8px 20px -6px rgba(0, 0, 0, 0.5)';
-            el.style.background = 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(34, 197, 94, 0.22), transparent 75%), #0f172a';
+            el.style.borderColor = `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.55)`;
+            el.style.boxShadow = `0 0 25px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.35), 0 8px 20px -6px rgba(0, 0, 0, 0.5)`;
+            el.style.background = `radial-gradient(ellipse 90% 70% at 50% 0%, rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.22), transparent 75%), #0f172a`;
           } else if (hasExam) {
             el.style.borderColor = `rgba(${rgbColor}, 0.45)`;
             el.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.2), 0 6px 18px -5px rgba(0, 0, 0, 0.35)`;
@@ -1997,9 +2000,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const avatarBox = document.getElementById('banner-avatar-container');
       if (avatarBox) {
         if (isGradeS) {
-          avatarBox.style.background = 'linear-gradient(135deg, #86efac 0%, #22c55e 45%, #16a34a 100%)';
-          avatarBox.style.boxShadow = '0 0 25px rgba(34, 197, 94, 0.85), 0 0 45px rgba(34, 197, 94, 0.45)';
-          avatarBox.style.border = '2.5px solid #22c55e';
+          avatarBox.style.background = `linear-gradient(135deg, #86efac 0%, ${TOPSCORE_COLORS.STAR} 45%, #006400 100%)`;
+          avatarBox.style.boxShadow = `0 0 25px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.85), 0 0 45px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`;
+          avatarBox.style.border = `2.5px solid ${TOPSCORE_COLORS.STAR}`;
           avatarBox.classList.add('grade-star');
         } else {
           avatarBox.classList.remove('grade-star');
@@ -2014,7 +2017,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (scoreVal) {
         scoreVal.style.color = targetColor;
         if (isGradeS) {
-          scoreVal.style.filter = 'drop-shadow(0 0 14px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 24px rgba(34, 197, 94, 0.45))';
+          scoreVal.style.filter = `drop-shadow(0 0 14px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)) drop-shadow(0 0 24px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45))`;
           scoreVal.classList.add('text-grade-star');
         } else {
           scoreVal.classList.remove('text-grade-star');
@@ -2027,7 +2030,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (gradeVal) {
         gradeVal.style.color = targetColor;
         if (isGradeS) {
-          gradeVal.style.filter = 'drop-shadow(0 0 14px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 24px rgba(34, 197, 94, 0.45))';
+          gradeVal.style.filter = `drop-shadow(0 0 14px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)) drop-shadow(0 0 24px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45))`;
           gradeVal.classList.add('text-grade-star');
         } else {
           gradeVal.classList.remove('text-grade-star');
@@ -2038,16 +2041,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // 5. Border Accent on Score & Grade Cards (Symmetrical Boxes)
       const scoreCard = document.getElementById('banner-score-box');
       if (scoreCard) {
-        scoreCard.style.borderColor = isGradeS ? 'rgba(34, 197, 94, 0.6)' : `rgba(${rgbColor}, 0.35)`;
+        scoreCard.style.borderColor = isGradeS ? `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.6)` : `rgba(${rgbColor}, 0.35)`;
         scoreCard.style.boxShadow = isGradeS
-          ? '0 0 20px rgba(34, 197, 94, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25)'
+          ? `0 0 20px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25)`
           : `0 0 12px rgba(${rgbColor}, 0.15), 0 4px 14px rgba(0, 0, 0, 0.2)`;
       }
       const gradeCard = document.getElementById('banner-grade-box');
       if (gradeCard) {
-        gradeCard.style.borderColor = isGradeS ? 'rgba(34, 197, 94, 0.6)' : `rgba(${rgbColor}, 0.35)`;
+        gradeCard.style.borderColor = isGradeS ? `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.6)` : `rgba(${rgbColor}, 0.35)`;
         gradeCard.style.boxShadow = isGradeS
-          ? '0 0 20px rgba(34, 197, 94, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25)'
+          ? `0 0 20px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25)`
           : `0 0 12px rgba(${rgbColor}, 0.15), 0 4px 14px rgba(0, 0, 0, 0.2)`;
       }
 
@@ -2186,8 +2189,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           ? `<span class="badge badge-success" style="font-size:0.75rem;padding:3px 8px;">✓ Passed</span>`
           : `<span class="badge badge-warning" style="font-size:0.75rem;padding:3px 8px;">⚠️  Retake Needed</span>`;
         const statusBadgeMobile = isPassed
-          ? `<span style="color:#10b981;font-weight:700;">✓ Passed</span>`
-          : `<span style="color:#f59e0b;font-weight:700;">⚠️  Retake</span>`;
+          ? `<span style="color:${TOPSCORE_COLORS.CORRECT};font-weight:700;">✓ Passed</span>`
+          : `<span style="color:${TOPSCORE_COLORS.D};font-weight:700;">⚠️  Retake</span>`;
 
         const attemptId = escapeHtml(a.id);
         const navLink = `window.location.href='result.html?attempt_id=${attemptId}'`;
@@ -2205,10 +2208,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               <span class="badge badge-neutral" style="font-size:0.75rem;">${escapeHtml(className)}</span>
             </td>
             <td>
-              <span class="fw-700 ${(grade === '★' || grade === 'S') ? 'text-grade-star' : `text-grade-${grade}`}" style="font-size:1rem; ${(grade === '★' || grade === 'S') ? 'filter:drop-shadow(0 0 6px rgba(34,197,94,0.6)); font-weight:900;' : ''}">${pct}%</span>
+              <span class="fw-700 ${(grade === '★' || grade === 'S') ? 'text-grade-star' : `text-grade-${grade}`}" style="font-size:1rem; ${(grade === '★' || grade === 'S') ? `filter:drop-shadow(0 0 6px rgba(${TOPSCORE_COLORS.STAR_RGB},0.6)); font-weight:900;` : ''}">${pct}%</span>
             </td>
             <td>
-              <span class="grade-badge ${(grade === '★' || grade === 'S') ? 'grade-star' : `grade-${grade}`}" style="width:28px;height:28px;font-size:0.82rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${(grade === '★' || grade === 'S') ? '' : `color:#fff;border:1.5px solid ${gradeColor};`}">${displayGrade}</span>
+              <span class="grade-badge ${(grade === '★' || grade === 'S') ? 'grade-star' : `grade-${grade}`}" style="width:28px;height:28px;font-size:0.82rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${(grade === '★' || grade === 'S') ? '' : `color:${TOPSCORE_COLORS.TEXT_DARK};border:1.5px solid ${gradeColor};`}">${displayGrade}</span>
             </td>
             <td class="text-muted text-sm">
               ${escapeHtml(dateStr)}
@@ -2224,12 +2227,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           <div class="completed-Test-mobile-card" onclick="${navLink}" style="padding: 8px 12px; gap: 4px; margin-bottom: 6px;">
             <div class="Test-card-header" style="margin-bottom: 2px;">
               <div class="Test-card-title" style="font-size: 0.9rem; line-height: 1.3;">${escapeHtml(TestTitle)}</div>
-              <span class="grade-badge ${(grade === '★' || grade === 'S') ? 'grade-star' : `grade-${grade}`}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${(grade === '★' || grade === 'S') ? '' : `color:#fff;border:1px solid ${gradeColor};`} flex-shrink:0;">${displayGrade}</span>
+              <span class="grade-badge ${(grade === '★' || grade === 'S') ? 'grade-star' : `grade-${grade}`}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${(grade === '★' || grade === 'S') ? '' : `color:${TOPSCORE_COLORS.TEXT_DARK};border:1px solid ${gradeColor};`} flex-shrink:0;">${displayGrade}</span>
             </div>
             
             <div class="Test-card-footer" style="margin-top: 0;">
               <div style="display:flex;align-items:center;gap:8px; font-size: 0.75rem;">
-                <span style="color:var(--clr-text-3);">Score: <strong style="color:${gradeColor}; ${(grade === '★' || grade === 'S') ? 'filter:drop-shadow(0 0 4px rgba(34,197,94,0.6)); font-weight:900;' : ''}">${pct}%</strong></span>
+                <span style="color:var(--clr-text-3);">Score: <strong style="color:${gradeColor}; ${(grade === '★' || grade === 'S') ? `filter:drop-shadow(0 0 4px rgba(${TOPSCORE_COLORS.STAR_RGB},0.6)); font-weight:900;` : ''}">${pct}%</strong></span>
                 <span style="color:var(--clr-text-3);">&bull;</span>
                 <span>${statusBadgeMobile}</span>
               </div>
@@ -2368,21 +2371,21 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
             const isExamItem = isExam(att.tests);
 
-            // Points-Centric comparison: Compare effPoints first
+            // Rule 2.7: Report card stores highest valid score
             let shouldReplace = false;
+            const attTime = new Date(att.submitted_at || att.created_at || 0).getTime();
             if (!bestMap[key]) {
               shouldReplace = true;
             } else {
-              const cur = bestMap[key];
-              const ptsDiff = effPoints - cur.points;
-              if (ptsDiff > 0.01) {
+              const curPts = Number(bestMap[key].points ?? 0);
+              const curPct = Number(bestMap[key].effPct ?? 0);
+              const curTime = bestMap[key].attTime || 0;
+              if (effPoints > curPts) {
                 shouldReplace = true;
-              } else if (Math.abs(ptsDiff) <= 0.01) {
-                if (effPct > cur.effPct + 0.01) {
-                  shouldReplace = true;
-                } else if (Math.abs(effPct - cur.effPct) <= 0.01 && att.is_best_score && !cur.is_best_score) {
-                  shouldReplace = true;
-                }
+              } else if (effPoints === curPts && effPct > curPct) {
+                shouldReplace = true;
+              } else if (effPoints === curPts && Math.abs(effPct - curPct) <= 0.01 && attTime > curTime) {
+                shouldReplace = true;
               }
             }
 
@@ -2396,6 +2399,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 rawPoints: rawScore,
                 totalQ,
                 isRemedial,
+                attTime,
                 is_best_score: Boolean(att.is_best_score)
               };
             }
@@ -2458,29 +2462,29 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           };
         });
 
-        // 4. Deterministic Multi-Tier Ranking (Points-First, 100% Parity with Class Hub):
-        // 1. Global PTS DESC (exam points)
-        // 2. Global SCORE % DESC (exam mastery; unattempted exams sort after completed)
-        // 3. PROG % DESC (overall completion)
+        // 4. Deterministic Multi-Tier Ranking (Progress-First Hierarchy, 100% Parity with Class Hub):
+        // 1. PROG % DESC (overall curriculum progress)
+        // 2. Global PTS DESC (total points from latest exam package: Words + Phrases)
+        // 3. Global SCORE % DESC (exam mastery; unattempted exams sort after completed)
         // 4. Earliest last submission timestamp
         // 5. Alphabetical clean name
         studentStats.sort((a, b) => {
-          // 1. Primary: Global PTS DESC
+          // 1. Primary: PROG % DESC
+          const progA = Number(a.progressPct ?? 0);
+          const progB = Number(b.progressPct ?? 0);
+          if (progA !== progB) return progB - progA;
+
+          // 2. Secondary: Global PTS DESC (latest exam points)
           const ptsA = Number(a.totalPoints ?? 0);
           const ptsB = Number(b.totalPoints ?? 0);
           if (ptsA !== ptsB) return ptsB - ptsA;
 
-          // 2. Secondary: Global SCORE % DESC (unattempted exams sort after completed)
+          // 3. Tertiary: Global SCORE % DESC (unattempted exams sort after completed)
           const examCountA = a.completedExamCount ?? a.completedWeeklyCount ?? 0;
           const examCountB = b.completedExamCount ?? b.completedWeeklyCount ?? 0;
           const scoreA = (examCountA > 0) ? Number(a.overallScore ?? 0) : -1;
           const scoreB = (examCountB > 0) ? Number(b.overallScore ?? 0) : -1;
           if (scoreA !== scoreB) return scoreB - scoreA;
-
-          // 3. Tertiary: PROG % DESC
-          const progA = Number(a.progressPct ?? 0);
-          const progB = Number(b.progressPct ?? 0);
-          if (progA !== progB) return progB - progA;
 
           // 4. Earliest last submission timestamp
           if (a.lastSubmittedAt && b.lastSubmittedAt) {
@@ -2584,12 +2588,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 </div>
               </div>
               <div class="th-col th-point" style="display:flex; align-items:center; justify-content:flex-end;">
-                <span style="color:${hasExam ? theme.color : '#94a3b8'}; font-weight:800; font-size:0.95rem; font-variant-numeric:tabular-nums;">
+                <span style="color:${hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : (hasExam ? theme.color : '#94a3b8')}; font-weight:800; font-size:0.95rem; font-variant-numeric:tabular-nums;">
                   ${st.totalPoints}
                 </span>
               </div>
               <div class="th-col th-grade" style="display:flex; align-items:center; justify-content:center;">
-                <div class="leaderboard-grade-chip" style="background:${hasExam ? theme.color : 'rgba(255,255,255,0.12)'}; width:22px; height:22px; border-radius:6px; font-size:0.72rem; font-weight:800; display:flex; align-items:center; justify-content:center; color:#fff;" title="${hasExam ? `Average: ${st.overallScore}%` : 'No exams completed yet'}">${gradeSymbol}</div>
+                <div class="leaderboard-grade-chip" style="background:${hasExam ? theme.color : 'rgba(255,255,255,0.12)'}; width:22px; height:22px; border-radius:6px; font-size:0.72rem; font-weight:800; display:flex; align-items:center; justify-content:center; color:${hasExam && gradeSymbol === '★' ? TOPSCORE_COLORS.TEXT_STAR : (hasExam ? TOPSCORE_COLORS.TEXT_DARK : '#ffffff')};" title="${hasExam ? `Average: ${st.overallScore}%` : 'No exams completed yet'}">${gradeSymbol}</div>
               </div>
             </div>
           `;
@@ -2601,7 +2605,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         console.error('Error loading batch leaderboard:', err);
         container.innerHTML = `
           <div class="empty-state p-4 text-center">
-            <p style="color:#f87171; font-size:0.85rem;">Failed to load batch standings.</p>
+            <p style="color:var(--clr-danger); font-size:0.85rem;">Failed to load batch standings.</p>
           </div>`;
       }
     }

@@ -370,10 +370,10 @@
 }
 
 .header-logout-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border-color: rgba(239, 68, 68, 0.4);
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+  background: rgba(var(--grade-e-rgb), 0.15);
+  color: var(--grade-e);
+  border-color: rgba(var(--grade-e-rgb), 0.4);
+  box-shadow: 0 0 12px rgba(var(--grade-e-rgb), 0.25);
 }
 
 .dashboard-content {
@@ -1072,12 +1072,12 @@
 
 .cheat-box {
   background: rgba(15, 6, 6, 0.94);
-  border: 2px solid #dc2626;
+  border: 2px solid var(--grade-e);
   border-radius: var(--radius-xl);
   padding: var(--space-8);
   max-width: 520px;
   width: 92%;
-  box-shadow: 0 0 50px rgba(220, 38, 38, 0.75), 0 25px 50px -12px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 0 50px rgba(var(--grade-e-rgb), 0.75), 0 25px 50px -12px rgba(0, 0, 0, 0.9);
   animation: cheat-box-bounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -1090,8 +1090,8 @@
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  background: rgba(220, 38, 38, 0.35);
-  border: 4px solid #dc2626;
+  background: rgba(var(--grade-e-rgb), 0.35);
+  border: 4px solid var(--grade-e);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1100,7 +1100,7 @@
   margin: 0 auto var(--space-4) auto;
   color: #ffffff;
   text-shadow: 0 0 25px rgba(255, 255, 255, 0.95);
-  box-shadow: 0 0 30px rgba(220, 38, 38, 0.7);
+  box-shadow: 0 0 30px rgba(var(--grade-e-rgb), 0.7);
 }
 
 /* ── Anti-Translation & Question Protection ── */
@@ -2270,16 +2270,16 @@ body.dashboard-page .header-logout-btn {
   width: 34px !important;
   height: 34px !important;
   border-radius: 8px !important;
-  background: rgba(239, 68, 68, 0.12) !important;
-  border: 1px solid rgba(239, 68, 68, 0.3) !important;
-  color: #ef4444 !important;
+  background: rgba(var(--grade-e-rgb), 0.12) !important;
+  border: 1px solid rgba(var(--grade-e-rgb), 0.3) !important;
+  color: var(--grade-e) !important;
   cursor: pointer !important;
   flex-shrink: 0 !important;
   transition: all 0.2s ease !important;
 }
 
 body.dashboard-page .header-logout-btn:hover {
-  background: rgba(239, 68, 68, 0.22) !important;
+  background: rgba(var(--grade-e-rgb), 0.22) !important;
   transform: scale(1.05) !important;
 }
 
@@ -2335,8 +2335,8 @@ body.dashboard-page #bottom-ad-banner {
 
 /* Modern Tier Hero Card (Strict 150px Uniform Height) */
 body.dashboard-page #welcome-banner-section {
-  --tier-color: #22C55E;
-  --tier-rgb: 34, 197, 94;
+  --tier-color: var(--grade-star);
+  --tier-rgb: var(--grade-star-rgb);
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
@@ -2360,9 +2360,9 @@ body.dashboard-page #welcome-banner-section {
 
 body.dashboard-page #welcome-banner-section[data-tier="S"],
 body.dashboard-page #welcome-banner-section[data-tier="★"] {
-  border-color: rgba(34, 197, 94, 0.5) !important;
-  box-shadow: 0 0 35px rgba(34, 197, 94, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(34, 197, 94, 0.22), transparent 75%), #0f172a !important;
+  border-color: rgba(var(--grade-star-rgb), 0.5) !important;
+  box-shadow: 0 0 35px rgba(var(--grade-star-rgb), 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--grade-star-rgb), 0.22), transparent 75%), #0f172a !important;
 }
 
 body.dashboard-page #welcome-name {
@@ -2397,8 +2397,8 @@ body.dashboard-page .hero-name-divider {
   width: 100% !important;
   height: 1px !important;
   margin: 4px 0 2px 0 !important;
-  background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb, 34, 197, 94), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb, 34, 197, 94), 0.6) 80%, transparent 100%) !important;
-  box-shadow: 0 0 10px rgba(var(--tier-rgb, 34, 197, 94), 0.4) !important;
+  background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.6) 80%, transparent 100%) !important;
+  box-shadow: 0 0 10px rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.4) !important;
 }
 
 body.dashboard-page .hero-metrics-row {
@@ -2432,8 +2432,8 @@ body.dashboard-page #welcome-banner-section[data-tier="S"] #banner-score-box,
 body.dashboard-page #welcome-banner-section[data-tier="S"] #banner-grade-box,
 body.dashboard-page #welcome-banner-section[data-tier="★"] #banner-score-box,
 body.dashboard-page #welcome-banner-section[data-tier="★"] #banner-grade-box {
-  border-color: rgba(34, 197, 94, 0.6) !important;
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25) !important;
+  border-color: rgba(var(--grade-star-rgb), 0.6) !important;
+  box-shadow: 0 0 20px rgba(var(--grade-star-rgb), 0.45), 0 6px 16px rgba(0, 0, 0, 0.25) !important;
 }
 
 body.dashboard-page .metric-label {
@@ -2468,91 +2468,91 @@ body.dashboard-page #stat-overall-grade-value {
 
 body.dashboard-page #welcome-banner-section[data-tier="S"],
 body.dashboard-page #welcome-banner-section[data-tier="★"] {
-  border-color: rgba(34, 197, 94, 0.55) !important;
-  box-shadow: 0 0 35px rgba(34, 197, 94, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(34, 197, 94, 0.22), transparent 75%), #0f172a !important;
+  border-color: rgba(var(--grade-star-rgb), 0.55) !important;
+  box-shadow: 0 0 35px rgba(var(--grade-star-rgb), 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--grade-star-rgb), 0.22), transparent 75%), #0f172a !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="A"] {
-  border-color: rgba(16, 185, 129, 0.55) !important;
+  border-color: rgba(var(--grade-a-rgb), 0.55) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="B"] {
-  border-color: rgba(56, 189, 248, 0.55) !important;
+  border-color: rgba(var(--grade-b-rgb), 0.55) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="C"] {
-  border-color: rgba(245, 158, 11, 0.55) !important;
+  border-color: rgba(var(--grade-c-rgb), 0.55) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="D"] {
-  border-color: rgba(249, 115, 22, 0.55) !important;
+  border-color: rgba(var(--grade-d-rgb), 0.55) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="E"],
 body.dashboard-page #welcome-banner-section[data-tier="F"] {
-  border-color: rgba(239, 68, 68, 0.55) !important;
+  border-color: rgba(var(--grade-e-rgb), 0.55) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="R"] {
-  border-color: rgba(255, 255, 0, 0.55) !important;
-  box-shadow: 0 0 25px rgba(255, 255, 0, 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(255, 255, 0, 0.15), transparent 75%), #0f172a !important;
+  border-color: rgba(var(--grade-c-rgb), 0.55) !important;
+  box-shadow: 0 0 25px rgba(var(--grade-c-rgb), 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--grade-c-rgb), 0.15), transparent 75%), #0f172a !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="S"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="S"] #stat-overall-grade-value,
 body.dashboard-page #welcome-banner-section[data-tier="★"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="★"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 24px rgba(34, 197, 94, 0.45)) !important;
-  color: #22c55e !important;
+  filter: drop-shadow(0 0 14px rgba(var(--grade-star-rgb), 0.95)) drop-shadow(0 0 24px rgba(var(--grade-star-rgb), 0.45)) !important;
+  color: var(--grade-star) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="A"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="A"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.45)) !important;
-  color: #10b981 !important;
+  filter: drop-shadow(0 0 10px rgba(var(--grade-a-rgb), 0.45)) !important;
+  color: var(--grade-a) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="B"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="B"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.45)) !important;
-  color: #38bdf8 !important;
+  filter: drop-shadow(0 0 10px rgba(var(--grade-b-rgb), 0.45)) !important;
+  color: var(--grade-b) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="C"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="C"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.45)) !important;
-  color: #f59e0b !important;
+  filter: drop-shadow(0 0 10px rgba(var(--grade-c-rgb), 0.45)) !important;
+  color: var(--grade-c) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="D"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="D"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.45)) !important;
-  color: #f97316 !important;
+  filter: drop-shadow(0 0 10px rgba(var(--grade-d-rgb), 0.45)) !important;
+  color: var(--grade-d) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="E"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="E"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.45)) !important;
-  color: #ef4444 !important;
+  filter: drop-shadow(0 0 10px rgba(var(--grade-e-rgb), 0.45)) !important;
+  color: var(--grade-e) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="F"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="F"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.45)) !important;
-  color: #ef4444 !important;
+  filter: drop-shadow(0 0 10px rgba(var(--grade-e-rgb), 0.45)) !important;
+  color: var(--grade-e) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="R"] #bottom-stat-avg-score,
 body.dashboard-page #welcome-banner-section[data-tier="R"] #stat-overall-grade-value {
-  filter: drop-shadow(0 0 12px rgba(255, 255, 0, 0.65)) !important;
-  color: #FFFF00 !important;
+  filter: drop-shadow(0 0 12px rgba(var(--grade-c-rgb), 0.65)) !important;
+  color: var(--grade-c) !important;
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="R"] #banner-score-box,
 body.dashboard-page #welcome-banner-section[data-tier="R"] #banner-grade-box {
-  border-color: rgba(255, 255, 0, 0.5) !important;
+  border-color: rgba(var(--grade-c-rgb), 0.5) !important;
   box-shadow: 0 0 14px rgba(255, 255, 0, 0.25) !important;
 }
 
@@ -2621,9 +2621,9 @@ body.dashboard-page #banner-avatar-img.hidden {
 
 body.dashboard-page #welcome-banner-section[data-tier="S"] #banner-avatar-container,
 body.dashboard-page #welcome-banner-section[data-tier="★"] #banner-avatar-container {
-  background: linear-gradient(135deg, #86efac 0%, #22c55e 45%, #16a34a 100%) !important;
-  border: 2.5px solid #22c55e !important;
-  box-shadow: 0 0 28px rgba(34, 197, 94, 0.95), 0 0 50px rgba(134, 239, 172, 0.5) !important;
+  background: linear-gradient(135deg, #86efac 0%, var(--grade-star) 100%) !important;
+  border: 2.5px solid var(--grade-star) !important;
+  box-shadow: 0 0 28px rgba(var(--grade-star-rgb), 0.95), 0 0 50px rgba(var(--grade-star-rgb), 0.5) !important;
 }
 
 body.dashboard-page .pure-star-svg {
@@ -2634,44 +2634,44 @@ body.dashboard-page .pure-star-svg {
   outline: none !important;
   background: transparent !important;
   animation: star-vector-pulse 2.2s infinite ease-in-out !important;
-  filter: drop-shadow(0 0 16px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 28px rgba(134, 239, 172, 0.65)) !important;
+  filter: drop-shadow(0 0 16px rgba(var(--grade-star-rgb), 0.95)) drop-shadow(0 0 28px rgba(var(--grade-star-rgb), 0.65)) !important;
 }
 
 @keyframes star-vector-pulse {
   0%, 100% {
     transform: scale(1);
-    filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.95)) drop-shadow(0 0 28px rgba(134, 239, 172, 0.65));
+    filter: drop-shadow(0 0 14px rgba(var(--grade-star-rgb), 0.95)) drop-shadow(0 0 28px rgba(var(--grade-star-rgb), 0.65));
   }
   50% {
     transform: scale(1.10);
-    filter: drop-shadow(0 0 22px rgba(34, 197, 94, 1)) drop-shadow(0 0 38px rgba(134, 239, 172, 0.95)) drop-shadow(0 0 52px rgba(34, 197, 94, 0.65));
+    filter: drop-shadow(0 0 22px rgba(var(--grade-star-rgb), 1)) drop-shadow(0 0 38px rgba(var(--grade-star-rgb), 0.95)) drop-shadow(0 0 52px rgba(var(--grade-star-rgb), 0.65));
   }
 }
 
 body.dashboard-page #welcome-banner-section[data-tier="A"] #banner-avatar-container {
-  border: 2.5px solid #10b981 !important;
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.5) !important;
+  border: 2.5px solid var(--grade-a) !important;
+  box-shadow: 0 0 18px rgba(var(--grade-a-rgb), 0.5) !important;
 }
 body.dashboard-page #welcome-banner-section[data-tier="B"] #banner-avatar-container {
-  border: 2.5px solid #38bdf8 !important;
-  box-shadow: 0 0 18px rgba(56, 189, 248, 0.5) !important;
+  border: 2.5px solid var(--grade-b) !important;
+  box-shadow: 0 0 18px rgba(var(--grade-b-rgb), 0.5) !important;
 }
 body.dashboard-page #welcome-banner-section[data-tier="C"] #banner-avatar-container {
-  border: 2.5px solid #f59e0b !important;
-  box-shadow: 0 0 18px rgba(245, 158, 11, 0.5) !important;
+  border: 2.5px solid var(--grade-c) !important;
+  box-shadow: 0 0 18px rgba(var(--grade-c-rgb), 0.5) !important;
 }
 body.dashboard-page #welcome-banner-section[data-tier="D"] #banner-avatar-container {
-  border: 2.5px solid #f97316 !important;
-  box-shadow: 0 0 18px rgba(249, 115, 22, 0.5) !important;
+  border: 2.5px solid var(--grade-d) !important;
+  box-shadow: 0 0 18px rgba(var(--grade-d-rgb), 0.5) !important;
 }
 body.dashboard-page #welcome-banner-section[data-tier="E"] #banner-avatar-container,
 body.dashboard-page #welcome-banner-section[data-tier="F"] #banner-avatar-container {
-  border: 2.5px solid #ef4444 !important;
-  box-shadow: 0 0 18px rgba(239, 68, 68, 0.5) !important;
+  border: 2.5px solid var(--grade-e) !important;
+  box-shadow: 0 0 18px rgba(var(--grade-e-rgb), 0.5) !important;
 }
 body.dashboard-page #welcome-banner-section[data-tier="R"] #banner-avatar-container {
-  border: 2.5px solid #FFFF00 !important;
-  box-shadow: 0 0 18px rgba(255, 255, 0, 0.5) !important;
+  border: 2.5px solid var(--grade-c) !important;
+  box-shadow: 0 0 18px rgba(var(--grade-c-rgb), 0.5) !important;
 }
 
 body.dashboard-page #banner-avatar-initial {
@@ -2718,8 +2718,8 @@ body.dashboard-page #welcome-meta-wrapper .meta-sep {
    ============================================================ */
 :root,
 body.dashboard-page {
-  --tier-color: #10b981;
-  --tier-rgb: 16, 185, 129;
+  --tier-color: var(--grade-star);
+  --tier-rgb: var(--grade-star-rgb);
 }
 
 body.dashboard-page #welcome-banner-section,
@@ -3062,15 +3062,15 @@ body.dashboard-page .next-asm-go-btn:hover {
 /* 2B: Retake Red Button */
 body.dashboard-page .next-asm-go-btn.is-retake,
 body.dashboard-page .next-asm-go-btn.is-retake-red {
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
-  box-shadow: 0 0 14px rgba(239, 68, 68, 0.55) !important;
+  background: linear-gradient(135deg, var(--grade-e) 0%, #990000 100%) !important;
+  box-shadow: 0 0 14px rgba(var(--grade-e-rgb), 0.55) !important;
 }
 
 /* 3C: Start Green Button */
 body.dashboard-page .next-asm-go-btn.is-start,
 body.dashboard-page .next-asm-go-btn.is-start-green {
-  background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important;
-  box-shadow: 0 0 14px rgba(16, 185, 129, 0.55) !important;
+  background: linear-gradient(135deg, #86efac 0%, var(--grade-star) 100%) !important;
+  box-shadow: 0 0 14px var(--grade-star-glow) !important;
 }
 
 /* 1A: Yellow Padlock Status */

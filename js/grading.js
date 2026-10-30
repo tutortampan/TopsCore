@@ -5,18 +5,15 @@
  * Standard Damerau-Levenshtein Edit Distance
  */
 export function damerauLevenshtein(a, b) {
-  const la = a.length, lb = b.length;
+  const la = a.length,
+    lb = b.length;
   const dp = Array.from({ length: la + 1 }, (_, i) =>
     Array.from({ length: lb + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
   );
   for (let i = 1; i <= la; i++) {
     for (let j = 1; j <= lb; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost
-      );
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
       if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
         dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + cost);
       }
@@ -34,26 +31,58 @@ export function damerauLevenshtein(a, b) {
  */
 export const ENGLISH_CONTRACTIONS = {
   // Pronoun + Be
-  "i'm": 'i am', "you're": 'you are', "he's": 'he is', "she's": 'she is',
-  "it's": 'it is', "we're": 'we are', "they're": 'they are',
+  "i'm": 'i am',
+  "you're": 'you are',
+  "he's": 'he is',
+  "she's": 'she is',
+  "it's": 'it is',
+  "we're": 'we are',
+  "they're": 'they are',
   // Pronoun + Will
-  "i'll": 'i will', "you'll": 'you will', "he'll": 'he will', "she'll": 'she will',
-  "it'll": 'it will', "we'll": 'we will', "they'll": 'they will',
+  "i'll": 'i will',
+  "you'll": 'you will',
+  "he'll": 'he will',
+  "she'll": 'she will',
+  "it'll": 'it will',
+  "we'll": 'we will',
+  "they'll": 'they will',
   // Pronoun + Have
-  "i've": 'i have', "you've": 'you have', "we've": 'we have', "they've": 'they have',
+  "i've": 'i have',
+  "you've": 'you have',
+  "we've": 'we have',
+  "they've": 'they have',
   // Pronoun + Would / Had
-  "i'd": 'i would', "you'd": 'you would', "he'd": 'he would', "she'd": 'she would',
-  "we'd": 'we would', "they'd": 'they would',
+  "i'd": 'i would',
+  "you'd": 'you would',
+  "he'd": 'he would',
+  "she'd": 'she would',
+  "we'd": 'we would',
+  "they'd": 'they would',
   // Negations
-  "can't": 'cannot', "cannot": 'cannot', "can not": 'cannot',
-  "don't": 'do not', "doesn't": 'does not', "didn't": 'did not',
-  "won't": 'will not', "isn't": 'is not', "aren't": 'are not',
-  "wasn't": 'was not', "weren't": 'were not',
-  "haven't": 'have not', "hasn't": 'has not', "hadn't": 'had not',
-  "wouldn't": 'would not', "shouldn't": 'should not', "couldn't": 'could not',
+  "can't": 'cannot',
+  cannot: 'cannot',
+  'can not': 'cannot',
+  "don't": 'do not',
+  "doesn't": 'does not',
+  "didn't": 'did not',
+  "won't": 'will not',
+  "isn't": 'is not',
+  "aren't": 'are not',
+  "wasn't": 'was not',
+  "weren't": 'were not',
+  "haven't": 'have not',
+  "hasn't": 'has not',
+  "hadn't": 'had not',
+  "wouldn't": 'would not',
+  "shouldn't": 'should not',
+  "couldn't": 'could not',
   // Phrasal / Question
-  "let's": 'let us', "that's": 'that is', "there's": 'there is',
-  "what's": 'what is', "who's": 'who is', "where's": 'where is'
+  "let's": 'let us',
+  "that's": 'that is',
+  "there's": 'there is',
+  "what's": 'what is',
+  "who's": 'who is',
+  "where's": 'where is',
 };
 
 /**
@@ -103,7 +132,9 @@ export function normalizeAnswerText(text) {
  * Strip all punctuation and spaces for compact comparison:
  */
 export function stripAllPunctuationAndSpaces(text) {
-  return String(text ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return String(text ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 }
 
 /**
@@ -124,7 +155,10 @@ export function expandAnswerVariants(raw) {
   const variants = new Set();
   variants.add(str);
   if (str.includes('(') && str.includes(')')) {
-    const withoutParens = str.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+    const withoutParens = str
+      .replace(/\([^)]*\)/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     if (withoutParens) variants.add(withoutParens);
     const strippedParens = str.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
     if (strippedParens) variants.add(strippedParens);
@@ -142,11 +176,11 @@ export function parseCorrectAnswers(rawAnswer) {
   const list = Array.isArray(rawAnswer) ? rawAnswer : [rawAnswer];
   const allVariants = [];
   list
-    .flatMap(s => String(s).split(/[;|/]/))
-    .map(s => s.trim())
+    .flatMap((s) => String(s).split(/[;|/]/))
+    .map((s) => s.trim())
     .filter(Boolean)
-    .forEach(item => {
-      expandAnswerVariants(item).forEach(v => allVariants.push(v));
+    .forEach((item) => {
+      expandAnswerVariants(item).forEach((v) => allVariants.push(v));
     });
   return allVariants;
 }
@@ -166,14 +200,18 @@ export function evaluateAnswer(studentAnswer, rawCorrectAnswer, answerType = 'wr
   const possibleAnswers = parseCorrectAnswers(rawCorrectAnswer);
 
   if (possibleAnswers.length === 0) {
-    return { result: normStudent ? 'correct' : 'incorrect', score: normStudent ? 1.0 : 0.0, matchedAnswer: '' };
+    return {
+      result: normStudent ? 'correct' : 'incorrect',
+      score: normStudent ? 1.0 : 0.0,
+      matchedAnswer: '',
+    };
   }
 
   if (!normStudent && !compactStudent) {
     return { result: 'incorrect', score: 0.0, matchedAnswer: possibleAnswers[0] };
   }
 
-  const isSpeech = (answerType === 'speech_to_text' || answerType === 'spoken');
+  const isSpeech = answerType === 'speech_to_text' || answerType === 'spoken';
   let bestResult = { result: 'incorrect', score: 0.0, matchedAnswer: possibleAnswers[0] };
 
   for (const opt of possibleAnswers) {
@@ -192,7 +230,10 @@ export function evaluateAnswer(studentAnswer, rawCorrectAnswer, answerType = 'wr
     const dist = Math.min(distNorm, distCompact);
     const minLen = Math.min(normStudent.length, normOpt.length);
 
-    const isWithin2Letters = (minLen >= 4 && dist <= 2) || (minLen === 3 && dist <= 1) || (minLen > 0 && dist <= 1 && distNorm <= 1);
+    const isWithin2Letters =
+      (minLen >= 4 && dist <= 2) ||
+      (minLen === 3 && dist <= 1) ||
+      (minLen > 0 && dist <= 1 && distNorm <= 1);
 
     if (isWithin2Letters) {
       if (isSpeech) {
@@ -243,12 +284,12 @@ export function isPrerequisiteMet(studentBestPercentage, requiredPercentage = 60
 
 /**
  * Centralized Authoritative Grade Engine (Official Scale)
- * ★ (S) : 100%       - Excellent (Green / Hijau #22C55E)
- * A     : 90% – 99%  - Very Good (Rich Green #10B981)
- * B     : 80% – 89%  - Good (Lime / Yellow-Green #84CC16)
- * C     : 60% – 79%  - Enough (Yellow #EAB308)
- * D     : 30% – 59%  - Less (Orange #F97316)
- * E     : 0% – 29%   - Fail (Red #EF4444)
+ * ★ (S) : 100%       - Excellent (Green / Hijau #00c000ff)
+ * A     : 90% – 99%  - Very Good (Rich Green #00c000ff)
+ * B     : 80% – 89%  - Good (Lime / Yellow-Green #95ff00ff)
+ * C     : 60% – 79%  - Enough (Yellow #fff000)
+ * D     : 30% – 59%  - Less (Orange #Ff8c00)
+ * E     : 0% – 29%   - Fail (Red #ff0000)
  */
 export function calculateGrade(percentage) {
   const num = Number(percentage) || 0;
@@ -265,10 +306,10 @@ export function calculateGrade(percentage) {
  * Authoritative Student Overall Score & Grade (AGENTS.md §2.8 & §2.10)
  * Evaluates strictly across taken/unlocked tests.
  * Unopened/locked tests do NOT penalize or drag down student score.
- * 
+ *
  * Formula: average_score = sum(best_percentage_on_taken) / count(taken_tests)
  * Grade: getGrade(average_score)
- * 
+ *
  * @param {Array<number>} takenPercentages Array of best percentages on completed/taken tests
  * @returns {{ averageScore: number, grade: string, count: number }}
  */
@@ -276,7 +317,7 @@ export function calculateOverallStudentScore(takenPercentages = []) {
   if (!Array.isArray(takenPercentages) || takenPercentages.length === 0) {
     return { averageScore: 0, grade: '—', count: 0 };
   }
-  const validPcts = takenPercentages.map(p => Number(p) || 0);
+  const validPcts = takenPercentages.map((p) => Number(p) || 0);
   const sum = validPcts.reduce((acc, curr) => acc + curr, 0);
   const averageScore = Math.round(sum / validPcts.length);
   const grade = calculateGrade(averageScore);
@@ -293,7 +334,9 @@ export function isExam(test) {
   const t = String(test.test_type || test.type || '').toLowerCase();
   if (t === 'exam') return true;
   if (t === 'quiz') return false;
-  const c = String(test.category || test.payload?.tier || test.payload?.category || '').toUpperCase();
+  const c = String(
+    test.category || test.payload?.tier || test.payload?.category || ''
+  ).toUpperCase();
   if (c === 'EXAM') return true;
   if (c === 'QUIZ' || c === 'TASK') return false;
   const shell = String(test.shell_code || test.payload?.shell_code || '').toUpperCase();
@@ -307,130 +350,177 @@ export function isExam(test) {
 export const isWeeklyExam = isExam; // Backward compatibility alias
 
 /**
+ * TOPSCORE SINGLE AUTHORITATIVE COLOR MASTER VAULT
+ * Strictly 1 unified palette for all grades, scores, points, and answer evaluations.
+ * No hardcoded hex codes may exist outside of this definition.
+ */
+export const TOPSCORE_COLORS = Object.freeze({
+  // 1. Grade & Score Tiers (Nilai Ujian & Persentase)
+  STAR: '#00c000ff', // 100% Star ★ (Pure Green - #00c000ff)
+  STAR_8HEX: '#00c000ff', // 8-digit hex alias with alpha
+  A: '#00c000ff', // 90–99% Grade A (Pure Green - Identical to Star)
+  A_8HEX: '#00c000ff', // 8-digit hex alias with alpha
+  B: '#95ff00ff', // 80–89% Grade B (Electric Lime - #95ff00ff)
+  C: '#FFFF00', // 60–79% Grade C (Pure Yellow - 100% distinct from orange)
+  D: '#FF8C00', // 30–59% Grade D (Dark Orange)
+  E: '#FF0000', // 0–29% Grade E (Pure Red)
+
+  // 2. RGB Equivalents for Opacities, Shadows, & Glows
+  STAR_RGB: '0, 192, 0',
+  A_RGB: '0, 192, 0',
+  B_RGB: '149, 255, 0',
+  C_RGB: '255, 255, 0',
+  D_RGB: '255, 140, 0',
+  E_RGB: '255, 0, 0',
+
+  // 3. Question Answer Evaluation Status (Result Page)
+  CORRECT: '#00c000ff', // Full point (1.0 pt)  -> Pure Green (Star / A)
+  PARTIAL: '#FFFF00', // Half point (0.5 pt)  -> Pure Yellow (Grade C standard)
+  INCORRECT: '#FF0000', // Zero point (0.0 pt)  -> Pure Red (Grade E fail tier)
+
+  // 4. Grade Badge Text Contrast
+  TEXT_STAR: '#FFFFFF', // White star symbol on ★ badge
+  TEXT_DARK: '#0F172A', // Deep dark slate letters for A, B, C, D, E badges
+});
+
+/**
  * Authoritative Grade & Score Palette (6 Clean Tiers: ★, A, B, C, D, E)
- * ★ Excellent  100%       Rich Green (White Star) #22C55E
- * A Very Good  90% – 99%  True Leaf Green         #22C55E
- * B Good       80% – 89%  Electric Bright Lime    #BEF264
- * C Enough     60% – 79%  Electric Lemon Yellow   #FDE047
- * D Less       30% – 59%  Clean Orange            #FB923C
- * E Fail       0% – 29%   Light Red               #F87171
  */
 const STAR_THEME = {
   symbol: '★',
   label: 'Excellent',
   predicate: 'Excellent',
-  color: '#22C55E',       // Green (100% Star)
-  dark: '#16a34a',
+  color: TOPSCORE_COLORS.STAR,
+  dark: '#006400',
   light: '#86efac',
-  rgb: '34, 197, 94',
-  glow: 'rgba(34, 197, 94, 0.45)',
+  rgb: TOPSCORE_COLORS.STAR_RGB,
+  glow: 'rgba(0, 192, 0, 0.5)',
+  textColor: TOPSCORE_COLORS.TEXT_STAR,
   name: 'Excellent (100%)',
   minScore: 100,
   maxScore: 100,
-  sparkle: true
+  sparkle: true,
 };
 
 export const GRADE_PALETTE = {
   '★': STAR_THEME,
-  S: STAR_THEME,          // Backward-compatibility alias for historical records
+  S: STAR_THEME, // Backward-compatibility alias for historical records
   A: {
     symbol: 'A',
     label: 'Very Good',
     predicate: 'Very Good',
-    color: '#10B981',       // True Leaf Green (90-99%)
-    dark: '#059669',
-    light: '#6ee7b7',
-    rgb: '16, 185, 129',
-    glow: 'rgba(16, 185, 129, 0.35)',
+    color: TOPSCORE_COLORS.A,
+    dark: '#006400',
+    light: '#86efac',
+    rgb: TOPSCORE_COLORS.A_RGB,
+    glow: 'rgba(0, 192, 0, 0.35)',
+    textColor: TOPSCORE_COLORS.TEXT_DARK,
     name: 'Very Good (90-99%)',
     minScore: 90,
     maxScore: 99,
-    sparkle: false
+    sparkle: false,
   },
   B: {
     symbol: 'B',
     label: 'Good',
     predicate: 'Good',
-    color: '#BEF264',       // Electric Bright Lime (80-89%)
-    dark: '#a3e635',
+    color: TOPSCORE_COLORS.B,
+    dark: '#5ebd00',
     light: '#d9f99d',
-    rgb: '190, 242, 100',
-    glow: 'rgba(190, 242, 100, 0.35)',
+    rgb: TOPSCORE_COLORS.B_RGB,
+    glow: 'rgba(149, 255, 0, 0.35)',
+    textColor: TOPSCORE_COLORS.TEXT_DARK,
     name: 'Good (80-89%)',
     minScore: 80,
     maxScore: 89,
-    sparkle: false
+    sparkle: false,
   },
   C: {
     symbol: 'C',
     label: 'Enough',
     predicate: 'Enough',
-    color: '#FDE047',       // Pure Electric Lemon Yellow (60-79%)
-    dark: '#eab308',
-    light: '#fef08a',
-    rgb: '253, 224, 71',
-    glow: 'rgba(253, 224, 71, 0.35)',
+    color: TOPSCORE_COLORS.C,
+    dark: '#cccc00',
+    light: '#ffff99',
+    rgb: TOPSCORE_COLORS.C_RGB,
+    glow: 'rgba(255, 255, 0, 0.35)',
+    textColor: TOPSCORE_COLORS.TEXT_DARK,
     name: 'Enough (60-79%)',
     minScore: 60,
     maxScore: 79,
-    sparkle: false
+    sparkle: false,
   },
   D: {
     symbol: 'D',
     label: 'Less',
     predicate: 'Less',
-    color: '#FB923C',       // Clean Orange (30-59%)
-    dark: '#f97316',
+    color: TOPSCORE_COLORS.D,
+    dark: '#cc7000',
     light: '#fed7aa',
-    rgb: '251, 146, 60',
-    glow: 'rgba(251, 146, 60, 0.35)',
+    rgb: TOPSCORE_COLORS.D_RGB,
+    glow: 'rgba(255, 140, 0, 0.35)',
+    textColor: TOPSCORE_COLORS.TEXT_DARK,
     name: 'Less (30-59%)',
     minScore: 30,
     maxScore: 59,
-    sparkle: false
+    sparkle: false,
   },
   E: {
     symbol: 'E',
     label: 'Fail',
     predicate: 'Fail',
-    color: '#F87171',       // Light Red (0-29%)
-    dark: '#ef4444',
-    light: '#fca5a5',
-    rgb: '248, 113, 113',
-    glow: 'rgba(248, 113, 113, 0.35)',
+    color: TOPSCORE_COLORS.E,
+    dark: '#cc0000',
+    light: '#ff9999',
+    rgb: TOPSCORE_COLORS.E_RGB,
+    glow: 'rgba(255, 0, 0, 0.35)',
+    textColor: TOPSCORE_COLORS.TEXT_DARK,
     name: 'Fail (0-29%)',
     minScore: 0,
     maxScore: 29,
-    sparkle: false
-  }
+    sparkle: false,
+  },
 };
 
 /**
  * Universal Grade Color Resolver by Percentage Score (Single Source of Truth)
  * Returns authoritative color hex for any given percentage score.
- * 
+ *
  * @param {number|string} percentage Score percentage (0 - 100)
  * @returns {string} Hex color string
  */
 export function getGradeColorByScore(percentage) {
   const p = Number(percentage);
   if (isNaN(p) || p < 0) return '#94a3b8';
-  if (p >= 100) return GRADE_PALETTE['★']?.color || '#22C55E';
-  if (p >= 90) return GRADE_PALETTE.A?.color || '#22C55E';
-  if (p >= 80) return GRADE_PALETTE.B?.color || '#BEF264';
-  if (p >= 60) return GRADE_PALETTE.C?.color || '#FDE047';
-  if (p >= 30) return GRADE_PALETTE.D?.color || '#FB923C';
-  return GRADE_PALETTE.E?.color || '#F87171';
+  if (p >= 100) return TOPSCORE_COLORS.STAR;
+  if (p >= 90) return TOPSCORE_COLORS.A;
+  if (p >= 80) return TOPSCORE_COLORS.B;
+  if (p >= 60) return TOPSCORE_COLORS.C;
+  if (p >= 30) return TOPSCORE_COLORS.D;
+  return TOPSCORE_COLORS.E;
 }
 
 export function getGradeColor(grade, isRemedial = false) {
   const g = String(grade || '').trim();
-  if (g === '★' || g.toUpperCase() === 'S') return GRADE_PALETTE['★']?.color || '#22C55E';
+  if (g === '★' || g.toUpperCase() === 'S') return TOPSCORE_COLORS.STAR;
   return GRADE_PALETTE[g.toUpperCase()]?.color || '#94a3b8';
 }
 
 export function getScoreColor(percentage, isRemedial = false) {
   return getGradeColorByScore(percentage);
+}
+
+/**
+ * Authoritative Evaluation Result Color Resolver (Single Source of Truth)
+ * @param {'correct'|'minor_spelling_error'|'partial'|'incorrect'} category
+ * @returns {string} Hex color
+ */
+export function getEvaluationColor(category) {
+  const c = String(category || '').toLowerCase();
+  if (c === 'correct' || c === 'full') return TOPSCORE_COLORS.CORRECT;
+  if (c === 'minor_spelling_error' || c === 'partial' || c === 'half')
+    return TOPSCORE_COLORS.PARTIAL;
+  return TOPSCORE_COLORS.INCORRECT;
 }
 
 export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
@@ -453,29 +543,30 @@ export function formatGradeBadgeHtml(grade, isRemedial = false, customStyle = ''
   const cleanGrade = g.toUpperCase();
   const lowerG = cleanGrade.toLowerCase();
   const color = GRADE_PALETTE[cleanGrade]?.color || '#94a3b8';
-  const textColor = '#000000';
+  const textColor = GRADE_PALETTE[cleanGrade]?.textColor || TOPSCORE_COLORS.TEXT_DARK;
   return `<span class="grade-circle grade-circle-${lowerG}" style="background:${color}; color:${textColor}; ${customStyle}" title="Grade ${cleanGrade}">${cleanGrade}</span>`;
 }
 
 export function getGradeTheme(grade, isRemedial = false) {
   const g = String(grade || '').trim();
-  const isStar = (g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR');
+  const isStar = g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR';
   const effectiveKey = isStar ? '★' : g.toUpperCase();
   const theme = GRADE_PALETTE[effectiveKey] || {
-    symbol: isStar ? '★' : (g || '—'),
-    color: isStar ? '#22C55E' : '#94a3b8',
-    dark: isStar ? '#16a34a' : '#64748b',
+    symbol: isStar ? '★' : g || '—',
+    color: isStar ? TOPSCORE_COLORS.STAR : '#94a3b8',
+    dark: isStar ? '#006400' : '#64748b',
     light: isStar ? '#86efac' : '#cbd5e1',
-    rgb: isStar ? '34, 197, 94' : '148, 163, 184',
-    glow: isStar ? 'rgba(34, 197, 94, 0.45)' : 'rgba(148, 163, 184, 0.25)',
+    rgb: isStar ? TOPSCORE_COLORS.STAR_RGB : '148, 163, 184',
+    glow: isStar ? 'rgba(0, 192, 0, 0.5)' : 'rgba(148, 163, 184, 0.25)',
+    textColor: isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK,
     name: isStar ? 'Excellent (100%)' : 'Standard',
-    sparkle: isStar
+    sparkle: isStar,
   };
   if (isRemedial) {
     return {
       ...theme,
       isRemedial: true,
-      symbol: theme.symbol
+      symbol: theme.symbol,
     };
   }
   return theme;
@@ -505,7 +596,7 @@ export function getAchievementStatus(grade, percentage = null) {
     B: 'GOOD',
     C: 'ENOUGH',
     D: 'LESS',
-    E: 'FAIL'
+    E: 'FAIL',
   };
   return map[effGrade] || 'ENOUGH';
 }
@@ -523,13 +614,13 @@ export function normalizeWrittenAnswer(text) {
 export function recalculateAttempt(answers, passingThreshold = 60) {
   let totalScore = 0;
   const totalQuestions = answers.length;
-  const evaluatedAnswers = answers.map(ans => {
+  const evaluatedAnswers = answers.map((ans) => {
     const evalRes = evaluateAnswer(ans.student_answer, ans.correct_answer, ans.answer_type);
     totalScore += evalRes.score;
     return {
       ...ans,
       score: evalRes.score,
-      evaluation_result: evalRes.result
+      evaluation_result: evalRes.result,
     };
   });
   const percentage = calculatePercentage(totalScore, totalQuestions);
@@ -541,13 +632,13 @@ export function recalculateAttempt(answers, passingThreshold = 60) {
     percentage,
     grade,
     isPassing: passed,
-    answers: evaluatedAnswers
+    answers: evaluatedAnswers,
   };
 }
 
 /**
  * Authoritative Milestone Progression & Exam Mastery Engine (Phase 159).
- * 
+ *
  * Rules:
  * 1. Evaluated EXCLUSIVELY from Exams (Quizzes excluded from academic score/points).
  * 2. Next Exam 0% Penalty:
@@ -559,7 +650,7 @@ export function recalculateAttempt(answers, passingThreshold = 60) {
  *      in the denominator, but Theme N+1 is not queued yet.
  * 3. Zero-Exam Edge Case:
  *    - When 0 exams are completed, returns score: 0 (displays '—'), grade: '—', points: 0.
- * 
+ *
  * @param {Array<{ effPoints: number, effPct: number, totalQ: number, test: object }>} examEntries - Student's best exam attempts
  * @param {Array<object>} allClassExams - All exam objects for the class
  * @returns {{ totalPoints: number, overallScore: number, grade: string, denominator: number, completedExamCount: number, completedWeeklyCount: number }}
@@ -568,8 +659,10 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
   const completedExamCount = Array.isArray(examEntries) ? examEntries.length : 0;
   const completedWeeklyCount = completedExamCount; // Backward compatibility alias
 
-  // 1. Total Points earned across all completed exams
-  const totalPoints = Math.round(examEntries.reduce((sum, e) => sum + (Number(e.effPoints ?? e.points ?? 0)), 0) * 10) / 10;
+  // Riwayat Akumulasi Seluruh Poin (Arsip/Audit Track Record)
+  const cumulativePoints =
+    Math.round(examEntries.reduce((sum, e) => sum + Number(e.effPoints ?? e.points ?? 0), 0) * 10) /
+    10;
 
   // Helper to extract theme code from test
   const helperThemeCode = (t) => {
@@ -600,7 +693,7 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
 
   // Group class exams by theme
   const themeExamsMap = {};
-  (allClassExams || []).forEach(t => {
+  (allClassExams || []).forEach((t) => {
     if (!isExam(t)) return;
     const tc = helperThemeCode(t);
     if (!themeExamsMap[tc]) themeExamsMap[tc] = [];
@@ -608,36 +701,59 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
   });
 
   const sortedThemes = Object.keys(themeExamsMap).sort();
-  if (sortedThemes.length === 0) {
-    const sumEarned = examEntries.reduce((sum, e) => sum + (Number(e.effPoints ?? e.points ?? 0)), 0);
-    const sumMax = examEntries.reduce((sum, e) => sum + (Number(e.totalQ ?? 0)), 0);
-    const overallScore = sumMax > 0 ? Math.round((sumEarned / sumMax) * 100) : 0;
+  if (sortedThemes.length === 0 || completedExamCount === 0) {
     return {
-      totalPoints,
-      overallScore,
-      grade: calculateGrade(overallScore),
-      denominator: sumMax,
+      totalPoints: completedExamCount > 0 ? totalPoints : 0,
+      overallScore: 0,
+      grade: '—',
+      denominator: 0,
       completedExamCount,
-      completedWeeklyCount
+      completedWeeklyCount,
+      activeThemeCode: null,
+      themeStats: [],
+      includedThemeCodes: [],
+      includedExamIds: new Set(),
     };
   }
 
   // Pre-calculate theme max questions and student earned points per theme
   const themeStats = sortedThemes.map((tc, idx) => {
     const examsInTheme = themeExamsMap[tc];
-    const maxQ = examsInTheme.reduce((acc, t) => acc + getExpectedMax(t), 0);
-    const examIds = new Set(examsInTheme.map(t => t.id));
-    
-    const studentAttemptsInTheme = examEntries.filter(e => {
+    const examIds = new Set(examsInTheme.map((t) => t.id));
+
+    const studentAttemptsInTheme = examEntries.filter((e) => {
       const eId = e.test?.id || e.testId || e.test_id;
       if (eId && examIds.has(eId)) return true;
       const tcAttempt = helperThemeCode(e.test);
       return tcAttempt === tc;
     });
 
-    const earned = studentAttemptsInTheme.reduce((sum, e) => sum + (Number(e.effPoints ?? e.points ?? 0)), 0);
+    // Package calculation: each theme is 1 package.
+    // For each exam in the theme package:
+    // If student attempted it, use their attempt's actual total_questions (or totalQ).
+    // If student did not attempt it, count as unattempted (0 pts) with default expected questions.
+    let dynamicThemeMaxQ = 0;
+    examsInTheme.forEach(t => {
+      const att = studentAttemptsInTheme.find(e => {
+        const eId = e.test?.id || e.testId || e.test_id;
+        return eId === t.id;
+      });
+      if (att && (att.totalQ || att.total_questions)) {
+        dynamicThemeMaxQ += Number(att.totalQ || att.total_questions);
+      } else {
+        dynamicThemeMaxQ += getExpectedMax(t);
+      }
+    });
+
+    const maxQ = dynamicThemeMaxQ > 0 ? dynamicThemeMaxQ : examsInTheme.reduce((acc, t) => acc + getExpectedMax(t), 0);
+
+    const earned = studentAttemptsInTheme.reduce(
+      (sum, e) => sum + Number(e.effPoints ?? e.points ?? 0),
+      0
+    );
     const attempted = studentAttemptsInTheme.length > 0;
-    const passed = attempted && maxQ > 0 && (earned / maxQ) >= 0.6;
+    const scorePct = maxQ > 0 ? Math.round((earned / maxQ) * 100) : 0;
+    const passed = attempted && maxQ > 0 && earned / maxQ >= 0.6;
 
     return {
       themeCode: tc,
@@ -645,61 +761,55 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
       maxQ,
       earned,
       attempted,
-      passed
+      passed,
+      scorePct,
     };
   });
 
-  let highestAttemptedIdx = -1;
-  themeStats.forEach((ts, idx) => {
-    if (ts.attempted) highestAttemptedIdx = Math.max(highestAttemptedIdx, idx);
-  });
-
-  themeStats.forEach((ts, idx) => {
-    if (idx < highestAttemptedIdx) {
-      ts.passed = true;
+  // 2. Authoritative Single Vocab Model: Latest Active Theme Score & Grade
+  // Nilai Global (Overall Score & Grade) dihitung dari Tema Terakhir yang aktif dikerjakan siswa
+  let latestAttemptedTheme = null;
+  for (let i = themeStats.length - 1; i >= 0; i--) {
+    if (themeStats[i].attempted) {
+      latestAttemptedTheme = themeStats[i];
+      break;
     }
-  });
-
-  const includedIndices = new Set();
-  themeStats.forEach((ts, idx) => {
-    if (ts.attempted) includedIndices.add(idx);
-    if (ts.passed && idx + 1 < themeStats.length) {
-      includedIndices.add(idx + 1);
-    }
-  });
-
-  if (includedIndices.size === 0) {
-    // Initial milestone: All enrolled students start at Theme 1 (index 0) with unattempted exams counted as 0%
-    includedIndices.add(0);
   }
 
+  let totalPoints = 0;
+  let overallScore = 0;
+  let grade = '—';
   let denominator = 0;
-  includedIndices.forEach(idx => {
-    denominator += themeStats[idx].maxQ;
-  });
 
-  const overallScore = denominator > 0 ? Math.round((totalPoints / denominator) * 100) : 0;
-  const grade = calculateGrade(overallScore);
-
-  const includedThemeCodes = Array.from(includedIndices).map(idx => themeStats[idx].themeCode);
-  const includedExamIds = new Set();
-  includedThemeCodes.forEach(tc => {
-    (themeExamsMap[tc] || []).forEach(t => {
-      if (t.id) includedExamIds.add(t.id);
-    });
-  });
+  if (latestAttemptedTheme) {
+    // Sesi Ujian Tema Mutakhir: Poin dan Nilai murni merefleksikan capaian sesi tes terbaru (bukan akumulasi masa lalu)
+    totalPoints = Math.round(latestAttemptedTheme.earned * 10) / 10;
+    overallScore = latestAttemptedTheme.scorePct;
+    grade = calculateGrade(overallScore);
+    denominator = latestAttemptedTheme.maxQ;
+  } else if (completedExamCount > 0) {
+    const sumEarned = examEntries.reduce((sum, e) => sum + Number(e.effPoints ?? e.points ?? 0), 0);
+    const sumMax = examEntries.reduce((sum, e) => sum + Number(e.totalQ ?? 0), 0);
+    totalPoints = Math.round(sumEarned * 10) / 10;
+    overallScore = sumMax > 0 ? Math.round((sumEarned / sumMax) * 100) : 0;
+    grade = calculateGrade(overallScore);
+    denominator = sumMax;
+  }
 
   return {
     totalPoints,
+    cumulativePoints,
     overallScore,
     grade,
     denominator,
     completedExamCount,
     completedWeeklyCount,
-    includedThemeCodes,
-    includedExamIds
+    activeThemeCode: latestAttemptedTheme?.themeCode || null,
+    themeStats,
+    // Backward compatibility aliases
+    includedThemeCodes: latestAttemptedTheme ? [latestAttemptedTheme.themeCode] : [],
+    includedExamIds: new Set(
+      latestAttemptedTheme ? (themeExamsMap[latestAttemptedTheme.themeCode] || []).map((t) => t.id) : []
+    ),
   };
 }
-
-
-

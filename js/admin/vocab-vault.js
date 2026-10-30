@@ -1451,13 +1451,13 @@ function _renderTopicBlueprintTab(area, words, topics) {
             </div>
             <div style="display: flex; align-items: center; gap: 3px; flex-shrink: 0;">
               <button class="btn-edit-topic-mini" data-topic="${escapeHtml(t.name)}" title="Rename Topic" style="background: transparent; border: none; cursor: pointer; color: #38bdf8; font-size: 11px; padding: 1px 3px; line-height: 1;">✏️</button>
-              <button class="btn-del-topic-mini" data-topic="${escapeHtml(t.name)}" title="Delete Topic" style="background: transparent; border: none; cursor: pointer; color: #ef4444; font-size: 11px; padding: 1px 3px; line-height: 1;">🗑️</button>
+              <button class="btn-del-topic-mini" data-topic="${escapeHtml(t.name)}" title="Delete Topic" style="background: transparent; border: none; cursor: pointer; color: var(--clr-danger, #FF0000); font-size: 11px; padding: 1px 3px; line-height: 1;">🗑️</button>
             </div>
           </div>
           <!-- Row 2: POS chips & Total count -->
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; gap: 2.5px; align-items: center;">
-              <span style="background: rgba(34,197,94,0.18); color: #4ade80; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.verbs} Verbs">${t.verbs}V</span>
+              <span style="background: rgba(var(--grade-star-rgb, 0, 192, 0), 0.18); color: #86efac; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.verbs} Verbs">${t.verbs}V</span>
               <span style="background: rgba(234,179,8,0.18); color: #facc15; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.adjs} Adjectives">${t.adjs}A</span>
               <span style="background: rgba(56,189,248,0.18); color: #38bdf8; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.nouns} Nouns">${t.nouns}N</span>
               <span style="background: rgba(168,85,247,0.18); color: #c084fc; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.phrases} Phrases">${t.phrases}P</span>

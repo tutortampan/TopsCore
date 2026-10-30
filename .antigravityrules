@@ -31,3 +31,17 @@
 8. DATABASE INTEGRITY & SOFT-DELETE:
    - Use Soft-Delete (`deleted_at IS NULL`) exclusively for business entities.
    - Never execute raw hard-deletes (`DELETE FROM`) on historical results, attempts, or student records.
+
+9. POSTGREST ASYNC HANDLING:
+   - Supabase PostgrestFilterBuilder queries are Thenables, NOT true Promises. Never call `.catch()` directly on them. Always use standard `try { await ... } catch (err) {}`.
+
+10. DEFENSIVE PROPERTY SCOPING IN UI & MODALS:
+   - When mapping tasks/quiz counts or loops across modals, explicitly define all counter variables before passing to view layers to prevent `ReferenceError` crashes.
+
+11. SINGLE SOURCE OF TRUTH COLORING:
+   - Never hardcode grade, percentage, points, or answer evaluation colors across CSS or JS modules.
+   - All colors must strictly reference `TOPSCORE_COLORS` in `js/grading.js` and the corresponding `--grade-*` / `--eval-*` CSS variables in `css/style.css`.
+   - Star (★) and Grade A share the exact same base color (`#00c000ff` / `#00c000`).
+   - Grade B is Electric Lime (`#95ff00ff`), Grade C is Pure Yellow (`#FFFF00`), Grade D is Dark Orange (`#FF8C00`), Grade E is Pure Red (`#FF0000`).
+   - Round grade badges must render white (`#FFFFFF`) for the Star symbol and deep dark slate (`#0F172A`) for letters A, B, C, D, E.
+   - Points (PTS) dynamically follow `getGradeColorByScore()`.

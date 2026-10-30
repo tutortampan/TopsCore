@@ -16,9 +16,9 @@ async function runTest() {
 
   if (wtErr) throw wtErr;
   console.log(`[1] Checking Words Quizzes Durations (${wordsTasks.length} quizzes found):`);
-  const nonStandardTasks = wordsTasks.filter(t => ![5, 10].includes(t.working_duration_minutes) && ![5, 10].includes(t.payload?.working_duration_minutes));
+  const nonStandardTasks = wordsTasks.filter(t => ![5, 8, 10].includes(t.working_duration_minutes) && ![5, 8, 10].includes(t.payload?.working_duration_minutes));
   if (nonStandardTasks.length === 0) {
-    console.log('  ✅ ALL Words Quizzes have valid 5m/10m duration settings!');
+    console.log('  ✅ ALL Words Quizzes have valid 5m/8m/10m duration settings!');
   } else {
     console.error('  ❌ Found quizzes with invalid duration:', nonStandardTasks.map(t => `${t.shell_code} (${t.working_duration_minutes}m)`));
   }

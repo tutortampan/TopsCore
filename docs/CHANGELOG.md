@@ -1,3 +1,672 @@
+## [2026-10-30 20:12] — Phase 203: Progress-First Ranking, Left Panel PTS Column, Dynamic Progress Color & Unbroken Theme Dividers
+
+**Agent/Session:** Antigravity / SESSION-20261030-2012
+**Phase:** Phase 203
+**Status:** PASS (no commit per user instruction)
+
+### Why
+- User requests:
+  1. Rank students in Vocabulary class by Progress first, then total points from latest exam package (combining Words + Phrases): "untuk ranking di kelas VOCABULARY kita urutkan dari progress lalu berdasarakan lalu total pont dari exam terakahir (satu exam terdiri dari 2 exam yaitu words dan phrases), bisa dipahami?".
+  2. Add latest exam points column beside Grade in left sticky panel: "tambahkan kolom point terakhir di samping grade agar mempermudah saya cek rangking. bisa dipahami?".
+  3. Dynamic progress % text color derived from exam score: "wrna keterangan progress ambil dari warna score".
+  4. Ensure theme dividing lines are prominent and run all the way down: "garis pembatas antar tema juga dipertegas sampai bawah,,, ".
+  5. Strict user constraint: NO GIT COMMIT, NO GIT PUSH.
+
+### Changed
+1. `js/admin/app.js`:
+   - Updated `studentsGridData.sort`: Primary sort is now `progressPct` DESC, secondary is `totalEarnedScore` DESC (latest exam points), tertiary is `averageScorePct` DESC, quaternary is `lastSubmittedAt` ASC.
+   - Updated DataGrid `initialSortKey: 'progressPct'` with `initialSortAsc: false`.
+   - Updated `sortComparator`: clicking `PROG` or `PTS` follows the progress-first tie-breaker hierarchy.
+   - Restored `PTS` column (`totalEarnedScore`) as `col-sticky-7 col-sticky-last` (46px) right beside `GRD` (38px).
+   - In `columns`: updated `progressPct` rendering so text color inherits `getGradeColorByScore(row.averageScorePct)`.
+   - In `summaryRow`: updated `progressPct` cell to color `avgProg` with `avgGradeColor`, and added `totalEarnedScore` cell displaying `avgPts` colored by `avgScore`.
+   - Updated `dynamicSuperHeaders[0].colSpan = 7`.
+2. `css/admin.css`:
+   - Updated sticky column offsets and widths for 7 columns (INST, PROGRAM, BATCH, STUDENT NAME, PROG, GRD, PTS).
+   - Placed `col-sticky-last` on `col-sticky-7` (`PTS`) with `border-right: 3px solid rgba(56, 189, 248, 0.75)` and `box-shadow: 4px 0 10px rgba(0, 0, 0, 0.4)`.
+   - Scoped `#class-attendance-grid td.col-exam-pts:not(.col-test-theme-total)` so it no longer strips `border-right` from theme dividing columns.
+   - Strengthened theme vertical dividers (Theme A #38bdf8, Theme B #c084fc, Theme C #fbbf24, Theme D #34d399) across `th`, `td`, `tfoot td`, and summary row cells with distinct glow box-shadows.
+3. `js/dashboard.js`:
+   - Aligned batch leaderboard sorting in `loadBatchLeaderboard`: Primary `progressPct` DESC -> Secondary `totalPoints` DESC -> Tertiary `overallScore` DESC -> Quaternary `lastSubmittedAt` ASC.
+4. `scripts/test_student_dashboard_exam_parity.mjs` & `scripts/test_batch_133_student_lobby_standings.mjs`:
+   - Updated ranking test suites to assert progress-first hierarchy.
+5. Cache busters bumped to `?v=20261030_v44` across HTML, JS, and CSS files.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: ALL 40 JS files passed syntax validation.
+- `node scripts/test_student_dashboard_exam_parity.mjs`: PASS 100%.
+- `node scripts/test_batch_133_student_lobby_standings.mjs`: PASS 100%.
+
+### Next Action
+- Present summary to the user. No git commit.
+
+## [2026-10-30 19:44] — Phase 202: Class Hub Matrix Streamlining & Rule 2.7 Highest Attempt Score Restoration
+
+**Agent/Session:** Antigravity / SESSION-20261030-1944
+**Phase:** Phase 202
+**Status:** PASS (no commit per user instruction)
+
+### Why
+- User requests:
+  1. Remove active theme code label from beside student names ("keterangan tentang thema yang sedang di ambil di samping nama tidak perlu").
+  2. Remove SCORE and PTS columns from the left sticky panel ("kolom score dan point di sebelah kri ini spertinya tidak perlu").
+  3. Investigate why scores disappeared or became 0% across various themes/students ("lalu ada beberapa nilai yang aneh dalam kolom tema siswa... banyak nilai yang hilang. apa yang terjadi?").
+  4. Absolute user constraint: NO GIT COMMIT, NO GIT PUSH.
+
+### Changed
+1. `js/admin/app.js`:
+   - Removed active theme badge (`<span class="badge-active-theme">`) from the student name column.
+   - Removed `averageScorePct` (`SCORE`) and `totalEarnedScore` (`PTS`) from `initialRosterData` sticky columns.
+   - Left sticky columns now streamlined to: `INST | PROGRAM | BATCH | STUDENT NAME | PROG | GRD`.
+   - Updated `dynamicSuperHeaders[0].colSpan = 6` (was 8).
+   - In `summaryRow`, updated `grade` to use `col-sticky-6 col-sticky-last`.
+   - Restored TopsCore Rule 2.7 (highest valid score & capped score priority) in attempt sorting logic (`renderClassHub`), preventing empty/auto-closed sessions from overwriting real student test scores.
+2. `css/admin.css`:
+   - Updated sticky column horizontal offsets and widths:
+     `col-sticky-1` (0px, 48px), `col-sticky-2` (48px, 54px), `col-sticky-3` (102px, 48px), `col-sticky-4` (150px, 140px), `col-sticky-5` (290px, 46px), `col-sticky-6` (336px, 40px).
+   - Set `col-sticky-last` (`col-sticky-6` / `GRD`) with `border-right: 3px solid rgba(56, 189, 248, 0.75) !important; box-shadow: 4px 0 10px rgba(0, 0, 0, 0.4) !important;`.
+   - Reduced left sticky panel width from 480px to 376px, freeing up +104px of horizontal space for the test matrix grid.
+3. `js/dashboard.js`:
+   - Restored Rule 2.7 (highest valid score & percentage priority) in `computeOverallStats` (line 1860) and `loadBatchLeaderboard` (line 2375).
+4. `js/admin/student-management.js`:
+   - Restored Rule 2.7 in `bestByAsm` (lines 210-216), prioritizing highest score and percentage.
+5. Cache busters bumped to `?v=20261030_v43` across HTML, JS, and CSS files.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: ALL 40 JS files passed syntax validation.
+- `node scripts/test_student_dashboard_exam_parity.mjs`: PASS 100%.
+- `node scripts/test_batch_133_student_lobby_standings.mjs`: PASS 100%.
+
+### Next Action
+- Present clear summary and root-cause analysis to the user. No git commit.
+
+## [2026-10-30 19:15] — Phase 201: Dynamic Package Denominator Calibration, Firm Theme Dividers, and Typographic Unification
+
+**Agent/Session:** Antigravity / SESSION-20261030-1915
+**Phase:** Phase 201
+**Status:** PASS (no commit per user instruction)
+
+### Why
+- User feedback audit:
+  1. Syazida Shinda Debi and Ari Wahyu Darma total score and points showed an anomaly (Theme C combined score showed 44% D for Syazida with 262 pts and 43% D for Ari Wahyu with 256 pts) despite high scores on Word Exam (73% and 69%) and Phrase Exam (97% and 98%).
+  2. Cause: Theme C questions denominator was statically hardcoded as 600 (480 words + 120 phrases), dividing their earned points by 600 instead of their attempt's actual 320 questions (200 words + 120 phrases), penalizing them for 280 phantom questions.
+  3. User requirement: "nilai tiap tema adalah 1 paket, jadi kalau belum dikerjakan, maka tetap dihitung".
+  4. User requirement: "coba berikan garis yang lebih tegas juga antar tema."
+  5. User requirement: "lalu kalau bisa janganbuat tulisan terlalu bold. smakan ukuran font nama dan angka,,, gunakan 1 font juga... agar lebih sesuai."
+  6. Strict user constraint: NO GIT COMMIT, NO GIT PUSH.
+
+### Changed
+1. `js/grading.js`:
+   - Updated `computeMilestoneExamMastery()`:
+     - For each exam in the theme package: if student attempted it, their attempt's actual `total_questions` is used; if unattempted, the test's expected question count (`getExpectedMax`) is added to the denominator with 0 points earned.
+     - Syazida correctly achieves **82% Grade B (262 pts / 320 max)**.
+     - Ari Wahyu correctly achieves **80% Grade B (256 pts / 320 max)**.
+     - Students with unattempted Phrase exam (Wardatul, Muhammad Masyan, Unggul, Latifa) correctly evaluated with full package denominator (600 max).
+2. `js/admin/app.js`:
+   - In `renderClassHub()`:
+     - Calculated per-student `studentThemeMaxQ` within the active themes loop, ensuring each student's package denominator accounts for their actual tested question count plus unattempted package questions.
+     - Appended theme-specific classes: `col-test-theme-score-${tc.toLowerCase()}` and `col-test-theme-total-${tc.toLowerCase()}`.
+     - In `col-test-theme-total`: updated tooltip to display student's exact dynamic package denominator `${displayVal}/${studentThemeMaxQ} pts (${Math.round(themePct)}%)`.
+     - In `displayName` (Student Name column): added active theme milestone badge `<span class="badge-active-theme badge-active-theme-${row.activeThemeCode.toLowerCase()}">TH-${row.activeThemeCode}</span>`.
+     - Standardized font sizes to `0.76rem`, softened font weight to `600`, and added `font-variant-numeric: tabular-nums` across student names, `PROG`, `SCORE`, `GRD`, and `PTS`.
+3. `css/admin.css`:
+   - **Firm Theme Dividers**: Added 3px solid theme-accented borders across super-headers (`super-hdr-theme-a` 3px #38bdf8, `super-hdr-theme-b` 3px #c084fc, `super-hdr-theme-c` 3px #fbbf24, `super-hdr-theme-d` 3px #34d399) and columns (`col-test-theme-total-a`, `col-test-theme-total-b`, `col-test-theme-total-c`, `col-test-theme-total-d`) extending through rows and summary footer.
+   - **Softened Typography**: Softened `font-weight: 800/900` to `600` across grid headers, scores, points, and matrix cells.
+   - **Unified Font Family**: Enforced `font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;` across `#class-attendance-grid` and tabular numbers `font-variant-numeric: tabular-nums !important; font-feature-settings: 'tnum' 1 !important;`.
+   - **Active Theme Badges**: Styled `.badge-active-theme` for themes A, B, C, D with theme-colored backgrounds and borders.
+4. Cache Busting:
+   - Updated cache busters to `?v=20261030_v42` across `admin.html`, `dashboard.html`, `js/admin/app.js`, `js/dashboard.js`, `js/admin/student-management.js`, and `css/admin.css`.
+5. `scripts/test_batch_133_student_lobby_standings.mjs`:
+   - Added pagination to attempt fetching to prevent postgREST 1000 row truncation.
+   - Verified 100% standing parity across all 24 students.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: ALL 40 JS files passed syntax validation (node --check).
+- `node scripts/test_student_dashboard_exam_parity.mjs`: 100% PASS.
+- `node scripts/test_batch_133_student_lobby_standings.mjs`: 100% PASS (Syazida: 82% B 262 pts, Ari Wahyu: 80% B 256 pts).
+
+---
+
+## [2026-10-30 18:30] — Phase 200: Vocabulary Evaluation Engine: Non-Cumulative Latest Attempt & Latest Theme Session as Primary Benchmark
+
+**Agent/Session:** Antigravity / SESSION-20261030-1830
+**Phase:** Phase 200
+**Status:** PASS (no commit per user instruction)
+
+### Why
+- User requirement: In the vocabulary evaluation system, learning outcome assessment is NOT based on cumulative average or historical sum of points across all past sessions. Because vocabulary mastery is about retention and final competency achievement, the primary benchmark used as the student reference score is the result from the **latest test session (latest attempt)** on the exam schedule. Previous test history purely functions as a learning track record, while the main summary columns (`SCORE`, `GRD`, `PTS`) in the main panel must reflect actual achievement on that latest test.
+- User mandate: Ensure scoring, grading, and point colors strictly follow TopsCore official color rules, and do NOT commit or push to git.
+
+### Changed
+1. `js/grading.js`:
+   - Updated `computeMilestoneExamMastery()`:
+     - `totalPoints` now evaluates to the points earned on the student's **latest active theme exam session** (`latestAttemptedTheme.earned`), eliminating cumulative summation across past themes (e.g. Aunul Fikri now shows 362 pts instead of 683.5 pts).
+     - `overallScore` strictly reflects the percentage score achieved on that latest theme exam session (`latestAttemptedTheme.scorePct`).
+     - `grade` accurately reflects `calculateGrade(overallScore)`.
+     - `cumulativePoints` preserved as an explicit secondary attribute for audit/telemetry records.
+2. `js/admin/app.js`:
+   - In `renderClassHub`:
+     - Retakes and multiple attempts now sort by latest submission timestamp (`new Date(y.submitted_at || y.created_at) - new Date(x.submitted_at || x.created_at)`), ensuring that retakes and remediations evaluate the student's *current retention* and actual contemporary competence.
+     - Added `activeThemeCode` to student row objects.
+     - Updated summary column tooltips to display: `Latest Exam Score: ${score}% (Theme ${activeThemeCode})` and `Latest Exam Points: ${pts} pts (Theme ${activeThemeCode})`.
+     - Preserved dynamic PTS coloring via `getGradeColorByScore(row.averageScorePct)`.
+3. `js/dashboard.js`:
+   - In `computeOverallStats()` and `loadBatchLeaderboard()`:
+     - Selected latest attempt by timestamp for each exam.
+     - Leaderboard points column dynamically colored via `getGradeColorByScore(st.overallScore)`.
+     - Leaderboard grade chips strictly enforce Star ★ white text and slate dark `#0F172A` for grades A-E.
+4. `js/admin/student-management.js`:
+   - Selected latest attempt by timestamp for each exam.
+   - Standardized total points color to `rec.overallColor || 'var(--clr-text-1)'`.
+5. Script cache versions bumped:
+   - `admin.html`: `js/admin/app.js?v=20261030_v41`
+   - `dashboard.html`: `./js/dashboard.js?v=20261030_v41`
+   - `js/api.js`: `./grading.js?v=20261030_v41`
+   - `js/dashboard.js`: `./grading.js?v=20261030_v41`
+   - `js/admin/app.js`: `../app.js?v=20261030_v41`
+   - `js/admin/student-management.js`: `../app.js?v=20261030_v41`
+6. `docs/DECISIONS.md`:
+   - Recorded `DECISION-031 — Vocabulary Evaluation Engine: Non-Cumulative Latest Attempt & Latest Theme Session as Primary Benchmark`.
+7. `scripts/test_student_dashboard_exam_parity.mjs` & `scripts/test_batch_133_student_lobby_standings.mjs`:
+   - Updated test assertions to verify non-cumulative latest attempt ranking and stats.
+
+### Tests
+- `npm test`: 100% PASS (40/40 JS syntax checks PASS, 27 SW assets exist, 100% dashboard parity verified).
+- `node scripts/test_batch_133_student_lobby_standings.mjs`: 100% match between Class Hub simulation and Student Dashboard standings.
+- `node scripts/verify_green_star_grading.mjs`: ALL VERIFICATIONS PASSED SUCCESSFULLY.
+- `node scripts/test_levelup_logic.mjs`: ALL LEVEL-UP PROGRESSION TESTS PASSED.
+- `node scripts/test_sequential_exam_prerequisite.mjs`: ALL SEQUENTIAL PRE-REQUISITE TESTS PASSED.
+
+---
+
+## [2026-10-30 17:35] — Phase 199.1: Review Audit & Hardening — Test Analytics Cockpit, Telemetry Drawer Inspection & Classification Accuracy
+
+**Agent/Session:** Antigravity / SESSION-20261030-1735
+**Phase:** Phase 199.1
+**Status:** PASS
+
+### Why
+- Review and harden the Phase 199 Test Analytics overhaul:
+  1. Fix drawer inspection telemetry: `_openTestCardDrawer` failed to render stats for tests when clicked from the slide-out drawer because `drawerRows` omitted `takersCount`, `avgScoreVal`, `remRateVal`, `pacingVal`, `securityFlags`, `status`, `programName`, `classBoard`, `TestCategory`, `qCount`, `minScore`, `prereq`.
+  2. Implement keyboard `Escape` dismissal for `#tac-pacing-drawer` with body scroll locking and search input auto-focus.
+  3. Fix error sorting comparator where blanks were artificially demoted even when timeout/blank was the #1 dominant failure mode.
+  4. Fix classifier circumlocution logic that previously misclassified all mistakes on multi-word target phrases as literal translations.
+  5. Add support for `'partial'` and `'half'` evaluation results in `classifyStudentError`.
+  6. Expand word form derivational suffix coverage (`ion`, `ation`, `ition`, `ance`, `ence`, `ant`, `ent`, `iful`, `y`) and silent 'e' elision.
+  7. Filter Top 10 Most Missed Questions to `q.fail >= 1` so 0-error questions never appear as bottlenecks.
+  8. Fix PostgreSQL table case sensitivity crash in `_duplicateTest` and `openSessionModal` (`sb.from('Tests')` -> `sb.from('tests')`).
+  9. Replace native `alert()` with `showToast`.
+  10. Add `#tac-pacing-no-results` empty-state row in drawer table.
+  11. Purge remaining internal jargon from modal headers (`Rule 2.10`, `FAPR`, `The Wall`, `Matrix`).
+
+### Changed
+- `js/admin/tests-management.js`:
+  - Applied all 11 hardening fixes across data processing, classifier, drawer telemetry, keyboard accessibility, and modal headers.
+- `js/admin/app.js`:
+  - Bumped cache version to `?v=20261030_v40`.
+
+### Tests
+- `npm run test:syntax`: 40/40 JS files passed `node --check`.
+- `npm test`: 100% PASS on composite validation suite.
+- `node scripts/test_analytics_classifier.mjs`: 13/13 edge cases passed.
+
+---
+
+## [2026-10-30 17:15] — Phase 199: Test Analytics Cockpit Overhaul: 4-Theme Side-by-Side Comparison Board, Telemetry Pacing Drawer & Student Error Diagnostics Breakdown
+
+**Agent/Session:** Antigravity / SESSION-20261030-1715
+**Phase:** Phase 199
+**Status:** PASS
+
+### Why
+- Overhaul and redesign the Test Analytics screen (`admin.html#tests` rendered in `js/admin/tests-management.js`) per agreed `/grill-me` specification:
+  1. Eliminate visual clutter: completely remove jarring bright neon-red horizontal bars and internal engineering jargon ("RULE 2.10", "FAPR", "LINGUISTIC POS MATRIX", "THE WALL").
+  2. Implement top executive header bar with Class Answering Pacing (seconds/question & duration/test) and Student Error Diagnosis Breakdown (Spelling, Literal Translation, Word Form, Timed Out).
+  3. Implement right-side smooth slide-out drawer displaying complete test-by-test completion & pacing telemetry table (submits, duration vs limit, pass rate, timeout rate, pacing status).
+  4. Implement 4-column side-by-side Theme Comparison Board (Theme A, Theme B, Theme C, Theme D) with Top 10 most missed questions, soft emerald target answers, actual student typed answers with error frequencies/percentages, question pacing, and error diagnosis tags.
+
+### Changed
+1. `js/admin/tests-management.js`:
+   - Added `levenshteinDistance` and `classifyStudentError` deterministic classification engine.
+   - Upgraded `attempt_answers` query to fetch balanced empirical sample across Themes A, B, C, and D (1,000 per theme).
+   - Overhauled main interface with dark-mode aesthetic, soft rounded corners, subtle accents, and responsive layout.
+   - Built Top Executive Header Bar with Class Answering Pacing and 4 Error Diagnosis Breakdown chips.
+   - Built 4-Column Side-by-Side Theme Comparison Board with Top 10 Most Missed Questions per theme.
+   - Built right-side Slide-Out Drawer (`#tac-pacing-drawer`) with full telemetry table, instant search, filter pills, and status badges.
+   - Preserved backward compatibility for all existing admin modals, order updates, and test builders.
+2. `js/admin/app.js`:
+   - Updated `tests-management.js` import cache query to `?v=20261030_v39`.
+
+### Files
+- `js/admin/tests-management.js`
+- `js/admin/app.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- command: `npm run test:syntax` &rarr; `PASS` (40/40 JS files syntax valid)
+- command: `npm run test:grading` &rarr; `PASS` (100% grading palette & color vault verified)
+- command: `npm run test:manifest` &rarr; `PASS` (27/27 SW manifest assets exist)
+- command: `npm run test:parity` &rarr; `PASS` (100% student dashboard parity)
+- command: `npm run test:duration` &rarr; `PASS` (RPC emergency submit & auto-close verified)
+- command: `npm run test:prereq` &rarr; `PASS` (Sequential exam prerequisite tests pass)
+- command: `npm test` &rarr; `PASS` (Full suite passed)
+
+### Risks / Follow-up
+- None. All visual clutter, alarmist red bars, and engineering jargon have been removed. Layout verified responsive across screen sizes.
+
+---
+
+## [2026-10-30 16:30] — Phase 198: P0 Infrastructure & Reliability Hardening: Student Level-Up Progression, Database Performance Indexing, CDN Route Security & Credential Protection
+
+**Agent/Session:** Antigravity / SESSION-20261030-1630
+**Phase:** Phase 198
+**Status:** PASS
+
+### Why
+- User instruction: Proceed with P0 implementation plan from system audit report:
+  1. Student Level-Up Progression Fix in `js/api.js`.
+  2. Database Performance Indexing migration and Supabase cloud execution.
+  3. CDN Route Security (`netlify.toml`, `vercel.json`) & Credential Protection (`scripts/fix_emergency_submit.mjs`, `scripts/sync_local_to_cloud.mjs`).
+  4. Full verification suite execution and AGENTS.md documentation continuity.
+
+### Changed
+1. **Student Level-Up Progression Engine (`js/api.js`)**:
+   - In `checkAndTriggerLevelUp()`, updated gating exam query from `.eq('category', 'TEST')` to `.in('category', ['EXAM', 'TEST'])`, enabling milestone exams to trigger level advancement upon achieving $\ge 60\%$.
+   - Removed query references to non-existent `levels.program_id` column (selecting `id, level_number` and querying `nextLevel` by `level_number`), resolving runtime PostgreSQL error 42703.
+   - Upgraded attempt score check to inspect `effective_score ?? percentage` across submitted/auto_submitted attempts, ensuring remediated exam completions are accurately counted.
+   - Fixed critical regression in `fetchStudentLevel()`: now queries `level_id, levels:level_id(...)` alongside batch defaults so individual student level-ups are preserved on dashboard reload.
+2. **Database Performance Indexing**:
+   - Created migration `supabase/migrations/20261030160000_performance_indexes.sql` creating:
+     * `idx_attempts_student_test` on `public.attempts(student_id, test_id)`
+     * `idx_attempt_answers_attempt_id` on `public.attempt_answers(attempt_id)`
+     * `idx_students_batch_id` on `public.students(batch_id)`
+     * `idx_students_program_id` on `public.students(program_id)`
+   - Applied and verified all 4 indexes directly against Supabase Cloud PostgreSQL via `scripts/apply_performance_indexes.mjs`.
+   - Hardened `scripts/apply_performance_indexes.mjs` to accept `SUPABASE_DB_HOST`, `SUPABASE_DB_PORT`, `SUPABASE_DB_USER`, `SUPABASE_DB_NAME` environment variables.
+3. **CDN Route Security & Credential Protection**:
+   - `netlify.toml`: Added forced 404 redirects for `/scripts/*`, `/scripts`, `/supabase/*`, `/supabase`, `/docs/*`, `/docs`, `/scratch/*`, `/scratch`, `/supabase_deploy/*`, `/supabase_deploy` to prevent public directory traversal.
+   - `vercel.json`: Added route redirects for bare paths and wildcards (`/scripts`, `/scripts/:path*`, `/supabase`, `/supabase/:path*`, `/docs`, `/docs/:path*`, `/scratch`, `/scratch/:path*`, `/supabase_deploy`, `/supabase_deploy/:path*`) to `/`.
+   - `scripts/fix_emergency_submit.mjs` & `scripts/sync_local_to_cloud.mjs`: Redacted hardcoded plaintext password (`100%TopsCore`), dynamically reading from `process.env.SUPABASE_DB_PASSWORD || process.env.PGPASSWORD` with validation guards.
+4. **Automated Verification**:
+   - Added `scripts/test_levelup_logic.mjs` verifying milestone exam gating detection, 60% threshold, remedial effective scores, and dual-check level resolution.
+   - Updated `scripts/test_submit_and_duration.mjs` to account for 8-minute Words Quizzes, passing with 100% clean output.
+
+### Files
+- `js/api.js`
+- `netlify.toml`
+- `vercel.json`
+- `scripts/fix_emergency_submit.mjs`
+- `scripts/sync_local_to_cloud.mjs`
+- `scripts/apply_performance_indexes.mjs`
+- `scripts/test_levelup_logic.mjs`
+- `supabase/migrations/20261030160000_performance_indexes.sql`
+
+### Database
+- migration: `supabase/migrations/20261030160000_performance_indexes.sql`
+- indexes created: `idx_attempts_student_test`, `idx_attempt_answers_attempt_id`, `idx_students_batch_id`, `idx_students_program_id`
+
+### Tests
+- command: `node scripts/apply_performance_indexes.mjs` &rarr; `PASS` (All 4 indexes verified in `pg_indexes`)
+- command: `node scripts/test_levelup_logic.mjs` &rarr; `PASS` (Gating exam detected & threshold verified)
+- command: `npm run test:syntax` &rarr; `PASS` (40/40 JS files syntax valid)
+- command: `npm run test:grading` &rarr; `PASS` (100% grading palette tests pass)
+- command: `npm run test:manifest` &rarr; `PASS` (27/27 SW manifest assets exist)
+- command: `npm run test:parity` &rarr; `PASS` (100% student dashboard parity)
+- command: `npm run test:prereq` &rarr; `PASS` (Sequential exam prerequisite tests pass)
+- command: `npm run test:duration` &rarr; `PASS` (RPC emergency submit & auto-close verified)
+
+### Risks / Follow-up
+- None. All changes strictly non-visual, backend and infrastructure hardening.
+
+### Next Action
+- Ready for user review.
+
+## [2026-10-30 09:00] — Phase 197: Comprehensive Grading & Typography Color Unification Across CSS & JS, Zero Rogue Hex Overrides & Cache Bump v38
+
+**Agent/Session:** Antigravity / SESSION-20261030-0900
+**Phase:** Phase 197
+**Status:** PASS (Strictly NO commit / NO push per user instruction)
+
+### Why
+- User instruction: *"IYa coba lakukan secara menyeluruh dan mendalam... /boost"* and *"Saya ingin kamu data semua warna di grading scoring dan SEMUA font atau teks yang memakai warna,,, kita pakai kesempatan ini untuk menyatukan warna agar tidak muncul warna yang tiba2 berbeda.... oh ya, no push commit!"*
+- Mandatory rule: Unify all grading/scoring colors and typography across CSS & JS to the canonical single source of truth, eliminate rogue hex overrides, enforce badge text contrast, and bump cache to v38. Strictly NO git commit and NO git push.
+
+### Changed
+1. **Master Vault & Single Source of Truth**:
+   - Palette strictly enforced: Star (`★` / 100%) `#00c000ff`, Grade A (90–99%) `#00c000ff`, Grade B (80–89%) `#95ff00ff`, Grade C (60–79%) `#FFFF00`, Grade D (30–59%) `#FF8C00`, Grade E (0–29%) `#FF0000`.
+   - Evaluations: Correct `#00c000ff`, Partial `#FFFF00`, Incorrect `#FF0000`.
+   - Text contrast: Star (`★`) `#FFFFFF`, Letters A-E `#0F172A`.
+   - Remedial: 60% cap, inherits score color, small `R` only on percentage (`60%ᴿ`).
+2. **CSS Token Unification**:
+   - `css/style.css`: Updated `--clr-success: #00c000ff;`, `.grade-star` gradient start `#86efac`, purged dead `.grade-F` and `.text-grade-F`, standardized button and badge RGB opacities to canonical tokens (`--grade-star-rgb`, `--grade-e-rgb`, `--grade-d-rgb`), and added `.grade-circle-★` / `.grade-circle-s` aliases.
+   - `css/result.css`: Deleted obsolete gold `.grade-S` styling; standardized result grade display to green star gradient; replaced hardcoded Tailwind overrides (`#22C55E`, `#10B981`, `#84CC16`, `#EAB308`, `#F97316`, `#EF4444`) with `var(--grade-*)` CSS variables; replaced emerald `#10b981` fallbacks with `var(--grade-star)`; unified metric stacked rows (Correct, Partial, Incorrect) to `var(--eval-*)`; unified accuracy segments/labels to `var(--eval-*)`; replaced all legacy `rgba(34, 197, 94, ...)` drop-shadows and dividers with `rgba(var(--grade-star-rgb), ...)`; standardized `.result-badge-best` and `.remedial-segment-btn.segment-normal.active`.
+   - `css/dashboard.css`: Standardized `--tier-color` and `#welcome-banner-section` to `var(--grade-star)` and `var(--grade-star-rgb)`; purged all legacy `rgba(34, 197, 94, ...)` and `rgba(16, 185, 129, ...)` references; standardized the Next Assessment green button to canonical Star green gradient and glow.
+   - `css/admin.css`: Standardized `.text-gold-champion` and champion cards to `var(--grade-star)` with `var(--grade-star-glow)`; aliased `--fm-*` design tokens to root variables (`--fm-text-muted: var(--clr-text-3);`); standardized `.badge-success`, `.badge-warning`, `.badge-danger`, `.status-dot.*`, and `pulse*` keyframes to root tokens; added `.grade-circle-★` / `.grade-circle-s` aliases.
+3. **JS Color Normalization & Prior Attempt Blindspot Fixes**:
+   - Purged all legacy `#009A00` / `0, 154, 0` and `#77FF00` references across `js/dashboard.js`, `js/result.js`, `js/admin/app.js`, `js/admin/class.js`, `js/admin/student-management.js`, and `js/admin/tests-management.js`.
+   - Purged remaining hardcoded `rgba(34, 197, 94, ...)` across `js/dashboard.js` (lines 1945, 1980-1982, 2017, 2030, 2041-2051) and `js/result.js` (lines 699-701, 786-801) using `TOPSCORE_COLORS.STAR_RGB`.
+   - Standardized Next Assessment 100% completion badge (`js/dashboard.js:913`) and progress bar fallback to canonical tokens.
+   - Standardized `js/admin/tests-management.js` fail score, security badges, and target correct answers (lines 982, 2034, 2252) to `TOPSCORE_COLORS.CORRECT` / `TOPSCORE_COLORS.E`.
+   - Fixed `js/admin/student-management.js` failed tests score percentage dynamically via `getGradeColorByScore`, and standardized remediation alert container and PIN security status.
+   - Standardized `js/test.js`: cheat strike badge red (`#dc2626` & shadow &rarr; `var(--grade-e)`), MC options background gradient (`rgba(16,185,129,0.2)` &rarr; `rgba(var(--grade-star-rgb), 0.2)`), speech recognition mic button, recording states, and offline syncDot indicators to canonical tokens.
+   - Standardized `js/admin/vocab-vault.js`: topic delete button and verb part-of-speech chips.
+   - Standardized `js/admin/crud-modals.js`: student and question duplicate resolution tables and candidate badges.
+   - Standardized `js/admin/curriculum-management.js`: program batch count badges and Add Batch button.
+   - Standardized `js/admin/admin-deck.js`: KPI card metric colors and bio character counter danger fallback.
+   - Standardized `js/auth.js`: error message styling across all 4 cascade steps to `var(--clr-danger, #FF0000)`.
+   - Standardized `js/admin/desk.js`: storage metric, scan integrity buttons, recalibration metrics cards, confirmation modal, heartbeat status text, and database relational constraint issue cards to canonical tokens.
+   - Standardized `docs/DECISIONS.md`: updated line 766 DECISION-029 color vault reference.
+   - Badge text contrast: In `dashboard.js`, `class.js`, and `tests-access.js`, dynamically set text color to `#ffffff` for Star (`★`) and `#0f172a` for letters A-E. Fixed `tests-access.js` circle class generator for Star tier.
+   - Cleaned rogue `#22c55e` male gender badge in `student-management.js` to `#38bdf8`.
+   - Cleaned remedial `#fbbf24` in `tests-access.js` to `inherit`.
+   - Cleaned `js/grading.js` fallbacks to `#006400` / `rgba(0, 192, 0, 0.5)`.
+   - Exposed `TOPSCORE_COLORS` on `window` in `js/app.js`.
+4. **Cache & Asset Version Bumping**:
+   - Bumped `sw.js` cache name to `topscore-cache-option-a-v38`.
+   - Updated cache-busting query strings to `?v=20261030_v38` in `admin.html`, `dashboard.html`, `result.html`, `test.html`.
+
+### Files
+- `css/style.css`
+- `css/result.css`
+- `css/dashboard.css`
+- `css/admin.css`
+- `css/auth.css`
+- `css/test.css`
+- `js/grading.js`
+- `js/app.js`
+- `js/auth.js`
+- `js/test.js`
+- `js/dashboard.js`
+- `js/result.js`
+- `js/admin/app.js`
+- `js/admin/class.js`
+- `js/admin/student-management.js`
+- `js/admin/tests-management.js`
+- `js/admin/tests-access.js`
+- `js/admin/crud-modals.js`
+- `js/admin/modules.js`
+- `js/admin/vocab-vault.js`
+- `js/admin/curriculum-management.js`
+- `js/admin/admin-deck.js`
+- `js/admin/desk.js`
+- `admin.html`
+- `dashboard.html`
+- `result.html`
+- `test.html`
+- `sw.js`
+- `AGENTS.md`
+- `.antigravityrules`
+- `ANTIGRAVITY_COMMAND_CENTER.md`
+- `ANTIGRAVITY_GUIDE.md`
+- `docs/DECISIONS.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- command: `node scripts/verify_green_star_grading.mjs`
+- result: `PASS` (100% green star & color palette audit).
+- command: `npm test`
+- result: `PASS` (40/40 JS syntax checks, 27/27 SW manifest assets, student dashboard exam-only parity test suite).
+
+---
+
+## [2026-10-30 08:15] — Phase 196: Vocab Single Scoring Model (Latest Active Theme), Student Roster Data Query Parity & Cache Bump v37
+
+**Agent/Session:** Antigravity / SESSION-20261030-0815
+**Phase:** Phase 196
+**Status:** PASS
+
+### Why
+- The user pointed out two issues:
+  1. Low student scores in Vocab classes (D, C) due to the future milestone 0% penalty, asking to use the latest active exam/theme as the single global scoring model for Vocab classes across ALL levels: *"saya lihat nilai siswa di kelas Vocab sangat rendah (D,C) saaya tidak mau membuat mereka tidak besemnagat,,, bagaimana kalau kita pakai nilai rata2 dari Exam terkahir yang mereka pakai untuk sebagai nilai global, apakah bisa? tapi sebelumnya kita atur dulu cara kita Scoring dan Grading degan maksmial dan 1 model untuk kelas vocab SEMUA LEVEL, yang menggunakan sistem quiz dan Exam /grill-me"*.
+  2. Discrepancies between Student Roster and Class Hub, and color mismatches with the official grading palette.
+  3. "coba cek mana yang belum dilakukan" — exhaustive audit of the entire implementation.
+
+### Changed
+1. **Latest Active Theme Scoring Engine (`js/grading.js`)**:
+   - Updated `computeMilestoneExamMastery()` to derive Global Score % and Grade strictly from the student's **Latest Active Theme** (`latestAttemptedTheme.scorePct`).
+   - Removed future milestone 0% denominator dilution. Pasya now evaluates to 60% Grade C (Theme A mastery), and Sofa Maria Ulfa evaluates to 47% Grade D (Theme B active).
+   - Global PTS reflects cumulative exam points earned across all completed exams.
+   - Students with 0 completed exams (e.g. Rifky Ahmad) display neutral `—` for Score, Grade, and PTS.
+2. **Student Roster Full Test Query Parity (`js/admin/student-management.js`)**:
+   - Fixed `adminFetchAll('tests', ...)` query to fetch full metadata: `id, title, test_type, shell_code, payload, total_questions, display_order, category, level_id, class_id, levels(name, level_number)`.
+   - Previously, `test_type` and `shell_code` were missing, causing `isWeeklyExam(test)` to evaluate to `false` for all tests, creating zeroed exam arrays.
+   - Wired fallback matching for exams attempted by students across level boundaries.
+3. **Class Hub Attendance Matrix (`js/admin/app.js`)**:
+   - Added Theme Combined Score (`SCORE %`: `theme_${tc}_score`) column right before Theme Total Points (`TOT`: `theme_${tc}_total_pts`).
+   - Dynamically scaled super-headers `colSpan` (`(themeTests.length * 2) + 2` in 'ALL' view, `colSpan + 2` in single-theme view).
+   - Added summary row calculation for `theme_${tc}_score`.
+4. **Master Color Vault Enforced (`js/grading.js` & `css/style.css`)**:
+   - Set `TOPSCORE_COLORS.STAR`, `A`, and `CORRECT` strictly to user-chosen `#00c000ff` (`0, 192, 0`).
+   - Set `TOPSCORE_COLORS.B` strictly to user-chosen `#95ff00ff` (`149, 255, 0`).
+   - Aligned `--grade-star`, `--grade-a`, `--grade-b`, and `--eval-correct` in `css/style.css`.
+   - Verified 100% PASS on `node scripts/verify_green_star_grading.mjs`.
+5. **Cache Invalidation & Import Version Bumping**:
+   - Bumped Service Worker cache name to `topscore-cache-option-a-v37`.
+   - Bumped script tags in `admin.html`, `dashboard.html`, and `result.html` to `?v=20261030_v37`.
+   - Bumped `student-management.js` imports in `js/admin/app.js` to `?v=20261030_v37`.
+
+### Tests
+- command: `npm test`
+- result: `PASS` (40/40 JS syntax checks, 27/27 SW manifest assets, student dashboard exam-only parity test suite).
+- command: `node scripts/verify_green_star_grading.mjs`
+- result: `PASS` (100% green star & color palette audit).
+
+---
+
+## [2026-10-30 07:22] — Phase 195: Academic Scoring Parity & Unified Milestone Engine in Student Roster
+
+**Agent/Session:** Antigravity / SESSION-20261030-0722
+**Phase:** Phase 195
+**Status:** PASS
+
+### Why
+- The user observed that student scores differed between the Student Roster (`admin.html#students`) and Class Hub / Result Class (`admin.html#class-hub`), e.g., Muhammad Alimae Pasya showed 68% Grade C in Student Roster but 18% Grade E in Class Hub, and Rifky Ahmad showed 100% Grade ★ with 0 exams completed.
+- The user requested:
+  1. Explanation of the scoring discrepancy.
+  2. Full architectural alignment across all systems: *"harus disamakan sistem grading, scoring, di seliuruh sistem... coba diskusikan... kita atur dengan baik /grill-me"*
+  3. Interactive alignment on 0-exam representation, PTS column addition, remedial marker placement, and drawer breakdown structure.
+
+### Changed
+1. **Academic Scoring Engine Alignment (`js/admin/student-management.js`)**:
+   - Imported `isWeeklyExam`, `isExam`, `computeMilestoneExamMastery`, `calculateGrade` into `student-management.js`.
+   - Replaced ad-hoc raw test averaging (`sumPercentages / bestByAsm.size`) with authoritative `computeMilestoneExamMastery(studentExamEntries, studentLevelExams)`.
+   - Filtered academic Score, Grade, and Points strictly from curriculum Exams (`isWeeklyExam(test)`). Quizzes now exclusively inform pacing (`TESTS` count and `COMPLETION %`).
+   - Implemented neutral `—` display for students with 0 completed exams (e.g. Rifky Ahmad).
+   - Applied remedial `60%ᴿ` score cap indicator where applicable.
+2. **Dedicated PTS Column Added to Student Roster**:
+   - Added `PTS` column (`totalEarnedScore`) right beside Score and Grade in Student Roster DataGrid.
+   - Pts values inherit the student's exam grade color dynamically (`getGradeColorByScore`).
+   - Added sorting support for `totalEarnedScore`.
+3. **Student Detail Drawer Evolution**:
+   - Updated `showStudentProgressDetails` KPI summary boxes to display `Mastery Score`, `Academic Grade`, `Exam Points`, and `Curriculum Pace`.
+   - Split test breakdown table into 2 dedicated sections:
+     * 🎓 **Weekly Exams** (Ujian Mingguan penentu nilai akademik & milestone, with points, percentage, and remedial toggle).
+     * ⚡ **Daily Quizzes** (Kuis latihan harian untuk pemantauan pacing/progress).
+4. **Color Centralization Fixes**:
+   - `js/admin/app.js`: Replaced Tailwind `#F87171` in milestone pending exam cells with `TOPSCORE_COLORS.E` (`#FF0000`).
+   - Replaced `#eab308` in in-progress badge with `TOPSCORE_COLORS.C` (`#FFFF00`).
+   - Replaced `#000000` text in Class Average grade circle with `TOPSCORE_COLORS.TEXT_DARK` (`#0F172A`).
+   - `js/admin/tests-management.js`: Cleaned `#eab308` and hardcoded colors in remedial and domain split badges.
+   - `sw.js`: Bumped Service Worker cache name to `topscore-cache-option-a-v35`.
+
+### Verification
+- `npm test`: 100% PASS (40/40 JS syntax checks, 27/27 SW manifest assets, full student dashboard parity suite).
+
+---
+
+## [2026-10-30 00:58] — Phase 194: Full System Exhaustive Audit, Color Centralization & Test Session Cache Busting
+
+**Agent/Session:** Antigravity / SESSION-20261030-0058
+**Phase:** Phase 194
+**Status:** PASS
+
+### Why
+- The user requested:
+  1. *"Susunan palet baru: ★ & A (#009a00ff), B (#77FF00), C (#FFFF00), D (#FF8C00), E (#FF0000). cek apakah ini, cek SEMUA lagi"*
+  2. Submitted screenshot of `Uncaught tests-access.js?v=20261027d:2150 ReferenceError: completedTaskCount is not defined` occurring on `tops-core.netlify.app/admin#class-hub`.
+
+### Changed
+1. **Palette Finalization & Centralization**:
+   - `js/grading.js`:
+     * Set `TOPSCORE_COLORS.STAR` and `TOPSCORE_COLORS.A` to `#009A00` (`#009a00ff`), RGB `0, 154, 0`.
+     * Set `CORRECT` to `#009A00`.
+     * Retained `B` (`#77FF00`), `C` (`#FFFF00`), `D` (`#FF8C00`), `E` (`#FF0000`).
+   - `css/style.css`: Updated `--grade-star`, `--grade-a`, `--eval-correct`, and `--clr-success` to `#009a00`, RGB `0, 154, 0`.
+   - `AGENTS.md` & `.antigravityrules`: Updated Rule 2.10 table and Rule 11.
+2. **Exhaustive Removal of Local Override Dictionaries**:
+   - `js/admin/student-management.js`:
+     * Deleted `cMap` dictionary in student roster calculation; wired `overallColor` to `getGradeColorByScore(overallPct)`.
+     * Upgraded Grade column from plain inline style to canonical `.grade-circle` / `.grade-circle-star` badge system with white Star and dark slate letter contrasting.
+     * Replaced hardcoded fallback colors in curriculum pacing modal and profile KPI cards with `getGradeColorByScore()`.
+   - `js/result.js`:
+     * Deleted `gradeRingColors` local dictionary; wired SVG Score Ring directly to `circle.style.stroke = getGradeColor(grade)`.
+     * Deleted `standardGradeColors` local dictionary; wired Hero banner directly to `getGradeColor(grade)`.
+     * Updated particle themes and star vector filters to `#009A00`.
+   - `js/admin/class.js`:
+     * Deleted `cMap` dictionary in `renderStudentsRoster`; routed to `getGradeColor(globalGrade)` and `getGradeColorByScore(overallPct)`.
+   - `js/admin/tests-management.js`:
+     * Replaced hardcoded `#22c55e` / `#10b981` in `gradePalette` and domain split diagnostics with `TOPSCORE_COLORS` and `getGradeColorByScore()`.
+     * Replaced manual tier fallback ladder in `getGradeBadge(pct)` with `calculateGrade(pct)` and `getGradeColorByScore(pct)`.
+   - `js/admin/app.js`: Cleaned ternary fallback chains at lines 1820, 1902, 1953, 2004, 2143 to use `getGradeColorByScore()`.
+   - `.vscode/settings.json`: Configured instant save (`formatOnSave: false`, `eslint.run: onType`) eliminating UI freeze when accepting changes.
+   - `js/dashboard.js`: Cleaned fallback objects to use `#009A00` / `0, 154, 0`.
+3. **Test Session Cache Mismatch & ReferenceError Resolution**:
+   - `js/admin/tests-access.js`:
+     * Guaranteed `completedQuizCount` and `completedTaskCount: completedQuizCount` definition.
+     * Upgraded internal module imports from stale `?v=20261027d` to `?v=20261030_v34`.
+   - `js/admin/app.js`: Bumped `tests-access.js` import to `?v=20261030_v34`.
+   - `admin.html`, `result.html`, `dashboard.html`: Bumped all script and stylesheet version queries to `?v=20261030_v34`.
+   - `sw.js`: Bumped Service Worker cache name to `topscore-cache-option-a-v34`.
+
+### Verification
+- `node scripts/verify_green_star_grading.mjs`: 100% PASS (35 assertions).
+- `npm test`: 100% PASS (40/40 JS syntax checks, 27/27 SW manifest assets, full parity test suite).
+
+---
+
+## [2026-10-30 00:33] — Phase 193: Custom Ultra-Vibrant Tier Palette Deployment
+
+**Agent/Session:** Antigravity / SESSION-20261030-0033
+**Phase:** Phase 193
+**Status:** PASS
+
+### Why
+- The user requested: *"saya kurang suka warnnaya... kuningnya terlalu mirip orange,,, saya ingin agar terlihat bedanya dan VIBRANT,,, coba kita ulangi... PASTIKAN INI DIPAKAI DI SELURUH SISTEM UNTUK HAL2 YANG TERKAIT DENGAN SCORE, GRADE, POINT"*.
+- In a detailed 5-step custom color selection process, the user selected exact hex codes to establish maximum vibrancy and sharp distinction between all tiers.
+
+### Changed
+1. **Master Vault (`js/grading.js`)**:
+   - Updated `TOPSCORE_COLORS` constant:
+     * `STAR`: `#008000` (Pure Green - 100%)
+     * `A`: `#008000` (Pure Green - 90–99%, identical to Star)
+     * `B`: `#77FF00` (Electric Lime - 80–89%)
+     * `C`: `#FFFF00` (Pure Yellow - 60–79%, 100% distinct from orange)
+     * `D`: `#FF8C00` (Dark Orange - 30–59%)
+     * `E`: `#FF0000` (Pure Red - 0–29%)
+     * `CORRECT`: `#008000`
+     * `PARTIAL`: `#FFFF00`
+     * `INCORRECT`: `#FF0000`
+     * `TEXT_STAR`: `#FFFFFF`
+     * `TEXT_DARK`: `#0F172A`
+2. **Global Styles (`css/style.css`, `css/admin.css`, `css/result.css`, `css/dashboard.css`)**:
+   - Synchronized `:root` CSS variables with `#008000`, `#77ff00`, `#ffff00`, `#ff8c00`, and `#ff0000`.
+   - Updated dashboard welcome banner and avatar card borders/glows to consume `var(--grade-*)`.
+3. **Cache & Assets**:
+   - Bumped `sw.js` cache to `topscore-cache-option-a-v33`.
+   - Bumped query string in `result.html` to `?v=20261030_v33`.
+4. **Governance (`AGENTS.md` & `.antigravityrules`)**:
+   - Updated Rule 2.10 table in `AGENTS.md` and Rule 11 in `.antigravityrules`.
+   - Updated test assertions in `scripts/verify_green_star_grading.mjs`.
+
+### Verification
+- `node scripts/verify_green_star_grading.mjs`: 100% PASS (35 assertions verified).
+- `npm test`: 100% PASS (40 JS syntax checks, 27 SW manifest assets, student dashboard parity verified).
+
+---
+
+## [2026-10-30 00:18] — Phase 192: Centralized Single-Source-of-Truth Color Architecture
+
+**Agent/Session:** Antigravity / SESSION-20261030-0018
+**Phase:** Phase 192
+**Status:** PASS
+
+### Why
+- The user requested (`/grill-me`): *"I want to check the Grading, scoring, point colour in system, I feel like some colour doesnt match between the one in the result page, and in the admin page, also student page... can we make a better, stricter rule on it? we need to make sure the colouring syte is from one set of rule. apakah nanti kode warna ini ada di satu tempat? semuanya nanti menacu kesana... selaiin itu ini juga dipakai saat menghitung poin jawaban yang correct, partial dan incorrect dalam halaman result..."*
+- Consolidated and eliminated competing color palettes across `result.html`, `admin.html`, `dashboard.html`, `css/style.css`, `css/admin.css`, `css/result.css`, and `js/grading.js`.
+
+### Changed
+1. **Master Vault (`js/grading.js`)**:
+   - Created frozen `TOPSCORE_COLORS` constant:
+     * `STAR`: `#16A34A` (Rich Jungle Green)
+     * `A`: `#16A34A` (Identical to Star)
+     * `B`: `#84CC16` (Lime 500)
+     * `C`: `#F59E0B` (Amber 500)
+     * `D`: `#F97316` (Orange 500)
+     * `E`: `#EF4444` (Crimson Red 500)
+     * `CORRECT`: `#16A34A`
+     * `PARTIAL`: `#F59E0B`
+     * `INCORRECT`: `#EF4444`
+     * `TEXT_STAR`: `#FFFFFF`
+     * `TEXT_DARK`: `#0F172A`
+   - Added `getEvaluationColor(category)` and refactored `GRADE_PALETTE`, `getGradeColorByScore()`, `getGradeColor()`, `getScoreColor()`, and `formatGradeBadgeHtml()` to read exclusively from `TOPSCORE_COLORS`.
+   - Re-exported `TOPSCORE_COLORS` in `js/app.js` and `js/api.js`.
+2. **Global CSS Single Source (`css/style.css`)**:
+   - Injected `:root` variables `--grade-star`, `--grade-a`, `--grade-b`, `--grade-c`, `--grade-d`, `--grade-e`, `--eval-correct`, `--eval-partial`, `--eval-incorrect`, and `--badge-text-*`.
+   - Linked all `.grade-circle`, `.form-pill`, and `.score-*` utility classes directly to CSS variables.
+3. **Admin UI (`css/admin.css` & `js/admin/app.js`)**:
+   - Migrated `.form-pill` and `.grade-circle` rules to `var(--grade-*)`.
+   - Configured high-contrast dark text (`#0F172A`) for grades A, B, C, D, E and white text for Star ★.
+4. **Result Page (`css/result.css` & `js/result.js`)**:
+   - Normalized CRLF line endings to LF.
+   - Refactored `.result-identity-card[data-tier="..."]` to read `rgba(var(--grade-*-rgb), 0.55)`.
+   - Updated `res-points` element to dynamically style numeric points (PTS) with `getGradeColorByScore(attemptPct)`.
+   - Updated Correct, Partial, and Incorrect cards and answer row badges to use `TOPSCORE_COLORS`.
+5. **Student Dashboard (`js/dashboard.js`)**:
+   - Updated batch leaderboard grade chip to use `TOPSCORE_COLORS.TEXT_DARK` for grades A-E and `TOPSCORE_COLORS.TEXT_STAR` for Star ★.
+6. **Governance Contract (`AGENTS.md` & `.antigravityrules`)**:
+   - Updated Rule 2.10 table in `AGENTS.md` to official `#16A34A`, `#84CC16`, `#F59E0B`, `#F97316`, `#EF4444`.
+   - Added Rule 11 in `.antigravityrules`: `SINGLE SOURCE OF TRUTH COLORING`.
+   - Bumped cache to `v32` in `sw.js` and query strings in `result.html`.
+
+### Verification
+- `node scripts/verify_green_star_grading.mjs`: 100% PASS (all 35 assertions passed).
+- `npm test`: 100% PASS (40/40 JS syntax checks valid, 27/27 SW manifest assets verified, student dashboard parity verified).
+
+---
+
+## [2026-10-29 23:49] — Phase 191: 100% AI Workflow Maximization Suite
+
+**Agent/Session:** Antigravity / SESSION-20261029-2349
+**Phase:** Phase 191
+**Status:** PASS
+
+### Why
+- The user requested: *"coba terPKAN SARAN2MU"* (Apply your recommendations to maximize a 100% AI workflow in Antigravity).
+- Implemented targeted settings, shortcut tasks, and governance rules to eliminate all friction between the human architect and the AI execution engine.
+
+### Changed
+- `.vscode/settings.json`:
+  * Enabled `"editor.inlineSuggest.enabled": true` for multi-line AI Supercomplete and Tab-to-Jump.
+  * Configured `"editor.suggestSelection": "first"` and `"editor.acceptSuggestionOnEnter": "smart"`.
+  * Configured `"editor.quickSuggestions"` for instant prompt and identifier completion.
+  * Set `"workbench.editor.enablePreview": false` to prevent AI-opened files from closing upon clicking other tabs.
+- `.vscode/tasks.json`:
+  * Created preconfigured Antigravity tasks:
+    1. `TopsCore: Verify System Health (CI Gate)` set as default build task (<kbd>Ctrl+Shift+B</kbd>).
+    2. `TopsCore: Check JS Syntax`.
+    3. `TopsCore: Verify Grading Scale`.
+    4. `TopsCore: Start Five Server` (port 5500 background).
+- `.antigravityrules`:
+  * Added Rule 9: `POSTGREST ASYNC HANDLING` — prevents calling `.catch()` directly on PostgrestFilterBuilder queries.
+  * Added Rule 10: `DEFENSIVE PROPERTY SCOPING IN UI & MODALS` — ensures all counters/iterators are initialized before UI rendering.
+
+### Verification
+- `npm test`: 100% PASS (40/40 JS syntax checks valid, 27/27 SW cache manifest assets exist, student dashboard parity verified).
+
+---
+
 ## [2026-10-29 19:18] — Phase 190: Test Sessions Unified Access Resolution — completedTaskCount ReferenceError Fix
 
 **Agent/Session:** Antigravity / SESSION-20261029-1918

@@ -1,6 +1,6 @@
 import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, labelAttemptRemedial } from '../api.js?v=5.3.2';
 import { getSupabase } from '../supabase.js?v=5.3.2';
-import { getGrade, showToast } from '../app.js?v=5.3.2';
+import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261030_v43';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=5.3.2';
 import { DataGrid } from './datagrid.js?v=5.3.2';
 
@@ -70,7 +70,7 @@ export async function renderStudents(area) {
     adminFetchAll('programs', 'id, name, institution_id, is_active'),
     adminFetchAll('batches', 'id, name, program_id, is_active, current_level_id'),
     adminFetchAll('assignments', 'student_id, batch_id, test_id').catch(() => []),
-    adminFetchAll('tests', 'id, title, level_id, levels(name, level_number)').catch(() => [])
+    adminFetchAll('tests', 'id, title, test_type, shell_code, payload, total_questions, display_order, category, level_id, class_id, levels(name, level_number)').catch(() => [])
   ]);
   const levelsMap = new Map();
   (allLevels || []).forEach(l => levelsMap.set(l.id, l));
@@ -166,15 +166,19 @@ export async function renderStudents(area) {
         });
       }
 
+      const isExam = isWeeklyExam(test);
       studentDetails.push({
         testId,
         testTitle: test.title,
+        shellCode: test.shell_code || test.payload?.shell_code || '',
+        isExam,
         levelNumber: test.levels?.level_number || 1,
         levelName: test.levels?.name || 'Unknown',
         is_completed: isCompleted,
         is_in_progress: isInProgress,
         bestScore,
         bestPct,
+        totalQuestions: test.total_questions || test.payload?.total_questions || 10,
         attemptId: bestAttempt?.id || null,
         is_remedial_unlocked: Boolean(bestAttempt?.is_remedial_unlocked)
       });
@@ -196,7 +200,7 @@ export async function renderStudents(area) {
       const sc = Number(a.score ?? 0);
       const tq = Number(a.total_questions || a.max_score || 10);
       const rawPct = a.percentage != null ? Number(a.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
-      const isRem = Boolean(a.is_remedial_unlocked);
+      const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
       const maxRemPts = tq * 0.6;
       const effPoints = isRem ? Math.min(sc, maxRemPts) : sc;
       const effPct = isRem ? Math.min(rawPct, 60.0) : (a.effective_score != null ? Number(a.effective_score) : rawPct);
@@ -205,7 +209,13 @@ export async function renderStudents(area) {
         bestByAsm.set(asmId, { score: effPoints, totalQuestions: tq, percentage: effPct, attempt: a });
       } else {
         const existing = bestByAsm.get(asmId);
-        if (effPoints > existing.score || (effPoints === existing.score && effPct > existing.percentage)) {
+        const aDate = new Date(a.submitted_at || a.created_at || 0).getTime();
+        const exDate = new Date(existing.attempt?.submitted_at || existing.attempt?.created_at || 0).getTime();
+        if (effPoints > existing.score) {
+          bestByAsm.set(asmId, { score: effPoints, totalQuestions: tq, percentage: effPct, attempt: a });
+        } else if (effPoints === existing.score && effPct > existing.percentage) {
+          bestByAsm.set(asmId, { score: effPoints, totalQuestions: tq, percentage: effPct, attempt: a });
+        } else if (effPoints === existing.score && aDate > exDate) {
           bestByAsm.set(asmId, { score: effPoints, totalQuestions: tq, percentage: effPct, attempt: a });
         }
       }
@@ -215,36 +225,71 @@ export async function renderStudents(area) {
     const completionPct = totalAssigned > 0 ? Math.round((completedTestsCount / totalAssigned) * 100) : 0;
     const latestAttempt = studentAttempts.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
     
-    // Authoritative global grade & score across completed tests (Rule 2.8 & 2.10)
+    // Authoritative Milestone Progression Engine (Rule 2.7, 2.8 & 2.10)
+    // Academic Score, Grade, and Points are evaluated EXCLUSIVELY from Exams
+    const studentLevelExams = (allTests || []).filter(a => {
+      if (studentLevelId && a.level_id && a.level_id !== studentLevelId) return false;
+      return isWeeklyExam(a);
+    });
+
+    const examMapById = new Map(studentLevelExams.map(t => [t.id, t]));
+    const studentExamEntries = [];
+    studentLevelExams.forEach(examTest => {
+      const best = bestByAsm.get(examTest.id);
+      if (best) {
+        studentExamEntries.push({
+          test: examTest,
+          effPoints: best.score,
+          effPct: best.percentage,
+          totalQ: best.totalQuestions
+        });
+      }
+    });
+
+    // Also include any other exam attempts from bestByAsm not in studentLevelExams
+    bestByAsm.forEach((best, asmId) => {
+      if (!examMapById.has(asmId)) {
+        const tObj = testsMap.get(asmId);
+        if (tObj && isWeeklyExam(tObj)) {
+          studentExamEntries.push({
+            test: tObj,
+            effPoints: best.score,
+            effPct: best.percentage,
+            totalQ: best.totalQuestions
+          });
+          examMapById.set(asmId, tObj);
+        }
+      }
+    });
+
+    const hasRemedial = Array.from(bestByAsm.values()).some(b => Boolean(b.attempt?.is_remedial_unlocked || b.attempt?.is_remedial));
+
+    const allExamsList = Array.from(examMapById.values());
+    const mastery = (typeof computeMilestoneExamMastery === 'function')
+      ? computeMilestoneExamMastery(studentExamEntries, allExamsList.length > 0 ? allExamsList : studentLevelExams)
+      : {
+          totalPoints: studentExamEntries.reduce((sum, e) => sum + (e.effPoints || 0), 0),
+          overallScore: 0,
+          grade: '—',
+          completedExamCount: studentExamEntries.length
+        };
+
+    const completedExamCount = mastery.completedExamCount ?? studentExamEntries.length;
     let overallScoreStr = '—';
     let globalGrade = '—';
-    let overallColor = 'rgba(255,255,255,0.4)';
+    let overallColor = '#94a3b8';
     let overallPct = -1;
+    let totalEarnedScore = mastery.totalPoints || 0;
 
-    if (bestByAsm.size > 0) {
-      let sumPercentages = 0;
-
-      bestByAsm.forEach(best => {
-        sumPercentages += Number(best.percentage || 0);
-      });
-
-      overallPct = Math.round(sumPercentages / bestByAsm.size);
-
-      if (overallPct >= 0) {
-        overallScoreStr = `${overallPct}%`;
-        const g = typeof getGrade === 'function' ? getGrade(overallPct) : (
-          overallPct >= 100 ? '★' :
-          overallPct >= 90 ? 'A' :
-          overallPct >= 80 ? 'B' :
-          overallPct >= 60 ? 'C' :
-          overallPct >= 30 ? 'D' : 'E'
-        );
-        globalGrade = g;
-        const cMap = { '★': '#22C55E', 'S': '#22C55E', 'A': '#10B981', 'B': '#84CC16', 'C': '#EAB308', 'D': '#F97316', 'E': '#EF4444' };
-        overallColor = cMap[g] || 'rgba(255,255,255,0.4)';
-      }
+    if (completedExamCount > 0) {
+      overallPct = mastery.overallScore;
+      globalGrade = mastery.grade;
+      const isCappedRem = hasRemedial && overallPct === 60;
+      overallScoreStr = isCappedRem ? '60%ᴿ' : `${overallPct}%`;
+      overallColor = typeof getGradeColorByScore === 'function'
+        ? getGradeColorByScore(overallPct)
+        : (typeof getGradeColor === 'function' ? getGradeColor(globalGrade) : TOPSCORE_COLORS.STAR);
     }
-    const hasRemedial = Array.from(bestByAsm.values()).some(b => Boolean(b.attempt?.is_remedial_unlocked));
 
 
     // Compute age from birth_date
@@ -312,6 +357,8 @@ export async function renderStudents(area) {
       pinDisplay: s.pin || 'NOT SET',
       totalAssigned,
       completedTests: completedTestsCount,
+      completedExamCount,
+      totalEarnedScore,
       inProgressCount,
       completionPct,
       details: studentDetails,
@@ -536,7 +583,7 @@ export async function renderStudents(area) {
     modal.id = 'prog-details-modal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.92);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;';
 
-    const detailsRows = (rec.details || []).map(r => {
+    const renderDetailRow = (r) => {
       const attId = r.attemptId;
       const isRem = Boolean(r.is_remedial_unlocked);
       const scoreClickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();" style="cursor:pointer; text-decoration:underline;" title="View Exam Result Sheet"` : '';
@@ -546,7 +593,7 @@ export async function renderStudents(area) {
         if (isRem) {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
-              <span class="badge" style="font-size:0.65rem; background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid #f59e0b; padding:2px 6px;">REMEDIAL</span>
+              <span class="badge" style="font-size:0.65rem; background:rgba(255,255,0,0.15); color:${TOPSCORE_COLORS.C}; border:1px solid ${TOPSCORE_COLORS.C}; padding:2px 6px;">REMEDIAL</span>
               <button class="btn btn-ghost btn-xs btn-prog-toggle-rem" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 6px; font-size:0.75rem;" title="Revert remedial status (return to normal)">↩️</button>
             </div>
           `;
@@ -559,9 +606,17 @@ export async function renderStudents(area) {
         }
       }
 
+      const scoreColor = r.bestPct != null ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(r.bestPct) : TOPSCORE_COLORS.STAR) : 'var(--clr-text-3)';
+      const ptsDisplay = (r.bestScore != null && r.totalQuestions) ? `${r.bestScore}/${r.totalQuestions} pts` : '—';
+
       return `
         <tr>
-          <td class="fw-600 text-sm" style="color:var(--clr-text-1);">${escapeHtml(r.testTitle || '—')}</td>
+          <td class="fw-600 text-sm" style="color:var(--clr-text-1);">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span>${escapeHtml(r.testTitle || '—')}</span>
+              ${r.shellCode ? `<span class="badge" style="font-size:0.65rem;background:rgba(255,255,255,0.06);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);">${escapeHtml(r.shellCode)}</span>` : ''}
+            </div>
+          </td>
           <td class="text-center">
             <span class="badge badge-primary" style="font-size:0.75rem;">
               ${escapeHtml(r.levelName || (typeof toLevelLetter === 'function' ? toLevelLetter(r.levelNumber) : `Level ${r.levelNumber}`))}
@@ -573,16 +628,20 @@ export async function renderStudents(area) {
             </span>
           </td>
           <td class="text-center">
-            <span class="fw-700 text-sm" ${scoreClickAttr} style="color:${r.bestPct != null ? (r.bestPct >= 100 ? '#22C55E' : r.bestPct >= 90 ? '#10B981' : r.bestPct >= 80 ? '#84CC16' : r.bestPct >= 60 ? '#EAB308' : r.bestPct >= 30 ? '#F97316' : '#EF4444') : 'var(--clr-text-3)'};">
-              ${r.bestPct != null ? `${r.bestPct}%${isRem ? '<sup style="font-size:0.7em;font-weight:900;margin-left:2px;">R</sup>' : ''}` : '—'}
-            </span>
+            <div class="fw-700 text-sm" ${scoreClickAttr} style="color:${scoreColor};">
+              ${r.bestPct != null ? `${r.bestPct}%${isRem ? `<sup class="asm-rem-sup" style="font-size:0.7em;font-weight:900;margin-left:2px;color:${TOPSCORE_COLORS.C};">R</sup>` : ''}` : '—'}
+            </div>
+            <div class="text-xs text-muted" style="font-size:0.68rem;">${ptsDisplay}</div>
           </td>
           <td class="text-center">
             ${actionHtml}
           </td>
         </tr>
       `;
-    }).join('');
+    };
+
+    const examRows = (rec.details || []).filter(r => r.isExam).map(renderDetailRow).join('');
+    const quizRows = (rec.details || []).filter(r => !r.isExam).map(renderDetailRow).join('');
 
     modal.innerHTML = `
       <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border);border-radius:14px;width:100%;max-width:820px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 40px rgba(0,0,0,0.6);overflow:hidden;">
@@ -616,14 +675,18 @@ export async function renderStudents(area) {
               <div class="fw-700" style="font-size:1.25rem;color:var(--clr-warning);">${rec.inProgressCount || 0}</div>
             </div>
             <div style="flex:1;min-width:100px;">
-              <div class="text-xs text-muted">Overall Score</div>
+              <div class="text-xs text-muted">Mastery Score</div>
               <div class="fw-700" style="font-size:1.25rem;color:${rec.overallColor || 'var(--clr-text-1)'};">${rec.overallScoreStr}</div>
             </div>
             <div style="flex:1;min-width:90px;">
               <div class="text-xs text-muted">Global Grade</div>
               <div style="margin-top:2px;">
-                <span class="badge" style="${rec.globalGrade === 'S' || rec.globalGrade === '★' ? 'background:rgba(34,197,94,0.18);color:#22C55E;font-weight:900;box-shadow:0 0 10px rgba(34,197,94,0.45);border:1px solid #22C55E;' : `background:${rec.overallColor};color:#000;font-weight:800;`}font-size:0.85rem;padding:3px 10px;">${(rec.globalGrade === 'S' || rec.globalGrade === '★') ? '★' : rec.globalGrade}</span>
+                <span class="badge" style="${rec.globalGrade === 'S' || rec.globalGrade === '★' ? `background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.18);color:${TOPSCORE_COLORS.STAR};font-weight:900;box-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB},0.45);border:1px solid ${TOPSCORE_COLORS.STAR};` : `background:${rec.overallColor};color:${TOPSCORE_COLORS?.TEXT_DARK || '#0F172A'};font-weight:800;`}font-size:0.85rem;padding:3px 10px;">${(rec.globalGrade === 'S' || rec.globalGrade === '★') ? '★' : rec.globalGrade}</span>
               </div>
+            </div>
+            <div style="flex:1;min-width:100px;">
+              <div class="text-xs text-muted">Exam Points</div>
+              <div class="fw-700" style="font-size:1.25rem;color:${rec.overallColor || 'var(--clr-text-1)'};">${rec.totalEarnedScore ?? 0} <span style="font-size:0.7rem;color:#94a3b8;font-weight:normal;">pts</span></div>
             </div>
             <div style="flex:1.2;min-width:120px;">
               <div class="text-xs text-muted mb-1">Completion</div>
@@ -635,20 +698,56 @@ export async function renderStudents(area) {
               </div>
             </div>
           </div>
-          <table class="table-wrap" style="width:100%;">
-            <thead>
-              <tr>
-                <th class="text-left" style="padding:8px 12px;">Test Title</th>
-                <th class="text-center" style="padding:8px 12px;width:130px;">Level</th>
-                <th class="text-center" style="padding:8px 12px;width:120px;">Status</th>
-                <th class="text-center" style="padding:8px 12px;width:100px;">Best Score</th>
-                <th class="text-center" style="padding:8px 12px;width:130px;">Action / Remedial</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${detailsRows || '<tr><td colspan="5" class="text-center text-muted p-4">No tests assigned.</td></tr>'}
-            </tbody>
-          </table>
+
+          <!-- 1. Weekly Exams Section (Milestone Academic Assessments) -->
+          <div class="mb-4">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08);">
+              <div style="font-size:0.9rem;font-weight:800;color:var(--clr-text-1);display:flex;align-items:center;gap:6px;">
+                <span>🎓 Weekly Exams (Ujian Mingguan)</span>
+                <span class="badge" style="background:rgba(244,114,182,0.15);color:#f472b6;font-size:0.7rem;border:1px solid rgba(244,114,182,0.3);">Penentu Nilai Akademik &amp; Milestone</span>
+              </div>
+              <span class="text-xs text-muted">${(rec.details || []).filter(r => r.isExam && r.is_completed).length} / ${(rec.details || []).filter(r => r.isExam).length} Completed</span>
+            </div>
+            <table class="table-wrap" style="width:100%;">
+              <thead>
+                <tr>
+                  <th class="text-left" style="padding:8px 12px;">Exam Title</th>
+                  <th class="text-center" style="padding:8px 12px;width:120px;">Level</th>
+                  <th class="text-center" style="padding:8px 12px;width:120px;">Status</th>
+                  <th class="text-center" style="padding:8px 12px;width:110px;">Exam Result</th>
+                  <th class="text-center" style="padding:8px 12px;width:130px;">Action / Remedial</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${examRows || '<tr><td colspan="5" class="text-center text-muted p-4">No weekly exams assigned.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 2. Daily Quizzes Section (Practice & Curriculum Pacing) -->
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08);">
+              <div style="font-size:0.9rem;font-weight:800;color:var(--clr-text-1);display:flex;align-items:center;gap:6px;">
+                <span>⚡ Daily Quizzes (Latihan Harian)</span>
+                <span class="badge" style="background:rgba(250,204,21,0.15);color:#facc15;font-size:0.7rem;border:1px solid rgba(250,204,21,0.3);">Pacing &amp; Completion Only</span>
+              </div>
+              <span class="text-xs text-muted">${(rec.details || []).filter(r => !r.isExam && r.is_completed).length} / ${(rec.details || []).filter(r => !r.isExam).length} Completed</span>
+            </div>
+            <table class="table-wrap" style="width:100%;">
+              <thead>
+                <tr>
+                  <th class="text-left" style="padding:8px 12px;">Quiz Title</th>
+                  <th class="text-center" style="padding:8px 12px;width:120px;">Level</th>
+                  <th class="text-center" style="padding:8px 12px;width:120px;">Status</th>
+                  <th class="text-center" style="padding:8px 12px;width:110px;">Quiz Score</th>
+                  <th class="text-center" style="padding:8px 12px;width:130px;">Action / Remedial</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${quizRows || '<tr><td colspan="5" class="text-center text-muted p-4">No daily quizzes assigned.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     `;
@@ -805,7 +904,7 @@ export async function renderStudents(area) {
           </div>
           <div class="profile-kpi-card">
             <div class="profile-kpi-label">Overall Score</div>
-            <div class="profile-kpi-val" style="color: ${rec.overallColor || 'var(--fm-text-primary, #f8fafc)'}; ${(rec.globalGrade === 'S' || rec.globalGrade === '★') ? 'filter:drop-shadow(0 0 8px rgba(34,197,94,0.6)); font-weight:900;' : ''}">${rec.overallScoreStr || '—'}</div>
+            <div class="profile-kpi-val" style="color: ${rec.overallColor || 'var(--fm-text-primary, #f8fafc)'}; ${(rec.globalGrade === 'S' || rec.globalGrade === '★') ? `filter:drop-shadow(0 0 8px rgba(${TOPSCORE_COLORS.STAR_RGB},0.6)); font-weight:900;` : ''}">${rec.overallScoreStr || '—'}</div>
           </div>
           <div class="profile-kpi-card">
             <div class="profile-kpi-label">Curriculum Done</div>
@@ -814,17 +913,17 @@ export async function renderStudents(area) {
               <span style="font-size: 0.75rem; color: var(--fm-text-muted); font-weight: 600;">(${rec.completionPct || 0}%)</span>
             </div>
           </div>
-          <div class="profile-kpi-card" style="border-left: 3px solid #10b981;">
-            <div class="profile-kpi-label" style="color: #10b981;">Correct Answers</div>
-            <div class="profile-kpi-val" id="profile-stat-correct" style="color: #10b981;">...</div>
+          <div class="profile-kpi-card" style="border-left: 3px solid var(--eval-correct);">
+            <div class="profile-kpi-label" style="color: var(--eval-correct);">Correct Answers</div>
+            <div class="profile-kpi-val" id="profile-stat-correct" style="color: var(--eval-correct);">...</div>
           </div>
-          <div class="profile-kpi-card" style="border-left: 3px solid #f59e0b;">
-            <div class="profile-kpi-label" style="color: #f59e0b;">Minor Errors</div>
-            <div class="profile-kpi-val" id="profile-stat-minor" style="color: #f59e0b;">...</div>
+          <div class="profile-kpi-card" style="border-left: 3px solid var(--eval-partial);">
+            <div class="profile-kpi-label" style="color: var(--eval-partial);">Minor Errors</div>
+            <div class="profile-kpi-val" id="profile-stat-minor" style="color: var(--eval-partial);">...</div>
           </div>
-          <div class="profile-kpi-card" style="border-left: 3px solid #ef4444;">
-            <div class="profile-kpi-label" style="color: #ef4444;">Incorrect</div>
-            <div class="profile-kpi-val" id="profile-stat-wrong" style="color: #ef4444;">...</div>
+          <div class="profile-kpi-card" style="border-left: 3px solid var(--eval-incorrect);">
+            <div class="profile-kpi-label" style="color: var(--eval-incorrect);">Incorrect</div>
+            <div class="profile-kpi-val" id="profile-stat-wrong" style="color: var(--eval-incorrect);">...</div>
           </div>
         </div>
 
@@ -910,7 +1009,7 @@ export async function renderStudents(area) {
                 </span>
               </td>
               <td class="text-center">
-                <span class="fw-700 text-sm" style="color:${d.bestPct != null ? (d.bestPct >= 80 ? '#10b981' : d.bestPct >= 60 ? '#84cc16' : d.bestPct >= 40 ? '#eab308' : d.bestPct >= 20 ? '#f97316' : '#ef4444') : 'var(--clr-text-3)'};">
+                <span class="fw-700 text-sm" style="color:${d.bestPct != null ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(d.bestPct) : TOPSCORE_COLORS.STAR) : 'var(--clr-text-3)'};">
                   ${d.bestPct != null ? `${d.bestPct}%` : '—'}
                 </span>
               </td>
@@ -963,7 +1062,7 @@ export async function renderStudents(area) {
                             </div>
                             <div class="text-xs" style="color:var(--fm-text-secondary, #94a3b8);">
                               <span>Given: <code style="color:#f8fafc;">${escapeHtml(sAns)}</code></span>
-                              <span style="margin-left:12px;">Accepted: <code style="color:#10b981;">${escapeHtml(cAns)}</code></span>
+                              <span style="margin-left:12px;">Accepted: <code style="color:${TOPSCORE_COLORS.CORRECT};">${escapeHtml(cAns)}</code></span>
                             </div>
                           </div>
                         `;
@@ -1038,14 +1137,14 @@ export async function renderStudents(area) {
             </div>
 
             ${failedTests.length > 0 ? `
-              <div style="padding:14px 18px; border-radius:10px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25);">
-                <div class="fw-700 text-sm mb-2" style="color:#fbbf24;">⚠️ Remediation Alerts (${failedTests.length} Modules Below KKM 60%)</div>
+              <div style="padding:14px 18px; border-radius:10px; background:rgba(${TOPSCORE_COLORS.D_RGB},0.08); border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.25);">
+                <div class="fw-700 text-sm mb-2" style="color:${TOPSCORE_COLORS.D};">⚠️ Remediation Alerts (${failedTests.length} Modules Below KKM 60%)</div>
                 <div style="display:flex; flex-direction:column; gap:8px;">
                   ${failedTests.map(fa => `
                     <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(0,0,0,0.2); border-radius:6px;">
                       <div>
                         <div class="fw-600 text-sm" style="color:#f8fafc;">${escapeHtml(fa.testTitle)}</div>
-                        <div class="text-xs text-muted">Current Best: <strong style="color:#ef4444;">${fa.bestPct}%</strong> (KKM Passing: 60%)</div>
+                        <div class="text-xs text-muted">Current Best: <strong style="color:${getGradeColorByScore(fa.bestPct)};">${fa.bestPct}%</strong> (KKM Passing: 60%)</div>
                       </div>
                       <button class="btn btn-warning btn-sm" onclick="showToast('Remedial retake permitted for ${escapeHtml(fa.testTitle)}', 'info')">
                         Authorize Retake
@@ -1055,9 +1154,9 @@ export async function renderStudents(area) {
                 </div>
               </div>
             ` : `
-              <div style="padding:24px; text-align:center; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:10px;">
+              <div style="padding:24px; text-align:center; background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.08); border:1px solid rgba(${TOPSCORE_COLORS.STAR_RGB},0.2); border-radius:10px;">
                 <div style="font-size:2rem; margin-bottom:4px;">🎉</div>
-                <div class="fw-700" style="color:#10b981;">No Remediation Required</div>
+                <div class="fw-700" style="color:${TOPSCORE_COLORS.STAR};">No Remediation Required</div>
                 <div class="text-xs text-muted" style="margin-top:4px;">All attempted tests meet or exceed academic passing criteria.</div>
               </div>
             `}
@@ -1070,7 +1169,7 @@ export async function renderStudents(area) {
               <div class="fw-700 text-xs text-muted uppercase mb-2">Student Authentication</div>
               <div style="margin-bottom:8px;">
                 <div class="text-xs text-muted">PIN Security Status:</div>
-                <div class="fw-700 text-sm" style="color:#10b981;">✔️ Configured (4-digit PIN)</div>
+                <div class="fw-700 text-sm" style="color:${TOPSCORE_COLORS.STAR};">✔️ Configured (4-digit PIN)</div>
               </div>
               <div>
                 <div class="text-xs text-muted">Account Status:</div>
@@ -1377,8 +1476,8 @@ export async function renderStudents(area) {
               </div>
               <div>
                 <div style="font-size:0.65rem;font-weight:700;color:#64748b;text-transform:uppercase;">Total Points</div>
-                <div style="font-size:1.15rem;font-weight:800;color:#059669;line-height:1.3;">
-                  ${totalCorrect} <span style="font-size:0.75rem;color:#64748b;font-weight:600;">pts</span>
+                <div style="font-size:1.15rem;font-weight:800;color:${rec.overallColor || 'var(--clr-text-1)'};line-height:1.3;">
+                  ${rec.totalEarnedScore ?? totalCorrect} <span style="font-size:0.75rem;color:#64748b;font-weight:600;">pts</span>
                 </div>
               </div>
             </div>
@@ -1512,10 +1611,14 @@ export async function renderStudents(area) {
         const scB = b.overallPct ?? -1;
         if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
       } else if (sortKey === 'globalGrade') {
-        const rank = { 'S': 7, 'A': 6, 'B': 5, 'C': 4, 'D': 3, 'E': 2, 'F': 1 };
+        const rank = { '★': 7, 'S': 7, 'A': 6, 'B': 5, 'C': 4, 'D': 3, 'E': 2, 'F': 1 };
         const rA = rank[a.globalGrade] || 0;
         const rB = rank[b.globalGrade] || 0;
         if (rA !== rB) return direction === 'asc' ? rA - rB : rB - rA;
+      } else if (sortKey === 'totalEarnedScore') {
+        const scA = a.totalEarnedScore ?? 0;
+        const scB = b.totalEarnedScore ?? 0;
+        if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
       }
 
       let valA = a[sortKey];
@@ -1774,7 +1877,7 @@ export async function renderStudents(area) {
         align: 'center',
         width: '80px',
         render: (row) => (row.gender || '').toLowerCase() === 'male'
-          ? `<span class="fw-600" style="color:#22c55e;font-size:0.8rem;">&#9794; Male</span>`
+          ? `<span class="fw-600" style="color:#38bdf8;font-size:0.8rem;">&#9794; Male</span>`
           : (row.gender || '').toLowerCase() === 'female'
           ? `<span class="fw-600" style="color:#f472b6;font-size:0.8rem;">&#9792; Female</span>`
           : `<span class="text-muted fw-600" style="font-size:0.8rem;">&mdash;</span>`
@@ -1808,12 +1911,44 @@ export async function renderStudents(area) {
         sortable: true,
         align: 'center',
         width: '65px',
-        render: (row) => row.globalGrade !== '-' && row.globalGrade !== '—' 
-          ? ((row.globalGrade === 'S' || row.globalGrade === '★')
-            ? `<span class="badge" style="background:rgba(34,197,94,0.18);color:#22C55E;font-weight:900;font-size:0.8rem;padding:2px 8px;box-shadow:0 0 10px rgba(34,197,94,0.45);border:1px solid #22C55E;">★</span>`
-            : `<span class="badge" style="background:${row.overallColor};color:#000;font-weight:800;font-size:0.8rem;padding:2px 8px;">${row.globalGrade}</span>`
-          )
-          : '—'
+        render: (row) => {
+          if (!row.globalGrade || row.globalGrade === '-' || row.globalGrade === '—') {
+            return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+          }
+          const isStar = row.globalGrade === '★' || row.globalGrade === 'S';
+          if (isStar) {
+            return `<span class="grade-circle grade-circle-star" title="Grade ★ (100% Excellent)">★</span>`;
+          }
+          const cleanGrade = String(row.globalGrade).trim().toUpperCase();
+          const lowerG = cleanGrade.toLowerCase();
+          const badgeColor = row.overallColor || (typeof getGradeColor === 'function' ? getGradeColor(cleanGrade) : '#FFFF00');
+          const textColor = (TOPSCORE_COLORS && TOPSCORE_COLORS.TEXT_DARK) ? TOPSCORE_COLORS.TEXT_DARK : '#0F172A';
+          return `<span class="grade-circle grade-circle-${lowerG}" style="background:${badgeColor}; color:${textColor}; font-weight:800;" title="Grade ${cleanGrade}">${cleanGrade}</span>`;
+        }
+      },
+      // 10.5. PTS (Total Exam Points)
+      {
+        key: 'totalEarnedScore',
+        label: 'PTS',
+        sortable: true,
+        align: 'center',
+        width: '75px',
+        render: (row) => {
+          if (!row.completedExamCount && row.totalEarnedScore === 0) {
+            return `<span class="text-muted" style="font-size:0.75rem;" title="0 pts (No exams completed)">—</span>`;
+          }
+          const ptsVal = Number(row.totalEarnedScore ?? 0);
+          const formattedPts = (ptsVal % 1 !== 0) ? ptsVal.toFixed(1) : ptsVal;
+          const isStar = row.globalGrade === '★' || row.globalGrade === 'S';
+          const ptsColor = row.overallPct >= 0
+            ? (isStar ? TOPSCORE_COLORS.STAR : (row.overallColor || 'var(--clr-text-1)'))
+            : '#94a3b8';
+          return `
+            <div class="fw-700 text-xs ${isStar ? 'text-gold-champion' : ''}" style="color:${ptsColor}; font-size:0.88rem;" title="Exam Points: ${formattedPts} pts">
+              ${formattedPts} <span style="font-size:0.62rem; color:#94a3b8; font-weight:normal;">pts</span>
+            </div>
+          `;
+        }
       },
       // 11. Completion (Level Progress Bar)
       {

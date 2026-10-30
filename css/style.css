@@ -36,10 +36,45 @@
   --clr-surface-2: rgba(255, 255, 255, 0.03);
   /* slightly raised surface for filter bars */
 
+  /* ============================================================
+     TOPSCORE SINGLE AUTHORITATIVE COLOR MASTER VAULT
+     Strictly 1 single source of truth across Result, Admin, & Student
+     ============================================================ */
+  --grade-star: #00c000ff;
+  --grade-star-rgb: 0, 192, 0;
+  --grade-star-glow: rgba(0, 192, 0, 0.5);
+
+  --grade-a: #00c000ff;
+  --grade-a-rgb: 0, 192, 0;
+
+  --grade-b: #95ff00ff;
+  --grade-b-rgb: 149, 255, 0;
+
+  --grade-c: #ffff00;
+  --grade-c-rgb: 255, 255, 0;
+
+  --grade-d: #ff8c00;
+  --grade-d-rgb: 255, 140, 0;
+
+  --grade-e: #ff0000;
+  --grade-e-rgb: 255, 0, 0;
+
+  /* Question Answer Evaluations (Result Page & Answer Logs) */
+  --eval-correct: #00c000ff;
+  --eval-correct-rgb: 0, 192, 0;
+  --eval-partial: #ffff00;
+  --eval-partial-rgb: 255, 255, 0;
+  --eval-incorrect: #ff0000;
+  --eval-incorrect-rgb: 255, 0, 0;
+
+  /* Grade Badge Text Contrast Rules */
+  --badge-text-star: #ffffff;
+  --badge-text-dark: #0f172a;
+
   /* Status colours */
-  --clr-success: #10b981;
-  --clr-warning: #f59e0b;
-  --clr-danger: #ef4444;
+  --clr-success: #00c000ff;
+  --clr-warning: #ff8c00;
+  --clr-danger: #ff0000;
   --clr-info: #06b6d4;
 
   /* Text */
@@ -288,37 +323,37 @@ a:hover {
 
 /* Danger button */
 .btn-danger {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(var(--grade-e-rgb), 0.15);
   color: var(--clr-danger);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(var(--grade-e-rgb), 0.3);
 }
 
 .btn-danger:hover {
-  background: rgba(239, 68, 68, 0.25);
-  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
+  background: rgba(var(--grade-e-rgb), 0.25);
+  box-shadow: 0 4px 20px rgba(var(--grade-e-rgb), 0.25);
 }
 
 /* Success button */
 .btn-success {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(var(--grade-star-rgb), 0.15);
   color: var(--clr-success);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(var(--grade-star-rgb), 0.3);
 }
 
 .btn-success:hover {
-  background: rgba(16, 185, 129, 0.25);
+  background: rgba(var(--grade-star-rgb), 0.25);
 }
 
 /* Warning button */
 .btn-warning {
-  background: rgba(245, 158, 11, 0.18);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(var(--grade-d-rgb), 0.18);
+  color: var(--clr-warning);
+  border: 1px solid rgba(var(--grade-d-rgb), 0.4);
 }
 
 .btn-warning:hover {
-  background: rgba(245, 158, 11, 0.28);
-  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.25);
+  background: rgba(var(--grade-d-rgb), 0.28);
+  box-shadow: 0 4px 20px rgba(var(--grade-d-rgb), 0.25);
 }
 
 /* Ghost button */
@@ -434,21 +469,21 @@ select.form-control {
 }
 
 .badge-success {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(var(--grade-star-rgb), 0.15);
   color: var(--clr-success);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  border: 1px solid rgba(var(--grade-star-rgb), 0.25);
 }
 
 .badge-danger {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(var(--grade-e-rgb), 0.15);
   color: var(--clr-danger);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(var(--grade-e-rgb), 0.25);
 }
 
 .badge-warning {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(var(--grade-d-rgb), 0.15);
   color: var(--clr-warning);
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  border: 1px solid rgba(var(--grade-d-rgb), 0.25);
 }
 
 .badge-info {
@@ -559,15 +594,15 @@ select.form-control {
 }
 
 .toast-success {
-  background: rgba(16, 185, 129, 0.12);
-  border-color: rgba(16, 185, 129, 0.3);
-  color: #a7f3d0;
+  background: rgba(var(--grade-star-rgb), 0.12);
+  border-color: rgba(var(--grade-star-rgb), 0.3);
+  color: #86efac;
 }
 
 .toast-error {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
+  background: rgba(var(--grade-e-rgb), 0.12);
+  border-color: rgba(var(--grade-e-rgb), 0.3);
+  color: #ff9999;
 }
 
 .toast-info {
@@ -577,9 +612,9 @@ select.form-control {
 }
 
 .toast-warning {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #fde68a;
+  background: rgba(var(--grade-d-rgb), 0.12);
+  border-color: rgba(var(--grade-d-rgb), 0.3);
+  color: #fed7aa;
 }
 
 /* ============================================================
@@ -827,155 +862,153 @@ tbody tr:last-child td {
   transform: scale(1.08);
 }
 
-/* S: Star / Bintang (100% - Rich Green #22C55E with Glow) */
+/* ★: Star (100% - Pure Green #00c000ff with Glow) */
 @keyframes star-badge-glow {
   0%, 100% {
-    box-shadow: 0 0 16px rgba(34, 197, 94, 0.45), 0 0 28px rgba(34, 197, 94, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.85);
-    filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.45));
+    box-shadow: 0 0 16px rgba(var(--grade-star-rgb), 0.45), 0 0 28px rgba(var(--grade-star-rgb), 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.85);
+    filter: drop-shadow(0 0 6px rgba(var(--grade-star-rgb), 0.45));
   }
   50% {
-    box-shadow: 0 0 26px rgba(34, 197, 94, 0.75), 0 0 42px rgba(34, 197, 94, 0.45), inset 0 1px 4px rgba(255, 255, 255, 1);
-    filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.75));
+    box-shadow: 0 0 26px rgba(var(--grade-star-rgb), 0.75), 0 0 42px rgba(var(--grade-star-rgb), 0.45), inset 0 1px 4px rgba(255, 255, 255, 1);
+    filter: drop-shadow(0 0 12px rgba(var(--grade-star-rgb), 0.75));
   }
 }
 
 @keyframes star-text-gleam {
   0%, 100% {
-    filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.45));
+    filter: drop-shadow(0 0 8px rgba(var(--grade-star-rgb), 0.45));
   }
   50% {
-    filter: drop-shadow(0 0 16px rgba(34, 197, 94, 0.85)) drop-shadow(0 0 24px rgba(34, 197, 94, 0.45));
+    filter: drop-shadow(0 0 16px rgba(var(--grade-star-rgb), 0.85)) drop-shadow(0 0 24px rgba(var(--grade-star-rgb), 0.45));
   }
 }
 
 .grade-star,
 .grade-★,
 .grade-S {
-  background: rgba(34, 197, 94, 0.18) !important;
-  color: #22C55E !important;
+  background: rgba(var(--grade-star-rgb), 0.18) !important;
+  color: var(--grade-star) !important;
   font-weight: 900;
-  border: 1.5px solid #22C55E !important;
+  border: 1.5px solid var(--grade-star) !important;
   animation: star-badge-glow 2.2s infinite ease-in-out;
 }
 
 .text-grade-star,
 .text-grade-★,
 .text-grade-S {
-  color: #22C55E !important;
+  color: var(--grade-star) !important;
   animation: star-text-gleam 2.2s infinite ease-in-out;
 }
 
-/* A: Grade A (90-99%) - True Leaf Green #22C55E */
+/* A: Grade A (90-99%) - Pure Green #00c000ff (Identical to Star base color) */
 .grade-A {
-  background: rgba(34, 197, 94, 0.16) !important;
-  color: #22C55E !important;
-  border: 1.5px solid rgba(34, 197, 94, 0.7) !important;
+  background: rgba(var(--grade-a-rgb), 0.16) !important;
+  color: var(--grade-a) !important;
+  border: 1.5px solid rgba(var(--grade-a-rgb), 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-A {
-  color: #22C55E !important;
+  color: var(--grade-a) !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-/* B: Grade B (80-89%) - Electric Bright Lime #BEF264 */
+/* B: Grade B (80-89%) - Electric Lime #95ff00ff */
 .grade-B {
-  background: rgba(190, 242, 100, 0.16) !important;
-  color: #BEF264 !important;
-  border: 1.5px solid rgba(190, 242, 100, 0.7) !important;
+  background: rgba(var(--grade-b-rgb), 0.16) !important;
+  color: var(--grade-b) !important;
+  border: 1.5px solid rgba(var(--grade-b-rgb), 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-B {
-  color: #BEF264 !important;
+  color: var(--grade-b) !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-/* C: Grade C (60-79%) - Pure Electric Lemon Yellow #FDE047 */
+/* C: Grade C (60-79%) - Pure Yellow #FFFF00 */
 .grade-C {
-  background: rgba(253, 224, 71, 0.16) !important;
-  color: #FDE047 !important;
-  border: 1.5px solid rgba(253, 224, 71, 0.7) !important;
+  background: rgba(var(--grade-c-rgb), 0.16) !important;
+  color: var(--grade-c) !important;
+  border: 1.5px solid rgba(var(--grade-c-rgb), 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-C {
-  color: #FDE047 !important;
+  color: var(--grade-c) !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-/* D: Grade D (30-59%) - Clean Orange #FB923C */
+/* D: Grade D (30-59%) - Dark Orange #FF8C00 */
 .grade-D {
-  background: rgba(251, 146, 60, 0.16) !important;
-  color: #FB923C !important;
-  border: 1.5px solid rgba(251, 146, 60, 0.7) !important;
+  background: rgba(var(--grade-d-rgb), 0.16) !important;
+  color: var(--grade-d) !important;
+  border: 1.5px solid rgba(var(--grade-d-rgb), 0.7) !important;
   box-shadow: none !important;
 }
 
 .text-grade-D {
-  color: #FB923C !important;
+  color: var(--grade-d) !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-/* E: Grade E (0-29%) & Legacy F - Light Red #F87171 */
-.grade-E,
-.grade-F {
-  background: rgba(248, 113, 113, 0.16) !important;
-  color: #F87171 !important;
-  border: 1.5px solid rgba(248, 113, 113, 0.7) !important;
+/* E: Grade E (0-29%) - Pure Red #FF0000 */
+.grade-E {
+  background: rgba(var(--grade-e-rgb), 0.16) !important;
+  color: var(--grade-e) !important;
+  border: 1.5px solid rgba(var(--grade-e-rgb), 0.7) !important;
   box-shadow: none !important;
 }
 
-.text-grade-E,
-.text-grade-F {
-  color: #F87171 !important;
+.text-grade-E {
+  color: var(--grade-e) !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
 /* Score text colors - Glow ONLY on Grade S / Star */
 .score-high {
-  color: #22C55E !important;
+  color: var(--grade-star) !important;
   font-weight: 700;
-  filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.45));
+  filter: drop-shadow(0 0 8px rgba(var(--grade-star-rgb), 0.45));
 } /* 100% Star ⭐ */
 
 .score-dist {
-  color: #22C55E !important;
+  color: var(--grade-a) !important;
   font-weight: 700;
   filter: none !important;
-} /* 90-99% A (True Leaf Green) */
+} /* 90-99% A (Rich Jungle Green) */
 
 .score-pass {
-  color: #BEF264 !important;
+  color: var(--grade-b) !important;
   font-weight: 700;
   filter: none !important;
-} /* 80-89% B (Electric Bright Lime) */
+} /* 80-89% B (Lime 500) */
 
 .score-warn {
-  color: #FDE047 !important;
+  color: var(--grade-c) !important;
   font-weight: 700;
   filter: none !important;
-} /* 60-79% C (Pure Electric Lemon Yellow) */
+} /* 60-79% C (Amber 500) */
 
 .score-remed {
-  color: #FB923C !important;
+  color: var(--grade-d) !important;
   font-weight: 700;
   filter: none !important;
-} /* 30-59% D (Clean Orange) */
+} /* 30-59% D (Orange 500) */
 
 .score-poor {
-  color: #F87171 !important;
+  color: var(--grade-e) !important;
   font-weight: 700;
   filter: none !important;
-} /* 0-29% E (Light Red) */
+} /* 0-29% E (Crimson Red) */
 
 .score-fail {
-  color: #F87171 !important;
+  color: var(--grade-e) !important;
   font-weight: 700;
   filter: none !important;
 } /* Legacy Fail Fallback */
@@ -1003,42 +1036,44 @@ tbody tr:last-child td {
   user-select: none !important;
 }
 
-.grade-circle.grade-circle-star {
-  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%) !important;
-  color: #ffffff !important;
+.grade-circle.grade-circle-star,
+.grade-circle.grade-circle-★,
+.grade-circle.grade-circle-s {
+  background: linear-gradient(135deg, #86efac 0%, var(--grade-star) 100%) !important;
+  color: var(--badge-text-star) !important;
   font-size: 0.72rem !important;
   font-weight: 900 !important;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6) !important;
+  box-shadow: 0 0 8px var(--grade-star-glow) !important;
   border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
 
 .grade-circle.grade-circle-a {
-  background: #22C55E !important;
-  color: #000000 !important;
+  background: var(--grade-a) !important;
+  color: var(--badge-text-dark) !important;
   font-weight: 900 !important;
 }
 
 .grade-circle.grade-circle-b {
-  background: #BEF264 !important;
-  color: #000000 !important;
+  background: var(--grade-b) !important;
+  color: var(--badge-text-dark) !important;
   font-weight: 900 !important;
 }
 
 .grade-circle.grade-circle-c {
-  background: #FDE047 !important;
-  color: #000000 !important;
+  background: var(--grade-c) !important;
+  color: var(--badge-text-dark) !important;
   font-weight: 900 !important;
 }
 
 .grade-circle.grade-circle-d {
-  background: #FB923C !important;
-  color: #000000 !important;
+  background: var(--grade-d) !important;
+  color: var(--badge-text-dark) !important;
   font-weight: 900 !important;
 }
 
 .grade-circle.grade-circle-e {
-  background: #F87171 !important;
-  color: #000000 !important;
+  background: var(--grade-e) !important;
+  color: var(--badge-text-dark) !important;
   font-weight: 900 !important;
 }
 

@@ -18,9 +18,10 @@
     "*.cjs": "javascript"
   },
 
-  // ─── FORMATTING (Prettier on Save) ──────────────────────────────────
+  // ─── FORMATTING (Instant Save Optimization) ─────────────────────────
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": false,
+  "editor.formatOnSaveMode": "modifications",
   "editor.formatOnPaste": false,
   "[javascript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -44,12 +45,12 @@
     "editor.formatOnSave": false
   },
 
-  // ─── ESLINT ─────────────────────────────────────────────────────────
+  // ─── ESLINT (Non-blocking background validation) ─────────────────────
   "eslint.enable": true,
   "eslint.validate": [
     "javascript"
   ],
-  "eslint.run": "onSave",
+  "eslint.run": "onType",
 
   // ─── ERROR LENS (Inline instant error/warning visualizer) ────────────
   "errorLens.enabled": true,
@@ -88,6 +89,15 @@
   "editor.bracketPairColorization.enabled": true,
   "editor.linkedEditing": true,
   "editor.stickyScroll.enabled": true,
+  "editor.inlineSuggest.enabled": true,
+  "editor.suggestSelection": "first",
+  "editor.acceptSuggestionOnEnter": "smart",
+  "editor.quickSuggestions": {
+    "other": "on",
+    "comments": "off",
+    "strings": "on"
+  },
+  "workbench.editor.enablePreview": false,
 
   // ─── FILES & SEARCH EXCLUSIONS ──────────────────────────────────────
   "files.eol": "\n",

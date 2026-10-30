@@ -43,12 +43,12 @@ Menyebutkan nama file atau modul membuat AI langsung fokus ke file tersebut tanp
 1. **Tanpa Student ID Bisnis:** Tidak ada input atau tampilan Student ID. Identitas murni internal UUID.
 2. **Alur Login Siswa:** `INSTITUTION` &rarr; `PROGRAM` &rarr; `STUDENT NAME` &rarr; `PIN`.
 3. **Official Grading Scale (Rule 2.10):**
-   * `★` (100% - Hijau `#22C55E`)
-   * `A` (90%–99% - Hijau `#10B981`)
-   * `B` (80%–89% - Hijau Muda / Lime `#84CC16`)
-   * `C` (60%–79% - Kuning `#EAB308`)
-   * `D` (30%–59% - Oranye `#F97316`)
-   * `E` (0%–29% - Merah `#EF4444`)
+   * `★` (100% - Pure Green `#00c000ff` / `#00c000`)
+   * `A` (90%–99% - Pure Green `#00c000ff` / `#00c000`)
+   * `B` (80%–89% - Electric Lime `#95ff00ff`)
+   * `C` (60%–79% - Pure Yellow `#FFFF00`)
+   * `D` (30%–59% - Dark Orange `#FF8C00`)
+   * `E` (0%–29% - Pure Red `#FF0000`)
    * *Tanpa Grade S, F, atau R! Remedial maksimal 60% (Grade C) dan simbol "R" kecil (`60%ᴿ`) HANYA muncul di samping skor persentase.*
 4. **Arsitektur Tanpa Framework Backend:**
    * Murni **HTML5 + Modular ES6 JS + CSS3** di frontend.

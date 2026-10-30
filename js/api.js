@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=5.3.2';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=5.6.5';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261030_v41';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=5.3.2';
 import { escapeHtml, escHtml } from './app.js?v=5.3.2';
 
@@ -9,7 +9,7 @@ export function getGrade(pct) {
   return calculateGrade(pct);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -2587,7 +2587,7 @@ export async function createVocabMasteryTest(config) {
 export async function checkAndTriggerLevelUp(studentId, currentLevelId) {
   const sb = await getSupabase();
   const { data: levelData, error: lvlErr } = await sb.from('levels')
-    .select('id, level_number, program_id')
+    .select('id, level_number')
     .eq('id', currentLevelId)
     .single();
   if (lvlErr || !levelData) return { levelUp: false, newLevel: null, status: 'ERROR' };
@@ -2598,7 +2598,7 @@ export async function checkAndTriggerLevelUp(studentId, currentLevelId) {
     .select('id, title, display_order, shell_code, levels!inner(level_number)')
     .eq('level_id', currentLevelId)
     .neq('levels.level_number', 0)
-    .eq('category', 'TEST')
+    .in('category', ['EXAM', 'TEST'])
     .eq('status', 'PUBLISHED')
     .order('display_order', { ascending: false })
     .order('created_at', { ascending: false })
@@ -2607,15 +2607,16 @@ export async function checkAndTriggerLevelUp(studentId, currentLevelId) {
 
   const examIds = exams.map(e => e.id);
   const { data: attempts, error: attErr } = await sb.from('attempts')
-    .select('test_id, percentage')
+    .select('test_id, percentage, effective_score')
     .eq('student_id', studentId)
     .in('test_id', examIds)
-    .eq('is_best_score', true);
+    .in('status', ['submitted', 'auto_submitted']);
   if (attErr) return { levelUp: false, newLevel: null, status: 'ERROR' };
 
   const bestScoreMap = {};
   (attempts || []).forEach(a => {
-    bestScoreMap[a.test_id] = Math.max(bestScoreMap[a.test_id] || 0, parseFloat(a.percentage || 0));
+    const rawScore = a.effective_score !== null && a.effective_score !== undefined ? a.effective_score : a.percentage;
+    bestScoreMap[a.test_id] = Math.max(bestScoreMap[a.test_id] || 0, parseFloat(rawScore || 0));
   });
 
   const allPassed = examIds.every(id => (bestScoreMap[id] || 0) >= 60);
@@ -2630,7 +2631,6 @@ export async function checkAndTriggerLevelUp(studentId, currentLevelId) {
   const nextLevelNum = currentLevelNum + 1;
   const { data: nextLevel, error: nlErr } = await sb.from('levels')
     .select('id, name')
-    .eq('program_id', levelData.program_id)
     .eq('level_number', nextLevelNum)
     .single();
   if (nlErr || !nextLevel) return { levelUp: false, newLevel: null, status: 'NEXT_LEVEL_NOT_FOUND' };
@@ -2660,6 +2660,8 @@ export async function fetchStudentLevel(studentId) {
   const sb = await getSupabase();
   const { data, error } = await sb.from('students')
     .select(`
+      level_id,
+      levels:level_id(id, level_number, name),
       batch_id,
       batches:batch_id(current_level_id, levels:current_level_id(id, level_number, name))
     `)
@@ -2671,9 +2673,9 @@ export async function fetchStudentLevel(studentId) {
     return { level_id: null, level_number: 1, level_name: '1st Level' };
   }
   
-  const lvlId = data.batches?.current_level_id || null;
-  const lvlNum = data.batches?.levels?.level_number || 1;
-  const lvlName = data.batches?.levels?.name || '1st Level';
+  const lvlId = data.level_id || data.batches?.current_level_id || null;
+  const lvlNum = data.levels?.level_number || data.batches?.levels?.level_number || 1;
+  const lvlName = data.levels?.name || data.batches?.levels?.name || '1st Level';
   return { level_id: lvlId, level_number: lvlNum, level_name: lvlName };
 }
 

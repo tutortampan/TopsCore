@@ -121,11 +121,11 @@ export async function renderDashboard(container) {
             <div class="text-muted text-sm text-uppercase fw-700">Programs</div>
           </div>
           <div class="glass-card" style="padding: 1.5rem; text-align: center;">
-            <div style="font-size: 2.2rem; font-weight: 800; color: #10b981;">${batches.length}</div>
+            <div style="font-size: 2.2rem; font-weight: 800; color: var(--clr-success);">${batches.length}</div>
             <div class="text-muted text-sm text-uppercase fw-700">Batches</div>
           </div>
           <div class="glass-card" style="padding: 1.5rem; text-align: center;">
-            <div style="font-size: 2.2rem; font-weight: 800; color: #f59e0b;">${institutions.length}</div>
+            <div style="font-size: 2.2rem; font-weight: 800; color: var(--clr-warning);">${institutions.length}</div>
             <div class="text-muted text-sm text-uppercase fw-700">Institutions</div>
           </div>
         </div>
@@ -352,7 +352,7 @@ export async function renderAdminProfile(container) {
   const updateBioCounter = () => {
     const len = bioInput.value.length;
     bioCounter.textContent = `${len} / 350`;
-    bioCounter.style.color = len > 350 ? 'var(--clr-danger, #ef4444)' : 'var(--clr-text-3)';
+    bioCounter.style.color = len > 350 ? 'var(--clr-danger, #FF0000)' : 'var(--clr-text-3)';
   };
   bioInput.addEventListener('input', updateBioCounter);
   updateBioCounter();

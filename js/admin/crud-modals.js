@@ -192,7 +192,7 @@ async function openCrudModal(section, record) {
           </div>
           <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.75rem; color: #94a3b8; margin-top: 6px;">
             ${record.shell_code ? `<span>Code: <strong style="color:#f1f5f9;">${escapeHtml(record.shell_code)}</strong></span>` : ''}
-            ${record.status ? `<span>Status: <strong style="color:${String(record.status).toUpperCase() === 'PUBLISHED' ? '#22c55e' : '#f59e0b'};">${escapeHtml(record.status)}</strong></span>` : ''}
+            ${record.status ? `<span>Status: <strong style="color:${String(record.status).toUpperCase() === 'PUBLISHED' ? 'var(--clr-success)' : 'var(--clr-warning)'};">${escapeHtml(record.status)}</strong></span>` : ''}
             ${record.test_type ? `<span>Type: <strong style="color:#f1f5f9;">${escapeHtml(record.test_type)}</strong></span>` : ''}
           </div>
         `;
@@ -1172,7 +1172,7 @@ async function loadDuplicateStudents(scope = 'same_class') {
       (group.candidates || []).forEach((student, sIdx) => {
         const isPrimary = student.id === group.recommendedPrimaryId || sIdx === 0;
         html += `
-              <tr style="${isPrimary ? 'background:rgba(16, 185, 129, 0.12);' : ''} border-bottom:1px solid rgba(255,255,255,0.05);">
+              <tr style="${isPrimary ? 'background:rgba(var(--grade-star-rgb, 0, 192, 0), 0.12);' : ''} border-bottom:1px solid rgba(255,255,255,0.05);">
                 <td style="padding:8px 4px; font-family:monospace; font-size:0.8rem;">${student.id.substring(0,8)}...</td>
                 <td style="padding:8px 4px;">${escapeHtml(student.programName || student.programs?.name || '—')}</td>
                 <td style="padding:8px 4px;">${escapeHtml(student.batchName || student.batches?.name || 'Unassigned')}</td>
@@ -1180,7 +1180,7 @@ async function loadDuplicateStudents(scope = 'same_class') {
                 <td style="padding:8px 4px;"><span class="badge" style="background:rgba(59,130,246,0.2); color:#60a5fa;">${student.attemptsCount || 0} attempts</span></td>
                 <td style="padding:8px 4px; font-size:0.8rem; color:#94a3b8;">${new Date(student.created_at).toLocaleDateString()}</td>
                 <td style="padding:8px 4px; text-align:right;">
-                  ${isPrimary ? '<span class="badge badge-success" style="background:#10b981; color:#fff; padding:3px 8px; border-radius:4px; font-size:0.75rem;">Primary Target</span>' : `<button class="btn btn-warning btn-sm btn-merge-student" data-primary="${group.recommendedPrimaryId}" data-secondary="${student.id}" style="font-size:0.75rem; padding:3px 8px;">Merge to Primary</button>`}
+                  ${isPrimary ? '<span class="badge badge-success" style="background:var(--clr-success, #00c000ff); color:#0F172A; font-weight:700; padding:3px 8px; border-radius:4px; font-size:0.75rem;">Primary Target</span>' : `<button class="btn btn-warning btn-sm btn-merge-student" data-primary="${group.recommendedPrimaryId}" data-secondary="${student.id}" style="font-size:0.75rem; padding:3px 8px;">Merge to Primary</button>`}
                 </td>
               </tr>
         `;
@@ -1287,13 +1287,13 @@ async function loadDuplicateQuestions() {
         `;
         group.candidates.forEach((q, qIdx) => {
           html += `
-                <tr style="${qIdx === 0 ? 'background:rgba(16, 185, 129, 0.1);' : 'background:rgba(239, 68, 68, 0.05);'} border-bottom:1px solid rgba(255,255,255,0.05);">
+                <tr style="${qIdx === 0 ? 'background:rgba(var(--grade-star-rgb, 0, 192, 0), 0.1);' : 'background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.05);'} border-bottom:1px solid rgba(255,255,255,0.05);">
                   <td style="padding:6px 4px; font-family:monospace;">${q.id.substring(0,8)}...</td>
                   <td style="padding:6px 4px; font-weight:700;">#${q.question_order}</td>
                   <td style="padding:6px 4px;">${escapeHtml(q.answer_type)}</td>
                   <td style="padding:6px 4px;" class="fw-700 text-primary">${q.answersCount || 0}</td>
                   <td style="padding:6px 4px; color:#94a3b8;">${new Date(q.created_at).toLocaleDateString()}</td>
-                  <td style="padding:6px 4px; text-align:right;">${qIdx === 0 ? '<span class="badge badge-success" style="background:#10b981; color:#fff; padding:2px 6px; border-radius:3px;">Primary (Keep)</span>' : '<span class="badge badge-error" style="background:#ef4444; color:#fff; padding:2px 6px; border-radius:3px;">Duplicate (Remove)</span>'}</td>
+                  <td style="padding:6px 4px; text-align:right;">${qIdx === 0 ? '<span class="badge badge-success" style="background:var(--clr-success, #00c000ff); color:#0F172A; font-weight:700; padding:2px 6px; border-radius:3px;">Primary (Keep)</span>' : '<span class="badge badge-error" style="background:var(--clr-danger, #FF0000); color:#fff; padding:2px 6px; border-radius:3px;">Duplicate (Remove)</span>'}</td>
                 </tr>
           `;
         });

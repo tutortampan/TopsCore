@@ -542,7 +542,7 @@ export async function renderCurriculum(area) {
                   <div class="d-flex align-center gap-2 flex-wrap">
                     <span style="font-weight: 700; font-size: 1rem; color: var(--fm-text-primary);">${escapeHtml(prog.name)}</span>
                     ${prog.code ? `<span class="badge-tag" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--fm-text-muted);">${escapeHtml(prog.code)}</span>` : ''}
-                    <span class="badge-tag" style="background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25);">${progBatches.length} Batches</span>
+                    <span class="badge-tag" style="background: rgba(var(--grade-star-rgb, 0, 192, 0), 0.12); color: var(--clr-success); border: 1px solid rgba(var(--grade-star-rgb, 0, 192, 0), 0.25);">${progBatches.length} Batches</span>
                   </div>
                   ${prog.description ? `<div class="text-xs text-muted mt-1 text-truncate" style="max-width: 600px;">${escapeHtml(prog.description)}</div>` : ''}
                 </div>
@@ -551,7 +551,7 @@ export async function renderCurriculum(area) {
                     <input type="checkbox" onchange="window.toggleProgramCascade('${prog.id}', this.checked)" ${prog.is_active ? 'checked' : ''}>
                     <span class="toggle-slider"></span>
                   </label>
-                  <button class="btn btn-primary btn-sm" style="font-size: 0.75rem; padding: 4px 9px; background: #059669; border-color: #059669;" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')" title="Add Batch to Program">+ Add Batch</button>
+                  <button class="btn btn-primary btn-sm" style="font-size: 0.75rem; padding: 4px 9px; background: var(--clr-success); border-color: var(--clr-success); color: #0F172A; font-weight: 700;" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')" title="Add Batch to Program">+ Add Batch</button>
                   <button class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 8px;" onclick="window.openCurriculumEdit('programs', '${prog.id}')" title="Edit Program">
                     ✏️ Edit
                   </button>
@@ -567,9 +567,9 @@ export async function renderCurriculum(area) {
                     <div class="d-flex justify-between align-center mb-2">
                       <div class="curriculum-tree-group-title">
                         <span>👥 Batches</span>
-                        <span class="badge-tag" style="font-size: 0.68rem; background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.25);">${progBatches.length}</span>
+                        <span class="badge-tag" style="font-size: 0.68rem; background: rgba(var(--grade-star-rgb, 0, 192, 0), 0.15); color: var(--clr-success); border: 1px solid rgba(var(--grade-star-rgb, 0, 192, 0), 0.25);">${progBatches.length}</span>
                       </div>
-                      <button class="btn btn-ghost btn-sm" style="font-size: 0.72rem; padding: 2px 6px; color: #34d399;" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')">
+                      <button class="btn btn-ghost btn-sm" style="font-size: 0.72rem; padding: 2px 6px; color: var(--clr-success);" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')">
                         + Add Batch
                       </button>
                     </div>

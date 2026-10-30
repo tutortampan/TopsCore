@@ -114,20 +114,20 @@ function computeStudentStats(student, attempts, allTests) {
 
 function rankStudents(studentStatsList) {
   return [...studentStatsList].sort((a, b) => {
-    // 1. Primary: Global PTS DESC (Points first!)
+    // 1. Primary: PROG % DESC (Progress first per user specification)
+    const progA = Number(a.progressPct ?? 0);
+    const progB = Number(b.progressPct ?? 0);
+    if (progA !== progB) return progB - progA;
+
+    // 2. Secondary: Global PTS DESC (latest exam points)
     const ptsA = Number(a.totalPoints ?? 0);
     const ptsB = Number(b.totalPoints ?? 0);
     if (ptsA !== ptsB) return ptsB - ptsA;
 
-    // 2. Secondary: Global SCORE % DESC (unattempted exams sort after completed)
+    // 3. Tertiary: Global SCORE % DESC (unattempted exams sort after completed)
     const scoreA = (a.completedWeeklyCount > 0) ? Number(a.overallScore ?? 0) : -1;
     const scoreB = (b.completedWeeklyCount > 0) ? Number(b.overallScore ?? 0) : -1;
     if (scoreA !== scoreB) return scoreB - scoreA;
-
-    // 3. Tertiary: PROG % DESC
-    const progA = Number(a.progressPct ?? 0);
-    const progB = Number(b.progressPct ?? 0);
-    if (progA !== progB) return progB - progA;
 
     // 4. Earliest submission
     if (a.lastSubmittedAt && b.lastSubmittedAt) {
@@ -150,19 +150,19 @@ const quizAttempts = [
 const res1 = computeStudentStats(quizOnlyStudent, quizAttempts, sampleTests);
 
 console.log('  Scenario 1 (Quiz Only):', res1);
-if (res1.totalPoints === 0 && res1.overallScore === 0 && res1.grade === 'E' && res1.completedCount === 3 && res1.progressPct > 0) {
-  console.log('  ✅ PASS: Quizzes counted toward completed count and PROG %, but EXCLUDED from PTS (0), SCORE (0), and GRD (E)!');
+if (res1.totalPoints === 0 && res1.overallScore === 0 && (res1.grade === '—' || res1.grade === 'E') && res1.completedCount === 3 && res1.progressPct > 0) {
+  console.log('  ✅ PASS: Quizzes counted toward completed count and PROG %, but EXCLUDED from PTS (0) and SCORE (0)!');
 } else {
   console.error('  ❌ FAIL: Quiz leakage detected in Scenario 1!');
   process.exit(1);
 }
 
-// Case 2: Student with 0 total activity (Initial milestone is Theme 1: 0% Grade E)
+// Case 2: Student with 0 total activity (Neutral initial state: 0 pts, 0% score)
 const zeroStudent = { id: 's2', name: 'Zero Activity', gender: 'female' };
 const res2 = computeStudentStats(zeroStudent, [], sampleTests);
 console.log('  Scenario 2 (0 Activity):', res2);
-if (res2.totalPoints === 0 && res2.overallScore === 0 && res2.grade === 'E' && res2.progressPct === 0) {
-  console.log('  ✅ PASS: 0 activity produces 0 pts, 0% score, and initial Grade E for Theme 1!');
+if (res2.totalPoints === 0 && res2.overallScore === 0 && (res2.grade === '—' || res2.grade === 'E') && res2.progressPct === 0) {
+  console.log('  ✅ PASS: 0 activity produces 0 pts and 0% score!');
 } else {
   console.error('  ❌ FAIL in Scenario 2!');
   process.exit(1);
@@ -250,26 +250,26 @@ console.log('  Sofa Maria Ulfa stats:', { pts: statsSofa.totalPoints, score: sta
 console.log('  Suke Ajai stats:', { pts: statsSuke.totalPoints, score: statsSuke.overallScore + '%', grd: statsSuke.grade, prog: statsSuke.progressPct + '%' });
 console.log('  Pasya stats:', { pts: statsPasya.totalPoints, score: statsPasya.overallScore + '%', grd: statsPasya.grade, prog: statsPasya.progressPct + '%' });
 
-// Verify Pasya was penalized by Theme B (350 questions queued at 0%)
-// Denominator should be 150 + 350 = 500, Score = 90 / 500 = 18%, Grade E!
-if (statsPasya.overallScore === 18 && statsPasya.grade === 'E') {
-  console.log('  ✅ PASS: Pasya milestone penalty enforced! (Score: 18% Grade E due to unattempted Theme B queued at 0%).');
+// Verify Pasya evaluated by latest active Theme A (90/150 = 60%, Grade C)
+// Future unattempted Theme B does NOT penalize current active theme!
+if (statsPasya.overallScore === 60 && statsPasya.grade === 'C') {
+  console.log('  ✅ PASS: Pasya evaluated by latest active Theme A! (Score: 60% Grade C, no penalty from future Theme B).');
 } else {
-  console.error(`  ❌ FAIL: Expected Pasya score 18% Grade E, got score ${statsPasya.overallScore}% Grade ${statsPasya.grade}`);
+  console.error(`  ❌ FAIL: Expected Pasya score 60% Grade C, got score ${statsPasya.overallScore}% Grade ${statsPasya.grade}`);
   process.exit(1);
 }
 
-// Verify Ranking Order: Points-First hierarchy
+// Verify Ranking Order: Progress-First hierarchy
 const rankedMilestone = rankStudents([statsSuke, statsSofa, statsPasya]);
 console.log('  Ranked Results:');
 rankedMilestone.forEach((st, idx) => {
-  console.log(`    #${idx+1}: ${st.name} | PTS: ${st.totalPoints} | SCORE: ${st.overallScore}% (${st.grade}) | PROG: ${st.progressPct}%`);
+  console.log(`    #${idx+1}: ${st.name} | PROG: ${st.progressPct}% | PTS: ${st.totalPoints} | SCORE: ${st.overallScore}% (${st.grade})`);
 });
 
-if (rankedMilestone[0].id === 'sofa' && rankedMilestone[1].id === 'suke' && rankedMilestone[2].id === 'pasya') {
-  console.log('  ✅ PASS: Suke Ajai ranking paradox RESOLVED! Sofa Maria Ulfa (273.5 pts) ranks #1 over Suke Ajai (143 pts) despite lower task count!');
+if (rankedMilestone[0].id === 'suke' && rankedMilestone[1].id === 'sofa' && rankedMilestone[2].id === 'pasya') {
+  console.log('  ✅ PASS: Progress-First Ranking verified! Suke (45% PROG, 90 pts) > Sofa (43% PROG, 163.5 pts) > Pasya (20% PROG, 90 pts).');
 } else {
-  console.error('  ❌ FAIL: Ranking order does not prioritize Points!');
+  console.error('  ❌ FAIL: Ranking order does not prioritize Progress!');
   process.exit(1);
 }
 

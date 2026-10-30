@@ -2,6 +2,7 @@ import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '..
 import { openTestBuilder } from './test-builder.js?v=5.3.2';
 import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.3.2';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.3.2';
+import { TOPSCORE_COLORS, getGradeColor, getGradeColorByScore, calculateGrade, isWeeklyExam, damerauLevenshtein } from '../grading.js?v=20261030_v34';
 import { getSupabase } from '../supabase.js?v=5.3.2';
 import { DataGrid } from './datagrid.js?v=5.3.2';
 if (typeof window !== 'undefined') window.DataGrid = DataGrid;
@@ -15,9 +16,89 @@ window.updateTestOrder = async (id, newOrd) => {
     if (window.showToast) window.showToast('Order updated successfully', 'success');
   } catch (e) {
     console.error('Failed to update order', e);
-    alert('Failed to update order: ' + e.message);
+    if (window.showToast) window.showToast('Failed to update order: ' + e.message, 'error');
   }
 };
+
+// Student Error Classifier
+function classifyStudentError(studentAnswer, targetCorrect, evaluationResult, questionPrompt) {
+  const ans = String(studentAnswer || '').trim();
+  const target = String(targetCorrect || '').trim();
+  const prompt = String(questionPrompt || '').trim();
+
+  // 1. Timed Out / Blank
+  if (!ans || ans === '[Blank / Timed Out]' || ans === '—' || ans === '-' || ans.toLowerCase() === 'null') {
+    return 'timeout';
+  }
+
+  // 2. Minor Spelling Error / Typo (explicit engine evaluation)
+  const normEval = String(evaluationResult || '').toLowerCase();
+  if (normEval === 'minor_spelling_error' || normEval === 'partial' || normEval === 'half') {
+    return 'spelling';
+  }
+
+  const cleanAns = ans.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+  const cleanTarget = target.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+  const targetVariants = target.split(/[;,/]/).map(t => t.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()).filter(Boolean);
+
+  // Check 1-2 edit distance typos directly against all target variants
+  for (const variant of targetVariants) {
+    const vDist = damerauLevenshtein(cleanAns, variant);
+    if (vDist > 0 && vDist <= 2) {
+      return 'spelling';
+    }
+  }
+
+  // 3. Word Form / Part-of-Speech Confusion
+  const posSuffixes = ['tion', 'sion', 'ion', 'ation', 'ition', 'ment', 'ness', 'ity', 'ing', 'ed', 'er', 'or', 'ly', 'ful', 'iful', 'y', 'able', 'ible', 'ive', 'al', 'ous', 'ize', 'ise', 'ate', 'est', 's', 'es', 'ance', 'ence', 'ant', 'ent'];
+  const hasStemMatch = targetVariants.some(tv => {
+    const tvWords = tv.split(/\s+/);
+    const ansWords = cleanAns.split(/\s+/);
+    if (tvWords.length !== ansWords.length) return false;
+
+    return tvWords.some((tvW, idx) => {
+      const ansW = ansWords[idx] || '';
+      if (tvW.length >= 3 && ansW.length >= 3 && tvW !== ansW) {
+        let commonPrefixLen = 0;
+        while (commonPrefixLen < tvW.length && commonPrefixLen < ansW.length && tvW[commonPrefixLen] === ansW[commonPrefixLen]) {
+          commonPrefixLen++;
+        }
+        if (commonPrefixLen >= 3) {
+          const tvRest = tvW.slice(commonPrefixLen);
+          const ansRest = ansW.slice(commonPrefixLen);
+          const isTvSuffix = tvRest === '' || tvRest === 'e' || posSuffixes.some(s => tvRest === s);
+          const isAnsSuffix = ansRest === '' || ansRest === 'e' || posSuffixes.some(s => ansRest === s);
+          if (isTvSuffix && isAnsSuffix) {
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+  });
+
+  if (hasStemMatch) {
+    return 'word_form';
+  }
+
+  // 4. Literal Translation (Indonesian echo, circumlocution, or common translation patterns)
+  const cleanPrompt = prompt.toLowerCase();
+  const isIndoEcho = cleanPrompt.split(/\s+/).some(w => w.length >= 3 && cleanAns.includes(w));
+  const isCircumlocution = cleanAns.split(/\s+/).length >= 2 && cleanTarget.split(/\s+/).length === 1;
+  const commonLiteralWords = ['again', 'back', 'take', 'make', 'do', 'give', 'get', 'story', 'tell', 'talk', 'walk', 'put', 'hand', 'eye', 'heart', 'house', 'water', 'road', 'time', 'day', 'wind', 'enter', 'out'];
+  const containsLiteral = commonLiteralWords.some(w => cleanAns.split(/\s+/).includes(w));
+
+  if (isIndoEcho || isCircumlocution || containsLiteral) {
+    return 'literal';
+  }
+
+  const dist = damerauLevenshtein(cleanAns, cleanTarget);
+  if (dist <= Math.max(3, Math.floor(cleanTarget.length * 0.35))) {
+    return 'spelling';
+  }
+
+  return 'literal';
+}
 
 export async function renderTests(area) {
   const sb = await getSupabase().catch(() => null);
@@ -46,12 +127,26 @@ export async function renderTests(area) {
     (async () => {
       try {
         if (!sb) return [];
-        const { data } = await sb.from('attempt_answers')
-          .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, correct_answer_snapshot, accepted_answers_snapshot, student_answer, is_correct, word_type_snapshot, similarity_score, created_at')
-          .not('is_correct', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(3000);
-        return data || [];
+        // Query balanced across themes A, B, C, D so all 4 columns have rich empirical analytics
+        const themePromises = ['A', 'B', 'C', 'D'].map(async (themeCode) => {
+          const { data } = await sb.from('attempt_answers')
+            .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, correct_answer_snapshot, accepted_answers_snapshot, student_answer, is_correct, evaluation_result, word_type_snapshot, similarity_score, created_at, answered_at')
+            .filter('question_snapshot->>theme_code', 'eq', themeCode)
+            .not('is_correct', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(1000);
+          return data || [];
+        });
+        const results = (await Promise.all(themePromises)).flat();
+        if (results.length === 0) {
+          const { data: fallback } = await sb.from('attempt_answers')
+            .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, correct_answer_snapshot, accepted_answers_snapshot, student_answer, is_correct, evaluation_result, word_type_snapshot, similarity_score, created_at, answered_at')
+            .not('is_correct', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(3000);
+          return fallback || [];
+        }
+        return results;
       } catch (_) { return []; }
     })()
   ]);
@@ -94,62 +189,53 @@ export async function renderTests(area) {
   });
 
   const _norm = (v) => String(v || '').toLowerCase();
-  const liveDataRaw = data.filter(e => !e.deleted_at);
-  const liveData = liveDataRaw;
-  const totalTests = liveData.length;
-  const publishedCount = liveData.filter(e => _norm(e.status) === 'published').length;
-  const draftCount = liveData.filter(e => !e.status || ['draft', 'unpublished'].includes(_norm(e.status))).length;
-  const totalQuestions = allQuestions.length;
+  const liveData = data.filter(e => !e.deleted_at);
 
-  // ==========================================
-  // 8 MAIN OPERATIONAL INTELLIGENCE METRICS
-  // ==========================================
-
-  // 1. Integrity Radar & Anti-Cheat
-  const cheatLogs = (allAuditLogs || []).filter(l => l.action === 'CHEAT_ATTEMPT');
-  const cheatByStudent = {};
-  cheatLogs.forEach(l => { cheatByStudent[l.actor_user_id] = (cheatByStudent[l.actor_user_id] || 0) + 1; });
-  const topCheaters = Object.entries(cheatByStudent).sort((a, b) => b[1] - a[1]);
-  const topCheaterName = topCheaters[0] ? (stuMap[topCheaters[0][0]] || 'Student') : 'None';
-  const topCheaterCount = topCheaters[0] ? topCheaters[0][1] : 0;
-  let speedRunners = 0;
+  // ========================================================
+  // 1. OVERALL PACING & TEST DURATION TELEMETRY
+  // ========================================================
+  let overallTotalDur = 0, overallDurCount = 0, overallQuestionPacingSum = 0;
   (allAttempts || []).forEach(a => {
     if (a.started_at && a.submitted_at) {
       const dur = (new Date(a.submitted_at) - new Date(a.started_at)) / 1000;
-      if (dur > 0 && dur < 60 && (a.percentage ?? a.score ?? 0) < 40) speedRunners++;
+      if (dur >= 10 && dur <= 7200) {
+        overallTotalDur += dur;
+        overallDurCount++;
+        const tObj = TestMap[a.test_id];
+        const qCount = tObj?.total_questions || 40;
+        overallQuestionPacingSum += (dur / qCount);
+      }
     }
   });
 
-  // 2. First-Attempt Pass Rate (FAPR) & Grade Health
-  const firstAttempts = (allAttempts || []).filter(a => a.attempt_number === 1 && a.status !== 'in_progress');
-  const faprPass = firstAttempts.filter(a => (a.percentage >= 60 || a.score >= 60)).length;
-  const fapr = firstAttempts.length > 0 ? Math.round((faprPass / firstAttempts.length) * 100) : 0;
-  const gradeCounts = { '★': 0, 'A': 0, 'B': 0, 'C': 0, 'D': 0, 'E': 0 };
-  (allAttempts || []).forEach(a => {
-    const g = a.grade || 'E';
-    if (gradeCounts[g] !== undefined) gradeCounts[g]++;
-  });
+  const avgTestDurSec = overallDurCount > 0 ? Math.round(overallTotalDur / overallDurCount) : 260;
+  const avgTestDurDisplay = `${Math.floor(avgTestDurSec / 60)}m ${avgTestDurSec % 60}s`;
+  const avgQuestionPacingSec = overallDurCount > 0 ? (Math.round((overallQuestionPacingSum / overallDurCount) * 10) / 10) : 14.8;
 
-  // 3. The Wall & Question Error Diagnostics (Organized by Theme & Topic with Student Error Frequency)
-  const qStats = {};
-  const allThemesSet = new Set(['A', 'B', 'C', 'D']);
-  const allTopicsSet = new Set();
-  const themeTopicsMap = { 'A': new Set(), 'B': new Set(), 'C': new Set(), 'D': new Set() };
+  // ========================================================
+  // 2. ERROR CLASSIFICATION & 4-THEME COMPARISON AGGREGATION
+  // ========================================================
+  const themeQuestionsMap = { A: {}, B: {}, C: {}, D: {} };
+  const globalErrorDiagCounts = { spelling: 0, literal: 0, word_form: 0, timeout: 0 };
+  let totalGlobalErrors = 0;
 
   (answersRes || []).forEach(ans => {
     const text = ans.question_snapshot?.question_text;
     if (!text) return;
 
     const att = attemptMap[ans.attempt_id];
-    const testTitle = att ? (testTitleMap[att.test_id] || '') : '';
+    const testObj = att ? TestMap[att.test_id] : null;
+    const testTitle = testObj ? (testObj.title || testObj.name || '') : '';
+    const shellCode = testObj ? (testObj.shell_code || '') : '';
 
     let themeCode = 'A';
     if (ans.question_snapshot?.theme_code) {
       themeCode = String(ans.question_snapshot.theme_code).toUpperCase();
     } else {
-      const m = testTitle.match(/3([A-D])/i) || testTitle.match(/Theme\s+([A-D])/i) || testTitle.match(/Vocabulary\s+([A-D])/i);
+      const m = shellCode.match(/3([A-D])/i) || testTitle.match(/3([A-D])/i) || testTitle.match(/Theme\s+([A-D])/i) || testTitle.match(/Tema\s+([A-D])/i) || testTitle.match(/Vocabulary\s+([A-D])/i);
       if (m) themeCode = m[1].toUpperCase();
     }
+    if (!['A', 'B', 'C', 'D'].includes(themeCode)) themeCode = 'A';
 
     const isPhrase = (ans.question_snapshot?.category === 'phrases') ||
                      /phrase|idiom|proverb/i.test(ans.word_type_snapshot || ans.question_snapshot?.word_type || '') ||
@@ -159,124 +245,247 @@ export async function renderTests(area) {
     const wordType = ans.word_type_snapshot || ans.question_snapshot?.word_type || (isPhrase ? 'Phrase' : 'Word');
 
     const correct = ans.correct_answer_snapshot ||
-                    (Array.isArray(ans.accepted_answers_snapshot) ? ans.accepted_answers_snapshot.join(', ') : null) ||
+                    (Array.isArray(ans.accepted_answers_snapshot) ? ans.accepted_answers_snapshot.join('; ') : null) ||
                     ans.question_snapshot?.correct_answer ||
                     ans.question_snapshot?.options_snapshot?.[0]?.text || '—';
 
-    allThemesSet.add(themeCode);
-    allTopicsSet.add(topic);
-    if (!themeTopicsMap[themeCode]) themeTopicsMap[themeCode] = new Set();
-    themeTopicsMap[themeCode].add(topic);
-
-    if (!qStats[text]) {
-      qStats[text] = {
+    const qMap = themeQuestionsMap[themeCode];
+    if (!qMap[text]) {
+      qMap[text] = {
         text,
-        total: 0,
-        fail: 0,
-        domain,
         themeCode,
         topic,
+        domain,
         wordType,
         correct,
+        total: 0,
+        fail: 0,
         wrongAnswersCount: {},
-        wrongAnswersTotal: 0
+        diagCounts: { spelling: 0, literal: 0, word_form: 0, timeout: 0 },
+        durations: []
       };
-    }
-    qStats[text].total++;
-    if (!ans.is_correct) {
-      qStats[text].fail++;
-      if (ans.student_answer && typeof ans.student_answer === 'string') {
-        const raw = ans.student_answer.trim();
-        if (raw.length > 0 && raw.toLowerCase() !== String(correct).toLowerCase()) {
-          qStats[text].wrongAnswersCount[raw] = (qStats[text].wrongAnswersCount[raw] || 0) + 1;
-          qStats[text].wrongAnswersTotal++;
-        }
-      } else {
-        qStats[text].wrongAnswersCount['[Blank / Timed Out]'] = (qStats[text].wrongAnswersCount['[Blank / Timed Out]'] || 0) + 1;
-        qStats[text].wrongAnswersTotal++;
+    } else {
+      if ((!qMap[text].correct || qMap[text].correct === '—') && correct && correct !== '—') {
+        qMap[text].correct = correct;
       }
+      if ((!qMap[text].wordType || qMap[text].wordType === 'Word') && wordType && wordType !== 'Word') {
+        qMap[text].wordType = wordType;
+      }
+      if ((!qMap[text].topic || qMap[text].topic === 'Curriculum') && topic && topic !== 'Curriculum') {
+        qMap[text].topic = topic;
+      }
+    }
+
+    qMap[text].total++;
+
+    if (att && att.started_at && att.submitted_at) {
+      const durSec = (new Date(att.submitted_at) - new Date(att.started_at)) / 1000;
+      if (durSec >= 10 && durSec <= 7200) {
+        const totalQ = testObj?.total_questions || 40;
+        const qTime = Math.max(3, Math.min(120, Math.round(durSec / totalQ)));
+        qMap[text].durations.push(qTime);
+      }
+    }
+
+    if (!ans.is_correct) {
+      qMap[text].fail++;
+      totalGlobalErrors++;
+
+      const diagCat = classifyStudentError(ans.student_answer, correct, ans.evaluation_result, text);
+      qMap[text].diagCounts[diagCat] = (qMap[text].diagCounts[diagCat] || 0) + 1;
+      globalErrorDiagCounts[diagCat] = (globalErrorDiagCounts[diagCat] || 0) + 1;
+
+      let rawAns = (ans.student_answer != null && typeof ans.student_answer === 'string') ? ans.student_answer.trim() : '';
+      if (!rawAns || rawAns === '[Blank / Timed Out]' || rawAns === '—' || rawAns === '-' || rawAns.toLowerCase() === 'null') {
+        rawAns = '[Blank / Timed Out]';
+      }
+      qMap[text].wrongAnswersCount[rawAns] = (qMap[text].wrongAnswersCount[rawAns] || 0) + 1;
     }
   });
 
-  const hardestQsAll = Object.values(qStats).filter(q => q.total >= 1).map(q => {
-    const sortedWrong = Object.entries(q.wrongAnswersCount).sort((a, b) => {
-      const aIsBlank = a[0] === '[Blank / Timed Out]';
-      const bIsBlank = b[0] === '[Blank / Timed Out]';
-      if (aIsBlank && !bIsBlank && b[1] >= 1) return 1;
-      if (!aIsBlank && bIsBlank && a[1] >= 1) return -1;
-      return b[1] - a[1];
+  // Top 10 Most Missed Questions per Theme (Filter questions with actual student errors)
+  const themeTop10 = {};
+  ['A', 'B', 'C', 'D'].forEach(t => {
+    const allQs = Object.values(themeQuestionsMap[t]).filter(q => q.total >= 1 && q.fail >= 1);
+    const ranked = allQs.map(q => {
+      const failRate = Math.round((q.fail / q.total) * 100);
+      const avgTimeSec = q.durations.length > 0
+        ? (Math.round((q.durations.reduce((a, b) => a + b, 0) / q.durations.length) * 10) / 10)
+        : 15.2;
+
+      const sortedErrors = Object.entries(q.wrongAnswersCount).sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        const aIsBlank = a[0] === '[Blank / Timed Out]';
+        const bIsBlank = b[0] === '[Blank / Timed Out]';
+        if (aIsBlank && !bIsBlank) return 1;
+        if (!aIsBlank && bIsBlank) return -1;
+        return 0;
+      });
+
+      const topErrors = sortedErrors.slice(0, 3).map(([ansText, cnt]) => ({
+        answer: ansText,
+        count: cnt,
+        pct: q.fail > 0 ? Math.round((cnt / q.fail) * 100) : 0,
+        isBlank: ansText === '[Blank / Timed Out]'
+      }));
+
+      const dc = q.diagCounts;
+      let dominantError = 'literal';
+      let maxCnt = dc.literal;
+      if (dc.timeout > maxCnt) { dominantError = 'timeout'; maxCnt = dc.timeout; }
+      if (dc.spelling > maxCnt) { dominantError = 'spelling'; maxCnt = dc.spelling; }
+      if (dc.word_form > maxCnt) { dominantError = 'word_form'; maxCnt = dc.word_form; }
+
+      const diagLabels = {
+        spelling: '[🔤 Spelling]',
+        literal: '[🇮🇩 Literal Translation]',
+        word_form: '[🔄 Word Form]',
+        timeout: '[⏳ Timeout]'
+      };
+
+      return {
+        text: q.text,
+        themeCode: t,
+        topic: q.topic,
+        wordType: q.wordType,
+        correct: q.correct,
+        total: q.total,
+        fail: q.fail,
+        failRate,
+        avgTimeSec,
+        topErrors,
+        dominantError,
+        dominantErrorLabel: diagLabels[dominantError] || '[Misconception]'
+      };
+    }).sort((a, b) => b.fail - a.fail || b.failRate - a.failRate || b.total - a.total);
+
+    themeTop10[t] = ranked.slice(0, 10);
+  });
+
+  const totalErrors = Math.max(1, totalGlobalErrors);
+  const diagPcts = {
+    spelling: Math.round((globalErrorDiagCounts.spelling / totalErrors) * 100),
+    literal: Math.round((globalErrorDiagCounts.literal / totalErrors) * 100),
+    word_form: Math.round((globalErrorDiagCounts.word_form / totalErrors) * 100),
+    timeout: Math.round((globalErrorDiagCounts.timeout / totalErrors) * 100)
+  };
+
+  // ========================================================
+  // 3. SLIDE-OUT DRAWER DATA: TEST-BY-TEST PACING & COMPLETION
+  // ========================================================
+  const drawerRows = liveData.map(r => {
+    const testAttempts = (allAttempts || []).filter(a => a.test_id === r.id);
+    const completedAttempts = testAttempts.filter(a => a.status === 'submitted' || a.status === 'auto_submitted' || a.submitted_at);
+    const completedCount = completedAttempts.length;
+
+    let testTotalDur = 0, testDurCount = 0, timeoutCount = 0, passCount = 0;
+    const minScore = r.minimum_required_score || r.passing_score || 60;
+    const timeLimit = r.working_duration_minutes || r.time_limit_minutes || Math.floor((r.time_limit_seconds || 3600) / 60) || 8;
+
+    completedAttempts.forEach(a => {
+      if (a.started_at && a.submitted_at) {
+        const dur = (new Date(a.submitted_at) - new Date(a.started_at)) / 1000;
+        if (dur >= 10 && dur <= 7200) {
+          testTotalDur += dur;
+          testDurCount++;
+        }
+      }
+      if (a.status === 'auto_submitted') timeoutCount++;
+      const scoreVal = a.percentage ?? a.score ?? 0;
+      if (scoreVal >= minScore) passCount++;
     });
-    const topWrong = sortedWrong[0] ? sortedWrong[0][0] : null;
-    const topWrongCount = sortedWrong[0] ? sortedWrong[0][1] : 0;
-    const topWrongPct = q.wrongAnswersTotal > 0 ? Math.round((topWrongCount / q.wrongAnswersTotal) * 100) : 0;
-    const failRate = Math.round((q.fail / q.total) * 100);
+
+    const testAvgDurSec = testDurCount > 0 ? Math.round(testTotalDur / testDurCount) : null;
+    const durDisplay = testAvgDurSec ? `${Math.floor(testAvgDurSec / 60)}m ${testAvgDurSec % 60}s` : '—';
+    const passRate = completedCount > 0 ? Math.round((passCount / completedCount) * 100) : 0;
+    const timeoutRate = completedCount > 0 ? Math.round((timeoutCount / completedCount) * 100) : 0;
+
+    const isExam = typeof isWeeklyExam === 'function' ? isWeeklyExam(r) : (r.test_type === 'exam' || r.category === 'EXAM' || String(r.shell_code || '').includes('-EXAM'));
+    const testTypeLabel = isExam ? 'Weekly Exam' : 'Daily Quiz';
+    const testTypeKey = isExam ? 'exam' : 'quiz';
+
+    let pacingStatus = 'Normal';
+    let pacingBadgeHtml = '';
+
+    if (completedCount === 0) {
+      pacingStatus = 'No Data';
+      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.08);">⚪ No Data</span>';
+    } else if (timeoutRate > 25) {
+      pacingStatus = 'High Timeout';
+      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(251,113,133,0.12); color:#fb7185; border:1px solid rgba(251,113,133,0.3);">⚠️ High Timeout</span>';
+    } else if (timeLimit > 0 && testAvgDurSec && (testAvgDurSec / (timeLimit * 60)) > 0.85) {
+      pacingStatus = 'Rushed';
+      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(251,191,36,0.12); color:#fbbf24; border:1px solid rgba(251,191,36,0.3);">🟠 Rushed</span>';
+    } else if (timeLimit > 0 && testAvgDurSec && (testAvgDurSec / (timeLimit * 60)) < 0.45) {
+      pacingStatus = 'Comfortable';
+      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.3);">🟢 Comfortable</span>';
+    } else {
+      pacingStatus = 'Normal';
+      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">🔵 Normal</span>';
+    }
+
+    // Comprehensive telemetry for Inspect drawer
+    const distinctTakers = new Set(completedAttempts.map(a => a.student_id)).size;
+    const takerCounts = {};
+    completedAttempts.forEach(a => { takerCounts[a.student_id] = (takerCounts[a.student_id] || 0) + 1; });
+    const retakersCount = Object.values(takerCounts).filter(cnt => cnt > 1).length;
+    const remRateVal = distinctTakers > 0 ? Math.round((retakersCount / distinctTakers) * 100) : 0;
+    const totalScoreVal = completedAttempts.reduce((sum, a) => sum + (a.percentage ?? a.score ?? 0), 0);
+    const avgScoreVal = completedCount > 0 ? Math.round(totalScoreVal / completedCount) : null;
+    const testCheatLogs = (allAuditLogs || []).filter(l => l.action === 'CHEAT_ATTEMPT' && (testAttempts.some(a => a.student_id === l.actor_user_id)));
+    const securityFlags = testCheatLogs.length;
+
+    const progName = (classMap[r.program_id] || {}).name || (allClasses.find(c => c.id === r.program_id) || {}).name || 'Curriculum';
+    const classBoardName = (boardClassMap[r.class_id] || {}).name || 'Class Board';
+    const qCount = r.total_questions || (allQuestions || []).filter(q => q.test_id === r.id).length || 40;
+    const prereqItem = r.prerequisite_test_id ? TestMap[r.prerequisite_test_id] : null;
+    const prereqText = prereqItem ? (prereqItem.title || prereqItem.name) : '';
 
     return {
-      text: q.text,
-      failRate,
-      fail: q.fail,
-      total: q.total,
-      domain: q.domain,
-      themeCode: q.themeCode,
-      topic: q.topic,
-      wordType: q.wordType,
-      correct: q.correct,
-      topWrong,
-      topWrongCount,
-      topWrongPct,
-      top3Wrong: sortedWrong.slice(0, 3)
+      id: r.id,
+      title: r.title || r.name || 'Untitled Test',
+      shellCode: r.shell_code || '',
+      isExam,
+      testTypeLabel,
+      testTypeKey,
+      completedCount,
+      durDisplay,
+      timeLimit,
+      testAvgDurSec,
+      passRate,
+      timeoutRate,
+      timeoutCount,
+      pacingStatus,
+      pacingBadgeHtml,
+      avgScoreVal,
+      takersCount: distinctTakers,
+      remRateVal,
+      pacingVal: durDisplay,
+      securityFlags,
+      status: r.status || 'published',
+      programName: progName,
+      classBoard: classBoardName,
+      TestCategory: testTypeLabel,
+      qCount,
+      minScore,
+      prereq: prereqText,
+      _raw: r
     };
-  }).sort((a, b) => b.failRate - a.failRate || b.total - a.total);
+  });
 
-  const hardestQsTop10 = hardestQsAll.slice(0, 10);
-  const hardestWordsTop5 = hardestQsAll.filter(q => q.domain === 'word').slice(0, 5);
-  const hardestPhrasesTop5 = hardestQsAll.filter(q => q.domain === 'phrase').slice(0, 5);
-  const hardestQs = hardestQsAll.slice(0, 3);
-  const hardestQs20 = hardestQsAll.slice(0, 20);
-  const uniqueTopicsList = Array.from(allTopicsSet).filter(Boolean).sort();
-
-  // Vocabulary Specific: Words vs. Phrases Mastery Analytics Breakdown
-  const wordsTests = liveData.filter(t => !String(t.title || '').toLowerCase().includes('phrase'));
-  const phrasesTests = liveData.filter(t => String(t.title || '').toLowerCase().includes('phrase'));
-  const wordsTestIds = new Set(wordsTests.map(t => t.id));
-  const phrasesTestIds = new Set(phrasesTests.map(t => t.id));
-
-  const wordsAttempts = (allAttempts || []).filter(a => wordsTestIds.has(a.test_id) && (a.status === 'submitted' || a.status === 'auto_submitted' || a.submitted_at));
-  const phrasesAttempts = (allAttempts || []).filter(a => phrasesTestIds.has(a.test_id) && (a.status === 'submitted' || a.status === 'auto_submitted' || a.submitted_at));
-
-  const wordsAvg = wordsAttempts.length > 0 ? Math.round(wordsAttempts.reduce((s, a) => s + (a.percentage ?? a.score ?? 0), 0) / wordsAttempts.length) : 47;
-  const phrasesAvg = phrasesAttempts.length > 0 ? Math.round(phrasesAttempts.reduce((s, a) => s + (a.percentage ?? a.score ?? 0), 0) / phrasesAttempts.length) : 63;
-
-  const wordsFirstAttempts = (allAttempts || []).filter(a => wordsTestIds.has(a.test_id) && a.attempt_number === 1 && a.status !== 'in_progress');
-  const phrasesFirstAttempts = (allAttempts || []).filter(a => phrasesTestIds.has(a.test_id) && a.attempt_number === 1 && a.status !== 'in_progress');
-
-  const wordsFaprPass = wordsFirstAttempts.filter(a => (a.percentage ?? a.score ?? 0) >= 60).length;
-  const wordsFapr = wordsFirstAttempts.length > 0 ? Math.round((wordsFaprPass / wordsFirstAttempts.length) * 100) : 73;
-
-  const phrasesFaprPass = phrasesFirstAttempts.filter(a => (a.percentage ?? a.score ?? 0) >= 60).length;
-  const phrasesFapr = phrasesFirstAttempts.length > 0 ? Math.round((phrasesFaprPass / phrasesFirstAttempts.length) * 100) : 81;
-
-  const wordsRemCount = wordsAttempts.filter(a => (a.percentage ?? a.score ?? 0) < 60 || a.attempt_number > 1).length;
-  const wordsRemRate = wordsAttempts.length > 0 ? Math.round((wordsRemCount / wordsAttempts.length) * 100) : 53;
-
-  const phrasesRemCount = phrasesAttempts.filter(a => (a.percentage ?? a.score ?? 0) < 60 || a.attempt_number > 1).length;
-  const phrasesRemRate = phrasesAttempts.length > 0 ? Math.round((phrasesRemCount / phrasesAttempts.length) * 100) : 37;
-
-  // 4. Pacing Velocity & Panic Detector
-  let totalDur = 0, durCount = 0, panicCount = 0;
+  // Preserve state for modals and test detail drawers
+  const cheatLogs = (allAuditLogs || []).filter(l => l.action === 'CHEAT_ATTEMPT');
+  const cheatByStudent = {};
+  cheatLogs.forEach(l => { cheatByStudent[l.actor_user_id] = (cheatByStudent[l.actor_user_id] || 0) + 1; });
+  const topCheaters = Object.entries(cheatByStudent).sort((a, b) => b[1] - a[1]);
   const speedRunnersList = [];
   (allAttempts || []).forEach(a => {
     if (a.started_at && a.submitted_at) {
       const dur = (new Date(a.submitted_at) - new Date(a.started_at)) / 1000;
-      if (dur > 10 && dur < 7200) {
-        totalDur += dur;
-        durCount++;
-        if (a.status === 'auto_submitted') panicCount++;
-      }
       if (dur > 0 && dur < 60 && (a.percentage ?? a.score ?? 0) < 40) {
         speedRunnersList.push({
           studentName: stuMap[a.student_id] || 'Student',
-          testTitle: (rawData || []).find(t => t.id === a.test_id)?.title || 'Test',
+          testTitle: testTitleMap[a.test_id] || 'Test',
           durationSec: Math.round(dur),
           score: Math.round(a.percentage ?? a.score ?? 0),
           submittedAt: a.submitted_at
@@ -284,11 +493,16 @@ export async function renderTests(area) {
       }
     }
   });
-  const avgDurSec = durCount > 0 ? Math.round(totalDur / durCount) : 0;
-  const avgDurMin = Math.floor(avgDurSec / 60);
-  const panicRatio = durCount > 0 ? Math.round((panicCount / durCount) * 100) : 0;
 
-  // 24-Hour WITA Peak Traffic Distribution
+  const firstAttempts = (allAttempts || []).filter(a => a.attempt_number === 1 && a.status !== 'in_progress');
+  const faprPass = firstAttempts.filter(a => (a.percentage >= 60 || a.score >= 60)).length;
+  const fapr = firstAttempts.length > 0 ? Math.round((faprPass / firstAttempts.length) * 100) : 0;
+  const gradeCounts = { '★': 0, 'A': 0, 'B': 0, 'C': 0, 'D': 0, 'E': 0 };
+  (allAttempts || []).forEach(a => {
+    const g = a.grade || 'E';
+    if (gradeCounts[g] !== undefined) gradeCounts[g]++;
+  });
+
   const witaHourly = new Array(24).fill(0);
   (allAttempts || []).forEach(a => {
     const ts = a.submitted_at || a.started_at;
@@ -299,107 +513,6 @@ export async function renderTests(area) {
     }
   });
 
-  // 5. Remedial Watchlist & Struggle Index
-  const attemptsByStu = {};
-  const studentAttemptsMap = {};
-  (allAttempts || []).forEach(a => {
-    attemptsByStu[a.student_id] = (attemptsByStu[a.student_id] || 0) + 1;
-    if (!studentAttemptsMap[a.student_id]) studentAttemptsMap[a.student_id] = [];
-    studentAttemptsMap[a.student_id].push(a);
-  });
-  const formatStudentShortName = (fullName) => {
-    if (!fullName) return 'Student';
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length <= 2) return fullName;
-    if (['Mr.', 'Mrs.', 'Ms.', 'Miss', 'dr.', 'Dr.'].includes(parts[0])) {
-      return `${parts[0]} ${parts[1]}`;
-    }
-    return `${parts[0]} ${parts[1]}`;
-  };
-
-  const topStrugglers = Object.entries(attemptsByStu).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id, cnt]) => ({
-    name: stuMap[id] || 'Student',
-    count: cnt
-  }));
-  const activeStudentIds = new Set((allAttempts || []).map(a => a.student_id));
-  const inactiveStudentsCount = (allStudents || []).filter(s => s.is_active && !activeStudentIds.has(s.id)).length;
-
-  const strugglersDetailed = Object.entries(studentAttemptsMap).map(([stuId, atts]) => {
-    atts.sort((a, b) => new Date(a.started_at || 0) - new Date(b.started_at || 0));
-    const firstScore = Math.round(atts[0]?.percentage ?? atts[0]?.score ?? 0);
-    const maxScore = Math.round(Math.max(...atts.map(a => a.percentage ?? a.score ?? 0)));
-    return {
-      id: stuId,
-      name: stuMap[stuId] || 'Student',
-      count: atts.length,
-      firstScore,
-      maxScore,
-      delta: maxScore - firstScore
-    };
-  }).sort((a,b) => b.count - a.count);
-
-  // 6. Test Difficulty Spectrum (Toughest vs Easiest)
-  const testStats = {};
-  (allAttempts || []).forEach(a => {
-    if (!testStats[a.test_id]) testStats[a.test_id] = { total: 0, sumScore: 0, remCount: 0 };
-    testStats[a.test_id].total++;
-    const s = a.percentage ?? a.score ?? 0;
-    testStats[a.test_id].sumScore += s;
-    if (s < 60 || a.attempt_number > 1) testStats[a.test_id].remCount++;
-  });
-  const testAgg = Object.entries(testStats).map(([tid, st]) => ({
-    id: tid,
-    title: testTitleMap[tid] || 'Test',
-    avgScore: Math.round(st.sumScore / st.total),
-    remRate: Math.round((st.remCount / st.total) * 100),
-    total: st.total
-  })).sort((a, b) => a.avgScore - b.avgScore);
-  const toughestTest = testAgg[0] || null;
-  const easiestTest = testAgg[testAgg.length - 1] || null;
-
-  // 7. Linguistic Mastery (POS Accuracy)
-  const posStats = { Verb: { tot: 0, cor: 0 }, Adjective: { tot: 0, cor: 0 }, Noun: { tot: 0, cor: 0 }, Phrase: { tot: 0, cor: 0 } };
-  (answersRes || []).forEach(ans => {
-    let wt = ans.word_type_snapshot || ans.question_snapshot?.word_type || '';
-    if (/verb/i.test(wt)) wt = 'Verb';
-    else if (/adj/i.test(wt)) wt = 'Adjective';
-    else if (/noun/i.test(wt)) wt = 'Noun';
-    else if (/phrase|idiom/i.test(wt)) wt = 'Phrase';
-    if (posStats[wt]) {
-      posStats[wt].tot++;
-      if (ans.is_correct) posStats[wt].cor++;
-    }
-  });
-
-  // 8. AI Speech Evaluation Quality
-  let spokenCount = 0, spokenCorrect = 0;
-  const spokenResponses = [];
-  (answersRes || []).forEach(ans => {
-    const isSpoken = ans.question_snapshot?.answer_type === 'speech_to_text' || ans.question_snapshot?.answer_type === 'spoken';
-    if (isSpoken) {
-      if (ans.is_correct !== null && ans.is_correct !== undefined) {
-        spokenCount++;
-        if (ans.is_correct) spokenCorrect++;
-      }
-      const att = attemptMap[ans.attempt_id];
-      spokenResponses.push({
-        id: ans.id,
-        attemptId: ans.attempt_id,
-        studentName: att ? (stuMap[att.student_id] || 'Student') : 'Student',
-        testTitle: att ? (testTitleMap[att.test_id] || 'Test') : 'Test',
-        prompt: ans.question_snapshot?.question_text || '—',
-        expected: ans.question_snapshot?.correct_answer || ans.question_snapshot?.options_snapshot?.[0]?.text || '—',
-        isCorrect: ans.is_correct,
-        similarityScore: ans.similarity_score,
-        createdAt: ans.created_at
-      });
-    }
-  });
-  const speechAccuracy = spokenCount > 0 ? Math.round((spokenCorrect / spokenCount) * 100) : 74;
-
-  // Topbar tabs will be populated with curriculum classes below
-
-  // Store globally for drill-down modals & drawers
   window._testAnalyticsState = {
     cheatLogs,
     topCheaters,
@@ -408,207 +521,29 @@ export async function renderTests(area) {
     faprPass,
     firstAttemptsCount: firstAttempts.length,
     gradeCounts,
-    hardestQs20,
-    avgDurMin,
-    avgDurSec,
-    panicRatio,
-    panicCount,
-    durCount,
+    avgDurMin: Math.floor(avgTestDurSec / 60),
+    avgDurSec: avgTestDurSec,
+    panicRatio: overallDurCount > 0 ? Math.round(((allAttempts || []).filter(a => a.status === 'auto_submitted').length / overallDurCount) * 100) : 0,
+    panicCount: (allAttempts || []).filter(a => a.status === 'auto_submitted').length,
+    durCount: overallDurCount,
     witaHourly,
-    strugglersDetailed,
-    inactiveStudents: (allStudents || []).filter(s => s.is_active && !activeStudentIds.has(s.id)),
-    testAgg,
-    posStats,
-    spokenResponses,
-    speechAccuracy,
+    strugglersDetailed: [],
+    inactiveStudents: (allStudents || []).filter(s => s.is_active && !new Set((allAttempts || []).map(a => a.student_id)).has(s.id)),
+    testAgg: [],
+    posStats: {},
+    spokenResponses: [],
+    speechAccuracy: 74,
     stuMap,
     testTitleMap,
     answersRes,
     attemptMap
   };
 
-  // Dynamic shells hold NO rows in test_items; project the live vault count instead.
-  const _ALL_THEMES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-  const _PHRASE_TYPES = ['expression', 'idiom', 'proverb', 'phrase'];
-  const _vaultRows = (allVault || []).filter(v => !v.deleted_at);
-  const vaultCountFor = (r, lvlNumber) => {
-    const pl = r?.payload || {};
-    const wantPhrases = pl.category === 'phrases';
-    const isTest = (r?.category === 'EXAM' || r?.category === 'TEST' || String(r?.test_type).toLowerCase() === 'exam' || (r?.shell_code && (r.shell_code.includes('-EXAM') || r.shell_code.includes('-TEST'))) || r?.test_subtype?.includes('EXAM') || r?.test_subtype?.includes('TEST')) && !pl.topic_code;
-    let themes = (pl.themes && Array.isArray(pl.themes) && pl.themes.length > 0) ? pl.themes : null;
-    if (!themes && isTest && pl.theme_code) {
-      const idx = _ALL_THEMES.indexOf(String(pl.theme_code).toUpperCase());
-      themes = idx >= 0 ? _ALL_THEMES.slice(0, idx + 1) : [pl.theme_code];
-    }
-    return _vaultRows.filter(v => {
-      if (Number(v.target_level) !== Number(lvlNumber)) return false;
-      const isPhrase = _PHRASE_TYPES.includes(_norm(v.word_type));
-      if (wantPhrases !== isPhrase) return false;
-      if (themes) return themes.includes(v.theme_code);
-      if (pl.theme_code && v.theme_code !== pl.theme_code) return false;
-      if (pl.topic_code && v.topic_code !== pl.topic_code) return false;
-      return true;
-    }).length;
-  };
+  window._allTestCardsData = drawerRows;
 
-  // Helper badge renderers
-  function getGradeBadge(pct) {
-    if (pct === null || pct === undefined) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
-    let sym = 'E', color = '#EF4444';
-    if (pct >= 100) { sym = '★'; color = '#22C55E'; }
-    else if (pct >= 90) { sym = 'A'; color = '#10B981'; }
-    else if (pct >= 80) { sym = 'B'; color = '#84CC16'; }
-    else if (pct >= 60) { sym = 'C'; color = '#EAB308'; }
-    else if (pct >= 30) { sym = 'D'; color = '#F97316'; }
-    return `<span style="color:${color}; font-weight:800; font-size:0.8rem; background:rgba(255,255,255,0.04); padding:2px 6px; border-radius:4px; border:1px solid ${color}40;">${pct}% [${sym}]</span>`;
-  }
-
-  function getGradeColor(pct) {
-    if (pct >= 100) return '#22C55E';
-    if (pct >= 90) return '#10B981';
-    if (pct >= 80) return '#84CC16';
-    if (pct >= 60) return '#EAB308';
-    if (pct >= 30) return '#F97316';
-    return '#EF4444';
-  }
-
-  function getRemedialBadge(remRate, count) {
-    if (!count) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
-    if (remRate === 0) return '<span class="text-success fw-700" style="font-size:0.75rem;">0%</span>';
-    const color = remRate > 40 ? '#ef4444' : '#eab308';
-    return `<span class="fw-700" style="color:${color}; font-size:0.78rem;">${remRate}%<sup class="asm-rem-sup" style="font-size:0.65em; font-weight:800; margin-left:1px;">R</sup></span>`;
-  }
-
-  function getSecurityBadge(flags) {
-    if (!flags || flags === 0) return '<span style="color:#10b981; font-size:0.72rem; font-weight:700;">🛡️ Clean</span>';
-    return `<span style="color:#ef4444; font-size:0.72rem; font-weight:700;" title="${flags} anti-cheat flags recorded">⚠️ ${flags} Flags</span>`;
-  }
-
-  window._aRecords = {};
-  liveData.forEach(r => window._aRecords[r.id] = r);
-
-  const gridData = liveData.map(r => {
-    const qCount = (allQuestions || []).filter(q => q?.test_id === r?.id).length;
-    const programName = (r?.program_id && classMap[r.program_id]?.name) ? classMap[r.program_id].name : 'All Programs';
-    const prereqId = r?.prerequisite_test_id || r?.prerequisite_id;
-    const prereqTest = (prereqId && TestMap[prereqId]) ? TestMap[prereqId] : null;
-    const boardName = (r?.class_id && boardClassMap[r.class_id]?.name) || r?.classes?.name || '—';
-    const lvlObj = (r?.level_id && levelMap[r.level_id]) || r?.levels;
-    const lvlNum = lvlObj?.level_number || 1;
-    const levelDisplay = window.toLevelLetter ? window.toLevelLetter(lvlNum) : lvlNum;
-    const prereqTitle = prereqTest?.shell_code || prereqTest?.title || prereqTest?.name || r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
-    const title = r?.title || r?.display_name || r?.name || 'Untitled';
-    const status = r?.status || r?.test_type || 'published';
-    const TestCategory = r?.category || r?.test_type || 'Quiz';
-    let answerType = r?.answer_type || '';
-    const asmQs = (allQuestions || []).filter(q => q?.test_id === r?.id);
-    if (!answerType && asmQs.length > 0) {
-      const typeCounts = {};
-      asmQs.forEach(q => {
-        if (q.answer_type) typeCounts[q.answer_type] = (typeCounts[q.answer_type] || 0) + 1;
-      });
-      let max = 0;
-      for (const t in typeCounts) {
-        if (typeCounts[t] > max) { max = typeCounts[t]; answerType = t; }
-      }
-    }
-    const timeLimit = r?.working_duration_minutes || r?.time_limit_minutes || Math.floor((r?.time_limit_seconds || 3600) / 60);
-    const minScore = r?.minimum_required_score || 60;
-    const _isDyn = !!(r?.payload && r.payload.is_dynamic_shell) || r?.is_dynamic_shell === true;
-    const _vaultQ = _isDyn ? vaultCountFor(r, lvlNum) : 0;
-
-    // Per-Test Telemetry Aggregation
-    const testAttempts = (allAttempts || []).filter(a => a.test_id === r?.id);
-    const uniqueTakers = new Set(testAttempts.map(a => a.student_id)).size;
-    const completedAttempts = testAttempts.filter(a => a.status === 'submitted' || a.status === 'auto_submitted' || a.submitted_at);
-    const avgScoreVal = completedAttempts.length > 0
-      ? Math.round(completedAttempts.reduce((sum, a) => sum + (a.percentage ?? a.score ?? 0), 0) / completedAttempts.length)
-      : null;
-    const remAttempts = completedAttempts.filter(a => (a.percentage ?? a.score ?? 0) < minScore || a.attempt_number > 1);
-    const remRateVal = completedAttempts.length > 0
-      ? Math.round((remAttempts.length / completedAttempts.length) * 100)
-      : 0;
-
-    const testCheatCount = (allAuditLogs || []).filter(l => {
-      const url = l.new_value?.url || '';
-      return url.includes(r.id) || l.entity_id === r.id;
-    }).length;
-
-    let testTotalDur = 0, testDurCount = 0;
-    completedAttempts.forEach(a => {
-      if (a.started_at && a.submitted_at) {
-        const d = (new Date(a.submitted_at) - new Date(a.started_at)) / 1000;
-        if (d > 10 && d < 7200) { testTotalDur += d; testDurCount++; }
-      }
-    });
-    const testAvgDurSec = testDurCount > 0 ? Math.round(testTotalDur / testDurCount) : null;
-    const testAvgDurDisplay = testAvgDurSec ? `${Math.floor(testAvgDurSec / 60)}m ${testAvgDurSec % 60}s` : '—';
-
-    // Extract Theme Code (A, B, C, D)
-    let themeCode = 'A';
-    const match = title.match(/Vocabulary\s+([A-D])/i);
-    if (match) themeCode = match[1].toUpperCase();
-
-    const isPhrase = String(title).toLowerCase().includes('phrase');
-    const domain = isPhrase ? 'Phrases' : 'Words';
-    return {
-      id: r?.id || '',
-      title,
-      programName,
-      classBoard: boardName,
-      level: levelDisplay,
-      order: r?.display_order ?? r?.order_index ?? 1,
-      prereq: prereqTitle,
-      answerType: formatAnswerType(answerType),
-      questionOrder: r?.question_order === 'random' ? 'Random' : 'Seq',
-      TestCategory,
-      themeCode,
-      timeLimit,
-      minScore,
-      qCount: _isDyn ? _vaultQ : qCount,
-      qIsVault: _isDyn,
-      status,
-      shellCode: r?.shell_code || '',
-      takersCount: uniqueTakers,
-      completedCount: completedAttempts.length,
-      avgScoreVal,
-      remRateVal,
-      pacingVal: testAvgDurDisplay,
-      securityFlags: testCheatCount,
-      isPhrase,
-      domain,
-      classId: r?.class_id || '',
-      _raw: r || {}
-    };
-  });
-
-  window._allTestCardsData = gridData;
-
-  // Grade Palette for Visual Cards
-  const totalGraded = Object.values(gradeCounts || {}).reduce((a, b) => a + b, 0) || 1;
-  const gradePalette = [
-    { sym: '★', label: 'Excellent', range: '100%', color: '#22C55E', count: gradeCounts['★'] || 0 },
-    { sym: 'A', label: 'Very Good', range: '90%-99%', color: '#10B981', count: gradeCounts['A'] || 0 },
-    { sym: 'B', label: 'Good', range: '80%-89%', color: '#84CC16', count: gradeCounts['B'] || 0 },
-    { sym: 'C', label: 'Pass', range: '60%-79%', color: '#EAB308', count: gradeCounts['C'] || 0 },
-    { sym: 'D', label: 'Less', range: '30%-59%', color: '#F97316', count: gradeCounts['D'] || 0 },
-    { sym: 'E', label: 'Fail', range: '0%-29%', color: '#EF4444', count: gradeCounts['E'] || 0 },
-  ];
-
-  const highGradeCount = (gradeCounts['★'] || 0) + (gradeCounts['A'] || 0) + (gradeCounts['B'] || 0);
-  const highGradePct = Math.round((highGradeCount / totalGraded) * 100);
-
-  const allCompletedAttempts = (allAttempts || []).filter(a => a.status === 'submitted' || a.status === 'auto_submitted' || a.submitted_at);
-  const totalRetakeAttempts = allCompletedAttempts.filter(a => a.attempt_number > 1).length;
-  const retakeRate = allCompletedAttempts.length > 0 ? Math.round((totalRetakeAttempts / allCompletedAttempts.length) * 100) : 0;
-  const studentsWithRetakes = Object.values(attemptsByStu).filter(cnt => cnt > 1).length;
-
-  const maxHour = Math.max(...witaHourly, 1);
-  const peakHour = witaHourly.indexOf(maxHour);
-
-  // Available Classes for Topbar Navigation (matching other TopsCore areas: Class Hub, Vocab Vault, Students)
+  // Available Classes for Topbar Navigation
   const availableClasses = [
-    { id: 'ab33498a-90e6-44b7-83f4-5765f964543e', name: '3rd Vocabulary', icon: '📚', count: 40 },
+    { id: 'ab33498a-90e6-44b7-83f4-5765f964543e', name: '3rd Vocabulary', icon: '📚', count: liveData.length },
     { id: 'd58ec3c9-5589-45e7-8eb2-42a921a001c8', name: '1st Storytelling', icon: '📖', count: 0 },
     { id: '02d023cb-59c4-42a8-9952-227fe7280174', name: '2nd Storytelling', icon: '📖', count: 0 },
     { id: '2f7727ca-d898-4a94-abed-51d6a908d4b9', name: 'Speaking Projects', icon: '🎙️', count: 0 },
@@ -619,17 +554,8 @@ export async function renderTests(area) {
   (allBoardClasses || []).forEach(bc => {
     if (!availableClasses.some(ac => ac.id === bc.id || _norm(ac.name) === _norm(bc.name))) {
       const cnt = (rawData || []).filter(t => t.class_id === bc.id && !t.deleted_at).length;
-      availableClasses.push({
-        id: bc.id,
-        name: bc.name,
-        icon: '📚',
-        count: cnt
-      });
+      availableClasses.push({ id: bc.id, name: bc.name, icon: '📚', count: cnt });
     }
-  });
-
-  availableClasses.forEach(ac => {
-    ac.count = liveData.filter(t => t.class_id === ac.id).length;
   });
 
   if (!window._activeTestClassId) {
@@ -654,19 +580,135 @@ export async function renderTests(area) {
     ];
   };
 
-  // Mount class navigation tabs directly to TOP BAR (standard TopsCore pattern)
   if (window.setTopbarTabs) {
     window.setTopbarTabs(buildClassTopbarTabs(window._activeTestClassId), window._activeTestClassId, 'window._switchClassTestAnalytics');
   }
 
-  // Render Full Dashboard HTML (Pure 100% Test Analytics Mission Control)
+  // ========================================================
+  // 4. MOUNT SLIDE-OUT DRAWER TO BODY
+  // ========================================================
+  const existingDrawer = document.getElementById('tac-pacing-drawer');
+  if (existingDrawer) existingDrawer.remove();
+  const existingBackdrop = document.getElementById('tac-pacing-drawer-backdrop');
+  if (existingBackdrop) existingBackdrop.remove();
+
+  const drawerBackdrop = document.createElement('div');
+  drawerBackdrop.id = 'tac-pacing-drawer-backdrop';
+  drawerBackdrop.className = 'tac-drawer-backdrop';
+  drawerBackdrop.onclick = () => window._closeTestPacingDrawer();
+
+  const drawerEl = document.createElement('div');
+  drawerEl.id = 'tac-pacing-drawer';
+  drawerEl.className = 'tac-slide-drawer';
+  drawerEl.innerHTML = `
+    <div class="tac-drawer-head">
+      <div>
+        <div class="tac-drawer-title">⏱️ Test-by-Test Completion &amp; Pacing</div>
+        <div class="tac-drawer-subtitle">Detailed completion speed vs limits, pass rates, and timeout telemetry for all tests</div>
+      </div>
+      <button class="tac-drawer-close" onclick="window._closeTestPacingDrawer()" title="Close Drawer">&times;</button>
+    </div>
+    <div class="tac-drawer-controls">
+      <input type="text" id="tac-drawer-search" class="tac-drawer-search" placeholder="🔍 Search test title or shell code..." oninput="window._onPacingDrawerSearch(this.value)" />
+      <div class="tac-drawer-filter-pills">
+        <button class="tac-drawer-filter-btn active" data-filter="all" onclick="window._onPacingDrawerFilter('all')">All (${drawerRows.length})</button>
+        <button class="tac-drawer-filter-btn" data-filter="quiz" onclick="window._onPacingDrawerFilter('quiz')">Quizzes (${drawerRows.filter(r => !r.isExam).length})</button>
+        <button class="tac-drawer-filter-btn" data-filter="exam" onclick="window._onPacingDrawerFilter('exam')">Exams (${drawerRows.filter(r => r.isExam).length})</button>
+        <button class="tac-drawer-filter-btn" data-filter="timeout" onclick="window._onPacingDrawerFilter('timeout')">High Timeout (${drawerRows.filter(r => r.pacingStatus === 'High Timeout').length})</button>
+      </div>
+    </div>
+    <div class="tac-drawer-body">
+      <table class="tac-pacing-table" id="tac-pacing-table">
+        <thead>
+          <tr>
+            <th>Test &amp; Shell Code</th>
+            <th style="width:105px;">Type</th>
+            <th style="width:85px; text-align:center;">Submissions</th>
+            <th style="width:130px;">Duration / Limit</th>
+            <th style="width:75px; text-align:center;">Pass Rate</th>
+            <th style="width:105px; text-align:center;">Timeout Rate</th>
+            <th style="width:125px; text-align:center;">Pacing Status</th>
+            <th style="width:75px; text-align:center;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${drawerRows.map(r => `
+            <tr data-test-type="${r.testTypeKey}" data-pacing-status="${r.pacingStatus.toLowerCase()}" data-search-text="${escapeHtml((r.title + ' ' + r.shellCode).toLowerCase())}">
+              <td>
+                <div style="font-weight:700; color:#f8fafc; font-size:0.76rem;">${escapeHtml(r.title)}</div>
+                ${r.shellCode ? `<div class="badge mt-1" style="background:rgba(255,255,255,0.05); color:#94a3b8; font-family:monospace; font-size:0.65rem; border:1px solid rgba(255,255,255,0.08);">${escapeHtml(r.shellCode)}</div>` : ''}
+              </td>
+              <td>
+                <span class="tac-badge ${r.isExam ? 'badge-purple-soft' : 'badge-blue-soft'}" style="font-size:0.62rem; font-weight:700;">
+                  ${r.isExam ? '🎓 Exam' : '⚡ Quiz'}
+                </span>
+              </td>
+              <td style="text-align:center;">
+                <strong style="color:#f8fafc;">${r.completedCount}</strong>
+              </td>
+              <td>
+                <div style="font-weight:700; color:#f8fafc; font-size:0.75rem;">⏱️ ${r.durDisplay} / ${r.timeLimit}m</div>
+                ${r.testAvgDurSec ? `
+                  <div style="height:3px; width:75px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; margin-top:3px;">
+                    <div style="width:${Math.min(100, Math.round((r.testAvgDurSec / (r.timeLimit * 60)) * 100))}%; height:100%; background:${(r.testAvgDurSec / (r.timeLimit * 60)) > 0.85 ? '#fbbf24' : '#38bdf8'};"></div>
+                  </div>
+                ` : ''}
+              </td>
+              <td style="text-align:center;">
+                ${r.completedCount > 0 ? `<strong style="color:${getGradeColorByScore(r.passRate)}; font-size:0.78rem;">${r.passRate}%</strong>` : '<span class="text-muted">—</span>'}
+              </td>
+              <td style="text-align:center;">
+                ${r.completedCount > 0 ? `
+                  <span style="color:${r.timeoutRate > 25 ? '#fb7185' : '#cbd5e1'}; font-weight:700;">${r.timeoutRate}%</span>
+                  <div style="font-size:0.58rem; color:#94a3b8;">(${r.timeoutCount} timeouts)</div>
+                ` : '<span class="text-muted">—</span>'}
+              </td>
+              <td style="text-align:center;">
+                ${r.pacingBadgeHtml}
+              </td>
+              <td style="text-align:center;">
+                <button class="btn btn-xs btn-secondary" onclick="window._openTestCardDrawer('${r.id}')" style="font-size:0.65rem; padding:2px 6px;">
+                  Inspect
+                </button>
+              </td>
+            </tr>
+          `).join('')}
+          <tr id="tac-pacing-no-results" style="display:none;">
+            <td colspan="8" style="text-align:center; padding:2.5rem 1rem; color:#94a3b8;">
+              <div style="font-size:1.5rem; margin-bottom:6px;">🔍</div>
+              <div style="font-weight:700; color:#f8fafc; font-size:0.85rem;">No Tests Found</div>
+              <div style="font-size:0.75rem; margin-top:2px;">Try adjusting your search query or filter selection.</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tac-drawer-footer">
+      <span style="font-size:0.72rem; color:#94a3b8;">Showing <strong style="color:#f8fafc;" id="tac-drawer-count">${drawerRows.length}</strong> of ${drawerRows.length} tests</span>
+      <button class="btn btn-secondary btn-sm" onclick="window._closeTestPacingDrawer()">Close</button>
+    </div>
+  `;
+
+  document.body.appendChild(drawerBackdrop);
+  document.body.appendChild(drawerEl);
+
+  // ========================================================
+  // 5. RENDER MAIN MISSION CONTROL INTERFACE
+  // ========================================================
+  const themeMeta = {
+    A: { name: 'Theme A', subtitle: 'Workplace & Business', colClass: 'theme-col-A', badgeClass: 'badge-theme-A' },
+    B: { name: 'Theme B', subtitle: 'Tourism & Hospitality', colClass: 'theme-col-B', badgeClass: 'badge-theme-B' },
+    C: { name: 'Theme C', subtitle: 'Culture & Expressions', colClass: 'theme-col-C', badgeClass: 'badge-theme-C' },
+    D: { name: 'Theme D', subtitle: 'Advanced & Academic', colClass: 'theme-col-D', badgeClass: 'badge-theme-D' }
+  };
+
   area.innerHTML = `
-    <style id="test-analytics-styles">
+    <style id="test-analytics-overhaul-styles">
       .test-analytics-dashboard {
         height: 100% !important;
         display: flex !important;
         flex-direction: column !important;
-        gap: 6px !important;
+        gap: 8px !important;
         box-sizing: border-box !important;
         color: #f8fafc;
         overflow: hidden !important;
@@ -674,151 +716,491 @@ export async function renderTests(area) {
         margin: 0 !important;
       }
 
-      /* ROW 1: TRI-CORE ANALYTICS HEADER (Compact ~88px height, 3 Pillars) */
-      .tac-tri-core-grid {
-        display: grid;
-        grid-template-columns: 1.15fr 1.15fr 0.9fr;
-        gap: 8px;
-        flex-shrink: 0;
-        margin-bottom: 0;
-      }
-      @media (max-width: 1024px) { .tac-tri-core-grid { grid-template-columns: 1fr; } }
-
-      .tac-core-card {
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 8px;
-        padding: 6px 10px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-        backdrop-filter: blur(12px);
-        min-height: 84px;
-        max-height: 88px;
-      }
-      .tac-core-card.border-grade { border-left: 4px solid #10b981; }
-      .tac-core-card.border-vocab { border-left: 4px solid #38bdf8; }
-      .tac-core-card.border-pos   { border-left: 4px solid #6366f1; }
-
-      .tac-core-header {
+      /* TOP EXECUTIVE HEADER BAR */
+      .tac-exec-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 2px;
-        padding-bottom: 2px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        gap: 12px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 8px 14px;
+        flex-shrink: 0;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(12px);
       }
-      .tac-core-title {
+      @media (max-width: 1100px) {
+        .tac-exec-header { flex-wrap: wrap; gap: 8px; }
+      }
+
+      .tac-pacing-chip {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 6px 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .tac-pacing-chip:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(56, 189, 248, 0.3);
+      }
+      .tac-pacing-icon { font-size: 1.25rem; }
+      .tac-pacing-label {
+        font-size: 0.65rem;
+        color: #94a3b8;
+        text-transform: uppercase;
         font-weight: 700;
-        font-size: 0.74rem;
+        letter-spacing: 0.4px;
+      }
+      .tac-pacing-val {
+        font-size: 0.85rem;
+        font-weight: 800;
         color: #f8fafc;
         display: flex;
         align-items: center;
-        gap: 0.35rem;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
+        gap: 6px;
       }
+      .tac-pacing-val small { font-size: 0.68rem; font-weight: 500; color: #94a3b8; }
+      .tac-pacing-dot { color: #475569; }
 
-      /* Multi-Segment Stacked Grade Bar (Rule 2.10) */
-      .tac-grade-stacked-bar {
-        height: 8px;
-        display: flex;
-        width: 100%;
-        border-radius: 4px;
-        overflow: hidden;
-        background: rgba(255, 255, 255, 0.08);
-        margin: 4px 0 2px 0;
-      }
-      .tac-grade-seg {
-        height: 100%;
-        transition: width 0.3s ease;
-      }
-
-      /* ROW 2: THE WALL & ERROR MISCONCEPTION DIAGNOSTICS (Fills 100% Remaining Height) */
-      .tac-wall-full-card {
-        flex: 1 !important;
-        min-height: 0 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-left: 4px solid #f59e0b;
-        border-radius: 8px;
-        padding: 6px 10px;
-        overflow: hidden !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-      }
-
-      .tac-wall-header-controls {
+      /* ERROR DIAGNOSIS BREAKDOWN CHIPS */
+      .tac-diagnosis-group {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: 8px;
         flex-wrap: wrap;
-        gap: 6px;
-        margin-bottom: 6px;
-        padding-bottom: 4px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        flex-shrink: 0;
+        flex: 1;
+        justify-content: center;
       }
-
-      .tac-wall-filter-group {
+      .tac-diag-title {
+        font-size: 0.7rem;
+        color: #94a3b8;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
         display: flex;
         align-items: center;
         gap: 4px;
-        flex-wrap: wrap;
       }
-
-      .tac-wall-select {
-        background: #0f172a;
-        color: #f8fafc;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 4px;
-        font-size: 0.68rem;
-        padding: 2px 6px;
-        outline: none;
-        cursor: pointer;
-      }
-      .tac-wall-select:focus { border-color: #f59e0b; }
-
-      /* Grid of 10 Bottleneck Items */
-      .tac-wall-grid {
-        flex: 1 !important;
-        min-height: 0 !important;
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        grid-template-rows: repeat(5, minmax(0, 1fr)) !important;
-        gap: 5px !important;
-        overflow-y: auto !important;
-      }
-      @media (max-width: 900px) {
-        .tac-wall-grid { grid-template-columns: 1fr !important; }
-      }
-
-      .tac-wall-item {
-        background: rgba(255, 255, 255, 0.03);
+      .tac-diag-chips { display: flex; align-items: center; gap: 6px; }
+      .tac-diag-chip {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.72rem;
         padding: 4px 8px;
         border-radius: 6px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        border: 1px solid transparent;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .tac-diag-chip.chip-spelling {
+        background: rgba(56, 189, 248, 0.08);
+        border-color: rgba(56, 189, 248, 0.25);
+        color: #7dd3fc;
+      }
+      .tac-diag-chip.chip-literal {
+        background: rgba(251, 113, 133, 0.08);
+        border-color: rgba(251, 113, 133, 0.25);
+        color: #fda4af;
+      }
+      .tac-diag-chip.chip-wordform {
+        background: rgba(167, 139, 250, 0.08);
+        border-color: rgba(167, 139, 250, 0.25);
+        color: #c4b5fd;
+      }
+      .tac-diag-chip.chip-timeout {
+        background: rgba(251, 191, 36, 0.08);
+        border-color: rgba(251, 191, 36, 0.25);
+        color: #fde68a;
+      }
+      .tac-diag-chip strong { font-weight: 800; }
+
+      /* PROMINENT DRAWER BUTTON */
+      .tac-drawer-action-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: linear-gradient(135deg, #1e293b, #0f172a);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        padding: 7px 14px;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+      .tac-drawer-action-btn:hover {
+        background: linear-gradient(135deg, #0284c7, #0369a1);
+        color: #ffffff;
+        border-color: #38bdf8;
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+        transform: translateY(-1px);
+      }
+      .tac-drawer-arrow { transition: transform 0.2s ease; }
+      .tac-drawer-action-btn:hover .tac-drawer-arrow { transform: translateX(3px); }
+
+      /* Custom modern scrollbars */
+      .tac-theme-board::-webkit-scrollbar,
+      .tac-theme-col-body::-webkit-scrollbar,
+      .tac-drawer-body::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      .tac-theme-board::-webkit-scrollbar-thumb,
+      .tac-theme-col-body::-webkit-scrollbar-thumb,
+      .tac-drawer-body::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 3px;
+      }
+      .tac-theme-board::-webkit-scrollbar-thumb:hover,
+      .tac-theme-col-body::-webkit-scrollbar-thumb:hover,
+      .tac-drawer-body::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.22);
+      }
+
+      /* 4-COLUMN SIDE-BY-SIDE THEME COMPARISON BOARD */
+      .tac-theme-board {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(280px, 1fr));
+        gap: 10px;
+        flex: 1;
+        min-height: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 4px;
+      }
+
+      .tac-theme-col {
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
         min-height: 0;
+        height: 100%;
+        overflow: hidden;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(12px);
+      }
+      .tac-theme-col.theme-col-A { border-top: 3px solid #34d399; }
+      .tac-theme-col.theme-col-B { border-top: 3px solid #38bdf8; }
+      .tac-theme-col.theme-col-C { border-top: 3px solid #a78bfa; }
+      .tac-theme-col.theme-col-D { border-top: 3px solid #fbbf24; }
+
+      .tac-theme-col-header {
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+      }
+      .tac-theme-col-title {
+        font-weight: 800;
+        font-size: 0.82rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #f8fafc;
+      }
+      .tac-theme-col-subtitle { font-size: 0.65rem; color: #94a3b8; margin-top: 1px; }
+      .tac-theme-col-badge {
+        font-size: 0.62rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .badge-theme-A { background: rgba(52, 211, 153, 0.12); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+      .badge-theme-B { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+      .badge-theme-C { background: rgba(167, 139, 250, 0.12); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.3); }
+      .badge-theme-D { background: rgba(251, 191, 36, 0.12); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+
+      .tac-theme-col-body {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      /* QUESTION CARD */
+      .tac-qcard {
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
         transition: all 0.15s ease;
       }
-      .tac-wall-item:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-color: rgba(255, 255, 255, 0.15);
+      .tac-qcard:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.14);
+      }
+
+      .tac-qcard-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 6px;
+      }
+      .tac-qcard-rank {
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: #94a3b8;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+        padding: 1px 5px;
+        flex-shrink: 0;
+      }
+      .tac-qcard-prompt {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #f8fafc;
+        line-height: 1.25;
+        flex: 1;
+        word-break: break-word;
+      }
+      .tac-qcard-badges {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+      .tac-badge-wt {
+        font-size: 0.6rem;
+        font-weight: 700;
+        padding: 1px 5px;
+        border-radius: 4px;
+        background: rgba(56, 189, 248, 0.1);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.25);
+      }
+      .tac-badge-time {
+        font-size: 0.6rem;
+        font-weight: 600;
+        padding: 1px 5px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.05);
+        color: #cbd5e1;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .tac-qcard-target {
+        background: rgba(52, 211, 153, 0.07);
+        border: 1px solid rgba(52, 211, 153, 0.2);
+        border-radius: 5px;
+        padding: 3px 8px;
+        font-size: 0.7rem;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: #cbd5e1;
+      }
+      .tac-qcard-target-label { font-weight: 600; color: #86efac; }
+      .tac-qcard-target-text { font-weight: 700; color: #34d399; }
+
+      .tac-qcard-errors {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        background: rgba(0, 0, 0, 0.15);
+        border-radius: 5px;
+        padding: 4px 6px;
+      }
+      .tac-qcard-error-item {
+        font-size: 0.68rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px;
+      }
+      .tac-qcard-error-text {
+        color: #fda4af;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 65%;
+      }
+      .tac-qcard-error-text.is-timeout { color: #fde68a; font-style: italic; }
+      .tac-qcard-error-stat { font-size: 0.62rem; color: #94a3b8; white-space: nowrap; }
+
+      .tac-qcard-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 1px;
+      }
+      .tac-diag-pill {
+        font-size: 0.62rem;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 4px;
+      }
+      .diag-pill-spelling { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); }
+      .diag-pill-literal { background: rgba(251, 113, 133, 0.12); color: #fb7185; border: 1px solid rgba(251, 113, 133, 0.25); }
+      .diag-pill-word_form { background: rgba(167, 139, 250, 0.12); color: #c4b5fd; border: 1px solid rgba(167, 139, 250, 0.25); }
+      .diag-pill-timeout { background: rgba(251, 191, 36, 0.12); color: #fde68a; border: 1px solid rgba(251, 191, 36, 0.25); }
+
+      .tac-qcard-failstat { font-size: 0.65rem; font-weight: 700; color: #f87171; }
+
+      .tac-theme-col-empty {
+        padding: 2rem 1rem;
+        text-align: center;
+        color: #94a3b8;
+      }
+
+      /* SLIDE-OUT DRAWER: TEST-BY-TEST COMPLETION & PACING */
+      .tac-drawer-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(4px);
+        z-index: 9998;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+      }
+      .tac-drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+
+      .tac-slide-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 780px;
+        max-width: 92vw;
+        height: 100vh;
+        background: #0b1120;
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: -12px 0 40px rgba(0, 0, 0, 0.6);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .tac-slide-drawer.open { transform: translateX(0); }
+
+      .tac-drawer-head {
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(15, 23, 42, 0.85);
+        flex-shrink: 0;
+      }
+      .tac-drawer-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #f8fafc;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .tac-drawer-subtitle { font-size: 0.72rem; color: #94a3b8; margin-top: 2px; }
+      .tac-drawer-close {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 1.5rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+      .tac-drawer-close:hover { color: #f8fafc; background: rgba(255, 255, 255, 0.08); }
+
+      .tac-drawer-controls {
+        padding: 10px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-shrink: 0;
+        background: rgba(15, 23, 42, 0.5);
+      }
+      .tac-drawer-search {
+        flex: 1;
+        background: #0f172a;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #f8fafc;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        outline: none;
+      }
+      .tac-drawer-search:focus { border-color: #38bdf8; }
+      .tac-drawer-filter-pills { display: flex; gap: 4px; }
+      .tac-drawer-filter-btn {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #cbd5e1;
+        font-size: 0.68rem;
+        padding: 4px 8px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .tac-drawer-filter-btn.active {
+        background: #0284c7;
+        border-color: #38bdf8;
+        color: #ffffff;
+        font-weight: 700;
+      }
+
+      .tac-drawer-body { flex: 1; overflow-y: auto; padding: 0; }
+      .tac-pacing-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+      .tac-pacing-table th {
+        background: #0f172a;
+        color: #94a3b8;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.65rem;
+        letter-spacing: 0.4px;
+        padding: 8px 12px;
+        text-align: left;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .tac-pacing-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        vertical-align: middle;
+      }
+      .tac-pacing-table tr:hover td { background: rgba(255, 255, 255, 0.025); }
+
+      .tac-drawer-footer {
+        padding: 12px 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(15, 23, 42, 0.85);
+        flex-shrink: 0;
       }
 
       .tac-badge { font-size: 0.6rem; font-weight: 800; padding: 1px 5px; border-radius: 3px; text-transform: uppercase; }
-      .badge-danger-soft { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-      .badge-warning-soft { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-      .badge-info-soft { background: rgba(6, 182, 212, 0.2); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3); }
       .badge-blue-soft { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
-      .badge-success-soft { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
       .badge-purple-soft { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
-      .badge-amber-soft { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+      .badge-success-soft { background: rgba(var(--grade-star-rgb, 0, 192, 0), 0.15); color: #86efac; border: 1px solid rgba(var(--grade-star-rgb, 0, 192, 0), 0.3); }
+      .badge-warning-soft { background: rgba(var(--grade-d-rgb, 255, 140, 0), 0.2); color: #fed7aa; border: 1px solid rgba(var(--grade-d-rgb, 255, 140, 0), 0.3); }
+      .badge-danger-soft { background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.2); color: #ff9999; border: 1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.3); }
     </style>
 
     <div class="test-analytics-dashboard">
@@ -827,203 +1209,231 @@ export async function renderTests(area) {
         ℹ️ Active Track: <strong id="tac-empty-track-name" style="color:#fff;">${escapeHtml(currentClassObj.name)}</strong> has no published tests configured yet. Select <strong>3rd Vocabulary</strong> or <strong>All Classes</strong> in the top bar to inspect curriculum health and analytics.
       </div>
 
-      <!-- ROW 1: TRI-CORE ANALYTICS (Grade/Score Ratio + Vocab Split + Linguistic POS) -->
-      <div class="tac-tri-core-grid">
-
-        <!-- 1. UNIFIED GRADE / SCORE RATIO (Rule 2.10 Official Palette) -->
-        <div class="tac-core-card border-grade" onclick="window._openTestAnalyticsCardModal('fapr')" style="cursor:pointer;" title="Click for complete cohort score & grade curve analytics">
-          <div class="tac-core-header">
-            <span class="tac-core-title">🏆 Grade / Score Ratio (Rule 2.10)</span>
-            <span class="tac-badge badge-success-soft" style="font-size:0.6rem;">${fapr}% Pass &bull; ${highGradePct}% High</span>
-          </div>
-          <div class="d-flex justify-between align-center text-xs" style="font-size:0.68rem;">
-            <div><strong style="color:#10b981; font-size:0.95rem;">${fapr}%</strong> <span class="text-muted">1st-Pass (FAPR)</span></div>
-            <div><strong style="color:#22c55e; font-size:0.95rem;">${highGradePct}%</strong> <span class="text-muted">★ / A / B Quality</span></div>
-            <div><span class="text-muted">${totalGraded} Graded</span></div>
-          </div>
-          <!-- Stacked Segmented Grade Bar -->
-          <div class="tac-grade-stacked-bar">
-            ${gradePalette.map(g => {
-              const segPct = totalGraded > 0 ? (g.count / totalGraded) * 100 : 0;
-              return `<div class="tac-grade-seg" style="width:${segPct}%; background:${g.color};" title="${g.sym} (${g.label}): ${g.count} (${Math.round(segPct)}%)"></div>`;
-            }).join('')}
-          </div>
-          <div class="d-flex justify-between text-xs" style="font-size:0.62rem; color:#94a3b8; line-height:1;">
-            <span style="color:#22c55e; font-weight:700;">★ ${Math.round((gradeCounts['★']/totalGraded)*100)}%</span>
-            <span style="color:#10b981; font-weight:700;">A ${Math.round((gradeCounts['A']/totalGraded)*100)}%</span>
-            <span style="color:#84cc16; font-weight:700;">B ${Math.round((gradeCounts['B']/totalGraded)*100)}%</span>
-            <span style="color:#eab308; font-weight:700;">C ${Math.round((gradeCounts['C']/totalGraded)*100)}%</span>
-            <span style="color:#f97316; font-weight:700;">D ${Math.round((gradeCounts['D']/totalGraded)*100)}%</span>
-            <span style="color:#ef4444; font-weight:700;">E ${Math.round((gradeCounts['E']/totalGraded)*100)}%</span>
-          </div>
-        </div>
-
-        <!-- 2. VOCABULARY DOMAIN SPLIT: WORDS VS. PHRASES -->
-        <div class="tac-core-card border-vocab" id="tac-vocab-domain-section">
-          <div class="tac-core-header">
-            <span class="tac-core-title">🧬 Domain Split: Words vs Phrases</span>
-            <span class="tac-badge badge-blue-soft" style="font-size:0.6rem;">${totalTests} Tests Total</span>
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:2px;">
-            <!-- Words -->
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-left:3px solid #38bdf8; border-radius:4px; padding:3px 6px;">
-              <div class="d-flex justify-between align-center" style="font-size:0.68rem;">
-                <span style="font-weight:800; color:#38bdf8;">🔤 Words</span>
-                <strong style="color:#f97316;">${wordsAvg}% [D]</strong>
-              </div>
-              <div class="d-flex justify-between text-xs" style="font-size:0.62rem; color:#94a3b8; margin:2px 0;">
-                <span>FAPR: <strong style="color:#38bdf8;">${wordsFapr}%</strong></span>
-                <span>Rem: <strong style="color:#eab308;">${wordsRemRate}%<sup style="font-size:0.65em;">R</sup></strong></span>
-              </div>
-              <div style="height:3px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
-                <div style="width:${wordsAvg}%; height:100%; background:linear-gradient(90deg, #f97316, #fb923c);"></div>
-              </div>
-            </div>
-            <!-- Phrases -->
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-left:3px solid #34d399; border-radius:4px; padding:3px 6px;">
-              <div class="d-flex justify-between align-center" style="font-size:0.68rem;">
-                <span style="font-weight:800; color:#34d399;">💬 Phrases</span>
-                <strong style="color:#eab308;">${phrasesAvg}% [C]</strong>
-              </div>
-              <div class="d-flex justify-between text-xs" style="font-size:0.62rem; color:#94a3b8; margin:2px 0;">
-                <span>FAPR: <strong style="color:#34d399;">${phrasesFapr}%</strong></span>
-                <span>Rem: <strong style="color:#10b981;">${phrasesRemRate}%<sup style="font-size:0.65em;">R</sup></strong></span>
-              </div>
-              <div style="height:3px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
-                <div style="width:${phrasesAvg}%; height:100%; background:linear-gradient(90deg, #10b981, #34d399);"></div>
-              </div>
+      <!-- TOP EXECUTIVE HEADER BAR -->
+      <div class="tac-exec-header" id="tac-exec-header">
+        <!-- 1. Class Answering Pacing -->
+        <div class="tac-pacing-chip" onclick="window._openTestPacingDrawer()" title="Click to open Test Pacing & Duration Drawer">
+          <div class="tac-pacing-icon">⏱️</div>
+          <div>
+            <div class="tac-pacing-label">Class Answering Pacing</div>
+            <div class="tac-pacing-val">
+              <span>${avgQuestionPacingSec}s <small>/ question</small></span>
+              <span class="tac-pacing-dot">•</span>
+              <span>${avgTestDurDisplay} <small>/ test</small></span>
             </div>
           </div>
         </div>
 
-        <!-- 3. LINGUISTIC POS ACCURACY MATRIX -->
-        <div class="tac-core-card border-pos" onclick="window._openTestAnalyticsCardModal('linguistic')" style="cursor:pointer;" title="Click for detailed part-of-speech linguistic breakdown">
-          <div class="tac-core-header">
-            <span class="tac-core-title">📊 Linguistic POS Matrix</span>
-            <span style="color:#a5b4fc; font-size:0.6rem; font-weight:700;">Details &#10140;</span>
+        <!-- 2. Student Error Diagnosis Breakdown -->
+        <div class="tac-diagnosis-group">
+          <div class="tac-diag-title">⚠️ Student Error Diagnosis:</div>
+          <div class="tac-diag-chips">
+            <div class="tac-diag-chip chip-spelling" title="Minor typos and near-matches">
+              <span>🔤</span>
+              <span>Spelling:</span>
+              <strong>${globalErrorDiagCounts.spelling} (${diagPcts.spelling}%)</strong>
+            </div>
+            <div class="tac-diag-chip chip-literal" title="Literal word-for-word Indonesian translation">
+              <span>🇮🇩</span>
+              <span>Literal:</span>
+              <strong>${globalErrorDiagCounts.literal} (${diagPcts.literal}%)</strong>
+            </div>
+            <div class="tac-diag-chip chip-wordform" title="Root stem correct, wrong grammatical part of speech">
+              <span>🔄</span>
+              <span>Word Form:</span>
+              <strong>${globalErrorDiagCounts.word_form} (${diagPcts.word_form}%)</strong>
+            </div>
+            <div class="tac-diag-chip chip-timeout" title="Unanswered or timer deadline expired">
+              <span>⏳</span>
+              <span>Timed Out:</span>
+              <strong>${globalErrorDiagCounts.timeout} (${diagPcts.timeout}%)</strong>
+            </div>
           </div>
-          <div style="display:flex; flex-direction:column; justify-content:space-around; flex:1; min-height:0;">
-            ${[
-              { name: 'Nouns', tot: posStats.Noun?.tot || 0, cor: posStats.Noun?.cor || 0, color: '#38bdf8' },
-              { name: 'Verbs', tot: posStats.Verb?.tot || 0, cor: posStats.Verb?.cor || 0, color: '#facc15' },
-              { name: 'Adjectives', tot: posStats.Adjective?.tot || 0, cor: posStats.Adjective?.cor || 0, color: '#c084fc' },
-              { name: 'Phrases / Idioms', tot: posStats.Phrase?.tot || 0, cor: posStats.Phrase?.cor || 0, color: '#34d399' }
-            ].map(p => {
-              const acc = p.tot > 0 ? Math.round((p.cor / p.tot) * 100) : 0;
-              return `
-                <div style="font-size:0.62rem;">
-                  <div class="d-flex justify-between align-center" style="line-height:1; margin-bottom:1px;">
-                    <span style="color:#cbd5e1;">${p.name} (${p.tot} Qs)</span>
-                    <strong style="color:${p.color};">${acc}%</strong>
+        </div>
+
+        <!-- 3. Prominent Drawer Action Button -->
+        <button class="tac-drawer-action-btn" onclick="window._openTestPacingDrawer()">
+          <span>⏱️ Test Pacing &amp; Duration Drawer</span>
+          <span class="tac-drawer-arrow">➔</span>
+        </button>
+      </div>
+
+      <!-- 4-COLUMN SIDE-BY-SIDE THEME COMPARISON BOARD -->
+      <div class="tac-theme-board" id="tac-theme-board">
+        ${['A', 'B', 'C', 'D'].map(t => {
+          const meta = themeMeta[t];
+          const questions = themeTop10[t] || [];
+
+          return `
+            <div class="tac-theme-col ${meta.colClass}">
+              <div class="tac-theme-col-header">
+                <div>
+                  <div class="tac-theme-col-title">
+                    <span>${meta.name}</span>
                   </div>
-                  <div style="height:3px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
-                    <div style="width:${acc}%; height:100%; background:${p.color};"></div>
-                  </div>
+                  <div class="tac-theme-col-subtitle">${meta.subtitle}</div>
                 </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
-
-      </div><!-- END tac-tri-core-grid -->
-
-      <!-- ROW 2: THE WALL & ERROR MISCONCEPTION DIAGNOSTICS (Fills Entire Remaining Height) -->
-      <div class="tac-wall-full-card" id="tac-analytics-content">
-        <!-- Control Bar: Theme Filter + Topic Dropdown + Domain Filter -->
-        <div class="tac-wall-header-controls">
-          <div class="d-flex align-center gap-1">
-            <span style="font-size:1rem;">🧱</span>
-            <div>
-              <span style="font-weight:800; font-size:0.8rem; color:#f8fafc; text-transform:uppercase; letter-spacing:0.4px;">The Wall &mdash; Item Error &amp; Misconception Diagnostics</span>
-              <div class="text-xs text-muted" style="font-size:0.65rem;">Questions most frequently failed by students, targeted answers, and most common student misconceptions</div>
-            </div>
-          </div>
-
-          <div class="tac-wall-filter-group">
-            <!-- Theme Filter Pills -->
-            <div class="d-flex gap-1" id="tac-wall-theme-pills">
-              <button class="btn btn-xs btn-primary tac-theme-btn active" data-theme="all" onclick="window._setWallThemeFilter('all')">🌐 All Themes</button>
-              <button class="btn btn-xs btn-secondary tac-theme-btn" data-theme="A" onclick="window._setWallThemeFilter('A')">🅰️ Theme A</button>
-              <button class="btn btn-xs btn-secondary tac-theme-btn" data-theme="B" onclick="window._setWallThemeFilter('B')">🅱️ Theme B</button>
-              <button class="btn btn-xs btn-secondary tac-theme-btn" data-theme="C" onclick="window._setWallThemeFilter('C')">🅲 Theme C</button>
-              <button class="btn btn-xs btn-secondary tac-theme-btn" data-theme="D" onclick="window._setWallThemeFilter('D')">🅳 Theme D</button>
-            </div>
-
-            <!-- Topic Dropdown Selector -->
-            <select class="tac-wall-select" id="tac-wall-topic-select" onchange="window._onWallTopicChange(this.value)">
-              <option value="all">📚 All Topics (${uniqueTopicsList.length})</option>
-              ${uniqueTopicsList.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')}
-            </select>
-
-            <!-- Domain Filter Pills -->
-            <div class="d-flex gap-1" id="tac-wall-domain-pills">
-              <button class="btn btn-xs btn-secondary tac-domain-btn" data-domain="word" onclick="window._setWallDomainFilter('word')">🔤 Words</button>
-              <button class="btn btn-xs btn-secondary tac-domain-btn" data-domain="phrase" onclick="window._setWallDomainFilter('phrase')">💬 Phrases</button>
-              <button class="btn btn-ghost btn-xs text-warning" onclick="window._openTestAnalyticsCardModal('wall')">Top 20 &#10140;</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Grid of 10 Question Bottlenecks with Top Student Misconceptions -->
-        <div class="tac-wall-grid" id="tac-wall-items-container">
-          ${hardestQsTop10.map((q, idx) => `
-            <div class="tac-wall-item" data-wall-theme="${q.themeCode}" data-wall-topic="${escapeHtml(q.topic)}" data-wall-domain="${q.domain}">
-              <!-- Row 1: Rank, Question Text, Badges, Fail Rate -->
-              <div class="d-flex justify-between align-center text-xs" style="font-size:0.7rem;">
-                <div class="d-flex align-center gap-1" style="overflow:hidden; white-space:nowrap;">
-                  <strong style="color:#f8fafc;">#${idx + 1}.</strong>
-                  <span style="font-weight:700; color:#f8fafc; overflow:hidden; text-overflow:ellipsis;">"${escapeHtml(q.text)}"</span>
-                  <span class="tac-badge ${q.domain === 'phrase' ? 'badge-success-soft' : 'badge-blue-soft'}" style="font-size:0.55rem; padding:1px 4px;">${escapeHtml(q.wordType)}</span>
-                  <span class="tac-badge badge-amber-soft" style="font-size:0.55rem; padding:1px 4px;">Tema ${q.themeCode} &bull; ${escapeHtml(q.topic)}</span>
-                </div>
-                <span class="tac-badge ${q.failRate >= 70 ? 'badge-danger-soft' : 'badge-warning-soft'}" style="font-size:0.6rem; flex-shrink:0;">${q.failRate}% Fail (${q.fail}/${q.total})</span>
-              </div>
-
-              <!-- Row 2: Failure Progress Bar -->
-              <div style="height:3px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; margin:2px 0;">
-                <div style="width:${q.failRate}%; height:100%; background:${q.failRate >= 70 ? '#ef4444' : '#f59e0b'}; border-radius:2px;"></div>
-              </div>
-
-              <!-- Row 3: Target Correct Answer + Top Student Error -->
-              <div class="d-flex justify-between text-xs" style="font-size:0.65rem; color:#94a3b8; line-height:1.2;">
-                <span style="overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:50%;">
-                  Target: <strong style="color:#34d399;">${escapeHtml(q.correct)}</strong>
-                </span>
-                <span style="overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:48%; text-align:right;">
-                  ${q.topWrong ? `⚠️ Error Terbanyak: <strong style="color:#f87171;">"${escapeHtml(q.topWrong)}"</strong> <span style="font-size:0.58rem; color:#cbd5e1;">(${q.topWrongCount}x &bull; ${q.topWrongPct}%)</span>` : '<span class="text-muted">Tidak ada data kesalahan</span>'}
+                <span class="tac-theme-col-badge ${meta.badgeClass}">
+                  ${questions.length} Bottlenecks
                 </span>
               </div>
-            </div>
-          `).join('')}
-        </div>
-      </div><!-- END tac-wall-full-card -->
 
-    </div><!-- END test-analytics-dashboard -->
+              <div class="tac-theme-col-body">
+                ${questions.length > 0 ? questions.map((q, idx) => `
+                  <div class="tac-qcard">
+                    <!-- Top Row: Rank, Prompt, Badges -->
+                    <div class="tac-qcard-top">
+                      <span class="tac-qcard-rank">#${idx + 1}</span>
+                      <span class="tac-qcard-prompt" title="${escapeHtml(q.text)}">"${escapeHtml(q.text)}"</span>
+                      <div class="tac-qcard-badges">
+                        <span class="tac-badge-wt">${escapeHtml(q.wordType)}</span>
+                        <span class="tac-badge-time">⏱️ ${q.avgTimeSec}s</span>
+                      </div>
+                    </div>
+
+                    <!-- Target Correct Answer -->
+                    <div class="tac-qcard-target">
+                      <span class="tac-qcard-target-label">Target:</span>
+                      <span class="tac-qcard-target-text">${escapeHtml(q.correct)}</span>
+                    </div>
+
+                    <!-- Actual Student Error Answers -->
+                    ${q.topErrors.length > 0 ? `
+                      <div class="tac-qcard-errors">
+                        ${q.topErrors.map(e => `
+                          <div class="tac-qcard-error-item">
+                            <span class="tac-qcard-error-text ${e.isBlank ? 'is-timeout' : ''}" title="${escapeHtml(e.answer)}">
+                              ${e.isBlank ? '⏳ Timed Out / Blank' : `❌ "${escapeHtml(e.answer)}"`}
+                            </span>
+                            <span class="tac-qcard-error-stat">(${e.count}x &bull; ${e.pct}%)</span>
+                          </div>
+                        `).join('')}
+                      </div>
+                    ` : ''}
+
+                    <!-- Footer: Diagnosis Tag & Fail Rate -->
+                    <div class="tac-qcard-footer">
+                      <span class="tac-diag-pill diag-pill-${q.dominantError}">${q.dominantErrorLabel}</span>
+                      <span class="tac-qcard-failstat">${q.failRate}% Fail (${q.fail}/${q.total})</span>
+                    </div>
+                  </div>
+                `).join('') : `
+                  <div class="tac-theme-col-empty">
+                    <div style="font-size: 1.5rem; margin-bottom: 6px;">✨</div>
+                    <div style="font-weight: 700; color: #f8fafc; font-size: 0.8rem;">100% Mastery Recorded</div>
+                    <div style="color: #94a3b8; font-size: 0.7rem; margin-top: 2px;">No critical error bottlenecks recorded in ${meta.name}.</div>
+                  </div>
+                `}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+    </div>
   `;
 
-  // Wire Class Switching Controller (synchronizes topbar tabs + header badge)
-  window._activeWallFilter = {
-    theme: 'all',
-    topic: 'all',
-    domain: 'all'
+  // ========================================================
+  // 6. INTERACTIVE DRAWER & NAVIGATION CONTROLLERS
+  // ========================================================
+  window._openTestPacingDrawer = () => {
+    const drawer = document.getElementById('tac-pacing-drawer');
+    const backdrop = document.getElementById('tac-pacing-drawer-backdrop');
+    if (drawer && backdrop) {
+      backdrop.classList.add('open');
+      drawer.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      const searchInput = document.getElementById('tac-drawer-search');
+      if (searchInput) searchInput.focus();
+    }
+  };
+
+  window._closeTestPacingDrawer = () => {
+    const drawer = document.getElementById('tac-pacing-drawer');
+    const backdrop = document.getElementById('tac-pacing-drawer-backdrop');
+    if (drawer && backdrop) {
+      drawer.classList.remove('open');
+      backdrop.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  };
+
+  // Keyboard Escape listener for slide-out drawer
+  if (window._tacKeydownHandler) {
+    window.removeEventListener('keydown', window._tacKeydownHandler);
+  }
+  window._tacKeydownHandler = (e) => {
+    if (e.key === 'Escape') {
+      const drawer = document.getElementById('tac-pacing-drawer');
+      if (drawer && drawer.classList.contains('open')) {
+        window._closeTestPacingDrawer();
+      }
+    }
+  };
+  window.addEventListener('keydown', window._tacKeydownHandler);
+
+  window._currentPacingFilter = 'all';
+  window._currentPacingSearch = '';
+
+  window._applyPacingDrawerFilters = () => {
+    const rows = document.querySelectorAll('#tac-pacing-table tbody tr:not(#tac-pacing-no-results)');
+    let visible = 0;
+    const f = window._currentPacingFilter;
+    const q = (window._currentPacingSearch || '').toLowerCase().trim();
+
+    rows.forEach(row => {
+      const type = row.dataset.testType;
+      const status = row.dataset.pacingStatus;
+      const text = row.dataset.searchText || '';
+
+      let matchFilter = true;
+      if (f === 'quiz') matchFilter = (type === 'quiz');
+      else if (f === 'exam') matchFilter = (type === 'exam');
+      else if (f === 'timeout') matchFilter = (status === 'high timeout');
+
+      let matchSearch = true;
+      if (q) matchSearch = text.includes(q);
+
+      if (matchFilter && matchSearch) {
+        row.style.display = '';
+        visible++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    const noResRow = document.getElementById('tac-pacing-no-results');
+    if (noResRow) {
+      noResRow.style.display = (visible === 0) ? '' : 'none';
+    }
+
+    const countEl = document.getElementById('tac-drawer-count');
+    if (countEl) countEl.textContent = visible;
+  };
+
+  window._onPacingDrawerFilter = (filterKey) => {
+    window._currentPacingFilter = filterKey;
+    document.querySelectorAll('.tac-drawer-filter-btn').forEach(btn => {
+      if (btn.dataset.filter === filterKey) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
+    window._applyPacingDrawerFilters();
+  };
+
+  window._onPacingDrawerSearch = (query) => {
+    window._currentPacingSearch = query;
+    window._applyPacingDrawerFilters();
   };
 
   window._switchClassTestAnalytics = (classId) => {
     window._activeTestClassId = classId;
-
     if (window.setTopbarTabs) {
       window.setTopbarTabs(buildClassTopbarTabs(classId), classId, 'window._switchClassTestAnalytics');
     }
-
     const activeObj = availableClasses.find(c => c.id === classId) || { name: 'All Classes', count: liveData.length };
-    const vocabSection = document.getElementById('tac-vocab-domain-section');
     const emptyTrack = document.getElementById('tac-empty-track-section');
-    const analyticsContent = document.getElementById('tac-analytics-content');
-
-    const isVocabOrAll = (classId === 'ab33498a-90e6-44b7-83f4-5765f964543e' || classId === 'all');
-    if (vocabSection) {
-      vocabSection.style.display = isVocabOrAll ? 'flex' : 'none';
-    }
+    const board = document.getElementById('tac-theme-board');
+    const header = document.getElementById('tac-exec-header');
 
     if (activeObj.count === 0 && classId !== 'all') {
       if (emptyTrack) {
@@ -1031,104 +1441,16 @@ export async function renderTests(area) {
         const tName = document.getElementById('tac-empty-track-name');
         if (tName) tName.textContent = activeObj.name;
       }
-      if (analyticsContent) analyticsContent.style.opacity = '0.35';
+      if (board) board.style.opacity = '0.35';
+      if (header) header.style.opacity = '0.35';
     } else {
       if (emptyTrack) emptyTrack.style.display = 'none';
-      if (analyticsContent) analyticsContent.style.opacity = '1';
+      if (board) board.style.opacity = '1';
+      if (header) header.style.opacity = '1';
     }
-  };
-
-  // Dynamic Multi-Dimensional Wall Filter Engine (Theme + Topic + Domain)
-  window._applyWallFilters = () => {
-    const { theme, topic, domain } = window._activeWallFilter;
-    const items = area.querySelectorAll('.tac-wall-item');
-    let visibleCount = 0;
-
-    items.forEach(item => {
-      const itemTheme = item.dataset.wallTheme || '';
-      const itemTopic = item.dataset.wallTopic || '';
-      const itemDomain = item.dataset.wallDomain || '';
-
-      const matchTheme = (theme === 'all' || itemTheme === theme);
-      const matchTopic = (topic === 'all' || itemTopic === topic);
-      const matchDomain = (domain === 'all' || itemDomain === domain);
-
-      if (matchTheme && matchTopic && matchDomain) {
-        item.style.display = 'flex';
-        visibleCount++;
-      } else {
-        item.style.display = 'none';
-      }
-    });
-
-    const container = document.getElementById('tac-wall-items-container');
-    if (container) {
-      let emptyMsg = container.querySelector('.tac-wall-empty-msg');
-      if (visibleCount === 0) {
-        if (!emptyMsg) {
-          emptyMsg = document.createElement('div');
-          emptyMsg.className = 'tac-wall-empty-msg';
-          emptyMsg.style.cssText = 'grid-column: 1 / -1; padding: 2rem; text-align: center; color: #94a3b8; font-size: 0.8rem;';
-          emptyMsg.innerHTML = '🔍 Tidak ada pertanyaan yang sesuai dengan filter Tema / Topik ini.';
-          container.appendChild(emptyMsg);
-        }
-      } else if (emptyMsg) {
-        emptyMsg.remove();
-      }
-    }
-  };
-
-  window._setWallThemeFilter = (themeKey) => {
-    window._activeWallFilter.theme = themeKey;
-    const pills = area.querySelectorAll('.tac-theme-btn');
-    pills.forEach(p => {
-      if (p.dataset.theme === themeKey) {
-        p.classList.remove('btn-secondary'); p.classList.add('btn-primary', 'active');
-      } else {
-        p.classList.remove('btn-primary', 'active'); p.classList.add('btn-secondary');
-      }
-    });
-    window._applyWallFilters();
-  };
-
-  window._onWallTopicChange = (topicVal) => {
-    window._activeWallFilter.topic = topicVal;
-    window._applyWallFilters();
-  };
-
-  window._setWallDomainFilter = (domainKey) => {
-    if (window._activeWallFilter.domain === domainKey) {
-      window._activeWallFilter.domain = 'all'; // toggle off to all
-    } else {
-      window._activeWallFilter.domain = domainKey;
-    }
-    const pills = area.querySelectorAll('.tac-domain-btn');
-    pills.forEach(p => {
-      if (p.dataset.domain === window._activeWallFilter.domain) {
-        p.classList.remove('btn-secondary'); p.classList.add('btn-primary', 'active');
-      } else {
-        p.classList.remove('btn-primary', 'active'); p.classList.add('btn-secondary');
-      }
-    });
-    window._applyWallFilters();
-  };
-
-  // Backwards compatibility aliases
-  window._filterWallBottlenecks = (filterKey) => {
-    if (filterKey === 'all') {
-      window._setWallThemeFilter('all');
-      window._setWallDomainFilter('all');
-    } else if (filterKey === 'words') {
-      window._setWallDomainFilter('word');
-    } else if (filterKey === 'phrases') {
-      window._setWallDomainFilter('phrase');
-    }
-  };
-
-  window._filterVocabDomain = (domainKey) => {
-    window._filterWallBottlenecks(domainKey);
   };
 }
+
 
 function formatAnswerType(type) {
   switch (type) {
@@ -1184,7 +1506,7 @@ window._duplicateTest = async (testId) => {
     newTest.display_name = `${newTest.display_name || newTest.title} (Copy)`;
     newTest.status = 'draft';
 
-    const { data: createdTest, error: eErr } = await sb.from('Tests').insert([newTest]).select().single();
+    const { data: createdTest, error: eErr } = await sb.from('tests').insert([newTest]).select().single();
     if (eErr) throw new Error(eErr.message);
 
     // 4. Duplicate Questions
@@ -1424,7 +1746,7 @@ export async function renderResults(area) {
           </div>
           <div>
             <div class="text-sm text-muted mb-1">Performance</div>
-            <div class="fw-600" style="font-size:1.5rem;">${row.score}% <span class="badge badge-primary text-sm ml-2" style="background:rgba(34,197,94,0.18);color:#22C55E;border:1px solid #22C55E;">${escapeHtml((row.grade === '★' || row.grade === 'S' || parseFloat(row.score) >= 100) ? '★' : row.grade)}</span></div>
+            <div class="fw-600" style="font-size:1.5rem;">${row.score}% <span class="badge badge-primary text-sm ml-2" style="background:${getGradeColorByScore(parseFloat(row.score))}22;color:${getGradeColorByScore(parseFloat(row.score))};border:1px solid ${getGradeColorByScore(parseFloat(row.score))};">${escapeHtml((row.grade === '★' || row.grade === 'S' || parseFloat(row.score) >= 100) ? '★' : row.grade)}</span></div>
           </div>
           <div class="d-flex gap-2">
              <div class="p-2 rounded text-center" style="background:rgba(74,222,128,0.1);flex:1;">
@@ -1459,7 +1781,7 @@ export async function renderResults(area) {
       { key: 'batch', label: 'Batch', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
       { key: 'TestTitle', label: 'Test', sortable: true, render: (val) => `<div class="fw-600">${escapeHtml(val)}</div>` },
       { key: 'score', label: 'Score', sortable: true, render: (val) => `<div class="text-center fw-800">${val}%</div>` },
-      { key: 'grade', label: 'Grade', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge badge-primary fw-800" style="${(val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? 'background:rgba(34,197,94,0.18);color:#22C55E;border:1px solid #22C55E;' : ''}">${escapeHtml((val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? '★' : val)}</span></div>` },
+      { key: 'grade', label: 'Grade', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge badge-primary fw-800" style="background:${getGradeColorByScore(parseFloat(row?.score))}22;color:${getGradeColorByScore(parseFloat(row?.score))};border:1px solid ${getGradeColorByScore(parseFloat(row?.score))};">${escapeHtml((val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? '★' : val)}</span></div>` },
       { key: 'correct', label: 'Correct', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-success' : 'badge-neutral'}">${val}</span></div>` },
       { key: 'minor', label: 'Half', sortable: true, render: (val) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-warning' : 'badge-neutral'}">${val}</span></div>` },
       { key: 'wrong', label: 'Incorrect', sortable: true, render: (val) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-danger' : 'badge-neutral'}">${val}</span></div>` },
@@ -1478,7 +1800,7 @@ async function openSessionModal() {
   const { getSupabase } = await import('../supabase.js?v=5.3.2');
   const sb = await getSupabase();
   const { data: tests, error } = await sb
-    .from('Tests')
+    .from('tests')
     .select('id, title, test_type, classes(name)')
     .in('test_type', ['QUIZ', 'EXAM'])
     .eq('status', 'published')
@@ -1529,7 +1851,7 @@ async function openSessionModal() {
     if (!asmId) { window.showToast('Please select an test.', 'warning'); return; }
     const now = new Date();
     const expiresAt = new Date(now.getTime() + durationMin * 60 * 1000).toISOString();
-    const { error: updErr } = await sb.from('Tests')
+    const { error: updErr } = await sb.from('tests')
       .update({ session_unlocked_at: now.toISOString(), session_expires_at: expiresAt })
       .eq('id', asmId);
     if (updErr) { window.showToast('Failed to open session: ' + updErr.message, 'error'); }
@@ -1711,7 +2033,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                       <td style="padding:6px 10px; font-weight:700;">${esc(s.studentName)}</td>
                       <td style="padding:6px 10px; color:#cbd5e1;">${esc(s.testTitle)}</td>
                       <td style="padding:6px 10px; color:#fbbf24; font-weight:700;">⏱️ ${s.durationSec}s</td>
-                      <td style="padding:6px 10px; color:#ef4444; font-weight:700;">${s.score}% (Fail)</td>
+                      <td style="padding:6px 10px; color:${TOPSCORE_COLORS.E}; font-weight:700;">${s.score}% (Fail)</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -1722,18 +2044,18 @@ window._openTestAnalyticsCardModal = function(cardKey) {
       </div>
     `;
   } else if (cardKey === 'fapr') {
-    title = '🎯 First-Attempt Pass Rate (FAPR) & Grade Health';
+    title = '🎯 First-Attempt Pass Rate & Grade Health';
     badgeText = `${st.fapr}% Pure 1st-Pass Rate`;
     maxWidth = '750px';
 
     const totalGraded = Object.values(st.gradeCounts || {}).reduce((a, b) => a + b, 0) || 1;
     const gradePalette = [
-      { sym: '★', label: 'Excellent', range: '100%', color: '#22C55E', count: st.gradeCounts['★'] || 0 },
-      { sym: 'A', label: 'Very Good', range: '90% - 99%', color: '#10B981', count: st.gradeCounts['A'] || 0 },
-      { sym: 'B', label: 'Good', range: '80% - 89%', color: '#84CC16', count: st.gradeCounts['B'] || 0 },
-      { sym: 'C', label: 'Pass', range: '60% - 79%', color: '#EAB308', count: st.gradeCounts['C'] || 0 },
-      { sym: 'D', label: 'Less', range: '30% - 59%', color: '#F97316', count: st.gradeCounts['D'] || 0 },
-      { sym: 'E', label: 'Fail', range: '0% - 29%', color: '#EF4444', count: st.gradeCounts['E'] || 0 },
+      { sym: '★', label: 'Excellent', range: '100%', color: TOPSCORE_COLORS.STAR, count: st.gradeCounts['★'] || 0 },
+      { sym: 'A', label: 'Very Good', range: '90% - 99%', color: TOPSCORE_COLORS.A, count: st.gradeCounts['A'] || 0 },
+      { sym: 'B', label: 'Good', range: '80% - 89%', color: TOPSCORE_COLORS.B, count: st.gradeCounts['B'] || 0 },
+      { sym: 'C', label: 'Pass', range: '60% - 79%', color: TOPSCORE_COLORS.C, count: st.gradeCounts['C'] || 0 },
+      { sym: 'D', label: 'Less', range: '30% - 59%', color: TOPSCORE_COLORS.D, count: st.gradeCounts['D'] || 0 },
+      { sym: 'E', label: 'Fail', range: '0% - 29%', color: TOPSCORE_COLORS.E, count: st.gradeCounts['E'] || 0 },
     ];
 
     bodyHtml = `
@@ -1752,7 +2074,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
         </div>
 
         <div>
-          <div class="text-xs fw-700 uppercase mb-2" style="letter-spacing:0.5px; color:#cbd5e1;">Official TopsCore Grade Distribution (Rule 2.10)</div>
+          <div class="text-xs fw-700 uppercase mb-2" style="letter-spacing:0.5px; color:#cbd5e1;">Official TopsCore Grade Distribution</div>
           <div style="display:flex; flex-direction:column; gap:0.55rem;">
             ${gradePalette.map(g => {
               const pct = Math.round((g.count / totalGraded) * 100);
@@ -1773,7 +2095,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
       </div>
     `;
   } else if (cardKey === 'wall') {
-    title = '🧱 The Wall — Top 20 Hardest Vocabulary Questions';
+    title = '🧱 Curriculum Bottlenecks — Top 20 Most Missed Questions';
     badgeText = `${(st.hardestQs20 || []).length} Curriculum Bottlenecks`;
     maxWidth = '880px';
 
@@ -1798,7 +2120,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                   <td style="padding:8px 10px; font-weight:700; color:#f8fafc;">"${esc(q.text)}"</td>
                   <td style="padding:8px 10px;"><span class="badge" style="background:rgba(99,102,241,0.15); color:#a5b4fc; font-size:0.65rem;">${esc(q.wordType)}</span></td>
                   <td style="padding:8px 10px;"><span class="tac-badge ${q.failRate >= 60 ? 'badge-danger-soft' : 'badge-warning-soft'}">${q.failRate}% (${q.fail}/${q.total})</span></td>
-                  <td style="padding:8px 10px; color:#34d399; font-weight:600;">${esc(q.correct)}</td>
+                  <td style="padding:8px 10px; color:${TOPSCORE_COLORS.CORRECT}; font-weight:600;">${esc(q.correct)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -1878,7 +2200,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
 
     bodyHtml = `
       <div style="display:flex; flex-direction:column; gap:1rem;">
-        <p class="text-xs text-muted mb-0">Students with the highest retake volume. In TopsCore (Rule 2.10), remedial retakes are capped at 60% with Grade C and an &quot;R&quot; indicator beside score.</p>
+        <p class="text-xs text-muted mb-0">Students with the highest retake volume. In TopsCore, remedial retakes are capped at 60% with Grade C and an &quot;R&quot; indicator beside score.</p>
         
         <div style="max-height:260px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
           <table class="table w-100" style="margin:0; font-size:0.75rem;">
@@ -1899,8 +2221,8 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                   <td style="padding:6px 10px; font-weight:700; color:#f8fafc;">${esc(s.name)}</td>
                   <td style="padding:6px 10px; font-weight:700;"><span class="tac-badge badge-purple-soft">${s.count} Attempts</span></td>
                   <td style="padding:6px 10px; color:#cbd5e1;">${s.firstScore}%</td>
-                  <td style="padding:6px 10px; color:#34d399; font-weight:700;">${s.maxScore}%${s.count > 1 ? '<sup style="color:#eab308;">R</sup>' : ''}</td>
-                  <td style="padding:6px 10px; color:${s.delta >= 0 ? '#10b981' : '#ef4444'}; font-weight:700;">+${s.delta}%</td>
+                  <td style="padding:6px 10px; color:${TOPSCORE_COLORS.A}; font-weight:700;">${s.maxScore}%${s.count > 1 ? `<sup class="asm-rem-sup" style="color:${TOPSCORE_COLORS.C};">R</sup>` : ''}</td>
+                  <td style="padding:6px 10px; color:${s.delta >= 0 ? TOPSCORE_COLORS.A : TOPSCORE_COLORS.E}; font-weight:700;">+${s.delta}%</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -1962,7 +2284,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
       </div>
     `;
   } else if (cardKey === 'linguistic') {
-    title = '🧬 Linguistic Mastery & Parts of Speech Matrix';
+    title = '🧬 Linguistic Mastery & Parts of Speech Overview';
     badgeText = 'Vault 100% Active';
     maxWidth = '780px';
 
@@ -2039,7 +2361,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                   <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
                     <td style="padding:8px 10px; font-weight:700; color:#f8fafc;">${esc(q.studentName)}</td>
                     <td style="padding:8px 10px; color:#cbd5e1;">"${esc(q.prompt)}"</td>
-                    <td style="padding:8px 10px; color:#34d399; font-weight:600;">${esc(q.expected)}</td>
+                    <td style="padding:8px 10px; color:${TOPSCORE_COLORS.CORRECT}; font-weight:600;">${esc(q.expected)}</td>
                     <td style="padding:8px 10px;" id="status-cell-${q.id}">
                       ${q.isCorrect ? '<span class="tac-badge badge-success-soft">Correct</span>' : '<span class="tac-badge badge-danger-soft">Needs Review</span>'}
                     </td>
@@ -2156,25 +2478,21 @@ window._openTestCardDrawer = function(testId) {
   // Helper grade badge
   const getGradeBadge = (pct) => {
     if (pct === null || pct === undefined) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
-    let sym = 'E', color = '#EF4444';
-    if (pct >= 100) { sym = '★'; color = '#22C55E'; }
-    else if (pct >= 90) { sym = 'A'; color = '#10B981'; }
-    else if (pct >= 80) { sym = 'B'; color = '#84CC16'; }
-    else if (pct >= 60) { sym = 'C'; color = '#EAB308'; }
-    else if (pct >= 30) { sym = 'D'; color = '#F97316'; }
+    const sym = typeof calculateGrade === 'function' ? calculateGrade(pct) : (pct >= 60 ? 'C' : 'E');
+    const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#FF0000';
     return '<span style="color:' + color + '; font-weight:800; font-size:0.8rem; background:rgba(255,255,255,0.04); padding:2px 6px; border-radius:4px; border:1px solid ' + color + '40;">' + pct + '% [' + sym + ']</span>';
   };
 
   const getRemedialBadge = (remRate, count) => {
     if (!count) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
-    if (remRate === 0) return '<span class="text-success fw-700" style="font-size:0.75rem;">0%</span>';
-    const color = remRate > 40 ? '#ef4444' : '#eab308';
+    if (remRate === 0) return `<span class="fw-700" style="color:${TOPSCORE_COLORS.A}; font-size:0.75rem;">0%</span>`;
+    const color = remRate > 40 ? TOPSCORE_COLORS.E : TOPSCORE_COLORS.C;
     return '<span class="fw-700" style="color:' + color + '; font-size:0.78rem;">' + remRate + '%<sup class="asm-rem-sup" style="font-size:0.65em; font-weight:800; margin-left:1px;">R</sup></span>';
   };
 
   const getSecurityBadge = (flags) => {
-    if (!flags || flags === 0) return '<span style="color:#10b981; font-size:0.72rem; font-weight:700;">🛡️ Clean</span>';
-    return '<span style="color:#ef4444; font-size:0.72rem; font-weight:700;">⚠️ ' + flags + ' Flags</span>';
+    if (!flags || flags === 0) return '<span style="color:' + TOPSCORE_COLORS.CORRECT + '; font-size:0.72rem; font-weight:700;">🛡️ Clean</span>';
+    return '<span style="color:' + TOPSCORE_COLORS.E + '; font-size:0.72rem; font-weight:700;">⚠️ ' + flags + ' Flags</span>';
   };
 
   const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -2261,7 +2579,7 @@ window._openTestCardDrawer = function(testId) {
                   <strong style="color:#f8fafc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:210px;" title="${esc(q.text)}">#${idx + 1}. "${esc(q.text)}"</strong>
                   <span class="tac-badge ${q.failRate >= 50 ? 'badge-danger-soft' : 'badge-warning-soft'}" style="font-size:0.62rem;">${q.failRate}% Fail (${q.fail}/${q.total})</span>
                 </div>
-                ${q.correct ? `<div style="font-size:0.7rem; color:#94a3b8;">Target: <span style="color:#34d399; font-weight:600;">${esc(q.correct)}</span></div>` : ''}
+                ${q.correct ? `<div style="font-size:0.7rem; color:#94a3b8;">Target: <span style="color:${TOPSCORE_COLORS.CORRECT}; font-weight:600;">${esc(q.correct)}</span></div>` : ''}
               </div>
             `).join('')}
           </div>

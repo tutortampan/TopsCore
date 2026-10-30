@@ -223,9 +223,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (cheatStrikes > MAX_STRIKES) {
         if (strikeBadge) {
           strikeBadge.textContent = `🚨 LIMIT EXCEEDED (${MAX_STRIKES}/${MAX_STRIKES})`;
-          strikeBadge.style.background = '#dc2626';
+          strikeBadge.style.background = 'var(--grade-e, #FF0000)';
           strikeBadge.style.color = '#ffffff';
-          strikeBadge.style.boxShadow = '0 0 20px rgba(220, 38, 38, 0.95)';
+          strikeBadge.style.boxShadow = '0 0 20px rgba(var(--grade-e-rgb, 255, 0, 0), 0.95)';
           strikeBadge.style.border = '2px solid #ffffff';
         }
         if (reasonEl) {
@@ -249,9 +249,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       const isFinalWarning = (cheatStrikes === MAX_STRIKES);
       if (strikeBadge) {
         strikeBadge.textContent = isFinalWarning ? `🚨 STRIKE ${cheatStrikes} OF ${MAX_STRIKES} (FINAL WARNING)` : `🚨 STRIKE ${cheatStrikes} OF ${MAX_STRIKES}`;
-        strikeBadge.style.background = '#dc2626'; // Merah semua untuk strike 1-10!
+        strikeBadge.style.background = 'var(--grade-e, #FF0000)'; // Merah canonical untuk strike 1-10!
         strikeBadge.style.color = '#ffffff';
-        strikeBadge.style.boxShadow = '0 0 20px rgba(220, 38, 38, 0.95)';
+        strikeBadge.style.boxShadow = '0 0 20px rgba(var(--grade-e-rgb, 255, 0, 0), 0.95)';
         strikeBadge.style.border = '2px solid #ffffff';
       }
 
@@ -1599,7 +1599,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
         btn.setAttribute('tabindex', '0');
-        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16,185,129,0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:clamp(12.5px, 3.2vw, 14.5px); font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 16px rgba(6,182,212,0.25)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
+        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(var(--grade-star-rgb, 0, 192, 0), 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:clamp(12.5px, 3.2vw, 14.5px); font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 16px rgba(6,182,212,0.25)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
         
         btn.innerHTML = `<div class="mc-letter" style="background:${isSelected ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; color:${isSelected ? '#000000' : '#94a3b8'}; border-radius:8px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:11.5px; font-weight:800;">${letters[i] || i+1}</div><div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25; text-align:left;">${optText}</div>`;
         
@@ -1617,7 +1617,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           btn.classList.add('selected');
           btn.setAttribute('aria-checked', 'true');
           btn.style.border = '1.5px solid #06b6d4';
-          btn.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16,185,129,0.2) 100%)';
+          btn.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(var(--grade-star-rgb, 0, 192, 0), 0.2) 100%)';
           btn.style.boxShadow = '0 0 16px rgba(6,182,212,0.25)';
           btn.style.color = '#ffffff';
           const activeLetter = btn.querySelector('.mc-letter');
@@ -1651,7 +1651,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         btn.className = `mc-option ${isSelected ? 'selected' : ''}`;
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
-        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; justify-content:center; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16,185,129,0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; font-weight:600; font-size:clamp(12.5px, 3.2vw, 14.5px); cursor:pointer; text-align:center; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 16px rgba(6,182,212,0.25)' : '0 2px 6px rgba(0,0,0,0.2)'}; flex-shrink:0;`;
+        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; justify-content:center; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(var(--grade-star-rgb, 0, 192, 0), 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; font-weight:600; font-size:clamp(12.5px, 3.2vw, 14.5px); cursor:pointer; text-align:center; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 16px rgba(6,182,212,0.25)' : '0 2px 6px rgba(0,0,0,0.2)'}; flex-shrink:0;`;
         btn.innerHTML = `<div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25;">${optText}</div>`;
         btn.addEventListener('click', () => {
           area.querySelectorAll('.mc-option').forEach(o => {
@@ -1743,7 +1743,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       const statusEl = document.createElement('div');
       statusEl.style.cssText = 'font-weight:700; font-size:11.5px; color:#94a3b8;';
       statusEl.textContent = savedAnswer ? '✅ Recorded' : '● Ready';
-      if (savedAnswer) statusEl.style.color = '#34d399';
+      if (savedAnswer) statusEl.style.color = 'var(--clr-success, #00c000ff)';
       topRow.appendChild(langSelect); topRow.appendChild(statusEl);
       area.appendChild(topRow);
 
@@ -1755,7 +1755,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       const micBtn = document.createElement('button');
       micBtn.className = 'speech-mic-btn-lg';
-      micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(52,211,153,0.45); background:linear-gradient(135deg,#10b981 0%,#059669 100%); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 0 24px rgba(16,185,129,0.45), 0 8px 16px rgba(0,0,0,0.35); flex-shrink:0;';
+      micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(var(--grade-star-rgb, 0, 192, 0), 0.4); background:linear-gradient(135deg, #86efac 0%, var(--grade-star, #00c000ff) 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 0 24px rgba(var(--grade-star-rgb, 0, 192, 0), 0.45), 0 8px 16px rgba(0,0,0,0.35); flex-shrink:0;';
       micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
       
       const micHelp = document.createElement('div');
@@ -1772,11 +1772,13 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           lang: langSelect.value,
           onStart() {
             window._isSpeechRecognitionEngaged = true;
-            micBtn.style.background = 'linear-gradient(135deg, #ef4444, #b91c1c)';
-            micBtn.style.borderColor = 'rgba(239,68,68,0.5)';
+            micBtn.classList.add('listening');
+            micBtn.style.background = 'linear-gradient(135deg, var(--grade-e, #FF0000), #990000)';
+            micBtn.style.borderColor = 'rgba(var(--grade-e-rgb, 255, 0, 0), 0.5)';
+            micBtn.style.color = '#ffffff';
             micBtn.innerHTML = '<svg style="width:clamp(18px, 4.5vw, 24px); height:clamp(18px, 4.5vw, 24px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>';
             statusEl.textContent = '● Listening';
-            statusEl.style.color = '#ef4444';
+            statusEl.style.color = 'var(--grade-e, #FF0000)';
             micHelp.textContent = 'Listening...';
             transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.4); font-style:italic;">Listening...</span>';
           },
@@ -1790,21 +1792,25 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           },
           onEnd() {
             setTimeout(() => { window._isSpeechRecognitionEngaged = false; }, 1500);
-            micBtn.style.background = 'linear-gradient(135deg,#10b981 0%,#059669 100%)';
-            micBtn.style.borderColor = 'rgba(52,211,153,0.45)';
+            micBtn.classList.remove('listening');
+            micBtn.style.background = 'linear-gradient(135deg, #86efac 0%, var(--grade-star, #00c000ff) 100%)';
+            micBtn.style.borderColor = 'rgba(var(--grade-star-rgb, 0, 192, 0), 0.45)';
+            micBtn.style.color = '#0F172A';
             micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
             const hasAns = !!answeredMap[row.id];
             statusEl.textContent = hasAns ? '✅ Recorded' : '● Ready';
-            statusEl.style.color = hasAns ? '#34d399' : '#94a3b8';
+            statusEl.style.color = hasAns ? 'var(--clr-success, #00c000ff)' : '#94a3b8';
             micHelp.textContent = 'Tap to Speak';
           },
           onError(msg) {
             setTimeout(() => { window._isSpeechRecognitionEngaged = false; }, 1500);
-            micBtn.style.background = 'linear-gradient(135deg,#10b981 0%,#059669 100%)';
-            micBtn.style.borderColor = 'rgba(52,211,153,0.45)';
+            micBtn.classList.remove('listening');
+            micBtn.style.background = 'linear-gradient(135deg, #86efac 0%, var(--grade-star, #00c000ff) 100%)';
+            micBtn.style.borderColor = 'rgba(var(--grade-star-rgb, 0, 192, 0), 0.45)';
+            micBtn.style.color = '#0F172A';
             micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
             statusEl.textContent = `⚠️ ${msg}`;
-            statusEl.style.color = '#f43f5e';
+            statusEl.style.color = 'var(--grade-e, #FF0000)';
             micHelp.textContent = 'Tap to Retry';
             showToast(msg, 'warning');
           }
@@ -1866,10 +1872,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       try {
         await saveAnswer(attemptAnswerId, studentAnswer);
         if (statusText) statusText.textContent = 'Saved';
-        if (syncDot) syncDot.style.background = '#10b981';
+        if (syncDot) syncDot.style.background = 'var(--clr-success, #00c000ff)';
       } catch(e) {
         if (statusText) statusText.textContent = 'Saved (Offline)';
-        if (syncDot) syncDot.style.background = '#fbbf24';
+        if (syncDot) syncDot.style.background = 'var(--clr-warning, #FFFF00)';
       }
     }
 

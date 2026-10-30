@@ -148,7 +148,7 @@
       cursor: pointer;
       transition: color 0.2s;
     }
-    .clear-session-link:hover { color: #f87171; }
+    .clear-session-link:hover { color: var(--clr-danger); }
     .clear-session-link.visible { display: block; }
 
     /* --- Cascading Section --- */
@@ -199,9 +199,9 @@
     }
 
     .cascade-step-num.done {
-      background: rgba(52,211,153,0.2);
-      border-color: rgba(52,211,153,0.4);
-      color: #34d399;
+      background: rgba(var(--grade-star-rgb), 0.2);
+      border-color: rgba(var(--grade-star-rgb), 0.4);
+      color: var(--grade-star);
     }
 
     .cascade-title-wrap {
@@ -257,10 +257,10 @@
     .cascade-section.selected { margin-bottom: 0.38rem; }
     .cascade-section.selected .cascade-body { display: none; }
     .cascade-section.selected .cascade-inner {
-      border-color: rgba(52,211,153,0.2);
-      background: rgba(52,211,153,0.05);
+      border-color: rgba(var(--grade-star-rgb), 0.2);
+      background: rgba(var(--grade-star-rgb), 0.05);
     }
-    .cascade-section.selected .cascade-step-num { background: rgba(52,211,153,0.2); border-color: rgba(52,211,153,0.4); color: #34d399; }
+    .cascade-section.selected .cascade-step-num { background: rgba(var(--grade-star-rgb), 0.2); border-color: rgba(var(--grade-star-rgb), 0.4); color: var(--grade-star); }
     .cascade-section.selected .cascade-label { color: rgba(255,255,255,0.7); }
 
     .cascade-body { padding: 1.25rem 1.25rem 1.5rem; }
@@ -340,7 +340,7 @@
 
     .opt-card-icon { font-size: 1.1rem; flex-shrink: 0; }
     .opt-card-name { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .opt-card-check { color: #34d399; font-size: 1rem; display: none; }
+    .opt-card-check { color: var(--grade-star); font-size: 1rem; display: none; }
     .opt-card.active .opt-card-check { display: block; }
 
     /* Empty & loading states */

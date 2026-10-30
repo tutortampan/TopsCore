@@ -20,11 +20,21 @@ async function main() {
   const allBatchExams = allTests.filter(isWeeklyExam);
   console.log(`Total exams in batch: ${allBatchExams.length}`);
 
-  // 3. Fetch all attempts for students in batch
+  // 3. Fetch all attempts for students in batch with pagination
   const studentIds = students.map(s => s.id);
-  const { data: attempts } = await sb.from('attempts')
-    .select('id, student_id, test_id, score, percentage, status, is_remedial_unlocked, created_at, submitted_at, total_questions, tests(*)')
-    .in('student_id', studentIds);
+  let attempts = [];
+  let from = 0;
+  while (true) {
+    const { data: page, error } = await sb.from('attempts')
+      .select('id, student_id, test_id, score, percentage, status, is_remedial_unlocked, created_at, submitted_at, total_questions, tests(*)')
+      .in('student_id', studentIds)
+      .range(from, from + 999);
+    if (error) throw error;
+    if (!page || page.length === 0) break;
+    attempts = attempts.concat(page);
+    if (page.length < 1000) break;
+    from += 1000;
+  }
 
   console.log(`Total attempts for batch: ${attempts.length}`);
 
@@ -49,13 +59,31 @@ async function main() {
       const effPct = isRemedial ? Math.min(rawPct, 60.0) : rawPct;
 
       const key = t.id;
-      if (!bestMap[key] || effPoints > bestMap[key].points || (effPoints === bestMap[key].points && effPct > bestMap[key].effPct)) {
+      const attTime = new Date(att.submitted_at || att.created_at || 0).getTime();
+      let shouldReplace = false;
+      if (!bestMap[key]) {
+        shouldReplace = true;
+      } else {
+        const curSc = Number(bestMap[key].points ?? 0);
+        const curPct = Number(bestMap[key].effPct ?? 0);
+        const curTime = bestMap[key].attTime || 0;
+        if (effPoints > curSc) {
+          shouldReplace = true;
+        } else if (effPoints === curSc && effPct > curPct) {
+          shouldReplace = true;
+        } else if (effPoints === curSc && Math.abs(effPct - curPct) <= 0.01 && attTime > curTime) {
+          shouldReplace = true;
+        }
+      }
+
+      if (shouldReplace) {
         bestMap[key] = {
           test: t,
           isExam,
           effPct,
           points: effPoints,
-          totalQ
+          totalQ,
+          attTime
         };
       }
 
@@ -84,8 +112,12 @@ async function main() {
     };
   });
 
-  // Sort
+  // Sort (Progress-First Hierarchy per User Specification)
   studentStats.sort((a, b) => {
+    const progA = Number(a.progressPct ?? 0);
+    const progB = Number(b.progressPct ?? 0);
+    if (progA !== progB) return progB - progA;
+
     const ptsA = Number(a.totalPoints ?? 0);
     const ptsB = Number(b.totalPoints ?? 0);
     if (ptsA !== ptsB) return ptsB - ptsA;
@@ -93,10 +125,6 @@ async function main() {
     const scoreA = (a.completedWeeklyCount > 0) ? Number(a.overallScore ?? 0) : -1;
     const scoreB = (b.completedWeeklyCount > 0) ? Number(b.overallScore ?? 0) : -1;
     if (scoreA !== scoreB) return scoreB - scoreA;
-
-    const progA = Number(a.progressPct ?? 0);
-    const progB = Number(b.progressPct ?? 0);
-    if (progA !== progB) return progB - progA;
 
     if (a.lastSubmittedAt && b.lastSubmittedAt) {
       const diff = new Date(a.lastSubmittedAt) - new Date(b.lastSubmittedAt);

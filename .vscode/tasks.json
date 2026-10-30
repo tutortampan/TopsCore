@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "TopsCore: Verify System Health (CI Gate)",
+      "type": "shell",
+      "command": "npm test",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": false,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "TopsCore: Check JS Syntax",
+      "type": "shell",
+      "command": "node scripts/check_all_js_syntax.cjs",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "TopsCore: Verify Grading Scale",
+      "type": "shell",
+      "command": "node scripts/verify_green_star_grading.mjs",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "TopsCore: Start Five Server",
+      "type": "shell",
+      "command": "npx five-server . --port=5500 --open",
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}
+

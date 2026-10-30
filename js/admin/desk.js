@@ -492,7 +492,7 @@ export async function renderDataHealth(container) {
 
       <div class="antigravity-card p-4">
         <div class="text-xs text-muted text-uppercase fw-700 mb-2">Storage Usage (Transient Blobs)</div>
-        <div style="font-size:1.75rem;font-weight:700;color:#10b981;" id="metric-storage">0.00 MB</div>
+        <div style="font-size:1.75rem;font-weight:700;color:var(--clr-success, #00c000ff);" id="metric-storage">0.00 MB</div>
         <div class="text-xs text-muted mt-1">Zero audio blobs persisted (Low-Egress)</div>
       </div>
 
@@ -564,7 +564,7 @@ export async function renderDataHealth(container) {
             Audit foreign key integrity. Identify unlinked attempt answers, progress records missing students, and Tests with dangling references.
           </p>
         </div>
-        <button class="btn btn-success" id="btn-health-scan-orphans" style="width:100%;font-weight:600;background:linear-gradient(135deg, #10b981, #059669);color:#fff;">
+        <button class="btn btn-success" id="btn-health-scan-orphans" style="width:100%;font-weight:700;background:linear-gradient(135deg, #86efac, var(--grade-star, #00c000ff));color:#0F172A;">
           &#128269; Scan Integrity
         </button>
       </div>
@@ -595,7 +595,7 @@ export async function renderDataHealth(container) {
         </div>
         <div class="d-flex gap-2 align-end" style="padding-top: 18px;">
           <button class="btn btn-primary" id="btn-preview-recal" disabled style="height: 38px;">🔍 Preview Recalibration</button>
-          <button class="btn btn-success" id="btn-apply-recal" disabled style="height: 38px; background: linear-gradient(135deg, #10b981, #059669); font-weight: 700;">⚡ Apply Recalibration</button>
+          <button class="btn btn-success" id="btn-apply-recal" disabled style="height: 38px; background: linear-gradient(135deg, #86efac, var(--grade-star, #00c000ff)); color: #0F172A; font-weight: 700;">⚡ Apply Recalibration</button>
         </div>
       </div>
 
@@ -614,13 +614,13 @@ export async function renderDataHealth(container) {
             <div class="text-xs text-muted mb-1">Affected Attempts</div>
             <div class="fw-700" style="font-size: 1.4rem; color: var(--clr-primary, #a78bfa);" id="recal-metric-affected">0</div>
           </div>
-          <div class="glass-card p-3 text-center" style="border-left: 3px solid #10b981;">
+          <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--grade-star, #00c000ff);">
             <div class="text-xs text-muted mb-1">Status: FAIL &rarr; PASS</div>
-            <div class="fw-700" style="font-size: 1.4rem; color: #10b981;" id="recal-metric-fail-pass">0</div>
+            <div class="fw-700" style="font-size: 1.4rem; color: var(--grade-star, #00c000ff);" id="recal-metric-fail-pass">0</div>
           </div>
-          <div class="glass-card p-3 text-center" style="border-left: 3px solid #f43f5e;">
+          <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--grade-e, #FF0000);">
             <div class="text-xs text-muted mb-1">Status: PASS &rarr; FAIL</div>
-            <div class="fw-700" style="font-size: 1.4rem; color: #f43f5e;" id="recal-metric-pass-fail">0</div>
+            <div class="fw-700" style="font-size: 1.4rem; color: var(--grade-e, #FF0000);" id="recal-metric-pass-fail">0</div>
           </div>
           <div class="glass-card p-3 text-center" style="border-left: 3px solid #38bdf8;">
             <div class="text-xs text-muted mb-1">Score Increases</div>
@@ -678,7 +678,7 @@ export async function renderDataHealth(container) {
         </div>
         <div class="d-flex gap-3 justify-between">
           <button class="btn btn-secondary" id="btn-recal-cancel" style="flex:1;">Cancel</button>
-          <button class="btn btn-primary" id="btn-recal-confirm-run" style="flex:1; background: linear-gradient(135deg,#10b981,#059669); border:none;">✅ Yes, Apply Changes</button>
+          <button class="btn btn-primary" id="btn-recal-confirm-run" style="flex:1; background: linear-gradient(135deg, #86efac, var(--grade-star, #00c000ff)); color: #0F172A; font-weight: 700; border:none;">✅ Yes, Apply Changes</button>
         </div>
       </div>
     </div>
@@ -701,21 +701,21 @@ export async function renderDataHealth(container) {
       if (res.connected) {
         if (latency < 400) {
           if (dot) dot.className = 'heartbeat-dot pulse-emerald';
-          if (text) { text.textContent = 'Supabase Connected'; text.style.color = '#10b981'; }
+          if (text) { text.textContent = 'Supabase Connected'; text.style.color = 'var(--clr-success, #00c000ff)'; }
           if (latDesc) latDesc.textContent = 'Optimal connection speed';
         } else {
           if (dot) dot.className = 'heartbeat-dot pulse-amber';
-          if (text) { text.textContent = 'High Latency'; text.style.color = '#f59e0b'; }
+          if (text) { text.textContent = 'High Latency'; text.style.color = 'var(--clr-warning, #FFFF00)'; }
           if (latDesc) latDesc.textContent = 'Moderate response delay';
         }
       } else {
         if (dot) dot.className = 'heartbeat-dot pulse-red';
-        if (text) { text.textContent = 'Offline / Disconnected'; text.style.color = '#ef4444'; }
+        if (text) { text.textContent = 'Offline / Disconnected'; text.style.color = 'var(--clr-danger, #FF0000)'; }
         if (latDesc) latDesc.textContent = res.error || 'Connection failed';
       }
     } catch (e) {
       if (dot) dot.className = 'heartbeat-dot pulse-red';
-      if (text) { text.textContent = 'Network Error'; text.style.color = '#ef4444'; }
+      if (text) { text.textContent = 'Network Error'; text.style.color = 'var(--clr-danger, #FF0000)'; }
       if (latEl) latEl.textContent = 'Error';
     }
   };
@@ -804,9 +804,9 @@ export async function renderDataHealth(container) {
 
       const resultsHTML = `
         <div style="display:flex;flex-direction:column;gap:1.25rem;">
-          <div class="antigravity-card p-4 text-center" style="border:1px solid ${totalIssues === 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'};">
+          <div class="antigravity-card p-4 text-center" style="border:1px solid ${totalIssues === 0 ? 'rgba(var(--grade-star-rgb, 0, 192, 0), 0.3)' : 'rgba(var(--grade-e-rgb, 255, 0, 0), 0.3)'};">
             <div style="font-size:2.5rem;margin-bottom:0.25rem;">${totalIssues === 0 ? '&#9989;' : '&#9888;&#65039;'}</div>
-            <h3 style="font-weight:700;margin:0 0 4px 0;color:${totalIssues === 0 ? '#10b981' : '#f59e0b'};">
+            <h3 style="font-weight:700;margin:0 0 4px 0;color:${totalIssues === 0 ? 'var(--clr-success, #00c000ff)' : 'var(--clr-warning, #FFFF00)'};">
               ${totalIssues === 0 ? 'All Relational Constraints Healthy' : `${totalIssues} Integrity Issue(s) Detected`}
             </h3>
             <p class="text-xs text-muted" style="margin:0;">
@@ -817,25 +817,25 @@ export async function renderDataHealth(container) {
           <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:1rem;">
             <div class="antigravity-card p-3">
               <div class="text-xs text-muted mb-1">Orphaned Attempts</div>
-              <div style="font-size:1.4rem;font-weight:700;color:${orphanedAttempts.length ? '#ef4444' : '#10b981'};">
+              <div style="font-size:1.4rem;font-weight:700;color:${orphanedAttempts.length ? 'var(--clr-danger, #FF0000)' : 'var(--clr-success, #00c000ff)'};">
                 ${orphanedAttempts.length}
               </div>
             </div>
             <div class="antigravity-card p-3">
               <div class="text-xs text-muted mb-1">Orphaned Questions</div>
-              <div style="font-size:1.4rem;font-weight:700;color:${orphanedQuestions.length ? '#ef4444' : '#10b981'};">
+              <div style="font-size:1.4rem;font-weight:700;color:${orphanedQuestions.length ? 'var(--clr-danger, #FF0000)' : 'var(--clr-success, #00c000ff)'};">
                 ${orphanedQuestions.length}
               </div>
             </div>
             <div class="antigravity-card p-3">
               <div class="text-xs text-muted mb-1">Unlinked Answers</div>
-              <div style="font-size:1.4rem;font-weight:700;color:${orphanedAnswers.length ? '#ef4444' : '#10b981'};">
+              <div style="font-size:1.4rem;font-weight:700;color:${orphanedAnswers.length ? 'var(--clr-danger, #FF0000)' : 'var(--clr-success, #00c000ff)'};">
                 ${orphanedAnswers.length}
               </div>
             </div>
             <div class="antigravity-card p-3">
               <div class="text-xs text-muted mb-1">Dangling Progress</div>
-              <div style="font-size:1.4rem;font-weight:700;color:${danglingProgress.length ? '#ef4444' : '#10b981'};">
+              <div style="font-size:1.4rem;font-weight:700;color:${danglingProgress.length ? 'var(--clr-danger, #FF0000)' : 'var(--clr-success, #00c000ff)'};">
                 ${danglingProgress.length}
               </div>
             </div>

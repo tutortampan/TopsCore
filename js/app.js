@@ -1,4 +1,6 @@
 import {
+  TOPSCORE_COLORS,
+  getEvaluationColor,
   calculateGrade,
   calculateGrade as getGrade,
   getGradeSymbol,
@@ -15,6 +17,8 @@ import {
 } from './grading.js';
 
 export {
+  TOPSCORE_COLORS,
+  getEvaluationColor,
   calculateGrade,
   calculateGrade as getGrade,
   getGradeSymbol,
@@ -37,6 +41,7 @@ if (typeof window !== 'undefined') {
   window.getGradeColor = getGradeColor;
   window.getGradeSymbol = getGradeSymbol;
   window.GRADE_PALETTE = GRADE_PALETTE;
+  window.TOPSCORE_COLORS = TOPSCORE_COLORS;
   window.isExam = isExam;
   window.isWeeklyExam = isExam;
   window.computeMilestoneExamMastery = computeMilestoneExamMastery;

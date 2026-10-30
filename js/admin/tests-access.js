@@ -23,9 +23,9 @@ import {
   fetchLiveTestSessionData,
   closeTestSession,
   getGrade
-} from '../api.js?v=20261027d';
-import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261027d';
-import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261027d';
+} from '../api.js?v=20261030_v34';
+import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261030_v34';
+import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261030_v34';
 
 const THEME_DEFINITIONS = [
   { code: 'A', name: 'Workplace', color: '#3b82f6', bgRgba: 'rgba(59, 130, 246, 0.08)', borderRgba: 'rgba(59, 130, 246, 0.25)' },
@@ -1602,15 +1602,16 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       const scoreColor = getGradeColorByScore(item.effectiveScore);
       const isRemedialCap = theme.isRemedial;
       const scoreDisplay = item.isEvaluated 
-        ? `${item.effectiveScore}%${isRemedialCap ? '<sup style="font-size:0.65em; font-weight:900; color:#fbbf24; margin-left:1px;">R</sup>' : ''}`
+        ? `${item.effectiveScore}%${isRemedialCap ? '<sup style="font-size:0.65em; font-weight:900; color:inherit; margin-left:1px;">R</sup>' : ''}`
         : '--';
 
-      const isStar = item.grade === '★' || item.grade === 'Star' || item.effectiveScore === 100;
+      const isStar = item.grade === '★' || item.grade === 'Star' || item.grade === 'S' || item.effectiveScore === 100;
       const gradeText = isStar ? '★' : item.grade;
-      const circleText = (item.grade === 'B' || item.grade === 'C') ? '#0f172a' : '#ffffff';
+      const circleText = isStar ? '#ffffff' : '#0f172a';
+      const circleClass = isStar ? 'grade-circle-star' : `grade-circle-${(item.grade || 'e').toLowerCase()}`;
 
       const gradeCircleHtml = item.isEvaluated ? `
-        <div class="grade-circle grade-circle-${item.grade.toLowerCase()}" style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 800; background: ${scoreColor}; color: ${circleText}; box-shadow: 0 0 8px ${scoreColor}; flex-shrink: 0;">
+        <div class="grade-circle ${circleClass}" style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 800; background: ${scoreColor}; color: ${circleText}; box-shadow: 0 0 8px ${scoreColor}; flex-shrink: 0;">
           ${gradeText}
         </div>
       ` : `
