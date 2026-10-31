@@ -1785,7 +1785,7 @@ export async function renderStudents(area) {
         const pct = cs?.themeScores?.['A'] ?? 0;
         const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
         const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:${color};font-variant-numeric:tabular-nums;" title="Theme A Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.75;font-weight:normal;color:${color};"> pts</span></div>`;
+        return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme A Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
       }
     },
     {
@@ -1802,7 +1802,7 @@ export async function renderStudents(area) {
         const pct = cs?.themeScores?.['B'] ?? 0;
         const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
         const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:${color};font-variant-numeric:tabular-nums;" title="Theme B Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.75;font-weight:normal;color:${color};"> pts</span></div>`;
+        return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme B Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
       }
     },
     {
@@ -1819,7 +1819,7 @@ export async function renderStudents(area) {
         const pct = cs?.themeScores?.['C'] ?? 0;
         const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
         const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:${color};font-variant-numeric:tabular-nums;" title="Theme C Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.75;font-weight:normal;color:${color};"> pts</span></div>`;
+        return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme C Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
       }
     },
     {
@@ -1836,7 +1836,7 @@ export async function renderStudents(area) {
         const pct = cs?.themeScores?.['D'] ?? 0;
         const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
         const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:${color};font-variant-numeric:tabular-nums;" title="Theme D Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.75;font-weight:normal;color:${color};"> pts</span></div>`;
+        return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme D Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
       }
     }
   ]);
