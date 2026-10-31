@@ -1934,7 +1934,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
           const themeContainer = document.getElementById('attendance-theme-pills-container');
           if (themeContainer) {
             const btnAll = themeContainer.querySelector('[data-theme="ALL"]');
-            if (btnAll) btnAll.textContent = `🌐 ALL (EXAM TOTALS)`;
+            if (btnAll) btnAll.textContent = `🌐 ALL (EXAMS ONLY)`;
             const btnA = themeContainer.querySelector('[data-theme="A"]');
             if (btnA) btnA.textContent = `🟦 THEME A (${themeAsmCounts['A'] || 8})`;
             const btnB = themeContainer.querySelector('[data-theme="B"]');
