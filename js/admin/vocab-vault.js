@@ -1,3 +1,16 @@
+
+function speakEnglishWord(text) {
+  if (!text || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US';
+  u.rate = 0.95;
+  const voices = window.speechSynthesis.getVoices();
+  const enVoice = voices.find(v => (v.lang === 'en-US' || v.lang.startsWith('en')) && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Female')));
+  if (enVoice) u.voice = enVoice;
+  window.speechSynthesis.speak(u);
+}
+
 /**
  * vocab-vault.js
  * Admin Vocabulary Vault Console — Domain C (Class) Section
@@ -243,13 +256,27 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
           <span style="font-size:11px; color: ${typeColor}; display: inline-block; text-transform: capitalize; font-weight: 700; border: none;">${escapeHtml(w.word_type || 'Vocab')}</span>
         </td>
         <td class="cell-indonesian" style="padding: 6px 12px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.indonesian)}">${escapeHtml(w.indonesian)}</td>
-        <td class="cell-english" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.english)}">${escapeHtml(w.english)}</td>
+        <td class="cell-english" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.english)}">
+          <button type="button" class="btn-vault-speak" data-speak="${escapeHtml(w.english)}" style="background:transparent; border:none; cursor:pointer; padding:0 4px; font-size:12px; color:var(--clr-accent-1, #6366f1); opacity:0.85; transition:transform 0.15s ease;" title="Listen Native Pronunciation">🔊</button>
+          ${escapeHtml(w.english)}
+        </td>
         <td style="padding: 6px 12px; text-align: right; position: sticky; right: 0; background: var(--fm-bg-panel, #0f172a); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 5;">
           <button class="btn btn-xs btn-edit-vault" data-edit-vault="${escapeHtml(w.id)}" style="background: transparent; color: #3b82f6; border: 1px solid #3b82f6; font-size: 10px; padding: 2px 6px;" title="Edit word">&#9998;</button>
           <button class="btn btn-danger btn-xs" data-del-vault="${escapeHtml(w.id)}" title="Delete word" style="font-size: 10px; padding: 2px 6px;">&#128465;</button>
         </td>
       </tr>
     `}).join('');
+
+    // Native Speech Pronunciation Handler
+    tbody.querySelectorAll('.btn-vault-speak').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const text = btn.getAttribute('data-speak');
+        speakEnglishWord(text);
+        btn.style.transform = 'scale(1.25)';
+        setTimeout(() => { btn.style.transform = 'scale(1)'; }, 250);
+      });
+    });
 
     // Delete handlers
     tbody.querySelectorAll('[data-del-vault]').forEach(btn => {

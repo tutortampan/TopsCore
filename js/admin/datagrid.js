@@ -204,10 +204,12 @@ export class DataGrid {
     }
 
     let superHtml = '';
-    if (this.superHeaders && this.superHeaders.length > 0) {
+    const hasSuperHdr = (this.superHeaders && this.superHeaders.length > 0);
+    if (hasSuperHdr) {
+      this.thead.classList.add('has-super-headers');
       superHtml = '<tr class="datagrid-super-header-row">';
       if (this.bulkActions) {
-        superHtml += '<th style="background:var(--clr-bg-2);"></th>';
+        superHtml += '<th style="position:sticky; top:0; left:0; z-index:25; background:var(--fm-bg-panel,#0f172a); border-bottom:1px solid rgba(255,255,255,0.12);"></th>';
       }
       this.superHeaders.forEach(sh => {
         const colSpanAttr = sh.colSpan ? ` colspan="${sh.colSpan}"` : '';
@@ -216,16 +218,21 @@ export class DataGrid {
         superHtml += `<th${colSpanAttr}${cls}${st}>${sh.label}</th>`;
       });
       superHtml += '</tr>';
+    } else {
+      this.thead.classList.remove('has-super-headers');
     }
 
     let html = '<tr>';
     if (this.bulkActions) {
-      html += `<th style="width:40px; text-align:center; position:sticky; left:0; z-index:10; background:var(--clr-bg-2);"><input type="checkbox" class="datagrid-select-all" /></th>`;
+      const topOffset = hasSuperHdr ? 'top:26px;' : 'top:0;';
+      const zIdx = hasSuperHdr ? '24' : '15';
+      html += `<th style="width:40px; text-align:center; position:sticky; ${topOffset} left:0; z-index:${zIdx}; background:var(--fm-bg-panel,#0f172a);"><input type="checkbox" class="datagrid-select-all" /></th>`;
     }
     
     visibleCols.forEach((col, visibleIdx) => {
+      const topOffset = hasSuperHdr ? 'top:26px;' : 'top:0;';
       const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
-      const stickyStyle = isStickyRight ? 'position:sticky; right:0; z-index:10; background:var(--clr-bg-2);' : '';
+      const stickyStyle = isStickyRight ? `position:sticky; ${topOffset} right:0; z-index:15; background:var(--fm-bg-panel,#0f172a);` : '';
       const widthStyle = col.width ? `width:${col.width}; max-width:${col.width};` : '';
       const customClass = col.className ? ` ${col.className}` : '';
       const rawTitle = col.headerTitle || col.title;

@@ -2112,3 +2112,52 @@
   background: #080f1d;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+/* ============================================================
+   ATTEMPT HISTORY & RESULT TABLES (Sleek, Modern, Sticky Header)
+   ============================================================ */
+.result-page .table-responsive {
+  max-height: 280px;
+  overflow-y: auto;
+  overflow-x: auto;
+  position: relative;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.4);
+  -webkit-overflow-scrolling: touch;
+}
+
+.result-page table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.result-page table th {
+  padding: 8px 12px !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  color: #ffffff !important;
+  background: #0f172a !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+.result-page table td {
+  padding: 8px 12px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  font-size: 0.84rem !important;
+  color: #e2e8f0 !important;
+  vertical-align: middle !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+.result-page table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.035) !important;
+}

@@ -33,6 +33,7 @@
   --fm-text-muted: var(--clr-text-3);         /* Elevated contrast subtitles and labels */
   --fm-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --fm-font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --fm-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   /* Dimensions */
   --fm-sidebar-w: 200px;
@@ -2465,7 +2466,7 @@ tr.deleted-row td {
   border-radius: 8px;
   color: var(--clr-danger);
   font-weight: 700;
-  font-family: monospace;
+  font-family: var(--fm-font-mono);
   font-size: 1rem;
   text-align: center;
   letter-spacing: 2px;
@@ -3543,10 +3544,10 @@ tr.deleted-row td {
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  --matrix-row-height: 28px;
-  --matrix-font-size: 0.76rem;
-  --matrix-badge-font: 0.65rem;
-  --matrix-cell-padding: 2px 2px;
+  --matrix-row-height: 26px;
+  --matrix-font-size: 0.70rem;
+  --matrix-badge-font: 0.58rem;
+  --matrix-cell-padding: 1px 1px;
 }
 
 #class-attendance-grid .datagrid-toolbar,
@@ -3563,7 +3564,7 @@ tr.deleted-row td {
   flex: 1 !important;
   height: 100% !important;
   max-height: 100% !important;
-  overflow-x: auto !important; /* Smooth horizontal scroll when columns exceed container */
+  overflow-x: hidden !important; /* Zero horizontal scroll - fits 100% within workspace */
   overflow-y: auto !important; /* Smooth vertical scroll when student count exceeds viewport */
   width: 100% !important;
   display: block !important;
@@ -3578,21 +3579,18 @@ tr.deleted-row td {
 }
 
 #class-attendance-grid .table-wrap::-webkit-scrollbar {
-  height: 9px;
+  width: 6px;
+  height: 6px;
   background: rgba(15, 23, 42, 0.85);
-  border-top: 1px solid rgba(56, 189, 248, 0.25);
 }
 
 #class-attendance-grid .table-wrap::-webkit-scrollbar-thumb {
   background: linear-gradient(90deg, #38bdf8, #818cf8);
   border-radius: 4px;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 #class-attendance-grid .table-wrap::-webkit-scrollbar-thumb:hover {
   background: #38bdf8;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.9);
 }
 
 body.sidebar-collapsed #admin-sidebar {
@@ -3621,8 +3619,9 @@ body.sidebar-collapsed .admin-main {
 
 #class-attendance-grid table.datagrid-table {
   table-layout: fixed !important;
-  width: max-content !important;
-  min-width: 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
   height: 100% !important;
   border-collapse: separate !important;
   border-spacing: 0 !important;
@@ -3633,8 +3632,8 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid tbody tr {
-  height: var(--matrix-row-height, 28px);
-  max-height: var(--matrix-row-height, 28px);
+  height: var(--matrix-row-height, 26px);
+  max-height: var(--matrix-row-height, 26px);
 }
 
 #class-attendance-grid tbody tr:hover {
@@ -3642,9 +3641,9 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid tbody td {
-  height: var(--matrix-row-height, 28px);
-  padding: var(--matrix-cell-padding, 2px 2px) !important;
-  font-size: var(--matrix-font-size, 0.75rem);
+  height: var(--matrix-row-height, 26px);
+  padding: var(--matrix-cell-padding, 1px 1px) !important;
+  font-size: var(--matrix-font-size, 0.70rem);
   vertical-align: middle;
   line-height: 1.1;
   box-sizing: border-box;
@@ -3665,19 +3664,19 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid th.super-hdr {
-  font-size: var(--matrix-badge-font, 0.65rem);
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: var(--matrix-badge-font, 0.58rem);
+  font-weight: 600;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   padding: 2px 2px !important;
   text-align: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   line-height: 1.1;
-  height: 20px;
+  height: 19px;
   color: #ffffff !important;
   position: sticky !important;
   top: 0 !important;
-  z-index: 20 !important;
+  z-index: 22 !important;
   background: #0b1120 !important;
 }
 
@@ -3721,13 +3720,14 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid .datagrid-thead tr:not(.datagrid-super-header-row) th {
-  padding: 2px 2px !important;
-  font-size: var(--matrix-badge-font, 0.68rem);
+  padding: 2px 1px !important;
+  font-size: var(--matrix-badge-font, 0.58rem);
+  font-weight: 500;
   line-height: 1.1;
-  height: 22px;
+  height: 20px;
   color: #ffffff !important;
   position: sticky !important;
-  top: 20px !important;
+  top: 19px !important;
   z-index: 18 !important;
   background: #0b1120 !important;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) !important;
@@ -3741,7 +3741,7 @@ body.sidebar-collapsed .admin-main {
 #class-attendance-grid thead th.col-sticky {
   background: #0b1120 !important;
   position: sticky !important;
-  top: 20px !important;
+  top: 19px !important;
   z-index: 32 !important;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
@@ -3761,14 +3761,14 @@ body.sidebar-collapsed .admin-main {
   z-index: 25 !important;
 }
 
-/* Individual Sticky Column Left Offsets & Widths (7 Columns: INST, PROGRAM, BATCH, STUDENT NAME, GRD, PROG, PTS) */
-#class-attendance-grid .col-sticky-1 { left: 0px !important; width: 48px !important; min-width: 48px !important; max-width: 48px !important; }
-#class-attendance-grid .col-sticky-2 { left: 48px !important; width: 54px !important; min-width: 54px !important; max-width: 54px !important; }
-#class-attendance-grid .col-sticky-3 { left: 102px !important; width: 48px !important; min-width: 48px !important; max-width: 48px !important; }
-#class-attendance-grid .col-sticky-4 { left: 150px !important; width: 140px !important; min-width: 140px !important; max-width: 140px !important; }
-#class-attendance-grid .col-sticky-5 { left: 290px !important; width: 38px !important; min-width: 38px !important; max-width: 38px !important; }
-#class-attendance-grid .col-sticky-6 { left: 328px !important; width: 46px !important; min-width: 46px !important; max-width: 46px !important; }
-#class-attendance-grid .col-sticky-7 { left: 374px !important; width: 46px !important; min-width: 46px !important; max-width: 46px !important; }
+/* Individual Sticky Column Left Offsets & Widths (7 Columns: INST, PROGRAM, BATCH, STUDENT NAME, GRD, PROG, PTS) - Streamlined for 100% Zero-Scroll Viewport Fit */
+#class-attendance-grid .col-sticky-1 { left: 0px !important; width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
+#class-attendance-grid .col-sticky-2 { left: 34px !important; width: 44px !important; min-width: 44px !important; max-width: 44px !important; }
+#class-attendance-grid .col-sticky-3 { left: 78px !important; width: 36px !important; min-width: 36px !important; max-width: 36px !important; }
+#class-attendance-grid .col-sticky-4 { left: 114px !important; width: 110px !important; min-width: 110px !important; max-width: 110px !important; }
+#class-attendance-grid .col-sticky-5 { left: 224px !important; width: 28px !important; min-width: 28px !important; max-width: 28px !important; }
+#class-attendance-grid .col-sticky-6 { left: 252px !important; width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
+#class-attendance-grid .col-sticky-7 { left: 286px !important; width: 38px !important; min-width: 38px !important; max-width: 38px !important; }
 
 /* Sticky Border & Shadow Separator on Last Sticky Column (PTS) */
 #class-attendance-grid .col-sticky-last {
@@ -3779,7 +3779,7 @@ body.sidebar-collapsed .admin-main {
 /* Test Columns Widths & Layout */
 #class-attendance-grid th.col-test,
 #class-attendance-grid td.col-test {
-  padding: var(--matrix-cell-padding, 2px 1px) !important;
+  padding: var(--matrix-cell-padding, 1px 1px) !important;
   text-align: center !important;
   overflow: hidden !important;
   text-overflow: clip !important;
@@ -3788,15 +3788,15 @@ body.sidebar-collapsed .admin-main {
 
 #class-attendance-grid th.col-quiz,
 #class-attendance-grid td.col-quiz {
-  width: 42px !important;
-  min-width: 42px !important;
-  max-width: 44px !important;
+  width: 32px !important;
+  min-width: 32px !important;
+  max-width: 34px !important;
 }
 
-/* Base number & score */
+/* Base number & score - Unbolded and Clean */
 #class-attendance-grid th.col-test .test-num {
-  font-size: var(--matrix-badge-font, 0.68rem) !important;
-  font-weight: 700 !important;
+  font-size: var(--matrix-badge-font, 0.58rem) !important;
+  font-weight: 500 !important;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   display: inline-block;
   cursor: help;
@@ -3805,8 +3805,8 @@ body.sidebar-collapsed .admin-main {
 
 #class-attendance-grid td.col-test .test-score,
 #class-attendance-grid td.col-test .asm-score {
-  font-size: var(--matrix-font-size, 0.75rem) !important;
-  font-weight: 600 !important;
+  font-size: var(--matrix-font-size, 0.70rem) !important;
+  font-weight: 500 !important;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   font-variant-numeric: tabular-nums !important;
   font-feature-settings: "tnum" 1 !important;
@@ -3818,8 +3818,8 @@ body.sidebar-collapsed .admin-main {
 #class-attendance-grid .test-dot,
 #class-attendance-grid .asm-dot {
   color: rgba(255, 255, 255, 0.22);
-  font-weight: 700 !important;
-  font-size: var(--matrix-font-size, 0.75rem) !important;
+  font-weight: 400 !important;
+  font-size: var(--matrix-font-size, 0.70rem) !important;
   line-height: 1;
   display: inline-block;
 }
@@ -3837,40 +3837,40 @@ body.sidebar-collapsed .admin-main {
 
 #class-attendance-grid th.col-exam-score,
 #class-attendance-grid td.col-exam-score {
-  width: 50px !important;
-  min-width: 50px !important;
-  max-width: 52px !important;
-  border-left: 2px solid rgba(255, 255, 255, 0.22) !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 38px !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.18) !important;
   border-right: none !important;
 }
 
 #class-attendance-grid th.col-exam-pts,
 #class-attendance-grid td.col-exam-pts {
-  width: 58px !important;
-  min-width: 58px !important;
-  max-width: 60px !important;
-  border-left: 1px dashed rgba(255, 255, 255, 0.12) !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 38px !important;
+  border-left: 1px dashed rgba(255, 255, 255, 0.10) !important;
   border-right: none !important;
 }
 
 #class-attendance-grid th.col-test-theme-score,
 #class-attendance-grid td.col-test-theme-score {
-  width: 52px !important;
-  min-width: 52px !important;
-  max-width: 56px !important;
-  border-left: 2px solid rgba(255, 255, 255, 0.35) !important;
-  border-right: 1px dashed rgba(255, 255, 255, 0.15) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 40px !important;
+  border-left: 2px solid rgba(255, 255, 255, 0.25) !important;
+  border-right: 1px dashed rgba(255, 255, 255, 0.10) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
 }
 
 #class-attendance-grid th.col-test-theme-total,
 #class-attendance-grid td.col-test-theme-total {
-  width: 58px !important;
-  min-width: 58px !important;
-  max-width: 62px !important;
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 40px !important;
   border-left: none !important;
-  border-right: 3px solid rgba(255, 255, 255, 0.45) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
+  border-right: 3px solid rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
 }
 
 /* Theme-Specific Firm Dividing Borders (3px Solid) running all the way down */
@@ -3917,9 +3917,10 @@ body.sidebar-collapsed .admin-main {
 
 #class-attendance-grid th.col-test-theme-score .test-num,
 #class-attendance-grid th.col-test-theme-total .test-num {
-  background: rgba(255, 255, 255, 0.18) !important;
-  border: 1px solid rgba(255, 255, 255, 0.4) !important;
-  font-weight: 700 !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  font-weight: 600 !important;
+  font-size: 0.52rem !important;
 }
 
 #class-attendance-grid td.col-exam {
@@ -3928,12 +3929,12 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid td.col-exam-score {
-  border-left: 2px solid rgba(255, 255, 255, 0.22) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.18) !important;
   border-right: none !important;
 }
 
 #class-attendance-grid td.col-exam-pts:not(.col-test-theme-total) {
-  border-left: 1px dashed rgba(255, 255, 255, 0.12) !important;
+  border-left: 1px dashed rgba(255, 255, 255, 0.10) !important;
   border-right: none !important;
 }
 
@@ -3951,7 +3952,7 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid td.col-exam .test-score-test:hover {
-  transform: scale(1.08);
+  transform: scale(1.05);
   filter: brightness(1.2);
 }
 
@@ -3969,16 +3970,16 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid .test-num-total {
-  font-size: 0.58rem !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.02em !important;
+  font-size: 0.52rem !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
   line-height: 1.1 !important;
 }
 
 #class-attendance-grid .test-subtag {
-  font-size: 0.44rem !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.01em !important;
+  font-size: 0.40rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
   margin-top: 1px !important;
   line-height: 1 !important;
   color: #ffffff !important;
@@ -4551,11 +4552,11 @@ tfoot.datagrid-tfoot,
 }
 
 .student-dossier-sheet table td {
-  color: #ffffff !important;
+  color: #0f172a !important;
 }
 
 .student-dossier-sheet table td.dossier-label {
-  color: #94a3b8 !important;
+  color: #64748b !important;
 }
 
 .dossier-table {
@@ -4566,14 +4567,14 @@ tfoot.datagrid-tfoot,
 }
 
 .dossier-table th {
-  background: rgba(15, 23, 42, 0.95);
-  color: #ffffff;
+  background: #f1f5f9;
+  color: #0f172a;
   font-weight: 700;
   text-transform: uppercase;
   font-size: 0.70rem;
   letter-spacing: 0.05em;
   padding: 8px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 2px solid #cbd5e1;
   border-right: none;
   border-left: none;
   border-top: none;
@@ -4582,15 +4583,15 @@ tfoot.datagrid-tfoot,
 
 .dossier-table td {
   padding: 7px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid #e2e8f0;
   border-right: none;
   border-left: none;
   border-top: none;
-  color: #ffffff;
+  color: #1e293b;
 }
 
 .dossier-table tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.015);
+  background: #f8fafc;
 }
 
 .dossier-table tr:hover td {
@@ -4599,6 +4600,27 @@ tfoot.datagrid-tfoot,
 
 /* Print Rules */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+  .admin-sidebar,
+  .admin-header,
+  #admin-sidebar,
+  #admin-header,
+  #admin-bottom-infobar,
+  #mobile-bottom-bar,
+  #admin-content-area,
+  .toast-container,
+  .tac-slide-drawer,
+  .tac-drawer-backdrop {
+    display: none !important;
+  }
+  body {
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
   .student-dossier-sheet table td {
     color: #0f172a !important;
   }
@@ -4610,7 +4632,7 @@ tfoot.datagrid-tfoot,
   }
   .dossier-table th {
     background: #f1f5f9 !important;
-    color: #334155 !important;
+    color: #0f172a !important;
     border: 1px solid #cbd5e1 !important;
   }
   .dossier-table td {
@@ -4621,6 +4643,9 @@ tfoot.datagrid-tfoot,
   .dossier-table tr:nth-child(even) td {
     background: #f8fafc !important;
   }
+  .dossier-table tr {
+    page-break-inside: avoid !important;
+  }
   body * {
     visibility: hidden !important;
   }
@@ -4629,11 +4654,15 @@ tfoot.datagrid-tfoot,
     visibility: visible !important;
   }
   .student-modal-backdrop {
-    position: static !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
     background: transparent !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     padding: 0 !important;
+    margin: 0 !important;
     display: block !important;
     overflow: visible !important;
   }
@@ -4643,6 +4672,8 @@ tfoot.datagrid-tfoot,
     max-height: none !important;
     max-width: 100% !important;
     width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     overflow: visible !important;
     background: transparent !important;
   }
@@ -4655,9 +4686,12 @@ tfoot.datagrid-tfoot,
     background: transparent !important;
   }
   .student-dossier-sheet {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
     box-shadow: none !important;
     border: none !important;
-    padding: 10mm 15mm !important;
+    padding: 6mm 10mm !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;

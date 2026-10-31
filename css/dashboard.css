@@ -1177,10 +1177,14 @@
 }
 .completed-table-card {
   border-radius: var(--radius-xl);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 480px;
+  position: relative;
   border: 1px solid var(--clr-border);
   background: var(--clr-surface);
   padding: 0;
+  -webkit-overflow-scrolling: touch;
 }
 .completed-exams-table {
   width: 100%;
@@ -1188,15 +1192,20 @@
   text-align: left;
 }
 .completed-exams-table th {
-  padding: 14px 18px;
+  padding: 12px 18px;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--clr-text-3);
-  background: rgba(255, 255, 255, 0.02);
+  color: #ffffff;
+  background: #0f172a !important;
   border-bottom: 1px solid var(--clr-border);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
   font-weight: 700;
   white-space: nowrap;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  font-variant-numeric: tabular-nums;
 }
 .completed-exams-table td {
   padding: 16px 18px;
@@ -1724,6 +1733,7 @@
 .profile-history-table-wrap {
   max-height: 240px;
   overflow-y: auto;
+  position: relative;
 }
 
 .profile-history-table-wrap table {
@@ -1733,11 +1743,17 @@
 
 .profile-history-table-wrap th {
   font-size: 0.68rem;
-  padding: 6px 10px;
-  background: rgba(0, 0, 0, 0.3);
-  color: #94a3b8;
-  font-weight: 600;
+  padding: 8px 12px;
+  background: #0f172a !important;
+  color: #f8fafc;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  font-variant-numeric: tabular-nums;
 }
 
 .profile-history-table-wrap td {
@@ -1961,10 +1977,14 @@
     }
     .completed-table-card {
       border-radius: var(--radius-xl);
-      overflow: hidden;
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 480px;
+      position: relative;
       border: 1px solid var(--clr-border);
       background: var(--clr-surface);
       padding: 0;
+      -webkit-overflow-scrolling: touch;
     }
 
     /* Desktop Table Styling */
@@ -1978,11 +1998,16 @@
       font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: var(--clr-text-3);
-      background: rgba(255, 255, 255, 0.02);
+      color: #ffffff;
+      background: #0f172a !important;
       border-bottom: 1px solid var(--clr-border);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
       font-weight: 700;
       white-space: nowrap;
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 10 !important;
+      font-variant-numeric: tabular-nums;
     }
     .completed-Tests-table td {
       padding: 10px 14px;
