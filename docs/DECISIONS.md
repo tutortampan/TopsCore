@@ -964,7 +964,62 @@ In TopsCore vocabulary classes, each theme (A, B, C, D) comprises two integrated
 ### Consequences
 - Absolute pedagogical and visual consistency across paired theme exams.
 - Tutors and students see harmonious remedial statuses with zero confusion.
-- Clean, legible matrix rendering in Class Hub regardless of screen resolution.
+---
+
+## DECISION-036 — Real-Time Spoken Interim Persistence, Mobile Anti-Cheat Guard & Offline Buffer Reconnect Engine
+
+Date: 2026-11-01
+Status: ACCEPTED
+
+### Context
+Telemetry investigation of 94,746 student answers across Batch 133 revealed a 42% timeout/blank rate and 1,528 cheat strike logs. Root cause analysis identified that:
+1. Virtual keyboard popups on mobile Android/iOS triggered `window.blur`, causing false-positive cheat alarms with an aggressive 10s countdown that prematurely auto-submitted student exams.
+2. Web Speech API on mobile Chrome/Android produces `interim` results and delays `onFinal` until 2–3s of silence; when countdown expired or students navigated, transcripts in `transcriptBox` were lost because elements lacked an ID and `saveCurrentAnswer()` only inspected `.value` of text inputs.
+3. Network blips in dormitory environments caused unsaved answers to be dropped without visual feedback.
+
+### Decision
+1. **Mobile Visibility Guard**:
+   - On mobile devices, `window.blur` events are ignored if the document remains visible (`document.visibilityState === 'visible'`).
+   - Anti-cheat grace period extended from 10s to 30s with strike-based tolerance.
+2. **Real-Time Interim Speech Persistence & Fail-Safe**:
+   - Assigned explicit `transcriptBox.id = 'speech-transcript-' + row.id`.
+   - Real-time auto-commit on `onResult(interim)` immediately saves spoken words into `answeredMap` as they are spoken.
+   - Fail-safe commit in `onEnd` and `saveCurrentAnswer()` reads `speech-transcript-${row.id}` on navigation or time-out.
+3. **Offline Resilience & Auto-Reconnect Sync**:
+   - Added live `#test-sync-indicator` pill next to the countdown timer (`Saved` 🟢 / `Saving…` 🔵 / `Offline (Buffered)` 🟡).
+   - Real-time `online`/`offline` listeners buffer answers to `localStorage` and auto-flush via `Promise.allSettled(saveAnswer)` upon network reconnection.
+
+### Consequences
+- Eradicates premature auto-submits caused by mobile keyboard usage.
+- Zero lost spoken answers during network lags, speech delays, or navigation.
+- High visual confidence and peace of mind for students in dormitory or mobile settings.
+
+---
+
+## DECISION-037 — Phrase Progress Word-Counter Guidance & Immediate Post-Exam 3D Flashcard Recovery
+
+Date: 2026-11-01
+Status: ACCEPTED
+
+### Context
+Empirical analysis of student errors showed two key pedagogical gaps:
+1. Multi-word phrases and idioms (4+ words) suffered from incomplete submissions (students typing only 1 or 2 words due to lack of visual guidance).
+2. The golden learning retention window immediately following exam submission was underutilized, with students viewing static scores without active reinforcement of missed words.
+
+### Decision
+1. **Phrase Progress Word-Counter**:
+   - Questions with target phrases $\ge 2$ words dynamically render a real-time word counter: `✍️ X / Y words` for written mode and `🎙️ X / Y words` for spoken mode.
+   - Counter dynamically shifts from cyan (`#38bdf8`) to vibrant green (`--clr-success, #00c000ff`) when the target word count is fulfilled.
+2. **Immediate Post-Exam 3D Flashcard Recovery**:
+   - On `result.html`, a dedicated `🗂️ FLASHCARD RECOVERY` action button dynamically activates if any questions were missed, timed out, or partially credited.
+   - Launches an interactive 3D Flip Card modal presenting:
+     - Front: Word category, Indonesian prompt, and student's incorrect attempt.
+     - Back: Correct target English expression with native text-to-speech audio pronunciation (`🔊 Listen`) powered by Web Speech Synthesis.
+
+### Consequences
+- Substantially reduces incomplete answers on idiom and phrase assessments.
+- Bridges assessment and learning, converting evaluation into immediate vocabulary mastery and retention.
+
 
 
 
