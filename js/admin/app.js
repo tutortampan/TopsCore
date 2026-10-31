@@ -2135,13 +2135,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     dynamicAsmCols.push({
                       key: `test_${asm.id}_pts`,
                       className: 'col-asm col-exam col-exam-pts',
-                      width: '60px',
+                      width: '36px',
                       headerTitle: `${headerTooltip} (Points)`,
                       title: `${headerTooltip} (Points)`,
                       label: `
                         <div class="asm-hdr-cell">
                           <span class="test-num test-num-test" title="${escapeHtml(headerTooltip)}">${num}</span>
-                          <span class="test-subtag test-subtag-test-pts">${isPhrase ? 'PHR' : 'WRD'} PTS</span>
+                          <span class="test-subtag test-subtag-test-pts">PTS</span>
                         </div>
                       `,
                       sortable: true,
