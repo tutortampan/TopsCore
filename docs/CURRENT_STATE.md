@@ -1,16 +1,15 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 04:43 UTC+8
+Last Updated: 2026-11-01 04:47 UTC+8
 
-Current Phase: Phase 254: Live Speech Equalizer Waveform Bars & Full Cache v85 [COMPLETE]
+Current Phase: Phase 255: Server-Authoritative Auto-Close Scoring Engine Upgrade [COMPLETE]
 
 Current Task:
-1. Live Audio Equalizer Waveform Bars in Test Runner (`js/test.js` & `css/test.css`):
-   - Added animated 4-bar equalizer (`.speech-wave-bars`) inside `statusEl` while speech recognition is active (`onStart`).
-   - Provides immediate visual feedback that microphone input is active, resolving acoustic anxiety and un-transmitted speech confusion.
-2. Verified 0 rogue colors across 57 files via `scripts/deep_color_audit.mjs`.
-3. Automated Headless Chrome E2E test passed across all 5 primary pages with 0 console errors.
-4. Cache busters updated to `?v=20261101_v85`.
+1. Server-Authoritative Auto-Close Evaluation (`supabase/migrations/20261101050000_auto_close_with_emergency_eval.sql`):
+   - Upgraded `auto_close_expired_attempts` to evaluate all in-progress student answers via `emergency_submit_attempt(rec.id, NULL, 'auto_submitted')` instead of blindly setting score = 0.
+   - Permanently eliminates the 44% zero-score loss when students' devices run out of battery or disconnect on timeout.
+2. Verified 40/40 JS syntax checks PASS and 0 console errors on E2E test.
+3. Cache busters updated to `?v=20261101_v85`.
 
 Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v85)
 

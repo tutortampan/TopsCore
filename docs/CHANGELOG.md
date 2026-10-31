@@ -1,3 +1,25 @@
+## [2026-11-01 04:48] — Phase 255: Server-Authoritative Auto-Close Scoring Engine Upgrade
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 255  
+**Status:** PASS  
+
+### Why
+- Implement Proposal Item 5.1 #1 (Auto-Evaluation on Expiry): Permanently eliminate the 44% zero-score loss when students' attempts expire without final manual submission.
+
+### Changed
+- `supabase/migrations/20261101050000_auto_close_with_emergency_eval.sql`:
+  - Upgraded PostgreSQL function `auto_close_expired_attempts(p_attempt_id uuid DEFAULT NULL)`.
+  - Replaced blind `score = 0` update with server-side loop executing `emergency_submit_attempt(v_rec.id, NULL, 'auto_submitted')`.
+  - Guarantees that every answered question in an abandoned or timed-out session is officially evaluated, scored, and granted its rightful points.
+
+### Verification
+- Migration SQL syntax checked.
+- 40/40 JS files syntax validation PASS (`node --check`).
+- E2E health check: 0 errors across 5 primary pages.
+
+---
+
 ## [2026-11-01 04:45] — Phase 254: Live Speech Equalizer Waveform Bars & Full Cache v85
 
 **Agent/Session:** Antigravity  
