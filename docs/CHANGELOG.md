@@ -10,6 +10,11 @@
 ### Changed
 - `css/style.css`:
   - Added universal styling for `.btn-flashcard-glow`, `.flashcard-modal-backdrop`, `.flip-card`, `.flip-card-inner`, and backface 3D transforms.
+  - Disabled `@view-transition { navigation: auto; }` to eliminate unhandled Chromium DOMException `InvalidStateError: Transition was aborted because of invalid state. ViewTransition opt-in disabled` on page navigation and JS redirects.
+- `css/admin.css`:
+  - Relaxed `.datagrid-cell` text color from hard `#ffffff !important` to `#ffffff` so inline dynamic exam points grade colors are never overridden.
+- `js/admin/app.js`:
+  - Reinforced dynamic exam points color styling with `!important` in Class Hub attendance matrix and summary row.
 - `dashboard.html`:
   - Added trigger button `btn-lobby-flashcards` in Achievement Status bar.
   - Added 3D Flashcard Recovery Modal markup with native audio pronunciation button.
