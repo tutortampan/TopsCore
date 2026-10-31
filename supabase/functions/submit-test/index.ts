@@ -119,6 +119,62 @@ function parseValidAnswers(row: any): string[] {
   return allVariants;
 }
 
+const POS_DERIVATIONAL_SUFFIXES = new Set([
+  'ion', 'tion', 'ation', 'ition', 'sion',
+  'ment', 'ments',
+  'ness', 'ance', 'ence', 'ity', 'ty',
+  'able', 'ible', 'al', 'ial', 'ful', 'less', 'ive', 'ous', 'ious',
+  'ate', 'en', 'ify', 'ize', 'ise',
+  'ly', 'ward', 'wise',
+  'er', 'or', 'ist', 'ee',
+  'ed', 'ing', 's', 'es',
+]);
+
+function isSingleWordFormMatch(sW: string, tW: string): boolean {
+  if (!sW || !tW || sW === tW) return false;
+  if (sW.length < 4 || tW.length < 4) return false;
+
+  let commonPrefixLen = 0;
+  while (
+    commonPrefixLen < sW.length &&
+    commonPrefixLen < tW.length &&
+    sW[commonPrefixLen] === tW[commonPrefixLen]
+  ) {
+    commonPrefixLen++;
+  }
+
+  if (commonPrefixLen >= 4) {
+    const sRest = sW.slice(commonPrefixLen);
+    const tRest = tW.slice(commonPrefixLen);
+    const isSuffix = (rest: string) => rest === '' || POS_DERIVATIONAL_SUFFIXES.has(rest);
+    if (isSuffix(sRest) && isSuffix(tRest)) return true;
+  }
+  return false;
+}
+
+function isWordFormAnswerMatch(studentText: string, optText: string): boolean {
+  const s = String(studentText || '').toLowerCase().trim();
+  const t = String(optText || '').toLowerCase().trim();
+  if (!s || !t || s === t) return false;
+
+  const sWords = s.split(/\s+/).filter(Boolean);
+  const tWords = t.split(/\s+/).filter(Boolean);
+  if (sWords.length !== tWords.length || sWords.length === 0) return false;
+
+  let hasFormDiff = false;
+  for (let i = 0; i < sWords.length; i++) {
+    const sw = sWords[i];
+    const tw = tWords[i];
+    if (sw === tw) continue;
+    if (isSingleWordFormMatch(sw, tw)) {
+      hasFormDiff = true;
+    } else {
+      return false;
+    }
+  }
+  return hasFormDiff;
+}
+
 function evaluateStudentAnswer(
   studentAnswer: string,
   validAnswers: string[],
@@ -137,6 +193,10 @@ function evaluateStudentAnswer(
 
     if (normStudent === normValid || (compactStudent && compactStudent === compactValid)) {
       return { result: "correct", score: 1.0, is_correct: true, similarity_score: 1.0 };
+    }
+
+    if (isWordFormAnswerMatch(normStudent, normValid)) {
+      return { result: "minor_word_form_error", score: 0.5, is_correct: true, similarity_score: 0.5 };
     }
 
     if (isSpeech) {

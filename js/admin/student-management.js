@@ -1,4 +1,4 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, labelAttemptRemedial } from '../api.js?v=20261101_v75';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, labelAttemptRemedial } from '../api.js?v=20261101_v76';
 import { getSupabase } from '../supabase.js?v=5.3.2';
 import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261030_v43';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=5.3.2';
@@ -520,16 +520,23 @@ export async function renderStudents(area) {
   // Filter students strictly by active program
   const programStudents = currentProgramId ? gridData.filter(s => s.program_id === currentProgramId) : gridData;
 
-  // Filter data if navigated from Batches or batch status
-  const currentBatchStatus = window._filterBatchStatus || (window._filterBatchId ? 'all' : 'active');
-  const filteredGridData = programStudents.filter(s => {
-    if (window._filterBatchId && s.batch_id !== window._filterBatchId) return false;
+  // Scope students strictly by the active batch if selected, or active batches in the program
+  const rosterScopeStudents = window._filterBatchId 
+    ? programStudents.filter(s => s.batch_id === window._filterBatchId)
+    : programStudents.filter(s => (s.batches ? s.batches.is_active !== false : true));
+
+  // Default status is ALWAYS 'active' when entering Student Roster per user directive
+  const currentBatchStatus = (window._filterBatchStatus === 'inactive' || window._filterBatchStatus === 'all')
+    ? window._filterBatchStatus
+    : 'active';
+
+  const filteredGridData = rosterScopeStudents.filter(s => {
     if (currentBatchStatus === 'active') {
       return (s.batches ? s.batches.is_active !== false : true) && ((s._raw || s).is_active !== false);
     } else if (currentBatchStatus === 'inactive') {
       return (s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false);
     }
-    return true;
+    return true; // 'all'
   });
 
   // Batches belonging to current active program
@@ -547,10 +554,10 @@ export async function renderStudents(area) {
     }
   }
 
-  // Interactive Status Filter Tabs (User Directive: Active & Inactive in Topbar, No middle filter bar)
-  const activeCount = programStudents.filter(s => (s.batches ? s.batches.is_active !== false : true) && ((s._raw || s).is_active !== false)).length;
-  const inactiveCount = programStudents.filter(s => (s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false)).length;
-  const totalCount = programStudents.length;
+  // Interactive Status Filter Tabs (Scoped to active batch / active batches in scope)
+  const activeCount = rosterScopeStudents.filter(s => (s.batches ? s.batches.is_active !== false : true) && ((s._raw || s).is_active !== false)).length;
+  const inactiveCount = rosterScopeStudents.filter(s => (s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false)).length;
+  const totalCount = rosterScopeStudents.length;
 
   window._switchStudentRosterStatus = (statusId) => {
     window._filterBatchStatus = statusId;

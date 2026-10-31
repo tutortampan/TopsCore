@@ -935,7 +935,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const isTest = isExam(nextAsm);
 
       // Selected Icons: 1A (Solid Yellow Padlock), 2B (Red Rotate Undo), 3C (Green Circle Play)
-      const ICON_1A_YELLOW_LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="#facc15" stroke-width="2.6" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11.5" rx="3" fill="#facc15" stroke="#eab308" stroke-width="1"/><circle cx="12" cy="14.8" r="1.5" fill="#713f12"/><path d="M12 15.5v2.2" stroke="#713f12" stroke-width="1.6" stroke-linecap="round"/></svg>';
+      const ICON_1A_YELLOW_LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="#ffff00" stroke-width="2.6" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11.5" rx="3" fill="#ffff00" stroke="#cccc00" stroke-width="1"/><circle cx="12" cy="14.8" r="1.5" fill="#713f12"/><path d="M12 15.5v2.2" stroke="#713f12" stroke-width="1.6" stroke-linecap="round"/></svg>';
       const ICON_2B_RED_RETAKE  = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
       const ICON_3C_GREEN_PLAY  = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="#ffffff"/></svg>';
 

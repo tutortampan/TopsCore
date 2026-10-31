@@ -388,9 +388,18 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     function triggerCheatAlert(reason) {
       if (!isTestActive || !securityConfig.enabled) return;
 
-      // Guard: Ignore blur events if speech recognition or mic is active (prevents false alarms on Android/Chrome OS intent)
+      // Guard 1: Ignore blur events if speech recognition or mic is active (prevents false alarms on Android/Chrome OS intent)
       if (window._isSpeechRecognitionEngaged && (reason.includes('focus') || reason.includes('blur'))) {
         return;
+      }
+
+      // Guard 2: Mobile / Keyboard Focus Guard (prevents false alarms on Gboard/Samsung virtual keyboard, autocorrect taps, or text selection)
+      if (document.visibilityState === 'visible' && (reason.includes('focus') || reason.includes('blur'))) {
+        const activeEl = document.activeElement;
+        const tag = (activeEl?.tagName || '').toLowerCase();
+        if (tag === 'textarea' || tag === 'input' || window.activeKeyboardInput) {
+          return;
+        }
       }
 
       const now = Date.now();
@@ -471,10 +480,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       if (dismissBtn) {
         dismissBtn.style.display = 'inline-block';
-        dismissBtn.style.background = '#dc2626';
+        dismissBtn.style.background = 'var(--grade-e, #FF0000)';
         dismissBtn.style.color = '#ffffff';
         dismissBtn.style.border = '2px solid #ffffff';
-        dismissBtn.style.boxShadow = '0 0 25px rgba(220, 38, 38, 0.85)';
+        dismissBtn.style.boxShadow = '0 0 25px rgba(var(--grade-e-rgb, 255, 0, 0), 0.85)';
         dismissBtn.textContent = isFinalWarning ? 'Return to My TEST (Final Warning)' : 'Return to My TEST';
       }
 
@@ -482,7 +491,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       startPoliceSiren();
 
-      const durationSeconds = securityConfig.countdownSeconds || 10;
+      const durationSeconds = securityConfig.countdownSeconds || 25;
       cheatDeadline = Date.now() + (durationSeconds * 1000);
       if (countEl) countEl.textContent = durationSeconds;
 
@@ -664,9 +673,20 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     // Detect opening another app, side panel, or losing window focus
     window.addEventListener('blur', () => {
       if (!securityConfig.enabled) return;
-      if (isTestActive) {
-        triggerCheatAlert('Screen lost focus / Side panel or external app opened');
+      if (!isTestActive) return;
+
+      // Mobile / Virtual Keyboard Guard:
+      // If the page is still visible, blur is typically triggered by virtual keyboard opening/closing,
+      // native autocomplete/autocorrect popups, speech mic intent, or tapping text selection.
+      if (document.visibilityState === 'visible') {
+        const activeEl = document.activeElement;
+        const tag = (activeEl?.tagName || '').toLowerCase();
+        if (tag === 'textarea' || tag === 'input' || window.activeKeyboardInput || window._isSpeechRecognitionEngaged) {
+          return;
+        }
       }
+
+      triggerCheatAlert('Screen lost focus / Side panel or external app opened');
     });
 
     // On pagehide / minimize: safely buffer current answers to storage only.
@@ -2167,8 +2187,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (unanswered > 0) {
         // Red Emergency Warning State ("PERINGATAN MERAH SEMUA")
         if (modalBox) {
-          modalBox.style.border = '2px solid #dc2626';
-          modalBox.style.boxShadow = '0 0 50px rgba(220, 38, 38, 0.45), 0 20px 50px rgba(0,0,0,0.9)';
+          modalBox.style.border = '2px solid var(--grade-e, #FF0000)';
+          modalBox.style.boxShadow = '0 0 50px rgba(var(--grade-e-rgb, 255, 0, 0), 0.45), 0 20px 50px rgba(0,0,0,0.9)';
         }
         if (modalIcon) modalIcon.textContent = '🚨';
         if (modalTitle) {

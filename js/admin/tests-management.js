@@ -2,7 +2,7 @@ import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '..
 import { openTestBuilder } from './test-builder.js?v=5.3.2';
 import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.3.2';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.3.2';
-import { TOPSCORE_COLORS, getGradeColor, getGradeColorByScore, calculateGrade, isWeeklyExam, damerauLevenshtein, isWordFormAnswerMatch } from '../grading.js?v=20261031_v58';
+import { TOPSCORE_COLORS, getGradeColor, getGradeColorByScore, calculateGrade, isWeeklyExam, damerauLevenshtein, isWordFormAnswerMatch, cleanPunctuationAndSymbols, parseCorrectAnswers } from '../grading.js?v=20261031_v58';
 import { getSupabase } from '../supabase.js?v=5.3.2';
 import { DataGrid } from './datagrid.js?v=5.3.2';
 if (typeof window !== 'undefined') window.DataGrid = DataGrid;
@@ -51,8 +51,8 @@ function classifyStudentError(studentAnswer, targetCorrect, evaluationResult, qu
     return 'spelling';
   }
 
-  const cleanAns = ans.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-  const targetVariants = target.split(/[;,/]/).map(t => t.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()).filter(Boolean);
+  const cleanAns = cleanPunctuationAndSymbols(ans);
+  const targetVariants = parseCorrectAnswers(target).map(t => cleanPunctuationAndSymbols(t)).filter(Boolean);
 
   // 3. Word Form / Part-of-Speech Confusion (Morphological Root Match)
   for (const variant of targetVariants) {
