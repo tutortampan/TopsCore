@@ -1,29 +1,25 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 04:32 UTC+8
+Last Updated: 2026-11-01 04:36 UTC+8
 
-Current Phase: Phase 252: Universal Dynamic Points Color Adherence & Quiz Scaffolding [COMPLETE]
+Current Phase: Phase 253: Spoken Quiz First-Letter Clue Scaffolding & Full Cache v84 [COMPLETE]
 
 Current Task:
-1. Dynamic Points (PTS) Coloring Adherence (Rule 2.10):
-   - In Student Roster table (`js/admin/student-management.js`), dynamically colored `Exam 1`, `Exam 2`, `Exam 3`, `Exam 4` points using `getGradeColorByScore(themePct)` with `!important` to prevent CSS overrides.
-   - In Student Roster summary row (`summaryRow`), dynamically colored `Avg: X pts` by `batchOverallPct` via `getGradeColorByScore`.
-   - In Class Hub matrix summary row (`js/admin/app.js`), dynamically colored `Class Avg Points` and `Theme Total Points` using `getGradeColorByScore(avgPct)`.
-   - In Student Progress / Test Details modal (`student-management.js`), dynamically colored `ptsDisplay` using `scoreColor`.
-2. Practice Quiz First-Letter Scaffolding Hint (`js/test.js`):
-   - Added optional `💡 Hint` button for practice quizzes (strictly disabled for Exams) revealing first-letter mask clues (`W _ _ _ - W _ _ _ _ _ _`) to overcome the blank/timeout bottleneck.
-3. Cache Busters:
-   - Bumped to `?v=20261101_v83` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/admin/app.js`, and `js/admin/student-management.js`.
-4. Automated Headless Chrome E2E verification:
-   - Verified with real Google Chrome browser across all 5 core entrypoints (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`): 0 console errors, 0 uncaught exceptions.
+1. Spoken Quiz Scaffolding (`js/test.js`):
+   - Added `💡 Hint` button for spoken questions in `renderSpeech` during Quiz practice sessions.
+   - Generates masked letter clue (e.g. `I _ _ _ _ _ _ _`) without revealing the target word, bridging the 74% Vocab Gap.
+   - Strictly disabled during formal Exams to ensure evaluation integrity.
+2. Verified 0 rogue colors across 57 files via `scripts/deep_color_audit.mjs`.
+3. Automated Headless Chrome E2E test passed across all 5 primary pages with 0 console errors.
+4. Cache busters updated to `?v=20261101_v84`.
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v83)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v84)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
    - Kolom nilai ujian (**EXAM 1–4**) dan poin (**PTS**) di Roster Siswa (`admin.html#students`) serta footer summary row secara otomatis mewarisi warna grade kanonik (**★/A Hijau `#00c000ff`, B Lime `#95ff00ff`, C Kuning `#FFFF00`, D Oranye `#FF8C00`, E Merah `#FF0000`**).
    - Seluruh nilai siswa di Class Hub Batch 133 100% murni tanpa manipulasi.
-   - Pada kuis latihan harian (`test.html`), siswa memiliki opsi `💡 Hint` huruf pertama untuk mengurangi angka timeout.
+   - Pada kuis latihan harian lisan & tulisan (`test.html`), siswa memiliki opsi `💡 Hint` huruf pertama untuk mengatasi kebuntuan kosa kata.
 
 ## Files Changed In Latest Step
 - `js/admin/student-management.js` — Added dynamic points color inheritance and `!important` rule in `perClassColDefs`, `summaryRow`, and modal rows.
