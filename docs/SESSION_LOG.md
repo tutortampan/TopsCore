@@ -1,3 +1,38 @@
+## SESSION-20261101-0225
+
+Start: 2026-11-01 02:20 UTC+8
+End: 2026-11-01 02:25 UTC+8
+Agent: Antigravity
+
+### User Request
+"bagian ini hnaya tempilkan batch yang aktif saja, uyng tidak aktif sembunyikan" (with screenshot of Domain B sidebar displaying Camp 133 and inactive Past batches).
+
+### Objective
+1. Filter the Domain B sidebar batch list to display ONLY active batches (`is_active: true`).
+2. Hide all past/inactive batches (`Camp 132`, `Camp 131`, `Camp 123`, `Hospitality TP-26`, `Hospitality SH-26`).
+3. Update pre-render cache hydration in `admin-init.js` to ensure inactive batches do not flash on load.
+4. Validate syntax, test simulation, bump cache to `?v=20261101_v75`, and push to `origin/main`.
+
+### Work Performed
+1. `js/admin/app.js`:
+   - Updated `loadSidebarPrograms()`: filtered batches by `is_active !== false` and restricted active programs to those containing at least one active batch.
+   - Updated `renderItems()`: filtered items to `it.is_active !== false` and stripped `Past` tag rendering.
+2. `js/admin/admin-init.js`:
+   - Pre-render cache hydration: filtered cached items by `is_active !== false`.
+3. `scripts/test_roster_clean_layout.mjs`:
+   - Updated simulation to assert active batches only.
+4. Cache Busters:
+   - Bumped `admin.html`, `dashboard.html`, `result.html`, `test.html`, `app.js`, and `student-management.js` to `?v=20261101_v75`.
+
+### Verification
+- `node scripts/test_roster_clean_layout.mjs`: PASS (Sidebar active batch: `Camp 133`).
+- `node scripts/check_all_js_syntax.cjs`: 40/40 PASS.
+
+### Resume From
+Ready for user verification in browser (Ctrl + F5).
+
+---
+
 ## SESSION-20261101-0125
 
 Start: 2026-11-01 01:05 UTC+8

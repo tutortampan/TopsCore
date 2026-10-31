@@ -18,3 +18,4 @@ function scan(dir) {
 }
 
 scan('js');
+

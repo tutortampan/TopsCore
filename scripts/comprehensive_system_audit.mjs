@@ -88,3 +88,4 @@ if (gradingCode.includes('function getGradeColorByScore')) {
 console.log('\n=== AUDIT SUMMARY ===');
 console.log(`Total HTML link/script issues: ${totalHtmlIssues}`);
 console.log(`Total JS import issues: ${totalImportIssues}`);
+

@@ -26,10 +26,11 @@ async function runTest() {
     return (b.name || '').localeCompare(a.name || '', undefined, { numeric: true });
   });
 
-  console.log('Sidebar Camp Batches:');
-  campBatches.forEach(b => {
+  const activeCampBatches = campBatches.filter(b => b.is_active !== false);
+  console.log('Sidebar Active Batches:');
+  activeCampBatches.forEach(b => {
     const label = formatSidebarBatchLabel(campProg.name, b.name);
-    console.log(`  - [${b.is_active ? 'ACTIVE' : 'PAST'}] ${label} (ID: ${b.id})`);
+    console.log(`  - [ACTIVE] ${label} (ID: ${b.id})`);
   });
 
   const batch133 = campBatches.find(b => b.name === '133');

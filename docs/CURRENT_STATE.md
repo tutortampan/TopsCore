@@ -1,33 +1,29 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 01:25 UTC+8
+Last Updated: 2026-11-01 02:25 UTC+8
 
-Current Phase: Phase 241: Comprehensive System Audit, Student Roster Summary Footer (tfoot), Avatar Graceful Fallback Engine, and Hotkey / Excel Innovations [COMPLETE]
+Current Phase: Phase 242: Sidebar Batch Filtering — Display Strictly Active Batches Only [COMPLETE]
 
-Current Task: Fulfilled comprehensive diagnostic audit, column/font/footer ("fot") review, and high-impact tactical innovations:
-1. Student Roster Docked Summary Row (`tfoot`): Added dynamic batch summary footer row to DataGrid in `student-management.js`:
-   - `LEVEL`: `BATCH AVG`
-   - `NAME`: `★ BATCH AVERAGE (${filteredData.length} Students)`
-   - `AGE`: Dynamic average age (e.g. `17.7 yrs`)
-   - `GENDER`: Gender breakdown (e.g. `12 M · 10 F`)
-   - `EXAM 1–4`: Dynamic average earned points for Theme A, B, C, D exams (e.g. `96.1 pts`, `169.5 pts`, `112.4 pts`, `321.6 pts`)
-   - `ACTIONS`: Total average points across all 4 milestone exams (`Avg: 699.6 pts`).
-2. Docked Summary Footer Styling (`css/admin.css`): Generalized `.datagrid-tfoot` and `tr.datagrid-summary-row` with sticky docked positioning, blue accent border (`rgba(56, 189, 248, 0.6)`), and tabular numerals (`font-variant-numeric: tabular-nums`).
-3. Avatar Graceful Fallback Everywhere ("fot"): Added `onerror="this.onerror=null;this.src='${generateAvatarDataUri(...)}'"` fallback across student rows, modals, credential cards, exam screen (`test.js`), and result header (`result.js`) to guarantee 0 broken image icons.
-4. Hotkey Quick-Switch (Tactical Innovation 1): Pressing `1` (Active), `2` (Inactive), or `3` (All) toggles roster status filters instantaneously with a toast notification.
-5. Smart Excel Export (Tactical Innovation 2): Upgraded `exportStudentsGradebook` to include individual Theme Exam points (`Exam 1–4 Pts`, `Total Exam Pts`, `Score %`, `Grade`, `Age`, `Gender`).
-6. Deep E2E & Integrity Verification:
-   - 40/40 JS files syntax validation PASS (`node --check`).
-   - 6/6 HTML files checked: 0 missing scripts, 0 broken styles.
-   - Supabase DB: 704 best score attempts (0 duplicates), 40 tests (100% valid class_id), 64 active students (100% valid batch_id).
-   - Student Lobby Standings & Dashboard parity: 100% PASS matching live production.
-7. Cache buster bumped to `?v=20261101_v74`.
+Current Task: Fulfilled user directive to strictly display ONLY active batches in Domain B sidebar (`B — BOARD`) and hide inactive/past batches:
+1. `loadSidebarPrograms()` in `js/admin/app.js`: Filtered batches by `is_active !== false` and programs to active programs with active batches. Inactive/past batches (`Camp 132`, `Camp 131`, `Camp 123`, `Hospitality TP-26`, `Hospitality SH-26`) are completely excluded from sidebar injection.
+2. `renderItems()` in `js/admin/app.js`: Added explicit filter `it.is_active !== false` and removed `Past` badges so that only active batch buttons (e.g. `Camp 133`) are rendered.
+3. Pre-render Cache Hydration in `js/admin/admin-init.js`: Filtered `localStorage` cached list by `is_active !== false` before rendering so no inactive batches flash on page load.
+4. Cache bumped to `?v=20261101_v75` across `admin.html`, `dashboard.html`, `result.html`, `test.html`.
+5. 40/40 JS files passed syntax validation (`node --check`).
 
 Status: COMPLETE (All 40 JS syntax checks PASS, 0 git diff)
 
 ## Next Exact Action
 1. User dapat melakukan hard-refresh (**Ctrl + F5**) di browser pada `admin.html`:
-   - Topbar Tabs: Klik `🟢 Active Students` (22), `⚪ Inactive Students` (2), atau `👥 All Students` (24) — atau tekan tombol keyboard `1`, `2`, atau `3` untuk beralih instan.
+   - Side Panel (Domain B): Sekarang **hanya menampilkan batch aktif** (misal: `Camp 133`). Seluruh batch non-aktif/past (`Camp 132`, `Camp 131`, `Camp 123`, `Hospitality TP-26`, `Hospitality SH-26`) disembunyikan total dari sidebar.
+   - Bersih & Rapi: Sidebar kini fokus hanya pada angkatan yang sedang aktif berjalan.
+
+## Files Changed In Latest Step
+- `js/admin/app.js` — Updated `loadSidebarPrograms()` and `renderItems()` to filter out inactive batches and eliminate `Past` tags.
+- `js/admin/admin-init.js` — Filtered `localStorage` pre-render cache by `is_active !== false` to eliminate flash of past batches.
+- `scripts/test_roster_clean_layout.mjs` — Updated test script assertion to test active batches only.
+- `admin.html`, `dashboard.html`, `result.html`, `test.html` — Cache bumped to `?v=20261101_v75`.
+- `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`
    - Tabel Roster: Header tabel langsung berada tepat di bawah top panel; kolom bersih dan terfokus (`Level`, `Name`, `Age`, `Gender`, `Exam 1–4 Pts`, `Actions`).
    - Docked Summary Footer (`tfoot`): Baris `★ BATCH AVERAGE` di bagian bawah tabel menampilkan rata-rata usia (`17.7 yrs`), perbandingan gender (`12 M · 10 F`), rata-rata poin ujian Theme 1–4, dan total rata-rata poin.
    - Foto Mahasiswa: Seluruh foto profil kini memiliki fail-safe engine; jika gambar dari storage gagal termuat, otomatis digantikan avatar SVG elegan tanpa ada icon gambar rusak.

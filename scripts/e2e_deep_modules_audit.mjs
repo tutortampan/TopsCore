@@ -66,3 +66,4 @@ for (const file of modulesToCheck) {
 }
 
 console.log(`\nModule audit completed with ${errors} critical errors.`);
+

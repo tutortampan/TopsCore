@@ -1,3 +1,30 @@
+## [2026-11-01 02:25] — Phase 242: Sidebar Batch Filtering — Display Strictly Active Batches Only
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 242
+**Status:** PASS
+
+### Why
+- User directive: "bagian ini hnaya tempilkan batch yang aktif saja, uyng tidak aktif sembunyikan" (In this section only show the batches that are ACTIVE, hide the ones that are INACTIVE).
+- Previously, all non-deleted batches were loaded in the sidebar, with inactive ones appended with a `Past` badge (e.g. `Camp 132 Past`, `Camp 131 Past`, `Camp 123 Past`, `Hospitality TP-26 Past`, `Hospitality SH-26 Past`), cluttering the Domain B quick switcher.
+
+### Changed
+- `js/admin/app.js`:
+  - `loadSidebarPrograms()`: Filtered batches by `is_active !== false` and restricted active programs to those containing at least one active batch.
+  - `renderItems()`: Filtered items to `it.is_active !== false` and removed the `Past` tag renderer.
+- `js/admin/admin-init.js`:
+  - Pre-render hydration: Filtered cached list to `item.is_active !== false` so that past batches never flash in the DOM during load.
+- `scripts/test_roster_clean_layout.mjs`:
+  - Updated sidebar batch simulation to assert active batches only.
+- Cache Busters:
+  - Bumped `admin.html`, `dashboard.html`, `result.html`, `test.html`, `app.js`, and `student-management.js` to `?v=20261101_v75`.
+
+### Verification
+- `node scripts/test_roster_clean_layout.mjs`: Verified only active batch `Camp 133` is listed under Camp; inactive batches are hidden.
+- `node scripts/check_all_js_syntax.cjs`: 40/40 JS files passed syntax validation (`node --check`).
+
+---
+
 ## [2026-11-01 01:25] — Phase 241: Comprehensive System Audit, Student Roster Summary Footer (tfoot), Avatar Graceful Fallback Engine, and Hotkey / Excel Innovations
 
 **Agent/Session:** Antigravity
