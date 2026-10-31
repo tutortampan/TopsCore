@@ -1353,6 +1353,8 @@ if (!session) {
     let _activeFlashcards = [];
     let _currentFcIndex = 0;
 
+    window.setupFlashcardRecovery = setupFlashcardRecovery;
+    window.openFlashcardModal = openFlashcardModal;
     function setupFlashcardRecovery(answers = []) {
       const fcBtn = document.getElementById('open-flashcards-btn');
       const fcBadge = document.getElementById('flashcard-badge-count');
