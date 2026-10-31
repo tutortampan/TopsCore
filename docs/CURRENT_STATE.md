@@ -1,23 +1,31 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 00:48 UTC+8
+Last Updated: 2026-11-01 00:55 UTC+8
 
-Current Phase: Phase 239: Purge Lingering Student Dashboard Forgiven Logic & Domain B Batch Sidebar Hydration [COMPLETE]
+Current Phase: Phase 240: Student Roster Streamlining, Dynamic Program+Batch Sidebar, Interactive Topbar Status Filter, and Redundant Column Elimination [COMPLETE]
 
-Current Task: (1) Purged remaining `forgiven_student_ids`, `is_forgiven`, and `grade === 'F'` references from student dashboard prerequisite gating (`js/dashboard.js`), ensuring prerequisite unlocks depend purely on authentic submitted scores and live tutor sessions. (2) Enhanced Domain B sidebar hydration in `js/admin/admin-init.js` and `js/admin/app.js` to dynamically show specific program batches (e.g. "Camp 133") with URL hash sync (`#students?batch_id=...`). (3) Bumped cache busters across `dashboard.html` to `?v=20261101_v73`. (4) Validated all 40 JS files pass syntax checking (`node --check`).
+Current Task: Fulfilled user directive with 5 uploaded screenshots:
+1. Top Panel (Gambar 1): Transformed static KPI cards into clickable, interactive status filter tabs: `🟢 Active Students` (22), `⚪ Inactive Students` (2), `👥 All Students` (24) with count badges and active states.
+2. Removed Header & Filter Bar (Gambar 2): Eliminated the bulky section header, redundant subtitle, and duplicate dropdown filter bar (`Status: Active Only`, `Batch: All Active`). The DataGrid table header is now raised directly beneath the top panel with zero wasted space. Added `+ Add Student` and `Resolve Duplicates` directly into the DataGrid toolbar on the right.
+3. Dynamic Program + Batch Side Panel (Gambar 3): Updated Domain B sidebar in `loadSidebarPrograms` and `admin-init.js` to list batches under programs with the format `[Program Name] [Batch Name]` (e.g. `Camp 133`, `Camp 132`, `Camp 131`, `Camp 123`). Clicking a batch directly loads that batch roster and persists selection in URL hash and `localStorage`.
+4. Removed Redundant Left Columns (Gambar 4): Removed `INSTITUTION`, `PROGRAM`, and `BATCH` columns from DataGrid, as they are already represented in the sidebar batch selection. Columns now start cleanly with Checkbox, `LEVEL`, `NAME`, `AGE`, `GENDER`.
+5. Removed Redundant Right Columns (Gambar 5): Removed `ENROLLED` (join date) and `STATUS` columns, as active/inactive state is managed by the top panel and enrollment data belongs to Organization. The right side now cleanly displays the 4 class theme exams (`EXAM 1` to `EXAM 4`) and `ACTIONS`.
+6. Verified with syntax validation (40/40 PASS) and cache bumped to `?v=20261101_v73`.
 
 Status: COMPLETE (All 40 JS syntax checks PASS, 0 git diff)
 
 ## Next Exact Action
-1. User dapat melakukan hard-refresh (**Ctrl + F5**) di browser:
-   - Di `dashboard.html`: Prasyarat ujian siswa murni dievaluasi dari skor autentik dan sesi live tutor.
-   - Di `admin.html`: Sidebar navigasi Domain B menampilkan batch program secara spesifik (misal: "Camp 133") dengan sinkronisasi URL hash yang presisi.
+1. User dapat melakukan hard-refresh (**Ctrl + F5**) di browser pada `admin.html`:
+   - Side Panel (Domain B): Sekarang menampilkan `Camp 133`, `Camp 132`, `Camp 131`, dll.
+   - Top Panel: Kartu di atas kini aktif dan dapat diklik untuk berganti antara `🟢 Active Students`, `⚪ Inactive Students`, dan `👥 All Students`.
+   - Header & Filter: Header besar dan filter dropdown tengah sudah dibersihkan total; header tabel langsung naik tepat di bawah top panel. Tombol `+ Add Student` terletak rapi di toolbar kanan.
+   - Tabel Bersih: Kolom `INSTITUTION`, `PROGRAM`, `BATCH`, `ENROLLED`, dan `STATUS` telah dihapus; hanya kolom esensial `Level`, `Name`, `Age`, `Gender`, `4 Exam Points`, dan `Actions` yang ditampilkan.
 
 ## Files Changed In Latest Step
-- `js/dashboard.js` — Removed lingering `forgiven_student_ids`, `is_forgiven`, and `grade === 'F'` checks from prerequisite gating.
-- `js/admin/admin-init.js` — Hydrated sidebar program and batch items from local cache.
-- `js/admin/app.js` — Enhanced `loadSidebarPrograms()` to support batch-level grouping and selection persistence.
-- `dashboard.html` — Bumped script cache buster to `?v=20261101_v73`.
+- `js/admin/student-management.js` — Elevated active/inactive tabs to topbar; stripped subtitle and filter bar; removed 5 redundant columns; integrated `+ Add Student` into DataGrid actions toolbar.
+- `js/admin/app.js` — Enhanced `loadSidebarPrograms` to build `[Program] [Batch]` items; updated `applySubRouteState` to restore batch and status tab from URL query params.
+- `js/admin/admin-init.js` — Synchronized sidebar pre-render hydration to render batch-level sidebar items without flashing.
+- `admin.html`, `dashboard.html`, `result.html` — Cache bumped to `?v=20261101_v73`.
 - `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`
 
 ## Completed

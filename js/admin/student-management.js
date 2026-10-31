@@ -1,4 +1,4 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, labelAttemptRemedial } from '../api.js?v=5.3.2';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, labelAttemptRemedial } from '../api.js?v=20261101_v73';
 import { getSupabase } from '../supabase.js?v=5.3.2';
 import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261030_v43';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=5.3.2';
@@ -1779,8 +1779,8 @@ export async function renderStudents(area) {
   // and after (enrolled/status/actions).
   const buildSuperHeaders = () => {
     if (activeClassColumns.length === 0) return null;
-    const fixed_before = 7; // inst, prog, batch, level, name, age, gender
-    const fixed_after = 3;  // enrolled, status, actions (progress column removed)
+    const fixed_before = 4; // level, name, age, gender (checkbox handled automatically by DataGrid)
+    const fixed_after = 1;  // actions (enrolled and status removed)
     const sh = [];
     sh.push({ label: '', colSpan: fixed_before, style: 'background:var(--clr-bg-2);border:none;' });
     activeClassColumns.forEach(cls => {
@@ -1798,8 +1798,8 @@ export async function renderStudents(area) {
     container: gridContainer,
     data: filteredGridData,
     pageSize: 50,
-    searchKeys: ['instName', 'progName', 'batchName', 'levelName', 'displayName', 'pinDisplay'],
-    initialSortKey: 'instName',
+    searchKeys: ['levelName', 'displayName', 'name', 'pinDisplay'],
+    initialSortKey: 'displayName',
     initialSortAsc: true,
     stickyActionCol: true,
     superHeaders: buildSuperHeaders(),
@@ -1809,10 +1809,10 @@ export async function renderStudents(area) {
       const bActive = ((b._raw || b).is_active !== false) ? 1 : 0;
       if (aActive !== bActive) return bActive - aActive;
 
-      // When sorting by instName, use full hierarchy
-      if (sortKey === 'instName') {
-        const cmp = compareStudentsHierarchical(a, b);
-        return direction === 'desc' ? -cmp : cmp;
+      if (sortKey === 'displayName' || sortKey === 'sortName' || sortKey === 'instName') {
+        const nameA = (a.displayName || a.name || '').toLowerCase();
+        const nameB = (b.displayName || b.name || '').toLowerCase();
+        return direction === 'desc' ? nameB.localeCompare(nameA) : nameA.localeCompare(nameB);
       }
 
       // Column-specific comparison for class exams
@@ -2027,32 +2027,7 @@ export async function renderStudents(area) {
       }
     },
     columns: [
-      // 1. Institution
-      {
-        key: 'instName',
-        label: 'Institution',
-        sortable: true,
-        width: '135px',
-        render: (row) => `<div class="text-sm fw-600" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;" title="${escapeHtml(row.instName)}">${escapeHtml(row.instName)}</div>`
-      },
-      // 2. Program
-      {
-        key: 'progName',
-        label: 'Program',
-        sortable: true,
-        width: '100px',
-        render: (row) => `<div class="text-sm fw-600" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:95px;color:var(--clr-text-2, #cbd5e1);" title="${escapeHtml(row.progName)}">${escapeHtml(row.progName)}</div>`
-      },
-      // 3. Batch
-      {
-        key: 'batchName',
-        label: 'Batch',
-        sortable: true,
-        align: 'center',
-        width: '75px',
-        render: (row) => `<span class="text-sm fw-600" style="color:#ffffff;">${escapeHtml(row.batchName || '—')}</span>`
-      },
-      // 4. Level
+      // 1. Level
       {
         key: 'levelName',
         label: 'Level',
@@ -2133,25 +2108,6 @@ export async function renderStudents(area) {
           `
         }
       ]),
-
-      // 12. Joined
-      {
-        key: 'joinDate',
-        label: 'Enrolled',
-        sortable: true,
-        align: 'center',
-        width: '95px',
-        render: (row) => `<span class="text-xs text-muted">${escapeHtml(row.joinDate)}</span>`
-      },
-      // 13. Status
-      {
-        key: 'status',
-        label: 'Status',
-        sortable: true,
-        align: 'center',
-        width: '75px',
-        render: (val, row) => `<span class="badge ${((row._raw || row).is_active !== false) ? 'badge-success' : 'badge-neutral'}">${((row._raw || row).is_active !== false) ? 'Active' : 'Inactive'}</span>`
-      },
 
       {
         label: 'Actions',

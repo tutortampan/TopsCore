@@ -1,5 +1,5 @@
 import { DataGrid } from './datagrid.js?v=5.3.2';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261030_v43';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261101_v73';
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
@@ -368,7 +368,7 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter,
   adminOverridePrerequisitesWithRemedial
-} from '../api.js?v=20261101_v71';
+} from '../api.js?v=20261101_v73';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.4.7';
 import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.4.7';
 import { getSupabase } from '../supabase.js?v=5.4.7';

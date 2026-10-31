@@ -1,3 +1,40 @@
+## SESSION-20261101-0055
+
+Start: 2026-11-01 00:48 UTC+8
+End: 2026-11-01 00:55 UTC+8
+Agent: Antigravity
+
+### User Request
+"panel di atas ini aa gunanya? tidak bisa diklik, bagaimana kalau di atas itu dipakai untuk panel active dan inactve students. gamabr 2, bagian ini tidak perlu, kita taruh aktif dan tak aktif di atas saja. naikkan kolom header tabel tepat di bawah top panel sja. gambar 3. disana tertera Camp untuk student yang didasarakan pada program yang diambil. kita tambahkan nama penal siswa di side panel itu berisi nama program lalu nama batch . ex: Camp 131;Camp 132;Camp 133; atau Tamata 2026, dll. gambar 4 jadi kolom di gambar 4 pada student rooster iini beberpa tidak perlu, msalnya kolom institusi, program, atau batch, sebab sudah terwakili di side panel.  begitu juga kolom di gambar 5, ststus aktif tak aktif diwakili panel atas, dan waktu enrolled tidak perlu ada disana, sebab nfo itu ada di bagian organization. apakah kamu paham? analisa, petakan, analisa, pelari, terapkan!" (with 5 uploaded images)
+
+### Objective
+1. Make top panel tabs interactive: filter between Active Students, Inactive Students, and All Students.
+2. Eliminate bulky header, subtitle, and middle filter bar (Gambar 2), raising the DataGrid directly below the top panel.
+3. List batches under Domain B sidebar formatted as `[Program Name] [Batch Name]` (e.g., `Camp 133`, `Camp 132`, `Camp 131`, `Camp 123`).
+4. Remove `INSTITUTION`, `PROGRAM`, and `BATCH` columns from Student Roster (Gambar 4).
+5. Remove `ENROLLED` and `STATUS` columns from Student Roster (Gambar 5).
+6. Validate syntax, test simulation, and bump cache busters.
+
+### Work Performed
+1. `js/admin/student-management.js`:
+   - Topbar tabs: wired `active`, `inactive`, `all` with live count badges and `window._switchStudentStatusTab`.
+   - Layout: stripped section header, subtitle, and filter dropdown bar.
+   - Toolbar: moved `+ Add Student` and `Resolve Duplicates` directly into `.datagrid-actions`.
+   - Columns: removed `instName`, `progName`, `batchName`, `joinDate`, `status`. Kept Checkbox, `LEVEL`, `NAME`, `AGE`, `GENDER`, 4 class theme exams (`EXAM 1` to `EXAM 4`), and `ACTIONS`.
+   - SuperHeaders: updated `fixed_before: 4`, `fixed_after: 1`.
+2. `js/admin/app.js`:
+   - `loadSidebarPrograms()`: grouped batches under active programs with `formatSidebarBatchLabel`, sorting active first, persisting selection in `localStorage` and URL query params.
+   - `applySubRouteState()`: synced `batch_id` and subTab from URL query params.
+3. `js/admin/admin-init.js`:
+   - Pre-render cache hydration updated to support batch-level items.
+4. Cache Busters:
+   - Bumped to `?v=20261101_v73` across `admin.html`, `dashboard.html`, `result.html`, `app.js`, and `student-management.js`.
+5. Testing:
+   - `node scripts/check_all_js_syntax.cjs`: 40/40 JS files PASS.
+   - `node scripts/test_roster_clean_layout.mjs`: Verified batch 133 (22 active, 2 inactive, 24 total) PASS.
+
+---
+
 ## SESSION-20261101-0048
 
 Start: 2026-11-01 00:41 UTC+8

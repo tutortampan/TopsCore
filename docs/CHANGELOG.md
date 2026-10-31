@@ -1,3 +1,39 @@
+## [2026-11-01 00:55] — Phase 240: Student Roster Streamlining, Dynamic Program+Batch Sidebar, Interactive Topbar Status Filter, and Redundant Column Elimination
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 240
+**Status:** PASS
+
+### Why
+- Completed user directive with 5 uploaded screenshots:
+  1. Top panel (Gambar 1): Transformed non-clickable static cards into interactive, clickable tabs (`🟢 Active Students`, `⚪ Inactive Students`, `👥 All Students`, and `⚠️ Need Remediation` if pending).
+  2. Middle header & filter bar (Gambar 2): Removed bulky section title, subtitle, and redundant filter bar (`Status: Active Only`, `Batch: All Active`). Raised the DataGrid table header directly beneath the top panel with zero wasted space. Added `+ Add Student` and `Resolve Duplicates` into the DataGrid toolbar on the right.
+  3. Side panel program + batch listing (Gambar 3): Updated Domain B sidebar in `loadSidebarPrograms` and `admin-init.js` to list batches under programs formatted as `[Program Name] [Batch Name]` (e.g. `Camp 133`, `Camp 132`, `Camp 131`, `Camp 123`).
+  4. Removed left redundant columns (Gambar 4): Removed `INSTITUTION`, `PROGRAM`, and `BATCH` columns from the DataGrid, as they are already represented in the selected sidebar batch.
+  5. Removed right redundant columns (Gambar 5): Removed `ENROLLED` and `STATUS` columns, as active/inactive state is filtered and displayed by the top panel tabs and enrollment date is tracked in Organization.
+
+### Changed
+- `js/admin/student-management.js`:
+  - Topbar Tabs: Passed clickable tabs (`active`, `inactive`, `all`) with `currentBatchStatus` and callback `window._switchStudentStatusTab`.
+  - Layout: Replaced `area.innerHTML` with direct DataGrid card container, eliminating large header, subtitle, and filter dropdowns.
+  - Columns: Removed `instName`, `progName`, `batchName`, `joinDate`, and `status`. What remains: Checkbox, `LEVEL`, `NAME`, `AGE`, `GENDER`, dynamic 4 class exams (`EXAM 1` to `EXAM 4`), and `ACTIONS`.
+  - SuperHeaders: Adjusted `fixed_before = 4` (Level, Name, Age, Gender) and `fixed_after = 1` (Actions).
+  - Search & Sort: Set `searchKeys` to `['levelName', 'displayName', 'name', 'pinDisplay']` and `initialSortKey: 'displayName'`.
+  - Actions Toolbar: Injected `+ Add Student` and `Resolve Duplicates` buttons directly into `.datagrid-actions`.
+- `js/admin/app.js`:
+  - `loadSidebarPrograms()`: Fetched and grouped batches under programs with label formula `formatSidebarBatchLabel`, sorted active batches first, and persisted selection to `localStorage` and URL hash.
+  - `applySubRouteState()`: Synced `batch_id` and subTab from URL query params.
+- `js/admin/admin-init.js`:
+  - Updated pre-render cache hydration to support `[Program] [Batch]` items with active match detection.
+- Cache Busters:
+  - Bumped `admin.html`, `dashboard.html`, `result.html`, `app.js`, and `student-management.js` to `?v=20261101_v73`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: 40/40 JS files PASS (node --check).
+- `node scripts/test_roster_clean_layout.mjs`: Verified batch 133 active (22), inactive (2), total (24), and column layout PASS.
+
+---
+
 ## [2026-11-01 00:48] — Phase 239: Purge Lingering Student Dashboard Forgiven Logic & Domain B Batch Sidebar Hydration
 
 **Agent/Session:** Antigravity
