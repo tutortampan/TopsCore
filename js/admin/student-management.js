@@ -1,4 +1,4 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, labelAttemptRemedial } from '../api.js?v=20261101_v76';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, labelAttemptRemedial } from '../api.js?v=20261101_v77';
 import { getSupabase } from '../supabase.js?v=5.3.2';
 import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261030_v43';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=5.3.2';
@@ -846,7 +846,7 @@ export async function renderStudents(area) {
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08);">
               <div style="font-size:0.9rem;font-weight:800;color:var(--clr-text-1);display:flex;align-items:center;gap:6px;">
                 <span>⚡ Daily Quizzes (Latihan Harian)</span>
-                <span class="badge" style="background:rgba(250,204,21,0.15);color:#facc15;font-size:0.7rem;border:1px solid rgba(250,204,21,0.3);">Pacing &amp; Completion Only</span>
+                <span class="badge" style="background:rgba(255,255,0,0.15);color:#FFFF00;font-size:0.7rem;border:1px solid rgba(255,255,0,0.3);">Pacing &amp; Completion Only</span>
               </div>
               <span class="text-xs text-muted">${(rec.details || []).filter(r => !r.isExam && r.is_completed).length} / ${(rec.details || []).filter(r => !r.isExam).length} Completed</span>
             </div>
@@ -1920,25 +1920,25 @@ export async function renderStudents(area) {
 
       let cells = '';
       // Checkbox column
-      cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;color:#38bdf8;font-weight:700;">★</td>`;
+      cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);color:var(--grade-star, #00c000ff);font-weight:700;">★</td>`;
 
       visibleCols.forEach(col => {
         if (col.key === 'levelName') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;font-weight:700;color:#38bdf8;font-size:0.75rem;">BATCH AVG</td>`;
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:var(--grade-star, #00c000ff);font-size:0.75rem;">BATCH AVG</td>`;
         } else if (col.key === 'sortName') {
-          cells += `<td style="background:#0f172a;border-top:2px solid #38bdf8;font-weight:700;color:#ffffff;font-size:0.78rem;">★ BATCH AVERAGE (${filteredData.length} Students)</td>`;
+          cells += `<td style="background:#0f172a;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:#ffffff;font-size:0.78rem;">★ BATCH AVERAGE (${filteredData.length} Students)</td>`;
         } else if (col.key === 'ageDisplay') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;font-weight:700;color:#94a3b8;font-size:0.75rem;">${avgAgeStr}</td>`;
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:#94a3b8;font-size:0.75rem;">${avgAgeStr}</td>`;
         } else if (col.key === 'gender') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;font-weight:700;font-size:0.72rem;color:var(--clr-text-2);white-space:nowrap;">${genderBreakdown}</td>`;
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;font-size:0.72rem;color:var(--clr-text-2);white-space:nowrap;">${genderBreakdown}</td>`;
         } else if (col.key && col.key.includes('_cls_exam')) {
           const avgVal = classExamAverages[col.key];
-          const color = classExamColors[col.key] || '#38bdf8';
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;font-weight:700;color:${color};font-size:0.8rem;">${avgVal != null ? `${avgVal} <span style="font-size:0.65rem;opacity:0.75;font-weight:normal;color:${color};">pts</span>` : '—'}</td>`;
+          const color = classExamColors[col.key] || 'var(--clr-text-1)';
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:${color};font-size:0.8rem;">${avgVal != null ? `${avgVal} <span style="font-size:0.65rem;opacity:0.75;font-weight:normal;color:${color};">pts</span>` : '—'}</td>`;
         } else if (col.label === 'Actions') {
-          cells += `<td style="background:#0f172a;text-align:right;border-top:2px solid #38bdf8;font-weight:700;color:#38bdf8;font-size:0.8rem;padding-right:1rem;">Avg: ${avgPtsStr}</td>`;
+          cells += `<td style="background:#0f172a;text-align:right;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:var(--grade-star, #00c000ff);font-size:0.8rem;padding-right:1rem;">Avg: ${avgPtsStr}</td>`;
         } else {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;color:#94a3b8;">—</td>`;
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);color:#94a3b8;">—</td>`;
         }
       });
 

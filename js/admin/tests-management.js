@@ -2,7 +2,7 @@ import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '..
 import { openTestBuilder } from './test-builder.js?v=5.3.2';
 import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.3.2';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.3.2';
-import { TOPSCORE_COLORS, getGradeColor, getGradeColorByScore, calculateGrade, isWeeklyExam, damerauLevenshtein, isWordFormAnswerMatch, cleanPunctuationAndSymbols, parseCorrectAnswers } from '../grading.js?v=20261031_v58';
+import { TOPSCORE_COLORS, getGradeColor, getGradeColorByScore, calculateGrade, isWeeklyExam, damerauLevenshtein, isWordFormAnswerMatch, cleanPunctuationAndSymbols, parseCorrectAnswers } from '../grading.js?v=20261101_v77';
 import { getSupabase } from '../supabase.js?v=5.3.2';
 import { DataGrid } from './datagrid.js?v=5.3.2';
 if (typeof window !== 'undefined') window.DataGrid = DataGrid;
@@ -2323,7 +2323,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
     const p = st.posStats || {};
     const categories = [
       { name: 'Noun', icon: '📦', tot: p.Noun?.tot || 0, cor: p.Noun?.cor || 0, color: '#38bdf8' },
-      { name: 'Verb', icon: '⚡', tot: p.Verb?.tot || 0, cor: p.Verb?.cor || 0, color: '#facc15' },
+      { name: 'Verb', icon: '⚡', tot: p.Verb?.tot || 0, cor: p.Verb?.cor || 0, color: TOPSCORE_COLORS.C || '#FFFF00' },
       { name: 'Adjective', icon: '🎨', tot: p.Adjective?.tot || 0, cor: p.Adjective?.cor || 0, color: '#c084fc' },
       { name: 'Phrase / Idiom', icon: '💬', tot: p.Phrase?.tot || 0, cor: p.Phrase?.cor || 0, color: '#34d399' },
     ];

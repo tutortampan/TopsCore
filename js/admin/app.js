@@ -368,11 +368,11 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter,
   adminOverridePrerequisitesWithRemedial
-} from '../api.js?v=20261101_v76';
+} from '../api.js?v=20261101_v77';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.4.7';
 import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.4.7';
 import { getSupabase } from '../supabase.js?v=5.4.7';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261101_v76';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261101_v77';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.4.7';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.4.7';
 import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=20261101_v73';
@@ -386,7 +386,7 @@ import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal,
 import { renderCurriculum } from './curriculum-management.js?v=5.4.8';
 import { renderClassesHub } from './classes-hub.js?v=5.4.7';
 import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.4.7';
-import { openStudentFullEdit } from './student-management.js?v=20261101_v76';
+import { openStudentFullEdit } from './student-management.js?v=20261101_v77';
 import { renderStudentsRegistration } from './student-registration.js?v=20261031_v47';
 
     // -- Primary Tab Switching Variables --
@@ -1635,7 +1635,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                       <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--clr-text-1);">📝 Class Tests</h3>
                       <div class="asm-meta-chips" style="display: inline-flex; align-items: center; gap: 6px;">
-                        <span class="badge" style="background: rgba(250, 204, 21, 0.12); color: #facc15; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(250, 204, 21, 0.3);">⚡ ${taskTests.length} Quizzes</span>
+                        <span class="badge" style="background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.12); color: var(--grade-c, #ffff00); font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.3);">⚡ ${taskTests.length} Quizzes</span>
                         <span class="badge" style="background: rgba(244, 114, 182, 0.12); color: #f472b6; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(244, 114, 182, 0.3);">📝 ${testTests.length} Exams</span>
                         <span class="badge" style="background: rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.12); color: ${TOPSCORE_COLORS.STAR}; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.3);">🎯 Min. 60%</span>
                       </div>
@@ -1748,7 +1748,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                 sortable: true,
                 render: (val, row) => {
                   let displayTitle = escapeHtml(row.title);
-                  displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: #facc15;">$1</span>');
+                  displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: var(--grade-c, #ffff00);">$1</span>');
                   displayTitle = displayTitle.replace(/\b(Test)\b/gi, '<span style="color: #f472b6;">$1</span>');
                   return `<div class="fw-700" style="color:var(--clr-text-1); font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:250px;" title="${escapeHtml(row.title)}">${displayTitle}</div>`;
                 }
@@ -1792,7 +1792,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                 sortable: true,
                 render: (val, row) => {
                   let typeStr = escapeHtml(row.TestCategory || 'Quiz');
-                  typeStr = typeStr.replace(/(QUIZ|TASK)/ig, '<span style="color: #facc15; font-weight: 800;">$1</span>');
+                  typeStr = typeStr.replace(/(QUIZ|TASK)/ig, '<span style="color: var(--grade-c, #ffff00); font-weight: 800;">$1</span>');
                   typeStr = typeStr.replace(/(EXAM|TEST)/ig, '<span style="color: #f472b6; font-weight: 800;">$1</span>');
                   return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${typeStr}</div>`;
                 }
@@ -2882,7 +2882,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
 
       } catch (e) {
         console.error('[renderClassHub error]:', e);
-        area.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">Failed to load class data: ${escapeHtml(e?.message || 'Unknown error')}</p></div>`;
+        area.innerHTML = `<div class="empty-state"><p style="color:#FF0000;">Failed to load class data: ${escapeHtml(e?.message || 'Unknown error')}</p></div>`;
       }
     }
     window.renderClassHub = renderClassHub;
@@ -3457,7 +3457,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
            const c = (classes||[]).find(x => x.id === a.class_id);
            const isExam = isWeeklyExam(a);
            const catLabel = isExam ? 'EXAM' : 'QUIZ';
-           const badgeColor = !isExam ? 'background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);' : 'background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);';
+           const badgeColor = !isExam ? 'background:rgba(255,140,0,0.15);color:#FF8C00;border:1px solid rgba(255,140,0,0.3);' : 'background:rgba(255,0,0,0.15);color:#FF0000;border:1px solid rgba(255,0,0,0.3);';
            return `
              <tr style="border-bottom:1px solid var(--clr-border);">
                <td style="padding:0.75rem 1rem;font-weight:600;color:var(--clr-text);">${escapeHtml(a.title || 'Untitled')}</td>
@@ -3488,7 +3488,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                 </div>
               </div>
               <div style="flex:1; min-width:200px; padding:1.5rem; background:var(--clr-surface); border:1px solid var(--clr-border); border-radius:12px; display:flex; align-items:center; gap:1rem;">
-                <div style="width:48px;height:48px;border-radius:50%;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#ef4444;">🏆</div>
+                <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,0,0,0.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#FF0000;">🏆</div>
                 <div>
                   <div style="font-size:1.8rem; font-weight:800; color:var(--clr-text-1); line-height:1;">${tests.length}</div>
                   <div style="font-size:0.75rem; color:var(--clr-text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">Total Tests</div>
@@ -3761,7 +3761,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
 
       } catch (e) {
         console.error(e);
-        area.innerHTML = `<div class="empty-state"><p style="color:#ef4444;">Failed to load class panel.</p></div>`;
+        area.innerHTML = `<div class="empty-state"><p style="color:#FF0000;">Failed to load class panel.</p></div>`;
       }
     }
 
@@ -4099,7 +4099,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261101_v76');
+      const sm = await import('./student-management.js?v=20261101_v77');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }
@@ -4155,8 +4155,8 @@ window._deleteRecord = async (section, id, name) => {
         _cascadeStudentIds = students.map(s => s.id);
         titleEl.textContent = `Delete Batch "${escapeHtml(name)}"?`;
         msgEl.innerHTML = `
-          <div style="text-align:left; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
-            <div style="font-weight:700; color:#ef4444; font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Data Alert</div>
+          <div style="text-align:left; background:rgba(255,0,0,0.12); border:1px solid rgba(255,0,0,0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="font-weight:700; color:#FF0000; font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Data Alert</div>
             <div style="font-size:0.85rem; color:var(--clr-text-1); margin-bottom:6px;">
               This Batch currently has <strong>${students.length} enrolled student(s)</strong>.
             </div>
@@ -4200,8 +4200,8 @@ window._deleteRecord = async (section, id, name) => {
       if (bIds.length > 0 || studentCount > 0) {
         titleEl.textContent = `Delete Program "${escapeHtml(name)}"?`;
         msgEl.innerHTML = `
-          <div style="text-align:left; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
-            <div style="font-weight:700; color:#ef4444; font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Data Alert</div>
+          <div style="text-align:left; background:rgba(255,0,0,0.12); border:1px solid rgba(255,0,0,0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="font-weight:700; color:#FF0000; font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Data Alert</div>
             <div style="font-size:0.85rem; color:var(--clr-text-1); margin-bottom:6px;">
               This Program contains <strong>${bIds.length} batch(es)</strong> and <strong>${studentCount} student(s)</strong>.
             </div>

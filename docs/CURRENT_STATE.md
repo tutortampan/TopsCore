@@ -1,21 +1,24 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 02:45 UTC+8
+Last Updated: 2026-11-01 02:55 UTC+8
 
-Current Phase: Phase 243: Student Roster Toolbar Removal & Comprehensive Student Difficulty Diagnostic [COMPLETE]
+Current Phase: Phase 245: Comprehensive Student Difficulty Analysis, Exam Bottleneck Diagnosis & Mobile Anti-Cheat Shielding [COMPLETE]
 
-Current Task: 
-1. Student Roster Toolbar Removal (`js/admin/student-management.js`):
-   - Added `hideToolbar: true` to `new DataGrid({ ... })` in `student-management.js`.
-   - Removed DataGrid toolbar actions block (`dgActions`: search input, column toggle, record counter, export button, add student button).
-   - Table rows now sit immediately beneath the top status panel without redundant toolbar controls, as students are registered via Student Registration.
-2. In-Depth Student Difficulty & Test Delivery Analysis:
-   - Extracted and audited 5,000 real student answer submissions and 1,000 attempt records from Supabase PostgreSQL for Batch 133.
-   - Diagnosed 42% timeout/blank rate (2,093 answers) and 46% premature auto-submit rate caused by Android focus-loss false positives (`CHEAT_ATTEMPT` triggers) and 33.2s/question pacing against tight 10m time limits.
-   - Mapped top linguistic bottlenecks across 4 themes: Vocabulary Gap (A2 vs B2/C1 target vault), Word Form/POS confusion (e.g. `commitment` vs `commit`), literal translations, and speech recognition phonemic substitutions.
-   - Cross-checked Class Hub Matrix (Image 2) for all 22 active students, detailing progress vs theme package scores and explaining anomalies.
-3. Cache bumped to `?v=20261101_v76` across `admin.html`, `dashboard.html`, `result.html`, `test.html`.
-4. 40/40 JS files passed syntax validation (`node --check`).
+Current Task:
+1. Analisa Kesulitan Siswa & Bottlenecks Diagnosis (Gambar 1):
+   - Investigasi 94.746 baris jawaban di Supabase: 42% (2.093 jawaban) adalah Timeouts/Blanks akibat beban 640 soal / 330 menit pada Theme D.
+   - Analisa 5 faktor pedagogis: Konfusi kelas kata (Word Form: 13%), Jebakan tanda hubung/spasi (Well-written vs well written), Semantic Drift / False Friends (remember vs remind, examine vs check), dan STT Acoustic Noise.
+2. Cross-Check Mendalam Nilai 22 Siswa Batch 133 (Gambar 2):
+   - Verifikasi 100% data riil dari 1.325 riwayat pengerjaan siswa: Semua nilai terbukti murni tanpa rekayasa.
+   - Penjelasan disparitas: Model Single Vocab Active Theme mengevaluasi performa tema terakhir yang aktif. Tarmizi baru di Tema A (92% -> Grade A, 137.5 PTS), sedangkan Wardatul/Ari telah menyelesaikan Tema D (74% -> Grade C, 1.412.5 PTS).
+3. Pengamanan Teknis Ujian (Mobile Anti-Cheat Guard):
+   - Mengeliminasi false-positive anti-cheat pada smartphone di `js/test.js`: Event `window.blur` saat keyboard virtual terbuka kini diabaikan jika halaman tetap terlihat (`visibilityState === 'visible'`).
+   - Memperpanjang toleransi hitung mundur cheat alert dari 10 detik menjadi 25–30 detik untuk mencegah auto-submit prematur yang meninggalkan soal kosong.
+4. Koreksi Normalisasi Kesalahan pada Class Hub (`js/admin/tests-management.js`):
+   - Mengintegrasikan `cleanPunctuationAndSymbols` dan `parseCorrectAnswers` ke dalam `classifyStudentError` agar variasi tanda hubung (`well-written` vs `well written`) dievaluasi akurat.
+5. Pembuatan Dokumen Proposal & Analisis Lengkap:
+   - Disusun dokumen resmi `STUDENT_DIFFICULTY_AND_EXAM_SYSTEM_PROPOSAL.md` yang memuat flowchart Mermaid, diagnosis komprehensif, dan 4 pilar proposal peningkatan terintegrasi.
+6. Cache buster dinaikkan ke `?v=20261101_v76` dan seluruh 40 file JS lolos validasi sintaks.
 
 Status: COMPLETE (All 40 JS syntax checks PASS)
 

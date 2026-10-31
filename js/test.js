@@ -678,7 +678,11 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       // Mobile / Virtual Keyboard Guard:
       // If the page is still visible, blur is typically triggered by virtual keyboard opening/closing,
       // native autocomplete/autocorrect popups, speech mic intent, or tapping text selection.
+      const isMobileDevice = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       if (document.visibilityState === 'visible') {
+        if (isMobileDevice) {
+          return; // On mobile devices, ignore window blur if page is fully visible
+        }
         const activeEl = document.activeElement;
         const tag = (activeEl?.tagName || '').toLowerCase();
         if (tag === 'textarea' || tag === 'input' || window.activeKeyboardInput || window._isSpeechRecognitionEngaged) {
