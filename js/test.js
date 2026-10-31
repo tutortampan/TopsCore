@@ -1994,6 +1994,36 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         area.appendChild(wordCounter);
       }
 
+      // Quiz Practice Scaffolding: First-Letter Hint (Quizzes only, strictly disabled for Exams)
+      const isQuizPractice = !(String(testData?.test_type).toLowerCase() === 'exam' || ['EXAM', 'TEST'].includes(testData?.category));
+      const targetAns = (snap?.correct_answer || snap?.answer || row?.correct_answer_snapshot || '').trim();
+      const primaryTarget = targetAns.split(/[;/,|]/)[0].trim();
+      if (isQuizPractice && primaryTarget.length >= 3) {
+        const hintBtn = document.createElement('button');
+        hintBtn.type = 'button';
+        hintBtn.className = 'quiz-hint-btn';
+        hintBtn.innerHTML = '💡 Hint';
+        hintBtn.title = 'Get first-letter clue (Quiz practice only)';
+        hintBtn.style.cssText = 'font-size:11px; font-weight:700; color:#fbbf24; background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
+        
+        const hintDisplay = document.createElement('div');
+        hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:#fbbf24; margin-top:3px; display:none;';
+        const mask = primaryTarget.split(' ').map(w => {
+          if (w.length <= 2) return w;
+          return w[0].toUpperCase() + ' ' + '_ '.repeat(w.length - 1).trim();
+        }).join('   ');
+        hintDisplay.textContent = mask;
+
+        hintBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          hintDisplay.style.display = 'block';
+          hintBtn.style.display = 'none';
+        });
+
+        area.appendChild(hintBtn);
+        area.appendChild(hintDisplay);
+      }
+
       area.addEventListener('click', () => {
         ta.focus();
         window.activeKeyboardInput = ta;
