@@ -2146,7 +2146,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             micBtn.style.borderColor = 'rgba(var(--grade-e-rgb, 255, 0, 0), 0.5)';
             micBtn.style.color = '#ffffff';
             micBtn.innerHTML = '<svg style="width:clamp(18px, 4.5vw, 24px); height:clamp(18px, 4.5vw, 24px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>';
-            statusEl.textContent = '● Listening';
+            statusEl.innerHTML = '● Listening <span class="speech-wave-bars"><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span></span>';
+            if (speechWordCounter) statusEl.appendChild(speechWordCounter);
             statusEl.style.color = 'var(--grade-e, #FF0000)';
             micHelp.textContent = 'Listening...';
             transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.4); font-style:italic;">Listening...</span>';
@@ -2192,7 +2193,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             }
 
             const hasAns = !!answeredMap[row.id];
-            statusEl.textContent = hasAns ? '✅ Recorded' : '● Ready';
+            statusEl.innerHTML = hasAns ? '✅ Recorded' : '● Ready';
+            if (speechWordCounter) statusEl.appendChild(speechWordCounter);
             statusEl.style.color = hasAns ? 'var(--clr-success, #00c000ff)' : '#94a3b8';
             micHelp.textContent = 'Tap to Speak';
           },
@@ -2203,7 +2205,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             micBtn.style.borderColor = 'rgba(var(--grade-star-rgb, 0, 192, 0), 0.45)';
             micBtn.style.color = '#0F172A';
             micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
-            statusEl.textContent = `⚠️ ${msg}`;
+            statusEl.innerHTML = `⚠️ ${escapeHtml(msg || 'Retry')}`;
+            if (speechWordCounter) statusEl.appendChild(speechWordCounter);
             statusEl.style.color = 'var(--grade-e, #FF0000)';
             micHelp.textContent = 'Tap to Retry';
             showToast(msg, 'warning');
