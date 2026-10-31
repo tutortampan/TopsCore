@@ -1,19 +1,18 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 04:36 UTC+8
+Last Updated: 2026-11-01 04:43 UTC+8
 
-Current Phase: Phase 253: Spoken Quiz First-Letter Clue Scaffolding & Full Cache v84 [COMPLETE]
+Current Phase: Phase 254: Live Speech Equalizer Waveform Bars & Full Cache v85 [COMPLETE]
 
 Current Task:
-1. Spoken Quiz Scaffolding (`js/test.js`):
-   - Added `💡 Hint` button for spoken questions in `renderSpeech` during Quiz practice sessions.
-   - Generates masked letter clue (e.g. `I _ _ _ _ _ _ _`) without revealing the target word, bridging the 74% Vocab Gap.
-   - Strictly disabled during formal Exams to ensure evaluation integrity.
+1. Live Audio Equalizer Waveform Bars in Test Runner (`js/test.js` & `css/test.css`):
+   - Added animated 4-bar equalizer (`.speech-wave-bars`) inside `statusEl` while speech recognition is active (`onStart`).
+   - Provides immediate visual feedback that microphone input is active, resolving acoustic anxiety and un-transmitted speech confusion.
 2. Verified 0 rogue colors across 57 files via `scripts/deep_color_audit.mjs`.
 3. Automated Headless Chrome E2E test passed across all 5 primary pages with 0 console errors.
-4. Cache busters updated to `?v=20261101_v84`.
+4. Cache busters updated to `?v=20261101_v85`.
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v84)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v85)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
