@@ -34,8 +34,8 @@ function startServer() {
   });
 
   return new Promise((resolve) => {
-    const port = 5520;
-    server.listen(port, () => {
+    server.listen(0, () => {
+      const port = server.address().port;
       resolve({ server, port });
     });
   });
