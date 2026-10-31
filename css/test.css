@@ -283,6 +283,30 @@
       min-height: 1.4em;
     }
 
+    /* Live Equalizer Waveform Bars when Listening */
+    .speech-wave-bars {
+      display: inline-flex;
+      align-items: center;
+      gap: 2.5px;
+      height: 14px;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+    .speech-wave-bar {
+      width: 2.5px;
+      background: var(--grade-e, #FF0000);
+      border-radius: 2px;
+      animation: wavePulse 0.75s ease-in-out infinite alternate;
+    }
+    .speech-wave-bar:nth-child(1) { height: 5px; animation-delay: 0.1s; }
+    .speech-wave-bar:nth-child(2) { height: 11px; animation-delay: 0.25s; }
+    .speech-wave-bar:nth-child(3) { height: 15px; animation-delay: 0.4s; }
+    .speech-wave-bar:nth-child(4) { height: 7px; animation-delay: 0.15s; }
+    @keyframes wavePulse {
+      0%   { transform: scaleY(0.35); opacity: 0.55; }
+      100% { transform: scaleY(1.25); opacity: 1; }
+    }
+
     /* Nav buttons row */
     .speech-nav-row {
       display: flex;
