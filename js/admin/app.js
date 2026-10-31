@@ -380,7 +380,7 @@ import { renderTests } from './tests-management.js?v=20261031_v60';
 import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261030_v34';
 import { renderVocabularyVault } from './vocab-vault.js?v=20261031_v47';
 import { renderModules } from './modules.js?v=5.4.7';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.4.7';
+import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.4.8';
 import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.4.7';
 import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=5.4.9';
 import { renderCurriculum } from './curriculum-management.js?v=5.4.8';
@@ -1281,12 +1281,26 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             if (asms.length < 2) return;
             const hasThemeRem = asms.some(asm => {
               const att = asmScores[asm.id];
-              return Boolean(att?.is_remedial_unlocked || att?.is_remedial);
+              const maxQ = getAsmExpectedMax(asm);
+              const totalQ = Number(att?.total_questions || maxQ);
+              const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
+              const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
+              const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att.status||'').toLowerCase());
+              const inForgivenList = Boolean((asm.payload?.forgiven_student_ids || []).includes(s.id));
+              const isForgiven = !hasRealAtt && inForgivenList;
+              return !isForgiven && Boolean(att?.is_remedial_unlocked || att?.is_remedial);
             });
             if (hasThemeRem) {
               asms.forEach(asm => {
                 const att = asmScores[asm.id];
-                if (att) {
+                const maxQ = getAsmExpectedMax(asm);
+                const totalQ = Number(att?.total_questions || maxQ);
+                const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
+                const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
+                const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att.status||'').toLowerCase());
+                const inForgivenList = Boolean((asm.payload?.forgiven_student_ids || []).includes(s.id));
+                const isForgiven = !hasRealAtt && inForgivenList;
+                if (att && !isForgiven) {
                   att.is_remedial_unlocked = true;
                   att.is_remedial = true;
                 }
@@ -1302,16 +1316,23 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             const rawEarned = bestAtt?.score != null ? Math.min(Number(bestAtt.score), totalQ) : 0;
             const rawPct = bestAtt ? (bestAtt.percentage != null ? Number(bestAtt.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
 
-            const isRem = Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial);
+            // Forgiven = student is in forgiven_student_ids AND has NO real submitted attempt.
+            // Students with real attempts (including remedial 60%R) retain their real scores.
+            // Forgiven tests fulfill the prerequisite (counts toward PROG %) but award 0 PTS / SCORE.
+            const hasRealAtt = bestAtt && ['submitted','auto_submitted','evaluated','graded'].includes(String(bestAtt?.status||'').toLowerCase());
+            const inForgivenList = Boolean((asm.payload?.forgiven_student_ids || []).includes(s.id));
+            const isForgiven = !hasRealAtt && inForgivenList;
+
+            const isRem = !isForgiven && Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial);
             const maxRemPts = totalQ * 0.6;
-            const effEarned = isRem ? Math.min(rawEarned, maxRemPts) : rawEarned;
-            const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+            const effEarned = isForgiven ? 0 : (isRem ? Math.min(rawEarned, maxRemPts) : rawEarned);
+            const effPct = isForgiven ? 0 : (isRem ? Math.min(rawPct, 60.0) : rawPct);
 
-            rowScoreSortVals[`test_${asm.id}`] = bestAtt ? effEarned : -1;
-            rowScoreSortVals[`test_${asm.id}_pts`] = bestAtt ? effEarned : -1;
-            rowScoreSortVals[`test_${asm.id}_pct`] = bestAtt ? effPct : -1;
+            rowScoreSortVals[`test_${asm.id}`] = bestAtt ? (isForgiven ? 0 : effEarned) : -1;
+            rowScoreSortVals[`test_${asm.id}_pts`] = bestAtt ? (isForgiven ? 0 : effEarned) : -1;
+            rowScoreSortVals[`test_${asm.id}_pct`] = bestAtt ? (isForgiven ? 0 : effPct) : -1;
 
-            if (bestAtt) {
+            if (bestAtt && !isForgiven) {
               const st = String(bestAtt.status || '').toLowerCase();
               if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
                 completedCount++;
@@ -1449,10 +1470,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
           };
         });
 
-        // Leaderboard Sort Order (Progress-First Hierarchy per User Specification):
-        // 1. Primary: PROG % DESC (Highest progress first)
-        // 2. Secondary: Global PTS DESC (Total points from latest exam package: Words + Phrases)
-        // 3. Tertiary: Global SCORE % DESC (unattempted exams sort after completed)
+        // Leaderboard Sort Order (Total Exam Points Primary per User Specification):
+        // 1. Primary: Global PTS DESC (Total points from ALL completed exams)
+        // 2. Secondary: Global SCORE % DESC
+        // 3. Tertiary: PROG % DESC
         // 4. Quaternary: Earliest lastSubmittedAt ASC
         // 5. Clean student name ASC
         studentsGridData.sort((a, b) => {
@@ -1460,22 +1481,22 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
           const bActive = b.isActive ? 1 : 0;
           if (aActive !== bActive) return bActive - aActive;
 
-          // 1. Primary: PROG % DESC
-          const progA = Number(a.progressPct ?? 0);
-          const progB = Number(b.progressPct ?? 0);
-          if (progA !== progB) return progB - progA;
-
-          // 2. Secondary: Global PTS DESC (latest exam points)
+          // 1. Primary: Global PTS DESC (Total points from ALL completed exams)
           const ptsA = Number(a.totalEarnedScore ?? 0);
           const ptsB = Number(b.totalEarnedScore ?? 0);
           if (ptsA !== ptsB) return ptsB - ptsA;
 
-          // 3. Tertiary: Global SCORE % DESC (unattempted exams sort after completed)
+          // 2. Secondary: Global SCORE % DESC
           const examCountA = a.completedExamCount ?? a.completedWeeklyCount ?? 0;
           const examCountB = b.completedExamCount ?? b.completedWeeklyCount ?? 0;
           const scoreA = (examCountA > 0) ? Number(a.averageScorePct ?? 0) : -1;
           const scoreB = (examCountB > 0) ? Number(b.averageScorePct ?? 0) : -1;
           if (scoreA !== scoreB) return scoreB - scoreA;
+
+          // 3. Tertiary: PROG % DESC
+          const progA = Number(a.progressPct ?? 0);
+          const progB = Number(b.progressPct ?? 0);
+          if (progA !== progB) return progB - progA;
 
           // 4. Earliest last submission timestamp
           if (a.lastSubmittedAt && b.lastSubmittedAt) {
@@ -1573,8 +1594,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window._panAttendanceMatrix(400)" title="Pan Right" style="padding:2px 8px; font-size:0.75rem; height:24px; line-height:1;">▶</button>
                       </div>
 
-                      <button type="button" class="btn btn-warning btn-sm btn-override-prereq-matrix" id="btn-override-prereq-matrix" style="padding:2px 10px; font-size:0.72rem; height:24px; font-weight:700; background:rgba(234, 179, 8, 0.16); color:#facc15; border:1px solid rgba(234, 179, 8, 0.4); border-radius:4px; display:inline-flex; align-items:center; gap:5px; cursor:pointer;" title="Buka Ujian & Berikan Nilai 60% Remedial pada tes sebelumnya">
-                        <span>⚡</span> <span>Override Nilai & Prerequisite</span>
+                      <button type="button" class="btn btn-warning btn-sm btn-override-prereq-matrix" id="btn-override-prereq-matrix" style="padding:2px 10px; font-size:0.72rem; height:24px; font-weight:700; background:rgba(239, 68, 68, 0.16); color:#f87171; border:1px solid rgba(239, 68, 68, 0.4); border-radius:4px; display:inline-flex; align-items:center; gap:5px; cursor:pointer;" title="Forgive prasyarat quiz/exam siswa (Grade F 0 pts) agar bisa mengikuti exam target">
+                        <span>⚡</span> <span>Forgive</span>
                       </button>
                     </div>
 
@@ -1586,6 +1607,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#00FFFF; font-weight:800;">PHR</span> Phrase</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">PTS</span> Points</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">SCORE</span> %</span>
+                      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FF0000; font-weight:900; font-size:0.75rem;">F</span> Forgiven</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FFFF00; font-weight:800; font-size:0.75rem;">ᴿ</span> Remedi</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span class="grade-circle grade-circle-star" style="width:16px !important; height:16px !important; min-width:16px !important; min-height:16px !important; font-size:0.6rem !important;">★</span> ★ (100%)</span>
                     </div>
@@ -1891,10 +1913,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                 let hasAtt = false;
                 let studentThemeMaxQ = 0;
 
-                // Rule 2.10: Paired Theme Exam Remedial Synchronization ("Satu Paket")
                 const hasThemeRem = targetAsms.some(asm => {
                   const att = row.asmScores?.[asm.id];
-                  return Boolean(att?.is_remedial_unlocked || att?.is_remedial);
+                  const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
+                  const isForgiven = !hasRealAtt && Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+                  return !isForgiven && Boolean(att?.is_remedial_unlocked || att?.is_remedial);
                 });
 
                 targetAsms.forEach(asm => {
@@ -1903,14 +1926,18 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                   if (att) {
                     const st = String(att.status || '').toLowerCase();
                     if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
-                      hasAtt = true;
-                      const isRem = hasThemeRem || Boolean(att.is_remedial_unlocked || att.is_remedial);
-                      const totalQ = Number(att.total_questions || fallbackMax);
-                      studentThemeMaxQ += totalQ;
-                      const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      const maxRemPts = totalQ * 0.6;
-                      const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
-                      themeEarned += effSc;
+                      const hasRealAtt = true; // already confirmed submitted
+                      const isForgiven = !hasRealAtt && Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+                      if (!isForgiven) {
+                        hasAtt = true;
+                        const isRem = hasThemeRem || Boolean(att.is_remedial_unlocked || att.is_remedial);
+                        const totalQ = Number(att.total_questions || fallbackMax);
+                        studentThemeMaxQ += totalQ;
+                        const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
+                        const maxRemPts = totalQ * 0.6;
+                        const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
+                        themeEarned += effSc;
+                      }
                       return;
                     }
                   }
@@ -1998,8 +2025,24 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     sortable: true,
                     align: 'center',
                     render: (val, row) => {
-                      const isQueued = row.includedExamIds && row.includedExamIds.has(asm.id);
                       const att = row.asmScores?.[asm.id];
+                      const maxQ = getAsmExpectedMax(asm);
+                      const totalQ = Number(att?.total_questions || maxQ);
+                      const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
+                      const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
+                      const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
+                      const inForgivenList = Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+                      const isForgiven = !hasRealAtt && inForgivenList;
+                      if (isForgiven) {
+                        return `
+                          <span class="asm-score asm-score-test asm-score-forgiven"
+                                style="color:#FF0000; cursor:default; font-weight:800; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                                title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;🔓 [FORGIVEN] Prasyarat dibebaskan oleh Tutor (0 Pts / Tidak dihitung di akumulasi)">
+                            F
+                          </span>
+                        `;
+                      }
+                      const isQueued = row.includedExamIds && row.includedExamIds.has(asm.id);
                       if (!att) {
                         if (isQueued) {
                           return `
@@ -2037,16 +2080,20 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       const siblingExams = (themeGroups[tc] || []).filter(isWeeklyExam);
                       const hasThemeRem = siblingExams.some(sAsm => {
                         const sAtt = row.asmScores?.[sAsm.id];
-                        return Boolean(sAtt?.is_remedial_unlocked || sAtt?.is_remedial);
+                        const sMaxQ = getAsmExpectedMax(sAsm);
+                        const sTotalQ = Number(sAtt?.total_questions || sMaxQ);
+                        const sRawEarned = sAtt?.score != null ? Math.min(Number(sAtt.score), sTotalQ) : 0;
+                        const sPct = sAtt ? (sAtt.percentage != null ? Number(sAtt.percentage) : (sTotalQ > 0 ? (sRawEarned / sTotalQ) * 100 : 0)) : -1;
+                        const sHasReal = sAtt && ['submitted','auto_submitted','evaluated','graded'].includes(String(sAtt?.status||'').toLowerCase());
+                        const sForgiven = !sHasReal && Boolean((sAsm.payload?.forgiven_student_ids || []).includes(row.id));
+                        return !sForgiven && Boolean(sAtt?.is_remedial_unlocked || sAtt?.is_remedial);
                       });
-                      const isRem = hasThemeRem || Boolean(att.is_remedial_unlocked || att.is_remedial);
-                      const maxQ = getAsmExpectedMax(asm);
-                      const totalQ = Number(att.total_questions || maxQ);
+                      const isRem = (hasThemeRem || Boolean(att.is_remedial_unlocked || att.is_remedial));
+                      // reuse totalQ declared above; compute sc for submitted att
                       const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
+                      const effRawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
                       const maxRemPts = totalQ * 0.6;
-                      const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
-                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                      const effPct = isRem ? Math.min(effRawPct, 60.0) : effRawPct;
                       const color = typeof getGradeColorByScore === 'function'
                         ? getGradeColorByScore(effPct)
                         : (effPct >= 60 ? '#FFFF00' : '#FF0000');
@@ -2081,10 +2128,27 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     sortable: true,
                     align: 'center',
                     render: (val, row) => {
-                      const isQueued = row.includedExamIds && row.includedExamIds.has(asm.id);
                       const att = row.asmScores?.[asm.id];
                       const maxQ = getAsmExpectedMax(asm);
                       const totalQ = Number(att?.total_questions || maxQ);
+                      const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
+                      const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
+                      const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
+                      const inForgivenList = Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+                      const isForgiven = !hasRealAtt && inForgivenList;
+                      if (isForgiven) {
+                        return `
+                          <span class="asm-score asm-score-test"
+                                style="color:#94a3b8; cursor:default;"
+                                title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;0 pts (Forgiven)">
+                            <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;">
+                              0
+                            </span>
+                          </span>
+                        `;
+                      }
+                      const isQueued = row.includedExamIds && row.includedExamIds.has(asm.id);
+                      // maxQ and totalQ already declared above
 
                       if (!att) {
                         if (isQueued) {
@@ -2123,10 +2187,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       }
                       const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                       const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
+                      const effRawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
                       const maxRemPts = totalQ * 0.6;
                       const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
-                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                      const effPct = isRem ? Math.min(effRawPct, 60.0) : effRawPct;
                       const cleanEffSc = Math.round(effSc * 2) / 2;
                       const displayVal = (cleanEffSc % 1 !== 0) ? cleanEffSc.toFixed(1) : cleanEffSc.toString();
                       const color = typeof getGradeColorByScore === 'function'
@@ -2166,6 +2230,22 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     align: 'center',
                     render: (val, row) => {
                       const att = row.asmScores?.[asm.id];
+                      const maxQ = getAsmExpectedMax(asm);
+                      const totalQ = Number(att?.total_questions || maxQ);
+                      const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
+                      const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
+                      const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
+                      const inForgivenList = Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+                      const isForgiven = !hasRealAtt && inForgivenList;
+                      if (isForgiven) {
+                        return `
+                          <span class="asm-score asm-score-task asm-score-forgiven"
+                                style="color:#FF0000; cursor:default; font-weight:800; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                                title="${num}. [QUIZ] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;🔓 [FORGIVEN] Prasyarat dibebaskan oleh Tutor (0 Pts / Tidak dihitung di akumulasi)">
+                            F
+                          </span>
+                        `;
+                      }
                       if (!att) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       const st = String(att.status || '').toLowerCase();
                       if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
@@ -2176,16 +2256,21 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       const siblingExams = (themeGroups[tc] || []).filter(isWeeklyExam);
                       const hasThemeRem = siblingExams.some(sAsm => {
                         const sAtt = row.asmScores?.[sAsm.id];
-                        return Boolean(sAtt?.is_remedial_unlocked || sAtt?.is_remedial);
+                        const sMaxQ = getAsmExpectedMax(sAsm);
+                        const sTotalQ = Number(sAtt?.total_questions || sMaxQ);
+                        const sRawEarned = sAtt?.score != null ? Math.min(Number(sAtt.score), sTotalQ) : 0;
+                        const sPct = sAtt ? (sAtt.percentage != null ? Number(sAtt.percentage) : (sTotalQ > 0 ? (sRawEarned / sTotalQ) * 100 : 0)) : -1;
+                        const sHasReal = sAtt && ['submitted','auto_submitted','evaluated','graded'].includes(String(sAtt?.status||'').toLowerCase());
+                        const sForgiven = !sHasReal && Boolean((sAsm.payload?.forgiven_student_ids || []).includes(row.id));
+                        return !sForgiven && Boolean(sAtt?.is_remedial_unlocked || sAtt?.is_remedial);
                       });
-                      const isRem = hasThemeRem || Boolean(att.is_remedial_unlocked || att.is_remedial);
-                      const maxQ = getAsmExpectedMax(asm);
-                      const totalQ = Number(att.total_questions || maxQ);
+                      const isRem = (hasThemeRem || Boolean(att.is_remedial_unlocked || att.is_remedial));
+                      // reuse totalQ declared above; compute sc for submitted att
                       const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      const rawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
+                      const effRawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
                       const maxRemPts = totalQ * 0.6;
                       const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
-                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                      const effPct = isRem ? Math.min(effRawPct, 60.0) : effRawPct;
                       const cleanSc = Math.round(effSc * 2) / 2;
                       const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
                       const color = typeof getGradeColorByScore === 'function'
@@ -2382,15 +2467,18 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     filteredData.forEach(s => {
                       const att = s.asmScores?.[asmId];
                       if (att && ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(att.status || '').toLowerCase())) {
-                        count++;
-                        const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
-                        const targetAsm = classTests.find(a => a.id === asmId);
-                        const maxQ = getAsmExpectedMax(targetAsm);
+                        // Skip forgiven attempts from class average (they contribute 0 pts)
+                        const targetAsmForForgiven = classTests.find(a => a.id === asmId);
+                        const maxQ = getAsmExpectedMax(targetAsmForForgiven);
                         const tq = Number(att.total_questions || maxQ || 50);
                         const sc = att.score != null ? Math.min(Number(att.score), tq) : 0;
+                        const rawPct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
+                        // att is already confirmed submitted at this point; no forgiven exclusion needed
+                        // (forgiven students without attempts have no att here, so they're naturally excluded)
+                        count++;
+                        const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                         const maxRemPts = tq * 0.6;
                         const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
-                        const rawPct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
                         const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
                         scoreSum += effSc;
                         pctSum += effPct;
@@ -2628,7 +2716,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       <span style="color:var(--clr-text-1); font-size:var(--matrix-font-size, 0.75rem); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
                         ${escapeHtml(row.displayName)}
                       </span>
-                      <button type="button" class="btn-override-student-trigger" data-sid="${row.id}" data-sname="${escapeHtml(row.displayName)}" style="background:transparent; border:none; color:#facc15; cursor:pointer; font-size:0.72rem; padding:0 2px; opacity:0.65; flex-shrink:0; line-height:1; transition:opacity 0.15s;" title="Override prerequisite untuk ${escapeHtml(row.displayName)} (Beri 60% Remedial & Buka Exam)" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.65'">⚡</button>
+                      <button type="button" class="btn-override-student-trigger" data-sid="${row.id}" data-sname="${escapeHtml(row.displayName)}" style="background:transparent; border:none; color:#f87171; cursor:pointer; font-size:0.72rem; padding:0 2px; opacity:0.65; flex-shrink:0; line-height:1; transition:opacity 0.15s;" title="Forgive prerequisite untuk ${escapeHtml(row.displayName)} (Grade F 0 pts & Buka Exam)" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.65'">⚡</button>
                     </div>
                   `
                 },
@@ -2690,7 +2778,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       : '#ffffff';
                     const displayScore = Number(val || 0).toFixed(1).replace(/\.0$/, '');
                     return `
-                      <div style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; line-height:1; display:flex; align-items:baseline; justify-content:flex-end; gap:2px; padding-right:4px;" title="Latest Exam Points (Words + Phrases): ${displayScore} pts">
+                      <div style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; line-height:1; display:flex; align-items:baseline; justify-content:flex-end; gap:2px; padding-right:4px;" title="Total Exam Points (All Completed Exams): ${displayScore} pts">
                         <span style="color:${scoreColor};">${displayScore}</span>
                         <span style="font-size:0.60rem; color:var(--clr-text-3); font-weight:500;">pts</span>
                       </div>
@@ -2947,13 +3035,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
         <div class="modal-box" style="background:#0f172a; border:1px solid rgba(250,204,21,0.35); border-radius:12px; width:100%; max-width:660px; max-height:94vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,0.9);">
 
           <!-- Header -->
-          <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:flex-start; background:rgba(234,179,8,0.07); flex-shrink:0;">
+          <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:flex-start; background:rgba(239,68,68,0.08); flex-shrink:0;">
             <div>
-              <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(234,179,8,0.15); color:#facc15; border:1px solid rgba(234,179,8,0.35); padding:2px 8px; border-radius:4px; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:5px;">
-                ⚡ TUTOR OVERRIDE &bull; ${escapeHtml(className)}
+              <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(239,68,68,0.18); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:4px; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:5px;">
+                ⚡ TUTOR FORGIVENESS &bull; ${escapeHtml(className)}
               </div>
-              <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#ffffff;">Override Nilai Remedial</h3>
-              <div style="font-size:0.76rem; color:#94a3b8; margin-top:2px;">Pilih kuis/ujian &amp; siswa. Nilai kosong atau di bawah target akan diisi otomatis sebagai Remedial.</div>
+              <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#ffffff;">Bypass Prasyarat (Grade F — Forgiven)</h3>
+              <div style="font-size:0.76rem; color:#94a3b8; margin-top:2px;">Bebaskan prasyarat ujian dengan status <strong style="color:#FF0000;">F (Forgiven)</strong>. Nilai 0 Poin, tidak dihitung di progres maupun akumulasi skor, namun membuka akses ujian target.</div>
             </div>
             <button type="button" id="btn-close-override-modal" style="color:#94a3b8; font-size:1.3rem; padding:2px 8px; line-height:1; cursor:pointer; background:none; border:none;">&times;</button>
           </div>
@@ -2966,11 +3054,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
               <div style="font-size:0.73rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">A. Siswa Target</div>
               <div style="display:flex; flex-direction:column; gap:7px;">
                 <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#e2e8f0; cursor:pointer;">
-                  <input type="radio" name="override_scope" value="all" ${initialScope === 'all' ? 'checked' : ''} style="accent-color:#facc15; cursor:pointer;">
+                  <input type="radio" name="override_scope" value="all" ${initialScope === 'all' ? 'checked' : ''} style="accent-color:#ef4444; cursor:pointer;">
                   <span><strong>Semua Siswa</strong> (${classStudents.length} siswa terdaftar di kelas)</span>
                 </label>
                 <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#e2e8f0; cursor:pointer;">
-                  <input type="radio" name="override_scope" value="batch" style="accent-color:#facc15; cursor:pointer;">
+                  <input type="radio" name="override_scope" value="batch" style="accent-color:#ef4444; cursor:pointer;">
                   <span><strong>Per Batch</strong></span>
                 </label>
                 <div id="override-batch-select-wrap" style="display:none; padding-left:22px;">
@@ -2979,7 +3067,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                   </select>
                 </div>
                 <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#e2e8f0; cursor:pointer;">
-                  <input type="radio" name="override_scope" value="single" ${initialScope === 'single' ? 'checked' : ''} style="accent-color:#facc15; cursor:pointer;">
+                  <input type="radio" name="override_scope" value="single" ${initialScope === 'single' ? 'checked' : ''} style="accent-color:#ef4444; cursor:pointer;">
                   <span><strong>Siswa Spesifik</strong></span>
                 </label>
                 <div id="override-single-select-wrap" style="display:${initialScope === 'single' ? 'block' : 'none'}; padding-left:22px;">
@@ -2993,11 +3081,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             <!-- Section B: Test Checklist -->
             <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06);">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                <div style="font-size:0.73rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">B. Pilih Kuis / Ujian yang Di-override</div>
+                <div style="font-size:0.73rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">B. Pilih Kuis / Ujian yang Di-forgive (Bypass)</div>
                 <div style="display:flex; gap:6px;">
-                  <button type="button" id="btn-check-all-tests" style="background:rgba(250,204,21,0.12); color:#facc15; border:1px solid rgba(250,204,21,0.3); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">✓ Semua</button>
+                  <button type="button" id="btn-check-all-tests" style="background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.3); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">✓ Semua</button>
                   <button type="button" id="btn-check-quizzes-only" style="background:rgba(59,130,246,0.12); color:#93c5fd; border:1px solid rgba(59,130,246,0.3); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">Quiz Saja</button>
-                  <button type="button" id="btn-check-exams-only" style="background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.3); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">Exam Saja</button>
+                  <button type="button" id="btn-check-exams-only" style="background:rgba(239,68,68,0.18); color:#fca5a5; border:1px solid rgba(239,68,68,0.4); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">Exam Saja</button>
                   <button type="button" id="btn-uncheck-all-tests" style="background:rgba(255,255,255,0.06); color:#94a3b8; border:1px solid rgba(255,255,255,0.15); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">✗ Hapus</button>
                 </div>
               </div>
@@ -3009,24 +3097,24 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
 
             <!-- Section C: Options -->
             <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; gap:8px;">
-              <div style="font-size:0.73rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:2px;">C. Opsi Override</div>
+              <div style="font-size:0.73rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:2px;">C. Opsi Forgiveness</div>
               <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.8rem; color:#cbd5e1; cursor:pointer;">
-                <input type="checkbox" id="override-only-empty" style="cursor:pointer; margin-top:2px; accent-color:#facc15;">
-                <span><strong>Hanya Isi yang Kosong:</strong> Jika dicentang, siswa yang sudah punya nilai (berapa pun) akan dilewati. Jika tidak dicentang (default), yang kosong <em>dan</em> yang di bawah nilai target akan diisi.</span>
+                <input type="checkbox" id="override-only-empty" style="cursor:pointer; margin-top:2px; accent-color:#ef4444;">
+                <span><strong>Hanya Siswa Tanpa Nilai (Belum Pernah Ikut):</strong> Jika dicentang, hanya tes yang belum memiliki riwayat ujian yang akan di-forgive. Jika tidak dicentang (default), tes yang belum pernah ikut maupun yang nilainya belum lulus (&lt; 60%) akan di-forgive.</span>
               </label>
               <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.8rem; color:#cbd5e1; cursor:pointer;">
-                <input type="checkbox" id="override-unlock-sessions" style="cursor:pointer; margin-top:2px; accent-color:#facc15;">
-                <span><strong>Buka Sesi Ujian Langsung:</strong> Daftarkan siswa ke whitelist sesi ujian aktif sehingga dapat menekan tombol mulai.</span>
+                <input type="checkbox" id="override-unlock-sessions" style="cursor:pointer; margin-top:2px; accent-color:#ef4444;">
+                <span><strong>Buka Sesi Ujian Langsung:</strong> Daftarkan siswa ke whitelist sesi ujian aktif sehingga dapat menekan tombol mulai ujian.</span>
               </label>
             </div>
 
             <!-- Section D: Protection Notice -->
             <div style="padding:12px 18px; background:rgba(34,197,94,0.06); border-bottom:1px solid rgba(34,197,94,0.15);">
-              <div style="font-size:0.75rem; color:#4ade80; font-weight:700; margin-bottom:4px;">🛡️ Perlindungan Nilai (Rule 2.10)</div>
+              <div style="font-size:0.75rem; color:#4ade80; font-weight:700; margin-bottom:4px;">🛡️ Perlindungan Siswa Lulus Mandiri (Rule 2.10)</div>
               <div style="font-size:0.75rem; color:#94a3b8; line-height:1.5;">
-                • Siswa yang sudah memiliki nilai <strong>&ge; target</strong> pada suatu tes <strong>tidak akan diturunkan</strong>.<br>
-                • Tes yang kosong atau di bawah target akan otomatis diisi <strong>60%<sup>ᴿ</sup> (Grade C Remedial)</strong>.<br>
-                • Tombol ujian pada dashboard siswa akan langsung aktif hijau.
+                • Siswa yang sudah lulus prasyarat (&ge; 60%) secara mandiri (seperti <strong>Syazida</strong>) <strong>TIDAK AKAN DIBERIKAN KODE F</strong> dan nilai aslinya tetap terjaga utuh.<br>
+                • Tes yang di-override akan berstatus <strong style="color:#FF0000;">F (Forgiven - Merah)</strong>, bernilai <strong>0 Pts</strong>, dan <strong>dikecualikan</strong> dari progres (PROG) maupun rata-rata skor (SCORE).<br>
+                • Siswa dijamin 100% dapat langsung membuka dan mengerjakan ujian target di Student Lobby.
               </div>
             </div>
           </div>
@@ -3034,8 +3122,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
           <!-- Footer -->
           <div style="padding:12px 18px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); flex-shrink:0;">
             <button type="button" id="btn-cancel-override-modal" style="color:#94a3b8; font-size:0.85rem; cursor:pointer; background:none; border:none;">Batal</button>
-            <button type="button" id="btn-execute-override" style="font-weight:800; font-size:0.85rem; padding:8px 22px; background:#eab308; color:#0f172a; border:none; border-radius:6px; display:inline-flex; align-items:center; gap:8px; cursor:pointer; box-shadow:0 4px 14px rgba(234,179,8,0.4);">
-              <span>⚡</span> <span>Terapkan Override Remedial</span>
+            <button type="button" id="btn-execute-override" style="font-weight:800; font-size:0.85rem; padding:8px 22px; background:#ef4444; color:#ffffff; border:none; border-radius:6px; display:inline-flex; align-items:center; gap:8px; cursor:pointer; box-shadow:0 4px 14px rgba(239,68,68,0.4);">
+              <span>🔓</span> <span>Forgive</span>
             </button>
           </div>
         </div>
@@ -3133,22 +3221,21 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             const unlockSess  = modal.querySelector('#override-unlock-sessions')?.checked === true;
 
             btnExec.disabled = true;
-            btnExec.innerHTML = `<span>⏳</span> <span>Menerapkan Override...</span>`;
+            btnExec.innerHTML = `<span>⏳</span> <span>Forgiving...</span>`;
 
             const res = await adminOverridePrerequisitesWithRemedial({
               classId,
               studentIds: targetStudentIds,
-              selectedTestIds,          // NEW: specific test IDs from checklist
-              targetScorePercent: 60,   // 60% remedial
+              selectedTestIds,          // specific test IDs from checklist
+              targetScorePercent: 60,
               onlyFillEmpty: onlyEmpty,
               unlockLiveSessions: unlockSess
             });
 
             closeModal();
 
-            const suffix = res.isRemedial !== false ? `ᴿ` : '';
             showToast(
-              `⚡ Override Berhasil! ${res.createdCount} nilai baru + ${res.updatedCount} diperbarui → ${res.fillScore || 60}%${suffix} untuk ${res.affectedStudentsCount} siswa pada ${res.affectedTestsCount} tes.`,
+              `⚡ Bypass Prasyarat Berhasil! Status Forgiven (F) diterapkan untuk ${res.affectedStudentsCount} siswa pada ${res.affectedTestsCount} tes.`,
               'success'
             );
 
@@ -3163,7 +3250,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             showToast('Gagal menerapkan override: ' + (err?.message || 'Unknown error'), 'error');
             if (btnExec) {
               btnExec.disabled = false;
-              btnExec.innerHTML = `<span>⚡</span> <span>Terapkan Override Remedial</span>`;
+              btnExec.innerHTML = `<span>🔓</span> <span>Forgive</span>`;
             }
           }
         };

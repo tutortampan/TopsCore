@@ -128,15 +128,28 @@ Deno.serve(async (req) => {
     const isStandaloneTryout = test.payload?.is_standalone_tryout === true;
     const prereqId = test.prerequisite_test_id;
     if (prereqId && !isStandaloneTryout) {
-      const { data: prereqAttempts } = await supabase
-        .from("attempts")
-        .select("effective_score, percentage, status")
-        .eq("student_id", student_id)
-        .eq("test_id", prereqId)
-        .in("status", ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
+      const [prereqAttRes, prereqTestRes] = await Promise.all([
+        supabase
+          .from("attempts")
+          .select("effective_score, percentage, status")
+          .eq("student_id", student_id)
+          .eq("test_id", prereqId)
+          .in("status", ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]),
+        supabase
+          .from("tests")
+          .select("id, payload")
+          .eq("id", prereqId)
+          .single()
+      ]);
+      const prereqAttempts = prereqAttRes.data;
+      const prereqTest = prereqTestRes.data;
 
       const reqScore = test.prerequisite_min_score || 60;
-      const hasPassed = prereqAttempts && prereqAttempts.some((a: any) => (a.effective_score || a.percentage || 0) >= reqScore);
+      const isPrereqForgiven = Boolean(
+        test.payload?.forgiven_student_ids?.includes(student_id) ||
+        prereqTest?.payload?.forgiven_student_ids?.includes(student_id)
+      );
+      const hasPassed = isPrereqForgiven || (prereqAttempts && prereqAttempts.some((a: any) => (a.effective_score || a.percentage || 0) >= reqScore));
 
       if (!hasPassed) {
         return new Response(JSON.stringify({ error: `Prerequisite not completed. You must score at least ${reqScore}% on the prerequisite test.` }), {
@@ -271,7 +284,7 @@ Deno.serve(async (req) => {
         if (themeCode) {
           const { data: siblingQuizzes } = await supabase
             .from('tests')
-            .select('id')
+            .select('id, payload')
             .eq('class_id', test.class_id)
             .eq('level_id', test.level_id)
             .eq('test_type', 'quiz')
@@ -288,6 +301,11 @@ Deno.serve(async (req) => {
               
             const reqScore = test.prerequisite_min_score || 60;
             const passedQuizIds = new Set();
+            siblingQuizzes.forEach((sq: any) => {
+              if (sq.payload?.forgiven_student_ids?.includes(student_id)) {
+                passedQuizIds.add(sq.id);
+              }
+            });
             if (siblingAttempts) {
               siblingAttempts.forEach((att: any) => {
                 if ((att.effective_score || att.percentage || 0) >= reqScore) {
@@ -341,7 +359,8 @@ Deno.serve(async (req) => {
                 .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
 
               const reqScore = test.prerequisite_min_score || 60;
-              const hasPassedWords = (wordsAttempts || []).some((att: any) => {
+              const isWordsForgiven = Boolean(wordsExam.payload?.forgiven_student_ids?.includes(student_id) || test.payload?.forgiven_student_ids?.includes(student_id));
+              const hasPassedWords = isWordsForgiven || (wordsAttempts || []).some((att: any) => {
                 const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
                 return pct >= reqScore;
               });

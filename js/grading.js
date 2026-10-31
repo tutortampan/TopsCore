@@ -521,6 +521,7 @@ export const TOPSCORE_COLORS = Object.freeze({
   C: '#FFFF00', // 60–79% Grade C (Pure Yellow - 100% distinct from orange)
   D: '#FF8C00', // 30–59% Grade D (Dark Orange)
   E: '#FF0000', // 0–29% Grade E (Pure Red)
+  FORGIVEN: '#FF0000', // Admin-Forgiven Prerequisite Override (Pure Red #FF0000)
 
   // 2. RGB Equivalents for Opacities, Shadows, & Glows
   STAR_RGB: '0, 192, 0',
@@ -529,6 +530,7 @@ export const TOPSCORE_COLORS = Object.freeze({
   C_RGB: '255, 255, 0',
   D_RGB: '255, 140, 0',
   E_RGB: '255, 0, 0',
+  FORGIVEN_RGB: '255, 0, 0',
 
   // 3. Question Answer Evaluation Status (Result Page)
   CORRECT: '#00c000ff', // Full point (1.0 pt)  -> Pure Green (Star / A)
@@ -813,12 +815,20 @@ export function recalculateAttempt(answers, passingThreshold = 60) {
  * @returns {{ totalPoints: number, overallScore: number, grade: string, denominator: number, completedExamCount: number, completedWeeklyCount: number }}
  */
 export function computeMilestoneExamMastery(examEntries = [], allClassExams = []) {
-  const completedExamCount = Array.isArray(examEntries) ? examEntries.length : 0;
+  // Exclude Forgiven exam entries from academic points and mastery calculations.
+  // An entry is Forgiven ONLY when explicitly flagged (no real submitted attempt in DB).
+  const cleanExamEntries = (Array.isArray(examEntries) ? examEntries : []).filter(e => {
+    if (!e) return false;
+    if (e.isForgiven) return false; // Only isForgiven set from app.js (no real attempt + in forgiven_student_ids)
+    return true;
+  });
+
+  const completedExamCount = cleanExamEntries.length;
   const completedWeeklyCount = completedExamCount; // Backward compatibility alias
 
-  // Riwayat Akumulasi Seluruh Poin (Arsip/Audit Track Record)
+  // Riwayat Akumulasi Seluruh Poin (Total Poin dari Seluruh Exam yang Dikerjakan Sah)
   const cumulativePoints =
-    Math.round(examEntries.reduce((sum, e) => sum + Number(e.effPoints ?? e.points ?? 0), 0) * 10) /
+    Math.round(cleanExamEntries.reduce((sum, e) => sum + Number(e.effPoints ?? e.points ?? 0), 0) * 10) /
     10;
 
   // Helper to extract theme code from test
@@ -860,7 +870,7 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
   const sortedThemes = Object.keys(themeExamsMap).sort();
   if (sortedThemes.length === 0 || completedExamCount === 0) {
     return {
-      totalPoints: completedExamCount > 0 ? totalPoints : 0,
+      totalPoints: 0,
       overallScore: 0,
       grade: '—',
       denominator: 0,
@@ -878,7 +888,7 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
     const examsInTheme = themeExamsMap[tc];
     const examIds = new Set(examsInTheme.map((t) => t.id));
 
-    const studentAttemptsInTheme = examEntries.filter((e) => {
+    const studentAttemptsInTheme = cleanExamEntries.filter((e) => {
       const eId = e.test?.id || e.testId || e.test_id;
       if (eId && examIds.has(eId)) return true;
       const tcAttempt = helperThemeCode(e.test);
@@ -933,28 +943,28 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
     }
   }
 
-  let totalPoints = 0;
+  let latestThemePoints = 0;
   let overallScore = 0;
   let grade = '—';
   let denominator = 0;
 
   if (latestAttemptedTheme) {
-    // Sesi Ujian Tema Mutakhir: Poin dan Nilai murni merefleksikan capaian sesi tes terbaru (bukan akumulasi masa lalu)
-    totalPoints = Math.round(latestAttemptedTheme.earned * 10) / 10;
+    latestThemePoints = Math.round(latestAttemptedTheme.earned * 10) / 10;
     overallScore = latestAttemptedTheme.scorePct;
     grade = calculateGrade(overallScore);
     denominator = latestAttemptedTheme.maxQ;
   } else if (completedExamCount > 0) {
-    const sumEarned = examEntries.reduce((sum, e) => sum + Number(e.effPoints ?? e.points ?? 0), 0);
-    const sumMax = examEntries.reduce((sum, e) => sum + Number(e.totalQ ?? 0), 0);
-    totalPoints = Math.round(sumEarned * 10) / 10;
+    const sumEarned = cleanExamEntries.reduce((sum, e) => sum + Number(e.effPoints ?? e.points ?? 0), 0);
+    const sumMax = cleanExamEntries.reduce((sum, e) => sum + Number(e.totalQ ?? 0), 0);
+    latestThemePoints = Math.round(sumEarned * 10) / 10;
     overallScore = sumMax > 0 ? Math.round((sumEarned / sumMax) * 100) : 0;
     grade = calculateGrade(overallScore);
     denominator = sumMax;
   }
 
   return {
-    totalPoints,
+    totalPoints: latestThemePoints, // Authoritative: Points of latest active theme exams
+    latestThemePoints,
     cumulativePoints,
     overallScore,
     grade,

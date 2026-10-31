@@ -65,13 +65,14 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     let answeredMap = {}; // attempt_answer_id -> student_answer
     window.answeredMap = answeredMap;
 
-    // —— Anti-Cheat State & Police Siren Audio ——
+    // —— Anti-Cheat State & Multi-Sound Alert Engine ——
     let isTestActive = false;
     let cheatInterval = null;
     let audioCtx = null;
-    let sirenOsc = null;
-    let sirenGain = null;
-    let securityConfig = { enabled: true, soundEnabled: true, countdownSeconds: 10 };
+    let _activeOscNodes = []; // track all active oscillator/source nodes for clean stop
+    let _activeGainNodes = [];
+    let _activeAudioSource = null; // for custom audio buffer source
+    let securityConfig = { enabled: true, soundEnabled: true, countdownSeconds: 10, soundType: 'police_siren', customSoundB64: '' };
 
     // Mobile Audio Unlock on first interaction
     const unlockAudio = () => {
@@ -89,56 +90,262 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     document.addEventListener('click', unlockAudio, { once: true, passive: true });
     document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
 
+    // ─── Sound Engine Helpers ──────────────────────────────────────
+    function _getCtx() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function _makeOsc(type, freq, gainVal, ctx) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      g.gain.value = gainVal;
+      osc.connect(g);
+      g.connect(ctx.destination);
+      _activeOscNodes.push(osc);
+      _activeGainNodes.push(g);
+      return { osc, g };
+    }
+
+    // ─── Individual Sound Implementations ────────────────────────
+    const CHEAT_SOUNDS = {
+
+      // 1. Police Siren (original, improved)
+      police_siren(ctx) {
+        const { osc, g } = _makeOsc('sawtooth', 650, 0.35, ctx);
+        const now = ctx.currentTime;
+        const cycle = 0.5;
+        for (let i = 0; i < 40; i++) {
+          const t = now + i * cycle * 2;
+          osc.frequency.linearRampToValueAtTime(1250, t + cycle);
+          osc.frequency.linearRampToValueAtTime(650, t + cycle * 2);
+        }
+        osc.start();
+      },
+
+      // 2. Alarm Beeps — sharp repeating beeps like a door alarm
+      alarm_beep(ctx) {
+        const now = ctx.currentTime;
+        for (let i = 0; i < 20; i++) {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.value = 880;
+          g.gain.setValueAtTime(0, now + i * 0.35);
+          g.gain.linearRampToValueAtTime(0.4, now + i * 0.35 + 0.02);
+          g.gain.setValueAtTime(0.4, now + i * 0.35 + 0.18);
+          g.gain.linearRampToValueAtTime(0, now + i * 0.35 + 0.22);
+          osc.connect(g); g.connect(ctx.destination);
+          osc.start(now + i * 0.35);
+          osc.stop(now + i * 0.35 + 0.25);
+          _activeOscNodes.push(osc); _activeGainNodes.push(g);
+        }
+      },
+
+      // 3. Red Alert — Star-Trek-style descending wail
+      red_alert(ctx) {
+        const { osc, g } = _makeOsc('sawtooth', 1100, 0.3, ctx);
+        const now = ctx.currentTime;
+        const cycle = 0.8;
+        for (let i = 0; i < 24; i++) {
+          const t = now + i * cycle;
+          osc.frequency.setValueAtTime(1100, t);
+          osc.frequency.exponentialRampToValueAtTime(400, t + cycle * 0.8);
+        }
+        osc.start();
+      },
+
+      // 4. Buzzer — harsh exam-room buzzer
+      buzzer(ctx) {
+        const { osc, g } = _makeOsc('square', 110, 0.45, ctx);
+        const now = ctx.currentTime;
+        g.gain.setValueAtTime(0.45, now);
+        for (let i = 0; i < 10; i++) {
+          g.gain.setValueAtTime(0.45, now + i * 0.3);
+          g.gain.setValueAtTime(0, now + i * 0.3 + 0.15);
+        }
+        osc.start();
+        osc.stop(now + 3.5);
+      },
+
+      // 5. Warning Tone — calm but insistent dual-tone
+      warning_tone(ctx) {
+        const now = ctx.currentTime;
+        [660, 880].forEach((freq, idx) => {
+          const { osc, g } = _makeOsc('sine', freq, 0.28, ctx);
+          const offset = idx * 0.5;
+          for (let i = 0; i < 16; i++) {
+            g.gain.setValueAtTime(0, now + offset + i * 1.0);
+            g.gain.linearRampToValueAtTime(0.28, now + offset + i * 1.0 + 0.05);
+            g.gain.setValueAtTime(0.28, now + offset + i * 1.0 + 0.38);
+            g.gain.linearRampToValueAtTime(0, now + offset + i * 1.0 + 0.45);
+          }
+          osc.start();
+        });
+      },
+
+      // 6. Laser Blast — sci-fi descending laser
+      laser_blast(ctx) {
+        const now = ctx.currentTime;
+        for (let i = 0; i < 12; i++) {
+          const { osc, g } = _makeOsc('sawtooth', 1200, 0.3, ctx);
+          const t = now + i * 0.4;
+          osc.frequency.setValueAtTime(1200, t);
+          osc.frequency.exponentialRampToValueAtTime(200, t + 0.3);
+          g.gain.setValueAtTime(0.3, t);
+          g.gain.linearRampToValueAtTime(0, t + 0.32);
+          osc.start(t); osc.stop(t + 0.35);
+        }
+      },
+
+      // 7. Rapid Fire — machine-gun pulse
+      rapid_fire(ctx) {
+        const now = ctx.currentTime;
+        for (let i = 0; i < 30; i++) {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.value = 300 + Math.random() * 400;
+          const t = now + i * 0.12;
+          g.gain.setValueAtTime(0.3, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+          osc.connect(g); g.connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.12);
+          _activeOscNodes.push(osc); _activeGainNodes.push(g);
+        }
+      },
+
+      // 8. Dramatic Klaxon — low pulsing klaxon like a ship alarm
+      klaxon(ctx) {
+        const now = ctx.currentTime;
+        for (let i = 0; i < 12; i++) {
+          const { osc, g } = _makeOsc('square', i % 2 === 0 ? 220 : 180, 0.4, ctx);
+          const t = now + i * 0.35;
+          g.gain.setValueAtTime(0.4, t);
+          g.gain.setValueAtTime(0, t + 0.28);
+          osc.start(t); osc.stop(t + 0.32);
+        }
+      },
+
+      // 9. High-Pitch Whistle — sharp penalty-whistle sound
+      whistle(ctx) {
+        const { osc, g } = _makeOsc('sine', 2800, 0.0, ctx);
+        const now = ctx.currentTime;
+        const blastDur = 0.35;
+        const gap = 0.2;
+        for (let i = 0; i < 8; i++) {
+          const t = now + i * (blastDur + gap);
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.35, t + 0.04);
+          g.gain.setValueAtTime(0.35, t + blastDur - 0.05);
+          g.gain.linearRampToValueAtTime(0, t + blastDur);
+          osc.frequency.setValueAtTime(2800, t);
+          osc.frequency.linearRampToValueAtTime(3200, t + blastDur * 0.5);
+          osc.frequency.linearRampToValueAtTime(2600, t + blastDur);
+        }
+        osc.start();
+      },
+
+      // 10. DJ Drop — rising synth stab with reverb-like decay (energetic DJ cue)
+      dj_drop(ctx) {
+        const now = ctx.currentTime;
+        // Bass kick
+        for (let i = 0; i < 4; i++) {
+          const kick = ctx.createOscillator();
+          const kg = ctx.createGain();
+          kick.type = 'sine';
+          const t = now + i * 0.25;
+          kick.frequency.setValueAtTime(150, t);
+          kick.frequency.exponentialRampToValueAtTime(40, t + 0.2);
+          kg.gain.setValueAtTime(0.6, t);
+          kg.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+          kick.connect(kg); kg.connect(ctx.destination);
+          kick.start(t); kick.stop(t + 0.25);
+          _activeOscNodes.push(kick); _activeGainNodes.push(kg);
+        }
+        // Rising synth arp
+        const freqs = [220, 330, 440, 660, 880, 1100, 1320, 1760];
+        freqs.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.value = freq;
+          const t = now + 1.0 + idx * 0.08;
+          g.gain.setValueAtTime(0.25, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+          osc.connect(g); g.connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.4);
+          _activeOscNodes.push(osc); _activeGainNodes.push(g);
+        });
+        // Final stab chord (3 oscillators)
+        [440, 550, 660].forEach((freq) => {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.value = freq;
+          const t = now + 1.7;
+          g.gain.setValueAtTime(0.3, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+          osc.connect(g); g.connect(ctx.destination);
+          osc.start(t); osc.stop(t + 1.3);
+          _activeOscNodes.push(osc); _activeGainNodes.push(g);
+        });
+      },
+
+      // Custom: play base64-encoded audio file uploaded by admin
+      async custom(ctx, b64) {
+        if (!b64) return CHEAT_SOUNDS.police_siren(ctx);
+        try {
+          const binary = atob(b64.split(',').pop());
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const buffer = await ctx.decodeAudioData(bytes.buffer);
+          const src = ctx.createBufferSource();
+          src.buffer = buffer;
+          src.loop = true;
+          src.connect(ctx.destination);
+          src.start();
+          _activeAudioSource = src;
+        } catch (_) {
+          CHEAT_SOUNDS.police_siren(ctx); // fallback
+        }
+      }
+    };
+
+    // ─── Public play / stop ───────────────────────────────────────
     function startPoliceSiren() {
       if (!securityConfig.soundEnabled) return;
       try {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
+        const ctx = _getCtx();
         stopPoliceSiren();
-
-        sirenOsc = audioCtx.createOscillator();
-        sirenGain = audioCtx.createGain();
-        sirenOsc.type = 'sawtooth';
-
-        const now = audioCtx.currentTime;
-        sirenGain.gain.setValueAtTime(0.35, now);
-
-        // Police Siren wail between 650Hz and 1250Hz in repeating cycles
-        sirenOsc.frequency.setValueAtTime(650, now);
-        const cycle = 0.5;
-        for (let i = 0; i < 40; i++) {
-          const t = now + (i * cycle * 2);
-          sirenOsc.frequency.linearRampToValueAtTime(1250, t + cycle);
-          sirenOsc.frequency.linearRampToValueAtTime(650, t + cycle * 2);
+        const type = securityConfig.soundType || 'police_siren';
+        const fn = CHEAT_SOUNDS[type] || CHEAT_SOUNDS.police_siren;
+        if (type === 'custom') {
+          fn(ctx, securityConfig.customSoundB64);
+        } else {
+          fn(ctx);
         }
-
-        sirenOsc.connect(sirenGain);
-        sirenGain.connect(audioCtx.destination);
-        sirenOsc.start();
-
-        // Phone haptic vibration alert matching siren wail
+        // Phone haptic vibration
         if (navigator.vibrate) {
           try { navigator.vibrate([300, 150, 300, 150, 300, 150, 600]); } catch (_) {}
         }
       } catch (e) {
-        console.warn('Police siren audio error:', e);
+        console.warn('Cheat sound error:', e);
       }
     }
 
     function stopPoliceSiren() {
       try {
-        if (sirenOsc) {
-          sirenOsc.stop();
-          sirenOsc.disconnect();
-          sirenOsc = null;
-        }
-        if (sirenGain) {
-          sirenGain.disconnect();
-          sirenGain = null;
+        _activeOscNodes.forEach(n => { try { n.stop(); n.disconnect(); } catch (_) {} });
+        _activeGainNodes.forEach(g => { try { g.disconnect(); } catch (_) {} });
+        _activeOscNodes = [];
+        _activeGainNodes = [];
+        if (_activeAudioSource) {
+          try { _activeAudioSource.stop(); _activeAudioSource.disconnect(); } catch (_) {}
+          _activeAudioSource = null;
         }
         if (navigator.vibrate) {
           try { navigator.vibrate(0); } catch (_) {}

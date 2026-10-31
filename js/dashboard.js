@@ -1387,7 +1387,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                const prereqPct = prereqBest ? parseFloat(prereqBest.percentage || 0) : null;
                const pObj = Tests.find(a => a.id === prereqId);
                const pMinScore = pObj ? (pObj.minimum_required_score || pObj.pass_threshold || 60) : 60;
-               prereqMet = prereqPct !== null && prereqPct >= pMinScore;
+               const isPrereqForgiven = Boolean(
+                 (pObj?.payload?.forgiven_student_ids || []).includes(session?.student_id) ||
+                 (Test?.payload?.forgiven_student_ids || []).includes(session?.student_id) ||
+                 prereqBest?.is_forgiven ||
+                 prereqBest?.grade === 'F'
+               );
+               prereqMet = isPrereqForgiven || (prereqPct !== null && prereqPct >= pMinScore);
                prereqTitle = pObj ? (pObj.display_name || pObj.title || pObj.name || 'Prerequisite') : 'Prerequisite Test';
             }
 
@@ -1427,7 +1433,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 const wRem = Boolean(wBest && (wBest.is_remedial_unlocked || wBest.is_remedial));
                 const wPct = wRem && wRawPct !== null ? Math.min(wRawPct, 60.0) : wRawPct;
                 const wMin = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 60;
-                if (wPct === null || wPct < wMin) {
+                const isWordsForgiven = Boolean(
+                  (siblingWordsExam.payload?.forgiven_student_ids || []).includes(session?.student_id) ||
+                  (Test?.payload?.forgiven_student_ids || []).includes(session?.student_id) ||
+                  wBest?.is_forgiven ||
+                  wBest?.grade === 'F'
+                );
+                if (!isWordsForgiven && (wPct === null || wPct < wMin)) {
                   prereqMet = false;
                   prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
                 }
@@ -1655,7 +1667,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             for (const quiz of siblingQuizzes) {
               const quizBest = bestByTest[quiz.id];
               const quizPct = quizBest ? parseFloat(quizBest.percentage || 0) : null;
-              if (quizPct === null || quizPct < reqScore) {
+              const isQuizForgiven = Boolean(
+                (quiz.payload?.forgiven_student_ids || []).includes(session?.student_id) ||
+                (asm.payload?.forgiven_student_ids || []).includes(session?.student_id) ||
+                quizBest?.is_forgiven ||
+                quizBest?.grade === 'F'
+              );
+              if (!isQuizForgiven && (quizPct === null || quizPct < reqScore)) {
                 prereqMet = false;
                 prereqTitle = `All Theme Quizzes (Required: ≥${reqScore}%)`;
                 break;
@@ -1668,7 +1686,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const liveSess = (asm.payload?.test_session);
           const isSessLive = liveSess?.status === 'UNLOCKED' &&
             (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > new Date()) &&
-            (!Array.isArray(liveSess.allowed_student_ids) || liveSess.allowed_student_ids.length === 0 || liveSess.allowed_student_ids.includes(user?.id));
+            (!Array.isArray(liveSess.allowed_student_ids) || liveSess.allowed_student_ids.length === 0 || liveSess.allowed_student_ids.includes(session?.student_id || session?.id));
 
           const isPhrasesExam = isExam(asm) && Boolean(
             asm.category === 'phrases' || asm.test_subtype === 'PHRASE_EXAM' ||
@@ -1701,7 +1719,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               const wRem = Boolean(wBest && (wBest.is_remedial_unlocked || wBest.is_remedial));
               const wPct = wRem && wRawPct !== null ? Math.min(wRawPct, 60.0) : wRawPct;
               const wMin = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 60;
-              if (wPct === null || wPct < wMin) {
+              const isWordsForgiven = Boolean(
+                (siblingWordsExam.payload?.forgiven_student_ids || []).includes(session?.student_id || session?.id) ||
+                (asm.payload?.forgiven_student_ids || []).includes(session?.student_id || session?.id) ||
+                wBest?.is_forgiven ||
+                wBest?.grade === 'F'
+              );
+              if (!isWordsForgiven && (wPct === null || wPct < wMin)) {
                 prereqMet = false;
                 prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
               }
@@ -1745,7 +1769,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Live test session state
         const liveSession = asm.payload?.test_session;
         const isSessionUnlocked = liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > new Date());
-        const isWhitelisted = isSessionUnlocked && (!Array.isArray(liveSession?.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(user.id));
+        const isWhitelisted = isSessionUnlocked && (!Array.isArray(liveSession?.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(session?.student_id || session?.id));
 
         // Availability window
         const now = new Date();

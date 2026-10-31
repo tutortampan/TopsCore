@@ -1,27 +1,35 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-31 08:17 UTC+8
+Last Updated: 2026-10-31 12:25 UTC+8
 
-Current Phase: Phase 226: Override Modal Redesign — Test Checklist & Bug Fix [COMPLETE]
+Current Phase: Phase 232: Full Forgiveness Engine Restoration, All Students Exam 39 & 40 Eligibility & Points Realignment [COMPLETE]
 
-Current Task: Redesigned override modal dari dropdown scope menjadi checklist interaktif semua quiz & exam di kelas. Diperbaiki bug tombol tidak berfungsi (duplikat event listener + `selectedTestIds` tidak dikirim ke backend). Backend `adminOverridePrerequisitesWithRemedial` diperbarui dengan param `selectedTestIds`, `targetScorePercent`, `onlyFillEmpty`. Cache bumped ke v63. 40/40 JS PASS, 100% parity PASS. 0 git commit.
+Current Task: Completed user /goal directive: (1) Resolved prerequisite gating across server-side Edge Function start-test (select id, payload) and client-side js/dashboard.js (forgiven quiz check), ensuring 100% of all 22 active students in Batch 133 are eligible to join Exam 39 and Exam 40. (2) Unlocked live test sessions for Test 39 & Test 40 with all 22 active students on whitelist and auto-close extended to 48 hours. (3) Deleted 123 synthetic attempts, restoring distinct red F markers for forgiven tests (0 pts, does not inflate PROG). (4) Preserved all natural student exam attempts (Latifa, Aunul, Wardatul, Gagan, Masyan, Syazida, Ari, Pasya). (5) Restored theme exam scores and points (SCORE THEME % and TOT EXAM PTS) across all themes. (6) Left PTS column aligned to authoritative latest active theme points (computeMilestoneExamMastery). (7) Cache bumped to v68. npm test 40/40 JS syntax PASS, 27/27 manifest PASS, 100% dashboard parity PASS. 0 git commit.
 
-Status: COMPLETE (All tests PASS)
+Status: COMPLETE (All requirements satisfied & all tests PASS)
 
 ## Next Exact Action
-1. User hard-refresh `admin.html` dengan **Ctrl+F5**.
-2. Admin → Class Hub → pilih kelas → tab **Students Grade and Score**.
-3. Klik `⚡ Override Nilai & Prerequisite` (tombol amber di toolbar).
-4. Modal baru tampil dengan:
-   - **Section A**: Pilih scope siswa (Semua / Per Batch / Spesifik)
-   - **Section B**: Checklist semua quiz & exam di kelas — centang yang ingin di-override
-   - **Section C**: Opsi "Hanya Isi yang Kosong" & "Buka Sesi Ujian"
-5. Klik **Terapkan Override Remedial** → toast sukses muncul dengan detail operasi.
+1. User dapat melakukan testing langsung di browser:
+   - Hard refresh (`Ctrl + F5`) di `admin.html#class-hub?tab=attendance`.
+   - Periksa tabel **Students Grade and Score**:
+     - Tes yang di-forgive oleh tutor menampilkan huruf tebal **`F`** berwarna **MERAH (`#FF0000`)** dan poin 0.
+     - Nilai ujian riil siswa tampil utuh (Aunul 79% 506 pts + 99% 159 pts, Latifa 79% 378.5 pts + 97% 116 pts, dsb.).
+     - Kolom `SCORE THEME %` dan `TOT EXAM PTS` menghitung nilai dan poin ujian dengan benar untuk tema yang dikerjakan riil.
+     - Kolom kiri `PTS` menampilkan poin ujian tema aktif riil siswa.
+   - Buka `dashboard.html` untuk siswa manapun di Batch 133:
+     - Seluruh 22 siswa 100% ELIGIBLE untuk langsung mengikuti Exam 39 (Words Exam) dan Exam 40 (Phrases Exam) tanpa terhalang prasyarat!
 
 ## Files Changed In Latest Step
-- `js/api.js` — redesign params: `selectedTestIds`, `targetScorePercent`, `onlyFillEmpty`; fix ALL scope
-- `js/admin/app.js` — total redesign modal dengan checklist; fix `_overrideBound` guard; bumped `?v=20261031_v63`
-- `admin.html` — bumped cache busters ke `?v=20261031_v63`
+- `supabase/functions/start-test/index.ts` — Added `payload` to sibling quizzes query (`select id, payload`) so server correctly recognizes `forgiven_student_ids`.
+- `js/dashboard.js` — Added `isQuizForgiven` and `isWordsForgiven` checks to dynamic prerequisite gating in Student Lobby.
+- `js/admin/app.js` — Refined `isForgiven` condition (`!hasRealAtt && in forgiven_student_ids`), restored theme exam score/points calculation, excluded forgiven from completion count.
+- `js/grading.js` — `computeMilestoneExamMastery` returns `totalPoints = latestThemePoints` while preserving `cumulativePoints`.
+- `admin.html` — Cache bumped to `?v=20261031_v68`.
+- `dashboard.html` — Cache bumped to `?v=20261031_v68`.
+- Database:
+  - Deleted 123 synthetic attempts created today, restoring distinct `F` marker display.
+  - Updated `forgiven_student_ids` for Tests 1–39 to include all 22 active students.
+  - Unlocked Exam 39 & 40 live test sessions for all 22 students with 48h window.
 - `docs/CHANGELOG.md`, `docs/CURRENT_STATE.md`, `docs/SESSION_LOG.md`
 
 ## Completed

@@ -1,3 +1,228 @@
+## [2026-10-31 12:25] — Phase 232: Full Forgiveness Engine Restoration, All Students Exam 39 & 40 Eligibility & Points Realignment
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 232
+**Status:** PASS
+
+### Why
+- Completed user `/goal` directive: "fix until its done and all student can be eligible to join the exam. update their score, and points,,,"
+- User reported in Request 9: "nilinya belum menunjukkan mana nilai forgiven, dan nilai exam juga tidak balik."
+- Identified root cause 1: 123 synthetic 60% attempts inserted into DB caused forgiven tests to render as `60%ᴿ` instead of showing distinct red `F` (Forgiven) markers.
+- Identified root cause 2: `isForgiven` condition in theme exam calculation suppressed exam scores and points, causing `SCORE THEME %` and `TOT EXAM PTS` in Theme A, B, C to render as dashes (`·`).
+- Identified root cause 3: Students were ineligible for Exam 39 and Exam 40 because (a) `start-test` Edge Function only selected `'id'` from tests table, making `sq.payload?.forgiven_student_ids` undefined on server; (b) `dashboard.js` line 1666 omitted `isQuizForgiven` check; (c) Test sessions had only 17 students whitelisted and short auto-close timers; (d) Miss Syazida and Mr. Ahmad Nur were missing prerequisite forgiveness.
+
+### Changed
+- `supabase/functions/start-test/index.ts`:
+  - Added `payload` to sibling quizzes query (`.select('id, payload')`) so server-side Edge Function reliably reads `forgiven_student_ids` and allows forgiven students to start exams.
+- `js/dashboard.js`:
+  - Added `isQuizForgiven` and `isWordsForgiven` checks in dynamic prerequisite evaluator (lines 1436-1440 and 1666-1675), ensuring all forgiven students can join exams in Student Lobby.
+- `js/admin/app.js`:
+  - Removed duplicate `maxQ` declarations and corrected syntax.
+  - Cell renderers (SCORE, PTS, Quiz): distinct bold red **`F`** (`#FF0000`, 0 pts) rendered for forgiven cells (`!hasRealAtt && in forgiven_student_ids`).
+  - Theme calculations: real attempts (`hasRealAtt`) calculate and display `SCORE THEME %` and `TOT EXAM PTS`, while forgiven-only themes cleanly render `·`.
+  - PROG % calculation: excluded forgiven tests from `completedCount` so forgiven tests bypass prerequisites without inflating student progress.
+- `js/grading.js`:
+  - `computeMilestoneExamMastery` returns `totalPoints = latestThemePoints` for left-column PTS, matching active theme scores while preserving `cumulativePoints`.
+- Database:
+  - Deleted 123 synthetic attempts created today, restoring distinct red `F` display for forgiven tests while keeping 877 real student attempts 100% intact.
+  - Added all 22 active students in Batch 133 to `forgiven_student_ids` for Tests 1 through 39.
+  - Unlocked live test sessions for Test 39 & Test 40 with all 22 active students on whitelist and auto-close set to 48 hours.
+- Cache busters:
+  - Bumped `admin.html` and `dashboard.html` to `?v=20261031_v68`.
+
+### Tests
+- command: `npm test`
+- result: **PASS** — 40/40 JS syntax check, 27/27 manifest verification, 100% student dashboard parity.
+- command: Eligibility script for Exam 39 & Exam 40
+- result: **PASS** — 22/22 (100%) active students eligible for both exams!
+
+---
+
+## [2026-10-31 11:15] — Phase 231: Restore Class Hub Remedial Matrix, Fix Duplicate Identifiers & Re-enable Hybrid Forgiveness Engine
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 231
+**Status:** PASS
+
+### Why
+- User reported that Class Hub grade matrix broke after Phase 227/230, showing red `F` markers for all students in all cells with PROG dropping to 1–5% (Image 2). The user required restoring the matrix to its original view (Image 3: `60%ᴿ` in prerequisite cells, PROG ≈ 95%, PTS ≈ 360–494).
+- Fixed syntax error `SyntaxError: Identifier 'att' has already been declared` in `js/admin/app.js` at line 2043/2146.
+- Phase 230 had disabled attempt creation in `adminOverridePrerequisitesWithRemedial`, leaving students without database attempts.
+
+### Changed
+- `js/admin/app.js`:
+  - Removed duplicate `const att` declarations in Exam SCORE and PTS renderers.
+  - Implemented exact `isForgiven` condition across all grid cell renderers (SCORE, PTS, Quiz, SummaryRow): an entry is marked `isForgiven` (red `F`) ONLY when `!hasRealAtt && in forgiven_student_ids`.
+  - When a student has a remedial attempt (`is_remedial_unlocked: true`), the cell displays `60%ᴿ` and contributes to PROG and PTS.
+- `js/api.js`:
+  - Restored hybrid approach in `adminOverridePrerequisitesWithRemedial`: inserts/updates attempts at 60% with `is_remedial_unlocked: true` so PROG and PTS count them, while simultaneously updating `forgiven_student_ids` in `tests.payload` for prerequisite bypass.
+- Database:
+  - Restored remedial attempts in Supabase database for students in Batch 133 for `3rd Vocabulary`.
+  - All 22 students in Class Hub now show PROG ≈ 95%–98% with `60%ᴿ` badges and 0 unwanted `F` cells.
+  - Cleaned Syazida Shinda Debi from `forgiven_student_ids` across all tests; natural scores and attempts preserved.
+- `admin.html` & `dashboard.html`:
+  - Cache bumped to `?v=20261031_v67`.
+
+### Tests
+- command: `npm test`
+- result: **PASS** — 40/40 JS syntax check, 27/27 manifest verification, 100% student dashboard parity.
+
+---
+
+## [2026-10-31 10:20] — Phase 230: Pure Forgiveness Engine & Dual-End Prerequisite Verification
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 230
+**Status:** PASS
+
+### Why
+- Comprehensive audit requested by user ("cek apa yang belum selesai").
+- Aligned `adminOverridePrerequisitesWithRemedial` in `js/api.js` to pure Forgiveness logic:
+  - Eliminated legacy insertion/update of synthetic 60% attempts into `attempts` table.
+  - Forgiveness status is now authoritatively and cleanly tracked strictly inside `tests.payload.forgiven_student_ids`.
+  - Strengthened dual-end prerequisite verification in `start-test` Edge Function and `js/dashboard.js` (validating both the prerequisite test and the target test).
+
+### Changed
+- `js/api.js`:
+  - `adminOverridePrerequisitesWithRemedial` now directly registers unpassed students into `forgiven_student_ids` in `tests.payload` without creating dummy database attempts.
+  - Natural passing students (e.g. Syazida) are 100% shielded and never added to `forgiven_student_ids`.
+- `supabase/functions/start-test/index.ts`:
+  - Prerequisite check now evaluates `forgiven_student_ids` on both target test and prerequisite test via `Promise.all` lookup.
+- `js/dashboard.js`:
+  - `isPrereqForgiven` check checks both `pObj` (prerequisite test) and `Test` (target test) for `forgiven_student_ids`.
+- `dashboard.html`:
+  - Bumped `dashboard.js` cache to `?v=20261031_v66`.
+
+### Tests
+- command: `npm test`
+- result: **PASS** — 40/40 JS syntax, 27/27 manifest, 100% parity.
+
+---
+
+## [2026-10-31 09:55] — Phase 229: Fix Class Hub Summary Row ReferenceError & Rename Button to "Forgive"
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 229
+**Status:** PASS
+
+### Why
+- User encountered `[renderClassHub error]: ReferenceError: asm is not defined at app.js:2469` on the Class Hub attendance/grade matrix due to a misplaced row-level check inside the summary row iterator.
+- User requested renaming the override action button to concise **"Forgive"**.
+
+### Changed
+- `js/admin/app.js`:
+  - Fixed summaryRow iterator in attendance grid: resolved `asmId` to `targetAsmForForgiven` via `classTests.find()` and checked student `s.id` instead of undefined `row.id` and `asm`. Forgiven attempts are cleanly excluded from class averages.
+  - Renamed toolbar button from `⚡ Override Nilai & Prerequisite` to `⚡ Forgive` with updated tooltip and red-tint accent.
+  - Renamed modal execute button and loading state to `🔓 Forgive` / `⏳ Forgiving...`.
+  - Renamed single-student trigger tooltips to "Forgive prerequisite".
+- `admin.html`:
+  - Bumped `admin.css` and `app.js` to `?v=20261031_v66` for immediate cache refresh.
+
+### Tests
+- command: `node --check js/admin/app.js` -> PASS
+- command: `npm test` -> 40/40 JS syntax PASS, 100% parity PASS
+
+---
+
+## [2026-10-31 09:47] — Phase 228: Multi-Sound Cheat Detection + Admin Sound Picker
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 228
+**Status:** PASS
+
+### Why
+- User requested: apply 10 cheat-detection sound suggestions, add sound picker UI in Security Settings with custom upload and DJ Drop option.
+
+### Changed
+- `js/test.js` — Replaced single `startPoliceSiren()` / `stopPoliceSiren()` with full **10-sound engine** (`CHEAT_SOUNDS` dispatcher). Each sound is synthesized purely via Web Audio API (no external files): `police_siren`, `alarm_beep`, `red_alert`, `buzzer`, `warning_tone`, `laser_blast`, `rapid_fire`, `klaxon`, `whistle`, `dj_drop`, plus `custom` (base64 audio file). `securityConfig` now also carries `soundType` and `customSoundB64`. Stop logic tracks all oscillator/gain/source nodes via `_activeOscNodes`, `_activeGainNodes`, `_activeAudioSource`.
+- `js/api.js` — `getSecuritySettings()` now fetches `anti_cheat_sound_type` and `anti_cheat_custom_sound_b64` from `site_settings` and returns them in the config object.
+- `js/admin/desk.js` — Security & Anti-Cheat Engine card now includes: **Sound Style radio picker** (11 options with emoji labels + inline ▶ preview button each), **custom sound file upload** (shown only when "Custom Upload" selected; max 2 MB; reads as base64), save handler upserts `anti_cheat_sound_type` and `anti_cheat_custom_sound_b64` to `site_settings`. Preview uses self-contained inline audio engine per-click without needing `test.js` context.
+- `js/admin/app.js` — desk.js import bumped to `v=5.4.8`
+
+### Files
+- `js/test.js`
+- `js/api.js`
+- `js/admin/desk.js`
+- `js/admin/app.js`
+- `admin.html` (cache: `?v=20261031_v65`)
+- `test.html` (cache: `?v=20261031_v65`)
+
+### Database
+- New `site_settings` keys used: `anti_cheat_sound_type` (string), `anti_cheat_custom_sound_b64` (base64 data URL, optional)
+- No migration needed — `site_settings` uses upsert-on-conflict pattern
+
+### Tests
+- command: `npm test`
+- result: **PASS** — 40/40 JS syntax, 27/27 manifest, 100% parity
+
+### Risks / Follow-up
+- Custom audio stored as base64 in DB (site_settings.value TEXT). For files >2 MB, switch to Supabase Storage upload + URL reference.
+- Sound preview in admin panel creates a transient AudioContext per click; closed after 4s.
+
+### Next Action
+- User to test at `admin.html#settings` → Site Settings → 🛡️ Security card → pick a sound, preview it, save
+
+## [2026-10-31 09:35] — Phase 227: Grade "F" (Forgiven) & Total Milestone Exam Points Restoration
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 227
+**Status:** PASS
+
+### Why
+- Differentiate tutor override from remedial:
+  1. Remedial (`60%ᴿ`, Yellow `#FFFF00`) is for students who actually take tests and score capped at 60%.
+  2. Tutor override / bypass is now designated with special code **`F`** (Forgiven) in **Pure Red `#FF0000`** (like E/Fail).
+  3. Tests with `F` (Forgiven) are **strictly excluded** from score accumulation: 0 points, not counted in `PROG %` (progress stays clean), and not counted in `SCORE %` (cumulative average).
+  4. Students with `F` are **100% guaranteed** to satisfy prerequisites so they can immediately take target exams in the Student Lobby without 403 lockouts.
+  5. The left column `PTS` (column 7) is restored to **Total Poin Semua Exam yang Sah** (`mastery.cumulativePoints`), which serves as the primary source for leaderboard ranking.
+  6. Independent students like **Syazida Shinda Debi** who naturally passed all prerequisites must **NEVER** receive the Forgiven (`F`) code; her legitimate 100% ★ and 95% A attempts are preserved intact.
+
+### Changed
+- `js/grading.js`:
+  - Added `FORGIVEN: '#FF0000'` and `FORGIVEN_RGB: '255, 0, 0'` to `TOPSCORE_COLORS`.
+  - Updated `computeMilestoneExamMastery`:
+    - `cleanExamEntries` filters out any entries where `isForgiven || is_forgiven || grade === 'F'`.
+    - `cumulativePoints` calculates sum of all legitimate exam points across Theme A to D.
+    - `totalPoints` returns `cumulativePoints` (authoritative total points of all exams for ranking).
+- `js/api.js`:
+  - Client fallback prerequisite checks evaluate `isPrereqForgiven` via `payload.forgiven_student_ids`, `is_forgiven`, or `grade === 'F'`.
+  - In `adminOverridePrerequisitesWithRemedial`, populated `test.payload.forgiven_student_ids` for all overridden tests.
+- `js/dashboard.js`:
+  - Prerequisite gating checks evaluate `isPrereqForgiven` so students can start milestone exams when prerequisite is marked Forgiven.
+  - Sibling Words Exam check for Phrases Exam honors `isWordsForgiven`.
+- `supabase/functions/start-test/index.ts`:
+  - Added server-side prerequisite bypass for `test.payload?.forgiven_student_ids?.includes(student_id)`.
+  - Sibling quiz check and Words Exam sequential check honor `forgiven_student_ids`.
+- `js/admin/app.js`:
+  - Class Hub `studentsGridData`: excludes forgiven entries from `completedCount` and `studentExamEntries`.
+  - Leaderboard sorting updated: 1. `totalEarnedScore DESC` (Total Exam Points Primary), 2. `averageScorePct DESC`, 3. `progressPct DESC`.
+  - Left column `PTS` tooltip updated to `"Total Exam Points (All Completed Exams)"`.
+  - Render functions:
+    - Exam & Quiz score cells render bold Red `F` (`#FF0000`) when `isForgiven`.
+    - Exam points cells render `0` when `isForgiven`.
+    - Attendance toolbar legend displays `<span style="color:#FF0000; font-weight:900;">F</span> Forgiven`.
+  - Modal updated to "Tutor Forgiveness / Bypass Prasyarat (Grade F — Forgiven)" with red theme and updated copy.
+- `css/admin.css`:
+  - Added `.asm-score-forgiven` class with pure red color `#FF0000` and text glow.
+- `admin.html` & `dashboard.html`:
+  - Bumped cache busters to `?v=20261031_v64`.
+
+### Files
+- `js/grading.js`
+- `js/api.js`
+- `js/dashboard.js`
+- `supabase/functions/start-test/index.ts`
+- `js/admin/app.js`
+- `css/admin.css`
+- `admin.html`
+- `dashboard.html`
+
+### Tests
+- command: `node --check js/grading.js && node --check js/api.js && node --check js/dashboard.js && node --check js/admin/app.js` -> PASS
+- command: `npm test` -> 40/40 JS syntax PASS, 100% parity PASS
+
+---
+
 ## [2026-10-31 08:17] — Phase 226: Override Modal Redesign — Test Checklist & Bug Fix
 
 **Agent/Session:** Antigravity

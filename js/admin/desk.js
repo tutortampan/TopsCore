@@ -1104,13 +1104,47 @@ export async function renderSettings(area) {
 
         <div class="form-group mb-3 d-flex justify-between align-center">
           <div>
-            <label class="form-label text-sm fw-600 mb-0">Police Siren / Audio Alert</label>
-            <div class="text-xs text-muted">Play synthetic Web Audio siren</div>
+            <label class="form-label text-sm fw-600 mb-0">Audio Alert</label>
+            <div class="text-xs text-muted">Play cheat-detection sound on violation</div>
           </div>
           <label class="switch">
             <input type="checkbox" id="setting-anti_cheat_sound" ${settings.anti_cheat_sound_enabled !== 'false' ? 'checked' : ''} />
             <span class="slider round"></span>
           </label>
+        </div>
+
+        <!-- Sound Type Picker -->
+        <div class="form-group mb-3" id="sound-picker-group">
+          <label class="form-label text-sm fw-600 mb-2">🔊 Alert Sound Style</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem 0.8rem;">
+            ${[
+              { id: 'police_siren', emoji: '🚨', label: 'Police Siren' },
+              { id: 'alarm_beep',   emoji: '📢', label: 'Alarm Beeps' },
+              { id: 'red_alert',    emoji: '🔴', label: 'Red Alert' },
+              { id: 'buzzer',       emoji: '🔔', label: 'Buzzer' },
+              { id: 'warning_tone', emoji: '⚠️', label: 'Warning Tone' },
+              { id: 'laser_blast',  emoji: '⚡', label: 'Laser Blast' },
+              { id: 'rapid_fire',   emoji: '💥', label: 'Rapid Fire' },
+              { id: 'klaxon',       emoji: '🛥️', label: 'Klaxon' },
+              { id: 'whistle',      emoji: '🏉', label: 'Whistle' },
+              { id: 'dj_drop',      emoji: '🎧', label: 'DJ Drop' },
+              { id: 'custom',       emoji: '📁', label: 'Custom Upload' },
+            ].map(s => `
+              <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;padding:0.3rem 0.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);transition:background 0.15s;" class="sound-opt-label">
+                <input type="radio" name="anti_cheat_sound_type" value="${s.id}" ${(settings.anti_cheat_sound_type || 'police_siren') === s.id ? 'checked' : ''} style="accent-color:#eab308;" />
+                <span style="font-size:0.95rem;">${s.emoji}</span>
+                <span class="text-xs fw-600">${s.label}</span>
+                <button type="button" class="btn-preview-sound" data-sound="${s.id}" title="Preview" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:0.8rem;opacity:0.7;padding:0 2px;" tabindex="-1">▶</button>
+              </label>`).join('')}
+          </div>
+        </div>
+
+        <!-- Custom Sound Upload (shown only when 'custom' is selected) -->
+        <div class="form-group mb-3" id="custom-sound-upload-group" style="display:${(settings.anti_cheat_sound_type || 'police_siren') === 'custom' ? 'block' : 'none'};">
+          <label class="form-label text-sm fw-600">Upload Custom Alert Sound</label>
+          <div class="text-xs text-muted mb-1">MP3, WAV, or OGG — stored in browser settings (max ~2 MB)</div>
+          <input type="file" id="setting-custom-sound-file" accept="audio/*" class="form-control" style="padding:0.35rem;" />
+          ${settings.anti_cheat_custom_sound_b64 ? `<div class="text-xs mt-1" style="color:#22c55e;">✅ Custom sound uploaded. Uploading a new file will replace it.</div>` : ''}
         </div>
 
         <div class="form-group mb-4">
@@ -1120,7 +1154,7 @@ export async function renderSettings(area) {
         </div>
 
         <button class="btn btn-primary btn-sm w-100" id="btn-save-anti-cheat" style="font-weight:700;">
-          Save Security Settings
+          🛡️ Save Security Settings
         </button>
       </div>
 
@@ -1268,6 +1302,166 @@ export async function renderSettings(area) {
     }
   });
 
+  // Sound Picker: show/hide custom upload group
+  area.querySelectorAll('input[name="anti_cheat_sound_type"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const upGrp = document.getElementById('custom-sound-upload-group');
+      if (upGrp) upGrp.style.display = radio.value === 'custom' ? 'block' : 'none';
+    });
+  });
+
+  // Preview sound buttons — uses same Web Audio engine as test.js inline here
+  area.querySelectorAll('.btn-preview-sound').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const soundId = btn.dataset.sound;
+      const customB64 = settings.anti_cheat_custom_sound_b64 || '';
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        await ctx.resume();
+        const PREVIEW_SOUNDS = {
+          police_siren(c) {
+            const o = c.createOscillator(), g = c.createGain();
+            o.type = 'sawtooth'; o.frequency.value = 650; g.gain.value = 0.28;
+            const now = c.currentTime;
+            for (let i = 0; i < 6; i++) {
+              o.frequency.linearRampToValueAtTime(1250, now + i * 1 + 0.5);
+              o.frequency.linearRampToValueAtTime(650, now + i * 1 + 1.0);
+            }
+            o.connect(g); g.connect(c.destination); o.start(); o.stop(now + 3.0);
+          },
+          alarm_beep(c) {
+            const now = c.currentTime;
+            for (let i = 0; i < 5; i++) {
+              const o = c.createOscillator(), g = c.createGain();
+              o.type = 'square'; o.frequency.value = 880;
+              g.gain.setValueAtTime(0, now + i * 0.35);
+              g.gain.linearRampToValueAtTime(0.35, now + i * 0.35 + 0.02);
+              g.gain.setValueAtTime(0.35, now + i * 0.35 + 0.18);
+              g.gain.linearRampToValueAtTime(0, now + i * 0.35 + 0.22);
+              o.connect(g); g.connect(c.destination);
+              o.start(now + i * 0.35); o.stop(now + i * 0.35 + 0.25);
+            }
+          },
+          red_alert(c) {
+            const o = c.createOscillator(), g = c.createGain();
+            o.type = 'sawtooth'; g.gain.value = 0.27;
+            const now = c.currentTime;
+            for (let i = 0; i < 4; i++) {
+              const t = now + i * 0.8;
+              o.frequency.setValueAtTime(1100, t);
+              o.frequency.exponentialRampToValueAtTime(400, t + 0.64);
+            }
+            o.connect(g); g.connect(c.destination); o.start(); o.stop(now + 3.5);
+          },
+          buzzer(c) {
+            const o = c.createOscillator(), g = c.createGain();
+            o.type = 'square'; o.frequency.value = 110; g.gain.value = 0;
+            const now = c.currentTime;
+            for (let i = 0; i < 4; i++) {
+              g.gain.setValueAtTime(0.4, now + i * 0.3);
+              g.gain.setValueAtTime(0, now + i * 0.3 + 0.15);
+            }
+            o.connect(g); g.connect(c.destination); o.start(); o.stop(now + 1.4);
+          },
+          warning_tone(c) {
+            const now = c.currentTime;
+            [660, 880].forEach((freq, idx) => {
+              const o = c.createOscillator(), g = c.createGain();
+              o.type = 'sine'; o.frequency.value = freq; g.gain.value = 0;
+              const off = idx * 0.5;
+              for (let i = 0; i < 3; i++) {
+                g.gain.setValueAtTime(0, now + off + i); g.gain.linearRampToValueAtTime(0.28, now + off + i + 0.05);
+                g.gain.setValueAtTime(0.28, now + off + i + 0.38); g.gain.linearRampToValueAtTime(0, now + off + i + 0.45);
+              }
+              o.connect(g); g.connect(c.destination); o.start(); o.stop(now + 4);
+            });
+          },
+          laser_blast(c) {
+            const now = c.currentTime;
+            for (let i = 0; i < 4; i++) {
+              const o = c.createOscillator(), g = c.createGain();
+              o.type = 'sawtooth'; const t = now + i * 0.4;
+              o.frequency.setValueAtTime(1200, t); o.frequency.exponentialRampToValueAtTime(200, t + 0.3);
+              g.gain.setValueAtTime(0.3, t); g.gain.linearRampToValueAtTime(0, t + 0.32);
+              o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.35);
+            }
+          },
+          rapid_fire(c) {
+            const now = c.currentTime;
+            for (let i = 0; i < 12; i++) {
+              const o = c.createOscillator(), g = c.createGain();
+              o.type = 'sawtooth'; o.frequency.value = 300 + Math.random() * 400;
+              const t = now + i * 0.12;
+              g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+              o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.12);
+            }
+          },
+          klaxon(c) {
+            const now = c.currentTime;
+            for (let i = 0; i < 6; i++) {
+              const o = c.createOscillator(), g = c.createGain();
+              o.type = 'square'; o.frequency.value = i % 2 === 0 ? 220 : 180;
+              const t = now + i * 0.35;
+              g.gain.setValueAtTime(0.4, t); g.gain.setValueAtTime(0, t + 0.28);
+              o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.32);
+            }
+          },
+          whistle(c) {
+            const o = c.createOscillator(), g = c.createGain();
+            o.type = 'sine'; g.gain.value = 0;
+            const now = c.currentTime;
+            for (let i = 0; i < 3; i++) {
+              const t = now + i * 0.55;
+              g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.35, t + 0.04);
+              g.gain.setValueAtTime(0.35, t + 0.3); g.gain.linearRampToValueAtTime(0, t + 0.35);
+              o.frequency.setValueAtTime(2800, t); o.frequency.linearRampToValueAtTime(3200, t + 0.175); o.frequency.linearRampToValueAtTime(2600, t + 0.35);
+            }
+            o.connect(g); g.connect(c.destination); o.start(); o.stop(now + 2);
+          },
+          dj_drop(c) {
+            const now = c.currentTime;
+            for (let i = 0; i < 4; i++) {
+              const k = c.createOscillator(), kg = c.createGain();
+              k.type = 'sine'; const t = now + i * 0.25;
+              k.frequency.setValueAtTime(150, t); k.frequency.exponentialRampToValueAtTime(40, t + 0.2);
+              kg.gain.setValueAtTime(0.6, t); kg.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+              k.connect(kg); kg.connect(c.destination); k.start(t); k.stop(t + 0.25);
+            }
+            [220, 330, 440, 660, 880, 1100, 1320, 1760].forEach((freq, idx) => {
+              const o = c.createOscillator(), g = c.createGain();
+              o.type = 'sawtooth'; o.frequency.value = freq;
+              const t = now + 1.0 + idx * 0.08;
+              g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+              o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.4);
+            });
+            [440, 550, 660].forEach(freq => {
+              const o = c.createOscillator(), g = c.createGain();
+              o.type = 'sawtooth'; o.frequency.value = freq;
+              const t = now + 1.7;
+              g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+              o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 1.3);
+            });
+          },
+          async custom(c) {
+            if (!customB64) { PREVIEW_SOUNDS.police_siren(c); return; }
+            const binary = atob(customB64.split(',').pop());
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const buffer = await c.decodeAudioData(bytes.buffer);
+            const src = c.createBufferSource();
+            src.buffer = buffer; src.connect(c.destination); src.start(); src.stop(c.currentTime + 3);
+          }
+        };
+        const fn = PREVIEW_SOUNDS[soundId] || PREVIEW_SOUNDS.police_siren;
+        await fn(ctx);
+        setTimeout(() => { try { ctx.close(); } catch (_) {} }, 4000);
+      } catch (e) {
+        showToast('Preview error: ' + e.message, 'error');
+      }
+    });
+  });
+
   // Save Anti-Cheat Settings
   document.getElementById('btn-save-anti-cheat')?.addEventListener('click', async () => {
     const isEnabled = document.getElementById('setting-anti_cheat_enabled').checked;
@@ -1278,13 +1472,39 @@ export async function renderSettings(area) {
     if (!countdown || isNaN(countdown) || parseInt(countdown) < 3) countdown = '3';
     if (parseInt(countdown) > 60) countdown = '60';
 
+    // Sound type selection
+    const selectedTypeEl = area.querySelector('input[name="anti_cheat_sound_type"]:checked');
+    const soundType = selectedTypeEl ? selectedTypeEl.value : 'police_siren';
+
+    // Custom sound file — read as base64 if provided
+    let customSoundB64 = settings.anti_cheat_custom_sound_b64 || '';
+    const customFileInput = document.getElementById('setting-custom-sound-file');
+    if (customFileInput && customFileInput.files && customFileInput.files[0]) {
+      const file = customFileInput.files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        showToast('Custom sound file is too large (max 2 MB).', 'error');
+        return;
+      }
+      customSoundB64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
     try {
-      await Promise.all([
+      const upserts = [
         sb.from('site_settings').upsert({ key: 'anti_cheat_enabled', value: isEnabled ? 'true' : 'false', updated_at: new Date().toISOString() }, { onConflict: 'key' }),
         sb.from('site_settings').upsert({ key: 'anti_cheat_sound_enabled', value: isSoundEnabled ? 'true' : 'false', updated_at: new Date().toISOString() }, { onConflict: 'key' }),
-        sb.from('site_settings').upsert({ key: 'anti_cheat_countdown_seconds', value: countdown, updated_at: new Date().toISOString() }, { onConflict: 'key' })
-      ]);
-      showToast('Test Security Settings saved securely!', 'success');
+        sb.from('site_settings').upsert({ key: 'anti_cheat_countdown_seconds', value: countdown, updated_at: new Date().toISOString() }, { onConflict: 'key' }),
+        sb.from('site_settings').upsert({ key: 'anti_cheat_sound_type', value: soundType, updated_at: new Date().toISOString() }, { onConflict: 'key' }),
+      ];
+      if (customSoundB64) {
+        upserts.push(sb.from('site_settings').upsert({ key: 'anti_cheat_custom_sound_b64', value: customSoundB64, updated_at: new Date().toISOString() }, { onConflict: 'key' }));
+      }
+      await Promise.all(upserts);
+      showToast('🛡️ Security Settings saved!', 'success');
     } catch (err) {
       showToast('Failed to save security settings: ' + err.message, 'error');
     }

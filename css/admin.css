@@ -3950,6 +3950,13 @@ body.sidebar-collapsed .admin-main {
   line-height: 0 !important;
 }
 
+.asm-score-forgiven {
+  color: #FF0000 !important;
+  font-weight: 800 !important;
+  text-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
+  letter-spacing: 0.02em;
+}
+
 .badge-remedial-tag {
   background: rgba(255, 255, 0, 0.12) !important;
   border: 1px solid rgba(255, 255, 0, 0.3) !important;
