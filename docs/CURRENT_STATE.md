@@ -1,17 +1,23 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 02:25 UTC+8
+Last Updated: 2026-11-01 02:45 UTC+8
 
-Current Phase: Phase 242: Sidebar Batch Filtering — Display Strictly Active Batches Only [COMPLETE]
+Current Phase: Phase 243: Student Roster Toolbar Removal & Comprehensive Student Difficulty Diagnostic [COMPLETE]
 
-Current Task: Fulfilled user directive to strictly display ONLY active batches in Domain B sidebar (`B — BOARD`) and hide inactive/past batches:
-1. `loadSidebarPrograms()` in `js/admin/app.js`: Filtered batches by `is_active !== false` and programs to active programs with active batches. Inactive/past batches (`Camp 132`, `Camp 131`, `Camp 123`, `Hospitality TP-26`, `Hospitality SH-26`) are completely excluded from sidebar injection.
-2. `renderItems()` in `js/admin/app.js`: Added explicit filter `it.is_active !== false` and removed `Past` badges so that only active batch buttons (e.g. `Camp 133`) are rendered.
-3. Pre-render Cache Hydration in `js/admin/admin-init.js`: Filtered `localStorage` cached list by `is_active !== false` before rendering so no inactive batches flash on page load.
-4. Cache bumped to `?v=20261101_v75` across `admin.html`, `dashboard.html`, `result.html`, `test.html`.
-5. 40/40 JS files passed syntax validation (`node --check`).
+Current Task: 
+1. Student Roster Toolbar Removal (`js/admin/student-management.js`):
+   - Added `hideToolbar: true` to `new DataGrid({ ... })` in `student-management.js`.
+   - Removed DataGrid toolbar actions block (`dgActions`: search input, column toggle, record counter, export button, add student button).
+   - Table rows now sit immediately beneath the top status panel without redundant toolbar controls, as students are registered via Student Registration.
+2. In-Depth Student Difficulty & Test Delivery Analysis:
+   - Extracted and audited 5,000 real student answer submissions and 1,000 attempt records from Supabase PostgreSQL for Batch 133.
+   - Diagnosed 42% timeout/blank rate (2,093 answers) and 46% premature auto-submit rate caused by Android focus-loss false positives (`CHEAT_ATTEMPT` triggers) and 33.2s/question pacing against tight 10m time limits.
+   - Mapped top linguistic bottlenecks across 4 themes: Vocabulary Gap (A2 vs B2/C1 target vault), Word Form/POS confusion (e.g. `commitment` vs `commit`), literal translations, and speech recognition phonemic substitutions.
+   - Cross-checked Class Hub Matrix (Image 2) for all 22 active students, detailing progress vs theme package scores and explaining anomalies.
+3. Cache bumped to `?v=20261101_v76` across `admin.html`, `dashboard.html`, `result.html`, `test.html`.
+4. 40/40 JS files passed syntax validation (`node --check`).
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 git diff)
+Status: COMPLETE (All 40 JS syntax checks PASS)
 
 ## Next Exact Action
 1. User dapat melakukan hard-refresh (**Ctrl + F5**) di browser pada `admin.html`:

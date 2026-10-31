@@ -316,6 +316,7 @@ export async function renderStudents(area) {
       // Group exams into 4 themes: A (Exam 1), B (Exam 2), C (Exam 3), D (Exam 4)
       const themeCodes = ['A', 'B', 'C', 'D'];
       const themePoints = {};
+      const themeScores = {};
       let totalExamPts = 0;
       let hasAnyExamAtt = false;
 
@@ -327,11 +328,23 @@ export async function renderStudents(area) {
 
         let earned = 0;
         let hasAttInTheme = false;
+        let studentThemeMaxQ = 0;
         examsInTheme.forEach(ex => {
           const best = bestByAsm.get(ex.id);
+          let maxQ = Number(ex.payload?.total_questions || ex.total_questions || 0);
+          if (!maxQ || maxQ <= 0) {
+            const isPhrase = ex.payload?.category === 'phrases' || /PHRASES/i.test(ex.shell_code || '') || /phrase/i.test(ex.title || '');
+            if (tc === 'A') maxQ = isPhrase ? 30 : 120;
+            else if (tc === 'B') maxQ = isPhrase ? 70 : 280;
+            else if (tc === 'C') maxQ = isPhrase ? 120 : 480;
+            else if (tc === 'D') maxQ = isPhrase ? 160 : 640;
+            else maxQ = isPhrase ? 30 : 120;
+          }
+
           if (best && best.score != null) {
             hasAttInTheme = true;
             earned += Number(best.score);
+            studentThemeMaxQ += (best.totalQuestions ? Number(best.totalQuestions) : maxQ);
           }
         });
 
@@ -339,9 +352,12 @@ export async function renderStudents(area) {
           hasAnyExamAtt = true;
           const cleanEarned = Math.round(earned * 10) / 10;
           themePoints[tc] = cleanEarned;
+          const themePct = studentThemeMaxQ > 0 ? Math.round((cleanEarned / studentThemeMaxQ) * 100) : 0;
+          themeScores[tc] = themePct;
           totalExamPts += cleanEarned;
         } else {
           themePoints[tc] = null;
+          themeScores[tc] = null;
         }
       });
 
@@ -359,6 +375,7 @@ export async function renderStudents(area) {
 
       perClassFinal.set(cId, {
         themes: themePoints,
+        themeScores: themeScores,
         totalPts: hasAnyExamAtt ? Math.round(totalExamPts * 10) / 10 : null
       });
     });
@@ -1732,8 +1749,10 @@ export async function renderStudents(area) {
         const cs = row.perClassFinal?.get(cls.id);
         const pts = cs?.themes?.['A'];
         if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+        const pct = cs?.themeScores?.['A'] ?? 0;
+        const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
         const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:var(--clr-text-1);" title="Theme A Total Exam Points: ${formatted}">${formatted}<span style="font-size:0.58rem;color:#94a3b8;font-weight:normal;"> pts</span></div>`;
+        return `<div class="fw-700" style="font-size:0.82rem;color:${color};font-variant-numeric:tabular-nums;" title="Theme A Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.75;font-weight:normal;color:${color};"> pts</span></div>`;
       }
     },
     {
@@ -1747,8 +1766,10 @@ export async function renderStudents(area) {
         const cs = row.perClassFinal?.get(cls.id);
         const pts = cs?.themes?.['B'];
         if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+        const pct = cs?.themeScores?.['B'] ?? 0;
+        const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
         const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:var(--clr-text-1);" title="Theme B Total Exam Points: ${formatted}">${formatted}<span style="font-size:0.58rem;color:#94a3b8;font-weight:normal;"> pts</span></div>`;
+        return `<div class="fw-700" style="font-size:0.82rem;color:${color};font-variant-numeric:tabular-nums;" title="Theme B Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.75;font-weight:normal;color:${color};"> pts</span></div>`;
       }
     },
     {
@@ -1762,8 +1783,10 @@ export async function renderStudents(area) {
         const cs = row.perClassFinal?.get(cls.id);
         const pts = cs?.themes?.['C'];
         if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+        const pct = cs?.themeScores?.['C'] ?? 0;
+        const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
         const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:var(--clr-text-1);" title="Theme C Total Exam Points: ${formatted}">${formatted}<span style="font-size:0.58rem;color:#94a3b8;font-weight:normal;"> pts</span></div>`;
+        return `<div class="fw-700" style="font-size:0.82rem;color:${color};font-variant-numeric:tabular-nums;" title="Theme C Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.75;font-weight:normal;color:${color};"> pts</span></div>`;
       }
     },
     {
@@ -1777,8 +1800,10 @@ export async function renderStudents(area) {
         const cs = row.perClassFinal?.get(cls.id);
         const pts = cs?.themes?.['D'];
         if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+        const pct = cs?.themeScores?.['D'] ?? 0;
+        const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
         const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:var(--clr-text-1);" title="Theme D Total Exam Points: ${formatted}">${formatted}<span style="font-size:0.58rem;color:#94a3b8;font-weight:normal;"> pts</span></div>`;
+        return `<div class="fw-700" style="font-size:0.82rem;color:${color};font-variant-numeric:tabular-nums;" title="Theme D Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.75;font-weight:normal;color:${color};"> pts</span></div>`;
       }
     }
   ]);
@@ -1807,6 +1832,7 @@ export async function renderStudents(area) {
     container: gridContainer,
     data: filteredGridData,
     pageSize: 50,
+    hideToolbar: true,
     searchKeys: ['levelName', 'displayName', 'name', 'pinDisplay'],
     initialSortKey: 'displayName',
     initialSortAsc: true,
@@ -1847,19 +1873,30 @@ export async function renderStudents(area) {
 
       // Calculate average points per active class exam
       const classExamAverages = {};
+      const classExamColors = {};
       activeClassColumns.forEach(cls => {
+        const themeMap = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' };
         ['1', '2', '3', '4'].forEach(num => {
+          const tc = themeMap[num];
           const key = `_cls_exam${num}_${cls.id}`;
           let sum = 0;
           let count = 0;
+          let pctSum = 0;
           filteredData.forEach(r => {
             const val = r[key];
             if (val != null && val >= 0) {
               sum += val;
+              const cs = r.perClassFinal?.get(cls.id);
+              const pct = cs?.themeScores?.[tc];
+              if (pct != null && pct >= 0) {
+                pctSum += pct;
+              }
               count++;
             }
           });
           classExamAverages[key] = count > 0 ? (sum / count).toFixed(1) : null;
+          const avgPct = count > 0 ? Math.round(pctSum / count) : 0;
+          classExamColors[key] = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgPct) : '#38bdf8';
         });
       });
 
@@ -1889,7 +1926,8 @@ export async function renderStudents(area) {
           cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;font-weight:700;font-size:0.72rem;color:var(--clr-text-2);white-space:nowrap;">${genderBreakdown}</td>`;
         } else if (col.key && col.key.includes('_cls_exam')) {
           const avgVal = classExamAverages[col.key];
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;font-weight:700;color:#38bdf8;font-size:0.8rem;">${avgVal != null ? `${avgVal} <span style="font-size:0.65rem;color:#94a3b8;font-weight:normal;">pts</span>` : '—'}</td>`;
+          const color = classExamColors[col.key] || '#38bdf8';
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;font-weight:700;color:${color};font-size:0.8rem;">${avgVal != null ? `${avgVal} <span style="font-size:0.65rem;opacity:0.75;font-weight:normal;color:${color};">pts</span>` : '—'}</td>`;
         } else if (col.label === 'Actions') {
           cells += `<td style="background:#0f172a;text-align:right;border-top:2px solid #38bdf8;font-weight:700;color:#38bdf8;font-size:0.8rem;padding-right:1rem;">Avg: ${avgPtsStr}</td>`;
         } else {
@@ -2271,28 +2309,7 @@ export async function renderStudents(area) {
     ]
   });
 
-  // Inject Action Buttons directly into DataGrid Toolbar
-  const dgActions = gridContainer.querySelector('.datagrid-actions');
-  if (dgActions) {
-    const btnWrap = document.createElement('div');
-    btnWrap.style.cssText = 'display:flex;gap:0.5rem;align-items:center;margin-left:0.5rem;';
-    btnWrap.innerHTML = `
-      ${totalDuplicates > 0 ? `<button class="btn btn-warning btn-sm" id="students-grid-merge" style="font-weight:700;font-size:0.75rem;">⚠️ Duplicates (${totalDuplicates})</button>` : ''}
-      <button class="btn btn-secondary btn-sm" id="students-grid-export" style="font-size:0.75rem;" title="Export Excel Gradebook">📥 Export</button>
-      <button class="btn btn-primary btn-sm" id="students-grid-add" style="font-size:0.75rem;">+ Add Student</button>
-    `;
-    dgActions.appendChild(btnWrap);
-    btnWrap.querySelector('#students-grid-add')?.addEventListener('click', () => {
-      if (window._openAddModal) window._openAddModal('students');
-      else if (window.openStudentFullEdit) window.openStudentFullEdit({ program_id: currentProgramId }, () => renderStudents(area));
-    });
-    btnWrap.querySelector('#students-grid-export')?.addEventListener('click', () => {
-      if (window.exportStudentsGradebook) window.exportStudentsGradebook();
-    });
-    btnWrap.querySelector('#students-grid-merge')?.addEventListener('click', () => {
-      if (window.openDuplicateStudentsModal) window.openDuplicateStudentsModal();
-    });
-  }
+  // Toolbar hidden per user directive (hideToolbar: true) - students added via Student Registration and batch sizes are compact.
 }
 
 export function openStudentProfile(studentId, batchStudentIds = [], skipHistory = false) {
