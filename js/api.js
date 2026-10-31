@@ -750,7 +750,11 @@ export async function generateTestQuestions(sb, test) {
 
 export async function startTest(studentId, testId) {
   try {
-    return await callEdgeFunction('start-test', { student_id: studentId, test_id: testId });
+    const edgeRes = await callEdgeFunction('start-test', { student_id: studentId, test_id: testId });
+    if (edgeRes && edgeRes.attempt) {
+      return enrichTestSections(edgeRes);
+    }
+    return edgeRes;
   } catch (edgeErr) {
     if (
       edgeErr.code === 'LOCKED_BY_TUTOR' ||
