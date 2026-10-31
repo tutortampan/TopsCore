@@ -30,8 +30,8 @@ import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app
 const THEME_DEFINITIONS = [
   { code: 'A', name: 'Workplace', color: '#3b82f6', bgRgba: 'rgba(59, 130, 246, 0.08)', borderRgba: 'rgba(59, 130, 246, 0.25)' },
   { code: 'B', name: 'Tourism', color: '#a855f7', bgRgba: 'rgba(168, 85, 247, 0.08)', borderRgba: 'rgba(168, 85, 247, 0.25)' },
-  { code: 'C', name: 'CCU', color: '#f97316', bgRgba: 'rgba(249, 115, 22, 0.08)', borderRgba: 'rgba(249, 115, 22, 0.25)' },
-  { code: 'D', name: 'High-Frequency', color: '#10b981', bgRgba: 'rgba(16, 185, 129, 0.08)', borderRgba: 'rgba(16, 185, 129, 0.25)' }
+  { code: 'C', name: 'CCU', color: '#FF8C00', bgRgba: 'rgba(255, 140, 0, 0.08)', borderRgba: 'rgba(255, 140, 0, 0.25)' },
+  { code: 'D', name: 'High-Frequency', color: '#00c000ff', bgRgba: 'rgba(0, 192, 0, 0.08)', borderRgba: 'rgba(0, 192, 0, 0.25)' }
 ];
 
 let _activeClassHubContext = null;
@@ -418,7 +418,7 @@ export async function renderClassTestSessions(container, context = {}) {
           </div>
 
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <div id="live-modal-mode-badge" style="font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px; background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#34d399;">
+            <div id="live-modal-mode-badge" style="font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px; background:rgba(0,192,0,0.15); border:1px solid #00c000ff; color:#86efac;">
               NORMAL
             </div>
             <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:4px 10px; font-size:0.8rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:6px;">
@@ -428,7 +428,7 @@ export async function renderClassTestSessions(container, context = {}) {
 
             <!-- Quick Add Time Dropdown -->
             <div style="position:relative; display:inline-block;" id="live-modal-add-time-wrapper">
-              <button type="button" class="btn btn-sm" id="btn-live-modal-add-time" style="padding:5px 12px; font-size:0.8rem; font-weight:700; background:linear-gradient(135deg, #10b981, #059669); border:1px solid #34d399; color:#ffffff; border-radius:6px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(16,185,129,0.3); cursor:pointer;">
+              <button type="button" class="btn btn-sm" id="btn-live-modal-add-time" style="padding:5px 12px; font-size:0.8rem; font-weight:700; background:linear-gradient(135deg, #00c000, #009900); border:1px solid #00c000; color:#ffffff; border-radius:6px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(0,192,0,0.3); cursor:pointer;">
                 <span>⏱️ + Tambah Waktu</span>
                 <span style="font-size:0.65rem;">▼</span>
               </button>
@@ -475,7 +475,7 @@ export async function renderClassTestSessions(container, context = {}) {
           </div>
           <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:8px; padding:10px 14px;">
             <div style="font-size:0.7rem; font-weight:700; color:#34d399; text-transform:uppercase;">✅ Sudah Selesai</div>
-            <div id="kpi-live-submitted" style="font-size:1.4rem; font-weight:800; color:#10b981; margin-top:2px;">0</div>
+            <div id="kpi-live-submitted" style="font-size:1.4rem; font-weight:800; color:#00c000ff; margin-top:2px;">0</div>
           </div>
           <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:8px; padding:10px 14px;">
             <div style="font-size:0.7rem; font-weight:700; color:#fbbf24; text-transform:uppercase;">⏳ Belum Mulai</div>
@@ -483,7 +483,7 @@ export async function renderClassTestSessions(container, context = {}) {
           </div>
           <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:10px 14px;">
             <div style="font-size:0.7rem; font-weight:700; color:#f87171; text-transform:uppercase;">🚨 Total Alarm</div>
-            <div id="kpi-live-alarms" style="font-size:1.4rem; font-weight:800; color:#ef4444; margin-top:2px;">0</div>
+            <div id="kpi-live-alarms" style="font-size:1.4rem; font-weight:800; color:#FF0000; margin-top:2px;">0</div>
           </div>
         </div>
 
@@ -523,7 +523,7 @@ export async function renderClassTestSessions(container, context = {}) {
 
     <!-- Modal 4: Kick Student Confirmation Modal -->
     <div id="modal-kick-student-confirm" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10005; padding:16px;">
-      <div class="modal-box card" style="background:#0f172a; border:2px solid #ef4444; border-radius:12px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 20px 50px rgba(239,68,68,0.35);">
+      <div class="modal-box card" style="background:#0f172a; border:2px solid #FF0000; border-radius:12px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 20px 50px rgba(255,0,0,0.35);">
         <div style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:12px;">
           <span style="font-size:1.6rem;">🚨</span>
           <div>
@@ -550,7 +550,7 @@ export async function renderClassTestSessions(container, context = {}) {
         </div>
         <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
           <button type="button" class="btn btn-ghost" id="btn-cancel-kick" style="color:#94a3b8;">Batal</button>
-          <button type="button" class="btn btn-danger" id="btn-confirm-kick" style="background:#dc2626; border-color:#b91c1c; font-weight:800; padding:8px 18px; display:inline-flex; align-items:center; gap:6px;">
+          <button type="button" class="btn btn-danger" id="btn-confirm-kick" style="background:#FF0000; border-color:#cc0000; font-weight:800; padding:8px 18px; display:inline-flex; align-items:center; gap:6px;">
             <span>🚫</span> Keluarkan Sekarang
           </button>
         </div>
@@ -600,10 +600,10 @@ function renderThemeCard(theme, context) {
       <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px 14px; margin: 12px 0 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
           <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 800; color: #34d399;">
-            <span class="status-dot dot-live" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
+            <span class="status-dot dot-live" style="width: 8px; height: 8px; border-radius: 50%; background: #00c000; box-shadow: 0 0 8px rgba(0,192,0,0.6);"></span>
             LIVE (${remainingMinutes}m remaining)
           </span>
-          <span style="font-size: 0.72rem; font-weight: 800; padding: 2px 7px; border-radius: 4px; ${isRemedial ? 'background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24;' : 'background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399;'}">
+          <span style="font-size: 0.72rem; font-weight: 800; padding: 2px 7px; border-radius: 4px; ${isRemedial ? 'background: rgba(255, 255, 0, 0.2); border: 1px solid #FFFF00; color: #FFFF00;' : 'background: rgba(0, 192, 0, 0.2); border: 1px solid #00c000; color: #86efac;'}">
             ${isRemedial ? 'REMEDIAL (MAX 60%)' : 'NORMAL (FULL SCORE)'}
           </span>
         </div>
@@ -622,7 +622,7 @@ function renderThemeCard(theme, context) {
           <button type="button" class="btn btn-sm btn-theme-add-late" data-theme="${code}" style="background: #4f46e5; border-color: #4338ca; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 10px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
             <span>👥</span> + Susulan
           </button>
-          <button type="button" class="btn btn-sm btn-theme-close-session" data-theme="${code}" style="background: #ef4444; border-color: #dc2626; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 10px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+          <button type="button" class="btn btn-sm btn-theme-close-session" data-theme="${code}" style="background: #FF0000; border-color: #cc0000; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 10px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
             <span>🔒</span> Tutup Sesi
           </button>
         </div>
@@ -642,7 +642,7 @@ function renderThemeCard(theme, context) {
 
     actionButtons = `
       <div style="display: flex; gap: 8px; align-items: center; margin-top: auto;">
-        <button type="button" class="btn btn-sm btn-theme-open-session" data-theme="${code}" data-mode="normal" style="background: #10b981; border-color: #059669; color: #ffffff; font-weight: 700; flex: 1; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Open normal test session (full score) for eligible students">
+        <button type="button" class="btn btn-sm btn-theme-open-session" data-theme="${code}" data-mode="normal" style="background: #00c000; border-color: #009900; color: #ffffff; font-weight: 700; flex: 1; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Open normal test session (full score) for eligible students">
           <span>🟢</span> Open Normal
         </button>
         <button type="button" class="btn btn-sm btn-theme-open-session" data-theme="${code}" data-mode="remedial" style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; font-weight: 700; flex: 1; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Open remedial session (max 60% score) for students needing retake">
@@ -792,14 +792,14 @@ function openThemeSessionModal(container, theme, mode, context) {
   badgeEl.style.border = `1px solid ${theme.borderRgba}`;
 
   if (mode === 'normal') {
-    titleEl.innerHTML = `<span style="color:#10b981;">🟢 Open Normal Test Session</span>: Theme ${theme.code}`;
+    titleEl.innerHTML = `<span style="color:#00c000ff;">🟢 Open Normal Test Session</span>: Theme ${theme.code}`;
     bannerEl.style.background = 'rgba(16, 185, 129, 0.12)';
     bannerEl.style.border = '1px solid rgba(16, 185, 129, 0.35)';
     bannerEl.style.color = '#34d399';
     bannerEl.innerHTML = `
       🟢 <strong>NORMAL SESSION (FULL SCORE)</strong>: Eligible students take the test for full curriculum scores. Students who already passed may retake to improve their highest score.
     `;
-    confirmBtn.style.background = '#10b981';
+    confirmBtn.style.background = '#00c000';
     confirmBtn.style.borderColor = '#059669';
   } else {
     titleEl.innerHTML = `<span style="color:#fbbf24;">🟡 Open Remedial Test Session</span>: Theme ${theme.code}`;
@@ -1125,7 +1125,7 @@ function openThemeLateModal(container, theme, context) {
     modeBadgeEl.textContent = '🟡 REMEDIAL (MAX 60%)';
   } else {
     modeBadgeEl.style.background = 'rgba(16, 185, 129, 0.2)';
-    modeBadgeEl.style.border = '1px solid #10b981';
+    modeBadgeEl.style.border = '1px solid #00c000';
     modeBadgeEl.style.color = '#34d399';
     modeBadgeEl.textContent = '🟢 NORMAL (FULL SCORE)';
   }
@@ -1319,7 +1319,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     modeBadgeEl.textContent = '🟡 REMEDIAL (MAX 60%)';
   } else {
     modeBadgeEl.style.background = 'rgba(16, 185, 129, 0.2)';
-    modeBadgeEl.style.border = '1px solid #10b981';
+    modeBadgeEl.style.border = '1px solid #00c000';
     modeBadgeEl.style.color = '#34d399';
     modeBadgeEl.textContent = '🟢 NORMAL (FULL SCORE)';
   }
@@ -1412,11 +1412,11 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         } else if (hasSubmitted) {
           status = 'submitted';
           statusText = 'Sudah Selesai';
-          statusColor = '#10b981';
+          statusColor = '#00c000ff';
         } else if (hasCancelled) {
           status = 'cancelled';
           statusText = 'Dibatalkan / Kicked';
-          statusColor = '#ef4444';
+          statusColor = '#FF0000';
         }
 
         // Active module identification
@@ -1655,7 +1655,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
               <span style="font-weight: 800; color: #ffffff;">${item.answeredCount} / ${item.totalQuestions} (${item.answeredPercent}%)</span>
             </div>
             <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
-              <div style="height: 100%; width: ${item.answeredPercent}%; background: linear-gradient(90deg, #3b82f6, #10b981); border-radius: 3px; transition: width 0.3s ease;"></div>
+              <div style="height: 100%; width: ${item.answeredPercent}%; background: linear-gradient(90deg, #3b82f6, #00c000ff); border-radius: 3px; transition: width 0.3s ease;"></div>
             </div>
           </div>
 
@@ -1666,7 +1666,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
                 🛡️ 0x Bersih
               </span>
             ` : `
-              <span class="btn-inspect-student-alarms" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="font-size: 0.75rem; font-weight: 800; color: #ef4444; background: rgba(239,68,68,0.2); border: 1px solid #ef4444; padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(239,68,68,0.3); cursor: pointer; transition: transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Klik untuk lihat rincian ${item.alarmCount}x alarm anti-cheat">
+              <span class="btn-inspect-student-alarms" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="font-size: 0.75rem; font-weight: 800; color: #FF0000; background: rgba(255,0,0,0.2); border: 1px solid #FF0000; padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(255,0,0,0.3); cursor: pointer; transition: transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Klik untuk lihat rincian ${item.alarmCount}x alarm anti-cheat">
                 🚨 ${item.alarmCount}x ALARM 🔍
               </span>
             `}
@@ -1687,7 +1687,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
           <!-- 5. Tombol Keluarkan (Kick) -->
           <div style="display: flex; align-items: center;">
-            <button type="button" class="btn btn-sm btn-kick-student" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #f87171; font-weight: 700; font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#dc2626'; this.style.color='#fff';" onmouseout="this.style.background='rgba(239,68,68,0.15)'; this.style.color='#f87171';">
+            <button type="button" class="btn btn-sm btn-kick-student" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background: rgba(255,0,0,0.15); border: 1px solid rgba(255,0,0,0.4); color: #ff6b6b; font-weight: 700; font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#FF0000'; this.style.color='#fff';" onmouseout="this.style.background='rgba(255,0,0,0.15)'; this.style.color='#f87171';">
               <span>🚫</span> Keluarkan
             </button>
           </div>
@@ -1933,7 +1933,7 @@ function openStudentAlarmDetailModal(container, student, alarmsList = [], theme,
           <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
             <div>
               <div style="font-weight:700; color:#ffffff; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
-                <span style="color:#ef4444;">⚠️ Incident #${idx + 1}</span>
+                <span style="color:#FF0000;">⚠️ Incident #${idx + 1}</span>
                 <span style="font-size:0.75rem; color:#fca5a5;">(Strike ${item.strike || 1})</span>
               </div>
               <div style="font-size:0.78rem; color:#cbd5e1; margin-top:3px;">${escapeHtml(item.reason)}</div>
