@@ -885,8 +885,11 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
               const s = stuRes[0];
               if (s.photo_url && avatarEl) {
                 avatarEl.src = s.photo_url;
+                avatarEl.onerror = () => {
+                  avatarEl.src = generateAvatarDataUri(session.student_name || 'S', s.gender);
+                };
               } else if (avatarEl) {
-                avatarEl.src = generateAvatarDataUri(session.student_name || 'S');
+                avatarEl.src = generateAvatarDataUri(session.student_name || 'S', s.gender);
               }
               
               let age = '';

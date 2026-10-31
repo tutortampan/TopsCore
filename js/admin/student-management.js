@@ -1,4 +1,4 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, labelAttemptRemedial } from '../api.js?v=20261101_v73';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, labelAttemptRemedial } from '../api.js?v=20261101_v74';
 import { getSupabase } from '../supabase.js?v=5.3.2';
 import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261030_v43';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=5.3.2';
@@ -530,82 +530,72 @@ export async function renderStudents(area) {
     }
   }
 
-  // Elevate Student KPI tabs to topbar
-  if (window.setTopbarTabs) {
-    const activeCount = programStudents.filter(s => s.batches ? s.batches.is_active !== false : true).length;
-    const totalAttemptCount = programStudents.reduce((sum, s) => sum + (s.completedTests || 0), 0);
-    window.setTopbarTabs([
-      { id: 'enrolled', icon: '👥', label: `${window._selectedProgramName || 'Program'} Students`, val: programStudents.length },
-      { id: 'active', icon: '🟢', label: 'Active Students', val: activeCount, valColor: 'var(--clr-success, #4ade80)' },
-      { id: 'completed', icon: '📝', label: 'Completed Modules', val: totalAttemptCount, valColor: 'var(--clr-accent-1, #38bdf8)' },
-      { id: 'remediation', icon: '⚠️', label: 'Need Remediation', val: remediationPendingCount, valColor: remediationPendingCount > 0 ? 'var(--clr-warning, #fbbf24)' : '' }
-    ], null, null);
+  // Interactive Status Filter Tabs (User Directive: Active & Inactive in Topbar, No middle filter bar)
+  const activeCount = programStudents.filter(s => (s.batches ? s.batches.is_active !== false : true) && ((s._raw || s).is_active !== false)).length;
+  const inactiveCount = programStudents.filter(s => (s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false)).length;
+  const totalCount = programStudents.length;
+
+  window._switchStudentRosterStatus = (statusId) => {
+    window._filterBatchStatus = statusId;
+    try {
+      localStorage.setItem('topscore_student_status_tab', statusId);
+      const url = new URL(window.location.href);
+      url.searchParams.set('status', statusId);
+      window.history.replaceState(null, '', url.toString());
+    } catch (e) {}
+    renderStudents(area);
+  };
+
+  // Keyboard Quick-Switch (Hotkeys: 1 for Active, 2 for Inactive, 3 for All)
+  if (!window._rosterHotkeysBound) {
+    window._rosterHotkeysBound = true;
+    window.addEventListener('keydown', (e) => {
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      if (window._currentSection !== 'students' && window._activeSectionAlias !== 'students') return;
+
+      if (e.key === '1') {
+        window._switchStudentRosterStatus('active');
+        showToast('Filter: Active Students', 'info');
+      } else if (e.key === '2') {
+        window._switchStudentRosterStatus('inactive');
+        showToast('Filter: Inactive Students', 'info');
+      } else if (e.key === '3') {
+        window._switchStudentRosterStatus('all');
+        showToast('Filter: All Students', 'info');
+      }
+    });
   }
 
+  if (window.setTopbarTabs) {
+    window.setTopbarTabs([
+      { id: 'active', icon: '🟢', label: 'Active Students', val: activeCount, valColor: 'var(--clr-success, #4ade80)' },
+      { id: 'inactive', icon: '⚪', label: 'Inactive Students', val: inactiveCount, valColor: '#94a3b8' },
+      { id: 'all', icon: '👥', label: 'All Students', val: totalCount, valColor: 'var(--clr-accent-1, #38bdf8)' }
+    ], currentBatchStatus, 'window._switchStudentRosterStatus');
+  }
+
+  // Raised Table Layout (User Directive: Strip bulky header & middle filter bar; table header sits directly beneath top panel)
   area.innerHTML = `
-    <div class="section-header">
-      <div>
-        <h2 class="section-title">Students — ${escapeHtml(currentProgram ? currentProgram.name : 'Roster')} <span class="count-chip">${filteredGridData.length} ${currentBatchStatus === 'active' ? 'Active' : 'Total'}</span>
-        ${remediationPendingCount > 0 ? `<span class="badge badge-warning" style="margin-left:8px; font-size: 0.9rem;">⚠️ ${remediationPendingCount} Awaiting Remediation</span>` : ''}
-        </h2>
-        <p class="section-subtitle">Student roster for <strong>${escapeHtml(currentProgram ? currentProgram.name : 'Program')}</strong> with enrollment, curriculum test pacing, global scores, and grade records</p>
-      </div>
-      <div class="d-flex gap-2">
-        ${totalDuplicates > 0 ? `<button class="btn btn-warning btn-sm" id="students-merge-shortcut" style="font-weight:700;">⚠️ Resolve Duplicates (${totalDuplicates})</button>` : ''}
-        <button class="btn btn-primary btn-sm" id="students-add-shortcut">+ Add Student</button>
-      </div>
-    </div>
-
-    ${window._filterBatchId ? `
-      <div class="mb-4 p-3 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);color:#93c5fd;">
-        <div class="d-flex align-center gap-2">
-          <span style="font-size:1.2rem;">&#128101;</span>
-          <span>Filtered by Batch: <strong>${window._filterBatchName || 'Selected Batch'}</strong> (${filteredGridData.length} students)</span>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="window._filterBatchId=null; window._filterBatchName=null; window._filterBatchStatus='all'; window.loadSection('students');" style="text-decoration:underline;color:#93c5fd;">
-          Show All Batches
-        </button>
-      </div>
-    ` : ''}
-
     ${totalDuplicates > 0 ? `
-      <div class="mb-4 p-3 rounded d-flex align-center justify-between" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fef3c7;">
+      <div class="mb-3 p-3 rounded d-flex align-center justify-between" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fef3c7;">
         <div class="d-flex align-center gap-3">
-          <span style="font-size:1.4rem;">&#9888;&#65039;</span>
+          <span style="font-size:1.4rem;">⚠️</span>
           <div>
             <div class="fw-700 text-sm">Detected ${totalDuplicates} Duplicate Student Profiles</div>
             <div class="text-xs text-muted" style="color:rgba(255,255,255,0.85)!important;">
-              Found ${duplicateGroups.length} groups of students with identical names in the same class. Merge them to unify their Test progress.
+              Found ${duplicateGroups.length} groups of duplicate student profiles. Merge them to unify their Test progress.
             </div>
           </div>
         </div>
         <button class="btn btn-warning btn-sm" id="btn-banner-merge-duplicates" style="background:#f59e0b;color:#000;font-weight:700;border:none;">
-          &#9888;&#65039; Resolve All Duplicates
+          ⚠️ Resolve All Duplicates
         </button>
       </div>
     ` : ''}
 
-    <div class="students-filter-bar-slim">
-      <span style="font-size: 0.75rem; color: var(--fm-text-secondary, #94a3b8); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; gap: 4px; margin-right: 4px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--fm-accent-tactical, #6366f1);"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-        Filters:
-      </span>
-      <select id="students-filter-batch-status" class="form-input-slim">
-        <option value="active" ${currentBatchStatus === 'active' ? 'selected' : ''}>Status: Active Only</option>
-        <option value="all" ${currentBatchStatus === 'all' ? 'selected' : ''}>Status: All (Active & Inactive)</option>
-        <option value="inactive" ${currentBatchStatus === 'inactive' ? 'selected' : ''}>Status: Inactive / Past</option>
-      </select>
-      <select id="students-filter-batch" class="form-input-slim">
-        <option value="">Batch: All Active</option>
-        ${(programBatches || [])
-          .filter(b => currentBatchStatus === 'all' ? true : (currentBatchStatus === 'inactive' ? b.is_active === false : b.is_active !== false))
-          .map(b => `<option value="${b.id}" data-active="${b.is_active !== false}" ${window._filterBatchId === b.id ? 'selected' : ''}>Batch: ${escapeHtml(b.name)}${b.is_active === false ? ' (Past)' : ''}</option>`).join('')}
-      </select>
-      ${(currentBatchStatus !== 'active' || window._filterBatchId) ? `
-        <button id="students-filter-reset" class="btn btn-ghost btn-sm" style="padding: 2px 8px; height: 26px; font-size: 0.72rem; color: var(--fm-text-secondary, #94a3b8); margin-left: auto;" title="Reset filters">✕ Reset</button>
-      ` : ''}
-    </div>
-    <div id="student-grid-container" class="card" style="padding:1rem;"></div>
+    <div id="student-grid-container" class="card" style="padding:0.75rem 1rem;"></div>
   `;
 
   // Bind Buttons
@@ -618,37 +608,56 @@ export async function renderStudents(area) {
   const mergeBannerBtn = document.getElementById('btn-banner-merge-duplicates');
   if (mergeBannerBtn) mergeBannerBtn.onclick = () => { if (window.openDuplicateStudentsModal) window.openDuplicateStudentsModal(); };
   
-  // Global Export Function (callable from dedicated Import Students tab)
+  // Global Export Function (callable from dedicated Import Students tab & DataGrid toolbar)
   window.exportStudentsGradebook = () => {
     if (!filteredGridData || !filteredGridData.length) {
       showToast('No students to export.', 'info');
       return;
     }
     
-    const headers = ['Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Test Type', 'Score (%)', 'Grade', 'Status', 'Remediation Granted'];
+    const headers = [
+      'Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Age', 'Gender',
+      'Exam 1 (Theme A) Pts', 'Exam 2 (Theme B) Pts', 'Exam 3 (Theme C) Pts', 'Exam 4 (Theme D) Pts',
+      'Total Exam Pts', 'Score (%)', 'Grade', 'Status'
+    ];
     const rows = filteredGridData.map(s => {
+      let e1 = '—', e2 = '—', e3 = '—', e4 = '—';
+      if (activeClassColumns && activeClassColumns.length > 0) {
+        const cId = activeClassColumns[0].id;
+        if (s[`_cls_exam1_${cId}`] >= 0) e1 = s[`_cls_exam1_${cId}`];
+        if (s[`_cls_exam2_${cId}`] >= 0) e2 = s[`_cls_exam2_${cId}`];
+        if (s[`_cls_exam3_${cId}`] >= 0) e3 = s[`_cls_exam3_${cId}`];
+        if (s[`_cls_exam4_${cId}`] >= 0) e4 = s[`_cls_exam4_${cId}`];
+      }
       return {
         'Institution': s.instName || '—',
         'Program': s.progName || '—',
         'Batch': s.batchName || '—',
         'Current Level': s.levelName || '—',
         'Student Name': s.displayName || s.name || '—',
-        'Test Type': s.remediationPending ? 'EXAM' : '—',
+        'Age': s.ageDisplay || '—',
+        'Gender': (s.gender || '').toUpperCase() || '—',
+        'Exam 1 (Theme A) Pts': e1,
+        'Exam 2 (Theme B) Pts': e2,
+        'Exam 3 (Theme C) Pts': e3,
+        'Exam 4 (Theme D) Pts': e4,
+        'Total Exam Pts': s.totalEarnedScore ?? 0,
         'Score (%)': s.overallScoreStr || '—',
         'Grade': s.globalGrade || '—',
-        'Status': s.is_active ? 'Active' : 'Inactive',
-        'Remediation Granted': s.remediationPending ? 'No' : (s.overallScoreStr !== '—' ? 'Yes/NA' : '—')
+        'Status': s.is_active !== false ? 'Active' : 'Inactive'
       };
     });
     
     try {
       const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
       ws['!cols'] = [
-        { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 15 }
+        { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 14 }, { wch: 25 }, { wch: 8 }, { wch: 8 },
+        { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 },
+        { wch: 15 }, { wch: 10 }, { wch: 8 }, { wch: 10 }
       ];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Gradebook");
-      XLSX.writeFile(wb, "Gradebook_Export.xlsx");
+      XLSX.writeFile(wb, `Gradebook_${(window._selectedProgramName || 'Program')}_${(window._filterBatchName || 'Batch')}.xlsx`);
       showToast('Exported student gradebook successfully!', 'success');
     } catch (err) {
       console.error("Export error:", err);
@@ -732,7 +741,7 @@ export async function renderStudents(area) {
         <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--clr-border);display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.02);">
           <div class="d-flex align-center gap-3">
             ${rec.photo_url 
-              ? `<img src="${rec.photo_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">` 
+              ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">` 
               : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">`
             }
             <div>
@@ -943,7 +952,7 @@ export async function renderStudents(area) {
 
     const genderIcon = (rec.gender || '').toLowerCase().startsWith('m') ? '♂️' : '♀️';
     const photoContent = rec.photo_url
-      ? `<img src="${rec.photo_url}" alt="Student Photo" style="width:100%;height:100%;object-fit:cover;">`
+      ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" alt="Student Photo" style="width:100%;height:100%;object-fit:cover;">`
       : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:100%;height:100%;object-fit:cover;">`;
 
     backdrop.innerHTML = `
@@ -1554,7 +1563,7 @@ export async function renderStudents(area) {
               <!-- 3:4 Student Photo Box -->
               <div style="width:125px;height:166px;border:2px solid #cbd5e1;border-radius:6px;overflow:hidden;background:#f8fafc;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 6px rgba(0,0,0,0.05);position:relative;">
                 ${rec.photo_url 
-                  ? `<img src="${rec.photo_url}" style="width:100%;height:100%;object-fit:cover;">` 
+                  ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="width:100%;height:100%;object-fit:cover;">` 
                   : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:100%;height:100%;object-fit:cover;">`
                 }
                 <div style="position:absolute;bottom:0;inset-inline:0;background:rgba(15,23,42,0.8);color:#fff;font-size:0.6rem;text-align:center;padding:2px 0;font-weight:700;letter-spacing:0.04em;">
@@ -1803,6 +1812,93 @@ export async function renderStudents(area) {
     initialSortAsc: true,
     stickyActionCol: true,
     superHeaders: buildSuperHeaders(),
+    summaryRow: (visibleCols, filteredData) => {
+      if (!filteredData || filteredData.length === 0) return '';
+
+      // Calculate dynamic average age
+      let totalAge = 0;
+      let ageCount = 0;
+      const today = new Date();
+      filteredData.forEach(r => {
+        if (r.birth_date) {
+          const bd = new Date(r.birth_date);
+          if (!isNaN(bd.getTime())) {
+            let age = today.getFullYear() - bd.getFullYear();
+            const m = today.getMonth() - bd.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
+            if (age > 0) {
+              totalAge += age;
+              ageCount++;
+            }
+          }
+        }
+      });
+      const avgAgeStr = ageCount > 0 ? `${(totalAge / ageCount).toFixed(1)} yrs` : '—';
+
+      // Calculate gender breakdown
+      let mCount = 0;
+      let fCount = 0;
+      filteredData.forEach(r => {
+        const g = (r.gender || '').trim().toLowerCase();
+        if (g === 'male' || g === 'm') mCount++;
+        else if (g === 'female' || g === 'f') fCount++;
+      });
+      const genderBreakdown = `${mCount} M · ${fCount} F`;
+
+      // Calculate average points per active class exam
+      const classExamAverages = {};
+      activeClassColumns.forEach(cls => {
+        ['1', '2', '3', '4'].forEach(num => {
+          const key = `_cls_exam${num}_${cls.id}`;
+          let sum = 0;
+          let count = 0;
+          filteredData.forEach(r => {
+            const val = r[key];
+            if (val != null && val >= 0) {
+              sum += val;
+              count++;
+            }
+          });
+          classExamAverages[key] = count > 0 ? (sum / count).toFixed(1) : null;
+        });
+      });
+
+      // Calculate total average points across students with completed exams
+      let totalPtsSum = 0;
+      let ptsCount = 0;
+      filteredData.forEach(r => {
+        if (r.totalEarnedScore != null && r.totalEarnedScore > 0) {
+          totalPtsSum += r.totalEarnedScore;
+          ptsCount++;
+        }
+      });
+      const avgPtsStr = ptsCount > 0 ? `${(totalPtsSum / ptsCount).toFixed(1)} pts` : '—';
+
+      let cells = '';
+      // Checkbox column
+      cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;color:#38bdf8;font-weight:700;">★</td>`;
+
+      visibleCols.forEach(col => {
+        if (col.key === 'levelName') {
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;font-weight:700;color:#38bdf8;font-size:0.75rem;">BATCH AVG</td>`;
+        } else if (col.key === 'sortName') {
+          cells += `<td style="background:#0f172a;border-top:2px solid #38bdf8;font-weight:700;color:#ffffff;font-size:0.78rem;">★ BATCH AVERAGE (${filteredData.length} Students)</td>`;
+        } else if (col.key === 'ageDisplay') {
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;font-weight:700;color:#94a3b8;font-size:0.75rem;">${avgAgeStr}</td>`;
+        } else if (col.key === 'gender') {
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;font-weight:700;font-size:0.72rem;color:var(--clr-text-2);white-space:nowrap;">${genderBreakdown}</td>`;
+        } else if (col.key && col.key.includes('_cls_exam')) {
+          const avgVal = classExamAverages[col.key];
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;font-weight:700;color:#38bdf8;font-size:0.8rem;">${avgVal != null ? `${avgVal} <span style="font-size:0.65rem;color:#94a3b8;font-weight:normal;">pts</span>` : '—'}</td>`;
+        } else if (col.label === 'Actions') {
+          cells += `<td style="background:#0f172a;text-align:right;border-top:2px solid #38bdf8;font-weight:700;color:#38bdf8;font-size:0.8rem;padding-right:1rem;">Avg: ${avgPtsStr}</td>`;
+        } else {
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #38bdf8;color:#94a3b8;">—</td>`;
+        }
+      });
+
+      return `<tr class="datagrid-summary-row" style="background:#0f172a;font-weight:700;">${cells}</tr>`;
+    },
     sortComparator: (sortKey, direction, a, b) => {
       // Active students ALWAYS on top, inactive at bottom
       const aActive = ((a._raw || a).is_active !== false) ? 1 : 0;
@@ -2045,7 +2141,7 @@ export async function renderStudents(area) {
         render: (row) => {
           return `
             <div class="d-flex align-center gap-3">
-              ${row.photo_url ? `<img src="${row.photo_url}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">` : `<img src="${generateAvatarDataUri(row.displayName || row.name, row.gender)}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">`}
+              ${row.photo_url ? `<img src="${row.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(row.displayName || row.name, row.gender)}';" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">` : `<img src="${generateAvatarDataUri(row.displayName || row.name, row.gender)}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">`}
               <div>
                 <div class="fw-600" style="color:var(--clr-text-1);">
                   ${row.displayName}
@@ -2175,58 +2271,27 @@ export async function renderStudents(area) {
     ]
   });
 
-  // Bind custom filters
-  const statusFilter = document.getElementById('students-filter-batch-status');
-  const batchFilter = document.getElementById('students-filter-batch');
-  
-  if (statusFilter && batchFilter) {
-    const applyFilters = () => {
-      const bStatus = statusFilter.value;
-      const bid = batchFilter.value;
-      window._filterBatchStatus = bStatus;
-      window._filterBatchId = bid || null;
-
-      let newData = programStudents;
-      if (bid) newData = newData.filter(s => s.batch_id === bid);
-      if (bStatus === 'active') {
-        newData = newData.filter(s => (s.batches ? s.batches.is_active !== false : true) && ((s._raw || s).is_active !== false));
-      } else if (bStatus === 'inactive') {
-        newData = newData.filter(s => (s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false));
-      }
-      studentGrid.updateData(newData);
-      const countEl = document.querySelector('.section-title .count-chip');
-      if (countEl) countEl.textContent = `${newData.length} ${bStatus === 'active' ? 'Active' : 'Total'}`;
-    };
-
-    statusFilter.addEventListener('change', () => {
-      const bStatus = statusFilter.value;
-      Array.from(batchFilter.options).forEach(opt => {
-        if (!opt.value) return;
-        const isActive = opt.getAttribute('data-active') === 'true';
-        if (bStatus === 'active' && !isActive) {
-          opt.style.display = 'none';
-        } else if (bStatus === 'inactive' && isActive) {
-          opt.style.display = 'none';
-        } else {
-          opt.style.display = '';
-        }
-      });
-      if (batchFilter.selectedOptions[0] && batchFilter.selectedOptions[0].style.display === 'none') {
-        batchFilter.value = '';
-      }
-      applyFilters();
+  // Inject Action Buttons directly into DataGrid Toolbar
+  const dgActions = gridContainer.querySelector('.datagrid-actions');
+  if (dgActions) {
+    const btnWrap = document.createElement('div');
+    btnWrap.style.cssText = 'display:flex;gap:0.5rem;align-items:center;margin-left:0.5rem;';
+    btnWrap.innerHTML = `
+      ${totalDuplicates > 0 ? `<button class="btn btn-warning btn-sm" id="students-grid-merge" style="font-weight:700;font-size:0.75rem;">⚠️ Duplicates (${totalDuplicates})</button>` : ''}
+      <button class="btn btn-secondary btn-sm" id="students-grid-export" style="font-size:0.75rem;" title="Export Excel Gradebook">📥 Export</button>
+      <button class="btn btn-primary btn-sm" id="students-grid-add" style="font-size:0.75rem;">+ Add Student</button>
+    `;
+    dgActions.appendChild(btnWrap);
+    btnWrap.querySelector('#students-grid-add')?.addEventListener('click', () => {
+      if (window._openAddModal) window._openAddModal('students');
+      else if (window.openStudentFullEdit) window.openStudentFullEdit({ program_id: currentProgramId }, () => renderStudents(area));
     });
-
-    batchFilter.addEventListener('change', applyFilters);
-
-    const resetBtn = document.getElementById('students-filter-reset');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        statusFilter.value = 'active';
-        batchFilter.value = '';
-        applyFilters();
-      });
-    }
+    btnWrap.querySelector('#students-grid-export')?.addEventListener('click', () => {
+      if (window.exportStudentsGradebook) window.exportStudentsGradebook();
+    });
+    btnWrap.querySelector('#students-grid-merge')?.addEventListener('click', () => {
+      if (window.openDuplicateStudentsModal) window.openDuplicateStudentsModal();
+    });
   }
 }
 

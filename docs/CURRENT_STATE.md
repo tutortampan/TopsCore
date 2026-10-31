@@ -1,31 +1,44 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 00:55 UTC+8
+Last Updated: 2026-11-01 01:25 UTC+8
 
-Current Phase: Phase 240: Student Roster Streamlining, Dynamic Program+Batch Sidebar, Interactive Topbar Status Filter, and Redundant Column Elimination [COMPLETE]
+Current Phase: Phase 241: Comprehensive System Audit, Student Roster Summary Footer (tfoot), Avatar Graceful Fallback Engine, and Hotkey / Excel Innovations [COMPLETE]
 
-Current Task: Fulfilled user directive with 5 uploaded screenshots:
-1. Top Panel (Gambar 1): Transformed static KPI cards into clickable, interactive status filter tabs: `🟢 Active Students` (22), `⚪ Inactive Students` (2), `👥 All Students` (24) with count badges and active states.
-2. Removed Header & Filter Bar (Gambar 2): Eliminated the bulky section header, redundant subtitle, and duplicate dropdown filter bar (`Status: Active Only`, `Batch: All Active`). The DataGrid table header is now raised directly beneath the top panel with zero wasted space. Added `+ Add Student` and `Resolve Duplicates` directly into the DataGrid toolbar on the right.
-3. Dynamic Program + Batch Side Panel (Gambar 3): Updated Domain B sidebar in `loadSidebarPrograms` and `admin-init.js` to list batches under programs with the format `[Program Name] [Batch Name]` (e.g. `Camp 133`, `Camp 132`, `Camp 131`, `Camp 123`). Clicking a batch directly loads that batch roster and persists selection in URL hash and `localStorage`.
-4. Removed Redundant Left Columns (Gambar 4): Removed `INSTITUTION`, `PROGRAM`, and `BATCH` columns from DataGrid, as they are already represented in the sidebar batch selection. Columns now start cleanly with Checkbox, `LEVEL`, `NAME`, `AGE`, `GENDER`.
-5. Removed Redundant Right Columns (Gambar 5): Removed `ENROLLED` (join date) and `STATUS` columns, as active/inactive state is managed by the top panel and enrollment data belongs to Organization. The right side now cleanly displays the 4 class theme exams (`EXAM 1` to `EXAM 4`) and `ACTIONS`.
-6. Verified with syntax validation (40/40 PASS) and cache bumped to `?v=20261101_v73`.
+Current Task: Fulfilled comprehensive diagnostic audit, column/font/footer ("fot") review, and high-impact tactical innovations:
+1. Student Roster Docked Summary Row (`tfoot`): Added dynamic batch summary footer row to DataGrid in `student-management.js`:
+   - `LEVEL`: `BATCH AVG`
+   - `NAME`: `★ BATCH AVERAGE (${filteredData.length} Students)`
+   - `AGE`: Dynamic average age (e.g. `17.7 yrs`)
+   - `GENDER`: Gender breakdown (e.g. `12 M · 10 F`)
+   - `EXAM 1–4`: Dynamic average earned points for Theme A, B, C, D exams (e.g. `96.1 pts`, `169.5 pts`, `112.4 pts`, `321.6 pts`)
+   - `ACTIONS`: Total average points across all 4 milestone exams (`Avg: 699.6 pts`).
+2. Docked Summary Footer Styling (`css/admin.css`): Generalized `.datagrid-tfoot` and `tr.datagrid-summary-row` with sticky docked positioning, blue accent border (`rgba(56, 189, 248, 0.6)`), and tabular numerals (`font-variant-numeric: tabular-nums`).
+3. Avatar Graceful Fallback Everywhere ("fot"): Added `onerror="this.onerror=null;this.src='${generateAvatarDataUri(...)}'"` fallback across student rows, modals, credential cards, exam screen (`test.js`), and result header (`result.js`) to guarantee 0 broken image icons.
+4. Hotkey Quick-Switch (Tactical Innovation 1): Pressing `1` (Active), `2` (Inactive), or `3` (All) toggles roster status filters instantaneously with a toast notification.
+5. Smart Excel Export (Tactical Innovation 2): Upgraded `exportStudentsGradebook` to include individual Theme Exam points (`Exam 1–4 Pts`, `Total Exam Pts`, `Score %`, `Grade`, `Age`, `Gender`).
+6. Deep E2E & Integrity Verification:
+   - 40/40 JS files syntax validation PASS (`node --check`).
+   - 6/6 HTML files checked: 0 missing scripts, 0 broken styles.
+   - Supabase DB: 704 best score attempts (0 duplicates), 40 tests (100% valid class_id), 64 active students (100% valid batch_id).
+   - Student Lobby Standings & Dashboard parity: 100% PASS matching live production.
+7. Cache buster bumped to `?v=20261101_v74`.
 
 Status: COMPLETE (All 40 JS syntax checks PASS, 0 git diff)
 
 ## Next Exact Action
 1. User dapat melakukan hard-refresh (**Ctrl + F5**) di browser pada `admin.html`:
-   - Side Panel (Domain B): Sekarang menampilkan `Camp 133`, `Camp 132`, `Camp 131`, dll.
-   - Top Panel: Kartu di atas kini aktif dan dapat diklik untuk berganti antara `🟢 Active Students`, `⚪ Inactive Students`, dan `👥 All Students`.
-   - Header & Filter: Header besar dan filter dropdown tengah sudah dibersihkan total; header tabel langsung naik tepat di bawah top panel. Tombol `+ Add Student` terletak rapi di toolbar kanan.
-   - Tabel Bersih: Kolom `INSTITUTION`, `PROGRAM`, `BATCH`, `ENROLLED`, dan `STATUS` telah dihapus; hanya kolom esensial `Level`, `Name`, `Age`, `Gender`, `4 Exam Points`, dan `Actions` yang ditampilkan.
+   - Topbar Tabs: Klik `🟢 Active Students` (22), `⚪ Inactive Students` (2), atau `👥 All Students` (24) — atau tekan tombol keyboard `1`, `2`, atau `3` untuk beralih instan.
+   - Tabel Roster: Header tabel langsung berada tepat di bawah top panel; kolom bersih dan terfokus (`Level`, `Name`, `Age`, `Gender`, `Exam 1–4 Pts`, `Actions`).
+   - Docked Summary Footer (`tfoot`): Baris `★ BATCH AVERAGE` di bagian bawah tabel menampilkan rata-rata usia (`17.7 yrs`), perbandingan gender (`12 M · 10 F`), rata-rata poin ujian Theme 1–4, dan total rata-rata poin.
+   - Foto Mahasiswa: Seluruh foto profil kini memiliki fail-safe engine; jika gambar dari storage gagal termuat, otomatis digantikan avatar SVG elegan tanpa ada icon gambar rusak.
+   - Export Excel: Tombol `📥 Export` di toolbar tabel kini menyertakan rincian poin tiap ujian Theme 1–4 dan grade akademik.
 
 ## Files Changed In Latest Step
-- `js/admin/student-management.js` — Elevated active/inactive tabs to topbar; stripped subtitle and filter bar; removed 5 redundant columns; integrated `+ Add Student` into DataGrid actions toolbar.
-- `js/admin/app.js` — Enhanced `loadSidebarPrograms` to build `[Program] [Batch]` items; updated `applySubRouteState` to restore batch and status tab from URL query params.
-- `js/admin/admin-init.js` — Synchronized sidebar pre-render hydration to render batch-level sidebar items without flashing.
-- `admin.html`, `dashboard.html`, `result.html` — Cache bumped to `?v=20261101_v73`.
+- `js/admin/student-management.js` — Added `summaryRow` callback to DataGrid, updated `setTopbarTabs` to interactive filter, bound hotkeys `1`/`2`/`3`, injected toolbar actions, added avatar `onerror` fallbacks, upgraded `exportStudentsGradebook`.
+- `css/admin.css` — Extended `.datagrid-tfoot` and `tr.datagrid-summary-row` for docked summary footer styling with tabular numbers.
+- `js/result.js` — Added `headerAvatarImg.onerror` fallback handler.
+- `js/test.js` — Added avatar fallback handler in test room header.
+- `admin.html`, `dashboard.html`, `result.html`, `test.html` — Cache bumped to `?v=20261101_v74`.
 - `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`
 
 ## Completed

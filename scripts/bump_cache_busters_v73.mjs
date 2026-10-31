@@ -24,3 +24,4 @@ smJs = smJs.replace(/\.\.\/api\.js\?v=[^"']+/g, `../api.js?v=${v}`);
 smJs = smJs.replace(/\.\.\/grading\.js\?v=[^"']+/g, `../grading.js?v=${v}`);
 fs.writeFileSync('js/admin/student-management.js', smJs, 'utf8');
 console.log('✓ Bumped js/admin/student-management.js');
+

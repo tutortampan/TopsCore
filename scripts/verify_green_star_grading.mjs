@@ -87,7 +87,7 @@ assert(adminCss.includes('var(--grade-a)'), "css/admin.css references var(--grad
 const resultJs = fs.readFileSync('js/result.js', 'utf-8');
 assert(resultJs.includes('TOPSCORE_COLORS.CORRECT'), "js/result.js uses TOPSCORE_COLORS.CORRECT");
 assert(resultJs.includes('TOPSCORE_COLORS.PARTIAL'), "js/result.js uses TOPSCORE_COLORS.PARTIAL");
-assert(resultJs.includes('getGradeColorByScore(attemptPct)'), "js/result.js sets dynamic points color via getGradeColorByScore");
+assert(resultJs.includes('getGradeColorByScore(pct)'), "js/result.js sets dynamic points color via getGradeColorByScore");
 
 console.log('\n======================================================');
 if (failed) {

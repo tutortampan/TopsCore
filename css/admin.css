@@ -4208,24 +4208,31 @@ body.sidebar-collapsed .admin-main {
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
 }
 
-/* Docked Summary Row (★ CLASS AVERAGE) */
+/* Docked Summary Row (★ CLASS & BATCH AVERAGE) */
+tfoot.datagrid-tfoot,
 #class-attendance-grid tfoot.datagrid-tfoot {
   position: sticky;
   bottom: 0;
   z-index: 10;
   background: #0f172a !important;
   box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.6);
-  height: 24px;
 }
 
-#class-attendance-grid tr.datagrid-summary-row td {
+.datagrid-tfoot tr.datagrid-summary-row td {
   background: #0f172a !important;
   border-top: 2px solid rgba(56, 189, 248, 0.6) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-  padding: 2px 2px !important;
-  font-size: var(--matrix-font-size, 0.75rem);
-  line-height: 1.1;
+  padding: 6px 8px !important;
+  font-size: 0.8rem;
+  line-height: 1.2;
   vertical-align: middle;
+  font-variant-numeric: tabular-nums !important;
+}
+
+#class-attendance-grid tr.datagrid-summary-row td {
+  padding: 2px 2px !important;
+  font-size: var(--matrix-font-size, 0.75rem) !important;
+  line-height: 1.1;
 }
 
 /* ============================================================

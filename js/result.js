@@ -640,6 +640,10 @@ if (!session) {
               const headerAvatarInitEl = document.getElementById('header-avatar-initial');
               if (headerAvatarImg) {
                 headerAvatarImg.src = st.photo_url;
+                headerAvatarImg.onerror = () => {
+                  headerAvatarImg.classList.add('hidden');
+                  headerAvatarInitEl?.classList.remove('hidden');
+                };
                 headerAvatarImg.classList.remove('hidden');
               }
               if (headerAvatarInitEl) headerAvatarInitEl.classList.add('hidden');
