@@ -30,3 +30,4 @@ appJs = appJs.replace(/\.\.\/api\.js\?v=[^"']+/g, `../api.js?v=${v}`);
 appJs = appJs.replace(/\.\.\/grading\.js\?v=[^"']+/g, `../grading.js?v=${v}`);
 fs.writeFileSync('js/admin/app.js', appJs, 'utf8');
 console.log('✓ Bumped js/admin/app.js');
+

@@ -170,3 +170,4 @@ fn = fn.replace(
 
 fs.writeFileSync('supabase/functions/start-test/index.ts', fn, 'utf8');
 console.log('supabase/functions/start-test/index.ts patched successfully!');
+
