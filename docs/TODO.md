@@ -1,3 +1,39 @@
+# ACTIVE DIRECTIVE: PHASE 259 — REAL-TIME DYNAMIC PACING BADGE IN TEST RUNNER [COMPLETE]
+
+- [x] Task 1: Added real-time pacing indicator pill `#test-pacing-indicator` calculating seconds-per-unanswered-question on every timer tick in `js/test.js`.
+- [x] Task 2: Styled 3 pacing states in `css/test.css`: Comfortable (>= 30s/q, Green), Moderate (15s–29s/q, Yellow), Urgent (< 15s/q, Pulsing Red).
+- [x] Task 3: Verified 40/40 JS syntax checks PASS and 0 console errors across all 5 primary entrypoints.
+- [x] Task 4: Synchronized cache busters to `?v=20261101_v89`.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 258 — CLASSROOM 3D FLASHCARD DRILL DI CLASS HUB [COMPLETE]
+
+- [x] Task 1: Added interactive `🎴 Drill` button in each Theme column header of the Bottlenecks board in `js/admin/tests-management.js`.
+- [x] Task 2: Injected `class-flashcard-modal` in `admin.html` with front-back 3D flipping, native audio pronunciation, and presenter keyboard shortcuts (Space, Arrow keys, P).
+- [x] Task 3: Enabled live classroom presentation of top bottleneck vocabulary on TV/projector screens.
+- [x] Task 4: Verified 40/40 JS syntax checks PASS, E2E console tests PASS.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 257 — MODULAR MILESTONE CHUNKS & EXAM FATIGUE ELIMINATION [COMPLETE]
+
+- [x] Task 1: Implemented automatic milestone chunking for cumulative multi-theme exams (such as Theme D High-Frequency Words Exam with 640 questions) in `js/test.js`.
+- [x] Task 2: Dynamically structured questions into 4 sequential Milestone Sections (Theme A, B, C, D) with `Next Milestone ➔` navigation.
+- [x] Task 3: Grouped question navigation matrix into foldable chapter blocks, eliminating mobile DOM lag and cognitive fatigue.
+- [x] Task 4: Preserved single authoritative PostgreSQL timer and attempt lifecycle without database schema modification.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 256 — SMART BOTTLENECK PRACTICE DI STUDENT LOBBY [COMPLETE]
+
+- [x] Task 1: Implemented `setupLobbyFlashcards()` and `openLobbyFlashcardsForAttempt()` in `js/dashboard.js`.
+- [x] Task 2: Added `🎯 Focus Practice: X Missed Words` trigger button in Achievement Status card and `🎯 Practice Missed Words` button on locked remedial exam cards in `dashboard.html`.
+- [x] Task 3: Universalized 3D flashcard modal styling in `css/style.css` with 3D card flipping and native TTS pronunciation audio.
+- [x] Task 4: Preserved URL hash route `#practice` per Rule 2.20.
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 250 — ACTIVE BATCH AUTO-SELECTION, SIDEBAR SYNCHRONIZATION & CACHE V81 [COMPLETE]
 
 - [x] Task 1: Scoped sidebar Domain B strictly to active batches (`is_active: true`), hiding inactive/past batches (`Camp 132`, `Camp 131`, `Camp 123`, `Hospitality SH-26`, `Hospitality TP-26`).
