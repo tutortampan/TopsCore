@@ -21,8 +21,10 @@ Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v87)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
-   - Pada ujian kumulatif raksasa seperti Theme D (640 soal), siswa tidak lagi dibebani dinding 640 soal sekaligus. Ujian secara otomatis terbagi menjadi 4 Milestone bertahap yang ringan dan terorganisir rapi.
-   - Siswa dapat menavigasi antar-milestone dengan lancar, melihat progres per tema, dan tidak lagi mengalami kelelahan mental (*cognitive fatigue*).
+   - Di **Roster Siswa** (`admin.html?status=active#students`), seluruh poin ujian (**EXAM 1–4**) kini 100% tampil berwarna sesuai tingkatan nilai kanonik (★/A Hijau `#00c000ff`, B Lime `#95ff00ff`, C Kuning `#FFFF00`, D Oranye `#FF8C00`, E Merah `#FF0000`), tidak ada lagi teks putih polos.
+   - Di **Class Hub** (`admin.html#class-hub`), kolom **PTS** dan sub-kolom tema mewarisi warna grade secara dinamis dan harmonis.
+   - Pada ujian kumulatif raksasa seperti Theme D (640 soal), siswa terbagi menjadi 4 Milestone bertahap yang rapi dan bebas kelelahan mental (*cognitive fatigue*).
+   - Di Student Lobby, fitur **🎯 Focus Practice 3D Flashcard** siap digunakan untuk melatih kosa kata yang sempat salah.
 
 ## Files Changed In Latest Step
 - `js/test.js` — Added multi-theme milestone auto-chunking logic.
