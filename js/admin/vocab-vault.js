@@ -227,10 +227,10 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     tbody.innerHTML = filtered.map((w, i) => {
       let typeColor = "#3b82f6"; // default blue
       const wt = (w.word_type || 'Vocab').toLowerCase();
-      if (wt === 'vocab' || wt === 'vocabulary') typeColor = "#10b981"; // green
-      if (wt === 'idiom') typeColor = "#f59e0b"; // yellow/orange
+      if (wt === 'vocab' || wt === 'vocabulary') typeColor = "#00c000ff"; // pure green
+      if (wt === 'idiom') typeColor = "#FF8C00"; // orange
       if (wt === 'expression') typeColor = "#8b5cf6"; // purple
-      if (wt === 'proverb') typeColor = "#ef4444"; // red
+      if (wt === 'proverb') typeColor = "#FF0000"; // pure red
 
       return `
       <tr data-word-id="${escapeHtml(w.id)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
@@ -345,8 +345,8 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
           tr.querySelector('.cell-indonesian').innerHTML = '<input type="text" class="input edit-indo" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.indonesian) + '">';
           btn.innerHTML = '&#128190;'; // Save icon
           btn.title = 'Save';
-          btn.style.color = '#10b981';
-          btn.style.borderColor = '#10b981';
+          btn.style.color = '#00c000ff';
+          btn.style.borderColor = '#00c000ff';
         }
       });
     });
@@ -550,7 +550,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
 
       const distributionBadge = `
         <div class="d-flex gap-2 flex-wrap mt-2">
-          <span style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">📦 Single Words: ${vocabRows.length} (${vocabDupes} dupes)</span>
+          <span style="background:rgba(0,192,0,0.15);color:#00c000ff;border:1px solid rgba(0,192,0,0.3);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">📦 Single Words: ${vocabRows.length} (${vocabDupes} dupes)</span>
           <span style="background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">💬 Phrases: ${phraseRows.length} (${phraseDupes} dupes)</span>
           <span style="background:rgba(99,102,241,0.1);color:#818cf8;border:1px solid rgba(99,102,241,0.25);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">🔍 Unique Questions: ${uniqueIndoCount}</span>
           <span style="background:rgba(236,72,153,0.15);color:#f472b6;border:1px solid rgba(236,72,153,0.3);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">📑 Themes: ${uniqueThemes} | Topics: ${uniqueTopics}</span>
@@ -558,7 +558,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
 
       if (!duplicateConflicts.length) {
         previewArea.innerHTML = `
-          <div class="p-3 rounded mb-3" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);">
+          <div class="p-3 rounded mb-3" style="background:rgba(0,192,0,0.1);border:1px solid rgba(0,192,0,0.3);">
             <p class="text-success fw-600 mb-1">&#10003; ${_parsedRows.length} total rows parsed — no conflicts detected.</p>
             ${distributionBadge}
           </div>
