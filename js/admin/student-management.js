@@ -1961,6 +1961,10 @@ export async function renderStudents(area) {
         const scA = a[sortKey] ?? -1;
         const scB = b[sortKey] ?? -1;
         if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
+      } else if (sortKey === 'ageDisplay') {
+        const ageA = parseFloat(a.ageDisplay) || (a.birth_date ? (new Date().getFullYear() - new Date(a.birth_date).getFullYear()) : -1);
+        const ageB = parseFloat(b.ageDisplay) || (b.birth_date ? (new Date().getFullYear() - new Date(b.birth_date).getFullYear()) : -1);
+        if (ageA !== ageB) return direction === 'asc' ? ageA - ageB : ageB - ageA;
       } else if (sortKey === 'completedTests') {
         const scA = a.completedTests ?? 0;
         const scB = b.completedTests ?? 0;
