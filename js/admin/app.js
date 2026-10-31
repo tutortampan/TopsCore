@@ -596,6 +596,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
           window._filterProgramId = params.program_id;
           try { localStorage.setItem('topscore_selected_program_id', params.program_id); } catch(_) {}
         }
+        if (params && params.batch_id) {
+          window._filterBatchId = params.batch_id;
+          try { localStorage.setItem('topscore_selected_batch_id', params.batch_id); } catch(_) {}
+        }
+        if (subTab) {
+          window._filterBatchStatus = subTab;
+          try { localStorage.setItem('topscore_student_status_tab', subTab); } catch(_) {}
+        }
       }
     }
 
@@ -748,10 +756,18 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
       }
     });
 
-    // --- SIDEBAR PROGRAMS LIST INJECTION (DOMAIN B) ---
-    async function loadSidebarPrograms(autoSelectProgramId = null) {
+    // --- SIDEBAR PROGRAMS & BATCHES LIST INJECTION (DOMAIN B) ---
+    async function loadSidebarPrograms(autoSelectProgramId = null, autoSelectBatchId = null) {
       const container = document.getElementById('sidebar-programs-list');
       if (!container) return;
+
+      const formatSidebarBatchLabel = (progName, batchName) => {
+        const p = (progName || '').trim();
+        const b = (batchName || '').trim();
+        if (!b) return p;
+        if (b.toLowerCase().startsWith(p.toLowerCase())) return b;
+        return `${p} ${b}`;
+      };
 
       const handleSidebarClick = (item, action) => {
         document.querySelectorAll('.admin-nav-item:not(.sidebar-class-item)').forEach(i => i.classList.remove('active'));
@@ -767,49 +783,102 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             handleSidebarClick(e.currentTarget, () => {
               const pid = item.getAttribute('data-program-id');
               const pname = item.getAttribute('data-program-name');
+              const bid = item.getAttribute('data-batch-id') || null;
+              const bname = item.getAttribute('data-batch-name') || null;
+              const label = item.getAttribute('data-sidebar-label') || pname;
+
               window._filterProgramId = pid;
               window._selectedProgramName = pname;
-              window._filterBatchId = null; // Reset batch selection when switching program
+              window._filterBatchId = bid;
+              window._filterBatchName = bname;
+              window._selectedSidebarLabel = label;
+
               try {
                 localStorage.setItem('topscore_selected_program_id', pid);
                 localStorage.setItem('topscore_selected_program_name', pname);
+                if (bid) {
+                  localStorage.setItem('topscore_selected_batch_id', bid);
+                  localStorage.setItem('topscore_selected_batch_name', bname);
+                } else {
+                  localStorage.removeItem('topscore_selected_batch_id');
+                  localStorage.removeItem('topscore_selected_batch_name');
+                }
+                localStorage.setItem('topscore_selected_sidebar_label', label);
+
+                if (window.history && window.history.replaceState) {
+                  const bParam = bid ? `?batch_id=${bid}` : (pid ? `?program_id=${pid}` : '');
+                  window.history.replaceState(null, '', `#students${bParam}`);
+                }
               } catch(err) {}
+
               loadSection('students');
             });
           });
         });
       };
 
-      const renderPrograms = (programs) => {
-        const activeList = (programs || []).filter(p => p.is_active !== false);
-        const sortedPrograms = activeList.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        const activeId = autoSelectProgramId || window._filterProgramId || localStorage.getItem('topscore_selected_program_id') || sortedPrograms[0]?.id;
+      const renderItems = (items) => {
+        if (!items || items.length === 0) {
+          container.innerHTML = `<div style="padding: 12px; color: var(--clr-text-muted); font-size: 0.8rem;">No active batches.</div>`;
+          return;
+        }
+
+        const activeBatchId = autoSelectBatchId || window._filterBatchId || localStorage.getItem('topscore_selected_batch_id');
+        const activeProgId = autoSelectProgramId || window._filterProgramId || localStorage.getItem('topscore_selected_program_id');
+
+        let matched = null;
+        if (activeBatchId) {
+          matched = items.find(it => it.batch_id === activeBatchId);
+        }
+        if (!matched && activeProgId) {
+          matched = items.find(it => it.program_id === activeProgId);
+        }
+        if (!matched && items.length > 0) {
+          matched = items.find(it => it.is_active !== false) || items[0];
+        }
+
+        const isStudentsActive = _currentSection === 'students' || window._activeSectionAlias === 'students';
 
         let html = `<div class="sidebar-program-group" style="display:flex; flex-direction:column; gap:2px;">`;
-        if (sortedPrograms.length === 0) {
-          html += `<div style="padding: 12px; color: var(--clr-text-muted); font-size: 0.8rem;">No active programs.</div>`;
-        } else {
-          sortedPrograms.forEach(prog => {
-            const isActive = (activeId === prog.id && (_currentSection === 'students' || window._activeSectionAlias === 'students')) ? 'active' : '';
-            html += `
-              <div class="admin-nav-item sidebar-program-item ${isActive}" data-program-id="${prog.id}" data-program-name="${escapeHtml(prog.name)}" data-sub="students">
-                <span class="nav-icon">👥</span>
-                <span>${escapeHtml(prog.name)}</span>
-              </div>
-            `;
-          });
-        }
+        items.forEach(it => {
+          const isItemActive = isStudentsActive && matched && (
+            (matched.batch_id && it.batch_id === matched.batch_id) ||
+            (!matched.batch_id && it.program_id === matched.program_id)
+          );
+          const activeCls = isItemActive ? 'active' : '';
+          const pastTag = (it.is_active === false) ? '<span style="font-size:0.65rem;color:var(--clr-text-muted);margin-left:auto;">Past</span>' : '';
+          html += `
+            <div class="admin-nav-item sidebar-program-item ${activeCls}"
+                 data-program-id="${it.program_id || it.id}"
+                 data-batch-id="${it.batch_id || ''}"
+                 data-program-name="${escapeHtml(it.program_name || it.name || '')}"
+                 data-batch-name="${escapeHtml(it.batch_name || '')}"
+                 data-sidebar-label="${escapeHtml(it.label || it.name || '')}"
+                 data-sub="students">
+              <span class="nav-icon">👥</span>
+              <span>${escapeHtml(it.label || it.name || '')}</span>
+              ${pastTag}
+            </div>
+          `;
+        });
         html += `</div>`;
         container.innerHTML = html;
         bindEvents();
 
-        if (!window._filterProgramId && sortedPrograms.length > 0) {
-          const selProg = sortedPrograms.find(p => p.id === activeId) || sortedPrograms[0];
-          window._filterProgramId = selProg.id;
-          window._selectedProgramName = selProg.name;
+        if (matched) {
+          window._filterProgramId = matched.program_id;
+          window._selectedProgramName = matched.program_name;
+          window._filterBatchId = matched.batch_id || null;
+          window._filterBatchName = matched.batch_name || null;
+          window._selectedSidebarLabel = matched.label;
           try {
-            localStorage.setItem('topscore_selected_program_id', selProg.id);
-            localStorage.setItem('topscore_selected_program_name', selProg.name);
+            localStorage.setItem('topscore_selected_program_id', matched.program_id);
+            localStorage.setItem('topscore_selected_program_name', matched.program_name);
+            if (matched.batch_id) {
+              localStorage.setItem('topscore_selected_batch_id', matched.batch_id);
+              localStorage.setItem('topscore_selected_batch_name', matched.batch_name || '');
+            }
+            localStorage.setItem('topscore_selected_sidebar_label', matched.label);
           } catch(err) {}
         }
       };
@@ -822,19 +891,64 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
         try {
           const cached = JSON.parse(localStorage.getItem('topscore_cached_sidebar_programs') || '[]');
           if (Array.isArray(cached) && cached.length > 0) {
-            renderPrograms(cached);
+            renderItems(cached);
           }
         } catch(e) {}
       }
 
-      // 2. Fetch fresh programs from server (stale-while-revalidate)
+      // 2. Fetch fresh programs and batches from server (stale-while-revalidate)
       try {
-        const programs = await adminFetchAll('programs', 'id, name, is_active, institution_id', { is_active: true });
-        if (programs && programs.length > 0) {
+        const [programs, batches] = await Promise.all([
+          adminFetchAll('programs', 'id, name, is_active, institution_id'),
+          adminFetchAll('batches', 'id, name, is_active, program_id, deleted_at').catch(() => [])
+        ]);
+
+        const validBatches = (batches || []).filter(b => !b.deleted_at);
+        // Include active programs or programs that have active/non-deleted batches
+        const activePrograms = (programs || []).filter(p => p.is_active !== false || validBatches.some(b => b.program_id === p.id));
+        activePrograms.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        const items = [];
+        activePrograms.forEach(prog => {
+          const pBatches = validBatches.filter(b => b.program_id === prog.id);
+          if (pBatches.length > 0) {
+            // Sort active batches first, then by name descending (e.g. 133, 132, 131)
+            pBatches.sort((a, b) => {
+              const aAct = a.is_active !== false ? 1 : 0;
+              const bAct = b.is_active !== false ? 1 : 0;
+              if (aAct !== bAct) return bAct - aAct;
+              return (b.name || '').localeCompare(a.name || '', undefined, { numeric: true });
+            });
+            pBatches.forEach(b => {
+              const label = formatSidebarBatchLabel(prog.name, b.name);
+              items.push({
+                id: `${prog.id}::${b.id}`,
+                program_id: prog.id,
+                program_name: prog.name,
+                batch_id: b.id,
+                batch_name: b.name,
+                label: label,
+                is_active: b.is_active !== false
+              });
+            });
+          } else {
+            items.push({
+              id: prog.id,
+              program_id: prog.id,
+              program_name: prog.name,
+              batch_id: null,
+              batch_name: null,
+              label: prog.name,
+              is_active: prog.is_active !== false
+            });
+          }
+        });
+
+        if (items.length > 0) {
           try {
-            localStorage.setItem('topscore_cached_sidebar_programs', JSON.stringify(programs));
+            localStorage.setItem('topscore_cached_sidebar_programs', JSON.stringify(items));
           } catch(err) {}
-          renderPrograms(programs);
+          renderItems(items);
         }
       } catch(err) {
         console.warn('[loadSidebarPrograms] server fetch failed, using cache:', err);

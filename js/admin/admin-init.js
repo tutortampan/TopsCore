@@ -27,22 +27,34 @@ export function initSidebarCache() {
       if (dashItem) dashItem.classList.remove('active');
     }
 
-    // 1. Programs Hydration
+    // 1. Programs & Batches Hydration
     const rawProg = localStorage.getItem('topscore_cached_sidebar_programs');
     if (rawProg) {
-      const list = JSON.parse(rawProg);
-      if (Array.isArray(list) && list.length > 0) {
-        const selId = localStorage.getItem('topscore_selected_program_id') || list[0].id;
-        const isProgActive = curHash === 'students';
-        let h = '<div class="sidebar-program-group" style="display:flex; flex-direction:column; gap:2px;">';
-        list.forEach(prog => {
-          const isActive = (selId === prog.id && isProgActive) ? 'active' : '';
-          h += `<div class="admin-nav-item sidebar-program-item ${isActive}" data-program-id="${prog.id}" data-program-name="${(prog.name || '').replace(/"/g, '&quot;')}" data-sub="students"><span class="nav-icon">👥</span><span>${prog.name || ''}</span></div>`;
-        });
-        h += '</div>';
-        const el = document.getElementById('sidebar-programs-list');
-        if (el) el.innerHTML = h;
-      }
+      try {
+        const list = JSON.parse(rawProg);
+        if (Array.isArray(list) && list.length > 0) {
+          const selBatchId = localStorage.getItem('topscore_selected_batch_id');
+          const selProgId = localStorage.getItem('topscore_selected_program_id');
+          const isProgActive = curHash === 'students';
+          let h = '<div class="sidebar-program-group" style="display:flex; flex-direction:column; gap:2px;">';
+          list.forEach(item => {
+            const isMatch = selBatchId 
+              ? (item.batch_id === selBatchId) 
+              : ((item.program_id && item.program_id === selProgId) || (item.id && item.id === selProgId));
+            const isActive = (isMatch && isProgActive) ? 'active' : '';
+            const label = item.label || item.name || '';
+            const pid = item.program_id || item.id || '';
+            const bid = item.batch_id || '';
+            const pname = item.program_name || item.name || '';
+            const bname = item.batch_name || '';
+            const pastTag = (item.is_active === false) ? '<span style="font-size:0.65rem;color:var(--clr-text-muted);margin-left:auto;">Past</span>' : '';
+            h += `<div class="admin-nav-item sidebar-program-item ${isActive}" data-program-id="${pid}" data-batch-id="${bid}" data-program-name="${pname.replace(/"/g, '&quot;')}" data-batch-name="${bname.replace(/"/g, '&quot;')}" data-sidebar-label="${label.replace(/"/g, '&quot;')}" data-sub="students"><span class="nav-icon">👥</span><span>${label}</span>${pastTag}</div>`;
+          });
+          h += '</div>';
+          const el = document.getElementById('sidebar-programs-list');
+          if (el) el.innerHTML = h;
+        }
+      } catch (e) {}
     }
 
     // 2. Classes Hydration

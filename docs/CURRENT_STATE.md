@@ -1,30 +1,23 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 00:40 UTC+8
+Last Updated: 2026-11-01 00:48 UTC+8
 
-Current Phase: Phase 238: Complete Verification of Student Roster 4 Theme Exam Points & Platform-Wide Clean M/F Gender [COMPLETE]
+Current Phase: Phase 239: Purge Lingering Student Dashboard Forgiven Logic & Domain B Batch Sidebar Hydration [COMPLETE]
 
-Current Task: Completed user directives: (1) Replaced `Score`, `Grd`, and `Progress` columns on Student Roster (`#students`) with 4 dedicated `Exam 1`, `Exam 2`, `Exam 3`, `Exam 4` columns representing each theme's total exam points, achieving 100% parity with Class Hub Attendance. (2) Streamlined gender display across both Student Roster and Class Students Tab to pure, clean `M` (blue) and `F` (pink) without unicode icons. (3) Eliminated query mismatch on `tests.total_questions` so all 40 class tests load flawlessly. (4) Bumped cache busters across all assets to `?v=20261101_v73`. All 40 JS files passed syntax validation (`node --check`).
+Current Task: (1) Purged remaining `forgiven_student_ids`, `is_forgiven`, and `grade === 'F'` references from student dashboard prerequisite gating (`js/dashboard.js`), ensuring prerequisite unlocks depend purely on authentic submitted scores and live tutor sessions. (2) Enhanced Domain B sidebar hydration in `js/admin/admin-init.js` and `js/admin/app.js` to dynamically show specific program batches (e.g. "Camp 133") with URL hash sync (`#students?batch_id=...`). (3) Bumped cache busters across `dashboard.html` to `?v=20261101_v73`. (4) Validated all 40 JS files pass syntax checking (`node --check`).
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 100% data parity verified)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 git diff)
 
 ## Next Exact Action
-1. User dapat melakukan hard-refresh di browser (**Ctrl + F5**) pada halaman:
-   - `admin.html#students`:
-     - Kolom `Gender` kini bersih menampilkan `M` (biru) atau `F` (pink) tanpa simbol icon `♂`/`♀`.
-     - Kolom kelas `3RD VOCABULARY` kini memiliki 4 kolom exam: `Exam 1` (Theme A), `Exam 2` (Theme B), `Exam 3` (Theme C), dan `Exam 4` (Theme D).
-     - Angka poin pada masing-masing kolom exam cocok 100% dengan total poin ujian masing-masing tema di Class Hub (misal: Aunul Fikri Yasir = 105.5 pts, 190 pts, 362 pts, 506 pts).
-     - Kolom `Score`, `Grd`, dan `Progress` yang tidak diperlukan sudah dihilangkan.
-   - `admin.html#class-hub?tab=attendance`:
-     - Tampilan bersih murni: semua tombol "Forgive" dan tanda superscript `^F` merah sudah hilang total.
-     - Drawer analitik pacing di bawah tabel sudah tidak bocor/muncul lagi.
+1. User dapat melakukan hard-refresh (**Ctrl + F5**) di browser:
+   - Di `dashboard.html`: Prasyarat ujian siswa murni dievaluasi dari skor autentik dan sesi live tutor.
+   - Di `admin.html`: Sidebar navigasi Domain B menampilkan batch program secara spesifik (misal: "Camp 133") dengan sinkronisasi URL hash yang presisi.
 
 ## Files Changed In Latest Step
-- `js/admin/student-management.js` — Replaced `Score`, `Grd`, `Progress` with `Exam 1`, `Exam 2`, `Exam 3`, `Exam 4`; streamlined gender to clean M/F; removed non-existent column `total_questions` from query.
-- `js/admin/class.js` — Streamlined gender display in Class Students tab to clean M/F badges.
-- `css/admin.css` — Added permanent `.tac-slide-drawer` styles with backdrop.
-- `js/admin/app.js` — Unmounted orphaned pacing drawers in `loadSection()`; bumped module imports to `?v=20261101_v73`.
-- `admin.html` — Bumped script tag to `?v=20261101_v73`.
+- `js/dashboard.js` — Removed lingering `forgiven_student_ids`, `is_forgiven`, and `grade === 'F'` checks from prerequisite gating.
+- `js/admin/admin-init.js` — Hydrated sidebar program and batch items from local cache.
+- `js/admin/app.js` — Enhanced `loadSidebarPrograms()` to support batch-level grouping and selection persistence.
+- `dashboard.html` — Bumped script cache buster to `?v=20261101_v73`.
 - `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`
 
 ## Completed

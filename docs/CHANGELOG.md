@@ -1,3 +1,30 @@
+## [2026-11-01 00:48] — Phase 239: Purge Lingering Student Dashboard Forgiven Logic & Domain B Batch Sidebar Hydration
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 239
+**Status:** PASS
+
+### Why
+- Thorough forensic sweep discovered remaining references to `forgiven_student_ids`, `is_forgiven`, and `grade === 'F'` inside student dashboard prerequisite logic (`js/dashboard.js`).
+- Cleaned all remaining forgiven traces to ensure prerequisite progression strictly adheres to genuine academic performance.
+- Enhanced Domain B sidebar navigation in `js/admin/admin-init.js` and `js/admin/app.js` to hydrate specific batches under programs (e.g., "Camp 133") and sync route parameters (`#students?batch_id=...`).
+
+### Changed
+- `js/dashboard.js`:
+  - Removed `isPrereqForgiven`, `isWordsForgiven`, and `isQuizForgiven` blocks.
+  - Prerequisite gating now strictly requires authentic student percentage >= minimum threshold (`prereqPct >= pMinScore`), or active live test session (`isSessLive`).
+- `js/admin/admin-init.js`:
+  - Enhanced cached programs hydration to render batch items with proper `batch_id` attributes and active states.
+- `js/admin/app.js`:
+  - Enhanced `loadSidebarPrograms()` to fetch and group batches under active programs, sort descending (e.g. 133, 132), and store selection in `localStorage`.
+- `dashboard.html`:
+  - Bumped script tag to `?v=20261101_v73`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: 40/40 JS files PASS (node --check).
+
+---
+
 ## [2026-11-01 00:40] — Phase 238: Complete Verification of Student Roster 4 Theme Exam Points & Platform-Wide Clean M/F Gender
 
 **Agent/Session:** Antigravity

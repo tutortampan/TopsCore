@@ -1387,13 +1387,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                const prereqPct = prereqBest ? parseFloat(prereqBest.percentage || 0) : null;
                const pObj = Tests.find(a => a.id === prereqId);
                const pMinScore = pObj ? (pObj.minimum_required_score || pObj.pass_threshold || 60) : 60;
-               const isPrereqForgiven = Boolean(
-                 (pObj?.payload?.forgiven_student_ids || []).includes(session?.student_id) ||
-                 (Test?.payload?.forgiven_student_ids || []).includes(session?.student_id) ||
-                 prereqBest?.is_forgiven ||
-                 prereqBest?.grade === 'F'
-               );
-               prereqMet = isPrereqForgiven || (prereqPct !== null && prereqPct >= pMinScore);
+               prereqMet = prereqPct !== null && prereqPct >= pMinScore;
                prereqTitle = pObj ? (pObj.display_name || pObj.title || pObj.name || 'Prerequisite') : 'Prerequisite Test';
             }
 
@@ -1433,13 +1427,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 const wRem = Boolean(wBest && (wBest.is_remedial_unlocked || wBest.is_remedial));
                 const wPct = wRem && wRawPct !== null ? Math.min(wRawPct, 60.0) : wRawPct;
                 const wMin = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 60;
-                const isWordsForgiven = Boolean(
-                  (siblingWordsExam.payload?.forgiven_student_ids || []).includes(session?.student_id) ||
-                  (Test?.payload?.forgiven_student_ids || []).includes(session?.student_id) ||
-                  wBest?.is_forgiven ||
-                  wBest?.grade === 'F'
-                );
-                if (!isWordsForgiven && (wPct === null || wPct < wMin)) {
+                if (wPct === null || wPct < wMin) {
                   prereqMet = false;
                   prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
                 }
@@ -1667,13 +1655,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             for (const quiz of siblingQuizzes) {
               const quizBest = bestByTest[quiz.id];
               const quizPct = quizBest ? parseFloat(quizBest.percentage || 0) : null;
-              const isQuizForgiven = Boolean(
-                (quiz.payload?.forgiven_student_ids || []).includes(session?.student_id) ||
-                (asm.payload?.forgiven_student_ids || []).includes(session?.student_id) ||
-                quizBest?.is_forgiven ||
-                quizBest?.grade === 'F'
-              );
-              if (!isQuizForgiven && (quizPct === null || quizPct < reqScore)) {
+              if (quizPct === null || quizPct < reqScore) {
                 prereqMet = false;
                 prereqTitle = `All Theme Quizzes (Required: ≥${reqScore}%)`;
                 break;
@@ -1719,13 +1701,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               const wRem = Boolean(wBest && (wBest.is_remedial_unlocked || wBest.is_remedial));
               const wPct = wRem && wRawPct !== null ? Math.min(wRawPct, 60.0) : wRawPct;
               const wMin = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 60;
-              const isWordsForgiven = Boolean(
-                (siblingWordsExam.payload?.forgiven_student_ids || []).includes(session?.student_id || session?.id) ||
-                (asm.payload?.forgiven_student_ids || []).includes(session?.student_id || session?.id) ||
-                wBest?.is_forgiven ||
-                wBest?.grade === 'F'
-              );
-              if (!isWordsForgiven && (wPct === null || wPct < wMin)) {
+              if (wPct === null || wPct < wMin) {
                 prereqMet = false;
                 prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
               }
