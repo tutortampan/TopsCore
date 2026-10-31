@@ -2389,7 +2389,33 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         console.error('Submit error:', e);
         hideLoading();
         if (isAuto) {
-          // Call server-authoritative auto_close RPC if primary submit failed
+          // 1. First fallback: Call server-authoritative emergency_submit_attempt RPC to score answers in PostgreSQL
+          try {
+            const sbKey = SUPABASE_ANON_KEY;
+            const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/emergency_submit_attempt`, {
+              method: 'POST',
+              headers: {
+                'apikey': sbKey,
+                'Authorization': `Bearer ${sbKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                p_attempt_id: attemptData.id,
+                p_answers: payload,
+                p_status: 'auto_submitted'
+              }),
+              keepalive: true
+            });
+            if (rpcRes.ok) {
+              sessionStorage.setItem('topscore_attempt_id', attemptData.id);
+              window.location.href = 'result.html';
+              return;
+            }
+          } catch (rpcErr) {
+            console.error('emergency_submit fallback failed:', rpcErr);
+          }
+
+          // 2. Second fallback: auto_close RPC if emergency_submit failed
           try {
             const sbKey = SUPABASE_ANON_KEY;
             const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/auto_close_expired_attempts`, {
