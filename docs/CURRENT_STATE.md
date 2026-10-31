@@ -1,33 +1,38 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 05:21 UTC+8
+Last Updated: 2026-11-01 05:25 UTC+8
 
-Current Phase: Phase 258: Classroom 3D Flashcard Drill di Class Hub [COMPLETE]
+Current Phase: Phase 259: Real-Time Dynamic Pacing Badge in Test Runner [COMPLETE]
 
 Current Task:
-1. Classroom 3D Flashcard Drill di Class Hub (`admin.html` & `js/admin/tests-management.js`):
-   - Added interactive `🎴 Drill` button in each Theme column header of the Bottlenecks board (Theme A, B, C, D).
-   - Injected `class-flashcard-modal` modal for live classroom presentation on TV/projector.
-   - Sisi depan menampilkan arti Indonesia, kelas kata (*Noun, Verb, Adjective, Idiom*), dan ringkasan kesalahan terbanyak siswa dari data evaluasi riil.
-   - Sisi belakang membalik 3D untuk menampilkan kata target bahasa Inggris yang benar dengan efek glow ungu elegan.
-   - Dilengkapi audio pelafalan penutur asli (*Web Speech Synthesis*) dan shortcut keyboard presentasi untuk tutor (**Space** untuk flip, **Panah Kanan/Kiri** untuk navigasi, **P** untuk audio, **Esc** untuk tutup).
-2. Verified 40/40 JS syntax checks PASS and 0 console errors across all E2E student journey tests and primary pages.
-3. Cache busters bumped to `?v=20261101_v88`.
+1. Anti-Timeout Dynamic Pacing Badge di Test Runner (`test.html`, `js/test.js`, `css/test.css`):
+   - Added real-time pacing indicator pill `#test-pacing-indicator` calculating seconds-per-unanswered-question on every timer tick.
+   - Pacing states:
+     - `pace-comfortable` (>= 30s/q, Pure Green `#00c000ff`).
+     - `pace-moderate` (15s–29s/q, Pure Yellow `#FFFF00`).
+     - `pace-urgent` (< 15s/q, Pure Red `#FF0000` with pulsing heartbeat animation).
+     - `Done! ✓` when all questions have answers.
+2. Verified 40/40 JS syntax checks PASS and 0 console errors across all E2E student journey tests and 5 primary pages.
+3. Cache busters bumped to `?v=20261101_v89`.
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v88)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v89)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
-   - Di Class Hub (`admin.html#class-hub`), pada setiap kartu Theme Bottlenecks (Theme A, B, C, D), tutor dapat mengklik tombol **🎴 Drill** untuk meluncurkan sesi drill kosakata 3D interaktif di depan kelas atau proyektor TV.
-   - Tutor dapat menggunakan tombol keyboard **Space** untuk membalik kartu dan tombol **Panah Kanan/Kiri** untuk berpindah kartu secara cepat saat mengajar.
+   - Di Test Runner (`test.html`), siswa kini melihat estimasi waktu per soal yang tersisa secara langsung (`~35s/q`, `~18s/q`, atau `⚡ ~8s/q`) di samping timer, membimbing manajemen waktu yang presisi dan mencegah keterlambatan penyerahan.
+   - Di Class Hub (`admin.html#class-hub`), tutor dapat menekan tombol **🎴 Drill** untuk melatih kosa kata bottleneck siswa dengan proyektor TV kelas.
 
 ## Files Changed In Latest Step
-- `admin.html` — Injected `class-flashcard-modal` markup.
-- `js/admin/tests-management.js` — Added `🎴 Drill` buttons, `_openThemeBottleneckFlashcards()`, keyboard shortcuts, and native audio pronunciation.
-- `admin.html`, `dashboard.html`, `index.html`, `result.html`, `test.html`, `js/admin/app.js` — Bumped cache busters to `v88`.
-- `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`
+- `test.html` — Injected `#test-pacing-indicator` markup.
+- `js/test.js` — Implemented `updatePacingBadge(remaining)` calculating live pacing telemetry.
+- `css/test.css` — Added `.test-pacing-badge`, `.pace-comfortable`, `.pace-moderate`, and `.pace-urgent` pulsing animations.
+- `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`
 
 ## Completed
+
+- **Phase 259: Real-Time Dynamic Pacing Badge in Test Runner**:
+   - Solved student time-out bottlenecks by providing proactive visual guidance on pacing throughout assessments.
+   - Verified 0 console errors and 0 uncaught exceptions across all 5 primary application entrypoints.
 
 - **Phase 258: Classroom 3D Flashcard Drill di Class Hub**:
   - Connected AI student error diagnosis directly to classroom teaching by allowing tutors to launch instant 3D flashcard drills for top theme bottlenecks.
