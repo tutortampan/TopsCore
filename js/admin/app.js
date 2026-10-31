@@ -2030,10 +2030,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             if (selectedTheme === 'ALL') {
               sortedThemes.forEach(tc => {
                 const tName = themeNames[tc] ? ` (${themeNames[tc]})` : '';
-                // Per user requirement: In ALL view, each theme only displays the COMBINED TOTAL columns (SCORE % & PTS)
+                const themeTests = activeTests.filter(asm => {
+                  const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+                  return (rawTheme || 'A').toUpperCase() === tc;
+                });
+                // In ALL view: render all individual exams (Word Exam & Phrase Exam, SCORE % + PTS) PLUS Theme Total columns
+                const colSpan = themeTests.length > 0 ? (themeTests.length * 2) + 2 : 2;
                 dynamicSuperHeaders.push({
                   label: `THEME ${tc}${tName}`,
-                  colSpan: 2,
+                  colSpan: colSpan,
                   className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
                 });
               });
@@ -2052,10 +2057,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             sortedActiveThemes.forEach(tc => {
               const asmsInTheme = themeGroups[tc];
 
-              // In specific Theme views (A, B, C, D): render all tasks/quizzes and individual exams (Word Exam & Phrase Exam)
-              // In ALL view: omit individual exams to keep the view clean, spacious, and focused solely on theme totals
-              if (selectedTheme !== 'ALL') {
-                asmsInTheme.forEach(asm => {
+              asmsInTheme.forEach(asm => {
                   const num = asm.display_order || (classTests.indexOf(asm) + 1);
                   const isTest = isWeeklyExam(asm);
                   const code = asm.payload?.shell_code || asm.shell_code || asm.title;
@@ -2071,13 +2073,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     dynamicAsmCols.push({
                       key: `test_${asm.id}_pct`,
                       className: 'col-asm col-exam col-exam-score',
-                      width: '54px',
+                      width: '36px',
                       headerTitle: `${headerTooltip} (Score %)`,
                       title: `${headerTooltip} (Score %)`,
                       label: `
                         <div class="asm-hdr-cell">
                           <span class="test-num test-num-test" title="${escapeHtml(headerTooltip)}">${num}</span>
-                          <span class="test-subtag test-subtag-test-score">SCORE</span>
+                          <span class="test-subtag test-subtag-test-score">SCR</span>
                         </div>
                       `,
                       sortable: true,
@@ -2097,17 +2099,17 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                         const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
 
                         if (!att) {
-                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.70rem); font-weight:400;" title="Unattempted">&middot;</span>';
                         }
                         const st = String(att.status || '').toLowerCase();
                         if (st === 'in_progress') {
                           const isExpired = att.expires_at && new Date(att.expires_at) < new Date();
                           if (!isExpired) {
-                            return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
+                            return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.70rem) * 0.85);" title="In Progress">⏳</span>`;
                           }
                         }
                         if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
-                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.70rem); font-weight:400;" title="Unattempted">&middot;</span>';
                         }
 
                         const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
@@ -2120,7 +2122,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
 
                         return `
                           <span class="asm-score asm-score-test"
-                                style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                                style="color:${color}; ${cursorStyle} font-weight:500; font-size:var(--matrix-font-size, 0.70rem); font-variant-numeric:tabular-nums;"
                                 ${clickAttr}
                                 title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${roundPct}%&#10;Click to open result">
                             ${roundPct}%${remSup}
@@ -2247,7 +2249,6 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     });
                   }
                 });
-              }
 
               // 3. THEME COMBINED SCORE COLUMN (User requirement: "Score dan pointanya dijadikan satu")
               dynamicAsmCols.push({
@@ -2258,8 +2259,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                 title: `Theme ${tc} Combined Score % (Words + Phrases)`,
                 label: `
                   <div class="asm-hdr-cell">
-                    <span class="test-num test-num-test test-num-total" title="Theme ${tc} Combined Score %">SCORE</span>
-                    <span class="test-subtag test-subtag-test-score">${selectedTheme === 'ALL' ? 'EXAM %' : 'THEME %'}</span>
+                    <span class="test-num test-num-test test-num-total" title="Theme ${tc} Combined Score %">TOT</span>
+                    <span class="test-subtag test-subtag-test-score">SCORE %</span>
                   </div>
                 `,
                 sortable: true,

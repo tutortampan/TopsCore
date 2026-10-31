@@ -1126,14 +1126,14 @@ if (!session) {
       histSection.innerHTML = `
         <div style="background:var(--clr-card,rgba(30,41,59,0.8));border:1px solid var(--clr-border,rgba(255,255,255,0.08));border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
           <h3 style="font-size:0.9rem;font-weight:700;color:var(--clr-text-1);margin:0 0 1rem;">&#128203; Attempt History</h3>
-          <div class="table-responsive">
+          <div class="table-responsive" style="max-height:280px;overflow-y:auto;overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;">
               <thead>
                 <tr style="border-bottom:1px solid var(--clr-border);">
-                  <th style="padding:6px 12px;font-size:0.75rem;color:var(--clr-text-3);text-align:left;font-weight:600;">Date</th>
-                  <th style="padding:6px 12px;font-size:0.75rem;color:var(--clr-text-3);text-align:left;font-weight:600;">Score</th>
-                  <th style="padding:6px 12px;font-size:0.75rem;color:var(--clr-text-3);text-align:left;font-weight:600;">Grade</th>
-                  <th style="padding:6px 12px;font-size:0.75rem;color:var(--clr-text-3);text-align:left;font-weight:600;"></th>
+                  <th style="padding:8px 12px;font-size:0.72rem;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">Date</th>
+                  <th style="padding:8px 12px;font-size:0.72rem;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">Score</th>
+                  <th style="padding:8px 12px;font-size:0.72rem;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">Grade</th>
+                  <th style="padding:8px 12px;font-size:0.72rem;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);"></th>
                 </tr>
               </thead>
               <tbody>${rows}</tbody>
