@@ -1,34 +1,36 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 05:25 UTC+8
+Last Updated: 2026-11-01 05:32 UTC+8
 
-Current Phase: Phase 259: Real-Time Dynamic Pacing Badge in Test Runner [COMPLETE]
+Current Phase: Phase 260: Official Student Dossier Print/PDF Modernization [COMPLETE]
 
 Current Task:
-1. Anti-Timeout Dynamic Pacing Badge di Test Runner (`test.html`, `js/test.js`, `css/test.css`):
-   - Added real-time pacing indicator pill `#test-pacing-indicator` calculating seconds-per-unanswered-question on every timer tick.
-   - Pacing states:
-     - `pace-comfortable` (>= 30s/q, Pure Green `#00c000ff`).
-     - `pace-moderate` (15s–29s/q, Pure Yellow `#FFFF00`).
-     - `pace-urgent` (< 15s/q, Pure Red `#FF0000` with pulsing heartbeat animation).
-     - `Done! ✓` when all questions have answers.
-2. Verified 40/40 JS syntax checks PASS and 0 console errors across all E2E student journey tests and 5 primary pages.
-3. Cache busters bumped to `?v=20261101_v89`.
+1. Modernized Official Student Dossier Print/PDF Engine (`css/admin.css`, `js/admin/dossier_export.js`, `js/admin/student-management.js`):
+   - Refined `@media print` directives in `css/admin.css` with `@page { size: A4 portrait; margin: 8mm 10mm; }`.
+   - Hidden all extraneous UI chrome (`.admin-sidebar`, `.admin-header`, `#admin-sidebar`, `#admin-header`, `#admin-bottom-infobar`, `#mobile-bottom-bar`, `#admin-content-area`, `.toast-container`, drawers) during print, ensuring zero blank pages.
+   - Pinned `.student-dossier-sheet` to absolute `(0, 0)` with clean `box-sizing: border-box`, eliminating page-start offsets.
+   - Fixed text contrast inside `.student-dossier-sheet`: replaced accidental `#ffffff` text rules with crisp `#0f172a` slate headers and `#1e293b` data cells.
+   - Modernized standalone export engine `js/admin/dossier_export.js` with official TopsCore Academic Administration Seal, certified summary KPI grid, and signature blocks.
+2. Verified 40/40 JS syntax checks PASS and 0 console errors across all 5 primary entrypoints.
+3. Cache busters bumped to `?v=20261101_v90`.
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v89)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v90)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
-   - Di Test Runner (`test.html`), siswa kini melihat estimasi waktu per soal yang tersisa secara langsung (`~35s/q`, `~18s/q`, atau `⚡ ~8s/q`) di samping timer, membimbing manajemen waktu yang presisi dan mencegah keterlambatan penyerahan.
-   - Di Class Hub (`admin.html#class-hub`), tutor dapat menekan tombol **🎴 Drill** untuk melatih kosa kata bottleneck siswa dengan proyektor TV kelas.
+   - Di Student Profile / Student Roster, membuka Official Dossier dan menekan tombol **🖨️ Print / Save as PDF** kini menghasilkan cetakan raport A4 portrait yang bersih, presisi, tanpa margin kosong atau elemen antarmuka admin yang bocor.
 
 ## Files Changed In Latest Step
-- `test.html` — Injected `#test-pacing-indicator` markup.
-- `js/test.js` — Implemented `updatePacingBadge(remaining)` calculating live pacing telemetry.
-- `css/test.css` — Added `.test-pacing-badge`, `.pace-comfortable`, `.pace-moderate`, and `.pace-urgent` pulsing animations.
+- `css/admin.css` — Modernized `@media print` rules, `@page` setup, and dossier table typography.
+- `js/admin/dossier_export.js` — Completely overhauled standalone export engine with certified TopsCore academic layout.
+- `js/admin/student-management.js` — Connected `exportStudentDossier`.
 - `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`
 
 ## Completed
+
+- **Phase 260: Official Student Dossier Print/PDF Modernization**:
+   - Upgraded official academic report card export to clean A4 standard with certified signatures, academic seal, and zero blank page leakages.
+   - Verified 0 console errors across all 5 primary entrypoints.
 
 - **Phase 259: Real-Time Dynamic Pacing Badge in Test Runner**:
    - Solved student time-out bottlenecks by providing proactive visual guidance on pacing throughout assessments.
