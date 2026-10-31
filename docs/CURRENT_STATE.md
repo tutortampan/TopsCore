@@ -1,37 +1,37 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 05:14 UTC+8
+Last Updated: 2026-11-01 05:21 UTC+8
 
-Current Phase: Phase 257: Modular Milestone Chunks & Exam Fatigue Elimination [COMPLETE]
+Current Phase: Phase 258: Classroom 3D Flashcard Drill di Class Hub [COMPLETE]
 
 Current Task:
-1. Modular Milestone Chunks (`js/test.js`):
-   - Implemented automatic milestone chunking for cumulative multi-theme exams (such as Theme D High-Frequency Words Exam with 640 questions).
-   - Dynamically analyzes `allAnswerRows` for multi-theme spans (`['A', 'B', 'C', 'D']`) and auto-generates sequential Milestone Sections:
-     * Milestone 1 — Theme A (Workplace)
-     * Milestone 2 — Theme B (Tourism)
-     * Milestone 3 — Theme C (CCU & Culture)
-     * Milestone 4 — Theme D (High-Frequency)
-   - Groups question navigation matrix into foldable chapter blocks, eliminating mobile DOM lag and cognitive fatigue.
-   - Smoothly guides students between milestones with `Next Milestone ➔` button.
+1. Classroom 3D Flashcard Drill di Class Hub (`admin.html` & `js/admin/tests-management.js`):
+   - Added interactive `🎴 Drill` button in each Theme column header of the Bottlenecks board (Theme A, B, C, D).
+   - Injected `class-flashcard-modal` modal for live classroom presentation on TV/projector.
+   - Sisi depan menampilkan arti Indonesia, kelas kata (*Noun, Verb, Adjective, Idiom*), dan ringkasan kesalahan terbanyak siswa dari data evaluasi riil.
+   - Sisi belakang membalik 3D untuk menampilkan kata target bahasa Inggris yang benar dengan efek glow ungu elegan.
+   - Dilengkapi audio pelafalan penutur asli (*Web Speech Synthesis*) dan shortcut keyboard presentasi untuk tutor (**Space** untuk flip, **Panah Kanan/Kiri** untuk navigasi, **P** untuk audio, **Esc** untuk tutup).
 2. Verified 40/40 JS syntax checks PASS and 0 console errors across all E2E student journey tests and primary pages.
-3. Cache busters bumped to `?v=20261101_v87`.
+3. Cache busters bumped to `?v=20261101_v88`.
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v87)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v88)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
-   - Di **Roster Siswa** (`admin.html?status=active#students`), seluruh poin ujian (**EXAM 1–4**) kini 100% tampil berwarna sesuai tingkatan nilai kanonik (★/A Hijau `#00c000ff`, B Lime `#95ff00ff`, C Kuning `#FFFF00`, D Oranye `#FF8C00`, E Merah `#FF0000`), tidak ada lagi teks putih polos.
-   - Di **Class Hub** (`admin.html#class-hub`), kolom **PTS** dan sub-kolom tema mewarisi warna grade secara dinamis dan harmonis.
-   - Pada ujian kumulatif raksasa seperti Theme D (640 soal), siswa terbagi menjadi 4 Milestone bertahap yang rapi dan bebas kelelahan mental (*cognitive fatigue*).
-   - Di Student Lobby, fitur **🎯 Focus Practice 3D Flashcard** siap digunakan untuk melatih kosa kata yang sempat salah.
+   - Di Class Hub (`admin.html#class-hub`), pada setiap kartu Theme Bottlenecks (Theme A, B, C, D), tutor dapat mengklik tombol **🎴 Drill** untuk meluncurkan sesi drill kosakata 3D interaktif di depan kelas atau proyektor TV.
+   - Tutor dapat menggunakan tombol keyboard **Space** untuk membalik kartu dan tombol **Panah Kanan/Kiri** untuk berpindah kartu secara cepat saat mengajar.
 
 ## Files Changed In Latest Step
-- `js/test.js` — Added multi-theme milestone auto-chunking logic.
-- `admin.html`, `dashboard.html`, `index.html`, `result.html`, `test.html`, `js/admin/app.js` — Bumped cache busters to `v87`.
+- `admin.html` — Injected `class-flashcard-modal` markup.
+- `js/admin/tests-management.js` — Added `🎴 Drill` buttons, `_openThemeBottleneckFlashcards()`, keyboard shortcuts, and native audio pronunciation.
+- `admin.html`, `dashboard.html`, `index.html`, `result.html`, `test.html`, `js/admin/app.js` — Bumped cache busters to `v88`.
 - `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`
 
 ## Completed
+
+- **Phase 258: Classroom 3D Flashcard Drill di Class Hub**:
+  - Connected AI student error diagnosis directly to classroom teaching by allowing tutors to launch instant 3D flashcard drills for top theme bottlenecks.
+  - Verified 0 console errors and 0 uncaught exceptions across all 5 primary application entrypoints.
 
 - **Phase 257: Modular Milestone Chunks & Exam Fatigue Elimination**:
   - Eliminated student cognitive exhaustion on massive 640-question exams by dynamically structuring them into manageable milestone sections.

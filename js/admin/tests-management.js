@@ -1299,9 +1299,16 @@ export async function renderTests(area) {
                   </div>
                   <div class="tac-theme-col-subtitle">${meta.subtitle}</div>
                 </div>
-                <span class="tac-theme-col-badge ${meta.badgeClass}">
-                  ${questions.length} Bottlenecks
-                </span>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span class="tac-theme-col-badge ${meta.badgeClass}">
+                    ${questions.length} Bottlenecks
+                  </span>
+                  ${questions.length > 0 ? `
+                    <button type="button" class="tac-drill-btn" onclick="window._openThemeBottleneckFlashcards('${t}')" title="Launch Classroom 3D Flashcard Drill for ${meta.name}" style="padding:2px 8px; font-size:0.68rem; font-weight:700; border-radius:6px; background:rgba(168,85,247,0.22); border:1px solid rgba(168,85,247,0.5); color:#e9d5ff; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s ease;">
+                      🎴 Drill
+                    </button>
+                  ` : ''}
+                </div>
               </div>
 
               <div class="tac-theme-col-body">
@@ -1481,6 +1488,163 @@ export async function renderTests(area) {
       if (header) header.style.opacity = '1';
     }
   };
+
+  window._themeTop20 = themeTop20;
+  window._themeMeta = themeMeta;
+
+  let _classFcCards = [];
+  let _classFcCurrentIndex = 0;
+  let _isClassFcBound = false;
+
+  window._openThemeBottleneckFlashcards = function(themeCode) {
+    const questions = (window._themeTop20 && window._themeTop20[themeCode]) || [];
+    if (!questions || questions.length === 0) {
+      if (typeof showToast === 'function') showToast(`No bottleneck vocabulary recorded for Theme ${themeCode}.`, 'info');
+      return;
+    }
+
+    _classFcCards = questions;
+    _classFcCurrentIndex = 0;
+
+    const modal = document.getElementById('class-flashcard-modal');
+    const titleEl = document.getElementById('class-fc-modal-title');
+    const meta = (window._themeMeta && window._themeMeta[themeCode]) || { name: `Theme ${themeCode}` };
+    if (titleEl) titleEl.textContent = `🎴 ${meta.name} — Class Drill`;
+
+    initClassroomFlashcardControls();
+    renderClassroomFlashcardItem();
+    if (modal) modal.classList.remove('hidden');
+  };
+
+  function initClassroomFlashcardControls() {
+    if (_isClassFcBound) return;
+    _isClassFcBound = true;
+
+    const modal = document.getElementById('class-flashcard-modal');
+    const closeBtn = document.getElementById('close-class-flashcard-btn');
+    if (closeBtn) closeBtn.onclick = closeClassroomFlashcardModal;
+    if (modal) {
+      modal.onclick = (e) => {
+        if (e.target.id === 'class-flashcard-modal') closeClassroomFlashcardModal();
+      };
+    }
+
+    const flipInner = document.getElementById('class-active-flip-inner');
+    const flipCard = document.getElementById('class-active-flip-card');
+    const toggleFlip = () => flipInner?.classList.toggle('flipped');
+
+    if (flipCard) flipCard.onclick = toggleFlip;
+    const flipBtn = document.getElementById('class-fc-btn-flip');
+    if (flipBtn) {
+      flipBtn.onclick = (e) => {
+        e.stopPropagation();
+        toggleFlip();
+      };
+    }
+
+    const prevBtn = document.getElementById('class-fc-btn-prev');
+    if (prevBtn) {
+      prevBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (_classFcCards.length === 0) return;
+        _classFcCurrentIndex = (_classFcCurrentIndex - 1 + _classFcCards.length) % _classFcCards.length;
+        renderClassroomFlashcardItem();
+      };
+    }
+
+    const nextBtn = document.getElementById('class-fc-btn-next');
+    if (nextBtn) {
+      nextBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (_classFcCards.length === 0) return;
+        _classFcCurrentIndex = (_classFcCurrentIndex + 1) % _classFcCards.length;
+        renderClassroomFlashcardItem();
+      };
+    }
+
+    const speakBtn = document.getElementById('class-fc-speak-btn');
+    if (speakBtn) {
+      speakBtn.onclick = (e) => {
+        e.stopPropagation();
+        playClassroomFlashcardAudio();
+      };
+    }
+
+    // Keyboard shortcuts for tutor classroom presentation (Space, Arrows, P)
+    window.addEventListener('keydown', (e) => {
+      const modal = document.getElementById('class-flashcard-modal');
+      if (!modal || modal.classList.contains('hidden')) return;
+
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        toggleFlip();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (_classFcCards.length === 0) return;
+        _classFcCurrentIndex = (_classFcCurrentIndex + 1) % _classFcCards.length;
+        renderClassroomFlashcardItem();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (_classFcCards.length === 0) return;
+        _classFcCurrentIndex = (_classFcCurrentIndex - 1 + _classFcCards.length) % _classFcCards.length;
+        renderClassroomFlashcardItem();
+      } else if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        playClassroomFlashcardAudio();
+      } else if (e.key === 'Escape') {
+        closeClassroomFlashcardModal();
+      }
+    });
+  }
+
+  function playClassroomFlashcardAudio() {
+    const item = _classFcCards[_classFcCurrentIndex];
+    if (!item) return;
+    const target = (item.correct || '').split(/[;/,|]/)[0].trim();
+    if (target && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(target);
+      u.lang = 'en-US';
+      u.rate = 0.9;
+      window.speechSynthesis.speak(u);
+    }
+  }
+
+  function closeClassroomFlashcardModal() {
+    const modal = document.getElementById('class-flashcard-modal');
+    if (modal) modal.classList.add('hidden');
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  }
+
+  function renderClassroomFlashcardItem() {
+    const q = _classFcCards[_classFcCurrentIndex];
+    if (!q) return;
+
+    const flipInner = document.getElementById('class-active-flip-inner');
+    if (flipInner) flipInner.classList.remove('flipped');
+
+    const promptEl = document.getElementById('class-fc-front-prompt');
+    if (promptEl) promptEl.textContent = q.text || '—';
+
+    const posEl = document.getElementById('class-fc-front-pos');
+    if (posEl) posEl.textContent = q.wordType || 'WORD';
+
+    const errorsEl = document.getElementById('class-fc-front-errors');
+    if (errorsEl) {
+      if (q.topErrors && q.topErrors.length > 0) {
+        const errList = q.topErrors.map(e => `"${escapeHtml(e.answer)}" (${e.count}x)`).join(', ');
+        errorsEl.innerHTML = `Frequent student mistakes: <span style="color:var(--grade-e, #FF0000);">${errList}</span>`;
+      } else {
+        errorsEl.innerHTML = `<span style="color:#94a3b8;">High timeout or blank responses</span>`;
+      }
+    }
+
+    const backTargetEl = document.getElementById('class-fc-back-target');
+    if (backTargetEl) backTargetEl.textContent = q.correct || '—';
+
+    const counterEl = document.getElementById('class-fc-progress-counter');
+    if (counterEl) counterEl.textContent = `Card ${_classFcCurrentIndex + 1} of ${_classFcCards.length}`;
+  }
 }
 
 

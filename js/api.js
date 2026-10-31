@@ -748,6 +748,93 @@ export async function generateTestQuestions(sb, test) {
   return questions;
 }
 
+export function enrichTestSections(result) {
+  if (!result || !result.answers || !Array.isArray(result.answers) || result.answers.length === 0) {
+    return result;
+  }
+
+  // If valid sections with more than 1 item are already provided, keep them
+  if (Array.isArray(result.sections) && result.sections.length > 1) {
+    return result;
+  }
+
+  const answers = result.answers;
+  // 1. Check for multiple themes (e.g. cumulative exam with Theme A, B, C, D)
+  const themeCodes = [...new Set(answers.map(a => {
+    const snap = (typeof a.question_snapshot === 'string')
+      ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })()
+      : (a.question_snapshot || {});
+    return snap?.theme_code;
+  }).filter(Boolean))].sort();
+
+  if (themeCodes.length > 1) {
+    const themeNameMap = {
+      'A': 'Workplace & Business',
+      'B': 'Tourism & Hospitality',
+      'C': 'Culture & Expressions',
+      'D': 'Advanced & Academic'
+    };
+    result.sections = themeCodes.map((tc, idx) => {
+      const sampleSnap = answers.map(a => (typeof a.question_snapshot === 'string' ? JSON.parse(a.question_snapshot) : a.question_snapshot)).find(s => s?.theme_code === tc);
+      const themeTitle = sampleSnap?.theme ? `Theme ${tc}: ${sampleSnap.theme}` : `Theme ${tc}: ${themeNameMap[tc] || `Section ${idx + 1}`}`;
+      return {
+        id: `theme_${tc}`,
+        title: themeTitle,
+        section_order: idx + 1
+      };
+    });
+    // Tag each question snapshot with section_id
+    answers.forEach(a => {
+      let snap = a.question_snapshot;
+      let isStr = false;
+      if (typeof snap === 'string') {
+        isStr = true;
+        try { snap = JSON.parse(snap); } catch(_) { snap = {}; }
+      }
+      if (snap?.theme_code) {
+        snap.section_id = `theme_${snap.theme_code}`;
+        a.question_snapshot = isStr ? JSON.stringify(snap) : snap;
+      }
+    });
+    return result;
+  }
+
+  // 2. Check for combined Words and Phrases
+  const hasWordsAndPhrases = answers.some(a => {
+    const snap = typeof a.question_snapshot === 'string' ? JSON.parse(a.question_snapshot) : a.question_snapshot;
+    return snap?.test_section === 'words';
+  }) && answers.some(a => {
+    const snap = typeof a.question_snapshot === 'string' ? JSON.parse(a.question_snapshot) : a.question_snapshot;
+    return snap?.test_section === 'phrases';
+  });
+
+  if (hasWordsAndPhrases) {
+    result.sections = [
+      { id: 'words', title: 'Part 1: Words', section_order: 1 },
+      { id: 'phrases', title: 'Part 2: Phrases', section_order: 2 }
+    ];
+    answers.forEach(a => {
+      let snap = a.question_snapshot;
+      let isStr = false;
+      if (typeof snap === 'string') {
+        isStr = true;
+        try { snap = JSON.parse(snap); } catch(_) { snap = {}; }
+      }
+      if (snap?.test_section === 'phrases') {
+        snap.section_id = 'phrases';
+      } else if (snap?.test_section === 'words') {
+        snap.section_id = 'words';
+      }
+      a.question_snapshot = isStr ? JSON.stringify(snap) : snap;
+    });
+    return result;
+  }
+
+  // 3. Fallback: Single Default Section
+  result.sections = [{ id: 'default', title: result.test?.title || result.test?.name || 'Test', section_order: 1 }];
+  return result;
+}
+
 export async function startTest(studentId, testId) {
   try {
     const edgeRes = await callEdgeFunction('start-test', { student_id: studentId, test_id: testId });
@@ -1067,7 +1154,7 @@ export async function startTest(studentId, testId) {
       ]
     : [{ id: 'default', title: test.name || test.title || 'Test', section_order: 1 }];
 
-  return {
+  return enrichTestSections({
     success: true,
     attempt: attempt,
     test: test,
@@ -1075,7 +1162,7 @@ export async function startTest(studentId, testId) {
     sections: sections,
     answers: sanitizedAnswers,
     resumed: !!existingAttempts?.[0]
-  };
+  });
 }
 
 /** ALIAS KRUSIAL: Mencegah SyntaxError crash di test.html */

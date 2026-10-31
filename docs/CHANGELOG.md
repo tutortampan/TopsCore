@@ -1,3 +1,30 @@
+## [2026-11-01 05:21] — Phase 258: Classroom 3D Flashcard Drill di Class Hub
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 258  
+**Status:** PASS  
+
+### Why
+- Implement Proposal Item 5.4 / 2.1: Direct pedagogical classroom enablement — allowing tutors to project and conduct live 3D flashcard drills for top bottleneck vocabulary in each theme directly in front of the classroom or on a TV screen.
+
+### Changed
+- `admin.html`:
+  - Injected `class-flashcard-modal` modal markup featuring front-back 3D flipping, native audio pronunciation, and responsive desktop layout.
+- `js/admin/tests-management.js`:
+  - Added `🎴 Drill` button in each Theme column header of the Bottlenecks board (Theme A, B, C, D).
+  - Implemented `window._openThemeBottleneckFlashcards(themeCode)`.
+  - Added presenter keyboard shortcuts (**Space** to flip card, **Arrow Right/Left** for Next/Prev, **P** for speech pronunciation, **Esc** to dismiss).
+  - Integrated native SpeechSynthesis TTS for crystal-clear American English pronunciation.
+- `admin.html`, `dashboard.html`, `index.html`, `result.html`, `test.html`, `js/admin/app.js`:
+  - Bumped cache busters to `?v=20261101_v88`.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs`: 40/40 JS files passed syntax validation (`node --check`).
+- `node scripts/e2e_student_exam_journey.mjs`: PASS (0 console errors).
+- `node scripts/e2e_console_health_check.mjs`: PASS (0 console errors across all 5 primary application pages).
+
+---
+
 ## [2026-11-01 05:14] — Phase 257: Modular Milestone Chunks & Exam Fatigue Elimination
 
 **Agent/Session:** Antigravity  
@@ -8,6 +35,9 @@
 - Implement Proposal Item 5.1 / 2.1: Eliminate cognitive exhaustion, smartphone DOM lagging, and 42% timeout rates on massive 640-question cumulative exams (such as Theme D High-Frequency Words Exam).
 
 ### Changed
+- `js/api.js`:
+  - Added `enrichTestSections()` to automatically synthesize 4 structured theme milestones (`Theme A: Workplace`, `Theme B: Tourism`, `Theme C: CCU`, `Theme D: High-Frequency`) whenever a multi-theme cumulative exam is started or resumed, both via Edge Functions and client DB fallbacks.
+  - Tagged each question snapshot with its respective `section_id` (`theme_A`, `theme_B`, `theme_C`, `theme_D`) to eliminate massive 640-question flat grids.
 - `js/test.js`:
   - Implemented automatic milestone section chunking in test startup sequence.
   - Detects multi-theme cumulative tests ($\ge 80$ questions spanning Themes A, B, C, D) and dynamically creates structured milestone chapters (`Milestone 1 — Theme A`, `Milestone 2 — Theme B`, etc.).

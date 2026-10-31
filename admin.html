@@ -12,12 +12,12 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261101_v87" />
-  <link rel="stylesheet" href="css/admin.css?v=20261101_v87" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=20261101_v87" />
+  <link rel="stylesheet" href="css/style.css?v=20261101_v88" />
+  <link rel="stylesheet" href="css/admin.css?v=20261101_v88" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=20261101_v88" />
   <!-- SheetJS for Excel Import / Export -->
-  <script src="./js/vendor/xlsx.full.min.js?v=20261101_v87" defer
-    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=20261101_v87';"></script>
+  <script src="./js/vendor/xlsx.full.min.js?v=20261101_v88" defer
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=20261101_v88';"></script>
 
 </head>
 
@@ -493,8 +493,48 @@
     </div>
   </div>
 
-  <script type="module" src="./js/admin/admin-init.js?v=20261101_v87"></script>
-  <script type="module" src="js/admin/app.js?v=20261101_v87"></script>
+    <!-- 🎴 Classroom 3D Flashcard Drill Modal (Bottleneck Master) -->
+  <div class="flashcard-modal-backdrop hidden" id="class-flashcard-modal" role="dialog" aria-modal="true" aria-label="Classroom Flashcard Drill">
+    <div class="flashcard-modal-card" style="max-width: 540px;">
+      <div class="flashcard-modal-header">
+        <div class="flashcard-header-title-wrap">
+          <h2 class="flashcard-modal-title" id="class-fc-modal-title">🎴 Classroom Bottleneck Drill</h2>
+          <span class="flashcard-modal-counter" id="class-fc-progress-counter">Card 1 of 20</span>
+        </div>
+        <button class="flashcard-close-btn" id="close-class-flashcard-btn" type="button" aria-label="Close">✕</button>
+      </div>
+
+      <div class="flashcard-stage" style="padding: 1.5rem 1.25rem;">
+        <div class="flip-card" id="class-active-flip-card" style="height: 260px;">
+          <div class="flip-card-inner" id="class-active-flip-inner">
+            <!-- Front Side: Prompt & Common Mistakes -->
+            <div class="flip-card-front">
+              <div class="fc-pos-pill" id="class-fc-front-pos">WORD</div>
+              <h3 class="fc-front-prompt" id="class-fc-front-prompt" style="font-size: 1.5rem;">Prompt</h3>
+              <div class="fc-front-student-ans" id="class-fc-front-errors" style="font-size: 0.8rem; margin-top: 6px; text-align: center; max-width: 90%;">Common mistakes: <span>—</span></div>
+              <div class="fc-tap-hint">👆 Tap card or press [Space] to reveal target</div>
+            </div>
+            <!-- Back Side: English Target & Pronunciation Audio -->
+            <div class="flip-card-back">
+              <span class="fc-target-label">TARGET VOCABULARY</span>
+              <h2 class="fc-back-target" id="class-fc-back-target" style="font-size: 1.8rem;">Target</h2>
+              <button type="button" class="fc-speak-btn" id="class-fc-speak-btn" title="Listen to Native Pronunciation">🔊 Listen [P]</button>
+              <div class="fc-tap-hint">👆 Tap card or press [Space] to flip back</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flashcard-footer-controls">
+        <button class="btn btn-secondary btn-sm" id="class-fc-btn-prev" type="button">← Prev [←]</button>
+        <button class="btn btn-primary btn-sm" id="class-fc-btn-flip" type="button">🔄 Flip [Space]</button>
+        <button class="btn btn-secondary btn-sm" id="class-fc-btn-next" type="button">Next → [→]</button>
+      </div>
+    </div>
+  </div>
+
+<script type="module" src="./js/admin/admin-init.js?v=20261101_v88"></script>
+  <script type="module" src="js/admin/app.js?v=20261101_v88"></script>
 
 
 
