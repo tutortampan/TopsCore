@@ -3670,7 +3670,7 @@ export async function getSecuritySettings() {
   return {
     enabled: settings.anti_cheat_enabled !== 'false',
     soundEnabled: settings.anti_cheat_sound_enabled !== 'false',
-    countdownSeconds: parseInt(settings.anti_cheat_countdown_seconds || '10', 10),
+    countdownSeconds: Math.max(parseInt(settings.anti_cheat_countdown_seconds || '30', 10), 25),
     soundType: settings.anti_cheat_sound_type || 'police_siren',
     customSoundB64: settings.anti_cheat_custom_sound_b64 || ''
   };

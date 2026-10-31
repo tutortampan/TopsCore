@@ -72,7 +72,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     let _activeOscNodes = []; // track all active oscillator/source nodes for clean stop
     let _activeGainNodes = [];
     let _activeAudioSource = null; // for custom audio buffer source
-    let securityConfig = { enabled: true, soundEnabled: true, countdownSeconds: 10, soundType: 'police_siren', customSoundB64: '' };
+    let securityConfig = { enabled: true, soundEnabled: true, countdownSeconds: 30, soundType: 'police_siren', customSoundB64: '' };
 
     // Mobile Audio Unlock on first interaction
     const unlockAudio = () => {
@@ -491,7 +491,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       startPoliceSiren();
 
-      const durationSeconds = securityConfig.countdownSeconds || 25;
+      const durationSeconds = Math.max(securityConfig.countdownSeconds || 30, 25);
       cheatDeadline = Date.now() + (durationSeconds * 1000);
       if (countEl) countEl.textContent = durationSeconds;
 

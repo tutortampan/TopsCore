@@ -13,6 +13,8 @@ const v = '20261101_v76';
 
 let appJs = fs.readFileSync('js/admin/app.js', 'utf8');
 appJs = appJs.replace(/student-management\.js\?v=[^"']+/g, `student-management.js?v=${v}`);
+appJs = appJs.replace(/tests-access\.js\?v=[^"']+/g, `tests-access.js?v=${v}`);
+appJs = appJs.replace(/classes-hub\.js\?v=[^"']+/g, `classes-hub.js?v=${v}`);
 appJs = appJs.replace(/\.\/app\.js\?v=[^"']+/g, `./app.js?v=${v}`);
 appJs = appJs.replace(/\.\.\/api\.js\?v=[^"']+/g, `../api.js?v=${v}`);
 appJs = appJs.replace(/\.\.\/grading\.js\?v=[^"']+/g, `../grading.js?v=${v}`);
@@ -25,7 +27,8 @@ smJs = smJs.replace(/\.\.\/grading\.js\?v=[^"']+/g, `../grading.js?v=${v}`);
 fs.writeFileSync('js/admin/student-management.js', smJs, 'utf8');
 console.log('✓ Bumped js/admin/student-management.js');
 
-let tmJs = fs.readFileSync('js/admin/tests-management.js', 'utf8');
-tmJs = tmJs.replace(/\.\.\/grading\.js\?v=[^"']+/g, `../grading.js?v=${v}`);
-fs.writeFileSync('js/admin/tests-management.js', tmJs, 'utf8');
-console.log('✓ Bumped js/admin/tests-management.js');
+let taJs = fs.readFileSync('js/admin/tests-access.js', 'utf8');
+taJs = taJs.replace(/\.\.\/api\.js\?v=[^"']+/g, `../api.js?v=${v}`);
+taJs = taJs.replace(/\.\.\/grading\.js\?v=[^"']+/g, `../grading.js?v=${v}`);
+fs.writeFileSync('js/admin/tests-access.js', taJs, 'utf8');
+console.log('✓ Bumped js/admin/tests-access.js');
