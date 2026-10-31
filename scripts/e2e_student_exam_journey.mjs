@@ -50,25 +50,25 @@ async function runStudentJourneyTest() {
   await context.addInitScript(() => {
     const photo = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="50" fill="%23a855f7"/></svg>';
     const mockSession = {
-      student_id: 'stu-camp-133-01',
-      student_name: 'Aunul Fikri Yasir',
-      institution_id: 'inst-001',
+      student_id: '151bc378-b99a-4583-8ef3-bf1007a69531',
+      student_name: 'Gagan Tara Deswari',
+      institution_id: 'f51d4c2c-7c24-42ef-8d8f-b0f3e524a447',
       institution_name: 'CAKE ENGLISH COURSE',
-      program_id: 'prog-001',
+      program_id: '11deb53c-434a-44b0-83ca-1cc9b239cab3',
       program_name: 'Camp',
-      batch_id: 'batch-133',
+      batch_id: '3b697c66-da5d-4a68-b823-ba3d06353852',
       batch_name: '133',
-      level_id: 'lvl-003',
+      level_id: '51589e1a-d96e-496e-92a3-d9d350483555',
       level_name: '3rd Level',
       level_number: 3,
       gender: 'male',
       photo_url: photo,
-      birth_date: '2005-01-01',
+      birth_date: '2002-12-25',
       education: 'University'
     };
     sessionStorage.setItem('topscore_session', JSON.stringify(mockSession));
-    sessionStorage.setItem('topscore_test_id', 'test-mock-01');
-    sessionStorage.setItem('topscore_attempt_id', 'att-mock-01');
+    sessionStorage.setItem('topscore_test_id', 'dc34c2bd-035a-43f6-a007-bfadd54576a8');
+    sessionStorage.setItem('topscore_attempt_id', 'fd37522b-3502-45f4-a8ab-01ba8ff8d44b');
   });
 
   const page = await context.newPage();
@@ -103,7 +103,7 @@ async function runStudentJourneyTest() {
 
     // ── STAGE 2: Test Runner & Scaffolding Verification ──
     console.log('[Stage 2] Verifying Test Runner Features (Hints, Word Counter, Audio Buffer)...');
-    await page.goto(`${baseUrl}/test.html`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${baseUrl}/test.html?test_id=dc34c2bd-035a-43f6-a007-bfadd54576a8&attempt_id=fd37522b-3502-45f4-a8ab-01ba8ff8d44b`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1000);
 
     // Verify test sync indicator pill exists
