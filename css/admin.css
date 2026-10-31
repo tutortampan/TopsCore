@@ -1944,7 +1944,7 @@ textarea.form-control {
    20. SECTION-SPECIFIC DOMAIN VIEW POLISH
    ============================================================ */
 
-/* Recalibrator, Import, and Settings sections use inline styles — 
+/* Recalibrator, Import, and Settings sections use inline styles —
    provide sensible defaults for their containers */
 .admin-content > div > h2.section-title {
   font-size: 1.35rem !important;
@@ -2110,7 +2110,7 @@ textarea.form-control {
    25. ADDITIONAL ADMIN CONTENT AREA OVERRIDES
    ============================================================ */
 
-/* Override any global style.css card/glass-card backgrounds that 
+/* Override any global style.css card/glass-card backgrounds that
    might bleed into admin views with wrong colors */
 .admin-content .card,
 .admin-content .glass-card,
@@ -2271,12 +2271,12 @@ tr.deleted-row td {
     body * {
         visibility: hidden;
     }
-    
+
     /* Make ONLY the cv-print-container and its children visible */
     #cv-print-container, #cv-print-container * {
         visibility: visible;
     }
-    
+
     /* Position the container at the top left of the printed page */
     #cv-print-container {
         position: absolute;
@@ -2288,13 +2288,13 @@ tr.deleted-row td {
         margin: 0;
         padding: 0;
     }
-    
+
     /* A4 Portrait Specifications */
     @page {
         size: A4 portrait;
         margin: 8mm 10mm; /* 8mm top/bottom, 10mm left/right */
     }
-    
+
     /* Optimize typography for dense fitting */
     #cv-print-container {
         font-size: 8.5pt;
@@ -2520,7 +2520,7 @@ tr.deleted-row td {
 .binder-sidebar {
   flex: 0 0 140px;
   /* Push down by the height of the top tabs (approx 42px) */
-  margin-top: 41px; 
+  margin-top: 41px;
   position: relative;
   z-index: 2; /* Ensure it stays above the canvas left border */
 }

@@ -49,6 +49,20 @@
   "fiveServer.port": 5500,
   "fiveServer.openTerminal": false,
   "fiveServer.highlight": true,
+  "fiveServer.watch": [
+    "*.html",
+    "css/**",
+    "js/**",
+    "assets/**"
+  ],
+  "fiveServer.ignore": [
+    "docs/**",
+    "scripts/**",
+    "supabase/**",
+    "node_modules/**",
+    "*.json",
+    "*.md"
+  ],
 
   // ─── EDITOR UX ──────────────────────────────────────────────────────
   "editor.tabSize": 2,
@@ -83,7 +97,9 @@
     "**/playwright-report/**": true,
     "**/test-results/**": true,
     "**/audit_screenshots/**": true,
-    "**/scratch/**": true
+    "**/scratch/**": true,
+    "**/scripts/*.json": true,
+    "**/*.backup.json": true
   },
   "files.exclude": {
     "**/node_modules": true,
@@ -104,11 +120,15 @@
   "errorLens.enabledDiagnosticLevels": ["error", "warning"],
   "errorLens.fontSize": "0.75rem",
   "errorLens.delay": 150,
+  "errorLens.messageTemplate": "[$source] $message",
+  "errorLens.gutterIconsEnabled": true,
 
   // ─── ESLINT & CODE QUALITY ──────────────────────────────────────────
   "eslint.enable": true,
+  "eslint.experimental.useFlatConfig": true,
   "eslint.validate": [
-    "javascript"
+    "javascript",
+    "javascriptreact"
   ],
 
   // ─── TERMINAL ───────────────────────────────────────────────────────
@@ -128,6 +148,8 @@
 
   // ─── JAVASCRIPT & LANGUAGE PRODUCTIVITY ────────────────────────────
   "javascript.suggest.completeFunctionCalls": true,
+  "javascript.suggest.autoImports": false,
+  "typescript.suggest.autoImports": false,
   "javascript.updateImportsOnFileMove.enabled": "always",
   "editor.smoothScrolling": true,
   "editor.cursorBlinking": "smooth",
