@@ -3489,7 +3489,9 @@ tr.deleted-row td {
 }
 
 #class-attendance-grid .datagrid-toolbar,
-#class-attendance-grid .datagrid-pagination {
+#class-attendance-grid .datagrid-pagination,
+#student-grid-container .datagrid-toolbar,
+#student-grid-container .datagrid-pagination {
   display: none !important;
   margin: 0 !important;
   padding: 0 !important;
