@@ -1,3 +1,31 @@
+## [2026-11-01 04:15] — Phase 249: Online/Offline Network Resilience Buffer & Live Cloud Sync Status Pill in Test Runner (Pilar 3 Implementation)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 249  
+**Status:** PASS  
+
+### Why
+- User directive: "cek semua error yang ada, dan jalankan berbagai e2e test,,, cek semua kolom, fot, semua hal dalam sistem, usahakan agar maksimal, cek SEMUA ERROR... coba terapkan dan saya ingin ada ide2 baru yang muncul natinya"
+- Implementation of Pilar 3 from `STUDENT_DIFFICULTY_AND_EXAM_SYSTEM_PROPOSAL.md`: Network resilience, graceful offline buffering, and automatic re-sync upon internet restoration.
+
+### Changed
+- `test.html`:
+  - Added dedicated, sleek `#test-sync-indicator` pill next to the countdown timer displaying live status:
+    - 🟢 `Saved`: All answers successfully persisted to Supabase database.
+    - 🔵 `Saving…` / `Syncing…`: Real-time debounced write to cloud in flight.
+    - 🟡 `Offline (Buffered)`: Clear visual assurance that answers are safely saved in local storage without panic if internet disconnects.
+- `js/test.js`:
+  - Added `window.addEventListener('offline')`: Immediately informs student via toast and switches sync dot to yellow `Offline (Buffered)`.
+  - Added `window.addEventListener('online')`: Automatically flushes all locally buffered answers to Supabase via `Promise.allSettled(saveAnswer)` and switches sync dot back to green `Saved`.
+- `js/admin/app.js`:
+  - Updated internal dynamic module imports to `?v=20261101_v80`.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs`: ALL 40 JavaScript files passed syntax validation (`node --check`).
+- `node scripts/e2e_console_health_check.mjs`: Automated Headless Chrome test across all 5 core pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`) with 0 uncaught errors.
+
+---
+
 ## [2026-11-01 03:16] — Phase 248: Real-Time Spoken Answer Persistence & Speech Recognition Fail-Safe
 
 **Agent/Session:** Antigravity

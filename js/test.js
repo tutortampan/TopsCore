@@ -2153,6 +2153,43 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       persistLocalBuffer();
     });
 
+    // Network resilience: Offline buffer & auto-reconnect sync (Pilar 3)
+    window.addEventListener('offline', () => {
+      const statusText = document.getElementById('sync-status-text');
+      const syncDot = document.getElementById('sync-dot');
+      if (statusText) statusText.textContent = 'Offline (Buffered)';
+      if (syncDot) syncDot.style.background = 'var(--clr-warning, #FFFF00)';
+      if (typeof showToast === 'function') {
+        showToast('Connection lost. Answers are buffered locally and safe.', 'warning');
+      }
+    });
+
+    window.addEventListener('online', async () => {
+      const statusText = document.getElementById('sync-status-text');
+      const syncDot = document.getElementById('sync-dot');
+      if (statusText) statusText.textContent = 'Syncing…';
+      if (syncDot) syncDot.style.background = '#38bdf8';
+      if (typeof showToast === 'function') {
+        showToast('Connection restored! Syncing answers to server…', 'info');
+      }
+      try {
+        saveCurrentAnswer();
+        persistLocalBuffer();
+        const activeAnswers = window.answeredMap || answeredMap;
+        const promises = [];
+        for (const [ansId, ansVal] of Object.entries(activeAnswers)) {
+          if (ansVal && typeof ansVal === 'string' && ansVal.trim()) {
+            promises.push(saveAnswer(ansId, ansVal.trim()));
+          }
+        }
+        await Promise.allSettled(promises);
+        if (statusText) statusText.textContent = 'Saved';
+        if (syncDot) syncDot.style.background = 'var(--clr-success, #00c000ff)';
+      } catch (syncErr) {
+        console.warn('[OnlineSync] Reconnect sync error:', syncErr);
+      }
+    });
+
     window.toggleMatrixPopup = function(show) {
       const popup = document.getElementById('matrix-popup');
       if (!popup) return;

@@ -1,38 +1,28 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 03:16 UTC+8
+Last Updated: 2026-11-01 04:18 UTC+8
 
-Current Phase: Phase 248: Real-Time Spoken Answer Persistence & Speech Recognition Fail-Safe [COMPLETE]
+Current Phase: Phase 249: Online/Offline Network Resilience Buffer & Live Cloud Sync Status Pill [COMPLETE]
 
 Current Task:
-1. Root Cause Resolution for 42% Blank/Timed Out Spoken Questions:
-   - **Root Cause Identified**:
-     1. Spoken answers created `transcriptBox = document.createElement('div')` without an ID (`speech-transcript-${row.id}`).
-     2. In `saveCurrentAnswer()`, the handler tried to read `document.getElementById('speech-text-' + row.id).value`. Since `transcriptBox` is a `<div>`, `.value` was undefined and the element ID was missing, causing `saveCurrentAnswer()` to completely fail to save spoken answers on navigation or timeout!
-     3. Answers were previously only committed on `onFinal`. On Chrome Mobile/Android, Web Speech API often keeps speech in `interim` results until a 2-3s silence. If the timer ran out or the student navigated before `onFinal`, the spoken answer was dropped and recorded as blank.
-   - **Implementation**:
-     1. Explicit ID: Set `transcriptBox.id = 'speech-transcript-' + row.id`.
-     2. Real-Time Interim Commit: Added real-time updating in `onResult(interim)` to immediately write student speech to `answeredMap[row.id]`, ensuring words are recorded instantly as the student speaks.
-     3. `onEnd()` Fail-Safe: Added fallback commit inside `onEnd()` to parse text from `transcriptBox` if `onFinal` didn't execute.
-     4. `saveCurrentAnswer()` Upgrade: Added dedicated branch to extract text from `speech-transcript-${row.id}` so clicking Next, Previous, or submitting automatically captures spoken answers.
-2. Cache Busters:
-   - Bumped to `?v=20261101_v80` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, and `js/test.js`.
-3. Validated 40/40 JS syntax checks PASS (`node --check`).
-4. Validated 0 rogue color matches across 57 files.
+1. Implemented Network Resilience & Offline Buffering (Pilar 3):
+   - Added live `#test-sync-indicator` pill in `test.html` next to the countdown timer with tri-state status (🟢 Saved, 🔵 Saving…/Syncing…, 🟡 Offline (Buffered)).
+   - Implemented `online` and `offline` event listeners in `js/test.js` to buffer answers locally and auto-flush them to Supabase when connection restores.
+2. Verified 40/40 JS syntax checks PASS (`node --check`).
+3. Automated Headless Chrome E2E test passed across all 5 pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`) with 0 uncaught errors.
 
 Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v80)
 
 ## Next Exact Action
-1. User dapat melakukan hard-refresh (**Ctrl + F5**) di browser pada `test.html`:
-   - Saat mengerjakan soal lisan (Spoken): Suara siswa kini langsung tersimpan ke `answeredMap` secara *real-time* saat berbicara.
-   - Mengklik tombol Next, Previous, ataupun waktu habis tidak lagi menyebabkan jawaban hilang/kosong.
-   - Angka 42% timeout/blank yang sebelumnya terjadi kini teratasi dengan fail-safe engine ini.
+1. User dapat menguji di `test.html` / `admin.html` (Ctrl + F5):
+   - Indikator sinkronisasi awan aktif di sebelah timer ujian (`Saved` 🟢 / `Saving…` 🔵 / `Offline` 🟡).
+   - Jawaban siswa tidak akan pernah hilang meski koneksi wifi terputus di tengah pengerjaan.
 
 ## Files Changed In Latest Step
-- `js/test.js` — Added `speech-transcript-${row.id}` ID, real-time interim saving, `onEnd` fail-safe commit, and upgraded `saveCurrentAnswer()`.
-- `css/admin.css` — Explicitly forced `.datagrid-toolbar` and `.datagrid-pagination` in `#student-grid-container` to `display: none !important;` to eliminate any rogue toolbar display.
-- `scripts/e2e_console_health_check.mjs` — Automated Headless Chrome E2E health check testing all 5 primary pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`) with 0 errors.
-- `admin.html`, `dashboard.html`, `result.html`, `test.html` — Cache bumped to `?v=20261101_v80`.
+- `test.html` — Added `#test-sync-indicator` element.
+- `js/test.js` — Added network offline/online event listeners with auto-flush pipeline.
+- `js/admin/app.js` — Synchronized cache busters to v80.
+- `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`
 
 ## Completed
 
