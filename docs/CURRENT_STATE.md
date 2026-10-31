@@ -1,33 +1,36 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-31 19:15 UTC+8
+Last Updated: 2026-11-01 00:20 UTC+8
 
-Current Phase: Phase 234: Forensic Audit, 770 Synthetic Dummies Purge, Real Exam Scores Restoration & Clean Milestone Parity [COMPLETE]
+Current Phase: Phase 235: Pure Academic Data Restoration, Elimination of All Forgiven & Remedial Overrides, and Exact Parity Realignment [COMPLETE]
 
-Current Task: Completed user directive: (1) Conducted comprehensive forensic audit of all attempts across Batch 133 in 3rd Vocabulary. (2) Accurately distinguished real-time genuine student attempts from synthetic override attempts. (3) Safely backed up all 2,250 attempts to `scripts/full_attempts_backup_before_purge.json`. (4) Deleted all 770 synthetic dummy attempts (0 answers, 0 duration, created at 01:50, 02:15, and 02:39 UTC) from Supabase. (5) Verified and restored `is_best_score = true` on genuine attempts from students. (6) Verified all 23 real attempts taken today on Test 39 & 40 (Syazida, Aunul, Gagan, Ari, Wardatul, Masyan, Shelia, Asmul, Nurhaliza, Risma, Tiara, Laura, Asti, Sofa Maria, Suke, Pasya) are 100% intact with real answers and scores. (7) Restricted `isPrereqTest` strictly to `display_order <= 38`, ensuring Milestone Destination Exams (Test 39 & 40) display pure real scores with NO red F superscript. (8) Restored PTS to cumulative exam points across all completed exams. (9) Cache bumped to v70. All tests PASS.
+Current Task: Completed user `/goal` directive: (1) Stripped `forgiven_student_ids` from ALL 40 tests in `3rd Vocabulary` in Supabase database. (2) Removed all ad-hoc Forgiven and Remedial override logic, toolbar buttons, row triggers, and red `^F` superscript renderers. (3) Restored authentic test progression (PROG %): only tests with genuine submitted attempts increment progress. (4) Restored genuine theme summary columns (`SCORE THEME %`, `TOT EXAM PTS`): unattempted themes render clean unattempted dashes (`·`) instead of 0% or `0%^F`. (5) Preserved 100% genuine student exam and quiz scores, points, and grades without artificial inflation or synthetic overrides. (6) Bumped cache busters across all assets to `?v=20261101_v71`. All 40 JS files passed syntax validation, 27/27 SW manifest verified, and 100% parity tests PASS.
 
 Status: COMPLETE (All requirements satisfied & all tests PASS)
 
 ## Next Exact Action
-1. All changes committed and pushed to git remote.
+1. Changes committed and pushed to git remote.
 2. User dapat hard-refresh di browser (Ctrl + F5):
    - Di `admin.html#class-hub?tab=attendance`:
-     - 770 attempt dummy telah bersih dihapus dari database.
-     - Seluruh nilai riil siswa kembali 100% utuh sesuai jawaban mereka di `attempt_answers`.
-     - Tes 1 s/d 38: Nilai asli tetap terjaga; nilai < 60% memiliki tanda superscript F merah (`59%ᶠ`), nilai >= 60% tampil bersih.
-     - Exam 39 & 40 (Milestone Exams): Menampilkan nilai ujian asli tanpa superscript F.
-     - Kolom PTS mencerminkan akumulasi total poin riil dari seluruh ujian yang telah diselesaikan.
-     - PROG siswa 95% (98% / 100%), seluruh siswa 100% eligible masuk Exam 39 & 40.
+     - Tampilan bersih murni: tombol "Forgive" dan tanda superscript `^F` merah telah dihapus total.
+     - Tes yang belum pernah diambil siswa tampil dengan tanda titik tengah netral (`·`), bukan `0%ᶠ` atau angka merah.
+     - Nilai ujian dan kuis siswa tampil murni sesuai persentase dan poin asli yang diperolehnya.
+     - Tema yang belum pernah diambil (misal Theme B/C/D untuk siswa yang baru selesai Theme A) tampil `·`, bukan 0%.
+     - Nilai PROG siswa mencerminkan progres penyelesaian sesungguhnya (misal Muhammad Tarmizi yang baru ikut 9 tes tampil 23%, bukan 95%).
+     - Akumulasi poin PTS dan Grade murni dari ujian yang telah diselesaikan.
 
 ## Files Changed In Latest Step
-- `js/admin/app.js` — Restricted `isPrereqTest` to `display_order <= 38`, passed `isForgiven: !hasRealAtt` to prevent unattempted prerequisite themes from acting as academic failures, restored `totalEarnedScore` to `mastery.cumulativePoints`.
-- `js/admin/student-management.js` — Synchronized `totalEarnedScore` and `pts` to `cumulativePoints` for 100% roster/Class Hub parity.
-- `admin.html` — Cache bumped to `?v=20261031_v70`.
-- `dashboard.html` — Cache bumped to `?v=20261031_v70`.
+- `js/admin/app.js` — Removed `isPrereqTest` fake completion branching; removed `btn-override-prereq-matrix`, row trigger buttons, and `^F: Forgiven` legend; purged `_openClassOverridePrereqModal`; restored pure cell renderers and theme calculations.
+- `css/admin.css` — Removed `.test-forgiven-sup` and `.asm-score-forgiven`.
+- `js/api.js` — Removed `forgiven_student_ids` checks from prerequisite guards and removed payload update logic.
+- `js/dashboard.js` — Cleaned up `forgiven_student_ids` references; preserved tutor live session direct access rule.
+- `supabase/functions/start-test/index.ts` — Cleaned up `forgiven_student_ids` checks.
 - Database:
-  - Purged 770 synthetic dummy attempts from `attempts`.
-  - Re-evaluated `is_best_score = true` for remaining genuine attempts across 301 student-test pairs.
-  - Cleared `forgiven_student_ids` on Test 39 payload to `[]`.
+  - Cleaned `forgiven_student_ids` from all tests payload.
+  - Reset `correct_count` anomalies on 13 zero-answer attempts.
+  - Synchronized `is_best_score = true` across 1,480 attempts.
+- `admin.html`, `dashboard.html`, `result.html` — Cache bumped to `?v=20261101_v71`.
+- `docs/CHANGELOG.md`, `docs/CURRENT_STATE.md`, `docs/SESSION_LOG.md`
 - `docs/CHANGELOG.md`, `docs/CURRENT_STATE.md`, `docs/SESSION_LOG.md`
 
 ## Completed

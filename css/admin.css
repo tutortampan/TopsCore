@@ -3950,22 +3950,7 @@ body.sidebar-collapsed .admin-main {
   line-height: 0 !important;
 }
 
-.test-forgiven-sup {
-  font-size: 0.60em !important;
-  color: #FF0000 !important;
-  font-weight: 900 !important;
-  margin-left: 0.5px !important;
-  vertical-align: super !important;
-  line-height: 0 !important;
-  text-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
-}
 
-.asm-score-forgiven {
-  color: #FF0000 !important;
-  font-weight: 800 !important;
-  text-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
-  letter-spacing: 0.02em;
-}
 
 .badge-remedial-tag {
   background: rgba(255, 255, 0, 0.12) !important;

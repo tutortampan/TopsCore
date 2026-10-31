@@ -1,3 +1,46 @@
+## [2026-11-01 00:15] — Phase 235: Pure Academic Data Restoration, Elimination of All Forgiven & Remedial Overrides, and Exact Parity Realignment
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 235
+**Status:** PASS
+
+### Why
+- Completed user `/goal` directive: *"masih belum pulih, cek ulang semua siswa yang mendapatkan niali hasil exam resmi, dan juga quiz mereka, hapus semua perubahan berupa Forgiven atau Remedial, buat nialai ujian semurni mungkin, lakukan dengan teliti dan hati2. hilangakn niali yang bukan hasil siswa murni.. perbaiki efek override/forgiven. hilangkan dulu efeknya, lalucek ulang sampai benar2 benar hitungannya,"*
+- The ad-hoc "Forgiven" (`^F`) system previously injected `forgiven_student_ids` across Tests 1–38 in `tests.payload`, rendered unattempted tests as `0%^F`, inflated progress (PROG) to 95%–100% for students who only completed a few tests, and forced unattempted themes to render 0% instead of clean unattempted dashes (`·`).
+- The user directed to eliminate all artificial forgiven markers and fake remedial overrides, restoring the system to pure, genuine student results.
+
+### Changed
+- Database & Data Integrity (Supabase):
+  - Stripped `forgiven_student_ids` from ALL 40 tests in `3rd Vocabulary` (0 tests remain with forgiven payload).
+  - Cleaned leftover synthetic `correct_count` anomalies on 13 zero-answer attempts to 0.
+  - Re-evaluated and synchronized `is_best_score = true` across 1,480 attempts so every `(student_id, test_id)` pair has exactly one true best attempt.
+  - Verified 0 attempts remain with `is_remedial_unlocked: true` or `grade: 'F'`.
+- `js/admin/app.js`:
+  - Removed artificial `isPrereqTest` branching in Step 3 calculation. Only genuine submitted attempts increment `completedCount` and enter `studentExamEntries`.
+  - Restored true PROG %: `Math.round((completedCount / totalClassTests) * 100)`. Students who completed 9 tests now accurately show 23% PROG, not an inflated 95%.
+  - Removed `btn-override-prereq-matrix` (Forgive button), student row trigger buttons (`⚡`), and `^F: Forgiven` from table toolbar and legend.
+  - Removed `_openClassOverridePrereqModal` override generator.
+  - Cell renderers (Exam SCORE, Exam PTS, Quiz): unattempted tests cleanly render `&middot;` (`·`) instead of red `0%^F`. Submitted attempts render natural percentages and earned points with official grade colors.
+  - Theme calculations (`SCORE THEME %`, `TOT EXAM PTS`): unattempted themes naturally render `·` instead of `0%^F`.
+- `css/admin.css`:
+  - Purged `.test-forgiven-sup` and `.asm-score-forgiven` CSS classes.
+- `js/api.js`:
+  - Removed `forgiven_student_ids` payload updates and checks from prerequisite gating and sequential words exam guards.
+- `js/dashboard.js`:
+  - Removed `isPrereqForgiven`, `isWordsForgiven`, and `isQuizForgiven` references. Preserved clean live session rule (`isSessLive`) allowing direct entry when tutor actively unlocks the session.
+- `supabase/functions/start-test/index.ts`:
+  - Removed `forgiven_student_ids` checks from server-side prerequisite gating.
+- Cache busters:
+  - Bumped `admin.html`, `dashboard.html`, `result.html`, and `app.js` to `?v=20261101_v71`.
+
+### Tests
+- 40/40 JS syntax checks PASS (`node scripts/check_all_js_syntax.cjs`).
+- 27/27 service worker cache manifest assets verified.
+- 100% student dashboard parity and standings PASS.
+- Full Batch 133 simulation verified exact, pure scores and progress across all 22 active students.
+
+---
+
 ## [2026-10-31 19:15] — Phase 234: Forensic Audit, 770 Synthetic Dummies Purge, Real Exam Scores Restoration & Clean Milestone Parity
 
 **Agent/Session:** Antigravity

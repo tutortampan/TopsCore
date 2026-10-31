@@ -803,11 +803,7 @@ export async function startTest(studentId, testId) {
     const reqScore = (asmData.minimum_required_score && parseFloat(asmData.minimum_required_score) > 0)
       ? parseFloat(asmData.minimum_required_score)
       : 60;
-    const isPrereqForgiven = Boolean(
-      asmData.payload?.forgiven_student_ids?.includes(studentId) ||
-      prereqAttempts?.some(a => a.is_forgiven || a.grade === 'F')
-    );
-    const hasPassed = isPrereqForgiven || (prereqAttempts && prereqAttempts.some(a => (parseFloat(a.percentage || a.score || 0)) >= reqScore));
+    const hasPassed = Boolean(prereqAttempts && prereqAttempts.some(a => (parseFloat(a.percentage || a.score || 0)) >= reqScore));
     if (!hasPassed) {
       const pErr = new Error(`Prerequisite not completed. You must score at least ${reqScore}% on the prerequisite test.`);
       pErr.code = 'PREREQUISITE_NOT_MET';
@@ -856,11 +852,7 @@ export async function startTest(studentId, testId) {
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
 
       const reqScore = asmData.minimum_required_score || 60;
-      const isWordsForgiven = Boolean(
-        wordsExam.payload?.forgiven_student_ids?.includes(studentId) ||
-        wordsAttempts?.some(a => a.is_forgiven || a.grade === 'F')
-      );
-      const hasPassedWords = isWordsForgiven || (wordsAttempts || []).some(att => {
+      const hasPassedWords = (wordsAttempts || []).some(att => {
         const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
         return pct >= reqScore;
       });
@@ -3106,34 +3098,7 @@ export async function adminOverridePrerequisitesWithRemedial({
     }
   }
 
-  // 6.5. Update forgiven_student_ids in tests.payload for all affected prerequisite tests
-  if (affectedStudentSet.size > 0 && prerequisiteTests.length > 0) {
-    try {
-      for (const t of prerequisiteTests) {
-        if (affectedTestSet.has(t.id)) {
-          const forgivenForThisTest = finalStudentIds.filter(sId => {
-            const key = `${sId}_${t.id}`;
-            const atts = attemptsByStudentTest[key] || [];
-            const bestPct = atts.reduce((best, a) => {
-              const st = String(a.status || '').toLowerCase();
-              if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return best;
-              return Math.max(best, Number(a.effective_score ?? a.percentage ?? 0));
-            }, -1);
-            if (bestPct >= fillScore) return false; // Natural pass (Syazida) protected
-            return true;
-          });
 
-          const payload = t.payload || {};
-          const existingForgiven = Array.isArray(payload.forgiven_student_ids) ? payload.forgiven_student_ids : [];
-          const mergedForgiven = [...new Set([...existingForgiven, ...forgivenForThisTest])];
-          payload.forgiven_student_ids = mergedForgiven;
-          await sb.from('tests').update({ payload, updated_at: nowIso }).eq('id', t.id);
-        }
-      }
-    } catch (forgiveErr) {
-      console.warn('[adminOverridePrerequisitesWithRemedial] Forgiven student payload update warning:', forgiveErr);
-    }
-  }
 
   // 7. Whitelist and Unlock Test Sessions if requested
   if (unlockLiveSessions && targetExams.length > 0) {

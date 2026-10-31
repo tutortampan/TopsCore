@@ -368,11 +368,11 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter,
   adminOverridePrerequisitesWithRemedial
-} from '../api.js?v=20261031_v63';
+} from '../api.js?v=20261101_v71';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.4.7';
 import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.4.7';
 import { getSupabase } from '../supabase.js?v=5.4.7';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261031_v54';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261101_v71';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.4.7';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.4.7';
 import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=5.4.7';
@@ -386,7 +386,7 @@ import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal,
 import { renderCurriculum } from './curriculum-management.js?v=5.4.8';
 import { renderClassesHub } from './classes-hub.js?v=5.4.7';
 import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.4.7';
-import { openStudentFullEdit } from './student-management.js?v=20261031_v54';
+import { openStudentFullEdit } from './student-management.js?v=20261101_v71';
 import { renderStudentsRegistration } from './student-registration.js?v=20261031_v47';
 
     // -- Primary Tab Switching Variables --
@@ -1286,52 +1286,29 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             const rawPct = bestAtt ? (bestAtt.percentage != null ? Number(bestAtt.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
             const hasRealAtt = bestAtt && ['submitted','auto_submitted','evaluated','graded'].includes(String(bestAtt?.status||'').toLowerCase());
 
-            const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
-
-            let effEarned = 0;
-            let effPct = 0;
-
-            if (isPrereqTest) {
-              if (hasRealAtt && rawPct >= 60) {
-                // Natural pass!
-                effEarned = rawEarned;
-                effPct = rawPct;
-              } else {
-                // Forgiven! Real score preserved, but Grade F
-                effEarned = hasRealAtt ? rawEarned : 0;
-                effPct = hasRealAtt ? rawPct : 0;
-              }
-              // Rule: tests 1 to 38 are completed or forgiven, fulfilling progression toward Exam 39 & 40
+            if (hasRealAtt) {
               completedCount++;
+              const isRem = Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial);
+              const effEarned = isRem ? Math.min(rawEarned, totalQ * 0.6) : rawEarned;
+              const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+
               if (isWeeklyExam(asm)) {
                 studentExamEntries.push({
                   test: asm,
                   effPoints: effEarned,
                   effPct,
-                  totalQ,
-                  isForgiven: !hasRealAtt
+                  totalQ
                 });
               }
-            } else {
-              // Milestone Destination Exams (Test 39 & 40)
-              effEarned = hasRealAtt ? rawEarned : 0;
-              effPct = hasRealAtt ? rawPct : 0;
-              if (hasRealAtt) {
-                completedCount++;
-                if (isWeeklyExam(asm)) {
-                  studentExamEntries.push({
-                    test: asm,
-                    effPoints: effEarned,
-                    effPct,
-                    totalQ
-                  });
-                }
-              }
-            }
 
-            rowScoreSortVals[`test_${asm.id}`] = (hasRealAtt || isPrereqTest) ? effEarned : -1;
-            rowScoreSortVals[`test_${asm.id}_pts`] = (hasRealAtt || isPrereqTest) ? effEarned : -1;
-            rowScoreSortVals[`test_${asm.id}_pct`] = (hasRealAtt || isPrereqTest) ? effPct : -1;
+              rowScoreSortVals[`test_${asm.id}`] = effEarned;
+              rowScoreSortVals[`test_${asm.id}_pts`] = effEarned;
+              rowScoreSortVals[`test_${asm.id}_pct`] = effPct;
+            } else {
+              rowScoreSortVals[`test_${asm.id}`] = -1;
+              rowScoreSortVals[`test_${asm.id}_pts`] = -1;
+              rowScoreSortVals[`test_${asm.id}_pct`] = -1;
+            }
           });
 
           const totalClassTests = classTests.length || 40;
@@ -1579,10 +1556,6 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window._panAttendanceMatrix(-400)" title="Pan Left" style="padding:2px 8px; font-size:0.75rem; height:24px; line-height:1;">◀</button>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window._panAttendanceMatrix(400)" title="Pan Right" style="padding:2px 8px; font-size:0.75rem; height:24px; line-height:1;">▶</button>
                       </div>
-
-                      <button type="button" class="btn btn-warning btn-sm btn-override-prereq-matrix" id="btn-override-prereq-matrix" style="padding:2px 10px; font-size:0.72rem; height:24px; font-weight:700; background:rgba(239, 68, 68, 0.16); color:#f87171; border:1px solid rgba(239, 68, 68, 0.4); border-radius:4px; display:inline-flex; align-items:center; gap:5px; cursor:pointer;" title="Forgive prasyarat quiz/exam siswa (Grade F 0 pts) agar bisa mengikuti exam target">
-                        <span>⚡</span> <span>Forgive</span>
-                      </button>
                     </div>
 
                     <div style="display:flex; align-items:center; gap:10px; font-size:0.68rem; color:#94a3b8;">
@@ -1593,7 +1566,6 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#00FFFF; font-weight:800;">PHR</span> Phrase</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">PTS</span> Points</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">SCORE</span> %</span>
-                      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FF0000; font-weight:900; font-size:0.75rem;">F</span> Forgiven</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FFFF00; font-weight:800; font-size:0.75rem;">ᴿ</span> Remedi</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span class="grade-circle grade-circle-star" style="width:16px !important; height:16px !important; min-width:16px !important; min-height:16px !important; font-size:0.6rem !important;">★</span> ★ (100%)</span>
                     </div>
@@ -1902,7 +1874,6 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                 targetAsms.forEach(asm => {
                   const att = row.asmScores?.[asm.id];
                   const fallbackMax = getAsmExpectedMax(asm);
-                  const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
 
                   if (att) {
                     const st = String(att.status || '').toLowerCase();
@@ -1912,14 +1883,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       studentThemeMaxQ += totalQ;
                       const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
                       themeEarned += sc;
-                      return;
                     }
-                  }
-                  if (isPrereqTest) {
-                    hasAtt = true;
-                    studentThemeMaxQ += fallbackMax;
-                  } else {
-                    studentThemeMaxQ += fallbackMax;
                   }
                 });
 
@@ -2016,48 +1980,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                       const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
 
-                      if (isPrereqTest) {
-                        if (hasRealAtt && rawPct >= 60) {
-                          // Natural Pass!
-                          const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(rawPct) : '#00c000ff';
-                          return `
-                            <span class="asm-score asm-score-test"
-                                  style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                                  ${clickAttr}
-                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${Math.round(rawPct)}% (Natural Pass)&#10;Click to open result">
-                              ${Math.round(rawPct)}%
-                            </span>
-                          `;
-                        } else {
-                          // Forgiven (Grade F)! Real score preserved, superscript F
-                          const effPct = hasRealAtt ? Math.max(0, rawPct) : 0;
-                          const effRound = Math.round(effPct);
-                          const color = effPct > 0 && typeof getGradeColorByScore === 'function'
-                            ? getGradeColorByScore(effPct)
-                            : '#FF0000';
-                          return `
-                            <span class="asm-score asm-score-test asm-score-forgiven"
-                                  style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                                  ${clickAttr}
-                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;🔓 [FORGIVEN] Score: ${effRound}% | Grade: F&#10;Click to open result">
-                              ${effRound}%<sup class="test-forgiven-sup">F</sup>
-                            </span>
-                          `;
-                        }
-                      }
-
-                      // Milestone Destination Exams (Test 39 & 40)
-                      const isQueued = row.includedExamIds && row.includedExamIds.has(asm.id);
                       if (!att) {
-                        if (isQueued) {
-                          return `
-                            <span class="asm-score asm-score-test"
-                                  style="color:${TOPSCORE_COLORS.E}; cursor:default; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Unattempted (Pending milestone exam counted as 0%)">
-                              0%
-                            </span>
-                          `;
-                        }
                         return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       }
                       const st = String(att.status || '').toLowerCase();
@@ -2068,26 +1991,23 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                         }
                       }
                       if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
-                        if (isQueued) {
-                          return `
-                            <span class="asm-score asm-score-test"
-                                  style="color:${TOPSCORE_COLORS.E}; cursor:default; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Unattempted (Pending milestone exam counted as 0%)">
-                              0%
-                            </span>
-                          `;
-                        }
                         return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       }
+
+                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                      const roundPct = Math.round(effPct);
                       const color = typeof getGradeColorByScore === 'function'
-                        ? getGradeColorByScore(rawPct)
-                        : (rawPct >= 60 ? '#FFFF00' : '#FF0000');
+                        ? getGradeColorByScore(effPct)
+                        : (effPct >= 60 ? '#FFFF00' : '#FF0000');
+                      const remSup = isRem ? '<sup class="asm-rem-sup">R</sup>' : '';
+
                       return `
                         <span class="asm-score asm-score-test"
                               style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
                               ${clickAttr}
-                              title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${Math.round(rawPct)}%&#10;Click to open result">
-                          ${Math.round(rawPct)}%
+                              title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${roundPct}%&#10;Click to open result">
+                          ${roundPct}%${remSup}
                         </span>
                       `;
                     }
@@ -2118,42 +2038,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
 
                       const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
 
-                      if (isPrereqTest) {
-                        const effEarned = hasRealAtt ? rawEarned : 0;
-                        const cleanSc = Math.round(effEarned * 10) / 10;
-                        const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
-                        const color = effEarned > 0 && typeof getGradeColorByScore === 'function'
-                          ? getGradeColorByScore(rawPct)
-                          : (effEarned > 0 ? '#FFFF00' : '#94a3b8');
-                        const attId = att?.id || att?.attempt_id;
-                        const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                        const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-                        return `
-                          <span class="asm-score asm-score-test"
-                                style="color:${color}; ${cursorStyle}"
-                                ${clickAttr}
-                                title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${displayVal}/${totalQ} pts">
-                            <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;">
-                              ${displayVal}
-                            </span>
-                          </span>
-                        `;
-                      }
-
-                      // Milestone Destination Exams (Test 39 & 40)
-                      const isQueued = row.includedExamIds && row.includedExamIds.has(asm.id);
                       if (!att) {
-                        if (isQueued) {
-                          return `
-                            <span class="asm-score asm-score-test"
-                                  style="color:${TOPSCORE_COLORS.E}; cursor:default;"
-                                  title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Pending milestone exam: 0/${totalQ} pts">
-                              <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;">
-                                0
-                              </span>
-                            </span>
-                          `;
-                        }
                         return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       }
                       const st = String(att.status || '').toLowerCase();
@@ -2164,32 +2049,26 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                         }
                       }
                       if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
-                        if (isQueued) {
-                          return `
-                            <span class="asm-score asm-score-test"
-                                  style="color:${TOPSCORE_COLORS.E}; cursor:default;"
-                                  title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Pending milestone exam: 0/${totalQ} pts">
-                              <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;">
-                                0
-                              </span>
-                            </span>
-                          `;
-                        }
                         return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       }
-                      const cleanSc = Math.round(rawEarned * 10) / 10;
+
+                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+                      const effEarned = isRem ? Math.min(rawEarned, totalQ * 0.6) : rawEarned;
+                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                      const cleanSc = Math.round(effEarned * 10) / 10;
                       const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
                       const color = typeof getGradeColorByScore === 'function'
-                        ? getGradeColorByScore(rawPct)
-                        : (rawPct >= 60 ? '#FFFF00' : '#FF0000');
-                      const attId = att.id || att.attempt_id;
+                        ? getGradeColorByScore(effPct)
+                        : (effPct >= 60 ? '#FFFF00' : '#FF0000');
+                      const attId = att?.id || att?.attempt_id;
                       const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                       const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+
                       return `
                         <span class="asm-score asm-score-test"
                               style="color:${color}; ${cursorStyle}"
                               ${clickAttr}
-                              title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${displayVal}/${totalQ} pts&#10;Click to open result">
+                              title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${displayVal}/${totalQ} pts">
                           <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;">
                             ${displayVal}
                           </span>
@@ -2227,53 +2106,25 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                       const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
 
-                      if (isPrereqTest) {
-                        if (hasRealAtt && rawPct >= 60) {
-                          // Natural Pass!
-                          const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(rawPct) : '#00c000ff';
-                          return `
-                            <span class="asm-score asm-score-task"
-                                  style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                                  ${clickAttr}
-                                  title="${num}. [QUIZ] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${Math.round(rawPct)}% (Natural Pass)&#10;Click to view result">
-                              ${Math.round(rawPct)}%
-                            </span>
-                          `;
-                        } else {
-                          // Forgiven (Grade F)! Real score preserved, superscript F
-                          const effPct = hasRealAtt ? Math.max(0, rawPct) : 0;
-                          const effRound = Math.round(effPct);
-                          const color = effPct > 0 && typeof getGradeColorByScore === 'function'
-                            ? getGradeColorByScore(effPct)
-                            : '#FF0000';
-                          return `
-                            <span class="asm-score asm-score-task asm-score-forgiven"
-                                  style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                                  ${clickAttr}
-                                  title="${num}. [QUIZ] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;🔓 [FORGIVEN] Score: ${effRound}% | Grade: F&#10;Click to view result">
-                              ${effRound}%<sup class="test-forgiven-sup">F</sup>
-                            </span>
-                          `;
-                        }
-                      }
-
                       if (!att) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       const st = String(att.status || '').toLowerCase();
                       if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
                       if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
 
-                      const cleanSc = Math.round(rawEarned * 2) / 2;
-                      const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
+                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                      const roundPct = Math.round(effPct);
                       const color = typeof getGradeColorByScore === 'function'
-                        ? getGradeColorByScore(rawPct)
-                        : (rawPct >= 60 ? '#FFFF00' : '#FF0000');
+                        ? getGradeColorByScore(effPct)
+                        : (effPct >= 60 ? '#FFFF00' : '#FF0000');
+                      const remSup = isRem ? '<sup class="asm-rem-sup">R</sup>' : '';
 
                       return `
                         <span class="asm-score asm-score-task"
                               style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
                               ${clickAttr}
-                              title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${Math.round(rawPct)}% (${displayVal}/${totalQ} pts)&#10;Click to view result">
-                          ${Math.round(rawPct)}%
+                              title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${roundPct}%&#10;Click to view result">
+                          ${roundPct}%${remSup}
                         </span>
                       `;
                     }
@@ -2455,14 +2306,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     filteredData.forEach(s => {
                       const att = s.asmScores?.[asmId];
                       if (att && ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(att.status || '').toLowerCase())) {
-                        // Skip forgiven attempts from class average (they contribute 0 pts)
-                        const targetAsmForForgiven = classTests.find(a => a.id === asmId);
-                        const maxQ = getAsmExpectedMax(targetAsmForForgiven);
+                        const targetAsmForAvg = classTests.find(a => a.id === asmId);
+                        const maxQ = getAsmExpectedMax(targetAsmForAvg);
                         const tq = Number(att.total_questions || maxQ || 50);
                         const sc = att.score != null ? Math.min(Number(att.score), tq) : 0;
                         const rawPct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (sc / tq) * 100 : 0);
-                        // att is already confirmed submitted at this point; no forgiven exclusion needed
-                        // (forgiven students without attempts have no att here, so they're naturally excluded)
                         count++;
                         const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                         const maxRemPts = tq * 0.6;
@@ -2700,11 +2548,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                   sortable: true,
                   width: '140px',
                   render: (val, row) => `
-                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:135px; display:flex; align-items:center; justify-content:space-between; gap:2px;" title="${escapeHtml(row.displayName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Student has remedial score' : ''}">
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:135px; display:flex; align-items:center; gap:2px;" title="${escapeHtml(row.displayName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Student has remedial score' : ''}">
                       <span style="color:var(--clr-text-1); font-size:var(--matrix-font-size, 0.75rem); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
                         ${escapeHtml(row.displayName)}
                       </span>
-                      <button type="button" class="btn-override-student-trigger" data-sid="${row.id}" data-sname="${escapeHtml(row.displayName)}" style="background:transparent; border:none; color:#f87171; cursor:pointer; font-size:0.72rem; padding:0 2px; opacity:0.65; flex-shrink:0; line-height:1; transition:opacity 0.15s;" title="Forgive prerequisite untuk ${escapeHtml(row.displayName)} (Grade F 0 pts & Buka Exam)" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.65'">⚡</button>
                     </div>
                   `
                 },
@@ -2911,41 +2758,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             });
           }
 
-          // Override Prerequisite Button & Single-Student Row Triggers
-          const btnOverride = document.getElementById('btn-override-prereq-matrix');
-          if (btnOverride && !btnOverride._overrideBound) {
-            btnOverride._overrideBound = true;
-            btnOverride.addEventListener('click', () => {
-              window._openClassOverridePrereqModal({
-                classId,
-                className,
-                currentClass,
-                classTests,
-                classStudents: (activeBatchStudents && activeBatchStudents.length > 0) ? activeBatchStudents : classStudents,
-                allBatches
-              });
-            });
-          }
 
-          const gridEl = document.getElementById('class-attendance-grid');
-          if (gridEl && !gridEl._overrideBound) {
-            gridEl._overrideBound = true;
-            gridEl.addEventListener('click', (e) => {
-              const btn = e.target.closest('.btn-override-student-trigger');
-              if (!btn) return;
-              e.stopPropagation();
-              const sId = btn.dataset.sid;
-              window._openClassOverridePrereqModal({
-                classId,
-                className,
-                currentClass,
-                classTests,
-                classStudents: activeBatchStudents || classStudents,
-                allBatches,
-                preselectedStudentId: sId
-              });
-            });
-          }
         }
         window._classHubCache[classId] = { timestamp: Date.now() };
 
@@ -2956,293 +2769,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
     }
     window.renderClassHub = renderClassHub;
 
-    // ── CLASS HUB OVERRIDE PREREQUISITE & REMEDIAL MODAL ──
+    // ── CLASS HUB OVERRIDE PREREQUISITE & REMEDIAL MODAL (DISABLED FOR PURE ACADEMIC DATA) ──
     window._openClassOverridePrereqModal = function(opts = {}) {
-      const {
-        classId = window._selectedClassId,
-        className = window._selectedClassName || 'Vocabulary',
-        currentClass = null,
-        classTests = [],
-        classStudents = [],
-        allBatches = [],
-        preselectedStudentId = null
-      } = opts;
-
-      // ── Helpers ──────────────────────────────────────────────
-      const _isExamTest = (asm) => {
-        if (!asm) return false;
-        const t = String(asm.test_type || asm.type || '').toLowerCase();
-        if (t === 'exam') return true;
-        if (t === 'quiz') return false;
-        const c = String(asm.category || asm.payload?.tier || asm.payload?.category || '').toUpperCase();
-        if (c === 'EXAM') return true;
-        if (c === 'QUIZ' || c === 'TASK') return false;
-        const shell = String(asm.shell_code || asm.payload?.shell_code || '').toUpperCase();
-        if (shell.endsWith('-EXAM') || shell.includes('-EXAM-')) return true;
-        if (shell.endsWith('-QUIZ') || shell.includes('-QUIZ-')) return false;
-        if (shell.endsWith('-TEST') || shell.includes('-TEST-')) return true;
-        if (shell.endsWith('-TASK') || shell.includes('-TASK-')) return false;
-        return false;
-      };
-
-      const sortedTests = (classTests || []).slice().sort((a, b) => (a.display_order ?? 999) - (b.display_order ?? 999));
-      const activeBatches = (allBatches || []).filter(b => b.is_active !== false);
-      const initialScope = preselectedStudentId ? 'single' : 'all';
-
-      // Build checklist rows for every test
-      const testRows = sortedTests.map((t, idx) => {
-        const isExamItem = _isExamTest(t);
-        const label = escapeHtml(t.shell_code || t.title || `Test ${idx + 1}`);
-        const theme = (t.payload?.theme_code || '').toUpperCase();
-        const typeTag = isExamItem
-          ? `<span style="background:rgba(239,68,68,0.18); color:#f87171; border:1px solid rgba(239,68,68,0.35); padding:1px 5px; border-radius:3px; font-size:0.67rem; font-weight:800; letter-spacing:0.03em;">EXAM</span>`
-          : `<span style="background:rgba(59,130,246,0.18); color:#93c5fd; border:1px solid rgba(59,130,246,0.35); padding:1px 5px; border-radius:3px; font-size:0.67rem; font-weight:800; letter-spacing:0.03em;">QUIZ</span>`;
-        const themeTag = theme
-          ? `<span style="background:rgba(168,85,247,0.18); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:1px 5px; border-radius:3px; font-size:0.67rem; font-weight:700;">${escapeHtml(theme)}</span>`
-          : '';
-        return `
-          <label class="override-test-row" data-testid="${t.id}" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:5px; cursor:pointer; transition:background 0.1s;" onmouseover="this.style.background='rgba(250,204,21,0.06)'" onmouseout="this.style.background='transparent'">
-            <input type="checkbox" class="override-test-cb" value="${t.id}" style="cursor:pointer; accent-color:#facc15; width:15px; height:15px; flex-shrink:0;" checked>
-            <span style="display:flex; align-items:center; gap:5px; flex:1; min-width:0;">
-              ${typeTag}${themeTag}
-              <span style="font-size:0.8rem; color:#e2e8f0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${label}">${label}</span>
-            </span>
-          </label>`;
-      }).join('');
-
-      let modal = document.getElementById('modal-class-override-prereq');
-      if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'modal-class-override-prereq';
-        modal.className = 'modal-backdrop';
-        modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.82); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:99999; padding:16px;';
-        document.body.appendChild(modal);
-      }
-
-      modal.innerHTML = `
-        <div class="modal-box" style="background:#0f172a; border:1px solid rgba(250,204,21,0.35); border-radius:12px; width:100%; max-width:660px; max-height:94vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,0.9);">
-
-          <!-- Header -->
-          <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:flex-start; background:rgba(239,68,68,0.08); flex-shrink:0;">
-            <div>
-              <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(239,68,68,0.18); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:4px; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:5px;">
-                ⚡ TUTOR FORGIVENESS &bull; ${escapeHtml(className)}
-              </div>
-              <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#ffffff;">Bypass Prasyarat (Grade F — Forgiven)</h3>
-              <div style="font-size:0.76rem; color:#94a3b8; margin-top:2px;">Bebaskan prasyarat ujian dengan status <strong style="color:#FF0000;">F (Forgiven)</strong>. Nilai 0 Poin, tidak dihitung di progres maupun akumulasi skor, namun membuka akses ujian target.</div>
-            </div>
-            <button type="button" id="btn-close-override-modal" style="color:#94a3b8; font-size:1.3rem; padding:2px 8px; line-height:1; cursor:pointer; background:none; border:none;">&times;</button>
-          </div>
-
-          <!-- Body (scrollable) -->
-          <div style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:0;">
-
-            <!-- Section A: Student Scope -->
-            <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06);">
-              <div style="font-size:0.73rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">A. Siswa Target</div>
-              <div style="display:flex; flex-direction:column; gap:7px;">
-                <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#e2e8f0; cursor:pointer;">
-                  <input type="radio" name="override_scope" value="all" ${initialScope === 'all' ? 'checked' : ''} style="accent-color:#ef4444; cursor:pointer;">
-                  <span><strong>Semua Siswa</strong> (${classStudents.length} siswa terdaftar di kelas)</span>
-                </label>
-                <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#e2e8f0; cursor:pointer;">
-                  <input type="radio" name="override_scope" value="batch" style="accent-color:#ef4444; cursor:pointer;">
-                  <span><strong>Per Batch</strong></span>
-                </label>
-                <div id="override-batch-select-wrap" style="display:none; padding-left:22px;">
-                  <select id="override-batch-select" style="background:#1e293b; border:1px solid rgba(255,255,255,0.15); color:#ffffff; padding:5px 10px; border-radius:6px; font-size:0.8rem; width:100%;">
-                    ${activeBatches.map(b => `<option value="${b.id}">Batch ${escapeHtml(b.name || b.id)}</option>`).join('')}
-                  </select>
-                </div>
-                <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#e2e8f0; cursor:pointer;">
-                  <input type="radio" name="override_scope" value="single" ${initialScope === 'single' ? 'checked' : ''} style="accent-color:#ef4444; cursor:pointer;">
-                  <span><strong>Siswa Spesifik</strong></span>
-                </label>
-                <div id="override-single-select-wrap" style="display:${initialScope === 'single' ? 'block' : 'none'}; padding-left:22px;">
-                  <select id="override-single-select" style="background:#1e293b; border:1px solid rgba(255,255,255,0.15); color:#ffffff; padding:5px 10px; border-radius:6px; font-size:0.8rem; width:100%;">
-                    ${classStudents.map(s => `<option value="${s.id}" ${s.id === preselectedStudentId ? 'selected' : ''}>${escapeHtml(s.displayName || s.name || 'Unknown')} (${escapeHtml(s.batch || s.batches?.name || 'No Batch')})</option>`).join('')}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <!-- Section B: Test Checklist -->
-            <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06);">
-              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                <div style="font-size:0.73rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">B. Pilih Kuis / Ujian yang Di-forgive (Bypass)</div>
-                <div style="display:flex; gap:6px;">
-                  <button type="button" id="btn-check-all-tests" style="background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.3); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">✓ Semua</button>
-                  <button type="button" id="btn-check-quizzes-only" style="background:rgba(59,130,246,0.12); color:#93c5fd; border:1px solid rgba(59,130,246,0.3); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">Quiz Saja</button>
-                  <button type="button" id="btn-check-exams-only" style="background:rgba(239,68,68,0.18); color:#fca5a5; border:1px solid rgba(239,68,68,0.4); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">Exam Saja</button>
-                  <button type="button" id="btn-uncheck-all-tests" style="background:rgba(255,255,255,0.06); color:#94a3b8; border:1px solid rgba(255,255,255,0.15); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">✗ Hapus</button>
-                </div>
-              </div>
-              <div id="override-test-checklist" style="max-height:220px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:4px 4px; background:rgba(0,0,0,0.25);">
-                ${sortedTests.length > 0 ? testRows : '<div style="padding:12px; color:#64748b; font-size:0.8rem; text-align:center;">Tidak ada tes ditemukan di kelas ini.</div>'}
-              </div>
-              <div id="override-selected-count" style="font-size:0.72rem; color:#94a3b8; margin-top:5px; text-align:right;">${sortedTests.length} tes dipilih</div>
-            </div>
-
-            <!-- Section C: Options -->
-            <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; gap:8px;">
-              <div style="font-size:0.73rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:2px;">C. Opsi Forgiveness</div>
-              <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.8rem; color:#cbd5e1; cursor:pointer;">
-                <input type="checkbox" id="override-only-empty" style="cursor:pointer; margin-top:2px; accent-color:#ef4444;">
-                <span><strong>Hanya Siswa Tanpa Nilai (Belum Pernah Ikut):</strong> Jika dicentang, hanya tes yang belum memiliki riwayat ujian yang akan di-forgive. Jika tidak dicentang (default), tes yang belum pernah ikut maupun yang nilainya belum lulus (&lt; 60%) akan di-forgive.</span>
-              </label>
-              <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.8rem; color:#cbd5e1; cursor:pointer;">
-                <input type="checkbox" id="override-unlock-sessions" style="cursor:pointer; margin-top:2px; accent-color:#ef4444;">
-                <span><strong>Buka Sesi Ujian Langsung:</strong> Daftarkan siswa ke whitelist sesi ujian aktif sehingga dapat menekan tombol mulai ujian.</span>
-              </label>
-            </div>
-
-            <!-- Section D: Protection Notice -->
-            <div style="padding:12px 18px; background:rgba(34,197,94,0.06); border-bottom:1px solid rgba(34,197,94,0.15);">
-              <div style="font-size:0.75rem; color:#4ade80; font-weight:700; margin-bottom:4px;">🛡️ Perlindungan Siswa Lulus Mandiri (Rule 2.10)</div>
-              <div style="font-size:0.75rem; color:#94a3b8; line-height:1.5;">
-                • Siswa yang sudah lulus prasyarat (&ge; 60%) secara mandiri (seperti <strong>Syazida</strong>) <strong>TIDAK AKAN DIBERIKAN KODE F</strong> dan nilai aslinya tetap terjaga utuh.<br>
-                • Tes yang di-override akan berstatus <strong style="color:#FF0000;">F (Forgiven - Merah)</strong>, bernilai <strong>0 Pts</strong>, dan <strong>dikecualikan</strong> dari progres (PROG) maupun rata-rata skor (SCORE).<br>
-                • Siswa dijamin 100% dapat langsung membuka dan mengerjakan ujian target di Student Lobby.
-              </div>
-            </div>
-          </div>
-
-          <!-- Footer -->
-          <div style="padding:12px 18px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); flex-shrink:0;">
-            <button type="button" id="btn-cancel-override-modal" style="color:#94a3b8; font-size:0.85rem; cursor:pointer; background:none; border:none;">Batal</button>
-            <button type="button" id="btn-execute-override" style="font-weight:800; font-size:0.85rem; padding:8px 22px; background:#ef4444; color:#ffffff; border:none; border-radius:6px; display:inline-flex; align-items:center; gap:8px; cursor:pointer; box-shadow:0 4px 14px rgba(239,68,68,0.4);">
-              <span>🔓</span> <span>Forgive</span>
-            </button>
-          </div>
-        </div>
-      `;
-
-      modal.style.display = 'flex';
-
-      // ── Close handlers ──────────────────────────────────────
-      const closeModal = () => { modal.style.display = 'none'; };
-      modal.querySelector('#btn-close-override-modal').onclick = closeModal;
-      modal.querySelector('#btn-cancel-override-modal').onclick = closeModal;
-      modal.onclick = (e) => { if (e.target === modal) closeModal(); };
-
-      // ── Scope radio toggles ──────────────────────────────────
-      const scopeRadios = modal.querySelectorAll('input[name="override_scope"]');
-      const batchWrap   = modal.querySelector('#override-batch-select-wrap');
-      const singleWrap  = modal.querySelector('#override-single-select-wrap');
-      scopeRadios.forEach(r => {
-        r.onchange = () => {
-          const val = modal.querySelector('input[name="override_scope"]:checked')?.value;
-          if (batchWrap)  batchWrap.style.display  = (val === 'batch')  ? 'block' : 'none';
-          if (singleWrap) singleWrap.style.display = (val === 'single') ? 'block' : 'none';
-        };
-      });
-
-      // ── Checklist bulk-select buttons ───────────────────────
-      const allCbs = () => modal.querySelectorAll('.override-test-cb');
-      const countLabel = modal.querySelector('#override-selected-count');
-      const updateCount = () => {
-        const checked = modal.querySelectorAll('.override-test-cb:checked').length;
-        if (countLabel) countLabel.textContent = `${checked} dari ${sortedTests.length} tes dipilih`;
-      };
-      // Listen to individual cb changes
-      modal.querySelector('#override-test-checklist').addEventListener('change', updateCount);
-
-      modal.querySelector('#btn-check-all-tests').onclick = () => {
-        allCbs().forEach(cb => { cb.checked = true; });
-        updateCount();
-      };
-      modal.querySelector('#btn-uncheck-all-tests').onclick = () => {
-        allCbs().forEach(cb => { cb.checked = false; });
-        updateCount();
-      };
-      modal.querySelector('#btn-check-quizzes-only').onclick = () => {
-        allCbs().forEach(cb => {
-          const row = cb.closest('.override-test-row');
-          const tId = row?.dataset.testid;
-          const tObj = sortedTests.find(t => t.id === tId);
-          cb.checked = tObj ? !_isExamTest(tObj) : false;
-        });
-        updateCount();
-      };
-      modal.querySelector('#btn-check-exams-only').onclick = () => {
-        allCbs().forEach(cb => {
-          const row = cb.closest('.override-test-row');
-          const tId = row?.dataset.testid;
-          const tObj = sortedTests.find(t => t.id === tId);
-          cb.checked = tObj ? _isExamTest(tObj) : false;
-        });
-        updateCount();
-      };
-
-      // ── Execute button ───────────────────────────────────────
-      const btnExec = modal.querySelector('#btn-execute-override');
-      if (btnExec) {
-        btnExec.onclick = async () => {
-          try {
-            // 1. Collect selected test IDs from checklist
-            const selectedTestIds = [...modal.querySelectorAll('.override-test-cb:checked')].map(cb => cb.value);
-            if (selectedTestIds.length === 0) {
-              showToast('Pilih minimal 1 tes untuk di-override.', 'warning');
-              return;
-            }
-
-            // 2. Resolve student IDs from scope
-            const scopeVal = modal.querySelector('input[name="override_scope"]:checked')?.value || 'all';
-            let targetStudentIds = [];
-
-            if (scopeVal === 'all') {
-              targetStudentIds = classStudents.map(s => s.id);
-            } else if (scopeVal === 'batch') {
-              const bId = modal.querySelector('#override-batch-select')?.value;
-              targetStudentIds = classStudents.filter(s => (s.batch_id || s._raw?.batch_id) === bId).map(s => s.id);
-            } else if (scopeVal === 'single') {
-              const sId = modal.querySelector('#override-single-select')?.value;
-              if (sId) targetStudentIds = [sId];
-            }
-
-            if (!targetStudentIds || targetStudentIds.length === 0) {
-              showToast('Tidak ada siswa yang dipilih.', 'warning');
-              return;
-            }
-
-            const onlyEmpty   = modal.querySelector('#override-only-empty')?.checked === true;
-            const unlockSess  = modal.querySelector('#override-unlock-sessions')?.checked === true;
-
-            btnExec.disabled = true;
-            btnExec.innerHTML = `<span>⏳</span> <span>Forgiving...</span>`;
-
-            const res = await adminOverridePrerequisitesWithRemedial({
-              classId,
-              studentIds: targetStudentIds,
-              selectedTestIds,          // specific test IDs from checklist
-              targetScorePercent: 60,
-              onlyFillEmpty: onlyEmpty,
-              unlockLiveSessions: unlockSess
-            });
-
-            closeModal();
-
-            showToast(
-              `⚡ Bypass Prasyarat Berhasil! Status Forgiven (F) diterapkan untuk ${res.affectedStudentsCount} siswa pada ${res.affectedTestsCount} tes.`,
-              'success'
-            );
-
-            // Clear cache and re-render
-            if (window._classHubCache) delete window._classHubCache[classId];
-            const contentArea = document.getElementById('admin-content-area');
-            if (contentArea && typeof window.renderClassHub === 'function') {
-              await window.renderClassHub(contentArea);
-            }
-          } catch (err) {
-            console.error('[Override Prerequisite Error]:', err);
-            showToast('Gagal menerapkan override: ' + (err?.message || 'Unknown error'), 'error');
-            if (btnExec) {
-              btnExec.disabled = false;
-              btnExec.innerHTML = `<span>🔓</span> <span>Forgive</span>`;
-            }
-          }
-        };
-      }
+      return;
     };
 
 
@@ -4446,7 +3975,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261031_v54');
+      const sm = await import('./student-management.js?v=20261101_v71');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }

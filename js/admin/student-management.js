@@ -70,7 +70,7 @@ export async function renderStudents(area) {
     adminFetchAll('programs', 'id, name, institution_id, is_active'),
     adminFetchAll('batches', 'id, name, program_id, is_active, current_level_id'),
     adminFetchAll('assignments', 'student_id, batch_id, test_id').catch(() => []),
-    adminFetchAll('tests', 'id, title, test_type, shell_code, payload, total_questions, display_order, category, level_id, class_id, levels(name, level_number)').catch(() => []),
+    adminFetchAll('tests', 'id, title, test_type, shell_code, payload, display_order, category, level_id, class_id, levels(name, level_number)').catch(() => []),
     adminFetchAll('classes', 'id, name, is_active').catch(() => [])
   ]);
   const levelsMap = new Map();
@@ -303,10 +303,7 @@ export async function renderStudents(area) {
         : (typeof getGradeColor === 'function' ? getGradeColor(globalGrade) : TOPSCORE_COLORS.STAR);
     }
 
-    // ── Per-Class Stats (Phase 214 & Phase 217) ─────────────────────────────
-    // For each active class, compute Score %, Grade, and Total PTS strictly
-    // from the EXAMS in that class (Rule 2.7, 2.8, 2.10 & User Directive:
-    // "taruh saja total point dari SEMUA Exam di kelas Vocab yang diikuti").
+    // ── Per-Class Stats (User Directive: 4 Exam columns matching each theme's total exam points) ──
     const perClassFinal = new Map();
 
     classesMap.forEach((cls, cId) => {
@@ -316,16 +313,35 @@ export async function renderStudents(area) {
       const classExams = classAllTests.filter(t => isWeeklyExam(t));
       const targetExams = classExams.length > 0 ? classExams : classAllTests;
 
-      const studentClassExamEntries = [];
-      targetExams.forEach(examTest => {
-        const best = bestByAsm.get(examTest.id);
-        if (best) {
-          studentClassExamEntries.push({
-            test: examTest,
-            effPoints: best.score,
-            effPct: best.percentage,
-            totalQ: best.totalQuestions
-          });
+      // Group exams into 4 themes: A (Exam 1), B (Exam 2), C (Exam 3), D (Exam 4)
+      const themeCodes = ['A', 'B', 'C', 'D'];
+      const themePoints = {};
+      let totalExamPts = 0;
+      let hasAnyExamAtt = false;
+
+      themeCodes.forEach(tc => {
+        const examsInTheme = targetExams.filter(t => 
+          t.payload?.theme_code === tc || 
+          (t.shell_code && (t.shell_code.includes(`-${tc}-`) || t.shell_code.startsWith(`3${tc}-`)))
+        );
+
+        let earned = 0;
+        let hasAttInTheme = false;
+        examsInTheme.forEach(ex => {
+          const best = bestByAsm.get(ex.id);
+          if (best && best.score != null) {
+            hasAttInTheme = true;
+            earned += Number(best.score);
+          }
+        });
+
+        if (hasAttInTheme) {
+          hasAnyExamAtt = true;
+          const cleanEarned = Math.round(earned * 10) / 10;
+          themePoints[tc] = cleanEarned;
+          totalExamPts += cleanEarned;
+        } else {
+          themePoints[tc] = null;
         }
       });
 
@@ -337,42 +353,14 @@ export async function renderStudents(area) {
       const hasProgressInClass = (allProgress || []).some(p => p.student_id === s.id && p.class_id === cId);
       const isEnrolledInClass = hasAttemptsInClass || hasProgressInClass;
 
-      if (!isEnrolledInClass && studentClassExamEntries.length === 0) {
+      if (!isEnrolledInClass && !hasAnyExamAtt) {
         return; // Student doesn't belong to this class, leave undefined so table shows '—'
       }
 
-      if (studentClassExamEntries.length > 0) {
-        const classMastery = (typeof computeMilestoneExamMastery === 'function')
-          ? computeMilestoneExamMastery(studentClassExamEntries, targetExams)
-          : {
-              totalPoints: studentClassExamEntries.reduce((acc, c) => acc + (c.effPoints || 0), 0),
-              overallScore: Math.round(studentClassExamEntries.reduce((acc, c) => acc + (c.effPct || 0), 0) / studentClassExamEntries.length),
-              grade: '—',
-              completedExamCount: studentClassExamEntries.length
-            };
-
-        const effScorePct = classMastery.overallScore;
-        const ptsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(effScorePct) : '#94a3b8';
-
-        perClassFinal.set(cId, {
-          completed: studentClassExamEntries.length,
-          totalTests: targetExams.length,
-          avgPct: effScorePct,
-          grade: classMastery.grade,
-          pts: classMastery.cumulativePoints != null ? classMastery.cumulativePoints : classMastery.totalPoints,
-          color: ptsColor
-        });
-      } else {
-        // Enrolled or started quizzes but no completed exams yet
-        perClassFinal.set(cId, {
-          completed: 0,
-          totalTests: targetExams.length,
-          avgPct: null,
-          grade: '—',
-          pts: null,
-          color: '#94a3b8'
-        });
-      }
+      perClassFinal.set(cId, {
+        themes: themePoints,
+        totalPts: hasAnyExamAtt ? Math.round(totalExamPts * 10) / 10 : null
+      });
     });
 
 
@@ -457,15 +445,16 @@ export async function renderStudents(area) {
       joinDate,
       phone: s.phone || s.phone_number || '—',
       email: s.email || '—',
-      perClassFinal   // Map<classId, {completed,totalTests,avgPct,grade,pts,color}>
+      perClassFinal   // Map<classId, {themes, totalPts}>
     };
 
-    // Flatten per-class metrics so DataGrid can search & sort seamlessly
+    // Flatten per-class theme exam metrics so DataGrid can search & sort seamlessly
     perClassFinal.forEach((cs, cId) => {
-      rowObj[`_cls_score_${cId}`] = cs.avgPct ?? -1;
-      rowObj[`_cls_grade_${cId}`] = cs.grade ?? '—';
-      rowObj[`_cls_pts_${cId}`] = cs.pts ?? -1;
-      rowObj[`_cls_tests_${cId}`] = cs.completed ?? 0;
+      rowObj[`_cls_exam1_${cId}`] = cs.themes?.['A'] ?? -1;
+      rowObj[`_cls_exam2_${cId}`] = cs.themes?.['B'] ?? -1;
+      rowObj[`_cls_exam3_${cId}`] = cs.themes?.['C'] ?? -1;
+      rowObj[`_cls_exam4_${cId}`] = cs.themes?.['D'] ?? -1;
+      rowObj[`_cls_pts_${cId}`] = cs.totalPts ?? -1;
     });
 
     return rowObj;
@@ -969,7 +958,7 @@ export async function renderStudents(area) {
               <div class="d-flex align-center gap-2 flex-wrap">
                 <h3 style="margin: 0; font-size: 1.2rem; color: var(--fm-text-primary, #f8fafc); font-weight: 800;">${escapeHtml(rec.displayName || rec.name)}</h3>
                 <span class="badge ${rec.is_active !== false ? 'badge-success' : 'badge-neutral'}" style="font-size: 0.7rem;">${rec.is_active !== false ? 'Active' : 'Inactive'}</span>
-                <span class="badge badge-info" style="font-size: 0.7rem;">${genderIcon} ${escapeHtml(rec.gender || '—')}</span>
+                <span class="badge badge-info" style="font-size: 0.7rem;">${escapeHtml(rec.gender || '—')}</span>
               </div>
               <div class="text-xs text-muted" style="margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                 <span>🏛️ ${escapeHtml(rec.instName)}</span> &bull; 
@@ -1721,75 +1710,77 @@ export async function renderStudents(area) {
     .filter(Boolean)
     .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-  // Build dynamic per-class DataGrid column definitions
+  // Build dynamic per-class DataGrid column definitions: 4 Exam columns matching each theme's total exam points
   const perClassColDefs = activeClassColumns.flatMap(cls => [
     {
-      key: `_cls_score_${cls.id}`,
-      label: 'Score',
+      key: `_cls_exam1_${cls.id}`,
+      label: 'Exam 1',
       sortable: true,
       align: 'center',
-      width: '68px',
+      width: '75px',
       _classId: cls.id,
       render: (row) => {
         const cs = row.perClassFinal?.get(cls.id);
-        if (!cs || cs.avgPct === null) return `<span class="text-muted" style="font-size:0.72rem;">—</span>`;
-        return `<span class="fw-700" style="font-size:0.85rem;color:${cs.color};">${cs.avgPct}%</span>`;
+        const pts = cs?.themes?.['A'];
+        if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+        const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+        return `<div class="fw-700" style="font-size:0.82rem;color:var(--clr-text-1);" title="Theme A Total Exam Points: ${formatted}">${formatted}<span style="font-size:0.58rem;color:#94a3b8;font-weight:normal;"> pts</span></div>`;
       }
     },
     {
-      key: `_cls_grade_${cls.id}`,
-      label: 'Grd',
+      key: `_cls_exam2_${cls.id}`,
+      label: 'Exam 2',
       sortable: true,
       align: 'center',
-      width: '52px',
+      width: '75px',
       _classId: cls.id,
       render: (row) => {
         const cs = row.perClassFinal?.get(cls.id);
-        if (!cs || cs.grade === '—') return `<span class="text-muted" style="font-size:0.72rem;">—</span>`;
-        const isStar = cs.grade === '★' || cs.grade === 'S';
-        if (isStar) return `<span class="grade-circle grade-circle-star" style="font-size:0.8rem;" title="Grade ★ Excellent">★</span>`;
-        const textColor = (TOPSCORE_COLORS && TOPSCORE_COLORS.TEXT_DARK) ? TOPSCORE_COLORS.TEXT_DARK : '#0F172A';
-        return `<span class="grade-circle grade-circle-${cs.grade.toLowerCase()}" style="background:${cs.color};color:${textColor};font-weight:800;font-size:0.78rem;" title="Grade ${cs.grade}">${cs.grade}</span>`;
+        const pts = cs?.themes?.['B'];
+        if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+        const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+        return `<div class="fw-700" style="font-size:0.82rem;color:var(--clr-text-1);" title="Theme B Total Exam Points: ${formatted}">${formatted}<span style="font-size:0.58rem;color:#94a3b8;font-weight:normal;"> pts</span></div>`;
       }
     },
     {
-      key: `_cls_pts_${cls.id}`,
-      label: 'PTS',
+      key: `_cls_exam3_${cls.id}`,
+      label: 'Exam 3',
       sortable: true,
       align: 'center',
-      width: '65px',
+      width: '75px',
       _classId: cls.id,
       render: (row) => {
         const cs = row.perClassFinal?.get(cls.id);
-        if (!cs || cs.pts === null) return `<span class="text-muted" style="font-size:0.72rem;">—</span>`;
-        const formatted = (cs.pts % 1 !== 0) ? cs.pts.toFixed(1) : cs.pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:${cs.color};">${formatted}<span style="font-size:0.58rem;color:#94a3b8;font-weight:normal;"> pts</span></div>`;
+        const pts = cs?.themes?.['C'];
+        if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+        const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+        return `<div class="fw-700" style="font-size:0.82rem;color:var(--clr-text-1);" title="Theme C Total Exam Points: ${formatted}">${formatted}<span style="font-size:0.58rem;color:#94a3b8;font-weight:normal;"> pts</span></div>`;
       }
     },
     {
-      key: `_cls_tests_${cls.id}`,
-      label: 'Exams',
+      key: `_cls_exam4_${cls.id}`,
+      label: 'Exam 4',
       sortable: true,
       align: 'center',
-      width: '58px',
+      width: '75px',
       _classId: cls.id,
       render: (row) => {
         const cs = row.perClassFinal?.get(cls.id);
-        const done = cs?.completed ?? 0;
-        const total = cs?.totalTests ?? 0;
-        if (done === 0 && total === 0) return `<span class="text-muted" style="font-size:0.72rem;">—</span>`;
-        return `<div class="fw-600" style="font-size:0.82rem;color:var(--clr-text-1);">${done}<span class="text-muted" style="font-weight:400;font-size:0.72rem;"> / ${total}</span></div>`;
+        const pts = cs?.themes?.['D'];
+        if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+        const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+        return `<div class="fw-700" style="font-size:0.82rem;color:var(--clr-text-1);" title="Theme D Total Exam Points: ${formatted}">${formatted}<span style="font-size:0.58rem;color:#94a3b8;font-weight:normal;"> pts</span></div>`;
       }
     }
   ]);
 
-  // Build superHeaders: span class-name across its 4 sub-columns (Score/Grd/PTS/Exams)
+  // Build superHeaders: span class-name across its 4 exam sub-columns (Exam 1 / Exam 2 / Exam 3 / Exam 4)
   // Plus span blank headers for the fixed columns before (inst/prog/batch/lvl/name/age/gender)
-  // and after (progress/enrolled/status/actions).
+  // and after (enrolled/status/actions).
   const buildSuperHeaders = () => {
     if (activeClassColumns.length === 0) return null;
     const fixed_before = 7; // inst, prog, batch, level, name, age, gender
-    const fixed_after = 4;  // progress, enrolled, status, actions
+    const fixed_after = 3;  // enrolled, status, actions (progress column removed)
     const sh = [];
     sh.push({ label: '', colSpan: fixed_before, style: 'background:var(--clr-bg-2);border:none;' });
     activeClassColumns.forEach(cls => {
@@ -1824,23 +1815,10 @@ export async function renderStudents(area) {
         return direction === 'desc' ? -cmp : cmp;
       }
 
-      // Column-specific comparison
-      if (sortKey.startsWith('_cls_pts_')) {
+      // Column-specific comparison for class exams
+      if (sortKey.includes('_cls_exam') || sortKey.includes('_cls_pts_')) {
         const scA = a[sortKey] ?? -1;
         const scB = b[sortKey] ?? -1;
-        if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
-      } else if (sortKey.startsWith('_cls_score_')) {
-        const scA = a[sortKey] ?? -1;
-        const scB = b[sortKey] ?? -1;
-        if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
-      } else if (sortKey.startsWith('_cls_grade_')) {
-        const rank = { '★': 7, 'S': 7, 'A': 6, 'B': 5, 'C': 4, 'D': 3, 'E': 2, 'F': 1 };
-        const rA = rank[a[sortKey]] || 0;
-        const rB = rank[b[sortKey]] || 0;
-        if (rA !== rB) return direction === 'asc' ? rA - rB : rB - rA;
-      } else if (sortKey.startsWith('_cls_tests_')) {
-        const scA = a[sortKey] ?? 0;
-        const scB = b[sortKey] ?? 0;
         if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
       } else if (sortKey === 'completedTests') {
         const scA = a.completedTests ?? 0;
@@ -2131,17 +2109,16 @@ export async function renderStudents(area) {
         render: (row) => {
           const g = (row.gender || '').trim().toLowerCase();
           if (g === 'male' || g === 'm') {
-            return `<span class="fw-700" style="color:#38bdf8;font-size:0.8rem;" title="Male">&#9794; M</span>`;
+            return `<span class="fw-700" style="color:#38bdf8;font-size:0.8rem;" title="Male">M</span>`;
           }
           if (g === 'female' || g === 'f') {
-            return `<span class="fw-700" style="color:#f472b6;font-size:0.8rem;" title="Female">&#9792; F</span>`;
+            return `<span class="fw-700" style="color:#f472b6;font-size:0.8rem;" title="Female">F</span>`;
           }
           return `<span class="text-muted fw-600" style="font-size:0.8rem;">&mdash;</span>`;
         }
       },
-      // 8–11. Dynamic Per-Class Columns (Score / Grade / PTS / Tests per active class)
-      // Replaces the previous static global Tests / Score / Grade / PTS / Completion columns.
-      // If no active classes have data, falls back to a single Completion column.
+      // 8–11. Dynamic Per-Class Columns (4 Theme Exams per active class)
+      // Replaces the previous static Score / Grade / PTS / Progress columns per user directive.
       ...(perClassColDefs.length > 0 ? perClassColDefs : [
         {
           key: 'completedTests',
@@ -2156,23 +2133,6 @@ export async function renderStudents(area) {
           `
         }
       ]),
-
-      // Completion bar (always shown, compact)
-      {
-        key: 'completionPct',
-        label: 'Progress',
-        sortable: true,
-        align: 'center',
-        width: '95px',
-        render: (row) => `
-          <div class="d-flex align-center gap-2 justify-center" style="min-width:85px;">
-            <div style="flex:1;max-width:55px;background:rgba(255,255,255,0.1);height:5px;border-radius:3px;overflow:hidden;">
-              <div style="width:${row.completionPct}%;background:var(--fm-accent-tactical, #6366f1);height:100%;border-radius:3px;"></div>
-            </div>
-            <span class="text-xs fw-600" style="color:var(--clr-text-2);min-width:28px;">${row.completionPct}%</span>
-          </div>
-        `
-      },
 
       // 12. Joined
       {
