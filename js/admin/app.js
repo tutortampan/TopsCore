@@ -1658,7 +1658,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                       <div class="attendance-theme-pills" id="attendance-theme-pills-container">
                         <span style="font-size:0.7rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em; margin-right:2px;">THEME VIEW:</span>
-                        <button type="button" class="attendance-theme-pill ${(!window._classAttendanceThemeFilter || window._classAttendanceThemeFilter === 'ALL') ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('ALL')" data-theme="ALL">🌐 ALL (EXAMS ONLY)</button>
+                        <button type="button" class="attendance-theme-pill ${(!window._classAttendanceThemeFilter || window._classAttendanceThemeFilter === 'ALL') ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('ALL')" data-theme="ALL" title="Combined Exam Totals (Score & Points) for All Themes">🌐 ALL (EXAM TOTALS)</button>
                         <button type="button" class="attendance-theme-pill theme-a ${window._classAttendanceThemeFilter === 'A' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('A')" data-theme="A">🟦 THEME A (8)</button>
                         <button type="button" class="attendance-theme-pill theme-b ${window._classAttendanceThemeFilter === 'B' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('B')" data-theme="B">🟪 THEME B (10)</button>
                         <button type="button" class="attendance-theme-pill theme-c ${window._classAttendanceThemeFilter === 'C' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('C')" data-theme="C">🟧 THEME C (12)</button>
@@ -1934,7 +1934,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
           const themeContainer = document.getElementById('attendance-theme-pills-container');
           if (themeContainer) {
             const btnAll = themeContainer.querySelector('[data-theme="ALL"]');
-            if (btnAll) btnAll.textContent = `🌐 ALL (EXAMS ONLY)`;
+            if (btnAll) btnAll.textContent = `🌐 ALL (EXAM TOTALS)`;
             const btnA = themeContainer.querySelector('[data-theme="A"]');
             if (btnA) btnA.textContent = `🟦 THEME A (${themeAsmCounts['A'] || 8})`;
             const btnB = themeContainer.querySelector('[data-theme="B"]');

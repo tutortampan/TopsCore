@@ -3675,12 +3675,17 @@ body.sidebar-collapsed .admin-main {
   line-height: 1.1;
   height: 20px;
   color: #ffffff !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 20 !important;
+  background: #0b1120 !important;
 }
 
 #class-attendance-grid th.super-hdr-student {
   position: sticky !important;
+  top: 0 !important;
   left: 0 !important;
-  z-index: 30 !important;
+  z-index: 35 !important;
   background: #0b1120 !important;
   color: #ffffff !important;
   border-right: 3px solid rgba(56, 189, 248, 0.75) !important;
@@ -3688,28 +3693,28 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid th.super-hdr-theme-a {
-  background: rgba(56, 189, 248, 0.12);
+  background: #111e38 !important;
   color: #ffffff !important;
   border-right: 3px solid #38bdf8 !important;
   border-top: 2px solid #38bdf8;
 }
 
 #class-attendance-grid th.super-hdr-theme-b {
-  background: rgba(168, 85, 247, 0.12);
+  background: #1e1338 !important;
   color: #ffffff !important;
   border-right: 3px solid #c084fc !important;
   border-top: 2px solid #c084fc;
 }
 
 #class-attendance-grid th.super-hdr-theme-c {
-  background: rgba(245, 158, 11, 0.12);
+  background: #271a0b !important;
   color: #ffffff !important;
   border-right: 3px solid #fbbf24 !important;
   border-top: 2px solid #fbbf24;
 }
 
 #class-attendance-grid th.super-hdr-theme-d {
-  background: rgba(16, 185, 129, 0.12);
+  background: #0d231a !important;
   color: #ffffff !important;
   border-right: 3px solid #34d399 !important;
   border-top: 2px solid #34d399;
@@ -3721,6 +3726,11 @@ body.sidebar-collapsed .admin-main {
   line-height: 1.1;
   height: 22px;
   color: #ffffff !important;
+  position: sticky !important;
+  top: 20px !important;
+  z-index: 18 !important;
+  background: #0b1120 !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Sticky Student Info Columns on the Left */
@@ -3730,7 +3740,10 @@ body.sidebar-collapsed .admin-main {
 
 #class-attendance-grid thead th.col-sticky {
   background: #0b1120 !important;
-  z-index: 20 !important;
+  position: sticky !important;
+  top: 20px !important;
+  z-index: 32 !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
 #class-attendance-grid tbody td.col-sticky {
@@ -5044,7 +5057,9 @@ tfoot.datagrid-tfoot,
 
 .roster-table-scroll {
   flex: 1 !important;
+  max-height: 380px !important;
   overflow-y: auto !important;
+  position: relative !important;
 }
 
 .roster-table {
@@ -5057,7 +5072,18 @@ tfoot.datagrid-tfoot,
 }
 
 .roster-table th {
-  padding: 8px 0 !important;
+  padding: 8px 12px !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) !important;
 }
 
 .modal-box-add-class {
