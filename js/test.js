@@ -1208,9 +1208,51 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       const display = document.getElementById('timer-display');
       timerEl.classList.remove('warning', 'critical');
 
+
+    let _lastRemainingSeconds = 0;
+    function updatePacingBadge(remainingSeconds) {
+      if (remainingSeconds != null) _lastRemainingSeconds = remainingSeconds;
+      const badge = document.getElementById('test-pacing-indicator');
+      const valEl = document.getElementById('test-pacing-val');
+      if (!badge || !valEl) return;
+
+      const total = (allAnswerRows && allAnswerRows.length > 0) ? allAnswerRows.length : (answerRows?.length || 1);
+      const answered = Object.keys(answeredMap || {}).filter(k => {
+        const v = answeredMap[k];
+        return v !== undefined && v !== null && String(v).trim() !== '';
+      }).length;
+      const unanswered = Math.max(0, total - answered);
+
+      if (unanswered === 0) {
+        badge.className = 'test-pacing-badge pace-comfortable';
+        badge.title = 'All questions answered! Review before submitting.';
+        valEl.textContent = 'Done! ✓';
+        badge.classList.remove('hidden');
+        return;
+      }
+
+      const secPerQ = Math.round(_lastRemainingSeconds / Math.max(1, unanswered));
+      badge.classList.remove('hidden', 'pace-comfortable', 'pace-moderate', 'pace-urgent');
+
+      if (secPerQ >= 30) {
+        badge.classList.add('pace-comfortable');
+        badge.title = `Comfortable Pace: ~${secPerQ}s per question remaining (${unanswered} questions left)`;
+        valEl.textContent = `~${secPerQ}s/q`;
+      } else if (secPerQ >= 15) {
+        badge.classList.add('pace-moderate');
+        badge.title = `Moderate Pace: ~${secPerQ}s per question remaining (${unanswered} questions left)`;
+        valEl.textContent = `~${secPerQ}s/q`;
+      } else {
+        badge.classList.add('pace-urgent');
+        badge.title = `Urgent Pace: ~${secPerQ}s per question remaining! Speed up or skip difficult questions. (${unanswered} questions left)`;
+        valEl.textContent = `⚡ ~${secPerQ}s/q`;
+      }
+    }
+
       timerController = startCountdown(activeEndAt.toISOString(), {
         onTick(remaining) {
           display.textContent = formatTime(remaining);
+          updatePacingBadge(remaining);
         },
         onWarning(remaining) {
           if (remaining <= 120) {
