@@ -1618,6 +1618,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           <div class="speech-question-text" style="font-size:clamp(18px, 4.5vw, 26px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
             ${escapeHtml(questionText)}
           </div>
+          ${displayType ? `<div style="font-size:10px; font-weight:800; letter-spacing:0.08em; color:#fbbf24; margin-top:4px; text-transform:uppercase; background:rgba(251,191,36,0.12); padding:1px 8px; border-radius:4px; border:1px solid rgba(251,191,36,0.25);">[ ${escapeHtml(displayType)} ]</div>` : ''}
         `;
         upperGroup.appendChild(questionBox);
 
@@ -1672,6 +1673,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           <div class="speech-question-text" style="font-size:clamp(20px, 5vw, 26px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
             ${escapeHtml(questionText)}
           </div>
+          ${displayType ? `<div style="font-size:10px; font-weight:800; letter-spacing:0.08em; color:#fbbf24; margin-top:4px; text-transform:uppercase; background:rgba(251,191,36,0.12); padding:1px 8px; border-radius:4px; border:1px solid rgba(251,191,36,0.25);">[ ${escapeHtml(displayType)} ]</div>` : ''}
         `;
         main.appendChild(questionBox);
 
