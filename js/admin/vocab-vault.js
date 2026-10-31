@@ -746,9 +746,9 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
       const circle = el.querySelector('span');
       const isActive = stepNum === currentStep;
       const isDone = stepNum < currentStep;
-      circle.style.background = isActive ? 'var(--clr-primary)' : isDone ? 'rgba(16,185,129,0.6)' : 'rgba(255,255,255,0.1)';
+      circle.style.background = isActive ? 'var(--clr-primary)' : isDone ? 'rgba(0,192,0,0.6)' : 'rgba(255,255,255,0.1)';
       circle.style.color = (isActive || isDone) ? '#fff' : 'var(--clr-text-3)';
-      el.style.color = isActive ? 'var(--clr-primary)' : isDone ? '#10b981' : 'var(--clr-text-3)';
+      el.style.color = isActive ? 'var(--clr-primary)' : isDone ? '#00c000ff' : 'var(--clr-text-3)';
     });
     document.getElementById('builder-back-btn').style.display = currentStep > 1 ? '' : 'none';
     document.getElementById('builder-next-btn').innerHTML = currentStep === 4 ? (state.isEdit ? '&#10003; Save Changes' : '&#10003; Create Test') : 'Next →';
@@ -1464,7 +1464,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; gap: 2.5px; align-items: center;">
               <span style="background: rgba(var(--grade-star-rgb, 0, 192, 0), 0.18); color: #86efac; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.verbs} Verbs">${t.verbs}V</span>
-              <span style="background: rgba(234,179,8,0.18); color: #facc15; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.adjs} Adjectives">${t.adjs}A</span>
+              <span style="background: rgba(255,255,0,0.18); color: #FFFF00; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.adjs} Adjectives">${t.adjs}A</span>
               <span style="background: rgba(56,189,248,0.18); color: #38bdf8; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.nouns} Nouns">${t.nouns}N</span>
               <span style="background: rgba(168,85,247,0.18); color: #c084fc; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.phrases} Phrases">${t.phrases}P</span>
             </div>
@@ -1731,7 +1731,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
           <td style="padding:10px 8px; color:var(--clr-text-2);" class="cell-eng-${gi}-${wi}">${escapeHtml(w.english)}</td>
           <td style="padding:10px 8px;"><span class="badge" style="background:rgba(99,102,241,0.15);color:#a5b4fc;font-size:0.72rem;">${escapeHtml(w.topic)}</span></td>
           <td style="padding:10px 8px; text-align:right;">
-            <button class="btn btn-xs btn-keep-this" data-gi="${gi}" data-id="${escapeHtml(w.id)}" style="background:transparent;color:#10b981;border:1px solid #10b981;margin-right:4px;" title="Keep this entry, delete others">&#10003; Keep</button>
+            <button class="btn btn-xs btn-keep-this" data-gi="${gi}" data-id="${escapeHtml(w.id)}" style="background:transparent;color:#00c000ff;border:1px solid #00c000ff;margin-right:4px;" title="Keep this entry, delete others">&#10003; Keep</button>
             <button class="btn btn-danger btn-xs btn-del-this" data-gi="${gi}" data-id="${escapeHtml(w.id)}" title="Delete this entry">&#128465;</button>
           </td>
         </tr>
