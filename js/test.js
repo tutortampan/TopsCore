@@ -2046,7 +2046,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         updateSpeechWordCount = (val) => {
           const words = (val || '').trim().split(/\s+/).filter(Boolean).length;
           const isDone = words >= speechTargetPhraseWords;
-          speechWordCounter.innerHTML = `🎙️ <span style="color:${isDone ? 'var(--clr-success, #00c000ff)' : '#38bdf8'};·font-weight:800;">${words}</span>/${speechTargetPhraseWords} words`.replace('\xb7', ' ');
+          speechWordCounter.innerHTML = `🎙️ <span style="color:${isDone ? 'var(--clr-success, #00c000ff)' : '#38bdf8'}; font-weight:800;">${words}</span> / ${speechTargetPhraseWords} words`;
         };
         updateSpeechWordCount(savedAnswer || '');
         statusEl.appendChild(speechWordCounter);
