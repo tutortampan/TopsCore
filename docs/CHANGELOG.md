@@ -1,3 +1,61 @@
+## [2026-11-01 02:55] — Phase 246: Student Roster Scoped Active/Inactive Counts & Default Active Tab
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 246
+**Status:** PASS
+
+### Why
+- User directive: "angka siswa kayif dan tidakaktif ini sepertinya salah, uang tidak aktif hnaya 2, lalu angaka ini darimana? sertta saat masuk student rooster saya masuk ke panel all student, saya ingi yang pertama terpilih adalah aktif student saja. perbaiaki /goal"
+- Root Cause Identified:
+  1. Topbar status tabs (`Active`, `Inactive`, `All`) were calculating counts across the entire Program `Camp` including historical inactive past batches (`Camp 131` [17], `Camp 132` [8], `Camp 123` [1]), inflating Inactive to 28 and All to 50 instead of scoping to the selected active batch (`Camp 133`).
+  2. In `js/admin/student-management.js`, `currentBatchStatus` defaulted to `'all'` whenever `_filterBatchId` was present (`(window._filterBatchId ? 'all' : 'active')`), forcing the view into `All Students` instead of `Active Students`.
+
+### Changed
+- `js/admin/student-management.js`:
+  - Scoped `rosterScopeStudents` to `window._filterBatchId` (or active batches in program if no specific batch is selected).
+  - Calculated `activeCount`, `inactiveCount`, and `totalCount` strictly from `rosterScopeStudents`. For Batch 133: Active = 22, Inactive = 2 (Mr. Rifky Ahmad & Mr. Muhammad Alif Rezki Rahmansyah), Total = 24.
+  - Set default `currentBatchStatus` to strictly `'active'` so navigating into the student roster always opens the **Active Students** tab first.
+- `js/admin/app.js`:
+  - In route parsing (`#students`), defaults `window._filterBatchStatus` to `'active'` when no subTab is specified in URL params.
+  - In sidebar navigation click handler (`handleSidebarClick`), explicitly resets `window._filterBatchStatus = 'active'` upon clicking any program/batch item in `B — BOARD`.
+- Cache Busters:
+  - Bumped to `?v=20261101_v77`.
+
+### Verification
+- `node scripts/test_student_roster_counts_and_active_default.mjs`: PASS (Active: 22, Inactive: 2, Total: 24, Default tab: 'active').
+- `node scripts/check_all_js_syntax.cjs`: PASS (All 40 JS files passed syntax validation).
+- `node scripts/check_color_rules.mjs`: PASS (0 color violations).
+
+---
+
+## [2026-11-01 02:55] — Phase 245: Comprehensive Student Difficulty Analysis, Exam Bottleneck Diagnosis & Mobile Anti-Cheat Shielding
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 245
+**Status:** PASS
+
+### Why
+- User request: "analisa kesulitan siswa saat menjawab soal, apa yang seebnarnya bisa diperbaiki. lalu ccek error yang mungkin muncul salam siswa menlanakan test,,, baerikan saya laporan pemetaan dan saran yang kongkrit. [ada gamabar dua, sekali lagi lakukan cross cjeck nilai secara mendlam, lalu berikan analisa yang tepat serta peningkatan apa yangbisa kita terapkan saya mau kamu berikan analisa lengkap danproposal peningkatan /goal"
+
+### Changed
+- `js/test.js`:
+  - Added Mobile Device Guard: On mobile phones (`isMobileDevice`), `window.blur` events are ignored if the document remains visible (`visibilityState === 'visible'`). Prevents virtual keyboard pops, orientation changes, or system toasts from triggering false cheat warnings.
+  - Lengthened cheat countdown grace period from 10s to 25–30s before auto-submit.
+- `js/admin/tests-management.js`:
+  - Upgraded `classifyStudentError` to use `cleanPunctuationAndSymbols` and `parseCorrectAnswers`. Correctly handles hyphenated and spaced compound words (`well-written` vs `well written`) without generating false spelling discrepancies.
+- `docs/CURRENT_STATE.md`:
+  - Updated to Phase 245 with full status summary.
+- Artifact Created:
+  - `STUDENT_DIFFICULTY_AND_EXAM_SYSTEM_PROPOSAL.md`: Exhaustive analytical report with Mermaid diagram, root cause diagnosis, 22-student audit scorecard matching Image 2, and 4 concrete enhancement proposals.
+- Cache Busters:
+  - Bumped to `?v=20261101_v76`.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs`: ALL 40 JS files passed syntax validation (`node --check`).
+- `node scripts/deep_cross_check_batch_133.mjs`: Successfully cross-checked all 22 active students in Batch 133 with 100% parity to database reality.
+
+---
+
 ## [2026-11-01 02:55] — Phase 244: Dynamic Exam Points Coloring & Student Delivery / Scoring Engine Alignment
 
 **Agent/Session:** Antigravity

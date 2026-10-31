@@ -220,7 +220,43 @@ Agent: Antigravity
 
 ---
 
-## SESSION-20261101-0025
+## SESSION-20261101-0255
+
+Start: 2026-11-01 02:40 UTC+8
+End: 2026-11-01 02:55 UTC+8
+Agent: Antigravity
+
+### User Request
+"angka siswa kayif dan tidakaktif ini sepertinya salah, uang tidak aktif hnaya 2, lalu angaka ini darimana? sertta saat masuk student rooster saya masuk ke panel all student, saya ingi yang pertama terpilih adalah aktif student saja. perbaiaki /goal"
+
+### Objective
+1. Explain where the 28 inactive and 50 all student counts originated from (historical batches across Camp program).
+2. Scope the student roster topbar status counts (`Active`, `Inactive`, `All`) strictly to the selected batch (`Camp 133`), yielding Active: 22, Inactive: 2, All: 24.
+3. Fix the default view state upon entering the Student Roster so that **Active Students** (`active`) is always selected first instead of `All Students`.
+4. Run syntax validation, verification test, bump cache busters to `?v=20261101_v77`, and commit.
+
+### Work Performed
+1. Database & Code Investigation:
+   - Queried Supabase: Program `Camp` has 4 batches: `Camp 133` (active, 22 active + 2 inactive), `Camp 132` (inactive, 8 inactive), `Camp 131` (inactive, 17 inactive), `Camp 123` (inactive, 1 inactive).
+   - The topbar tabs were calculating counts on `programStudents` across all batches, totaling 28 inactive and 50 all students.
+   - Meanwhile, the data table was filtered to Batch 133, showing 24 records.
+   - In `student-management.js`, `currentBatchStatus` was defaulting to `'all'` when `_filterBatchId` was present (`(window._filterBatchId ? 'all' : 'active')`), forcing the view into `All Students`.
+2. Fixes Implemented:
+   - `js/admin/student-management.js`:
+     - Introduced `rosterScopeStudents` scoped to `window._filterBatchId` (or active batches in program if no specific batch is selected).
+     - Calculated `activeCount`, `inactiveCount`, and `totalCount` strictly from `rosterScopeStudents`.
+     - Set default `currentBatchStatus` to strictly `'active'`.
+   - `js/admin/app.js`:
+     - Set default status to `'active'` in routing and in `handleSidebarClick`.
+3. Verification:
+   - `node scripts/test_student_roster_counts_and_active_default.mjs`: PASS (Active: 22, Inactive: 2, Total: 24, Default tab: 'active').
+   - `node scripts/check_all_js_syntax.cjs`: PASS (All 40 JS files passed syntax validation).
+   - `node scripts/check_color_rules.mjs`: PASS (0 color violations).
+   - Bumped cache busters across all HTML and JS files to `?v=20261101_v77`.
+
+---
+
+
 
 Start: 2026-11-01 00:01 UTC+8
 End: 2026-11-01 00:25 UTC+8

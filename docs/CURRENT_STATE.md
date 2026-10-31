@@ -2,30 +2,29 @@
 
 Last Updated: 2026-11-01 02:55 UTC+8
 
-Current Phase: Phase 245: Comprehensive Student Difficulty Analysis, Exam Bottleneck Diagnosis & Mobile Anti-Cheat Shielding [COMPLETE]
+Current Phase: Phase 246: Student Roster Scoped Active/Inactive Counts & Default Active Tab [COMPLETE]
 
 Current Task:
-1. Analisa Kesulitan Siswa & Bottlenecks Diagnosis (Gambar 1):
-   - Investigasi 94.746 baris jawaban di Supabase: 42% (2.093 jawaban) adalah Timeouts/Blanks akibat beban 640 soal / 330 menit pada Theme D.
-   - Analisa 5 faktor pedagogis: Konfusi kelas kata (Word Form: 13%), Jebakan tanda hubung/spasi (Well-written vs well written), Semantic Drift / False Friends (remember vs remind, examine vs check), dan STT Acoustic Noise.
-2. Cross-Check Mendalam Nilai 22 Siswa Batch 133 (Gambar 2):
-   - Verifikasi 100% data riil dari 1.325 riwayat pengerjaan siswa: Semua nilai terbukti murni tanpa rekayasa.
-   - Penjelasan disparitas: Model Single Vocab Active Theme mengevaluasi performa tema terakhir yang aktif. Tarmizi baru di Tema A (92% -> Grade A, 137.5 PTS), sedangkan Wardatul/Ari telah menyelesaikan Tema D (74% -> Grade C, 1.412.5 PTS).
-3. Pengamanan Teknis Ujian (Mobile Anti-Cheat Guard):
-   - Mengeliminasi false-positive anti-cheat pada smartphone di `js/test.js`: Event `window.blur` saat keyboard virtual terbuka kini diabaikan jika halaman tetap terlihat (`visibilityState === 'visible'`).
-   - Memperpanjang toleransi hitung mundur cheat alert dari 10 detik menjadi 25–30 detik untuk mencegah auto-submit prematur yang meninggalkan soal kosong.
-4. Koreksi Normalisasi Kesalahan pada Class Hub (`js/admin/tests-management.js`):
-   - Mengintegrasikan `cleanPunctuationAndSymbols` dan `parseCorrectAnswers` ke dalam `classifyStudentError` agar variasi tanda hubung (`well-written` vs `well written`) dievaluasi akurat.
-5. Pembuatan Dokumen Proposal & Analisis Lengkap:
-   - Disusun dokumen resmi `STUDENT_DIFFICULTY_AND_EXAM_SYSTEM_PROPOSAL.md` yang memuat flowchart Mermaid, diagnosis komprehensif, dan 4 pilar proposal peningkatan terintegrasi.
-6. Cache buster dinaikkan ke `?v=20261101_v76` dan seluruh 40 file JS lolos validasi sintaks.
+1. Perbaikan Penghitungan Jumlah Siswa Aktif dan Tidak Aktif di Student Roster (Batch Scope Parity):
+   - **Penyebab Angka 28 Tidak Aktif & 50 Total**: Sebelumnya penghitungan menghitung seluruh batch lampau di Program Camp (`Camp 131` [17], `Camp 132` [8], `Camp 123` [1]), sehingga menggelembungkan angka Inactive ke 28 dan Total ke 50, padahal tabel difilter ke batch aktif (`Camp 133`).
+   - **Perbaikan**: Mengaitkan cakupan (`rosterScopeStudents`) secara ketat pada batch yang dipilih di sidebar (`window._filterBatchId`).
+   - **Hasil Terkoreksi Batch 133**:
+     - `🟢 Active Students`: **22 Siswa** (100% siswa aktif yang mengikuti ujian).
+     - `⚪ Inactive Students`: **2 Siswa** (Mr. Rifky Ahmad & Mr. Muhammad Alif Rezki Rahmansyah, sesuai konfirmasi user: "yang tidak aktif hanya 2").
+     - `👥 All Students`: **24 Siswa** (22 aktif + 2 tidak aktif, tepat cocok dengan badge pencarian `24 RECORDS` pada tabel).
+2. Default Tab Roster Mahasiswa:
+   - Mengubah inisialisasi status filter agar saat pertama kali masuk ke Student Roster, tab yang terpilih secara otomatis adalah **Active Students** (`active`), bukan `All Students`.
+   - Mengamankan routing di `js/admin/app.js` dan klik navigasi sidebar sehingga `window._filterBatchStatus = 'active'` selalu aktif secara konsisten.
+3. Cache buster dinaikkan ke `?v=20261101_v77`.
 
-Status: COMPLETE (All 40 JS syntax checks PASS)
+Status: COMPLETE (All 40 JS syntax checks PASS, Roster test PASS, Color rules PASS)
 
 ## Next Exact Action
 1. User dapat melakukan hard-refresh (**Ctrl + F5**) di browser pada `admin.html`:
-   - Side Panel (Domain B): Sekarang **hanya menampilkan batch aktif** (misal: `Camp 133`). Seluruh batch non-aktif/past (`Camp 132`, `Camp 131`, `Camp 123`, `Hospitality TP-26`, `Hospitality SH-26`) disembunyikan total dari sidebar.
-   - Bersih & Rapi: Sidebar kini fokus hanya pada angkatan yang sedang aktif berjalan.
+   - Buka menu `Camp 133` di sidebar: Tab teratas langsung terpilih di **Active Students** dengan angka **22**.
+   - Tab **Inactive Students** kini menampilkan tepat **2** siswa tidak aktif.
+   - Tab **All Students** kini menampilkan tepat **24** siswa total.
+   - Tabel menampilkan 22 siswa aktif secara bersih dan terfokus.
 
 ## Files Changed In Latest Step
 - `js/admin/app.js` — Updated `loadSidebarPrograms()` and `renderItems()` to filter out inactive batches and eliminate `Past` tags.

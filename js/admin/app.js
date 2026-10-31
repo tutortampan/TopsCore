@@ -4256,8 +4256,8 @@ window._deleteRecord = async (section, id, name) => {
       if (pIds.length > 0 || bIds.length > 0 || studentCount > 0) {
         titleEl.textContent = `Delete Institution "${escapeHtml(name)}"?`;
         msgEl.innerHTML = `
-          <div style="text-align:left; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
-            <div style="font-weight:700; color:#ef4444; font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Hierarchy Alert</div>
+          <div style="text-align:left; background:rgba(255,0,0,0.12); border:1px solid rgba(255,0,0,0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="font-weight:700; color:#FF0000; font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Hierarchy Alert</div>
             <div style="font-size:0.85rem; color:var(--clr-text-1); margin-bottom:6px;">
               This Institution contains <strong>${pIds.length} program(s)</strong>, <strong>${bIds.length} batch(es)</strong>, and <strong>${studentCount} student(s)</strong>.
             </div>

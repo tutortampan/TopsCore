@@ -222,18 +222,18 @@ function openPurgeConfirmationModal(table, id, name, onComplete) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
           <div style="font-size:2rem;line-height:1;">&#9888;&#65039;</div>
           <div>
-            <h3 style="margin:0;font-size:1.25rem;color:#ef4444;font-weight:700;">Permanent Purge Warning</h3>
+            <h3 style="margin:0;font-size:1.25rem;color:#FF0000;font-weight:700;">Permanent Purge Warning</h3>
             <div class="text-xs text-muted">Irreversible Database Action</div>
           </div>
         </div>
 
         <p style="font-size:0.875rem;line-height:1.5;color:#cbd5e1;margin-bottom:1rem;">
-          You are about to permanently purge <strong style="color:#f8fafc;">${escapeHtml(name)}</strong> (<code style="color:#ef4444;">${table}</code>).
+          You are about to permanently purge <strong style="color:#f8fafc;">${escapeHtml(name)}</strong> (<code style="color:#FF0000;">${table}</code>).
           This action will permanently delete this row and cannot be undone.
         </p>
 
         <div style="margin-bottom:1rem;">
-          <label style="font-size:0.75rem;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">
+          <label style="font-size:0.75rem;font-weight:700;color:#FF0000;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">
             Type "CONFIRM" to unlock permanent purge:
           </label>
           <input type="text" class="purge-confirm-input" id="purge-confirm-text" placeholder="CONFIRM" autocomplete="off" />
@@ -475,7 +475,7 @@ export async function renderDataHealth(container) {
       </div>
       <div class="d-flex align-center gap-2" id="sync-heartbeat-badge">
         <span class="heartbeat-dot pulse-emerald" id="health-heartbeat-dot"></span>
-        <span class="text-xs fw-700" id="health-heartbeat-text" style="color:#10b981;">Supabase Live</span>
+        <span class="text-xs fw-700" id="health-heartbeat-text" style="color:#00c000ff;">Supabase Live</span>
       </div>
     </div>
 
@@ -1048,11 +1048,11 @@ export async function renderSettings(area) {
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));gap:1.5rem;align-items:start;">
 
       <!-- 1. The Cost Guard Engine Card (Crucial) -->
-      <div class="antigravity-card p-5" style="border-color:rgba(239,68,68,0.3);box-shadow:0 20px 40px rgba(239,68,68,0.08);">
+      <div class="antigravity-card p-5" style="border-color:rgba(255,0,0,0.3);box-shadow:0 20px 40px rgba(255,0,0,0.08);">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
           <div style="font-size:1.5rem;">&#128737;&#65039;</div>
           <div>
-            <h3 style="font-size:1.1rem;margin:0;color:#ef4444;font-weight:700;">The Cost Guard Engine</h3>
+            <h3 style="font-size:1.1rem;margin:0;color:#FF0000;font-weight:700;">The Cost Guard Engine</h3>
             <div class="text-xs text-muted">Global AI Token Bankruptcy Defense</div>
           </div>
         </div>
@@ -1078,11 +1078,11 @@ export async function renderSettings(area) {
       </div>
 
       <!-- 1.5 Test Security & Anti-Cheat Engine Card -->
-      <div class="antigravity-card p-5" style="border-color:rgba(234, 179, 8, 0.3);box-shadow:0 20px 40px rgba(234, 179, 8, 0.08);">
+      <div class="antigravity-card p-5" style="border-color:rgba(255, 255, 0, 0.3);box-shadow:0 20px 40px rgba(255, 255, 0, 0.08);">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
           <div style="font-size:1.5rem;">🛡️</div>
           <div>
-            <h3 style="font-size:1.1rem;margin:0;color:#eab308;font-weight:700;">Test Security &amp; Anti-Cheat Engine</h3>
+            <h3 style="font-size:1.1rem;margin:0;color:#FFFF00;font-weight:700;">Test Security &amp; Anti-Cheat Engine</h3>
             <div class="text-xs text-muted">Controls for exam-taking integrity</div>
           </div>
         </div>

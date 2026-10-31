@@ -1103,15 +1103,15 @@ export async function renderCentralQuestionImport(area) {
           <div class="text-xs text-muted">Exact Matches (Preserved)</div>
         </div>
         <div class="card p-3" style="flex:1;min-width:130px;background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);text-align:center;">
-          <div style="font-size:1.4rem;font-weight:800;color:#eab308;">${summary.answerChanges}</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#FFFF00;">${summary.answerChanges}</div>
           <div class="text-xs text-muted">Answer Updates</div>
         </div>
         <div class="card p-3" style="flex:1;min-width:130px;background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);text-align:center;">
-          <div style="font-size:1.4rem;font-weight:800;color:#f97316;">${summary.possibleDuplicates}</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#FF8C00;">${summary.possibleDuplicates}</div>
           <div class="text-xs text-muted">Possible Duplicates</div>
         </div>
         <div class="card p-3" style="flex:1;min-width:130px;background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);text-align:center;">
-          <div style="font-size:1.4rem;font-weight:800;color:${summary.invalidWordTypes > 0 ? '#ef4444' : 'var(--clr-text-muted)'};">${summary.invalidWordTypes}</div>
+          <div style="font-size:1.4rem;font-weight:800;color:${summary.invalidWordTypes > 0 ? '#FF0000' : 'var(--clr-text-muted)'};">${summary.invalidWordTypes}</div>
           <div class="text-xs text-muted">Word Type Suggestions</div>
         </div>
       `;
@@ -1120,7 +1120,7 @@ export async function renderCentralQuestionImport(area) {
       let alertHtml = '';
       if (summary.possibleDuplicates > 0) {
         alertHtml += `
-          <div class="alert alert-warning p-3 mb-3 text-xs" style="background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:8px;">
+          <div class="alert alert-warning p-3 mb-3 text-xs" style="background:rgba(255,140,0,0.1);border:1px solid rgba(255,140,0,0.3);border-radius:8px;">
             &#9888;&#65039; <strong>${summary.possibleDuplicates} Possible Duplicate(s) Found:</strong> High similarity detected. Review the comparisons below and choose whether to <em>Use Existing</em> or <em>Create New</em>.
           </div>
         `;
@@ -1152,7 +1152,7 @@ export async function renderCentralQuestionImport(area) {
             </select>
           `;
         } else if (r.duplicateStatus === 'POSSIBLE_DUPLICATE') {
-          statusBadge = `<span class="badge" style="background:#f97316;color:#fff;">Duplicate? (${r.similarityPct}%)</span>`;
+          statusBadge = `<span class="badge" style="background:#FF8C00;color:#fff;">Duplicate? (${r.similarityPct}%)</span>`;
           actionCol = `
             <select class="form-control form-control-sm row-action-choice" data-idx="${idx}">
               <option value="CREATE_NEW" ${r.actionChoice === 'CREATE_NEW' ? 'selected' : ''}>Create New</option>
