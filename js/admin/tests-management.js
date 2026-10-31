@@ -2148,7 +2148,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
             <tbody>
               ${(st.hardestQs20 || []).map((q, idx) => `
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-                  <td style="padding:8px 10px; font-weight:800; color:${idx < 3 ? '#ef4444' : '#fbbf24'}; text-align:center;">#${idx + 1}</td>
+                  <td style="padding:8px 10px; font-weight:800; color:${idx < 3 ? '#FF0000' : '#FFFF00'}; text-align:center;">#${idx + 1}</td>
                   <td style="padding:8px 10px; font-weight:700; color:#f8fafc;">"${esc(q.text)}"</td>
                   <td style="padding:8px 10px;"><span class="badge" style="background:rgba(99,102,241,0.15); color:#a5b4fc; font-size:0.65rem;">${esc(q.wordType)}</span></td>
                   <td style="padding:8px 10px;"><span class="tac-badge ${q.failRate >= 60 ? 'badge-danger-soft' : 'badge-warning-soft'}">${q.failRate}% (${q.fail}/${q.total})</span></td>
