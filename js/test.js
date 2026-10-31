@@ -969,9 +969,53 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           return;
         }
 
-        // V1 Snapshot fallback: ensure every question has a valid section_id
+        // Auto-chunk multi-theme exams (e.g. Theme D cumulative 640 questions) into manageable milestone sections
         if (!testsections || testsections.length === 0) {
-          testsections = [{ id: 'default', title: testData?.title || testData?.test_title || 'Test', section_order: 1 }];
+          const themesMap = new Map();
+          allAnswerRows.forEach(row => {
+            let snap = row.question_snapshot;
+            if (typeof snap === 'string') {
+              try { snap = JSON.parse(snap); } catch { snap = {}; }
+            }
+            const tc = (snap?.theme_code || snap?.theme || '').toUpperCase();
+            if (tc) {
+              if (!themesMap.has(tc)) themesMap.set(tc, 0);
+              themesMap.set(tc, themesMap.get(tc) + 1);
+            }
+          });
+
+          const uniqueThemes = Array.from(themesMap.keys()).sort();
+          if (uniqueThemes.length > 1 && allAnswerRows.length >= 80) {
+            const themeLabels = {
+              'A': 'Milestone 1 — Theme A (Workplace)',
+              'B': 'Milestone 2 — Theme B (Tourism)',
+              'C': 'Milestone 3 — Theme C (CCU & Culture)',
+              'D': 'Milestone 4 — Theme D (High-Frequency)',
+              'E': 'Milestone 5 — Theme E (General)',
+              'F': 'Milestone 6 — Theme F (Idioms & Advanced)'
+            };
+            testsections = uniqueThemes.map((tc, idx) => ({
+              id: `theme_${tc}`,
+              theme_code: tc,
+              title: themeLabels[tc] || `Theme ${tc}`,
+              section_order: idx + 1
+            }));
+
+            // Assign matching section_id to row snapshots
+            allAnswerRows.forEach(row => {
+              let snap = row.question_snapshot;
+              if (typeof snap === 'string') {
+                try { snap = JSON.parse(snap); } catch { snap = {}; }
+              } else if (!snap || typeof snap !== 'object') {
+                snap = {};
+              }
+              const tc = (snap.theme_code || snap.theme || '').toUpperCase();
+              snap.section_id = tc ? `theme_${tc}` : (testsections[0]?.id || 'default');
+              row.question_snapshot = snap;
+            });
+          } else {
+            testsections = [{ id: 'default', title: testData?.title || testData?.test_title || 'Test', section_order: 1 }];
+          }
         }
         allAnswerRows.forEach(row => {
           if (row.question_snapshot) {

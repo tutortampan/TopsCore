@@ -1,34 +1,39 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 05:07 UTC+8
+Last Updated: 2026-11-01 05:14 UTC+8
 
-Current Phase: Phase 256: Smart Bottleneck Practice di Student Lobby (3D Flashcard Integration) [COMPLETE]
+Current Phase: Phase 257: Modular Milestone Chunks & Exam Fatigue Elimination [COMPLETE]
 
 Current Task:
-1. Smart Bottleneck Practice di Student Lobby (`dashboard.html` & `js/dashboard.js`):
-   - Added interactive 3D Flashcard Modal directly in Student Lobby (`dashboard.html`).
-   - Dynamically checks latest student attempts for missed questions / bottlenecks (`fetchAttemptAnswers`).
-   - Renders glowing action chip `🎯 Focus Practice: X Missed Words` in Achievement section and `🎯 Practice Missed Words` button on locked remedial exam cards.
-   - Interactive flip cards feature Indonesian prompt, target English phrase/word, student's mistake, and native Web Speech TTS audio pronunciation.
+1. Modular Milestone Chunks (`js/test.js`):
+   - Implemented automatic milestone chunking for cumulative multi-theme exams (such as Theme D High-Frequency Words Exam with 640 questions).
+   - Dynamically analyzes `allAnswerRows` for multi-theme spans (`['A', 'B', 'C', 'D']`) and auto-generates sequential Milestone Sections:
+     * Milestone 1 — Theme A (Workplace)
+     * Milestone 2 — Theme B (Tourism)
+     * Milestone 3 — Theme C (CCU & Culture)
+     * Milestone 4 — Theme D (High-Frequency)
+   - Groups question navigation matrix into foldable chapter blocks, eliminating mobile DOM lag and cognitive fatigue.
+   - Smoothly guides students between milestones with `Next Milestone ➔` button.
 2. Verified 40/40 JS syntax checks PASS and 0 console errors across all E2E student journey tests and primary pages.
-3. Cache busters bumped to `?v=20261101_v86`.
+3. Cache busters bumped to `?v=20261101_v87`.
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v86)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v87)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
-   - Di Student Lobby (`dashboard.html`), siswa yang memiliki kata-kata salah pada ujian/kuis terakhir kini memiliki tombol interaktif **🎯 Focus Practice** dengan badge jumlah kata salah.
-   - Mengklik tombol tersebut membuka modal 3D Flashcard interaktif lengkap dengan audio pelafalan asli bahasa Inggris.
-   - Pada kartu ujian yang memerlukan remedial, tersedia tombol langsung **🎯 Practice Missed Words** untuk melatih kosa kata sebelum meminta izin remedial ke tutor.
+   - Pada ujian kumulatif raksasa seperti Theme D (640 soal), siswa tidak lagi dibebani dinding 640 soal sekaligus. Ujian secara otomatis terbagi menjadi 4 Milestone bertahap yang ringan dan terorganisir rapi.
+   - Siswa dapat menavigasi antar-milestone dengan lancar, melihat progres per tema, dan tidak lagi mengalami kelelahan mental (*cognitive fatigue*).
 
 ## Files Changed In Latest Step
-- `dashboard.html` — Added Flashcard Recovery Modal markup and Focus Practice trigger button.
-- `js/dashboard.js` — Implemented `setupLobbyFlashcards()`, `openLobbyFlashcardsForAttempt()`, card flip/prev/next controls, and TTS pronunciation.
-- `css/style.css` — Universalized `.flashcard-modal-*` and `.flip-card-*` styling.
-- `admin.html`, `dashboard.html`, `index.html`, `result.html`, `test.html` — Bumped cache busters to `v86`.
+- `js/test.js` — Added multi-theme milestone auto-chunking logic.
+- `admin.html`, `dashboard.html`, `index.html`, `result.html`, `test.html`, `js/admin/app.js` — Bumped cache busters to `v87`.
 - `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`
 
 ## Completed
+
+- **Phase 257: Modular Milestone Chunks & Exam Fatigue Elimination**:
+  - Eliminated student cognitive exhaustion on massive 640-question exams by dynamically structuring them into manageable milestone sections.
+  - Verified 0 console errors across all 5 primary application entrypoints.
 
 - **Phase 256: Smart Bottleneck Practice di Student Lobby (3D Flashcard Integration)**:
   - Empowered students to drill their specific missed vocabulary directly from the Student Lobby before retaking exams.

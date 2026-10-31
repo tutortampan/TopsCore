@@ -32,16 +32,19 @@ server.listen(0, async () => {
     const page = await browser.newPage();
     await page.setViewport({ width: 1400, height: 900 });
 
-    page.on('console', msg => {
-      if (msg.type() === 'error') console.log('PAGE ERROR:', msg.text());
+    await page.evaluateOnNewDocument(() => {
+      localStorage.setItem('topscore_admin_session', JSON.stringify({
+        user: { role: 'admin', username: 'admin' },
+        token: 'mock-token'
+      }));
     });
 
     await page.goto(`http://127.0.0.1:${port}/admin.html?status=active#students`, { waitUntil: 'networkidle2' });
-    await new Promise(r => setTimeout(r, 4500));
+    await new Promise(r => setTimeout(r, 6000));
 
     const examCells = await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll('#student-grid-container table tbody tr'));
-      return rows.slice(0, 8).map(tr => {
+      return rows.slice(0, 10).map(tr => {
         const nameEl = tr.querySelector('td:nth-child(3)') || tr.querySelector('.student-name');
         const name = nameEl?.innerText?.trim() || 'unknown';
         const divs = Array.from(tr.querySelectorAll('td div[title*="Total Exam Points"]'));
@@ -59,6 +62,9 @@ server.listen(0, async () => {
 
     console.log('Exam Cells Result:');
     console.log(JSON.stringify(examCells, null, 2));
+
+    await page.screenshot({ path: 'scripts/roster_colored_points_verified.png' });
+    console.log('Screenshot saved to scripts/roster_colored_points_verified.png');
 
     await browser.close();
   } catch (err) {
