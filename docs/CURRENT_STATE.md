@@ -1,30 +1,39 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 04:18 UTC+8
+Last Updated: 2026-11-01 04:22 UTC+8
 
-Current Phase: Phase 249: Online/Offline Network Resilience Buffer & Live Cloud Sync Status Pill [COMPLETE]
+Current Phase: Phase 250: Active Batch Auto-Selection, Sidebar Synchronization & Full Cache v81 [COMPLETE]
 
 Current Task:
-1. Implemented Network Resilience & Offline Buffering (Pilar 3):
-   - Added live `#test-sync-indicator` pill in `test.html` next to the countdown timer with tri-state status (🟢 Saved, 🔵 Saving…/Syncing…, 🟡 Offline (Buffered)).
-   - Implemented `online` and `offline` event listeners in `js/test.js` to buffer answers locally and auto-flush them to Supabase when connection restores.
-2. Verified 40/40 JS syntax checks PASS (`node --check`).
-3. Automated Headless Chrome E2E test passed across all 5 pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`) with 0 uncaught errors.
+1. Student Roster Active Batch Synchronization:
+   - In `js/admin/student-management.js`, added fallback to automatically select the first active batch (e.g. `Camp 133`) if none is explicitly passed or found in localStorage.
+   - Synchronized sidebar item active highlight for batch items matching `_filterBatchId`.
+   - Updated topbar title to display the exact Program + Batch name (e.g. `Camp 133`).
+2. Cache Busters:
+   - Bumped to `?v=20261101_v81` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/test.js`, and `js/admin/app.js`.
+3. Verified 0 rogue color matches across 57 files via `scripts/deep_color_audit.mjs`.
+4. Automated Headless Chrome E2E test passed across all 5 primary pages with 0 errors.
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v80)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v81)
 
 ## Next Exact Action
-1. User dapat menguji di `test.html` / `admin.html` (Ctrl + F5):
-   - Indikator sinkronisasi awan aktif di sebelah timer ujian (`Saved` 🟢 / `Saving…` 🔵 / `Offline` 🟡).
-   - Jawaban siswa tidak akan pernah hilang meski koneksi wifi terputus di tengah pengerjaan.
+1. User hard-refresh (**Ctrl + F5**) pada browser:
+   - Sidebar Domain B menampilkan Program + Batch aktif (misal `Camp 133`), dan batch masa lalu (past) disembunyikan.
+   - Roster siswa otomatis menampilkan batch aktif dengan header tabel langsung di bawah topbar tabs (Active / Inactive / All).
+   - Kolom-kolom redundan (Institution, Program, Batch, Enrolled, Status) telah dihilangkan sehingga fokus pada Level, Nama, Usia, Gender, dan Nilai Ujian.
 
 ## Files Changed In Latest Step
-- `test.html` — Added `#test-sync-indicator` element.
-- `js/test.js` — Added network offline/online event listeners with auto-flush pipeline.
-- `js/admin/app.js` — Synchronized cache busters to v80.
-- `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`
+- `js/admin/student-management.js` — Added active batch auto-detection, sidebar active class sync, and title formatting.
+- `js/admin/app.js` — Synchronized cache busters and sub-module imports to `v81`.
+- `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/test.js` — Bumped cache busters to `v81`.
+- `docs/CURRENT_STATE.md`
 
 ## Completed
+
+- **Phase 250: Active Batch Auto-Selection, Sidebar Synchronization & Full Cache v81**:
+  - Implemented auto-selection of active batches in `student-management.js` and synchronized the active state of sidebar items under Domain B.
+  - Formatted topbar title with active batch name.
+  - Cache bumped to `v81` and validated with 0 rogue colors and 0 E2E console errors.
 
 - **Phase 248: Real-Time Spoken Answer Persistence & Speech Recognition Fail-Safe**:
   - Implemented real-time interim speech commit in `js/test.js` so spoken answers are recorded instantly as the student speaks without waiting for silence or `onFinal`.

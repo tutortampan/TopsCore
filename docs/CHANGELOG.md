@@ -1,3 +1,32 @@
+## [2026-11-01 04:22] — Phase 250: Active Batch Auto-Selection, Sidebar Synchronization & Full Cache v81
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 250  
+**Status:** PASS  
+
+### Why
+- User request:
+  1. Sidebar Domain B should strictly display only active batches (e.g. `Camp 133`) and hide past/inactive batches.
+  2. Student roster should auto-select the active batch if none is specified, update the topbar title with the active batch name, and highlight the corresponding sidebar item.
+  3. Student roster table header is raised directly beneath topbar tabs, with redundant columns (`INSTITUTION`, `PROGRAM`, `BATCH`, `ENROLLED`, `STATUS`) removed in favor of essential student metrics.
+
+### Changed
+- `js/admin/student-management.js`:
+  - Added fallback auto-selection of the first active batch of the active program when navigating to `#students`.
+  - Added sidebar `.active` toggle for matching batch items.
+  - Dynamically set `#topbar-title` to display the Program + Batch label.
+- `js/admin/app.js`:
+  - Synchronized cache buster query parameters for sub-module imports to `v81`.
+- `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/test.js`:
+  - Cache busters bumped to `?v=20261101_v81`.
+
+### Verification
+- `scripts/deep_color_audit.mjs`: 0 rogue color matches across all 57 files.
+- `scripts/e2e_console_health_check.mjs`: 0 console errors across all 5 primary application pages in Headless Chrome.
+- All active JS files syntax check: PASS.
+
+---
+
 ## [2026-11-01 04:15] — Phase 249: Online/Offline Network Resilience Buffer & Live Cloud Sync Status Pill in Test Runner (Pilar 3 Implementation)
 
 **Agent/Session:** Antigravity  
