@@ -40,3 +40,4 @@ const backupData = {
 
 fs.writeFileSync('scripts/full_attempts_backup_before_purge.json', JSON.stringify(backupData, null, 2));
 console.log('Saved full backup to scripts/full_attempts_backup_before_purge.json');
+

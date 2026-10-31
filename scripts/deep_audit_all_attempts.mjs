@@ -82,3 +82,4 @@ fs.writeFileSync('scripts/audit_all_attempts_summary.json', JSON.stringify({
 }, null, 2));
 
 console.log('Saved summary to scripts/audit_all_attempts_summary.json');
+
