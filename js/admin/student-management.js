@@ -774,7 +774,7 @@ export async function renderStudents(area) {
             <div class="fw-700 text-sm" ${scoreClickAttr} style="color:${scoreColor};">
               ${r.bestPct != null ? `${r.bestPct}%${isRem ? `<sup class="asm-rem-sup" style="font-size:0.7em;font-weight:900;margin-left:2px;color:${TOPSCORE_COLORS.C};">R</sup>` : ''}` : '—'}
             </div>
-            <div class="text-xs text-muted" style="font-size:0.68rem;">${ptsDisplay}</div>
+            <div style="font-size:0.68rem;color:${scoreColor};opacity:0.85;font-weight:600;">${ptsDisplay}</div>
           </td>
           <td class="text-center">
             ${actionHtml}
@@ -1935,14 +1935,18 @@ export async function renderStudents(area) {
 
       // Calculate total average points across students with completed exams
       let totalPtsSum = 0;
+      let totalPctSum = 0;
       let ptsCount = 0;
       filteredData.forEach(r => {
         if (r.totalEarnedScore != null && r.totalEarnedScore > 0) {
           totalPtsSum += r.totalEarnedScore;
+          totalPctSum += (r.overallPct != null ? Number(r.overallPct) : 0);
           ptsCount++;
         }
       });
       const avgPtsStr = ptsCount > 0 ? `${(totalPtsSum / ptsCount).toFixed(1)} pts` : '—';
+      const batchOverallPct = ptsCount > 0 ? Math.round(totalPctSum / ptsCount) : 0;
+      const batchPtsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(batchOverallPct) : 'var(--grade-star, #00c000ff)';
 
       let cells = '';
       // Checkbox column
@@ -1962,7 +1966,7 @@ export async function renderStudents(area) {
           const color = classExamColors[col.key] || 'var(--clr-text-1)';
           cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:${color};font-size:0.8rem;">${avgVal != null ? `${avgVal} <span style="font-size:0.65rem;opacity:0.75;font-weight:normal;color:${color};">pts</span>` : '—'}</td>`;
         } else if (col.label === 'Actions') {
-          cells += `<td style="background:#0f172a;text-align:right;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:var(--grade-star, #00c000ff);font-size:0.8rem;padding-right:1rem;">Avg: ${avgPtsStr}</td>`;
+          cells += `<td style="background:#0f172a;text-align:right;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:${batchPtsColor};font-size:0.8rem;padding-right:1rem;">Avg: ${avgPtsStr}</td>`;
         } else {
           cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);color:#94a3b8;">—</td>`;
         }
