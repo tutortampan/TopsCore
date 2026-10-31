@@ -1,3 +1,33 @@
+## [2026-11-01 05:07] — Phase 256: Smart Bottleneck Practice di Student Lobby (3D Flashcard Integration)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 256  
+**Status:** PASS  
+
+### Why
+- Implement Proposal Item 5.4 / 2.1: Empower students who scored poorly or have missed vocabulary to directly drill and practice their specific bottlenecks from the Student Lobby before retaking exams.
+
+### Changed
+- `css/style.css`:
+  - Added universal styling for `.btn-flashcard-glow`, `.flashcard-modal-backdrop`, `.flip-card`, `.flip-card-inner`, and backface 3D transforms.
+- `dashboard.html`:
+  - Added trigger button `btn-lobby-flashcards` in Achievement Status bar.
+  - Added 3D Flashcard Recovery Modal markup with native audio pronunciation button.
+- `js/dashboard.js`:
+  - Imported `fetchAttemptAnswers` from `./api.js`.
+  - Added `setupLobbyFlashcards(attempts)` and `openLobbyFlashcardsForAttempt(attemptId)`.
+  - Added card navigation, 3D flip animation, native Web Speech TTS audio, and `#practice` URL hash route preservation (Rule 2.20).
+  - Added direct `🎯 Practice Missed Words` button on locked remedial exam cards in `renderClasses()`.
+- `admin.html`, `dashboard.html`, `index.html`, `result.html`, `test.html`:
+  - Bumped cache busters to `?v=20261101_v86`.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs`: 40/40 JS files passed syntax validation (`node --check`).
+- `node scripts/e2e_student_exam_journey.mjs`: PASS (3D Flashcard Recovery verified, card flip transition verified, 0 console errors).
+- `node scripts/e2e_console_health_check.mjs`: PASS (0 uncaught errors across 5 primary pages).
+
+---
+
 ## [2026-11-01 04:48] — Phase 255: Server-Authoritative Auto-Close Scoring Engine Upgrade
 
 **Agent/Session:** Antigravity  

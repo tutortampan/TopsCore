@@ -2185,10 +2185,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
 
                       return `
                         <span class="asm-score asm-score-test"
-                              style="color:${color}; ${cursorStyle}"
+                              style="color:${color} !important; ${cursorStyle}"
                               ${clickAttr}
                               title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${displayVal}/${totalQ} pts">
-                          <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;">
+                          <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; color:${color} !important;">
                             ${displayVal}
                           </span>
                         </span>
@@ -2324,7 +2324,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
 
                   return `
                     <span class="asm-score asm-score-test test-score-theme-total"
-                          style="color:${color}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                          style="color:${color} !important; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
                           title="Theme ${tc} Total Points: ${displayVal}/${studentThemeMaxQ} pts (${Math.round(themePct)}%)">
                       ${displayVal}
                     </span>
@@ -2410,8 +2410,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     cellsHtml += `
                       <td class="col-sticky col-sticky-7 col-sticky-last text-right" style="padding-right:4px;">
                         <div style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; line-height:1; display:flex; align-items:baseline; justify-content:flex-end; gap:2px;" title="Class Avg Latest Exam Points: ${avgPts} pts">
-                          <span style="color:${avgPtsColor};">${avgPts}</span>
-                          <span style="font-size:0.60rem; color:var(--clr-text-3); font-weight:500;">pts</span>
+                          <span style="color:${avgPtsColor} !important;">${avgPts}</span>
+                          <span style="font-size:0.60rem; color:${avgPtsColor} !important; opacity:0.85; font-weight:500;">pts</span>
                         </div>
                       </td>
                     `;
@@ -2737,8 +2737,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     const displayScore = Number(val || 0).toFixed(1).replace(/\.0$/, '');
                     return `
                       <div style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; line-height:1; display:flex; align-items:baseline; justify-content:flex-end; gap:2px; padding-right:4px;" title="Total Exam Points (All Completed Exams): ${displayScore} pts">
-                        <span style="color:${scoreColor};">${displayScore}</span>
-                        <span style="font-size:0.60rem; color:var(--clr-text-3); font-weight:500;">pts</span>
+                        <span style="color:${scoreColor} !important;">${displayScore}</span>
+                        <span style="font-size:0.60rem; color:${scoreColor} !important; opacity:0.85; font-weight:500;">pts</span>
                       </div>
                     `;
                   }

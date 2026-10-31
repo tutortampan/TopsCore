@@ -1,32 +1,39 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 04:47 UTC+8
+Last Updated: 2026-11-01 05:07 UTC+8
 
-Current Phase: Phase 255: Server-Authoritative Auto-Close Scoring Engine Upgrade [COMPLETE]
+Current Phase: Phase 256: Smart Bottleneck Practice di Student Lobby (3D Flashcard Integration) [COMPLETE]
 
 Current Task:
-1. Server-Authoritative Auto-Close Evaluation (`supabase/migrations/20261101050000_auto_close_with_emergency_eval.sql`):
-   - Upgraded `auto_close_expired_attempts` to evaluate all in-progress student answers via `emergency_submit_attempt(rec.id, NULL, 'auto_submitted')` instead of blindly setting score = 0.
-   - Permanently eliminates the 44% zero-score loss when students' devices run out of battery or disconnect on timeout.
-2. Verified 40/40 JS syntax checks PASS and 0 console errors on E2E test.
-3. Cache busters updated to `?v=20261101_v85`.
+1. Smart Bottleneck Practice di Student Lobby (`dashboard.html` & `js/dashboard.js`):
+   - Added interactive 3D Flashcard Modal directly in Student Lobby (`dashboard.html`).
+   - Dynamically checks latest student attempts for missed questions / bottlenecks (`fetchAttemptAnswers`).
+   - Renders glowing action chip `🎯 Focus Practice: X Missed Words` in Achievement section and `🎯 Practice Missed Words` button on locked remedial exam cards.
+   - Interactive flip cards feature Indonesian prompt, target English phrase/word, student's mistake, and native Web Speech TTS audio pronunciation.
+2. Verified 40/40 JS syntax checks PASS and 0 console errors across all E2E student journey tests and primary pages.
+3. Cache busters bumped to `?v=20261101_v86`.
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v85)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v86)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
-   - Kolom nilai ujian (**EXAM 1–4**) dan poin (**PTS**) di Roster Siswa (`admin.html#students`) serta footer summary row secara otomatis mewarisi warna grade kanonik (**★/A Hijau `#00c000ff`, B Lime `#95ff00ff`, C Kuning `#FFFF00`, D Oranye `#FF8C00`, E Merah `#FF0000`**).
-   - Seluruh nilai siswa di Class Hub Batch 133 100% murni tanpa manipulasi.
-   - Pada kuis latihan harian lisan & tulisan (`test.html`), siswa memiliki opsi `💡 Hint` huruf pertama untuk mengatasi kebuntuan kosa kata.
+   - Di Student Lobby (`dashboard.html`), siswa yang memiliki kata-kata salah pada ujian/kuis terakhir kini memiliki tombol interaktif **🎯 Focus Practice** dengan badge jumlah kata salah.
+   - Mengklik tombol tersebut membuka modal 3D Flashcard interaktif lengkap dengan audio pelafalan asli bahasa Inggris.
+   - Pada kartu ujian yang memerlukan remedial, tersedia tombol langsung **🎯 Practice Missed Words** untuk melatih kosa kata sebelum meminta izin remedial ke tutor.
 
 ## Files Changed In Latest Step
-- `js/admin/student-management.js` — Added dynamic points color inheritance and `!important` rule in `perClassColDefs`, `summaryRow`, and modal rows.
-- `js/admin/app.js` — Added dynamic points color inheritance in Class Hub summary row (`avgCol`, `avgThemeColor`).
-- `js/test.js` — Added practice quiz first-letter hint scaffolding.
-- `admin.html`, `dashboard.html`, `result.html`, `test.html` — Bumped cache buster to `v83`.
+- `dashboard.html` — Added Flashcard Recovery Modal markup and Focus Practice trigger button.
+- `js/dashboard.js` — Implemented `setupLobbyFlashcards()`, `openLobbyFlashcardsForAttempt()`, card flip/prev/next controls, and TTS pronunciation.
+- `css/style.css` — Universalized `.flashcard-modal-*` and `.flip-card-*` styling.
+- `admin.html`, `dashboard.html`, `index.html`, `result.html`, `test.html` — Bumped cache busters to `v86`.
 - `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`
 
 ## Completed
+
+- **Phase 256: Smart Bottleneck Practice di Student Lobby (3D Flashcard Integration)**:
+  - Empowered students to drill their specific missed vocabulary directly from the Student Lobby before retaking exams.
+  - Implemented client-side audio pronunciation synthesis and 3D card flip animation.
+  - Verified 0 console errors and 0 uncaught exceptions on full student journey.
 
 - **Phase 252: Universal Dynamic Points Color Adherence & Quiz Scaffolding**:
   - Aligned all points displays across Student Roster, Class Hub, and modals with Rule 2.10.

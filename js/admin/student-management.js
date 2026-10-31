@@ -829,7 +829,7 @@ export async function renderStudents(area) {
             </div>
             <div style="flex:1;min-width:100px;">
               <div class="text-xs text-muted">Exam Points</div>
-              <div class="fw-700" style="font-size:1.25rem;color:${rec.overallColor || 'var(--clr-text-1)'};">${rec.totalEarnedScore ?? 0} <span style="font-size:0.7rem;color:#94a3b8;font-weight:normal;">pts</span></div>
+              <div class="fw-700" style="font-size:1.25rem;color:${rec.overallColor || 'var(--clr-text-1)'};">${rec.totalEarnedScore ?? 0} <span style="font-size:0.7rem;color:${rec.overallColor || '#94a3b8'};opacity:0.85;font-weight:normal;">pts</span></div>
             </div>
             <div style="flex:1.2;min-width:120px;">
               <div class="text-xs text-muted mb-1">Completion</div>
@@ -1525,6 +1525,7 @@ export async function renderStudents(area) {
       const displayGrade = grade === 'S' || grade === '★' ? '★' : grade;
       const remTag = isRem ? '<sup style="font-size:0.65em;vertical-align:super;">R</sup>' : '';
       const dateStr = att.submitted_at ? new Date(att.submitted_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+      const itemPtsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#0f172a';
 
       return `
         <tr>
@@ -1532,9 +1533,9 @@ export async function renderStudents(area) {
           <td style="font-weight:600;">${escapeHtml(title)}</td>
           <td style="text-align:center;"><span style="font-size:0.7rem;padding:2px 6px;border-radius:4px;background:#f1f5f9;font-weight:700;">${escapeHtml(type)}</span></td>
           <td style="text-align:center;color:#475569;font-size:0.78rem;">${dateStr}</td>
-          <td style="text-align:center;font-weight:600;">${pts} / ${maxQ}</td>
-          <td style="text-align:center;font-weight:700;color:#0f172a;">${pct}%${remTag}</td>
-          <td style="text-align:center;"><strong style="font-size:0.9rem;">${displayGrade}</strong></td>
+          <td style="text-align:center;font-weight:700;color:${itemPtsColor};">${pts} / ${maxQ}</td>
+          <td style="text-align:center;font-weight:700;color:${itemPtsColor};">${pct}%${remTag}</td>
+          <td style="text-align:center;"><strong style="font-size:0.9rem;color:${itemPtsColor};">${displayGrade}</strong></td>
         </tr>
       `;
     }).join('');
@@ -1642,7 +1643,7 @@ export async function renderStudents(area) {
               <div>
                 <div style="font-size:0.65rem;font-weight:700;color:#64748b;text-transform:uppercase;">Total Points</div>
                 <div style="font-size:1.15rem;font-weight:800;color:${rec.overallColor || 'var(--clr-text-1)'};line-height:1.3;">
-                  ${rec.totalEarnedScore ?? totalCorrect} <span style="font-size:0.75rem;color:#64748b;font-weight:600;">pts</span>
+                  ${rec.totalEarnedScore ?? totalCorrect} <span style="font-size:0.75rem;color:${rec.overallColor || '#64748b'};opacity:0.85;font-weight:600;">pts</span>
                 </div>
               </div>
             </div>
@@ -1964,9 +1965,9 @@ export async function renderStudents(area) {
         } else if (col.key && col.key.includes('_cls_exam')) {
           const avgVal = classExamAverages[col.key];
           const color = classExamColors[col.key] || 'var(--clr-text-1)';
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:${color};font-size:0.8rem;">${avgVal != null ? `${avgVal} <span style="font-size:0.65rem;opacity:0.75;font-weight:normal;color:${color};">pts</span>` : '—'}</td>`;
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:${color} !important;font-size:0.8rem;">${avgVal != null ? `${avgVal} <span style="font-size:0.65rem;opacity:0.85;font-weight:normal;color:${color} !important;">pts</span>` : '—'}</td>`;
         } else if (col.label === 'Actions') {
-          cells += `<td style="background:#0f172a;text-align:right;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:${batchPtsColor};font-size:0.8rem;padding-right:1rem;">Avg: ${avgPtsStr}</td>`;
+          cells += `<td style="background:#0f172a;text-align:right;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:${batchPtsColor} !important;font-size:0.8rem;padding-right:1rem;">Avg: ${avgPtsStr}</td>`;
         } else {
           cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);color:#94a3b8;">—</td>`;
         }

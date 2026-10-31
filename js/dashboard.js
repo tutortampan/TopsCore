@@ -3,7 +3,7 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=5.6.8';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=5.6.8';
     import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=5.3.2';
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=5.3.2';
     import { testMicrophoneCapability } from './speech.js?v=5.3.2';
@@ -849,6 +849,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         await computeOverallStats(attempts, myTests);
         await loadBatchLeaderboard();
         setupProfileModal(attempts);
+        setupLobbyFlashcards(attempts);
       } catch(e) {
         hideLoading();
         showToast('Failed to load dashboard: ' + e.message, 'error');
@@ -857,6 +858,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         renderCompletedTestsBottom([], 0);
         await loadBatchLeaderboard().catch(() => {});
         setupProfileModal([]);
+        setupLobbyFlashcards([]);
       }
     }
 
@@ -1476,7 +1478,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 } else {
                   actionBtn = `<div style="display:flex; flex-direction:column; align-items:flex-end; text-align:right;">
                                  <span style="background:rgba(239,68,68,0.15);color:#f87171;padding:4px 8px;border-radius:4px;font-size:0.7rem;font-weight:700; border: 1px solid rgba(239,68,68,0.3); margin-bottom:4px;">🔒 Locked (Remediation Required)</span>
-                                 <span style="font-size:0.65rem;color:var(--clr-text-3);">Official Exam score is below passing threshold.<br>Contact your tutor for remedial authorization.</span>
+                                 <button type="button" class="btn-flashcard-glow" onclick="window.openLobbyFlashcardsForAttempt('${best.id}')" style="margin-top:2px; margin-bottom:4px; padding:3px 10px; font-size:0.7rem; border-radius:6px; cursor:pointer;">🎯 Practice Missed Words</button>
+                                 <span style="font-size:0.65rem;color:var(--clr-text-3);">Official Exam score is below passing threshold.<br>Practice bottlenecks above or contact tutor.</span>
                                </div>`;
                 }
               } else {
@@ -3055,7 +3058,209 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (cur) {
           openClassModal(cur, window._classesProgress);
         }
+      } else if (hash === '#practice' || hash === '#flashcards') {
+        initLobbyFlashcardControls();
+        openLobbyFlashcardModal();
       }
+    }
+
+    // ===== 🎯 STUDENT LOBBY FLASHCARD RECOVERY ENGINE =====
+    let _lobbyActiveFlashcards = [];
+    let _lobbyCurrentFcIndex = 0;
+    let _isLobbyFcControlsBound = false;
+
+    window.openLobbyFlashcardsForAttempt = async function(attemptId) {
+      if (!attemptId) return;
+      showLoading('Loading missed vocabulary flashcards…');
+      try {
+        const answers = await fetchAttemptAnswers(attemptId);
+        hideLoading();
+        startLobbyFlashcardsWithAnswers(answers);
+      } catch (err) {
+        hideLoading();
+        console.warn('Failed to load flashcard answers:', err);
+        showToast('Could not load flashcard vocabulary: ' + err.message, 'warning');
+      }
+    };
+
+    function startLobbyFlashcardsWithAnswers(answers = []) {
+      const missed = (answers || []).filter(a => {
+        const isCorrect = a.is_correct === true || parseFloat(a.score || 0) >= 1.0;
+        return !isCorrect;
+      });
+      if (missed.length === 0) {
+        showToast('🎉 Excellent! No missed words found in this assessment.', 'info');
+        return;
+      }
+      _lobbyActiveFlashcards = missed;
+      initLobbyFlashcardControls();
+      openLobbyFlashcardModal();
+    }
+
+    async function setupLobbyFlashcards(attempts = []) {
+      const btn = document.getElementById('btn-lobby-flashcards');
+      const badge = document.getElementById('lobby-fc-count-badge');
+      if (!btn) return;
+
+      // Find candidate attempts (submitted/auto_submitted) with score < 100%
+      const candidateAttempts = (attempts || []).filter(a => {
+        const st = (a.status || '').toLowerCase();
+        return (st === 'submitted' || st === 'auto_submitted' || st === 'graded' || st === 'evaluated') && parseFloat(a.percentage || 0) < 100;
+      });
+
+      if (candidateAttempts.length === 0) {
+        btn.classList.add('hidden');
+        return;
+      }
+
+      // Sort newest attempt first
+      candidateAttempts.sort((a, b) => new Date(b.created_at || b.started_at || 0) - new Date(a.created_at || a.started_at || 0));
+      const latestAttempt = candidateAttempts[0];
+
+      try {
+        const answers = await fetchAttemptAnswers(latestAttempt.id);
+        const missed = (answers || []).filter(a => {
+          const isCorrect = a.is_correct === true || parseFloat(a.score || 0) >= 1.0;
+          return !isCorrect;
+        });
+
+        if (missed.length > 0) {
+          _lobbyActiveFlashcards = missed;
+          btn.classList.remove('hidden');
+          if (badge) badge.textContent = missed.length;
+          btn.onclick = () => {
+            initLobbyFlashcardControls();
+            openLobbyFlashcardModal();
+          };
+          initLobbyFlashcardControls();
+        } else {
+          btn.classList.add('hidden');
+        }
+      } catch (err) {
+        console.warn('Silent skip lobby flashcards:', err);
+        btn.classList.add('hidden');
+      }
+    }
+
+    function initLobbyFlashcardControls() {
+      if (_isLobbyFcControlsBound) return;
+      _isLobbyFcControlsBound = true;
+
+      const modal = document.getElementById('flashcard-modal');
+      const closeBtn = document.getElementById('close-flashcard-btn');
+      if (closeBtn) closeBtn.onclick = closeLobbyFlashcardModal;
+      if (modal) {
+        modal.onclick = (e) => {
+          if (e.target.id === 'flashcard-modal') closeLobbyFlashcardModal();
+        };
+      }
+
+      const flipInner = document.getElementById('active-flip-inner');
+      const flipCard = document.getElementById('active-flip-card');
+      const toggleFlip = () => flipInner?.classList.toggle('flipped');
+
+      if (flipCard) flipCard.onclick = toggleFlip;
+      const flipBtn = document.getElementById('fc-btn-flip');
+      if (flipBtn) {
+        flipBtn.onclick = (e) => {
+          e.stopPropagation();
+          toggleFlip();
+        };
+      }
+
+      const prevBtn = document.getElementById('fc-btn-prev');
+      if (prevBtn) {
+        prevBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (_lobbyActiveFlashcards.length === 0) return;
+          _lobbyCurrentFcIndex = (_lobbyCurrentFcIndex - 1 + _lobbyActiveFlashcards.length) % _lobbyActiveFlashcards.length;
+          renderLobbyFlashcardItem();
+        };
+      }
+
+      const nextBtn = document.getElementById('fc-btn-next');
+      if (nextBtn) {
+        nextBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (_lobbyActiveFlashcards.length === 0) return;
+          _lobbyCurrentFcIndex = (_lobbyCurrentFcIndex + 1) % _lobbyActiveFlashcards.length;
+          renderLobbyFlashcardItem();
+        };
+      }
+
+      const speakBtn = document.getElementById('fc-speak-btn');
+      if (speakBtn) {
+        speakBtn.onclick = (e) => {
+          e.stopPropagation();
+          const currentItem = _lobbyActiveFlashcards[_lobbyCurrentFcIndex];
+          if (!currentItem) return;
+          const snap = typeof currentItem.question_snapshot === 'string'
+            ? (() => { try { return JSON.parse(currentItem.question_snapshot); } catch(_) { return {}; } })()
+            : (currentItem.question_snapshot || {});
+          const target = (snap.correct_answer || snap.answer || currentItem.correct_answer_snapshot || currentItem.correct_answer || '').split(/[;/,|]/)[0].trim();
+          if (target && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(target);
+            u.lang = 'en-US';
+            u.rate = 0.9;
+            window.speechSynthesis.speak(u);
+          }
+        };
+      }
+    }
+
+    function openLobbyFlashcardModal() {
+      const modal = document.getElementById('flashcard-modal');
+      if (!modal || _lobbyActiveFlashcards.length === 0) return;
+      _lobbyCurrentFcIndex = 0;
+      renderLobbyFlashcardItem();
+      modal.classList.remove('hidden');
+      if (!window.location.hash || window.location.hash === '#') {
+        window.history.replaceState(null, '', '#practice');
+      }
+    }
+
+    function closeLobbyFlashcardModal() {
+      const modal = document.getElementById('flashcard-modal');
+      if (modal) modal.classList.add('hidden');
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      if (window.location.hash === '#practice' || window.location.hash === '#flashcards') {
+        window.history.replaceState(null, '', 'dashboard.html');
+      }
+    }
+
+    function renderLobbyFlashcardItem() {
+      const item = _lobbyActiveFlashcards[_lobbyCurrentFcIndex];
+      if (!item) return;
+
+      const flipInner = document.getElementById('active-flip-inner');
+      if (flipInner) flipInner.classList.remove('flipped');
+
+      const snap = typeof item.question_snapshot === 'string'
+        ? (() => { try { return JSON.parse(item.question_snapshot); } catch(_) { return {}; } })()
+        : (item.question_snapshot || {});
+
+      const prompt = snap.question_text || snap.question || snap.soal || snap.indonesia || '—';
+      const pos = snap.word_type || snap.category || (snap.correct_answer?.includes(' ') ? 'Phrase' : 'Word');
+      const target = (snap.correct_answer || snap.answer || item.correct_answer_snapshot || item.correct_answer || '—').split(/[;/,|]/)[0].trim();
+      const studentAns = (item.student_answer || '').trim() || '(No answer / Blank)';
+
+      const posEl = document.getElementById('fc-front-pos');
+      if (posEl) posEl.textContent = pos;
+
+      const promptEl = document.getElementById('fc-front-prompt');
+      if (promptEl) promptEl.textContent = prompt;
+
+      const studentAnsEl = document.getElementById('fc-front-student-ans');
+      if (studentAnsEl) {
+        studentAnsEl.innerHTML = `Your answer: <span style="color:var(--grade-e, #FF0000);">${escapeHtml(studentAns)}</span>`;
+      }
+
+      const backTargetEl = document.getElementById('fc-back-target');
+      if (backTargetEl) backTargetEl.textContent = target;
+
+      const counterEl = document.getElementById('fc-progress-counter');
+      if (counterEl) counterEl.textContent = `Card ${_lobbyCurrentFcIndex + 1} of ${_lobbyActiveFlashcards.length}`;
     }
 
     window.addEventListener('hashchange', restoreDashboardHashRoute);

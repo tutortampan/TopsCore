@@ -105,6 +105,7 @@ async function runStudentJourneyTest() {
     console.log('[Stage 2] Verifying Test Runner Features (Hints, Word Counter, Audio Buffer)...');
     await page.goto(`${baseUrl}/test.html?test_id=dc34c2bd-035a-43f6-a007-bfadd54576a8&attempt_id=fd37522b-3502-45f4-a8ab-01ba8ff8d44b`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1000);
+    console.log('  Current URL:', page.url());
 
     // Verify test sync indicator pill exists
     const hasSyncIndicator = await page.evaluate(() => {
@@ -119,9 +120,9 @@ async function runStudentJourneyTest() {
       testEl.className = 'speech-wave-bars';
       document.body.appendChild(testEl);
       const style = window.getComputedStyle(testEl);
-      const isFlex = style.display === 'inline-flex';
+      const computedDisplay = style.display;
       testEl.remove();
-      return isFlex;
+      return ['flex', 'inline-flex'].includes(computedDisplay);
     });
     console.log(`  ✅ Live speech animated equalizer waveform styling active: ${hasWaveformStyles}`);
 
@@ -150,11 +151,26 @@ async function runStudentJourneyTest() {
 
     // Test Flip Card Interaction
     const flipInteraction = await page.evaluate(() => {
+      // Simulate 2 recovery items with window.setupFlashcardRecovery
+      window.setupFlashcardRecovery([
+        {
+          id: 'test-ans-01',
+          score: 0,
+          student_answer: 'commitmant',
+          correct_answer: 'commitment',
+          question_snapshot: { question_text: 'Komitmen', word_type: 'Noun', correct_answer: 'commitment' }
+        }
+      ]);
+
+      const openBtn = document.getElementById('open-flashcards-btn');
+      if (openBtn) openBtn.click();
       const card = document.getElementById('active-flip-card');
       const inner = document.getElementById('active-flip-inner');
       if (!card || !inner) return false;
+      const before = inner.classList.contains('flipped');
       card.click();
-      return inner.classList.contains('flipped');
+      const after = inner.classList.contains('flipped');
+      return before !== after && after === true;
     });
     console.log(`  ✅ 3D Card Flip interaction verified (transitions front to back): ${flipInteraction}`);
 

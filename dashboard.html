@@ -21,9 +21,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261101_v85" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261101_v85" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=20261101_v85" />
+  <link rel="stylesheet" href="css/style.css?v=20261101_v86" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261101_v86" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=20261101_v86" />
 
 
 </head>
@@ -117,6 +117,9 @@
     <!-- 3. ACHIEVEMENT STATUS CARD (50px) -->
     <div class="dashboard-achievement-card" id="dashboard-achievement-card" aria-label="Achievement Status">
       <span class="achievement-status-text" id="dashboard-achievement-text">—</span>
+      <button type="button" class="btn-flashcard-glow hidden" id="btn-lobby-flashcards" title="Practice Missed Words from Recent Assessments" style="padding: 4px 12px; border-radius: 8px; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+        🎯 Focus Practice <span id="lobby-fc-count-badge" style="background:#a855f7; color:#fff; border-radius:10px; padding:1px 6px; font-size:0.68rem; font-weight:800;">0</span>
+      </button>
     </div>
 
     <!-- 4. CLASSES SELECTOR BAR (50px: Unified Bar - click opens modal list) -->
@@ -179,6 +182,46 @@
       <div id="leaderboard-my-summary">
         <span id="leaderboard-my-rank"></span>
         <span id="leaderboard-champion-name"></span>
+      </div>
+    </div>
+
+    <!-- 🗂️ Flashcard Recovery Modal (Interactive Learning Retention) -->
+    <div class="flashcard-modal-backdrop hidden" id="flashcard-modal" role="dialog" aria-modal="true" aria-label="Missed Words Flashcard Review">
+      <div class="flashcard-modal-card">
+        <div class="flashcard-modal-header">
+          <div class="flashcard-header-title-wrap">
+            <h2 class="flashcard-modal-title">🎯 Focus Practice (Missed Words)</h2>
+            <span class="flashcard-modal-counter" id="fc-progress-counter">Card 1 of 5</span>
+          </div>
+          <button class="flashcard-close-btn" id="close-flashcard-btn" type="button" aria-label="Close">✕</button>
+        </div>
+
+        <div class="flashcard-stage">
+          <div class="flip-card" id="active-flip-card">
+            <div class="flip-card-inner" id="active-flip-inner">
+              <!-- Front Side: Prompt & Student's Mistake -->
+              <div class="flip-card-front">
+                <div class="fc-pos-pill" id="fc-front-pos">WORD</div>
+                <h3 class="fc-front-prompt" id="fc-front-prompt">Prompt</h3>
+                <div class="fc-front-student-ans" id="fc-front-student-ans">Your answer: <span>—</span></div>
+                <div class="fc-tap-hint">👆 Tap card to reveal target</div>
+              </div>
+              <!-- Back Side: English Target & Pronunciation Audio -->
+              <div class="flip-card-back">
+                <span class="fc-target-label">CORRECT TARGET</span>
+                <h2 class="fc-back-target" id="fc-back-target">Target</h2>
+                <button type="button" class="fc-speak-btn" id="fc-speak-btn" title="Listen to Native Pronunciation">🔊 Listen</button>
+                <div class="fc-tap-hint">👆 Tap card to flip back</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flashcard-footer-controls">
+          <button class="btn btn-secondary btn-sm" id="fc-btn-prev" type="button">← Prev</button>
+          <button class="btn btn-primary btn-sm" id="fc-btn-flip" type="button">🔄 Flip</button>
+          <button class="btn btn-secondary btn-sm" id="fc-btn-next" type="button">Next →</button>
+        </div>
       </div>
     </div>
 
@@ -512,12 +555,12 @@
     </div>
   </div>
 
-  <script type="module" src="./js/dashboard.js?v=20261101_v85"></script>
+  <script type="module" src="./js/dashboard.js?v=20261101_v86"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261101_v85')
+        navigator.serviceWorker.register('sw.js?v=20261101_v86')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);
