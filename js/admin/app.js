@@ -2457,7 +2457,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       } else if (isTest && isPtsCol) {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
-                            <span style="color:#e2e8f0; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Points: ${avgSc}/${totalQ} pts">${avgSc}</span>
+                            <span style="color:${avgCol}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Points: ${avgSc}/${totalQ} pts (${avgPct}%)">${avgSc}</span>
                           </td>
                         `;
                       } else {
@@ -2504,18 +2504,22 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     const tc = col.key.replace('theme_', '').replace('_total_pts', '');
                     let count = 0;
                     let totalPtsSum = 0;
+                    let totalMaxQSum = 0;
                     filteredData.forEach(s => {
                       const val = s[col.key];
                       if (val !== undefined && val !== null && val >= 0) {
                         count++;
                         totalPtsSum += Number(val);
+                        totalMaxQSum += Number(s[`theme_${tc}_max_q`] || (tc === 'A' ? 150 : tc === 'B' ? 350 : tc === 'C' ? 600 : 800));
                       }
                     });
                     if (count > 0) {
                       const avgThemePts = (totalPtsSum / count).toFixed(1).replace(/\.0$/, '');
+                      const avgThemePct = totalMaxQSum > 0 ? Math.round((totalPtsSum / totalMaxQSum) * 100) : 0;
+                      const avgThemeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgThemePct) : '#ffffff';
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:#ffffff; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Points: ${avgThemePts} pts">${avgThemePts}</span>
+                          <span style="color:${avgThemeColor}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Points: ${avgThemePts} pts (${avgThemePct}%)">${avgThemePts}</span>
                         </td>
                       `;
                     } else {

@@ -1,39 +1,42 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 04:22 UTC+8
+Last Updated: 2026-11-01 04:25 UTC+8
 
-Current Phase: Phase 250: Active Batch Auto-Selection, Sidebar Synchronization & Full Cache v81 [COMPLETE]
+Current Phase: Phase 251: Phrase Real-Time Word-Count Counter & Full Cache v82 [COMPLETE]
 
 Current Task:
-1. Student Roster Active Batch Synchronization:
-   - In `js/admin/student-management.js`, added fallback to automatically select the first active batch (e.g. `Camp 133`) if none is explicitly passed or found in localStorage.
-   - Synchronized sidebar item active highlight for batch items matching `_filterBatchId`.
-   - Updated topbar title to display the exact Program + Batch name (e.g. `Camp 133`).
-2. Cache Busters:
-   - Bumped to `?v=20261101_v81` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/test.js`, and `js/admin/app.js`.
-3. Verified 0 rogue color matches across 57 files via `scripts/deep_color_audit.mjs`.
+1. Real-Time Phrase Word-Counter in Test Runner (`js/test.js`):
+   - Added interactive `✍️ X / Y words` counter for written phrase questions and `🎙️ X / Y words` for spoken questions.
+   - Dynamically highlights green when target word count is satisfied, preventing incomplete phrase submissions.
+2. Batch Scoping and Active Default Tab Persistence:
+   - Scoped top tabs strictly to the active batch (`Camp 133`: 22 Active, 2 Inactive, 24 All).
+   - Ensured entering Student Roster always defaults to the 'Active Students' tab.
+   - Verified that sidebar hides past inactive batches.
+3. Cache Busters:
+   - Bumped to `?v=20261101_v82` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/test.js`, and `js/admin/app.js`.
 4. Automated Headless Chrome E2E test passed across all 5 primary pages with 0 errors.
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v81)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v82)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
-   - Sidebar Domain B menampilkan Program + Batch aktif (misal `Camp 133`), dan batch masa lalu (past) disembunyikan.
-   - Roster siswa otomatis menampilkan batch aktif dengan header tabel langsung di bawah topbar tabs (Active / Inactive / All).
-   - Kolom-kolom redundan (Institution, Program, Batch, Enrolled, Status) telah dihilangkan sehingga fokus pada Level, Nama, Usia, Gender, dan Nilai Ujian.
+   - Roster siswa menampilkan hitungan presisi Batch 133: 🟢 Active (22), ⚪ Inactive (2), 👥 All (24).
+   - Default tab terpilih saat masuk adalah **Active Students** (22 records).
+   - Sidebar Domain B hanya menampilkan batch aktif (`Camp 133`).
+   - Pada halaman ujian (`test.html`), soal frasa kini dilengkapi word counter interaktif real-time.
 
 ## Files Changed In Latest Step
-- `js/admin/student-management.js` — Added active batch auto-detection, sidebar active class sync, and title formatting.
-- `js/admin/app.js` — Synchronized cache busters and sub-module imports to `v81`.
-- `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/test.js` — Bumped cache busters to `v81`.
-- `docs/CURRENT_STATE.md`
+- `js/test.js` — Added phrase word counters for written and spoken questions.
+- `scripts/dump_roster_table.mjs` — Automated roster DOM table column layout verifier.
+- `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/admin/app.js` — Bumped cache busters to `v82`.
+- `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`
 
 ## Completed
 
-- **Phase 250: Active Batch Auto-Selection, Sidebar Synchronization & Full Cache v81**:
-  - Implemented auto-selection of active batches in `student-management.js` and synchronized the active state of sidebar items under Domain B.
-  - Formatted topbar title with active batch name.
-  - Cache bumped to `v81` and validated with 0 rogue colors and 0 E2E console errors.
+- **Phase 251: Phrase Real-Time Word-Count Counter & Full Cache v82**:
+  - Implemented real-time interactive word counter in `js/test.js` for phrase questions.
+  - Bumped application cache busters to `v82`.
+  - Ran headless Puppeteer DOM check and E2E console tests with 0 errors.
 
 - **Phase 248: Real-Time Spoken Answer Persistence & Speech Recognition Fail-Safe**:
   - Implemented real-time interim speech commit in `js/test.js` so spoken answers are recorded instantly as the student speaks without waiting for silence or `onFinal`.

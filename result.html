@@ -133,9 +133,50 @@
         <button class="btn btn-primary hidden" id="try-again-btn">Try Again</button>
         <a href="dashboard.html" class="btn btn-dashboard-primary cascade-btn-item" id="back-dashboard-btn">BACK TO
           LOBBY</a>
+        <button class="btn btn-flashcard-glow cascade-btn-item hidden" id="open-flashcards-btn" type="button" title="Interactive 3D Flashcard Review for missed items">🗂️ FLASHCARD RECOVERY (<span id="flashcard-badge-count">0</span>)</button>
         <button class="btn btn-breakdown-ghost cascade-btn-item" id="toggle-answers-btn">VIEW ANSWER BREAKDOWN</button>
       </div>
     </section>
+
+    <!-- 🗂️ Flashcard Recovery Modal (Interactive Learning Retention) -->
+    <div class="flashcard-modal-backdrop hidden" id="flashcard-modal" role="dialog" aria-modal="true" aria-label="Missed Words Flashcard Review">
+      <div class="flashcard-modal-card">
+        <div class="flashcard-modal-header">
+          <div class="flashcard-header-title-wrap">
+            <h2 class="flashcard-modal-title">🗂️ Flashcard Recovery</h2>
+            <span class="flashcard-modal-counter" id="fc-progress-counter">Card 1 of 5</span>
+          </div>
+          <button class="flashcard-close-btn" id="close-flashcard-btn" type="button" aria-label="Close">✕</button>
+        </div>
+
+        <div class="flashcard-stage">
+          <div class="flip-card" id="active-flip-card">
+            <div class="flip-card-inner" id="active-flip-inner">
+              <!-- Front Side: Prompt & Student's Mistake -->
+              <div class="flip-card-front">
+                <div class="fc-pos-pill" id="fc-front-pos">WORD</div>
+                <h3 class="fc-front-prompt" id="fc-front-prompt">Prompt</h3>
+                <div class="fc-front-student-ans" id="fc-front-student-ans">Your answer: <span>—</span></div>
+                <div class="fc-tap-hint">👆 Tap card to reveal target</div>
+              </div>
+              <!-- Back Side: English Target & Pronunciation Audio -->
+              <div class="flip-card-back">
+                <span class="fc-target-label">CORRECT TARGET</span>
+                <h2 class="fc-back-target" id="fc-back-target">Target</h2>
+                <button type="button" class="fc-speak-btn" id="fc-speak-btn" title="Listen to Native Pronunciation">🔊 Listen</button>
+                <div class="fc-tap-hint">👆 Tap card to flip back</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flashcard-footer-controls">
+          <button class="btn btn-secondary btn-sm" id="fc-btn-prev" type="button">← Prev</button>
+          <button class="btn btn-primary btn-sm" id="fc-btn-flip" type="button">🔄 Flip</button>
+          <button class="btn btn-secondary btn-sm" id="fc-btn-next" type="button">Next →</button>
+        </div>
+      </div>
+    </div>
 
     <div class="answers-modal-backdrop hidden" id="answers-section" role="dialog" aria-modal="true"
       aria-label="Answer Breakdown Modal">

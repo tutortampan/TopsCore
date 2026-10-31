@@ -1192,7 +1192,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       }
     }
 
-    function handleTimeUp(isSection) {
+    function proceedTimeUp(isSection) {
        if (isSection) {
           showToast('Section time is up! Moving to next section.', 'warning', 5000);
           if (currentSectionIndex < testsections.length - 1) {
@@ -1204,6 +1204,20 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           showToast('Time is up! Submitting your TEST…', 'warning', 5000);
           autoSubmit();
        }
+    }
+
+    function handleTimeUp(isSection) {
+       saveCurrentAnswer();
+       // Speech Grace Buffer (+3s): Allow in-flight speech recognition to finalize transcribing
+       if (window._isSpeechRecognitionEngaged) {
+          showToast('⏱️ Finalizing your speech recording...', 'info', 3000);
+          setTimeout(() => {
+             saveCurrentAnswer();
+             proceedTimeUp(isSection);
+          }, 3000);
+          return;
+       }
+       proceedTimeUp(isSection);
     }
 
     // —— Build Nav Grid (Display All Questions & Group by Section) ——
@@ -1926,6 +1940,15 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       });
     }
 
+
+    function getTargetPhraseWordCount(snap = {}, row = {}) {
+      const ans = (snap?.correct_answer || snap?.answer || row?.correct_answer_snapshot || '').trim();
+      if (!ans) return 0;
+      const primary = ans.split(/[;/,|]/)[0].trim();
+      const words = primary.split(/\s+/).filter(Boolean).length;
+      return words >= 2 ? words : 0;
+    }
+
     function renderWritten(area, controlArea, row, savedAnswer, snap = {}, vk) {
       area.innerHTML = '';
       area.style.display = 'flex';
@@ -1954,6 +1977,23 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       area.appendChild(ta);
 
+      // Phrase Progress Word-Counter (Pilar 2 Enhancement)
+      const targetPhraseWords = getTargetPhraseWordCount(snap, row);
+      let wordCounter = null;
+      let updateWordCount = null;
+      if (targetPhraseWords >= 2) {
+        wordCounter = document.createElement('div');
+        wordCounter.className = 'phrase-word-counter';
+        wordCounter.style.cssText = 'font-size:11.5px; font-weight:700; color:#94a3b8; margin-top:2px; display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:10px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08);';
+        updateWordCount = (val) => {
+          const words = (val || '').trim().split(/\s+/).filter(Boolean).length;
+          const isDone = words >= targetPhraseWords;
+          wordCounter.innerHTML = `✍️ <span style="color:${isDone ? 'var(--clr-success, #00c000ff)' : '#38bdf8'}; font-weight:800;">${words}</span> / ${targetPhraseWords} words`;
+        };
+        updateWordCount(ta.value);
+        area.appendChild(wordCounter);
+      }
+
       area.addEventListener('click', () => {
         ta.focus();
         window.activeKeyboardInput = ta;
@@ -1963,6 +2003,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       ta.addEventListener('input', () => {
         answeredMap[row.id] = ta.value;
+        if (wordCounter && typeof updateWordCount === 'function') {
+          updateWordCount(ta.value);
+        }
         updateActiveChipOnly(row.id, ta.value);
         scheduleDebouncedAutoSave(row.id, ta.value, 800);
       });
@@ -1989,9 +2032,26 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       langSelect.style.cssText = 'background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:2px 8px; font-size:11.5px; font-weight:600; outline:none;';
       langSelect.innerHTML = `<option value="en-US">🇺🇸 EN-US</option><option value="en-GB">🇬🇧 EN-UK</option>`;
       const statusEl = document.createElement('div');
-      statusEl.style.cssText = 'font-weight:700; font-size:11.5px; color:#94a3b8;';
+      statusEl.style.cssText = 'font-weight:700; font-size:11.5px; color:#94a3b8; display:flex; align-items:center; gap:8px;';
       statusEl.textContent = savedAnswer ? '✅ Recorded' : '● Ready';
       if (savedAnswer) statusEl.style.color = 'var(--clr-success, #00c000ff)';
+
+      // Spoken Phrase Word-Counter
+      const speechTargetPhraseWords = getTargetPhraseWordCount(snap, row);
+      let speechWordCounter = null;
+      let updateSpeechWordCount = null;
+      if (speechTargetPhraseWords >= 2) {
+        speechWordCounter = document.createElement('span');
+        speechWordCounter.style.cssText = 'font-size:11px; font-weight:700; padding:1px 6px; border-radius:8px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08);';
+        updateSpeechWordCount = (val) => {
+          const words = (val || '').trim().split(/\s+/).filter(Boolean).length;
+          const isDone = words >= speechTargetPhraseWords;
+          speechWordCounter.innerHTML = `🎙️ <span style="color:${isDone ? 'var(--clr-success, #00c000ff)' : '#38bdf8'};·font-weight:800;">${words}</span>/${speechTargetPhraseWords} words`.replace('\xb7', ' ');
+        };
+        updateSpeechWordCount(savedAnswer || '');
+        statusEl.appendChild(speechWordCounter);
+      }
+
       topRow.appendChild(langSelect); topRow.appendChild(statusEl);
       area.appendChild(topRow);
 
@@ -2033,6 +2093,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           },
           onResult(interim) {
             transcriptBox.textContent = interim;
+            if (speechWordCounter && typeof updateSpeechWordCount === 'function') {
+              updateSpeechWordCount(interim);
+            }
             // Real-time interim commit (guarantees student speech is never lost on sudden timeout or navigation)
             if (interim && interim.trim()) {
               answeredMap[row.id] = interim.trim();
@@ -2041,6 +2104,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           },
           onFinal(transcript) {
             transcriptBox.textContent = transcript;
+            if (speechWordCounter && typeof updateSpeechWordCount === 'function') {
+              updateSpeechWordCount(transcript);
+            }
             answeredMap[row.id] = transcript;
             updateNavGrid();
             persistLocalBuffer();

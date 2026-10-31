@@ -1,3 +1,36 @@
+## [2026-11-01 04:26] — Phase 251: Phrase Real-Time Word-Count Counter & Full Cache v82
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 251  
+**Status:** PASS  
+
+### Why
+- User request:
+  1. Fix active / inactive student counts in Student Roster so they strictly scope to the selected active batch (Batch 133: 22 Active, 2 Inactive, 24 All).
+  2. Resolve where 28 inactive and 50 all came from (they were leaking from past/inactive batches in the Camp program: 131, 132, 123).
+  3. Ensure entering Student Roster always defaults to the **Active Students** tab (`active`), not *All Students*.
+  4. Implement Pilar 2 scaffolding from the proposal: interactive phrase word counter in `test.html` so students immediately see how many words they have typed or spoken versus the target count.
+  5. Bump all cache busters to `v82`.
+
+### Changed
+- `js/test.js`:
+  - Added `getTargetPhraseWordCount` helper to extract expected word count for phrase questions.
+  - Added live word counter chip (`✍️ X / Y words` for written, `🎙️ X / Y words` for spoken) that turns green upon reaching the target word length.
+- `js/admin/app.js`:
+  - Ensured `_filterBatchId` restores from localStorage when opening `#students`.
+  - Bumped sub-module imports to `?v=20261101_v82`.
+- `admin.html`, `dashboard.html`, `result.html`, `test.html`:
+  - Bumped cache busters to `?v=20261101_v82`.
+- `scripts/dump_roster_table.mjs`:
+  - Added automated DOM test verifying roster columns: Level, Name, Age, Gender, Exams, Actions.
+
+### Verification
+- `scripts/test_student_roster_counts_and_active_default.mjs`: PASS (22 Active, 2 Inactive, 24 All, default active tab).
+- `scripts/check_all_js_syntax.cjs`: PASS (40/40 JS files passed syntax check).
+- `scripts/e2e_console_health_check.mjs`: PASS (0 console errors across all 5 primary application pages in Headless Chrome).
+
+---
+
 ## [2026-11-01 04:22] — Phase 250: Active Batch Auto-Selection, Sidebar Synchronization & Full Cache v81
 
 **Agent/Session:** Antigravity  

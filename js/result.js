@@ -1010,6 +1010,7 @@ if (!session) {
 
         // Render answer breakdown
         renderAnswers(answers);
+        setupFlashcardRecovery(answers);
 
         // Attempt history (all attempts for this test)
         if (testId) {
@@ -1345,6 +1346,126 @@ if (!session) {
       if (breakdownBtn) breakdownBtn.classList.add('cascade-revealed');
 
       clearTimeout(safetyTimeout);
+    }
+
+
+    // ===== 🗂️ FLASHCARD RECOVERY ENGINE =====
+    let _activeFlashcards = [];
+    let _currentFcIndex = 0;
+
+    function setupFlashcardRecovery(answers = []) {
+      const fcBtn = document.getElementById('open-flashcards-btn');
+      const fcBadge = document.getElementById('flashcard-badge-count');
+      if (!fcBtn) return;
+
+      // Filter answers where student had difficulty (incorrect, timeout, or partial)
+      _activeFlashcards = (answers || []).filter(a => {
+        const cat = getEvalCategory(a);
+        return cat === 'incorrect' || cat === 'minor_spelling_error';
+      });
+
+      if (_activeFlashcards.length === 0) {
+        fcBtn.classList.add('hidden');
+        return;
+      }
+
+      fcBtn.classList.remove('hidden');
+      if (fcBadge) fcBadge.textContent = _activeFlashcards.length;
+
+      fcBtn.onclick = () => openFlashcardModal();
+      document.getElementById('close-flashcard-btn')?.addEventListener('click', closeFlashcardModal);
+      document.getElementById('flashcard-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'flashcard-modal') closeFlashcardModal();
+      });
+
+      const flipInner = document.getElementById('active-flip-inner');
+      const flipCard = document.getElementById('active-flip-card');
+      const toggleFlip = () => flipInner?.classList.toggle('flipped');
+
+      if (flipCard) flipCard.onclick = toggleFlip;
+      document.getElementById('fc-btn-flip')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFlip();
+      });
+
+      document.getElementById('fc-btn-prev')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (_activeFlashcards.length === 0) return;
+        _currentFcIndex = (_currentFcIndex - 1 + _activeFlashcards.length) % _activeFlashcards.length;
+        renderFlashcardItem();
+      });
+
+      document.getElementById('fc-btn-next')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (_activeFlashcards.length === 0) return;
+        _currentFcIndex = (_currentFcIndex + 1) % _activeFlashcards.length;
+        renderFlashcardItem();
+      });
+
+      document.getElementById('fc-speak-btn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const currentItem = _activeFlashcards[_currentFcIndex];
+        if (!currentItem) return;
+        const snap = typeof currentItem.question_snapshot === 'string'
+          ? (() => { try { return JSON.parse(currentItem.question_snapshot); } catch(_) { return {}; } })()
+          : (currentItem.question_snapshot || {});
+        const target = (snap.correct_answer || snap.answer || currentItem.correct_answer || '').split(/[;/,|]/)[0].trim();
+        if (target && 'speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(target);
+          u.lang = 'en-US';
+          u.rate = 0.9;
+          window.speechSynthesis.speak(u);
+        }
+      });
+    }
+
+    function openFlashcardModal() {
+      const modal = document.getElementById('flashcard-modal');
+      if (!modal || _activeFlashcards.length === 0) return;
+      _currentFcIndex = 0;
+      renderFlashcardItem();
+      modal.classList.remove('hidden');
+    }
+
+    function closeFlashcardModal() {
+      const modal = document.getElementById('flashcard-modal');
+      if (modal) modal.classList.add('hidden');
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+
+    function renderFlashcardItem() {
+      const item = _activeFlashcards[_currentFcIndex];
+      if (!item) return;
+
+      const flipInner = document.getElementById('active-flip-inner');
+      if (flipInner) flipInner.classList.remove('flipped');
+
+      const snap = typeof item.question_snapshot === 'string'
+        ? (() => { try { return JSON.parse(item.question_snapshot); } catch(_) { return {}; } })()
+        : (item.question_snapshot || {});
+
+      const prompt = snap.question_text || snap.question || snap.soal || snap.indonesia || '—';
+      const pos = snap.word_type || snap.category || (snap.correct_answer?.includes(' ') ? 'Phrase' : 'Word');
+      const target = (snap.correct_answer || snap.answer || item.correct_answer || '—').split(/[;/,|]/)[0].trim();
+      const studentAns = (item.student_answer || '').trim() || '(No answer / Blank)';
+
+      const posEl = document.getElementById('fc-front-pos');
+      if (posEl) posEl.textContent = pos;
+
+      const promptEl = document.getElementById('fc-front-prompt');
+      if (promptEl) promptEl.textContent = prompt;
+
+      const studentAnsEl = document.getElementById('fc-front-student-ans');
+      if (studentAnsEl) {
+        studentAnsEl.innerHTML = `Your answer: <span style="color:var(--grade-e, #FF0000);">${escapeHtml(studentAns)}</span>`;
+      }
+
+      const backTargetEl = document.getElementById('fc-back-target');
+      if (backTargetEl) backTargetEl.textContent = target;
+
+      const counterEl = document.getElementById('fc-progress-counter');
+      if (counterEl) counterEl.textContent = `Card ${_currentFcIndex + 1} of ${_activeFlashcards.length}`;
     }
 
     function renderAnswers(answers) {
