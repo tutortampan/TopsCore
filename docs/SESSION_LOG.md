@@ -1,3 +1,34 @@
+## SESSION-20261101-0028
+
+Start: 2026-11-01 00:25 UTC+8
+End: 2026-11-01 00:28 UTC+8
+Agent: Antigravity
+
+### User Request
+"apa ini di bawah tabel result?" (with screenshot showing unstyled table "⏱️ Test-by-Test Completion & Pacing" rendered below the Class Hub grid)
+
+### Objective
+1. Identify what component is rendering below the Class Hub table and why.
+2. Fix the leak so no orphaned drawer appears under the attendance table.
+3. Ensure all drawer styling is properly scoped and lifecycle cleanup is implemented on view navigation.
+4. Verify syntax and deploy changes.
+
+### Work Performed
+1. Diagnosis:
+   - The element is `#tac-pacing-drawer` from `js/admin/tests-management.js` (Test Analytics).
+   - It was mounted onto `document.body` so it could slide out over the UI.
+   - Its CSS was dynamically injected inside `#admin-content-area`.
+   - Navigating to `#class-hub` destroyed the `<style>` tag while leaving the `#tac-pacing-drawer` element in `document.body`. Without `position: fixed` and `transform: translateX(100%)`, it fell into document flow at the bottom of the page.
+2. Fix:
+   - Relocated drawer CSS rules to `css/admin.css` with persistent fixed positioning.
+   - Added automatic cleanup in `loadSection()` in `js/admin/app.js` to unmount orphaned `#tac-pacing-drawer` and backdrop when `section !== 'tests'`.
+   - Bumped cache busters across `admin.html`, `dashboard.html`, `result.html`, and `js/admin/app.js` to `?v=20261101_v72`.
+3. Validation:
+   - Ran `node scripts/check_all_js_syntax.cjs`: 40/40 files passed.
+   - Clean git working tree pushed to `origin/main`.
+
+---
+
 ## SESSION-20261101-0025
 
 Start: 2026-11-01 00:01 UTC+8

@@ -1,33 +1,22 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 00:20 UTC+8
+Last Updated: 2026-11-01 00:28 UTC+8
 
-Current Phase: Phase 235: Pure Academic Data Restoration, Elimination of All Forgiven & Remedial Overrides, and Exact Parity Realignment [COMPLETE]
+Current Phase: Phase 237: Fix Test Analytics Pacing Drawer DOM Leak on Class Hub & Permanent Scoping [COMPLETE]
 
-Current Task: Completed user `/goal` directive: (1) Stripped `forgiven_student_ids` from ALL 40 tests in `3rd Vocabulary` in Supabase database. (2) Removed all ad-hoc Forgiven and Remedial override logic, toolbar buttons, row triggers, and red `^F` superscript renderers. (3) Restored authentic test progression (PROG %): only tests with genuine submitted attempts increment progress. (4) Restored genuine theme summary columns (`SCORE THEME %`, `TOT EXAM PTS`): unattempted themes render clean unattempted dashes (`·`) instead of 0% or `0%^F`. (5) Preserved 100% genuine student exam and quiz scores, points, and grades without artificial inflation or synthetic overrides. (6) Bumped cache busters across all assets to `?v=20261101_v71`. All 40 JS files passed syntax validation, 27/27 SW manifest verified, and 100% parity tests PASS.
+Current Task: Resolved user inquiry regarding orphan table "⏱️ Test-by-Test Completion & Pacing" appearing below the Class Hub matrix: (1) Diagnosed DOM leak where `#tac-pacing-drawer` was mounted to `document.body` but its CSS was inside a transient `<style>` block in `#admin-content-area`. (2) Relocated drawer CSS rules permanently into `css/admin.css` with persistent fixed positioning. (3) Implemented automated cleanup in `loadSection()` (`js/admin/app.js`) to unmount any orphaned `#tac-pacing-drawer` and backdrop when navigating away from `tests`. (4) Bumped cache busters across `admin.html`, `dashboard.html`, `result.html`, and `js/admin/app.js` to `?v=20261101_v72`. All 40 JS files passed syntax validation (`node --check`).
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 100% dashboard calculation verified, 0 git commit)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 git diff)
 
 ## Next Exact Action
-1. Changes committed and pushed to git remote.
-2. User dapat hard-refresh di browser (Ctrl + F5):
-   - Di `admin.html#class-hub?tab=attendance`:
-     - Tampilan bersih murni: tombol "Forgive" dan tanda superscript `^F` merah telah dihapus total.
-     - Tes yang belum pernah diambil siswa tampil dengan tanda titik tengah netral (`·`), bukan `0%ᶠ` atau angka merah.
-     - Nilai ujian dan kuis siswa tampil murni sesuai persentase dan poin asli yang diperolehnya.
-     - Tema yang belum pernah diambil (misal Theme B/C/D untuk siswa yang baru selesai Theme A) tampil `·`, bukan 0%.
-     - Nilai PROG siswa mencerminkan progres penyelesaian sesungguhnya (misal Muhammad Tarmizi yang baru ikut 9 tes tampil 23%, bukan 95%).
-     - Akumulasi poin PTS dan Grade murni dari ujian yang telah diselesaikan.
+1. User dapat melakukan hard-refresh di browser (**Ctrl + F5**) pada halaman `admin.html#class-hub`.
+2. Drawer analitik pacing di bawah tabel sudah hilang total dan hanya tabel Class Hub murni yang tampil.
 
 ## Files Changed In Latest Step
-- `js/admin/app.js` — Removed `isPrereqTest` fake completion branching; removed `btn-override-prereq-matrix`, row trigger buttons, and `^F: Forgiven` legend; purged `_openClassOverridePrereqModal`; restored pure cell renderers and theme calculations.
-- `css/admin.css` — Removed `.test-forgiven-sup` and `.asm-score-forgiven`.
-- `js/api.js` — Removed `forgiven_student_ids` checks from prerequisite guards and removed payload update logic.
-- `js/dashboard.js` — Cleaned up `forgiven_student_ids` references; preserved tutor live session direct access rule.
-- `supabase/functions/start-test/index.ts` — Cleaned up `forgiven_student_ids` checks.
-- Database:
-  - Cleaned `forgiven_student_ids` from all tests payload.
-  - Reset `correct_count` anomalies on 13 zero-answer attempts.
+- `css/admin.css` — Added permanent `.tac-slide-drawer` and pacing drawer styles.
+- `js/admin/app.js` — Added DOM lifecycle cleanup for `#tac-pacing-drawer` and backdrop in `loadSection()`.
+- `admin.html`, `dashboard.html`, `result.html` — Cache bumped to `?v=20261101_v72`.
+- `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`, `docs/CURRENT_STATE.md`
   - Synchronized `is_best_score = true` across 1,480 attempts.
 - `admin.html`, `dashboard.html`, `result.html` — Cache bumped to `?v=20261101_v71`.
 - `docs/CHANGELOG.md`, `docs/CURRENT_STATE.md`, `docs/SESSION_LOG.md`

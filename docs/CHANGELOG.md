@@ -1,3 +1,28 @@
+## [2026-11-01 00:27] — Phase 237: Fix Test Analytics Pacing Drawer DOM Leak on Class Hub & Permanent Scoping
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 237
+**Status:** PASS
+
+### Why
+- Completed user inquiry: *"apa ini di bawah tabel result?"* with attached screenshot showing a raw, unstyled table titled **"⏱️ Test-by-Test Completion & Pacing"** rendered directly below the Class Hub matrix on `admin.html#class-hub`.
+- Investigation identified that `#tac-pacing-drawer` in `js/admin/tests-management.js` was appended to `document.body` as a slide-out drawer, but its styling resided inside a transient `<style>` element inside `#admin-content-area`.
+- When the user navigated from `#tests` to `#class-hub`, `#admin-content-area` was rewritten, destroying the style rules. Consequently, the drawer lost `position: fixed` and `transform: translateX(100%)`, causing it to drop into normal document flow below the Class Hub grid.
+
+### Changed
+- `css/admin.css`:
+  - Permanently integrated all `.tac-slide-drawer`, `.tac-drawer-backdrop`, and pacing table styles into the global admin stylesheet with `!important` guards to ensure fixed positioning is never lost.
+- `js/admin/app.js`:
+  - Added DOM lifecycle cleanup inside `loadSection`: when navigating to any section other than `tests`, any orphaned `#tac-pacing-drawer` and `#tac-pacing-drawer-backdrop` attached to `document.body` are immediately unmounted (`remove()`).
+- Cache Busters:
+  - Bumped cache buster query parameters across `admin.html`, `dashboard.html`, `result.html`, and `js/admin/app.js` to `?v=20261101_v72`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: 40/40 JS files PASS (node --check).
+- Visual verification: Switching between `#tests` and `#class-hub` leaves no orphan DOM elements on `document.body`.
+
+---
+
 ## [2026-11-01 00:22] — Phase 236: Student Roster Gender Streamlining & 4 Theme Exam Points Direct Parity
 
 **Agent/Session:** Antigravity
