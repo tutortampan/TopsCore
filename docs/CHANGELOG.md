@@ -1,3 +1,30 @@
+## [2026-11-01 00:22] — Phase 236: Student Roster Gender Streamlining & 4 Theme Exam Points Direct Parity
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 236
+**Status:** PASS
+
+### Why
+- Completed user directive: *"di student rooster ini gender masih ada icon di samping M/F, hilangkan itu, cukup pakai M/F. dan kolom exam dalam kelas Vocab seharusnya ada 4 exam disana,,, cocokkan isinya dengan yang ada di total point masin2 tema sesuai data di kelas. ada kkolom grade, score , progress, itu tak penting, saya hanya butuh total points masing2 exam. analisa, pelajari, lakukan"*
+- User requested clean gender labels (`M` / `F`) without unicode gender symbol icons.
+- In Student Roster, columns under active classes were previously showing `Score`, `Grd`, `PTS`, `Exams` (and a global `Progress` bar). The query had also failed to load tests due to querying non-existent column `total_questions`, resulting in dashes (`—`).
+- The user specified that `Score`, `Grade`, and `Progress` are not important, and instructed to display exactly **4 Exam columns** representing the 4 theme exam total points from the class data (matching Class Hub).
+
+### Changed
+- `js/admin/student-management.js`:
+  - Query Fix: Removed non-existent column `total_questions` from `adminFetchAll('tests')` on line 73, successfully loading all 40 class tests.
+  - Gender Column: Replaced unicode icons `&#9794; M` and `&#9792; F` with clean bold `M` (`#38bdf8`) and `F` (`#f472b6`). Also cleaned modal badge.
+  - Per-Class Computation: Grouped target class exams into 4 themes (Theme A = Exam 1, Theme B = Exam 2, Theme C = Exam 3, Theme D = Exam 4) and summed each student's genuine earned exam points for that theme.
+  - DataGrid Columns: Replaced `Score`, `Grd`, `PTS`, and `Exams` with 4 dedicated theme exam columns (`Exam 1`, `Exam 2`, `Exam 3`, `Exam 4`). Removed `Progress` column.
+  - SuperHeaders: Configured `colSpan: 4` spanning the 4 theme exam columns, with `fixed_before: 7` and `fixed_after: 3` (`Enrolled`, `Status`, `Actions`).
+  - Sort Comparator: Added sort comparator branches for `_cls_exam1_`, `_cls_exam2_`, `_cls_exam3_`, `_cls_exam4_`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: 40/40 JS files PASS (node --check).
+- Simulation script: Verified 100% parity of theme points between Class Hub and Student Roster for all students in Batch 133.
+
+---
+
 ## [2026-11-01 00:15] — Phase 235: Pure Academic Data Restoration, Elimination of All Forgiven & Remedial Overrides, and Exact Parity Realignment
 
 **Agent/Session:** Antigravity

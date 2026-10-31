@@ -1,3 +1,33 @@
+## SESSION-20261101-0025
+
+Start: 2026-11-01 00:01 UTC+8
+End: 2026-11-01 00:25 UTC+8
+Agent: Antigravity
+
+### User Request
+"di student rooster ini gender masih ada icon di samping M/F, hilangkan itu, cukup pakai M/F. dan kolom exam dalam kelas Vocab seharusnya ada 4 exam disana,,, cocokkan isinya dengan yang ada di total point masin2 tema sesuai data di kelas. ada kkolom grade, score , progress, itu tak penting, saya hanya butuh total points masing2 exam. analisa, pelajari, lakukan"
+
+### Objective
+1. Remove unicode gender icons from Student Roster, displaying only clean `M` and `F`.
+2. Fix `adminFetchAll('tests')` query in `student-management.js` (remove non-existent `total_questions` column).
+3. Replace `Score`, `Grd`, `PTS`, `Exams` and global `Progress` columns with 4 dedicated Exam columns (`Exam 1`, `Exam 2`, `Exam 3`, `Exam 4`).
+4. Calculate and match the total points of each theme exam (Theme A, B, C, D) to achieve 100% parity with Class Hub.
+5. Verify syntax and data integrity.
+
+### Work Performed
+1. `js/admin/student-management.js`:
+   - Line 73: Removed `total_questions` column from select query, restoring test loading (40 tests loaded).
+   - Lines 2110–2118: Replaced `&#9794; M` and `&#9792; F` with clean `M` and `F`.
+   - Lines 306–370: Computed total exam points per theme (A: Exam 1, B: Exam 2, C: Exam 3, D: Exam 4).
+   - Lines 1715–1770: Generated 4 DataGrid columns (`Exam 1` to `Exam 4`).
+   - Lines 1780–1790: Configured `superHeaders` with `colSpan: 4`, `fixed_before: 7`, `fixed_after: 3`.
+   - Removed `Progress` column per user requirement.
+2. Verified with Node simulation: all theme exam points match Class Hub with 100% precision.
+3. All 40 JS files passed syntax validation (`node --check`).
+4. Committed and pushed changes to git remote (`4d6d01c`).
+
+---
+
 ## SESSION-20261101-0020
 
 Start: 2026-10-31 23:51 UTC+8
