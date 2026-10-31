@@ -484,6 +484,15 @@ export async function renderStudents(area) {
   const activePrograms = (allPrograms || []).filter(p => p.is_active !== false);
   activePrograms.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
+  // Ensure active batch is selected (from memory or localStorage)
+  if (!window._filterBatchId) {
+    const savedBatchId = localStorage.getItem('topscore_selected_batch_id');
+    const isValidSaved = savedBatchId && (allBatches || []).some(b => b.id === savedBatchId);
+    if (isValidSaved) {
+      window._filterBatchId = savedBatchId;
+    }
+  }
+
   // If filtered by batch, auto-detect program
   if (window._filterBatchId && allBatches) {
     const matchedBatch = allBatches.find(b => b.id === window._filterBatchId);
@@ -508,13 +517,30 @@ export async function renderStudents(area) {
     } catch(e) {}
   }
 
-  // Synchronize sidebar active state for program items
+  // If still no batch selected, pick the first active batch of the active program
+  if (!window._filterBatchId && currentProgramId && allBatches) {
+    const firstActiveBatch = allBatches.find(b => b.program_id === currentProgramId && b.is_active !== false && !b.deleted_at);
+    if (firstActiveBatch) {
+      window._filterBatchId = firstActiveBatch.id;
+      window._filterBatchName = firstActiveBatch.name;
+      try {
+        localStorage.setItem('topscore_selected_batch_id', firstActiveBatch.id);
+        localStorage.setItem('topscore_selected_batch_name', firstActiveBatch.name);
+      } catch(_) {}
+    }
+  }
+
+  // Synchronize sidebar active state for program/batch items
   document.querySelectorAll('.sidebar-program-item').forEach(i => {
-    i.classList.toggle('active', i.getAttribute('data-program-id') === currentProgramId);
+    const matchesBatch = window._filterBatchId && i.getAttribute('data-batch-id') === window._filterBatchId;
+    const matchesProg = !window._filterBatchId && i.getAttribute('data-program-id') === currentProgramId;
+    i.classList.toggle('active', !!(matchesBatch || matchesProg));
   });
   const topbarTitle = document.getElementById('topbar-title');
-  if (topbarTitle && window._selectedProgramName) {
-    topbarTitle.textContent = window._selectedProgramName;
+  if (topbarTitle) {
+    const curBatch = (allBatches || []).find(b => b.id === window._filterBatchId);
+    const batchLabel = curBatch ? (curBatch.name.toLowerCase().startsWith((window._selectedProgramName || '').toLowerCase()) ? curBatch.name : `${window._selectedProgramName} ${curBatch.name}`) : window._selectedProgramName;
+    topbarTitle.textContent = window._selectedSidebarLabel || batchLabel || window._selectedProgramName || 'Students';
   }
 
   // Filter students strictly by active program
