@@ -1020,6 +1020,35 @@ Empirical analysis of student errors showed two key pedagogical gaps:
 - Substantially reduces incomplete answers on idiom and phrase assessments.
 - Bridges assessment and learning, converting evaluation into immediate vocabulary mastery and retention.
 
+---
+
+## DECISION-038 — Active-Only Batch Sidebar Scoping, Student Roster Redundant Column Purge, and Speech Grace Buffer (+3s)
+
+Date: 2026-11-01
+Status: ACCEPTED
+
+### Context
+1. In Domain B (Board) sidebar, displaying past/inactive batches cluttered navigation and created confusion between active cohorts and historical records.
+2. In the Student Roster table (`admin.html#students`), columns for Institution, Program, Batch, Enrolled Date, and Status were redundant because Program and Batch are already scoped by the sidebar, Status is toggled by topbar tabs, and enrollment date lives under Organization.
+3. In spoken tests, mobile Web Speech API latency caused speech processing to lag 2–3s after speech ends, risking abrupt cut-offs and blank answers when countdown reached 0.
+
+### Decision
+1. **Active-Only Batch Sidebar Scoping**:
+   - Sidebar Domain B strictly filters and renders only active batches (`is_active: true`, e.g. `Camp 133`). Inactive/past batches are completely hidden from the sidebar menu.
+   - If no batch is selected, the application automatically detects and selects the first active batch of the active program and synchronizes the active highlight.
+2. **Student Roster Column Streamlining & Top Panel**:
+   - Removed `INSTITUTION`, `PROGRAM`, `BATCH`, `ENROLLED`, and `STATUS` columns from the Student Roster DataGrid.
+   - Retained only student-centric columns: `[Checkbox] | Level | Name (Avatar) | Age | Gender (M/F) | [Class Theme Exams 1-4] | Actions`.
+   - Replaced bulky filter toolbar with interactive topbar tabs (`🟢 Active Students`, `⚪ Inactive Students`, `👥 All Students`), raising table headers directly beneath metric tabs.
+3. **Speech Recognition Grace Buffer (+3s)**:
+   - In `js/test.js`, if the countdown deadline expires while the student is actively speaking (`window._isSpeechRecognitionEngaged`), the system initiates a 3-second grace buffer (`⏱️ Finalizing your speech recording...`), allowing speech recognition to finalize transcribing before auto-submitting.
+
+### Consequences
+- Clean, focused, uncluttered navigation for tutors.
+- Zero loss of student speech on last-second answers before countdown expiration.
+- Maximized horizontal screen real estate for exam performance metrics on student roster.
+
+
 
 
 
