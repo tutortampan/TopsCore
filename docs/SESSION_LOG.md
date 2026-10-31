@@ -1,3 +1,41 @@
+## SESSION-20261031-1825
+
+Start: 2026-10-31 18:14 UTC+8
+End: 2026-10-31 18:27 UTC+8
+Agent: Antigravity
+
+### User Request
+"commit push"
+(Continuing goal: "nalisa dan terapakan agar penialian siswa sesuai,,, yang remidi jadikan normal dulu, dan yang bukan hasil remidi berikan tanda nilai grade F Forgiven, intinya dari test pertama sampai 38 yang ememang punya nilai, dan lulus, biarkan, yang nilainya kurang dari 60% atau kosong, berikan nilai F tanpa merubah skor asli mereka, misalnya 40% maka biarkan 40% tapi Bri Grade F, dan kalau 0 maka biarkan nol, dengan Grade F juga, buat F jadi superscript di atas score seperti remidi. coba lakukan ini sampai nilainya benar, sehingga semua siswa bisa eligible masuk exam 39 dan 40. /goal")
+
+### Objective
+1. Normalize database remedial attempts for Batch 133 in Tests 1–38 (`is_remedial_unlocked: false`).
+2. Implement rendering in `js/admin/app.js`:
+   - Natural passing tests ($\ge 60\%$): clean score and grade (e.g. `85%`, `100%★`, `78%`).
+   - Forgiven attempts ($< 60\%$): real score percentage preserved with bold red superscript `F` (e.g. `59%^F`, `40%^F`) and earned points.
+   - Forgiven unattempted: `0%^F` with 0 pts.
+3. Keep PROG % at 95% (or 98%/100%).
+4. Verify all 22 students are eligible to join Exam 39 & Exam 40.
+5. Execute `git add`, `git commit`, and `git push` per explicit user command.
+
+### Work Performed
+1. Database:
+   - Updated 651 remedial attempts for Batch 133 in Tests 1–38 to `is_remedial_unlocked: false`.
+   - Restored 79 `effective_score` values that had been capped below raw `score`.
+2. CSS:
+   - Added `.test-forgiven-sup` in `css/admin.css` with bold red styling and super vertical alignment.
+3. Matrix Engine (`js/admin/app.js`):
+   - Refactored cell renderers (Exam SCORE, Exam PTS, Quiz) to support natural passes, real score with superscript `F`, and `0%^F`.
+   - Updated theme calculation to sum real exam points without artificial remedial contamination.
+   - Restored student PROG % calculation across tests 1–38.
+4. Testing:
+   - `npm test`: 40/40 JS syntax checks PASS, 27/27 manifest PASS, 100% dashboard parity PASS.
+   - Node simulation verified exact rendering on active students.
+5. Git:
+   - Committed and pushed all changes to `origin/main`.
+
+---
+
 ## SESSION-20261031-1225
 
 Start: 2026-10-31 11:30 UTC+8

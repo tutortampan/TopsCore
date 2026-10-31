@@ -1,35 +1,31 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-31 12:25 UTC+8
+Last Updated: 2026-10-31 18:25 UTC+8
 
-Current Phase: Phase 232: Full Forgiveness Engine Restoration, All Students Exam 39 & 40 Eligibility & Points Realignment [COMPLETE]
+Current Phase: Phase 233: Remedial Normalization, Real Score Preservation with Red Superscript F (Grade F), and 100% Exam 39 & 40 Eligibility [COMPLETE]
 
-Current Task: Completed user /goal directive: (1) Resolved prerequisite gating across server-side Edge Function start-test (select id, payload) and client-side js/dashboard.js (forgiven quiz check), ensuring 100% of all 22 active students in Batch 133 are eligible to join Exam 39 and Exam 40. (2) Unlocked live test sessions for Test 39 & Test 40 with all 22 active students on whitelist and auto-close extended to 48 hours. (3) Deleted 123 synthetic attempts, restoring distinct red F markers for forgiven tests (0 pts, does not inflate PROG). (4) Preserved all natural student exam attempts (Latifa, Aunul, Wardatul, Gagan, Masyan, Syazida, Ari, Pasya). (5) Restored theme exam scores and points (SCORE THEME % and TOT EXAM PTS) across all themes. (6) Left PTS column aligned to authoritative latest active theme points (computeMilestoneExamMastery). (7) Cache bumped to v68. npm test 40/40 JS syntax PASS, 27/27 manifest PASS, 100% dashboard parity PASS. 0 git commit.
+Current Task: Completed user /goal directive and commit push request: (1) Normalized all attempts for Batch 133 in Tests 1-38 (is_remedial_unlocked = false, restored real effective scores). (2) Preserved natural passing tests (>= 60%) with clean score and grade (e.g. 85%, 100%★). (3) For tests < 60%, preserved real score percentage and earned points with bold red superscript F (e.g. 59%^F, 40%^F). (4) For unattempted/empty tests, displayed 0%^F with 0 pts. (5) Restored PROG % to 95% (or 98%/100%). (6) Verified 100% of all 22 active students in Batch 133 are eligible for Exam 39 & 40. (7) Cache bumped to v69. npm test passed 100%.
 
 Status: COMPLETE (All requirements satisfied & all tests PASS)
 
 ## Next Exact Action
-1. User dapat melakukan testing langsung di browser:
-   - Hard refresh (`Ctrl + F5`) di `admin.html#class-hub?tab=attendance`.
-   - Periksa tabel **Students Grade and Score**:
-     - Tes yang di-forgive oleh tutor menampilkan huruf tebal **`F`** berwarna **MERAH (`#FF0000`)** dan poin 0.
-     - Nilai ujian riil siswa tampil utuh (Aunul 79% 506 pts + 99% 159 pts, Latifa 79% 378.5 pts + 97% 116 pts, dsb.).
-     - Kolom `SCORE THEME %` dan `TOT EXAM PTS` menghitung nilai dan poin ujian dengan benar untuk tema yang dikerjakan riil.
-     - Kolom kiri `PTS` menampilkan poin ujian tema aktif riil siswa.
-   - Buka `dashboard.html` untuk siswa manapun di Batch 133:
-     - Seluruh 22 siswa 100% ELIGIBLE untuk langsung mengikuti Exam 39 (Words Exam) dan Exam 40 (Phrases Exam) tanpa terhalang prasyarat!
+1. All changes committed and pushed to git remote.
+2. User dapat hard-refresh di browser (Ctrl + F5):
+   - Di `admin.html#class-hub?tab=attendance`:
+     - Tes yang lulus (>= 60%) tampil bersih dengan warna predikat aslinya (misal 78%, 85%, 100%).
+     - Tes yang di bawah 60% menampilkan skor riil siswa + superscript F merah (misal 59%ᶠ, 40%ᶠ).
+     - Tes yang kosong/0 menampilkan 0%ᶠ.
+     - PROG siswa kembali normal 95% (98% bagi yang sudah ambil Exam 39, 100% bagi yang sudah selesai keduanya).
+     - Seluruh siswa 100% eligible masuk Exam 39 & Exam 40.
 
 ## Files Changed In Latest Step
-- `supabase/functions/start-test/index.ts` — Added `payload` to sibling quizzes query (`select id, payload`) so server correctly recognizes `forgiven_student_ids`.
-- `js/dashboard.js` — Added `isQuizForgiven` and `isWordsForgiven` checks to dynamic prerequisite gating in Student Lobby.
-- `js/admin/app.js` — Refined `isForgiven` condition (`!hasRealAtt && in forgiven_student_ids`), restored theme exam score/points calculation, excluded forgiven from completion count.
-- `js/grading.js` — `computeMilestoneExamMastery` returns `totalPoints = latestThemePoints` while preserving `cumulativePoints`.
-- `admin.html` — Cache bumped to `?v=20261031_v68`.
-- `dashboard.html` — Cache bumped to `?v=20261031_v68`.
+- `css/admin.css` — Added `.test-forgiven-sup` styling.
+- `js/admin/app.js` — Updated cell renderers (SCORE, PTS, Quiz), theme calculations, and PROG completion count.
+- `admin.html` — Cache bumped to `?v=20261031_v69`.
+- `dashboard.html` — Cache bumped to `?v=20261031_v69`.
 - Database:
-  - Deleted 123 synthetic attempts created today, restoring distinct `F` marker display.
-  - Updated `forgiven_student_ids` for Tests 1–39 to include all 22 active students.
-  - Unlocked Exam 39 & 40 live test sessions for all 22 students with 48h window.
+  - Normalized 651 remedial attempts to normal (`is_remedial_unlocked = false`).
+  - Restored 79 `effective_score` values to actual scores.
 - `docs/CHANGELOG.md`, `docs/CURRENT_STATE.md`, `docs/SESSION_LOG.md`
 
 ## Completed

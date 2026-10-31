@@ -1277,37 +1277,6 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             if (!themeExamMap[tc]) themeExamMap[tc] = [];
             themeExamMap[tc].push(asm);
           });
-          Object.values(themeExamMap).forEach(asms => {
-            if (asms.length < 2) return;
-            const hasThemeRem = asms.some(asm => {
-              const att = asmScores[asm.id];
-              const maxQ = getAsmExpectedMax(asm);
-              const totalQ = Number(att?.total_questions || maxQ);
-              const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
-              const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
-              const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att.status||'').toLowerCase());
-              const inForgivenList = Boolean((asm.payload?.forgiven_student_ids || []).includes(s.id));
-              const isForgiven = !hasRealAtt && inForgivenList;
-              return !isForgiven && Boolean(att?.is_remedial_unlocked || att?.is_remedial);
-            });
-            if (hasThemeRem) {
-              asms.forEach(asm => {
-                const att = asmScores[asm.id];
-                const maxQ = getAsmExpectedMax(asm);
-                const totalQ = Number(att?.total_questions || maxQ);
-                const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
-                const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att.status||'').toLowerCase());
-                const inForgivenList = Boolean((asm.payload?.forgiven_student_ids || []).includes(s.id));
-                const isForgiven = !hasRealAtt && inForgivenList;
-                if (att && !isForgiven) {
-                  att.is_remedial_unlocked = true;
-                  att.is_remedial = true;
-                }
-              });
-            }
-          });
-
           // Step 3: Compute effective scores, completion, and sort values
           classTests.forEach(asm => {
             const bestAtt = asmScores[asm.id];
@@ -1315,26 +1284,39 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             const totalQ = Number(bestAtt?.total_questions || maxQ);
             const rawEarned = bestAtt?.score != null ? Math.min(Number(bestAtt.score), totalQ) : 0;
             const rawPct = bestAtt ? (bestAtt.percentage != null ? Number(bestAtt.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
-
-            // Forgiven = student is in forgiven_student_ids AND has NO real submitted attempt.
-            // Students with real attempts (including remedial 60%R) retain their real scores.
-            // Forgiven tests fulfill the prerequisite (counts toward PROG %) but award 0 PTS / SCORE.
             const hasRealAtt = bestAtt && ['submitted','auto_submitted','evaluated','graded'].includes(String(bestAtt?.status||'').toLowerCase());
-            const inForgivenList = Boolean((asm.payload?.forgiven_student_ids || []).includes(s.id));
-            const isForgiven = !hasRealAtt && inForgivenList;
 
-            const isRem = !isForgiven && Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial);
-            const maxRemPts = totalQ * 0.6;
-            const effEarned = isForgiven ? 0 : (isRem ? Math.min(rawEarned, maxRemPts) : rawEarned);
-            const effPct = isForgiven ? 0 : (isRem ? Math.min(rawPct, 60.0) : rawPct);
+            const isPrereqTest = (asm.display_order != null ? asm.display_order <= 38 : false)
+              || Boolean((asm.payload?.forgiven_student_ids || []).includes(s.id));
 
-            rowScoreSortVals[`test_${asm.id}`] = bestAtt ? (isForgiven ? 0 : effEarned) : -1;
-            rowScoreSortVals[`test_${asm.id}_pts`] = bestAtt ? (isForgiven ? 0 : effEarned) : -1;
-            rowScoreSortVals[`test_${asm.id}_pct`] = bestAtt ? (isForgiven ? 0 : effPct) : -1;
+            let effEarned = 0;
+            let effPct = 0;
 
-            if (bestAtt && !isForgiven) {
-              const st = String(bestAtt.status || '').toLowerCase();
-              if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
+            if (isPrereqTest) {
+              if (hasRealAtt && rawPct >= 60) {
+                // Natural pass!
+                effEarned = rawEarned;
+                effPct = rawPct;
+              } else {
+                // Forgiven! Real score preserved, but Grade F
+                effEarned = hasRealAtt ? rawEarned : 0;
+                effPct = hasRealAtt ? rawPct : 0;
+              }
+              // Rule: tests 1 to 38 are completed or forgiven, fulfilling progression toward Exam 39 & 40
+              completedCount++;
+              if (isWeeklyExam(asm)) {
+                studentExamEntries.push({
+                  test: asm,
+                  effPoints: effEarned,
+                  effPct,
+                  totalQ
+                });
+              }
+            } else {
+              // Milestone Destination Exams (Test 39 & 40)
+              effEarned = hasRealAtt ? rawEarned : 0;
+              effPct = hasRealAtt ? rawPct : 0;
+              if (hasRealAtt) {
                 completedCount++;
                 if (isWeeklyExam(asm)) {
                   studentExamEntries.push({
@@ -1346,6 +1328,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                 }
               }
             }
+
+            rowScoreSortVals[`test_${asm.id}`] = (hasRealAtt || isPrereqTest) ? effEarned : -1;
+            rowScoreSortVals[`test_${asm.id}_pts`] = (hasRealAtt || isPrereqTest) ? effEarned : -1;
+            rowScoreSortVals[`test_${asm.id}_pct`] = (hasRealAtt || isPrereqTest) ? effPct : -1;
           });
 
           const totalClassTests = classTests.length || 40;
@@ -1913,36 +1899,29 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                 let hasAtt = false;
                 let studentThemeMaxQ = 0;
 
-                const hasThemeRem = targetAsms.some(asm => {
-                  const att = row.asmScores?.[asm.id];
-                  const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
-                  const isForgiven = !hasRealAtt && Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
-                  return !isForgiven && Boolean(att?.is_remedial_unlocked || att?.is_remedial);
-                });
-
                 targetAsms.forEach(asm => {
                   const att = row.asmScores?.[asm.id];
                   const fallbackMax = getAsmExpectedMax(asm);
+                  const isPrereqTest = (asm.display_order != null ? asm.display_order <= 38 : false)
+                    || Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+
                   if (att) {
                     const st = String(att.status || '').toLowerCase();
                     if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
-                      const hasRealAtt = true; // already confirmed submitted
-                      const isForgiven = !hasRealAtt && Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
-                      if (!isForgiven) {
-                        hasAtt = true;
-                        const isRem = hasThemeRem || Boolean(att.is_remedial_unlocked || att.is_remedial);
-                        const totalQ = Number(att.total_questions || fallbackMax);
-                        studentThemeMaxQ += totalQ;
-                        const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                        const maxRemPts = totalQ * 0.6;
-                        const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
-                        themeEarned += effSc;
-                      }
+                      hasAtt = true;
+                      const totalQ = Number(att.total_questions || fallbackMax);
+                      studentThemeMaxQ += totalQ;
+                      const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
+                      themeEarned += sc;
                       return;
                     }
                   }
-                  // Package rule: unattempted exam adds its expected questions to the package denominator
-                  studentThemeMaxQ += fallbackMax;
+                  if (isPrereqTest) {
+                    hasAtt = true;
+                    studentThemeMaxQ += fallbackMax;
+                  } else {
+                    studentThemeMaxQ += fallbackMax;
+                  }
                 });
 
                 const cleanThemeEarned = Math.round(themeEarned * 10) / 10;
@@ -2031,17 +2010,45 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
                       const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
                       const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
-                      const inForgivenList = Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
-                      const isForgiven = !hasRealAtt && inForgivenList;
-                      if (isForgiven) {
-                        return `
-                          <span class="asm-score asm-score-test asm-score-forgiven"
-                                style="color:#FF0000; cursor:default; font-weight:800; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                                title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;🔓 [FORGIVEN] Prasyarat dibebaskan oleh Tutor (0 Pts / Tidak dihitung di akumulasi)">
-                            F
-                          </span>
-                        `;
+
+                      const isPrereqTest = (asm.display_order != null ? asm.display_order <= 38 : false)
+                        || Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+
+                      const attId = att?.id || att?.attempt_id;
+                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+
+                      if (isPrereqTest) {
+                        if (hasRealAtt && rawPct >= 60) {
+                          // Natural Pass!
+                          const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(rawPct) : '#00c000ff';
+                          return `
+                            <span class="asm-score asm-score-test"
+                                  style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                                  ${clickAttr}
+                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${Math.round(rawPct)}% (Natural Pass)&#10;Click to open result">
+                              ${Math.round(rawPct)}%
+                            </span>
+                          `;
+                        } else {
+                          // Forgiven (Grade F)! Real score preserved, superscript F
+                          const effPct = hasRealAtt ? Math.max(0, rawPct) : 0;
+                          const effRound = Math.round(effPct);
+                          const color = effPct > 0 && typeof getGradeColorByScore === 'function'
+                            ? getGradeColorByScore(effPct)
+                            : '#FF0000';
+                          return `
+                            <span class="asm-score asm-score-test asm-score-forgiven"
+                                  style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                                  ${clickAttr}
+                                  title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;🔓 [FORGIVEN] Score: ${effRound}% | Grade: F&#10;Click to open result">
+                              ${effRound}%<sup class="test-forgiven-sup">F</sup>
+                            </span>
+                          `;
+                        }
                       }
+
+                      // Milestone Destination Exams (Test 39 & 40)
                       const isQueued = row.includedExamIds && row.includedExamIds.has(asm.id);
                       if (!att) {
                         if (isQueued) {
@@ -2074,39 +2081,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                         }
                         return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       }
-                      // Rule 2.10: Theme Exam Remedial Synchronization
-                      const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
-                      const tc = (rawTheme || 'A').toUpperCase();
-                      const siblingExams = (themeGroups[tc] || []).filter(isWeeklyExam);
-                      const hasThemeRem = siblingExams.some(sAsm => {
-                        const sAtt = row.asmScores?.[sAsm.id];
-                        const sMaxQ = getAsmExpectedMax(sAsm);
-                        const sTotalQ = Number(sAtt?.total_questions || sMaxQ);
-                        const sRawEarned = sAtt?.score != null ? Math.min(Number(sAtt.score), sTotalQ) : 0;
-                        const sPct = sAtt ? (sAtt.percentage != null ? Number(sAtt.percentage) : (sTotalQ > 0 ? (sRawEarned / sTotalQ) * 100 : 0)) : -1;
-                        const sHasReal = sAtt && ['submitted','auto_submitted','evaluated','graded'].includes(String(sAtt?.status||'').toLowerCase());
-                        const sForgiven = !sHasReal && Boolean((sAsm.payload?.forgiven_student_ids || []).includes(row.id));
-                        return !sForgiven && Boolean(sAtt?.is_remedial_unlocked || sAtt?.is_remedial);
-                      });
-                      const isRem = (hasThemeRem || Boolean(att.is_remedial_unlocked || att.is_remedial));
-                      // reuse totalQ declared above; compute sc for submitted att
-                      const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      const effRawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
-                      const maxRemPts = totalQ * 0.6;
-                      const effPct = isRem ? Math.min(effRawPct, 60.0) : effRawPct;
                       const color = typeof getGradeColorByScore === 'function'
-                        ? getGradeColorByScore(effPct)
-                        : (effPct >= 60 ? '#FFFF00' : '#FF0000');
-                      const attId = att.id || att.attempt_id;
-                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-
+                        ? getGradeColorByScore(rawPct)
+                        : (rawPct >= 60 ? '#FFFF00' : '#FF0000');
                       return `
-                        <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}"
+                        <span class="asm-score asm-score-test"
                               style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
                               ${clickAttr}
-                              title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Score: ${Math.round(effPct)}%` : `Score: ${Math.round(effPct)}%`}&#10;Click to open result">
-                          ${Math.round(effPct)}%${isRem ? '<sup class="test-rem-sup">R</sup>' : ''}
+                              title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${Math.round(rawPct)}%&#10;Click to open result">
+                          ${Math.round(rawPct)}%
                         </span>
                       `;
                     }
@@ -2134,22 +2117,34 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
                       const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
                       const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
-                      const inForgivenList = Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
-                      const isForgiven = !hasRealAtt && inForgivenList;
-                      if (isForgiven) {
+
+                      const isPrereqTest = (asm.display_order != null ? asm.display_order <= 38 : false)
+                        || Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+
+                      if (isPrereqTest) {
+                        const effEarned = hasRealAtt ? rawEarned : 0;
+                        const cleanSc = Math.round(effEarned * 10) / 10;
+                        const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
+                        const color = effEarned > 0 && typeof getGradeColorByScore === 'function'
+                          ? getGradeColorByScore(rawPct)
+                          : (effEarned > 0 ? '#FFFF00' : '#94a3b8');
+                        const attId = att?.id || att?.attempt_id;
+                        const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                        const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
                         return `
                           <span class="asm-score asm-score-test"
-                                style="color:#94a3b8; cursor:default;"
-                                title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;0 pts (Forgiven)">
+                                style="color:${color}; ${cursorStyle}"
+                                ${clickAttr}
+                                title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${displayVal}/${totalQ} pts">
                             <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;">
-                              0
+                              ${displayVal}
                             </span>
                           </span>
                         `;
                       }
-                      const isQueued = row.includedExamIds && row.includedExamIds.has(asm.id);
-                      // maxQ and totalQ already declared above
 
+                      // Milestone Destination Exams (Test 39 & 40)
+                      const isQueued = row.includedExamIds && row.includedExamIds.has(asm.id);
                       if (!att) {
                         if (isQueued) {
                           return `
@@ -2185,26 +2180,19 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                         }
                         return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       }
-                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
-                      const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      const effRawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
-                      const maxRemPts = totalQ * 0.6;
-                      const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
-                      const effPct = isRem ? Math.min(effRawPct, 60.0) : effRawPct;
-                      const cleanEffSc = Math.round(effSc * 2) / 2;
-                      const displayVal = (cleanEffSc % 1 !== 0) ? cleanEffSc.toFixed(1) : cleanEffSc.toString();
+                      const cleanSc = Math.round(rawEarned * 10) / 10;
+                      const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
                       const color = typeof getGradeColorByScore === 'function'
-                        ? getGradeColorByScore(effPct)
-                        : (effPct >= 60 ? '#FFFF00' : '#FF0000');
+                        ? getGradeColorByScore(rawPct)
+                        : (rawPct >= 60 ? '#FFFF00' : '#FF0000');
                       const attId = att.id || att.attempt_id;
                       const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                       const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-
                       return `
-                        <span class="asm-score asm-score-test ${isRem ? 'asm-score-remedial' : ''}"
+                        <span class="asm-score asm-score-test"
                               style="color:${color}; ${cursorStyle}"
                               ${clickAttr}
-                              title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Points: ${displayVal}/${totalQ} pts` : `Points: ${displayVal}/${totalQ} pts`}&#10;Click to open result & manage remedial">
+                              title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${displayVal}/${totalQ} pts&#10;Click to open result">
                           <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;">
                             ${displayVal}
                           </span>
@@ -2235,57 +2223,61 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
                       const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
                       const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
-                      const inForgivenList = Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
-                      const isForgiven = !hasRealAtt && inForgivenList;
-                      if (isForgiven) {
-                        return `
-                          <span class="asm-score asm-score-task asm-score-forgiven"
-                                style="color:#FF0000; cursor:default; font-weight:800; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                                title="${num}. [QUIZ] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;🔓 [FORGIVEN] Prasyarat dibebaskan oleh Tutor (0 Pts / Tidak dihitung di akumulasi)">
-                            F
-                          </span>
-                        `;
+
+                      const isPrereqTest = (asm.display_order != null ? asm.display_order <= 38 : false)
+                        || Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+
+                      const attId = att?.id || att?.attempt_id;
+                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+
+                      if (isPrereqTest) {
+                        if (hasRealAtt && rawPct >= 60) {
+                          // Natural Pass!
+                          const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(rawPct) : '#00c000ff';
+                          return `
+                            <span class="asm-score asm-score-task"
+                                  style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                                  ${clickAttr}
+                                  title="${num}. [QUIZ] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${Math.round(rawPct)}% (Natural Pass)&#10;Click to view result">
+                              ${Math.round(rawPct)}%
+                            </span>
+                          `;
+                        } else {
+                          // Forgiven (Grade F)! Real score preserved, superscript F
+                          const effPct = hasRealAtt ? Math.max(0, rawPct) : 0;
+                          const effRound = Math.round(effPct);
+                          const color = effPct > 0 && typeof getGradeColorByScore === 'function'
+                            ? getGradeColorByScore(effPct)
+                            : '#FF0000';
+                          return `
+                            <span class="asm-score asm-score-task asm-score-forgiven"
+                                  style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                                  ${clickAttr}
+                                  title="${num}. [QUIZ] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;🔓 [FORGIVEN] Score: ${effRound}% | Grade: F&#10;Click to view result">
+                              ${effRound}%<sup class="test-forgiven-sup">F</sup>
+                            </span>
+                          `;
+                        }
                       }
+
                       if (!att) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                       const st = String(att.status || '').toLowerCase();
                       if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
                       if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
-                      // Rule 2.10: Theme Exam Remedial Synchronization
-                      const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
-                      const tc = (rawTheme || 'A').toUpperCase();
-                      const siblingExams = (themeGroups[tc] || []).filter(isWeeklyExam);
-                      const hasThemeRem = siblingExams.some(sAsm => {
-                        const sAtt = row.asmScores?.[sAsm.id];
-                        const sMaxQ = getAsmExpectedMax(sAsm);
-                        const sTotalQ = Number(sAtt?.total_questions || sMaxQ);
-                        const sRawEarned = sAtt?.score != null ? Math.min(Number(sAtt.score), sTotalQ) : 0;
-                        const sPct = sAtt ? (sAtt.percentage != null ? Number(sAtt.percentage) : (sTotalQ > 0 ? (sRawEarned / sTotalQ) * 100 : 0)) : -1;
-                        const sHasReal = sAtt && ['submitted','auto_submitted','evaluated','graded'].includes(String(sAtt?.status||'').toLowerCase());
-                        const sForgiven = !sHasReal && Boolean((sAsm.payload?.forgiven_student_ids || []).includes(row.id));
-                        return !sForgiven && Boolean(sAtt?.is_remedial_unlocked || sAtt?.is_remedial);
-                      });
-                      const isRem = (hasThemeRem || Boolean(att.is_remedial_unlocked || att.is_remedial));
-                      // reuse totalQ declared above; compute sc for submitted att
-                      const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      const effRawPct = att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0);
-                      const maxRemPts = totalQ * 0.6;
-                      const effSc = isRem ? Math.min(sc, maxRemPts) : sc;
-                      const effPct = isRem ? Math.min(effRawPct, 60.0) : effRawPct;
-                      const cleanSc = Math.round(effSc * 2) / 2;
+
+                      const cleanSc = Math.round(rawEarned * 2) / 2;
                       const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
                       const color = typeof getGradeColorByScore === 'function'
-                        ? getGradeColorByScore(effPct)
-                        : (effPct >= 60 ? '#FFFF00' : '#FF0000');
-                      const attId = att.id || att.attempt_id;
-                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+                        ? getGradeColorByScore(rawPct)
+                        : (rawPct >= 60 ? '#FFFF00' : '#FF0000');
 
                       return `
-                        <span class="asm-score asm-score-task ${isRem ? 'asm-score-remedial' : ''}"
+                        <span class="asm-score asm-score-task"
                               style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
                               ${clickAttr}
-                              title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${isRem ? `🏷️ [REMEDIAL (MAX 60%)]&#10;Score: ${Math.round(effPct)}%` : `Score: ${Math.round(effPct)}%`} (${displayVal}/${totalQ} pts)&#10;Click to view result">
-                          ${Math.round(effPct)}%${isRem ? '<sup class="test-rem-sup">R</sup>' : ''}
+                              title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${Math.round(rawPct)}% (${displayVal}/${totalQ} pts)&#10;Click to view result">
+                          ${Math.round(rawPct)}%
                         </span>
                       `;
                     }

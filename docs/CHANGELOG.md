@@ -1,3 +1,42 @@
+## [2026-10-31 18:25] — Phase 233: Remedial Normalization, Real Score Preservation with Red Superscript F (Grade F), and 100% Exam 39 & 40 Eligibility
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 233
+**Status:** PASS
+
+### Why
+- Completed user `/goal` directive:
+  1. *"yang remidi jadikan normal dulu"*: Removed artificial remedial flags (`is_remedial_unlocked: false`) and restored natural effective scores in database.
+  2. *"dan yang bukan hasil remidi berikan tanda nilai grade F Forgiven, intinya dari test pertama sampai 38: yang memang punya nilai, dan lulus, biarkan"*: Tests with $\ge 60\%$ keep natural score and grade (e.g. `85%`, `100%★`, `78%`).
+  3. *"yang nilainya kurang dari 60% atau kosong, berikan nilai F tanpa merubah skor asli mereka, misalnya 40% maka biarkan 40% tapi Bri Grade F, dan kalau 0 maka biarkan nol, dengan Grade F juga, buat F jadi superscript di atas score seperti remidi"*: Rendered `${Math.round(effPct)}%<sup class="test-forgiven-sup">F</sup>` in bold red (`#FF0000`) for $<60\%$ and `0%<sup class="test-forgiven-sup">F</sup>` for unattempted/0, preserving student real score percentages and earned points.
+  4. *"sehingga semua siswa bisa eligible masuk exam 39 dan 40"*: All 22 students in Batch 133 are 100% eligible in Edge Function `start-test` and Student Lobby `dashboard.js`.
+
+### Changed
+- `css/admin.css`:
+  - Added `.test-forgiven-sup` styling: `font-size: 0.60em; color: #FF0000; font-weight: 900; margin-left: 0.5px; vertical-align: super; line-height: 0; text-shadow: 0 0 4px rgba(255, 0, 0, 0.5);`.
+- `js/admin/app.js`:
+  - Removed theme-wide remedial contamination loops.
+  - Cell renderers (Exam SCORE, Exam PTS, Quiz):
+    - Natural pass ($\ge 60\%$): clean score `${Math.round(rawPct)}%` (no superscript).
+    - Forgiven ($< 60\%$): `${Math.round(rawPct)}%<sup class="test-forgiven-sup">F</sup>` with real score percentage and real earned points.
+    - Forgiven (unattempted/0): `0%<sup class="test-forgiven-sup">F</sup>` with 0 pts.
+  - Theme calculations: real earned exam points computed for `cleanThemeEarned` and `themePct`.
+  - PROG % calculation: tests 1 through 38 count toward completion, restoring student PROG to 95% (or 98%/100%).
+- Database (Supabase):
+  - Normalized 651 remedial attempts for Batch 133 across Tests 1–38 (`is_remedial_unlocked: false`).
+  - Restored 79 `effective_score` values to match actual earned scores.
+  - Verified 0 remaining remedial unlocked attempts.
+- Cache busters:
+  - Bumped `admin.html` and `dashboard.html` to `?v=20261031_v69`.
+
+### Tests
+- command: `npm test`
+- result: **PASS** — 40/40 JS syntax checks PASS, 27/27 manifest verified, 100% student dashboard parity PASS.
+- command: Eligibility and matrix simulation script
+- result: **PASS** — 22/22 (100%) active students eligible for Exam 39 & 40; matrix renders clean scores for passing tests, real score + superscript F for $<60\%$, and `0%^F` for unattempted.
+
+---
+
 ## [2026-10-31 12:25] — Phase 232: Full Forgiveness Engine Restoration, All Students Exam 39 & 40 Eligibility & Points Realignment
 
 **Agent/Session:** Antigravity
