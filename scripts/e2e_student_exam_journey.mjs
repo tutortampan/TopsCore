@@ -127,7 +127,7 @@ async function runStudentJourneyTest() {
 
     // ── STAGE 3: Result Page & 3D Flashcard Recovery Verification ──
     console.log('[Stage 3] Verifying Result Page & 3D Flashcard Recovery Modal...');
-    await page.goto(`${baseUrl}/result.html`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${baseUrl}/result.html?attempt_id=fd37522b-3502-45f4-a8ab-01ba8ff8d44b`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1000);
 
     // Verify 3D Flashcard Recovery Modal elements exist in DOM
