@@ -1996,6 +1996,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       area.appendChild(topRow);
 
       const transcriptBox = document.createElement('div');
+      transcriptBox.id = `speech-transcript-${row.id}`;
       transcriptBox.style.cssText = 'flex:1; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:#38bdf8; text-align:center; width:100%; word-break:break-word; min-height:48px; text-shadow:0 2px 10px rgba(56,189,248,0.35); font-family:\'Outfit\',sans-serif;';
       if (savedAnswer) transcriptBox.textContent = savedAnswer;
       else transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.35); font-style:italic;">Listening...</span>';
@@ -2030,7 +2031,14 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             micHelp.textContent = 'Listening...';
             transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.4); font-style:italic;">Listening...</span>';
           },
-          onResult(interim) { transcriptBox.textContent = interim; },
+          onResult(interim) {
+            transcriptBox.textContent = interim;
+            // Real-time interim commit (guarantees student speech is never lost on sudden timeout or navigation)
+            if (interim && interim.trim()) {
+              answeredMap[row.id] = interim.trim();
+              updateNavGrid();
+            }
+          },
           onFinal(transcript) {
             transcriptBox.textContent = transcript;
             answeredMap[row.id] = transcript;
@@ -2045,6 +2053,18 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             micBtn.style.borderColor = 'rgba(var(--grade-star-rgb, 0, 192, 0), 0.45)';
             micBtn.style.color = '#0F172A';
             micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+
+            // Fail-safe commit: If interim transcript exists in box but onFinal never fired, commit it!
+            const boxText = (transcriptBox.textContent || '').trim();
+            if (boxText && !boxText.includes('Listening...') && !boxText.includes('Tap to Speak')) {
+              if (!answeredMap[row.id] || answeredMap[row.id] !== boxText) {
+                answeredMap[row.id] = boxText;
+                updateNavGrid();
+                persistLocalBuffer();
+                autoSave(row.id, boxText);
+              }
+            }
+
             const hasAns = !!answeredMap[row.id];
             statusEl.textContent = hasAns ? '✅ Recorded' : '● Ready';
             statusEl.style.color = hasAns ? 'var(--clr-success, #00c000ff)' : '#94a3b8';
@@ -2174,10 +2194,28 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (window._questionPacingTimer) clearTimeout(window._questionPacingTimer);
       const row = answerRows[currentIndex];
       if (!row) return;
-      const ta = document.getElementById(`written-${row.id}`) || document.getElementById(`speech-text-${row.id}`);
-      if (ta) answeredMap[row.id] = ta.value;
+
+      // 1. Written Input
+      const writtenEl = document.getElementById(`written-${row.id}`);
+      if (writtenEl && writtenEl.value != null && writtenEl.value.trim()) {
+        answeredMap[row.id] = writtenEl.value.trim();
+      }
+
+      // 2. Spoken / Speech Recognition Transcript Box
+      const transcriptEl = document.getElementById(`speech-transcript-${row.id}`) || document.getElementById(`speech-text-${row.id}`);
+      if (transcriptEl) {
+        const text = (transcriptEl.textContent || transcriptEl.value || '').trim();
+        if (text && !text.includes('Listening...') && !text.includes('Tap to Speak')) {
+          answeredMap[row.id] = text;
+        }
+      }
+
+      // 3. Selection / Dropdown
       const dd = document.getElementById(`dropdown-${row.id}`);
-      if (dd) answeredMap[row.id] = dd.value;
+      if (dd && dd.value != null && dd.value.trim()) {
+        answeredMap[row.id] = dd.value.trim();
+      }
+
       persistLocalBuffer();
     }
 
