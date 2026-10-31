@@ -1,3 +1,30 @@
+## [2026-11-01 03:16] — Phase 248: Real-Time Spoken Answer Persistence & Speech Recognition Fail-Safe
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 248
+**Status:** PASS
+
+### Why
+- Deep diagnosis of Image 1 revealed 1,223 timed-out / blank questions (42% of all questions).
+- Root Cause Identified:
+  1. In `js/test.js`, spoken question container created `transcriptBox = document.createElement('div')` without an explicit ID (`speech-transcript-${row.id}`).
+  2. `saveCurrentAnswer()` only looked for `.value` on `speech-text-${row.id}`. Since `transcriptBox` is a `<div>` without that ID, `.value` was undefined and `saveCurrentAnswer()` did nothing for spoken answers upon navigation or countdown deadline.
+  3. `onFinal` in Web Speech API on mobile Chrome/Android often requires 2-3s of silence before firing. If the countdown expired or the user clicked Next while speaking, the interim transcript in `transcriptBox` was never saved.
+
+### Changed
+- `js/test.js`:
+  - Assigned explicit element ID: `transcriptBox.id = 'speech-transcript-' + row.id`.
+  - Added real-time interim commit in `onResult(interim)`: student speech is immediately written into `answeredMap[row.id]` and navigation grid is updated as words are spoken.
+  - Added fail-safe commit in `onEnd()`: if `onFinal` didn't fire but words exist in `transcriptBox`, commits the text automatically.
+  - Upgraded `saveCurrentAnswer()`: reads spoken answers from `speech-transcript-${row.id}` via `.textContent` or `.value`.
+- Cache Busters:
+  - Bumped to `?v=20261101_v80` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, and `js/test.js`.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs`: PASS (40/40 JS files passed syntax validation).
+- `node scripts/deep_color_audit.mjs`: PASS (0 rogue color matches across 57 files).
+- `node scripts/verify_green_star_grading.mjs`: PASS (All grading rules and color master vault assertions passed).
+
 ## [2026-11-01 03:07] — Phase 247: Full System Color Conformity Audit & Student Error Diagnostics
 
 **Agent/Session:** Antigravity

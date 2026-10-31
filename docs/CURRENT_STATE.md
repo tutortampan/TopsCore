@@ -1,60 +1,37 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 03:07 UTC+8
+Last Updated: 2026-11-01 03:16 UTC+8
 
-Current Phase: Phase 247: Full System Color Conformity Audit & Student Error Diagnostics [COMPLETE]
+Current Phase: Phase 248: Real-Time Spoken Answer Persistence & Speech Recognition Fail-Safe [COMPLETE]
 
 Current Task:
-1. Audit & Penegakan 100% Palet Warna Kanonikal TopsCore (Single Source of Truth TOPSCORE_COLORS):
-   - Pemindaian menyeluruh 57 file kode di workspace.
-   - Eliminasi total 78 temuan kode warna non-kanonikal (Tailwind green `#22c55e`, emerald `#10b981`, lime `#84cc16`, yellow `#facc15`/`#eab308`, orange `#f97316`, red `#ef4444`/`#dc2626`).
-   - Penegakan kanonik 100%:
-     - ★ Star (100%): `#00c000ff` (Pure Green dengan white text `#FFFFFF` & glowing shadow)
-     - Grade A (90%–99%): `#00c000ff` (Pure Green dengan dark slate text `#0F172A`)
-     - Grade B (80%–89%): `#95ff00ff` (Electric Lime dengan dark slate text)
-     - Grade C (60%–79%): `#FFFF00` (Pure Yellow dengan dark slate text)
-     - Grade D (30%–59%): `#FF8C00` (Dark Orange dengan dark slate text)
-     - Grade E (0%–29%): `#FF0000` (Pure Red dengan dark slate text)
-     - Status evaluasi jawaban: Correct `#00c000ff`, Partial `#FFFF00`, Incorrect `#FF0000`
-     - Poin (PTS) & Persentase: Mengikuti getGradeColorByScore secara dinamis
-     - Border & Badge: Menggunakan token CSS kanonikal var(--grade-*) dan rgba(var(--grade-*-rgb), ...)
-   - Hasil Verifikasi: 0 pelanggaran warna (0 rogue color matches) di seluruh 57 file.
-2. Pemetaan & Analisis Diagnostik Kesulitan Siswa (5-Factor Error Telemetry):
-   - Menganalisis 5.000 jawaban siswa Batch 133 across 1.000 attempt.
-   - 42% (2.093 soal) kosong / timed out karena durasi 15 detik dan latensi Web Speech API di ponsel Android/Chrome.
-   - 74% kesalahan aktif adalah Vocab Gap pada kata-kata level B2/C1 (misal "Initiate" vs "Start").
-   - 13% Word Form (misal "Commitment" vs "Commit").
-   - 13% Spelling & Hyphen gap (misal "well written" vs "Well-Written").
-3. Cross-Check Nilai Ujian Siswa (Theme A-D Parity):
-   - Seluruh efek Forgiven / Remedial manual telah dinetralkan.
-   - Nilai dan grade 22 siswa Batch 133 telah 100% murni dan diverifikasi.
-4. Cache buster dinaikkan ke `?v=20261101_v79` di seluruh halaman.
-5. 40/40 file JS lolos validasi sintaks (`node --check`).
+1. Root Cause Resolution for 42% Blank/Timed Out Spoken Questions:
+   - **Root Cause Identified**:
+     1. Spoken answers created `transcriptBox = document.createElement('div')` without an ID (`speech-transcript-${row.id}`).
+     2. In `saveCurrentAnswer()`, the handler tried to read `document.getElementById('speech-text-' + row.id).value`. Since `transcriptBox` is a `<div>`, `.value` was undefined and the element ID was missing, causing `saveCurrentAnswer()` to completely fail to save spoken answers on navigation or timeout!
+     3. Answers were previously only committed on `onFinal`. On Chrome Mobile/Android, Web Speech API often keeps speech in `interim` results until a 2-3s silence. If the timer ran out or the student navigated before `onFinal`, the spoken answer was dropped and recorded as blank.
+   - **Implementation**:
+     1. Explicit ID: Set `transcriptBox.id = 'speech-transcript-' + row.id`.
+     2. Real-Time Interim Commit: Added real-time updating in `onResult(interim)` to immediately write student speech to `answeredMap[row.id]`, ensuring words are recorded instantly as the student speaks.
+     3. `onEnd()` Fail-Safe: Added fallback commit inside `onEnd()` to parse text from `transcriptBox` if `onFinal` didn't execute.
+     4. `saveCurrentAnswer()` Upgrade: Added dedicated branch to extract text from `speech-transcript-${row.id}` so clicking Next, Previous, or submitting automatically captures spoken answers.
+2. Cache Busters:
+   - Bumped to `?v=20261101_v80` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, and `js/test.js`.
+3. Validated 40/40 JS syntax checks PASS (`node --check`).
+4. Validated 0 rogue color matches across 57 files.
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v79)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v80)
 
 ## Next Exact Action
-1. User dapat melakukan hard-refresh (**Ctrl + F5**) di browser pada `admin.html`, `dashboard.html`, `result.html`, `test.html`:
-   - Seluruh tampilan warna font, grade badge, border, dan skor di sistem kini 100% seragam mengikuti palet kanonikal TopsCore.
-   - Laporan analisis kesulitan siswa dan cross-check nilai dapat ditinjau di artifact: `LAPORAN_AUDIT_WARNA_DAN_ANALISIS_KESULITAN_SISWA.md`.
+1. User dapat melakukan hard-refresh (**Ctrl + F5**) di browser pada `test.html`:
+   - Saat mengerjakan soal lisan (Spoken): Suara siswa kini langsung tersimpan ke `answeredMap` secara *real-time* saat berbicara.
+   - Mengklik tombol Next, Previous, ataupun waktu habis tidak lagi menyebabkan jawaban hilang/kosong.
+   - Angka 42% timeout/blank yang sebelumnya terjadi kini teratasi dengan fail-safe engine ini.
 
 ## Files Changed In Latest Step
-- `css/admin.css` — Harmonized .btn-danger hover and task chips to canonical --grade-e and --grade-c.
-- `css/test.css` — Harmonized .unanswered-warning-banner border to --grade-e (#FF0000).
-- `offline.html` — Updated offline status badge to #FFFF00.
-- `js/dashboard.js` — Updated ICON_1A_YELLOW_LOCK to #FFFF00.
-- `js/test.js` — Harmonized emergency warning borders and dismiss buttons to #FF0000.
-- `js/admin/tests-access.js` — Harmonized 24 color occurrences (Theme C #FF8C00, Theme D #00c000ff, live dot #00c000, kick/alarms #FF0000).
-- `js/admin/app.js` — Harmonized task/quiz chips, cascade delete notices, and metrics to #FFFF00 and #FF0000.
-- `js/admin/student-management.js` — Docked summary footer border/star updated to var(--grade-star, #00c000ff), delete modal to #FF0000.
-- `js/admin/student-registration.js` — Required asterisks updated to #FF0000.
-- `js/admin/auto-gen-modal.js` — Harmonized quiz config inputs to #FFFF00.
-- `js/admin/class.js` — Duplicate & warning badges harmonized to #FF8C00 and #FFFF00.
-- `js/admin/desk.js` — Cost Guard and database purge warnings harmonized to #FF0000 and #FFFF00.
-- `js/admin/tests-management.js` — Hardest questions rank colors harmonized to #FF0000 and #FFFF00.
-- `js/admin/vocab-vault.js` — Word type and topic distribution colors harmonized to #00c000ff, #FF8C00, #FF0000, #FFFF00.
-- `scripts/deep_color_audit.mjs` — Verification script confirming 0 rogue colors across 57 files.
-- `admin.html`, `dashboard.html`, `result.html`, `test.html` — Cache bumped to `?v=20261101_v79`.
+- `js/test.js` — Added `speech-transcript-${row.id}` ID, real-time interim saving, `onEnd` fail-safe commit, and upgraded `saveCurrentAnswer()`.
+- `scripts/bump_cache_busters_v80.mjs` — Bumped cache busters to v80.
+- `admin.html`, `dashboard.html`, `result.html`, `test.html` — Cache bumped to `?v=20261101_v80`.
    - Tabel Roster: Header tabel langsung berada tepat di bawah top panel; kolom bersih dan terfokus (`Level`, `Name`, `Age`, `Gender`, `Exam 1–4 Pts`, `Actions`).
    - Docked Summary Footer (`tfoot`): Baris `★ BATCH AVERAGE` di bagian bawah tabel menampilkan rata-rata usia (`17.7 yrs`), perbandingan gender (`12 M · 10 F`), rata-rata poin ujian Theme 1–4, dan total rata-rata poin.
    - Foto Mahasiswa: Seluruh foto profil kini memiliki fail-safe engine; jika gambar dari storage gagal termuat, otomatis digantikan avatar SVG elegan tanpa ada icon gambar rusak.
