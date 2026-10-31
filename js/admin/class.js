@@ -2240,11 +2240,11 @@ export async function renderProgressView(area) {
               </td>
               <td class="text-center"><span class="text-xs fw-600" style="color:var(--clr-text-2);">${r.ageDisplay}</span></td>
               <td class="text-center">
-                ${r.gender === 'male' 
-                  ? `<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);font-size:0.68rem;padding:2px 6px;">&#9794; Male</span>`
-                  : r.gender === 'female'
-                  ? `<span class="badge" style="background:rgba(244,114,182,0.15);color:#f472b6;border:1px solid rgba(244,114,182,0.3);font-size:0.68rem;padding:2px 6px;">&#9792; Female</span>`
-                  : `<span class="badge badge-neutral" style="font-size:0.68rem;padding:2px 6px;">&mdash;</span>`
+                ${(r.gender === 'male' || r.gender === 'm')
+                  ? `<span class="fw-700" style="color:#38bdf8;font-size:0.8rem;" title="Male">M</span>`
+                  : (r.gender === 'female' || r.gender === 'f')
+                  ? `<span class="fw-700" style="color:#f472b6;font-size:0.8rem;" title="Female">F</span>`
+                  : `<span class="text-muted fw-600" style="font-size:0.8rem;">&mdash;</span>`
                 }
               </td>
               <td class="text-center fw-600 text-sm">

@@ -1,3 +1,41 @@
+## SESSION-20261101-0040
+
+Start: 2026-11-01 00:29 UTC+8
+End: 2026-11-01 00:40 UTC+8
+Agent: Antigravity
+
+### User Request
+"di student rooster ini gender masih ada icon di samping M/F, hilangkan itu, cukup pakai M/F. dan kolom exam dalam kelas Vocab seharusnya ada 4 exam disana,,, cocokkan isinya dengan yang ada di total point masin2 tema sesuai data di kelas. ada kkolom grade, score , progress, itu tak penting, saya hanya butuh total points masing2 exam. analisa, pelajari, lakukan" (with 2 screenshots of Class Hub and Student Roster)
+
+### Objective
+1. Streamline Gender column in Student Roster to clean `M` and `F` without icons.
+2. Remove redundant columns (`Score`, `Grd`, `Progress`) from Student Roster.
+3. Replace them with 4 dedicated theme exam columns (`Exam 1`, `Exam 2`, `Exam 3`, `Exam 4`) matching the 4 theme exam total points in Class Hub (Theme A Workplace, Theme B Tourism, Theme C CCU, Theme D High-Frequency).
+4. Resolve query bug on non-existent column `tests.total_questions` so all 40 class tests load without falling back to dashes.
+5. Streamline gender display in Class Students tab (`class.js`) for platform-wide consistency.
+6. Verify 100% data parity for Batch 133 across both views.
+
+### Work Performed
+1. Fixed query on `tests` table in `student-management.js` by removing non-existent column `total_questions`.
+2. Replaced `&#9794; M` and `&#9792; F` with clean `M` (`#38bdf8`) and `F` (`#f472b6`) in `student-management.js` and `class.js`.
+3. Created 4 theme exam columns (`Exam 1` = Theme A, `Exam 2` = Theme B, `Exam 3` = Theme C, `Exam 4` = Theme D) under the active class superheader in DataGrid.
+4. Calculated each student's genuine earned points per theme from the best submitted exam attempts.
+5. Verified 100% parity between Student Roster exam points and Class Hub attendance matrix (e.g., Aunul: 105.5, 190, 362, 506 pts).
+6. Bumped cache busters across `admin.html`, `js/admin/app.js`, `student-management.js`, and `class.js` to `?v=20261101_v73`.
+7. Ran `node scripts/check_all_js_syntax.cjs`: 40/40 files passed.
+
+### Commands Run
+- `git status`
+- `node scripts/check_all_js_syntax.cjs`
+- `node check_all_js_syntax.cjs`
+- `git commit` & `git push`
+
+### Verification
+- 40/40 JS syntax checks PASS.
+- Full parity simulation PASS with 0 mismatches.
+
+---
+
 ## SESSION-20261101-0028
 
 Start: 2026-11-01 00:25 UTC+8

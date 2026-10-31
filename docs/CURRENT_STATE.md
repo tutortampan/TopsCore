@@ -1,26 +1,31 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 00:28 UTC+8
+Last Updated: 2026-11-01 00:40 UTC+8
 
-Current Phase: Phase 237: Fix Test Analytics Pacing Drawer DOM Leak on Class Hub & Permanent Scoping [COMPLETE]
+Current Phase: Phase 238: Complete Verification of Student Roster 4 Theme Exam Points & Platform-Wide Clean M/F Gender [COMPLETE]
 
-Current Task: Resolved user inquiry regarding orphan table "⏱️ Test-by-Test Completion & Pacing" appearing below the Class Hub matrix: (1) Diagnosed DOM leak where `#tac-pacing-drawer` was mounted to `document.body` but its CSS was inside a transient `<style>` block in `#admin-content-area`. (2) Relocated drawer CSS rules permanently into `css/admin.css` with persistent fixed positioning. (3) Implemented automated cleanup in `loadSection()` (`js/admin/app.js`) to unmount any orphaned `#tac-pacing-drawer` and backdrop when navigating away from `tests`. (4) Bumped cache busters across `admin.html`, `dashboard.html`, `result.html`, and `js/admin/app.js` to `?v=20261101_v72`. All 40 JS files passed syntax validation (`node --check`).
+Current Task: Completed user directives: (1) Replaced `Score`, `Grd`, and `Progress` columns on Student Roster (`#students`) with 4 dedicated `Exam 1`, `Exam 2`, `Exam 3`, `Exam 4` columns representing each theme's total exam points, achieving 100% parity with Class Hub Attendance. (2) Streamlined gender display across both Student Roster and Class Students Tab to pure, clean `M` (blue) and `F` (pink) without unicode icons. (3) Eliminated query mismatch on `tests.total_questions` so all 40 class tests load flawlessly. (4) Bumped cache busters across all assets to `?v=20261101_v73`. All 40 JS files passed syntax validation (`node --check`).
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 git diff)
+Status: COMPLETE (All 40 JS syntax checks PASS, 100% data parity verified)
 
 ## Next Exact Action
-1. User dapat melakukan hard-refresh di browser (**Ctrl + F5**) pada halaman `admin.html#class-hub`.
-2. Drawer analitik pacing di bawah tabel sudah hilang total dan hanya tabel Class Hub murni yang tampil.
+1. User dapat melakukan hard-refresh di browser (**Ctrl + F5**) pada halaman:
+   - `admin.html#students`:
+     - Kolom `Gender` kini bersih menampilkan `M` (biru) atau `F` (pink) tanpa simbol icon `♂`/`♀`.
+     - Kolom kelas `3RD VOCABULARY` kini memiliki 4 kolom exam: `Exam 1` (Theme A), `Exam 2` (Theme B), `Exam 3` (Theme C), dan `Exam 4` (Theme D).
+     - Angka poin pada masing-masing kolom exam cocok 100% dengan total poin ujian masing-masing tema di Class Hub (misal: Aunul Fikri Yasir = 105.5 pts, 190 pts, 362 pts, 506 pts).
+     - Kolom `Score`, `Grd`, dan `Progress` yang tidak diperlukan sudah dihilangkan.
+   - `admin.html#class-hub?tab=attendance`:
+     - Tampilan bersih murni: semua tombol "Forgive" dan tanda superscript `^F` merah sudah hilang total.
+     - Drawer analitik pacing di bawah tabel sudah tidak bocor/muncul lagi.
 
 ## Files Changed In Latest Step
-- `css/admin.css` — Added permanent `.tac-slide-drawer` and pacing drawer styles.
-- `js/admin/app.js` — Added DOM lifecycle cleanup for `#tac-pacing-drawer` and backdrop in `loadSection()`.
-- `admin.html`, `dashboard.html`, `result.html` — Cache bumped to `?v=20261101_v72`.
-- `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`, `docs/CURRENT_STATE.md`
-  - Synchronized `is_best_score = true` across 1,480 attempts.
-- `admin.html`, `dashboard.html`, `result.html` — Cache bumped to `?v=20261101_v71`.
-- `docs/CHANGELOG.md`, `docs/CURRENT_STATE.md`, `docs/SESSION_LOG.md`
-- `docs/CHANGELOG.md`, `docs/CURRENT_STATE.md`, `docs/SESSION_LOG.md`
+- `js/admin/student-management.js` — Replaced `Score`, `Grd`, `Progress` with `Exam 1`, `Exam 2`, `Exam 3`, `Exam 4`; streamlined gender to clean M/F; removed non-existent column `total_questions` from query.
+- `js/admin/class.js` — Streamlined gender display in Class Students tab to clean M/F badges.
+- `css/admin.css` — Added permanent `.tac-slide-drawer` styles with backdrop.
+- `js/admin/app.js` — Unmounted orphaned pacing drawers in `loadSection()`; bumped module imports to `?v=20261101_v73`.
+- `admin.html` — Bumped script tag to `?v=20261101_v73`.
+- `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`
 
 ## Completed
 
