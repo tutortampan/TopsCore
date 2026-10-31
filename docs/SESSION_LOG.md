@@ -1,3 +1,33 @@
+## SESSION-20261031-1915
+
+Start: 2026-10-31 18:30 UTC+8
+End: 2026-10-31 19:15 UTC+8
+Agent: Antigravity
+
+### User Request
+"coba cek ulang ini,,,lalu analisa mana yang niainya remedi dan kembalikan semua nilai hasil override siang ini,,, cek hasil real time mereka memang ujian,,, dan mana yang hasil override,,, cek dengan hati2 jangan sampai nilai aslinya hilang... lakukan hati2"
+
+### Objective
+1. Conduct forensic audit on all attempts for Batch 133 in 3rd Vocabulary.
+2. Distinguish genuine real-time exam attempts from synthetic override attempts.
+3. Remove all 770 synthetic dummy override attempts from database.
+4. Restore `is_best_score = true` on genuine student attempts.
+5. Protect all real exam scores taken today on Test 39 & 40.
+6. Ensure Tests 39 & 40 show clean milestone exam scores without red `F` superscript.
+7. Restore cumulative exam points in PTS column.
+
+### Work Performed
+1. Full database backup created: `scripts/full_attempts_backup_before_purge.json` (2,250 attempts).
+2. Forensic audit identified 770 synthetic dummy attempts created at 01:50, 02:15, and 02:39 UTC with 0 duration and 0 answers in `attempt_answers`.
+3. Deleted all 770 synthetic dummy attempts from Supabase.
+4. Restored `is_best_score = true` on genuine attempts across 301 student-test pairs.
+5. Cleared `forgiven_student_ids` on Test 39 payload to `[]`.
+6. Verified all 23 real attempts taken today on Test 39 & 40 (Syazida, Aunul, Gagan, Ari, Wardatul, Masyan, Shelia, Asmul, Nurhaliza, Risma, Tiara, Laura, Asti, Sofa Maria, Suke, Pasya) are 100% intact.
+7. Restricted `isPrereqTest` in `js/admin/app.js` to `display_order <= 38`.
+8. Added `isForgiven: !hasRealAtt` to prerequisite exam entries and linked `totalEarnedScore` to `mastery.cumulativePoints`.
+9. Bumped cache busters to `?v=20261031_v70`.
+10. `npm test` passed 100%.
+
 ## SESSION-20261031-1825
 
 Start: 2026-10-31 18:14 UTC+8

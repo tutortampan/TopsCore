@@ -1286,8 +1286,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             const rawPct = bestAtt ? (bestAtt.percentage != null ? Number(bestAtt.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
             const hasRealAtt = bestAtt && ['submitted','auto_submitted','evaluated','graded'].includes(String(bestAtt?.status||'').toLowerCase());
 
-            const isPrereqTest = (asm.display_order != null ? asm.display_order <= 38 : false)
-              || Boolean((asm.payload?.forgiven_student_ids || []).includes(s.id));
+            const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
 
             let effEarned = 0;
             let effPct = 0;
@@ -1309,7 +1308,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                   test: asm,
                   effPoints: effEarned,
                   effPct,
-                  totalQ
+                  totalQ,
+                  isForgiven: !hasRealAtt
                 });
               }
             } else {
@@ -1359,7 +1359,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
           const averageScorePct = mastery.overallScore;
           const overallPct = averageScorePct;
           const curriculumGradePct = averageScorePct;
-          const totalEarnedScore = mastery.totalPoints;
+          const totalEarnedScore = mastery.cumulativePoints != null ? mastery.cumulativePoints : mastery.totalPoints;
           const totalMaxPossible = mastery.denominator;
           const grade = mastery.grade;
 
@@ -1902,8 +1902,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                 targetAsms.forEach(asm => {
                   const att = row.asmScores?.[asm.id];
                   const fallbackMax = getAsmExpectedMax(asm);
-                  const isPrereqTest = (asm.display_order != null ? asm.display_order <= 38 : false)
-                    || Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+                  const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
 
                   if (att) {
                     const st = String(att.status || '').toLowerCase();
@@ -2011,8 +2010,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
                       const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
 
-                      const isPrereqTest = (asm.display_order != null ? asm.display_order <= 38 : false)
-                        || Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+                      const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
 
                       const attId = att?.id || att?.attempt_id;
                       const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
@@ -2118,8 +2116,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
                       const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
 
-                      const isPrereqTest = (asm.display_order != null ? asm.display_order <= 38 : false)
-                        || Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+                      const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
 
                       if (isPrereqTest) {
                         const effEarned = hasRealAtt ? rawEarned : 0;
@@ -2224,8 +2221,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                       const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
                       const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
 
-                      const isPrereqTest = (asm.display_order != null ? asm.display_order <= 38 : false)
-                        || Boolean((asm.payload?.forgiven_student_ids || []).includes(row.id));
+                      const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
 
                       const attId = att?.id || att?.attempt_id;
                       const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';

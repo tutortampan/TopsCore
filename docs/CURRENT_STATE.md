@@ -1,10 +1,10 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-31 18:25 UTC+8
+Last Updated: 2026-10-31 19:15 UTC+8
 
-Current Phase: Phase 233: Remedial Normalization, Real Score Preservation with Red Superscript F (Grade F), and 100% Exam 39 & 40 Eligibility [COMPLETE]
+Current Phase: Phase 234: Forensic Audit, 770 Synthetic Dummies Purge, Real Exam Scores Restoration & Clean Milestone Parity [COMPLETE]
 
-Current Task: Completed user /goal directive and commit push request: (1) Normalized all attempts for Batch 133 in Tests 1-38 (is_remedial_unlocked = false, restored real effective scores). (2) Preserved natural passing tests (>= 60%) with clean score and grade (e.g. 85%, 100%★). (3) For tests < 60%, preserved real score percentage and earned points with bold red superscript F (e.g. 59%^F, 40%^F). (4) For unattempted/empty tests, displayed 0%^F with 0 pts. (5) Restored PROG % to 95% (or 98%/100%). (6) Verified 100% of all 22 active students in Batch 133 are eligible for Exam 39 & 40. (7) Cache bumped to v69. npm test passed 100%.
+Current Task: Completed user directive: (1) Conducted comprehensive forensic audit of all attempts across Batch 133 in 3rd Vocabulary. (2) Accurately distinguished real-time genuine student attempts from synthetic override attempts. (3) Safely backed up all 2,250 attempts to `scripts/full_attempts_backup_before_purge.json`. (4) Deleted all 770 synthetic dummy attempts (0 answers, 0 duration, created at 01:50, 02:15, and 02:39 UTC) from Supabase. (5) Verified and restored `is_best_score = true` on genuine attempts from students. (6) Verified all 23 real attempts taken today on Test 39 & 40 (Syazida, Aunul, Gagan, Ari, Wardatul, Masyan, Shelia, Asmul, Nurhaliza, Risma, Tiara, Laura, Asti, Sofa Maria, Suke, Pasya) are 100% intact with real answers and scores. (7) Restricted `isPrereqTest` strictly to `display_order <= 38`, ensuring Milestone Destination Exams (Test 39 & 40) display pure real scores with NO red F superscript. (8) Restored PTS to cumulative exam points across all completed exams. (9) Cache bumped to v70. All tests PASS.
 
 Status: COMPLETE (All requirements satisfied & all tests PASS)
 
@@ -12,20 +12,22 @@ Status: COMPLETE (All requirements satisfied & all tests PASS)
 1. All changes committed and pushed to git remote.
 2. User dapat hard-refresh di browser (Ctrl + F5):
    - Di `admin.html#class-hub?tab=attendance`:
-     - Tes yang lulus (>= 60%) tampil bersih dengan warna predikat aslinya (misal 78%, 85%, 100%).
-     - Tes yang di bawah 60% menampilkan skor riil siswa + superscript F merah (misal 59%ᶠ, 40%ᶠ).
-     - Tes yang kosong/0 menampilkan 0%ᶠ.
-     - PROG siswa kembali normal 95% (98% bagi yang sudah ambil Exam 39, 100% bagi yang sudah selesai keduanya).
-     - Seluruh siswa 100% eligible masuk Exam 39 & Exam 40.
+     - 770 attempt dummy telah bersih dihapus dari database.
+     - Seluruh nilai riil siswa kembali 100% utuh sesuai jawaban mereka di `attempt_answers`.
+     - Tes 1 s/d 38: Nilai asli tetap terjaga; nilai < 60% memiliki tanda superscript F merah (`59%ᶠ`), nilai >= 60% tampil bersih.
+     - Exam 39 & 40 (Milestone Exams): Menampilkan nilai ujian asli tanpa superscript F.
+     - Kolom PTS mencerminkan akumulasi total poin riil dari seluruh ujian yang telah diselesaikan.
+     - PROG siswa 95% (98% / 100%), seluruh siswa 100% eligible masuk Exam 39 & 40.
 
 ## Files Changed In Latest Step
-- `css/admin.css` — Added `.test-forgiven-sup` styling.
-- `js/admin/app.js` — Updated cell renderers (SCORE, PTS, Quiz), theme calculations, and PROG completion count.
-- `admin.html` — Cache bumped to `?v=20261031_v69`.
-- `dashboard.html` — Cache bumped to `?v=20261031_v69`.
+- `js/admin/app.js` — Restricted `isPrereqTest` to `display_order <= 38`, passed `isForgiven: !hasRealAtt` to prevent unattempted prerequisite themes from acting as academic failures, restored `totalEarnedScore` to `mastery.cumulativePoints`.
+- `js/admin/student-management.js` — Synchronized `totalEarnedScore` and `pts` to `cumulativePoints` for 100% roster/Class Hub parity.
+- `admin.html` — Cache bumped to `?v=20261031_v70`.
+- `dashboard.html` — Cache bumped to `?v=20261031_v70`.
 - Database:
-  - Normalized 651 remedial attempts to normal (`is_remedial_unlocked = false`).
-  - Restored 79 `effective_score` values to actual scores.
+  - Purged 770 synthetic dummy attempts from `attempts`.
+  - Re-evaluated `is_best_score = true` for remaining genuine attempts across 301 student-test pairs.
+  - Cleared `forgiven_student_ids` on Test 39 payload to `[]`.
 - `docs/CHANGELOG.md`, `docs/CURRENT_STATE.md`, `docs/SESSION_LOG.md`
 
 ## Completed

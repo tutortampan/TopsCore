@@ -291,7 +291,7 @@ export async function renderStudents(area) {
     let globalGrade = '—';
     let overallColor = '#94a3b8';
     let overallPct = -1;
-    let totalEarnedScore = mastery.totalPoints || 0;
+    let totalEarnedScore = (mastery.cumulativePoints != null ? mastery.cumulativePoints : mastery.totalPoints) || 0;
 
     if (completedExamCount > 0) {
       overallPct = mastery.overallScore;
@@ -359,7 +359,7 @@ export async function renderStudents(area) {
           totalTests: targetExams.length,
           avgPct: effScorePct,
           grade: classMastery.grade,
-          pts: classMastery.totalPoints,
+          pts: classMastery.cumulativePoints != null ? classMastery.cumulativePoints : classMastery.totalPoints,
           color: ptsColor
         });
       } else {

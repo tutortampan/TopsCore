@@ -1,3 +1,34 @@
+## [2026-10-31 19:15] — Phase 234: Forensic Audit, 770 Synthetic Dummies Purge, Real Exam Scores Restoration & Clean Milestone Parity
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 234
+**Status:** PASS
+
+### Why
+- User request: *"coba cek ulang ini,,,lalu analisa mana yang niainya remedi dan kembalikan semua nilai hasil override siang ini,,, cek hasil real time mereka memang ujian,,, dan mana yang hasil override,,, cek dengan hati2 jangan sampai nilai aslinya hilang... lakukan hati2"*
+- A comprehensive forensic audit revealed that earlier today (between 01:50 and 02:39 UTC), 770 synthetic dummy attempts (duration = 0ms, 0 answers in `attempt_answers`, score = 60%, grade = C) had been inserted into `attempts` table.
+- These synthetic dummy attempts masked legitimate student attempts and made every cell in the table show `60%^R`.
+- Furthermore, Test 39 payload contained 22 student IDs in `forgiven_student_ids`, which erroneously applied prerequisite forgiveness (`^F`) to milestone exams and pulled unattempted students into Theme D with 0 pts.
+
+### Changed
+- Database & Data Integrity:
+  - Backed up all 2,250 attempts to `scripts/full_attempts_backup_before_purge.json`.
+  - Deleted all 770 synthetic dummy attempts (0 answers, 0 duration, created at 01:50, 02:15, and 02:39 UTC).
+  - Re-evaluated and restored `is_best_score = true` for all legitimate remaining student attempts across 301 pairs.
+  - Cleared `forgiven_student_ids` on Test 39 payload to `[]`.
+  - Verified all 23 real attempts taken today on Test 39 & 40 (Syazida, Aunul, Gagan, Ari, Wardatul, Masyan, Shelia, Asmul, Nurhaliza, Risma, Tiara, Laura, Asti, Sofa Maria, Suke, Pasya) remain 100% intact and unaltered.
+- `js/admin/app.js`:
+  - Restricted `isPrereqTest` strictly to `asm.display_order != null && asm.display_order <= 38`, ensuring Milestone Destination Exams (Test 39 & 40) display pure, clean real scores and points with NO red `F` superscript.
+  - Added `isForgiven: !hasRealAtt` to `studentExamEntries` for prerequisite exams, preventing unattempted prerequisite themes from acting as academic failures in `computeMilestoneExamMastery`.
+  - Restored `totalEarnedScore` to `mastery.cumulativePoints != null ? mastery.cumulativePoints : mastery.totalPoints` so the PTS column correctly sums all completed exams.
+- `js/admin/student-management.js`:
+  - Updated `pts` and `totalEarnedScore` to `mastery.cumulativePoints` for 100% parity with Class Hub.
+- Cache busters:
+  - Bumped `admin.html` and `dashboard.html` to `?v=20261031_v70`.
+
+### Tests
+- `npm test`: 40/40 JS syntax checks PASS, 27/27 manifest PASS, 100% dashboard parity PASS.
+
 ## [2026-10-31 18:25] — Phase 233: Remedial Normalization, Real Score Preservation with Red Superscript F (Grade F), and 100% Exam 39 & 40 Eligibility
 
 **Agent/Session:** Antigravity
