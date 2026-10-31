@@ -602,8 +602,22 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--fm-radius-md, 8px);
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
+  max-height: calc(100vh - 215px);
+  min-height: 200px;
+  position: relative;
   margin-bottom: 1.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Constrain table-wrap height inside dialogs and modals */
+.modal-box .table-wrap,
+.modal-body .table-wrap,
+.modal .table-wrap,
+#duplicate-students-modal .table-wrap,
+#duplicate-questions-modal .table-wrap {
+  max-height: 380px !important;
+  min-height: 120px !important;
 }
 
 /* Master Data Table Selectors (Covering all variations across Admin) */
@@ -623,7 +637,7 @@ body {
   background: transparent;
 }
 
-/* Standardized Table Headers */
+/* Standardized Table Headers - Universal Sticky Header at top:0 */
 .table-wrap th,
 .data-table th,
 .datagrid-table th,
@@ -633,15 +647,21 @@ body {
 #vault-table th,
 #vault-topic-table th,
 #access-tests-table th,
-.dossier-table th {
+.dossier-table th,
+.roster-table th,
+#dup-table th,
+.tac-pacing-table th,
+.modal-box table th,
+.modal-body table th {
   padding: 8px 12px !important;
   font-size: 0.70rem !important;
   font-weight: 700 !important;
   letter-spacing: 0.05em !important;
   text-transform: uppercase !important;
   color: #ffffff !important;
-  background: rgba(15, 23, 42, 0.95) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: #0f172a !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) !important;
   border-right: none !important;
   border-top: none !important;
   border-left: none !important;
@@ -650,6 +670,47 @@ body {
   top: 0;
   z-index: 10;
   box-sizing: border-box;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Super-headers in DataGrid (e.g. Student Roster with Class Exam columns) */
+.datagrid-thead tr.datagrid-super-header-row th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 15 !important;
+  background: #0f172a !important;
+  height: 26px !important;
+  padding: 4px 8px !important;
+  box-sizing: border-box !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Secondary header row directly beneath super-header (avoids collision/overlap) */
+.datagrid-thead.has-super-headers tr:not(.datagrid-super-header-row) th,
+.datagrid-thead:has(.datagrid-super-header-row) tr:not(.datagrid-super-header-row) th {
+  position: sticky !important;
+  top: 26px !important;
+  z-index: 14 !important;
+  background: #0f172a !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* First sticky column intersection with super-headers */
+.datagrid-thead tr.datagrid-super-header-row th:first-child {
+  position: sticky !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 25 !important;
+  background: #0f172a !important;
+}
+
+.datagrid-thead.has-super-headers tr:not(.datagrid-super-header-row) th:first-child,
+.datagrid-thead:has(.datagrid-super-header-row) tr:not(.datagrid-super-header-row) th:first-child {
+  position: sticky !important;
+  top: 26px !important;
+  left: 0 !important;
+  z-index: 24 !important;
+  background: #0f172a !important;
 }
 
 /* Standardized Table Data Cells */
@@ -3503,7 +3564,7 @@ tr.deleted-row td {
   height: 100% !important;
   max-height: 100% !important;
   overflow-x: auto !important; /* Smooth horizontal scroll when columns exceed container */
-  overflow-y: hidden !important;
+  overflow-y: auto !important; /* Smooth vertical scroll when student count exceeds viewport */
   width: 100% !important;
   display: block !important;
   position: relative;

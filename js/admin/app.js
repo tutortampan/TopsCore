@@ -2030,18 +2030,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             if (selectedTheme === 'ALL') {
               sortedThemes.forEach(tc => {
                 const tName = themeNames[tc] ? ` (${themeNames[tc]})` : '';
-                const themeTests = activeTests.filter(asm => {
-                  const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
-                  return (rawTheme || 'A').toUpperCase() === tc;
+                // Per user requirement: In ALL view, each theme only displays the COMBINED TOTAL columns (SCORE % & PTS)
+                dynamicSuperHeaders.push({
+                  label: `THEME ${tc}${tName}`,
+                  colSpan: 2,
+                  className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
                 });
-                const colSpan = themeTests.length > 0 ? (themeTests.length * 2) + 2 : 0; // SCORE + PTS per test, PLUS 2 for Theme Combined Score % & Total Points
-                if (colSpan > 0) {
-                  dynamicSuperHeaders.push({
-                    label: `THEME ${tc}${tName}`,
-                    colSpan: colSpan,
-                    className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
-                  });
-                }
               });
             } else {
               const tName = themeNames[selectedTheme] ? ` (${themeNames[selectedTheme]})` : '';
@@ -2058,210 +2052,214 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
             sortedActiveThemes.forEach(tc => {
               const asmsInTheme = themeGroups[tc];
 
-              asmsInTheme.forEach(asm => {
-                const num = asm.display_order || (classTests.indexOf(asm) + 1);
-                const isTest = isWeeklyExam(asm);
-                const code = asm.payload?.shell_code || asm.shell_code || asm.title;
-                const isPhrase = asm.payload?.category === 'phrases' || /PHRASES/i.test(code || '') || /phrase/i.test(asm.title || '');
-                const tag = isTest ? (isPhrase ? 'PHRASE EXAM' : 'WORD EXAM') : (isPhrase ? 'PHRASE QUIZ' : 'WORD QUIZ');
-                const cleanTitle = asm.title || asm.name || code || 'Test';
-                const headerTooltip = (code && cleanTitle && !cleanTitle.toLowerCase().startsWith(code.toLowerCase()))
-                  ? `${code}: ${cleanTitle}`
-                  : cleanTitle;
+              // In specific Theme views (A, B, C, D): render all tasks/quizzes and individual exams (Word Exam & Phrase Exam)
+              // In ALL view: omit individual exams to keep the view clean, spacious, and focused solely on theme totals
+              if (selectedTheme !== 'ALL') {
+                asmsInTheme.forEach(asm => {
+                  const num = asm.display_order || (classTests.indexOf(asm) + 1);
+                  const isTest = isWeeklyExam(asm);
+                  const code = asm.payload?.shell_code || asm.shell_code || asm.title;
+                  const isPhrase = asm.payload?.category === 'phrases' || /PHRASES/i.test(code || '') || /phrase/i.test(asm.title || '');
+                  const tag = isTest ? (isPhrase ? 'PHRASE EXAM' : 'WORD EXAM') : (isPhrase ? 'PHRASE QUIZ' : 'WORD QUIZ');
+                  const cleanTitle = asm.title || asm.name || code || 'Test';
+                  const headerTooltip = (code && cleanTitle && !cleanTitle.toLowerCase().startsWith(code.toLowerCase()))
+                    ? `${code}: ${cleanTitle}`
+                    : cleanTitle;
 
-                if (isTest) {
-                  // 1. SCORE COLUMN FIRST (User requirement: "score, baru point")
-                  dynamicAsmCols.push({
-                    key: `test_${asm.id}_pct`,
-                    className: 'col-asm col-exam col-exam-score',
-                    width: '54px',
-                    headerTitle: `${headerTooltip} (Score %)`,
-                    title: `${headerTooltip} (Score %)`,
-                    label: `
-                      <div class="asm-hdr-cell">
-                        <span class="test-num test-num-test" title="${escapeHtml(headerTooltip)}">${num}</span>
-                        <span class="test-subtag test-subtag-test-score">SCORE</span>
-                      </div>
-                    `,
-                    sortable: true,
-                    align: 'center',
-                    render: (val, row) => {
-                      const att = row.asmScores?.[asm.id];
-                      const maxQ = getAsmExpectedMax(asm);
-                      const totalQ = Number(att?.total_questions || maxQ);
-                      const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
-                      const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
+                  if (isTest) {
+                    // 1. SCORE COLUMN FIRST (User requirement: "score, baru point")
+                    dynamicAsmCols.push({
+                      key: `test_${asm.id}_pct`,
+                      className: 'col-asm col-exam col-exam-score',
+                      width: '54px',
+                      headerTitle: `${headerTooltip} (Score %)`,
+                      title: `${headerTooltip} (Score %)`,
+                      label: `
+                        <div class="asm-hdr-cell">
+                          <span class="test-num test-num-test" title="${escapeHtml(headerTooltip)}">${num}</span>
+                          <span class="test-subtag test-subtag-test-score">SCORE</span>
+                        </div>
+                      `,
+                      sortable: true,
+                      align: 'center',
+                      render: (val, row) => {
+                        const att = row.asmScores?.[asm.id];
+                        const maxQ = getAsmExpectedMax(asm);
+                        const totalQ = Number(att?.total_questions || maxQ);
+                        const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
+                        const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
+                        const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
 
-                      const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
+                        const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
 
-                      const attId = att?.id || att?.attempt_id;
-                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+                        const attId = att?.id || att?.attempt_id;
+                        const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                        const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
 
-                      if (!att) {
-                        return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
-                      }
-                      const st = String(att.status || '').toLowerCase();
-                      if (st === 'in_progress') {
-                        const isExpired = att.expires_at && new Date(att.expires_at) < new Date();
-                        if (!isExpired) {
-                          return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
+                        if (!att) {
+                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
                         }
-                      }
-                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
-                        return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
-                      }
-
-                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
-                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-                      const roundPct = Math.round(effPct);
-                      const color = typeof getGradeColorByScore === 'function'
-                        ? getGradeColorByScore(effPct)
-                        : (effPct >= 60 ? '#FFFF00' : '#FF0000');
-                      const remSup = isRem ? '<sup class="asm-rem-sup">R</sup>' : '';
-
-                      return `
-                        <span class="asm-score asm-score-test"
-                              style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                              ${clickAttr}
-                              title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${roundPct}%&#10;Click to open result">
-                          ${roundPct}%${remSup}
-                        </span>
-                      `;
-                    }
-                  });
-
-                  // 2. POINTS COLUMN SECOND
-                  dynamicAsmCols.push({
-                    key: `test_${asm.id}_pts`,
-                    className: 'col-asm col-exam col-exam-pts',
-                    width: '60px',
-                    headerTitle: `${headerTooltip} (Points)`,
-                    title: `${headerTooltip} (Points)`,
-                    label: `
-                      <div class="asm-hdr-cell">
-                        <span class="test-num test-num-test" title="${escapeHtml(headerTooltip)}">${num}</span>
-                        <span class="test-subtag test-subtag-test-pts">${isPhrase ? 'PHR' : 'WRD'} PTS</span>
-                      </div>
-                    `,
-                    sortable: true,
-                    align: 'center',
-                    render: (val, row) => {
-                      const att = row.asmScores?.[asm.id];
-                      const maxQ = getAsmExpectedMax(asm);
-                      const totalQ = Number(att?.total_questions || maxQ);
-                      const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
-                      const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
-
-                      const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
-
-                      if (!att) {
-                        return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
-                      }
-                      const st = String(att.status || '').toLowerCase();
-                      if (st === 'in_progress') {
-                        const isExpired = att.expires_at && new Date(att.expires_at) < new Date();
-                        if (!isExpired) {
-                          return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
+                        const st = String(att.status || '').toLowerCase();
+                        if (st === 'in_progress') {
+                          const isExpired = att.expires_at && new Date(att.expires_at) < new Date();
+                          if (!isExpired) {
+                            return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
+                          }
                         }
-                      }
-                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
-                        return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
-                      }
+                        if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
+                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+                        }
 
-                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
-                      const effEarned = isRem ? Math.min(rawEarned, totalQ * 0.6) : rawEarned;
-                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-                      const cleanSc = Math.round(effEarned * 10) / 10;
-                      const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
-                      const color = typeof getGradeColorByScore === 'function'
-                        ? getGradeColorByScore(effPct)
-                        : (effPct >= 60 ? '#FFFF00' : '#FF0000');
-                      const attId = att?.id || att?.attempt_id;
-                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+                        const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+                        const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                        const roundPct = Math.round(effPct);
+                        const color = typeof getGradeColorByScore === 'function'
+                          ? getGradeColorByScore(effPct)
+                          : (effPct >= 60 ? '#FFFF00' : '#FF0000');
+                        const remSup = isRem ? '<sup class="asm-rem-sup">R</sup>' : '';
 
-                      return `
-                        <span class="asm-score asm-score-test"
-                              style="color:${color} !important; ${cursorStyle}"
-                              ${clickAttr}
-                              title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${displayVal}/${totalQ} pts">
-                          <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; color:${color} !important;">
-                            ${displayVal}
+                        return `
+                          <span class="asm-score asm-score-test"
+                                style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                                ${clickAttr}
+                                title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${roundPct}%&#10;Click to open result">
+                            ${roundPct}%${remSup}
                           </span>
-                        </span>
-                      `;
-                    }
-                  });
-                } else {
-                  // Quiz column (Displays Score % per user requirement)
-                  dynamicAsmCols.push({
-                    key: `test_${asm.id}`,
-                    className: 'col-asm col-quiz',
-                    width: '46px',
-                    headerTitle: `${headerTooltip} (Quiz Score %)`,
-                    title: `${headerTooltip} (Quiz Score %)`,
-                    label: `
-                      <div class="asm-hdr-cell">
-                        <span class="test-num test-num-task" title="${escapeHtml(headerTooltip)}">${num}</span>
-                        <span class="test-subtag ${isPhrase ? 'test-subtag-phr' : 'test-subtag-wrd'}">${isPhrase ? 'PHR' : 'WRD'}</span>
-                      </div>
-                    `,
-                    sortable: true,
-                    align: 'center',
-                    render: (val, row) => {
-                      const att = row.asmScores?.[asm.id];
-                      const maxQ = getAsmExpectedMax(asm);
-                      const totalQ = Number(att?.total_questions || maxQ);
-                      const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
-                      const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
+                        `;
+                      }
+                    });
 
-                      const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
+                    // 2. POINTS COLUMN SECOND
+                    dynamicAsmCols.push({
+                      key: `test_${asm.id}_pts`,
+                      className: 'col-asm col-exam col-exam-pts',
+                      width: '60px',
+                      headerTitle: `${headerTooltip} (Points)`,
+                      title: `${headerTooltip} (Points)`,
+                      label: `
+                        <div class="asm-hdr-cell">
+                          <span class="test-num test-num-test" title="${escapeHtml(headerTooltip)}">${num}</span>
+                          <span class="test-subtag test-subtag-test-pts">${isPhrase ? 'PHR' : 'WRD'} PTS</span>
+                        </div>
+                      `,
+                      sortable: true,
+                      align: 'center',
+                      render: (val, row) => {
+                        const att = row.asmScores?.[asm.id];
+                        const maxQ = getAsmExpectedMax(asm);
+                        const totalQ = Number(att?.total_questions || maxQ);
+                        const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
+                        const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
+                        const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
 
-                      const attId = att?.id || att?.attempt_id;
-                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+                        const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
 
-                      if (!att) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
-                      const st = String(att.status || '').toLowerCase();
-                      if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
-                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+                        if (!att) {
+                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+                        }
+                        const st = String(att.status || '').toLowerCase();
+                        if (st === 'in_progress') {
+                          const isExpired = att.expires_at && new Date(att.expires_at) < new Date();
+                          if (!isExpired) {
+                            return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
+                          }
+                        }
+                        if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
+                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+                        }
 
-                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
-                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-                      const roundPct = Math.round(effPct);
-                      const color = typeof getGradeColorByScore === 'function'
-                        ? getGradeColorByScore(effPct)
-                        : (effPct >= 60 ? '#FFFF00' : '#FF0000');
-                      const remSup = isRem ? '<sup class="asm-rem-sup">R</sup>' : '';
+                        const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+                        const effEarned = isRem ? Math.min(rawEarned, totalQ * 0.6) : rawEarned;
+                        const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                        const cleanSc = Math.round(effEarned * 10) / 10;
+                        const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
+                        const color = typeof getGradeColorByScore === 'function'
+                          ? getGradeColorByScore(effPct)
+                          : (effPct >= 60 ? '#FFFF00' : '#FF0000');
+                        const attId = att?.id || att?.attempt_id;
+                        const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                        const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
 
-                      return `
-                        <span class="asm-score asm-score-task"
-                              style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                              ${clickAttr}
-                              title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${roundPct}%&#10;Click to view result">
-                          ${roundPct}%${remSup}
-                        </span>
-                      `;
-                    }
-                  });
-                }
-              });
+                        return `
+                          <span class="asm-score asm-score-test"
+                                style="color:${color} !important; ${cursorStyle}"
+                                ${clickAttr}
+                                title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${displayVal}/${totalQ} pts">
+                            <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; color:${color} !important;">
+                              ${displayVal}
+                            </span>
+                          </span>
+                        `;
+                      }
+                    });
+                  } else {
+                    // Quiz column (Displays Score % per user requirement)
+                    dynamicAsmCols.push({
+                      key: `test_${asm.id}`,
+                      className: 'col-asm col-quiz',
+                      width: '46px',
+                      headerTitle: `${headerTooltip} (Quiz Score %)`,
+                      title: `${headerTooltip} (Quiz Score %)`,
+                      label: `
+                        <div class="asm-hdr-cell">
+                          <span class="test-num test-num-task" title="${escapeHtml(headerTooltip)}">${num}</span>
+                          <span class="test-subtag ${isPhrase ? 'test-subtag-phr' : 'test-subtag-wrd'}">${isPhrase ? 'PHR' : 'WRD'}</span>
+                        </div>
+                      `,
+                      sortable: true,
+                      align: 'center',
+                      render: (val, row) => {
+                        const att = row.asmScores?.[asm.id];
+                        const maxQ = getAsmExpectedMax(asm);
+                        const totalQ = Number(att?.total_questions || maxQ);
+                        const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
+                        const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
+                        const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
 
-              // 3. THEME COMBINED SCORE COLUMN (User requirement: "score, lalu point untuk tiap tema")
+                        const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
+
+                        const attId = att?.id || att?.attempt_id;
+                        const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                        const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+
+                        if (!att) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+                        const st = String(att.status || '').toLowerCase();
+                        if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
+                        if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+
+                        const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+                        const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                        const roundPct = Math.round(effPct);
+                        const color = typeof getGradeColorByScore === 'function'
+                          ? getGradeColorByScore(effPct)
+                          : (effPct >= 60 ? '#FFFF00' : '#FF0000');
+                        const remSup = isRem ? '<sup class="asm-rem-sup">R</sup>' : '';
+
+                        return `
+                          <span class="asm-score asm-score-task"
+                                style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                                ${clickAttr}
+                                title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${roundPct}%&#10;Click to view result">
+                            ${roundPct}%${remSup}
+                          </span>
+                        `;
+                      }
+                    });
+                  }
+                });
+              }
+
+              // 3. THEME COMBINED SCORE COLUMN (User requirement: "Score dan pointanya dijadikan satu")
               dynamicAsmCols.push({
                 key: `theme_${tc}_score`,
                 className: `col-asm col-exam col-exam-score col-test-theme-score col-test-theme-score-${tc.toLowerCase()}`,
-                width: '54px',
+                width: selectedTheme === 'ALL' ? '68px' : '54px',
                 headerTitle: `Theme ${tc} Combined Score % (Words + Phrases)`,
                 title: `Theme ${tc} Combined Score % (Words + Phrases)`,
                 label: `
                   <div class="asm-hdr-cell">
                     <span class="test-num test-num-test test-num-total" title="Theme ${tc} Combined Score %">SCORE</span>
-                    <span class="test-subtag test-subtag-test-score">THEME %</span>
+                    <span class="test-subtag test-subtag-test-score">${selectedTheme === 'ALL' ? 'EXAM %' : 'THEME %'}</span>
                   </div>
                 `,
                 sortable: true,
@@ -2288,13 +2286,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
               dynamicAsmCols.push({
                 key: `theme_${tc}_total_pts`,
                 className: `col-asm col-exam col-exam-pts col-test-theme-total col-test-theme-total-${tc.toLowerCase()}`,
-                width: '60px',
+                width: selectedTheme === 'ALL' ? '74px' : '60px',
                 headerTitle: `Theme ${tc} Exam Points (Words + Phrases)`,
                 title: `Theme ${tc} Exam Points (Words + Phrases)`,
                 label: `
                   <div class="asm-hdr-cell">
-                    <span class="test-num test-num-test test-num-total" title="Theme ${tc} Exam Points (Words + Phrases)">TOT</span>
-                    <span class="test-subtag test-subtag-test-pts">EXAM PTS</span>
+                    <span class="test-num test-num-test test-num-total" title="Theme ${tc} Exam Points (Words + Phrases)">PTS</span>
+                    <span class="test-subtag test-subtag-test-pts">${selectedTheme === 'ALL' ? 'TOTAL' : 'EXAM PTS'}</span>
                   </div>
                 `,
                 sortable: true,
