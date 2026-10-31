@@ -1,4 +1,24 @@
-# ACTIVE DIRECTIVE: PHASE 238 — COMPLETE VERIFICATION OF STUDENT ROSTER 4 THEME EXAM POINTS & PLATFORM-WIDE CLEAN M/F GENDER [COMPLETE]
+# ACTIVE DIRECTIVE: PHASE 246 — STUDENT ROSTER BATCH SCOPE & DEFAULT ACTIVE TAB [COMPLETE]
+
+- [x] Task 1: Scoped student roster topbar status counts (`Active`, `Inactive`, `All`) strictly to `window._filterBatchId` (or active batches in program if no specific batch is selected).
+- [x] Task 2: Resolved root cause of 28 inactive / 50 total students (historical batches in Camp program). For Batch 133, counts are now precisely Active: 22, Inactive: 2, All: 24.
+- [x] Task 3: Ensured opening Student Roster always defaults to the **Active Students** (`active`) tab first, eliminating disorienting starts on `All Students`.
+- [x] Task 4: Verified 40/40 JS syntax checks PASS, `scripts/test_student_roster_counts_and_active_default.mjs` PASS.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 245 — COMPREHENSIVE STUDENT DIFFICULTY ANALYSIS & EXAM SYSTEM PROPOSAL [COMPLETE]
+
+- [x] Task 1: Investigated 94,746 attempt answers in Supabase to diagnose root causes of student bottlenecks and timeouts across Themes A, B, C, D.
+- [x] Task 2: Discovered 1,528 `CHEAT_ATTEMPT` audit logs caused by mobile virtual keyboard `window.blur` events and implemented mobile guard in `js/test.js`.
+- [x] Task 3: Extended cheat countdown grace period from 10s to 30s before auto-submit.
+- [x] Task 4: Upgraded `classifyStudentError` to use `cleanPunctuationAndSymbols` for hyphenated/spaced compound words (`well-written` vs `well written`).
+- [x] Task 5: Conducted exhaustive student-by-student cross-check of all 22 active students in Batch 133, verifying 100% pure student scores without artificial overrides.
+- [x] Task 6: Authored comprehensive analytical proposal `STUDENT_DIFFICULTY_AND_EXAM_SYSTEM_PROPOSAL.md`.
+
+---
+
+
 
 - [x] Task 1: Streamlined Gender display across Student Roster (`#students`) and Class Students Tab (`#class-hub?tab=students`) to pure bold `M` (`#38bdf8`) and `F` (`#f472b6`) without unicode icons (`♂`/`♀`).
 - [x] Task 2: Replaced redundant `Score`, `Grd`, and `Progress` columns on Student Roster with 4 dedicated `Exam 1`, `Exam 2`, `Exam 3`, `Exam 4` columns representing each theme's total exam points.
