@@ -2135,9 +2135,9 @@ export async function renderStudents(area) {
         const confirmed = await new Promise(resolve => {
           const c = document.createElement('div');
           c.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
-          c.innerHTML = `<div style="background:var(--fm-bg-panel, #0F172A);border:1px solid rgba(239,68,68,0.5);border-radius:12px;padding:2rem;max-width:380px;text-align:center;">
+          c.innerHTML = `<div style="background:var(--fm-bg-panel, #0F172A);border:1px solid rgba(255,0,0,0.5);border-radius:12px;padding:2rem;max-width:380px;text-align:center;">
             <div style="font-size:2rem;margin-bottom:0.5rem;">&#9888;&#65039;</div>
-            <h3 style="color:#ef4444;margin:0 0 0.5rem;">Delete ${selectedIds.length} Students?</h3>
+            <h3 style="color:#FF0000;margin:0 0 0.5rem;">Delete ${selectedIds.length} Students?</h3>
             <p style="color:var(--clr-text-3);font-size:0.85rem;margin-bottom:1.5rem;">This will soft-delete all selected students. Their history will be preserved.</p>
             <div style="display:flex;gap:0.75rem;justify-content:center;">
               <button id="c-no" class="btn btn-secondary">Cancel</button>

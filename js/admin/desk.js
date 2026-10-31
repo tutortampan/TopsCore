@@ -1131,7 +1131,7 @@ export async function renderSettings(area) {
               { id: 'custom',       emoji: '📁', label: 'Custom Upload' },
             ].map(s => `
               <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;padding:0.3rem 0.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);transition:background 0.15s;" class="sound-opt-label">
-                <input type="radio" name="anti_cheat_sound_type" value="${s.id}" ${(settings.anti_cheat_sound_type || 'police_siren') === s.id ? 'checked' : ''} style="accent-color:#eab308;" />
+                <input type="radio" name="anti_cheat_sound_type" value="${s.id}" ${(settings.anti_cheat_sound_type || 'police_siren') === s.id ? 'checked' : ''} style="accent-color:#FFFF00;" />
                 <span style="font-size:0.95rem;">${s.emoji}</span>
                 <span class="text-xs fw-600">${s.label}</span>
                 <button type="button" class="btn-preview-sound" data-sound="${s.id}" title="Preview" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:0.8rem;opacity:0.7;padding:0 2px;" tabindex="-1">▶</button>
@@ -1144,7 +1144,7 @@ export async function renderSettings(area) {
           <label class="form-label text-sm fw-600">Upload Custom Alert Sound</label>
           <div class="text-xs text-muted mb-1">MP3, WAV, or OGG — stored in browser settings (max ~2 MB)</div>
           <input type="file" id="setting-custom-sound-file" accept="audio/*" class="form-control" style="padding:0.35rem;" />
-          ${settings.anti_cheat_custom_sound_b64 ? `<div class="text-xs mt-1" style="color:#22c55e;">✅ Custom sound uploaded. Uploading a new file will replace it.</div>` : ''}
+          ${settings.anti_cheat_custom_sound_b64 ? `<div class="text-xs mt-1" style="color:#00c000ff;">✅ Custom sound uploaded. Uploading a new file will replace it.</div>` : ''}
         </div>
 
         <div class="form-group mb-4">
