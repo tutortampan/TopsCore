@@ -1,25 +1,136 @@
-## [2026-10-31 07:15] — Phase 224: Student Dashboard `attTime` ReferenceError Fix & v61 Cache Bump
+## [2026-10-31 08:17] — Phase 226: Override Modal Redesign — Test Checklist & Bug Fix
 
 **Agent/Session:** Antigravity
-**Phase:** Phase 224
+**Phase:** Phase 226
 **Status:** PASS
 
 ### Why
-- User reported `Failed to load dashboard: attTime is not defined` on the student lobby (`dashboard.html`) for Muhammad Tarmizi Tohir, halting dashboard data hydration and causing Rank Standings to spin indefinitely.
-- Root cause: In `js/dashboard.js` line 1913 inside the `attempts.forEach` loop, `attTime` was evaluated in an attempt comparison condition before being declared in that scope.
+- User reported tombol `⚡ Override Nilai & Prerequisite` tidak menghasilkan perubahan apa pun.
+- User ingin ganti UI modal dari dropdown scope → **checklist interaktif** yang menampilkan semua quiz dan exam di kelas, sehingga bisa memilih tes mana saja yang nilainya di-override.
+- User ingin override berlaku untuk **tes mana saja** (quiz & exam), tidak terbatas pada hanya prerequisite sebelum 2 exam terakhir.
+- Override hanya mengisi nilai yang **kosong** atau **di bawah target** — tidak menurunkan yang sudah bagus.
+
+### Root Causes (Bug)
+1. **Multiple event listeners**: Tombol `btn-override-prereq-matrix` tidak punya guard `_overrideBound`, sehingga setiap re-render menambah listener baru yang bisa saling konflik.
+2. **`selectedTestIds` tidak dikirim**: Fungsi backend lama tidak memiliki parameter untuk menerima daftar test yang dipilih secara eksplisit dari checklist.
+3. **Logic "ALL" tidak termasuk exam**: Jalur `ALL` lama hanya override quiz (bukan exam), sehingga exam yang dipilih tidak pernah ter-override.
 
 ### Changed
-- `js/dashboard.js`:
-  - Declared `const attTime = new Date(att.submitted_at || att.created_at || 0).getTime();` within `attempts.forEach` (line 1900), resolving the ReferenceError.
-  - Added Paired Theme Exam Remedial Synchronization in `dashboard.js` assessment rendering loop so student lobby reflects the "Satu Paket" rule.
 - `js/api.js`:
-  - Removed invalid reference to non-existent database column `is_remedial` during attempt update queries, retaining official column `is_remedial_unlocked`.
-- `dashboard.html`:
-  - Bumped cache buster to `v=20261031_v61`.
+  - Added `selectedTestIds` param: jika diisi, override **persis** test-test yang ada di array ini (bisa quiz maupun exam).
+  - Added `targetScorePercent` param (default 60): bisa diatur jika score selain 60% dibutuhkan.
+  - Added `onlyFillEmpty` param: jika `true`, skip siswa yang sudah punya attempt (berapa pun skornya). Default `false` = isi yang kosong DAN yang di bawah target.
+  - Replaced `alreadyPassed` check: sekarang dibandingkan terhadap `fillScore` (bukan hardcode 60%), sehingga tidak pernah menurunkan nilai yang sudah ≥ target.
+  - Added inline `_gradeForScore()` helper (tidak perlu dynamic import).
+  - Fixed `ALL` legacy fallback: sekarang meng-include semua test (quiz + exam).
+  - Updated audit log: mencatat `selected_test_ids`, `fill_score_percent`, `only_fill_empty`, `is_remedial`.
+  - Return object kini juga mengembalikan `fillScore`, `fillGrade`, `isRemedial`.
+- `js/admin/app.js`:
+  - Bumped to `?v=20261031_v63`.
+  - **Total redesign modal** `window._openClassOverridePrereqModal`:
+    - Section A: Scope Siswa (Semua / Per Batch / Spesifik) — tetap sama.
+    - **Section B (NEW): Checklist Interaktif** — menampilkan semua quiz & exam di kelas dengan badge type (QUIZ/EXAM) dan theme (A/B/C/D). Tombol bulk: ✓ Semua, Quiz Saja, Exam Saja, ✗ Hapus.
+    - **Section C (NEW): Opsi Override** — "Hanya Isi yang Kosong" checkbox + "Buka Sesi Ujian" checkbox.
+    - Section D: Protection notice (Rule 2.10).
+  - Added `_overrideBound` guard pada toolbar button untuk mencegah duplikat event listener.
+  - Execute button sekarang mengirim `selectedTestIds` dari checklist ke backend.
+  - Toast sukses sekarang menampilkan detail: jumlah nilai baru, diperbarui, siswa terdampak, tes terdampak.
+- `admin.html`: Bumped cache busters ke `?v=20261031_v63`.
+
+### Files
+- `js/api.js`
+- `js/admin/app.js`
+- `admin.html`
+
+### Database
+- Tidak ada perubahan schema.
+- Sama seperti sebelumnya: upsert ke tabel `attempts`, update `tests.payload.test_session` (opsional), insert ke `audit_logs`.
 
 ### Tests
-- `scripts/verify_tarmizi_dashboard.mjs`: Successfully loaded Muhammad Tarmizi Tohir's 48 attempts in Node environment, computed 2 exams and 9 activities with 0 errors.
-- `scripts/check_all_js_syntax.cjs`: 40/40 JS files PASS with 0 syntax errors.
+- command: `node --check js/api.js && node --check js/admin/app.js`
+- result: PASS
+- command: `npm test`
+- result: `40/40 JS syntax PASS, 100% parity PASS`
+
+### Risks / Follow-up
+- Jika `classTests` kosong saat modal dibuka, checklist akan menampilkan pesan "Tidak ada tes ditemukan". Ini normal jika kelas belum punya tes.
+- `selectedTestIds` sepenuhnya client-driven. Backend tetap mem-filter hanya test yang ada di `class_id` yang dikirim, sehingga tidak bisa di-spoof untuk kelas lain.
+
+### Next Action
+- User hard-refresh `admin.html` (Ctrl+F5).
+- Navigasi ke Class Hub → Students Grade and Score → klik `⚡ Override Nilai & Prerequisite`.
+- Checklist semua quiz & exam sekarang tampil. Centang yang ingin di-override, pilih siswa, klik Terapkan.
+
+---
+
+## [2026-10-31 07:55] — Phase 225: Class Hub Override Prerequisite & 60% Remedial Feature
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 225
+**Status:** PASS
+
+### Why
+- User request: Tutors need an admin override capability that grants students immediate access to target exams even if prerequisite scores are unmet, automatically setting all unmet prerequisites to 60% Remedial (Grade C, Yellow) without downgrading any student who already passed.
+- Feature placed in Class Hub → Students Grade and Score (Attendance Matrix) tab toolbar and per-student row.
+
+### Changed
+- `js/api.js`:
+  - Added `adminOverridePrerequisitesWithRemedial({classId, studentIds, targetThemeCode, targetExamId, unlockLiveSessions, includeWordsExamIfPhrasesSelected})` export function.
+  - Fetches all class tests, identifies prerequisite tests vs target exams.
+  - Protects students already at ≥60% (never downgrades passing scores — Rule 2.7).
+  - Creates new `submitted` attempts at 60%, Grade C, `is_remedial_unlocked: true` for unattempted prerequisites.
+  - Updates existing failed attempts (< 60%) to 60%, Grade C, `is_remedial_unlocked: true`.
+  - Optionally unlocks live test sessions (whitelists student IDs in `payload.test_session.allowed_student_ids`).
+  - Writes audit log to `audit_logs` table (Rule 2.19).
+  - Clears admin caches after operation.
+- `js/admin/app.js`:
+  - Bumped to `?v=20261031_v62`.
+  - Added import of `adminOverridePrerequisitesWithRemedial` from `api.js`.
+  - Added `⚡ Override Nilai & Prerequisite` amber toolbar button (`id="btn-override-prereq-matrix"`) in attendance matrix filter bar.
+  - Added per-student `⚡` icon trigger (`btn-override-student-trigger`) in student name column cells.
+  - Added event listeners for toolbar button and per-row triggers after grid render.
+  - Added `window._openClassOverridePrereqModal(opts)` full modal implementation:
+    - Scope selector: All students / By batch / Single student.
+    - Target exam/theme selector: All prerequisites / Theme A–D exams / Specific exam ID.
+    - Unlock sessions checkbox.
+    - Include words exam if phrases selected checkbox.
+    - Protection rules notice (Rule 2.10).
+    - Execute button calls `adminOverridePrerequisitesWithRemedial()`, shows success toast, clears cache, re-renders class hub.
+- `css/admin.css`:
+  - Merged `.btn-override-prereq-matrix, .btn-prereq-override-toolbar` styles (amber/yellow theme).
+  - Added `.btn-override-student-trigger, .btn-prereq-override-row` row-level trigger styles.
+- `admin.html`:
+  - Bumped cache busters to `css/admin.css?v=20261031_v62` and `js/admin/app.js?v=20261031_v62`.
+
+### Files
+- `js/api.js`
+- `js/admin/app.js`
+- `css/admin.css`
+- `admin.html`
+
+### Database
+- No schema migration required. Uses existing `attempts` columns: `score`, `percentage`, `effective_score`, `grade`, `is_remedial_unlocked`, `status`, `is_best_score`.
+- Writes to existing `audit_logs` table.
+
+### Tests
+- command: `node scripts/test_prereq_override_remedial.mjs`
+- result: `EXIT 0 — ALL 4 CHECKS PASS`
+  - Rule 2.10 Grade C / Yellow #FFFF00 at 60% ✓
+  - Simulation: 1 unattempted quiz inserted as 60% remedial ✓
+  - Simulation: 1 failed quiz updated to 60% remedial ✓
+  - Exam prerequisites fully unlocked after override ✓
+- command: `npm test`
+- result: `40/40 JS syntax PASS, 100% parity PASS`
+
+### Risks / Follow-up
+- Override is **irreversible** from the UI (no undo button). Failed prereq attempts are updated; only a DB restore reverts.
+- Per Rule 2.10: students with existing score ≥60% are never downgraded — verified in tests.
+- Paired theme exam remedial sync (Words + Phrases) handled by `includeWordsExamIfPhrasesSelected` option.
+
+### Next Action
+- User hard-refresh `admin.html` (Ctrl+F5).
+- Navigate: Admin → Class Hub → Students Grade and Score tab.
+- Verify `⚡ Override Nilai & Prerequisite` amber button in toolbar and `⚡` icons per student row.
 
 ---
 

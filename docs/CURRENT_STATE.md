@@ -1,22 +1,27 @@
 # CURRENT STATE
 
-Last Updated: 2026-10-31 07:15 UTC+8
+Last Updated: 2026-10-31 08:17 UTC+8
 
-Current Phase: Phase 224: Student Dashboard `attTime` ReferenceError Fix & v61 Cache Bump [COMPLETE]
+Current Phase: Phase 226: Override Modal Redesign — Test Checklist & Bug Fix [COMPLETE]
 
-Current Task: Resolved runtime ReferenceError in `js/dashboard.js` (`attTime is not defined`) for student dashboard (`dashboard.html`). Declared `attTime` timestamp within `attempts.forEach`, verified complete data hydration with Muhammad Tarmizi Tohir's 48 attempts in Node environment, and bumped `dashboard.html` cache buster to `v=20261031_v61`. 40/40 JS files syntax PASS, 0 git commit.
+Current Task: Redesigned override modal dari dropdown scope menjadi checklist interaktif semua quiz & exam di kelas. Diperbaiki bug tombol tidak berfungsi (duplikat event listener + `selectedTestIds` tidak dikirim ke backend). Backend `adminOverridePrerequisitesWithRemedial` diperbarui dengan param `selectedTestIds`, `targetScorePercent`, `onlyFillEmpty`. Cache bumped ke v63. 40/40 JS PASS, 100% parity PASS. 0 git commit.
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 100% dashboard calculation verified, 0 git commit)
+Status: COMPLETE (All tests PASS)
 
 ## Next Exact Action
-1. User hard-refresh Student Lobby (`Ctrl + F5` on `dashboard.html`) to confirm:
-   - Error banner is gone.
-   - Profile, academic score, exam status, and Rank Standings load immediately without spinning.
+1. User hard-refresh `admin.html` dengan **Ctrl+F5**.
+2. Admin → Class Hub → pilih kelas → tab **Students Grade and Score**.
+3. Klik `⚡ Override Nilai & Prerequisite` (tombol amber di toolbar).
+4. Modal baru tampil dengan:
+   - **Section A**: Pilih scope siswa (Semua / Per Batch / Spesifik)
+   - **Section B**: Checklist semua quiz & exam di kelas — centang yang ingin di-override
+   - **Section C**: Opsi "Hanya Isi yang Kosong" & "Buka Sesi Ujian"
+5. Klik **Terapkan Override Remedial** → toast sukses muncul dengan detail operasi.
 
 ## Files Changed In Latest Step
-- `js/dashboard.js` — declared `attTime` in `attempts.forEach` loop; added paired theme exam sync in student view
-- `js/api.js` — fixed update payload to avoid querying non-existent `is_remedial` column
-- `dashboard.html` — bumped cache buster to `?v=20261031_v61`
+- `js/api.js` — redesign params: `selectedTestIds`, `targetScorePercent`, `onlyFillEmpty`; fix ALL scope
+- `js/admin/app.js` — total redesign modal dengan checklist; fix `_overrideBound` guard; bumped `?v=20261031_v63`
+- `admin.html` — bumped cache busters ke `?v=20261031_v63`
 - `docs/CHANGELOG.md`, `docs/CURRENT_STATE.md`, `docs/SESSION_LOG.md`
 
 ## Completed

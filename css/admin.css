@@ -5292,3 +5292,102 @@ body.sidebar-collapsed .admin-main {
   border-color: rgba(168, 85, 247, 0.3) !important;
   color: #c084fc !important;
 }
+
+/* =========================================================================
+   PREREQUISITE OVERRIDE (AUTO 60% REMEDIAL) CONTROLS & MODAL
+   ========================================================================= */
+.btn-override-prereq-matrix,
+.btn-prereq-override-toolbar {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.22), rgba(202, 138, 4, 0.32)) !important;
+  color: #facc15 !important;
+  font-weight: 700 !important;
+  font-size: 0.72rem !important;
+  height: 24px !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 2px 10px !important;
+  border-radius: 4px !important;
+  border: 1px solid rgba(234, 179, 8, 0.45) !important;
+  cursor: pointer !important;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25) !important;
+  transition: all 0.15s ease !important;
+}
+.btn-override-prereq-matrix:hover,
+.btn-prereq-override-toolbar:hover {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: #0f172a !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.45) !important;
+  transform: translateY(-1px);
+}
+.btn-override-student-trigger,
+.btn-prereq-override-row {
+  background: none !important;
+  border: none !important;
+  color: #fbbf24 !important;
+  cursor: pointer !important;
+  font-size: 0.72rem !important;
+  padding: 0 2px !important;
+  line-height: 1 !important;
+  opacity: 0.65 !important;
+  transition: opacity 0.15s ease, transform 0.15s ease !important;
+}
+.btn-override-student-trigger:hover,
+.btn-prereq-override-row:hover {
+  opacity: 1 !important;
+  transform: scale(1.25) !important;
+}
+
+#prereq-override-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.prereq-override-modal {
+  background: #0f172a;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 12px;
+  max-width: 540px;
+  width: 100%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 25px rgba(245, 158, 11, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modalScaleIn {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.prereq-override-header {
+  padding: 14px 18px;
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.02));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.prereq-override-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+.prereq-override-footer {
+  padding: 12px 18px;
+  background: rgba(15, 23, 42, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}

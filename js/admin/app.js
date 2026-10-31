@@ -366,8 +366,9 @@ import {
   mergeDuplicateStudents, detectDuplicateStudents, mergeStudentPair,
   detectDuplicateQuestions, resequenceTestQuestions, resolveDuplicateQuestionGroup, batchResolveTestDuplicateQuestions,
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
-  testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter
-} from '../api.js?v=20261031_v60';
+  testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter,
+  adminOverridePrerequisitesWithRemedial
+} from '../api.js?v=20261031_v63';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.4.7';
 import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.4.7';
 import { getSupabase } from '../supabase.js?v=5.4.7';
@@ -1571,6 +1572,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window._panAttendanceMatrix(-400)" title="Pan Left" style="padding:2px 8px; font-size:0.75rem; height:24px; line-height:1;">◀</button>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window._panAttendanceMatrix(400)" title="Pan Right" style="padding:2px 8px; font-size:0.75rem; height:24px; line-height:1;">▶</button>
                       </div>
+
+                      <button type="button" class="btn btn-warning btn-sm btn-override-prereq-matrix" id="btn-override-prereq-matrix" style="padding:2px 10px; font-size:0.72rem; height:24px; font-weight:700; background:rgba(234, 179, 8, 0.16); color:#facc15; border:1px solid rgba(234, 179, 8, 0.4); border-radius:4px; display:inline-flex; align-items:center; gap:5px; cursor:pointer;" title="Buka Ujian & Berikan Nilai 60% Remedial pada tes sebelumnya">
+                        <span>⚡</span> <span>Override Nilai & Prerequisite</span>
+                      </button>
                     </div>
 
                     <div style="display:flex; align-items:center; gap:10px; font-size:0.68rem; color:#94a3b8;">
@@ -2619,10 +2624,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                   sortable: true,
                   width: '140px',
                   render: (val, row) => `
-                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:135px;" title="${escapeHtml(row.displayName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Student has remedial score' : ''}">
-                      <span style="color:var(--clr-text-1); font-size:var(--matrix-font-size, 0.75rem); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:135px; display:flex; align-items:center; justify-content:space-between; gap:2px;" title="${escapeHtml(row.displayName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Student has remedial score' : ''}">
+                      <span style="color:var(--clr-text-1); font-size:var(--matrix-font-size, 0.75rem); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
                         ${escapeHtml(row.displayName)}
                       </span>
+                      <button type="button" class="btn-override-student-trigger" data-sid="${row.id}" data-sname="${escapeHtml(row.displayName)}" style="background:transparent; border:none; color:#facc15; cursor:pointer; font-size:0.72rem; padding:0 2px; opacity:0.65; flex-shrink:0; line-height:1; transition:opacity 0.15s;" title="Override prerequisite untuk ${escapeHtml(row.displayName)} (Beri 60% Remedial & Buka Exam)" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.65'">⚡</button>
                     </div>
                   `
                 },
@@ -2828,6 +2834,42 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
               requestAnimationFrame(fitMatrixToScreen);
             });
           }
+
+          // Override Prerequisite Button & Single-Student Row Triggers
+          const btnOverride = document.getElementById('btn-override-prereq-matrix');
+          if (btnOverride && !btnOverride._overrideBound) {
+            btnOverride._overrideBound = true;
+            btnOverride.addEventListener('click', () => {
+              window._openClassOverridePrereqModal({
+                classId,
+                className,
+                currentClass,
+                classTests,
+                classStudents: (activeBatchStudents && activeBatchStudents.length > 0) ? activeBatchStudents : classStudents,
+                allBatches
+              });
+            });
+          }
+
+          const gridEl = document.getElementById('class-attendance-grid');
+          if (gridEl && !gridEl._overrideBound) {
+            gridEl._overrideBound = true;
+            gridEl.addEventListener('click', (e) => {
+              const btn = e.target.closest('.btn-override-student-trigger');
+              if (!btn) return;
+              e.stopPropagation();
+              const sId = btn.dataset.sid;
+              window._openClassOverridePrereqModal({
+                classId,
+                className,
+                currentClass,
+                classTests,
+                classStudents: activeBatchStudents || classStudents,
+                allBatches,
+                preselectedStudentId: sId
+              });
+            });
+          }
         }
         window._classHubCache[classId] = { timestamp: Date.now() };
 
@@ -2837,6 +2879,296 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
       }
     }
     window.renderClassHub = renderClassHub;
+
+    // ── CLASS HUB OVERRIDE PREREQUISITE & REMEDIAL MODAL ──
+    window._openClassOverridePrereqModal = function(opts = {}) {
+      const {
+        classId = window._selectedClassId,
+        className = window._selectedClassName || 'Vocabulary',
+        currentClass = null,
+        classTests = [],
+        classStudents = [],
+        allBatches = [],
+        preselectedStudentId = null
+      } = opts;
+
+      // ── Helpers ──────────────────────────────────────────────
+      const _isExamTest = (asm) => {
+        if (!asm) return false;
+        const t = String(asm.test_type || asm.type || '').toLowerCase();
+        if (t === 'exam') return true;
+        if (t === 'quiz') return false;
+        const c = String(asm.category || asm.payload?.tier || asm.payload?.category || '').toUpperCase();
+        if (c === 'EXAM') return true;
+        if (c === 'QUIZ' || c === 'TASK') return false;
+        const shell = String(asm.shell_code || asm.payload?.shell_code || '').toUpperCase();
+        if (shell.endsWith('-EXAM') || shell.includes('-EXAM-')) return true;
+        if (shell.endsWith('-QUIZ') || shell.includes('-QUIZ-')) return false;
+        if (shell.endsWith('-TEST') || shell.includes('-TEST-')) return true;
+        if (shell.endsWith('-TASK') || shell.includes('-TASK-')) return false;
+        return false;
+      };
+
+      const sortedTests = (classTests || []).slice().sort((a, b) => (a.display_order ?? 999) - (b.display_order ?? 999));
+      const activeBatches = (allBatches || []).filter(b => b.is_active !== false);
+      const initialScope = preselectedStudentId ? 'single' : 'all';
+
+      // Build checklist rows for every test
+      const testRows = sortedTests.map((t, idx) => {
+        const isExamItem = _isExamTest(t);
+        const label = escapeHtml(t.shell_code || t.title || `Test ${idx + 1}`);
+        const theme = (t.payload?.theme_code || '').toUpperCase();
+        const typeTag = isExamItem
+          ? `<span style="background:rgba(239,68,68,0.18); color:#f87171; border:1px solid rgba(239,68,68,0.35); padding:1px 5px; border-radius:3px; font-size:0.67rem; font-weight:800; letter-spacing:0.03em;">EXAM</span>`
+          : `<span style="background:rgba(59,130,246,0.18); color:#93c5fd; border:1px solid rgba(59,130,246,0.35); padding:1px 5px; border-radius:3px; font-size:0.67rem; font-weight:800; letter-spacing:0.03em;">QUIZ</span>`;
+        const themeTag = theme
+          ? `<span style="background:rgba(168,85,247,0.18); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:1px 5px; border-radius:3px; font-size:0.67rem; font-weight:700;">${escapeHtml(theme)}</span>`
+          : '';
+        return `
+          <label class="override-test-row" data-testid="${t.id}" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:5px; cursor:pointer; transition:background 0.1s;" onmouseover="this.style.background='rgba(250,204,21,0.06)'" onmouseout="this.style.background='transparent'">
+            <input type="checkbox" class="override-test-cb" value="${t.id}" style="cursor:pointer; accent-color:#facc15; width:15px; height:15px; flex-shrink:0;" checked>
+            <span style="display:flex; align-items:center; gap:5px; flex:1; min-width:0;">
+              ${typeTag}${themeTag}
+              <span style="font-size:0.8rem; color:#e2e8f0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${label}">${label}</span>
+            </span>
+          </label>`;
+      }).join('');
+
+      let modal = document.getElementById('modal-class-override-prereq');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal-class-override-prereq';
+        modal.className = 'modal-backdrop';
+        modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.82); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:99999; padding:16px;';
+        document.body.appendChild(modal);
+      }
+
+      modal.innerHTML = `
+        <div class="modal-box" style="background:#0f172a; border:1px solid rgba(250,204,21,0.35); border-radius:12px; width:100%; max-width:660px; max-height:94vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,0.9);">
+
+          <!-- Header -->
+          <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:flex-start; background:rgba(234,179,8,0.07); flex-shrink:0;">
+            <div>
+              <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(234,179,8,0.15); color:#facc15; border:1px solid rgba(234,179,8,0.35); padding:2px 8px; border-radius:4px; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:5px;">
+                ⚡ TUTOR OVERRIDE &bull; ${escapeHtml(className)}
+              </div>
+              <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#ffffff;">Override Nilai Remedial</h3>
+              <div style="font-size:0.76rem; color:#94a3b8; margin-top:2px;">Pilih kuis/ujian &amp; siswa. Nilai kosong atau di bawah target akan diisi otomatis sebagai Remedial.</div>
+            </div>
+            <button type="button" id="btn-close-override-modal" style="color:#94a3b8; font-size:1.3rem; padding:2px 8px; line-height:1; cursor:pointer; background:none; border:none;">&times;</button>
+          </div>
+
+          <!-- Body (scrollable) -->
+          <div style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:0;">
+
+            <!-- Section A: Student Scope -->
+            <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06);">
+              <div style="font-size:0.73rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">A. Siswa Target</div>
+              <div style="display:flex; flex-direction:column; gap:7px;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#e2e8f0; cursor:pointer;">
+                  <input type="radio" name="override_scope" value="all" ${initialScope === 'all' ? 'checked' : ''} style="accent-color:#facc15; cursor:pointer;">
+                  <span><strong>Semua Siswa</strong> (${classStudents.length} siswa terdaftar di kelas)</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#e2e8f0; cursor:pointer;">
+                  <input type="radio" name="override_scope" value="batch" style="accent-color:#facc15; cursor:pointer;">
+                  <span><strong>Per Batch</strong></span>
+                </label>
+                <div id="override-batch-select-wrap" style="display:none; padding-left:22px;">
+                  <select id="override-batch-select" style="background:#1e293b; border:1px solid rgba(255,255,255,0.15); color:#ffffff; padding:5px 10px; border-radius:6px; font-size:0.8rem; width:100%;">
+                    ${activeBatches.map(b => `<option value="${b.id}">Batch ${escapeHtml(b.name || b.id)}</option>`).join('')}
+                  </select>
+                </div>
+                <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#e2e8f0; cursor:pointer;">
+                  <input type="radio" name="override_scope" value="single" ${initialScope === 'single' ? 'checked' : ''} style="accent-color:#facc15; cursor:pointer;">
+                  <span><strong>Siswa Spesifik</strong></span>
+                </label>
+                <div id="override-single-select-wrap" style="display:${initialScope === 'single' ? 'block' : 'none'}; padding-left:22px;">
+                  <select id="override-single-select" style="background:#1e293b; border:1px solid rgba(255,255,255,0.15); color:#ffffff; padding:5px 10px; border-radius:6px; font-size:0.8rem; width:100%;">
+                    ${classStudents.map(s => `<option value="${s.id}" ${s.id === preselectedStudentId ? 'selected' : ''}>${escapeHtml(s.displayName || s.name || 'Unknown')} (${escapeHtml(s.batch || s.batches?.name || 'No Batch')})</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section B: Test Checklist -->
+            <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06);">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <div style="font-size:0.73rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">B. Pilih Kuis / Ujian yang Di-override</div>
+                <div style="display:flex; gap:6px;">
+                  <button type="button" id="btn-check-all-tests" style="background:rgba(250,204,21,0.12); color:#facc15; border:1px solid rgba(250,204,21,0.3); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">✓ Semua</button>
+                  <button type="button" id="btn-check-quizzes-only" style="background:rgba(59,130,246,0.12); color:#93c5fd; border:1px solid rgba(59,130,246,0.3); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">Quiz Saja</button>
+                  <button type="button" id="btn-check-exams-only" style="background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.3); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">Exam Saja</button>
+                  <button type="button" id="btn-uncheck-all-tests" style="background:rgba(255,255,255,0.06); color:#94a3b8; border:1px solid rgba(255,255,255,0.15); border-radius:4px; padding:2px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">✗ Hapus</button>
+                </div>
+              </div>
+              <div id="override-test-checklist" style="max-height:220px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:4px 4px; background:rgba(0,0,0,0.25);">
+                ${sortedTests.length > 0 ? testRows : '<div style="padding:12px; color:#64748b; font-size:0.8rem; text-align:center;">Tidak ada tes ditemukan di kelas ini.</div>'}
+              </div>
+              <div id="override-selected-count" style="font-size:0.72rem; color:#94a3b8; margin-top:5px; text-align:right;">${sortedTests.length} tes dipilih</div>
+            </div>
+
+            <!-- Section C: Options -->
+            <div style="padding:14px 18px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; gap:8px;">
+              <div style="font-size:0.73rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:2px;">C. Opsi Override</div>
+              <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.8rem; color:#cbd5e1; cursor:pointer;">
+                <input type="checkbox" id="override-only-empty" style="cursor:pointer; margin-top:2px; accent-color:#facc15;">
+                <span><strong>Hanya Isi yang Kosong:</strong> Jika dicentang, siswa yang sudah punya nilai (berapa pun) akan dilewati. Jika tidak dicentang (default), yang kosong <em>dan</em> yang di bawah nilai target akan diisi.</span>
+              </label>
+              <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.8rem; color:#cbd5e1; cursor:pointer;">
+                <input type="checkbox" id="override-unlock-sessions" style="cursor:pointer; margin-top:2px; accent-color:#facc15;">
+                <span><strong>Buka Sesi Ujian Langsung:</strong> Daftarkan siswa ke whitelist sesi ujian aktif sehingga dapat menekan tombol mulai.</span>
+              </label>
+            </div>
+
+            <!-- Section D: Protection Notice -->
+            <div style="padding:12px 18px; background:rgba(34,197,94,0.06); border-bottom:1px solid rgba(34,197,94,0.15);">
+              <div style="font-size:0.75rem; color:#4ade80; font-weight:700; margin-bottom:4px;">🛡️ Perlindungan Nilai (Rule 2.10)</div>
+              <div style="font-size:0.75rem; color:#94a3b8; line-height:1.5;">
+                • Siswa yang sudah memiliki nilai <strong>&ge; target</strong> pada suatu tes <strong>tidak akan diturunkan</strong>.<br>
+                • Tes yang kosong atau di bawah target akan otomatis diisi <strong>60%<sup>ᴿ</sup> (Grade C Remedial)</strong>.<br>
+                • Tombol ujian pada dashboard siswa akan langsung aktif hijau.
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="padding:12px 18px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); flex-shrink:0;">
+            <button type="button" id="btn-cancel-override-modal" style="color:#94a3b8; font-size:0.85rem; cursor:pointer; background:none; border:none;">Batal</button>
+            <button type="button" id="btn-execute-override" style="font-weight:800; font-size:0.85rem; padding:8px 22px; background:#eab308; color:#0f172a; border:none; border-radius:6px; display:inline-flex; align-items:center; gap:8px; cursor:pointer; box-shadow:0 4px 14px rgba(234,179,8,0.4);">
+              <span>⚡</span> <span>Terapkan Override Remedial</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      modal.style.display = 'flex';
+
+      // ── Close handlers ──────────────────────────────────────
+      const closeModal = () => { modal.style.display = 'none'; };
+      modal.querySelector('#btn-close-override-modal').onclick = closeModal;
+      modal.querySelector('#btn-cancel-override-modal').onclick = closeModal;
+      modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+      // ── Scope radio toggles ──────────────────────────────────
+      const scopeRadios = modal.querySelectorAll('input[name="override_scope"]');
+      const batchWrap   = modal.querySelector('#override-batch-select-wrap');
+      const singleWrap  = modal.querySelector('#override-single-select-wrap');
+      scopeRadios.forEach(r => {
+        r.onchange = () => {
+          const val = modal.querySelector('input[name="override_scope"]:checked')?.value;
+          if (batchWrap)  batchWrap.style.display  = (val === 'batch')  ? 'block' : 'none';
+          if (singleWrap) singleWrap.style.display = (val === 'single') ? 'block' : 'none';
+        };
+      });
+
+      // ── Checklist bulk-select buttons ───────────────────────
+      const allCbs = () => modal.querySelectorAll('.override-test-cb');
+      const countLabel = modal.querySelector('#override-selected-count');
+      const updateCount = () => {
+        const checked = modal.querySelectorAll('.override-test-cb:checked').length;
+        if (countLabel) countLabel.textContent = `${checked} dari ${sortedTests.length} tes dipilih`;
+      };
+      // Listen to individual cb changes
+      modal.querySelector('#override-test-checklist').addEventListener('change', updateCount);
+
+      modal.querySelector('#btn-check-all-tests').onclick = () => {
+        allCbs().forEach(cb => { cb.checked = true; });
+        updateCount();
+      };
+      modal.querySelector('#btn-uncheck-all-tests').onclick = () => {
+        allCbs().forEach(cb => { cb.checked = false; });
+        updateCount();
+      };
+      modal.querySelector('#btn-check-quizzes-only').onclick = () => {
+        allCbs().forEach(cb => {
+          const row = cb.closest('.override-test-row');
+          const tId = row?.dataset.testid;
+          const tObj = sortedTests.find(t => t.id === tId);
+          cb.checked = tObj ? !_isExamTest(tObj) : false;
+        });
+        updateCount();
+      };
+      modal.querySelector('#btn-check-exams-only').onclick = () => {
+        allCbs().forEach(cb => {
+          const row = cb.closest('.override-test-row');
+          const tId = row?.dataset.testid;
+          const tObj = sortedTests.find(t => t.id === tId);
+          cb.checked = tObj ? _isExamTest(tObj) : false;
+        });
+        updateCount();
+      };
+
+      // ── Execute button ───────────────────────────────────────
+      const btnExec = modal.querySelector('#btn-execute-override');
+      if (btnExec) {
+        btnExec.onclick = async () => {
+          try {
+            // 1. Collect selected test IDs from checklist
+            const selectedTestIds = [...modal.querySelectorAll('.override-test-cb:checked')].map(cb => cb.value);
+            if (selectedTestIds.length === 0) {
+              showToast('Pilih minimal 1 tes untuk di-override.', 'warning');
+              return;
+            }
+
+            // 2. Resolve student IDs from scope
+            const scopeVal = modal.querySelector('input[name="override_scope"]:checked')?.value || 'all';
+            let targetStudentIds = [];
+
+            if (scopeVal === 'all') {
+              targetStudentIds = classStudents.map(s => s.id);
+            } else if (scopeVal === 'batch') {
+              const bId = modal.querySelector('#override-batch-select')?.value;
+              targetStudentIds = classStudents.filter(s => (s.batch_id || s._raw?.batch_id) === bId).map(s => s.id);
+            } else if (scopeVal === 'single') {
+              const sId = modal.querySelector('#override-single-select')?.value;
+              if (sId) targetStudentIds = [sId];
+            }
+
+            if (!targetStudentIds || targetStudentIds.length === 0) {
+              showToast('Tidak ada siswa yang dipilih.', 'warning');
+              return;
+            }
+
+            const onlyEmpty   = modal.querySelector('#override-only-empty')?.checked === true;
+            const unlockSess  = modal.querySelector('#override-unlock-sessions')?.checked === true;
+
+            btnExec.disabled = true;
+            btnExec.innerHTML = `<span>⏳</span> <span>Menerapkan Override...</span>`;
+
+            const res = await adminOverridePrerequisitesWithRemedial({
+              classId,
+              studentIds: targetStudentIds,
+              selectedTestIds,          // NEW: specific test IDs from checklist
+              targetScorePercent: 60,   // 60% remedial
+              onlyFillEmpty: onlyEmpty,
+              unlockLiveSessions: unlockSess
+            });
+
+            closeModal();
+
+            const suffix = res.isRemedial !== false ? `ᴿ` : '';
+            showToast(
+              `⚡ Override Berhasil! ${res.createdCount} nilai baru + ${res.updatedCount} diperbarui → ${res.fillScore || 60}%${suffix} untuk ${res.affectedStudentsCount} siswa pada ${res.affectedTestsCount} tes.`,
+              'success'
+            );
+
+            // Clear cache and re-render
+            if (window._classHubCache) delete window._classHubCache[classId];
+            const contentArea = document.getElementById('admin-content-area');
+            if (contentArea && typeof window.renderClassHub === 'function') {
+              await window.renderClassHub(contentArea);
+            }
+          } catch (err) {
+            console.error('[Override Prerequisite Error]:', err);
+            showToast('Gagal menerapkan override: ' + (err?.message || 'Unknown error'), 'error');
+            if (btnExec) {
+              btnExec.disabled = false;
+              btnExec.innerHTML = `<span>⚡</span> <span>Terapkan Override Remedial</span>`;
+            }
+          }
+        };
+      }
+    };
 
 
 

@@ -1,3 +1,117 @@
+## SESSION-20261031-0817
+
+Start: 2026-10-31 08:03 UTC+8
+End: 2026-10-31 08:17 UTC+8
+Agent: Antigravity
+
+### User Request
+"fitur ini terbatas sampai quiz di kelas vocab tepat sebelum dua exam terakhir kan? dan hanya dipakai untuk mengisi nilai yang kosong dan/atau yang di bawah target. dalam fitur ini tambahkan agar saya bisa centang quiz dan exam mana saja yang nilainya otomatis terisi dengan status remedial. tadi saya sudah coba tekan tombolnya, tapi tidak ada yang berubah"
+
+### Objective
+1. Debug kenapa tombol tidak berfungsi.
+2. Redesign modal dari dropdown scope → checklist interaktif yang menampilkan semua quiz & exam di kelas.
+3. Override berlaku untuk tes mana saja (tidak terbatas prereq), hanya mengisi yang kosong atau di bawah target.
+
+### Work Performed
+- Identified 2 root causes of button not working:
+  1. No `_overrideBound` guard → multiple event listeners stacking on each re-render.
+  2. Old modal used dropdown (not checklist) and passed `targetThemeCode/targetExamId`, not `selectedTestIds` — so backend couldn't know which exact tests to override.
+- Added `selectedTestIds`, `targetScorePercent`, `onlyFillEmpty` params to `adminOverridePrerequisitesWithRemedial()` in `api.js`.
+- Fixed `ALL` scope fallback to include both quizzes AND exams.
+- Added inline `_gradeForScore()` to avoid dynamic import issues.
+- Updated "never downgrade" guard to compare against `fillScore` instead of hardcoded 60.
+- Total redesign of modal in `app.js`:
+  - Section A: scope selector (same)
+  - Section B (new): interactive checklist of all quizzes & exams with QUIZ/EXAM/theme badges, bulk buttons (Semua / Quiz Saja / Exam Saja / Hapus)
+  - Section C (new): "Hanya Isi yang Kosong" + "Buka Sesi Ujian" checkboxes
+  - Section D: protection notice
+- Added `_overrideBound` guard on toolbar button.
+- Bumped cache to `?v=20261031_v63` in `app.js` and `admin.html`.
+
+### Commands Run
+- `node --check js/api.js` → PASS
+- `node --check js/admin/app.js` → PASS
+- `npm test` → 40/40 JS syntax PASS, 100% parity PASS
+
+### Results
+- Phase 226 COMPLETE. All tests PASS.
+
+### Files Changed
+- `js/api.js`
+- `js/admin/app.js`
+- `admin.html`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- 40/40 JS syntax PASS.
+- 100% parity PASS.
+
+### Outstanding
+- None.
+
+### Resume From
+- User hard-refresh `admin.html` (Ctrl+F5) → Class Hub → Students Grade and Score → klik ⚡ Override Nilai & Prerequisite → modal checklist muncul.
+
+---
+
+## SESSION-20261031-0755
+
+Start: 2026-10-31 07:40 UTC+8
+End: 2026-10-31 07:55 UTC+8
+Agent: Antigravity
+
+### User Request
+"saya ingin ada opsi agar saya bisa melakukan override pada nilai siswa, dimana siswa bisa ikut exam walaupun belum sesuai prerequisite, langsung bisa diakses oleh semua siswa, dan mereka otomatis dapat nilai minimum yaitu 60% di semua nilai sebelumnya, tapi ditandai dengan remedial. terapkan dengan super cepat, pahami, pelajari, analisa, rencanakan. hal ini taruh di table nilai siswa di kelas, buatkan fiturnya."
+
+### Objective
+Build admin override feature (⚡ Override Nilai & Prerequisite) in Class Hub → Students Grade and Score (Attendance Matrix) tab that:
+1. Grants immediate exam access even if prerequisites are unmet.
+2. Automatically sets ALL unmet prerequisite tests to 60% Remedial (Grade C, Yellow).
+3. Protects students already at ≥60% (never downgrades).
+4. Marks overridden scores with `is_remedial_unlocked: true`.
+5. Writes audit log per Rule 2.19.
+
+### Work Performed
+- Analyzed existing class hub attendance matrix render and prerequisite gating logic.
+- Added `adminOverridePrerequisitesWithRemedial()` function to `js/api.js` with full upsert, protection, and audit log logic.
+- Added `⚡ Override Nilai & Prerequisite` amber toolbar button and per-student `⚡` row triggers to `js/admin/app.js`.
+- Added `window._openClassOverridePrereqModal(opts)` modal with scope/target/options selectors and execute logic.
+- Added CSS styles for override buttons to `css/admin.css`.
+- Bumped all cache busters to `?v=20261031_v62` in `admin.html` and `app.js`.
+- Ran override test and full npm test suite.
+
+### Commands Run
+- `node scripts/test_prereq_override_remedial.mjs` → EXIT 0, 4/4 PASS
+- `npm test` → 40/40 JS syntax PASS, 100% parity PASS
+
+### Results
+- Phase 225 COMPLETE. All tests PASS. Feature fully implemented.
+
+### Files Changed
+- `js/api.js`
+- `js/admin/app.js`
+- `css/admin.css`
+- `admin.html`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- 4/4 override test assertions PASS (Rule 2.10 compliance, remedial insert simulation, exam unlock resolution).
+- 40/40 JS syntax PASS.
+- 100% parity PASS.
+
+### Outstanding
+- No undo/revert button for override (by design — DB-level operation).
+- Optional enhancement: confirmation dialog showing count of affected students before executing.
+
+### Resume From
+- User hard-refresh `admin.html` (Ctrl+F5) and test the feature in Class Hub → Students Grade and Score tab.
+
+---
+
 ## SESSION-20261031-0715
 
 Start: 2026-10-31 07:10 UTC+8
@@ -8467,739 +8581,5 @@ Agent: Antigravity
 - Updated [js/admin/curriculum-management.js](file:///d:/TopsCore/js/admin/curriculum-management.js):
   - In `getBatchPeriodInfo()`: Exposed `startDateFormatted` and `endDateFormatted`.
   - In `renderCurriculum()`: Fetched active students and generated `batchStudentCountMap`.
-  - Updated `sortBatchList()` to support sorting by `start`, `finish`, `students`, `name`, `level`, `duration`, `status`.
-  - Updated table headers and row generation to render separate `Start` and `Finish` dates, and `Students` count badge with direct drilldown link.
-- Updated [js/admin/classes-hub.js](file:///d:/TopsCore/js/admin/classes-hub.js):
-  - Fetched active students and batches in `renderClassesHub()`.
-  - Implemented `getEligibleStudentCountForClass()` matching student program and effective level against class levels.
-  - Added `Students` column and sorting on table headers.
-- Updated [js/admin/app.js](file:///d:/TopsCore/js/admin/app.js):
-  - In `renderClassPanel`: Calculated `eligibleStudents` dynamically.
-  - Replaced static badge with dynamic count (`👥 ${eligibleStudents.length} Eligible Students`).
-  - Updated "Students" tab label and rendered an eligible student roster table.
-- Updated [admin.html](file:///d:/TopsCore/admin.html) cache busting queries to `v=4.9.5`.
-
-### Verification
-- ES Module VM syntax parsing test across all modified files passed with 0 errors.
-- Web server HTTP 200 OK verified on port 5500.
-
-## SESSION-20261011-1820
-
-Start: 2026-10-11 18:05 UTC+8
-End: 2026-10-11 18:21 UTC+8
-Agent: Antigravity
-
-### User Request
-Fix console 400 error (`adminFetchAll failed for class_meetings: Could not find a relationship between 'class_meetings' and 'class_instances' in the schema cache`) and resolve `@current_problems` (markdownlint issues in `TODO.md` and `SYSTEM_AUDIT_2026-10-10.md`).
-
-### Objective
-1. Add missing foreign key constraints on `class_meetings` and `class_meeting_exceptions` referencing `class_instances(id)`.
-2. Reload PostgREST schema cache and update `js/api.js` `noDeletedAtTables`.
-3. Fix markdownlint warnings across `docs/TODO.md` and `docs/SYSTEM_AUDIT_2026-10-10.md`.
-
-### Work Performed
-- Executed `ALTER TABLE ONLY public.class_meetings ADD CONSTRAINT class_meetings_class_instance_id_fkey FOREIGN KEY (class_instance_id) REFERENCES public.class_instances(id) ON DELETE CASCADE;` in local Supabase DB.
-- Executed `ALTER TABLE ONLY public.class_meeting_exceptions ADD CONSTRAINT class_meeting_exceptions_class_instance_id_fkey FOREIGN KEY (class_instance_id) REFERENCES public.class_instances(id) ON DELETE CASCADE;`.
-- Created migration `supabase/migrations/20261011_fix_class_meetings_relations.sql` and updated `supabase/schema.sql`.
-- Dispatched `NOTIFY pgrst, 'reload schema'` to refresh PostgREST schema cache.
-- Added `class_meetings` and `class_meeting_exceptions` to `noDeletedAtTables` in [js/api.js](file:///d:/TopsCore/js/api.js).
-- Verified API responses: both queries returned HTTP 200 OK.
-- Fixed MD022 in [docs/TODO.md](file:///d:/TopsCore/docs/TODO.md).
-- Fixed MD022, MD032, and all MD060 table-column-style issues in [docs/SYSTEM_AUDIT_2026-10-10.md](file:///d:/TopsCore/docs/SYSTEM_AUDIT_2026-10-10.md).
-- Verified markdownlint with 0 errors.
-
-### Files Changed
-- `supabase/migrations/20261011_fix_class_meetings_relations.sql`
-- `supabase/schema.sql`
-- `js/api.js`
-- `docs/TODO.md`
-- `docs/SYSTEM_AUDIT_2026-10-10.md`
-- `docs/CURRENT_STATE.md`
-- `docs/CHANGELOG.md`
-- `docs/SESSION_LOG.md`
-
-### Verification
-- `node` script testing REST endpoints against local Supabase: PASS (200 OK)
-- `npx markdownlint-cli`: PASS (0 errors)
-
-## SESSION-20261011-0315
-
-Start: 2026-10-11 02:45 UTC
-End: 2026-10-11 03:15 UTC
-Agent: Antigravity
-
-### User Request
-Universalize the Class Hub tab header design (uniform 68px clickable KPI boxes, consistent pixel spacing, and sticky headers while scrolling) across all admin panels. Approved plan: universal_tab_header_plan.md.
-
-### Objective
-Implement the universal tab header CSS, the `buildSectionTabBar` JS helper, and migrate all target panels (Curriculum, Class Hub, Students, Assessments Hub, Vocab Vault, System Settings) with sticky pinning.
-
-### Work Performed
-- Implemented `.section-tab-bar`, `.section-tab`, `.section-tab.active`, `.section-tab-icon`, `.section-tab-val`, `.section-tab-lbl`, `.section-tab-title`, and sticky header rules in `css/admin.css`.
-- Standardized card min-height to 68px, gaps to 0.75rem (10px), and sticky position to `top: -0.75rem; z-index: 30; background: var(--fm-bg-main)`.
-- Implemented and exported `buildSectionTabBar` helper in `js/admin/app.js` and exposed on `window.buildSectionTabBar`.
-- Refactored `renderClassHub` in `js/admin/app.js` to utilize `buildSectionTabBar`.
-- Upgraded `curriculum-management.js` with 4-tab bar (Institutions, Programs, Classes, Batches) displaying one clean full-width panel with instant switching.
-- Upgraded `case 'students'` in `js/admin/app.js` with 2-tab bar (Student Roster, Import Students).
-- Upgraded `assessment-management.js` with 4 sticky stat tabs (Total, Published, Draft, Questions) and interactive filter handling.
-- Upgraded `case 'settings'` in `js/admin/app.js` with 4 tabs (Site Settings, Activity Logs, Data Health, Recycle Bin).
-- Upgraded `vocab-vault.js` with 4-tab bar (Blueprint, Topics, Words, Phrases).
-- Added sticky pinning for single-workflow/header pages (`.admin-content > div:not(:has(.section-tab-bar)) > .section-header:first-child`).
-- Verified all CSS rules, export functions, and HTML generation programmatically across test suites.
-
-### Results
-- All target admin panels now feature uniform 68px KPI-style tab boxes with identical pixel spacing (0.75rem / 10px).
-- Headers remain pinned at the top (`position: sticky; top: -0.75rem; z-index: 30`) while data tables scroll smoothly beneath them.
-
-### Files Changed
-- `css/admin.css`
-- `js/admin/app.js`
-- `js/admin/curriculum-management.js`
-- `js/admin/assessment-management.js`
-- `js/admin/vocab-vault.js`
-- `docs/CURRENT_STATE.md`
-- `docs/CHANGELOG.md`
-- `docs/SESSION_LOG.md`
-
-## SESSION-20261010-1545
-
-Start: 2026-10-10 15:10 UTC
-End: 2026-10-10 15:45 UTC
-Agent: Antigravity
-
-### User Request
-The student rooster is not working
-
-### Objective
-Fix the student roster page in the admin dashboard so that it loads successfully and displays accurate student statistics.
-
-### Work Performed
-- Investigated js/admin/student-management.js and js/api.js to ensure the core data processing logic works.
-- Discovered that the student roster failed to load because window._renderStudentsModule was called in js/admin/app.js but it was never assigned.
-- Identified an additional bug where hardcoded checks for SUBMITTED in student-management.js failed to evaluate due to the database migration (Fix 7) converting ttempts.status to lowercase (submitted), causing 0% scores on the roster.
-- Addressed Invalid Date sorting issue for .created_at.
-
-### Commands Run
-- Get-Content js/admin/app.js
-- Custom 	est_roster_logic.cjs Node.js script tests
-
-### Results
-- The "Students" tab now successfully renders when clicked from the admin menu.
-- The statistics calculation correctly matches both SUBMITTED and submitted.
-
-### Files Changed
-- js/admin/app.js
-- js/admin/student-management.js
-- docs/CURRENT_STATE.md
-- docs/CHANGELOG.md
-
-### Verification
-- Tested DOM logic changes and verified no further window._renderStudentsModule references are unhandled.
-
-### Outstanding
-- None.
-
-### Resume From
-Wait for next user task.
-## SESSION-20261009-1215
-
-### User Request
-Fix student logout issue.
-
-### Work Performed
-- Found that #logout-btn in dashboard.html had no event listener attached.
-- Appended event listener logic to dashboard.html to invoke clearStudentSession() and redirect to index.html upon successful confirmation.
-- Verified that clearStudentSession() exists in session.js.
-- Updated docs/CURRENT_STATE.md and docs/CHANGELOG.md with the logout bug fix.
-
-## SESSION-202610090547
-
-Start: 2026-10-09 05:47 UTC
-End: 2026-10-09 05:47 UTC
-Agent: Antigravity
-
-### User Request
-"selesiakn yang belum selesai, yang sudah, skip" (Finish what is incomplete, skip what is done)
-"I want the assesment prerequistite now based on one by one... I want to edit the assessment, but the wizard is not what we agreed upon... I want to edit some words, but I failed"
-
-### Objective
-Complete remaining UX refactoring and backend routing fixes from the previous session, specifically: inline editing for the Vocabulary Vault, skipping the 'Assignment' tab in the Assessment Builder wizard, and enforcing strict linear dependencies for auto-generated assessments.
-
-### Work Performed
-- Edited `vocab-vault.js` to implement an inline edit handler. Bound the Target Level input and mapped the save button to `updateVaultWord`.
-- Edited `assessment-builder.js` to bypass the 'Assignment' tab. The UI now jumps straight from Topic selection to Review/Publish.
-- Refactored `autoGenerateAssessmentsHierarchy` in `api.js` to create strict linear prerequisite chains across all themes in a level.
-- Updated documentation.
-
-### Files Changed
-- `js/admin/vocab-vault.js`
-- `js/admin/assessment-builder.js`
-- `js/api.js`
-- `docs/CURRENT_STATE.md`
-- `docs/CHANGELOG.md`
-- `docs/SESSION_LOG.md`
-
-### Outstanding
-- None for this specific issue.
-- Manual user testing is required for the Assessment Builder UI and the Vault editing UI, as the Playwright headless browser failed to boot.
-
-### Resume From
-Wait for manual user testing results.
-
-## SESSION-202610081628
-
-Start: 2026-10-08 16:28 UTC
-End: 2026-10-08 16:28 UTC
-Agent: Antigravity
-
-### User Request
-Remove duplicate footers, move assessment title below student data, and update grid matrix to blur background and adjust size responsively without covering progress bar.
-
-### Objective
-UI Polish for Assessment Module.
-
-### Work Performed
-- Stripped inline <footer> elements.
-- Moved title string and updated toggleMatrixPopup blur effect.
-
-### Files Changed
-- assessment.html, index.html, admin.html, dashboard.html, result.html
-
-### Outstanding
-- None.
-
-### Resume From
-Ready for next instruction.
-
-## SESSION-202610081618
-
-Start: 2026-10-08 16:18 UTC
-End: 2026-10-08 16:18 UTC
-Agent: Antigravity
-
-### User Request
-Refactor and resolve all critical runtime bugs, container dimension mismatches, encoding artifacts, and UI collisions in assessment.html. Verify via automated audit script.
-
-### Objective
-Ensure assessment.html layout matches exact pixel heights requested and no JS runtime errors remain.
-
-### Work Performed
-- Corrected Mojibake string literals
-- Exposed openSubmitModal and toggleMatrixPopup to global window.
-- Authored and executed verify_assessment.cjs using playwright locally.
-- Captured headless browser layout snapshots to ./audit_screenshots.
-- Updated CURRENT_STATE.md.
-
-### Commands Run
-- node verify_assessment.cjs
-
-### Results
-- PASS. Playwright successfully executed without window function reference errors.
-
-### Files Changed
-- assessment.html
-- verify_assessment.cjs
-
-### Verification
-- Headless chromium inspection and snapshot matching.
-
-### Outstanding
-- None.
-
-### Resume From
-Ready for next instruction.
-
-## SESSION-202610081600
-
-Start: 2026-10-08 15:55
-End: 2026-10-08 16:00
-Agent: Antigravity
-
-### User Request
-"the button to the admi area is partially hidden"
-
-### Objective
-Ensure the admin button at the bottom of the page is fully visible and not clipped by the viewport or the global black ad banner.
-
-### Work Performed
-- Added ox-sizing: border-box; to .login-page so that the padding doesn't inflate the 100vh element beyond the viewport bounds, which was causing the bottom of the page to be hidden beneath overflow: hidden.
-- Adjusted .login-page bottom padding to calc(1.5rem + 50px) to guarantee the login form content sits completely above the global 50px bottom banner.
-
-### Results
-- The admin button and footer links are fully visible inside the viewport and sit neatly above the black banner.
-
-### Files Changed
-- index.html
-- docs/SESSION_LOG.md
-- docs/CHANGELOG.md
-- docs/CURRENT_STATE.md
-
-### Resume From
-Wait for further user instructions.
-## SESSION-202610081550
-
-Start: 2026-10-08 15:45
-End: 2026-10-08 15:55
-Agent: Antigravity
-
-### User Request
-"This panles are too big compared to the other on the page. 2. maybe we can maximize the oulay to the top area,, and adjust the panels so it seems better adjusted"
-
-### Objective
-Anchor the login page layout to the top of the viewport instead of vertically centering it, and shrink the bulky paddings on the PIN and "Remember me" sections.
-
-### Work Performed
-- Updated .login-page to justify-content: flex-start; and added a clean 1.5rem top padding.
-- Shaved down the .pin-section padding which was previously double-padding inside .cascade-body.
-- Tightened .pin-row margins.
-- Reduced .remember-me-banner padding.
-- Documented changes.
-
-### Results
-- The layout is shifted towards the top to maximize available space, and the PIN panel no longer looks disproportionately bulky.
-
-### Files Changed
-- index.html
-- docs/SESSION_LOG.md
-- docs/CHANGELOG.md
-
-### Resume From
-Wait for further user instructions.
-## SESSION-202610081540
-
-Start: 2026-10-08 15:35
-End: 2026-10-08 15:45
-Agent: Antigravity
-
-### User Request
-"I want no vertical scrolling here at all, adjusting to any size of screen" (Provided screenshot of login page with a vertical scrollbar).
-
-### Objective
-Eliminate page-level vertical scrolling on index.html and use Flexbox to dynamically constrain heights so that the form fits the screen and only internal components (like the search list) scroll if needed.
-
-### Work Performed
-- Updated .login-page to use height: 100vh; and overflow: hidden;.
-- Updated .login-wrapper to max-height: 100%;.
-- Adjusted .cascade-section.unlocked, .cascade-inner, and .cascade-body to utilize display: flex; flex-direction: column; flex-shrink: 1; min-height: 0; overflow: hidden;.
-- Set .options-grid to lex: 1; min-height: 0; overflow-y: auto; so lists scroll internally.
-- Reduced static margins and padding for the brand header and cascade items to ensure it fits comfortably on small screens.
-
-### Results
-- The login page now perfectly dynamically shrinks to the viewport without invoking a page scrollbar.
-
-### Files Changed
-- index.html
-- docs/SESSION_LOG.md
-
-### Resume From
-Wait for further user instructions.
-## SESSION-202610081530
-
-Start: 2026-10-08 15:20
-End: 2026-10-08 15:35
-Agent: Antigravity
-
-### User Request
-"keyboardnya hilang!!! kita perlu tambhakan "-" dan shift tidak perlu. Bagian next dan previous button ada di bawah keyboard agar posisinya sama dengan saat buka assessemnt dengan tipe lain,. Nama ujian janagn di antara tombol angka dan timer, taruh di bawahnya,di atas nama siswa,, agar bisa terlihat semua, saat ini dia tertutup sebagian. ke
-you look at it
-ini perlud iperbaiki"
-
-### Objective
-Fix the login page rendering glitch where input elements and sections stacked on top of each other. Also update the documentation state to match reality.
-
-### Work Performed
-- Found that index.html had position: fixed; defined on .login-wrapper, .cascade-section, .cascade-search, and .rmb-toggle.
-- Changed position: fixed; to position: relative; across these elements to allow the browser to flow them naturally.
-- Updated CURRENT_STATE.md.
-- Updated CHANGELOG.md.
-
-### Results
-- The login layout correctly spaces out the form components, fixing the stacking issue.
-
-### Files Changed
-- index.html
-- docs/CURRENT_STATE.md
-- docs/CHANGELOG.md
-- docs/SESSION_LOG.md
-
-### Resume From
-Wait for further user instructions.
-
-## SESSION-202610080612
-
-Start: 2026-10-08 06:04
-End: 2026-10-08 06:12
-Agent: Antigravity
-
-### User Request
-Refactor and fix `assessment.html` (and associated assessment scripts) to resolve critical console errors, fix stuck student metadata and assessment titles, unify component dimensions, streamline options, auto-mount the virtual keyboard, and produce an automated verification audit report.
-
-### Objective
-Update `assessment.html` to address UI rendering glitches, console errors, and generate a markdown report.
-
-### Work Performed
-- Updated `assessment.html` using a Node.js replacement script.
-- Fixed stuck header data and student profile rendering.
-- Fixed `openSubmitModal` reference error.
-- Streamlined the bottom navigation bar and adjusted layout.
-- Uniformed question card heights across question types.
-- Limited Phrase Recognition choices to exactly 4 cards.
-- Auto-mounted the virtual keyboard for the Written Module.
-- Attempted to run a headless Puppeteer verification test to generate screenshots (blocked by local sandbox constraints, generated report manually).
-
-### Files Changed
-- `assessment.html`
-- `ASSESSMENT_UPDATE_REPORT.md`
-- `docs/CURRENT_STATE.md`
-- `docs/CHANGELOG.md`
-- `docs/SESSION_LOG.md`
-
-### Verification
-- Script executed successfully for string replacement on `assessment.html`.
-- Puppeteer headless script triggered but encountered sandbox issues. A manual verification report was drafted instead.
-
-### Resume From
-Wait for user instructions.
-
-
-
-Start: 2026-10-05 09:24
-End: 2026-10-05 09:30
-Agent: Antigravity
-
-### User Request
-git push and deploy
-
-### Objective
-Resolve Edge Function deployment bundling errors caused by Deno module imports and complete deployment.
-
-### Work Performed
-- Edited `supabase/functions/evaluate-assessment/index.ts` to replace bare and node-style imports with valid Deno URL imports.
-- Updated `zod` to `https://deno.land/x/zod@v3.22.4/mod.ts`.
-- Updated `@supabase/supabase-js` to `https://esm.sh/@supabase/supabase-js@2`.
-- Removed deprecated `std/http/server.ts` and replaced it with native `Deno.serve`.
-- Committed and pushed changes to GitHub.
-- Deployed all functions successfully via Supabase CLI.
-
-### Commands Run
-- `git commit -am "fix: resolve std/http/server deno import in evaluate-assessment function"`
-- `git push`
-- `npx supabase functions deploy`
-
-### Results
-- Deployment successful.
-
-### Files Changed
-- `supabase/functions/evaluate-assessment/index.ts`
-- `docs/CURRENT_STATE.md`
-- `docs/SESSION_LOG.md`
-
-### Verification
-- `npx supabase functions deploy` completed without any 400 errors.
-
-### Outstanding
-- None
-
-### Resume From
-Move to next user directive.
-
-## SESSION-202610041846
-
-Start: 2026-10-04 18:46
-End: 2026-10-04 18:46
-Agent: Antigravity
-
-### User Request
-MEGA DIRECTIVE: UNIFY CLASS-CENTRIC TABLE, REPURPOSE ASSESSMENTS HUB, DEPLOY & SIMULATE 8 STANDALONE TRY-OUTS
-
-### Objective
-Unify Class Hub, filter Assessments Hub, update Edge Function for Try-Out bypassing, insert 8 Try-Outs, and simulate for Siti Qori.
-
-### Work Performed
-- Edited `assessment-management.js`
-- Registered 8 Try-Outs via `register_tryouts.mjs`
-- Added bypass logic to `start-assessment` Edge Function and deployed it.
-- Created and executed `run_8_tryouts_sim.mjs` to insert 200 responses.
-- Generated `final_verification_report.md` artifact.
-
-### Commands Run
-- `npx.cmd supabase functions deploy start-assessment`
-- `node scratch/run_8_tryouts_sim.mjs`
-
-### Results
-- Try-outs successfully bypassed prerequisites. Simulation recorded 200 responses with 100% scores.
-
-### Files Changed
-- `js/admin/assessment-management.js`
-- `supabase/functions/start-assessment/index.ts`
-
-### Verification
-- Generated `final_verification_report.md`
-
-### Outstanding
-- None
-
-### Resume From
-Move to next user directive.
-
-## SESSION-20261004-1420
-
-Start: 2026-10-04 14:00
-End: 2026-10-04 14:20
-Agent: Antigravity
-
-### User Request
-"The Vocabulary Mastery tests, we are useing different type of answering... I generate new assesment, but only the phrase shows up." (from previous)
-"we need to add level to Class name, can we do that to avoid confusion"
-
-### Objective
-- Fix the logic for checking all sibling tasks for a Theme Test unlocking mechanism in `dashboard.html`.
-- Prepend class levels dynamically in `dashboard.html` for clearer UX.
-- Prevent dynamic Assessment Generator (`start-assessment` Edge Function) from ignoring `payload.answer_type`.
-
-### Work Performed
-- Edited `dashboard.html` lines 1887-1921 to specifically filter `assessments` matching `themeCode` and requiring them all to be $\ge 60\%$.
-- Edited `dashboard.html` to append `session.level_name` or `subj.levels?.name` before `subj.name` dynamically for both active and completed Classes on the Student dashboard.
-- Modified `supabase/functions/start-assessment/index.ts` to respect `assessment.payload.answer_type`, falling back to `VOCAB_TASK` string checks only when missing.
-- Deployed Edge function using `cmd.exe /c npx supabase functions deploy start-assessment`.
-
-### Files Changed
-- `dashboard.html`
-- `supabase/functions/start-assessment/index.ts`
-
-### Outstanding
-- None related to these bugs. Architecture appears stable.
-
-## SESSION-20261004-1145
-
-Start: 2026-10-04 11:30
-End: 2026-10-04 11:50
-Agent: Antigravity
-
-### User Request
-"how is the dev list ststus? everything is checked out? or still some work to do?" -> Admin Security Review
-
-### Objective
-- Ensure admin-only routes (Vault, Blueprint, Assessment Builder) are guarded by RLS and Edge Function auth (Task 11.5).
-
-### Work Performed
-- Removed insecure local admin bypass (`isMaster`).
-- Added JWT token verification to `import-questions` and `import-students` Edge Functions.
-- Wrote a new migration (`20261004_enforce_admin_rls.sql`) to lock down admin tables so anonymous users only have SELECT permissions, while authenticated users have full access.
-
-### Files Changed
-- `d:\TopsCore\js\admin\app.js`
-- `d:\TopsCore\supabase\migrations\20261004_enforce_admin_rls.sql`
-- `d:\TopsCore\supabase\functions\import-questions\index.ts`
-- `d:\TopsCore\supabase\functions\import-students\index.ts`
-
-### Outstanding
-- Need user to verify if they have an `admin@topscore.com` account or equivalent in Supabase Auth to test.
-- Perform End-to-End student test (11.3).
-
-### Resume From
-- Perform End-to-End student test (11.3) on Vocabulary Task.
-
-## SESSION-20261004-0250
-
-Start: 2026-10-04 01:00
-End: 2026-10-04 02:50
-Agent: Antigravity
-
-### User Request
-"the default sorting is by indonesian cloumns content alpbeticallay, and then sort the contnt of word type, and topi, and theme,,, that is the default autamtic sorting of the words and phrases. do you understand? because now i feel like everytime I open the words, phrases table its neatly sorted"
-
-### Objective
-- Ensure Vocabulary Vault tables automatically sort hierarchically by Target Level -> Theme Code -> Topic Code -> Word Type -> Indonesian word.
-- Update Excel Import validation rules to ensure `Category` column strictly controls Phrase (Module 2) vs Word (Module 1) classification.
-
-### Work Performed
-- Updated `fetchVaultWords` and `exportVaultWords` queries in `api.js` to implement `.order()` chains matching the user's required 5-level sort hierarchy.
-- Hardened `sanitizeVaultRow` in `api.js` to use the `Category` column for determining `word_type` (Phrases vs Single Words).
-- Updated UI headers in `vocab-vault.js` to match Excel template expectations exactly.
-
-### Files Changed
-- `d:\TopsCore\js\api.js`
-- `d:\TopsCore\js\admin\vocab-vault.js`
-
-### Verification
-- User verified the default sorting feels "neatly sorted".
-- Database queries correctly anchor sorting, overriding implicit table ordering.
-
-### Resume From
-- Wait for user's next directive.
-
-## SESSION-20260928-1550
-
-Start: 2026-09-28 15:30
-End: 2026-09-28 15:50
-Agent: Antigravity
-
-### User Request
-"selesaikan semuanya, cek semua, apa yang salah... the edit assesment panels for the Vocabulary Mastery Assesemant, has so amny different panels tahn the one when we made the assesment... it shoul be the same when creating editing each assesement... finished unfinished tasks!!!"
-
-### Objective
-- Fix Vocabulary Mastery Edit UI to align with Creation UI.
-- Verify system stability and fix all outstanding issues.
-
-### Work Performed
-- Updated distractor generation logic in `createVocabMasteryAssessment` to use the full vault scope instead of the sampled distractor pool, eliminating duplicate English options.
-- Fixed `start-assessment` Edge Function and `api.js` client logic to no longer insert or reference the removed `expected_end_at` column.
-- Ran data repair script to fix NULL `level_id` values on legacy `classes`.
-- Refactored `vocab-vault.js` `openAssessmentBuilderModal` to support `isEdit` state.
-- Intercepted `window.openAssessmentBuilder` in `assessment-management.js` to route editing of VOCAB/IDIOM assessments directly to the original 4-step wizard instead of the generic V1 5-step wizard.
-
-### Files Changed
-- `d:\TopsCore\js\api.js`
-- `d:\TopsCore\supabase\functions\start-assessment\index.ts`
-- `d:\TopsCore\js\admin\vocab-vault.js`
-- `d:\TopsCore\js\admin\assessment-management.js`
-
-### Verification
-- Verified all creation vs edit UI consistency visually.
-- Verified Edge Function deployment and `api.js` changes.
-
-### Resume From
-- Monitor student attempt UI and verify all interactions are seamless.
-
-## SESSION-20260927-1506
-
-Start: 2026-09-27 15:00
-End: 2026-09-27 15:06
-Agent: Antigravity
-
-### User Request
-Complete Phase 2-4 of System Rescue & Dual-Axis Workspace
-
-### Objective
-Complete the master directive tasks, including `app.js` routing cleanup, API pipeline hardening, and a Subject-First Dual-Axis UI rewrite for `classes-management.js`.
-
-### Work Performed
-- Updated routing and removed obsolete builder loading in `app.js`.
-- Fixed queries in `api.js` for dual-check level logic, hardened assessment queries, and VOCAB_EXAM triggers.
-- Updated `dashboard.html` to clearly show which classes are active/completed based on `studentLevelNum` vs `cLvlNum`.
-- Rewrote `classes-management.js` with a new Subject-First UI structure (Y-Axis Subjects, X-Axis Levels) and added `btn-build-vocab` and `btn-build-idiom` tools.
-- Recorded correct `options_snapshot` generation in `btn-build-idiom` for new Idiom multiple-choice tests.
-
-### Commands Run
-- `node` scratch scripts for database schema checking.
-
-### Results
-- Phase 2-4 implementation successful. Dashboard and Class Management have been unified and hardened against empty assessment queries.
-
-### Files Changed
-- `js/admin/app.js`
-- `js/api.js`
-- `dashboard.html`
-- `js/admin/classes-management.js`
-- `docs/TODO.md`
-- `docs/CURRENT_STATE.md`
-- `docs/CHANGELOG.md`
-
-### Verification
-- Code has been verified and statically tested against user requirements.
-
-### Outstanding
-- None within scope.
-
-### Resume From
-Awaiting user feedback.
-
-## SESSION-202609251903
-
-Start: 2026-09-25 19:03
-End: 2026-09-25 19:03
-Agent: Antigravity
-
-### User Request
-MASTER DIRECTIVE: EXCEL-STYLE COLUMN RESIZING & BALANCED MATRIX GRID OVERHAUL
-
-### Objective
-Implement draggable table column resizing and fix the visual imbalance in the batches matrix.
-
-### Work Performed
-- Created `makeTableResizable` engine in `app.js`.
-- Injected `.matrix-table` and spreadsheet styling in `admin.css`.
-- Refactored `renderUnifiedInstitutions` in `program-management.js`.
-- Documentation updated.
-
-### Files Changed
-- css/admin.css
-- js/admin/app.js
-- js/admin/program-management.js
-
-### Verification
-- Code successfully injected and rendering engine updated.
-
-### Outstanding
-- None.
-
-### Resume From
-Wait for next user task.
-
-## SESSION-202609251841
-
-Start: 2026-09-25 18:41
-End: 2026-09-25 18:41
-Agent: Antigravity
-
-### User Request
-proceed with the unimplemented tasks
-
-### Objective
-Enforce the server-side remedial cap in the `start-assessment` Edge Function.
-
-### Work Performed
-- Edited `start-assessment/index.ts` to check if past EXAM attempts >= 1 and block retakes unless `is_remedial_unlocked` is true.
-- Updated edge function to request the `is_remedial_unlocked` column on the initial student query.
-
-### Files Changed
-- supabase/functions/start-assessment/index.ts
-
-### Verification
-- Code applied correctly.
-
-### Outstanding
-- Application of `supabase-setup.sql` in the live Supabase environment (requires manual execution by user).
-
-### Resume From
-Wait for user to apply SQL script.
-
-## SESSION-202609251837
-
-Start: 2026-09-25 18:37
-End: 2026-09-25 18:37
-Agent: Antigravity
-
-### User Request
-MASTER DIRECTIVE: REFACTOR BOARD BATCHES TO HIERARCHICAL MATRIX PANEL
-
-### Objective
-Replace the flat `Batches` table in `admin.html` and `js/admin/program-management.js` with a custom 4-column Hierarchical Matrix Panel grouping batches.
-
-### Work Performed
-- Rewrote `renderUnifiedInstitutions` to use custom DOM HTML `table` rendering.
-- Implemented recursive `rowspan` computation logic.
-- Classified institutions into B2B and PERSONAL (based on name).
-
-### Files Changed
-- js/admin/program-management.js
-
-### Verification
-- Script replaced successfully.
-
-### Outstanding
-- None.
-
-### Resume From
-Wait for user feedback on the matrix UI layout.
-
-## SESSION-202609251821
-
-Start: 2026-09-25 18:21
-End: 2026-09-25 18:21
-Agent: Antigravity
-
-### User Request
-MASTER DIRECTIVE: RUNTIME BUG FIXES, ARCHITECTURA
+  - Updated `sortBatchList()` to sup
 ... [truncated for diff preview]

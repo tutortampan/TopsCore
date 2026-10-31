@@ -105,6 +105,12 @@
   "errorLens.fontSize": "0.75rem",
   "errorLens.delay": 150,
 
+  // ─── ESLINT & CODE QUALITY ──────────────────────────────────────────
+  "eslint.enable": true,
+  "eslint.validate": [
+    "javascript"
+  ],
+
   // ─── TERMINAL ───────────────────────────────────────────────────────
   "terminal.integrated.defaultProfile.windows": "PowerShell",
   "terminal.integrated.enableMultiLinePasteWarning": "never",

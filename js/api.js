@@ -2793,6 +2793,386 @@ export async function adminUnlockRemedialExam(attemptId) {
   return data;
 }
 
+export async function adminOverridePrerequisitesWithRemedial({
+  classId,
+  studentIds = [],
+  selectedTestIds = null,       // NEW: explicit list of test IDs to override (null = use legacy targetThemeCode logic)
+  targetScorePercent = 60,      // NEW: target fill score, default 60% (remedial)
+  onlyFillEmpty = false,         // NEW: if true, skip students who have ANY attempt (even failed); default false = fill empty OR below target
+  unlockLiveSessions = false,
+  // Legacy params (kept for backward compat, used when selectedTestIds is null)
+  targetThemeCode = 'ALL',
+  targetExamId = null,
+  includeWordsExamIfPhrasesSelected = true
+}) {
+  const sb = await getSupabase();
+
+  if (!classId) throw new Error('classId is required for prerequisite override.');
+
+  // 1. Fetch all tests for this class ordered by display_order
+  const { data: allClassTests, error: testErr } = await sb
+    .from('tests')
+    .select('id, title, test_type, category, shell_code, display_order, payload, class_id, level_id')
+    .eq('class_id', classId)
+    .order('display_order', { ascending: true });
+
+  if (testErr) throw testErr;
+  if (!allClassTests || allClassTests.length === 0) {
+    throw new Error('No tests found in this class.');
+  }
+
+  // Helper to accurately identify milestone exams vs quizzes
+  const isWeeklyExam = (asm) => {
+    if (!asm) return false;
+    const t = String(asm.test_type || asm.type || '').toLowerCase();
+    if (t === 'exam') return true;
+    if (t === 'quiz') return false;
+    const c = String(asm.category || asm.payload?.tier || asm.payload?.category || '').toUpperCase();
+    if (c === 'EXAM') return true;
+    if (c === 'QUIZ' || c === 'TASK') return false;
+    const shell = String(asm.shell_code || asm.payload?.shell_code || '').toUpperCase();
+    if (shell.endsWith('-EXAM') || shell.includes('-EXAM-')) return true;
+    if (shell.endsWith('-QUIZ') || shell.includes('-QUIZ-')) return false;
+    if (shell.endsWith('-TEST') || shell.includes('-TEST-')) return true;
+    if (shell.endsWith('-TASK') || shell.includes('-TASK-')) return false;
+    return false;
+  };
+
+  const getExpectedMax = (asm) => {
+    if (!asm) return 40;
+    if (asm.payload?.total_questions && Number(asm.payload.total_questions) > 0) {
+      return Number(asm.payload.total_questions);
+    }
+    const isTest = isWeeklyExam(asm);
+    return isTest ? 150 : 40;
+  };
+
+  // 2. Identify which tests to override
+  // NEW FLOW: if selectedTestIds is provided, use it directly (any quiz or exam).
+  let prerequisiteTests = [];
+  let targetExams = [];
+
+  const fillScore = Math.max(1, Math.min(100, Number(targetScorePercent) || 60));
+  const isRemedial = fillScore <= 60; // Scores <= 60% are marked as remedial per Rule 2.10
+
+  if (Array.isArray(selectedTestIds) && selectedTestIds.length > 0) {
+    // NEW: user picked specific tests from the checklist
+    prerequisiteTests = allClassTests.filter(t => selectedTestIds.includes(t.id));
+    // Target exams = exams within selected tests (for session unlock)
+    targetExams = prerequisiteTests.filter(isWeeklyExam);
+  } else if (targetExamId) {
+    const targetExam = allClassTests.find(t => t.id === targetExamId);
+    if (!targetExam) throw new Error('Selected target exam not found.');
+    targetExams = [targetExam];
+    const targetOrder = targetExam.display_order ?? targetExam.order_index ?? 999;
+
+    // Is target exam a Phrases Exam?
+    const isPhrasesExam = Boolean(
+      targetExam.payload?.category === 'phrases' ||
+      /PHRASES/i.test(targetExam.shell_code || targetExam.payload?.shell_code || '') ||
+      /phrase/i.test(targetExam.title || '') ||
+      targetExam.test_subtype === 'PHRASE_EXAM' ||
+      targetExam.test_subtype === 'PHRASE_TEST'
+    );
+
+    prerequisiteTests = allClassTests.filter(t => {
+      if (t.id === targetExam.id) return false;
+      const tOrder = t.display_order ?? t.order_index ?? 0;
+      if (!isWeeklyExam(t)) return tOrder <= targetOrder;
+      if (isPhrasesExam && includeWordsExamIfPhrasesSelected && isWeeklyExam(t) && tOrder < targetOrder) return true;
+      return false;
+    });
+  } else if (targetThemeCode && targetThemeCode !== 'ALL') {
+    const themeUpper = targetThemeCode.toUpperCase();
+    targetExams = allClassTests.filter(t => {
+      const rawTheme = t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+      return isWeeklyExam(t) && (rawTheme || 'A').toUpperCase() === themeUpper;
+    });
+
+    const maxThemeOrder = targetExams.length > 0
+      ? Math.max(...targetExams.map(t => t.display_order ?? t.order_index ?? 999))
+      : 999;
+
+    prerequisiteTests = allClassTests.filter(t => {
+      const tOrder = t.display_order ?? t.order_index ?? 0;
+      // All quizzes up to this theme's exams
+      if (!isWeeklyExam(t)) {
+        return tOrder <= maxThemeOrder;
+      }
+
+      return false;
+    });
+  } else {
+    // ALL legacy: Override all quizzes and exams in the class
+    targetExams = allClassTests.filter(isWeeklyExam);
+    prerequisiteTests = allClassTests; // all tests including exams
+  }
+
+  if (prerequisiteTests.length === 0) {
+    prerequisiteTests = allClassTests;
+  }
+
+  // 3. Ensure studentIds is populated scoped to this class
+  let finalStudentIds = Array.isArray(studentIds) ? studentIds.filter(Boolean) : [];
+  if (finalStudentIds.length === 0) {
+    const { data: cls } = await sb.from('classes').select('id, program_id').eq('id', classId).single();
+    if (cls?.program_id) {
+      const { data: bData } = await sb.from('batches').select('id').eq('program_id', cls.program_id);
+      const bIds = (bData || []).map(b => b.id);
+      const { data: sData } = await sb.from('students')
+        .select('id')
+        .in('batch_id', bIds.length > 0 ? bIds : ['__dummy__'])
+        .is('deleted_at', null)
+        .eq('is_active', true);
+      finalStudentIds = (sData || []).map(s => s.id);
+    }
+  }
+
+  if (finalStudentIds.length === 0) {
+    throw new Error('No students found to override.');
+  }
+
+  // 4. Fetch existing attempts for these students across prerequisiteTests
+  const prereqIds = prerequisiteTests.map(t => t.id);
+  const { data: existingAttempts, error: attErr } = await sb
+    .from('attempts')
+    .select('id, student_id, test_id, score, percentage, effective_score, total_questions, is_best_score, is_remedial_unlocked, status, attempt_number')
+    .in('student_id', finalStudentIds)
+    .in('test_id', prereqIds);
+
+  if (attErr) throw attErr;
+
+  const attemptsByStudentTest = {};
+  (existingAttempts || []).forEach(att => {
+    const key = `${att.student_id}_${att.test_id}`;
+    if (!attemptsByStudentTest[key]) attemptsByStudentTest[key] = [];
+    attemptsByStudentTest[key].push(att);
+  });
+
+  const now = new Date();
+  const nowIso = now.toISOString();
+
+  let createdCount = 0;
+  let updatedCount = 0;
+  const affectedStudentSet = new Set();
+  const affectedTestSet = new Set();
+
+  const inserts = [];
+  const updates = [];
+
+  // Determine the grade at the fill score (inline, no dynamic import)
+  const _gradeForScore = (pct) => {
+    if (pct >= 100) return '★';
+    if (pct >= 90)  return 'A';
+    if (pct >= 80)  return 'B';
+    if (pct >= 60)  return 'C';
+    if (pct >= 30)  return 'D';
+    return 'E';
+  };
+  const fillGrade = _gradeForScore(fillScore);
+
+  for (const sId of finalStudentIds) {
+    for (const test of prerequisiteTests) {
+      const key = `${sId}_${test.id}`;
+      const atts = attemptsByStudentTest[key] || [];
+
+      // Check if student already has score >= fillScore (never downgrade)
+      const bestSubmittedPct = atts.reduce((best, a) => {
+        const st = String(a.status || '').toLowerCase();
+        const isSub = ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
+        if (!isSub) return best;
+        const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || 0);
+        return Math.max(best, pct);
+      }, -1);
+
+      if (bestSubmittedPct >= fillScore) {
+        // Already at or above fill score — never downgrade
+        continue;
+      }
+
+      // onlyFillEmpty mode: skip if any submitted attempt exists (regardless of score)
+      if (onlyFillEmpty && atts.some(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()))) {
+        continue;
+      }
+
+      // Expected questions and fill score calculation
+      const totalQ = Number(getExpectedMax(test) || 40);
+      const remScore = Math.round(totalQ * (fillScore / 100) * 10) / 10;
+      const remCorrect = Math.round(totalQ * (fillScore / 100));
+
+      affectedStudentSet.add(sId);
+      affectedTestSet.add(test.id);
+
+      if (atts.length > 0) {
+        // Update existing best/latest attempt to fillScore Remedial
+        atts.sort((x, y) => {
+          const scX = Number(x.score ?? 0);
+          const scY = Number(y.score ?? 0);
+          if (scY !== scX) return scY - scX;
+          return new Date(y.submitted_at || y.created_at || 0) - new Date(x.submitted_at || x.created_at || 0);
+        });
+        const topAtt = atts[0];
+        updates.push({
+          id: topAtt.id,
+          score: remScore,
+          correct_count: remCorrect,
+          total_questions: totalQ,
+          percentage: fillScore,
+          effective_score: remScore,
+          grade: fillGrade,
+          status: 'submitted',
+          is_best_score: true,
+          is_remedial_unlocked: isRemedial,
+          submitted_at: nowIso,
+          updated_at: nowIso
+        });
+        updatedCount++;
+
+        // Clear other attempts' is_best_score
+        for (let i = 1; i < atts.length; i++) {
+          if (atts[i].is_best_score) {
+            updates.push({
+              id: atts[i].id,
+              is_best_score: false,
+              updated_at: nowIso
+            });
+          }
+        }
+      } else {
+        // Insert new completed attempt with fillScore Remedial
+        inserts.push({
+          student_id: sId,
+          test_id: test.id,
+          attempt_number: 1,
+          started_at: nowIso,
+          expires_at: nowIso,
+          submitted_at: nowIso,
+          status: 'submitted',
+          score: remScore,
+          correct_count: remCorrect,
+          total_questions: totalQ,
+          percentage: fillScore,
+          effective_score: remScore,
+          grade: fillGrade,
+          is_best_score: true,
+          is_remedial_unlocked: isRemedial,
+          created_at: nowIso,
+          updated_at: nowIso
+        });
+        createdCount++;
+      }
+    }
+  }
+
+  // 5. Execute DB Inserts in safe chunks
+  if (inserts.length > 0) {
+    const chunk = 40;
+    for (let i = 0; i < inserts.length; i += chunk) {
+      const batch = inserts.slice(i, i + chunk);
+      const { error: insErr } = await sb.from('attempts').insert(batch);
+      if (insErr) {
+        console.error('[adminOverridePrerequisitesWithRemedial] Insert error:', insErr);
+        throw insErr;
+      }
+    }
+  }
+
+  // 6. Execute DB Updates
+  if (updates.length > 0) {
+    const chunk = 25;
+    for (let i = 0; i < updates.length; i += chunk) {
+      const batch = updates.slice(i, i + chunk);
+      await Promise.all(batch.map(u => 
+        sb.from('attempts').update({
+          score: u.score,
+          correct_count: u.correct_count,
+          total_questions: u.total_questions,
+          percentage: u.percentage,
+          effective_score: u.effective_score,
+          grade: u.grade,
+          status: u.status,
+          is_best_score: u.is_best_score,
+          is_remedial_unlocked: u.is_remedial_unlocked,
+          submitted_at: u.submitted_at,
+          updated_at: u.updated_at
+        }).eq('id', u.id)
+      ));
+    }
+  }
+
+  // 7. Whitelist and Unlock Test Sessions if requested
+  if (unlockLiveSessions && targetExams.length > 0) {
+    try {
+      const sessionDurationMins = 180; // 3-hour window
+      const autoClose = new Date(Date.now() + sessionDurationMins * 60 * 1000).toISOString();
+
+      for (const asm of targetExams) {
+        const payload = asm.payload || {};
+        const sess = payload.test_session || {};
+        const existingAllowed = Array.isArray(sess.allowed_student_ids) ? sess.allowed_student_ids : [];
+        const mergedAllowed = [...new Set([...existingAllowed, ...finalStudentIds])];
+
+        payload.test_session = {
+          ...sess,
+          status: 'UNLOCKED',
+          is_unlocked: true,
+          unlocked_at: nowIso,
+          auto_close_at: (sess.auto_close_at && new Date(sess.auto_close_at) > now) ? sess.auto_close_at : autoClose,
+          duration_minutes: sess.duration_minutes || sessionDurationMins,
+          allowed_student_ids: mergedAllowed
+        };
+
+        await sb.from('tests').update({ payload, updated_at: nowIso }).eq('id', asm.id);
+      }
+    } catch (sessErr) {
+      console.warn('[adminOverridePrerequisitesWithRemedial] Session unlock warning:', sessErr);
+    }
+  }
+
+  // 8. Clear Admin Caches
+  clearAdminCache('attempts');
+  clearAdminCache('tests');
+
+  // 9. Record Audit Log (Rule 2.19)
+  try {
+    await sb.from('audit_logs').insert({
+      actor_role: 'ADMIN',
+      action: 'OVERRIDE_PREREQUISITE_REMEDIAL',
+      entity_type: 'class',
+      entity_id: classId,
+      new_value: {
+        target_theme: targetThemeCode,
+        target_exam_id: targetExamId,
+        selected_test_ids: selectedTestIds,
+        fill_score_percent: fillScore,
+        only_fill_empty: onlyFillEmpty,
+        is_remedial: isRemedial,
+        student_count: finalStudentIds.length,
+        affected_students: affectedStudentSet.size,
+        affected_tests: affectedTestSet.size,
+        created_attempts: createdCount,
+        updated_attempts: updatedCount,
+        grade: fillGrade
+      }
+    });
+  } catch (auditErr) {
+    console.warn('[adminOverridePrerequisitesWithRemedial] Audit log warning:', auditErr);
+  }
+
+  return {
+    success: true,
+    createdCount,
+    updatedCount,
+    affectedStudentsCount: affectedStudentSet.size,
+    affectedTestsCount: affectedTestSet.size,
+    totalOperations: createdCount + updatedCount,
+    targetExamsCount: targetExams.length,
+    fillScore,
+    fillGrade,
+    isRemedial
+  };
+}
+
 export const toOrdinal = (n) => {
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
@@ -3838,6 +4218,7 @@ if (typeof window !== 'undefined') {
   window.labelAttemptRemedial = labelAttemptRemedial;
   window.closeTestSession = closeTestSession;
   window.checkStudentTestAccess = checkStudentTestAccess;
+  window.adminOverridePrerequisitesWithRemedial = adminOverridePrerequisitesWithRemedial;
 }
 
 
