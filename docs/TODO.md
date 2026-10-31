@@ -1,3 +1,15 @@
+# ACTIVE DIRECTIVE: PHASE 250 — ACTIVE BATCH AUTO-SELECTION, SIDEBAR SYNCHRONIZATION & CACHE V81 [COMPLETE]
+
+- [x] Task 1: Scoped sidebar Domain B strictly to active batches (`is_active: true`), hiding inactive/past batches (`Camp 132`, `Camp 131`, `Camp 123`, `Hospitality SH-26`, `Hospitality TP-26`).
+- [x] Task 2: Added auto-detection and selection of the active batch in `student-management.js` and synchronized the active highlight class on the sidebar item.
+- [x] Task 3: Formatted `#topbar-title` to display Program + Batch name (e.g. `Camp 133`).
+- [x] Task 4: Removed redundant columns (`INSTITUTION`, `PROGRAM`, `BATCH`, `ENROLLED`, `STATUS`) from Student Roster table.
+- [x] Task 5: Verified 0 rogue color matches across 57 files (`scripts/deep_color_audit.mjs`).
+- [x] Task 6: Headless Chrome E2E health check passed with 0 console errors across all 5 primary pages.
+- [x] Task 7: Cache busters synchronized to `?v=20261101_v81`.
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 246 — STUDENT ROSTER BATCH SCOPE & DEFAULT ACTIVE TAB [COMPLETE]
 
 - [x] Task 1: Scoped student roster topbar status counts (`Active`, `Inactive`, `All`) strictly to `window._filterBatchId` (or active batches in program if no specific batch is selected).
