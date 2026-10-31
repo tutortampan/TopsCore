@@ -1494,6 +1494,18 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         return;
       }
 
+      // Pacing Assistance (Anti-Timeout Guard):
+      // If student remains stuck on an unanswered question for > 45s, gently advise skipping.
+      if (window._questionPacingTimer) clearTimeout(window._questionPacingTimer);
+      const isCurrentlyUnanswered = !answeredMap[row.id] || !answeredMap[row.id].trim();
+      if (isCurrentlyUnanswered && isTestActive) {
+        window._questionPacingTimer = setTimeout(() => {
+          if (currentIndex === idx && (!answeredMap[row.id] || !answeredMap[row.id].trim()) && isTestActive) {
+            showToast('💡 Stuck? Tap Next to skip and return later before time runs out!', 'info', 6000);
+          }
+        }, 45000);
+      }
+
       let snap = row.question_snapshot;
       if (typeof snap === 'string') {
         try { snap = JSON.parse(snap); } catch { snap = { question_text: snap, answer_type: 'spoken' }; }
@@ -2159,6 +2171,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     };
 
     function saveCurrentAnswer() {
+      if (window._questionPacingTimer) clearTimeout(window._questionPacingTimer);
       const row = answerRows[currentIndex];
       if (!row) return;
       const ta = document.getElementById(`written-${row.id}`) || document.getElementById(`speech-text-${row.id}`);
