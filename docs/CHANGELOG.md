@@ -1,3 +1,35 @@
+## [2026-11-01 04:35] — Phase 252: Universal Dynamic Points Color Adherence & Quiz Scaffolding
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 252  
+**Status:** PASS  
+
+### Why
+- User directive: "di kolon nilai, pointnya warnanya belum mengikuti warna yang kita sepakati, perbaiki!v"
+- Enforce strict adherence to Rule 2.10 (Single Source of Truth Colors) so that numeric points (PTS) across all tables, summary rows, and modals dynamically inherit canonical grade colors.
+- Implement practice quiz scaffolding hint (Pillar 2 of the student difficulty proposal) to reduce timeout / blank rates for practice items.
+
+### Changed
+- `js/admin/student-management.js`:
+  - Added `!important` to dynamic point color rendering in `perClassColDefs` (Exam 1–4) to prevent table-level CSS (`color: #ffffff !important`) from overriding points colors.
+  - Dynamically colored `summaryRow` batch total average points (`Avg: X pts`) by `batchOverallPct` via `getGradeColorByScore`.
+  - Dynamically colored `ptsDisplay` in progress / test details modal row via `scoreColor`.
+- `js/admin/app.js`:
+  - Dynamically colored Class Hub summary row cells: individual exam points now inherit `avgCol` (`getGradeColorByScore(avgPct)`) and theme total points now inherit `avgThemeColor`.
+  - Bumped module imports to `?v=20261101_v83`.
+- `js/test.js`:
+  - Added practice quiz first-letter clue hint (`💡 Hint`), strictly disabled during Exams.
+- `admin.html`, `dashboard.html`, `result.html`, `test.html`:
+  - Bumped cache busters to `?v=20261101_v83`.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs`: 40/40 JS files passed syntax validation (`node --check`).
+- `node scripts/verify_green_star_grading.mjs`: 100% PASS across color tokens.
+- `node scripts/e2e_console_health_check.mjs`: Real Chrome browser loaded all 5 pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`) with 0 console errors and 0 uncaught exceptions.
+- `node scripts/dump_roster_table.mjs`: Confirmed dynamic points colors (Yellow `#FFFF00`, Lime `#95ff00ff`) rendered cleanly in Chrome DOM.
+
+---
+
 ## [2026-11-01 04:26] — Phase 251: Phrase Real-Time Word-Count Counter & Full Cache v82
 
 **Agent/Session:** Antigravity  

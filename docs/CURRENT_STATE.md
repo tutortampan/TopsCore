@@ -1,37 +1,43 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 04:25 UTC+8
+Last Updated: 2026-11-01 04:32 UTC+8
 
-Current Phase: Phase 251: Phrase Real-Time Word-Count Counter & Full Cache v82 [COMPLETE]
+Current Phase: Phase 252: Universal Dynamic Points Color Adherence & Quiz Scaffolding [COMPLETE]
 
 Current Task:
-1. Real-Time Phrase Word-Counter in Test Runner (`js/test.js`):
-   - Added interactive `✍️ X / Y words` counter for written phrase questions and `🎙️ X / Y words` for spoken questions.
-   - Dynamically highlights green when target word count is satisfied, preventing incomplete phrase submissions.
-2. Batch Scoping and Active Default Tab Persistence:
-   - Scoped top tabs strictly to the active batch (`Camp 133`: 22 Active, 2 Inactive, 24 All).
-   - Ensured entering Student Roster always defaults to the 'Active Students' tab.
-   - Verified that sidebar hides past inactive batches.
+1. Dynamic Points (PTS) Coloring Adherence (Rule 2.10):
+   - In Student Roster table (`js/admin/student-management.js`), dynamically colored `Exam 1`, `Exam 2`, `Exam 3`, `Exam 4` points using `getGradeColorByScore(themePct)` with `!important` to prevent CSS overrides.
+   - In Student Roster summary row (`summaryRow`), dynamically colored `Avg: X pts` by `batchOverallPct` via `getGradeColorByScore`.
+   - In Class Hub matrix summary row (`js/admin/app.js`), dynamically colored `Class Avg Points` and `Theme Total Points` using `getGradeColorByScore(avgPct)`.
+   - In Student Progress / Test Details modal (`student-management.js`), dynamically colored `ptsDisplay` using `scoreColor`.
+2. Practice Quiz First-Letter Scaffolding Hint (`js/test.js`):
+   - Added optional `💡 Hint` button for practice quizzes (strictly disabled for Exams) revealing first-letter mask clues (`W _ _ _ - W _ _ _ _ _ _`) to overcome the blank/timeout bottleneck.
 3. Cache Busters:
-   - Bumped to `?v=20261101_v82` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/test.js`, and `js/admin/app.js`.
-4. Automated Headless Chrome E2E test passed across all 5 primary pages with 0 errors.
+   - Bumped to `?v=20261101_v83` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/admin/app.js`, and `js/admin/student-management.js`.
+4. Automated Headless Chrome E2E verification:
+   - Verified with real Google Chrome browser across all 5 core entrypoints (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`): 0 console errors, 0 uncaught exceptions.
 
-Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v82)
+Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v83)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
-   - Roster siswa menampilkan hitungan presisi Batch 133: 🟢 Active (22), ⚪ Inactive (2), 👥 All (24).
-   - Default tab terpilih saat masuk adalah **Active Students** (22 records).
-   - Sidebar Domain B hanya menampilkan batch aktif (`Camp 133`).
-   - Pada halaman ujian (`test.html`), soal frasa kini dilengkapi word counter interaktif real-time.
+   - Kolom nilai ujian (**EXAM 1–4**) dan poin (**PTS**) di Roster Siswa (`admin.html#students`) serta footer summary row secara otomatis mewarisi warna grade kanonik (**★/A Hijau `#00c000ff`, B Lime `#95ff00ff`, C Kuning `#FFFF00`, D Oranye `#FF8C00`, E Merah `#FF0000`**).
+   - Seluruh nilai siswa di Class Hub Batch 133 100% murni tanpa manipulasi.
+   - Pada kuis latihan harian (`test.html`), siswa memiliki opsi `💡 Hint` huruf pertama untuk mengurangi angka timeout.
 
 ## Files Changed In Latest Step
-- `js/test.js` — Added phrase word counters for written and spoken questions.
-- `scripts/dump_roster_table.mjs` — Automated roster DOM table column layout verifier.
-- `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/admin/app.js` — Bumped cache busters to `v82`.
+- `js/admin/student-management.js` — Added dynamic points color inheritance and `!important` rule in `perClassColDefs`, `summaryRow`, and modal rows.
+- `js/admin/app.js` — Added dynamic points color inheritance in Class Hub summary row (`avgCol`, `avgThemeColor`).
+- `js/test.js` — Added practice quiz first-letter hint scaffolding.
+- `admin.html`, `dashboard.html`, `result.html`, `test.html` — Bumped cache buster to `v83`.
 - `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`
 
 ## Completed
+
+- **Phase 252: Universal Dynamic Points Color Adherence & Quiz Scaffolding**:
+  - Aligned all points displays across Student Roster, Class Hub, and modals with Rule 2.10.
+  - Implemented quiz practice first-letter scaffolding hint to address student bottleneck.
+  - Verified 0 console errors and 0 uncaught exceptions across all 5 primary application entrypoints in Chrome.
 
 - **Phase 251: Phrase Real-Time Word-Count Counter & Full Cache v82**:
   - Implemented real-time interactive word counter in `js/test.js` for phrase questions.

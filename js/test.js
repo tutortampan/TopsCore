@@ -2092,6 +2092,36 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       else transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.35); font-style:italic;">Listening...</span>';
       area.appendChild(transcriptBox);
 
+      // Quiz Practice Scaffolding: First-Letter Clue (Quizzes only, strictly disabled for Exams)
+      const isQuizPractice = !(String(testData?.test_type).toLowerCase() === 'exam' || ['EXAM', 'TEST'].includes(testData?.category));
+      const targetAns = (snap?.correct_answer || snap?.answer || row?.correct_answer_snapshot || '').trim();
+      const primaryTarget = targetAns.split(/[;/,|]/)[0].trim();
+      if (isQuizPractice && primaryTarget.length >= 3) {
+        const hintBtn = document.createElement('button');
+        hintBtn.type = 'button';
+        hintBtn.className = 'quiz-hint-btn';
+        hintBtn.innerHTML = '💡 Hint';
+        hintBtn.title = 'Get first-letter clue (Quiz practice only)';
+        hintBtn.style.cssText = 'font-size:11px; font-weight:700; color:#fbbf24; background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
+        
+        const hintDisplay = document.createElement('div');
+        hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:#fbbf24; margin-top:3px; display:none;';
+        const mask = primaryTarget.split(' ').map(w => {
+          if (w.length <= 2) return w;
+          return w[0].toUpperCase() + ' ' + '_ '.repeat(w.length - 1).trim();
+        }).join('   ');
+        hintDisplay.textContent = mask;
+
+        hintBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          hintDisplay.style.display = 'block';
+          hintBtn.style.display = 'none';
+        });
+
+        area.appendChild(hintBtn);
+        area.appendChild(hintDisplay);
+      }
+
       const micBtn = document.createElement('button');
       micBtn.className = 'speech-mic-btn-lg';
       micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(var(--grade-star-rgb, 0, 192, 0), 0.4); background:linear-gradient(135deg, #86efac 0%, var(--grade-star, #00c000ff) 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 0 24px rgba(var(--grade-star-rgb, 0, 192, 0), 0.45), 0 8px 16px rgba(0,0,0,0.35); flex-shrink:0;';
