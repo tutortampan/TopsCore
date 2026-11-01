@@ -179,22 +179,26 @@ export class DataGrid {
   }
 
   renderHeaders() {
-    // Update columns menu
-    this.colsMenu.innerHTML = this.columns.map((col, idx) => `
-      <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem; font-size:0.85rem; cursor:pointer;">
-        <input type="checkbox" class="datagrid-col-toggle" data-idx="${idx}" ${!col.hidden ? 'checked' : ''} />
-        ${col.label}
-      </label>
-    `).join('');
+    if (!this.thead) return;
 
-    this.colsMenu.querySelectorAll('.datagrid-col-toggle').forEach(cb => {
-      cb.addEventListener('change', (e) => {
-        const idx = parseInt(e.target.dataset.idx);
-        this.columns[idx].hidden = !e.target.checked;
-        this.renderHeaders();
-        this.render();
+    // Update columns menu if present
+    if (this.colsMenu) {
+      this.colsMenu.innerHTML = this.columns.map((col, idx) => `
+        <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem; font-size:0.85rem; cursor:pointer;">
+          <input type="checkbox" class="datagrid-col-toggle" data-idx="${idx}" ${!col.hidden ? 'checked' : ''} />
+          ${col.label}
+        </label>
+      `).join('');
+
+      this.colsMenu.querySelectorAll('.datagrid-col-toggle').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+          const idx = parseInt(e.target.dataset.idx);
+          this.columns[idx].hidden = !e.target.checked;
+          this.renderHeaders();
+          this.render();
+        });
       });
-    });
+    }
 
     // Render <thead>
     const visibleCols = this.columns.filter(c => !c.hidden);
@@ -418,14 +422,11 @@ export class DataGrid {
     }
   }
 
-  updateData(newData) {
-    this.rawData = newData;
-    this.filterData(this.searchInput.value);
-    this.render();
-  }
-
   render() {
-    this.countLabel.textContent = `${this.filteredData.length} records`;
+    if (this.countLabel) {
+      this.countLabel.textContent = `${this.filteredData.length} records`;
+    }
+    if (!this.tbody) return;
     this.tbody.innerHTML = '';
     const visibleCols = this.columns.filter(c => !c.hidden);
     
@@ -553,13 +554,19 @@ export class DataGrid {
 
   updateData(newData) {
     this.rawData = newData;
-    this.filteredData = [...newData];
+    const query = this.searchInput ? this.searchInput.value : '';
+    if (query && query.trim()) {
+      this.filterData(query);
+    } else {
+      this.filteredData = [...newData];
+      if (this.sortKey) this.sortData();
+    }
     this.currentPage = 1;
-    if (this.sortKey) this.sortData();
     this.render();
   }
 
   renderPagination(totalPages) {
+    if (!this.paginationContainer) return;
     this.paginationContainer.innerHTML = '';
     if (totalPages <= 1) return;
 

@@ -274,7 +274,7 @@ body {
 .admin-topbar {
   display: flex;
   align-items: flex-end;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   height: 50px;
   max-height: 50px;
@@ -442,7 +442,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 10px;
   flex-shrink: 0;
   z-index: 35;
 }
@@ -3285,7 +3285,7 @@ tr.deleted-row td {
   display: grid;
   grid-template-columns: minmax(130px, 1.3fr) minmax(95px, 0.9fr) minmax(80px, 0.8fr) minmax(110px, 1fr) minmax(110px, 1fr) minmax(110px, 1fr) minmax(105px, 1fr) minmax(95px, 0.9fr) 135px;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 0.55rem 0.85rem;
   border-radius: 6px;
 }
@@ -3319,7 +3319,7 @@ tr.deleted-row td {
   display: grid;
   grid-template-columns: minmax(200px, 2fr) minmax(120px, 1fr) minmax(160px, 1.5fr) 135px;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 0.55rem 0.85rem;
   border-radius: 6px;
 }
@@ -4479,7 +4479,7 @@ tfoot.datagrid-tfoot,
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   border-bottom: 1px solid var(--fm-border-subtle, rgba(255, 255, 255, 0.08));
   padding-bottom: 0px;
   overflow-x: auto;
@@ -4643,7 +4643,7 @@ tfoot.datagrid-tfoot,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -5127,8 +5127,8 @@ tfoot.datagrid-tfoot,
 }
 
 .modal-header-bordered {
-  padding-bottom: 14px !important;
-  margin-bottom: 14px !important;
+  padding-bottom: 10px !important;
+  margin-bottom: 10px !important;
   border-bottom: 1px solid var(--clr-border) !important;
 }
 
@@ -5204,7 +5204,7 @@ tfoot.datagrid-tfoot,
 .roster-add-bar {
   display: flex !important;
   gap: 10px !important;
-  margin-bottom: 15px !important;
+  margin-bottom: 10px !important;
 }
 
 .roster-table-scroll {
@@ -5244,9 +5244,9 @@ tfoot.datagrid-tfoot,
 }
 
 .modal-header-add-class {
-  margin-bottom: 16px !important;
+  margin-bottom: 10px !important;
   border-bottom: 1px solid var(--clr-border) !important;
-  padding-bottom: 12px !important;
+  padding-bottom: 10px !important;
 }
 
 .add-class-levels-container {
@@ -5449,7 +5449,7 @@ tfoot.datagrid-tfoot,
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 10px !important;
   padding: 12px 16px !important;
-  margin-bottom: 16px !important;
+  margin-bottom: 10px !important;
 }
 
 .global-asm-settings-header {
@@ -5473,7 +5473,7 @@ tfoot.datagrid-tfoot,
 .global-asm-settings-grid {
   display: grid !important;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
-  gap: 12px !important;
+  gap: 10px !important;
 }
 
 .global-asm-tier-card {
@@ -5628,7 +5628,7 @@ tfoot.datagrid-tfoot,
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   max-height: 75vh;
   overflow-y: auto;
 }
@@ -5710,7 +5710,7 @@ tfoot.datagrid-tfoot,
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 12px !important;
+  gap: 10px !important;
   flex-shrink: 0 !important;
   background: rgba(15, 23, 42, 0.5) !important;
 }

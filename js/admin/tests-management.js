@@ -1,10 +1,10 @@
-import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '../api.js?v=5.3.2';
-import { openTestBuilder } from './test-builder.js?v=5.3.2';
-import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=5.3.2';
-import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.3.2';
-import { TOPSCORE_COLORS, getGradeColor, getGradeColorByScore, calculateGrade, isWeeklyExam, damerauLevenshtein, isWordFormAnswerMatch, cleanPunctuationAndSymbols, parseCorrectAnswers } from '../grading.js?v=20261101_v77';
-import { getSupabase } from '../supabase.js?v=5.3.2';
-import { DataGrid } from './datagrid.js?v=5.3.2';
+import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '../api.js?v=20261101_v97';
+import { openTestBuilder } from './test-builder.js?v=20261101_v97';
+import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261101_v97';
+import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261101_v97';
+import { TOPSCORE_COLORS, getGradeColor, getGradeColorByScore, calculateGrade, isWeeklyExam, damerauLevenshtein, isWordFormAnswerMatch, cleanPunctuationAndSymbols, parseCorrectAnswers } from '../grading.js?v=20261101_v97';
+import { getSupabase } from '../supabase.js?v=20261101_v97';
+import { DataGrid } from './datagrid.js?v=20261101_v97';
 if (typeof window !== 'undefined') window.DataGrid = DataGrid;
 
 let TestsGrid;
@@ -1993,7 +1993,7 @@ export async function renderResults(area) {
  * Sets session_unlocked_at and session_expires_at on the Tests record.
  */
 async function openSessionModal() {
-  const { getSupabase } = await import('../supabase.js?v=5.3.2');
+  const { getSupabase } = await import('../supabase.js?v=20261101_v97');
   const sb = await getSupabase();
   const { data: tests, error } = await sb
     .from('tests')
@@ -2620,7 +2620,7 @@ window._overrideSpeechAnswer = async function(ansId) {
   }
 
   try {
-    const { getSupabase } = await import('../supabase.js?v=5.3.2');
+    const { getSupabase } = await import('../supabase.js?v=20261101_v97');
     const sb = await getSupabase();
     if (sb) {
       await sb.from('attempt_answers').update({

@@ -1,5 +1,5 @@
-import { DataGrid } from './datagrid.js?v=5.3.2';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261101_v95';
+import { DataGrid } from './datagrid.js?v=20261101_v97';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261101_v97';
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
@@ -373,26 +373,26 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter,
   adminOverridePrerequisitesWithRemedial
-} from '../api.js?v=20261101_v95';
+} from '../api.js?v=20261101_v97';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.4.7';
 import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.4.7';
 import { getSupabase } from '../supabase.js?v=5.4.7';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261101_v95';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261101_v97';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.4.7';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.4.7';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=20261101_v95';
-import { renderTests } from './tests-management.js?v=20261101_v95';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261101_v95';
-import { renderVocabularyVault } from './vocab-vault.js?v=20261101_v95';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=20261101_v97';
+import { renderTests } from './tests-management.js?v=20261101_v97';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261101_v97';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261101_v97';
 import { renderModules } from './modules.js?v=5.4.7';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.4.8';
 import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.4.7';
 import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=5.4.9';
 import { renderCurriculum } from './curriculum-management.js?v=5.4.8';
-import { renderClassesHub } from './classes-hub.js?v=20261101_v95';
+import { renderClassesHub } from './classes-hub.js?v=20261101_v97';
 import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.4.7';
-import { openStudentFullEdit } from './student-management.js?v=20261101_v95';
-import { renderStudentsRegistration } from './student-registration.js?v=20261101_v95';
+import { openStudentFullEdit } from './student-management.js?v=20261101_v97';
+import { renderStudentsRegistration } from './student-registration.js?v=20261101_v97';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -1883,7 +1883,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
           // Open Test Generator & Settings Wizard
           document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
             try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v95');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v97');
               await openAutoGenerateModal({
                 explicitClassId: classId,
                 onComplete: () => {
@@ -2354,6 +2354,39 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
               searchKeys: [],
               initialSortKey: 'progressPct',
               initialSortAsc: false,
+              sortComparator: (key, direction, a, b) => {
+                const dir = direction === 'asc' ? 1 : -1;
+                if (key === 'progressPct') {
+                  const pA = Number(a.progressPct ?? 0);
+                  const pB = Number(b.progressPct ?? 0);
+                  if (pA !== pB) return (pA - pB) * dir;
+                  // Tie-breaker 1: Total PTS DESC
+                  const ptsA = Number(a.totalEarnedScore ?? 0);
+                  const ptsB = Number(b.totalEarnedScore ?? 0);
+                  if (ptsA !== ptsB) return ptsB - ptsA;
+                  // Tie-breaker 2: Curriculum Score DESC
+                  const scA = Number(a.curriculumGradePct ?? a.averageScorePct ?? 0);
+                  const scB = Number(b.curriculumGradePct ?? b.averageScorePct ?? 0);
+                  if (scA !== scB) return scB - scA;
+                  // Tie-breaker 3: Earliest lastSubmittedAt ASC
+                  if (a.lastSubmittedAt && b.lastSubmittedAt) {
+                    const diff = new Date(a.lastSubmittedAt) - new Date(b.lastSubmittedAt);
+                    if (diff !== 0) return diff;
+                  }
+                  return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { numeric: true });
+                }
+                if (key === 'totalEarnedScore') {
+                  const ptsA = Number(a.totalEarnedScore ?? 0);
+                  const ptsB = Number(b.totalEarnedScore ?? 0);
+                  if (ptsA !== ptsB) return (ptsA - ptsB) * dir;
+                  // Tie-breaker: PROG DESC
+                  const pA = Number(a.progressPct ?? 0);
+                  const pB = Number(b.progressPct ?? 0);
+                  if (pA !== pB) return pB - pA;
+                  return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { numeric: true });
+                }
+                return null;
+              },
               superHeaders: dynamicSuperHeaders,
               summaryRow: (visibleCols, filteredData) => {
                 const totalStudents = filteredData.length;
@@ -3777,7 +3810,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v95');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v97');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -4108,7 +4141,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261101_v95');
+      const sm = await import('./student-management.js?v=20261101_v97');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }

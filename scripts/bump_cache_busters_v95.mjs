@@ -47,3 +47,4 @@ filesToUpdate.forEach(file => {
 });
 
 console.log(`Cache busters updated across ${totalReplacements} files to ${NEW_TAG}.`);
+

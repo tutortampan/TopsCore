@@ -1,7 +1,7 @@
 import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsTests, autoGeneratePhrasesTests } from '../api.js?v=20261027b';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261027b';
 import { openTestBuilder } from './test-builder.js?v=20261027b';
-import { DataGrid } from './datagrid.js?v=20261027b';
+import { DataGrid } from './datagrid.js?v=20261101_v97';
 import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261027b';
 
 // ─────────────────────────────────────────────────────────────

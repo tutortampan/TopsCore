@@ -250,12 +250,12 @@ console.log('  Sofa Maria Ulfa stats:', { pts: statsSofa.totalPoints, score: sta
 console.log('  Suke Ajai stats:', { pts: statsSuke.totalPoints, score: statsSuke.overallScore + '%', grd: statsSuke.grade, prog: statsSuke.progressPct + '%' });
 console.log('  Pasya stats:', { pts: statsPasya.totalPoints, score: statsPasya.overallScore + '%', grd: statsPasya.grade, prog: statsPasya.progressPct + '%' });
 
-// Verify Pasya evaluated by latest active Theme A (90/150 = 60%, Grade C)
-// Future unattempted Theme B does NOT penalize current active theme!
-if (statsPasya.overallScore === 60 && statsPasya.grade === 'C') {
-  console.log('  ✅ PASS: Pasya evaluated by latest active Theme A! (Score: 60% Grade C, no penalty from future Theme B).');
+// Verify Pasya evaluated against full curriculum total points (90/1900 = 5%, Grade E)
+// Cumulative curriculum points prevents artificial grade inflation
+if (statsPasya.overallScore === 5 && statsPasya.grade === 'E') {
+  console.log('  ✅ PASS: Pasya evaluated by cumulative curriculum mastery! (Score: 5% Grade E, 90 / 1900 pts).');
 } else {
-  console.error(`  ❌ FAIL: Expected Pasya score 60% Grade C, got score ${statsPasya.overallScore}% Grade ${statsPasya.grade}`);
+  console.error(`  ❌ FAIL: Expected Pasya score 5% Grade E, got score ${statsPasya.overallScore}% Grade ${statsPasya.grade}`);
   process.exit(1);
 }
 

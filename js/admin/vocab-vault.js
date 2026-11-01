@@ -1539,7 +1539,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
     const importedLevels = Array.from(levelsSet).sort((a, b) => a - b);
     if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
     try {
-      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v95');
+      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v97');
       await openAutoGenerateModal({
         availableLevels: importedLevels,
         preSelectedLevels: importedLevels,

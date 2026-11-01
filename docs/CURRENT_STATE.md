@@ -1,46 +1,41 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 14:20 UTC+8
+Last Updated: 2026-11-01 14:45 UTC+8
 
-Current Phase: Phase 267: Ari & Aunul Full Quiz Score Audit, Strict Inter-Theme Gating Lockdown & Progress-First Leaderboard Alignment [COMPLETE]
+Current Phase: Phase 269: Verification & Alignment of Full-Height DataGrid Viewports, Cumulative Curriculum Parity & Test Suite Green Baseline [COMPLETE]
 
 Current Task:
-1. Ari & Aunul Quiz Scores Audit & Clarification:
-   - Audited all attempts across Supabase database for Aunul Fikri Yasir (`2899b602...`) and Ari Wahyu Darma (`14bd4810...`).
-   - Confirmed both students completed all Theme A daily quizzes (Orders 1-6) with near-perfect scores (87.5% - 100%).
-   - Clarified that in Class Hub `ALL (EXAMS ONLY)` view, daily quiz columns are deliberately filtered out to focus exclusively on weekly milestone exams (Orders 7 & 8), whereas clicking `THEME A (8)` fully reveals all 6 daily quizzes.
-2. Inter-Theme Prerequisite Gating Lockdown:
-   - Eliminated blind `if (isSessLive) { prereqMet = true; }` bypass in `js/dashboard.js` (lines 1398-1440 and 1706-1750). Live session now opens test window BUT preserves strict academic prerequisites.
-   - Enforced Inter-Theme Gating across `js/dashboard.js`, `js/api.js`, `supabase/functions/start-test/index.ts`, and `js/admin/tests-access.js`: taking any test in Theme B, C, or D strictly requires passing all prior theme exams (>= 60%), unless explicit remedial is unlocked.
-3. Progress-First Leaderboard Ranking & Cumulative Curriculum Grading:
-   - Primary sort: `PROG %` DESC (Progress First) -> Secondary sort: `PTS` DESC (Total Exam Points) -> Tertiary: `SCORE %` DESC.
-   - Authoritative grading derived from total points earned out of total curriculum expected points (1,900 pts).
-4. System Cache Buster Bump:
-   - Bumped system-wide cache buster to `?v=20261101_v95` and service worker cache to `topscore-cache-option-a-v43`.
+1. Student Roster Full-Height Fix Verification:
+   - Verified that `#student-grid-container` and its parent `.admin-content:has(#student-grid-container)` expand to 100% of workspace height (`calc(100vh - 50px - 50px)`), eliminating dead space above `#bottom-ad-banner`.
+   - Verified that `.table-wrap` within student grid uses `flex: 1 1 0; max-height: 100%;` with thin scrollbars, seamlessly anchoring the `★ BATCH AVERAGE` summary row at the viewport bottom.
+2. Parity Test Alignment for Cumulative Curriculum Grading:
+   - Aligned `scripts/test_student_dashboard_exam_parity.mjs` assertion (lines 253-260) with the new authoritative cumulative curriculum mastery model (Pasya's 90 pts out of 1,900 expected pts yields 5% Grade E, preventing grade inflation).
+   - Confirmed all test suites (`npm.cmd test`, `test:grading`, `test:prereq`, `test:duration`) pass 100% with 0 errors.
+3. Ranking & Prerequisite Logic Verification:
+   - Confirmed Progress-First sorting: `PROG %` DESC -> `PTS` DESC -> `SCORE %` DESC.
+   - Cross-Theme prerequisite gating active and verified across client DB fallback, Edge Function (`start-test`), and test access eligibility.
 
-Status: COMPLETE (All JS syntax checks PASS, 0 Rogue Colors, Cache v95)
+Status: COMPLETE (All Test Suites PASS 100%, 0 Dead Space, Cumulative Grading Active)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
-   - Tabel Attendance Matrix pada Class Hub kini menampilkan peringkat siswa tersusun rapi berdasarkan PROG % (kemajuan) tertinggi lebih dulu, kemudian Total Poin (PTS).
-   - Nilai kuis harian Ari dan Aunul (95% - 100%) dapat dilihat dengan mengklik tab `THEME A (8)`, sementara tab `ALL (EXAMS ONLY)` menampilkan akumulasi ujian mingguan.
-   - Sistem prerequisite antar-tema terkunci ketat: siswa tidak lulus tema sebelumnya (<60%) tidak dapat membuka tema berikutnya tanpa remedial.
+   - Buka tabel Student Roster (`Camp 133`) atau Class Hub (`3rd Vocabulary`).
+   - Tabel kini mengisi penuh 100% tinggi workspace hingga menyentuh banner bawah (`TopsCore © 2026 | Created by Mr. Top`) tanpa ada ruang hitam/kosong terbuang.
+   - Peringkat siswa terurut rapi: Progres Tertinggi -> Total Poin Tertinggi -> Nilai Akumulatif Kurikulum.
+   - Siswa dengan progres rendah (seperti Tarmizi 23%) kini mendapatkan Grade E (bukan Grade A semu), memberikan keadilan bagi siswa yang telah menyelesaikan seluruh tema.
 
 ## Files Changed In Latest Step
-- `js/dashboard.js` — Removed unshielded `isSessLive` prerequisite override; implemented Inter-Theme prerequisite validation.
-- `js/api.js` — Enforced Inter-Theme prerequisite validation across all tests in `startTest()`.
-- `supabase/functions/start-test/index.ts` — Server-authoritative Inter-Theme prerequisite validation in Edge Function.
-- `js/admin/tests-access.js` — Fixed prior theme exam completion audit in `evaluateStudentsEligibility`.
-- `scripts/bump_cache_busters_v95.mjs` — Bumped cache busters to `20261101_v95` and SW cache to `topscore-cache-option-a-v43`.
-- `sw.js` — Service worker cache version bumped.
-- `admin.html`, `dashboard.html`, `result.html`, `test.html`, `index.html`, `offline.html`, `js/admin/*`, `js/test.js` — Bumped to `v95`.
+- `scripts/test_student_dashboard_exam_parity.mjs` — Aligned test assertion with authoritative cumulative curriculum mastery.
+- `docs/CURRENT_STATE.md` — Updated phase status and next exact actions.
+- `docs/CHANGELOG.md` — Recorded Phase 269 changes.
+- `docs/SESSION_LOG.md` — Logged verification session details.
+- `admin.html`, `dashboard.html`, `result.html`, `test.html`, `index.html`, `offline.html`, `js/admin/*`, `js/test.js` — Bumped to `v97`.
 - `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`.
 
 ## Completed
 
-- **Phase 267: Ari & Aunul Full Quiz Score Audit, Strict Inter-Theme Gating Lockdown & Progress-First Leaderboard Alignment**:
-  - Audited and confirmed Ari and Aunul's 100% quiz scores, eliminated session prerequisite bypass, enforced universal inter-theme gating, and aligned ranking/grading.
-  - Bumped cache busters to `v94` and service worker to `v42`.
+- **Phase 268: Elimination of Redundant Search Toolbar, Strict 10px Panel Spacing & Full Workspace Area Maximization**:
+  - Completely removed redundant search/column dropdowns from attendance matrix, harmonized all panel spacing to 10px, and bumped cache to `v97`.
 
 - **Phase 265: Full-Height Workspace Integration for Student Roster & DataGrids**:
   - Eliminated bottom dead space in Student Roster table, allowing the table to fill 100% of workspace height down to the bottom footer banner.
