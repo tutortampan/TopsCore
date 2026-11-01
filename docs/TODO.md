@@ -5,7 +5,7 @@
 - [x] Task 3: Inserted Muhammad Alimae Pasya Theme B offline score (147 PTS) into Supabase PostgreSQL, bringing total points to 264.5 PTS.
 - [x] Task 4: Permanently resolved IDE save conflict by configuring `"files.autoSave": "onFocusChange"` and `"files.saveConflictResolution": "overwriteFileOnDisk"`.
 - [x] Task 5: Verified DataGrid DOM null-guards across all methods and confirmed 0 console errors.
-- [x] Task 6: Bumped cache busters across application to `v103` and service worker to `v51`.
+- [x] Task 6: Bumped cache busters across application to `v103` and service worker to `v52`.
 
 ---
 
