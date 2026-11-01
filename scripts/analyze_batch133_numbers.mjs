@@ -34,12 +34,17 @@ async function analyze() {
 
   // Fetch all attempts for these students
   const studentIds = students.map(s => s.id);
-  const { data: attempts } = await sb.from('attempts')
-    .select('id, student_id, test_id, score, percentage, grade, status, is_best_score, is_remedial_unlocked, is_remedial, total_questions')
+  const { data: attempts, error: attErr } = await sb.from('attempts')
+    .select('id, student_id, test_id, score, percentage, grade, status, is_best_score, is_remedial_unlocked, effective_score, total_questions')
     .in('student_id', studentIds)
     .eq('is_best_score', true);
 
-  console.log(`Found ${attempts.length} best attempts for Batch 133.`);
+  if (attErr) {
+    console.error('Error fetching attempts:', attErr);
+    return;
+  }
+  const safeAttempts = attempts || [];
+  console.log(`Found ${safeAttempts.length} best attempts for Batch 133.`);
 
   // Group exams by Theme:
   // Theme A: Ord 7 (Words 120), Ord 8 (Phrases 30) -> Total 150
@@ -51,7 +56,7 @@ async function analyze() {
   const analysisRows = [];
 
   students.forEach(st => {
-    const stAttempts = attempts.filter(a => a.student_id === st.id);
+    const stAttempts = safeAttempts.filter(a => a.student_id === st.id);
     const attMap = {};
     stAttempts.forEach(a => { attMap[a.test_id] = a; });
 
@@ -65,7 +70,7 @@ async function analyze() {
       if (!att) return;
       const ord = ex.display_order;
       const score = Number(att.score || 0);
-      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+      const isRem = Boolean(att.is_remedial_unlocked);
       const eff = isRem ? Math.min(score, (att.total_questions || 100) * 0.6) : score;
 
       if (ord === 7 || ord === 8) { themeAPts += eff; themeAAttempted = true; }
