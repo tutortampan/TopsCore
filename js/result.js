@@ -344,7 +344,7 @@ if (!session) {
 
       try {
         const supabase = await getSupabase();
-        const { data: st } = await supabase.from('students').select('id, batch_id, level_id, program_id, institution_id').eq('id', targetStudentId).single();
+        const { data: st } = await supabase.from('students').select('id, batch_id, level_id, program_id, institution_id').eq('id', targetStudentId).maybeSingle();
         if (!st) return;
 
         const programId = st.program_id || session.program_id;
@@ -604,7 +604,7 @@ if (!session) {
             const { data: st } = await supabase.from('students')
               .select('id, name, photo_url, batch_id, level_id, program_id, institution_id, institutions(name), programs(name), batches(name), levels(name)')
               .eq('id', targetStudentId)
-              .single();
+              .maybeSingle();
             if (st) {
               studentFullName = st.name || studentFullName;
 
@@ -947,7 +947,7 @@ if (!session) {
           const targetStudentId = attempt.student_id || session.student_id;
           if (targetStudentId) {
             const supabase = await getSupabase();
-            const { data: stData } = await supabase.from('students').select('batch_id').eq('id', targetStudentId).single();
+            const { data: stData } = await supabase.from('students').select('batch_id').eq('id', targetStudentId).maybeSingle();
             if (stData?.batch_id) {
               const { data: bAtts } = await supabase
                 .from('attempts')

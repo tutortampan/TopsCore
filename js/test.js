@@ -1174,7 +1174,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           const { data: att } = await sb.from('attempts')
             .select('status, expires_at')
             .eq('id', attemptData.id)
-            .single();
+            .maybeSingle();
 
           if (att) {
             const st = String(att.status || '').toLowerCase();
@@ -1212,7 +1212,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             const { data: asm } = await sb.from('tests')
               .select('payload')
               .eq('id', testId)
-              .single();
+              .maybeSingle();
             const sess = asm?.payload?.test_session;
             if (sess && sess.status === 'UNLOCKED') {
               const allowed = sess.allowed_student_ids || [];
