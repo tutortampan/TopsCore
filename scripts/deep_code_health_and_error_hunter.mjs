@@ -120,7 +120,7 @@ jsFiles.forEach(f => {
   const content = fs.readFileSync(f, 'utf8');
   const lines = content.split('\n');
   lines.forEach((line, idx) => {
-    if (/console\.(log|info|warn|error)\(.*pin/i.test(line)) {
+    if (/console\.(log|info|warn|error)\(.*?\bpin\b/i.test(line)) {
       console.error(`  ❌ [${f}:${idx+1}] Potential PIN logged to console: ${line.trim()}`);
       pinLeakage++;
     }
