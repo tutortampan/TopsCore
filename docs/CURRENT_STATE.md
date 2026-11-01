@@ -29,8 +29,7 @@ Status: COMPLETE (All Test Suites PASS 100%, 0 Dead Space, Cumulative Grading Ac
 - `docs/CURRENT_STATE.md` — Updated phase status and next exact actions.
 - `docs/CHANGELOG.md` — Recorded Phase 269 changes.
 - `docs/SESSION_LOG.md` — Logged verification session details.
-- `admin.html`, `dashboard.html`, `result.html`, `test.html`, `index.html`, `offline.html`, `js/admin/*`, `js/test.js` — Bumped to `v97`.
-- `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`.
+- `docs/TODO.md` — Documented active directives.
 
 ## Completed
 
