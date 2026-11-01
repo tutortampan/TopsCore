@@ -31,11 +31,11 @@ import {
   addAdditionalMember,
   toLevelLetter,
   labelAttemptRemedial
-} from '../api.js?v=20261101_v99';
-import { showToast, showLoading, hideLoading, getGrade, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS } from '../app.js?v=20261101_v99';
-import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=20261101_v99';
-import { openStudentProfile } from './student-management.js?v=20261101_v99';
-import { generateAvatarDataUri } from '../utils/avatar-engine.js?v=20261101_v99';
+} from '../api.js?v=20261102_v103';
+import { showToast, showLoading, hideLoading, getGrade, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS } from '../app.js?v=20261102_v103';
+import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=20261102_v103';
+import { openStudentProfile } from './student-management.js?v=20261102_v103';
+import { generateAvatarDataUri } from '../utils/avatar-engine.js?v=20261102_v103';
 
 // escapeHtml / escHtml imported canonically
 

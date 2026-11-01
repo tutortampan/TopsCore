@@ -1,6 +1,6 @@
 // TOPSCORE LMS — Admin Initialization & Fast-Boot Controller
 // Centralizes sidebar hydration, record drawer controls, auth gate, and service worker registration
-import { DataGrid } from './datagrid.js?v=20261101_v97';
+import { DataGrid } from './datagrid.js?v=20261102_v103';
 if (typeof window !== 'undefined') {
   window.DataGrid = DataGrid;
 }
@@ -107,7 +107,7 @@ export function initRecordDrawer() {
   };
 }
 
-export function registerServiceWorker(swPath = 'sw.js?v=20261101_v97') {
+export function registerServiceWorker(swPath = 'sw.js?v=20261102_v103') {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register(swPath)

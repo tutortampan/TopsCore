@@ -32,9 +32,9 @@ import {
   renameVaultTopic,
   exportVaultWords,
   updateTestDefinition
-} from '../api.js?v=20261101_v99';
-import { showToast, showLoading, hideLoading } from '../app.js?v=20261101_v99';
-import { getSupabase } from '../supabase.js?v=20261101_v99';
+} from '../api.js?v=20261102_v103';
+import { showToast, showLoading, hideLoading } from '../app.js?v=20261102_v103';
+import { getSupabase } from '../supabase.js?v=20261102_v103';
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -217,7 +217,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     const importedLevels = Array.from(new Set(words.map(w => w.target_level || 1))).sort((a, b) => a - b);
     if (importedLevels.length === 0) importedLevels.push(1);
     try {
-      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v99');
+      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261102_v103');
       await openAutoGenerateModal({
         availableLevels: importedLevels,
         preSelectedLevels: importedLevels,
@@ -1637,7 +1637,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
     const importedLevels = Array.from(levelsSet).sort((a, b) => a - b);
     if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
     try {
-      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v99');
+      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261102_v103');
       await openAutoGenerateModal({
         availableLevels: importedLevels,
         preSelectedLevels: importedLevels,

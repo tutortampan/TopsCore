@@ -1,8 +1,8 @@
-import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsTests, autoGeneratePhrasesTests } from '../api.js?v=20261101_v99';
-import { showToast, escapeHtml, escHtml } from '../app.js?v=20261101_v99';
-import { openTestBuilder } from './test-builder.js?v=20261101_v99';
-import { DataGrid } from './datagrid.js?v=20261101_v99';
-import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261101_v99';
+import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsTests, autoGeneratePhrasesTests } from '../api.js?v=20261102_v103';
+import { showToast, escapeHtml, escHtml } from '../app.js?v=20261102_v103';
+import { openTestBuilder } from './test-builder.js?v=20261102_v103';
+import { DataGrid } from './datagrid.js?v=20261102_v103';
+import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261102_v103';
 
 // ─────────────────────────────────────────────────────────────
 // SMART CLASS-AWARE QUIZ / EXAM ROUTERS

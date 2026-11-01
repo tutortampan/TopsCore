@@ -5,7 +5,7 @@
  * Complies with TopsCore ABCD Architecture [Panel A].
  */
 
-import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=20261101_v99';
+import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=20261102_v103';
 
 export function triggerCVExport(student) {
   let container = document.getElementById("cv-print-container");

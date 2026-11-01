@@ -1,6 +1,6 @@
 import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, clearAdminCache } from '../api.js?v=5.3.2';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=5.3.2';
-import { DataGrid } from './datagrid.js?v=20261101_v97';
+import { DataGrid } from './datagrid.js?v=20261102_v103';
 
 window.makeTableResizable = function(table, storageKey) {
   const cols = table.querySelectorAll('th');
