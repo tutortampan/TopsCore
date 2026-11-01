@@ -1,3 +1,30 @@
+# ACTIVE DIRECTIVE: PHASE 269 — FULL-HEIGHT WORKSPACE, CUMULATIVE CURRICULUM GRADING & GREEN TEST BASELINE [COMPLETE]
+
+- [x] Task 1: Verified `#student-grid-container` and its parent `.admin-content:has(#student-grid-container)` flex layout fills 100% of workspace height (`calc(100vh - 50px - 50px)`), eliminating empty black space above `#bottom-ad-banner`.
+- [x] Task 2: Updated `scripts/test_student_dashboard_exam_parity.mjs` assertions to reflect authoritative cumulative curriculum mastery (Pasya 90/1900 pts = 5% Grade E).
+- [x] Task 3: Verified all automated test suites pass 100% (`npm.cmd test`, `test:grading`, `test:prereq`, `test:duration`).
+- [x] Task 4: Committed and pushed changes to `origin main` (commit `5073ef8`).
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 268 — REDUNDANT TOOLBAR ELIMINATION & STRICT 10PX PANEL SPACING [COMPLETE]
+
+- [x] Task 1: Completely removed redundant `Search... (Ctrl+K)` and `[Columns]` toolbar above the Class Hub attendance matrix using `hideToolbar: true` in `DataGrid` constructor and CSS display none rules.
+- [x] Task 2: Standardized all panel gaps, card distances, and layout margins to strictly **10px** across `css/admin.css` and `css/dashboard.css`.
+- [x] Task 3: Maximized workspace height and width with 0 wasted empty areas down to the footer infobar.
+- [x] Task 4: Bumped cache busters to `?v=20261101_v97` and service worker cache to `topscore-cache-option-a-v45`.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 267 — ARI & AUNUL SCORE AUDIT & STRICT INTER-THEME GATING [COMPLETE]
+
+- [x] Task 1: Audited all attempts across Supabase database for Aunul Fikri Yasir and Ari Wahyu Darma, confirming high quiz scores (87.5% - 100%) and clarifying the `ALL (EXAMS ONLY)` vs `THEME A (8)` matrix view filtering.
+- [x] Task 2: Eliminated unshielded `isSessLive` prerequisite override in `js/dashboard.js`, ensuring live tutor sessions still enforce strict prior-theme academic passing criteria.
+- [x] Task 3: Enforced universal Inter-Theme prerequisite gating across `js/dashboard.js`, `js/api.js`, `supabase/functions/start-test/index.ts`, and `js/admin/tests-access.js`.
+- [x] Task 4: Synchronized cache busters to `?v=20261101_v95` and service worker to `topscore-cache-option-a-v43`.
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 266 — PROGRESS-FIRST RANKING, CUMULATIVE CURRICULUM GRADING & CROSS-THEME PREREQUISITE GATING [COMPLETE]
 
 - [x] Task 1: Re-ordered leaderboard comparator in `js/admin/app.js`: `PROG %` DESC (Progress First) -> `PTS` DESC (Total Exam Points) -> `SCORE %` DESC -> `lastSubmittedAt` ASC.
