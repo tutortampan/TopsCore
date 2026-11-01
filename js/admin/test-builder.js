@@ -18,8 +18,8 @@ import {
   adminFetchAll,
   clearAdminCache,
   reorderTest
-} from '../api.js?v=5.3.2';
-import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=5.3.2';
+} from '../api.js?v=20261101_v99';
+import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261101_v99';
 
 export async function openTestBuilder(testId = null, initialClassId = null) {
   const isEdit = !!testId;

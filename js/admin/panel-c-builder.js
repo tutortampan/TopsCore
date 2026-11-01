@@ -3,9 +3,9 @@
  * Panel C (Class & Test Management) Dashboard
  * Handles Smart Auto-Naming, Test Duplication, Prerequisite Engine, and AI Module Templates
  */
-import { adminFetchAll, adminSoftDelete } from "../api.js?v=5.3.2";
-import { getSupabase } from "../supabase.js?v=5.3.2";
-import { showToast } from "../app.js?v=5.3.2";
+import { adminFetchAll, adminSoftDelete } from "../api.js?v=20261101_v99";
+import { getSupabase } from "../supabase.js?v=20261101_v99";
+import { showToast } from "../app.js?v=20261101_v99";
 
 // AI Module Definitions
 export const AI_MODULES = {

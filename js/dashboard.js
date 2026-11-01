@@ -3,12 +3,12 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=5.6.8';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261101_v97';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261101_v97';
-    import { testMicrophoneCapability } from './speech.js?v=20261101_v97';
-    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261101_v97';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=20261101_v97';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=20261101_v99';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261101_v99';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261101_v99';
+    import { testMicrophoneCapability } from './speech.js?v=20261101_v99';
+    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261101_v99';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=20261101_v99';
 
     window._isBatchChampion = false;
 
@@ -174,7 +174,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./supabase.js?v=20261101_v97')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).single();
           if (st?.gender) {
             currentGender = st.gender;
@@ -540,7 +540,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
         try {
-          const sb = await (await import('./supabase.js?v=20261101_v97')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).single();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
@@ -559,7 +559,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Background sync: memastikan localStorage selalu sinkron dengan database terbaru
         (async () => {
           try {
-            const sb = await (await import('./supabase.js?v=20261101_v97')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
             const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).single();
             if (st && st.photo_url !== photoUrl) {
               if (st.photo_url) {
@@ -613,7 +613,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
       if (!hasBirthday) {
         try {
-          const sb = await (await import('./supabase.js?v=20261101_v97')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
           const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).single();
           if (st && st.birth_date) {
             hasBirthday = true;
@@ -679,7 +679,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./supabase.js?v=20261101_v97')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).single();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -689,7 +689,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./session.js?v=20261101_v97');
+             const { setStudentSession } = await import('./session.js?v=20261101_v99');
              setStudentSession(session);
           }
         }
@@ -739,7 +739,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./session.js?v=20261101_v97');
+            const { setStudentSession } = await import('./session.js?v=20261101_v99');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -2451,7 +2451,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       try {
-        const sb = await (await import('./supabase.js?v=20261101_v97')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
         
         // 1. Fetch active students in the same batch
         const { data: students, error: stuErr } = await sb
@@ -2848,7 +2848,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./supabase.js?v=20261101_v97')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).single();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
@@ -2903,7 +2903,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./supabase.js?v=20261101_v97')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
             

@@ -3,10 +3,10 @@ import {
   mergeDuplicateStudents, detectDuplicateStudents, mergeStudentPair,
   detectDuplicateQuestions, resequenceTestQuestions, resolveDuplicateQuestionGroup, batchResolveTestDuplicateQuestions,
   toLevelLetter
-} from '../api.js?v=20261027b';
-import { cleanStudentName } from '../api.js?v=20261027b';
-import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261027b';
-import { getSupabase } from '../supabase.js?v=20261027b';
+} from '../api.js?v=20261101_v99';
+import { cleanStudentName } from '../api.js?v=20261101_v99';
+import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261101_v99';
+import { getSupabase } from '../supabase.js?v=20261101_v99';
 
 function formatLevelOption(l) {
   if (l && l.name) return l.name;

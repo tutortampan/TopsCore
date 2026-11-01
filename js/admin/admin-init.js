@@ -39,8 +39,8 @@ export function initSidebarCache() {
           const isProgActive = curHash === 'students';
           let h = '<div class="sidebar-program-group" style="display:flex; flex-direction:column; gap:2px;">';
           activeList.forEach(item => {
-            const isMatch = selBatchId 
-              ? (item.batch_id === selBatchId) 
+            const isMatch = selBatchId
+              ? (item.batch_id === selBatchId)
               : ((item.program_id && item.program_id === selProgId) || (item.id && item.id === selProgId));
             const isActive = (isMatch && isProgActive) ? 'active' : '';
             const label = item.label || item.name || '';
@@ -90,7 +90,7 @@ export function initRecordDrawer() {
     if (titleEl) titleEl.textContent = title || 'Details';
     if (bodyEl) bodyEl.innerHTML = bodyHTML || '';
     if (footerEl) footerEl.innerHTML = footerHTML || '<button class="btn btn-secondary" onclick="closeRecordDrawer()">Close</button>';
-    
+
     overlay?.classList.remove('hidden');
     setTimeout(() => {
       drawer?.classList.add('open');

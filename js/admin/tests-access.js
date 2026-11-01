@@ -23,9 +23,9 @@ import {
   fetchLiveTestSessionData,
   closeTestSession,
   getGrade
-} from '../api.js?v=20261101_v97';
-import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261101_v97';
-import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261101_v97';
+} from '../api.js?v=20261101_v99';
+import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261101_v99';
+import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261101_v99';
 
 const THEME_DEFINITIONS = [
   { code: 'A', name: 'Workplace', color: '#3b82f6', bgRgba: 'rgba(59, 130, 246, 0.08)', borderRgba: 'rgba(59, 130, 246, 0.25)' },

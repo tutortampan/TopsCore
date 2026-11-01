@@ -4,9 +4,9 @@
 import {
   adminFetchAll, adminInsert, adminUpdate, formatStudentName, cleanStudentName,
   normalizeStudentNameForMatch, clearAdminCache, sha256
-} from '../api.js?v=20261101_v97';
-import { showToast, showLoading, hideLoading, updateLoadingProgress, escapeHtml, escHtml } from '../app.js?v=20261101_v97';
-import { getSupabase } from '../supabase.js?v=20261101_v97';
+} from '../api.js?v=20261101_v99';
+import { showToast, showLoading, hideLoading, updateLoadingProgress, escapeHtml, escHtml } from '../app.js?v=20261101_v99';
+import { getSupabase } from '../supabase.js?v=20261101_v99';
 
 export async function renderStudentsRegistration(area) {
   let activeTab = window._activeStudentRegTab || localStorage.getItem('topscore_admin_student_reg_tab') || 'bulk';

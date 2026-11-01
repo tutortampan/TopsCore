@@ -3,9 +3,9 @@
  * Extracted from index.html
  */
 
-import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram, verifyStudentLogin, formatStudentName } from './api.js?v=5.3.2';
-    import { setStudentSession, getStudentSession } from './session.js?v=5.3.2';
-    import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=5.3.2';
+import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram, verifyStudentLogin, formatStudentName } from './api.js?v=20261101_v99';
+    import { setStudentSession, getStudentSession } from './session.js?v=20261101_v99';
+    import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261101_v99';
 
     // ── Redirect if already logged in ──
     if (getStudentSession()) {

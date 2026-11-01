@@ -10,12 +10,12 @@ window.makeTableResizable = function(table, storageKey) {
   } catch (_) {
     savedWidths = {};
   }
-  
+
   [].forEach.call(cols, function (col, idx) {
     if (savedWidths[idx]) {
       col.style.width = savedWidths[idx];
     }
-    
+
     const resizer = document.createElement('div');
     resizer.classList.add('col-resizer');
     col.appendChild(resizer);
@@ -42,7 +42,7 @@ window.makeTableResizable = function(table, storageKey) {
       resizer.classList.remove('active');
       document.removeEventListener('mousemove', mouseMoveHandler);
       document.removeEventListener('mouseup', mouseUpHandler);
-      
+
       // Save widths
       const currentWidths = {};
       [].forEach.call(cols, function (c, i) {
@@ -75,7 +75,7 @@ export async function renderClasses(area) {
     ...p,
     institutions: p.institutions || { name: instMap.get(p.institution_id) || '' }
   }));
-  
+
   // Sort by Institution Name (A-Z), then Program Name (A-Z)
   const data = [...rawData].sort((a, b) => {
     const pA = a.institutions?.name || '';
@@ -97,7 +97,7 @@ export async function renderClasses(area) {
         <button class="btn btn-primary btn-sm" id="programs-add-shortcut">+ Add Program</button>
       </div>
     </div>
-    
+
     ${window._filterInstitutionId ? `
       <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size:0.85rem;">
         <span>🏛️ Filtered by Institution: <strong>${escapeHtml(window._filterInstitutionName || 'Selected Institution')}</strong> (${filteredData.length} programs)</span>
@@ -152,28 +152,28 @@ export async function renderClasses(area) {
       if (window.openRecordDrawer) window.openRecordDrawer('Program Details', body, footer);
     },
     columns: [
-      { 
-        key: 'institutionName', 
-        label: 'Institution', 
-        sortable: true, 
-        render: (val, row) => { 
+      {
+        key: 'institutionName',
+        label: 'Institution',
+        sortable: true,
+        render: (val, row) => {
           const nameStr = row?._raw?.institutions?.name || row?._raw?.institution_name || 'N/A';
-          return escapeHtml(String(nameStr)); 
-        } 
+          return escapeHtml(String(nameStr));
+        }
       },
-      { 
-        key: 'name', 
-        label: 'Program Name', 
-        sortable: true, 
-        render: (val, row) => { 
+      {
+        key: 'name',
+        label: 'Program Name',
+        sortable: true,
+        render: (val, row) => {
           const nameStr = row?._raw?.name || row?._raw?.program_name || 'N/A';
-          return `<span class="fw-600">${escapeHtml(String(nameStr))}</span>`; 
-        } 
+          return `<span class="fw-600">${escapeHtml(String(nameStr))}</span>`;
+        }
       },
       { key: 'status', label: 'Status', sortable: true, render: (val, row) => `<span class="badge ${row?._raw?.is_active ? 'badge-success' : 'badge-neutral'}">${val}</span>` },
-      { 
-        key: 'actions', 
-        label: 'Actions', 
+      {
+        key: 'actions',
+        label: 'Actions',
         sortable: false,
         render: (val, row) => {
           if (!row) return '';
@@ -224,7 +224,7 @@ export async function renderBatches(area) {
         <button class="btn btn-primary btn-sm" id="batches-add-shortcut">+ Add Batch</button>
       </div>
     </div>
-    
+
     ${window._filterProgramId ? `
       <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size:0.85rem;">
         <span>🏛️ Filtered by Program: <strong>${escapeHtml(window._filterProgramName || 'Selected Program')}</strong> (${filteredData.length} batches)</span>
@@ -241,7 +241,7 @@ export async function renderBatches(area) {
   const gridData = filteredData.map(r => {
     const pName = r.programs?.institutions?.name || '-';
     const studentCount = allStudents.filter(s => s.batch_id === r.id && s.is_active).length;
-    
+
     return {
       id: r.id,
       program: pName,
@@ -284,27 +284,27 @@ export async function renderBatches(area) {
       if (window.openRecordDrawer) window.openRecordDrawer('Batch Details', body, footer);
     },
     columns: [
-      { 
-        key: 'program', 
-        label: 'Program', 
-        sortable: true, 
-        render: (val, row) => { 
+      {
+        key: 'program',
+        label: 'Program',
+        sortable: true,
+        render: (val, row) => {
           const nameStr = row?._raw?.programs?.name || row?._raw?.program_name || val;
-          return escapeHtml(String(nameStr || 'N/A')); 
-        } 
+          return escapeHtml(String(nameStr || 'N/A'));
+        }
       },
-      { 
-        key: 'name', 
-        label: 'Batch Name', 
-        sortable: true, 
-        render: (val, row) => { 
+      {
+        key: 'name',
+        label: 'Batch Name',
+        sortable: true,
+        render: (val, row) => {
           const nameStr = row?._raw?.name || val;
-          return `<span class="fw-600">${escapeHtml(String(nameStr || 'N/A'))}</span>`; 
-        } 
+          return `<span class="fw-600">${escapeHtml(String(nameStr || 'N/A'))}</span>`;
+        }
       },
-      { 
-        key: 'studentCount', 
-        label: 'Active Students', 
+      {
+        key: 'studentCount',
+        label: 'Active Students',
         sortable: true,
         render: (val, row) => {
           if (!row) return '';
@@ -315,9 +315,9 @@ export async function renderBatches(area) {
         `}
       },
       { key: 'status', label: 'Status', sortable: true, render: (val, row) => `<span class="badge ${row?._raw?.is_active ? 'badge-success' : 'badge-neutral'}">${val}</span>` },
-      { 
-        key: 'actions', 
-        label: 'Actions', 
+      {
+        key: 'actions',
+        label: 'Actions',
         sortable: false,
         render: (val, row) => {
           if (!row) return '';
@@ -369,14 +369,14 @@ export async function renderUnifiedInstitutions(area) {
   allOrderedInsts.forEach(inst => {
     let instNode = { id: inst.id, name: inst.name || 'Unknown', is_active: inst.is_active, raw: inst, rowspan: 0, programs: [] };
     const progs = Object.values(inst.programs).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    
+
     if (progs.length === 0) {
       instNode.rowspan = 2;
     } else {
       progs.forEach(prog => {
         let progNode = { id: prog.id, name: prog.name || 'Unknown', is_active: prog.is_active, raw: prog, rowspan: 0, batches: [] };
         const progBatches = [...prog.batches].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        
+
         if (progBatches.length === 0) {
           progNode.rowspan = 2;
         } else {
@@ -399,7 +399,7 @@ export async function renderUnifiedInstitutions(area) {
         <p class="section-subtitle">Central hub for structural entity generation and assignment</p>
       </div>
     </div>
-    
+
   `;
   hierarchy.forEach((inst, instIdx) => {
     html += `
@@ -423,7 +423,7 @@ export async function renderUnifiedInstitutions(area) {
     `;
 
     let isFirstInstRow = true;
-    
+
     if (inst.programs.length === 0) {
       html += `
         <tr class="level-row">
@@ -447,7 +447,7 @@ export async function renderUnifiedInstitutions(area) {
     } else {
       inst.programs.forEach(prog => {
         let isFirstProgRow = true;
-        
+
         if (prog.batches.length === 0) {
           html += `
             <tr class="level-row">
@@ -518,7 +518,7 @@ export async function renderUnifiedInstitutions(area) {
               <td style="padding-top: 0.25rem;">
                 <div class="matrix-actions-row" style="justify-content: space-between; width: 100%;">
                   <div class="matrix-actions-row">
-                    STUDENTS: ${batch.students} Enrolled &nbsp;&nbsp; 
+                    STUDENTS: ${batch.students} Enrolled &nbsp;&nbsp;
                     <a href="#" class="text-primary fw-600" style="text-decoration: underline; font-size: 0.85rem;" onclick='event.preventDefault(); window._filterBatchId="${batch.id}"; window._filterBatchName="${escapeHtml(batch.name)}"; window.loadSection("students");'>[ Manage Roster ↗ ]</a>
                   </div>
                   <div class="matrix-actions-row">
@@ -545,7 +545,7 @@ export async function renderUnifiedInstitutions(area) {
   });
 
   area.innerHTML = html;
-  
+
   if (window.makeTableResizable) {
     area.querySelectorAll('.matrix-table').forEach((table, idx) => {
       window.makeTableResizable(table, 'batches-matrix-widths-' + idx);
@@ -559,9 +559,9 @@ window.openChangeLevelModal = async function(batchId, currentLevelId) {
     if (window.showToast) window.showToast('No levels defined in the system. Create them first.', 'error');
     return;
   }
-  
+
   levels.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
-  
+
   let selectHtml = '<select id="level-select" class="form-control mb-4" style="width:100%; padding: 8px;">';
   selectHtml += '<option value="">-- No Level --</option>';
   levels.forEach(l => {
@@ -607,13 +607,13 @@ window.openChangeLevelModal = async function(batchId, currentLevelId) {
       </div>
     </div>
   `;
-  
+
   document.body.appendChild(overlay);
-  
+
   const closeOverlay = () => overlay.remove();
   document.getElementById('cancel-level-btn').onclick = closeOverlay;
   document.getElementById('cancel-level-btn-x').onclick = closeOverlay;
-  
+
   document.getElementById('save-level-btn').onclick = async () => {
     const newLevelId = document.getElementById('level-select').value;
     const btn = document.getElementById('save-level-btn');
@@ -623,16 +623,16 @@ window.openChangeLevelModal = async function(batchId, currentLevelId) {
       if (newLevelId !== currentLevelId) {
         const { getSupabase } = await import('../supabase.js?v=5.3.2');
         const sb = await getSupabase();
-        
+
         // Update batch
         const { error: batchErr } = await sb.from('batches').update({ current_level_id: newLevelId || null }).eq('id', batchId);
         if (batchErr) throw batchErr;
-        
-        
+
+
 
         clearAdminCache('batches');
         clearAdminCache('students');
-        
+
         if (window.showToast) window.showToast('Batch and student levels updated successfully.', 'success');
         if (window.loadSection) window.loadSection('institutions');
       }

@@ -712,7 +712,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px var(--space-4) env(safe-area-inset-bottom);
-  margin-bottom: 24px;
+  margin-bottom: 10px;
   z-index: var(--z-nav);
 }
 
@@ -1131,13 +1131,13 @@
 .completed-summary-bar {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: 10px;
   margin-top: var(--space-4);
 }
 .completed-summary-card {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   padding: 18px 20px;
   border-radius: var(--radius-xl);
   border: 1px solid var(--clr-border);
@@ -1225,7 +1225,7 @@
 @media (max-width: 768px) {
   .completed-summary-bar {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
   }
   .completed-summary-card {
     padding: 14px 16px;
@@ -1285,7 +1285,7 @@
 }
 .completed-summary-card {
   padding: 14px 16px;
-  gap: 12px;
+  gap: 10px;
 }
 
 /* Test table — compact rows */
@@ -1427,7 +1427,7 @@
 .profile-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .profile-modal-header h3 {
@@ -1493,14 +1493,14 @@
   padding: 14px 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 /* Student Identity Card */
 .profile-id-card {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 10px 14px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.03);
@@ -1807,7 +1807,7 @@
     .hero-compact-wrap {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 10px;
       width: 100%;
     }
     .banner-avatar-box {
@@ -2430,7 +2430,7 @@ body.dashboard-page .hero-metrics-row {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 12px !important;
+  gap: 10px !important;
   margin: 2px 0 !important;
 }
 
@@ -3512,7 +3512,7 @@ body.dashboard-page .completed-summary-val {
 
 .personal-data-card {
   margin-top: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .profile-pin-inputs-compact {

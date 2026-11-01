@@ -1,5 +1,5 @@
-import { DataGrid } from './datagrid.js?v=20261101_v97';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261101_v97';
+import { DataGrid } from './datagrid.js?v=20261101_v99';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261101_v99';
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
@@ -373,26 +373,26 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter,
   adminOverridePrerequisitesWithRemedial
-} from '../api.js?v=20261101_v97';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.4.7';
-import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.4.7';
-import { getSupabase } from '../supabase.js?v=5.4.7';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261101_v97';
-import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.4.7';
-import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.4.7';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=20261101_v97';
-import { renderTests } from './tests-management.js?v=20261101_v97';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261101_v97';
-import { renderVocabularyVault } from './vocab-vault.js?v=20261101_v97';
-import { renderModules } from './modules.js?v=5.4.7';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.4.8';
-import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.4.7';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=5.4.9';
-import { renderCurriculum } from './curriculum-management.js?v=5.4.8';
-import { renderClassesHub } from './classes-hub.js?v=20261101_v97';
-import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.4.7';
-import { openStudentFullEdit } from './student-management.js?v=20261101_v97';
-import { renderStudentsRegistration } from './student-registration.js?v=20261101_v97';
+} from '../api.js?v=20261101_v99';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261101_v99';
+import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261101_v99';
+import { getSupabase } from '../supabase.js?v=20261101_v99';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261101_v99';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261101_v99';
+import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261101_v99';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=20261101_v99';
+import { renderTests } from './tests-management.js?v=20261101_v99';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261101_v99';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261101_v99';
+import { renderModules } from './modules.js?v=20261101_v99';
+import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261101_v99';
+import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=20261101_v99';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261101_v99';
+import { renderCurriculum } from './curriculum-management.js?v=20261101_v99';
+import { renderClassesHub } from './classes-hub.js?v=20261101_v99';
+import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261101_v99';
+import { openStudentFullEdit } from './student-management.js?v=20261101_v99';
+import { renderStudentsRegistration } from './student-registration.js?v=20261101_v99';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -1157,6 +1157,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
           return false;
         };
         const isExam = isWeeklyExam;
+        const allClassExams = classTests.filter(isWeeklyExam);
+        const totalClassExams = allClassExams.length || 8;
         // Find students that have access to this class's program
         const classProgramId = currentClass?.program_id;
         const programBatches = (allBatches || []).filter(b => b.program_id === classProgramId);
@@ -1436,14 +1438,16 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
           });
 
           const totalClassTests = classTests.length || 40;
+
           // 1. PROG % (Completion Rate): Maintain calculation across ALL activities (quizzes + exams)
-          const progressPct = totalClassTests > 0 ? Math.round((completedCount / totalClassTests) * 100) : 0;
+          const allActProgressPct = totalClassTests > 0 ? Math.round((completedCount / totalClassTests) * 100) : 0;
+          const examProgressPct = totalClassExams > 0 ? Math.round((studentExamEntries.length / totalClassExams) * 100) : 0;
+          const progressPct = allActProgressPct;
           const progressStr = `${progressPct}%`;
 
           // 2. Milestone Progression Engine (Next Exam 0% Penalty):
           // Evaluates EXCLUSIVELY from Exams via authoritative computeMilestoneExamMastery.
           // When a student passes Theme N (>= 60%), Theme N+1 is queued into the denominator with 0% score.
-          const allClassExams = classTests.filter(isExam);
           const mastery = (typeof computeMilestoneExamMastery === 'function')
             ? computeMilestoneExamMastery(studentExamEntries, allClassExams)
             : {
@@ -1457,6 +1461,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
 
           const completedExamCount = mastery.completedExamCount ?? mastery.completedWeeklyCount ?? studentExamEntries.length;
           const completedWeeklyCount = completedExamCount;
+          const calibratedExamProgPct = totalClassExams > 0 ? Math.round((completedExamCount / totalClassExams) * 100) : 0;
           const averageScorePct = mastery.overallScore;
           const overallPct = averageScorePct;
           const curriculumGradePct = averageScorePct;
@@ -1532,6 +1537,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
             completedExamCount,
             completedWeeklyCount,
             totalClassTests,
+            totalClassExams,
+            allActProgressPct,
+            examProgressPct: calibratedExamProgPct,
             progressPct,
             progressStr,
             averageScorePct,
@@ -1557,8 +1565,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
           };
         });
 
-        // Leaderboard Sort Order (Progress-First Primary, Total Points Secondary per User Specification):
-        // 1. Primary: PROG % DESC (Completion rate of all curriculum tests)
+        // Leaderboard Sort Order (Milestone Exam Progress-First Primary, Total Points Secondary per User Specification):
+        // 1. Primary: Exam Milestone Progress DESC (Progression through Milestone Exams)
         // 2. Secondary: Global PTS DESC (Total points from ALL completed exams)
         // 3. Tertiary: Global SCORE % DESC (Curriculum accuracy percentage)
         // 4. Quaternary: Earliest lastSubmittedAt ASC
@@ -1568,9 +1576,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
           const bActive = b.isActive ? 1 : 0;
           if (aActive !== bActive) return bActive - aActive;
 
-          // 1. Primary: PROG % DESC (Progress first)
-          const progA = Number(a.progressPct ?? 0);
-          const progB = Number(b.progressPct ?? 0);
+          // 1. Primary: Exam Milestone Progress DESC (Progress first)
+          const progA = Number(a.examProgressPct ?? a.progressPct ?? 0);
+          const progB = Number(b.examProgressPct ?? b.progressPct ?? 0);
           if (progA !== progB) return progB - progA;
 
           // 2. Secondary: Global PTS DESC (Total points from ALL completed exams)
@@ -1883,7 +1891,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
           // Open Test Generator & Settings Wizard
           document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
             try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v97');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v99');
               await openAutoGenerateModal({
                 explicitClassId: classId,
                 onComplete: () => {
@@ -2017,6 +2025,27 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
                 row[`theme_${tc}_score`] = hasAtt ? themePct : -1;
                 row[`theme_${tc}_max_q`] = studentThemeMaxQ;
               });
+            });
+
+            // Calibrate contextual progressPct and tooltip per view mode:
+            // In 'ALL' (EXAMS ONLY) view: progress strictly represents Milestone Exam Progression (N / totalClassExams)
+            // In Theme views (A, B, C, D): progress represents Theme Completion (N / asmsInTheme.length)
+            studentsGridData.forEach(row => {
+              if (selectedTheme === 'ALL') {
+                const totalExams = allClassExams.length || 8;
+                row.progressPct = totalExams > 0 ? Math.round(((row.completedExamCount || 0) / totalExams) * 100) : 0;
+                row.progressStr = `${row.progressPct}%`;
+                row.progressTooltip = `${row.completedExamCount || 0}/${totalExams} Milestone Exams Done (${row.progressPct}%)`;
+              } else {
+                const asmsInTheme = themeGroups[selectedTheme] || [];
+                const completedInTheme = asmsInTheme.filter(asm => {
+                  const att = row.asmScores?.[asm.id];
+                  return att && ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(att.status || '').toLowerCase());
+                }).length;
+                row.progressPct = asmsInTheme.length > 0 ? Math.round((completedInTheme / asmsInTheme.length) * 100) : 0;
+                row.progressStr = `${row.progressPct}%`;
+                row.progressTooltip = `${completedInTheme}/${asmsInTheme.length} Theme ${selectedTheme} Activities Done (${row.progressPct}%)`;
+              }
             });
 
             // Dynamic super-headers (7 columns: INST, PROGRAM, BATCH, STUDENT NAME, PROG, GRD, PTS)
@@ -2748,11 +2777,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
                   width: '46px',
                   render: (val, row) => {
                     const progVal = Number(row.progressPct ?? 0);
-                    const progColor = (row.completedCount > 0 && typeof getGradeColorByScore === 'function')
+                    const progColor = ((row.completedExamCount > 0 || row.completedCount > 0) && typeof getGradeColorByScore === 'function')
                       ? getGradeColorByScore(progVal)
                       : 'var(--clr-text-3)';
+                    const tip = row.progressTooltip || `${row.completedCount}/${row.totalClassTests} Activities Done (${row.progressPct}%)`;
                     return `
-                      <div style="color:${progColor}; font-size:var(--matrix-font-size, 0.75rem); font-weight:600; font-variant-numeric:tabular-nums; line-height:1;" title="${row.completedCount}/${row.totalClassTests} Activities Done (${row.progressPct}%)">${row.progressPct}%</div>
+                      <div style="color:${progColor}; font-size:var(--matrix-font-size, 0.75rem); font-weight:600; font-variant-numeric:tabular-nums; line-height:1;" title="${escapeHtml(tip)}">${row.progressPct}%</div>
                     `;
                   }
                 },
@@ -3810,7 +3840,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v97');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v99');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -4141,7 +4171,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261101
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261101_v97');
+      const sm = await import('./student-management.js?v=20261101_v99');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }

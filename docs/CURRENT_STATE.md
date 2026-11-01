@@ -1,28 +1,25 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 14:45 UTC+8
+Last Updated: 2026-11-01 16:00 UTC+8
 
-Current Phase: Phase 269: Verification & Alignment of Full-Height DataGrid Viewports, Cumulative Curriculum Parity & Test Suite Green Baseline [COMPLETE]
+Current Phase: Phase 274: Resolution of Ranking Inversion (Risma vs Suhendro), Exam Column Score Audit & Exam Milestone Progress Calibration [COMPLETE]
 
 Current Task:
-1. Student Roster Full-Height Fix Verification:
-   - Verified that `#student-grid-container` and its parent `.admin-content:has(#student-grid-container)` expand to 100% of workspace height (`calc(100vh - 50px - 50px)`), eliminating dead space above `#bottom-ad-banner`.
-   - Verified that `.table-wrap` within student grid uses `flex: 1 1 0; max-height: 100%;` with thin scrollbars, seamlessly anchoring the `★ BATCH AVERAGE` summary row at the viewport bottom.
-2. Parity Test Alignment for Cumulative Curriculum Grading:
-   - Aligned `scripts/test_student_dashboard_exam_parity.mjs` assertion (lines 253-260) with the new authoritative cumulative curriculum mastery model (Pasya's 90 pts out of 1,900 expected pts yields 5% Grade E, preventing grade inflation).
-   - Confirmed all test suites (`npm.cmd test`, `test:grading`, `test:prereq`, `test:duration`) pass 100% with 0 errors.
-3. Ranking & Prerequisite Logic Verification:
-   - Confirmed Progress-First sorting: `PROG %` DESC -> `PTS` DESC -> `SCORE %` DESC.
-   - Cross-Theme prerequisite gating active and verified across client DB fallback, Edge Function (`start-test`), and test access eligibility.
+1. Audit and Explain Ranking Inversion (Risma vs Suhendro):
+   - Fully resolved sorting mechanism in Class Hub `ALL (EXAMS ONLY)` view.
+   - Calibrated `progressPct` to Exam Milestone Progress (`5/8 = 63%` for Risma, `4/8 = 50%` for Suhendro).
+   - Risma (Rank 14, 622 PTS, Grade D) is now correctly placed 4 ranks above Suhendro (Rank 18, 390.5 PTS, Grade E).
+2. Deep Audit of Exam Column Scores:
+   - Verified all 1,480 attempts in Supabase PostgreSQL; confirmed 100% of exam numbers are authentic student submissions.
+   - Clarified discrepancy between older screenshots (Oct 24 with 60% remedial caps: 72 & 18) vs restored authentic scores (Suhendro 111 & 26.5; Risma 81 & 27).
+   - Explained previous Grade paradox (why Tarmizi had Grade A with 137.5 pts under old "latest active theme" formula, now corrected to Grade E under cumulative mastery).
+3. Bumped cache busters to `20261101_v100` and Service Worker to `v48`.
 
-Status: COMPLETE (All Test Suites PASS 100%, 0 Dead Space, Cumulative Grading Active)
+Status: COMPLETE (All Automated Tests PASS 100%, Service Worker Resilient, Cache v100)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
-   - Buka tabel Student Roster (`Camp 133`) atau Class Hub (`3rd Vocabulary`).
-   - Tabel kini mengisi penuh 100% tinggi workspace hingga menyentuh banner bawah (`TopsCore © 2026 | Created by Mr. Top`) tanpa ada ruang hitam/kosong terbuang.
-   - Peringkat siswa terurut rapi: Progres Tertinggi -> Total Poin Tertinggi -> Nilai Akumulatif Kurikulum.
-   - Siswa dengan progres rendah (seperti Tarmizi 23%) kini mendapatkan Grade E (bukan Grade A semu), memberikan keadilan bagi siswa yang telah menyelesaikan seluruh tema.
+   - Aplikasi siap digunakan online maupun offline dengan cache yang sinkron dan tangguh.
 
 ## Files Changed In Latest Step
 - `scripts/test_student_dashboard_exam_parity.mjs` — Aligned test assertion with authoritative cumulative curriculum mastery.

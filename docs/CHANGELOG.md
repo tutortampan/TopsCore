@@ -1,4 +1,34 @@
-## [2026-11-01 14:45] — Phase 269: Verification & Alignment of Full-Height DataGrid Viewports, Cumulative Curriculum Parity & Test Suite Green Baseline
+## [2026-11-01 16:00] — Phase 274: Resolution of Ranking Inversion (Risma vs Suhendro), Exam Column Score Audit & Exam Milestone Progress Calibration
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 274  
+**Status:** PASS  
+
+### Why
+- User Inquiry:
+  1. *"kenapa posisi rangking siswa masih terlihat kurang pas misalnya rima dan suhendro"* — Ahmad Nur Suhendro (390.5 PTS, 4 exams, Theme B only, Grade E) was displayed at Rank 16 above Risma (622 PTS, 5 exams, Theme D reached, Grade D) at Rank 17.
+  2. *"dan saya merasa yakin bahwa nilai mereka dalam kolom exam masih banyak yang keliru, coba cek. pastikan benar, cari dari screenshot nilai mereka sebelumnya kalau ada /goal"*
+- Root Cause Analysis:
+  1. **Sorting Inversion Mechanism**: In `js/admin/app.js`, `progressPct` was calculated using all 40 activities (32 quizzes + 8 milestone exams). Suhendro completed 16 quizzes + 4 exams = 20 activities (50%), whereas Risma completed 14 quizzes + 5 exams = 19 activities (48%). In the `ALL (EXAMS ONLY)` view, quizzes are hidden, yet the sort comparator sorted strictly by `progressPct` first: `if (pA !== pB) return (pA - pB) * dir`. Suhendro was ranked ahead of Risma purely by 2 practice quizzes, completely hiding Risma's 622 PTS, 5 completed exams, and Grade D.
+  2. **Grade Discrepancy Perception**: In the user's prior screenshot, `GRD` was calculated using the deprecated "Latest Active Theme" model. Tarmizi stopped at Theme A (92%) $\rightarrow$ received Grade A with only 137.5 pts; Suhendro stopped at Theme B (72%) $\rightarrow$ received Grade C with 390.5 pts; while Risma attempted Theme D (37%) $\rightarrow$ was punished with Grade E despite earning 622 pts. This gave the illusion that Suhendro had a better academic grade than Risma.
+  3. **Exam Column Score Verification**: Full database audit across all 1,480 attempts in Supabase confirmed 100% authenticity. None of the numbers are corrupted or hallucinated. In earlier screenshots (Oct 24), scores were displayed with synthetic 60% remedial caps ($72^R$ and $18^R$); in Phase 235, user commanded removing all synthetic overrides, restoring the students' genuine, unaltered attempt scores (Suhendro: 111, 26.5, 188, 65; Risma: 81, 27, 211, 69, 234).
+
+### Changed
+- `js/admin/app.js`:
+  - Scoped `allClassExams` and `totalClassExams` at the root of `renderClassHub`.
+  - Added `examProgressPct` (`completedExamCount / totalClassExams * 100`) to student calculation objects.
+  - In `renderAttendanceGridMatrix`: when `selectedTheme === 'ALL'`, `row.progressPct` is dynamically calibrated to `examProgressPct` with tooltip `${row.completedExamCount}/${totalClassExams} Milestone Exams Done`.
+  - In initial sort and DataGrid `sortComparator`, primary progression sorts by Exam Milestone Progress DESC, with Total PTS (`totalEarnedScore`) as the decisive tie-breaker, followed by Curriculum Score % DESC.
+  - Result: Risma is placed at **Rank 14** (63% PROG, 622 PTS, Grade D), and Suhendro is placed at **Rank 18** (50% PROG, 390.5 PTS, Grade E).
+- Version Bump:
+  - Cache buster bumped to `20261101_v100` across `admin.html`, `dashboard.html`, `test.html`, `result.html`, `index.html`.
+  - Service Worker cache incremented to `topscore-cache-option-a-v48` in `sw.js`.
+
+### Tests
+- command: `node scratch/test_live_class_hub.mjs` -> PASS (Live headless Chromium confirmed exact student order: Risma Rank 14, Suhendro Rank 18, all 22 active students correctly ordered).
+- Screenshot: `scratch/class_hub_recalibrated_verified.png`.
+
+
 
 **Agent/Session:** Antigravity  
 **Phase:** Phase 269  
@@ -33,6 +63,127 @@
 
 ### Next Action
 - Present comprehensive summary and verification instructions to user.
+
+## [2026-11-01 15:11] — Phase 273: Service Worker Manifest & Offline Fallback Search Query Resilience
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 273  
+**Status:** PASS  
+
+### Why
+- Precaching in `sw.js` previously referenced older version tags (`?v=20261028`), and `caches.match` relied on exact URL string comparison without `{ ignoreSearch: true }`.
+- Under offline conditions, requests with updated query parameters could fail cache hits.
+
+### Changed
+- `sw.js`:
+  - Updated all precache URLs in `ASSETS_TO_CACHE` to `?v=20261101_v99`.
+  - Added `{ ignoreSearch: true }` parameter to `caches.match()` across both document fallback and static asset fallback branches.
+
+### Database
+- No schema or database changes required.
+
+### Tests
+- command: `npm.cmd test` -> PASS (All 3 stages green).
+
+### Next Action
+- Hard refresh in browser (Ctrl + F5).
+
+## [2026-11-01 15:07] — Phase 272: Complete Internal ES Module Import Tag Harmonization Across Entire Codebase
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 272  
+**Status:** PASS  
+
+### Why
+- An exhaustive audit of `js/` identified 16 secondary admin and utility modules importing dependencies with legacy semantic cache tags (e.g., `?v=5.3.2`, `?v=5.4.7`, `?v=20261027b`).
+- Stale import queries can cause browsers to serve cached JavaScript sub-modules, bypassing recent bug fixes.
+
+### Changed
+- `scripts/harmonize_all_js_import_tags.mjs`:
+  - Created automated script to scan and harmonize all internal `from '...?v=...'` module specifiers to `20261101_v99`.
+- Updated 16 files:
+  - `js/admin/admin-deck.js`
+  - `js/admin/class.js`
+  - `js/admin/classes-hub.js`
+  - `js/admin/classes-management.js`
+  - `js/admin/crud-modals.js`
+  - `js/admin/curriculum-management.js`
+  - `js/admin/cv-export.js`
+  - `js/admin/desk.js`
+  - `js/admin/imports-exports.js`
+  - `js/admin/panel-c-builder.js`
+  - `js/admin/program-management.js`
+  - `js/admin/test-builder.js`
+  - `js/admin/vocab-vault.js`
+  - `js/auth.js`
+  - `js/dashboard.js`
+  - `js/result.js`
+
+### Database
+- No schema or database changes required.
+
+### Tests
+- command: `npm.cmd test` -> PASS (Syntax checks, SW manifest, Parity test all green).
+- command: Verification of 0 remaining outdated import tags across `js/` -> PASS (0 found).
+
+### Next Action
+- Hard refresh in browser (Ctrl + F5).
+
+## [2026-11-01 14:58] — Phase 271: Global 10px Spacing Enforcement Across Student Dashboard & System Cache v99
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 271  
+**Status:** PASS  
+
+### Why
+- Completed full-scope audit of `css/dashboard.css` to bring student lobby cards, profile modals, and summary statistics to the strict 10px spacing standard established for Admin and Assessment modules.
+
+### Changed
+- `css/dashboard.css`:
+  - Harmonized `.completed-summary-bar` and `.completed-summary-card` gaps to `10px`.
+  - Harmonized `.profile-header-left`, `.profile-tab-pane`, and `.profile-id-card` gaps to `10px`.
+  - Standardized `.hero-compact-wrap`, `.hero-metrics-row`, and `.personal-data-card` to `10px`.
+- `scripts/bump_cache_busters_v99.mjs`:
+  - Bumped system-wide cache buster to `?v=20261101_v99` and service worker cache to `topscore-cache-option-a-v47`.
+
+### Database
+- No schema or database changes required.
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs` -> PASS (40/40 JS files passed node --check validation).
+- command: Verification of 0 remaining gaps > 10px across all 4 core CSS files -> PASS.
+
+### Next Action
+- Hard refresh in browser (Ctrl + F5).
+
+## [2026-11-01 14:53] — Phase 270: Universal 10px Panel Gaps Alignment Across Result & Test Modules & System Cache v98
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 270  
+**Status:** PASS  
+
+### Why
+- Thorough cross-module audit of all remaining CSS files (`css/result.css`, `css/test.css`) to enforce the strict 10px panel spacing requirement globally.
+- Aligned test runner submit modal and hero scorecard rows to ensure absolute visual consistency across all viewports.
+
+### Changed
+- `css/result.css`:
+  - Standardized `.result-hero-row` gap to `10px !important;`.
+- `css/test.css`:
+  - Standardized test question option gap to `10px;`.
+  - Harmonized `.submit-modal-icon`, `.submit-modal-title`, `.unanswered-warning-banner`, and `.submit-modal-message` to `margin-bottom: 10px;`.
+- `scripts/bump_cache_busters_v98.mjs`:
+  - Bumped system-wide cache buster to `?v=20261101_v98` and service worker cache to `topscore-cache-option-a-v46`.
+
+### Database
+- No schema or database changes required.
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs` -> PASS (40/40 JS files passed node --check validation).
+- command: `node scripts/e2e_console_health_check.mjs` -> PASS (0 console errors across all 5 pages).
+
+### Next Action
+- Hard refresh in browser (Ctrl + F5).
 
 ## [2026-11-01 14:42] — Phase 268: Elimination of Redundant Search Toolbar, Strict 10px Panel Spacing & Full Workspace Area Maximization
 

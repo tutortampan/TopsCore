@@ -1,5 +1,5 @@
-import { adminFetchAll, adminUpdate } from '../api.js?v=5.3.2';
-import { showToast, escapeHtml, escHtml } from '../app.js?v=5.3.2';
+import { adminFetchAll, adminUpdate } from '../api.js?v=20261101_v99';
+import { showToast, escapeHtml, escHtml } from '../app.js?v=20261101_v99';
 
 export async function renderClassesHub(area) {
   area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading Classes Hub...</p></div>';
