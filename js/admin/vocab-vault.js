@@ -90,10 +90,6 @@ export async function renderVocabularyVault(area) {
       if (window.setTopbarTabs) {
         window.setTopbarTabs(buildVaultTabs(activeVaultTab), activeVaultTab, 'window._switchVaultTab');
       }
-      // Reset bottom infobar if not on blueprint
-      if (activeVaultTab !== 'blueprint' && window.setBottomInfobar) {
-        window.setBottomInfobar(null, null);
-      }
       tabContent.innerHTML = '';
       if (activeVaultTab === 'blueprint' || activeVaultTab === 'topics') {
         _renderTopicBlueprintTab(tabContent, words, topics);
@@ -217,11 +213,112 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     filterAndRender();
   }, 10);
 
+  const triggerAutoGenerate = async () => {
+    const importedLevels = Array.from(new Set(words.map(w => w.target_level || 1))).sort((a, b) => a - b);
+    if (importedLevels.length === 0) importedLevels.push(1);
+    try {
+      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v99');
+      await openAutoGenerateModal({
+        availableLevels: importedLevels,
+        preSelectedLevels: importedLevels,
+        explicitClassId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
+        onComplete: () => {}
+      });
+    } catch (err) {
+      console.error(err);
+      if (window.showToast) window.showToast('Error opening generator: ' + err.message, 'error');
+    }
+  };
+
+  function _syncVaultGridBottomBar(filtered, allModeWords, currentMode) {
+    if (!window.setBottomInfobar) return;
+
+    const isWords = currentMode === 'single_words';
+    const totalCount = allModeWords.length;
+    const isFiltered = filtered.length !== totalCount;
+    const targetSet = isFiltered ? filtered : allModeWords;
+
+    let leftHtml = '';
+    if (isWords) {
+      const qCount = new Set(targetSet.map(w => (w.indonesian || '').toLowerCase().trim())).size;
+      const nouns = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'noun').length;
+      const verbs = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'verb').length;
+      const adjs = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'adjective').length;
+      const advs = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'adverb').length;
+      const themes = new Set(targetSet.map(w => w.theme || w.theme_code).filter(Boolean)).size;
+
+      if (isFiltered) {
+        leftHtml = `
+          <div class="bottom-info-chip" style="border: 1px solid rgba(56, 189, 248, 0.4);"><span class="chip-label" style="color: #38bdf8;">Showing:</span><span class="chip-val" style="color: #38bdf8;">${filtered.length} / ${totalCount}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Questions:</span><span class="chip-val">${qCount}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Nouns:</span><span class="chip-val">${nouns}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Verbs:</span><span class="chip-val">${verbs}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Adjectives:</span><span class="chip-val">${adjs}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Adverbs:</span><span class="chip-val">${advs}</span></div>
+        `;
+      } else {
+        leftHtml = `
+          <div class="bottom-info-chip"><span class="chip-label">Total Words:</span><span class="chip-val">${totalCount}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Questions:</span><span class="chip-val">${qCount}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Nouns:</span><span class="chip-val">${nouns}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Verbs:</span><span class="chip-val">${verbs}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Adjectives:</span><span class="chip-val">${adjs}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Adverbs:</span><span class="chip-val">${advs}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Themes:</span><span class="chip-val">${themes}</span></div>
+        `;
+      }
+    } else {
+      const qCount = new Set(targetSet.map(w => (w.indonesian || '').toLowerCase().trim())).size;
+      const expressions = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'expression').length;
+      const idioms = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'idiom').length;
+      const proverbs = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'proverb').length;
+      const themes = new Set(targetSet.map(w => w.theme || w.theme_code).filter(Boolean)).size;
+
+      if (isFiltered) {
+        leftHtml = `
+          <div class="bottom-info-chip" style="border: 1px solid rgba(56, 189, 248, 0.4);"><span class="chip-label" style="color: #38bdf8;">Showing:</span><span class="chip-val" style="color: #38bdf8;">${filtered.length} / ${totalCount}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Questions:</span><span class="chip-val">${qCount}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Expressions:</span><span class="chip-val">${expressions}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Idioms:</span><span class="chip-val">${idioms}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Proverbs:</span><span class="chip-val">${proverbs}</span></div>
+        `;
+      } else {
+        leftHtml = `
+          <div class="bottom-info-chip"><span class="chip-label">Total Phrases:</span><span class="chip-val">${totalCount}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Questions:</span><span class="chip-val">${qCount}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Expressions:</span><span class="chip-val">${expressions}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Idioms:</span><span class="chip-val">${idioms}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Proverbs:</span><span class="chip-val">${proverbs}</span></div>
+          <div class="bottom-info-chip"><span class="chip-label">Themes:</span><span class="chip-val">${themes}</span></div>
+        `;
+      }
+    }
+
+    const examBtnText = isWords ? '+ Vocab Exam' : '+ Phrase Exam';
+    const rightHtml = `
+      <button class="btn btn-primary btn-sm" id="btn-vault-bottom-autogen" style="background:var(--clr-primary); font-size:12px; padding:6px 14px; font-weight:600; cursor:pointer;">
+        ⚡ Auto-Generate from Blueprint
+      </button>
+      <button class="btn btn-secondary btn-sm" id="btn-vault-bottom-exam" style="font-size:12px; padding:6px 14px; font-weight:600; cursor:pointer;">
+        ${examBtnText}
+      </button>
+    `;
+
+    window.setBottomInfobar(leftHtml, rightHtml);
+
+    // Bind bottom action buttons
+    document.getElementById('btn-vault-bottom-autogen')?.addEventListener('click', triggerAutoGenerate);
+    document.getElementById('btn-vault-bottom-exam')?.addEventListener('click', () => {
+      document.getElementById('btn-create-vocab-test')?.click();
+    });
+  }
+
   function renderRows(filtered) {
     const tbody = document.getElementById('vault-tbody');
     if (!tbody) return;
     const uniqueIndoCount = new Set(filtered.map(w => w.indonesian.toLowerCase().trim())).size;
     document.getElementById('vault-count').textContent = `${uniqueIndoCount} questions (${filtered.length} entries)`;
+    _syncVaultGridBottomBar(filtered, _allWords, mode);
     if (!filtered.length) {
       tbody.innerHTML = `
         <tr>
@@ -436,6 +533,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       filterAndRender();
     });
   });
+  document.getElementById('btn-manual-auto-generate')?.addEventListener('click', triggerAutoGenerate);
   document.getElementById('btn-create-vocab-test')?.addEventListener('click', () => {
     if (mode === 'phrases') {
       openTestBuilderModal(topics, { testType: 'IDIOM_PROVERB' });

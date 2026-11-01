@@ -3572,6 +3572,7 @@ tr.deleted-row td {
   padding: 0 !important;
 }
 
+#vault-tab-content .table-wrap,
 #student-grid-container .table-wrap,
 #programs-grid-container .table-wrap,
 #batches-grid-container .table-wrap,
@@ -3590,6 +3591,7 @@ tr.deleted-row td {
   box-sizing: border-box !important;
 }
 
+#vault-tab-content .table-wrap table,
 #student-grid-container .table-wrap table,
 #programs-grid-container .table-wrap table,
 #batches-grid-container .table-wrap table,
@@ -3598,23 +3600,27 @@ tr.deleted-row td {
 }
 
 @supports (scrollbar-width: thin) {
+  #vault-tab-content .table-wrap,
   #student-grid-container .table-wrap {
     scrollbar-width: thin;
     scrollbar-color: rgba(56, 189, 248, 0.6) rgba(15, 23, 42, 0.85);
   }
 }
 
+#vault-tab-content .table-wrap::-webkit-scrollbar,
 #student-grid-container .table-wrap::-webkit-scrollbar {
   width: 6px;
   height: 6px;
   background: rgba(15, 23, 42, 0.85);
 }
 
+#vault-tab-content .table-wrap::-webkit-scrollbar-thumb,
 #student-grid-container .table-wrap::-webkit-scrollbar-thumb {
   background: linear-gradient(90deg, #38bdf8, #818cf8);
   border-radius: 4px;
 }
 
+#vault-tab-content .table-wrap::-webkit-scrollbar-thumb:hover,
 #student-grid-container .table-wrap::-webkit-scrollbar-thumb:hover {
   background: #38bdf8;
 }

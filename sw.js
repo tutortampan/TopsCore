@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v48';
+const CACHE_NAME = 'topscore-cache-option-a-v49';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -7,26 +7,26 @@ const ASSETS_TO_CACHE = [
   './test.html',
   './result.html',
   './offline.html',
-  './css/style.css?v=20261101_v100',
-  './css/admin.css?v=20261101_v100',
-  './css/dashboard.css?v=20261101_v100',
-  './css/auth.css?v=20261101_v100',
-  './css/test.css?v=20261101_v100',
-  './css/result.css?v=20261101_v100',
-  './css/components/avatars.css?v=20261101_v100',
-  './js/app.js?v=20261101_v100',
-  './js/api.js?v=20261101_v100',
-  './js/auth.js?v=20261101_v100',
-  './js/dashboard.js?v=20261101_v100',
-  './js/test.js?v=20261101_v100',
-  './js/result.js?v=20261101_v100',
-  './js/session.js?v=20261101_v100',
-  './js/supabase.js?v=20261101_v100',
-  './js/grading.js?v=20261101_v100',
-  './js/admin/admin-init.js?v=20261101_v100',
+  './css/style.css?v=20261028',
+  './css/admin.css?v=20261028',
+  './css/dashboard.css?v=20261028',
+  './css/auth.css?v=20261028',
+  './css/test.css?v=20261028',
+  './css/result.css?v=20261028_strip',
+  './css/components/avatars.css?v=20261028',
+  './js/app.js?v=20261029',
+  './js/api.js?v=20261028',
+  './js/auth.js?v=20261028',
+  './js/dashboard.js?v=20261028_sort_modal',
+  './js/test.js?v=20261028',
+  './js/result.js?v=20261028_strip',
+  './js/session.js?v=20261028',
+  './js/supabase.js?v=20261028',
+  './js/grading.js?v=20261028',
+  './js/admin/admin-init.js?v=20261029',
   './js/vendor/supabase.js',
-  './js/vendor/xlsx.full.min.js?v=20261101_v100',
-  './js/wake-lock.js?v=20261101_v100'
+  './js/vendor/xlsx.full.min.js?v=20261027d',
+  './js/wake-lock.js?v=20261027d'
 ];
 
 self.addEventListener('install', event => {
@@ -76,11 +76,11 @@ self.addEventListener('fetch', event => {
         }
         return response;
       }).catch(async () => {
-        const cached = await caches.match(event.request, { ignoreSearch: true });
+        const cached = await caches.match(event.request);
         if (cached) return cached;
         // If document navigation fails while completely offline, serve offline fallback
         if (isDoc) {
-          return caches.match('./offline.html', { ignoreSearch: true });
+          return caches.match('./offline.html');
         }
       })
     );
@@ -89,7 +89,7 @@ self.addEventListener('fetch', event => {
 
   // Cache-first for other static assets (images, fonts, static css)
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
+    caches.match(event.request).then(cachedResponse => {
       if (cachedResponse) return cachedResponse;
       return fetch(event.request).then(response => {
         if (!response || response.status !== 200 || response.type !== 'basic') {

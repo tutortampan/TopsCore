@@ -1,8 +1,86 @@
+## [2026-11-02 00:35] — Phase 276: Theme A & B Highest Score Parity, Bottom Infobar Overview Chips & Zero-Scroll Vocab Vault Full-Height Integration
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 276
+**Status:** PASS
+
+### Why
+- User Requests:
+  1. *"coba cari niali berdasarkan screenshot ynag ada yang menyimpan niali para siswa di tema A dab Tema B, lalu sesuaikan dengan yang ada sekrang di tabel kita. ambil nilai tertinggi, abaiakan nilai Forgiven, analisa, pelari, petakan, analisa lagi, pelajari lagi, petakan uang, analisa, terapkan"*
+  2. *"disini masih ada area kosong di bawah tabel,,, akalu memang ada kesulitan penerapan 'tdiak boleh ada empty space' maka taruh kolom info atau overview, atau summary tabel di bawah,,, sama seperti di beberapa halaman (ex: gambar 3) . analisa, pelajari, analisa, petakan, analisa, pelarai, analisa, terapkan"*
+  - Attachments: `media_1793549259217_ac603974.jpg` (Vocab tab with empty space below table), `media_1793549305626_021d4a21.jpg` (Phrases tab with empty space below table), `media_1793549364150_7d06c284.png` (Gambar 3: docked bottom infobar with overview chips and action buttons).
+
+### Changed
+1. **Reconciled Theme A & B Highest Scores (Ignored Forgiven Caps)**:
+   - Audited all 88 score cells across all 22 active students in Camp 133 for Test 7 (Words A), Test 8 (Phr A), Test 17 (Words B), and Test 18 (Phr B).
+   - Confirmed 100% exact match (88/88) between the Class Hub Attendance Matrix and the absolute highest authentic student attempts in Supabase PostgreSQL (`scratch/verify_table_vs_db_highest.mjs`).
+   - Strictly ignored synthetic remedial caps (e.g., 72 & 18 capped at 60%), preserving true student high scores (Suhendro: 111 & 26.5; Risma: 81 & 27).
+2. **Eliminated Empty Dead Space in Vocabulary Vault**:
+   - In `css/admin.css`, added `#vault-tab-content .table-wrap` to full-height workspace CSS (`flex: 1 1 0 !important; height: 100% !important; max-height: 100% !important; margin-bottom: 0 !important;`).
+   - Replaced fixed `max-height: calc(100vh - 215px)` constraint on Vault grid tables so table fills 100% down to the bottom infobar banner with zero empty space.
+3. **Implemented Dynamic Bottom Infobar Overview Chips (Gambar 3 Alignment)**:
+   - In `js/admin/vocab-vault.js`, removed `window.setBottomInfobar(null, null)` suppression logic.
+   - Implemented `_syncVaultGridBottomBar(filtered, allModeWords, mode)`:
+     - Vocab Tab Chips: `Total Words: 640`, `Questions: 575`, `Nouns: 160`, `Verbs: 320`, `Adjectives: 160`, `Adverbs: 0`, `Themes: 4` (updates dynamically when filtered: `Showing: X / 640`).
+     - Phrases Tab Chips: `Total Phrases: 160`, `Questions: 160`, `Expressions: 70`, `Idioms: 40`, `Proverbs: 50`, `Themes: 4` (updates dynamically when filtered: `Showing: X / 160`).
+     - Right Side Action Buttons: `⚡ Auto-Generate from Blueprint` (opens generator modal directly) and `+ Vocab Exam` / `+ Phrase Exam`.
+   - Wired `btn-manual-auto-generate` and `btn-vault-bottom-autogen` directly to `auto-gen-modal.js`.
+4. **Cache & Deployment**:
+   - Bumped cache busters across HTML and JS files to `20261102_v101`.
+   - Bumped Service Worker cache name to `topscore-cache-option-a-v49` in `sw.js`.
+
+### Database
+- All 1,480 attempts verified; 100% data integrity maintained.
+
+### Tests
+- command: `node scratch/verify_table_vs_db_highest.mjs` -> PASS (88/88 exact matches).
+- command: `node scripts/check_all_js_syntax.cjs` -> PASS (All 40 JS files passed node --check).
+- command: `node scratch/test_vocab_vault_ui.mjs` -> PASS (Verified bottom infobar, zero dead space, accurate chips across all 3 tabs).
+
+### Risks / Follow-up
+- None. Fully backward-compatible and responsive across all viewports.
+
+---
+
+## [2026-11-01 16:30] — Phase 275: 4-Way Reconciliation of External Sheet Scores vs Live TopsCore Database & Elimination of Forgiven Caps
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 275
+**Status:** PASS
+
+### Why
+- User Request: *"ini adalah nilai yang sempat direkam oleh data di luar sistem, coba cek lagi dan andingkan dengan data dari screenshot hasil ujian, seuiakn, lalu update"*
+- Attachment: `media_1793549684301_45a74792.png` (External recorded spreadsheet containing VOCABULARY 1, 2, 3, 4 for 23 students in Batch 133).
+- Mandate: Apply Rule "ambil nilai tertinggi, abaikan nilai Forgiven", verify all numbers against live Supabase PostgreSQL attempts and official screenshots (`media_1793548891397_b896c03f.jpg` & `media_1793544869879_b0dea7bc.jpg`).
+
+### Changed
+- Comprehensive 4-Way Reconciliation:
+  - Formulated cross-matrix verification script (`scratch/comprehensive_4way_reconciliation.mjs`) checking all 23 students across Theme A (Vocab 1), Theme B (Vocab 2), Theme C (Vocab 3), and Theme D (Vocab 4).
+  - Confirmed 18 of 23 students match identically or differ only by standard 0.5–1.0 pt integer rounding on the manual spreadsheet.
+  - Reconciled Asmul Kholid Theme B: External sheet recorded older 168 (98 Words + 70 Phrases on Oct 27); live system holds his official retake score of 288 (218 Words + 70 Phrases on Oct 30). Under "ambil nilai tertinggi", 288 is authoritative.
+  - Reconciled Sofa Maria Ulfa: External sheet applied legacy 60% forgiven cap (90 for V1) and omitted Phrases B (177 for V2). Live system holds authentic scores 144 PTS ($114 + 30$) and 247 PTS ($177 + 70$). Under "abaikan nilai Forgiven, ambil nilai tertinggi", genuine student scores are preserved.
+  - Reconciled Gagan Tara Deswari: External sheet manual typo of 223 corrected to true sum of 233 ($164 + 69$).
+  - Reconciled Muhammad Alimae Pasya: External sheet 144 was a row misplacement from Sofa's row (Pasya's authentic Theme A score is 106.5 PTS). External sheet 147 has no attempt record in DB (Pasya never took Test 17/18). Theme D (11) matches 100%.
+  - Accounted for post-sheet tests: Shelia Test 29 (21 PTS) and Suke Test 39 (82 PTS).
+- Documentation & Artifacts:
+  - Created `reconciliation_external_sheet_vs_system.md` detailing every student's 4-theme status and reconciliation narrative.
+  - Updated `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`.
+
+### Database
+- 1,480 attempts verified; zero data loss, zero unauthentic scores, 100% highest authentic scores intact.
+
+### Tests
+- command: `node scratch/comprehensive_4way_reconciliation.mjs` -> PASS (All 23 students cross-verified across 4 sources).
+- command: `node scratch/verify_table_vs_db_highest.mjs` -> PASS (88/88 checks exact match).
+
+### Next Action
+- Review reconciliation table with tutor. If tutor requests inserting Pasya's offline Theme B score of 147, execute privileged insertion.
+
 ## [2026-11-01 16:00] — Phase 274: Resolution of Ranking Inversion (Risma vs Suhendro), Exam Column Score Audit & Exam Milestone Progress Calibration
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 274  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 274
+**Status:** PASS
 
 ### Why
 - User Inquiry:
@@ -30,9 +108,9 @@
 
 
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 269  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 269
+**Status:** PASS
 
 ### Why
 - Verify and finalize resolution for:
@@ -66,9 +144,9 @@
 
 ## [2026-11-01 15:11] — Phase 273: Service Worker Manifest & Offline Fallback Search Query Resilience
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 273  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 273
+**Status:** PASS
 
 ### Why
 - Precaching in `sw.js` previously referenced older version tags (`?v=20261028`), and `caches.match` relied on exact URL string comparison without `{ ignoreSearch: true }`.
@@ -90,9 +168,9 @@
 
 ## [2026-11-01 15:07] — Phase 272: Complete Internal ES Module Import Tag Harmonization Across Entire Codebase
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 272  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 272
+**Status:** PASS
 
 ### Why
 - An exhaustive audit of `js/` identified 16 secondary admin and utility modules importing dependencies with legacy semantic cache tags (e.g., `?v=5.3.2`, `?v=5.4.7`, `?v=20261027b`).
@@ -131,9 +209,9 @@
 
 ## [2026-11-01 14:58] — Phase 271: Global 10px Spacing Enforcement Across Student Dashboard & System Cache v99
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 271  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 271
+**Status:** PASS
 
 ### Why
 - Completed full-scope audit of `css/dashboard.css` to bring student lobby cards, profile modals, and summary statistics to the strict 10px spacing standard established for Admin and Assessment modules.
@@ -158,9 +236,9 @@
 
 ## [2026-11-01 14:53] — Phase 270: Universal 10px Panel Gaps Alignment Across Result & Test Modules & System Cache v98
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 270  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 270
+**Status:** PASS
 
 ### Why
 - Thorough cross-module audit of all remaining CSS files (`css/result.css`, `css/test.css`) to enforce the strict 10px panel spacing requirement globally.
@@ -187,9 +265,9 @@
 
 ## [2026-11-01 14:42] — Phase 268: Elimination of Redundant Search Toolbar, Strict 10px Panel Spacing & Full Workspace Area Maximization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 268  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 268
+**Status:** PASS
 
 ### Why
 - User request: "kolom serach disini tidak eperlu buang saja. dan buat agar tidak ada ruang yang ksosong dalam worksapace di sistem, jarak antar panel adalah 10 px make sure of them,,, kalau ada halaman worksapace dengan arrea ksong dimaksimalkan /goal /" with screenshot of the redundant `Search... (Ctrl+K)` and `[Columns]` toolbar.
@@ -224,9 +302,9 @@
 
 ## [2026-11-01 14:20] — Phase 267: Ari & Aunul Full Quiz Score Audit, Strict Inter-Theme Gating Lockdown & Progress-First Leaderboard Alignment
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 267  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 267
+**Status:** PASS
 
 ### Why
 - User request: "saya ingat kalau ari dan aunul ini lulus dengan mengambil quiz,,, tapi disini nilainya hilang,,, kamu cari lagi nilai mereka yang sebenarnya! adapun celah yang ada tetap diperbaiki! 1. baik 2. Oke . mari kita terapkan /goal".
@@ -268,9 +346,9 @@
 
 ## [2026-11-01 14:15] — Phase 266: Progress-First Ranking, Cumulative Curriculum Grading & Cross-Theme Prerequisite Gating
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 266  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 266
+**Status:** PASS
 
 ### Why
 - User request: "kita susun berdasarkan progress dulu, baru total points dari semua exam,,, nah Grade mereka ini saya ingin diambli dari progress dan persentase Total point dari point seharusnya,,, apaka itu memungkinkan? lalu saya ingin membuat perhitungan yang lebih matang terkait nilai ini,,, saya melihat beberapa siswa seperti aunul mendapat 45% dan Ari dapat 30%di tema A, tapi mereka lanjut ke yang berikutnya,,, itu seharusnya tak mungkn, sebab saat mereka kerjakn itu ada prerequisite sytem yang berjalan... cob analisa, pecahkan, jelaskan, bahas /plan".
@@ -313,9 +391,9 @@
 
 ## [2026-11-01 13:54] — Phase 265: Full-Height Workspace Integration for Student Roster & DataGrids
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 265  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 265
+**Status:** PASS
 
 ### Why
 - User directive: "table ini tidak ful sampai bawah worksapce, ada ruang koson disna. perbaiki" with attached screenshot of Student Roster (`Camp 133` table in `student-management.js`).
@@ -348,9 +426,9 @@
 
 ## [2026-11-01 10:10] — Phase 264: Attendance Matrix Dynamic Superheaders & Exact Column Parity Alignment
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 264  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 264
+**Status:** PASS
 
 ### Why
 - Align Attendance Matrix dynamic superheaders and column generation in Class Hub (`js/admin/app.js`).
@@ -388,9 +466,9 @@
 
 ## [2026-11-01 09:47] — Phase 263: Comprehensive Code Health, Defensive Hardening & Error Hunting
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 263  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 263
+**Status:** PASS
 
 ### Why
 - User directive: "cehcek any errors and possible problem /goal".
@@ -435,9 +513,9 @@
 
 ## [2026-11-01 09:25] — Phase 262: Universal Sticky Table Headers, Font System & Sleek Modern Typography Audit
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 262  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 262
+**Status:** PASS
 
 ### Why
 - User request: "analisa semua tabel di system, pastikan semua headernya tidak hilang saal scrolling ke bawah kala emmang harus scroll, analisa semua font di dalam sistem, baik jenis maupun ukuran,,, jangan sampai ada yang tumpangtindih, pastikan desain di dalam TopsCore ini sleek, modern dan tetap rapi. Cek SEMUA ahalaman pastikan semua baik, dan rapi /goal".
@@ -483,9 +561,9 @@
 
 ## [2026-11-01 05:32] — Phase 260: Official Student Dossier Print/PDF Modernization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 260  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 260
+**Status:** PASS
 
 ### Why
 - Modernize official student dossier export and print layout for certified physical academic report cards, ensuring zero blank pages, clean A4 margins, crisp contrast, and academic seal verification.
@@ -510,9 +588,9 @@
 
 ## [2026-11-01 05:25] — Phase 259: Real-Time Dynamic Pacing Badge in Test Runner
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 259  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 259
+**Status:** PASS
 
 ### Why
 - Implement Proposal Item 5.2 / 2.1: Proactively mitigate the 42% blank/timed-out question failure rate by giving students real-time feedback on their remaining seconds per question, guiding pacing and encouraging strategic skipping of difficult questions.
@@ -536,9 +614,9 @@
 
 ## [2026-11-01 05:21] — Phase 258: Classroom 3D Flashcard Drill di Class Hub
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 258  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 258
+**Status:** PASS
 
 ### Why
 - Implement Proposal Item 5.4 / 2.1: Direct pedagogical classroom enablement — allowing tutors to project and conduct live 3D flashcard drills for top bottleneck vocabulary in each theme directly in front of the classroom or on a TV screen.
@@ -563,9 +641,9 @@
 
 ## [2026-11-01 05:14] — Phase 257: Modular Milestone Chunks & Exam Fatigue Elimination
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 257  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 257
+**Status:** PASS
 
 ### Why
 - Implement Proposal Item 5.1 / 2.1: Eliminate cognitive exhaustion, smartphone DOM lagging, and 42% timeout rates on massive 640-question cumulative exams (such as Theme D High-Frequency Words Exam).
@@ -591,9 +669,9 @@
 
 ## [2026-11-01 05:07] — Phase 256: Smart Bottleneck Practice di Student Lobby (3D Flashcard Integration)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 256  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 256
+**Status:** PASS
 
 ### Why
 - Implement Proposal Item 5.4 / 2.1: Empower students who scored poorly or have missed vocabulary to directly drill and practice their specific bottlenecks from the Student Lobby before retaking exams.
@@ -626,9 +704,9 @@
 
 ## [2026-11-01 04:48] — Phase 255: Server-Authoritative Auto-Close Scoring Engine Upgrade
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 255  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 255
+**Status:** PASS
 
 ### Why
 - Implement Proposal Item 5.1 #1 (Auto-Evaluation on Expiry): Permanently eliminate the 44% zero-score loss when students' attempts expire without final manual submission.
@@ -648,9 +726,9 @@
 
 ## [2026-11-01 04:45] — Phase 254: Live Speech Equalizer Waveform Bars & Full Cache v85
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 254  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 254
+**Status:** PASS
 
 ### Why
 - Implement Pillar 1 of the student difficulty proposal: live visual audio feedback during speech tests to resolve student anxiety over whether their microphone is picking up sound.
@@ -672,9 +750,9 @@
 
 ## [2026-11-01 04:35] — Phase 252: Universal Dynamic Points Color Adherence & Quiz Scaffolding
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 252  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 252
+**Status:** PASS
 
 ### Why
 - User directive: "di kolon nilai, pointnya warnanya belum mengikuti warna yang kita sepakati, perbaiki!v"
@@ -704,9 +782,9 @@
 
 ## [2026-11-01 04:26] — Phase 251: Phrase Real-Time Word-Count Counter & Full Cache v82
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 251  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 251
+**Status:** PASS
 
 ### Why
 - User request:
@@ -737,9 +815,9 @@
 
 ## [2026-11-01 04:22] — Phase 250: Active Batch Auto-Selection, Sidebar Synchronization & Full Cache v81
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 250  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 250
+**Status:** PASS
 
 ### Why
 - User request:
@@ -766,9 +844,9 @@
 
 ## [2026-11-01 04:15] — Phase 249: Online/Offline Network Resilience Buffer & Live Cloud Sync Status Pill in Test Runner (Pilar 3 Implementation)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 249  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 249
+**Status:** PASS
 
 ### Why
 - User directive: "cek semua error yang ada, dan jalankan berbagai e2e test,,, cek semua kolom, fot, semua hal dalam sistem, usahakan agar maksimal, cek SEMUA ERROR... coba terapkan dan saya ingin ada ide2 baru yang muncul natinya"

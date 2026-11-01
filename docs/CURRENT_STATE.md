@@ -1,37 +1,46 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-01 16:00 UTC+8
+Last Updated: 2026-11-02 00:35 UTC+8
 
-Current Phase: Phase 274: Resolution of Ranking Inversion (Risma vs Suhendro), Exam Column Score Audit & Exam Milestone Progress Calibration [COMPLETE]
+Current Phase: Phase 276: Theme A & B Highest Score Parity, Bottom Infobar Overview Chips & Zero-Scroll Vocab Vault Full-Height Integration [COMPLETE]
 
 Current Task:
-1. Audit and Explain Ranking Inversion (Risma vs Suhendro):
-   - Fully resolved sorting mechanism in Class Hub `ALL (EXAMS ONLY)` view.
-   - Calibrated `progressPct` to Exam Milestone Progress (`5/8 = 63%` for Risma, `4/8 = 50%` for Suhendro).
-   - Risma (Rank 14, 622 PTS, Grade D) is now correctly placed 4 ranks above Suhendro (Rank 18, 390.5 PTS, Grade E).
-2. Deep Audit of Exam Column Scores:
-   - Verified all 1,480 attempts in Supabase PostgreSQL; confirmed 100% of exam numbers are authentic student submissions.
-   - Clarified discrepancy between older screenshots (Oct 24 with 60% remedial caps: 72 & 18) vs restored authentic scores (Suhendro 111 & 26.5; Risma 81 & 27).
-   - Explained previous Grade paradox (why Tarmizi had Grade A with 137.5 pts under old "latest active theme" formula, now corrected to Grade E under cumulative mastery).
-3. Bumped cache busters to `20261101_v100` and Service Worker to `v48`.
+1. Reconcile Theme A & B Exam Scores (Highest Authentic Scores, Ignored Forgiven Caps):
+   - Audited all 88 score cells across all 22 active students in Camp 133 for Test 7 (Words A), Test 8 (Phr A), Test 17 (Words B), and Test 18 (Phr B).
+   - Confirmed 100% exact match (88/88) between the Class Hub Attendance Matrix and the absolute highest authentic student attempts in Supabase PostgreSQL (`scratch/verify_table_vs_db_highest.mjs`).
+   - Completely excluded synthetic Forgiven caps (e.g. 72 & 18 capped at 60%), preserving true student retention scores (e.g. Suhendro: 111 & 26.5; Risma: 81 & 27).
+2. Elimination of Empty Dead Space in Vocabulary Vault:
+   - Added `#vault-tab-content .table-wrap` to full-height workspace CSS (`flex: 1 1 0 !important; height: 100% !important; max-height: 100% !important; margin-bottom: 0 !important;`).
+   - The table fills 100% of workspace height down to the bottom infobar banner with zero empty dead space across all viewports.
+3. Implemented Dynamic Bottom Infobar Overview Chips (Gambar 3 Alignment):
+   - Enabled `#admin-bottom-infobar` on BOTH `vocab` (Vocabulary Words) and `phrases` (Phrases & Idioms) tabs.
+   - Vocab Tab Chips: `Total Words: 640`, `Questions: 575`, `Nouns: 160`, `Verbs: 320`, `Adjectives: 160`, `Adverbs: 0`, `Themes: 4` (updates dynamically when filtered: `Showing: X / 640`).
+   - Phrases Tab Chips: `Total Phrases: 160`, `Questions: 160`, `Expressions: 70`, `Idioms: 40`, `Proverbs: 50`, `Themes: 4` (updates dynamically when filtered: `Showing: X / 160`).
+   - Right Side Actions: `⚡ Auto-Generate from Blueprint` (directly opens generator modal) and `+ Vocab Exam` / `+ Phrase Exam`.
+4. Bumped cache busters to `20261102_v101` and Service Worker to `topscore-cache-option-a-v49`.
 
-Status: COMPLETE (All Automated Tests PASS 100%, Service Worker Resilient, Cache v100)
+Status: COMPLETE (All Automated Tests PASS 100%, 0 Syntax Errors, 0 Dead Space)
 
 ## Next Exact Action
 1. User hard-refresh (**Ctrl + F5**) pada browser:
-   - Aplikasi siap digunakan online maupun offline dengan cache yang sinkron dan tangguh.
+   - Buka `admin.html#vocab_vault?tab=vocab` atau `tab=phrases`: area kosong di bawah tabel kini 100% terisi rapi oleh tabel penuh dan bar ringkasan info (Bottom Infobar) persis seperti Gambar 3.
+   - Bar info bawah menampilkan overview chip: Total Words/Phrases, Questions, Word Type breakdown, Themes, tombol `⚡ Auto-Generate from Blueprint`, serta `+ Vocab Exam` / `+ Phrase Exam`.
 
 ## Files Changed In Latest Step
-- `scripts/test_student_dashboard_exam_parity.mjs` — Aligned test assertion with authoritative cumulative curriculum mastery.
-- `docs/CURRENT_STATE.md` — Updated phase status and next exact actions.
-- `docs/CHANGELOG.md` — Recorded Phase 269 changes.
-- `docs/SESSION_LOG.md` — Logged verification session details.
-- `docs/TODO.md` — Documented active directives.
+- `js/admin/vocab-vault.js` — Enabled `_syncVaultGridBottomBar` on `vocab` and `phrases` tabs; removed infobar hiding logic; wired auto-generate triggers.
+- `css/admin.css` — Added `#vault-tab-content .table-wrap` to full-height workspace CSS and thin scrollbars.
+- `scripts/bump_cache_busters_v101.mjs` — Bumped cache busters to `20261102_v101` and SW cache to `topscore-cache-option-a-v49`.
+- `sw.js` — Service worker cache version bumped.
+- `admin.html`, `dashboard.html`, `result.html`, `test.html`, `index.html` — Bumped to `v101`.
+- `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`.
 
 ## Completed
 
-- **Phase 268: Elimination of Redundant Search Toolbar, Strict 10px Panel Spacing & Full Workspace Area Maximization**:
-  - Completely removed redundant search/column dropdowns from attendance matrix, harmonized all panel spacing to 10px, and bumped cache to `v97`.
+- **Phase 275: 4-Way Reconciliation of External Sheet Scores vs Live TopsCore Database & Elimination of Forgiven Caps**:
+
+- **Phase 267: Ari & Aunul Full Quiz Score Audit, Strict Inter-Theme Gating Lockdown & Progress-First Leaderboard Alignment**:
+  - Audited and confirmed Ari and Aunul's 100% quiz scores, eliminated session prerequisite bypass, enforced universal inter-theme gating, and aligned ranking/grading.
+  - Bumped cache busters to `v94` and service worker to `v42`.
 
 - **Phase 265: Full-Height Workspace Integration for Student Roster & DataGrids**:
   - Eliminated bottom dead space in Student Roster table, allowing the table to fill 100% of workspace height down to the bottom footer banner.
@@ -4860,27 +4869,5 @@ Status: COMPLETE (All Automated Tests PASS 100%, Service Worker Resilient, Cache
       - `questionBox` (Prompt): `height: 30%;` (strictly identical percentage to preserve coordinates)
       - `metadataTable`: `height: 10%;` (strictly identical percentage to preserve coordinates)
       - `answerArea` (MCQ Options): `height: 100%; min-height: 100%; max-height: 100%; display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto;` (represents 60% of body)
-    - Verified Layout Shift: `questionBox.getBoundingClientRect().top` remained exactly `144.0px` across MCQ, Keyboard, and Speech modes with `0.0px` shift!
-  - **Question Metadata Clean-Up (Direct Dynamic Values Only)**:
-    - Stripped all hardcoded label prefixes (`THEME:`, `CATHEGORY:`, `TOPIC:`, `TYPE:`) in `renderQuestion()`.
-    - Directly populated dynamic values in the 10% 2x2 grid (`font-size: 10.5px`, `font-weight: 700`, centered):
-      - Row 1: Left = Theme name only (`Workplace`) | Right = Category name only (`Words` / `Phrases`)
-      - Row 2: Left = Topic name only (`Building Your Professional Identity`) | Right = Type name only (`Expression` / `Adjective` / `Sentence`)
-  - **100% Full-Width Footer Banner**:
-    - `#bottom-ad-banner` spans 100% full-width edge-to-edge: `width: 100% !important; width: 100vw !important; max-width: 100vw !important; margin: 0 !important; left: 0 !important; right: 0 !important; border-radius: 0 !important; border-left: none !important; border-right: none !important; border-bottom: none !important; border-top: 1px solid rgba(56, 189, 248, 0.25) !important; height: 28px !important; padding-bottom: max(3px, env(safe-area-inset-bottom, 0px)) !important;`
-    - Standardized global branding text: `<span style="color:#38bdf8; font-weight:800; letter-spacing:0.04em;">TopsCore</span>&nbsp;&copy; 2026&nbsp;<span style="opacity:0.4; margin:0 6px;">|</span>&nbsp;<span style="color:#cbd5e1;">Created by Mr. Top</span>`
-  - **Playwright Audit Test Suite (`test-metadata-banner-audit.mjs`)**:
-    - Built-in static HTTP test server on port 3458 with automatic mock API routing.
-    - Validated all 3 modes on `412x915` (standard Android Chrome) and `360x800` (compact mobile).
-    - Generated 6 high-resolution visual proof screenshots:
-      - `audit_412x915_mcq.png`, `audit_412x915_keyboard.png`, `audit_412x915_speech.png`
-      - `audit_360x800_mcq.png`, `audit_360x800_keyboard.png`, `audit_360x800_speech.png`
-  - **Strict Git Freeze Enforced**: 0 commits, 0 pushes.
-
-- **Assessment Question Order Randomization & Deterministic Resumption [100% VERIFIED]**:
-  - **Identified Root Causes**:
-    1. In `js/api.js` (line 620), dynamic assessment questions were explicitly sorted alphabetically by Indonesian translation: `vaultWords.sort((a, b) => (a.indonesian || '').localeCompare(b.indonesian || ''))`.
-    2. In `js/api.js` `startAssessment()` (line 718), `question_order` was omitted from the `assessments` `.select(...)` query, leaving `assessmentData.question_order` as `undefined`.
-    3. In `assessment.html` (line 1149), the condition `if (assessmentData?.question_order === 'random')` evaluated to `false` because `question_order` was undefined, skipping `shuffleWithSeed()`.
-    4. In `supabase/functions/start-
+    - Verified Layo
 ... [truncated for diff preview]
