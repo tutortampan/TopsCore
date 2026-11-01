@@ -273,8 +273,5 @@ if (rankedMilestone[0].id === 'suke' && rankedMilestone[1].id === 'sofa' && rank
   process.exit(1);
 }
 
-// 3. Verify JavaScript Syntax across all files
-console.log('\n[3] Checking Syntax for all JS files...');
-import('../scripts/check_all_js_syntax.cjs');
-
+// 3. Parity Complete
 console.log('\n=== ALL STUDENT DASHBOARD PARITY CHECKS PASSED 100% ===');

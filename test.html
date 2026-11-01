@@ -24,9 +24,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261102_v101" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261102_v101" />
-  <link rel="stylesheet" href="css/test.css?v=20261102_v101" />
+  <link rel="stylesheet" href="css/style.css?v=20261102_v103" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261102_v103" />
+  <link rel="stylesheet" href="css/test.css?v=20261102_v103" />
 </head>
 <body class="test-page notranslate" translate="no">
 
@@ -160,6 +160,58 @@
     </div>
   </div>
 
+  <!-- Pre-Exam Focus & Fullscreen Modal -->
+  <div id="pre-exam-focus-modal" class="pre-exam-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pre-exam-focus-title">
+    <div class="pre-exam-focus-box">
+      <div class="focus-icon">🛡️</div>
+      <h2 id="pre-exam-focus-title" class="focus-title">Persiapan Ujian</h2>
+      <p class="focus-subtitle">Ujian ini menerapkan mode layar penuh dan pengawasan fokus belajar.</p>
+      
+      <div class="focus-checklist">
+        <div class="focus-check-item">
+          <span class="check-ico">🔕</span>
+          <div class="check-text">
+            <strong>Aktifkan Mode 'Jangan Ganggu' (DND)</strong>
+            <span>Matikan notifikasi WhatsApp dan media sosial di bilah HP Anda agar tidak terganggu.</span>
+          </div>
+        </div>
+        <div class="focus-check-item">
+          <span class="check-ico">⛶</span>
+          <div class="check-text">
+            <strong>Mode Layar Penuh (Fullscreen)</strong>
+            <span>Layar akan otomatis penuh untuk memastikan pandangan jernih dan bebas distraksi.</span>
+          </div>
+        </div>
+        <div class="focus-check-item">
+          <span class="check-ico">⏱️</span>
+          <div class="check-text">
+            <strong>Pengerjaan Mandiri</strong>
+            <span>Kerjakan secara mandiri hingga tombol Selesai / Submit ditekan.</span>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primary btn-focus-start" id="btn-enter-fullscreen-start">
+        🚀 Masuk Layar Penuh &amp; Mulai Ujian
+      </button>
+    </div>
+  </div>
+
+  <!-- Fullscreen Pause Modal (Friendly Pause when fullscreen is exited) -->
+  <div id="fullscreen-pause-modal" class="pre-exam-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="fullscreen-pause-title">
+    <div class="pre-exam-focus-box">
+      <div class="focus-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">⏸️</div>
+      <h2 id="fullscreen-pause-title" class="focus-title">Layar Penuh Terputus</h2>
+      <p class="focus-subtitle">Ujian mewajibkan mode layar penuh agar fokus belajar tetap terjaga.</p>
+      <p style="font-size: 13px; color: #94a3b8; margin: 12px 0 20px 0; line-height: 1.5;">
+        Silakan klik tombol di bawah untuk kembali ke layar penuh dan melanjutkan pengerjaan soal Anda.
+      </p>
+      <button type="button" class="btn btn-primary btn-focus-start" id="btn-resume-fullscreen">
+        ⛶ Kembali ke Layar Penuh &amp; Lanjutkan
+      </button>
+    </div>
+  </div>
+
   <!-- Anti-Cheat Flashing Overlay -->
   <div id="cheat-overlay" role="alertdialog" aria-modal="true" aria-labelledby="cheat-title">
     <div class="cheat-box">
@@ -224,10 +276,10 @@
     </div>
   </div>
 
-  <script type="module" src="./js/test.js?v=20261102_v101"></script>
+  <script type="module" src="./js/test.js?v=20261102_v103"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=20261102_v101')
+      navigator.serviceWorker.register('sw.js?v=20261102_v103')
         .then(registration => registration.update())
         .catch(err => console.warn('SW registration failed:', err));
     }

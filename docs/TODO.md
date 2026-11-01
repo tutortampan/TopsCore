@@ -1,3 +1,24 @@
+# ACTIVE DIRECTIVE: PHASE 279 — MILESTONE DENOMINATOR STANDARDIZATION & ROSTER MONOTONICITY [COMPLETE]
+
+- [x] Task 1: Standardized `computeMilestoneExamMastery` denominator in `js/grading.js` to use `Math.max(canonicalMax, attemptTotalQ)` (1,900 points canonical curriculum) to eliminate early test version denominator compression.
+- [x] Task 2: Restored Syazida Shinda Debi canonical denominator to 1,900 PTS ($1308.5 / 1900 = 69\% \rightarrow \text{Grade C}$), achieving strict grade monotonicity.
+- [x] Task 3: Inserted Muhammad Alimae Pasya Theme B offline score (147 PTS) into Supabase PostgreSQL, bringing total points to 264.5 PTS.
+- [x] Task 4: Permanently resolved IDE save conflict by configuring `"files.autoSave": "onFocusChange"` and `"files.saveConflictResolution": "overwriteFileOnDisk"`.
+- [x] Task 5: Verified DataGrid DOM null-guards across all methods and confirmed 0 console errors.
+- [x] Task 6: Bumped cache busters across application to `v103` and service worker to `v51`.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 278 — SMART WEB PROCTORED SHIELD & FULLSCREEN INTEGRATION [COMPLETE]
+
+- [x] Task 1: Implemented Fullscreen API auto-activation via pre-exam focus modal `#pre-exam-focus-modal` with DND checklist in `js/test.js`.
+- [x] Task 2: De-weaponized long-press touch gestures on mobile devices by suppressing `contextmenu` events without cheat strikes.
+- [x] Task 3: Hardened test runner touch selection and callouts in `css/test.css`.
+- [x] Task 4: Configured 10-second `_blurGraceTimer` to absorb temporary system or WhatsApp notification banners.
+- [x] Task 5: Extended warning countdown to 60 seconds with calm chime (`startCalmTone`) to prevent student panic.
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 269 — FULL-HEIGHT WORKSPACE, CUMULATIVE CURRICULUM GRADING & GREEN TEST BASELINE [COMPLETE]
 
 - [x] Task 1: Verified `#student-grid-container` and its parent `.admin-content:has(#student-grid-container)` flex layout fills 100% of workspace height (`calc(100vh - 50px - 50px)`), eliminating empty black space above `#bottom-ad-banner`.

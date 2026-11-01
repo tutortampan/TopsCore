@@ -1,16 +1,16 @@
-import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261101_v99';
+import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261102_v103';
 /**
  * TopsCore — Test Engine Module
  * Extracted from test.html
  */
 
-import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261101_v99';
-    import { requireStudentSession } from './session.js?v=20261101_v99';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261101_v99';
-    import { startCountdown, isExpired } from './timer.js?v=20261101_v99';
-    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261101_v99';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261101_v99';
-    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261101_v99';
+import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261102_v103';
+    import { requireStudentSession } from './session.js?v=20261102_v103';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261102_v103';
+    import { startCountdown, isExpired } from './timer.js?v=20261102_v103';
+    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261102_v103';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261102_v103';
+    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261102_v103';
 
     // Arm wake lock gestures on first interaction
     bindWakeLockGestures();
@@ -337,6 +337,20 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       }
     }
 
+    function startCalmTone() {
+      if (!securityConfig.soundEnabled) return;
+      try {
+        const ctx = _getCtx();
+        stopPoliceSiren();
+        CHEAT_SOUNDS.warning_tone(ctx);
+        if (navigator.vibrate) {
+          try { navigator.vibrate([200, 100, 200]); } catch (_) {}
+        }
+      } catch (e) {
+        console.warn('Calm tone error:', e);
+      }
+    }
+
     function stopPoliceSiren() {
       try {
         _activeOscNodes.forEach(n => { try { n.stop(); n.disconnect(); } catch (_) {} });
@@ -489,9 +503,14 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       if (overlay) overlay.style.display = 'flex';
 
-      startPoliceSiren();
+      // Smart Proctor Tone: Play calm chime on early warnings, reserving loud siren for severe violations
+      if (cheatStrikes <= 3) {
+        startCalmTone();
+      } else {
+        startPoliceSiren();
+      }
 
-      const durationSeconds = Math.max(securityConfig.countdownSeconds || 30, 25);
+      const durationSeconds = Math.max(securityConfig.countdownSeconds || 60, 60);
       cheatDeadline = Date.now() + (durationSeconds * 1000);
       if (countEl) countEl.textContent = durationSeconds;
 
@@ -574,10 +593,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (isTestActive) e.preventDefault();
     });
 
+    // Context Menu Interception (Touch-Guard: Suppress menu without false alarm strikes on mobile long-press)
     document.addEventListener('contextmenu', (e) => {
       if (isTestActive) {
         e.preventDefault();
-        triggerCheatAlert('Right-Click / Context Menu');
       }
     });
 
@@ -616,9 +635,35 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
     // Screen Wake Lock & Keep-Awake Engine is managed via ./js/wake-lock.js
 
+    // Smart Focus Grace Period Engine (10-second buffer to absorb notifications, phone calls, or quick swipes)
+    let _blurGraceTimer = null;
+
+    function handleFocusLost(reason) {
+      if (!isTestActive || !securityConfig.enabled) return;
+      if (isCheatAlertActive) return;
+
+      saveCurrentAnswer();
+
+      if (_blurGraceTimer) clearTimeout(_blurGraceTimer);
+      _blurGraceTimer = setTimeout(() => {
+        if (document.hidden || !document.hasFocus()) {
+          triggerCheatAlert(reason);
+        }
+        _blurGraceTimer = null;
+      }, 10000);
+    }
+
+    function handleFocusRestored() {
+      if (_blurGraceTimer) {
+        clearTimeout(_blurGraceTimer);
+        _blurGraceTimer = null;
+      }
+    }
+
     // Detect switching tab or minimizing browser
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && isTestActive) {
+        handleFocusRestored();
         requestScreenWakeLock();
         saveCurrentAnswer();
 
@@ -634,7 +679,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
               audioCtx.resume();
             }
             if (!sirenOsc) {
-              startPoliceSiren();
+              if (cheatStrikes <= 3) startCalmTone();
+              else startPoliceSiren();
             }
             const remaining = Math.max(0, Math.ceil((cheatDeadline - Date.now()) / 1000));
             const countEl = document.getElementById('cheat-timer-count');
@@ -644,11 +690,12 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       }
       if (!securityConfig.enabled) return;
       if (isTestActive && document.hidden) {
-        triggerCheatAlert('Leaving the tab / Minimizing browser');
+        handleFocusLost('Leaving the tab / Minimizing browser');
       }
     });
 
     window.addEventListener('focus', () => {
+      handleFocusRestored();
       if (isTestActive) {
         saveCurrentAnswer();
         if (isCheatAlertActive && cheatDeadline > 0) {
@@ -663,7 +710,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
               audioCtx.resume();
             }
             if (!sirenOsc) {
-              startPoliceSiren();
+              if (cheatStrikes <= 3) startCalmTone();
+              else startPoliceSiren();
             }
           }
         }
@@ -690,7 +738,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         }
       }
 
-      triggerCheatAlert('Screen lost focus / Side panel or external app opened');
+      handleFocusLost('Screen lost focus / Side panel or external app opened');
     });
 
     // On pagehide / minimize: safely buffer current answers to storage only.
@@ -752,6 +800,48 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       }
       return result;
     }
+
+    // ─── Smart Web Proctored Shield: Fullscreen Helpers ─────────────
+    async function requestFullscreenMode() {
+      try {
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) {
+          await docEl.requestFullscreen();
+        } else if (docEl.webkitRequestFullscreen) {
+          await docEl.webkitRequestFullscreen();
+        } else if (docEl.mozRequestFullScreen) {
+          await docEl.mozRequestFullScreen();
+        } else if (docEl.msRequestFullscreen) {
+          await docEl.msRequestFullscreen();
+        }
+      } catch (err) {
+        console.warn('Fullscreen request bypassed or denied:', err);
+      }
+    }
+
+    function isFullscreenActive() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    }
+
+    function handleFullscreenChange() {
+      if (!isTestActive) return;
+      const pauseModal = document.getElementById('fullscreen-pause-modal');
+      if (!pauseModal) return;
+
+      if (!isFullscreenActive()) {
+        pauseModal.classList.remove('hidden');
+      } else {
+        pauseModal.classList.add('hidden');
+      }
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+
+    document.getElementById('btn-resume-fullscreen')?.addEventListener('click', async () => {
+      await requestFullscreenMode();
+      document.getElementById('fullscreen-pause-modal')?.classList.add('hidden');
+    });
 
     // —— Boot ——
     async function bootTest() {
@@ -1044,13 +1134,28 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         }
 
         hideLoading();
-        startSection(currentSectionIndex);
 
-        // Activate Anti-Cheat System & Screen Wake Lock
-        isTestActive = true;
-        requestScreenWakeLock();
-        lockHistory();
-        startSessionHeartbeatGuard();
+        const preExamModal = document.getElementById('pre-exam-focus-modal');
+        const proceedStartExam = async () => {
+          if (preExamModal) preExamModal.classList.add('hidden');
+          startSection(currentSectionIndex);
+          isTestActive = true;
+          requestScreenWakeLock();
+          lockHistory();
+          startSessionHeartbeatGuard();
+        };
+
+        if (preExamModal && !isFullscreenActive()) {
+          preExamModal.classList.remove('hidden');
+          document.getElementById('btn-enter-fullscreen-start')?.addEventListener('click', async () => {
+            try {
+              await requestFullscreenMode();
+            } catch (_) {}
+            await proceedStartExam();
+          }, { once: true });
+        } else {
+          await proceedStartExam();
+        }
       } catch(e) {
         hideLoading();
         showToast(e.message, 'error');
@@ -2649,6 +2754,12 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
     async function doSubmit(isAuto = false) {
       isTestActive = false; // Disable anti-cheat alerts on submission
+      if (isFullscreenActive()) {
+        try {
+          if (document.exitFullscreen) await document.exitFullscreen();
+          else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+        } catch (_) {}
+      }
       if (_sessionHeartbeatTimer) { clearInterval(_sessionHeartbeatTimer); _sessionHeartbeatTimer = null; }
       releaseScreenWakeLock();
       timerController?.stop();

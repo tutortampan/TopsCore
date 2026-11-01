@@ -89,7 +89,8 @@
   "files.encoding": "utf8",
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
-  "files.autoSave": "off",
+  "files.autoSave": "onFocusChange",
+  "files.saveConflictResolution": "overwriteFileOnDisk",
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,

@@ -3,12 +3,12 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=20261101_v99';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261101_v99';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261101_v99';
-    import { testMicrophoneCapability } from './speech.js?v=20261101_v99';
-    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261101_v99';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=20261101_v99';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=20261102_v103';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261102_v103';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261102_v103';
+    import { testMicrophoneCapability } from './speech.js?v=20261102_v103';
+    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261102_v103';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=20261102_v103';
 
     window._isBatchChampion = false;
 
@@ -27,20 +27,20 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
   const elBatch = document.getElementById('meta-batch');
   const elLvl = document.getElementById('meta-lvl');
   if (elInst) elInst.textContent = session.institution_name || 'CEC';
-  
+
   // Title case for program
   const prgName = session.program_name ? session.program_name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : 'Camp';
   if (elProg) elProg.textContent = prgName.toUpperCase();
-  
+
   if (elBatch) elBatch.textContent = session.batch_name ? String(session.batch_name).replace(/[^0-9]/g, '') || session.batch_name : '131';
   if (elLvl) elLvl.textContent = session.level_name ? (session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level') : '3rd Level';
-  
+
   // Suppress old welcome-meta logic
   const welcomeMetaEl = document.getElementById('welcome-meta');
   if(welcomeMetaEl) welcomeMetaEl.innerHTML = '';
 
 
-        
+
     function clearPhotoEverywhere() {
       try {
         localStorage.removeItem(`stu_photo_${session.student_id}`);
@@ -97,15 +97,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     function applyStudentGenderUI(g) {
       const nameStr = (session.student_name || session.name || session.full_name || '').trim();
       let parts = nameStr.split(/\s+/).filter(Boolean);
-      
+
       const firstLower = (parts[0] || '').toLowerCase();
       if (['mr.', 'mr', 'miss', 'ms.', 'ms', 'mrs.', 'mrs', 'king', 'queen'].includes(firstLower)) {
          parts.shift();
       }
-      
+
       const cleanFullName = parts.join(' ').trim() || nameStr;
       let formattedName = cleanFullName;
-      
+
       const isLeader = Boolean(window._isBatchChampion);
       if (isLeader) {
         if (g === 'male') {
@@ -138,7 +138,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       session.gender = g;
       session.student_name = formattedName;
       setStudentSession(session);
-      
+
       // Update initials
       const initChar = cleanFullName ? cleanFullName.charAt(0).toUpperCase() : 'S';
       const bInit = document.getElementById('banner-avatar-initial');
@@ -174,7 +174,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).single();
           if (st?.gender) {
             currentGender = st.gender;
@@ -446,7 +446,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const btn = document.getElementById('btn-confirm-photo-setup');
       btn.disabled = true;
       btn.textContent = 'Entering dashboard…';
-      
+
       try {
         // If student did not manually click "Capture Photo", auto-capture from active webcam stream!
         if (!onboardPhotoData) {
@@ -540,7 +540,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
         try {
-          const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).single();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
@@ -559,7 +559,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Background sync: memastikan localStorage selalu sinkron dengan database terbaru
         (async () => {
           try {
-            const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
             const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).single();
             if (st && st.photo_url !== photoUrl) {
               if (st.photo_url) {
@@ -613,7 +613,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
       if (!hasBirthday) {
         try {
-          const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
           const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).single();
           if (st && st.birth_date) {
             hasBirthday = true;
@@ -656,14 +656,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const btn = document.getElementById('btn-confirm-birthday-setup');
           btn.disabled = true;
           btn.textContent = 'Saving...';
-          
+
           try {
             await updateStudentBirthday(session.student_id, bd);
             const diff = Date.now() - new Date(bd).getTime();
             const age = Math.abs(new Date(diff).getUTCFullYear() - 1970);
             const ageEl = document.getElementById('welcome-age');
             if (ageEl) ageEl.textContent = `${age} y.o. • `;
-            
+
             showToast('Birthday registered successfully!', 'success');
             doResolve();
           } catch (err) {
@@ -679,7 +679,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).single();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -689,7 +689,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./session.js?v=20261101_v99');
+             const { setStudentSession } = await import('./session.js?v=20261102_v103');
              setStudentSession(session);
           }
         }
@@ -735,11 +735,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const btn = document.getElementById('btn-confirm-education-setup');
           btn.disabled = true;
           btn.textContent = 'Verifying & Saving...';
-          
+
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./session.js?v=20261101_v99');
+            const { setStudentSession } = await import('./session.js?v=20261102_v103');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -779,7 +779,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     progName,
               session.batch_name ? 'Batch ' + session.batch_name : null
             ].filter(Boolean);
-            
+
             welcomeMetaEl.innerHTML = '';
             parts.forEach((part, index) => {
               const span = document.createElement('span');
@@ -967,8 +967,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       } else {
         const activeSession = await fetchActiveTestSession(nextAsm.id, session.batch_id).catch(() => null);
         const isUnlocked = activeSession?.is_unlocked === true;
-        const isWhitelisted = !activeSession?.allowed_student_ids || 
-                              activeSession.allowed_student_ids.length === 0 || 
+        const isWhitelisted = !activeSession?.allowed_student_ids ||
+                              activeSession.allowed_student_ids.length === 0 ||
                               activeSession.allowed_student_ids.includes(session.student_id);
 
         if (isUnlocked && isWhitelisted) {
@@ -1038,7 +1038,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       rawClasses.forEach(c => {
         const cLvlNum = c.levels?.level_number;
         const isCurrentLevel = (studentLevelId && c.level_id === studentLevelId) || (studentLevelNum && cLvlNum === studentLevelNum);
-        
+
         // A class is active if it matches the student's valid level
         // Level 0 is under Level 1, so if student is at Level 1, 2, or 3, Level 0 is completed/past, not active
         if (isCurrentLevel || (cLvlNum == null && studentLevelNum === 0)) {
@@ -1053,7 +1053,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       completedClasses.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
       const classIcons = ['📚', '✍️', '🗣️', '🎧', '📈', '🌍', '📖', '💬'];
-      
+
       if (activeClasses.length === 0) {
         if (grid) {
           grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
@@ -1441,7 +1441,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
             // 2. Intra-Theme Sequential Gating: Phrases Exam requires sibling Words Exam >= 60%
             if (prereqMet && isPhrasesExam && !isRemedialSession && !isStudentRemedialUnlocked) {
-              const siblingWordsExam = Tests.find(a => 
+              const siblingWordsExam = Tests.find(a =>
                 a.id !== Test.id &&
                 isExam(a) &&
                 (
@@ -1684,13 +1684,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (isThemeTest) {
           const themeCode = asm.payload?.theme_code;
           if (themeCode) {
-            const siblingQuizzes = tests.filter(a => 
-              (a.test_type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || a.test_subtype === 'VOCAB_QUIZ' || a.test_subtype === 'PHRASE_QUIZ' || a.test_subtype === 'VOCAB_TASK' || a.test_subtype === 'PHRASE_TASK' || (a.shell_code || '').includes('-QUIZ') || (a.shell_code || '').includes('-TASK')) && 
-              a.payload?.theme_code === themeCode && 
+            const siblingQuizzes = tests.filter(a =>
+              (a.test_type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || a.test_subtype === 'VOCAB_QUIZ' || a.test_subtype === 'PHRASE_QUIZ' || a.test_subtype === 'VOCAB_TASK' || a.test_subtype === 'PHRASE_TASK' || (a.shell_code || '').includes('-QUIZ') || (a.shell_code || '').includes('-TASK')) &&
+              a.payload?.theme_code === themeCode &&
               a.level_id === asm.level_id &&
               a.class_id === asm.class_id
             );
-            
+
             const reqScore = asm.prerequisite_min_score || 60;
             for (const quiz of siblingQuizzes) {
               const quizBest = bestByTest[quiz.id];
@@ -1751,7 +1751,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           // 2. Intra-Theme Sequential Gating: Phrases Exam requires sibling Words Exam >= 60%
           if (prereqMet && isPhrasesExam && !isRemedialSession && !isStudentRemedialUnlocked) {
-            const siblingWordsExam = tests.find(a => 
+            const siblingWordsExam = tests.find(a =>
               a.id !== asm.id &&
               isExam(a) &&
               a.level_id === asm.level_id &&
@@ -1814,7 +1814,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const prereqBest = bestByTest[pid];
           const prereqPct = prereqBest ? parseFloat(prereqBest.percentage || 0) : null;
           prereqMet = prereqPct !== null && prereqPct >= (asm.prerequisite_min_score || 60);
-          
+
           const pObj = tests.find(a => a.id === pid);
           prereqTitle = pObj ? (pObj.title || pObj.Test_title || 'Prerequisite') : 'Prerequisite Test';
         }
@@ -1861,7 +1861,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const isSessionUnlocked = session?.status === 'UNLOCKED' && (!session.auto_close_at || new Date(session.auto_close_at) > new Date());
 
           let retakesAllowed = asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.test_id || a.Test_id) === asm.id && (a.status || '').toUpperCase() !== 'IN_PROGRESS').length));
-          
+
           if (isAsmTest) {
             // For formal Tests: Retake allowed if session is unlocked by Tutor (or Normal session for score improvement)
             if (passed) {
@@ -1962,7 +1962,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     }
 
     // ── Overall Stats Calculation (AGENTS.md §2.8 & §2.10) ──
-    
+
     function populateUpNext(attempts, myTests) {
       renderNextAssignmentHero(myTests, attempts, window._loadedClasses);
     }
@@ -2273,7 +2273,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
         }
       });
-      
+
       // Sort the deduplicated attempts by submitted_at desc
       const sortedAttempts = Array.from(uniqueAttemptsMap.values()).sort((a, b) => {
         const dateA = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
@@ -2367,7 +2367,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               <div class="Test-card-title" style="font-size: 0.9rem; line-height: 1.3;">${escapeHtml(TestTitle)}</div>
               <span class="grade-badge ${(grade === '★' || grade === 'S') ? 'grade-star' : `grade-${grade}`}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2); ${(grade === '★' || grade === 'S') ? '' : `color:${TOPSCORE_COLORS.TEXT_DARK};border:1px solid ${gradeColor};`} flex-shrink:0;">${displayGrade}</span>
             </div>
-            
+
             <div class="Test-card-footer" style="margin-top: 0;">
               <div style="display:flex;align-items:center;gap:8px; font-size: 0.75rem;">
                 <span style="color:var(--clr-text-3);">Score: <strong style="color:${gradeColor}; ${(grade === '★' || grade === 'S') ? `filter:drop-shadow(0 0 4px rgba(${TOPSCORE_COLORS.STAR_RGB},0.6)); font-weight:900;` : ''}">${pct}%</strong></span>
@@ -2451,8 +2451,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       try {
-        const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
-        
+        const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
+
         // 1. Fetch active students in the same batch
         const { data: students, error: stuErr } = await sb
           .from('students')
@@ -2500,7 +2500,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             const rawPct = parseFloat(att.percentage || 0);
             const isRemedial = Boolean(att.is_remedial_unlocked);
             const effPct = isRemedial ? Math.min(rawPct, 60.0) : parseFloat(att.effective_score ?? rawPct);
-            
+
             // Raw question points earned
             const rawScore = parseFloat(att.score != null ? att.score : (rawPct * totalQ / 100));
             // Remedial points capped at KKM 60% of total questions
@@ -2677,7 +2677,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const hasExamCompleted = (st.completedExamCount ?? st.completedWeeklyCount ?? 0) > 0;
           const isRank1 = st.rank === 1 && (st.totalPoints > 0 || (hasExamCompleted && st.overallScore > 0));
           const rowClass = `standings-row ${isMe ? 'my-row' : ''} ${isRank1 ? 'rank-1-row' : ''}`;
-          
+
           let rankBadgeClass = 'leaderboard-rank-badge';
           if (st.rank === 1) rankBadgeClass += ' rank-1';
           else if (st.rank === 2) rankBadgeClass += ' rank-2';
@@ -2848,14 +2848,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).single();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
           } else {
             clearPhotoEverywhere();
           }
-          
+
           if (st?.birth_date) {
             document.getElementById('prof-dob').value = st.birth_date;
             calculateAge(st.birth_date);
@@ -2903,10 +2903,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./supabase.js?v=20261101_v99')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
-            
+
             hideLoading();
             showToast('Personal Data updated successfully!', 'success');
             window.isProfileDirty = false;
@@ -2923,7 +2923,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const modalInput = document.getElementById('profile-modal-photo-input');
 
       avatarContainer.addEventListener('click', () => modalInput.click());
-      
+
       const handlePhotoChange = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -2953,13 +2953,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           e.target.value = '';
         }
       };
-      
+
       if (bannerInput) bannerInput.addEventListener('change', handlePhotoChange);
       if (modalInput) modalInput.addEventListener('change', handlePhotoChange);
 
       // Change PIN Form Handler
       const changePinForm = document.getElementById('change-pin-form');
-      
+
       const pinInputs = changePinForm.querySelectorAll('input');
       pinInputs.forEach(input => {
         input.addEventListener('input', () => {
@@ -3072,7 +3072,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const overlay = document.getElementById('level-up-overlay');
       const badgeText = document.getElementById('lu-badge-text');
       badgeText.textContent = newLevel;
-      
+
       // Make it visible
       overlay.classList.add('active');
 

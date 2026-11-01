@@ -901,14 +901,15 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
     // If student did not attempt it, count as unattempted (0 pts) with default expected questions.
     let dynamicThemeMaxQ = 0;
     examsInTheme.forEach(t => {
+      const canonicalMax = getExpectedMax(t);
       const att = studentAttemptsInTheme.find(e => {
         const eId = e.test?.id || e.testId || e.test_id;
         return eId === t.id;
       });
       if (att && (att.totalQ || att.total_questions)) {
-        dynamicThemeMaxQ += Number(att.totalQ || att.total_questions);
+        dynamicThemeMaxQ += Math.max(canonicalMax, Number(att.totalQ || att.total_questions));
       } else {
-        dynamicThemeMaxQ += getExpectedMax(t);
+        dynamicThemeMaxQ += canonicalMax;
       }
     });
 

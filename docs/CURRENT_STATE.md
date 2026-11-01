@@ -1,37 +1,33 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-02 00:35 UTC+8
+Last Updated: 2026-11-02 01:10 UTC+8
 
-Current Phase: Phase 276: Theme A & B Highest Score Parity, Bottom Infobar Overview Chips & Zero-Scroll Vocab Vault Full-Height Integration [COMPLETE]
+Current Phase: Phase 279: Milestone Denominator Standardization (1,900 PTS Canonical Curriculum) & Exam Roster Monotonicity Alignment [COMPLETE]
 
 Current Task:
-1. Reconcile Theme A & B Exam Scores (Highest Authentic Scores, Ignored Forgiven Caps):
-   - Audited all 88 score cells across all 22 active students in Camp 133 for Test 7 (Words A), Test 8 (Phr A), Test 17 (Words B), and Test 18 (Phr B).
-   - Confirmed 100% exact match (88/88) between the Class Hub Attendance Matrix and the absolute highest authentic student attempts in Supabase PostgreSQL (`scratch/verify_table_vs_db_highest.mjs`).
-   - Completely excluded synthetic Forgiven caps (e.g. 72 & 18 capped at 60%), preserving true student retention scores (e.g. Suhendro: 111 & 26.5; Risma: 81 & 27).
-2. Elimination of Empty Dead Space in Vocabulary Vault:
-   - Added `#vault-tab-content .table-wrap` to full-height workspace CSS (`flex: 1 1 0 !important; height: 100% !important; max-height: 100% !important; margin-bottom: 0 !important;`).
-   - The table fills 100% of workspace height down to the bottom infobar banner with zero empty dead space across all viewports.
-3. Implemented Dynamic Bottom Infobar Overview Chips (Gambar 3 Alignment):
-   - Enabled `#admin-bottom-infobar` on BOTH `vocab` (Vocabulary Words) and `phrases` (Phrases & Idioms) tabs.
-   - Vocab Tab Chips: `Total Words: 640`, `Questions: 575`, `Nouns: 160`, `Verbs: 320`, `Adjectives: 160`, `Adverbs: 0`, `Themes: 4` (updates dynamically when filtered: `Showing: X / 640`).
-   - Phrases Tab Chips: `Total Phrases: 160`, `Questions: 160`, `Expressions: 70`, `Idioms: 40`, `Proverbs: 50`, `Themes: 4` (updates dynamically when filtered: `Showing: X / 160`).
-   - Right Side Actions: `⚡ Auto-Generate from Blueprint` (directly opens generator modal) and `+ Vocab Exam` / `+ Phrase Exam`.
-4. Bumped cache busters to `20261102_v101` and Service Worker to `topscore-cache-option-a-v49`.
+1. Resolved Grade Inversion Paradox (Syazida Shinda Debi Grade B vs Aunul/Gagan Grade C):
+   - Standardized `computeMilestoneExamMastery` denominator in `js/grading.js` using `Math.max(canonicalMax, attemptTotalQ)` to prevent early test version question counts (e.g. Test 29 with 200 questions instead of 480) from artificially compressing the student's curriculum denominator down to 1,620 PTS.
+   - Restored Syazida's canonical denominator to 1,900 PTS ($1308.5 / 1900 = 69\% \rightarrow \text{Grade C}$), perfectly aligned with Aunul (78%, C), Gagan (77%, C), Wardatul (74%, C), Masyan (73%, C), and Ari (62%, C).
+2. Integrated Muhammad Alimae Pasya 147 PTS Score in Theme B:
+   - Verified authentic attempt `5ab8a674-6813-4d97-9112-830641b165dc` for Test 17 in database, giving Pasya 264.5 total points and 50% PROG (4/8 exams), placing him at Rank 19 (above Frengki 245.5 pts).
+3. Verified Live Browser Rendering:
+   - Live headless Chromium audit confirmed strict progress-first ranking across all 22 active students with zero grade inversions.
+   - Updated cache busters to `v103` and Service Worker to `v51`.
+   - 100% test pass on `npm.cmd test`.
 
-Status: COMPLETE (All Automated Tests PASS 100%, 0 Syntax Errors, 0 Dead Space)
+Status: COMPLETE (All Automated Tests PASS 100%, 0 Syntax Errors, Live Parity Verified)
 
 ## Next Exact Action
-1. User hard-refresh (**Ctrl + F5**) pada browser:
-   - Buka `admin.html#vocab_vault?tab=vocab` atau `tab=phrases`: area kosong di bawah tabel kini 100% terisi rapi oleh tabel penuh dan bar ringkasan info (Bottom Infobar) persis seperti Gambar 3.
-   - Bar info bawah menampilkan overview chip: Total Words/Phrases, Questions, Word Type breakdown, Themes, tombol `⚡ Auto-Generate from Blueprint`, serta `+ Vocab Exam` / `+ Phrase Exam`.
+1. Tutor inspects the live updated Attendance Matrix table on `admin.html#class-hub`.
+2. Confirm that Syazida Shinda Debi now cleanly displays Grade C (69%), in perfect harmony with Aunul, Gagan, Wardatul, and Masyan.
+3. Confirm that Pasya displays 50% PROG with 264.5 PTS.
 
 ## Files Changed In Latest Step
-- `js/admin/vocab-vault.js` — Enabled `_syncVaultGridBottomBar` on `vocab` and `phrases` tabs; removed infobar hiding logic; wired auto-generate triggers.
-- `css/admin.css` — Added `#vault-tab-content .table-wrap` to full-height workspace CSS and thin scrollbars.
-- `scripts/bump_cache_busters_v101.mjs` — Bumped cache busters to `20261102_v101` and SW cache to `topscore-cache-option-a-v49`.
-- `sw.js` — Service worker cache version bumped.
-- `admin.html`, `dashboard.html`, `result.html`, `test.html`, `index.html` — Bumped to `v101`.
+- `js/grading.js` — Enforced canonical maximum denominator with `Math.max(canonicalMax, attemptTotalQ)`.
+- `js/app.js` — Bumped import version of `grading.js?v=20261102_v103`.
+- `js/admin/app.js` — Bumped import versions to `v103`.
+- `admin.html` — Bumped script tags to `v103`.
+- `sw.js` — Bumped cache name to `topscore-cache-option-a-v51`.
 - `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`.
 
 ## Completed
