@@ -175,7 +175,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (!currentGender) {
         try {
           const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
-          const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).single();
+          const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).maybeSingle();
           if (st?.gender) {
             currentGender = st.gender;
           }
@@ -541,7 +541,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (!photoUrl) {
         try {
           const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
-          const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).single();
+          const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).maybeSingle();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
             localStorage.setItem(`stu_photo_${session.student_id}`, photoUrl);
@@ -560,7 +560,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         (async () => {
           try {
             const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
-            const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).single();
+            const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).maybeSingle();
             if (st && st.photo_url !== photoUrl) {
               if (st.photo_url) {
                 applyPhotoEverywhere(st.photo_url);
@@ -614,7 +614,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (!hasBirthday) {
         try {
           const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
-          const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).single();
+          const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).maybeSingle();
           if (st && st.birth_date) {
             hasBirthday = true;
             localStorage.setItem(`stu_bd_${session.student_id}`, 'true');
@@ -680,7 +680,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let hasEducation = false;
       try {
         const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
-        const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).single();
+        const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).maybeSingle();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
             hasEducation = true;
@@ -2849,7 +2849,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       (async () => {
         try {
           const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
-          const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).single();
+          const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).maybeSingle();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
           } else {

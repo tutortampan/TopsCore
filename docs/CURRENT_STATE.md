@@ -1,34 +1,36 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-02 01:10 UTC+8
+Last Updated: 2026-11-02 01:28 UTC+8
 
-Current Phase: Phase 279: Milestone Denominator Standardization (1,900 PTS Canonical Curriculum) & Exam Roster Monotonicity Alignment [COMPLETE]
+Current Phase: Phase 280: Comprehensive Multi-Route E2E Health Audit & PostgREST 406 Elimination [COMPLETE]
 
 Current Task:
-1. Resolved Grade Inversion Paradox (Syazida Shinda Debi Grade B vs Aunul/Gagan Grade C):
-   - Standardized `computeMilestoneExamMastery` denominator in `js/grading.js` using `Math.max(canonicalMax, attemptTotalQ)` to prevent early test version question counts (e.g. Test 29 with 200 questions instead of 480) from artificially compressing the student's curriculum denominator down to 1,620 PTS.
-   - Restored Syazida's canonical denominator to 1,900 PTS ($1308.5 / 1900 = 69\% \rightarrow \text{Grade C}$), perfectly aligned with Aunul (78%, C), Gagan (77%, C), Wardatul (74%, C), Masyan (73%, C), and Ari (62%, C).
-2. Integrated Muhammad Alimae Pasya 147 PTS Score in Theme B:
-   - Verified authentic attempt `5ab8a674-6813-4d97-9112-830641b165dc` for Test 17 in database, giving Pasya 264.5 total points and 50% PROG (4/8 exams), placing him at Rank 19 (above Frengki 245.5 pts).
-3. Verified Live Browser Rendering:
-   - Live headless Chromium audit confirmed strict progress-first ranking across all 22 active students with zero grade inversions.
-   - Updated cache busters to `v103` and Service Worker to `v51`.
-   - 100% test pass on `npm.cmd test`.
+1. Conducted Comprehensive Multi-Route Headless Chrome Health Audit:
+   - Audited all 8 primary application views via `scratch/comprehensive_health_audit_all_pages.mjs`:
+     - `index.html` (Landing & Login)
+     - `dashboard.html` (Student Lobby)
+     - `admin.html#dashboard` (Executive Dashboard)
+     - `admin.html#class-hub` (Attendance Matrix)
+     - `admin.html#vocab_vault?tab=vocab` (Vocabulary Words)
+     - `admin.html#vocab_vault?tab=phrases` (Phrases & Idioms)
+     - `admin.html#students` (Student Roster)
+     - `admin.html#tests_analytics` (Test Analytics)
+2. Resolved PostgREST HTTP 406 Not Acceptable on `dashboard.html`:
+   - Replaced 6 brittle `.single()` calls with canonical `.maybeSingle()` in `js/dashboard.js` (lines 178, 544, 563, 617, 683, 2852).
+   - Eliminated all network console errors when fetching optional student profile attributes.
+3. Verified Zero-Error Test Suite:
+   - 40/40 JavaScript files passed syntax check (`node --check`).
+   - Comprehensive multi-route audit passed with **0 errors detected**.
+   - Student dashboard exam parity passed 100%.
 
-Status: COMPLETE (All Automated Tests PASS 100%, 0 Syntax Errors, Live Parity Verified)
+Status: COMPLETE (All Automated Tests PASS 100%, 0 Syntax Errors, 0 Console Errors across all 8 Views)
 
 ## Next Exact Action
-1. Tutor inspects the live updated Attendance Matrix table on `admin.html#class-hub`.
-2. Confirm that Syazida Shinda Debi now cleanly displays Grade C (69%), in perfect harmony with Aunul, Gagan, Wardatul, and Masyan.
-3. Confirm that Pasya displays 50% PROG with 264.5 PTS.
+1. User tests and navigates any view in TopsCore LMS with zero console errors.
 
 ## Files Changed In Latest Step
-- `js/grading.js` — Enforced canonical maximum denominator with `Math.max(canonicalMax, attemptTotalQ)`.
-- `js/app.js` — Bumped import version of `grading.js?v=20261102_v103`.
-- `js/admin/app.js` — Bumped import versions to `v103`.
-- `admin.html` — Bumped script tags to `v103`.
-- `sw.js` — Bumped cache name to `topscore-cache-option-a-v51`.
-- `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`, `docs/SESSION_LOG.md`.
+- `js/dashboard.js` — Converted `.single()` to `.maybeSingle()`.
+- `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`.
 
 ## Completed
 
