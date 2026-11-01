@@ -1,5 +1,5 @@
 export class DataGrid {
-  constructor({ container, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false, sortComparator = null, initialSortKey = null, initialSortAsc = true, superHeaders = null, summaryRow = null, tableLayout = null, rowClassName = null }) {
+  constructor({ container, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false, sortComparator = null, initialSortKey = null, initialSortAsc = true, superHeaders = null, summaryRow = null, tableLayout = null, rowClassName = null, hideToolbar = false }) {
     this.container = typeof container === 'string' ? document.getElementById(container) : container;
     this.rowClassName = rowClassName;
     if (!this.container) {
@@ -21,7 +21,7 @@ export class DataGrid {
     this.sortKey = initialSortKey;
     this.sortAsc = initialSortAsc;
     this.bulkActions = bulkActions;
-    this.customBulkActions = arguments[0].customBulkActions || [];
+    this.customBulkActions = arguments[0]?.customBulkActions || [];
     this.selectedIds = new Set();
     this.onBulkAction = onBulkAction;
     this.onRowClick = onRowClick;
@@ -30,7 +30,7 @@ export class DataGrid {
     this.superHeaders = superHeaders;
     this.summaryRow = summaryRow;
     this.tableLayout = tableLayout;
-    this.hideToolbar = arguments[0].hideToolbar || false;
+    this.hideToolbar = Boolean(hideToolbar || arguments[0]?.hideToolbar);
     
     if (this.sortKey) this.sortData();
     this.init();
@@ -39,8 +39,9 @@ export class DataGrid {
   init() {
     if (!this.container) return;
     this.container.innerHTML = `
-      <div class="datagrid-toolbar" style="${this.hideToolbar ? 'display:none;' : 'display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; gap:1rem; flex-wrap:wrap;'}">
-        <div class="datagrid-search" style="flex:1; min-width:200px; display:flex; gap:0.5rem; align-items:center;">
+      ${this.hideToolbar ? '' : `
+      <div class="datagrid-toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:10px; flex-wrap:wrap;">
+        <div class="datagrid-search" style="flex:1; min-width:200px; display:flex; gap:10px; align-items:center;">
           <div class="datagrid-search-wrap" style="position:relative; max-width:320px; width:100%;">
             <input type="text" class="form-control datagrid-search-input" placeholder="Search... (Ctrl+K)" style="width:100%; padding-right:2rem;" />
             <button type="button" class="datagrid-search-clear hidden" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:var(--clr-text-3); cursor:pointer; font-size:0.85rem; padding:2px 4px;" title="Clear search">✕</button>
@@ -51,8 +52,8 @@ export class DataGrid {
             </div>
           </div>
         </div>
-        <div class="datagrid-actions" style="display:flex; gap:0.5rem; align-items:center;">
-          <span class="datagrid-count text-muted text-sm" style="margin-right:1rem;"></span>
+        <div class="datagrid-actions" style="display:flex; gap:10px; align-items:center;">
+          <span class="datagrid-count text-muted text-sm" style="margin-right:10px;"></span>
           ${this.bulkActions ? (
              this.customBulkActions.length > 0 
               ? this.customBulkActions.map((btn, i) => `<button class="btn ${btn.className || 'btn-secondary'} btn-sm datagrid-custom-bulk-btn hidden" data-idx="${i}">${btn.label} (<span class="datagrid-bulk-count">0</span>)</button>`).join(' ')
@@ -60,6 +61,7 @@ export class DataGrid {
           ) : ''}
         </div>
       </div>
+      `}
       <div class="table-wrap" style="${this.tableLayout === 'fixed' ? 'overflow-x:hidden;' : 'overflow-x:auto;'}">
         <table class="datagrid-table" style="width:100%; position:relative; ${this.tableLayout ? `table-layout:${this.tableLayout};` : ''}">
           <colgroup class="datagrid-colgroup"></colgroup>
@@ -69,7 +71,7 @@ export class DataGrid {
           <tfoot class="datagrid-tfoot"></tfoot>
         </table>
       </div>
-      <div class="datagrid-pagination" style="${this.hideToolbar ? 'display:none;' : 'display:flex; justify-content:center; align-items:center; gap:0.5rem; margin-top:1rem;'}">
+      <div class="datagrid-pagination" style="${this.hideToolbar ? 'display:none;' : 'display:flex; justify-content:center; align-items:center; gap:10px; margin-top:10px;'}">
       </div>
     `;
 
@@ -84,7 +86,7 @@ export class DataGrid {
     this.colsMenu = this.container.querySelector('.datagrid-cols-menu');
     this.colsBtn = this.container.querySelector('.datagrid-cols-btn');
 
-    if (this.searchKeys && this.searchKeys.length > 0) {
+    if (this.searchKeys && this.searchKeys.length > 0 && this.searchInput) {
       let searchDebounceTimer = null;
       this.searchInput.addEventListener('input', (e) => {
         clearTimeout(searchDebounceTimer);
@@ -98,12 +100,14 @@ export class DataGrid {
       });
 
       this.searchClearBtn?.addEventListener('click', () => {
-        this.searchInput.value = '';
-        this.searchClearBtn.classList.add('hidden');
-        this.currentPage = 1;
-        this.filterData('');
-        this.render();
-        this.searchInput.focus();
+        if (this.searchInput) {
+          this.searchInput.value = '';
+          this.searchClearBtn?.classList.add('hidden');
+          this.currentPage = 1;
+          this.filterData('');
+          this.render();
+          this.searchInput.focus();
+        }
       });
 
       // Quick keyboard shortcut: Ctrl+K or Cmd+K focuses search
@@ -113,7 +117,7 @@ export class DataGrid {
           return;
         }
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-          if (document.body.contains(this.searchInput)) {
+          if (this.searchInput && document.body.contains(this.searchInput)) {
             e.preventDefault();
             this.searchInput.focus();
             this.searchInput.select();
@@ -124,13 +128,15 @@ export class DataGrid {
     } else {
       const searchWrap = this.container.querySelector('.datagrid-search-wrap');
       if (searchWrap) searchWrap.style.display = 'none';
-      else this.searchInput.style.display = 'none';
+      else if (this.searchInput) this.searchInput.style.display = 'none';
     }
 
     // Toggle columns menu
-    this.colsBtn.addEventListener('click', () => {
-      this.colsMenu.classList.toggle('hidden');
-    });
+    if (this.colsBtn && this.colsMenu) {
+      this.colsBtn.addEventListener('click', () => {
+        this.colsMenu.classList.toggle('hidden');
+      });
+    }
 
     // Hide menu when clicking outside
     this._docClickHandler = (e) => {

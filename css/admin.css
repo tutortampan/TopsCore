@@ -526,8 +526,8 @@ body {
 #admin-kpi-banner {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 #admin-kpi-banner > div {
@@ -2665,7 +2665,7 @@ tr.deleted-row td {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 24px;
+  gap: 10px;
   height: calc(100vh - 120px);
   overflow: hidden;
 }
@@ -2677,7 +2677,7 @@ tr.deleted-row td {
   height: 100%;
   background: var(--bg-card, #1e293b);
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
   overflow-y: auto;
   border: 1px solid var(--border-color, #334155);
   display: flex;
@@ -2745,7 +2745,7 @@ tr.deleted-row td {
   height: 100%;
   background: var(--bg-card, #1e293b);
   border-radius: 12px;
-  padding: 24px;
+  padding: 12px;
   overflow-y: auto;
   border: 1px solid var(--border-color, #334155);
   display: flex;
@@ -2846,12 +2846,12 @@ tr.deleted-row td {
 .split-canvas-body {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 10px;
 }
 
 .split-canvas-row {
   display: flex;
-  gap: 1rem;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -3140,7 +3140,7 @@ tr.deleted-row td {
   padding: 1rem 1.15rem;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 10px;
 }
 
 .curriculum-tree-group-title {
@@ -3520,6 +3520,116 @@ tr.deleted-row td {
 }
 
 /* ============================================================
+   FULL-HEIGHT WORKSPACE INTEGRATION FOR STUDENT ROSTER & GRIDS
+   ============================================================ */
+.admin-content:has(#student-grid-container),
+.admin-content:has(#programs-grid-container),
+.admin-content:has(#batches-grid-container),
+.admin-content:has(#class-datagrid-container) {
+  padding: 6px 12px 0 12px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  height: calc(100vh - 50px - 50px) !important;
+}
+
+.admin-content:has(#student-grid-container):has(+ #admin-bottom-infobar:not(.hidden)),
+.admin-content:has(#programs-grid-container):has(+ #admin-bottom-infobar:not(.hidden)),
+.admin-content:has(#batches-grid-container):has(+ #admin-bottom-infobar:not(.hidden)),
+.admin-content:has(#class-datagrid-container):has(+ #admin-bottom-infobar:not(.hidden)) {
+  height: calc(100vh - 50px - 50px - 50px) !important;
+}
+
+#student-grid-container,
+#programs-grid-container,
+#batches-grid-container,
+#class-datagrid-container {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+#student-grid-container .datagrid-container,
+#programs-grid-container .datagrid-container,
+#batches-grid-container .datagrid-container,
+#class-datagrid-container .datagrid-container {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#student-grid-container .table-wrap,
+#programs-grid-container .table-wrap,
+#batches-grid-container .table-wrap,
+#class-datagrid-container .table-wrap {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  margin-bottom: 0 !important;
+  border-radius: var(--fm-radius-md, 8px) !important;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  background: var(--fm-bg-panel, #0f172a) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+#student-grid-container .table-wrap table,
+#programs-grid-container .table-wrap table,
+#batches-grid-container .table-wrap table,
+#class-datagrid-container .table-wrap table {
+  width: 100% !important;
+}
+
+@supports (scrollbar-width: thin) {
+  #student-grid-container .table-wrap {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(56, 189, 248, 0.6) rgba(15, 23, 42, 0.85);
+  }
+}
+
+#student-grid-container .table-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: rgba(15, 23, 42, 0.85);
+}
+
+#student-grid-container .table-wrap::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+  border-radius: 4px;
+}
+
+#student-grid-container .table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #38bdf8;
+}
+
+@media (max-width: 768px) {
+  .admin-content:has(#student-grid-container),
+  .admin-content:has(#programs-grid-container),
+  .admin-content:has(#batches-grid-container),
+  .admin-content:has(#class-datagrid-container) {
+    height: calc(100vh - 50px - var(--fm-bottom-tab-h, 56px)) !important;
+    padding: 4px 6px 0 6px !important;
+  }
+}
+
+/* ============================================================
    ZERO-SCROLL DYNAMIC RESPONSIVE CLASS ATTENDANCE MATRIX
    ============================================================ */
 .admin-content:has(#class-attendance-grid) {
@@ -3551,6 +3661,10 @@ tr.deleted-row td {
 }
 
 #class-attendance-grid .datagrid-toolbar,
+#class-attendance-container .datagrid-toolbar,
+#class-attendance-grid .datagrid-search,
+#class-attendance-grid .datagrid-search-wrap,
+#class-attendance-grid .datagrid-columns-dropdown,
 #class-attendance-grid .datagrid-pagination,
 #student-grid-container .datagrid-toolbar,
 #student-grid-container .datagrid-pagination {
@@ -3558,6 +3672,9 @@ tr.deleted-row td {
   margin: 0 !important;
   padding: 0 !important;
   height: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 #class-attendance-grid .table-wrap {
@@ -4216,7 +4333,8 @@ body.sidebar-collapsed .admin-main {
   background: rgba(15, 23, 42, 0.95);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
+  margin-bottom: 10px;
   flex-shrink: 0;
   min-height: 32px;
 }
@@ -5038,7 +5156,7 @@ tfoot.datagrid-tfoot,
   padding-right: 6px !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 20px !important;
+  gap: 10px !important;
 }
 
 .dup-questions-content {
@@ -5047,7 +5165,7 @@ tfoot.datagrid-tfoot,
   padding-right: 6px !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 16px !important;
+  gap: 10px !important;
 }
 
 .dup-filter-bar {

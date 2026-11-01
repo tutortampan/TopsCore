@@ -1,3 +1,21 @@
+# ACTIVE DIRECTIVE: PHASE 266 — PROGRESS-FIRST RANKING, CUMULATIVE CURRICULUM GRADING & CROSS-THEME PREREQUISITE GATING [COMPLETE]
+
+- [x] Task 1: Re-ordered leaderboard comparator in `js/admin/app.js`: `PROG %` DESC (Progress First) -> `PTS` DESC (Total Exam Points) -> `SCORE %` DESC -> `lastSubmittedAt` ASC.
+- [x] Task 2: Upgraded `computeMilestoneExamMastery` in `js/grading.js` to derive Grade and Overall Score from total points earned divided by total expected curriculum points (1,900 points on 3rd Vocabulary), eliminating artificial grade inflation for low-progress students.
+- [x] Task 3: Added Cross-Theme Sequential Exam Prerequisite in `evaluateStudentsEligibility` (`js/admin/tests-access.js`), client fallback `startTest` (`js/api.js`), and Edge Function `start-test`: taking Theme B, C, or D strictly requires passing all exams in the prior theme (>= 60%).
+- [x] Task 4: Passed deep code health audit with 0 errors, bumped cache buster to `?v=20261101_v94` and service worker to `topscore-cache-option-a-v42`.
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 265 — FULL-HEIGHT WORKSPACE INTEGRATION FOR STUDENT ROSTER & DATAGRIDS [COMPLETE]
+
+- [x] Task 1: Stripped outer redundant `.card` class and inline padding from `#student-grid-container` in `js/admin/student-management.js`.
+- [x] Task 2: Added full-height flex integration for `.admin-content:has(#student-grid-container)` and primary grid views in `css/admin.css`, filling 100% of the available viewport from topbar to the locked bottom footer.
+- [x] Task 3: Pinned summary row `★ BATCH AVERAGE` at the bottom of the table wrapper with sleek thin scrollbar and mobile responsive query.
+- [x] Task 4: Bumped cache busters to `?v=20261101_v93` and service worker cache to `topscore-cache-option-a-v41`.
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 259 — REAL-TIME DYNAMIC PACING BADGE IN TEST RUNNER [COMPLETE]
 
 - [x] Task 1: Added real-time pacing indicator pill `#test-pacing-indicator` calculating seconds-per-unanswered-question on every timer tick in `js/test.js`.

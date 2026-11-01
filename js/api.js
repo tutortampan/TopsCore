@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=5.3.2';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261031_v58';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261101_v95';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=5.3.2';
 import { escapeHtml, escHtml } from './app.js?v=5.3.2';
 
@@ -961,6 +961,55 @@ export async function startTest(studentId, testId) {
       if (!hasPassedWords) {
         const pErr = new Error(`Prerequisite not completed. You must pass the Words Exam (${wordsExam.title}) with at least ${reqScore}% before taking the Phrases Exam.`);
         pErr.code = 'WORDS_EXAM_REQUIRED';
+        pErr.status = 403;
+        throw pErr;
+      }
+    }
+  }
+
+  // Guard: Strict Cross-Theme Prerequisite:
+  // Taking ANY test (Quiz or Exam) in Theme B, C, or D requires passing prior theme's exams with >= 60%
+  const currentThemeFallback = String(themeCodeFallback || asmData.shell_code?.replace(/^[0-9]+/, '').charAt(0) || '').toUpperCase();
+  const themeSeqFallback = ['A', 'B', 'C', 'D'];
+  const curThemeIdxFallback = themeSeqFallback.indexOf(currentThemeFallback);
+
+  const isRemedialSessionFallback = asmData.payload?.test_session?.is_remedial === true ||
+    (Array.isArray(asmData.payload?.test_session?.remedial_student_ids) && asmData.payload.test_session.remedial_student_ids.includes(studentId));
+
+  if (curThemeIdxFallback > 0 && !isStandaloneTryout && !isRemedialSessionFallback) {
+    const priorTheme = themeSeqFallback[curThemeIdxFallback - 1];
+    const { data: priorExams } = await sb.from('tests')
+      .select('id, title, payload, shell_code, test_type')
+      .eq('class_id', asmData.class_id)
+      .eq('level_id', asmData.level_id)
+      .eq('test_type', 'exam')
+      .neq('id', asmData.id);
+
+    const matchingPriorExams = (priorExams || []).filter(t => {
+      const tc = t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '');
+      return String(tc).toUpperCase() === priorTheme && isWeeklyExam(t);
+    });
+
+    if (matchingPriorExams.length > 0) {
+      const priorExamIds = matchingPriorExams.map(t => t.id);
+      const { data: priorAttempts } = await sb.from('attempts')
+        .select('test_id, percentage, effective_score, status, is_remedial_unlocked')
+        .eq('student_id', studentId)
+        .in('test_id', priorExamIds)
+        .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
+
+      const passedPriorIds = new Set();
+      (priorAttempts || []).forEach(att => {
+        const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+        if (pct >= 60 || att.is_remedial_unlocked) {
+          passedPriorIds.add(att.test_id);
+        }
+      });
+
+      const failedAny = priorExamIds.some(id => !passedPriorIds.has(id));
+      if (failedAny) {
+        const pErr = new Error(`Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least 60% before taking Theme ${currentThemeFallback} tests.`);
+        pErr.code = 'PRIOR_THEME_EXAMS_REQUIRED';
         pErr.status = 403;
         throw pErr;
       }

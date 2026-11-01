@@ -933,8 +933,24 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
     };
   });
 
-  // 2. Authoritative Single Vocab Model: Latest Active Theme Score & Grade
-  // Nilai Global (Overall Score & Grade) dihitung dari Tema Terakhir yang aktif dikerjakan siswa
+  // 2. Authoritative Full Curriculum Cumulative Mastery Model
+  // Nilai Global (Overall Score & Grade) dihitung dari Total Poin yang Diperoleh
+  // dibanding Total Poin Kurikulum Seharusnya (misal 1.900 poin penuh pada 3rd Vocab)
+  const totalCurriculumExpectedPoints = themeStats.reduce((sum, ts) => sum + (ts.maxQ || 0), 0);
+
+  let overallScore = 0;
+  let grade = '—';
+  let denominator = totalCurriculumExpectedPoints;
+
+  if (completedExamCount > 0 && totalCurriculumExpectedPoints > 0) {
+    overallScore = Math.round((cumulativePoints / totalCurriculumExpectedPoints) * 100);
+    grade = calculateGrade(overallScore);
+  } else if (completedExamCount === 0) {
+    overallScore = 0;
+    grade = '—';
+  }
+
+  // Find latest attempted theme for contextual reference
   let latestAttemptedTheme = null;
   for (let i = themeStats.length - 1; i >= 0; i--) {
     if (themeStats[i].attempted) {
@@ -942,41 +958,20 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
       break;
     }
   }
-
-  let latestThemePoints = 0;
-  let overallScore = 0;
-  let grade = '—';
-  let denominator = 0;
-
-  if (latestAttemptedTheme) {
-    latestThemePoints = Math.round(latestAttemptedTheme.earned * 10) / 10;
-    overallScore = latestAttemptedTheme.scorePct;
-    grade = calculateGrade(overallScore);
-    denominator = latestAttemptedTheme.maxQ;
-  } else if (completedExamCount > 0) {
-    const sumEarned = cleanExamEntries.reduce((sum, e) => sum + Number(e.effPoints ?? e.points ?? 0), 0);
-    const sumMax = cleanExamEntries.reduce((sum, e) => sum + Number(e.totalQ ?? 0), 0);
-    latestThemePoints = Math.round(sumEarned * 10) / 10;
-    overallScore = sumMax > 0 ? Math.round((sumEarned / sumMax) * 100) : 0;
-    grade = calculateGrade(overallScore);
-    denominator = sumMax;
-  }
+  const latestThemePoints = latestAttemptedTheme ? Math.round(latestAttemptedTheme.earned * 10) / 10 : 0;
 
   return {
-    totalPoints: latestThemePoints, // Authoritative: Points of latest active theme exams
+    totalPoints: cumulativePoints, // Authoritative: Total points earned from all completed exams
     latestThemePoints,
     cumulativePoints,
     overallScore,
     grade,
-    denominator,
+    denominator: totalCurriculumExpectedPoints,
     completedExamCount,
     completedWeeklyCount,
     activeThemeCode: latestAttemptedTheme?.themeCode || null,
     themeStats,
-    // Backward compatibility aliases
-    includedThemeCodes: latestAttemptedTheme ? [latestAttemptedTheme.themeCode] : [],
-    includedExamIds: new Set(
-      latestAttemptedTheme ? (themeExamsMap[latestAttemptedTheme.themeCode] || []).map((t) => t.id) : []
-    ),
+    includedThemeCodes: sortedThemes,
+    includedExamIds: new Set((allClassExams || []).filter(isExam).map(t => t.id))
   };
 }

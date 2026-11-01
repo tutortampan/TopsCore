@@ -8,7 +8,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=5.3.2';
     import { testMicrophoneCapability } from './speech.js?v=5.3.2';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=5.3.2';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=20261031_v58';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=20261101_v95';
 
     window._isBatchChampion = false;
 
@@ -1393,12 +1393,44 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                prereqTitle = pObj ? (pObj.display_name || pObj.title || pObj.name || 'Prerequisite') : 'Prerequisite Test';
             }
 
-            // Sequential Intra-Theme Exam Prerequisite: Phrases Exam requires sibling Words Exam >= 60%
-            // Note: If tutor has actively unlocked a live test session for this student, access is authorized by tutor!
+            // Sequential Intra-Theme & Inter-Theme Exam Prerequisite Gating
             const liveSess = (Test.payload?.test_session);
             const isSessLive = liveSess?.status === 'UNLOCKED' &&
               (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > new Date()) &&
               (!Array.isArray(liveSess.allowed_student_ids) || liveSess.allowed_student_ids.length === 0 || liveSess.allowed_student_ids.includes(session?.student_id));
+
+            const isRemedialSession = liveSess?.is_remedial === true ||
+              (Array.isArray(liveSess?.remedial_student_ids) && liveSess.remedial_student_ids.includes(session?.student_id));
+            const isStudentRemedialUnlocked = Boolean(bestByTest[Test.id]?.is_remedial_unlocked || bestByTest[Test.id]?.is_remedial);
+
+            // 1. Inter-Theme Gating: Theme B, C, D tests strictly require all prior theme's exams to be passed (>= 60%)
+            const currentTheme = String(Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+            const themeSequence = ['A', 'B', 'C', 'D'];
+            const curThemeIdx = themeSequence.indexOf(currentTheme);
+
+            if (curThemeIdx > 0 && !isRemedialSession && !isStudentRemedialUnlocked) {
+              const priorTheme = themeSequence[curThemeIdx - 1];
+              const priorExams = Tests.filter(a => {
+                if (!isExam(a)) return false;
+                const tc = String(a.payload?.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+                return tc === priorTheme;
+              });
+
+              if (priorExams.length > 0) {
+                for (const pe of priorExams) {
+                  const peBest = bestByTest[pe.id];
+                  const peRawPct = peBest ? parseFloat(peBest.percentage || 0) : null;
+                  const peRem = Boolean(peBest && (peBest.is_remedial_unlocked || peBest.is_remedial));
+                  const pePct = peRem && peRawPct !== null ? Math.min(peRawPct, 60.0) : peRawPct;
+                  const peMin = pe.minimum_required_score || pe.pass_threshold || 60;
+                  if (pePct === null || pePct < peMin) {
+                    prereqMet = false;
+                    prereqTitle = `Theme ${priorTheme} Exams (Passed ≥${peMin}% required)`;
+                    break;
+                  }
+                }
+              }
+            }
 
             const isPhrasesExam = isExam(Test) && Boolean(
               Test.category === 'phrases' || Test.test_subtype === 'PHRASE_EXAM' ||
@@ -1406,9 +1438,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               (Test.shell_code || '').toUpperCase().includes('PHRASE') ||
               (Test.payload?.subtype || '').toUpperCase().includes('PHRASE')
             );
-            if (isSessLive) {
-              prereqMet = true;
-            } else if (prereqMet && isPhrasesExam) {
+
+            // 2. Intra-Theme Sequential Gating: Phrases Exam requires sibling Words Exam >= 60%
+            if (prereqMet && isPhrasesExam && !isRemedialSession && !isStudentRemedialUnlocked) {
               const siblingWordsExam = Tests.find(a => 
                 a.id !== Test.id &&
                 isExam(a) &&
@@ -1434,6 +1466,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                   prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
                 }
               }
+            }
+
+            // Explicit Remedial Session bypass authorization
+            if (isRemedialSession || isStudentRemedialUnlocked) {
+              prereqMet = true;
             }
 
             let statusBadge = '';
@@ -1666,12 +1703,44 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             }
           }
 
-          // Sequential Intra-Theme Exam Prerequisite: Phrases Exam requires sibling Words Exam >= 60%
-          // Note: If tutor has actively unlocked a live test session for this student, access is authorized by tutor!
+          // Sequential Intra-Theme & Inter-Theme Exam Prerequisite Gating
           const liveSess = (asm.payload?.test_session);
           const isSessLive = liveSess?.status === 'UNLOCKED' &&
             (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > new Date()) &&
             (!Array.isArray(liveSess.allowed_student_ids) || liveSess.allowed_student_ids.length === 0 || liveSess.allowed_student_ids.includes(session?.student_id || session?.id));
+
+          const isRemedialSession = liveSess?.is_remedial === true ||
+            (Array.isArray(liveSess?.remedial_student_ids) && liveSess.remedial_student_ids.includes(session?.student_id || session?.id));
+          const isStudentRemedialUnlocked = Boolean(bestByTest[asm.id]?.is_remedial_unlocked || bestByTest[asm.id]?.is_remedial);
+
+          // 1. Inter-Theme Gating: Theme B, C, D exams strictly require all prior theme's exams to be passed (>= 60%)
+          const currentTheme = String(themeCode || asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+          const themeSequence = ['A', 'B', 'C', 'D'];
+          const curThemeIdx = themeSequence.indexOf(currentTheme);
+
+          if (curThemeIdx > 0 && !isRemedialSession && !isStudentRemedialUnlocked) {
+            const priorTheme = themeSequence[curThemeIdx - 1];
+            const priorExams = tests.filter(a => {
+              if (!isExam(a)) return false;
+              const tc = String(a.payload?.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+              return tc === priorTheme && a.level_id === asm.level_id && a.class_id === asm.class_id;
+            });
+
+            if (priorExams.length > 0) {
+              for (const pe of priorExams) {
+                const peBest = bestByTest[pe.id];
+                const peRawPct = peBest ? parseFloat(peBest.percentage || 0) : null;
+                const peRem = Boolean(peBest && (peBest.is_remedial_unlocked || peBest.is_remedial));
+                const pePct = peRem && peRawPct !== null ? Math.min(peRawPct, 60.0) : peRawPct;
+                const peMin = pe.minimum_required_score || pe.pass_threshold || 60;
+                if (pePct === null || pePct < peMin) {
+                  prereqMet = false;
+                  prereqTitle = `Theme ${priorTheme} Exams (Passed ≥${peMin}% required)`;
+                  break;
+                }
+              }
+            }
+          }
 
           const isPhrasesExam = isExam(asm) && Boolean(
             asm.category === 'phrases' || asm.test_subtype === 'PHRASE_EXAM' ||
@@ -1679,9 +1748,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             (asm.shell_code || '').toUpperCase().includes('PHRASE') ||
             (asm.payload?.subtype || '').toUpperCase().includes('PHRASE')
           );
-          if (isSessLive) {
-            prereqMet = true;
-          } else if (prereqMet && isPhrasesExam) {
+
+          // 2. Intra-Theme Sequential Gating: Phrases Exam requires sibling Words Exam >= 60%
+          if (prereqMet && isPhrasesExam && !isRemedialSession && !isStudentRemedialUnlocked) {
             const siblingWordsExam = tests.find(a => 
               a.id !== asm.id &&
               isExam(a) &&
@@ -1709,6 +1778,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
               }
             }
+          }
+
+          // Explicit Remedial Session bypass authorization
+          if (isRemedialSession || isStudentRemedialUnlocked) {
+            prereqMet = true;
           }
         } else if (asm.prerequisites && typeof asm.prerequisites === 'object') {
           const parents = Array.isArray(asm.prerequisites.parents) ? asm.prerequisites.parents : [];

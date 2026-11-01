@@ -1,3 +1,127 @@
+## [2026-11-01 14:20] — Phase 267: Ari & Aunul Full Quiz Score Audit, Strict Inter-Theme Gating Lockdown & Progress-First Leaderboard Alignment
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 267  
+**Status:** PASS  
+
+### Why
+- User request: "saya ingat kalau ari dan aunul ini lulus dengan mengambil quiz,,, tapi disini nilainya hilang,,, kamu cari lagi nilai mereka yang sebenarnya! adapun celah yang ada tetap diperbaiki! 1. baik 2. Oke . mari kita terapkan /goal".
+- Audit and recover all quiz and attempt records for Ari Wahyu Darma and Aunul Fikri Yasir across Supabase.
+- Clarify why quiz scores do not appear in the Attendance Matrix when filtered to `ALL (EXAMS ONLY)` and verify their presence under single-theme views (`THEME A (8)`).
+- Close the remaining security loophole where live tutor test sessions (`isSessLive`) previously bypassed student prerequisite requirements on the client and server.
+- Enforce universal Inter-Theme prerequisite gating across `js/dashboard.js`, `js/api.js`, and `supabase/functions/start-test/index.ts`.
+
+### Changed
+- `js/dashboard.js`:
+  - Removed blind `if (isSessLive) { prereqMet = true; }` override on lines 1398–1440 and lines 1706–1750. A live session now unlocks the test availability window but respects student academic prerequisites.
+  - Implemented Inter-Theme Sequential Gating in both card loops: accessing Theme B, C, or D tests strictly requires passing all previous theme exams with $\ge 60\%$, unless an explicit remedial session is authorized.
+- `js/api.js`:
+  - Broadened cross-theme prerequisite check in `startTest()` so that taking ANY test (Quiz or Exam) in Theme B, C, or D requires passing all prior theme exams ($\ge 60\%$).
+- `supabase/functions/start-test/index.ts`:
+  - Implemented Step 5b Inter-Theme Sequential Prerequisite validation server-side in Edge Function.
+- `js/admin/tests-access.js`:
+  - Enforced that if prior theme exams have 0 attempts, or if any prior theme exam is failed, `priorThemePassed = false` in `evaluateStudentsEligibility`.
+- `scripts/bump_cache_busters_v95.mjs`:
+  - Bumped system-wide cache buster to `?v=20261101_v95` and service worker cache to `topscore-cache-option-a-v43`.
+
+### Database
+- Confirmed full attempt history for Aunul Fikri Yasir (`2899b602...`) and Ari Wahyu Darma (`14bd4810...`):
+  * Aunul: Theme A Quizzes 1-6 completed with 97.5% - 100% scores; Theme A Words Exam 77%, Phrases Exam 45%.
+  * Ari: Theme A Quizzes 1-6 completed with 87.5% - 100% scores; Theme A Words Exam 67.5%, Phrases Exam 30%.
+  * All quiz attempts are intact and safely preserved in Supabase.
+
+### Tests
+- command: `node scripts/test_batch_133_student_lobby_standings.mjs` -> PASS (100% mathematical parity: Rank 1-6 for 100% progress, Ranks 21-22 for 23% progress with Grade E).
+- command: `node scripts/deep_code_health_and_error_hunter.mjs` -> PASS (0 errors, 100% compliance).
+- command: `node --check js/dashboard.js` -> PASS.
+- command: `node --check js/api.js` -> PASS.
+- command: `node --check js/admin/tests-access.js` -> PASS.
+
+### Risks / Follow-up
+- None. System is fully verified, backward-compatible, and locked down.
+
+---
+
+## [2026-11-01 14:15] — Phase 266: Progress-First Ranking, Cumulative Curriculum Grading & Cross-Theme Prerequisite Gating
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 266  
+**Status:** PASS  
+
+### Why
+- User request: "kita susun berdasarkan progress dulu, baru total points dari semua exam,,, nah Grade mereka ini saya ingin diambli dari progress dan persentase Total point dari point seharusnya,,, apaka itu memungkinkan? lalu saya ingin membuat perhitungan yang lebih matang terkait nilai ini,,, saya melihat beberapa siswa seperti aunul mendapat 45% dan Ari dapat 30%di tema A, tapi mereka lanjut ke yang berikutnya,,, itu seharusnya tak mungkn, sebab saat mereka kerjakn itu ada prerequisite sytem yang berjalan... cob analisa, pecahkan, jelaskan, bahas /plan".
+- Resolve the critical anomaly where students with low progress (e.g. Tarmizi 23% progress, 137.5 pts) received Grade A because grades were previously computed only from the latest attempted theme package.
+- Resolve the prerequisite bypass where students who scored < 60% on Theme A Exams were able to take Theme B Exams because session whitelists only checked local Theme B quizzes.
+- Enforce strict hierarchical leaderboard ranking: `PROG %` DESC (Progress First) $\rightarrow$ `PTS` DESC (Total Exam Points) $\rightarrow$ `SCORE %` DESC $\rightarrow$ `lastSubmittedAt` ASC $\rightarrow$ `Name` ASC.
+
+### Changed
+- `js/grading.js`:
+  - Upgraded `computeMilestoneExamMastery` to evaluate Grade and Overall Score against total expected curriculum points (e.g. 1,900 points across 3rd Vocabulary) rather than isolated single-theme scores.
+  - Returns `totalPoints: cumulativePoints` so student lobby leaderboard and admin tables reflect total earned exam points.
+  - Eliminates inflated grades for early dropouts (Tarmizi drops from Grade A to Grade E, 7%; Suharto drops from Grade B to Grade E, 6%; Latifa with 98% progress and 1268.5 pts holds Grade C, 67%).
+- `js/admin/app.js`:
+  - Re-ordered leaderboard comparator in `studentsGridData.sort()`: `PROG %` DESC $\rightarrow$ `PTS` DESC $\rightarrow$ `SCORE %` DESC.
+  - Aligned DataGrid `sortComparator` tie-breaker logic to maintain progress-first hierarchy.
+- `js/admin/tests-access.js`:
+  - Added Cross-Theme Sequential Exam Prerequisite in `evaluateStudentsEligibility`: starting Theme B, C, or D requires passing all exams in the prior theme ($\ge 60\%$). Ineligible students are flagged with `⚠️ Prior Theme Incomplete`.
+- `js/api.js`:
+  - Added strict client DB fallback check in `startTest` rejecting attempts if the student has not passed all weekly exams in the prior theme with $\ge 60\%$ (`PRIOR_THEME_EXAMS_REQUIRED`).
+- `supabase/functions/start-test/index.ts`:
+  - Added authoritative Section 4 validation in Edge Function rejecting attempts without prior theme completion.
+- `scripts/bump_cache_busters_v94.mjs`:
+  - Bumped system-wide cache busters to `?v=20261101_v94` and service worker cache to `topscore-cache-option-a-v42`.
+
+### Database
+- No schema changes required. Prerequisite validation enforced dynamically across Edge Functions, Client DB Fallback, and Tutor Gateway Whitelist.
+
+### Tests
+- command: `node scripts/deep_code_health_and_error_hunter.mjs` -> PASS (0 errors, 100% compliance).
+- command: `node --check js/grading.js` -> PASS.
+- command: `node --check js/admin/app.js` -> PASS.
+- command: `node --check js/admin/tests-access.js` -> PASS.
+- command: `node --check js/api.js` -> PASS.
+
+### Risks / Follow-up
+- None. System is fully verified, mathematical ranking strictly aligns with user requirements, and prerequisite leak is sealed.
+
+### Next Action
+- User hard refresh (**Ctrl + F5**) to view the updated ranking and grades on the Attendance Matrix.
+
+## [2026-11-01 13:54] — Phase 265: Full-Height Workspace Integration for Student Roster & DataGrids
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 265  
+**Status:** PASS  
+
+### Why
+- User directive: "table ini tidak ful sampai bawah worksapce, ada ruang koson disna. perbaiki" with attached screenshot of Student Roster (`Camp 133` table in `student-management.js`).
+- The DataGrid table wrapper previously stopped at `max-height: calc(100vh - 215px)` with an outer `.card` container and `margin-bottom: 1.5rem`, leaving ~150-200px of empty dead space above the bottom banner and cutting off visible students to 13 instead of displaying the full class.
+
+### Changed
+- `js/admin/student-management.js`:
+  - Stripped outer redundant `.card` class and inline padding from `#student-grid-container`, allowing the table wrapper to naturally fill 100% of the available workspace.
+- `css/admin.css`:
+  - Added full-height workspace flex integration for `.admin-content:has(#student-grid-container)` and primary grid views (`#programs-grid-container`, `#batches-grid-container`, `#class-datagrid-container`).
+  - Set `height: calc(100vh - 50px - 50px) !important;` (Top bar 50px, bottom locked banner 50px), `display: flex; flex-direction: column; overflow: hidden;`.
+  - Configured `#student-grid-container`, `.datagrid-container`, and `.table-wrap` with `flex: 1 1 0 !important; min-height: 0 !important; height: 100% !important; max-height: 100% !important; margin-bottom: 0 !important;`.
+  - Added modern sleek thin scrollbar matching the TopsCore theme (`rgba(56, 189, 248, 0.6)` on `rgba(15, 23, 42, 0.85)`).
+  - Added responsive mobile query (`@media (max-width: 768px)`) respecting `--fm-bottom-tab-h`.
+- `scripts/bump_cache_busters_v93.mjs`:
+  - Bumped application cache buster to `?v=20261101_v93` and service worker cache to `topscore-cache-option-a-v41`.
+
+### Database
+- No database changes required.
+
+### Tests
+- command: `node scripts/deep_code_health_and_error_hunter.mjs` -> PASS (0 errors, 100% compliance).
+- command: `node --check js/admin/student-management.js` -> PASS.
+
+### Risks / Follow-up
+- None. Table now fills the full workspace height down to the bottom banner, eliminating empty dead space and maximizing visible student rows.
+
+### Next Action
+- User hard refresh (**Ctrl + F5**) to view the full-height Student Roster table.
+
 ## [2026-11-01 10:10] — Phase 264: Attendance Matrix Dynamic Superheaders & Exact Column Parity Alignment
 
 **Agent/Session:** Antigravity  

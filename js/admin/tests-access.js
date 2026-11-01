@@ -23,9 +23,9 @@ import {
   fetchLiveTestSessionData,
   closeTestSession,
   getGrade
-} from '../api.js?v=20261101_v92';
-import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261101_v92';
-import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261030_v34';
+} from '../api.js?v=20261101_v95';
+import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261101_v95';
+import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261101_v95';
 
 const THEME_DEFINITIONS = [
   { code: 'A', name: 'Workplace', color: '#3b82f6', bgRgba: 'rgba(59, 130, 246, 0.08)', borderRgba: 'rgba(59, 130, 246, 0.25)' },
@@ -2066,6 +2066,47 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
       }
     }
 
+    // 1b. Cross-Theme Sequential Exam Prerequisite:
+    // If evaluating Theme B, C, or D: must have passed prior theme's exams (>= 60%)
+    const themeSeq = ['A', 'B', 'C', 'D'];
+    const curThemeIdx = themeSeq.indexOf(String(theme?.code || '').toUpperCase());
+    let priorThemePassed = true;
+    let priorThemeCode = null;
+
+    if (curThemeIdx > 0) {
+      priorThemeCode = themeSeq[curThemeIdx - 1];
+      const priorExamAtts = studAtts.filter(a => {
+        const t = a.tests || a.test || {};
+        const shell = String(t.shell_code || a.shell_code || '');
+        const title = String(t.title || a.title || '');
+        const isEx = t.test_type === 'exam' || /EXAM/i.test(shell) || /EXAM/i.test(title);
+        if (!isEx) return false;
+        const m = shell.match(/^[0-9]+([A-Za-z])/);
+        const tc = m ? m[1].toUpperCase() : (title.match(/Theme\s+([A-Za-z])/i)?.[1]?.toUpperCase() || '');
+        return tc === priorThemeCode;
+      });
+
+      if (priorExamAtts.length === 0) {
+        priorThemePassed = false;
+      } else {
+        const priorBestScores = {};
+        priorExamAtts.forEach(a => {
+          const tId = a.test_id || a.Test_id;
+          const st = String(a.status || '').toLowerCase();
+          if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
+            const sc = parseFloat(a.effective_score ?? a.percentage ?? 0);
+            if (!priorBestScores[tId] || sc > priorBestScores[tId]) {
+              priorBestScores[tId] = sc;
+            }
+          }
+        });
+        const failedPrior = Object.keys(priorBestScores).length < 2 || Object.values(priorBestScores).some(sc => sc < 60);
+        if (failedPrior) {
+          priorThemePassed = false;
+        }
+      }
+    }
+
     // 2. Prior exam attempts on words & phrases:
     let wBestPct = null;
     let pBestPct = null;
@@ -2105,7 +2146,12 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
       // - Prereq must be met.
       // - If already passed: STILL eligible per user rule ("siapa tahu dia ingin mencoba lagi untuk nilai yang lebih baik").
       // - If prereq not met: NOT eligible unless tutor overrides.
-      if (!prereqMet) {
+      if (!priorThemePassed) {
+        isEligible = false;
+        statusType = 'danger';
+        statusLabel = `⚠️ Prior Theme ${priorThemeCode} Incomplete`;
+        reason = `Must pass Theme ${priorThemeCode} Exams (≥60%) before taking Theme ${theme.code} Exam.`;
+      } else if (!prereqMet) {
         isEligible = false;
         statusType = 'danger';
         statusLabel = `⚠️ Incomplete Quizzes (${completedQuizCount}/${activeQuizzes.length})`;

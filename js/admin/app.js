@@ -1,5 +1,5 @@
 import { DataGrid } from './datagrid.js?v=5.3.2';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261101_v92';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261101_v95';
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
@@ -373,26 +373,26 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter,
   adminOverridePrerequisitesWithRemedial
-} from '../api.js?v=20261101_v92';
+} from '../api.js?v=20261101_v95';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.4.7';
 import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.4.7';
 import { getSupabase } from '../supabase.js?v=5.4.7';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261101_v92';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261101_v95';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.4.7';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.4.7';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=20261101_v92';
-import { renderTests } from './tests-management.js?v=20261031_v60';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261101_v92';
-import { renderVocabularyVault } from './vocab-vault.js?v=20261031_v47';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=20261101_v95';
+import { renderTests } from './tests-management.js?v=20261101_v95';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261101_v95';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261101_v95';
 import { renderModules } from './modules.js?v=5.4.7';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.4.8';
 import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.4.7';
 import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=5.4.9';
 import { renderCurriculum } from './curriculum-management.js?v=5.4.8';
-import { renderClassesHub } from './classes-hub.js?v=20261101_v92';
+import { renderClassesHub } from './classes-hub.js?v=20261101_v95';
 import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.4.7';
-import { openStudentFullEdit } from './student-management.js?v=20261101_v92';
-import { renderStudentsRegistration } from './student-registration.js?v=20261031_v47';
+import { openStudentFullEdit } from './student-management.js?v=20261101_v95';
+import { renderStudentsRegistration } from './student-registration.js?v=20261101_v95';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -1557,10 +1557,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
           };
         });
 
-        // Leaderboard Sort Order (Total Exam Points Primary per User Specification):
-        // 1. Primary: Global PTS DESC (Total points from ALL completed exams)
-        // 2. Secondary: Global SCORE % DESC
-        // 3. Tertiary: PROG % DESC
+        // Leaderboard Sort Order (Progress-First Primary, Total Points Secondary per User Specification):
+        // 1. Primary: PROG % DESC (Completion rate of all curriculum tests)
+        // 2. Secondary: Global PTS DESC (Total points from ALL completed exams)
+        // 3. Tertiary: Global SCORE % DESC (Curriculum accuracy percentage)
         // 4. Quaternary: Earliest lastSubmittedAt ASC
         // 5. Clean student name ASC
         studentsGridData.sort((a, b) => {
@@ -1568,22 +1568,22 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
           const bActive = b.isActive ? 1 : 0;
           if (aActive !== bActive) return bActive - aActive;
 
-          // 1. Primary: Global PTS DESC (Total points from ALL completed exams)
+          // 1. Primary: PROG % DESC (Progress first)
+          const progA = Number(a.progressPct ?? 0);
+          const progB = Number(b.progressPct ?? 0);
+          if (progA !== progB) return progB - progA;
+
+          // 2. Secondary: Global PTS DESC (Total points from ALL completed exams)
           const ptsA = Number(a.totalEarnedScore ?? 0);
           const ptsB = Number(b.totalEarnedScore ?? 0);
           if (ptsA !== ptsB) return ptsB - ptsA;
 
-          // 2. Secondary: Global SCORE % DESC
+          // 3. Tertiary: Global SCORE % DESC
           const examCountA = a.completedExamCount ?? a.completedWeeklyCount ?? 0;
           const examCountB = b.completedExamCount ?? b.completedWeeklyCount ?? 0;
           const scoreA = (examCountA > 0) ? Number(a.averageScorePct ?? 0) : -1;
           const scoreB = (examCountB > 0) ? Number(b.averageScorePct ?? 0) : -1;
           if (scoreA !== scoreB) return scoreB - scoreA;
-
-          // 3. Tertiary: PROG % DESC
-          const progA = Number(a.progressPct ?? 0);
-          const progB = Number(b.progressPct ?? 0);
-          if (progA !== progB) return progB - progA;
 
           // 4. Earliest last submission timestamp
           if (a.lastSubmittedAt && b.lastSubmittedAt) {
@@ -1659,8 +1659,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                 </div>
               ` : `
                 <div id="class-attendance-container">
-                  <div class="attendance-matrix-toolbar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <div class="attendance-matrix-toolbar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                       <div class="attendance-theme-pills" id="attendance-theme-pills-container">
                         <span style="font-size:0.7rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em; margin-right:2px;">THEME VIEW:</span>
                         <button type="button" class="attendance-theme-pill ${(!window._classAttendanceThemeFilter || window._classAttendanceThemeFilter === 'ALL') ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('ALL')" data-theme="ALL" title="View all weekly exams across all themes">🌐 ALL (EXAMS ONLY)</button>
@@ -1883,7 +1883,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
           // Open Test Generator & Settings Wizard
           document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
             try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261031_v56');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v95');
               await openAutoGenerateModal({
                 explicitClassId: classId,
                 onComplete: () => {
@@ -2351,7 +2351,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
               tableLayout: 'fixed',
               hideToolbar: true,
               rowClassName: (row) => row.hasRemedial ? 'row-remedial' : '',
-              searchKeys: ['instName', 'instShort', 'progName', 'batch', 'displayName', 'name', 'pin'],
+              searchKeys: [],
               initialSortKey: 'progressPct',
               initialSortAsc: false,
               superHeaders: dynamicSuperHeaders,
@@ -3777,7 +3777,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261031_v56');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261101_v95');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -4108,7 +4108,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261101_v92');
+      const sm = await import('./student-management.js?v=20261101_v95');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }
