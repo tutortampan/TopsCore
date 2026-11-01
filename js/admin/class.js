@@ -120,14 +120,14 @@ export async function renderTopics(area) {
     }
 
     // Add Topic Button
-    document.getElementById('btn-add-topic').addEventListener('click', () => {
+    document.getElementById('btn-add-topic')?.addEventListener('click', () => {
       openTopicModal(null, Classes, async () => {
         await renderTopics(area);
       });
     });
 
     // Edit and Delete Delegations
-    document.getElementById('topics-tbody').addEventListener('click', async (e) => {
+    document.getElementById('topics-tbody')?.addEventListener('click', async (e) => {
       const navBtn = e.target.closest('.btn-nav-questions');
       const editBtn = e.target.closest('.btn-edit-topic');
       const delBtn = e.target.closest('.btn-del-topic');
@@ -539,7 +539,7 @@ export async function renderCentralQuestionBank(area) {
     };
 
     // Actions Delegation
-    document.getElementById('q-tbody').addEventListener('click', async (e) => {
+    document.getElementById('q-tbody')?.addEventListener('click', async (e) => {
       const editBtn = e.target.closest('.btn-edit-q');
       const delBtn = e.target.closest('.btn-del-q');
 
@@ -780,7 +780,7 @@ export async function renderAssignments(area) {
       });
     };
 
-    document.getElementById('assignments-tbody').addEventListener('click', async (e) => {
+    document.getElementById('assignments-tbody')?.addEventListener('click', async (e) => {
       const delBtn = e.target.closest('.btn-revoke-assignment');
       if (delBtn) {
         const id = delBtn.dataset.id;
@@ -1771,7 +1771,7 @@ export async function renderResults(area) {
     showToast(`Exported ${exportData.length} records to ${filename}`, 'success');
   });
 
-  document.getElementById('results-grid-container').addEventListener('click', async e => {
+  document.getElementById('results-grid-container')?.addEventListener('click', async e => {
     const toggleRemBtn = e.target.closest('.toggle-remedial-btn');
     if (toggleRemBtn) {
       const attemptId = toggleRemBtn.getAttribute('data-aid');

@@ -48,3 +48,4 @@ cssFiles.forEach(file => {
     tableRules.slice(0, 15).forEach(s => console.log(`  ${s}`));
     if (tableRules.length > 15) console.log(`  ... and ${tableRules.length - 15} more`);
 });
+

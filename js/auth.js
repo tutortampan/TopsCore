@@ -322,19 +322,19 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
     }
 
     // ── Change buttons ──
-    document.getElementById('change-institution-btn').addEventListener('click', () => {
+    document.getElementById('change-institution-btn')?.addEventListener('click', () => {
       reopenSection('sec-institution');
       resetFrom('institution');
     });
-    document.getElementById('change-program-btn').addEventListener('click', () => {
+    document.getElementById('change-program-btn')?.addEventListener('click', () => {
       reopenSection('sec-program');
       resetFrom('batch');
     });
-    document.getElementById('change-batch-btn').addEventListener('click', () => {
+    document.getElementById('change-batch-btn')?.addEventListener('click', () => {
       reopenSection('sec-batch');
       resetFrom('student');
     });
-    document.getElementById('change-student-btn').addEventListener('click', () => {
+    document.getElementById('change-student-btn')?.addEventListener('click', () => {
       reopenSection('sec-student');
       resetFrom('pin');
     });

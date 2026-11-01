@@ -2038,10 +2038,10 @@ async function openSessionModal() {
   document.body.appendChild(overlay);
 
   const close = () => overlay.remove();
-  document.getElementById('close-session-modal').addEventListener('click', close);
-  document.getElementById('cancel-session-modal').addEventListener('click', close);
+  document.getElementById('close-session-modal')?.addEventListener('click', close);
+  document.getElementById('cancel-session-modal')?.addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  document.getElementById('confirm-open-session').addEventListener('click', async () => {
+  document.getElementById('confirm-open-session')?.addEventListener('click', async () => {
     const asmId = document.getElementById('session-asm-select').value;
     const durationMin = parseInt(document.getElementById('session-duration').value) || 60;
     if (!asmId) { window.showToast('Please select an test.', 'warning'); return; }
@@ -2105,11 +2105,11 @@ window.openTestGatewayModal = async () => {
   document.body.appendChild(modal);
 
   const close = () => modal.remove();
-  document.getElementById('close-gateway-modal').addEventListener('click', close);
-  document.getElementById('cancel-gateway-modal').addEventListener('click', close);
+  document.getElementById('close-gateway-modal')?.addEventListener('click', close);
+  document.getElementById('cancel-gateway-modal')?.addEventListener('click', close);
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
 
-  document.getElementById('btn-gateway-next').addEventListener('click', () => {
+  document.getElementById('btn-gateway-next')?.addEventListener('click', () => {
     const sel = document.getElementById('gateway-class-select');
     const classId = sel.value;
     if (!classId) {

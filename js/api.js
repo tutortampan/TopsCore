@@ -774,8 +774,13 @@ export function enrichTestSections(result) {
       'C': 'Culture & Expressions',
       'D': 'Advanced & Academic'
     };
+    const safeParseSnap = (snap) => {
+      if (!snap) return {};
+      if (typeof snap !== 'string') return snap;
+      try { return JSON.parse(snap); } catch (_) { return {}; }
+    };
     result.sections = themeCodes.map((tc, idx) => {
-      const sampleSnap = answers.map(a => (typeof a.question_snapshot === 'string' ? JSON.parse(a.question_snapshot) : a.question_snapshot)).find(s => s?.theme_code === tc);
+      const sampleSnap = answers.map(a => safeParseSnap(a.question_snapshot)).find(s => s?.theme_code === tc);
       const themeTitle = sampleSnap?.theme ? `Theme ${tc}: ${sampleSnap.theme}` : `Theme ${tc}: ${themeNameMap[tc] || `Section ${idx + 1}`}`;
       return {
         id: `theme_${tc}`,
@@ -800,11 +805,16 @@ export function enrichTestSections(result) {
   }
 
   // 2. Check for combined Words and Phrases
+  const safeParseSnap = (snap) => {
+    if (!snap) return {};
+    if (typeof snap !== 'string') return snap;
+    try { return JSON.parse(snap); } catch (_) { return {}; }
+  };
   const hasWordsAndPhrases = answers.some(a => {
-    const snap = typeof a.question_snapshot === 'string' ? JSON.parse(a.question_snapshot) : a.question_snapshot;
+    const snap = safeParseSnap(a.question_snapshot);
     return snap?.test_section === 'words';
   }) && answers.some(a => {
-    const snap = typeof a.question_snapshot === 'string' ? JSON.parse(a.question_snapshot) : a.question_snapshot;
+    const snap = safeParseSnap(a.question_snapshot);
     return snap?.test_section === 'phrases';
   });
 

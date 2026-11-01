@@ -50,3 +50,4 @@ console.log('\n=== js/result.js tables ===', resultJsTables ? resultJsTables.len
 if (resultJsTables) {
     resultJsTables.forEach((t, i) => console.log(`Result JS Table ${i+1}:\n`, t.substring(0, 300)));
 }
+

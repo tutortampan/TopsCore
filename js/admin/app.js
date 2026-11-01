@@ -1,12 +1,17 @@
 import { DataGrid } from './datagrid.js?v=5.3.2';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261101_v88';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261101_v91';
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
 // =========================================================
 export function makeTableResizable(table, storageKey) {
   const cols = table.querySelectorAll('th');
-  const cachedWidths = JSON.parse(localStorage.getItem(storageKey) || '{}');
+  let cachedWidths = {};
+  try {
+    cachedWidths = JSON.parse(localStorage.getItem(storageKey) || '{}');
+  } catch (_) {
+    cachedWidths = {};
+  }
 
   [].forEach.call(cols, function (col, index) {
     if (cachedWidths[index]) {
@@ -368,25 +373,25 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter,
   adminOverridePrerequisitesWithRemedial
-} from '../api.js?v=20261101_v88';
+} from '../api.js?v=20261101_v91';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=5.4.7';
 import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=5.4.7';
 import { getSupabase } from '../supabase.js?v=5.4.7';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261101_v88';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261101_v91';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=5.4.7';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=5.4.7';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=20261101_v73';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=20261101_v91';
 import { renderTests } from './tests-management.js?v=20261031_v60';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261101_v88';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261101_v91';
 import { renderVocabularyVault } from './vocab-vault.js?v=20261031_v47';
 import { renderModules } from './modules.js?v=5.4.7';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=5.4.8';
 import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=5.4.7';
 import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=5.4.9';
 import { renderCurriculum } from './curriculum-management.js?v=5.4.8';
-import { renderClassesHub } from './classes-hub.js?v=20261101_v88';
+import { renderClassesHub } from './classes-hub.js?v=20261101_v91';
 import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=5.4.7';
-import { openStudentFullEdit } from './student-management.js?v=20261101_v88';
+import { openStudentFullEdit } from './student-management.js?v=20261101_v91';
 import { renderStudentsRegistration } from './student-registration.js?v=20261031_v47';
 
     // -- Primary Tab Switching Variables --
@@ -637,7 +642,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
     const session = getAdminSession();
     if (session) showConsole();
 
-    document.getElementById('admin-login-btn').addEventListener('click', async () => {
+    document.getElementById('admin-login-btn')?.addEventListener('click', async () => {
       const user = document.getElementById('admin-username').value.trim();
       const pass = document.getElementById('admin-password').value;
       if (!user || !pass) { showToast('Please enter credentials.', 'warning'); return; }
@@ -688,11 +693,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
       if (e.key === 'Enter') document.getElementById('admin-password')?.focus();
     });
 
-    document.getElementById('admin-password').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('admin-login-btn').click();
+    document.getElementById('admin-password')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('admin-login-btn')?.click();
     });
 
-    document.getElementById('admin-logout-btn').addEventListener('click', () => {
+    document.getElementById('admin-logout-btn')?.addEventListener('click', () => {
       if (window.isProfileDirty) {
         if (!confirm('You have unsaved changes. Are you sure you want to logout?')) {
           return;
@@ -2157,17 +2162,17 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                         const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
 
                         if (!att) {
-                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.70rem); font-weight:400;" title="Unattempted">&middot;</span>';
                         }
                         const st = String(att.status || '').toLowerCase();
                         if (st === 'in_progress') {
                           const isExpired = att.expires_at && new Date(att.expires_at) < new Date();
                           if (!isExpired) {
-                            return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
+                            return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.70rem) * 0.85);" title="In Progress">⏳</span>`;
                           }
                         }
                         if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
-                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.70rem); font-weight:400;" title="Unattempted">&middot;</span>';
                         }
 
                         const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
@@ -2187,7 +2192,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                                 style="color:${color} !important; ${cursorStyle}"
                                 ${clickAttr}
                                 title="${num}. [${tag} PTS] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;${displayVal}/${totalQ} pts">
-                            <span style="font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; color:${color} !important;">
+                            <span style="font-weight:500; font-size:var(--matrix-font-size, 0.70rem); font-variant-numeric:tabular-nums; color:${color} !important;">
                               ${displayVal}
                             </span>
                           </span>
@@ -2199,7 +2204,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
                     dynamicAsmCols.push({
                       key: `test_${asm.id}`,
                       className: 'col-asm col-quiz',
-                      width: '46px',
+                      width: '32px',
                       headerTitle: `${headerTooltip} (Quiz Score %)`,
                       title: `${headerTooltip} (Quiz Score %)`,
                       label: `
@@ -4103,7 +4108,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261101_v88');
+      const sm = await import('./student-management.js?v=20261101_v91');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }
@@ -4114,7 +4119,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261031
 
 // Global edit/delete handlers
 window._editRecord = async (section, id, jsonStr) => {
-  const record = JSON.parse(jsonStr);
+  let record;
+  try {
+    record = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
+  } catch (err) {
+    console.error('Failed to parse record JSON for edit:', err);
+    return;
+  }
   await openCrudModal(section, record);
 };
 
@@ -4284,7 +4295,7 @@ window._deleteRecord = async (section, id, name) => {
   modal.classList.remove('hidden');
 };
 
-document.getElementById('delete-confirm-btn').addEventListener('click', async () => {
+document.getElementById('delete-confirm-btn')?.addEventListener('click', async () => {
   if (!_deleteSection || !_deleteId) return;
   const btn = document.getElementById('delete-confirm-btn');
   btn.disabled = true;

@@ -47,3 +47,4 @@ cssFiles.forEach(file => {
     console.log(`Table selectors found: ${tableRules.length}`);
     tableRules.slice(0, 10).forEach(s => console.log(`  ${s}`));
 });
+

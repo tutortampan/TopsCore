@@ -249,7 +249,7 @@ export async function renderClasses(area) {
   buildFlatList();
 
   // Search
-  document.getElementById('class-search-input').addEventListener('input', (e) => {
+  document.getElementById('class-search-input')?.addEventListener('input', (e) => {
     buildFlatList(e.target.value);
   });
 

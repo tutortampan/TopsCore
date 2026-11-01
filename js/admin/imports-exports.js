@@ -976,17 +976,18 @@ function calculateAgeFromBirthDate(birthDateStr) {
         if (sel) sel.innerHTML = '<option value="">(No tests available or failed to load)</option>';
       });
 
-      document.getElementById('import-Test-select').addEventListener('change', (e) => {
+      document.getElementById('import-Test-select')?.addEventListener('change', (e) => {
         const testId = e.target.value;
         const selectedTest = fetchedTestsList.find(x => x.id === testId);
         if (selectedTest) {
           const atype = selectedTest.answer_type || 'written';
-          document.getElementById('import-Test-type-select').value = atype;
+          const typeSel = document.getElementById('import-Test-type-select');
+          if (typeSel) typeSel.value = atype;
           updateFormatDisplay(atype);
         }
       });
 
-      document.getElementById('import-Test-type-select').addEventListener('change', (e) => {
+      document.getElementById('import-Test-type-select')?.addEventListener('change', (e) => {
         updateFormatDisplay(e.target.value);
       });
 
@@ -1001,8 +1002,8 @@ function calculateAgeFromBirthDate(birthDateStr) {
       }
 
       // Download template for selected format
-      document.getElementById('download-template-btn').addEventListener('click', () => {
-        const currentType = document.getElementById('import-Test-type-select').value || 'written';
+      document.getElementById('download-template-btn')?.addEventListener('click', () => {
+        const currentType = document.getElementById('import-Test-type-select')?.value || 'written';
         downloadTemplateForType(currentType);
       });
 
@@ -1019,7 +1020,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
         });
       });
 
-      document.getElementById('import-questions-file').addEventListener('change', (e) => {
+      document.getElementById('import-questions-file')?.addEventListener('change', (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -1365,7 +1366,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
         </div>
       `;
 
-      document.getElementById('export-questions-btn').addEventListener('click', async () => {
+      document.getElementById('export-questions-btn')?.addEventListener('click', async () => {
         const testId = document.getElementById('export-test-select').value;
         if (!testId) { showToast('Please select an Test to export.', 'warning'); return; }
 

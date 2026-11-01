@@ -358,7 +358,7 @@ export async function renderAdminProfile(container) {
   updateBioCounter();
 
   // Auto-Generate Bio
-  document.getElementById('btn-auto-bio').addEventListener('click', () => {
+  document.getElementById('btn-auto-bio')?.addEventListener('click', () => {
     const fullName = document.getElementById('adm-full-name').value.trim() || 'Administrator';
     const title = document.getElementById('adm-title').value.trim() || 'Education Professional';
     const education = document.getElementById('adm-education').value.trim() || 'Higher Education';

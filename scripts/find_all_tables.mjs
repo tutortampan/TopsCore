@@ -40,3 +40,4 @@ console.log('Total <table> blocks found:', allTables.length);
 allTables.forEach((t, i) => {
     console.log(`${i+1}. [${t.file}:${t.line}] ${t.snippet}`);
 });
+

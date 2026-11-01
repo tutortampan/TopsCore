@@ -4,7 +4,12 @@ import { DataGrid } from './datagrid.js?v=5.3.2';
 
 window.makeTableResizable = function(table, storageKey) {
   const cols = table.querySelectorAll('th');
-  const savedWidths = JSON.parse(localStorage.getItem(storageKey) || '{}');
+  let savedWidths = {};
+  try {
+    savedWidths = JSON.parse(localStorage.getItem(storageKey) || '{}');
+  } catch (_) {
+    savedWidths = {};
+  }
   
   [].forEach.call(cols, function (col, idx) {
     if (savedWidths[idx]) {

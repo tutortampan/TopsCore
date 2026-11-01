@@ -51,11 +51,11 @@ async function inspectAttempts() {
       const order = testMap[a.test_id]?.display_order;
       return examOrders.includes(order);
     });
-    
+
     // Check which tests the student actually took
     const completedOrders = bestAtts.map(a => testMap[a.test_id]?.display_order).filter(Boolean).sort((a,b) => a-b);
     const completedExams = examAtts.map(a => testMap[a.test_id]?.display_order).sort((a,b) => a-b);
-    
+
     studentSummary.push({
       name: s.name,
       isActive: s.is_active,

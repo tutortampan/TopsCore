@@ -23,8 +23,8 @@ import {
   fetchLiveTestSessionData,
   closeTestSession,
   getGrade
-} from '../api.js?v=20261101_v79';
-import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261101_v79';
+} from '../api.js?v=20261101_v91';
+import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261101_v91';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261030_v34';
 
 const THEME_DEFINITIONS = [
