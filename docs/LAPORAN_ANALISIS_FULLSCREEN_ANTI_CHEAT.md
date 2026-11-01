@@ -235,10 +235,10 @@ Sebelum siswa dapat mengklik tombol "Mulai Ujian", tampilkan 3 langkah wajib:
    - Fullscreen **sangat disarankan untuk diterapkan**.
    - Penguncian notifikasi **tidak bisa dipaksakan dari browser**, namun dampaknya dapat diatasi hingga 95% dengan **menghapus hukuman pada long-press**, **memberikan toleransi jeda 10 detik pada notifikasi**, dan **menampilkan panduan mengaktifkan Mode DND sebelum tes**.
 
-2. **Rekomendasi Keputusan untuk Anda:**
-   - **Apakah Anda menyetujui penerapan paket perbaikan ini?**
-     Jika disetujui, kami dapat langsung memperbarui `js/test.js` dan antarmuka tes untuk:
-     1. Menambahkan Fullscreen otomatis saat tombol Start ditekan.
-     2. Menjinakkan event long-press & context menu agar siswa bebas menyentuh layar tanpa takut terkena strike.
-     3. Memberikan toleransi waktu 60 detik yang tenang (tanpa kepanikan sirine) saat terjadi interupsi.
-     4. Menambahkan checklist peringatan DND pra-ujian.
+2. **Status Penerapan (Disetujui & Tuntas Diterapkan):**
+   Seluruh rekomendasi di atas telah selesai diterapkan dan diverifikasi pada **Phase 278 – Phase 281**:
+   1. ✅ Menambahkan Fullscreen otomatis via modal checklist `#pre-exam-focus-modal`.
+   2. ✅ Menjinakkan event long-press & context menu tanpa sanksi curang.
+   3. ✅ Memberikan toleransi waktu 60 detik yang tenang (dengan nada chime) dan jeda fokus 10 detik.
+   4. ✅ Menambahkan checklist panduan DND pra-ujian.
+   5. ✅ Verifikasi 10-rute headless Playwright berstatus 100% PASS (0 runtime errors).
