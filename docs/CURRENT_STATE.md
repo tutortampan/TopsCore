@@ -19,6 +19,7 @@ Current Task:
    - 0 uncaught exceptions in E2E student journey.
    - 100% student dashboard exam parity verified.
    - 0 layout errors, collisions, or overlapping buttons across 9 routes.
+   - 0 viewport leakage / horizontal scroll issues across iPhone SE (375px) & iPad Mini (768px).
 
 Status: COMPLETE (All 40 JS syntax checks PASS, 0 Rogue Colors, Cache v92)
 
