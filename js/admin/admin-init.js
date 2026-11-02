@@ -19,6 +19,66 @@ export function initAuthGate() {
   }
 }
 
+export function getSidebarNavItemLabel(el) {
+  if (!el) return '';
+  const labelAttr = el.getAttribute('data-sidebar-label') || el.getAttribute('data-class-name');
+  if (labelAttr && labelAttr.trim()) return labelAttr.trim();
+
+  // Spans excluding .nav-icon
+  const spans = Array.from(el.querySelectorAll('span:not(.nav-icon)'));
+  if (spans.length > 0) {
+    const text = spans.map(s => s.textContent || '').join(' ').trim();
+    if (text) return text;
+  }
+
+  // Clone node and strip .nav-icon
+  const clone = el.cloneNode(true);
+  const icon = clone.querySelector('.nav-icon');
+  if (icon) icon.remove();
+  return (clone.textContent || '').replace(/^[^\w\d]+/gu, '').trim();
+}
+
+export function sortAllSidebarDomains() {
+  document.querySelectorAll('.nav-domain-group').forEach(group => {
+    const header = group.querySelector('.nav-domain-header');
+    if (header) header.style.order = '0';
+
+    const items = Array.from(group.querySelectorAll('.admin-nav-item'));
+    if (items.length <= 1) return;
+
+    items.sort((a, b) => {
+      const textA = getSidebarNavItemLabel(a);
+      const textB = getSidebarNavItemLabel(b);
+      return textA.localeCompare(textB, undefined, { numeric: true, sensitivity: 'base' });
+    });
+
+    items.forEach((item, idx) => {
+      item.style.order = String(idx + 1);
+    });
+  });
+}
+if (typeof window !== 'undefined') {
+  window.sortAllSidebarDomains = sortAllSidebarDomains;
+  window.getSidebarNavItemLabel = getSidebarNavItemLabel;
+}
+
+export function initSidebarAlphabeticalObserver() {
+  const nav = document.querySelector('.admin-nav');
+  if (!nav || nav._hasAlphabeticalObserver) return;
+  nav._hasAlphabeticalObserver = true;
+
+  let debounceTimer = null;
+  const observer = new MutationObserver((mutations) => {
+    const hasChildChanges = mutations.some(m => m.type === 'childList');
+    if (!hasChildChanges) return;
+    if (debounceTimer) cancelAnimationFrame(debounceTimer);
+    debounceTimer = requestAnimationFrame(() => {
+      sortAllSidebarDomains();
+    });
+  });
+  observer.observe(nav, { childList: true, subtree: true });
+}
+
 export function initSidebarCache() {
   try {
     const curHash = location.hash ? location.hash.substring(1).split('?')[0].split('/')[0] : (localStorage.getItem('topscore_admin_last_section') || '');
@@ -34,6 +94,7 @@ export function initSidebarCache() {
         const list = JSON.parse(rawProg);
         const activeList = Array.isArray(list) ? list.filter(item => item.is_active !== false) : [];
         if (activeList.length > 0) {
+          activeList.sort((a, b) => (a.label || a.name || '').localeCompare(b.label || b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
           const selBatchId = localStorage.getItem('topscore_selected_batch_id');
           const selProgId = localStorage.getItem('topscore_selected_program_id');
           const isProgActive = curHash === 'students';
@@ -62,6 +123,7 @@ export function initSidebarCache() {
     if (rawClass) {
       const list = JSON.parse(rawClass);
       if (Array.isArray(list) && list.length > 0) {
+        list.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
         const selId = localStorage.getItem('topscore_selected_class_id') || list[0].id;
         const isClassActive = curHash === 'class-hub' || curHash === 'classes';
         let h = '<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:2px;">';
@@ -74,6 +136,9 @@ export function initSidebarCache() {
         if (el) el.innerHTML = h;
       }
     }
+    // Authoritatively sort all sidebar domains & start observer
+    sortAllSidebarDomains();
+    initSidebarAlphabeticalObserver();
   } catch (err) {
     console.warn('[AdminInit] Sidebar cache hydration failed:', err);
   }

@@ -134,11 +134,18 @@ body {
   border-radius: 4px;
 }
 
-/* ABCD Domain Headers */
+/* ABCD Domain Headers & Alphabetical Item Flow */
 .nav-domain-group {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+#sidebar-programs-list,
+#sidebar-classes-list,
+.sidebar-program-group,
+.sidebar-class-group {
+  display: contents;
 }
 
 .nav-domain-header {

@@ -4081,14 +4081,18 @@ export async function labelAttemptRemedial(attemptId, isRemedial = true, cap = 6
 
   if (updErr) throw updErr;
 
-  await sb.from('audit_logs').insert({
-    actor_role: 'admin',
-    action: isRemedial ? 'ATTEMPT_SET_REMEDIAL' : 'ATTEMPT_SET_NORMAL',
-    entity_type: 'attempts',
-    entity_id: attemptId,
-    new_value: { is_remedial: isRemedial, effective_score: effectiveScore, grade },
-    created_at: new Date().toISOString()
-  }).catch(() => {});
+  try {
+    await sb.from('audit_logs').insert({
+      actor_role: 'admin',
+      action: isRemedial ? 'ATTEMPT_SET_REMEDIAL' : 'ATTEMPT_SET_NORMAL',
+      entity_type: 'attempts',
+      entity_id: attemptId,
+      new_value: { is_remedial: isRemedial, effective_score: effectiveScore, grade },
+      created_at: new Date().toISOString()
+    });
+  } catch (auditErr) {
+    console.warn('[labelAttemptRemedial] Audit log failed (non-blocking):', auditErr);
+  }
 
   // Resolve best score across attempts for this student & test
   const { data: allAttempts } = await sb.from('attempts')
@@ -4145,14 +4149,18 @@ export async function labelAttemptNormal(attemptId) {
 
   if (updErr) throw updErr;
 
-  await sb.from('audit_logs').insert({
-    actor_role: 'admin',
-    action: 'ATTEMPT_SET_NORMAL',
-    entity_type: 'attempts',
-    entity_id: attemptId,
-    new_value: { is_remedial: false, is_forgiven: false, effective_score: effectiveScore, grade },
-    created_at: new Date().toISOString()
-  }).catch(() => {});
+  try {
+    await sb.from('audit_logs').insert({
+      actor_role: 'admin',
+      action: 'ATTEMPT_SET_NORMAL',
+      entity_type: 'attempts',
+      entity_id: attemptId,
+      new_value: { is_remedial: false, is_forgiven: false, effective_score: effectiveScore, grade },
+      created_at: new Date().toISOString()
+    });
+  } catch (auditErr) {
+    console.warn('[labelAttemptNormal] Audit log failed (non-blocking):', auditErr);
+  }
 
   // Resolve best score across attempts for this student & test
   const { data: allAttempts } = await sb.from('attempts')
@@ -4196,7 +4204,7 @@ export async function labelAttemptForgiven(attemptId, reason = 'Tutor Result Wai
       is_forgiven: true,
       forgiven_reason: (reason || 'Tutor Result Waiver').trim(),
       forgiven_at: new Date().toISOString(),
-      forgiven_by: 'admin',
+      forgiven_by: null,
       is_remedial: false,
       is_remedial_unlocked: false,
       effective_score: effectiveScore,
@@ -4209,14 +4217,18 @@ export async function labelAttemptForgiven(attemptId, reason = 'Tutor Result Wai
 
   if (updErr) throw updErr;
 
-  await sb.from('audit_logs').insert({
-    actor_role: 'admin',
-    action: 'FORGIVEN_SCORE_GRANTED',
-    entity_type: 'attempts',
-    entity_id: attemptId,
-    new_value: { is_forgiven: true, reason: (reason || 'Tutor Result Waiver').trim(), student_id: att.student_id, test_id: att.test_id },
-    created_at: new Date().toISOString()
-  }).catch(() => {});
+  try {
+    await sb.from('audit_logs').insert({
+      actor_role: 'admin',
+      action: 'FORGIVEN_SCORE_GRANTED',
+      entity_type: 'attempts',
+      entity_id: attemptId,
+      new_value: { is_forgiven: true, reason: (reason || 'Tutor Result Waiver').trim(), student_id: att.student_id, test_id: att.test_id },
+      created_at: new Date().toISOString()
+    });
+  } catch (auditErr) {
+    console.warn('[labelAttemptForgiven] Audit log failed (non-blocking):', auditErr);
+  }
 
   // Resolve best score across attempts for this student & test
   const { data: allAttempts } = await sb.from('attempts')

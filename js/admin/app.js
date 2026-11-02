@@ -838,6 +838,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
       const renderItems = (items) => {
         // Strictly filter to active batches only per user directive: "bagian ini hnaya tempilkan batch yang aktif saja, uyng tidak aktif sembunyikan"
         const activeItems = (items || []).filter(it => it.is_active !== false);
+        // Strictly sort batches/programs alphabetically ascending (A-Z) with numeric support
+        activeItems.sort((a, b) => (a.label || a.name || '').localeCompare(b.label || b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
         if (!activeItems || activeItems.length === 0) {
           container.innerHTML = `<div style="padding: 12px; color: var(--clr-text-muted); font-size: 0.8rem;">No active batches.</div>`;
           return;
@@ -882,6 +884,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
         html += `</div>`;
         container.innerHTML = html;
         bindEvents();
+        if (typeof window !== 'undefined' && window.sortAllSidebarDomains) {
+          window.sortAllSidebarDomains();
+        }
 
         if (matched) {
           window._filterProgramId = matched.program_id;
@@ -933,8 +938,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
         activePrograms.forEach(prog => {
           const pActiveBatches = activeBatches.filter(b => b.program_id === prog.id);
           if (pActiveBatches.length > 0) {
-            // Sort active batches by name descending (e.g. 133, 132, 131)
-            pActiveBatches.sort((a, b) => (b.name || '').localeCompare(a.name || '', undefined, { numeric: true }));
+            // Strictly sort active batches alphabetically ascending (e.g. 132, 133, 134)
+            pActiveBatches.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
             pActiveBatches.forEach(b => {
               const label = formatSidebarBatchLabel(prog.name, b.name);
               items.push({
@@ -959,6 +964,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
             });
           }
         });
+
+        // Strictly sort all items alphabetically ascending
+        items.sort((a, b) => (a.label || a.name || '').localeCompare(b.label || b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
 
         if (items.length > 0) {
           try {
@@ -1027,6 +1035,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
         html += `</div>`;
         container.innerHTML = html;
         bindEvents();
+        if (typeof window !== 'undefined' && window.sortAllSidebarDomains) {
+          window.sortAllSidebarDomains();
+        }
 
         if (!window._selectedClassId && sortedClasses.length > 0) {
           const selCls = sortedClasses.find(c => c.id === activeId) || sortedClasses[0];
