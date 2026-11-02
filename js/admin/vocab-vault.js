@@ -31,10 +31,11 @@ import {
   adminFetchAll,
   renameVaultTopic,
   exportVaultWords,
-  updateTestDefinition
-} from '../api.js?v=20261102_v103';
-import { showToast, showLoading, hideLoading } from '../app.js?v=20261102_v103';
-import { getSupabase } from '../supabase.js?v=20261102_v103';
+  updateTestDefinition,
+  toOrdinalLevel
+} from '../api.js?v=20261102_v104';
+import { showToast, showLoading, hideLoading } from '../app.js?v=20261102_v104';
+import { getSupabase } from '../supabase.js?v=20261102_v104';
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -152,8 +153,14 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
         <div style="padding: 4px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; flex-shrink: 0;">
           
           <div class="table-toolbar-unified">
-            <input type="search" id="vault-search" placeholder="🔍 Search Indonesian, English, or Topic..." class="toolbar-input-38" style="width: 260px;" />
-            <select id="vault-topic-filter" class="toolbar-input-38" style="width: 170px; cursor: pointer;">
+            <input type="search" id="vault-search" placeholder="🔍 Search Indonesian, English, or Topic..." class="toolbar-input-38" style="width: 220px;" />
+            <select id="vault-level-filter" class="toolbar-input-38" style="width: 125px; cursor: pointer;">
+              <option value="">All Levels</option>
+              <option value="1">1st Level</option>
+              <option value="2">2nd Level</option>
+              <option value="3">3rd Level</option>
+            </select>
+            <select id="vault-topic-filter" class="toolbar-input-38" style="width: 160px; cursor: pointer;">
               <option value="">All Topics</option>
               ${topics.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')}
             </select>
@@ -181,15 +188,17 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
           <table id="vault-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
             <thead style="background: rgba(15, 23, 42, 0.95); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
               <tr>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 45px; line-height: 1.2;">Lvl</th>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 70px; line-height: 1.2;">T.Code</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 68px; line-height: 1.2;">Institution</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 68px; line-height: 1.2;">Program</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 75px; line-height: 1.2;">Level</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 55px; line-height: 1.2;">T.Code</th>
                 <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">Theme</th>
                 <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 70px; line-height: 1.2;">Topic Code</th>
                 <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">Topic</th>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 90px; line-height: 1.2;">Type</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 85px; line-height: 1.2;">Type</th>
                 <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">Indonesian</th>
                 <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">English</th>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: right; width: 90px; position: sticky; right: 0; background: rgba(15, 23, 42, 0.95); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 20; line-height: 1.2;">Actions</th>
+                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: right; width: 85px; position: sticky; right: 0; background: rgba(15, 23, 42, 0.95); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 20; line-height: 1.2;">Actions</th>
               </tr>
             </thead>
             <tbody id="vault-tbody"></tbody>
@@ -307,7 +316,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     if (!filtered.length) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="9">
+          <td colspan="11">
             <div class="smart-empty-state">
               <span class="smart-empty-icon">🔍</span>
               <div class="smart-empty-title">No vocabulary words found</div>
@@ -329,7 +338,9 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
       return `
       <tr data-word-id="${escapeHtml(w.id)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-        <td class="cell-level" style="padding: 6px 12px; font-weight: 600;"><span style="background:#475569;color:#ffffff;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;">${escapeHtml(String(w.target_level || '1'))}</span></td>
+        <td class="cell-institution" style="padding: 6px 12px; font-weight: 500; color: #94a3b8; font-size: 11px;">${escapeHtml(w.institutions?.name || w.institutions?.code || 'CEC')}</td>
+        <td class="cell-program" style="padding: 6px 12px; font-weight: 500; color: #94a3b8; font-size: 11px;">${escapeHtml(w.programs?.name || w.programs?.code || 'Camp')}</td>
+        <td class="cell-level" style="padding: 6px 12px; font-weight: 600;"><span style="background:#475569;color:#ffffff;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;">${escapeHtml(typeof toOrdinalLevel === 'function' ? toOrdinalLevel(w.target_level) : String(w.target_level || '1'))}</span></td>
         <td class="cell-theme-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#f472b6;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.theme_code || '—')}</span></td>
         <td class="cell-theme" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</td>
         <td class="cell-topic-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#a5b4fc;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.topic_code || '—')}</span></td>
@@ -463,9 +474,11 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
   function filterAndRender() {
     const search = (document.getElementById('vault-search')?.value || '').toLowerCase().trim();
+    const level = document.getElementById('vault-level-filter')?.value || '';
     const topic = document.getElementById('vault-topic-filter')?.value || '';
     const wordType = document.getElementById('vault-wordtype-filter')?.value || '';
     let filtered = _allWords;
+    if (level) filtered = filtered.filter(w => String(w.target_level) === level);
     if (topic) filtered = filtered.filter(w => w.topic === topic);
     if (wordType) {
       filtered = filtered.filter(w => {
@@ -488,6 +501,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     clearTimeout(_vaultSearchDebounce);
     _vaultSearchDebounce = setTimeout(filterAndRender, 200);
   });
+  document.getElementById('vault-level-filter')?.addEventListener('change', filterAndRender);
   document.getElementById('vault-topic-filter')?.addEventListener('change', filterAndRender);
   document.getElementById('vault-wordtype-filter')?.addEventListener('change', filterAndRender);
 
