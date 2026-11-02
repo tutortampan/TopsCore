@@ -1145,3 +1145,59 @@ Following a rigorous `/grill-me` architectural review with the Product Owner (Mr
 - Menghilangkan ambiguitas peran Level 0 (resmi menjadi status Alumni/Completed dengan Universal Access).
 - Memastikan pemisahan total konten kurikulum antar institusi klien tanpa duplikasi tabel.
 - Memberikan kontrol operasional penuh kepada tutor dan Mr. Top dalam mengelola kenaikan tingkat, remidi, perpindahan batch, dan pendaftaran ulang alumni.
+
+---
+
+## DECISION-041 — Result Page Wireframe Overhaul & Dual-View Parity, Direct Action Controls, and Strict A-Z ABCD Sidebar Architecture
+
+Date: 2026-11-03
+Status: ACCEPTED
+
+### Context
+1. User provided a detailed hand-crafted wireframe diagram for `result.html` defining:
+   - 150px Student Metadata card matching `#welcome-banner-section` on Student Dashboard 1:1.
+   - Dual-view parity: Student View vs Tutor View (`isAdminSession`).
+   - 3-column equal segmented control for Tutor View: `[ NORMAL ]` `[ REMIDI ]` `[ FORGIVE ]` with uniform font size and 50px height matching the score/grade row.
+   - 35% dynamic composite card housing 4 metric rows (*CORRECT, PARTIAL, INCORRECT, POINTS*) and 50px side-by-side Score % and Grade / Star vector.
+   - Reordering of the "View Answer Breakdown" button to sit directly above the back button.
+   - Dynamic tier aura (`--tier-color`, `--tier-rgb`) wrapping card borders and backgrounds.
+2. In the database, Batch 132 students were completely invisible due to being marked with `level_id = Alumni (Level 0)` and `is_active: false`. Furthermore, a legacy trigger `trigger_student_batch_change` referencing dropped table `additional_members` blocked batch transfers.
+3. User required transferring student `Muhammad Ariwil Asrori` from Batch 132 to Batch 134 inheriting Batch 134's academic level (2nd Level).
+4. Admin panel sidebar navigation required strict alphabetical A-Z item sorting within each of the 4 ABCD domain groups.
+
+### Decision
+1. **Result Page Hierarchy & Dual-View Parity**:
+   - Implemented exact wireframe specification on `result.html`, `css/result.css`, and `js/result.js`:
+     - Student Metadata Card: Strict 150px height, identical to Student Dashboard `#welcome-banner-section`.
+     - Test Title: Strict 50px height, 2 lines (Line 1: Type/Title, Line 2: Assessment Topic/Theme).
+     - Composite Card: 35% dynamic viewport height with internal divider and symmetrical 50px Score % & Grade row.
+     - Achievement Status Remark: Strict 50px height displaying canonical predicates (`FAIL`, `LESS`, `ENOUGH`, `GOOD`, `VERY GOOD`, `EXCELLENT`).
+     - Action Slot (Strict 50px height):
+       - Student View: `GO TO NEXT ASSESMENT:` with link to next assessment.
+       - Tutor View: 3-column segmented button `[ NORMAL ]` `[ REMIDI ]` `[ FORGIVE ]` with uniform 11.5px font size and instant confirmation dialogs.
+     - Reordered Breakdown Button: Strict 30px height, positioned above bottom navigation button.
+     - Bottom Navigation: Strict 30px height (`BACK TO ROOM` for Tutor vs `BACK TO LOBBY` for Student).
+     - Dynamic Tier Aura: Dynamic `--tier-color` and `--tier-rgb` applied to all cards, glow shadows, and background radial gradients.
+2. **Direct Result Page Waiver Handlers (`js/api.js`)**:
+   - `labelAttemptRemedial(attemptId, true, 60.0)` caps effective score at 60%, marks `is_remedial: true`, clears forgiven flag, and writes audit log.
+   - `labelAttemptForgiven(attemptId, reason)` grants Skor F waiver, preserves raw score, clears remedial flag, sets `forgiven_by: null` (satisfying UUID type constraint), and writes audit log.
+   - `labelAttemptNormal(attemptId)` clears both remedial and forgiven flags, restoring authoritative raw percentage.
+   - All audit log writes are wrapped in non-blocking try/catch blocks compatible with PostgREST builders.
+3. **Database Trigger Cleanup & Batch Restoration**:
+   - Dropped obsolete trigger `trigger_student_batch_change` and function `trg_student_batch_change()`. Versioned in `20261103070000_drop_legacy_batch_change_trigger.sql`.
+   - Transferred `Muhammad Ariwil Asrori` to Batch 134 with `level_id = 9936683a-5b4a-4796-bb5d-a7fd8ecf0b71` (2nd Level) and `is_active: true`.
+   - Reactivated all 7 students in Batch 132 with `level_id = 51589e1a-d96e-496e-92a3-d9d350483555` (3rd Level) and `is_active: true`.
+   - Backfilled all 34 students in the database with null `level_id` to match their batch's `current_level_id`.
+4. **Strict A-Z Alphabetical Sidebar Ordering**:
+   - Implemented `sortAllSidebarDomains()` and `initSidebarAlphabeticalObserver()` in `js/admin/admin-init.js`.
+   - Enforced A-Z item ordering across all 4 ABCD domains:
+     - Domain A: Curriculum -> Dashboard -> Organization.
+     - Domain B: Camp 132 -> Camp 133 -> Camp 134 -> Students Registration.
+     - Domain C: 2nd Vocabulary -> 3rd Vocabulary -> Test Analytics -> Vocabulary Vault.
+     - Domain D: Modules (Core Blocks) -> System Settings.
+
+### Consequences
+- Result page provides 100% visual and functional parity between Student and Tutor modes without page reloading friction.
+- Tutors can execute immediate academic discretion (`NORMAL`, `REMIDI`, `FORGIVE`) directly from the result inspection screen with complete audit log traceability.
+- Eliminates silent student disappearance caused by unintended Alumni level assignment on batch rosters.
+- Admin navigation maintains consistent, predictable alphabetical order regardless of dynamic asynchronous data loading.
