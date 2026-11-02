@@ -83,6 +83,9 @@ export function showToast(message, type = 'info', duration = 3000) {
   const timer = setTimeout(remove, duration);
   el.addEventListener('click', () => { clearTimeout(timer); remove(); });
 }
+if (typeof window !== 'undefined') {
+  window.showToast = showToast;
+}
 
 // TOPS CORE — Loading overlay helpers
 let _overlay = null;

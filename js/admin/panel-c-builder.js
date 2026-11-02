@@ -423,7 +423,7 @@ export async function renderAITests(area) {
       
       let editContentBtn = '';
       if (relModule?.module_type === 'LEGACY_Test') {
-        editContentBtn = `<button class="btn btn-outline-primary btn-sm" onclick="import('./test-builder.js?v=5.3.2').then(m => m.openTestBuilder('${r.id}'))">Questions</button>`;
+        editContentBtn = `<button class="btn btn-outline-primary btn-sm" onclick="import('./test-builder.js?v=20261102_v104').then(m => m.openTestBuilder('${r.id}'))">Questions</button>`;
       }
 
       const className = relClass?.name || '—';
@@ -480,7 +480,7 @@ window.openAITestEditor = async (testId) => {
   }
   
   if (asm.test_type && (asm.test_type.includes('VOCAB') || asm.test_type.includes('IDIOM'))) {
-    const { openTestBuilderModal } = await import('./vocab-vault.js?v=5.3.2');
+    const { openTestBuilderModal } = await import('./vocab-vault.js?v=20261102_v104');
     return openTestBuilderModal(null, { editTest: asm });
   }
   

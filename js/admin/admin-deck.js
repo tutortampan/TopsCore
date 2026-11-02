@@ -164,24 +164,26 @@ export async function renderDashboard(container) {
       <!-- RIGHT ZONE (35%) -->
       <div style="flex: 3.5; min-width: 250px; display: flex; flex-direction: column; gap: 1.5rem;">
         
-        <!-- Admin Dossier -->
-        <div class="glass-card" style="padding: 1.5rem; position: relative;">
-          ${profile ? 
-            `<div style="display: flex; gap: 1rem; align-items: center;">
-              <div class="avatar-3x4" style="width: 80px; height: 106px; background: var(--clr-primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 2rem; border-radius: 8px; overflow: hidden;">
-                ${profile.photo_url ? `<img src="${profile.photo_url}" style="width:100%;height:100%;object-fit:cover;">` : (profile.full_name ? profile.full_name.charAt(0).toUpperCase() : 'A')}
-              </div>
-              <div>
-                <h3 style="margin: 0;">${profile.full_name || 'Admin'}</h3>
-                <div class="text-muted text-sm">${profile.title || 'Administrator'}</div>
-              </div>
+        <!-- Platform Overview -->
+        <div class="glass-card" style="padding: 1.5rem;">
+          <h3 style="margin-top:0; display:flex; align-items:center; gap:8px;">
+            <span>🛡️</span> TopsCore LMS
+          </h3>
+          <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">Authoritative testing and progression system.</p>
+          <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:12px;">
+            <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+              <span class="text-muted">Platform Role</span>
+              <span class="fw-700" style="color:var(--clr-primary);">Administrator</span>
             </div>
-            <p class="text-sm mt-3" style="line-height: 1.4;">${profile.bio ? profile.bio.substring(0, 150) + '...' : 'No biography provided.'}</p>`
-           : 
-            `<h3 style="margin-top:0;">Admin Dossier</h3>
-            <p class="text-muted text-sm">No profile configured.</p>
-            <button class="btn btn-secondary btn-sm mt-2" onclick="window.openCrudModal('user_professionals', null)">Create Profile</button>`
-          }
+            <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+              <span class="text-muted">Grading Scale</span>
+              <span class="fw-700" style="color:#00c000;">★ 100% / Official</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:4px 0;">
+              <span class="text-muted">System Status</span>
+              <span class="fw-700" style="color:var(--clr-success);">● Online</span>
+            </div>
+          </div>
         </div>
 
         <!-- Live Timetable -->
@@ -399,7 +401,7 @@ export async function renderAdminProfile(container) {
     }
 
     try {
-      const { processAndCompressAvatar } = await import('../utils/avatar-engine.js?v=5.3.2');
+      const { processAndCompressAvatar } = await import('../utils/avatar-engine.js?v=20261102_v104');
       const compressedDataUrl = await processAndCompressAvatar(file, 'admin');
 
       // Optimistic preview

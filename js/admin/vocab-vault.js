@@ -294,23 +294,8 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       }
     }
 
-    const examBtnText = isWords ? '+ Vocab Exam' : '+ Phrase Exam';
-    const rightHtml = `
-      <button class="btn btn-primary btn-sm" id="btn-vault-bottom-autogen" style="background:var(--clr-primary); font-size:12px; padding:6px 14px; font-weight:600; cursor:pointer;">
-        ⚡ Auto-Generate from Blueprint
-      </button>
-      <button class="btn btn-secondary btn-sm" id="btn-vault-bottom-exam" style="font-size:12px; padding:6px 14px; font-weight:600; cursor:pointer;">
-        ${examBtnText}
-      </button>
-    `;
-
+    const rightHtml = '';
     window.setBottomInfobar(leftHtml, rightHtml);
-
-    // Bind bottom action buttons
-    document.getElementById('btn-vault-bottom-autogen')?.addEventListener('click', triggerAutoGenerate);
-    document.getElementById('btn-vault-bottom-exam')?.addEventListener('click', () => {
-      document.getElementById('btn-create-vocab-test')?.click();
-    });
   }
 
   function renderRows(filtered) {
@@ -1512,11 +1497,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
       <div class="bottom-info-chip"><span class="chip-label">Exams:</span><span class="chip-val">${totalTests}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Vault Items:</span><span class="chip-val">${words.length}</span></div>
     `;
-    const rightHtml = `
-      <button class="btn btn-primary btn-sm" id="btn-blueprint-auto-generate-bottom" style="background:var(--clr-primary); font-size:12px; padding:6px 14px; font-weight:600; cursor:pointer;">
-        ⚡ Auto-Generate from Blueprint
-      </button>
-    `;
+    const rightHtml = '';
     window.setBottomInfobar(leftHtml, rightHtml);
   }
 
@@ -1637,7 +1618,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
     const importedLevels = Array.from(levelsSet).sort((a, b) => a - b);
     if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
     try {
-      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261102_v103');
+      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261102_v104');
       await openAutoGenerateModal({
         availableLevels: importedLevels,
         preSelectedLevels: importedLevels,
@@ -1654,9 +1635,6 @@ function _renderTopicBlueprintTab(area, words, topics) {
 
   const btnGenTop = document.getElementById('btn-blueprint-auto-generate');
   if (btnGenTop) btnGenTop.onclick = triggerAutoGenerate;
-
-  const btnGenBottom = document.getElementById('btn-blueprint-auto-generate-bottom');
-  if (btnGenBottom) btnGenBottom.onclick = triggerAutoGenerate;
 
   // Rename Topic
   area.querySelectorAll('.btn-edit-topic-mini').forEach(btn => {

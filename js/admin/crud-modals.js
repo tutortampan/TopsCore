@@ -1462,7 +1462,7 @@ function _initBulkEditModal() {
   _bulkEditInitialized = true;
 
   const modal = document.getElementById('bulk-edit-tests-modal');
-  const closeBtn = document.getElementById('close-bulk-edit-asm-modal');
+  const closeBtn = document.getElementById('close-bulk-edit-tests-modal') || document.getElementById('close-bulk-edit-asm-modal');
   const cancelBtn = document.getElementById('bulk-cancel-btn');
   const saveBtn = document.getElementById('bulk-save-btn');
 

@@ -2670,7 +2670,7 @@ tr.deleted-row td {
   overflow: hidden;
 }
 
-/* ── LEFT: Master Subject List ── */
+/* ── LEFT: Master Class List ── */
 .split-master-pane {
   width: 300px;
   flex-shrink: 0;
@@ -5447,97 +5447,7 @@ tfoot.datagrid-tfoot,
   font-weight: 700 !important;
 }
 
-/* ==========================================================================
-   GLOBAL TASK & TEST SETTINGS BOX (Class Hub)
-   ========================================================================== */
-.global-asm-settings-box {
-  background: rgba(15, 23, 42, 0.75) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 10px !important;
-  padding: 12px 16px !important;
-  margin-bottom: 10px !important;
-}
 
-.global-asm-settings-header {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  margin-bottom: 10px !important;
-  flex-wrap: wrap !important;
-  gap: 8px !important;
-}
-
-.global-asm-settings-title {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  font-size: 0.95rem !important;
-  font-weight: 800 !important;
-  color: var(--clr-text-1) !important;
-}
-
-.global-asm-settings-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
-  gap: 10px !important;
-}
-
-.global-asm-tier-card {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 8px !important;
-  padding: 12px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 10px !important;
-}
-
-.global-asm-tier-card.task-card {
-  border-left: 3px solid var(--grade-c, #ffff00) !important;
-}
-
-.global-asm-tier-card.test-card {
-  border-left: 3px solid #f472b6 !important;
-}
-
-.global-asm-tier-header {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-}
-
-.global-asm-tier-title {
-  font-size: 0.88rem !important;
-  font-weight: 800 !important;
-}
-
-.global-asm-row {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  flex-wrap: wrap !important;
-}
-
-.global-asm-item {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 3px !important;
-  flex: 1 !important;
-  min-width: 90px !important;
-}
-
-.global-asm-label {
-  font-size: 0.68rem !important;
-  font-weight: 700 !important;
-  color: #94a3b8 !important;
-  text-transform: uppercase !important;
-}
-
-.global-asm-input {
-  height: 30px !important;
-  font-size: 0.8rem !important;
-  padding: 2px 8px !important;
-}
 
 
 

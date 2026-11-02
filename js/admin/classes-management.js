@@ -460,7 +460,7 @@ function renderProgramDetail(prog, inst) {
             class_id: newClass.id,
             level_id: lvlId
           }));
-          const sb = await import('../supabase.js?v=5.3.2').then(m => m.getSupabase());
+          const sb = await import('../supabase.js?v=20261102_v104').then(m => m.getSupabase());
           await sb.from('class_levels').insert(classLevelsPayload);
         }
         

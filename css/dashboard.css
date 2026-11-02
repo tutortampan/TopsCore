@@ -3035,6 +3035,7 @@ body.dashboard-page .next-test-card {
   gap: 10px !important;
 }
 
+body.dashboard-page .next-test-left,
 body.dashboard-page .next-asm-left {
   display: flex !important;
   align-items: center !important;
@@ -3043,10 +3044,12 @@ body.dashboard-page .next-asm-left {
   flex: 1 1 auto !important;
 }
 
+body.dashboard-page .next-test-icon,
 body.dashboard-page .next-asm-icon {
   display: none !important;
 }
 
+body.dashboard-page .next-test-title,
 body.dashboard-page .next-asm-title {
   font-family: 'Outfit', sans-serif !important;
   font-size: 0.88rem !important;
@@ -3060,6 +3063,7 @@ body.dashboard-page .next-asm-title {
   line-height: 1.35 !important;
 }
 
+body.dashboard-page .next-test-go-btn,
 body.dashboard-page .next-asm-go-btn {
   width: 36px !important;
   min-width: 36px !important;
@@ -3079,12 +3083,15 @@ body.dashboard-page .next-asm-go-btn {
   transition: all 0.2s ease !important;
 }
 
+body.dashboard-page .next-test-go-btn:hover,
 body.dashboard-page .next-asm-go-btn:hover {
   filter: brightness(1.15) !important;
   transform: scale(1.05) !important;
 }
 
 /* 2B: Retake Red Button */
+body.dashboard-page .next-test-go-btn.is-retake,
+body.dashboard-page .next-test-go-btn.is-retake-red,
 body.dashboard-page .next-asm-go-btn.is-retake,
 body.dashboard-page .next-asm-go-btn.is-retake-red {
   background: linear-gradient(135deg, var(--grade-e) 0%, #990000 100%) !important;
@@ -3092,6 +3099,8 @@ body.dashboard-page .next-asm-go-btn.is-retake-red {
 }
 
 /* 3C: Start Green Button */
+body.dashboard-page .next-test-go-btn.is-start,
+body.dashboard-page .next-test-go-btn.is-start-green,
 body.dashboard-page .next-asm-go-btn.is-start,
 body.dashboard-page .next-asm-go-btn.is-start-green {
   background: linear-gradient(135deg, #86efac 0%, var(--grade-star) 100%) !important;
@@ -3099,6 +3108,7 @@ body.dashboard-page .next-asm-go-btn.is-start-green {
 }
 
 /* 1A: Yellow Padlock Status */
+body.dashboard-page .next-test-status-icon,
 body.dashboard-page .next-asm-status-icon {
   width: 36px !important;
   min-width: 36px !important;
@@ -3110,6 +3120,7 @@ body.dashboard-page .next-asm-status-icon {
   flex-shrink: 0 !important;
 }
 
+body.dashboard-page .next-test-status-icon.is-locked-yellow svg,
 body.dashboard-page .next-asm-status-icon.is-locked-yellow svg {
   filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.65)) !important;
 }

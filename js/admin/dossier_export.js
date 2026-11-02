@@ -28,7 +28,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
         return `
           <tr>
             <td style="text-align:center; color:#64748b; font-weight:600;">${idx + 1}</td>
-            <td style="font-weight:700; color:#0f172a;">${escapeHtml(a.title || 'Assessment')}</td>
+            <td style="font-weight:700; color:#0f172a;">${escapeHtml(a.title || 'Test')}</td>
             <td style="text-align:center;"><span style="font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px; background:#f1f5f9; color:#475569;">${escapeHtml(a.type || 'Exam')}</span></td>
             <td style="text-align:center; color:#64748b; font-size:0.75rem;">${escapeHtml(a.date || '—')}</td>
             <td style="text-align:center; font-weight:700; color:#0f172a;">${a.points != null ? `${a.points} pts` : '—'}</td>

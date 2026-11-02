@@ -387,31 +387,31 @@ if (!session) {
           return (a.title || '').localeCompare(b.title || '');
         });
 
-        const isPassed = (asm) => {
-          const score = bestMap[asm.id];
+        const isPassed = (t) => {
+          const score = bestMap[t.id];
           if (score == null) return false;
-          const req = asm.minimum_required_score || 60;
+          const req = t.minimum_required_score || 60;
           return score >= req;
         };
 
-        let nextAsm = published.find(a => !isPassed(a));
+        let nextTest = published.find(a => !isPassed(a));
 
-        // Theme Exam Pair Transition: If nextAsm is Words Exam but student already has an attempt on it,
+        // Theme Exam Pair Transition: If nextTest is Words Exam but student already has an attempt on it,
         // and sibling Phrases Exam has NO attempt yet, prioritize Phrases Exam so the student
         // completes both parts of the theme exam package!
-        if (nextAsm && isExam(nextAsm) && bestMap[nextAsm.id] != null) {
-          const tc = nextAsm.payload?.theme_code;
+        if (nextTest && isExam(nextTest) && bestMap[nextTest.id] != null) {
+          const tc = nextTest.payload?.theme_code;
           const siblingPhrase = published.find(a =>
-            a.id !== nextAsm.id && isExam(a) &&
-            (tc ? a.payload?.theme_code === tc : (a.title || '').substring(0, 3).toLowerCase() === (nextAsm.title || '').substring(0, 3).toLowerCase()) &&
+            a.id !== nextTest.id && isExam(a) &&
+            (tc ? a.payload?.theme_code === tc : (a.title || '').substring(0, 3).toLowerCase() === (nextTest.title || '').substring(0, 3).toLowerCase()) &&
             (a.category === 'phrases' || a.test_subtype === 'PHRASE_EXAM' || (a.title || '').toLowerCase().includes('phrase') || (a.shell_code || '').toUpperCase().includes('PHRASE')) &&
             bestMap[a.id] == null
           );
           if (siblingPhrase) {
-            nextAsm = siblingPhrase;
+            nextTest = siblingPhrase;
           }
         }
-        if (!nextAsm) {
+        if (!nextTest) {
           container.innerHTML = `
             <div style="background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.22); border-radius:10px; padding:6px 12px; text-align:center; margin-bottom:4px;">
               <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:#34D399; font-weight:700;">🎉 Level Curriculum Complete</div>
@@ -421,9 +421,9 @@ if (!session) {
           return;
         }
 
-        const isTest = isExam(nextAsm);
+        const isTest = isExam(nextTest);
 
-        const nextName = nextAsm.title || nextAsm.shell_code || 'Next Test';
+        const nextName = nextTest.title || nextTest.shell_code || 'Next Test';
 
         if (!isTest) {
           container.innerHTML = `
@@ -433,12 +433,12 @@ if (!session) {
             </button>
           `;
           document.getElementById('btn-next-milestone').onclick = () => {
-            sessionStorage.setItem('topscore_test_id', nextAsm.id);
+            sessionStorage.setItem('topscore_test_id', nextTest.id);
             sessionStorage.removeItem('topscore_attempt_id');
-            window.location.href = `test.html?id=${nextAsm.id}`;
+            window.location.href = `test.html?id=${nextTest.id}`;
           };
         } else {
-          const activeSession = await fetchActiveTestSession(nextAsm.id, batchId).catch(() => null);
+          const activeSession = await fetchActiveTestSession(nextTest.id, batchId).catch(() => null);
           const isUnlocked = activeSession?.is_unlocked === true;
           const isWhitelisted = !activeSession?.allowed_student_ids || 
                                 activeSession.allowed_student_ids.length === 0 || 
@@ -452,9 +452,9 @@ if (!session) {
               </button>
             `;
             document.getElementById('btn-next-milestone').onclick = () => {
-              sessionStorage.setItem('topscore_test_id', nextAsm.id);
+              sessionStorage.setItem('topscore_test_id', nextTest.id);
               sessionStorage.removeItem('topscore_attempt_id');
-              window.location.href = `test.html?id=${nextAsm.id}`;
+              window.location.href = `test.html?id=${nextTest.id}`;
             };
           } else {
             container.innerHTML = `
@@ -860,8 +860,8 @@ if (!session) {
           titleTopic = asmData?.topic || asmData?.theme || asmData?.test_type || '';
         }
 
-        const typeEl = document.getElementById('result-asm-type-row');
-        const topicEl = document.getElementById('result-asm-topic-row');
+        const typeEl = document.getElementById('result-test-type-row') || document.getElementById('result-asm-type-row');
+        const topicEl = document.getElementById('result-test-topic-row') || document.getElementById('result-asm-topic-row');
         const legacyNameEl = document.getElementById('result-Test-name');
         if (typeEl) typeEl.textContent = titleType.toUpperCase();
         if (topicEl) {

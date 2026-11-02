@@ -1,5 +1,9 @@
-import { DataGrid } from './datagrid.js?v=20261102_v103';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261102_v103';
+import { DataGrid } from './datagrid.js?v=20261102_v104';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261102_v104';
+
+if (typeof window !== 'undefined') {
+  window.showToast = showToast;
+}
 
 // =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
@@ -373,26 +377,26 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter,
   adminOverridePrerequisitesWithRemedial
-} from '../api.js?v=20261102_v103';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261102_v103';
-import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261102_v103';
-import { getSupabase } from '../supabase.js?v=20261102_v103';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261102_v103';
-import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261102_v103';
-import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261102_v103';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderAssignments, renderCentralQuestionImport, renderResults, renderProgressView, renderRecalibrator, renderClassInstances } from './class.js?v=20261102_v103';
-import { renderTests } from './tests-management.js?v=20261102_v103';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261102_v103';
-import { renderVocabularyVault } from './vocab-vault.js?v=20261102_v103';
-import { renderModules } from './modules.js?v=20261102_v103';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261102_v103';
-import { renderImportStudents, renderImportQuestions, renderExportQuestions } from './imports-exports.js?v=20261102_v103';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261102_v103';
-import { renderCurriculum } from './curriculum-management.js?v=20261102_v103';
-import { renderClassesHub } from './classes-hub.js?v=20261102_v103';
-import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261102_v103';
-import { openStudentFullEdit } from './student-management.js?v=20261102_v103';
-import { renderStudentsRegistration } from './student-registration.js?v=20261102_v103';
+} from '../api.js?v=20261102_v104';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261102_v104';
+import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261102_v104';
+import { getSupabase } from '../supabase.js?v=20261102_v104';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261102_v104';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261102_v104';
+import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261102_v104';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261102_v104';
+import { renderTests } from './tests-management.js?v=20261102_v104';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261102_v104';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261102_v104';
+import { renderModules } from './modules.js?v=20261102_v104';
+import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261102_v104';
+import { renderExportQuestions } from './imports-exports.js?v=20261102_v104';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261102_v104';
+import { renderCurriculum } from './curriculum-management.js?v=20261102_v104';
+import { renderClassesHub } from './classes-hub.js?v=20261102_v104';
+import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261102_v104';
+import { openStudentFullEdit } from './student-management.js?v=20261102_v104';
+import { renderStudentsRegistration } from './student-registration.js?v=20261102_v104';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -1891,7 +1895,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
           // Open Test Generator & Settings Wizard
           document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
             try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261102_v103');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261102_v104');
               await openAutoGenerateModal({
                 explicitClassId: classId,
                 onComplete: () => {
@@ -2121,9 +2125,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
                       render: (val, row) => {
                         const att = row.asmScores?.[asm.id];
                         const maxQ = getAsmExpectedMax(asm);
-                        const totalQ = Number(att?.total_questions || maxQ);
+                        // FIX: Always use canonical max as denominator floor (prevents wrong DB total_questions from inflating/deflating %)
+                        const totalQ = Math.max(maxQ, Number(att?.total_questions || 0)) || maxQ;
                         const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                        const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
+                        // FIX: Always recalculate from score/canonMax — never trust att.percentage from DB directly
+                        const rawPct = att ? (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0) : -1;
                         const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
 
                         const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
@@ -2149,9 +2155,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
                         const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                         const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
                         const roundPct = Math.round(effPct);
+                        // FIX: If student passed the theme overall (>= 60%), don't show orange on individual sub-exam cells
+                        const rawThemeCode = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+                        const themeCode = (rawThemeCode || 'A').toUpperCase();
+                        const themeScore = row[`theme_${themeCode}_score`] ?? -1;
+                        const colorBasis = (effPct < 60 && themeScore >= 60) ? themeScore : effPct;
                         const color = typeof getGradeColorByScore === 'function'
-                          ? getGradeColorByScore(effPct)
-                          : (effPct >= 60 ? '#FFFF00' : '#FF0000');
+                          ? getGradeColorByScore(colorBasis)
+                          : (colorBasis >= 60 ? '#FFFF00' : '#FF0000');
                         const remSup = isRem ? '<sup class="asm-rem-sup">R</sup>' : '';
 
                         return `
@@ -2183,9 +2194,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
                       render: (val, row) => {
                         const att = row.asmScores?.[asm.id];
                         const maxQ = getAsmExpectedMax(asm);
-                        const totalQ = Number(att?.total_questions || maxQ);
+                        // FIX: Always use canonical max as denominator floor
+                        const totalQ = Math.max(maxQ, Number(att?.total_questions || 0)) || maxQ;
                         const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                        const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
+                        // FIX: Always recalculate from score/canonMax
+                        const rawPct = att ? (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0) : -1;
                         const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
 
                         const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
@@ -2209,9 +2222,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
                         const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
                         const cleanSc = Math.round(effEarned * 10) / 10;
                         const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
+                        // FIX: Color PTS based on theme-level score if individual sub-exam is below threshold
+                        const rawThemeCodePts = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+                        const themeCodePts = (rawThemeCodePts || 'A').toUpperCase();
+                        const themeScorePts = row[`theme_${themeCodePts}_score`] ?? -1;
+                        const colorBasisPts = (effPct < 60 && themeScorePts >= 60) ? themeScorePts : effPct;
                         const color = typeof getGradeColorByScore === 'function'
-                          ? getGradeColorByScore(effPct)
-                          : (effPct >= 60 ? '#FFFF00' : '#FF0000');
+                          ? getGradeColorByScore(colorBasisPts)
+                          : (colorBasisPts >= 60 ? '#FFFF00' : '#FF0000');
                         const attId = att?.id || att?.attempt_id;
                         const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                         const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
@@ -2247,9 +2265,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
                       render: (val, row) => {
                         const att = row.asmScores?.[asm.id];
                         const maxQ = getAsmExpectedMax(asm);
-                        const totalQ = Number(att?.total_questions || maxQ);
+                        // FIX: Always use canonical max as denominator floor
+                        const totalQ = Math.max(maxQ, Number(att?.total_questions || 0)) || maxQ;
                         const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                        const rawPct = att ? (att.percentage != null ? Number(att.percentage) : (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0)) : -1;
+                        // FIX: Always recalculate from score/canonMax
+                        const rawPct = att ? (totalQ > 0 ? (rawEarned / totalQ) * 100 : 0) : -1;
                         const hasRealAtt = att && ['submitted','auto_submitted','evaluated','graded'].includes(String(att?.status||'').toLowerCase());
 
                         const isPrereqTest = asm.display_order != null && asm.display_order <= 38;
@@ -3840,7 +3860,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261102_v103');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261102_v104');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -4171,7 +4191,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261102_v103');
+      const sm = await import('./student-management.js?v=20261102_v104');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }

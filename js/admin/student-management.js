@@ -847,7 +847,7 @@ export async function renderStudents(area) {
             </div>
           </div>
 
-          <!-- 1. Weekly Exams Section (Milestone Academic Assessments) -->
+          <!-- 1. Weekly Exams Section (Milestone Academic Tests) -->
           <div class="mb-4">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08);">
               <div style="font-size:0.9rem;font-weight:800;color:var(--clr-text-1);display:flex;align-items:center;gap:6px;">
@@ -1303,7 +1303,7 @@ export async function renderStudents(area) {
                         <div class="fw-600 text-sm" style="color:#f8fafc;">${escapeHtml(fa.testTitle)}</div>
                         <div class="text-xs text-muted">Current Best: <strong style="color:${getGradeColorByScore(fa.bestPct)};">${fa.bestPct}%</strong> (KKM Passing: 60%)</div>
                       </div>
-                      <button class="btn btn-warning btn-sm" onclick="showToast('Remedial retake permitted for ${escapeHtml(fa.testTitle)}', 'info')">
+                      <button class="btn btn-warning btn-sm" onclick="(window.showToast || showToast)('Remedial retake permitted for ${escapeHtml(fa.testTitle)}', 'info')">
                         Authorize Retake
                       </button>
                     </div>

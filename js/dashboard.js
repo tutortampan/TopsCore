@@ -897,44 +897,44 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         return (a.title || '').localeCompare(b.title || '');
       });
 
-      const isPassed = (asm) => {
-        const score = bestMap[asm.id];
+      const isPassed = (t) => {
+        const score = bestMap[t.id];
         if (score == null) return false;
-        const req = asm.minimum_required_score || 60;
+        const req = t.minimum_required_score || 60;
         return score >= req;
       };
 
-      let nextAsm = published.find(a => !isPassed(a));
+      let nextTest = published.find(a => !isPassed(a));
 
-      // Theme Exam Pair Transition: If nextAsm is Words Exam but student already has an attempt on it,
+      // Theme Exam Pair Transition: If nextTest is Words Exam but student already has an attempt on it,
       // and sibling Phrases Exam has NO attempt yet, prioritize Phrases Exam so the student
       // completes both parts of the theme exam package!
-      if (nextAsm && isExam(nextAsm) && bestMap[nextAsm.id] != null) {
-        const tc = nextAsm.payload?.theme_code;
+      if (nextTest && isExam(nextTest) && bestMap[nextTest.id] != null) {
+        const tc = nextTest.payload?.theme_code;
         const siblingPhrase = published.find(a =>
-          a.id !== nextAsm.id && isExam(a) &&
-          (tc ? a.payload?.theme_code === tc : (a.title || '').substring(0, 3).toLowerCase() === (nextAsm.title || '').substring(0, 3).toLowerCase()) &&
+          a.id !== nextTest.id && isExam(a) &&
+          (tc ? a.payload?.theme_code === tc : (a.title || '').substring(0, 3).toLowerCase() === (nextTest.title || '').substring(0, 3).toLowerCase()) &&
           (a.category === 'phrases' || a.test_subtype === 'PHRASE_EXAM' || (a.title || '').toLowerCase().includes('phrase') || (a.shell_code || '').toUpperCase().includes('PHRASE')) &&
           bestMap[a.id] == null
         );
         if (siblingPhrase) {
-          nextAsm = siblingPhrase;
+          nextTest = siblingPhrase;
         }
       }
 
-      if (!nextAsm) {
+      if (!nextTest) {
         container.innerHTML = `
-          <div class="next-asm-left">
-            <span class="next-asm-icon">🏆</span>
-            <span class="next-asm-title">All tests in this class completed!</span>
+          <div class="next-test-left next-asm-left">
+            <span class="next-test-icon next-asm-icon">🏆</span>
+            <span class="next-test-title next-asm-title">All tests in this class completed!</span>
           </div>
           <span style="font-size:0.75rem; font-weight:800; color:${TOPSCORE_COLORS.STAR}; padding:2px 8px; border-radius:4px; background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.15);">✓ 100%</span>
         `;
         return;
       }
 
-      const className = classMap[nextAsm.class_id]?.name || 'Class Module';
-      const isTest = isExam(nextAsm);
+      const className = classMap[nextTest.class_id]?.name || 'Class Module';
+      const isTest = isExam(nextTest);
 
       // Selected Icons: 1A (Solid Yellow Padlock), 2B (Red Rotate Undo), 3C (Green Circle Play)
       const ICON_1A_YELLOW_LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="#ffff00" stroke-width="2.6" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11.5" rx="3" fill="#ffff00" stroke="#cccc00" stroke-width="1"/><circle cx="12" cy="14.8" r="1.5" fill="#713f12"/><path d="M12 15.5v2.2" stroke="#713f12" stroke-width="1.6" stroke-linecap="round"/></svg>';
@@ -942,30 +942,30 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const ICON_3C_GREEN_PLAY  = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="#ffffff"/></svg>';
 
       if (!isTest) {
-        const hasAttempted = bestMap[nextAsm.id] != null;
+        const hasAttempted = bestMap[nextTest.id] != null;
         if (hasAttempted) {
           // 2B: Retake (Red Button with Rotate Undo Arrow)
           container.innerHTML = `
-            <div class="next-asm-left">
-              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Test')}">${escapeHtml(nextAsm.title || 'Test')}</span>
+            <div class="next-test-left next-asm-left">
+              <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Test')}">${escapeHtml(nextTest.title || 'Test')}</span>
             </div>
-            <button type="button" class="next-asm-go-btn is-retake-red" title="Retake Test" onclick="window.location.href='test.html?id=${nextAsm.id}'">
+            <button type="button" class="next-test-go-btn next-asm-go-btn is-retake-red" title="Retake Test" onclick="window.location.href='test.html?id=${nextTest.id}'">
               ${ICON_2B_RED_RETAKE}
             </button>
           `;
         } else {
           // 3C: Ready to take (Green Button with Circle Play)
           container.innerHTML = `
-            <div class="next-asm-left">
-              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Test')}">${escapeHtml(nextAsm.title || 'Test')}</span>
+            <div class="next-test-left next-asm-left">
+              <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Test')}">${escapeHtml(nextTest.title || 'Test')}</span>
             </div>
-            <button type="button" class="next-asm-go-btn is-start-green" title="Start Test" onclick="window.location.href='test.html?id=${nextAsm.id}'">
+            <button type="button" class="next-test-go-btn next-asm-go-btn is-start-green" title="Start Test" onclick="window.location.href='test.html?id=${nextTest.id}'">
               ${ICON_3C_GREEN_PLAY}
             </button>
           `;
         }
       } else {
-        const activeSession = await fetchActiveTestSession(nextAsm.id, session.batch_id).catch(() => null);
+        const activeSession = await fetchActiveTestSession(nextTest.id, session.batch_id).catch(() => null);
         const isUnlocked = activeSession?.is_unlocked === true;
         const isWhitelisted = !activeSession?.allowed_student_ids ||
                               activeSession.allowed_student_ids.length === 0 ||
@@ -975,30 +975,30 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const remMin = activeSession.remaining_minutes || 30;
           // Unlocked exam -> 3C: Ready to take (Green Button with Circle Play)
           container.innerHTML = `
-            <div class="next-asm-left">
-              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">${escapeHtml(nextAsm.title || 'Official Exam')}</span>
+            <div class="next-test-left next-asm-left">
+              <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Official Exam')}">${escapeHtml(nextTest.title || 'Official Exam')}</span>
             </div>
-            <button type="button" class="next-asm-go-btn is-start-green" title="Start Exam (${remMin}m left)" onclick="window.location.href='test.html?id=${nextAsm.id}'">
+            <button type="button" class="next-test-go-btn next-asm-go-btn is-start-green" title="Start Exam (${remMin}m left)" onclick="window.location.href='test.html?id=${nextTest.id}'">
               ${ICON_3C_GREEN_PLAY}
             </button>
           `;
         } else if (isUnlocked && !isWhitelisted) {
           // 1A: Locked (Yellow Padlock)
           container.innerHTML = `
-            <div class="next-asm-left">
-              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">${escapeHtml(nextAsm.title || 'Official Exam')}</span>
+            <div class="next-test-left next-asm-left">
+              <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Official Exam')}">${escapeHtml(nextTest.title || 'Official Exam')}</span>
             </div>
-            <span class="next-asm-status-icon is-locked-yellow" title="Locked - Prerequisite Required">
+            <span class="next-test-status-icon next-asm-status-icon is-locked-yellow" title="Locked - Prerequisite Required">
               ${ICON_1A_YELLOW_LOCK}
             </span>
           `;
         } else {
           // 1A: Waiting for Tutor (Yellow Padlock)
           container.innerHTML = `
-            <div class="next-asm-left">
-              <span class="next-asm-title" title="${escapeHtml(nextAsm.title || 'Official Exam')}">${escapeHtml(nextAsm.title || 'Official Exam')}</span>
+            <div class="next-test-left next-asm-left">
+              <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Official Exam')}">${escapeHtml(nextTest.title || 'Official Exam')}</span>
             </div>
-            <span class="next-asm-status-icon is-locked-yellow" title="Waiting for Tutor (Locked)">
+            <span class="next-test-status-icon next-asm-status-icon is-locked-yellow" title="Waiting for Tutor (Locked)">
               ${ICON_1A_YELLOW_LOCK}
             </span>
           `;
@@ -3163,7 +3163,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         return !isCorrect;
       });
       if (missed.length === 0) {
-        showToast('🎉 Excellent! No missed words found in this assessment.', 'info');
+        showToast('🎉 Excellent! No missed words found in this test.', 'info');
         return;
       }
       _lobbyActiveFlashcards = missed;
