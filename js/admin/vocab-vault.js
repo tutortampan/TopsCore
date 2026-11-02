@@ -145,6 +145,10 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       <option value="Proverb">Proverb</option>
     `;
 
+  const uniqueLevels = Array.from(new Set(words.map(w => parseInt(w.target_level)).filter(n => !isNaN(n) && n > 0))).sort((a, b) => a - b);
+  if (uniqueLevels.length === 0) uniqueLevels.push(1, 2, 3);
+  const levelSelectOptions = uniqueLevels.map(lvl => `<option value="${lvl}">${typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : 'Level ' + lvl}</option>`).join('');
+
   area.innerHTML = `
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
       <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
@@ -156,9 +160,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             <input type="search" id="vault-search" placeholder="🔍 Search Indonesian, English, or Topic..." class="toolbar-input-38" style="width: 220px;" />
             <select id="vault-level-filter" class="toolbar-input-38" style="width: 125px; cursor: pointer;">
               <option value="">All Levels</option>
-              <option value="1">1st Level</option>
-              <option value="2">2nd Level</option>
-              <option value="3">3rd Level</option>
+              ${levelSelectOptions}
             </select>
             <select id="vault-topic-filter" class="toolbar-input-38" style="width: 160px; cursor: pointer;">
               <option value="">All Topics</option>
@@ -338,9 +340,9 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
       return `
       <tr data-word-id="${escapeHtml(w.id)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-        <td class="cell-institution" style="padding: 6px 12px; font-weight: 500; color: #94a3b8; font-size: 11px;">${escapeHtml(w.institutions?.name || w.institutions?.code || 'CEC')}</td>
-        <td class="cell-program" style="padding: 6px 12px; font-weight: 500; color: #94a3b8; font-size: 11px;">${escapeHtml(w.programs?.name || w.programs?.code || 'Camp')}</td>
-        <td class="cell-level" style="padding: 6px 12px; font-weight: 600;"><span style="background:#475569;color:#ffffff;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;">${escapeHtml(typeof toOrdinalLevel === 'function' ? toOrdinalLevel(w.target_level) : String(w.target_level || '1'))}</span></td>
+        <td class="cell-institution" style="padding: 6px 8px; font-weight: 600;"><span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(56, 189, 248, 0.35); display: inline-block;">${escapeHtml(w.institutions?.code || w.institution_code || w.institutions?.name || 'CEC')}</span></td>
+        <td class="cell-program" style="padding: 6px 8px; font-weight: 600;"><span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(168, 85, 247, 0.35); display: inline-block;">${escapeHtml(w.programs?.name || w.program_name || 'Camp')}</span></td>
+        <td class="cell-level" style="padding: 6px 8px; font-weight: 600;"><span style="background: #334155; color: #f8fafc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.15); display: inline-block;">${escapeHtml(typeof toOrdinalLevel === 'function' ? toOrdinalLevel(w.target_level) : ('Level ' + (w.target_level || 1)))}</span></td>
         <td class="cell-theme-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#f472b6;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.theme_code || '—')}</span></td>
         <td class="cell-theme" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</td>
         <td class="cell-topic-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#a5b4fc;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.topic_code || '—')}</span></td>
@@ -1381,6 +1383,8 @@ function _renderTopicBlueprintTab(area, words, topics) {
       themeCode: 'ZZZ',
       topicCode: 'ZZZ',
       level: 3,
+      institution: 'CEC',
+      program: 'Camp',
       verbs: 0,
       adjs: 0,
       nouns: 0,
@@ -1401,6 +1405,8 @@ function _renderTopicBlueprintTab(area, words, topics) {
         themeCode: 'ZZZ',
         topicCode: 'ZZZ',
         level: parseInt(w.target_level) || 3,
+        institution: 'CEC',
+        program: 'Camp',
         verbs: 0,
         adjs: 0,
         nouns: 0,
@@ -1416,6 +1422,12 @@ function _renderTopicBlueprintTab(area, words, topics) {
     if (w.theme_code) tObj.themeCode = w.theme_code.trim();
     if (w.topic_code) tObj.topicCode = w.topic_code.trim();
     if (w.target_level) tObj.level = parseInt(w.target_level) || 3;
+    if (w.institutions?.code || w.institution_code || w.institutions?.name) {
+      tObj.institution = w.institutions?.code || w.institution_code || w.institutions?.name;
+    }
+    if (w.programs?.name || w.program_name) {
+      tObj.program = w.programs?.name || w.program_name;
+    }
 
     const wt = String(w.word_type || '').toLowerCase();
     if (wt === 'verb') tObj.verbs++;
@@ -1430,15 +1442,25 @@ function _renderTopicBlueprintTab(area, words, topics) {
     }
   });
 
-  // 2. Levels detection
+  // 2. Levels detection & level selection
   const levelsSet = new Set();
   topicMap.forEach(t => levelsSet.add(t.level));
   if (levelsSet.size === 0) levelsSet.add(3);
   const levels = Array.from(levelsSet).sort((a, b) => a - b);
-  const activeLevel = window._blueprintSelectedLevel || levels[0] || 3;
+  let activeLevel = window._blueprintSelectedLevel || levels[0] || 3;
+  if (!levels.includes(activeLevel)) activeLevel = levels[0];
+  window._blueprintSelectedLevel = activeLevel;
+
+  let activeViewMode = window._blueprintViewMode || 'board'; // 'board' or 'table'
 
   // 3. Group topics by Theme for active level
   const levelTopics = Array.from(topicMap.values()).filter(t => t.level === activeLevel);
+  const instNames = Array.from(new Set(levelTopics.map(t => t.institution).filter(Boolean)));
+  const progNames = Array.from(new Set(levelTopics.map(t => t.program).filter(Boolean)));
+  const displayInst = instNames.length > 0 ? instNames.join(', ') : 'CEC';
+  const displayProg = progNames.length > 0 ? progNames.join(', ') : 'Camp';
+  const displayLevelName = typeof toOrdinalLevel === 'function' ? toOrdinalLevel(activeLevel) : ('Level ' + activeLevel);
+
   const themeMap = new Map();
   levelTopics.forEach(t => {
     const thKey = t.themeCode + ' ' + t.theme;
@@ -1492,10 +1514,12 @@ function _renderTopicBlueprintTab(area, words, topics) {
   const totalWordsCount = words.filter(w => !isPhrase(w.word_type)).length;
   const totalPhrasesCount = words.filter(w => isPhrase(w.word_type)).length;
 
-  // 5. Setup bottom infobar chips and auto-generate button
+  // 5. Setup bottom infobar chips
   if (window.setBottomInfobar) {
     const leftHtml = `
-      <div class="bottom-info-chip"><span class="chip-label">Levels:</span><span class="chip-val">${levelsSet.size}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Institution:</span><span class="chip-val" style="color: #38bdf8;">${displayInst}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Program:</span><span class="chip-val" style="color: #c084fc;">${displayProg}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Level:</span><span class="chip-val" style="color: #f8fafc;">${displayLevelName}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Tasks:</span><span class="chip-val">${totalTasks}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Exams:</span><span class="chip-val">${totalTests}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Vault Items:</span><span class="chip-val">${words.length}</span></div>
@@ -1515,108 +1539,193 @@ function _renderTopicBlueprintTab(area, words, topics) {
   // 6. Build Zero-Scroll Dashboard HTML
   let html = `
     <div style="display: flex; flex-direction: column; height: 100%; max-height: calc(100vh - 120px); box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; gap: 6px; padding: 0 4px 6px 4px;">
-      <!-- Top Control Toolbar -->
-      <div style="flex-shrink: 0; padding: 2px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <input type="search" id="vault-topic-search" placeholder="🔍 Search Topics & Themes..." style="width: 210px; height: 32px; font-size: 11.5px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
-          <span style="background: rgba(30,41,59,0.9); border: 1px solid rgba(255,255,255,0.12); color: #f8fafc; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; letter-spacing: 0.05em;">LEVEL ${activeLevel}</span>
-          <button class="btn btn-secondary btn-sm" id="btn-topic-dup-checker" style="height: 32px; font-size: 11px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.12); color: #f8fafc; border-radius: 6px; cursor: pointer;">⚒️ Merge Similar</button>
-          <button class="btn btn-danger btn-sm" id="btn-reset-vault-header" style="height: 32px; font-size: 11px; padding: 0 10px; opacity: 0.88; border-radius: 6px; cursor: pointer;" title="Truncate all vault words">⚠️ Reset All</button>
+      <!-- Top Control Toolbar with Institution, Program, Level, and Mode Toggles -->
+      <div style="flex-shrink: 0; padding: 2px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+          <input type="search" id="vault-topic-search" placeholder="🔍 Search Topics & Themes..." style="width: 175px; height: 32px; font-size: 11.5px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
+          
+          <!-- Institution & Program Badges -->
+          <span style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Institution Scope">
+            <span style="color:#94a3b8; font-size:9.5px; text-transform:uppercase;">INST:</span> ${escapeHtml(displayInst)}
+          </span>
+          <span style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Program Scope">
+            <span style="color:#94a3b8; font-size:9.5px; text-transform:uppercase;">PROG:</span> ${escapeHtml(displayProg)}
+          </span>
+
+          <!-- Interactive Level Selector Tabs -->
+          <div style="display: flex; gap: 4px; align-items: center; background: rgba(15,23,42,0.7); padding: 2px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1);" title="Select Level to View">
+            ${levels.map(lvl => {
+              const isActive = (lvl === activeLevel);
+              const ord = typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : ('Level ' + lvl);
+              return `<button type="button" class="btn-blueprint-lvl-select" data-lvl="${lvl}" style="height: 26px; font-size: 11px; font-weight: 800; padding: 0 10px; border-radius: 5px; cursor: pointer; transition: all 0.2s ease; border: none; ${isActive ? 'background: #3b82f6; color: #ffffff; box-shadow: 0 2px 6px rgba(59,130,246,0.4);' : 'background: transparent; color: #94a3b8;'}">🎯 ${escapeHtml(ord.toUpperCase())}</button>`;
+            }).join('')}
+          </div>
+
+          <!-- View Mode Switcher (Board vs Table) -->
+          <div style="display: flex; gap: 2px; align-items: center; background: rgba(15,23,42,0.7); padding: 2px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1);" title="Switch Board / Table View">
+            <button type="button" id="btn-blueprint-mode-board" style="height: 26px; font-size: 10.5px; font-weight: 700; padding: 0 8px; border-radius: 5px; cursor: pointer; border: none; ${activeViewMode === 'board' ? 'background: rgba(255,255,255,0.15); color: #fff;' : 'background: transparent; color: #94a3b8;'}">🗺️ Board</button>
+            <button type="button" id="btn-blueprint-mode-table" style="height: 26px; font-size: 10.5px; font-weight: 700; padding: 0 8px; border-radius: 5px; cursor: pointer; border: none; ${activeViewMode === 'table' ? 'background: rgba(255,255,255,0.15); color: #fff;' : 'background: transparent; color: #94a3b8;'}">📊 Table</button>
+          </div>
+
+          <button class="btn btn-secondary btn-sm" id="btn-topic-dup-checker" style="height: 30px; font-size: 11px; padding: 0 8px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.12); color: #f8fafc; border-radius: 6px; cursor: pointer;">⚒️ Merge</button>
+          <button class="btn btn-danger btn-sm" id="btn-reset-vault-header" style="height: 30px; font-size: 11px; padding: 0 8px; opacity: 0.88; border-radius: 6px; cursor: pointer;" title="Truncate all vault words">⚠️ Reset</button>
         </div>
         <div style="display: flex; gap: 6px; align-items: center;">
-          <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Topics: <strong style="color:#ffffff;" id="topic-count-display">${topicMap.size}</strong></span>
-          <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Words: <strong style="color:#ffffff;">${totalWordsCount}</strong></span>
-          <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Phrases: <strong style="color:#ffffff;">${totalPhrasesCount}</strong></span>
-          <button class="btn btn-primary btn-sm" id="btn-blueprint-auto-generate" style="background: var(--clr-primary); font-size: 11.5px; padding: 0 14px; height: 32px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(99,102,241,0.35); border: none; cursor: pointer; border-radius: 5px;">⚡ Auto-Generate from Blueprint</button>
+          <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Topics: <strong style="color:#ffffff;" id="topic-count-display">${levelTopics.length}</strong></span>
+          <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Words: <strong style="color:#ffffff;">${levelTopics.reduce((acc, t) => acc + t.totalWords, 0)}</strong></span>
+          <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Phrases: <strong style="color:#ffffff;">${levelTopics.reduce((acc, t) => acc + t.totalPhrases, 0)}</strong></span>
+          <button class="btn btn-primary btn-sm" id="btn-blueprint-auto-generate" style="background: var(--clr-primary); font-size: 11.5px; padding: 0 12px; height: 32px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(99,102,241,0.35); border: none; cursor: pointer; border-radius: 5px;">⚡ Auto-Generate</button>
         </div>
       </div>
-
-      <!-- 4-Thematic Columns Board (Zero-Scroll Grid) -->
-      <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; overflow: hidden; padding-bottom: 2px;">
   `;
 
-  sortedThemes.forEach(th => {
-    const vis = themeVisuals[th.code] || { border: 'rgba(99,102,241,0.4)', accent: '#818cf8', pillBg: '#4f46e5' };
-
+  if (activeViewMode === 'table') {
+    // ─── 📊 Table View: Explicit Columns for Institution, Program, Level, Theme, Topic, Breakdown ───
     html += `
-      <div class="theme-column-card" style="background: #0f172a; border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid ${vis.accent}; border-radius: 8px; display: flex; flex-direction: column; height: 100%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.35);">
-        <!-- Column Header -->
-        <div style="background: rgba(30, 41, 59, 0.85); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 6px 10px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
-          <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
-            <span style="background: ${vis.pillBg}; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.05em; flex-shrink: 0;">THEME ${escapeHtml(th.code)}</span>
-            <span style="color: #ffffff; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(th.name)}">${escapeHtml(th.name)}</span>
-          </div>
-          <span style="color: #94a3b8; font-size: 10.5px; font-weight: 600; flex-shrink: 0; margin-left: 4px;">${th.topics.length} Tasks · ${th.totalCount} W</span>
-        </div>
-
-        <!-- Topics List Container -->
-        <div class="theme-topic-list" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px; overflow-y: auto; scrollbar-width: thin;">
+      <div class="table-wrap sticky-first" style="flex: 1; overflow-y: auto; min-height: 0; background: #0f172a; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
+          <thead style="background: rgba(15, 23, 42, 0.95); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+            <tr>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 85px;">Institution</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 80px;">Program</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 85px;">Level</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 65px;">T.Code</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px;">Theme</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 75px;">Topic Code</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px;">Topic</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center;">Verbs</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center;">Adjs</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center;">Nouns</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 60px; text-align: center;">Phrases</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 65px; text-align: center;">Total Items</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; font-size: 10px; text-align: right; width: 80px; position: sticky; right: 0; background: rgba(15, 23, 42, 0.95); border-left: 1px solid rgba(255, 255, 255, 0.08);">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${levelTopics.map(t => `
+              <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);" class="blueprint-table-row" data-topic="${escapeHtml(t.name)}" data-theme="${escapeHtml(t.theme)}">
+                <td style="padding: 6px 10px;"><span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(56, 189, 248, 0.35); display: inline-block;">${escapeHtml(t.institution || 'CEC')}</span></td>
+                <td style="padding: 6px 10px;"><span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(168, 85, 247, 0.35); display: inline-block;">${escapeHtml(t.program || 'Camp')}</span></td>
+                <td style="padding: 6px 10px;"><span style="background: #334155; color: #f8fafc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.15); display: inline-block;">${escapeHtml(typeof toOrdinalLevel === 'function' ? toOrdinalLevel(t.level) : ('Level ' + t.level))}</span></td>
+                <td style="padding: 6px 10px; color: #f472b6; font-family: monospace; font-weight: 700;">${escapeHtml(t.themeCode || '—')}</td>
+                <td style="padding: 6px 10px; color: #ffffff; font-weight: 600;">${escapeHtml(t.theme || '—')}</td>
+                <td style="padding: 6px 10px; color: #a5b4fc; font-family: monospace; font-weight: 700;">${escapeHtml(t.topicCode || '—')}</td>
+                <td style="padding: 6px 10px; color: #ffffff; font-weight: 600;">${escapeHtml(t.name)}</td>
+                <td style="padding: 6px 10px; text-align: center;"><span style="background: rgba(0, 192, 0, 0.18); color: #86efac; font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px;">${t.verbs}</span></td>
+                <td style="padding: 6px 10px; text-align: center;"><span style="background: rgba(255, 255, 0, 0.18); color: #FFFF00; font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px;">${t.adjs}</span></td>
+                <td style="padding: 6px 10px; text-align: center;"><span style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px;">${t.nouns}</span></td>
+                <td style="padding: 6px 10px; text-align: center;"><span style="background: rgba(168, 85, 247, 0.18); color: #c084fc; font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px;">${t.phrases}</span></td>
+                <td style="padding: 6px 10px; text-align: center; font-weight: 800; color: #ffffff;">${t.totalCount}</td>
+                <td style="padding: 6px 10px; text-align: right; position: sticky; right: 0; background: #0f172a; border-left: 1px solid rgba(255, 255, 255, 0.08);">
+                  <button class="btn-edit-topic-mini" data-topic="${escapeHtml(t.name)}" title="Rename Topic" style="background: transparent; border: none; cursor: pointer; color: #38bdf8; font-size: 11px; padding: 1px 3px;">✏️</button>
+                  <button class="btn-del-topic-mini" data-topic="${escapeHtml(t.name)}" title="Delete Topic" style="background: transparent; border: none; cursor: pointer; color: #FF0000; font-size: 11px; padding: 1px 3px;">🗑️</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } else {
+    // ─── 🗺️ Board View: 4-Thematic Columns Board with Institution, Program, Level on Each Card ───
+    html += `
+      <!-- 4-Thematic Columns Board (Zero-Scroll Grid) -->
+      <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; overflow: hidden; padding-bottom: 2px;">
     `;
 
-    th.topics.forEach((t, idx) => {
-      const displayNum = t.topicCode && t.topicCode !== 'ZZZ' ? t.topicCode : (idx + 1);
+    sortedThemes.forEach(th => {
+      const vis = themeVisuals[th.code] || { border: 'rgba(99,102,241,0.4)', accent: '#818cf8', pillBg: '#4f46e5' };
 
       html += `
-        <div class="topic-item-card" data-topic="${escapeHtml(t.name)}" data-theme="${escapeHtml(th.name)}" style="background: rgba(30, 41, 59, 0.55); border: 1px solid rgba(255,255,255,0.05); border-radius: 5px; padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; transition: background-color 120ms ease;">
-          <!-- Row 1: Number, Title, Actions -->
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
-            <div style="display: flex; align-items: center; gap: 5px; min-width: 0; flex: 1;">
-              <span style="color: ${vis.accent}; font-size: 10px; font-weight: 800; width: 14px; text-align: center; flex-shrink: 0;">${displayNum}</span>
-              <span class="topic-title-text" style="color: #f8fafc; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>
+        <div class="theme-column-card" style="background: #0f172a; border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid ${vis.accent}; border-radius: 8px; display: flex; flex-direction: column; height: 100%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.35);">
+          <!-- Column Header -->
+          <div style="background: rgba(30, 41, 59, 0.85); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 6px 10px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 5px; min-width: 0;">
+              <span style="background: ${vis.pillBg}; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.05em; flex-shrink: 0;">THEME ${escapeHtml(th.code)}</span>
+              <span style="color: #ffffff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(th.name)}">${escapeHtml(th.name)}</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 3px; flex-shrink: 0;">
-              <button class="btn-edit-topic-mini" data-topic="${escapeHtml(t.name)}" title="Rename Topic" style="background: transparent; border: none; cursor: pointer; color: #38bdf8; font-size: 11px; padding: 1px 3px; line-height: 1;">✏️</button>
-              <button class="btn-del-topic-mini" data-topic="${escapeHtml(t.name)}" title="Delete Topic" style="background: transparent; border: none; cursor: pointer; color: var(--clr-danger, #FF0000); font-size: 11px; padding: 1px 3px; line-height: 1;">🗑️</button>
+            <span style="color: #94a3b8; font-size: 10px; font-weight: 600; flex-shrink: 0; margin-left: 4px;">${th.topics.length} Tasks · ${th.totalCount} W</span>
+          </div>
+
+          <!-- Topics List Container -->
+          <div class="theme-topic-list" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px; overflow-y: auto; scrollbar-width: thin;">
+      `;
+
+      th.topics.forEach((t, idx) => {
+        const displayNum = t.topicCode && t.topicCode !== 'ZZZ' ? t.topicCode : (idx + 1);
+
+        html += `
+          <div class="topic-item-card" data-topic="${escapeHtml(t.name)}" data-theme="${escapeHtml(th.name)}" style="background: rgba(30, 41, 59, 0.55); border: 1px solid rgba(255,255,255,0.05); border-radius: 5px; padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; transition: background-color 120ms ease;">
+            <!-- Row 1: Number, Title, Actions -->
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+              <div style="display: flex; align-items: center; gap: 5px; min-width: 0; flex: 1;">
+                <span style="color: ${vis.accent}; font-size: 10px; font-weight: 800; width: 14px; text-align: center; flex-shrink: 0;">${displayNum}</span>
+                <span class="topic-title-text" style="color: #f8fafc; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 3px; flex-shrink: 0;">
+                <button class="btn-edit-topic-mini" data-topic="${escapeHtml(t.name)}" title="Rename Topic" style="background: transparent; border: none; cursor: pointer; color: #38bdf8; font-size: 11px; padding: 1px 3px; line-height: 1;">✏️</button>
+                <button class="btn-del-topic-mini" data-topic="${escapeHtml(t.name)}" title="Delete Topic" style="background: transparent; border: none; cursor: pointer; color: var(--clr-danger, #FF0000); font-size: 11px; padding: 1px 3px; line-height: 1;">🗑️</button>
+              </div>
+            </div>
+
+            <!-- Row 2: Metadata / Hierarchy Row (Institution, Program, Level) -->
+            <div style="display: flex; gap: 4px; align-items: center; font-size: 9px; padding-left: 19px; margin: 1px 0;">
+              <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 700; padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(56, 189, 248, 0.3);" title="Institution">${escapeHtml(t.institution || 'CEC')}</span>
+              <span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-weight: 700; padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(168, 85, 247, 0.3);" title="Program">${escapeHtml(t.program || 'Camp')}</span>
+              <span style="background: #334155; color: #f8fafc; font-weight: 700; padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.15);" title="Level">${escapeHtml(typeof toOrdinalLevel === 'function' ? toOrdinalLevel(t.level) : ('Level ' + t.level))}</span>
+            </div>
+
+            <!-- Row 3: POS chips & Total count -->
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; gap: 2.5px; align-items: center;">
+                <span style="background: rgba(var(--grade-star-rgb, 0, 192, 0), 0.18); color: #86efac; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.verbs} Verbs">${t.verbs}V</span>
+                <span style="background: rgba(255,255,0,0.18); color: #FFFF00; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.adjs} Adjectives">${t.adjs}A</span>
+                <span style="background: rgba(56,189,248,0.18); color: #38bdf8; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.nouns} Nouns">${t.nouns}N</span>
+                <span style="background: rgba(168,85,247,0.18); color: #c084fc; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.phrases} Phrases">${t.phrases}P</span>
+              </div>
+              <div style="display: flex; gap: 4px; align-items: center;">
+                <span style="background: rgba(255,255,255,0.06); color: #94a3b8; font-size: 9px; font-weight: 600; padding: 1px 4px; border-radius: 3px;" title="40 Words + 10 Phrases">Task: 40+10</span>
+                <span style="background: rgba(255,255,255,0.12); color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px;" title="Total Items">${t.totalCount}</span>
+              </div>
             </div>
           </div>
-          <!-- Row 2: POS chips & Total count -->
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; gap: 2.5px; align-items: center;">
-              <span style="background: rgba(var(--grade-star-rgb, 0, 192, 0), 0.18); color: #86efac; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.verbs} Verbs">${t.verbs}V</span>
-              <span style="background: rgba(255,255,0,0.18); color: #FFFF00; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.adjs} Adjectives">${t.adjs}A</span>
-              <span style="background: rgba(56,189,248,0.18); color: #38bdf8; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.nouns} Nouns">${t.nouns}N</span>
-              <span style="background: rgba(168,85,247,0.18); color: #c084fc; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.phrases} Phrases">${t.phrases}P</span>
+        `;
+      });
+
+      html += `
+          </div>
+
+          <!-- Exam Milestone Footer -->
+          <div style="background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(255,255,255,0.08); padding: 5px 8px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #c7d2fe; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; gap: 4px;">
+                <span>🏆</span> THEME ${escapeHtml(th.code)} EXAMS
+              </span>
+              <span style="color: #818cf8; font-size: 9px; font-weight: 700;">Cumul. Scale</span>
             </div>
-            <div style="display: flex; gap: 4px; align-items: center;">
-              <span style="background: rgba(255,255,255,0.06); color: #94a3b8; font-size: 9px; font-weight: 600; padding: 1px 4px; border-radius: 3px;" title="40 Words + 10 Phrases">Task: 40+10</span>
-              <span style="background: rgba(255,255,255,0.12); color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px;" title="Total Items">${t.totalCount}</span>
+            <div style="display: flex; gap: 5px; justify-content: space-between;">
+              <div style="background: rgba(99,102,241,0.18); border: 1px solid rgba(99,102,241,0.35); border-radius: 4px; padding: 3px 6px; flex: 1; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #a5b4fc; font-size: 9.5px; font-weight: 600;">Words Exam</span>
+                <span style="color: #ffffff; font-size: 11px; font-weight: 800;">${th.cumulativeWords} Q</span>
+              </div>
+              <div style="background: rgba(244,114,182,0.18); border: 1px solid rgba(244,114,182,0.35); border-radius: 4px; padding: 3px 6px; flex: 1; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #f472b6; font-size: 9.5px; font-weight: 600;">Phrases Exam</span>
+                <span style="color: #ffffff; font-size: 11px; font-weight: 800;">${th.cumulativePhrases} Q</span>
+              </div>
             </div>
           </div>
         </div>
       `;
     });
 
-    html += `
-        </div>
+    html += `</div>`; // Close grid
+  }
 
-        <!-- Exam Milestone Footer -->
-        <div style="background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(255,255,255,0.08); padding: 5px 8px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="color: #c7d2fe; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; gap: 4px;">
-              <span>🏆</span> THEME ${escapeHtml(th.code)} EXAMS
-            </span>
-            <span style="color: #818cf8; font-size: 9px; font-weight: 700;">Cumul. Scale</span>
-          </div>
-          <div style="display: flex; gap: 5px; justify-content: space-between;">
-            <div style="background: rgba(99,102,241,0.18); border: 1px solid rgba(99,102,241,0.35); border-radius: 4px; padding: 3px 6px; flex: 1; display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: #a5b4fc; font-size: 9.5px; font-weight: 600;">Words Exam</span>
-              <span style="color: #ffffff; font-size: 11px; font-weight: 800;">${th.cumulativeWords} Q</span>
-            </div>
-            <div style="background: rgba(244,114,182,0.18); border: 1px solid rgba(244,114,182,0.35); border-radius: 4px; padding: 3px 6px; flex: 1; display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: #f472b6; font-size: 9.5px; font-weight: 600;">Phrases Exam</span>
-              <span style="color: #ffffff; font-size: 11px; font-weight: 800;">${th.cumulativePhrases} Q</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-
-  html += `</div></div>`; // Close grid & main container
+  html += `</div>`; // Close main container
   area.innerHTML = html;
 
   // 7. Wire Events
-  // Auto-Generate Trigger (both top and bottom buttons)
+  // Auto-Generate Trigger (top button)
   const triggerAutoGenerate = async () => {
     const importedLevels = Array.from(levelsSet).sort((a, b) => a - b);
     if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
@@ -1638,6 +1747,31 @@ function _renderTopicBlueprintTab(area, words, topics) {
 
   const btnGenTop = document.getElementById('btn-blueprint-auto-generate');
   if (btnGenTop) btnGenTop.onclick = triggerAutoGenerate;
+
+  // Level selector buttons
+  area.querySelectorAll('.btn-blueprint-lvl-select').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const targetLvl = parseInt(e.currentTarget.getAttribute('data-lvl'), 10);
+      window._blueprintSelectedLevel = targetLvl;
+      _renderTopicBlueprintTab(area, words, topics);
+    });
+  });
+
+  // View Mode switcher buttons (Board vs Table)
+  const btnBoard = document.getElementById('btn-blueprint-mode-board');
+  const btnTable = document.getElementById('btn-blueprint-mode-table');
+  if (btnBoard) {
+    btnBoard.onclick = () => {
+      window._blueprintViewMode = 'board';
+      _renderTopicBlueprintTab(area, words, topics);
+    };
+  }
+  if (btnTable) {
+    btnTable.onclick = () => {
+      window._blueprintViewMode = 'table';
+      _renderTopicBlueprintTab(area, words, topics);
+    };
+  }
 
   // Rename Topic
   area.querySelectorAll('.btn-edit-topic-mini').forEach(btn => {
@@ -1665,9 +1799,9 @@ function _renderTopicBlueprintTab(area, words, topics) {
   area.querySelectorAll('.btn-del-topic-mini').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const topic = e.currentTarget.getAttribute('data-topic');
-      if (!confirm(`Are you sure you want to delete ALL words in the topic "${topic}"? This cannot be undone.`)) return;
+      if (!confirm(`Delete topic "${topic}" and all its vocabulary items from Vault?`)) return;
       try {
-        showLoading('Deleting topic...');
+        showLoading();
         const sb = await getSupabase();
         const { error } = await sb.from('vocabulary_vault').update({ deleted_at: new Date().toISOString() }).eq('topic', topic);
         hideLoading();
@@ -1684,73 +1818,68 @@ function _renderTopicBlueprintTab(area, words, topics) {
     });
   });
 
-  // Live Search Filter across all 4 Theme Columns
-  const searchInput = area.querySelector('#vault-topic-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      const term = e.target.value.toLowerCase().trim();
-      const cards = area.querySelectorAll('.topic-item-card');
-      let visibleCount = 0;
-      cards.forEach(card => {
-        const topic = (card.getAttribute('data-topic') || '').toLowerCase();
-        const theme = (card.getAttribute('data-theme') || '').toLowerCase();
-        const match = !term || topic.includes(term) || theme.includes(term);
-        card.style.display = match ? 'flex' : 'none';
-        if (match) visibleCount++;
-      });
-      const countEl = area.querySelector('#topic-count-display');
-      if (countEl) countEl.innerText = term ? `${visibleCount}/${topicMap.size}` : topicMap.size;
-    });
-  }
-
-  // Merge Similar Topics
-  const btnDup = area.querySelector('#btn-topic-dup-checker');
-  if (btnDup) {
-    btnDup.addEventListener('click', () => {
-      const topicEntries = Array.from(topicMap.entries()).map(([k, v]) => [k, {
-        theme: new Set([v.theme]),
-        themeCodes: new Set([v.themeCode]),
-        topicCodes: new Set([v.topicCode]),
-        count: v.totalCount,
-        targetLevel: v.level,
-        types: { 'Verb': v.verbs, 'Adjective': v.adjs, 'Noun': v.nouns, 'Phrase': v.phrases }
-      }]);
-
-      openTopicDuplicateCheckerModal(topicEntries, words, () => {
+  // Topic Duplicate Merge Checker Modal
+  const btnDupCheck = document.getElementById('btn-topic-dup-checker');
+  if (btnDupCheck) {
+    btnDupCheck.onclick = () => {
+      openTopicDuplicateCheckerModal(levelTopics, words, () => {
         if (typeof renderVocabularyVault === 'function') {
           const container = document.getElementById('classes-detail-canvas');
           if (container) renderVocabularyVault(container);
         }
       });
-    });
+    };
   }
 
   // Reset All Vault Words
-  const btnReset = area.querySelector('#btn-reset-vault-header');
+  const btnReset = document.getElementById('btn-reset-vault-header');
   if (btnReset) {
-    btnReset.addEventListener('click', async () => {
-      if (!confirm('⚠️ DANGER: This will permanently delete ALL vault words from the database. This cannot be undone. Are you absolutely sure?')) return;
-      if (!confirm('Second confirmation required. Type OK in the next prompt to confirm.')) return;
-      const confirmText = prompt('Type RESET to confirm truncation of all vault words:');
-      if (confirmText?.trim().toUpperCase() !== 'RESET') {
-        showToast('Reset cancelled.', 'info');
-        return;
-      }
+    btnReset.onclick = async () => {
+      if (!confirm('⚠️ DANGER: Soft-delete ALL words in the Vocabulary Vault? This action cannot be easily undone.')) return;
       try {
-        showLoading('Resetting vault...');
+        showLoading();
         const sb = await getSupabase();
         const { error } = await sb.from('vocabulary_vault').update({ deleted_at: new Date().toISOString() }).neq('id', '00000000-0000-0000-0000-000000000000');
         hideLoading();
         if (error) throw error;
-        showToast('✓ Vault reset complete. All words deleted.', 'success');
+        showToast('All words soft-deleted from Vault.', 'success');
         if (typeof renderVocabularyVault === 'function') {
           const container = document.getElementById('classes-detail-canvas');
           if (container) renderVocabularyVault(container);
         }
-      } catch (e) {
+      } catch (err) {
         hideLoading();
-        showToast('Reset failed: ' + e.message, 'error');
+        showToast(`Failed to reset vault: ${err.message}`, 'error');
       }
+    };
+  }
+
+  // Live Topic Search
+  const searchInput = document.getElementById('vault-topic-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const countEl = document.getElementById('topic-count-display');
+      let visible = 0;
+
+      if (activeViewMode === 'table') {
+        area.querySelectorAll('.blueprint-table-row').forEach(row => {
+          const tName = (row.getAttribute('data-topic') || '').toLowerCase();
+          const thName = (row.getAttribute('data-theme') || '').toLowerCase();
+          const match = !q || tName.includes(q) || thName.includes(q);
+          row.style.display = match ? '' : 'none';
+          if (match) visible++;
+        });
+      } else {
+        area.querySelectorAll('.topic-item-card').forEach(card => {
+          const tName = (card.getAttribute('data-topic') || '').toLowerCase();
+          const thName = (card.getAttribute('data-theme') || '').toLowerCase();
+          const match = !q || tName.includes(q) || thName.includes(q);
+          card.style.display = match ? 'flex' : 'none';
+          if (match) visible++;
+        });
+      }
+      if (countEl) countEl.textContent = visible;
     });
   }
 }

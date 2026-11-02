@@ -1,10 +1,26 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-03 07:45 UTC+8
-Current Phase: Phase 291: Result Page Glow Alignment, 8-Digit Hex Fix & Bright Blue Back Button Contrast [COMPLETE]
+Last Updated: 2026-11-03 07:58 UTC+8
+Current Phase: Phase 292: Vocabulary Vault Institution, Program & Level Columns Integration [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
+1. **Phase 292: Vocabulary Vault Institution, Program & Level Columns Integration:**
+   - **`js/api.js` Data Joins**: Updated `fetchVaultWords` select query to join `institutions(id, name, code)` and `programs(id, name, code)` on `vocabulary_vault`. All 820 items cleanly resolve with zero nulls.
+   - **Words & Phrases Grid Table View**: Added explicit columns to `<thead>` and `renderRows` for `Institution`, `Program`, and `Level`:
+     - Institution: Stylized cyan badge (`#38bdf8`) displaying `CEC`.
+     - Program: Stylized purple badge (`#c084fc`) displaying `Camp`.
+     - Level: Stylized slate badge (`#f8fafc`) displaying ordinal levels via `toOrdinalLevel()` (`2nd Level`, `3rd Level`).
+   - **Dynamic Level Filter**: Added `#vault-level-filter` to the toolbar populated dynamically from vault records, enabling instant filtering by Level across both single words and phrases.
+   - **Topic Blueprint Overhaul**:
+     - Added prominent Institution (`INST: CEC`) and Program (`PROG: CAMP`) badges to the blueprint toolbar.
+     - Implemented interactive Level Selector buttons (`[ 🎯 2ND LEVEL ]`, `[ 🎯 3RD LEVEL ]`) dynamically detected from vault records, enabling instant switching between 2nd Level and 3rd Level topics.
+     - Added View Mode Switcher (`[ 🗺️ Board ]` and `[ 📊 Table ]`).
+     - In **Board View**: Every topic card features a dedicated metadata hierarchy row `[CEC] [Camp] [2nd Level / 3rd Level]`.
+     - In **Table View**: Explicit columns for `Institution`, `Program`, `Level`, `T.Code`, `Theme`, `Topic Code`, `Topic`, `Verbs`, `Adjs`, `Nouns`, `Phrases`, `Total Items`, and `Actions`.
+     - Bottom infobar chips updated with Institution, Program, and Level metadata.
+   - **Parity & Consistency**: Result page glow alignment, bright vibrant blue back button contrast, and 8-digit hex parsing verified alongside 100% test pass.
+
 1. **Phase 291: Result Page Glow Alignment, 8-Digit Hex Fix & Bright Blue Back Button Contrast:**
    - **Bright Vibrant Blue Back Navigation Button Preserved**: Stripped `.btn-dashboard-primary` (`BACK TO ROOM` / `BACK TO LOBBY`) from tier-glow-active dark overrides. Restored `linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)` with bold white text and electric blue box shadow, ensuring unmistakable contrast against dark ghost button `VIEW ANSWER BREAKDOWN`.
    - **8-Digit Hex Normalization (Accidental Purple Eliminated)**: Fixed bitwise parser bug in `js/result.js` where `#00c000ff` shifted without stripping alpha bytes, corrupting Pure Green into Purple (`rgb(192, 0, 255)`). Stripped trailing alpha bytes and wired canonical RGB strings directly from `TOPSCORE_COLORS` constants (`STAR_RGB: '0, 192, 0'`, `C_RGB: '255, 255, 0'`).

@@ -1,3 +1,40 @@
+## [2026-11-03 07:58] — Phase 292: Vocabulary Vault Institution, Program & Level Columns Integration
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 292  
+**Status:** PASS  
+
+### Why
+- User request: *"di vocabulary vault tambahakan kolom institusi, program dan level dalam keterangan words dan Phrase. juga dalam Topic Blueprint. agar mudah dilihat. perbaiki /goal"*.
+- In `admin.html#vocab_vault`, the table previously showed `LVL | T.CODE | THEME | TOPIC CODE | TOPIC | TYPE | INDONESIAN | ENGLISH | ACTIONS` without Institution and Program scope, and Topic Blueprint previously defaulted to Level 2 without an explicit level switcher or visible metadata tags.
+
+### Changed
+1. **`js/api.js` Data Joining**:
+   - Updated `fetchVaultWords` select query in `js/api.js` to include foreign key relations:
+     `.select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category, institution_id, program_id, institutions(id, name, code), programs(id, name, code)')`
+   - All 820 words in `vocabulary_vault` resolve `institution` (`CEC`) and `program` (`Camp`) with zero nulls.
+2. **`js/admin/vocab-vault.js` Grid View (Vocabulary Words & Phrases Tabs)**:
+   - Added explicit column headers to `<thead>`: `Institution` (width 68px), `Program` (width 68px), `Level` (width 75px).
+   - Rendered stylized pill badges in `renderRows`:
+     - `cell-institution`: Cyan badge (`#38bdf8`) displaying `CEC`.
+     - `cell-program`: Purple badge (`#c084fc`) displaying `Camp`.
+     - `cell-level`: Slate badge (`#f8fafc`) displaying ordinal level via `toOrdinalLevel()` (e.g. `2nd Level`, `3rd Level`).
+   - Added dynamic `vault-level-filter` dropdown to toolbar populated from `words.target_level` using `toOrdinalLevel` (`All Levels`, `2nd Level`, `3rd Level`).
+   - Preserved row edit mode (`cell-level` input) and empty state `colspan="11"`.
+3. **`js/admin/vocab-vault.js` Topic Blueprint Tab Overhaul**:
+   - Added prominent Institution (`INST: CEC`) and Program (`PROG: CAMP`) badges to the blueprint toolbar.
+   - Implemented interactive Level Selector buttons (`[ 🎯 2ND LEVEL ]`, `[ 🎯 3RD LEVEL ]`) dynamically detected from vault records, allowing instant switching between levels.
+   - Added dual view mode switcher: `[ 🗺️ Board ]` and `[ 📊 Table ]`.
+   - In **Board View**: Added a dedicated metadata hierarchy row to every topic card: `[CEC] [Camp] [2nd Level / 3rd Level]` directly beneath the title and actions.
+   - In **Table View**: Added explicit columns for `Institution`, `Program`, `Level`, `T.Code`, `Theme`, `Topic Code`, `Topic`, `Verbs`, `Adjs`, `Nouns`, `Phrases`, `Total Items`, and `Actions`.
+   - Updated bottom infobar with chips for Institution, Program, Level, Tasks, Exams, and Vault Items.
+
+### Tests
+- command: `node --check js/admin/vocab-vault.js` -> PASS
+- command: `node scripts/check_all_js_syntax.cjs` -> PASS (40/40 JS files passed).
+- command: `node scripts/test_result_page_parity.cjs` -> PASS (100%).
+- command: `node scripts/verify_green_star_grading.mjs` -> PASS (100%).
+
 ## [2026-11-03 07:45] — Phase 291: Result Page Glow Alignment, 8-Digit Hex Fix & Bright Blue Back Button Contrast
 
 **Agent/Session:** Antigravity  
