@@ -1067,6 +1067,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
       try {
         const classes = await adminFetchAll('classes', 'id, name, program_id', { is_active: true });
         if (classes && classes.length > 0) {
+          classes.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
           try {
             localStorage.setItem('topscore_cached_sidebar_classes', JSON.stringify(classes));
           } catch(err) {}
