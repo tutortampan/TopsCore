@@ -31,11 +31,11 @@ import {
   addAdditionalMember,
   toLevelLetter,
   labelAttemptRemedial
-} from '../api.js?v=20261102_v103';
-import { showToast, showLoading, hideLoading, getGrade, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS } from '../app.js?v=20261102_v103';
-import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=20261102_v103';
-import { openStudentProfile } from './student-management.js?v=20261102_v103';
-import { generateAvatarDataUri } from '../utils/avatar-engine.js?v=20261102_v103';
+} from '../api.js?v=20261102_v104';
+import { showToast, showLoading, hideLoading, getGrade, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS } from '../app.js?v=20261102_v104';
+import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=20261102_v104';
+import { openStudentProfile } from './student-management.js?v=20261102_v104';
+import { generateAvatarDataUri } from '../utils/avatar-engine.js?v=20261102_v104';
 
 // escapeHtml / escHtml imported canonically
 
@@ -1238,7 +1238,7 @@ Existing historical attempt records will NOT be modified.`;
 
 export async function renderResults(area) {
   const [rawData, allInstitutions, allPrograms, allBatches] = await Promise.all([
-    adminFetchAll('attempts', '*, students(name, gender, batch_id, batches(name), program_id, programs(name, institution_id, institutions(name))), tests(id, title, test_type, prerequisite_test_id, prerequisite_min_score, shell_code), attempt_answers(id, evaluation_result, score)'),
+    adminFetchAll('attempts', '*, students(name, gender, batch_id, batches(name), program_id, programs(name, institution_id, institutions(name))), tests(id, title, test_type, prerequisite_test_id, minimum_required_score, shell_code)'),
     adminFetchAll('institutions'),
     adminFetchAll('programs'),
     adminFetchAll('batches')
@@ -1433,13 +1433,17 @@ export async function renderResults(area) {
         {
           key: 'percentage', label: 'Score', sortable: true, render: (v, r) => {
             const rawPct = parseFloat(r.percentage || 0);
-            const isRemedial = Boolean(r.is_remedial_unlocked);
+            const isRemedial = Boolean(r.is_remedial_unlocked || r.is_remedial);
+            const isForgiven = Boolean(r.is_forgiven);
             const effectivePct = isRemedial ? Math.min(rawPct, 60.0) : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
             const effectiveGrade = r.grade || (typeof getGrade === 'function' ? getGrade(effectivePct) : (effectivePct >= 90 ? 'A' : (effectivePct >= 80 ? 'B' : (effectivePct >= 60 ? 'C' : (effectivePct >= 30 ? 'D' : 'E')))));
+            const indicatorHtml = isRemedial
+              ? '<sup class="test-rem-sup" style="font-size:0.7em;font-weight:900;margin-left:2px;">R</sup>'
+              : (isForgiven ? '<sup class="test-forgiven-sup" style="font-size:0.7em;font-weight:900;margin-left:2px;color:#ef4444;" title="Score Forgiven: ' + escapeHtml(r.forgiven_reason || 'Waiver') + '">F</sup>' : '');
             return `
               <div class="text-center fw-700" style="display:flex;flex-direction:column;align-items:center;gap:3px;">
                 <div style="display:flex;align-items:center;gap:4px;" class="text-grade-${effectiveGrade}">
-                  <span>${effectivePct.toFixed(1)}%${isRemedial ? '<sup class="test-rem-sup" style="font-size:0.7em;font-weight:900;margin-left:2px;">R</sup>' : ''}</span>
+                  <span>${effectivePct.toFixed(1)}%${indicatorHtml}</span>
                   <span class="badge badge-success text-xs" style="font-size:0.65rem;padding:1px 5px;" title="Highest score recorded across attempts">Highest</span>
                 </div>
               </div>
@@ -1459,7 +1463,7 @@ export async function renderResults(area) {
           key: 'prereq', label: 'Prerequisite', sortable: false, render: (v, r) => {
             const def = r.tests || {};
             const prereqId = def.prerequisite_test_id;
-            const minScore = Number(def.prerequisite_min_score) || 60;
+            const minScore = Number(def.minimum_required_score) || 60;
             if (!prereqId) return '<div class="text-center"><span class="text-muted text-xs">&mdash;</span></div>';
             const studentPrereqBest = studentBestScoreMap.get(`${r.student_id}_${prereqId}`);
             if (studentPrereqBest != null && studentPrereqBest >= minScore) {
@@ -1469,50 +1473,22 @@ export async function renderResults(area) {
           }
         },
         {
-          key: 'correct', label: '&#9989; Correct', sortable: false, render: (v, r) => {
-            const answers = r.attempt_answers || [];
-            let attCorrect = 0;
-            answers.forEach(a => {
-              const res = (a.evaluation_result || '').toLowerCase();
-              const sc = parseFloat(a.score || 0);
-              if (res === 'correct' || sc >= 1) attCorrect++;
-            });
-            return answers.length > 0 ? `<div class="text-center"><span class="badge badge-success" style="font-size:0.75rem;">${attCorrect}</span></div>` : '<div class="text-center"><span class="text-muted text-xs">&mdash;</span></div>';
-          }
-        },
-        {
-          key: 'half', label: '&#9888;&#65039; Half', sortable: false, render: (v, r) => {
-            const answers = r.attempt_answers || [];
-            let attMinor = 0;
-            answers.forEach(a => {
-              const res = (a.evaluation_result || '').toLowerCase();
-              const sc = parseFloat(a.score || 0);
-              if (res.includes('minor') || (sc > 0 && sc < 1)) attMinor++;
-            });
-            return answers.length > 0 ? `<div class="text-center"><span class="badge badge-warning" style="font-size:0.75rem;">${attMinor}</span></div>` : '<div class="text-center"><span class="text-muted text-xs">&mdash;</span></div>';
-          }
-        },
-        {
-          key: 'wrong', label: '&#10060; Incorrect', sortable: false, render: (v, r) => {
-            const answers = r.attempt_answers || [];
-            let attWrong = 0;
-            answers.forEach(a => {
-              const res = (a.evaluation_result || '').toLowerCase();
-              const sc = parseFloat(a.score || 0);
-              if (res !== 'correct' && sc < 1 && !res.includes('minor') && !(sc > 0 && sc < 1)) attWrong++;
-            });
-            return answers.length > 0 ? `<div class="text-center"><span class="badge badge-danger" style="font-size:0.75rem;">${attWrong}</span></div>` : '<div class="text-center"><span class="text-muted text-xs">&mdash;</span></div>';
+          key: 'score', label: 'Points (PTS)', sortable: true, render: (v, r) => {
+            const sc = r.score != null ? parseFloat(r.score).toFixed(1).replace(/\.0$/, '') : '-';
+            const total = r.total_questions != null ? r.total_questions : '-';
+            return `<div class="text-center fw-600"><span class="badge" style="background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);font-size:0.75rem;padding:2px 8px;">${sc} / ${total}</span></div>`;
           }
         },
         { key: 'submitted_at', label: 'Submitted At', sortable: true, render: (v, r) => `<div class="text-center text-muted text-xs">${r.submitted_at ? new Date(r.submitted_at).toLocaleString() : '&mdash;'}</div>` },
         { key: 'actions', label: 'Actions', sortable: false, render: (v, r) => {
-           let btns = `<button class="btn btn-ghost btn-sm results-view-profile-btn" data-sid="${r.student_id}" style="font-size:0.75rem; padding:3px 10px; display:inline-flex; align-items:center; gap:4px;" title="View full student profile">&#128100; Profile</button>`;
-           if (r.is_remedial_unlocked) {
+           let btns = `<a href="result.html?attempt_id=${r.id}&from=admin" target="_blank" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:3px 8px; display:inline-flex; align-items:center; gap:4px; text-decoration:none;" title="Inspect Result & Answers Breakdown">&#128203; Result</a>`;
+           btns += `<button class="btn btn-ghost btn-sm results-view-profile-btn" data-sid="${r.student_id}" style="font-size:0.75rem; padding:3px 10px; display:inline-flex; align-items:center; gap:4px;" title="View full student profile">&#128100; Profile</button>`;
+           if (r.is_remedial_unlocked || r.is_remedial) {
              btns += `<button class="btn btn-secondary btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="false" style="font-size:0.75rem; padding:3px 8px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; color:#fbbf24;" title="Revert remedial status (return to normal)">↩️ Normal</button>`;
            } else {
              btns += `<button class="btn btn-warning btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="true" style="font-size:0.75rem; padding:3px 8px;" title="Mark this score as Remedial">🏷️ Remedial</button>`;
            }
-           return `<div class="text-center d-flex gap-2 justify-center flex-wrap" style="min-width:140px;">${btns}</div>`;
+           return `<div class="text-center d-flex gap-2 justify-center flex-wrap" style="min-width:180px;">${btns}</div>`;
         } }
       ]
     });
