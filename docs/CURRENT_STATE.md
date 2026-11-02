@@ -1,10 +1,18 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-03 07:30 UTC+8
-Current Phase: Phase 290: Side Panel Perpetual Alphabetical Ordering for ABCD Groups [COMPLETE]
+Last Updated: 2026-11-03 07:45 UTC+8
+Current Phase: Phase 291: Result Page Glow Alignment, 8-Digit Hex Fix & Bright Blue Back Button Contrast [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
+1. **Phase 291: Result Page Glow Alignment, 8-Digit Hex Fix & Bright Blue Back Button Contrast:**
+   - **Bright Vibrant Blue Back Navigation Button Preserved**: Stripped `.btn-dashboard-primary` (`BACK TO ROOM` / `BACK TO LOBBY`) from tier-glow-active dark overrides. Restored `linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)` with bold white text and electric blue box shadow, ensuring unmistakable contrast against dark ghost button `VIEW ANSWER BREAKDOWN`.
+   - **8-Digit Hex Normalization (Accidental Purple Eliminated)**: Fixed bitwise parser bug in `js/result.js` where `#00c000ff` shifted without stripping alpha bytes, corrupting Pure Green into Purple (`rgb(192, 0, 255)`). Stripped trailing alpha bytes and wired canonical RGB strings directly from `TOPSCORE_COLORS` constants (`STAR_RGB: '0, 192, 0'`, `C_RGB: '255, 255, 0'`).
+   - **Synchronized Deferred Tier Glow across All 4 Content Panels**: Initial neutral dark slate borders (`rgba(255, 255, 255, 0.12)`) on all 4 cards (`#result-identity-card`, `#result-Test-name-container`, `#result-metrics-composite-card`, `#result-motivation-msg`). At the exact moment `#result-motivation-msg` reveals, all 4 cards ignite simultaneously with `1.5px solid rgba(var(--tier-rgb), 0.75-0.85)` and glowing box-shadows (Pure Green for 100% Star, Pure Yellow for Grade C).
+   - **Animation Scope & Fallback Fix**: Passed `rgbColor` and `currentTier` into `runResultEntranceSequence`, resolving reference exceptions and adding `activateTierGlow()` to reduced motion and safety timeouts.
+   - **/learn Codification**: Created `learning_proposal.md` and DECISION-042 establishing permanent architectural invariants.
+   - **Verified**: Playwright live inspection of 100% Star (`result_star_100_verified.png`) and Grade C (`result_grade_c_verified.png`), plus 100% pass on `test_result_page_parity.cjs`, `verify_green_star_grading.mjs`, and `check_all_js_syntax.cjs`.
+
 1. **Phase 290: Side Panel Perpetual Alphabetical Ordering for ABCD Groups:**
    - **Domain A Ordered (C -> D -> O)**: Curriculum (`classes-hub`), Dashboard (`dashboard`), Organization (`organization`).
    - **Domain B Ordered (C -> S)**: Dynamic active batches strictly ascending (Camp 132, Camp 133, Camp 134) followed by Students Registration (`student-registration`).

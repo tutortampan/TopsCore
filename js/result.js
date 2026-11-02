@@ -1191,6 +1191,8 @@ if (!session) {
           wrongCount: wrong,
           formattedPoints,
           gradeColor,
+          rgbColor,
+          currentTier,
           isGradeSOr100
         });
 
@@ -1302,8 +1304,12 @@ if (!session) {
       wrongCount,
       formattedPoints,
       gradeColor,
+      rgbColor,
+      currentTier,
       isGradeSOr100
     }) {
+      const resolvedRgb = rgbColor || (TOPSCORE_COLORS && TOPSCORE_COLORS[`${isGradeSOr100 ? 'STAR' : (grade === '★' ? 'STAR' : grade)}_RGB`]) || '0, 192, 0';
+      const resolvedTier = currentTier || (isGradeSOr100 ? '★' : grade);
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       // Immediate reveal if user prefers reduced motion
@@ -1332,6 +1338,7 @@ if (!session) {
         if (wrongEl) wrongEl.textContent = wrongCount;
         const pointsEl = document.getElementById('res-points');
         if (pointsEl) pointsEl.textContent = formattedPoints;
+        activateTierGlow(gradeColor, resolvedRgb, resolvedTier, isGradeSOr100);
         return;
       }
 
@@ -1345,6 +1352,7 @@ if (!session) {
           gradeValEl.classList.remove('grade-delayed');
           gradeValEl.classList.add('grade-revealed');
         }
+        activateTierGlow(gradeColor, resolvedRgb, resolvedTier, isGradeSOr100);
       }, 5000);
 
       const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -1458,7 +1466,7 @@ if (!session) {
       }
 
       // ACTIVATE SYNCHRONIZED TIER GLOW SIMULTANEOUSLY ACROSS ALL PANELS
-      activateTierGlow(gradeColor, rgbColor, currentTier, isGradeSOr100);
+      activateTierGlow(gradeColor, resolvedRgb, resolvedTier, isGradeSOr100);
 
       // Step 7: 220ms after Evaluation Word Card -> Action Buttons reveal in sequence
       await sleep(220);
@@ -1476,7 +1484,7 @@ if (!session) {
       const backBtn = document.getElementById('back-dashboard-btn');
       if (backBtn) backBtn.classList.add('cascade-revealed');
 
-      activateTierGlow(gradeColor, rgbColor, currentTier, isGradeSOr100);
+      activateTierGlow(gradeColor, resolvedRgb, resolvedTier, isGradeSOr100);
       clearTimeout(safetyTimeout);
     }
 

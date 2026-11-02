@@ -1,3 +1,45 @@
+## [2026-11-03 07:45] — Phase 291: Result Page Glow Alignment, 8-Digit Hex Fix & Bright Blue Back Button Contrast
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 291  
+**Status:** PASS  
+
+### Why
+- User feedback and screenshots identified:
+  1. On 100% Star view (Muhammad Masyan Hafizi), the Test Full Title panel and Evaluation Word Card borders rendered PURPLE instead of Pure Green (`#00c000ff`).
+  2. On Grade C view (Miss Nurhaliza, 70.4%), panels were not visibly glowing Pure Yellow (`#FFFF00`).
+  3. The Back button (`BACK TO ROOM` / `BACK TO LOBBY`, `.btn-dashboard-primary`) was erroneously changed to a dark slate / score-tinted button, destroying its essential visual distinction against the dark ghost button directly above it (`VIEW ANSWER BREAKDOWN`).
+  4. User command: *"warnna penel2 masih ada yang keliru, misal disini gamabar 1, ada yang ungu, seharusnya hijau, vgambar 2 juga warna panel seharusnya Kuning semua,,, ini tidak tampak. tombol back to room disnni panel buat biru lebih terang agar terlihat bedanya dengan tombol di atasnya, sebelumnya warnyan biru lebih terang. janagn suka rubah yang saya TIDAK minta! /learn perbaiki!!! /goal"*.
+
+### Changed
+1. **Bright Vibrant Blue Back Navigation Button Preserved**:
+   - Stripped `.btn-dashboard-primary` from `tier-glow-active` dark tinted overrides in `css/result.css`.
+   - Restored high-visibility bright blue gradient (`linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)`) with crisp bold white text (`#ffffff`) and electric blue shadow (`rgba(37, 99, 235, 0.5)`).
+   - Retained `.btn-breakdown-ghost` (`VIEW ANSWER BREAKDOWN`) as a dark slate ghost button (`rgba(15, 23, 42, 0.85)`), ensuring immediate, sharp visual contrast between the two stacked actions.
+2. **8-Digit Hex Normalization (Accidental Purple Eliminated)**:
+   - Fixed 8-digit hex parsing bug in `js/result.js` where `parseInt('#00c000ff', 16)` shifted without stripping alpha bytes, corrupting Pure Green into Purple (`rgb(192, 0, 255)`).
+   - Stripped trailing alpha characters when `c.length === 8`, ensuring `#00c000ff` maps strictly to `rgb(0, 192, 0)`.
+   - Wired canonical RGB strings directly from `TOPSCORE_COLORS` master constants (`STAR_RGB: '0, 192, 0'`, `C_RGB: '255, 255, 0'`).
+3. **Synchronized Deferred Tier Glow across All 4 Panels**:
+   - Initial neutral state: all 4 cards (`#result-identity-card`, `#result-Test-name-container`, `#result-metrics-composite-card`, `#result-motivation-msg`) have clean slate borders (`rgba(255, 255, 255, 0.12)`) and background `#0f172a`.
+   - Removed hardcoded fallback border overrides (`56, 189, 248`) from `#result-Test-name-container`.
+   - At the exact moment the evaluation description card reveals, `activateTierGlow()` ignites simultaneously:
+     - 100% Star / Grade A: **Pure Green (`#00c000ff`, `rgb(0, 192, 0)`)** on all 4 card borders and glowing box-shadows.
+     - Grade C (70.4%): **Pure Yellow (`#FFFF00`, `rgb(255, 255, 0)`)** on all 4 card borders, divider line, topic row, and glowing box-shadows.
+4. **Animation Scope Variables & Exception Handling**:
+   - Passed `rgbColor` and `currentTier` into `runResultEntranceSequence` in `js/result.js`, ensuring no reference exceptions occur.
+   - Added `activateTierGlow()` trigger to `prefersReducedMotion` and `safetyTimeout` fallbacks.
+5. **/learn Codification**:
+   - Created `learning_proposal.md` and DECISION-042 establishing invariants against unrequested button restyling and guaranteeing 8-digit hex parsing safety.
+
+### Tests
+- command: `node scripts/test_result_page_parity.cjs` -> PASS (All 30 IDs, wireframe layout, and waiver handlers verified).
+- command: `node scripts/verify_green_star_grading.mjs` -> PASS (100%).
+- command: `node scripts/check_all_js_syntax.cjs` -> PASS (40/40 JS files passed).
+- Playwright Visual Verification:
+  - 100% Star: All panels verified Pure Green `rgb(0, 192, 0)`, Back button verified Bright Blue `#3b82f6 -> #2563eb` (`result_star_100_verified.png`).
+  - Grade C: All panels verified Pure Yellow `rgb(255, 255, 0)`, Back button verified Bright Blue (`result_grade_c_verified.png`).
+
 ## [2026-11-03 07:25] — Phase 290: Side Panel Perpetual Alphabetical Ordering for ABCD Groups
 
 **Agent/Session:** Antigravity  

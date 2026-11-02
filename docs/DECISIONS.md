@@ -1201,3 +1201,43 @@ Status: ACCEPTED
 - Tutors can execute immediate academic discretion (`NORMAL`, `REMIDI`, `FORGIVE`) directly from the result inspection screen with complete audit log traceability.
 - Eliminates silent student disappearance caused by unintended Alumni level assignment on batch rosters.
 - Admin navigation maintains consistent, predictable alphabetical order regardless of dynamic asynchronous data loading.
+
+
+---
+
+## DECISION-042 — Result Page Synchronized Tier Glow, 8-Digit Hex Normalization, and Bright Blue Primary Navigation Button Preservation
+
+Date: 2026-11-03
+Status: ACCEPTED
+
+### Context
+1. User feedback identified that panels on `result.html` exhibited inconsistent colors:
+   - For 100% Star view (Mr. Muhammad Masyan Hafizi), the Test Full Title panel and Evaluation Word Card borders rendered PURPLE instead of Pure Green (`#00c000ff`).
+   - For Grade C view (Miss Nurhaliza, 70.4%), panels failed to illuminate in vibrant Pure Yellow (`#FFFF00`).
+   - The primary navigation button (`BACK TO ROOM` / `BACK TO LOBBY`, `.btn-dashboard-primary`) was erroneously darkened to match the tier color, destroying its contrast against the dark ghost button directly above it (`VIEW ANSWER BREAKDOWN`).
+   - User command: *"warnna penel2 masih ada yang keliru, misal disini gamabar 1, ada yang ungu, seharusnya hijau, vgambar 2 juga warna panel seharusnya Kuning semua,,, ini tidak tampak. tombol back to room disnni panel buat biru lebih terang agar terlihat bedanya dengan tombol di atasnya, sebelumnya warnyan biru lebih terang. janagn suka rubah yang saya TIDAK minta! /learn perbaiki!!! /goal"*.
+
+### Root Causes
+1. **8-Digit Hex Bitwise Shift Bug**:
+   - `TOPSCORE_COLORS.STAR` is defined as `#00c000ff` (8-character hex).
+   - In `js/result.js`, `parseInt(c, 16)` was shifted right by 16 bits without stripping the 2 alpha bytes, extracting `0xc0` (192) for Red and `0xff` (255) for Blue, producing `rgb(192, 0, 255)` (Purple) instead of `rgb(0, 192, 0)` (Pure Green).
+2. **Unrequested Color Mutation on Functional Button**:
+   - `.btn-dashboard-primary` was improperly overridden in `.tier-glow-active` with a dark slate / score-tinted gradient, eliminating visual contrast with `.btn-breakdown-ghost`.
+3. **Missing Animation Scope Variables**:
+   - In `runResultEntranceSequence`, parameters `rgbColor` and `currentTier` were omitted, leading to early termination before tier glow activation.
+
+### Decision
+1. **Bright Blue Primary Navigation Button**:
+   - `.btn-dashboard-primary` strictly maintains its vibrant, bright blue gradient (`linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)`) with crisp bold white text and electric blue box shadow (`rgba(37, 99, 235, 0.5)`).
+   - Never override or tint `.btn-dashboard-primary` with tier score colors. It must permanently stand out from `.btn-breakdown-ghost` (`rgba(15, 23, 42, 0.85)`).
+2. **8-Digit Hex Normalization**:
+   - In `js/result.js`, `hexToRgba` and `hexToRgbString` strip trailing alpha characters when `c.length === 8`.
+   - Prefer canonical RGB strings directly from `TOPSCORE_COLORS[grade + '_RGB']` (`STAR_RGB: '0, 192, 0'`, `C_RGB: '255, 255, 0'`).
+3. **Synchronized Deferred Tier Glow across All 4 Panels**:
+   - All 4 panels (`#result-identity-card`, `#result-Test-name-container`, `#result-metrics-composite-card`, `#result-motivation-msg`) remain clean dark slate (`rgba(255, 255, 255, 0.12)`) until `#result-motivation-msg` reveals.
+   - Upon reveal, `activateTierGlow` simultaneously illuminates all 4 panels with `1.5px solid rgba(var(--tier-rgb), 0.75-0.85)`, glowing box shadows (`rgba(var(--tier-rgb), 0.35-0.50)`), and matching radial background auras:
+     - Star 100% / Grade A: **Pure Green (`#00c000ff`, `rgb(0, 192, 0)`)**.
+     - Grade C: **Pure Yellow (`#FFFF00`, `rgb(255, 255, 0)`)**.
+     - Grade B: **Electric Lime (`#95ff00ff`, `rgb(149, 255, 0)`)**.
+     - Grade D: **Dark Orange (`#FF8C00`, `rgb(255, 140, 0)`)**.
+     - Grade E: **Pure Red (`#FF0000`, `rgb(255, 0, 0)`)**.
