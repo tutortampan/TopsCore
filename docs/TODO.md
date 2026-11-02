@@ -1,3 +1,18 @@
+# ACTIVE DIRECTIVE: PHASE 290 — SIDE PANEL PERPETUAL ALPHABETICAL ORDERING FOR ABCD GROUPS [COMPLETE]
+
+- [x] Task 1: Audit admin sidebar navigation structure across all 4 ABCD domains (`A — ADMIN`, `B — BOARD`, `C — CLASS`, `D — SYSTEM & DATA`).
+- [x] Task 2: Reorder static HTML in `admin.html`:
+  - Domain A: Curriculum (`classes-hub`) $\rightarrow$ Dashboard (`dashboard`) $\rightarrow$ Organization (`organization`).
+  - Domain B: `#sidebar-programs-list` $\rightarrow$ Students Registration (`student-registration`).
+  - Domain C: `#sidebar-classes-list` $\rightarrow$ Test Analytics (`tests`) $\rightarrow$ Vocabulary Vault (`vocab_vault`).
+  - Domain D: Modules (`modules`) $\rightarrow$ System Settings (`settings`).
+- [x] Task 3: Configure `display: contents;` in `css/admin.css` for `#sidebar-programs-list`, `#sidebar-classes-list`, `.sidebar-program-group`, and `.sidebar-class-group` ensuring seamless flexbox item flow and `order` support.
+- [x] Task 4: Implement `sortAllSidebarDomains()` and `initSidebarAlphabeticalObserver()` with `requestAnimationFrame` debouncing in `js/admin/admin-init.js` for continuous alphabetical persistence.
+- [x] Task 5: Change batch sorting from descending to ascending (`(a.name).localeCompare(b.name, undefined, { numeric: true })`) in `js/admin/app.js` and ensure sorted cache persistence.
+- [x] Task 6: Verify with automated tests `scripts/test_sidebar_alphabetical_verification.cjs`, `scripts/check_all_js_syntax.cjs`, and parity suites (100% PASS).
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 285 — VOCAB 7×7 & LEVEL PROGRESSION MASTER SYSTEM [COMPLETE]
 
 ### 🔴 Phase 1: Total Terminology Unification (Quiz $\rightarrow$ Task 100%) [COMPLETE]

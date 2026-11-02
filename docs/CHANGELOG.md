@@ -1,3 +1,41 @@
+## [2026-11-03 07:25] — Phase 290: Side Panel Perpetual Alphabetical Ordering for ABCD Groups
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 290  
+**Status:** PASS  
+
+### Why
+- User requirement: "di bagian side panel ini harus selalu berdasarkan uritan abjad. tolong diperbaiki, dan buat agar selalu secara abjad tiap isi ABCD".
+- Analysis of admin sidebar identified:
+  1. **Domain A (Admin)**: Dashboard (D) and Organization (O) were placed ahead of Curriculum (C).
+  2. **Domain B (Board)**: Batches were sorted descending (Camp 134, 133, 132), and Students Registration (S) was placed above Camp batches (C).
+  3. **Domain C (Class)** & **Domain D (Data)**: Needed guaranteed continuous alphabetical sort persistence across dynamic class additions and asynchronous cache/server hydrations.
+
+### Changed
+1. **admin.html Primary Sidebar Structure**:
+   - **Domain A**: Reordered children to Curriculum (`classes-hub`), Dashboard (`dashboard`), Organization (`organization`).
+   - **Domain B**: Placed `#sidebar-programs-list` ahead of Students Registration (`student-registration`).
+   - **Domain C**: Retained `#sidebar-classes-list` ahead of Test Analytics (`tests`) and Vocabulary Vault (`vocab_vault`).
+   - **Domain D**: Validated Modules (`modules`) precedes System Settings (`settings`).
+2. **css/admin.css Flexbox Flow**:
+   - Configured `#sidebar-programs-list`, `#sidebar-classes-list`, `.sidebar-program-group`, and `.sidebar-class-group` with `display: contents;`.
+   - Allows all navigation items (static and dynamic) to participate directly in `.nav-domain-group` flex layout with exact uniform 2px gap and CSS `order` support.
+3. **js/admin/admin-init.js (Fast-Boot & Perpetual Sorter)**:
+   - Added `getSidebarNavItemLabel(el)`: Strips emoji and icon tags to cleanly extract alphanumeric text labels.
+   - Added `sortAllSidebarDomains()`: Authoritatively iterates every `.nav-domain-group`, sorts items alphabetically with `{ numeric: true, sensitivity: 'base' }`, assigns `style.order = String(idx + 1)`, and keeps header at `order: 0`.
+   - Added `initSidebarAlphabeticalObserver()`: MutationObserver on `.admin-nav` `{ childList: true, subtree: true }` that debounces with `requestAnimationFrame` to maintain alphabetical order perpetually whenever DOM items are inserted or removed.
+   - Updated fast-boot cache hydration for programs/batches and classes to sort arrays in ascending alphabetical order before DOM rendering.
+4. **js/admin/app.js (Ascending Sorts & Sync)**:
+   - Changed active batches sort from descending `(b.name).localeCompare(a.name)` to ascending `(a.name).localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })`.
+   - Ensured all generated batch items, program items, and class items are sorted ascending A-Z before rendering and before saving to `localStorage`.
+   - Triggered `window.sortAllSidebarDomains()` immediately after rendering batch and class lists.
+
+### Tests
+- command: `node scripts/test_sidebar_alphabetical_verification.cjs` -> PASS (100% of DOM layout, CSS rules, sorting functions, and ascending order verified).
+- command: `node scripts/check_all_js_syntax.cjs` -> PASS (40/40 JS files passed).
+- command: `node scripts/test_result_page_parity.cjs` -> PASS (100%).
+- command: `node scripts/verify_green_star_grading.mjs` -> PASS (100%).
+
 ## [2026-11-03 07:05] — Phase 289: Result Page Harmonized Glow & 40px Button Height Alignment
 
 **Agent/Session:** Antigravity  

@@ -1,11 +1,20 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-03 07:20 UTC+8
-Current Phase: Phase 289: Result Page Harmonized Glow & 40px Button Height Alignment [COMPLETE]
+Last Updated: 2026-11-03 07:30 UTC+8
+Current Phase: Phase 290: Side Panel Perpetual Alphabetical Ordering for ABCD Groups [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Phase 289: Result Page Harmonized Glow & 40px Button Height Alignment:**
+1. **Phase 290: Side Panel Perpetual Alphabetical Ordering for ABCD Groups:**
+   - **Domain A Ordered (C -> D -> O)**: Curriculum (`classes-hub`), Dashboard (`dashboard`), Organization (`organization`).
+   - **Domain B Ordered (C -> S)**: Dynamic active batches strictly ascending (Camp 132, Camp 133, Camp 134) followed by Students Registration (`student-registration`).
+   - **Domain C Ordered (2 -> 3 -> T -> V)**: Dynamic active classes (2nd Vocabulary, 3rd Vocabulary) followed by Test Analytics (`tests`), Vocabulary Vault (`vocab_vault`).
+   - **Domain D Ordered (M -> S)**: Modules (`modules`), System Settings (`settings`).
+   - **display: contents Flow**: Configured `#sidebar-programs-list`, `#sidebar-classes-list`, `.sidebar-program-group`, and `.sidebar-class-group` with `display: contents;` in `css/admin.css` ensuring zero layout breakage and direct flexbox participation.
+   - **Perpetual Sorter & MutationObserver**: Implemented `sortAllSidebarDomains()` and `initSidebarAlphabeticalObserver()` in `js/admin/admin-init.js`, auto-sorting items by clean text (stripping emojis/icons) with `{ numeric: true }` and maintaining continuous alphabetical order whenever dynamic items load.
+   - **Verified**: `test_sidebar_alphabetical_verification.cjs`, `check_all_js_syntax.cjs`, and `test_result_page_parity.cjs` passing 100%.
+
+2. **Phase 289: Result Page Harmonized Glow & 40px Button Height Alignment:**
    - **Flashcard Button Purged**: Completely removed unrequested `#open-flashcards-btn` from `result.html` and neutralized unhiding logic in `js/result.js`.
    - **Height 40px Alignment**: Aligned Action Row (`.result-action-slot`, `.btn-next-milestone`, `.tutor-remedial-segmented`), View Answer Breakdown (`.btn-breakdown-ghost`), and Back Navigation (`.btn-dashboard-primary`) to strictly 40px with uniform 11.5px font size (Weight 800) matching Image 1 wireframe. Zero vertical overflow or scrollbar.
    - **Harmonized Cohesive Color Palette**: Resolved mismatched cyan, purple, and blue borders. All panels (Metadata, Avatar Ring, Title, Topic row, Metrics Composite, Percentage, Points, Status Card, Action Buttons, Breakdown, and Back button) share the exact same `--tier-color` and `--tier-rgb`.

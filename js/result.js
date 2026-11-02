@@ -514,46 +514,87 @@ if (!session) {
         heroEl.style.setProperty('--tier-rgb', rgbColor);
       }
 
+      // 1. Identity & Metadata Card
       const idCard = document.getElementById('result-identity-card');
       if (idCard) {
         idCard.dataset.tier = currentTier;
         idCard.style.setProperty('--tier-color', gradeColor);
         idCard.style.setProperty('--tier-rgb', rgbColor);
+        idCard.style.borderColor = `rgba(${rgbColor}, 0.75)`;
+        idCard.style.boxShadow = `0 0 25px rgba(${rgbColor}, 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35)`;
       }
 
+      // Divider inside Identity card
+      const dividerEl = document.querySelector('.result-identity-card .hero-name-divider');
+      if (dividerEl) {
+        dividerEl.style.background = `linear-gradient(90deg, transparent 0%, rgba(${rgbColor}, 0.7) 20%, rgba(255, 255, 255, 0.9) 50%, rgba(${rgbColor}, 0.7) 80%, transparent 100%)`;
+      }
+
+      // 2. Avatar Container Ring
       const avatarCont = document.getElementById('result-avatar-container');
       if (avatarCont) {
         avatarCont.style.setProperty('--tier-color', gradeColor);
+        avatarCont.style.borderColor = gradeColor;
+        avatarCont.style.boxShadow = `0 0 22px rgba(${rgbColor}, 0.75), 0 4px 14px rgba(0, 0, 0, 0.35)`;
       }
 
+      // 3. Test Full Title Panel
       const titleCard = document.getElementById('result-Test-name-container');
       if (titleCard) {
         titleCard.dataset.tier = currentTier;
         titleCard.style.setProperty('--tier-color', gradeColor);
         titleCard.style.setProperty('--tier-rgb', rgbColor);
+        titleCard.style.borderColor = `rgba(${rgbColor}, 0.75)`;
+        titleCard.style.boxShadow = `0 0 20px rgba(${rgbColor}, 0.35)`;
       }
 
+      // Topic Row inside Title Panel
+      const topicEl = document.getElementById('result-test-topic-row');
+      if (topicEl) {
+        topicEl.style.color = gradeColor;
+        topicEl.style.textShadow = `0 0 14px rgba(${rgbColor}, 0.55)`;
+      }
+
+      // 4. Metrics Composite Card
       const compositeCard = document.getElementById('result-metrics-composite-card');
       if (compositeCard) {
         compositeCard.dataset.tier = currentTier;
         compositeCard.style.setProperty('--tier-color', gradeColor);
         compositeCard.style.setProperty('--tier-rgb', rgbColor);
+        compositeCard.style.borderColor = `rgba(${rgbColor}, 0.75)`;
+        compositeCard.style.boxShadow = `0 0 25px rgba(${rgbColor}, 0.35), 0 4px 16px rgba(0, 0, 0, 0.25)`;
       }
 
+      // Score % and Points inside composite card
+      const pctEl = document.getElementById('result-percentage');
+      if (pctEl) {
+        pctEl.style.color = gradeColor;
+        pctEl.style.textShadow = `0 0 16px rgba(${rgbColor}, 0.65)`;
+      }
+      const ptsEl = document.getElementById('res-points');
+      if (ptsEl) {
+        ptsEl.style.color = gradeColor;
+        ptsEl.style.textShadow = `0 0 10px rgba(${rgbColor}, 0.45)`;
+      }
+
+      // 5. Evaluation Word Card (EXCELLENT, GOOD, ENOUGH, etc.)
       const motEl = document.getElementById('result-motivation-msg');
       if (motEl) {
         motEl.dataset.tier = currentTier;
         motEl.style.setProperty('--tier-color', gradeColor);
         motEl.style.setProperty('--tier-rgb', rgbColor);
+        motEl.style.borderColor = `rgba(${rgbColor}, 0.85)`;
+        motEl.style.boxShadow = `0 0 25px rgba(${rgbColor}, 0.50)`;
+        motEl.style.color = gradeColor;
+        motEl.style.textShadow = `0 0 18px rgba(${rgbColor}, 0.75)`;
       }
 
-      const pctEl = document.getElementById('result-percentage');
-      if (pctEl) {
-        pctEl.style.color = gradeColor;
-      }
-      const ptsEl = document.getElementById('res-points');
-      if (ptsEl) {
-        ptsEl.style.color = gradeColor;
+      // 6. Tutor active segment button (NORMAL / REMIDI / FORGIVE)
+      const activeSegment = document.querySelector('.remedial-segment-btn.active');
+      if (activeSegment) {
+        activeSegment.style.borderColor = gradeColor;
+        activeSegment.style.color = gradeColor;
+        activeSegment.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.50)`;
       }
     }
 
@@ -750,15 +791,17 @@ if (!session) {
 
         // Authoritative Standard Grading System (Official Scale)
         const hexToRgba = (hex, alpha) => {
-          let c = String(hex || TOPSCORE_COLORS.STAR).replace('#', '');
+          let c = String(hex || TOPSCORE_COLORS.STAR).replace('#', '').trim();
           if (c.length === 3) c = c.split('').map(x => x + x).join('');
+          if (c.length === 8) c = c.substring(0, 6);
           const num = parseInt(c, 16);
           return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
         };
 
         const hexToRgbString = (hex) => {
-          let c = String(hex || TOPSCORE_COLORS.STAR).replace('#', '');
+          let c = String(hex || TOPSCORE_COLORS.STAR).replace('#', '').trim();
           if (c.length === 3) c = c.split('').map(x => x + x).join('');
+          if (c.length === 8) c = c.substring(0, 6);
           const num = parseInt(c, 16);
           return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
         };
@@ -766,7 +809,7 @@ if (!session) {
         const isGradeSOr100 = (pct >= 100 || grade === '★' || grade === 'S' || grade === 'STAR');
         const currentTier = isGradeSOr100 ? '★' : grade;
         let gradeColor = typeof getGradeColor === 'function' ? getGradeColor(grade) : (TOPSCORE_COLORS.STAR || '#00c000ff');
-        const rgbColor = hexToRgbString(gradeColor);
+        const rgbColor = TOPSCORE_COLORS[`${isGradeSOr100 ? 'STAR' : (grade === '★' ? 'STAR' : grade)}_RGB`] || hexToRgbString(gradeColor);
 
         // 5. Achievement Status (Rule DECISION-018: strictly FAIL, LESS, ENOUGH, GOOD, VERY GOOD, EXCELLENT)
         const motEl = document.getElementById('result-motivation-msg');
