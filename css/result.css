@@ -182,7 +182,7 @@
       min-height: 50px !important;
       max-height: 50px !important;
       background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, 56, 189, 248), 0.12), transparent 75%), #0f172a !important;
-      border: 1px solid rgba(var(--tier-rgb, 56, 189, 248), 0.35) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
       border-radius: 12px !important;
       padding: 0 12px !important;
       margin: 0 auto !important;
@@ -211,10 +211,10 @@
       font-weight: 800 !important;
       letter-spacing: 0.03em !important;
       text-transform: uppercase !important;
-      color: #38BDF8 !important;
+      color: var(--tier-color, #cbd5e1) !important;
       line-height: 1.25 !important;
       text-align: center !important;
-      text-shadow: 0 0 12px rgba(56, 189, 248, 0.3) !important;
+      text-shadow: 0 0 12px rgba(var(--tier-rgb, 203, 213, 225), 0.3) !important;
     }
     .result-curriculum-crumb {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -1170,8 +1170,8 @@
       justify-content: center !important;
       box-sizing: border-box !important;
       flex-shrink: 0 !important;
-      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.16), transparent 75%), #0f172a !important;
-      border: 1px solid rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.45) !important;
+      background: #0f172a !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
       font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
       font-size: clamp(1.15rem, 3vw, 1.35rem) !important;
@@ -2213,14 +2213,16 @@
    ============================================================ */
 
 /* Initial Neutral State: Clean Slate before Evaluation reveals */
+body.result-page:not(.tier-glow-active) #result-identity-card,
 body.result-page:not(.tier-glow-active) .result-identity-card,
+body.result-page:not(.tier-glow-active) #result-Test-name-container,
 body.result-page:not(.tier-glow-active) .result-test-title-wrap,
+body.result-page:not(.tier-glow-active) #result-metrics-composite-card,
 body.result-page:not(.tier-glow-active) .result-metrics-composite-card,
+body.result-page:not(.tier-glow-active) #result-motivation-msg,
 body.result-page:not(.tier-glow-active) .result-evaluation-card,
 body.result-page:not(.tier-glow-active) .btn-next-milestone,
-body.result-page:not(.tier-glow-active) .remedial-segment-btn,
-body.result-page:not(.tier-glow-active) .btn-breakdown-ghost,
-body.result-page:not(.tier-glow-active) .btn-dashboard-primary {
+body.result-page:not(.tier-glow-active) .remedial-segment-btn {
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   background: #0f172a !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
@@ -2251,50 +2253,54 @@ body.result-page:not(.tier-glow-active) #result-test-topic-row {
    Active Synchronized Glow: Illuminates simultaneously across
    ALL panels when Evaluation Description (less-excellent) reveals
    ------------------------------------------------------------- */
+body.result-page.tier-glow-active #result-identity-card,
 body.result-page.tier-glow-active .result-identity-card {
-  border-color: rgba(var(--tier-rgb), 0.55) !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.75) !important;
   box-shadow: 0 0 25px rgba(var(--tier-rgb), 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.15), transparent 75%), #0f172a !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.16), transparent 75%), #0f172a !important;
 }
 
 body.result-page.tier-glow-active #result-avatar-container {
   border-color: var(--tier-color) !important;
-  box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.70), 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+  box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.75), 0 4px 14px rgba(0, 0, 0, 0.35) !important;
 }
 
+body.result-page.tier-glow-active #result-Test-name-container,
 body.result-page.tier-glow-active .result-test-title-wrap {
-  border-color: rgba(var(--tier-rgb), 0.55) !important;
-  box-shadow: 0 0 20px rgba(var(--tier-rgb), 0.30) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.14), transparent 75%), #0f172a !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.75) !important;
+  box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.35) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.16), transparent 75%), #0f172a !important;
 }
 
 body.result-page.tier-glow-active #result-test-topic-row {
   color: var(--tier-color) !important;
-  text-shadow: 0 0 14px rgba(var(--tier-rgb), 0.5) !important;
+  text-shadow: 0 0 14px rgba(var(--tier-rgb), 0.55) !important;
 }
 
+body.result-page.tier-glow-active #result-metrics-composite-card,
 body.result-page.tier-glow-active .result-metrics-composite-card {
-  border-color: rgba(var(--tier-rgb), 0.55) !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.75) !important;
   box-shadow: 0 0 25px rgba(var(--tier-rgb), 0.35), 0 4px 16px rgba(0, 0, 0, 0.25) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.12), transparent 75%), #0f172a !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.15), transparent 75%), #0f172a !important;
 }
 
 body.result-page.tier-glow-active #result-percentage {
   color: var(--tier-color) !important;
-  text-shadow: 0 0 16px rgba(var(--tier-rgb), 0.6) !important;
+  text-shadow: 0 0 16px rgba(var(--tier-rgb), 0.65) !important;
 }
 
 body.result-page.tier-glow-active #res-points {
   color: var(--tier-color) !important;
-  text-shadow: 0 0 10px rgba(var(--tier-rgb), 0.4) !important;
+  text-shadow: 0 0 10px rgba(var(--tier-rgb), 0.45) !important;
 }
 
+body.result-page.tier-glow-active #result-motivation-msg,
 body.result-page.tier-glow-active .result-evaluation-card {
-  border-color: rgba(var(--tier-rgb), 0.65) !important;
-  box-shadow: 0 0 25px rgba(var(--tier-rgb), 0.45) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.20), transparent 75%), #0f172a !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.85) !important;
+  box-shadow: 0 0 25px rgba(var(--tier-rgb), 0.50) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.22), transparent 75%), #0f172a !important;
   color: var(--tier-color) !important;
-  text-shadow: 0 0 18px rgba(var(--tier-rgb), 0.7) !important;
+  text-shadow: 0 0 18px rgba(var(--tier-rgb), 0.75) !important;
 }
 
 body.result-page.tier-glow-active .btn-next-milestone {
@@ -2310,15 +2316,68 @@ body.result-page.tier-glow-active .tutor-remedial-segmented .remedial-segment-bt
   box-shadow: 0 0 18px rgba(var(--tier-rgb), 0.45) !important;
 }
 
-body.result-page.tier-glow-active .btn-breakdown-ghost {
-  border-color: rgba(var(--tier-rgb), 0.45) !important;
-  box-shadow: 0 0 14px rgba(var(--tier-rgb), 0.20) !important;
-  color: #F8FAFC !important;
+/* ===== ACTION BUTTONS CONTRAST (CLEAR DISTINCTION) =====
+   User requirement:
+   - "tombol back to room disnni panel buat biru lebih terang agar terlihat bedanya dengan tombol di atasnya,
+      sebelumnya warnyan biru lebih terang. jangan suka rubah yang saya TIDAK minta!"
+   - View Answer Breakdown = Dark Slate ghost button
+   - Back to Room / Back to Lobby = Bright Vibrant Solid Blue button
+*/
+.btn-breakdown-ghost {
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  border-radius: 8px !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 11.5px !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s ease !important;
+  flex-shrink: 0 !important;
+}
+.btn-breakdown-ghost:hover {
+  background: rgba(30, 41, 59, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
 }
 
-body.result-page.tier-glow-active .btn-dashboard-primary {
-  border: 1px solid rgba(var(--tier-rgb), 0.6) !important;
-  box-shadow: 0 4px 16px rgba(var(--tier-rgb), 0.35) !important;
-  background: linear-gradient(135deg, rgba(var(--tier-rgb), 0.35) 0%, #1e293b 100%) !important;
-  color: #FFFFFF !important;
+.btn-dashboard-primary {
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  border-radius: 8px !important;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: #ffffff !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-weight: 800 !important;
+  font-size: 11.5px !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-decoration: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s ease !important;
+  flex-shrink: 0 !important;
+}
+.btn-dashboard-primary:hover {
+  background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%) !important;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+  transform: translateY(-1px) !important;
 }
