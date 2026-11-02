@@ -2241,7 +2241,7 @@ export async function getServerTimeWita() {
 export async function fetchVaultWords({ topic = null, search = null, targetLevel = null, limit = 2500, offset = 0 } = {}) {
   const sb = await getSupabase();
   let query = sb.from('vocabulary_vault')
-    .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code')
+    .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category, institution_id, program_id, institutions(id, name, code), programs(id, name, code)')
     .is('deleted_at', null)
     .order('target_level', { ascending: true })
     .order('theme_code', { ascending: true })
