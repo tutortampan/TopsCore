@@ -1,3 +1,22 @@
+# ACTIVE DIRECTIVE: PHASE 292 — VOCABULARY VAULT INSTITUTION, PROGRAM & LEVEL INTEGRATION [COMPLETE]
+
+- [x] Task 1: Update `fetchVaultWords` in `js/api.js` to select joined relations `institutions(id, name, code)` and `programs(id, name, code)`.
+- [x] Task 2: Update `js/admin/vocab-vault.js` Words and Phrases grid table:
+  - Add explicit columns to `<thead>`: `Institution`, `Program`, `Level`.
+  - Render stylized pill badges in `renderRows` for `cell-institution` (Cyan `#38bdf8`), `cell-program` (Purple `#c084fc`), and `cell-level` (Slate `#f8fafc`).
+  - Add dynamic `vault-level-filter` dropdown to toolbar populated from `words.target_level` using `toOrdinalLevel`.
+  - Maintain empty state `colspan="11"` and row edit mode compatibility.
+- [x] Task 3: Overhaul `Topic Blueprint` in `js/admin/vocab-vault.js`:
+  - Add prominent Institution (`INST: CEC`) and Program (`PROG: CAMP`) badges to the blueprint toolbar.
+  - Implement interactive Level Selector buttons (`[ 🎯 2ND LEVEL ]`, `[ 🎯 3RD LEVEL ]`) dynamically detected from vault records.
+  - Add dual view mode switcher: `[ 🗺️ Board ]` and `[ 📊 Table ]`.
+  - In Board View: Add metadata hierarchy row `[CEC] [Camp] [2nd Level / 3rd Level]` to every single topic card.
+  - In Table View: Add explicit columns for `Institution`, `Program`, `Level`, `T.Code`, `Theme`, `Topic Code`, `Topic`, `Verbs`, `Adjs`, `Nouns`, `Phrases`, `Total Items`, and `Actions`.
+  - Update bottom infobar chips with Institution, Program, and Level metadata.
+- [x] Task 4: Verify with automated tests `node scripts/check_all_js_syntax.cjs`, `node scripts/test_result_page_parity.cjs`, and `node scripts/verify_green_star_grading.mjs` (100% PASS).
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 290 — SIDE PANEL PERPETUAL ALPHABETICAL ORDERING FOR ABCD GROUPS [COMPLETE]
 
 - [x] Task 1: Audit admin sidebar navigation structure across all 4 ABCD domains (`A — ADMIN`, `B — BOARD`, `C — CLASS`, `D — SYSTEM & DATA`).
