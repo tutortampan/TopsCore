@@ -1,7 +1,7 @@
 # PRODUCT SPECIFICATION — TOPSCORE LMS
 
 ## 1. Overview
-TopsCore is an institutional, data-efficient, low-egress English Learning Management System (LMS) powered by an AI Test Evaluation Engine. It manages Institutions, Programs, Classes, Levels, Modules, Tests (Quizzes & Exams), Student Submissions, Progression, and Admin Operations. All user interfaces, prompts, and system messages are in Direct English Only.
+TopsCore is an institutional, data-efficient, low-egress English Learning Management System (LMS) powered by an AI Test Evaluation Engine. It manages Institutions, Programs, Classes, Levels, Modules, Tests (Tasks & Exams), Student Submissions, Progression, and Admin Operations. All user interfaces, prompts, and system messages are in Direct English Only.
 
 ## 2. Core Hierarchy
 ```text
@@ -11,7 +11,7 @@ INSTITUTION
         │     └── STUDENTS (Grouped by Batch)
         │
         └── CLASSES (Formerly 'Subjects')
-              └── TESTS (Quizzes & Exams)
+              └── TESTS (Tasks & Exams)
                     └── MODULES (AI Evaluation Engines)
 
 STUDENT + TEST
@@ -30,9 +30,9 @@ STUDENT + CLASS
   4. `D — DATA` (Settings, Audit Logs, Data Health, Modules)
 - **Student Business ID**: No business-facing Student ID anywhere. UUID internal PK only (maps to auth.users).
 - **Student Login**: INSTITUTION -> PROGRAM -> Student Name -> Personal PIN. Server validates that the student belongs to the program and institution, is active, and the PIN matches hashed record.
-- **Test Auto-Naming Formula (Rule 2.6)**: `INSTITUTION + PROGRAM + CLASS + LEVEL + TEST TYPE + TEST TITLE`. Test types are either `Quiz` (formative drill) or `Exam` (formal milestone test).
+- **Test Auto-Naming Formula (Rule 2.6)**: `INSTITUTION + PROGRAM + CLASS + LEVEL + TEST TYPE + TEST TITLE`. Test types are either `Task` (daily formative practice/drill) or `Exam` (formal scheduled test).
 - **Scoring & Retakes**: Unlimited retakes bounded by availability windows. The main report card stores the **HIGHEST** score. Global average strictly counts unopened/unattempted available modules as 0. Teachers have manual override privileges.
-- **Prerequisites**: Dynamic multi-level prerequisites supporting 0 to N parent tests, minimum score thresholds, and aggregate average score thresholds. Strict sequential intra-theme prerequisites require passing Words Exam (≥60%) before Phrases Exam unlocks.
+- **Prerequisites & 7×7 Repetitive Mastery**: Dynamic multi-level prerequisites supporting 0 to N parent tests, minimum score thresholds, and aggregate average score thresholds. Strict 7×7 Repetitive Mastery locks Exam 🔒 until all prerequisite Tasks in that topic reach 7/7 Passes. Sequential intra-theme progression requires passing Words Exam (≥70%) before Phrases Exam unlocks.
 - **Stateless AI Media Pipeline**: Supabase stores ONLY structured text/JSON. Media (audio/photos) is processed transiently in the browser, sent directly to the AI API for evaluation via Edge Functions, and immediately discarded.
 - **Official Grading Scale (Rule 2.10 & TOPSCORE_COLORS)**:
   - `★` (100%): "Excellent" | Pure Green (`#00c000ff` / `#00c000`)
