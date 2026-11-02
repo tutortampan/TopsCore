@@ -1048,6 +1048,44 @@ Status: ACCEPTED
 - Zero loss of student speech on last-second answers before countdown expiration.
 - Maximized horizontal screen real estate for exam performance metrics on student roster.
 
+---
+
+## DECISION-039 — Universal Terminology Unification: Complete Elimination of 'Quiz' in Favor of 'Task', 7×7 Repetitive Mastery Engine, and Written Words Exam (>= 70%)
+
+Date: 2026-11-02
+Status: ACCEPTED
+
+### Context
+1. TopsCore LMS previously retained mixed terminology between "Quiz" and "Task" for formative daily practice tests, creating ambiguity in code filters (`isQuiz`, `test_type === 'quiz'`, `shell_code.includes('-QUIZ')`), UI badges, and database records.
+2. Pedagogically, the product owner determined that vocabulary acquisition requires intensive repetitive drill (*repetitive mastery*) rather than single-pass evaluation.
+3. Batch 133 has officially graduated. The academy is preparing for Batch 134 (`2nd Level`) and Batch 135 (`1st Level`), requiring clear curriculum boundaries and rigorous mastery standards.
+
+### Decision
+1. **Universal Elimination of 'Quiz' (Zero-Exception Standard)**:
+   - Eliminate the term "Quiz" across the entire TopsCore codebase, database titles, shell codes, UI labels, and documentation.
+   - Establish **Task** as the sole official term for daily formative practice, paired with **Exam** for formal scheduled evaluations: `TESTS (Tasks & Exams)`.
+2. **7×7 Repetitive Mastery Engine (Task System)**:
+   - Every vocabulary Task topic requires a minimum of **7 passed attempts** with a score of **≥ 70%** per attempt to be marked as Complete.
+   - Any attempt scoring < 70% is recorded in historical audit trails but does NOT increment the completion progress counter (`X/7`).
+   - The progress counter is calculated realtime from immutable `attempts` data (`COUNT(*) WHERE test_id = X AND score >= 70%`).
+   - **Visual Progression Palette (Unified with TopsCore Grade Scale)**:
+     - `0/7` $\rightarrow$ Pure Red / Grade E (`#FF0000`, `var(--grade-e)`)
+     - `1/7 & 2/7` $\rightarrow$ Dark Orange / Grade D (`#FF8C00`, `var(--grade-d)`)
+     - `3/7 & 4/7` $\rightarrow$ Pure Yellow / Grade C (`#FFFF00`, `var(--grade-c)`)
+     - `5/7 & 6/7` $\rightarrow$ Electric Lime / Grade B (`#95ff00`, `var(--grade-b)`)
+     - `7/7` $\rightarrow$ Pure Green / Grade A / Star (`#00c000`, `var(--grade-star)`)
+3. **Words Exam Written Mode & Minimum Passing Grade 70%**:
+   - Words Exam format transitions from speech-to-text to **Written (text input)**.
+   - Written answer evaluation strictly enforces AGENTS.md Rule 2.13 (partial credit of 0.5 pt for typos $\le 2$ characters).
+   - The universal minimum passing score for all Vocabulary Exams is standardized to **≥ 70%** (blocking sequential progression to Phrases Exam if < 70%).
+4. **Level-Scaffolded Vocabulary Curriculum**:
+   - **Level 2 (`2nd Vocabulary`)**: Designed as a **Words-Only** curriculum (no phrases) with 2 initial Themes A & B, keeping cognitive load appropriate for incoming Batch 134.
+   - **Level 3 (`3rd Vocabulary`)**: Preserves the **separate Words and Phrases structure**, with Words Exam (Written $\ge 70\%$) sequentially unlocking Phrases Exam (Dropdown $\ge 70\%$) per theme.
+
+### Consequences
+- Eliminates 100% of code branching and filter bugs related to `quiz` vs `task`.
+- Guarantees high student vocabulary retention through mandatory 7-pass drill repetition.
+- Ensures seamless auto-assignment for Batch 134 under Rule 2.5 without cross-level interference.
 
 
 
@@ -1057,3 +1095,53 @@ Status: ACCEPTED
 
 
 
+
+
+
+---
+
+## DECISION-040 — Level Progression System, Lifecycle Actions, Batch Transfer, and Multi-Tenant Vocabulary Vault Architecture
+
+Date: 2026-11-03
+Status: ACCEPTED
+
+### Context
+Following a rigorous `/grill-me` architectural review with the Product Owner (Mr. Top), several core progression and multi-tenant scoping mechanisms were formalized for TopsCore LMS:
+1. Penamaan tingkat akademik resmi disederhanakan: `1st` (1st Level), `2nd` (2nd Level), `3rd` (3rd Level), dan `Alumni` (Completed) yang menduduki `level_number = 0`.
+2. Aksi kenaikan tingkat siswa dikelompokkan ke dalam 4 status resmi operasional: `NEXT`, `HOLD`, `RETRY`, dan `REPEAT` (re-enrollment / mengulang dari level pilihan).
+3. Perpindahan siswa antar angkatan (e.g. dari Batch 123 ke Batch 124) membutuhkan mekanisme `Transfer Batch` dengan opsi `Inherit Batch Level`.
+4. Exam Gate diperketat menjadi **Hard Gate 🔒**: tombol Exam tidak dapat dibuka sebelum seluruh Task pada topik tersebut berstatus `7/7 Complete` (Hijau).
+5. Kebutuhan kurikulum multi-program (General English untuk CEC, Hospitality English untuk Sheraton Hotel, Office English untuk Evnikom) memerlukan isolasi bank soal dan auto-generate tanpa memecah database menjadi banyak tabel terpisah.
+
+### Decision
+1. **Penyelarasan 4 Level Resmi**:
+   - `level_number = 1`: Tampilan `1st`, Deskripsi `1st Level`.
+   - `level_number = 2`: Tampilan `2nd`, Deskripsi `2nd Level`.
+   - `level_number = 3`: Tampilan `3rd`, Deskripsi `3rd Level`.
+   - `level_number = 0`: Tampilan `Alumni`, Deskripsi `Completed`.
+2. **Empat Aksi Lifecycle Siswa (NEXT - HOLD - RETRY - REPEAT)**:
+   - `NEXT`: Siswa lulus semua Exam di level aktif $\ge 70\%$, memajukan `students.level_id` ke level berikutnya.
+   - `HOLD`: Siswa belum lulus (< 70%) atau belum menuntaskan 7×7 Task. Tombol kenaikan terkunci 🔒.
+   - `RETRY`: Siswa mengulang ujian atau drill yang belum tuntas di level saat ini.
+   - `REPEAT`: Siswa mengulang level dari awal, atau Alumni (Completed) yang mendaftar kembali memilih level masuk baru (`1st`, `2nd`, atau `3rd`) dengan riwayat kelulusan lama tetap diarsipkan.
+3. **Mekanisme Transfer Batch**:
+   - Admin dapat memindahkan siswa ke Batch baru dengan opsi `Inherit Batch Level` (level siswa otomatis sinkron mengikuti level batch target).
+4. **Hard Gate Exam**:
+   - Tombol pengerjaan Exam terkunci rapat 🔒 sampai seluruh Task pada topik tersebut mencapai `7/7 Complete`.
+5. **Multi-Tenant Vocabulary Vault & Standar Import/Export**:
+   - Menambahkan kolom `institution_id` dan `program_id` pada tabel `vocabulary_vault`. Seluruh data kosakata eksisting diatribusikan ke Institusi CEC dan Program Camp.
+   - Format template file import dan hasil export Excel diselaraskan dengan urutan kolom: `Institution` (Kolom 1), `Program` (Kolom 2), `Level` (Kolom 3), disusul `Category`, `Theme Code`, `Theme`, `Topic Code`, `Topic`, `Type`, `Indonesian`, `English`.
+   - Form pembuatan Test di Admin memiliki cascading dropdowns: `[Institution]` $\rightarrow$ `[Program]` $\rightarrow$ `[Class]` $\rightarrow$ `[Level]`.
+   - Engine Auto-Generate hanya menarik kata dari Vault yang berlabel Institusi & Program kelas tersebut, mengisolasi soal silabus secara total.
+6. **Mekanisme Remedial (60%ᴿ) & Skor F (Forgiven ᶠ)**:
+   - Nilai remedial tetap di-cap maksimal **60%** dengan format superskrip **`60%ᴿ`** (warna Kuning Grade C, `#FFFF00`) dan diakui sah meloloskan prasyarat kenaikan `NEXT`.
+   - Nilai Skor F (Forgiven) tetap mempertahankan skor murni yang gagal (misal 55%) dengan superskrip **`55%ᶠ`** (warna Merah Grade E, `#FF0000`), merupakan hak prerogatif Admin (Mr. Top) yang dicatat di audit log dan diakui sah meloloskan syarat `NEXT`.
+7. **Kebijakan Akses Terbuka Kumulatif & Evaluasi Level Aktif**:
+   - Siswa level tinggi berhak mengakses kelas level di bawahnya: Level 1 (akses Level 1), Level 2 (akses Level 2 + 1), Level 3 (akses Level 3 + 2 + 1), dan Alumni (Universal Access Level 1, 2, 3).
+   - Evaluasi syarat `NEXT` hanya memeriksa Exam pada Level Aktif siswa saat ini.
+   - Pengerjaan 7×7 Task instan tanpa jeda/cooldown.
+
+### Consequences
+- Menghilangkan ambiguitas peran Level 0 (resmi menjadi status Alumni/Completed dengan Universal Access).
+- Memastikan pemisahan total konten kurikulum antar institusi klien tanpa duplikasi tabel.
+- Memberikan kontrol operasional penuh kepada tutor dan Mr. Top dalam mengelola kenaikan tingkat, remidi, perpindahan batch, dan pendaftaran ulang alumni.

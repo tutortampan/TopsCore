@@ -3828,3 +3828,56 @@ body.dashboard-page .completed-summary-val {
   border-radius: 8px;
 }
 
+/* ==========================================================================
+   7×7 REPETITIVE MASTERY ENGINE CHIPS & PALETTE (PHASE 2)
+   ========================================================================== */
+.task-progress-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  font-family: 'Outfit', -apple-system, sans-serif;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.task-progress-chip.tier-0 {
+  background: rgba(255, 0, 0, 0.15) !important;
+  color: #FF0000 !important;
+  border: 1px solid rgba(255, 0, 0, 0.4) !important;
+}
+
+.task-progress-chip.tier-1,
+.task-progress-chip.tier-2 {
+  background: rgba(255, 140, 0, 0.15) !important;
+  color: #FF8C00 !important;
+  border: 1px solid rgba(255, 140, 0, 0.4) !important;
+}
+
+.task-progress-chip.tier-3,
+.task-progress-chip.tier-4 {
+  background: rgba(255, 255, 0, 0.15) !important;
+  color: #FFFF00 !important;
+  border: 1px solid rgba(255, 255, 0, 0.4) !important;
+}
+
+.task-progress-chip.tier-5,
+.task-progress-chip.tier-6 {
+  background: rgba(149, 255, 0, 0.15) !important;
+  color: #95ff00 !important;
+  border: 1px solid rgba(149, 255, 0, 0.4) !important;
+}
+
+.task-progress-chip.tier-7 {
+  background: rgba(0, 192, 0, 0.15) !important;
+  color: #00c000 !important;
+  border: 1px solid rgba(0, 192, 0, 0.45) !important;
+  box-shadow: 0 0 10px rgba(0, 192, 0, 0.25) !important;
+}
+
+

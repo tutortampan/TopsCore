@@ -2185,16 +2185,16 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         area.appendChild(wordCounter);
       }
 
-      // Quiz Practice Scaffolding: First-Letter Hint (Quizzes only, strictly disabled for Exams)
-      const isQuizPractice = !(String(testData?.test_type).toLowerCase() === 'exam' || ['EXAM', 'TEST'].includes(testData?.category));
+      // Task Practice Scaffolding: First-Letter Hint (Tasks only, strictly disabled for Exams)
+      const isTaskPractice = !(String(testData?.test_type).toLowerCase() === 'exam' || ['EXAM', 'TEST'].includes(testData?.category));
       const targetAns = (snap?.correct_answer || snap?.answer || row?.correct_answer_snapshot || '').trim();
       const primaryTarget = targetAns.split(/[;/,|]/)[0].trim();
-      if (isQuizPractice && primaryTarget.length >= 3) {
+      if (isTaskPractice && primaryTarget.length >= 3) {
         const hintBtn = document.createElement('button');
         hintBtn.type = 'button';
-        hintBtn.className = 'quiz-hint-btn';
+        hintBtn.className = 'task-hint-btn';
         hintBtn.innerHTML = '💡 Hint';
-        hintBtn.title = 'Get first-letter clue (Quiz practice only)';
+        hintBtn.title = 'Get first-letter clue (Task practice only)';
         hintBtn.style.cssText = 'font-size:11px; font-weight:700; color:#fbbf24; background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
         
         const hintDisplay = document.createElement('div');

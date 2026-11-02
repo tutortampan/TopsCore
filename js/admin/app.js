@@ -611,10 +611,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
         } else if (!window._filterBatchId) {
           window._filterBatchId = localStorage.getItem('topscore_selected_batch_id') || null;
         }
-        if (subTab && (subTab === 'active' || subTab === 'inactive' || subTab === 'all')) {
+        const allowedStatuses = ['active', 'inactive', 'alumni', 'all'];
+        if (subTab && allowedStatuses.includes(subTab)) {
           window._filterBatchStatus = subTab;
         } else {
-          window._filterBatchStatus = 'active';
+          const stored = localStorage.getItem('topscore_student_status_tab');
+          window._filterBatchStatus = allowedStatuses.includes(stored) ? stored : 'active';
         }
         try { localStorage.setItem('topscore_student_status_tab', window._filterBatchStatus); } catch(_) {}
       }
@@ -1232,7 +1234,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
 
           const title = r?.title || r?.display_name || r?.name || 'Untitled';
           const status = r?.status || r?.test_type || 'draft';
-          const TestCategory = (r?.category || r?.test_type || 'Quiz');
+          const TestCategory = (r?.category || r?.test_type || 'Task');
 
           let answerType = r?.answer_type || '';
           const asmQs = (allQuestions || []).filter(q => q?.test_id === r?.id);
@@ -1653,7 +1655,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                       <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--clr-text-1);">📝 Class Tests</h3>
                       <div class="asm-meta-chips" style="display: inline-flex; align-items: center; gap: 6px;">
-                        <span class="badge" style="background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.12); color: var(--grade-c, #ffff00); font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.3);">⚡ ${taskTests.length} Quizzes</span>
+                        <span class="badge" style="background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.12); color: var(--grade-c, #ffff00); font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.3);">⚡ ${taskTests.length} Tasks</span>
                         <span class="badge" style="background: rgba(244, 114, 182, 0.12); color: #f472b6; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(244, 114, 182, 0.3);">📝 ${testTests.length} Exams</span>
                         <span class="badge" style="background: rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.12); color: ${TOPSCORE_COLORS.STAR}; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.3);">🎯 Min. 60%</span>
                       </div>
@@ -1809,7 +1811,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
                 label: 'TYPE',
                 sortable: true,
                 render: (val, row) => {
-                  let typeStr = escapeHtml(row.TestCategory || 'Quiz');
+                  let typeStr = escapeHtml(row.TestCategory || 'Task');
                   typeStr = typeStr.replace(/(QUIZ|TASK)/ig, '<span style="color: var(--grade-c, #ffff00); font-weight: 800;">$1</span>');
                   typeStr = typeStr.replace(/(EXAM|TEST)/ig, '<span style="color: #f472b6; font-weight: 800;">$1</span>');
                   return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${typeStr}</div>`;
@@ -2100,7 +2102,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
                   const isTest = isWeeklyExam(asm);
                   const code = asm.payload?.shell_code || asm.shell_code || asm.title;
                   const isPhrase = asm.payload?.category === 'phrases' || /PHRASES/i.test(code || '') || /phrase/i.test(asm.title || '');
-                  const tag = isTest ? (isPhrase ? 'PHRASE EXAM' : 'WORD EXAM') : (isPhrase ? 'PHRASE QUIZ' : 'WORD QUIZ');
+                  const tag = isTest ? (isPhrase ? 'PHRASE EXAM' : 'WORD EXAM') : (isPhrase ? 'PHRASE TASK' : 'WORD TASK');
                   const cleanTitle = asm.title || asm.name || code || 'Test';
                   const headerTooltip = (code && cleanTitle && !cleanTitle.toLowerCase().startsWith(code.toLowerCase()))
                     ? `${code}: ${cleanTitle}`
@@ -2247,13 +2249,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
                       }
                     });
                   } else {
-                    // Quiz column (Displays Score % per user requirement)
+                    // Task column (Displays Score % per user requirement)
                     dynamicAsmCols.push({
                       key: `test_${asm.id}`,
-                      className: 'col-asm col-quiz',
+                      className: 'col-asm col-task',
                       width: '32px',
-                      headerTitle: `${headerTooltip} (Quiz Score %)`,
-                      title: `${headerTooltip} (Quiz Score %)`,
+                      headerTitle: `${headerTooltip} (Task Score %)`,
+                      title: `${headerTooltip} (Task Score %)`,
                       label: `
                         <div class="asm-hdr-cell">
                           <span class="test-num test-num-task" title="${escapeHtml(headerTooltip)}">${num}</span>
@@ -2549,7 +2551,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
                       } else {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
-                            <span style="color:${avgCol}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Quiz Score: ${avgPct}% (${count} students)">${avgPct}%</span>
+                            <span style="color:${avgCol}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Task Score: ${avgPct}% (${count} students)">${avgPct}%</span>
                           </td>
                         `;
                       }
@@ -3536,8 +3538,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
           adminFetchAll('test_results', 'final_score').catch(() => [])
         ]);
 
-        const quizzes = (allTests || []).filter(a => a.test_type === 'quiz' || (a.test_subtype && a.test_subtype.includes('TASK')));
-        const exams = (allTests || []).filter(a => a.test_type === 'exam' || (a.test_subtype && a.test_subtype.includes('TEST')));
+        const tasks = (allTests || []).filter(a => a.test_type === 'quiz' || a.category === 'TASK' || (a.test_subtype && a.test_subtype.includes('TASK')));
+        const tests = (allTests || []).filter(a => a.test_type === 'exam' || a.category === 'EXAM' || (a.test_subtype && (a.test_subtype.includes('TEST') || a.test_subtype.includes('EXAM'))));
 
         let passRate = "N/A";
         if (results && results.length > 0) {
@@ -3548,7 +3550,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261102
         let tableHtml = (allTests || []).map(a => {
            const c = (classes||[]).find(x => x.id === a.class_id);
            const isExam = isWeeklyExam(a);
-           const catLabel = isExam ? 'EXAM' : 'QUIZ';
+           const catLabel = isExam ? 'EXAM' : 'TASK';
            const badgeColor = !isExam ? 'background:rgba(255,140,0,0.15);color:#FF8C00;border:1px solid rgba(255,140,0,0.3);' : 'background:rgba(255,0,0,0.15);color:#FF0000;border:1px solid rgba(255,0,0,0.3);';
            return `
              <tr style="border-bottom:1px solid var(--clr-border);">

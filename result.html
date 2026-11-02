@@ -22,9 +22,9 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Outfit:wght@400;600;700;800;900&amp;display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261102_v103" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261102_v103" />
-  <link rel="stylesheet" href="css/result.css?v=20261102_v103" />
+  <link rel="stylesheet" href="css/style.css?v=20261102_v104" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261102_v104" />
+  <link rel="stylesheet" href="css/result.css?v=20261102_v104" />
 </head>
 
 <body class="result-page">
@@ -46,22 +46,22 @@
   <div id="result-content" class="hidden">
     <section class="result-hero" id="result-hero-section">
 
-      <!-- 1. Header Card (Student & Class Identity - Pure Identity Card) -->
+      <!-- 1. Header Card (Student Metadata - Strict 150px Uniform with Dashboard) -->
       <div class="result-identity-card cascade-item" id="result-identity-card">
         <!-- Institutional Metadata -->
         <div class="result-meta-wrapper" id="result-meta-wrapper">
-          <span id="meta-inst">CAKE ENGLISH COURSE</span>
+          <span id="meta-inst">CEC</span>
           <span class="meta-sep">|</span>
           <span id="meta-prog">CAMP</span>
           <span class="meta-sep">|</span>
-          <span id="meta-batch">133</span>
+          <span id="meta-batch">131</span>
           <span class="meta-sep">|</span>
           <span id="meta-lvl">3RD LEVEL</span>
         </div>
 
         <div class="hero-divider"></div>
 
-        <!-- Centered Large Avatar (Static / Non-clickable with Dynamic Grade Ring) -->
+        <!-- Centered Large Avatar (Dynamic Tier Ring & Crown Anchor) -->
         <div class="result-avatar-stage" id="result-avatar-stage">
           <span id="result-crown-badge" class="avatar-crown-badge hidden" title="Batch Champion">&#128081;</span>
           <div id="result-avatar-container" class="banner-avatar-container" title="Profile Photo">
@@ -76,66 +76,68 @@
         <div class="result-student-name-label" id="result-student-name-label">Student</div>
       </div>
 
-      <!-- 2. Test Title (2-Line: Type/Name & Topic/Theme) -->
+      <!-- 2. Test Full Title (2-Line: Type/Name & Topic/Theme - 50px / 15%) -->
       <div class="result-test-title-wrap cascade-item" id="result-Test-name-container">
-        <div class="result-title-row-type" id="result-test-type-row">TEST TITLE</div>
+        <div class="result-title-row-type" id="result-test-type-row">TEST FULL TITLE</div>
         <div class="result-title-row-topic" id="result-test-topic-row">TOPIC / THEME</div>
         <span id="result-Test-name" class="hidden"></span>
       </div>
 
-      <!-- 3. Dynamic Vertical Metrics Table (Stacked: CORRECT, PARTIAL, INCORRECT, POINTS) -->
-      <div class="result-metrics-table-card cascade-item" id="result-metrics-bar">
-        <!-- Row 1: CORRECT -->
-        <div class="metric-stacked-row metric-row-correct summary-clickable cascade-metric-row" id="card-filter-correct"
-          title="Click to view correct answers">
-          <span class="metric-stacked-lbl">CORRECT</span>
-          <span class="metric-stacked-val" id="res-correct">0</span>
+      <!-- 3. Dynamic Vertical Metrics & Score/Grade Composite Card (35% Dynamic) -->
+      <div class="result-metrics-composite-card cascade-item" id="result-metrics-composite-card">
+        <div class="result-metrics-table-inner" id="result-metrics-bar">
+          <!-- Row 1: CORRECT -->
+          <div class="metric-stacked-row metric-row-correct summary-clickable cascade-metric-row" id="card-filter-correct"
+            title="Click to view correct answers">
+            <span class="metric-stacked-lbl">CORRECT</span>
+            <span class="metric-stacked-val" id="res-correct">0</span>
+          </div>
+          <!-- Row 2: PARTIAL -->
+          <div class="metric-stacked-row metric-row-partial summary-clickable cascade-metric-row" id="card-filter-partial"
+            title="Click to view partial answers">
+            <span class="metric-stacked-lbl">PARTIAL</span>
+            <span class="metric-stacked-val" id="res-partial">0</span>
+          </div>
+          <!-- Row 3: INCORRECT -->
+          <div class="metric-stacked-row metric-row-wrong summary-clickable cascade-metric-row" id="card-filter-wrong"
+            title="Click to view incorrect answers">
+            <span class="metric-stacked-lbl">INCORRECT</span>
+            <span class="metric-stacked-val" id="res-wrong">0</span>
+          </div>
+          <!-- Row 4: POINTS -->
+          <div class="metric-stacked-row metric-row-points cascade-metric-row" id="result-points-box"
+            title="Total Points Earned">
+            <span class="metric-stacked-lbl">POINTS</span>
+            <span class="metric-stacked-val" id="res-points">0</span>
+          </div>
         </div>
-        <!-- Row 2: PARTIAL -->
-        <div class="metric-stacked-row metric-row-partial summary-clickable cascade-metric-row" id="card-filter-partial"
-          title="Click to view partial answers">
-          <span class="metric-stacked-lbl">PARTIAL</span>
-          <span class="metric-stacked-val" id="res-partial">0</span>
-        </div>
-        <!-- Row 3: INCORRECT -->
-        <div class="metric-stacked-row metric-row-wrong summary-clickable cascade-metric-row" id="card-filter-wrong"
-          title="Click to view incorrect answers">
-          <span class="metric-stacked-lbl">INCORRECT</span>
-          <span class="metric-stacked-val" id="res-wrong">0</span>
-        </div>
-        <!-- Row 4: POINTS -->
-        <div class="metric-stacked-row metric-row-points cascade-metric-row" id="result-points-box"
-          title="Total Points Earned">
-          <span class="metric-stacked-lbl">POINTS</span>
-          <span class="metric-stacked-val" id="res-points">0</span>
+
+        <!-- Internal Divider between metrics and score/grade -->
+        <div class="metrics-score-grade-divider"></div>
+
+        <!-- Dual Score & Grade Row (50px Side-by-Side Symmetrical) -->
+        <div class="result-score-grade-row" id="result-score-grade-card">
+          <!-- Kotak Score Bersih -->
+          <div class="score-grade-box score-box" id="result-score-box">
+            <span class="score-grade-val" id="result-percentage">0%</span>
+          </div>
+          <!-- Kotak Grade Bersih -->
+          <div class="score-grade-box grade-box" id="result-grade-box">
+            <span class="score-grade-val grade-delayed" id="result-grade-val">&mdash;</span>
+          </div>
         </div>
       </div>
 
-      <!-- 4. Dual Score & Grade Card (Side-by-Side Symmetrical - 50px) -->
-      <div class="result-score-grade-card cascade-item" id="result-score-grade-card">
-        <!-- Kotak Score Bersih -->
-        <div class="score-grade-box score-box" id="result-score-box">
-          <span class="score-grade-val" id="result-percentage">0%</span>
-        </div>
-        <!-- Kotak Grade Bersih -->
-        <div class="score-grade-box grade-box" id="result-grade-box">
-          <span class="score-grade-val grade-delayed" id="result-grade-val">&mdash;</span>
-        </div>
-      </div>
-
-      <!-- 5. Evaluation / Motivation Word Card (FAIL / LESS / ENOUGH / GOOD / VERY GOOD / EXCELLENT - 50px) -->
+      <!-- 4. Evaluation / Motivation Word Card (FAIL / LESS / ENOUGH / GOOD / VERY GOOD / EXCELLENT - 50px / 15%) -->
       <div class="result-evaluation-card cascade-item" id="result-motivation-msg">&mdash;</div>
 
+      <!-- 5. Actions (Next Milestone/Remedial 40px, Breakdown 40px, Back 40px) -->
+      <div class="result-action-slot cascade-item" id="smart-next-action-container"></div>
+      <button class="btn btn-breakdown-ghost cascade-item" id="toggle-answers-btn" type="button">VIEW ANSWER BREAKDOWN</button>
+      <a href="dashboard.html" class="btn btn-dashboard-primary cascade-item" id="back-dashboard-btn">BACK TO LOBBY</a>
 
-      <!-- 6. Actions (Next Milestone/Remedial 50px, Back 30px, Breakdown 30px) -->
-      <div class="result-action-buttons-wrap cascade-item" id="result-actions-container">
-        <div id="smart-next-action-container" class="cascade-btn-item"></div>
-        <button class="btn btn-primary hidden" id="try-again-btn">Try Again</button>
-        <a href="dashboard.html" class="btn btn-dashboard-primary cascade-btn-item" id="back-dashboard-btn">BACK TO
-          LOBBY</a>
-        <button class="btn btn-flashcard-glow cascade-btn-item hidden" id="open-flashcards-btn" type="button" title="Interactive 3D Flashcard Review for missed items">🗂️ FLASHCARD RECOVERY (<span id="flashcard-badge-count">0</span>)</button>
-        <button class="btn btn-breakdown-ghost cascade-btn-item" id="toggle-answers-btn">VIEW ANSWER BREAKDOWN</button>
-      </div>
+      <!-- Hidden compatibility elements -->
+      <button class="btn btn-primary hidden" id="try-again-btn">Try Again</button>
     </section>
 
     <!-- 🗂️ Flashcard Recovery Modal (Interactive Learning Retention) -->
@@ -201,11 +203,11 @@
     </div>
   </div>
 
-  <script type="module" src="./js/result.js?v=20261102_v103"></script>
+  <script type="module" src="./js/result.js?v=20261102_v104"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261102_v103').then(r => r.update()).catch(e => console.warn('SW:', e));
+        navigator.serviceWorker.register('sw.js?v=20261102_v104').then(r => r.update()).catch(e => console.warn('SW:', e));
       });
     }
   </script>

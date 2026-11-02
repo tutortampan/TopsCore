@@ -55,7 +55,7 @@ export function normalizeStudentNameForMatch(name) {
 export function toOrdinalLevel(num) {
   const n = parseInt(num, 10);
   if (isNaN(n)) return '1st Level';
-  if (n === 0) return 'General';
+  if (n === 0) return 'Alumni';
   if (n < 0) return '1st Level';
   const j = n % 10;
   const k = n % 100;
@@ -374,20 +374,36 @@ export async function fetchStudentClasses(programId, institutionId, levelId = nu
   const sb = await getSupabase();
   try {
     let query = sb.from('classes')
-      .select('id, name, code, description, level_id, levels!classes_level_id_fkey(level_number)')
+      .select('id, name, code, description, level_id, levels!classes_level_id_fkey(level_number, name)')
       .is('deleted_at', null)
-        .eq('is_active', true)
-        .order('name');
-      if (programId) query = query.eq('program_id', programId)
-        .is('deleted_at', null);
-      if (levelId) query = query.eq('level_id', levelId);
-
-    // Classes do not have institution_id directly, they are global or program-specific via class_programs
+      .eq('is_active', true)
+      .order('name');
+    if (programId) query = query.eq('program_id', programId);
 
     const { data, error } = await query;
     if (error) throw error;
+    if (!data || data.length === 0) return [];
 
-    if (!error && data && data.length > 0) return data;
+    if (!levelId) return data;
+
+    // Determine student level number
+    const { data: lvlData } = await sb.from('levels').select('level_number').eq('id', levelId).single();
+    if (!lvlData || typeof lvlData.level_number !== 'number') {
+      return data;
+    }
+
+    const studentLevelNum = lvlData.level_number;
+    // Level 0 (Alumni) receives Lifetime Universal Access across all program classes
+    if (studentLevelNum === 0) {
+      return data;
+    }
+
+    // Cumulative Retroactive Access: return classes whose level_number <= studentLevelNum
+    return data.filter(c => {
+      const cLvlNum = c.levels?.level_number;
+      if (cLvlNum == null) return true;
+      return cLvlNum <= studentLevelNum;
+    });
   } catch (e) {
     console.warn('Classes query note:', e.message);
   }
@@ -444,7 +460,10 @@ export async function fetchTestsForStudentClass(programId, classId, institutionI
     const { data: lvlData } = await sb.from('levels').select('level_number').eq('id', levelId).single();
     if (lvlData && typeof lvlData.level_number === 'number') {
       const maxLvl = lvlData.level_number;
-      results = results.filter(a => !a.levels || typeof a.levels.level_number !== 'number' || a.levels.level_number <= maxLvl);
+      // Alumni (Level 0) has Universal Access to all published tests in their program
+      if (maxLvl > 0) {
+        results = results.filter(a => !a.levels || typeof a.levels.level_number !== 'number' || a.levels.level_number <= maxLvl);
+      }
     } else {
       results = results.filter(a => a.level_id === levelId);
     }
@@ -524,6 +543,55 @@ export async function fetchStudentAttemptsForTest(studentId, testId) {
     .order('percentage', { ascending: false });
   if (error) throw error;
   return data || [];
+}
+
+/**
+ * Fetch count of successful attempts (percentage >= 70%) for each task of a student.
+ * Used for the 7×7 Repetitive Mastery Engine.
+ *
+ * @param {string} studentId
+ * @param {string|null} classId Optional filter for class
+ * @returns {Promise<Record<string, number>>} Map of test_id -> passCount (number of passes >= 70%)
+ */
+export async function fetchStudentTaskPassCounts(studentId, classId = null) {
+  if (!studentId) return {};
+  const sb = await getSupabase();
+  let query = sb.from('attempts')
+    .select('test_id, percentage, score, status, tests!inner(id, class_id, test_type, category, test_subtype)')
+    .eq('student_id', studentId)
+    .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
+
+  if (classId) {
+    query = query.eq('tests.class_id', classId);
+  }
+
+  const { data, error } = await query;
+  if (error || !data) {
+    // Fallback: fetch attempts directly without inner join
+    const { data: fallbackAtts } = await sb.from('attempts')
+      .select('test_id, percentage, score, status')
+      .eq('student_id', studentId)
+      .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
+    const passCounts = {};
+    for (const a of (fallbackAtts || [])) {
+      if (!a.test_id) continue;
+      const pct = parseFloat(a.percentage ?? a.score ?? 0);
+      if (pct >= 70) {
+        passCounts[a.test_id] = (passCounts[a.test_id] || 0) + 1;
+      }
+    }
+    return passCounts;
+  }
+
+  const passCounts = {};
+  for (const a of data) {
+    if (!a.test_id) continue;
+    const pct = parseFloat(a.percentage ?? a.score ?? 0);
+    if (pct >= 70) {
+      passCounts[a.test_id] = (passCounts[a.test_id] || 0) + 1;
+    }
+  }
+  return passCounts;
 }
 
 // ============================================================
@@ -913,6 +981,50 @@ export async function startTest(studentId, testId) {
     }
   }
 
+  // Guard: 7×7 Repetitive Mastery Hard Gate: Taking an Exam requires 7 passes (>= 70%) on all sibling Tasks
+  if (isWeeklyExam(asmData) && !isStandaloneTryout) {
+    const themeCode = asmData.payload?.theme_code || (asmData.shell_code ? asmData.shell_code.replace(/^[0-9]+/, '').charAt(0) : null);
+    if (themeCode) {
+      const { data: siblingTasks } = await sb.from('tests')
+        .select('id, title, payload, shell_code, test_subtype, test_type, category')
+        .eq('class_id', asmData.class_id)
+        .eq('level_id', asmData.level_id)
+        .neq('id', asmData.id)
+        .is('deleted_at', null);
+
+      const themeTasks = (siblingTasks || []).filter(t => {
+        if (isWeeklyExam(t)) return false;
+        const tc = t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '');
+        return String(tc).toUpperCase() === String(themeCode).toUpperCase();
+      });
+
+      if (themeTasks.length > 0) {
+        const taskIds = themeTasks.map(t => t.id);
+        const { data: taskAttempts } = await sb.from('attempts')
+          .select('test_id, percentage, effective_score, status')
+          .eq('student_id', studentId)
+          .in('test_id', taskIds)
+          .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
+
+        const passCountByTask = {};
+        (taskAttempts || []).forEach(att => {
+          const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+          if (pct >= 70) {
+            passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
+          }
+        });
+
+        const unmasteredTask = themeTasks.find(t => (passCountByTask[t.id] || 0) < 7);
+        if (unmasteredTask) {
+          const mErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (7 passes with at least 70%) on all Theme Tasks before taking the Exam.`);
+          mErr.code = 'MASTERY_7X7_NOT_MET';
+          mErr.status = 403;
+          throw mErr;
+        }
+      }
+    }
+  }
+
   // Guard: Strict Sequential Exam Prerequisite: If this is a Phrases Exam, student MUST pass Words Exam first (>= 60%)
   const isQuizFallback = (asmData.test_type || '').toLowerCase() === 'quiz' ||
                          (asmData.category || '').toLowerCase() === 'quiz' ||
@@ -947,15 +1059,15 @@ export async function startTest(studentId, testId) {
 
     if (wordsExam) {
       const { data: wordsAttempts } = await sb.from('attempts')
-        .select('percentage, effective_score, status')
+        .select('percentage, effective_score, status, is_remedial_unlocked, is_forgiven')
         .eq('student_id', studentId)
         .eq('test_id', wordsExam.id)
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
 
-      const reqScore = asmData.minimum_required_score || 60;
+      const reqScore = wordsExam?.minimum_required_score || asmData.minimum_required_score || 70;
       const hasPassedWords = (wordsAttempts || []).some(att => {
         const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-        return pct >= reqScore;
+        return pct >= reqScore || att.is_remedial_unlocked || att.is_forgiven;
       });
 
       if (!hasPassedWords) {
@@ -968,7 +1080,7 @@ export async function startTest(studentId, testId) {
   }
 
   // Guard: Strict Cross-Theme Prerequisite:
-  // Taking ANY test (Quiz or Exam) in Theme B, C, or D requires passing prior theme's exams with >= 60%
+  // Taking ANY test (Task or Exam) in Theme B, C, or D requires passing prior theme's exams with >= 70%
   const currentThemeFallback = String(themeCodeFallback || asmData.shell_code?.replace(/^[0-9]+/, '').charAt(0) || '').toUpperCase();
   const themeSeqFallback = ['A', 'B', 'C', 'D'];
   const curThemeIdxFallback = themeSeqFallback.indexOf(currentThemeFallback);
@@ -979,7 +1091,7 @@ export async function startTest(studentId, testId) {
   if (curThemeIdxFallback > 0 && !isStandaloneTryout && !isRemedialSessionFallback) {
     const priorTheme = themeSeqFallback[curThemeIdxFallback - 1];
     const { data: priorExams } = await sb.from('tests')
-      .select('id, title, payload, shell_code, test_type')
+      .select('id, title, payload, shell_code, test_type, minimum_required_score')
       .eq('class_id', asmData.class_id)
       .eq('level_id', asmData.level_id)
       .eq('test_type', 'exam')
@@ -993,7 +1105,7 @@ export async function startTest(studentId, testId) {
     if (matchingPriorExams.length > 0) {
       const priorExamIds = matchingPriorExams.map(t => t.id);
       const { data: priorAttempts } = await sb.from('attempts')
-        .select('test_id, percentage, effective_score, status, is_remedial_unlocked')
+        .select('test_id, percentage, effective_score, status, is_remedial_unlocked, is_forgiven')
         .eq('student_id', studentId)
         .in('test_id', priorExamIds)
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
@@ -1001,14 +1113,14 @@ export async function startTest(studentId, testId) {
       const passedPriorIds = new Set();
       (priorAttempts || []).forEach(att => {
         const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-        if (pct >= 60 || att.is_remedial_unlocked) {
+        if (pct >= 70 || att.is_remedial_unlocked || att.is_forgiven) {
           passedPriorIds.add(att.test_id);
         }
       });
 
       const failedAny = priorExamIds.some(id => !passedPriorIds.has(id));
       if (failedAny) {
-        const pErr = new Error(`Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least 60% before taking Theme ${currentThemeFallback} tests.`);
+        const pErr = new Error(`Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least 70% before taking Theme ${currentThemeFallback} tests.`);
         pErr.code = 'PRIOR_THEME_EXAMS_REQUIRED';
         pErr.status = 403;
         throw pErr;
@@ -2278,6 +2390,8 @@ function sanitizeVaultRow(row) {
   }
 
   return {
+    institution_id: row.institution_id || row.institutionId || null,
+    program_id: row.program_id || row.programId || null,
     theme_code: String(row.theme_code || '').trim().replace(/\s+/g, ' ').toUpperCase(),
     theme:      String(row.theme || '').trim().replace(/\s+/g, ' '),
     topic_code: String(row.topic_code || '').trim().replace(/\s+/g, ' ').toUpperCase(),
@@ -2601,10 +2715,10 @@ export async function createVocabMasteryTest(config) {
     selectedWords = stratifiedSample(topicMap, customQuota);
   }
 
-  // Resolve the final test_type (PostgreSQL enum: 'quiz' | 'exam') and category ('QUIZ' | 'EXAM'):
+  // Resolve the final test_type (PostgreSQL enum: 'quiz' | 'exam') and category ('TASK' | 'EXAM'):
   const isQuizTier = tier === 'QUIZ' || tier === 'TASK' || String(test_type).toLowerCase() === 'quiz' || test_type === 'TASK';
   const resolvedType = isQuizTier ? 'quiz' : 'exam';
-  const resolvedCategory = isQuizTier ? 'QUIZ' : 'EXAM';
+  const resolvedCategory = isQuizTier ? 'TASK' : 'EXAM';
 
   let defaultAnswerType = answerType;
   if (testType === 'IDIOM_PROVERB' ) {
@@ -2620,17 +2734,17 @@ export async function createVocabMasteryTest(config) {
     program_id:               programId,
     class_id:                 classId,
     level_id:                 levelId,
-    test_subtype:          'VOCAB_' + (isQuizTier ? 'QUIZ' : 'EXAM'),
+    test_subtype:          'VOCAB_' + (isQuizTier ? 'TASK' : 'EXAM'),
     test_type:                resolvedType,
     category:                 resolvedCategory,
     title:                    title,
-    description:              'Vocabulary Mastery (' + (isQuizTier ? 'Quiz' : 'Exam') + '). Topics: ' + sourceTopics.join(', '),
+    description:              'Vocabulary Mastery (' + (isQuizTier ? 'Task' : 'Exam') + '). Topics: ' + sourceTopics.join(', '),
     status:                   'PUBLISHED',
     availability_start:       windowStart || null,
     availability_end:         windowEnd || null,
     working_duration_minutes: durationMinutes || null,
     prerequisite_test_id:
-      (tier === 'QUIZ' && sourceTaskIds.length > 0) ? sourceTaskIds[0] :
+      ((tier === 'QUIZ' || tier === 'TASK') && sourceTaskIds.length > 0) ? sourceTaskIds[0] :
       (tier === 'EXAM' && sourceQuizIds.length > 0) ? sourceQuizIds[0] :
       (tier === 'TEST' && sourceTaskIds.length > 0) ? sourceTaskIds[sourceTaskIds.length - 1] : null,
     created_by:               'Admin (Vault)',
@@ -2832,19 +2946,13 @@ export async function fetchStudentLevel(studentId) {
 export async function exportVaultWords(mode = 'all') {
   const sb = await getSupabase();
   let query = sb.from('vocabulary_vault')
-    .select('target_level, theme_code, theme, topic_code, topic, indonesian, english, word_type, created_at')
+    .select('institution_id, program_id, target_level, theme_code, theme, topic_code, topic, indonesian, english, word_type, created_at, institutions!institution_id(name), programs!program_id(name)')
     .is('deleted_at', null)
     .order('target_level', { ascending: true })
     .order('theme_code', { ascending: true })
     .order('topic_code', { ascending: true })
     .order('word_type', { ascending: true })
     .order('indonesian', { ascending: true });
-
-  if (mode === 'single_words') {
-    // Exclude phrases
-    // We cannot use NOT IN easily if some are NULL, but we can do it if word_type is not null
-    // or just fetch all and filter in JS if simpler, but let's filter in JS to be safe with NULLs.
-  }
 
   const { data: words, error } = await query;
 
@@ -2860,13 +2968,15 @@ export async function exportVaultWords(mode = 'all') {
 
   if (filteredWords.length === 0) throw new Error('No words found in Vault for this category.');
 
-  // Format data for Excel
+  // Format data for Excel - 11 Column Standard
   const exportData = filteredWords.map(w => {
     const wt = (w.word_type || '').toLowerCase();
     const isPhrase = ['expression', 'idiom', 'proverb'].includes(wt);
     return {
-      Category: isPhrase ? 'Phrases' : 'Words',
+      Institution: w.institutions?.name || 'CEC',
+      Program: w.programs?.name || 'Camp',
       Level: w.target_level || '1',
+      Category: isPhrase ? 'Phrases' : 'Words',
       'Theme Code': w.theme_code || '',
       Theme: w.theme || '',
       'Topic Code': w.topic_code || '',
@@ -3350,23 +3460,23 @@ export async function upsertDynamicTestShell(config) {
     ? Number(durationMinutes)
     : (isTest ? 120 : 5);
 
-  // Standardized Shell Code: e.g. 3A1-WORDS-QUIZ, 3A1-PHRASES-QUIZ, 3A-WORDS-EXAM, 3A-PHRASES-EXAM
+  // Standardized Shell Code: e.g. 3A1-WORDS-TASK, 3A1-PHRASES-TASK, 3A-WORDS-EXAM, 3A-PHRASES-EXAM
   const code = isPhrase
-    ? (isTest ? `${levelNum}${themeCode}-PHRASES-EXAM` : `${levelNum}${themeCode}${topicCode || '1'}-PHRASES-QUIZ`)
-    : (isTest ? `${levelNum}${themeCode}-WORDS-EXAM` : `${levelNum}${themeCode}${topicCode || '1'}-WORDS-QUIZ`);
+    ? (isTest ? `${levelNum}${themeCode}-PHRASES-EXAM` : `${levelNum}${themeCode}${topicCode || '1'}-PHRASES-TASK`)
+    : (isTest ? `${levelNum}${themeCode}-WORDS-EXAM` : `${levelNum}${themeCode}${topicCode || '1'}-WORDS-TASK`);
 
-  // Standardized Title: e.g. "3rd Vocabulary A1 Words Quiz - Professional Identity"
+  // Standardized Title: e.g. "3rd Vocabulary A1 Words Task - Professional Identity"
   const ordinal = toOrdinal(levelNum);
   const cleanTitle = (topicName || themeName || '').replace(/["']/g, '').trim();
   const generatedTitle = isPhrase
     ? (isTest
         ? `${ordinal} Vocabulary ${themeCode} Phrases Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
-        : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Phrases Quiz${cleanTitle ? ' - ' + cleanTitle : ''}`)
+        : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Phrases Task${cleanTitle ? ' - ' + cleanTitle : ''}`)
     : (isTest
         ? `${ordinal} Vocabulary ${themeCode} Words Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
-        : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Words Quiz${cleanTitle ? ' - ' + cleanTitle : ''}`);
+        : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Words Task${cleanTitle ? ' - ' + cleanTitle : ''}`);
 
-  // Default answer types: Spoken for Quizzes (Words & Phrases), Spoken for Words Exam, Selection for Phrases Exam
+  // Default answer types: Spoken for Tasks (Words & Phrases), Spoken for Words Exam, Selection for Phrases Exam
   const defaultAnswerType = isTest ? (isPhrase ? 'selection' : 'spoken') : 'spoken';
 
   // Expected question counts
@@ -3444,12 +3554,12 @@ export async function upsertDynamicTestShell(config) {
     class_id:                   classId || (existing ? existing.class_id : null),
     level_id:                   levelId,
     module_id:                  moduleId,
-    test_subtype:               isTest ? (isPhrase ? 'PHRASE_EXAM' : 'VOCAB_EXAM') : (isPhrase ? 'PHRASE_QUIZ' : 'VOCAB_QUIZ'),
+    test_subtype:               isTest ? (isPhrase ? 'PHRASE_EXAM' : 'VOCAB_EXAM') : (isPhrase ? 'PHRASE_TASK' : 'VOCAB_TASK'),
     test_type:                  isTest ? 'exam' : 'quiz',
-    category:                   isTest ? 'EXAM' : 'QUIZ',
+    category:                   isTest ? 'EXAM' : 'TASK',
     shell_code:                 code,
     title:                      generatedTitle,
-    description:                description || `${isTest ? 'Exam' : 'Quiz'}: ${themeCode}/${topicCode || 'ALL'} (${isPhrase ? 'Phrases' : 'Words'})`,
+    description:                description || `${isTest ? 'Exam' : 'Task'}: ${themeCode}/${topicCode || 'ALL'} (${isPhrase ? 'Phrases' : 'Words'})`,
     status:                     'PUBLISHED',
     working_duration_minutes:   effectiveDurationMinutes,
     minimum_required_score:     effectiveMinScore,
@@ -3469,7 +3579,7 @@ export async function upsertDynamicTestShell(config) {
       category: isPhrase ? 'phrases' : 'words',
       answer_type: effectiveAnswerType,
       shell_code: code,
-      tier: isTest ? 'EXAM' : 'QUIZ',
+      tier: isTest ? 'EXAM' : 'TASK',
       working_duration_minutes: effectiveDurationMinutes,
       duration_minutes: effectiveDurationMinutes,
       minimum_required_score: effectiveMinScore,
@@ -3640,11 +3750,20 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
       }
     }
 
-    // 1. Fetch Words for Level to know what themes and topics exist
-    const { data: words, error } = await sb.from('vocabulary_vault')
+    // 1. Fetch Words for Level to know what themes and topics exist (Syllabus Isolated)
+    let vaultQuery = sb.from('vocabulary_vault')
       .select('theme_code, theme, topic_code, topic, word_type')
       .is('deleted_at', null)
       .eq('target_level', levelNum);
+
+    if (institutionId) {
+      vaultQuery = vaultQuery.eq('institution_id', institutionId);
+    }
+    if (programId) {
+      vaultQuery = vaultQuery.eq('program_id', programId);
+    }
+
+    const { data: words, error } = await vaultQuery;
 
     if (error || !words || words.length === 0) continue;
 
@@ -3698,12 +3817,12 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         const topicObj = themeData.topics.get(topicCode);
         const topicName = topicObj.name;
 
-        // 1. Words Quiz (First in topic pair)
+        // 1. Words Task (First in topic pair)
         if (topicObj.hasVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
           hasAnyVocab = true;
           const { testId, action } = await upsertDynamicTestShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
-            tier: 'QUIZ', themeName: themeData.name, topicName: topicName,
+            tier: 'TASK', themeName: themeData.name, topicName: topicName,
             description: `Theme: ${themeData.name} | Topic: ${topicName}`,
             themeCode, topicCode,
             modulePrefix: 'VOCAB', category: 'words',
@@ -3719,12 +3838,12 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           lastTaskId = testId;
         }
 
-        // 2. Phrases Quiz (Second in topic pair, chained to Word Quiz)
+        // 2. Phrases Task (Second in topic pair, chained to Word Task)
         if (topicObj.hasPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
           hasAnyPhrases = true;
           const { testId, action } = await upsertDynamicTestShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
-            tier: 'QUIZ', themeName: themeData.name, topicName: topicName,
+            tier: 'TASK', themeName: themeData.name, topicName: topicName,
             description: `Theme: ${themeData.name} | Topic: ${topicName}`,
             themeCode, topicCode,
             modulePrefix: 'PHRASE', category: 'phrases',
@@ -3932,7 +4051,7 @@ export async function addLateStudentsToSession({ testId, studentIds = [], remedi
   return { success: true, session: updatedSession, test: updated };
 }
 
-export async function labelAttemptRemedial(attemptId, isRemedial = true) {
+export async function labelAttemptRemedial(attemptId, isRemedial = true, cap = 60.0) {
   const sb = await getSupabase();
   const { data: att, error: attErr } = await sb.from('attempts')
     .select('id, student_id, test_id, percentage, score, total_questions')
@@ -3941,12 +4060,17 @@ export async function labelAttemptRemedial(attemptId, isRemedial = true) {
   if (attErr || !att) throw new Error('Attempt not found');
 
   const rawPct = parseFloat(att.percentage || 0);
-  const effectiveScore = isRemedial ? Math.min(rawPct, 60.0) : rawPct; // Remedial capped at max 60%
+  const effectiveScore = isRemedial ? Math.min(rawPct, cap) : rawPct; // Remedial capped at max 60%
   const grade = getGrade(effectiveScore);
 
   const { data: updated, error: updErr } = await sb.from('attempts')
     .update({
+      is_remedial: isRemedial,
       is_remedial_unlocked: isRemedial,
+      is_forgiven: false,
+      forgiven_reason: null,
+      forgiven_at: null,
+      forgiven_by: null,
       effective_score: effectiveScore,
       grade: grade,
       updated_at: new Date().toISOString()
@@ -3956,6 +4080,143 @@ export async function labelAttemptRemedial(attemptId, isRemedial = true) {
     .single();
 
   if (updErr) throw updErr;
+
+  await sb.from('audit_logs').insert({
+    actor_role: 'admin',
+    action: isRemedial ? 'ATTEMPT_SET_REMEDIAL' : 'ATTEMPT_SET_NORMAL',
+    entity_type: 'attempts',
+    entity_id: attemptId,
+    new_value: { is_remedial: isRemedial, effective_score: effectiveScore, grade },
+    created_at: new Date().toISOString()
+  }).catch(() => {});
+
+  // Resolve best score across attempts for this student & test
+  const { data: allAttempts } = await sb.from('attempts')
+    .select('id, effective_score, percentage, created_at')
+    .eq('student_id', att.student_id)
+    .eq('test_id', att.test_id)
+    .in('status', ['submitted', 'auto_submitted', 'evaluated']);
+
+  if (allAttempts && allAttempts.length > 0) {
+    allAttempts.sort((a, b) => {
+      const scoreA = Number(a.effective_score ?? a.percentage ?? 0);
+      const scoreB = Number(b.effective_score ?? b.percentage ?? 0);
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+    const bestId = allAttempts[0].id;
+    for (const a of allAttempts) {
+      await sb.from('attempts')
+        .update({ is_best_score: a.id === bestId })
+        .eq('id', a.id);
+    }
+  }
+
+  return { success: true, attempt: updated };
+}
+
+export async function labelAttemptNormal(attemptId) {
+  const sb = await getSupabase();
+  const { data: att, error: attErr } = await sb.from('attempts')
+    .select('id, student_id, test_id, percentage, score, total_questions')
+    .eq('id', attemptId)
+    .single();
+  if (attErr || !att) throw new Error('Attempt not found');
+
+  const rawPct = parseFloat(att.percentage || 0);
+  const effectiveScore = rawPct;
+  const grade = getGrade(effectiveScore);
+
+  const { data: updated, error: updErr } = await sb.from('attempts')
+    .update({
+      is_remedial: false,
+      is_remedial_unlocked: false,
+      is_forgiven: false,
+      forgiven_reason: null,
+      forgiven_at: null,
+      forgiven_by: null,
+      effective_score: effectiveScore,
+      grade: grade,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', attemptId)
+    .select()
+    .single();
+
+  if (updErr) throw updErr;
+
+  await sb.from('audit_logs').insert({
+    actor_role: 'admin',
+    action: 'ATTEMPT_SET_NORMAL',
+    entity_type: 'attempts',
+    entity_id: attemptId,
+    new_value: { is_remedial: false, is_forgiven: false, effective_score: effectiveScore, grade },
+    created_at: new Date().toISOString()
+  }).catch(() => {});
+
+  // Resolve best score across attempts for this student & test
+  const { data: allAttempts } = await sb.from('attempts')
+    .select('id, effective_score, percentage, created_at')
+    .eq('student_id', att.student_id)
+    .eq('test_id', att.test_id)
+    .in('status', ['submitted', 'auto_submitted', 'evaluated']);
+
+  if (allAttempts && allAttempts.length > 0) {
+    allAttempts.sort((a, b) => {
+      const scoreA = Number(a.effective_score ?? a.percentage ?? 0);
+      const scoreB = Number(b.effective_score ?? b.percentage ?? 0);
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+    const bestId = allAttempts[0].id;
+    for (const a of allAttempts) {
+      await sb.from('attempts')
+        .update({ is_best_score: a.id === bestId })
+        .eq('id', a.id);
+    }
+  }
+
+  return { success: true, attempt: updated };
+}
+
+export async function labelAttemptForgiven(attemptId, reason = 'Tutor Result Waiver') {
+  const sb = await getSupabase();
+  const { data: att, error: attErr } = await sb.from('attempts')
+    .select('id, student_id, test_id, percentage, score, total_questions')
+    .eq('id', attemptId)
+    .single();
+  if (attErr || !att) throw new Error('Attempt not found');
+
+  const rawPct = parseFloat(att.percentage || 0);
+  const effectiveScore = rawPct;
+  const grade = getGrade(effectiveScore);
+
+  const { data: updated, error: updErr } = await sb.from('attempts')
+    .update({
+      is_forgiven: true,
+      forgiven_reason: (reason || 'Tutor Result Waiver').trim(),
+      forgiven_at: new Date().toISOString(),
+      forgiven_by: 'admin',
+      is_remedial: false,
+      is_remedial_unlocked: false,
+      effective_score: effectiveScore,
+      grade: grade,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', attemptId)
+    .select()
+    .single();
+
+  if (updErr) throw updErr;
+
+  await sb.from('audit_logs').insert({
+    actor_role: 'admin',
+    action: 'FORGIVEN_SCORE_GRANTED',
+    entity_type: 'attempts',
+    entity_id: attemptId,
+    new_value: { is_forgiven: true, reason: (reason || 'Tutor Result Waiver').trim(), student_id: att.student_id, test_id: att.test_id },
+    created_at: new Date().toISOString()
+  }).catch(() => {});
 
   // Resolve best score across attempts for this student & test
   const { data: allAttempts } = await sb.from('attempts')
@@ -4368,6 +4629,8 @@ if (typeof window !== 'undefined') {
   window.resetStudentTestAlarms = resetStudentTestAlarms;
   window.fetchLiveTestSessionData = fetchLiveTestSessionData;
   window.labelAttemptRemedial = labelAttemptRemedial;
+  window.labelAttemptNormal = labelAttemptNormal;
+  window.labelAttemptForgiven = labelAttemptForgiven;
   window.closeTestSession = closeTestSession;
   window.checkStudentTestAccess = checkStudentTestAccess;
   window.adminOverridePrerequisitesWithRemedial = adminOverridePrerequisitesWithRemedial;

@@ -1,3 +1,53 @@
+# ACTIVE DIRECTIVE: PHASE 285 — VOCAB 7×7 & LEVEL PROGRESSION MASTER SYSTEM [COMPLETE]
+
+### 🔴 Phase 1: Total Terminology Unification (Quiz $\rightarrow$ Task 100%) [COMPLETE]
+- [x] Task 1.1: `AGENTS.md` update hierarchy & display formula from `Quiz` to `Task` (Rule 1.3, 1.4, 2.5, 2.6).
+- [x] Task 1.2: `js/dashboard.js`: Replace all `isQuiz` / `Quiz` references, badges, and labels with `isTask` / `Task`.
+- [x] Task 1.3: `js/admin/app.js`: Update metric summary chips and table category renderer from `Quizzes` $\rightarrow$ `Tasks`.
+- [x] Task 1.4: `js/admin/vocab-vault.js`: Update bottom infobar labels from `Quizzes:` $\rightarrow$ `Tasks:`.
+- [x] Task 1.5: `js/admin/crud-modals.js` & `js/admin/auto-gen-modal.js`: Modernize all modal labels, alerts, and placeholders from `Quiz` $\rightarrow$ `Task`.
+- [x] Task 1.6: `supabase/seed.sql` & Database: Standardize all test titles containing `* Quiz` to `* Task` and shell codes to `*-TASK`.
+
+### 🟡 Phase 2: Engine 7×7 Repetitive Mastery & Hard Gate Exam [COMPLETE]
+- [x] Task 2.1: `js/api.js`: Implement `fetchStudentTaskPassCounts(studentId, classId)` calculating passed attempts ($\ge 70\%$).
+- [x] Task 2.2: `js/dashboard.js`: Render dynamic `task-progress-chip` with `X/7` status per Task row.
+- [x] Task 2.3: `css/dashboard.css`: Implement 5-tier gamified color palette (Red `0/7`, Orange `1-2`, Yellow `3-4`, Lime `5-6`, Green Star `7/7`).
+- [x] Task 2.4: `js/dashboard.js` & `js/test.js`: Enforce Hard Gate — lock Exam button 🔒 until all Tasks in that topic reach `7/7 Complete`.
+- [x] Task 2.5: Automated test: Create and verify test script `scripts/test_task_7x7_logic.mjs`.
+
+### 🟡 Phase 3: Exam Words Written Mode & Passing Score 70% [COMPLETE]
+- [x] Task 3.1: Database: Ensure `answer_type = 'written'` on all Words Exam records.
+- [x] Task 3.2: `js/test.js`: Verify text input `<input type="text">` rendering with Damerau-Levenshtein typo tolerance (Rule 2.13).
+- [x] Task 3.3: `supabase/functions/start-test/index.ts` & `js/dashboard.js`: Standardize passing score threshold to $\ge 70\%$.
+- [x] Task 3.4: Automated test: Update and verify test script `scripts/test_sequential_exam_prerequisite.mjs` with 70% threshold.
+
+### 🟢 Phase 4: Class 2nd Vocabulary (Batch 134) Activation [COMPLETE]
+- [x] Task 4.1: Reactivate `2nd Vocabulary` class (`VOCAB_2ND`, Level: `2nd Level`) in Supabase database.
+- [x] Task 4.2: Verify Level 2 Theme A & B curriculum is strictly Words-Only (no phrases).
+- [x] Task 4.3: Connect Batch 134 to `2nd Level` to automatically inherit `2nd Vocabulary`.
+
+### 🔵 Phase 5: Level Progression System, Lifecycle Actions UI, Batch Transfer & Skor F [COMPLETE]
+- [x] Task 5.1: `levels` table synchronization: update Level 0 to `Alumni` (Description: `Completed`), update `toOrdinalLevel(0)` to `'Alumni'`.
+- [x] Task 5.2: `js/admin/student-management.js`: Implement Lifecycle actions: `NEXT` (promote), `HOLD` (locked), `RETRY` (repeat attempt), and `REPEAT` (re-enroll Alumni).
+- [x] Task 5.3: Implement `Transfer Batch` modal with `Inherit Batch Level` option.
+- [x] Task 5.4: Implement Remedial Cap 60% (`60%ᴿ` Yellow C) and `Skor F (Forgiven)` pure score modal (`55%ᶠ` Red E) with audit log for Mr. Top.
+- [x] Task 5.5: `admin.html#students`: Implement dedicated `🎓 Alumni` tab with `Program - Batch` header filter.
+- [x] Task 5.6: `js/dashboard.js`: Implement Cumulative Retroactive Access (`level_number <= student_level_number`) and Alumni Universal Access via Class button.
+
+### 🟣 Phase 6: Multi-Tenant Vocabulary Vault & 11-Column Import/Export [COMPLETE]
+- [x] Task 6.1: Add `institution_id` and `program_id` columns to `vocabulary_vault`.
+- [x] Task 6.2: Attribute all existing `vocabulary_vault` records to CEC (`f51d4c2c-7c24-42ef-8d8f-b0f3e524a447`) and Camp (`11deb53c-434a-44b0-83ca-1cc9b239cab3`).
+- [x] Task 6.3: `js/admin/crud-modals.js`: Implement cascading dropdowns `[Institution] -> [Program] -> [Class] -> [Level]` for Test creation.
+- [x] Task 6.4: `js/api.js` & `js/admin/vocab-vault.js`: Update Excel import & export to official 11-column standard (`Institution`, `Program`, `Level`, `Category`, `Theme Code`, `Theme`, `Topic Code`, `Topic`, `Type`, `Indonesian`, `English`).
+- [x] Task 6.5: `js/api.js:autoGenerateTestsHierarchy`: Filter vault words strictly matching active class `institution_id + program_id + target_level`.
+
+### 🏁 Phase 7: Full E2E Check System (10× Consecutive Pass Protocol) [COMPLETE]
+- [x] Task 7.1: Build master E2E test runner `scripts/test_vocab_7x7_and_leveling_e2e.mjs`.
+- [x] Task 7.2: Run 10 consecutive full realtime E2E test cycles across all 6 pillars.
+- [x] Task 7.3: Enforce Zero-Defect Policy: auto-restart to Cycle 1 on any failure until 10/10 runs pass with 0 errors.
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 279 — MILESTONE DENOMINATOR STANDARDIZATION & ROSTER MONOTONICITY [COMPLETE]
 
 - [x] Task 1: Standardized `computeMilestoneExamMastery` denominator in `js/grading.js` to use `Math.max(canonicalMax, attemptTotalQ)` (1,900 points canonical curriculum) to eliminate early test version denominator compression.

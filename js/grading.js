@@ -760,6 +760,68 @@ export function getAchievementStatus(grade, percentage = null) {
   return map[effGrade] || 'ENOUGH';
 }
 
+/**
+ * 7×7 Repetitive Mastery Progress Visual Resolver
+ * Returns the exact chip text, colors, tier class, and complete state based on pass count (0..7).
+ *
+ * @param {number} passCount Number of successful attempts (percentage >= 70%)
+ * @returns {{ count: number, text: string, color: string, bg: string, border: string, tierClass: string, isComplete: boolean }}
+ */
+export function getTaskProgressVisual(passCount) {
+  const count = Math.min(Math.max(Number(passCount) || 0, 0), 7);
+  if (count === 7) {
+    return {
+      count: 7,
+      text: '7/7 ✓ Complete',
+      color: TOPSCORE_COLORS.STAR,
+      bg: `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.15)`,
+      border: `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`,
+      tierClass: 'tier-7',
+      isComplete: true
+    };
+  } else if (count >= 5) {
+    return {
+      count,
+      text: `${count}/7`,
+      color: TOPSCORE_COLORS.B,
+      bg: `rgba(${TOPSCORE_COLORS.B_RGB}, 0.15)`,
+      border: `rgba(${TOPSCORE_COLORS.B_RGB}, 0.45)`,
+      tierClass: `tier-${count}`,
+      isComplete: false
+    };
+  } else if (count >= 3) {
+    return {
+      count,
+      text: `${count}/7`,
+      color: TOPSCORE_COLORS.C,
+      bg: `rgba(${TOPSCORE_COLORS.C_RGB}, 0.15)`,
+      border: `rgba(${TOPSCORE_COLORS.C_RGB}, 0.45)`,
+      tierClass: `tier-${count}`,
+      isComplete: false
+    };
+  } else if (count >= 1) {
+    return {
+      count,
+      text: `${count}/7`,
+      color: TOPSCORE_COLORS.D,
+      bg: `rgba(${TOPSCORE_COLORS.D_RGB}, 0.15)`,
+      border: `rgba(${TOPSCORE_COLORS.D_RGB}, 0.45)`,
+      tierClass: `tier-${count}`,
+      isComplete: false
+    };
+  } else {
+    return {
+      count: 0,
+      text: '0/7',
+      color: TOPSCORE_COLORS.E,
+      bg: `rgba(${TOPSCORE_COLORS.E_RGB}, 0.15)`,
+      border: `rgba(${TOPSCORE_COLORS.E_RGB}, 0.45)`,
+      tierClass: 'tier-0',
+      isComplete: false
+    };
+  }
+}
+
 /** Alias for normalizeAnswerText */
 export function normalizeWrittenAnswer(text) {
   return normalizeAnswerText(text);

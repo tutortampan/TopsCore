@@ -359,7 +359,7 @@ Deno.serve(async (req) => {
     const roundedPct = Math.round(rawPercentage * 100) / 100;
 
     let effectiveScore = roundedPct;
-    if (attempt.is_remedial_unlocked) {
+    if (attempt.is_remedial_unlocked || attempt.is_remedial) {
       effectiveScore = Math.min(roundedPct, 60.0);
     }
 
@@ -401,8 +401,8 @@ Deno.serve(async (req) => {
 
     if (allAttempts && allAttempts.length > 0) {
       allAttempts.sort((a: any, b: any) => {
-        const scoreA = Number(a.percentage ?? a.effective_score ?? 0);
-        const scoreB = Number(b.percentage ?? b.effective_score ?? 0);
+        const scoreA = Number(a.effective_score ?? a.percentage ?? 0);
+        const scoreB = Number(b.effective_score ?? b.percentage ?? 0);
         if (scoreB !== scoreA) return scoreB - scoreA;
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
@@ -422,7 +422,7 @@ Deno.serve(async (req) => {
       .eq("id", targetTestId)
       .single();
 
-    const levelUpThreshold = Number(testRec?.minimum_required_score ?? testRec?.payload?.minimum_required_score ?? 75);
+    const levelUpThreshold = Number(testRec?.minimum_required_score ?? testRec?.payload?.minimum_required_score ?? 70);
     if (testRec && testRec.test_type === 'exam' && roundedPct >= levelUpThreshold) {
       if (testRec.classes && testRec.classes.level_id) {
          const { data: currLevel } = await supabase.from("levels").select("level_number").eq("id", testRec.classes.level_id).single();

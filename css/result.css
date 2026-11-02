@@ -425,10 +425,10 @@
       justify-content: center !important;
       width: 100% !important;
       box-sizing: border-box !important;
-      padding: 4px 10px !important;
-      height: 50px !important;
-      min-height: 50px !important;
-      max-height: 50px !important;
+      padding: 2px 10px !important;
+      height: 40px !important;
+      min-height: 40px !important;
+      max-height: 40px !important;
       border-radius: 12px !important;
       text-align: center !important;
       cursor: pointer !important;
@@ -477,58 +477,65 @@
       line-height: 1.2 !important;
     }
 
-    /* ===== TUTOR REMEDIAL 2-COLUMN SEGMENTED CONTROL (EQUAL HEIGHT = 50px) ===== */
+    /* ===== TUTOR CONTROLS: 3-COLUMN EQUAL SEGMENTED CONTROL ([ NORMAL ] [ REMIDI ] [ FORGIVE ]) ===== */
     .tutor-remedial-segmented {
       display: grid !important;
-      grid-template-columns: 1fr 1fr !important;
-      gap: 10px !important;
+      grid-template-columns: 1fr 1fr 1fr !important;
+      gap: 8px !important;
       width: 100% !important;
       box-sizing: border-box !important;
-      height: 50px !important;
-      min-height: 50px !important;
-      max-height: 50px !important;
+      height: 40px !important;
+      min-height: 40px !important;
+      max-height: 40px !important;
       flex-shrink: 0 !important;
     }
     .remedial-segment-btn {
-      height: 50px !important;
-      min-height: 50px !important;
-      max-height: 50px !important;
-      padding: 0 10px !important;
+      height: 40px !important;
+      min-height: 40px !important;
+      max-height: 40px !important;
+      padding: 0 4px !important;
       border-radius: 12px !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-size: 13px !important;
+      font-size: 11.5px !important;
       font-weight: 800 !important;
-      letter-spacing: 0.06em !important;
+      letter-spacing: 0.05em !important;
       text-transform: uppercase !important;
       text-align: center !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      gap: 8px !important;
+      gap: 4px !important;
       cursor: pointer !important;
       transition: all 0.2s ease !important;
       -webkit-user-select: none !important;
       user-select: none !important;
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
-      background: rgba(15, 23, 42, 0.6) !important;
-      color: #64748B !important;
+      background: rgba(15, 23, 42, 0.7) !important;
+      color: #94A3B8 !important;
       box-sizing: border-box !important;
+      white-space: nowrap !important;
     }
     .remedial-segment-btn:hover {
       border-color: rgba(255, 255, 255, 0.25) !important;
       color: #E2E8F0 !important;
     }
     .remedial-segment-btn.segment-normal.active {
-      background: rgba(var(--grade-star-rgb), 0.16) !important;
-      border-color: rgba(var(--grade-star-rgb), 0.5) !important;
-      color: var(--grade-star) !important;
-      box-shadow: 0 0 16px var(--grade-star-glow) !important;
+      background: rgba(56, 189, 248, 0.2) !important;
+      border-color: rgba(56, 189, 248, 0.7) !important;
+      color: #38BDF8 !important;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.4) !important;
     }
     .remedial-segment-btn.segment-remidi.active {
-      background: rgba(var(--grade-c-rgb), 0.16) !important;
-      border-color: rgba(var(--grade-c-rgb), 0.65) !important;
-      color: var(--grade-c) !important;
-      box-shadow: 0 0 16px rgba(var(--grade-c-rgb), 0.35) !important;
+      background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.2) !important;
+      border-color: rgba(var(--grade-c-rgb, 255, 255, 0), 0.8) !important;
+      color: var(--grade-c, #FFFF00) !important;
+      box-shadow: 0 0 16px rgba(var(--grade-c-rgb, 255, 255, 0), 0.4) !important;
+    }
+    .remedial-segment-btn.segment-forgive.active {
+      background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.2) !important;
+      border-color: rgba(var(--grade-e-rgb, 255, 0, 0), 0.8) !important;
+      color: var(--grade-e, #FF0000) !important;
+      box-shadow: 0 0 16px rgba(var(--grade-e-rgb, 255, 0, 0), 0.4) !important;
     }
 
     /* ===== CERTIFICATE CARD HEADER (REMOVED PER USER REQUEST) ===== */
@@ -969,7 +976,8 @@
       line-height: 1.2 !important;
     }
 
-    /* ===== 3. DYNAMIC VERTICAL METRICS TABLE (VERTICALLY STACKED 4 ROWS) ===== */
+    /* ===== 3. DYNAMIC METRICS & SCORE/GRADE COMPOSITE CARD (35% DYNAMIC HEIGHT) ===== */
+    .result-metrics-composite-card,
     .result-metrics-table-card {
       background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, 56, 189, 248), 0.08), transparent 75%), #0f172a !important;
       border: 1px solid rgba(var(--tier-rgb, 56, 189, 248), 0.35) !important;
@@ -984,9 +992,32 @@
       overflow: hidden !important;
       display: flex !important;
       flex-direction: column !important;
-      flex: 1 1 0px !important; /* Truly dynamic in remaining screen */
-      min-height: 100px !important;
+      flex: 1 1 0px !important; /* Dynamic in remaining screen */
+      min-height: 140px !important;
       transition: all 0.3s ease !important;
+    }
+
+    .result-metrics-composite-card[data-tier="S"],
+    .result-metrics-composite-card[data-tier="★"] {
+      border-color: rgba(var(--grade-star-rgb), 0.55) !important;
+      box-shadow: 0 0 25px rgba(var(--grade-star-rgb), 0.35), 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+    }
+    .result-metrics-composite-card[data-tier="A"] { border-color: rgba(var(--grade-a-rgb), 0.55) !important; }
+    .result-metrics-composite-card[data-tier="B"] { border-color: rgba(var(--grade-b-rgb), 0.55) !important; }
+    .result-metrics-composite-card[data-tier="C"] { border-color: rgba(var(--grade-c-rgb), 0.55) !important; }
+    .result-metrics-composite-card[data-tier="D"] { border-color: rgba(var(--grade-d-rgb), 0.55) !important; }
+    .result-metrics-composite-card[data-tier="E"],
+    .result-metrics-composite-card[data-tier="F"] { border-color: rgba(var(--grade-e-rgb), 0.55) !important; }
+    .result-metrics-composite-card[data-tier="R"] {
+      border-color: rgba(var(--grade-c-rgb), 0.55) !important;
+      box-shadow: 0 0 16px rgba(var(--grade-c-rgb), 0.25) !important;
+    }
+
+    .result-metrics-table-inner {
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 1 auto !important;
+      width: 100% !important;
     }
 
     .metric-stacked-row {
@@ -1016,7 +1047,7 @@
 
     .metric-stacked-lbl {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-size: clamp(12px, 1.8vh, 14px) !important;
+      font-size: clamp(11.5px, 1.8vh, 13.5px) !important;
       font-weight: 800 !important;
       letter-spacing: 0.08em !important;
       text-transform: uppercase !important;
@@ -1026,7 +1057,7 @@
     .metric-stacked-val {
       font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
       font-feature-settings: 'tnum' on, 'lnum' on !important;
-      font-size: clamp(15px, 2.2vh, 18px) !important;
+      font-size: clamp(14px, 2.2vh, 17px) !important;
       font-weight: 900 !important;
       line-height: 1 !important;
       letter-spacing: -0.01em !important;
@@ -1035,95 +1066,93 @@
     /* Row 1: Correct (Canonical Pure Green) */
     .metric-row-correct .metric-stacked-lbl,
     .metric-row-correct .metric-stacked-val {
-      color: var(--eval-correct) !important;
+      color: var(--eval-correct, #00c000ff) !important;
     }
 
     /* Row 2: Partial (Canonical Pure Yellow) */
     .metric-row-partial .metric-stacked-lbl,
     .metric-row-partial .metric-stacked-val {
-      color: var(--eval-partial) !important;
+      color: var(--eval-partial, #FFFF00) !important;
     }
 
     /* Row 3: Incorrect (Canonical Pure Red) */
     .metric-row-wrong .metric-stacked-lbl,
     .metric-row-wrong .metric-stacked-val {
-      color: var(--eval-incorrect) !important;
+      color: var(--eval-incorrect, #FF0000) !important;
     }
 
-    /* Row 4: Points (Bright White or Kuning Murni for Remedial) */
+    /* Row 4: Points */
     .metric-row-points {
       background: rgba(255, 255, 255, 0.035) !important;
     }
     .metric-row-points .metric-stacked-lbl,
     .metric-row-points .metric-stacked-val {
-      color: #F8FAFC !important;
+      color: var(--tier-color, #F8FAFC) !important;
     }
 
-    /* ===== 4. DUAL SCORE & GRADE CARD (EXACT 50px SIDE-BY-SIDE SYMMETRICAL) ===== */
-    .result-score-grade-card {
-      display: grid !important;
-      grid-template-columns: 1fr 1fr !important;
-      gap: 10px !important;
+    /* Divider between metrics and score/grade */
+    .metrics-score-grade-divider {
       width: 100% !important;
-      max-width: 100% !important;
-      margin: 0 auto !important;
-      box-sizing: border-box !important;
-      height: 50px !important;
-      min-height: 50px !important;
-      max-height: 50px !important;
+      height: 1px !important;
+      background: rgba(255, 255, 255, 0.12) !important;
       flex-shrink: 0 !important;
     }
 
+    /* Dual Score & Grade Row (50px Side-by-Side Symmetrical) */
+    .result-score-grade-row,
+    .result-score-grade-card {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      width: 100% !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
+      background: rgba(23, 33, 56, 0.5) !important;
+    }
+
+    .result-score-grade-row .score-grade-box,
     .result-score-grade-card .score-grade-box {
       height: 50px !important;
       min-height: 50px !important;
       max-height: 50px !important;
-      background: rgba(23, 33, 56, 0.8) !important;
-      border-radius: 12px !important;
-      border: 1px solid rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.45) !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
       box-sizing: border-box !important;
       padding: 0 8px !important;
       transition: all 0.3s ease !important;
     }
 
+    .result-score-grade-row #result-score-box,
     .result-score-grade-card #result-score-box {
-      border-color: rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.45) !important;
+      border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
     }
 
+    .result-score-grade-row #result-percentage,
     .result-score-grade-card #result-percentage {
       font-family: 'Outfit', sans-serif !important;
-      font-size: clamp(1.5rem, 3.8vw, 1.85rem) !important;
+      font-size: clamp(1.4rem, 3.8vw, 1.85rem) !important;
       font-weight: 900 !important;
       letter-spacing: -0.02em !important;
       line-height: 1 !important;
-      color: var(--tier-color, var(--grade-star)) !important; /* Follows Grade Color */
+      color: var(--tier-color, var(--grade-star)) !important;
       text-shadow: 0 0 16px rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.5) !important;
     }
 
+    .result-score-grade-row #result-grade-val,
     .result-score-grade-card #result-grade-val {
       font-family: 'Outfit', sans-serif !important;
-      font-size: clamp(1.5rem, 3.8vw, 1.9rem) !important;
+      font-size: clamp(1.4rem, 3.8vw, 1.9rem) !important;
       font-weight: 900 !important;
       line-height: 1 !important;
-      color: var(--tier-color, var(--grade-star)) !important; /* Follows Grade Color */
+      color: var(--tier-color, var(--grade-star)) !important;
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
       text-shadow: 0 0 16px rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.6) !important;
-    }
-
-    .result-score-grade-card[data-tier="S"] .score-grade-box,
-    .result-score-grade-card[data-tier="★"] .score-grade-box {
-      border-color: rgba(var(--grade-star-rgb), 0.6) !important;
-      box-shadow: 0 0 20px var(--grade-star-glow), 0 6px 16px rgba(0, 0, 0, 0.25) !important;
-    }
-    .result-score-grade-card[data-tier="R"] .score-grade-box {
-      border-color: rgba(255, 255, 0, 0.5) !important;
-      box-shadow: 0 0 16px rgba(255, 255, 0, 0.25) !important;
     }
 
     /* ===== 5. EVALUATION WORD CARD (EXACT 50px - FAIL / LESS / ENOUGH / GOOD / VERY GOOD / EXCELLENT) ===== */
@@ -1179,9 +1208,9 @@
 
     /* ===== BUTTONS (EXACT 30px HEIGHT FOR BACK & BREAKDOWN) ===== */
     .btn-dashboard-primary {
-      height: 30px !important;
-      min-height: 30px !important;
-      max-height: 30px !important;
+      height: 40px !important;
+      min-height: 40px !important;
+      max-height: 40px !important;
       border-radius: 8px !important;
       background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%) !important;
       color: #ffffff !important;
@@ -1209,9 +1238,9 @@
     }
 
     .btn-breakdown-ghost {
-      height: 30px !important;
-      min-height: 30px !important;
-      max-height: 30px !important;
+      height: 40px !important;
+      min-height: 40px !important;
+      max-height: 40px !important;
       border-radius: 8px !important;
       background: transparent !important;
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
@@ -2160,4 +2189,136 @@
 
 .result-page table tbody tr:hover td {
   background: rgba(255, 255, 255, 0.035) !important;
+}
+
+
+    .result-action-slot {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 40px !important;
+      min-height: 40px !important;
+      max-height: 40px !important;
+      flex-shrink: 0 !important;
+      margin: 0 auto !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+
+/* ============================================================
+   DEFERRED SYNCHRONIZED TIER GLOW ARCHITECTURE
+   "warna baru keluar saat sudah muncul deskripsi dari nilai,
+    less-excellent, barulah warnanya muncul di semua panel (glow)"
+   ============================================================ */
+
+/* Initial Neutral State: Clean Slate before Evaluation reveals */
+body.result-page:not(.tier-glow-active) .result-identity-card,
+body.result-page:not(.tier-glow-active) .result-test-title-wrap,
+body.result-page:not(.tier-glow-active) .result-metrics-composite-card,
+body.result-page:not(.tier-glow-active) .result-evaluation-card,
+body.result-page:not(.tier-glow-active) .btn-next-milestone,
+body.result-page:not(.tier-glow-active) .remedial-segment-btn,
+body.result-page:not(.tier-glow-active) .btn-breakdown-ghost,
+body.result-page:not(.tier-glow-active) .btn-dashboard-primary {
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: #0f172a !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+  transition: border-color 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+body.result-page:not(.tier-glow-active) #result-avatar-container {
+  border: 2.5px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+  transition: border-color 0.8s ease, box-shadow 0.8s ease !important;
+}
+
+body.result-page:not(.tier-glow-active) #result-percentage,
+body.result-page:not(.tier-glow-active) #res-points {
+  color: #F8FAFC !important;
+  text-shadow: none !important;
+}
+
+body.result-page:not(.tier-glow-active) #result-test-topic-row {
+  color: #cbd5e1 !important;
+  text-shadow: none !important;
+}
+
+/* -------------------------------------------------------------
+   Active Synchronized Glow: Illuminates simultaneously across
+   ALL panels when Evaluation Description (less-excellent) reveals
+   ------------------------------------------------------------- */
+body.result-page.tier-glow-active .result-identity-card {
+  border-color: rgba(var(--tier-rgb), 0.55) !important;
+  box-shadow: 0 0 25px rgba(var(--tier-rgb), 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.15), transparent 75%), #0f172a !important;
+}
+
+body.result-page.tier-glow-active #result-avatar-container {
+  border-color: var(--tier-color) !important;
+  box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.70), 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+}
+
+body.result-page.tier-glow-active .result-test-title-wrap {
+  border-color: rgba(var(--tier-rgb), 0.55) !important;
+  box-shadow: 0 0 20px rgba(var(--tier-rgb), 0.30) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.14), transparent 75%), #0f172a !important;
+}
+
+body.result-page.tier-glow-active #result-test-topic-row {
+  color: var(--tier-color) !important;
+  text-shadow: 0 0 14px rgba(var(--tier-rgb), 0.5) !important;
+}
+
+body.result-page.tier-glow-active .result-metrics-composite-card {
+  border-color: rgba(var(--tier-rgb), 0.55) !important;
+  box-shadow: 0 0 25px rgba(var(--tier-rgb), 0.35), 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.12), transparent 75%), #0f172a !important;
+}
+
+body.result-page.tier-glow-active #result-percentage {
+  color: var(--tier-color) !important;
+  text-shadow: 0 0 16px rgba(var(--tier-rgb), 0.6) !important;
+}
+
+body.result-page.tier-glow-active #res-points {
+  color: var(--tier-color) !important;
+  text-shadow: 0 0 10px rgba(var(--tier-rgb), 0.4) !important;
+}
+
+body.result-page.tier-glow-active .result-evaluation-card {
+  border-color: rgba(var(--tier-rgb), 0.65) !important;
+  box-shadow: 0 0 25px rgba(var(--tier-rgb), 0.45) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.20), transparent 75%), #0f172a !important;
+  color: var(--tier-color) !important;
+  text-shadow: 0 0 18px rgba(var(--tier-rgb), 0.7) !important;
+}
+
+body.result-page.tier-glow-active .btn-next-milestone {
+  border-color: rgba(var(--tier-rgb), 0.6) !important;
+  box-shadow: 0 4px 18px rgba(var(--tier-rgb), 0.4) !important;
+  background: linear-gradient(135deg, rgba(var(--tier-rgb), 0.35) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+}
+
+body.result-page.tier-glow-active .tutor-remedial-segmented .remedial-segment-btn.active {
+  border-color: var(--tier-color) !important;
+  color: var(--tier-color) !important;
+  background: rgba(var(--tier-rgb), 0.20) !important;
+  box-shadow: 0 0 18px rgba(var(--tier-rgb), 0.45) !important;
+}
+
+body.result-page.tier-glow-active .btn-breakdown-ghost {
+  border-color: rgba(var(--tier-rgb), 0.45) !important;
+  box-shadow: 0 0 14px rgba(var(--tier-rgb), 0.20) !important;
+  color: #F8FAFC !important;
+}
+
+body.result-page.tier-glow-active .btn-dashboard-primary {
+  border: 1px solid rgba(var(--tier-rgb), 0.6) !important;
+  box-shadow: 0 4px 16px rgba(var(--tier-rgb), 0.35) !important;
+  background: linear-gradient(135deg, rgba(var(--tier-rgb), 0.35) 0%, #1e293b 100%) !important;
+  color: #FFFFFF !important;
 }

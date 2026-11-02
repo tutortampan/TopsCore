@@ -1,9 +1,77 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-02 15:20 UTC+8
-Current Phase: Phase 284: Exhaustive Workspace Audit, Bloat Elimination, Dead Code Pruning & System Harmonization [COMPLETE]
+Last Updated: 2026-11-03 07:20 UTC+8
+Current Phase: Phase 289: Result Page Harmonized Glow & 40px Button Height Alignment [COMPLETE]
+Status: COMPLETE
 
-## Audit & Cleanup Accomplishments:
+## Completed Work:
+1. **Phase 289: Result Page Harmonized Glow & 40px Button Height Alignment:**
+   - **Flashcard Button Purged**: Completely removed unrequested `#open-flashcards-btn` from `result.html` and neutralized unhiding logic in `js/result.js`.
+   - **Height 40px Alignment**: Aligned Action Row (`.result-action-slot`, `.btn-next-milestone`, `.tutor-remedial-segmented`), View Answer Breakdown (`.btn-breakdown-ghost`), and Back Navigation (`.btn-dashboard-primary`) to strictly 40px with uniform 11.5px font size (Weight 800) matching Image 1 wireframe. Zero vertical overflow or scrollbar.
+   - **Harmonized Cohesive Color Palette**: Resolved mismatched cyan, purple, and blue borders. All panels (Metadata, Avatar Ring, Title, Topic row, Metrics Composite, Percentage, Points, Status Card, Action Buttons, Breakdown, and Back button) share the exact same `--tier-color` and `--tier-rgb`.
+   - **Deferred Synchronized Tier Glow**: Configured initial clean neutral dark slate styling. Wired `activateTierGlow()` to fire at Step 6, exactly when `#result-motivation-msg` description reveals (`FAIL`...`EXCELLENT`). All panels illuminate simultaneously with glowing tier borders and radial background aura.
+   - **Verified**: `test_result_page_parity.cjs`, `verify_green_star_grading.mjs`, and `check_all_js_syntax.cjs` passing 100%.
+
+2. **Phase 288: Batch 132 Roster Activation & Ariwil Transfer to Batch 134:**
+   - **Root Cause Resolution**: Resolved issue where Batch 132 appeared completely empty due to students having `level_id` set to Alumni (`b70a0ea2-785d-4291-9adf-a4cbd7a2c9a2`) and `is_active: false`.
+   - **Database Trigger Fix**: Dropped dead legacy trigger `trigger_student_batch_change` and function `trg_student_batch_change()` which referenced dropped table `additional_members` and threw `42P01` on batch changes. Created migration `20261103070000_drop_legacy_batch_change_trigger.sql`.
+   - **Batch 132 Reactivation**: Reactivated all 7 remaining students in Batch 132 with `level_id = 51589e1a-d96e-496e-92a3-d9d350483555` (3rd Level) and `is_active: true`.
+   - **Ariwil Transfer**: Transferred Muhammad Ariwil Asrori to Batch 134 (`3e7288b7-a90e-4323-9b02-24e73991f0d7`) with `level_id = 9936683a-5b4a-4796-bb5d-a7fd8ecf0b71` (2nd Level) and `is_active: true`. Recorded `STUDENT_BATCH_TRANSFER` audit log.
+   - **Batch 134 Level Alignment**: Backfilled remaining 16 students in Batch 134 to `level_id = 9936683a-5b4a-4796-bb5d-a7fd8ecf0b71` (2nd Level).
+   - **Verified**: Frontend queries for Batch 132 (7 active students) and Batch 134 (17 active students including Ariwil) verified 100%.
+
+2. **Phase 287: Result Page Wireframe Overhaul & Dual-View Parity:**
+   - **Student Metadata (Strict 150px)**: Refactored `#result-identity-card` to match Student Dashboard `#welcome-banner-section` 1:1 in height, dividers, avatar photo ring, student name, and border-radius.
+   - **Test Full Title (Strict 50px / 15%)**: 2-line format displaying Test Type/Title on line 1 and Assessment Topic/Theme on line 2 with fallback protection.
+   - **Dynamic Metrics & Score/Grade Composite Card (35% Dynamic)**: Combined stacked vertical metrics (*CORRECT, PARTIAL, INCORRECT, POINTS*) with internal divider and 50px side-by-side Score % & Grade / Star vector row.
+   - **Achievement Status (Strict 50px / 15%)**: Standardized 6-tier status (`FAIL`, `LESS`, `ENOUGH`, `GOOD`, `VERY GOOD`, `EXCELLENT`) matching Rule DECISION-018 and wireframe.
+   - **Tutor 3-Button Controls (Strict 50px / 15%)**: Equal 3-column segmented button `[ NORMAL ]` `[ REMIDI ]` `[ FORGIVE ]` with uniform 11.5px font size, confirmation dialogs, and instant reactive reload.
+   - **Student Next Action (Strict 50px / 15%)**: Displays tag `GO TO NEXT ASSESMENT:` with next test title link.
+   - **View Answer Breakdown (Strict 30px / 10%)**: Reordered above Back button as Item 7.
+   - **Bottom Navigation (Strict 30px / 10%)**: Contextual routing: `BACK TO ROOM` (`admin.html#class-hub`) for Tutor/Admin vs `BACK TO LOBBY` (`dashboard.html`) for Student.
+   - **Dynamic Tier Aura**: Border color and background radial gradient across all result cards dynamically follow the student's exam score/grade calculation (`--tier-color`, `--tier-rgb`).
+   - **Status Engine Helpers (`js/api.js`)**: Added `labelAttemptNormal` and `labelAttemptForgiven` with audit logs.
+   - **Automated Verification**: `scripts/test_result_page_parity.cjs` passing 100% (all 30 IDs, styling, and logic verified).
+
+1. **Phase 1: Terminology Unification (Quiz -> Task 100%):**
+   - Normalized all 32 database test shells in 3rd Vocabulary to Task (`category: TASK`, `shell_code: *-TASK`, `title: * Task`).
+   - Unified terminology across `js/dashboard.js`, `js/admin/app.js`, `js/admin/vocab-vault.js`, `js/admin/crud-modals.js`, `js/test.js`, and `supabase/seed.sql`.
+2. **Phase 2: 7×7 Repetitive Mastery Engine & Hard Gate Exam:**
+   - Implemented `getTaskProgressVisual(passCount)` in `js/grading.js` with 5-tier gamified palette (Red `0/7` -> Star Green `7/7 ✓ Complete`).
+   - Implemented realtime pass counter in `js/api.js` and `task-progress-chip` in `js/dashboard.js`.
+   - Hard Gate Exam locked 🔒 until all prerequisite tasks reach 7/7 passes in Edge Function and client.
+   - Authorized remedial attempts exempted from 7×7 task prerequisite lock in `start-test` Edge Function and client.
+3. **Phase 3: Words Exam Written Mode & 70% Threshold:**
+   - Configured all 4 Words Exams (`3A-WORDS-EXAM` ... `3D-WORDS-EXAM`) with `answer_type = 'written'` and `minimum_required_score = 70`.
+   - Verified Rule 2.13 written tolerance engine (exact match 1.0 pt, typo 0.5 pt, root form 0.5 pt).
+   - Standardized auto-leveling passing threshold in `submit-test` Edge Function to 70%.
+4. **Phase 4: Class 2nd Vocabulary (Batch 134) Activation:**
+   - Reactivated `2nd Vocabulary` (`VOCAB_2ND`, Level 2) with active status in database.
+   - Verified Batch 134 links to 2nd Level and inherits 2nd Vocabulary.
+5. **Phase 5: Level Progression System, Lifecycle Actions UI, Batch Transfer & Skor F:**
+   - Updated Level 0 to `Alumni` (`toOrdinalLevel(0)` = `'Alumni'`).
+   - Implemented Lifecycle actions column in `js/admin/student-management.js`: `🚀 NEXT`, `🔒 HOLD`, `🔁 REPEAT`, `🔄 Transfer Batch`.
+   - Implemented mass promotion `window.promoteAllEligibleStudents` and `window.promoteStudentNextLevel`.
+   - Implemented `Transfer Batch` modal with `Inherit Batch Level`.
+   - Implemented `Skor F (Forgiven)` waiver (`55%ᶠ` Red E) and Remedial Cap 60% (`60%ᴿ` Yellow C) with audit logging.
+   - Fixed Edge Function `start-test` level resolution to support Cumulative Retroactive Access (`testLevelNum <= studentLevelNum`) and Lifetime Universal Access for Alumni (`studentLevelNum === 0`).
+   - Added graduating batch filter dropdown to `🎓 Alumni` tab and hid promote button on alumni.
+   - Persisted `alumni` status tab in `localStorage` and hash routing (Rule 2.20).
+   - Fixed class modal in `js/dashboard.js` to render locked exams with unlock instructions rather than silently omitting them.
+6. **Phase 6: Multi-Tenant Vocabulary Vault & 11-Column Import/Export:**
+   - Added `institution_id` and `program_id` columns to `vocabulary_vault`.
+   - Attributed all vault words to CEC and Camp.
+   - Cascading dropdowns `[Institution] -> [Program] -> [Class] -> [Level]` in test gateway.
+   - Standardized Excel import/export to 11 columns in `js/api.js` and `js/admin/vocab-vault.js`.
+7. **Phase 7: Full E2E Check System (10× Consecutive Pass Protocol):**
+   - Created `scripts/test_vocab_7x7_and_leveling_e2e.mjs` and `scripts/test_start_test_gating.mjs`.
+   - Executed 10 consecutive full realtime E2E cycles: 10/10 PASS (132/132 assertions verified without defect).
+   - Validated all 40 JavaScript files in workspace with `node --check` (100% clean).
+
+## Next Exact Action
+1. All 7 phases verified, hardened, and regression tested with zero defects. Ready for production release.
+
+## Audit & Cleanup Accomplishments (Phase 284):
 1. **Disk Bloat Removed (> 61 MB Freed, 670+ Unused Files Cleaned):**
    - Cleaned all 415 dead files in `scratch/` (-48.7 MB, including multi-MB JSON dumps).
    - Deleted `scripts/archive/` containing 241 obsolete scripts and old HTML tester mockups (-3.70 MB).

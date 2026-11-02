@@ -8,7 +8,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261102_v103';
     import { testMicrophoneCapability } from './speech.js?v=20261102_v103';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261102_v103';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=20261102_v103';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=20261102_v103';
 
     window._isBatchChampion = false;
 
@@ -123,9 +123,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       }
 
+      const isAlumni = session.level_number === 0 || (session.level_name || '').toLowerCase() === 'alumni';
       const crownEl = document.getElementById('banner-avatar-crown');
       if (crownEl) {
-        crownEl.classList.toggle('hidden', !isLeader);
+        if (isAlumni) {
+          crownEl.textContent = '🎓';
+          crownEl.title = 'Alumni Graduate';
+          crownEl.classList.remove('hidden');
+        } else {
+          crownEl.textContent = '👑';
+          crownEl.title = 'Batch Champion';
+          crownEl.classList.toggle('hidden', !isLeader);
+        }
       }
 
       const hdrNameEl = document.getElementById('header-student-name');
@@ -804,7 +813,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const welcomeLevelPanelEl = document.getElementById('welcome-level-panel');
           const welcomeLevelEl = document.getElementById('welcome-level');
           if (welcomeLevelPanelEl && welcomeLevelEl) {
-            welcomeLevelEl.textContent = session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level';
+            const isAlumni = session.level_number === 0 || (session.level_name || '').toLowerCase() === 'alumni';
+            welcomeLevelEl.textContent = isAlumni ? 'Alumni 🎓' : (session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level');
             welcomeLevelPanelEl.classList.remove('hidden');
           }
         }
@@ -1032,18 +1042,23 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const activeClasses = [];
       const completedClasses = [];
-      const studentLevelNum = session.level_number || 1;
+      const studentLevelNum = session.level_number != null ? session.level_number : 1;
       const studentLevelId = session.level_id;
+      const isAlumni = studentLevelNum === 0 || (session.level_name || '').toLowerCase() === 'alumni';
 
       rawClasses.forEach(c => {
         const cLvlNum = c.levels?.level_number;
         const isCurrentLevel = (studentLevelId && c.level_id === studentLevelId) || (studentLevelNum && cLvlNum === studentLevelNum);
 
-        // A class is active if it matches the student's valid level
-        // Level 0 is under Level 1, so if student is at Level 1, 2, or 3, Level 0 is completed/past, not active
-        if (isCurrentLevel || (cLvlNum == null && studentLevelNum === 0)) {
+        // Alumni receives universal access to all program classes
+        if (isAlumni) {
+          activeClasses.push(c);
+        } else if (isCurrentLevel || (cLvlNum == null && studentLevelNum === 0)) {
           activeClasses.push(c);
         } else if (studentLevelNum != null && cLvlNum != null && cLvlNum < studentLevelNum) {
+          // Cumulative retroactive access: previous level classes remain available for drill/review
+          c._isRetroactive = true;
+          activeClasses.push(c);
           completedClasses.push(c);
         }
       });
@@ -1334,12 +1349,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const attemptsRaw = await fetchAllStudentAttempts(session.student_id).catch(() => []);
         const bestByTest = {};
         const inProgByTest = {};
+        const passCountByTest = {};
         for (const att of attemptsRaw) {
           const eid = att.test_id || att.Test_id;
           if (!eid) continue;
-          const pct = parseFloat(att.percentage || 0);
+          const pct = parseFloat(att.percentage ?? att.effective_score ?? 0);
           const st  = (att.status || '').toLowerCase();
           if (st === 'in_progress') { inProgByTest[eid] = att; continue; }
+          if (st === 'submitted' || st === 'auto_submitted' || st === 'evaluated') {
+            if (pct >= 70) {
+              passCountByTest[eid] = (passCountByTest[eid] || 0) + 1;
+            }
+          }
           if (!bestByTest[eid] || pct > parseFloat(bestByTest[eid].percentage || 0) || (pct === parseFloat(bestByTest[eid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByTest[eid].submitted_at || 0))) {
             bestByTest[eid] = att;
           }
@@ -1403,6 +1424,25 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               (Array.isArray(liveSess?.remedial_student_ids) && liveSess.remedial_student_ids.includes(session?.student_id));
             const isStudentRemedialUnlocked = Boolean(bestByTest[Test.id]?.is_remedial_unlocked || bestByTest[Test.id]?.is_remedial);
 
+            // 7×7 Repetitive Mastery Hard Gate: Exams strictly require all Theme Tasks to reach 7/7 passes (>= 70%)
+            if (isExam(Test) && !isRemedialSession && !isStudentRemedialUnlocked) {
+              const currentThemeCode = String(Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+              if (currentThemeCode) {
+                const siblingTasks = sortedTests.filter(a =>
+                  !isExam(a) &&
+                  String(a.payload?.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase() === currentThemeCode
+                );
+                for (const st of siblingTasks) {
+                  const pCount = passCountByTest[st.id] || 0;
+                  if (pCount < 7) {
+                    prereqMet = false;
+                    prereqTitle = `All Theme ${currentThemeCode} Tasks (7/7 Passes Required)`;
+                    break;
+                  }
+                }
+              }
+            }
+
             // 1. Inter-Theme Gating: Theme B, C, D tests strictly require all prior theme's exams to be passed (>= 60%)
             const currentTheme = String(Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
             const themeSequence = ['A', 'B', 'C', 'D'];
@@ -1422,8 +1462,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                   const peRawPct = peBest ? parseFloat(peBest.percentage || 0) : null;
                   const peRem = Boolean(peBest && (peBest.is_remedial_unlocked || peBest.is_remedial));
                   const pePct = peRem && peRawPct !== null ? Math.min(peRawPct, 60.0) : peRawPct;
-                  const peMin = pe.minimum_required_score || pe.pass_threshold || 60;
-                  if (pePct === null || pePct < peMin) {
+                  const peMin = pe.minimum_required_score || pe.pass_threshold || 70;
+                  const pePassed = pePct !== null && (pePct >= peMin || (peRem && pePct >= 60));
+                  if (!pePassed) {
                     prereqMet = false;
                     prereqTitle = `Theme ${priorTheme} Exams (Passed ≥${peMin}% required)`;
                     break;
@@ -1439,7 +1480,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               (Test.payload?.subtype || '').toUpperCase().includes('PHRASE')
             );
 
-            // 2. Intra-Theme Sequential Gating: Phrases Exam requires sibling Words Exam >= 60%
+            // 2. Intra-Theme Sequential Gating: Phrases Exam requires sibling Words Exam >= 70%
             if (prereqMet && isPhrasesExam && !isRemedialSession && !isStudentRemedialUnlocked) {
               const siblingWordsExam = Tests.find(a =>
                 a.id !== Test.id &&
@@ -1460,8 +1501,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 const wRawPct = wBest ? parseFloat(wBest.percentage || 0) : null;
                 const wRem = Boolean(wBest && (wBest.is_remedial_unlocked || wBest.is_remedial));
                 const wPct = wRem && wRawPct !== null ? Math.min(wRawPct, 60.0) : wRawPct;
-                const wMin = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 60;
-                if (wPct === null || wPct < wMin) {
+                const wMin = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 70;
+                const wPassed = wPct !== null && (wPct >= wMin || (wRem && wPct >= 60));
+                if (!wPassed) {
                   prereqMet = false;
                   prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
                 }
@@ -1479,9 +1521,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             let cardFilter = 'none';
 
             if (!prereqMet) {
-              // Hide locked tests that have never been attempted — student doesn't need to see them
-              if (!best && !inProg) continue;
-              // If previously attempted but now locked (e.g. remedial required): still show but dimmed
               cardOpacity = '0.5';
               cardFilter = 'grayscale(100%)';
               statusBadge = `<span style="background:rgba(255,255,255,0.1);color:#a1a1aa;border:1px solid rgba(255,255,255,0.2);
@@ -1553,16 +1592,34 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                               font-size:0.78rem;font-weight:700;cursor:pointer;">Start Test ←’</button>`;
             }
 
-            const gradeChip = grade ? `<span style="background:${gradeColor}22;color:${gradeColor};border:1px solid ${gradeColor}44;
+            const isTaskItem = !isExam(Test);
+            const taskVisual = isTaskItem ? getTaskProgressVisual(passCountByTest[Test.id] || 0) : null;
+            const taskProgressBadge = taskVisual
+              ? `<span class="task-progress-chip ${taskVisual.tierClass}" style="background:${taskVisual.bg};color:${taskVisual.color};border:1px solid ${taskVisual.border};">${taskVisual.text}</span>`
+              : '';
+
+            // For Tasks: No cooldown, instant drill allowed anytime
+            if (isTaskItem && !inProg) {
+              const drillLabel = (taskVisual && taskVisual.count >= 7) ? 'Retake Drill' : ((taskVisual && taskVisual.count > 0) ? 'Drill Again' : 'Start Drill');
+              const drillBtn = `<button onclick="location.href='test.html?test_id=${Test.id}'"
+                                style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
+                                font-size:0.78rem;font-weight:700;cursor:pointer;margin-left:6px;">${drillLabel}</button>`;
+              if (best) {
+                actionBtn = `<div style="display:flex; align-items:center;">
+                               <button onclick="location.href='result.html?attempt_id=${best.id}'"
+                                style="background:rgba(255,255,255,0.06);color:var(--clr-text-2);border:1px solid var(--clr-border);
+                                padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">View</button>
+                               ${drillBtn}
+                             </div>`;
+              } else {
+                actionBtn = drillBtn;
+              }
+            }
+
+            const gradeChip = !isTaskItem && grade ? `<span style="background:${gradeColor}22;color:${gradeColor};border:1px solid ${gradeColor}44;
               padding:2px 7px;border-radius:4px;font-size:0.72rem;font-weight:800;">${getGradeSymbol(grade)}</span>` : '';
 
             lvlHtml += `<div class="asm-modal-row" style="opacity:${cardOpacity}; filter:${cardFilter};" >
-
-
-
-
-
-
               <div class="asm-modal-info">
                 <div style="font-size:0.85rem;font-weight:600;color:var(--clr-text-1);white-space:normal;line-height:1.3;" title="${Test.Test_title || Test.title || 'Test'}">
                   ${(Test.Test_title || Test.title || 'Test').replace(/^.*?-\s*\d+[a-z]{2}\s+Level\s*-\s*/i, '').replace(/Vocabulary Mastery /i, '')}
@@ -1573,7 +1630,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 </div>
               </div>
               <div class="asm-modal-actions">
-                ${gradeChip}
+                ${isTaskItem ? taskProgressBadge : gradeChip}
                 ${statusBadge}
                 ${actionBtn}
               </div>
@@ -1638,15 +1695,21 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       }
 
-      // Build attempts map: test_id -> best attempt
+      // Build attempts map: test_id -> best attempt & pass count
       const bestByTest = {};
       const inProgressByTest = {};
+      const passCountByTest = {};
       allAttempts.forEach(att => {
         const aid = att.test_id || att.Test_id;
         if (!aid) return;
-        const pct = parseFloat(att.percentage || 0);
-        if ((att.status || '').toUpperCase() === 'IN_PROGRESS') {
+        const pct = parseFloat(att.percentage ?? att.effective_score ?? 0);
+        const st = (att.status || '').toUpperCase();
+        if (st === 'IN_PROGRESS') {
           inProgressByTest[aid] = att;
+        } else if (st === 'SUBMITTED' || st === 'AUTO_SUBMITTED' || st === 'EVALUATED') {
+          if (pct >= 70) {
+            passCountByTest[aid] = (passCountByTest[aid] || 0) + 1;
+          }
         }
         // AGENTS.md §2.7: Report card stores strictly HIGHEST score across attempts
         if (!bestByTest[aid] || pct > parseFloat(bestByTest[aid].percentage || 0) || (pct === parseFloat(bestByTest[aid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByTest[aid].submitted_at || 0))) {
@@ -1664,6 +1727,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const grade = bestPct !== null ? getGrade(bestPct) : null;
         const gradeColor = bestPct !== null ? getGradeColorByScore(bestPct) : 'var(--clr-text-1)';
         const passed = bestPct !== null && bestPct >= (asm.pass_threshold || 60);
+
+        const isTaskItem = !isExam(asm);
+        const taskVisual = isTaskItem ? getTaskProgressVisual(passCountByTest[asm.id] || 0) : null;
+        const taskProgressBadge = taskVisual
+          ? `<span class="task-progress-chip ${taskVisual.tierClass}" style="background:${taskVisual.bg};color:${taskVisual.color};border:1px solid ${taskVisual.border};">${taskVisual.text}</span>`
+          : '';
 
         // Check dynamic prerequisites (0 to N parents + min score thresholds + aggregate average)
         let prereqMet = true;
@@ -1684,20 +1753,19 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (isThemeTest) {
           const themeCode = asm.payload?.theme_code;
           if (themeCode) {
-            const siblingQuizzes = tests.filter(a =>
-              (a.test_type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || a.test_subtype === 'VOCAB_QUIZ' || a.test_subtype === 'PHRASE_QUIZ' || a.test_subtype === 'VOCAB_TASK' || a.test_subtype === 'PHRASE_TASK' || (a.shell_code || '').includes('-QUIZ') || (a.shell_code || '').includes('-TASK')) &&
+            const siblingTasks = tests.filter(a =>
+              (a.test_type === 'task' || a.test_type === 'quiz' || a.category === 'TASK' || a.category === 'QUIZ' || a.test_subtype === 'VOCAB_TASK' || a.test_subtype === 'PHRASE_TASK' || a.test_subtype === 'VOCAB_QUIZ' || a.test_subtype === 'PHRASE_QUIZ' || (a.shell_code || '').includes('-TASK') || (a.shell_code || '').includes('-QUIZ')) &&
               a.payload?.theme_code === themeCode &&
               a.level_id === asm.level_id &&
               a.class_id === asm.class_id
             );
 
-            const reqScore = asm.prerequisite_min_score || 60;
-            for (const quiz of siblingQuizzes) {
-              const quizBest = bestByTest[quiz.id];
-              const quizPct = quizBest ? parseFloat(quizBest.percentage || 0) : null;
-              if (quizPct === null || quizPct < reqScore) {
+            // 7×7 Repetitive Mastery Hard Gate: All sibling tasks must reach 7 passes (>= 70%)
+            for (const task of siblingTasks) {
+              const pCount = passCountByTest[task.id] || 0;
+              if (pCount < 7) {
                 prereqMet = false;
-                prereqTitle = `All Theme Quizzes (Required: ≥${reqScore}%)`;
+                prereqTitle = `All Theme Tasks Mastery (7/7 Passes Required)`;
                 break;
               }
             }
@@ -1732,8 +1800,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 const peRawPct = peBest ? parseFloat(peBest.percentage || 0) : null;
                 const peRem = Boolean(peBest && (peBest.is_remedial_unlocked || peBest.is_remedial));
                 const pePct = peRem && peRawPct !== null ? Math.min(peRawPct, 60.0) : peRawPct;
-                const peMin = pe.minimum_required_score || pe.pass_threshold || 60;
-                if (pePct === null || pePct < peMin) {
+                const peMin = pe.minimum_required_score || pe.pass_threshold || 70;
+                const pePassed = pePct !== null && (pePct >= peMin || (peRem && pePct >= 60));
+                if (!pePassed) {
                   prereqMet = false;
                   prereqTitle = `Theme ${priorTheme} Exams (Passed ≥${peMin}% required)`;
                   break;
@@ -1749,7 +1818,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             (asm.payload?.subtype || '').toUpperCase().includes('PHRASE')
           );
 
-          // 2. Intra-Theme Sequential Gating: Phrases Exam requires sibling Words Exam >= 60%
+          // 2. Intra-Theme Sequential Gating: Phrases Exam requires sibling Words Exam >= 70%
           if (prereqMet && isPhrasesExam && !isRemedialSession && !isStudentRemedialUnlocked) {
             const siblingWordsExam = tests.find(a =>
               a.id !== asm.id &&
@@ -1772,8 +1841,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               const wRawPct = wBest ? parseFloat(wBest.percentage || 0) : null;
               const wRem = Boolean(wBest && (wBest.is_remedial_unlocked || wBest.is_remedial));
               const wPct = wRem && wRawPct !== null ? Math.min(wRawPct, 60.0) : wRawPct;
-              const wMin = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 60;
-              if (wPct === null || wPct < wMin) {
+              const wMin = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 70;
+              const wPassed = wPct !== null && (wPct >= wMin || (wRem && wPct >= 60));
+              if (!wPassed) {
                 prereqMet = false;
                 prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
               }
@@ -1884,9 +1954,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           } else {
             actionBtn = `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);" data-aid-result="${bestAtt?.id}">View Result</button>`;
           }
+
+          if (isTaskItem && !inProgAtt) {
+            const drillLabel = (taskVisual && taskVisual.count >= 7) ? 'Retake Drill' : ((taskVisual && taskVisual.count > 0) ? 'Drill Again' : 'Start Drill');
+            actionBtn = `<div style="display:flex;gap:6px;align-items:center;">
+              <button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button>
+              <button class="btn btn-sm btn-primary" style="padding:4px 8px;" data-aid="${asm.id}">${drillLabel}</button>
+            </div>`;
+          }
         } else {
           statusBadge = `<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);">Ready</span>`;
-          actionBtn = `<button class="btn btn-primary btn-sm" data-aid="${asm.id}">Start</button>`;
+          const readyLabel = isTaskItem ? 'Start Drill' : 'Start';
+          actionBtn = `<button class="btn btn-primary btn-sm" data-aid="${asm.id}">${readyLabel}</button>`;
         }
 
         const duration = asm.working_duration_minutes || asm.time_limit_minutes || 60;
@@ -1916,9 +1995,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 ${className ? `<span class="badge badge-neutral" style="font-size:0.7rem;">${escapeHtml(className)}</span>` : ''}
                 <span class="badge" style="font-size:0.68rem;background:rgba(255,255,255,0.06);color:var(--clr-text-3);border:1px solid var(--clr-border);">${escapeHtml(asmType)}</span>
               </div>
-              <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-                <span style="font-size:0.78rem;color:var(--clr-text-3);">\u23F1 ${duration} min</span>
-                ${qCount !== '—' ? `<span style="font-size:0.78rem;color:var(--clr-text-3);">\uD83D\uDCCB ${qCount} Questions</span>` : ''}
+              <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                ${isTaskItem && taskProgressBadge ? taskProgressBadge : ''}
+                <span style="font-size:0.78rem;color:var(--clr-text-3);">&#9201; ${duration} min</span>
+                ${qCount !== '—' ? `<span style="font-size:0.78rem;color:var(--clr-text-3);">&#128203; ${qCount} Questions</span>` : ''}
                 ${statusBadge}
               </div>
               ${!prereqMet && prereqTitle ? `<div style="margin-top:0.5rem;"><span style="font-size:0.72rem;color:#f87171;">\uD83D\uDD12 Complete prerequisite first: <em>${escapeHtml(prereqTitle)}</em></span></div>` : ''}
@@ -1970,7 +2050,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function computeOverallStats(attempts, tests = []) {
       // Rule 2.8 & Exam-Only Metric Rule:
       // Academic Score %, Grade, and Points are evaluated EXCLUSIVELY from Exams.
-      // Quizzes count strictly towards activity completion & badges, never inflating academic score.
+      // Tasks count strictly towards activity completion & badges, never inflating academic score.
       const activeAsmMap = new Map((tests || []).map(a => [a.id, a]));
       const allBestMap = {};
       const examBestMap = {};
@@ -2005,7 +2085,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       });
 
-      // Total completed activities (Quizzes + Exams) for badges / progress
+      // Total completed activities (Tasks + Exams) for badges / progress
       const completedCount = Object.keys(allBestMap).filter(k => !k.endsWith('_locked')).length;
       const TestsCountEl = document.getElementById('stat-Tests-done');
       if (TestsCountEl) TestsCountEl.textContent = completedCount;
@@ -2553,7 +2633,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             .filter(([k]) => !k.endsWith('_locked'))
             .map(([, v]) => v);
 
-          // Activity Completion & Progress % (counts both Quizzes & Exams)
+          // Activity Completion & Progress % (counts both Tasks & Exams)
           const completedCount = bestItems.length;
           const progressPct = totalClassTests > 0 ? Math.round((completedCount / totalClassTests) * 100) : 0;
 

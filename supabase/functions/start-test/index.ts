@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     // 1. Fetch Student Details
     const { data: student } = await supabase
       .from("students")
-      .select("id, institution_id, program_id, batch_id, is_active, batches!batch_id(current_level_id)")
+      .select("id, institution_id, program_id, batch_id, level_id, is_active, batches!batch_id(current_level_id)")
       .eq("id", student_id)
       .is("deleted_at", null)
       .single();
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
       const [prereqAttRes, prereqTestRes] = await Promise.all([
         supabase
           .from("attempts")
-          .select("effective_score, percentage, status")
+          .select("effective_score, percentage, status, is_remedial_unlocked, is_forgiven")
           .eq("student_id", student_id)
           .eq("test_id", prereqId)
           .in("status", ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]),
@@ -144,8 +144,8 @@ Deno.serve(async (req) => {
       const prereqAttempts = prereqAttRes.data;
       const prereqTest = prereqTestRes.data;
 
-      const reqScore = test.prerequisite_min_score || 60;
-      const hasPassed = Boolean(prereqAttempts && prereqAttempts.some((a: any) => (a.effective_score || a.percentage || 0) >= reqScore));
+      const reqScore = test.prerequisite_min_score || 70;
+      const hasPassed = Boolean(prereqAttempts && prereqAttempts.some((a: any) => a.is_forgiven || (a.is_remedial_unlocked && (a.effective_score || a.percentage || 0) >= 60) || (a.effective_score || a.percentage || 0) >= reqScore));
 
       if (!hasPassed) {
         return new Response(JSON.stringify({ error: `Prerequisite not completed. You must score at least ${reqScore}% on the prerequisite test.` }), {
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 5b. Strict Cross-Theme Prerequisite: Taking ANY test (Quiz or Exam) in Theme B, C, or D requires passing prior theme's exams with >= 60%
+    // 5b. Strict Cross-Theme Prerequisite: Taking ANY test in Theme B, C, or D requires passing prior theme's exams with >= 70%
     const currentThemeEdge = String(test.payload?.theme_code || (test.shell_code ? test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
     const themeSeqEdge = ['A', 'B', 'C', 'D'];
     const curThemeIdxEdge = themeSeqEdge.indexOf(currentThemeEdge);
@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
         const priorExamIds = matchingPriorExams.map((t: any) => t.id);
         const { data: priorAttempts } = await supabase
           .from('attempts')
-          .select('test_id, percentage, effective_score, status, is_remedial_unlocked')
+          .select('test_id, percentage, effective_score, status, is_remedial_unlocked, is_forgiven')
           .eq('student_id', student_id)
           .in('test_id', priorExamIds)
           .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
@@ -188,14 +188,14 @@ Deno.serve(async (req) => {
         const passedPriorIds = new Set();
         (priorAttempts || []).forEach((att: any) => {
           const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-          if (pct >= 60 || att.is_remedial_unlocked) {
+          if (pct >= 70 || att.is_remedial_unlocked || att.is_forgiven) {
             passedPriorIds.add(att.test_id);
           }
         });
 
         const failedAny = priorExamIds.some((id: any) => !passedPriorIds.has(id));
         if (failedAny) {
-          return new Response(JSON.stringify({ error: `Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least 60% before taking Theme ${currentThemeEdge} tests.` }), {
+          return new Response(JSON.stringify({ error: `Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least 70% before taking Theme ${currentThemeEdge} tests.` }), {
             status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
           });
         }
@@ -297,11 +297,32 @@ Deno.serve(async (req) => {
     // 8. Fetch Questions / Items
     let snapQuestions: any = [];
     if (test.payload && test.payload.is_dynamic_shell) {
-      const studentCurrentLevelId = student.batches?.current_level_id;
-      if (!isStandaloneTryout && studentCurrentLevelId && test.level_id && studentCurrentLevelId !== test.level_id) {
-         return new Response(JSON.stringify({ error: "Level mismatch. You do not have access to this test's level." }), {
-           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
-         });
+      const studentLevelId = student.level_id || student.batches?.current_level_id;
+      let studentLevelNum: number | null = null;
+      if (studentLevelId) {
+        const { data: sLvl } = await supabase.from('levels').select('level_number').eq('id', studentLevelId).single();
+        if (sLvl && typeof sLvl.level_number === 'number') {
+          studentLevelNum = sLvl.level_number;
+        }
+      }
+
+      let testLevelNum: number | null = null;
+      if (test.level_id) {
+        const { data: tLvl } = await supabase.from('levels').select('level_number').eq('id', test.level_id).single();
+        if (tLvl && typeof tLvl.level_number === 'number') {
+          testLevelNum = tLvl.level_number;
+        }
+      }
+
+      // Check level gating:
+      // Level 0 (Alumni) has universal lifetime access across all levels.
+      // Active students (Level >= 1) have Cumulative Retroactive Access: they can take any test where testLevelNum <= studentLevelNum.
+      if (!isStandaloneTryout && studentLevelNum !== null && testLevelNum !== null) {
+        if (studentLevelNum !== 0 && testLevelNum > studentLevelNum) {
+          return new Response(JSON.stringify({ error: `Level mismatch. You do not have access to Level ${testLevelNum} tests.` }), {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
       }
 
       // Validation: Strict Theme Prerequisites for Exams (Must pass ALL sibling quizzes with >= 60%)
@@ -323,135 +344,158 @@ Deno.serve(async (req) => {
           });
         }
 
-        // 2. Strict Prerequisite Quizzes check: Must pass ALL theme quizzes >= 60%
+        // 2. Strict Prerequisite Tasks check: Must pass ALL theme tasks 7 times >= 70% (7×7 Mastery)
+        // Exempt authorized remedial attempts
+        const isStudentRemedialAuthorized = isRemedialSession ||
+          (Array.isArray(liveSession?.remedial_student_ids) && liveSession.remedial_student_ids.includes(student_id));
         const themeCode = test.payload?.theme_code;
-        if (themeCode) {
-          const { data: siblingQuizzes } = await supabase
+        if (themeCode && !isStudentRemedialAuthorized) {
+          const { data: siblingTasks } = await supabase
             .from('tests')
-            .select('id, payload')
+            .select('id, payload, test_type, category, shell_code')
             .eq('class_id', test.class_id)
             .eq('level_id', test.level_id)
-            .eq('test_type', 'quiz')
+            .is('deleted_at', null)
             .contains('payload', { theme_code: themeCode });
 
-          if (siblingQuizzes && siblingQuizzes.length > 0) {
-            const quizIds = siblingQuizzes.map((t: any) => t.id);
+          const filteredTasks = (siblingTasks || []).filter((t: any) => {
+            const isEx = (t.test_type || '').toLowerCase() === 'exam' ||
+                         t.category === 'EXAM' ||
+                         (t.shell_code || '').endsWith('-EXAM');
+            return !isEx;
+          });
+
+          if (filteredTasks && filteredTasks.length > 0) {
+            const taskIds = filteredTasks.map((t: any) => t.id);
             const { data: siblingAttempts } = await supabase
               .from('attempts')
               .select('test_id, percentage, effective_score, is_best_score, status')
               .eq('student_id', student_id)
-              .in('test_id', quizIds)
+              .in('test_id', taskIds)
               .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
               
-            const reqScore = test.prerequisite_min_score || 60;
-            const passedQuizIds = new Set();
+            const passCountByTask: Record<string, number> = {};
             if (siblingAttempts) {
               siblingAttempts.forEach((att: any) => {
-                if ((att.effective_score || att.percentage || 0) >= reqScore) {
-                  passedQuizIds.add(att.test_id);
+                const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+                if (pct >= 70) {
+                  passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
                 }
               });
             }
 
-            if (passedQuizIds.size < quizIds.length) {
-              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must score at least ${reqScore}% on all Quizzes before taking the Exam.` }), {
+            const unmasteredTask = taskIds.find((tid: string) => (passCountByTask[tid] || 0) < 7);
+            if (unmasteredTask) {
+              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (7 passes with at least 70%) on all Theme Tasks before taking the Exam.` }), {
                 status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
               });
             }
           }
+        }
 
-          // 3. Strict Sequential Exam Prerequisite: If this is a Phrases Exam, student MUST pass Words Exam first (>= 60%)
-          const isQuiz = (test.test_type || '').toLowerCase() === 'quiz' || 
-                         (test.category || '').toLowerCase() === 'quiz' ||
-                         (test.shell_code || '').toUpperCase().includes('QUIZ') ||
-                         (test.shell_code || '').toUpperCase().includes('TASK') ||
-                         (test.payload?.shell_code || '').toUpperCase().includes('QUIZ');
+        // 3. Strict Sequential Exam Prerequisite: If this is a Phrases Exam, student MUST pass Words Exam first (>= 70%)
+        const isQuiz = (test.test_type || '').toLowerCase() === 'quiz' || 
+                       (test.category || '').toLowerCase() === 'quiz' ||
+                       (test.category || '').toLowerCase() === 'task' ||
+                       (test.shell_code || '').toUpperCase().includes('QUIZ') ||
+                       (test.shell_code || '').toUpperCase().includes('TASK') ||
+                       (test.payload?.shell_code || '').toUpperCase().includes('QUIZ') ||
+                       (test.payload?.shell_code || '').toUpperCase().includes('TASK');
 
-          const isPhrasesExam = !isQuiz && (test.payload?.category === 'phrases' || 
-                                /PHRASES/i.test(test.shell_code || test.payload?.shell_code || '') || 
-                                /phrase/i.test(test.title || '') ||
-                                test.test_subtype === 'PHRASE_EXAM' ||
-                                test.test_subtype === 'PHRASE_TEST');
-          if (isPhrasesExam) {
-            const { data: siblingWordsExams } = await supabase
-              .from('tests')
-              .select('id, title, payload, shell_code, test_subtype')
-              .eq('class_id', test.class_id)
-              .eq('level_id', test.level_id)
-              .eq('test_type', 'exam')
-              .neq('id', test.id)
-              .contains('payload', { theme_code: themeCode });
+        const isPhrasesExam = !isQuiz && (test.payload?.category === 'phrases' || 
+                              /PHRASES/i.test(test.shell_code || test.payload?.shell_code || '') || 
+                              /phrase/i.test(test.title || '') ||
+                              test.test_subtype === 'PHRASE_EXAM' ||
+                              test.test_subtype === 'PHRASE_TEST');
+        if (isPhrasesExam && themeCode) {
+          const { data: siblingWordsExams } = await supabase
+            .from('tests')
+            .select('id, title, payload, shell_code, test_subtype, minimum_required_score')
+            .eq('class_id', test.class_id)
+            .eq('level_id', test.level_id)
+            .eq('test_type', 'exam')
+            .neq('id', test.id)
+            .contains('payload', { theme_code: themeCode });
 
-            const wordsExam = (siblingWordsExams || []).find((t: any) => {
-              const cat = t.payload?.category;
-              const sc = t.shell_code || t.payload?.shell_code || '';
-              const ttl = t.title || '';
-              return cat === 'words' || /WORDS/i.test(sc) || /word/i.test(ttl) || t.test_subtype === 'VOCAB_EXAM' || t.test_subtype === 'VOCAB_TEST';
+          const wordsExam = (siblingWordsExams || []).find((t: any) => {
+            const cat = t.payload?.category;
+            const sc = t.shell_code || t.payload?.shell_code || '';
+            const ttl = t.title || '';
+            return cat === 'words' || /WORDS/i.test(sc) || /word/i.test(ttl) || t.test_subtype === 'VOCAB_EXAM' || t.test_subtype === 'VOCAB_TEST';
+          });
+
+          if (wordsExam) {
+            const { data: wordsAttempts } = await supabase
+              .from('attempts')
+              .select('percentage, effective_score, status, is_remedial_unlocked, is_forgiven, is_remedial')
+              .eq('student_id', student_id)
+              .eq('test_id', wordsExam.id)
+              .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
+
+            const reqScore = wordsExam.minimum_required_score || test.prerequisite_min_score || 70;
+            const hasPassedWords = (wordsAttempts || []).some((att: any) => {
+              if (att.is_forgiven) return true;
+              const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+              if (att.is_remedial_unlocked || att.is_remedial) {
+                return pct >= 60;
+              }
+              return pct >= reqScore;
             });
 
-            if (wordsExam) {
-              const { data: wordsAttempts } = await supabase
-                .from('attempts')
-                .select('percentage, effective_score, status')
-                .eq('student_id', student_id)
-                .eq('test_id', wordsExam.id)
-                .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
-
-              const reqScore = test.prerequisite_min_score || 60;
-              const hasPassedWords = (wordsAttempts || []).some((att: any) => {
-                const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-                return pct >= reqScore;
+            if (!hasPassedWords) {
+              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must pass the Words Exam (${wordsExam.title}) with at least ${reqScore}% before taking the Phrases Exam.` }), {
+                status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
               });
-
-              if (!hasPassedWords) {
-                return new Response(JSON.stringify({ error: `Prerequisite not completed. You must pass the Words Exam (${wordsExam.title}) with at least ${reqScore}% before taking the Phrases Exam.` }), {
-                  status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
-                });
-              }
             }
           }
+        }
 
-          // 4. Strict Cross-Theme Exam Prerequisite: Taking Theme B, C, or D requires passing prior theme's exams (>= 60%)
-          const themeSeq = ['A', 'B', 'C', 'D'];
-          const curThemeIdx = themeSeq.indexOf(String(themeCode || '').toUpperCase());
-          if (curThemeIdx > 0 && !isStandaloneTryout && test.test_type === 'exam') {
-            const priorTheme = themeSeq[curThemeIdx - 1];
-            const { data: priorExams } = await supabase
-              .from('tests')
-              .select('id, title, payload, shell_code, test_type')
-              .eq('class_id', test.class_id)
-              .eq('level_id', test.level_id)
-              .eq('test_type', 'exam')
-              .neq('id', test.id);
+        // 4. Strict Cross-Theme Exam Prerequisite: Taking Theme B, C, or D requires passing prior theme's exams (>= 70%)
+        const themeSeq = ['A', 'B', 'C', 'D'];
+        const curThemeIdx = themeSeq.indexOf(String(themeCode || '').toUpperCase());
+        if (curThemeIdx > 0 && !isStandaloneTryout && test.test_type === 'exam') {
+          const priorTheme = themeSeq[curThemeIdx - 1];
+          const { data: priorExams } = await supabase
+            .from('tests')
+            .select('id, title, payload, shell_code, test_type, minimum_required_score')
+            .eq('class_id', test.class_id)
+            .eq('level_id', test.level_id)
+            .eq('test_type', 'exam')
+            .neq('id', test.id);
 
-            const matchingPriorExams = (priorExams || []).filter((t: any) => {
-              const tc = t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '');
-              return String(tc).toUpperCase() === priorTheme;
+          const matchingPriorExams = (priorExams || []).filter((t: any) => {
+            const tc = t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '');
+            return String(tc).toUpperCase() === priorTheme;
+          });
+
+          if (matchingPriorExams.length > 0) {
+            const priorExamIds = matchingPriorExams.map((t: any) => t.id);
+            const { data: priorAttempts } = await supabase
+              .from('attempts')
+              .select('test_id, percentage, effective_score, status, is_remedial_unlocked, is_forgiven, is_remedial')
+              .eq('student_id', student_id)
+              .in('test_id', priorExamIds)
+              .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
+
+            const passedPriorIds = new Set();
+            (priorAttempts || []).forEach((att: any) => {
+              if (att.is_forgiven) {
+                passedPriorIds.add(att.test_id);
+                return;
+              }
+              const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+              if ((att.is_remedial_unlocked || att.is_remedial) && pct >= 60) {
+                passedPriorIds.add(att.test_id);
+              } else if (pct >= 70) {
+                passedPriorIds.add(att.test_id);
+              }
             });
 
-            if (matchingPriorExams.length > 0) {
-              const priorExamIds = matchingPriorExams.map((t: any) => t.id);
-              const { data: priorAttempts } = await supabase
-                .from('attempts')
-                .select('test_id, percentage, effective_score, status')
-                .eq('student_id', student_id)
-                .in('test_id', priorExamIds)
-                .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
-
-              const passedPriorIds = new Set();
-              (priorAttempts || []).forEach((att: any) => {
-                const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-                if (pct >= 60) {
-                  passedPriorIds.add(att.test_id);
-                }
+            const failedAny = priorExamIds.some((id: any) => !passedPriorIds.has(id));
+            if (failedAny) {
+              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least 70% before taking Theme ${themeCode} Exams.` }), {
+                status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
               });
-
-              const failedAny = priorExamIds.some((id: any) => !passedPriorIds.has(id));
-              if (failedAny) {
-                return new Response(JSON.stringify({ error: `Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least 60% before taking Theme ${themeCode} Exams.` }), {
-                  status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
-                });
-              }
             }
           }
         }

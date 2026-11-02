@@ -53,7 +53,7 @@ INSTITUTION
         │     └── STUDENTS (Grouped by Batch)
         │
         └── CLASSES (Formerly 'Subjects')
-              └── TESTS (Quizzes & Exams)
+              └── TESTS (Tasks & Exams)
                     └── MODULES (AI Evaluation Engines)
 
 STUDENT + TEST
@@ -75,7 +75,7 @@ Can manage:
 - Levels
 - Students
 - Student imports (into Batches)
-- Tests (Quizzes & Exams)
+- Tests (Tasks & Exams)
 - Test access assignments (to Batches or Students)
 - Questions
 - Question imports/exports
@@ -92,7 +92,7 @@ Can:
 - complete first-login photo setup when required
 - select assigned Classes
 - view unlocked Levels
-- start eligible published Tests (Quizzes & Exams)
+- start eligible published Tests (Tasks & Exams)
 - answer questions
 - resume an interrupted Attempt
 - submit an Attempt
@@ -164,7 +164,7 @@ A Student/Batch progresses through Levels.
 
 ## 2.5 Test Auto-Assignment (Level-Centric)
 
-Tests (Quizzes & Exams) are created within a **Class**.
+Tests (Tasks & Exams) are created within a **Class**.
 Because that Class belongs to a **Level**, the system automatically assigns the test to any Batch/Student that has unlocked that Level. 
 There is NO manual test-to-batch assignment required. Batches inherit tests automatically based on their current Level.
 
@@ -193,7 +193,7 @@ Rules:
 - `PROGRAM` is the approved display/name component described above.
 - `CLASS` comes from Class data.
 - `LEVEL` comes from Level data.
-- `TEST TYPE` is either Quiz (daily formative drill) or Exam (formal scheduled test).
+- `TEST TYPE` is either Task (daily formative practice/drill) or Exam (formal scheduled test).
 - `TEST TITLE` is determined by Admin.
 
 The application SHOULD store structured fields separately and generate/display the name from those components. Do not use one concatenated string as the sole source of truth.
@@ -1026,7 +1026,7 @@ At minimum:
 id
 class_id
 level_id
-test_type              -- 'quiz' or 'exam'
+test_type              -- 'task' or 'exam'
 title
 name
 status                 -- 'draft', 'published', 'archived'

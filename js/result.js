@@ -5,11 +5,11 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial } from './api.js?v=20261102_v103';
-import { isExam, getGradeColorByScore } from './grading.js?v=20261102_v103';
-import { getStudentSession, getAdminSession } from './session.js?v=20261102_v103';
-import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261102_v103';
-import { getSupabase } from './supabase.js?v=20261102_v103';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261102_v104';
+import { isExam, getGradeColorByScore } from './grading.js?v=20261102_v104';
+import { getStudentSession, getAdminSession } from './session.js?v=20261102_v104';
+import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261102_v104';
+import { getSupabase } from './supabase.js?v=20261102_v104';
 
 let session = getStudentSession();
 if (!session) {
@@ -289,48 +289,75 @@ if (!session) {
       const container = document.getElementById('smart-next-action-container');
       if (!container) return;
 
-      const isAdmin = Boolean(getAdminSession()) || session?.is_admin === true || urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true' || urlParams.get('from') === 'admin';
+      const isAdmin = Boolean(getAdminSession()) || session?.is_admin === true || urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true' || urlParams.get('from') === 'admin' || urlParams.get('mode') === 'tutor';
       const isRemedial = Boolean(attempt.is_remedial_unlocked || attempt.is_remedial);
 
-      // IF ADMIN / TUTOR: Render the 2-COLUMN SPLIT SEGMENTED CONTROL [ NORMAL ] | [ REMIDI ] directly in this slot
+      const isForgiven = Boolean(attempt.is_forgiven);
+      const isNormal = !isRemedial && !isForgiven;
+
+      // IF ADMIN / TUTOR: Render the 3-COLUMN SPLIT SEGMENTED CONTROL [ NORMAL ] | [ REMIDI ] | [ FORGIVE ] directly in this slot
       if (isAdmin) {
         container.innerHTML = `
-          <div class="tutor-remedial-segmented" role="group" aria-label="Exam Remedial Status">
-            <button type="button" class="remedial-segment-btn segment-normal ${!isRemedial ? 'active' : ''}" id="btn-segment-normal" title="Set Status: Normal Exam">
-              <span>${!isRemedial ? '●' : '○'}</span> NORMAL
+          <div class="tutor-remedial-segmented" role="group" aria-label="Exam Status Controls">
+            <button type="button" class="remedial-segment-btn segment-normal ${isNormal ? 'active' : ''}" id="btn-segment-normal" title="Set Status: Normal Exam">
+              <span>${isNormal ? '●' : '○'}</span> NORMAL
             </button>
-            <button type="button" class="remedial-segment-btn segment-remidi ${isRemedial ? 'active' : ''}" id="btn-segment-remidi" title="Set Status: Remedial Exam">
-              <span>${isRemedial ? '●' : '○'}</span> REMEDIAL
+            <button type="button" class="remedial-segment-btn segment-remidi ${isRemedial ? 'active' : ''}" id="btn-segment-remidi" title="Set Status: Remedial Exam (Max 60%)">
+              <span>${isRemedial ? '●' : '○'}</span> REMIDI
+            </button>
+            <button type="button" class="remedial-segment-btn segment-forgive ${isForgiven ? 'active' : ''}" id="btn-segment-forgive" title="Set Status: Forgiven Waiver (Skor F)">
+              <span>${isForgiven ? '●' : '○'}</span> FORGIVE
             </button>
           </div>
         `;
         const btnNormal = document.getElementById('btn-segment-normal');
         const btnRemidi = document.getElementById('btn-segment-remidi');
-        if (btnNormal && btnRemidi) {
+        const btnForgive = document.getElementById('btn-segment-forgive');
+
+        if (btnNormal && btnRemidi && btnForgive) {
           btnNormal.onclick = async () => {
-            if (!isRemedial) return;
+            if (isNormal) return;
+            if (!confirm('Kembalikan status ujian ini ke NORMAL (penilaian asli tanpa batasan remedial/dispensasi)?')) return;
             try {
               showLoading();
-              await labelAttemptRemedial(attempt.id, false, 60);
-              showToast('Status updated: NORMAL', 'success');
+              await labelAttemptNormal(attempt.id);
+              showToast('Status berhasil diubah: NORMAL', 'success');
               setTimeout(() => window.location.reload(), 300);
             } catch (err) {
               console.error(err);
-              showToast('Failed to update status', 'error');
+              showToast('Gagal mengubah status: ' + err.message, 'error');
             } finally {
               hideLoading();
             }
           };
+
           btnRemidi.onclick = async () => {
             if (isRemedial) return;
+            if (!confirm('Terapkan status REMEDIAL pada ujian ini (skor maksimal 60% / Grade C)?')) return;
             try {
               showLoading();
               await labelAttemptRemedial(attempt.id, true, 60);
-              showToast('Status updated: REMEDIAL', 'warning');
+              showToast('Status berhasil diubah: REMEDIAL (Max 60%)', 'warning');
               setTimeout(() => window.location.reload(), 300);
             } catch (err) {
               console.error(err);
-              showToast('Failed to update status', 'error');
+              showToast('Gagal mengubah status: ' + err.message, 'error');
+            } finally {
+              hideLoading();
+            }
+          };
+
+          btnForgive.onclick = async () => {
+            if (isForgiven) return;
+            if (!confirm('Berikan dispensasi SKOR F (FORGIVE) pada ujian ini agar siswa dapat memenuhi prasyarat materi berikutnya?')) return;
+            try {
+              showLoading();
+              await labelAttemptForgiven(attempt.id, 'Dispensasi Ujian oleh Tutor');
+              showToast('Status berhasil diubah: FORGIVEN (Skor F)', 'success');
+              setTimeout(() => window.location.reload(), 300);
+            } catch (err) {
+              console.error(err);
+              showToast('Gagal mengubah status: ' + err.message, 'error');
             } finally {
               hideLoading();
             }
@@ -428,7 +455,7 @@ if (!session) {
         if (!isTest) {
           container.innerHTML = `
             <button class="btn-next-milestone" id="btn-next-milestone" type="button">
-              <span class="next-btn-tag">GO TO NEXT TEST:</span>
+              <span class="next-btn-tag">GO TO NEXT ASSESMENT:</span>
               <span class="next-btn-title">${escapeHtml(cleanTitle(nextName))} &rarr;</span>
             </button>
           `;
@@ -440,14 +467,14 @@ if (!session) {
         } else {
           const activeSession = await fetchActiveTestSession(nextTest.id, batchId).catch(() => null);
           const isUnlocked = activeSession?.is_unlocked === true;
-          const isWhitelisted = !activeSession?.allowed_student_ids || 
-                                activeSession.allowed_student_ids.length === 0 || 
+          const isWhitelisted = !activeSession?.allowed_student_ids ||
+                                activeSession.allowed_student_ids.length === 0 ||
                                 activeSession.allowed_student_ids.includes(targetStudentId);
 
           if (isUnlocked && isWhitelisted) {
             container.innerHTML = `
               <button class="btn-next-milestone btn-next-test" id="btn-next-milestone" type="button">
-                <span class="next-btn-tag">GO TO NEXT TEST:</span>
+                <span class="next-btn-tag">GO TO NEXT ASSESMENT:</span>
                 <span class="next-btn-title">${escapeHtml(cleanTitle(nextName))} &rarr;</span>
               </button>
             `;
@@ -474,6 +501,62 @@ if (!session) {
       }
     }
 
+    
+    // Synchronized Tier Glow Trigger: Ignites ALL panels when evaluation description reveals
+    function activateTierGlow(gradeColor, rgbColor, currentTier, isGradeSOr100) {
+      document.body.classList.add('tier-glow-active');
+      document.body.style.setProperty('--tier-color', gradeColor);
+      document.body.style.setProperty('--tier-rgb', rgbColor);
+
+      const heroEl = document.getElementById('result-hero-section');
+      if (heroEl) {
+        heroEl.style.setProperty('--tier-color', gradeColor);
+        heroEl.style.setProperty('--tier-rgb', rgbColor);
+      }
+
+      const idCard = document.getElementById('result-identity-card');
+      if (idCard) {
+        idCard.dataset.tier = currentTier;
+        idCard.style.setProperty('--tier-color', gradeColor);
+        idCard.style.setProperty('--tier-rgb', rgbColor);
+      }
+
+      const avatarCont = document.getElementById('result-avatar-container');
+      if (avatarCont) {
+        avatarCont.style.setProperty('--tier-color', gradeColor);
+      }
+
+      const titleCard = document.getElementById('result-Test-name-container');
+      if (titleCard) {
+        titleCard.dataset.tier = currentTier;
+        titleCard.style.setProperty('--tier-color', gradeColor);
+        titleCard.style.setProperty('--tier-rgb', rgbColor);
+      }
+
+      const compositeCard = document.getElementById('result-metrics-composite-card');
+      if (compositeCard) {
+        compositeCard.dataset.tier = currentTier;
+        compositeCard.style.setProperty('--tier-color', gradeColor);
+        compositeCard.style.setProperty('--tier-rgb', rgbColor);
+      }
+
+      const motEl = document.getElementById('result-motivation-msg');
+      if (motEl) {
+        motEl.dataset.tier = currentTier;
+        motEl.style.setProperty('--tier-color', gradeColor);
+        motEl.style.setProperty('--tier-rgb', rgbColor);
+      }
+
+      const pctEl = document.getElementById('result-percentage');
+      if (pctEl) {
+        pctEl.style.color = gradeColor;
+      }
+      const ptsEl = document.getElementById('res-points');
+      if (ptsEl) {
+        ptsEl.style.color = gradeColor;
+      }
+    }
+
     async function loadResult() {
       try {
         let [attempt, answers] = await Promise.all([
@@ -487,7 +570,7 @@ if (!session) {
         // using the safety buffer preserved in sessionStorage or localStorage.
         const fallbackRaw = sessionStorage.getItem('topscore_fallback_payload_' + attemptId);
         const localAnswersRaw = localStorage.getItem('topscore_local_answers_' + attemptId);
-        
+
         let pendingPayload = null;
         if (fallbackRaw) {
           try {
@@ -513,7 +596,7 @@ if (!session) {
             await submitTest(attemptId, pendingPayload, { status: 'submitted' });
             sessionStorage.removeItem('topscore_fallback_payload_' + attemptId);
             localStorage.removeItem('topscore_local_answers_' + attemptId);
-            
+
             // Re-fetch authoritative attempt and evaluated answers
             const [refreshedAttempt, refreshedAnswers] = await Promise.all([
               fetchAttemptResult(attemptId),
@@ -550,7 +633,7 @@ if (!session) {
         }
 
         // Wire up Top Header matching Student Dashboard / Lobby
-        const isAdminSession = Boolean(getAdminSession()) || session?.is_admin === true || urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true' || urlParams.get('from') === 'admin';
+        const isAdminSession = Boolean(getAdminSession()) || session?.is_admin === true || urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true' || urlParams.get('from') === 'admin' || urlParams.get('mode') === 'tutor';
         const headerBrand = document.getElementById('result-header-brand');
         if (headerBrand) headerBrand.textContent = 'RESULT PAGE';
         const profileBtn = document.getElementById('view-profile-btn');
@@ -709,24 +792,26 @@ if (!session) {
             </svg>
           ` : `${grade}`;
 
-        // 1. Ambient Hero Banner Aura & Modular CSS Variables (1:1 with Dashboard)
+        // 1. Initial State: Setup data attributes without premature glow
         const identityCard = document.getElementById('result-identity-card');
         if (identityCard) {
           identityCard.dataset.tier = currentTier;
-          identityCard.style.setProperty('--tier-color', gradeColor);
-          identityCard.style.setProperty('--tier-rgb', rgbColor);
-          if (isGradeSOr100) {
-            identityCard.style.borderColor = `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.55)`;
-            identityCard.style.boxShadow = `0 0 35px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5)`;
-            identityCard.style.background = `radial-gradient(ellipse 90% 70% at 50% 0%, rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.22), transparent 75%), #0f172a`;
-          } else {
-            identityCard.style.borderColor = `rgba(${rgbColor}, 0.55)`;
-            identityCard.style.boxShadow = `0 0 20px rgba(${rgbColor}, 0.25), 0 10px 25px -5px rgba(0, 0, 0, 0.35)`;
-            identityCard.style.background = `radial-gradient(ellipse 90% 70% at 50% 0%, rgba(${rgbColor}, 0.14), transparent 75%), #0f172a`;
-          }
         }
 
         // Propagate tier color & border aura to all cards (Wireframe Rule)
+        const compositeCardEl = document.getElementById('result-metrics-composite-card');
+        if (compositeCardEl) {
+          compositeCardEl.dataset.tier = currentTier;
+          compositeCardEl.style.setProperty('--tier-color', gradeColor);
+          compositeCardEl.style.setProperty('--tier-rgb', rgbColor);
+        }
+        document.body.style.setProperty('--tier-color', gradeColor);
+        document.body.style.setProperty('--tier-rgb', rgbColor);
+        const resultHeroEl = document.getElementById('result-hero-section');
+        if (resultHeroEl) {
+          resultHeroEl.style.setProperty('--tier-color', gradeColor);
+          resultHeroEl.style.setProperty('--tier-rgb', rgbColor);
+        }
         const asmTitleWrap = document.getElementById('result-Test-name-container');
         if (asmTitleWrap) {
           asmTitleWrap.dataset.tier = currentTier;
@@ -857,7 +942,7 @@ if (!session) {
           titleTopic = parts.slice(1).join(' - ').trim();
         } else {
           titleType = cleanTitle(asmRawTitle).trim();
-          titleTopic = asmData?.topic || asmData?.theme || asmData?.test_type || '';
+          titleTopic = asmData?.topic || asmData?.theme || asmData?.payload?.theme_name || asmData?.category || asmData?.test_type || 'TOPIC ASSESSMENT';
         }
 
         const typeEl = document.getElementById('result-test-type-row') || document.getElementById('result-asm-type-row');
@@ -885,13 +970,13 @@ if (!session) {
         const correct = answers.filter(a => getEvalCategory(a) === 'correct').length;
         const partial = answers.filter(a => getEvalCategory(a) === 'minor_spelling_error').length;
         const wrong   = answers.filter(a => getEvalCategory(a) === 'incorrect').length;
-        
+
         const rawTotalPoints = answers.reduce((sum, a) => sum + Number(a.score ?? 0), 0);
         const attemptTotalQ = Number(attempt.total_questions || answers.length || 50);
         const maxRemedialPts = attemptTotalQ * 0.6;
         const totalPoints = isRemedial ? Math.min(rawTotalPoints, maxRemedialPts) : rawTotalPoints;
         const formattedPoints = (totalPoints % 1 !== 0) ? totalPoints.toFixed(1) : totalPoints;
-        
+
         const resPointsEl = document.getElementById('res-points');
         if (resPointsEl) {
           resPointsEl.textContent = '0';
@@ -1252,8 +1337,8 @@ if (!session) {
       await sleep(180);
 
       // Step 3: Metrics Table container cascades in
-      const metricsBar = document.getElementById('result-metrics-bar');
-      if (metricsBar) metricsBar.classList.add('cascade-revealed');
+      const compositeCard = document.getElementById('result-metrics-composite-card') || document.getElementById('result-metrics-bar');
+      if (compositeCard) compositeCard.classList.add('cascade-revealed');
       await sleep(100);
 
       // Metric Row 1: CORRECT
@@ -1322,12 +1407,15 @@ if (!session) {
         launchConfetti();
       }
 
-      // Step 6: 280ms after Grade Stamp -> Evaluation Word Card reveals
+      // Step 6: 280ms after Grade Stamp -> Evaluation Word Card reveals AND Synchronized Tier Glow ignites across ALL panels!
       await sleep(280);
       const evalCard = document.getElementById('result-motivation-msg');
       if (evalCard) {
         evalCard.classList.add('cascade-revealed');
       }
+
+      // ACTIVATE SYNCHRONIZED TIER GLOW SIMULTANEOUSLY ACROSS ALL PANELS
+      activateTierGlow(gradeColor, rgbColor, currentTier, isGradeSOr100);
 
       // Step 7: 220ms after Evaluation Word Card -> Action Buttons reveal in sequence
       await sleep(220);
@@ -1338,13 +1426,14 @@ if (!session) {
       if (smartNext) smartNext.classList.add('cascade-revealed');
       await sleep(120);
 
-      const backBtn = document.getElementById('back-dashboard-btn');
-      if (backBtn) backBtn.classList.add('cascade-revealed');
-      await sleep(120);
-
       const breakdownBtn = document.getElementById('toggle-answers-btn');
       if (breakdownBtn) breakdownBtn.classList.add('cascade-revealed');
+      await sleep(120);
 
+      const backBtn = document.getElementById('back-dashboard-btn');
+      if (backBtn) backBtn.classList.add('cascade-revealed');
+
+      activateTierGlow(gradeColor, rgbColor, currentTier, isGradeSOr100);
       clearTimeout(safetyTimeout);
     }
 
@@ -1571,7 +1660,7 @@ if (!session) {
 
         const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
         if (currentPage > totalPages) currentPage = totalPages;
-        
+
         const startIdx = (currentPage - 1) * itemsPerPage;
         const pageItems = filtered.slice(startIdx, startIdx + itemsPerPage);
 
@@ -1589,7 +1678,7 @@ if (!session) {
             const snap = typeof a.question_snapshot === 'string'
             ? (() => { try { return JSON.parse(a.question_snapshot); } catch { return {}; } })()
             : (a.question_snapshot || {});
-            
+
             const cat = getEvalCategory(a);
             const isCorrect = cat === 'correct';
             const isPartial = cat === 'minor_spelling_error';
@@ -1597,7 +1686,7 @@ if (!session) {
             const resultText  = isCorrect ? 'Correct' : isPartial ? 'Partial' : 'Incorrect';
             const typeStr = isCorrect ? 'correct' : isPartial ? 'partial' : 'incorrect';
             const colorHex = getEvaluationColor(cat);
-            
+
             const qNum = a.question_index !== undefined ? a.question_index + 1 : answers.indexOf(a) + 1;
 
             const isPhrase = phraseItems.includes(a);

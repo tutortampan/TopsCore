@@ -176,11 +176,11 @@ export async function openAutoGenerateModal(options = {}) {
             </div>
           </div>
 
-          <!-- Section 2: Quiz Configuration -->
+          <!-- Section 2: Task Configuration -->
           <div style="background:#1e293b; border:1px solid rgba(255,255,0,0.25); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="font-size:0.82rem; font-weight:800; color:#ffff00; display:inline-flex; align-items:center; gap:4px;">
-                ⚡ 1. PENGATURAN QUIZ (QUIZZES)
+                ⚡ 1. PENGATURAN TASK (TASKS)
               </span>
               <span class="badge" style="background:rgba(255,255,0,0.15); color:#ffff00; font-size:0.68rem; font-weight:700;">Mandiri</span>
             </div>
@@ -188,8 +188,8 @@ export async function openAutoGenerateModal(options = {}) {
             <!-- Row 1: Durasi Pengerjaan Terpisah (Words vs Phrases) & Nilai Minimal -->
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
               <div>
-                <label for="wizard-quiz-words-dur" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">⏱️ Words Quiz (Mnt)</label>
-                <input type="number" id="wizard-quiz-words-dur" min="1" max="180" value="${escapeHtml(String(prefillWordsTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan Words Quiz (40 Soal, default 15 menit)" />
+                <label for="wizard-quiz-words-dur" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">⏱️ Words Task (Mnt)</label>
+                <input type="number" id="wizard-quiz-words-dur" min="1" max="180" value="${escapeHtml(String(prefillWordsTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan Words Task (40 Soal, default 15 menit)" />
                 <div style="display:flex; gap:3px; margin-top:4px;">
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-words-dur" data-val="10" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">10m</button>
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-words-dur" data-val="15" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">15m</button>
@@ -198,8 +198,8 @@ export async function openAutoGenerateModal(options = {}) {
               </div>
 
               <div>
-                <label for="wizard-quiz-phrases-dur" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">⏱️ Phrases Quiz (Mnt)</label>
-                <input type="number" id="wizard-quiz-phrases-dur" min="1" max="180" value="${escapeHtml(String(prefillPhrasesTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan Phrases Quiz (10 Soal, default 10 menit)" />
+                <label for="wizard-quiz-phrases-dur" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">⏱️ Phrases Task (Mnt)</label>
+                <input type="number" id="wizard-quiz-phrases-dur" min="1" max="180" value="${escapeHtml(String(prefillPhrasesTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan Phrases Task (10 Soal, default 10 menit)" />
                 <div style="display:flex; gap:3px; margin-top:4px;">
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-phrases-dur" data-val="5" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">5m</button>
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-phrases-dur" data-val="10" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">10m</button>
@@ -209,7 +209,7 @@ export async function openAutoGenerateModal(options = {}) {
 
               <div>
                 <label for="wizard-quiz-min" class="form-label" style="font-size:0.7rem; color:#94a3b8; margin-bottom:2px; display:block;">🎯 Min. Skor (%)</label>
-                <input type="number" id="wizard-quiz-min" min="1" max="100" value="${escapeHtml(String(prefillTaskMin))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Batas tuntas kelulusan quiz" />
+                <input type="number" id="wizard-quiz-min" min="1" max="100" value="${escapeHtml(String(prefillTaskMin))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Batas tuntas kelulusan task" />
                 <div style="display:flex; gap:3px; margin-top:4px;">
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-min" data-val="60" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">60%</button>
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-min" data-val="70" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">70%</button>
@@ -217,10 +217,10 @@ export async function openAutoGenerateModal(options = {}) {
               </div>
             </div>
 
-            <!-- Row 2: Cara Jawab Terpisah (Words Quiz vs Phrases Quiz) -->
+            <!-- Row 2: Cara Jawab Terpisah (Words Task vs Phrases Task) -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:rgba(0,0,0,0.22); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,0,0.2);">
               <div>
-                <label for="wizard-quiz-ans-words" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">🗣️ Words Quiz</label>
+                <label for="wizard-quiz-ans-words" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">🗣️ Words Task</label>
                 <select id="wizard-quiz-ans-words" class="form-control" style="background:#090d16; color:#f8fafc; font-size:0.78rem; height:32px;">
                   <option value="spoken" ${prefillWordsTaskAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / AI)</option>
                   <option value="written" ${prefillWordsTaskAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik)</option>
@@ -230,7 +230,7 @@ export async function openAutoGenerateModal(options = {}) {
               </div>
 
               <div>
-                <label for="wizard-quiz-ans-phrases" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">🗣️ Phrases Quiz</label>
+                <label for="wizard-quiz-ans-phrases" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">🗣️ Phrases Task</label>
                 <select id="wizard-quiz-ans-phrases" class="form-control" style="background:#090d16; color:#f8fafc; font-size:0.78rem; height:32px;">
                   <option value="spoken" ${prefillPhrasesTaskAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / AI)</option>
                   <option value="written" ${prefillPhrasesTaskAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik)</option>
@@ -396,7 +396,7 @@ export async function openAutoGenerateModal(options = {}) {
         });
 
         overlay.remove();
-        const msg = `Pengaturan berhasil diterapkan: ${res.updatedTasks} Quiz (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m), ${res.updatedTests} Exam diperbarui!`;
+        const msg = `Pengaturan berhasil diterapkan: ${res.updatedTasks} Task (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m), ${res.updatedTests} Exam diperbarui!`;
         if (window.showToast) window.showToast(msg, 'success');
         else alert(msg);
 
@@ -424,7 +424,7 @@ export async function openAutoGenerateModal(options = {}) {
           <div class="spinner" style="margin:0 auto 1.25rem; width:36px; height:36px; border:3px solid rgba(255,255,255,0.2); border-radius:50%; border-top-color:#38bdf8; animation:spin 1s ease-in-out infinite;"></div>
           <h3 style="margin:0 0 6px 0; font-size:1.1rem; font-weight:700;">Men-generate Test Kurikulum</h3>
           <p style="color:#94a3b8; font-size:0.8rem; margin:0; line-height:1.4;">
-            Sedang membangun hierarki Quiz (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m) &amp; Exam untuk Level ${cfg.selectedLevels.join(', ')} pada kelas ${escapeHtml(className)}...
+            Sedang membangun hierarki Task (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m) &amp; Exam untuk Level ${cfg.selectedLevels.join(', ')} pada kelas ${escapeHtml(className)}...
           </p>
         </div>
       `;
@@ -446,7 +446,7 @@ export async function openAutoGenerateModal(options = {}) {
         });
 
         overlay.remove();
-        const msg = `Auto-Gen Sukses: ${res.quizzes ?? res.tasks ?? 0} Quiz, ${res.exams ?? res.tests ?? 0} Exam dibuat (${res.updated ?? 0} disinkronkan)!`;
+        const msg = `Auto-Gen Sukses: ${res.tasks ?? res.quizzes ?? 0} Task, ${res.tests ?? res.exams ?? 0} Exam dibuat (${res.updated ?? 0} disinkronkan)!`;
         if (window.showToast) window.showToast(msg, 'success');
         else alert(msg);
 

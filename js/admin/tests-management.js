@@ -2057,15 +2057,17 @@ async function openSessionModal() {
 
 window.openTestGatewayModal = async () => {
   showLoading('Loading Context...');
-  let allClasses, allLevels;
+  let allInstitutions, allPrograms, allClasses, allLevels;
   try {
-    [allClasses, allLevels] = await Promise.all([
-      adminFetchAll('classes', 'id, name, level_id'),
-      adminFetchAll('levels', 'id, name')
+    [allInstitutions, allPrograms, allClasses, allLevels] = await Promise.all([
+      adminFetchAll('institutions', 'id, name').catch(() => []),
+      adminFetchAll('programs', 'id, name, institution_id').catch(() => []),
+      adminFetchAll('classes', 'id, name, level_id, program_id').catch(() => []),
+      adminFetchAll('levels', 'id, name, level_number').catch(() => [])
     ]);
   } catch (e) {
     hideLoading();
-    showToast('Failed to load class context', 'error');
+    showToast('Failed to load context for test creation', 'error');
     return;
   }
   hideLoading();
@@ -2073,28 +2075,43 @@ window.openTestGatewayModal = async () => {
   const levelMap = {};
   (allLevels || []).forEach(l => { levelMap[l.id] = l.name; });
 
-  const classOptions = (allClasses || []).map(c => {
-    const lvlName = levelMap[c.level_id] || 'Unknown Level';
-    return `<option value="${c.id}" data-name="${escapeHtml(c.name || '')}">${escapeHtml(c.name || '')} (Level: ${escapeHtml(lvlName || '')})</option>`;
-  }).join('');
-
   const modal = document.createElement('div');
   modal.className = 'modal-backdrop';
   modal.innerHTML = `
-    <div class="modal-content" style="max-width:500px;">
+    <div class="modal-content" style="max-width:540px;">
       <div class="modal-header d-flex justify-between align-center p-3">
         <h3 class="fw-700 m-0 text-gradient" style="font-size:1.25rem;">Create New Test</h3>
         <button class="btn btn-ghost btn-sm" id="close-gateway-modal">&#10005;</button>
       </div>
       <div class="modal-body p-4">
-        <p class="text-muted text-sm mb-4">Please select the Class for this test. The system will automatically launch the correct test module based on the class type.</p>
-        <div class="form-group mb-4">
-          <label class="form-label">Target Class</label>
-          <select id="gateway-class-select" class="form-control" style="width:100%;font-size:1.05rem;padding:0.75rem;">
-            <option value="">-- Select Class --</option>
-            ${classOptions}
+        <p class="text-muted text-sm mb-4">Select the syllabus hierarchy for this test: <strong>Institution &rarr; Program &rarr; Class &rarr; Level</strong>. The system will launch the corresponding module builder.</p>
+        
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:700;font-size:0.85rem;">1. Target Institution</label>
+          <select id="gateway-inst-select" class="form-control" style="width:100%;">
+            ${(allInstitutions || []).map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('')}
           </select>
         </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:700;font-size:0.85rem;">2. Target Program</label>
+          <select id="gateway-prog-select" class="form-control" style="width:100%;">
+          </select>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:700;font-size:0.85rem;">3. Target Class</label>
+          <select id="gateway-class-select" class="form-control" style="width:100%;">
+          </select>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label" style="font-weight:700;font-size:0.85rem;">4. Academic Level</label>
+          <div id="gateway-level-badge" class="p-2 rounded fw-700 text-sm" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#38bdf8;">
+            —
+          </div>
+        </div>
+
         <div class="d-flex justify-end gap-2 mt-4">
           <button class="btn btn-secondary" id="cancel-gateway-modal">Cancel</button>
           <button class="btn btn-primary" id="btn-gateway-next">Next &rarr;</button>
@@ -2104,19 +2121,62 @@ window.openTestGatewayModal = async () => {
   `;
   document.body.appendChild(modal);
 
+  const instSel = modal.querySelector('#gateway-inst-select');
+  const progSel = modal.querySelector('#gateway-prog-select');
+  const classSel = modal.querySelector('#gateway-class-select');
+  const levelBadge = modal.querySelector('#gateway-level-badge');
+
+  function updatePrograms() {
+    const instId = instSel.value;
+    const progs = (allPrograms || []).filter(p => !instId || p.institution_id === instId);
+    progSel.innerHTML = progs.length > 0 
+      ? progs.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')
+      : '<option value="">-- No Programs in this Institution --</option>';
+    updateClasses();
+  }
+
+  function updateClasses() {
+    const progId = progSel.value;
+    const classes = (allClasses || []).filter(c => !progId || c.program_id === progId);
+    classSel.innerHTML = classes.length > 0
+      ? classes.map(c => {
+          const lvlName = levelMap[c.level_id] || 'Unknown Level';
+          return `<option value="${c.id}" data-name="${escapeHtml(c.name || '')}" data-level-id="${c.level_id || ''}" data-level-name="${escapeHtml(lvlName)}">${escapeHtml(c.name || '')} (${escapeHtml(lvlName)})</option>`;
+        }).join('')
+      : '<option value="">-- No Classes in this Program --</option>';
+    updateLevel();
+  }
+
+  function updateLevel() {
+    const opt = classSel.options[classSel.selectedIndex];
+    if (opt && opt.value) {
+      const lvlName = opt.getAttribute('data-level-name') || 'Unknown Level';
+      levelBadge.textContent = `🎯 ${lvlName}`;
+    } else {
+      levelBadge.textContent = '—';
+    }
+  }
+
+  instSel.addEventListener('change', updatePrograms);
+  progSel.addEventListener('change', updateClasses);
+  classSel.addEventListener('change', updateLevel);
+
+  // Initialize cascade
+  updatePrograms();
+
   const close = () => modal.remove();
   document.getElementById('close-gateway-modal')?.addEventListener('click', close);
   document.getElementById('cancel-gateway-modal')?.addEventListener('click', close);
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
 
   document.getElementById('btn-gateway-next')?.addEventListener('click', () => {
-    const sel = document.getElementById('gateway-class-select');
-    const classId = sel.value;
+    const classId = classSel.value;
     if (!classId) {
-      showToast('Please select a class first.', 'warning');
+      showToast('Please select a valid class first.', 'warning');
       return;
     }
-    const className = sel.options[sel.selectedIndex].getAttribute('data-name');
+    const opt = classSel.options[classSel.selectedIndex];
+    const className = opt.getAttribute('data-name');
     close();
 
     // Context-Aware Routing

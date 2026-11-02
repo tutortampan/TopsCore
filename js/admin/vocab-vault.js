@@ -559,15 +559,32 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
   modal.setAttribute('role', 'dialog');
   modal.setAttribute('aria-modal', 'true');
   modal.innerHTML = `
-    <div class="modal-box" style="max-width:680px;">
+    <div class="modal-box" style="max-width:700px;">
       <div class="d-flex justify-between align-center mb-4">
-        <h3 class="fw-700" style="margin:0;">&#128229; Import Vocabulary &amp; Phrases from Excel (Auto-Split)</h3>
+        <h3 class="fw-700" style="margin:0;">&#128229; Import Vocabulary &amp; Phrases from Excel (11-Column Standard)</h3>
         <button class="btn btn-ghost btn-sm" id="close-import-modal">&#10005;</button>
       </div>
-      <p class="text-muted text-sm mb-4">
-        Upload an <strong>.xlsx</strong> file with columns: <code>Category</code>, <code>Level</code>, <code>Theme Code</code>, <code>Theme</code>, <code>Topic Code</code>, <code>Topic</code>, <code>Type</code>, <code>Indonesian</code>, <code>English</code><br>
-        <span class="text-xs" style="color: #6366f1;">All word types accepted: ${allowedTypesStr}. Rows are auto-classified — phrases (Expression/Idiom/Proverb) and single words are split automatically, or forced by the <strong>Category</strong> column.</span>
+      <p class="text-muted text-sm mb-3">
+        Upload an <strong>.xlsx</strong> file conforming to the official 11-column standard:<br>
+        <code>1. Institution</code> &bull; <code>2. Program</code> &bull; <code>3. Level</code> &bull; <code>4. Category</code> &bull; <code>5. Theme Code</code> &bull; <code>6. Theme</code> &bull; <code>7. Topic Code</code> &bull; <code>8. Topic</code> &bull; <code>9. Type</code> &bull; <code>10. Indonesian</code> &bull; <code>11. English</code><br>
+        <span class="text-xs" style="color: #6366f1;">All word types accepted: ${allowedTypesStr}. Rows are auto-classified &mdash; phrases (Expression/Idiom/Proverb) and words are split automatically, or forced by the <strong>Category</strong> column.</span>
       </p>
+
+      <div class="d-flex gap-3 mb-3">
+        <div style="flex:1;">
+          <label class="form-label text-xs fw-700">Fallback Institution (if blank in Excel)</label>
+          <select id="vault-import-inst" class="form-control" style="width:100%;font-size:0.85rem;">
+            <option value="f51d4c2c-7c24-42ef-8d8f-b0f3e524a447" selected>CEC (Central English Course)</option>
+          </select>
+        </div>
+        <div style="flex:1;">
+          <label class="form-label text-xs fw-700">Fallback Program (if blank in Excel)</label>
+          <select id="vault-import-prog" class="form-control" style="width:100%;font-size:0.85rem;">
+            <option value="11deb53c-434a-44b0-83ca-1cc9b239cab3" selected>Camp</option>
+          </select>
+        </div>
+      </div>
+
       <div class="form-group mb-4">
         <input type="file" id="vault-excel-input" accept=".xlsx,.xls" class="form-control" />
       </div>
@@ -598,19 +615,24 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       const wb = XLSX.read(buffer, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
-      // Normalize column names (supports both old and new Excel formats)
+      const fallbackInstId = document.getElementById('vault-import-inst')?.value || 'f51d4c2c-7c24-42ef-8d8f-b0f3e524a447';
+      const fallbackProgId = document.getElementById('vault-import-prog')?.value || '11deb53c-434a-44b0-83ca-1cc9b239cab3';
+
+      // Normalize column names (supports 11-column standard with smart fallback)
       _parsedRows = raw.map(row => {
         const normalized = {};
         for (const [k, v] of Object.entries(row)) {
           normalized[k.trim().toUpperCase().replace(/\s+/g, ' ')] = String(v).trim();
         }
         return {
+          institution_id: fallbackInstId,
+          program_id: fallbackProgId,
           level: normalized.LEVEL || normalized.TARGET_LEVEL || '1',
+          category: normalized.CATEGORY || '',
           theme_code: (normalized['THEME CODE'] || normalized.THEME_CODE || '').toUpperCase(),
           theme: normalized['THEME NAME'] || normalized.THEME || '',
           topic_code: (normalized['TOPIC CODE'] || normalized.TOPIC_CODE || '').toUpperCase(),
           topic: normalized['TOPIC NAME'] || normalized.TOPIC || '',
-          category: normalized.CATEGORY || '',
           word_type: normalized.TYPE || normalized['WORD TYPE'] || normalized.WORD_TYPE || 'Vocab',
           indonesian: normalized.INDONESIAN || '',
           english: normalized.ENGLISH || ''
@@ -836,7 +858,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
     classId: editAsm?.class_id || overrides.classId || '', className: overrides.className || '',
     levelId: editAsm?.level_id || overrides.levelId || '', levelName: overrides.levelName || '',
     testType: editAsm?.test_type || overrides.testType || 'VOCAB_MASTERY',
-    tier: editAsm ? (editAsm.test_type?.includes('EXAM') ? 'EXAM' : 'QUIZ') : (overrides.tier || 'QUIZ'),
+    tier: editAsm ? (editAsm.test_type?.includes('EXAM') ? 'EXAM' : 'TASK') : (overrides.tier || 'TASK'),
     title: editAsm?.title || '',
     sourceTopic: null,
     sourceTaskIds: [],
@@ -866,7 +888,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 
   function updateAutoTitle() {
     const parts = [state.institutionName, state.programName, state.levelName, state.className].filter(Boolean);
-    let suffix = state.tier === 'EXAM' ? 'Exam' : 'Quiz';
+    let suffix = state.tier === 'EXAM' ? 'Exam' : 'Task';
     if ((state.tier === 'QUIZ' || state.tier === 'TASK') && state.sourceTopic) suffix += ` - ${state.sourceTopic}`;
     if (parts.length > 0) {
       state.title = `${parts.join(' - ')} - ${suffix}`;
@@ -915,11 +937,11 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             <label class="form-label">Test Tier</label>
             <div class="d-flex flex-column gap-3 mb-3">
               ${[
-          { val: 'QUIZ', icon: '&#128221;', label: 'Quiz', desc: 'Single topic drill' },
+          { val: 'TASK', icon: '&#9889;', label: 'Task', desc: 'Single topic drill' },
           { val: 'EXAM', icon: '&#127942;', label: 'Exam', desc: 'Milestone aggregated exam' }
         ].map(t => `
-                <label class="d-flex align-center gap-3 p-2 rounded" style="cursor:pointer;border:2px solid ${(state.tier === t.val || (state.tier === 'TASK' && t.val === 'QUIZ')) ? 'var(--clr-primary)' : 'var(--clr-border)'};background:${(state.tier === t.val || (state.tier === 'TASK' && t.val === 'QUIZ')) ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)'};">
-                  <input type="radio" name="vocab-tier" value="${t.val}" ${(state.tier === t.val || (state.tier === 'TASK' && t.val === 'QUIZ')) ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
+                <label class="d-flex align-center gap-3 p-2 rounded" style="cursor:pointer;border:2px solid ${(state.tier === t.val || (state.tier === 'QUIZ' && t.val === 'TASK')) ? 'var(--clr-primary)' : 'var(--clr-border)'};background:${(state.tier === t.val || (state.tier === 'QUIZ' && t.val === 'TASK')) ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)'};">
+                  <input type="radio" name="vocab-tier" value="${t.val}" ${(state.tier === t.val || (state.tier === 'QUIZ' && t.val === 'TASK')) ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
                   <div>
                     <div class="fw-700">${t.icon} ${t.label}</div>
                     <div class="text-muted text-xs mt-1">${t.desc}</div>
@@ -1079,7 +1101,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 
       if (state.tier === 'QUIZ' || state.tier === 'TASK') {
         sourceArea.innerHTML = `
-          <p class="text-muted text-sm mb-3">Select the Vault topic for this Quiz:</p>
+          <p class="text-muted text-sm mb-3">Select the Vault topic for this Task:</p>
           <div class="d-flex flex-column gap-2" style="max-height:280px;overflow-y:auto;" id="topic-radio-list">
             ${vaultTopics.map(t => `
               <label class="d-flex align-center gap-2 p-2 rounded" style="cursor:pointer;border:1px solid ${state.sourceTopic === t ? 'var(--clr-primary)' : 'var(--clr-border)'};">
@@ -1092,12 +1114,12 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
         document.querySelectorAll('input[name="vault-topic"]').forEach(r => {
           r.addEventListener('change', () => { state.sourceTopic = r.value; updateAutoTitle(); });
         });
-      } else if (state.tier === 'QUIZ') {
-        // Load existing TASK tests in selected class
+      } else if (state.tier === 'EXAM') {
+        // Load existing TASK tests
         const sb = await getSupabase();
         const { data: tasks } = await sb.from('tests')
           .select('id,title,description')
-          .eq('test_subtype', 'VOCAB_TASK')
+          .in('test_subtype', ['VOCAB_TASK', 'PHRASE_TASK', 'VOCAB_QUIZ', 'PHRASE_QUIZ'])
           .eq('class_id', state.classId)
           .eq('status', 'PUBLISHED')
           .is('deleted_at', null)
@@ -1106,13 +1128,13 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           sourceArea.innerHTML = `<p class="text-warning">No Task tests found in this class. Create Tasks first.</p>`;
         } else {
           sourceArea.innerHTML = `
-            <p class="text-muted text-sm mb-3">Select Tasks to aggregate for this Quiz:</p>
+            <p class="text-muted text-sm mb-3">Select Tasks to aggregate for this Exam:</p>
             <div class="d-flex flex-column gap-2" style="max-height:280px;overflow-y:auto;">
               ${tasks.map(t => {
-            const topicDesc = t.description?.split('Topics: ')?.[1] || '—';
+            const topicDesc = t.description?.split('Topics: ')?.[1] || t.description?.split('Topic: ')?.[1] || '—';
             return `
                 <label class="d-flex align-center gap-2 p-2 rounded" style="cursor:pointer;border:1px solid var(--clr-border);">
-                  <input type="checkbox" class="source-task-cb" value="${escapeHtml(t.id)}" ${state.sourceTaskIds.includes(t.id) ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
+                  <input type="checkbox" class="source-task-cb" value="${escapeHtml(t.id)}" ${(state.sourceTaskIds.includes(t.id) || state.sourceQuizIds.includes(t.id)) ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
                   <span class="fw-600 text-sm">${escapeHtml(t.title)}</span>
                   <span class="text-xs text-muted ml-2">Topic: ${escapeHtml(topicDesc)}</span>
                 </label>
@@ -1123,40 +1145,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           document.querySelectorAll('.source-task-cb').forEach(cb => {
             cb.addEventListener('change', () => {
               state.sourceTaskIds = [...document.querySelectorAll('.source-task-cb:checked')].map(c => c.value);
-            });
-          });
-        }
-      } else if (state.tier === 'EXAM') {
-        // Load existing QUIZ tests
-        const sb = await getSupabase();
-        const { data: quizzes } = await sb.from('tests')
-          .select('id,title,description')
-          .eq('test_subtype', 'VOCAB_QUIZ')
-          .eq('class_id', state.classId)
-          .eq('status', 'PUBLISHED')
-          .is('deleted_at', null)
-          .order('created_at');
-        if (!quizzes || !quizzes.length) {
-          sourceArea.innerHTML = `<p class="text-warning">No Quiz tests found in this class. Create Quizzes first.</p>`;
-        } else {
-          sourceArea.innerHTML = `
-            <p class="text-muted text-sm mb-3">Select Quizzes to aggregate for this Exam:</p>
-            <div class="d-flex flex-column gap-2" style="max-height:280px;overflow-y:auto;">
-              ${quizzes.map(q => {
-            const topicDesc = q.description?.split('Topics: ')?.[1] || '—';
-            return `
-                <label class="d-flex align-center gap-2 p-2 rounded" style="cursor:pointer;border:1px solid var(--clr-border);">
-                  <input type="checkbox" class="source-quiz-cb" value="${escapeHtml(q.id)}" ${state.sourceQuizIds.includes(q.id) ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
-                  <span class="fw-600 text-sm">${escapeHtml(q.title)}</span>
-                  <span class="text-xs text-muted ml-2">Topics: ${escapeHtml(topicDesc)}</span>
-                </label>
-                `;
-          }).join('')}
-            </div>
-          `;
-          document.querySelectorAll('.source-quiz-cb').forEach(cb => {
-            cb.addEventListener('change', () => {
-              state.sourceQuizIds = [...document.querySelectorAll('.source-quiz-cb:checked')].map(c => c.value);
+              state.sourceQuizIds = state.sourceTaskIds;
             });
           });
         }
@@ -1293,7 +1282,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
         showToast('Please select a Vault topic.', 'warning'); return;
       }
       if (state.tier === 'EXAM' && !state.sourceQuizIds.length && !state.sourceTaskIds.length) {
-        showToast('Please select at least one Quiz.', 'warning'); return;
+        showToast('Please select at least one Task.', 'warning'); return;
       }
     } else if (state.step === 4) {
       // Final submission
@@ -1479,7 +1468,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
       return codeA.localeCompare(codeB);
     });
 
-    totalTasks += th.topics.length * 2; // 2 quizzes per topic (Words + Phrases)
+    totalTasks += th.topics.length * 2; // 2 tasks per topic (Words + Phrases)
     runningWords += th.totalWords;
     runningPhrases += th.totalPhrases;
     th.cumulativeWords = runningWords;
@@ -1493,7 +1482,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
   if (window.setBottomInfobar) {
     const leftHtml = `
       <div class="bottom-info-chip"><span class="chip-label">Levels:</span><span class="chip-val">${levelsSet.size}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Quizzes:</span><span class="chip-val">${totalTasks}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Tasks:</span><span class="chip-val">${totalTasks}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Exams:</span><span class="chip-val">${totalTests}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Vault Items:</span><span class="chip-val">${words.length}</span></div>
     `;
@@ -1543,7 +1532,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
             <span style="background: ${vis.pillBg}; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.05em; flex-shrink: 0;">THEME ${escapeHtml(th.code)}</span>
             <span style="color: #ffffff; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(th.name)}">${escapeHtml(th.name)}</span>
           </div>
-          <span style="color: #94a3b8; font-size: 10.5px; font-weight: 600; flex-shrink: 0; margin-left: 4px;">${th.topics.length} Quizzes · ${th.totalCount} W</span>
+          <span style="color: #94a3b8; font-size: 10.5px; font-weight: 600; flex-shrink: 0; margin-left: 4px;">${th.topics.length} Tasks · ${th.totalCount} W</span>
         </div>
 
         <!-- Topics List Container -->
@@ -1575,7 +1564,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
               <span style="background: rgba(168,85,247,0.18); color: #c084fc; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.phrases} Phrases">${t.phrases}P</span>
             </div>
             <div style="display: flex; gap: 4px; align-items: center;">
-              <span style="background: rgba(255,255,255,0.06); color: #94a3b8; font-size: 9px; font-weight: 600; padding: 1px 4px; border-radius: 3px;" title="40 Words + 10 Phrases">Quiz: 40+10</span>
+              <span style="background: rgba(255,255,255,0.06); color: #94a3b8; font-size: 9px; font-weight: 600; padding: 1px 4px; border-radius: 3px;" title="40 Words + 10 Phrases">Task: 40+10</span>
               <span style="background: rgba(255,255,255,0.12); color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px;" title="Total Items">${t.totalCount}</span>
             </div>
           </div>

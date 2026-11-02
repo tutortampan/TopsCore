@@ -61,38 +61,54 @@ async function runTest() {
 
   console.log(`Matched Sibling Words Exam: "${siblingWordsExam.title}" (ID: ${siblingWordsExam.id})`);
 
-  // 3. Test gating logic with Attempt 12 (58.57% / 59% - Not Passed)
+  // 3. Test gating logic with 70% Passing Threshold (Phase 3)
   const nonPassedScore = 58.57;
-  const passedScore = 60.0;
-  const reqWordsScore = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 60;
+  const borderlineScore = 65.0;
+  const passedScore = 70.0;
+  const reqWordsScore = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 70;
 
-  console.log(`Evaluating threshold: Required score is ${reqWordsScore}%`);
+  console.log(`Evaluating threshold: Required score is ${reqWordsScore}% (Standard: 70%)`);
+  if (reqWordsScore !== 70) {
+    console.error(`Expected reqWordsScore to be 70%, but got ${reqWordsScore}%`);
+    process.exit(1);
+  }
   
-  // Test case A: Student with 58.57% (Gagan's highest non-remedial score)
+  // Test case A: Student with 58.57% (Below 70%)
   const isEligibleA = nonPassedScore >= reqWordsScore;
   console.log(`Test A (Score: 58.57%): ${isEligibleA ? 'Allowed' : 'BLOCKED (Correct)'}`);
   if (isEligibleA) {
-    console.error('Test A failed: 58.57% should NOT pass prerequisite >= 60%');
+    console.error('Test A failed: 58.57% should NOT pass prerequisite >= 70%');
     process.exit(1);
   }
 
-  // Test case B: Student with 60%
-  const isEligibleB = passedScore >= reqWordsScore;
-  console.log(`Test B (Score: 60.00%): ${isEligibleB ? 'ALLOWED (Correct)' : 'Blocked'}`);
-  if (!isEligibleB) {
-    console.error('Test B failed: 60% should pass prerequisite >= 60%');
+  // Test case B1: Student with 65.0% (Below 70%)
+  const isEligibleB1 = borderlineScore >= reqWordsScore;
+  console.log(`Test B1 (Score: 65.00%): ${isEligibleB1 ? 'Allowed' : 'BLOCKED (Correct)'}`);
+  if (isEligibleB1) {
+    console.error('Test B1 failed: 65% should NOT pass prerequisite >= 70%');
     process.exit(1);
   }
 
-  // Test case C: Daily Quiz (Test 20: 3C1 Phrases Quiz) MUST NOT be classified as Phrases Exam
+  // Test case B2: Student with 70.0% (Passing Threshold)
+  const isEligibleB2 = passedScore >= reqWordsScore;
+  console.log(`Test B2 (Score: 70.00%): ${isEligibleB2 ? 'ALLOWED (Correct)' : 'Blocked'}`);
+  if (!isEligibleB2) {
+    console.error('Test B2 failed: 70% should pass prerequisite >= 70%');
+    process.exit(1);
+  }
+
+  // Test case C: Daily Task (Test 20: 3C1 Phrases Task) MUST NOT be classified as Phrases Exam
   const test20Id = 'ccfce187-d9be-42a3-9745-cd4852865481';
   const { data: test20 } = await supabase.from('tests').select('*').eq('id', test20Id).single();
   if (test20) {
     const isQuizFallback = (test20.test_type || '').toLowerCase() === 'quiz' || 
+                           (test20.test_type || '').toLowerCase() === 'task' || 
                            (test20.category || '').toLowerCase() === 'quiz' ||
+                           (test20.category || '').toLowerCase() === 'task' ||
                            (test20.shell_code || '').toUpperCase().includes('QUIZ') ||
                            (test20.shell_code || '').toUpperCase().includes('TASK') ||
-                           (test20.payload?.shell_code || '').toUpperCase().includes('QUIZ');
+                           (test20.payload?.shell_code || '').toUpperCase().includes('QUIZ') ||
+                           (test20.payload?.shell_code || '').toUpperCase().includes('TASK');
 
     const isTest20PhrasesExam = !isQuizFallback && Boolean(
       test20.payload?.category === 'phrases' || 
@@ -102,9 +118,9 @@ async function runTest() {
       test20.test_subtype === 'PHRASE_TEST'
     );
 
-    console.log(`Test C (3C1 Phrases Quiz isPhrasesExam): ${isTest20PhrasesExam ? 'FAILED (Incorrectly flagged as exam)' : 'PASSED (Cleanly recognized as Quiz)'}`);
+    console.log(`Test C (3C1 Phrases Task isPhrasesExam): ${isTest20PhrasesExam ? 'FAILED (Incorrectly flagged as exam)' : 'PASSED (Cleanly recognized as Task)'}`);
     if (isTest20PhrasesExam) {
-      console.error('Test C failed: 3C1 Phrases Quiz must not be classified as Phrases Exam!');
+      console.error('Test C failed: 3C1 Phrases Task must not be classified as Phrases Exam!');
       process.exit(1);
     }
   }
