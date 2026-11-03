@@ -1257,6 +1257,23 @@ export async function renderSettings(area) {
         <textarea id="admin-scratchpad" style="width: 100%; height: 160px; background: rgba(0,0,0,0.1); border: 1px solid var(--clr-border); border-radius: 8px; padding: 0.8rem; color: var(--clr-text-1); font-family: inherit; resize: none;" placeholder="Start typing..."></textarea>
       </div>
 
+      <!-- 6. Danger Zone: Vocabulary Vault Master Reset -->
+      <div class="antigravity-card p-5" style="border: 1px solid rgba(255, 0, 0, 0.45); box-shadow: 0 10px 30px rgba(255, 0, 0, 0.12); background: rgba(15, 23, 42, 0.65);">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+          <div style="font-size:1.5rem;">⚠️</div>
+          <div>
+            <h3 style="font-size:1.1rem;margin:0;color:#FF0000;font-weight:700;">Danger Zone: Vocabulary Vault Reset</h3>
+            <div class="text-xs text-muted">Master Reset for Vocabulary Vault Items</div>
+          </div>
+        </div>
+        <p class="text-xs text-muted mb-3" style="line-height:1.4;">
+          Permanently delete all words, phrases, and topic data from the Vocabulary Vault database. This action cannot be undone. To prevent accidental mispresses, you must type <strong style="color: #FF0000;">RESET</strong> to confirm.
+        </p>
+        <button class="btn btn-danger btn-sm w-100" id="btn-danger-reset-vault" style="font-weight:700; height: 36px;">
+          🗑️ Master Reset Vocabulary Vault
+        </button>
+      </div>
+
     </div>
   `;
 
@@ -1569,4 +1586,29 @@ export async function renderSettings(area) {
       localStorage.setItem('topscore_admin_scratchpad', e.target.value);
     });
   }
+
+  // ---------------------------------------------------------
+  // Danger Zone: Master Reset Vocabulary Vault
+  // ---------------------------------------------------------
+  document.getElementById('btn-danger-reset-vault')?.addEventListener('click', async () => {
+    if (!confirm('⚠️ DANGER: This will permanently delete ALL words and phrases from the Vocabulary Vault. Are you sure you want to proceed?')) return;
+    const confirmText = prompt('Type RESET in capital letters to confirm permanent deletion:');
+    if (confirmText?.trim() !== 'RESET') {
+      showToast('Master reset cancelled.', 'info');
+      return;
+    }
+    showLoading('Resetting Vocabulary Vault...');
+    try {
+      const { error } = await sb.from('vocabulary_vault').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      hideLoading();
+      if (error) throw error;
+      showToast('✓ Vocabulary Vault successfully reset. All items deleted.', 'success');
+      if (window.logAdminAudit) {
+        window.logAdminAudit('RESET_VOCABULARY_VAULT', 'vocabulary_vault', null, { status: 'TRUNCATED' });
+      }
+    } catch (err) {
+      hideLoading();
+      showToast('Failed to reset Vocabulary Vault: ' + err.message, 'error');
+    }
+  });
 }

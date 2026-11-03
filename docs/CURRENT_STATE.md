@@ -1,10 +1,17 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-03 15:05 UTC+8
-Current Phase: Phase 295: Class Tests Grid UI Streamlining — Remove Redundant Class/Level Columns, Expand Title, and Standardize 70% Badge [COMPLETE]
+Last Updated: 2026-11-03 15:40 UTC+8
+Current Phase: Phase 296: Topic Blueprint Re-Design — Unified Curriculum Tabs, Single Table View, Bottom Action Bar & Safe System Settings Reset [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
+1. **Phase 296: Topic Blueprint Re-Design [COMPLETE]:**
+   - Replaced duplicate institution/program badges and separate level buttons with unified Curriculum Tabs: `[ 🎯 CEC Camp 1st Level ] [ 🎯 CEC Camp 2nd Level ] [ 🎯 CEC Camp 3rd Level ]`.
+   - Eliminated Board View and mode toggles; standardized solely on high-density Table View.
+   - Relocated `[ ⚒️ Merge Topics ]` and `[ ⚡ Auto-Generate ]` to the bottom-right corner inside the bottom infobar action area.
+   - Removed the dangerous Reset button from Vocabulary Vault and relocated it into **D — SYSTEM & DATA $\rightarrow$ System Settings (Danger Zone)** with mandatory `"RESET"` confirmation.
+   - Cache buster bumped to `v20261103_v109`. 100% tests PASS.
+
 1. **Phase 295: Class Tests Grid UI Streamlining [COMPLETE]:**
    - Removed redundant `CLASS` and `LEVEL` columns from `class-tests-grid` in `js/admin/app.js`.
    - Expanded `TITLE` column (`min-width: 280px; max-width: 600px;`), eliminating text clipping/ellipsis.

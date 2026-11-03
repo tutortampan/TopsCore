@@ -1,3 +1,42 @@
+## [2026-11-03 15:40] — Phase 296: Topic Blueprint Re-Design — Unified Curriculum Tabs, Single Table View, Bottom Action Bar & Safe System Settings Reset
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 296  
+**Status:** PASS  
+
+### Why
+- User request: *"disini ada topc blueprint dimana kita bisa pilih berdasarkan tombol yang kita tekan,,, saya ingin agar kita buat topic bluprint dengan dasar institusi dan Program dan Level di tab atas jadi misalnya namanya : CEC Camp 1st Level, CEC Camp 2nd Level, CEC Camp 3rd Level. apakah itu lbih mudah dan bisa gunakan 1 view saja yaitu table View. bagian pada gambar 2 bisa kita hapus, dan pindahkan tombol merge, dan auto generte ke pojok kana bawah, tombol rResest taruh di dalam System Settings, SO I dont mispress it... Analyze, map out, discuss. lakukan /goal"*.
+- Solved 4 major UX pain points:
+  1. Cluttered top toolbar with duplicate badges (`INST: CEC`, `PROG: Camp`) and disjointed level buttons replaced with clear, unified Curriculum Tabs: `[ 🎯 CEC Camp 1st Level ] [ 🎯 CEC Camp 2nd Level ] [ 🎯 CEC Camp 3rd Level ]`.
+  2. Redundant dual view modes (Board View vs Table View) streamlined into a single, high-density, authoritative Table View.
+  3. Action buttons (`[ ⚒️ Merge Topics ]` and `[ ⚡ Auto-Generate ]`) moved out of the secondary toolbar to the bottom-right corner of the viewport (integrated with the bottom infobar).
+  4. Dangerous `[ ⚠️ Reset ]` button removed entirely from Topic Blueprint and Vocabulary Vault views to prevent accidental mispresses, and relocated into **D — SYSTEM & DATA $\rightarrow$ System Settings (Danger Zone)** with mandatory `"RESET"` confirmation.
+
+### Changed
+1. **`js/admin/vocab-vault.js`**:
+   - Replaced separate institution/program badges and tiny level buttons in `_renderTopicBlueprintTab` with unified Curriculum Tabs dynamically matching `(institution, program, level)` (e.g., `CEC Camp 1st Level`, `CEC Camp 2nd Level`, `CEC Camp 3rd Level`).
+   - Removed Board View code and Board/Table switcher buttons (`#btn-blueprint-mode-board`, `#btn-blueprint-mode-table`); standardized strictly on Table View.
+   - Pinned `[ ⚒️ Merge Topics ]` and `[ ⚡ Auto-Generate ]` buttons to the bottom-right corner inside `window.setBottomInfobar`'s `rightHtml`.
+   - Removed `#btn-reset-vault` from Words/Phrases grid toolbar and `#btn-reset-vault-header` from Topic Blueprint toolbar.
+2. **`js/admin/desk.js`**:
+   - Added a dedicated Danger Zone card in `renderSettings`: *"Danger Zone: Vocabulary Vault Reset"* with prompt requiring uppercase `"RESET"` before executing table truncation.
+3. **`admin.html`**:
+   - Bumped cache buster from `v20261103_v108` to `v20261103_v109`.
+
+### Files
+- `js/admin/vocab-vault.js` (+117/-317 lines)
+- `js/admin/desk.js` (+42 lines)
+- `admin.html` (cache buster line 535)
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
+### Tests
+- command: `npm test` & `npm run test:grading`
+- result: `PASS` — 40/40 JS syntax, 27/27 manifest assets, student dashboard parity & green star grading PASSED.
+
+---
+
 ## [2026-11-03 15:05] — Phase 295: Class Tests Grid UI Streamlining — Remove Redundant Class/Level Columns, Expand Title, and Standardize 70% Badge
 
 **Agent/Session:** Antigravity  

@@ -1,3 +1,46 @@
+## SESSION-20261103-1540
+
+Start: 2026-11-03 15:15 UTC+8
+End: 2026-11-03 15:40 UTC+8
+Agent: Antigravity
+
+### User Request
+"disini ada topc blueprint dimana kita bisa pilih berdasarkan tombol yang kita tekan,,, saya ingin agar kita buat topic bluprint dengan dasar institusi dan Program dan Level di tab atas jadi misalnya namanya : CEC Camp 1st Level, CEC Camp 2nd Level, CEC Camp 3rd Level. apakah itu lbih mudah dan bisa gunakan 1 view saja yaitu table View. bagian pada gambar 2 bisa kita hapus, dan pindahkan tombol merge, dan auto generte ke pojok kana bawah, tombol rResest taruh di dalam System Settings, SO I dont mispress it... Analyze, map out, discuss. lakukan /goal"
+
+### Objective
+Overhaul Topic Blueprint UI in Vocabulary Vault:
+1. Replace separate Institution/Program badges and tiny level buttons with unified Curriculum Tabs: `[ 🎯 CEC Camp 1st Level ] [ 🎯 CEC Camp 2nd Level ] [ 🎯 CEC Camp 3rd Level ]`.
+2. Standardize on Table View as the single view mode; remove Board View and mode toggles.
+3. Clean up the top toolbar and move `[ ⚒️ Merge Topics ]` and `[ ⚡ Auto-Generate ]` to the bottom-right corner inside the bottom infobar action bar.
+4. Relocate the Reset button from Vocabulary Vault to **D — SYSTEM & DATA $\rightarrow$ System Settings (Danger Zone)** with mandatory `"RESET"` confirmation.
+
+### Work Performed
+1. Audited `js/admin/vocab-vault.js` (`_renderTopicBlueprintTab`, lines 1435–1890).
+2. Built unified Curriculum Tabs detection (`curricula` array combining Institution, Program, and Level).
+3. Eliminated Board View rendering branch and Board/Table switcher buttons (`#btn-blueprint-mode-board`, `#btn-blueprint-mode-table`).
+4. Connected `window.setBottomInfobar` `rightHtml` with `[ ⚒️ Merge Topics ]` and `[ ⚡ Auto-Generate ]` buttons and attached click handlers.
+5. Removed `#btn-reset-vault` from Words/Phrases toolbar and `#btn-reset-vault-header` from Topic Blueprint toolbar.
+6. Added Danger Zone card in `renderSettings` (`js/admin/desk.js`) with confirmation prompt requiring `"RESET"`.
+7. Bumped cache buster in `admin.html` to `v20261103_v109`.
+8. Ran all automated tests (`npm test` and `npm run test:grading`) — 100% PASS.
+
+### Files Changed
+- `js/admin/vocab-vault.js`
+- `js/admin/desk.js`
+- `admin.html`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- `npm test`: 40/40 JS syntax pass, 27/27 service worker assets pass, student dashboard parity pass.
+- `npm run test:grading`: 100% pass on green star grading and color vault constants.
+
+### Resume From
+Ready for user inspection of Topic Blueprint in `admin.html#vocab_vault?tab=blueprint` and System Settings.
+
+---
+
 ## SESSION-20261103-1455
 
 Start: 2026-11-03 14:55 UTC+8

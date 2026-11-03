@@ -180,7 +180,6 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-import-vault">&#128229; Import Excel</button>
             <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-export-vault">&#128228; Export Excel</button>
             <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-check-duplicates">&#9874; Check Dups</button>
-            <button class="btn btn-danger btn-sm toolbar-btn-38" id="btn-reset-vault" style="opacity:0.85;">&#128465; Reset</button>
             <button class="btn btn-primary btn-sm toolbar-btn-38" id="btn-manual-auto-generate" style="background:var(--clr-primary);">&#9881; Auto-Gen</button>
             <button class="btn btn-primary btn-sm toolbar-btn-38" id="btn-create-vocab-test">${mode === 'phrases' ? '+ Phrase Exam' : '+ Vocab Exam'}</button>
           </div>
@@ -541,26 +540,6 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       openTestBuilderModal(topics, { testType: 'IDIOM_PROVERB' });
     } else {
       openTestBuilderModal(topics, { testType: 'VOCAB_MASTERY' });
-    }
-  });
-
-  document.getElementById('btn-reset-vault')?.addEventListener('click', async () => {
-    if (!confirm('⚠️ DANGER: This will permanently delete ALL vault words from the database. This cannot be undone. Are you absolutely sure?')) return;
-    if (!confirm('Second confirmation required. Type OK in the next prompt to confirm.')) return;
-    const confirmText = prompt('Type RESET to confirm truncation of all vault words:');
-    if (confirmText?.trim().toUpperCase() !== 'RESET') { showToast('Reset cancelled.', 'info'); return; }
-    showLoading('Resetting vault...');
-    try {
-      const sb = await getSupabase();
-      const { error } = await sb.from('vocabulary_vault').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      hideLoading();
-      if (error) throw error;
-      showToast('✓ Vault reset complete. All words deleted.', 'success');
-      _allWords = [];
-      filterAndRender();
-    } catch (e) {
-      hideLoading();
-      showToast('Reset failed: ' + e.message, 'error');
     }
   });
 }
@@ -1456,146 +1435,103 @@ function _renderTopicBlueprintTab(area, words, topics) {
     }
   });
 
-  // 2. Levels detection & level selection
-  const levelsSet = new Set();
-  topicMap.forEach(t => levelsSet.add(t.level));
-  if (levelsSet.size === 0) levelsSet.add(3);
+  // 2. Curricula (Institution + Program + Level) Detection
+  // Standard CEC Camp levels 1, 2, 3 + any other detected levels in vault
+  const levelsSet = new Set([1, 2, 3]);
+  topicMap.forEach(t => {
+    if (t.level) levelsSet.add(t.level);
+  });
   const levels = Array.from(levelsSet).sort((a, b) => a - b);
-  let activeLevel = window._blueprintSelectedLevel || levels[0] || 3;
+
+  const defaultInst = 'CEC';
+  const defaultProg = 'Camp';
+
+  const curricula = levels.map(lvl => {
+    const ord = typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : (`Level ${lvl}`);
+    const matchingTopics = Array.from(topicMap.values()).filter(t => t.level === lvl);
+    const inst = matchingTopics[0]?.institution || defaultInst;
+    const prog = matchingTopics[0]?.program || defaultProg;
+    return {
+      level: lvl,
+      institution: inst,
+      program: prog,
+      label: `${inst} ${prog} ${ord}`, // e.g. "CEC Camp 1st Level", "CEC Camp 2nd Level", "CEC Camp 3rd Level"
+      topicsCount: matchingTopics.length
+    };
+  });
+
+  let activeLevel = window._blueprintSelectedLevel || (levels.includes(3) ? 3 : levels[0]);
   if (!levels.includes(activeLevel)) activeLevel = levels[0];
   window._blueprintSelectedLevel = activeLevel;
 
-  let activeViewMode = window._blueprintViewMode || 'board'; // 'board' or 'table'
-
-  // 3. Group topics by Theme for active level
-  const levelTopics = Array.from(topicMap.values()).filter(t => t.level === activeLevel);
-  const instNames = Array.from(new Set(levelTopics.map(t => t.institution).filter(Boolean)));
-  const progNames = Array.from(new Set(levelTopics.map(t => t.program).filter(Boolean)));
-  const displayInst = instNames.length > 0 ? instNames.join(', ') : 'CEC';
-  const displayProg = progNames.length > 0 ? progNames.join(', ') : 'Camp';
+  const activeCurriculum = curricula.find(c => c.level === activeLevel) || curricula[0];
+  const displayInst = activeCurriculum.institution;
+  const displayProg = activeCurriculum.program;
   const displayLevelName = typeof toOrdinalLevel === 'function' ? toOrdinalLevel(activeLevel) : ('Level ' + activeLevel);
 
-  const themeMap = new Map();
-  levelTopics.forEach(t => {
-    const thKey = t.themeCode + ' ' + t.theme;
-    if (!themeMap.has(thKey)) {
-      themeMap.set(thKey, {
-        code: t.themeCode,
-        name: t.theme,
-        topics: [],
-        totalWords: 0,
-        totalPhrases: 0,
-        totalCount: 0
-      });
+  // 3. Filter & Sort Topics for Active Curriculum Level
+  const levelTopics = Array.from(topicMap.values()).filter(t => t.level === activeLevel);
+  levelTopics.sort((a, b) => {
+    const thA = a.themeCode || 'ZZZ';
+    const thB = b.themeCode || 'ZZZ';
+    if (thA !== thB) {
+      if (thA === 'ZZZ') return 1;
+      if (thB === 'ZZZ') return -1;
+      return thA.localeCompare(thB);
     }
-    const th = themeMap.get(thKey);
-    th.topics.push(t);
-    th.totalWords += t.totalWords;
-    th.totalPhrases += t.totalPhrases;
-    th.totalCount += t.totalCount;
+    const numA = parseInt(a.topicCode, 10);
+    const numB = parseInt(b.topicCode, 10);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return (a.topicCode || '').localeCompare(b.topicCode || '');
   });
 
-  // Sort themes by themeCode (A, B, C, D)
-  const sortedThemes = Array.from(themeMap.values()).sort((a, b) => {
-    if (a.code === 'ZZZ' && b.code !== 'ZZZ') return 1;
-    if (a.code !== 'ZZZ' && b.code === 'ZZZ') return -1;
-    return a.code.localeCompare(b.code);
-  });
+  // Calculate thematic counts
+  const themeCodes = new Set(levelTopics.map(t => t.themeCode).filter(c => c && c !== 'ZZZ'));
+  const totalTasks = levelTopics.length * 2; // Words + Phrases tasks
+  const totalTests = themeCodes.size * 2;    // Words + Phrases exams
 
-  // 4. Calculate cumulative exam question scale
-  let runningWords = 0;
-  let runningPhrases = 0;
-  let totalTasks = 0;
-  let totalTests = sortedThemes.length * 2; // 2 exams per theme (Words + Phrases)
-
-  sortedThemes.forEach(th => {
-    th.topics.sort((a, b) => {
-      const codeA = a.topicCode || 'ZZZ';
-      const codeB = b.topicCode || 'ZZZ';
-      const numA = parseInt(codeA, 10);
-      const numB = parseInt(codeB, 10);
-      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-      return codeA.localeCompare(codeB);
-    });
-
-    totalTasks += th.topics.length * 2; // 2 tasks per topic (Words + Phrases)
-    runningWords += th.totalWords;
-    runningPhrases += th.totalPhrases;
-    th.cumulativeWords = runningWords;
-    th.cumulativePhrases = runningPhrases;
-  });
-
-  const totalWordsCount = words.filter(w => !isPhrase(w.word_type)).length;
-  const totalPhrasesCount = words.filter(w => isPhrase(w.word_type)).length;
-
-  // 5. Setup bottom infobar chips
+  // 4. Setup Bottom Infobar Chips & Bottom-Right Action Buttons
   if (window.setBottomInfobar) {
     const leftHtml = `
-      <div class="bottom-info-chip"><span class="chip-label">Institution:</span><span class="chip-val" style="color: #38bdf8;">${displayInst}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Program:</span><span class="chip-val" style="color: #c084fc;">${displayProg}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Level:</span><span class="chip-val" style="color: #f8fafc;">${displayLevelName}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Institution:</span><span class="chip-val" style="color: #38bdf8;">${escapeHtml(displayInst)}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Program:</span><span class="chip-val" style="color: #c084fc;">${escapeHtml(displayProg)}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Level:</span><span class="chip-val" style="color: #f8fafc;">${escapeHtml(displayLevelName)}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Tasks:</span><span class="chip-val">${totalTasks}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Exams:</span><span class="chip-val">${totalTests}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Vault Items:</span><span class="chip-val">${words.length}</span></div>
     `;
-    const rightHtml = '';
+    const rightHtml = `
+      <button class="btn btn-secondary btn-sm" id="btn-blueprint-bottom-merge" style="height: 30px; font-size: 11px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.12); color: #f8fafc; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Merge Similar Topics">⚒️ Merge Topics</button>
+      <button class="btn btn-primary btn-sm" id="btn-blueprint-bottom-autogen" style="background: var(--clr-primary); font-size: 11.5px; padding: 0 12px; height: 30px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(99,102,241,0.35); border: none; cursor: pointer; border-radius: 6px;" title="Auto-Generate Curriculum Tests">⚡ Auto-Generate</button>
+    `;
     window.setBottomInfobar(leftHtml, rightHtml);
   }
 
-  // Theme Visual Colors
-  const themeVisuals = {
-    'A': { border: 'rgba(56, 189, 248, 0.4)', accent: '#38bdf8', pillBg: '#0284c7' },
-    'B': { border: 'rgba(52, 211, 153, 0.4)', accent: '#34d399', pillBg: '#059669' },
-    'C': { border: 'rgba(251, 191, 36, 0.4)', accent: '#fbbf24', pillBg: '#d97706' },
-    'D': { border: 'rgba(192, 132, 252, 0.4)', accent: '#c084fc', pillBg: '#7c3aed' }
-  };
-
-  // 6. Build Zero-Scroll Dashboard HTML
+  // 5. Build Zero-Scroll Dashboard HTML (Table View Only)
   let html = `
     <div style="display: flex; flex-direction: column; height: 100%; max-height: calc(100vh - 120px); box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; gap: 6px; padding: 0 4px 6px 4px;">
-      <!-- Top Control Toolbar with Institution, Program, Level, and Mode Toggles -->
+      <!-- Top Control Toolbar with Unified Curriculum Tabs and Metrics -->
       <div style="flex-shrink: 0; padding: 2px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
-        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-          <input type="search" id="vault-topic-search" placeholder="🔍 Search Topics & Themes..." style="width: 175px; height: 32px; font-size: 11.5px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <input type="search" id="vault-topic-search" placeholder="🔍 Search Topics & Themes..." style="width: 200px; height: 32px; font-size: 11.5px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
           
-          <!-- Institution & Program Badges -->
-          <span style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Institution Scope">
-            <span style="color:#94a3b8; font-size:9.5px; text-transform:uppercase;">INST:</span> ${escapeHtml(displayInst)}
-          </span>
-          <span style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Program Scope">
-            <span style="color:#94a3b8; font-size:9.5px; text-transform:uppercase;">PROG:</span> ${escapeHtml(displayProg)}
-          </span>
-
-          <!-- Interactive Level Selector Tabs -->
-          <div style="display: flex; gap: 4px; align-items: center; background: rgba(15,23,42,0.7); padding: 2px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1);" title="Select Level to View">
-            ${levels.map(lvl => {
-              const isActive = (lvl === activeLevel);
-              const ord = typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : ('Level ' + lvl);
-              return `<button type="button" class="btn-blueprint-lvl-select" data-lvl="${lvl}" style="height: 26px; font-size: 11px; font-weight: 800; padding: 0 10px; border-radius: 5px; cursor: pointer; transition: all 0.2s ease; border: none; ${isActive ? 'background: #3b82f6; color: #ffffff; box-shadow: 0 2px 6px rgba(59,130,246,0.4);' : 'background: transparent; color: #94a3b8;'}">🎯 ${escapeHtml(ord.toUpperCase())}</button>`;
+          <!-- Unified Curriculum Tabs -->
+          <div style="display: flex; gap: 4px; align-items: center; background: rgba(15,23,42,0.7); padding: 3px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1);" title="Select Curriculum Track">
+            ${curricula.map(c => {
+              const isActive = (c.level === activeLevel);
+              return `<button type="button" class="btn-blueprint-curriculum-tab" data-lvl="${c.level}" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 12px; border-radius: 5px; cursor: pointer; transition: all 0.2s ease; border: none; ${isActive ? 'background: #3b82f6; color: #ffffff; box-shadow: 0 2px 6px rgba(59,130,246,0.4);' : 'background: transparent; color: #94a3b8;'}">🎯 ${escapeHtml(c.label)}</button>`;
             }).join('')}
           </div>
-
-          <!-- View Mode Switcher (Board vs Table) -->
-          <div style="display: flex; gap: 2px; align-items: center; background: rgba(15,23,42,0.7); padding: 2px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1);" title="Switch Board / Table View">
-            <button type="button" id="btn-blueprint-mode-board" style="height: 26px; font-size: 10.5px; font-weight: 700; padding: 0 8px; border-radius: 5px; cursor: pointer; border: none; ${activeViewMode === 'board' ? 'background: rgba(255,255,255,0.15); color: #fff;' : 'background: transparent; color: #94a3b8;'}">🗺️ Board</button>
-            <button type="button" id="btn-blueprint-mode-table" style="height: 26px; font-size: 10.5px; font-weight: 700; padding: 0 8px; border-radius: 5px; cursor: pointer; border: none; ${activeViewMode === 'table' ? 'background: rgba(255,255,255,0.15); color: #fff;' : 'background: transparent; color: #94a3b8;'}">📊 Table</button>
-          </div>
-
-          <button class="btn btn-secondary btn-sm" id="btn-topic-dup-checker" style="height: 30px; font-size: 11px; padding: 0 8px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.12); color: #f8fafc; border-radius: 6px; cursor: pointer;">⚒️ Merge</button>
-          <button class="btn btn-danger btn-sm" id="btn-reset-vault-header" style="height: 30px; font-size: 11px; padding: 0 8px; opacity: 0.88; border-radius: 6px; cursor: pointer;" title="Truncate all vault words">⚠️ Reset</button>
         </div>
+
         <div style="display: flex; gap: 6px; align-items: center;">
           <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Topics: <strong style="color:#ffffff;" id="topic-count-display">${levelTopics.length}</strong></span>
           <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Words: <strong style="color:#ffffff;">${levelTopics.reduce((acc, t) => acc + t.totalWords, 0)}</strong></span>
           <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Phrases: <strong style="color:#ffffff;">${levelTopics.reduce((acc, t) => acc + t.totalPhrases, 0)}</strong></span>
-          <button class="btn btn-primary btn-sm" id="btn-blueprint-auto-generate" style="background: var(--clr-primary); font-size: 11.5px; padding: 0 12px; height: 32px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(99,102,241,0.35); border: none; cursor: pointer; border-radius: 5px;">⚡ Auto-Generate</button>
         </div>
       </div>
-  `;
 
-  if (activeViewMode === 'table') {
-    // ─── 📊 Table View: Explicit Columns for Institution, Program, Level, Theme, Topic, Breakdown ───
-    html += `
+      <!-- 📊 Table View: Sole Authoritative Topic Blueprint Grid -->
       <div class="table-wrap sticky-first" style="flex: 1; overflow-y: auto; min-height: 0; background: #0f172a; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
           <thead style="background: rgba(15, 23, 42, 0.95); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
@@ -1616,10 +1552,17 @@ function _renderTopicBlueprintTab(area, words, topics) {
             </tr>
           </thead>
           <tbody>
-            ${levelTopics.map(t => `
+            ${levelTopics.length === 0 ? `
+              <tr>
+                <td colspan="13" style="text-align: center; padding: 36px 16px; color: #94a3b8; font-size: 12px;">
+                  No topics registered for <strong>${escapeHtml(activeCurriculum.label)}</strong> yet.<br>
+                  <span style="font-size: 11px; opacity: 0.8;">Import words in Excel or populate vault items to generate this blueprint.</span>
+                </td>
+              </tr>
+            ` : levelTopics.map(t => `
               <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);" class="blueprint-table-row" data-topic="${escapeHtml(t.name)}" data-theme="${escapeHtml(t.theme)}">
-                <td style="padding: 6px 10px;"><span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(56, 189, 248, 0.35); display: inline-block;">${escapeHtml(t.institution || 'CEC')}</span></td>
-                <td style="padding: 6px 10px;"><span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(168, 85, 247, 0.35); display: inline-block;">${escapeHtml(t.program || 'Camp')}</span></td>
+                <td style="padding: 6px 10px;"><span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(56, 189, 248, 0.35); display: inline-block;">${escapeHtml(t.institution || displayInst)}</span></td>
+                <td style="padding: 6px 10px;"><span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(168, 85, 247, 0.35); display: inline-block;">${escapeHtml(t.program || displayProg)}</span></td>
                 <td style="padding: 6px 10px;"><span style="background: #334155; color: #f8fafc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.15); display: inline-block;">${escapeHtml(typeof toOrdinalLevel === 'function' ? toOrdinalLevel(t.level) : ('Level ' + t.level))}</span></td>
                 <td style="padding: 6px 10px; color: #f472b6; font-family: monospace; font-weight: 700;">${escapeHtml(t.themeCode || '—')}</td>
                 <td style="padding: 6px 10px; color: #ffffff; font-weight: 600;">${escapeHtml(t.theme || '—')}</td>
@@ -1639,107 +1582,12 @@ function _renderTopicBlueprintTab(area, words, topics) {
           </tbody>
         </table>
       </div>
-    `;
-  } else {
-    // ─── 🗺️ Board View: 4-Thematic Columns Board with Institution, Program, Level on Each Card ───
-    html += `
-      <!-- 4-Thematic Columns Board (Zero-Scroll Grid) -->
-      <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; overflow: hidden; padding-bottom: 2px;">
-    `;
-
-    sortedThemes.forEach(th => {
-      const vis = themeVisuals[th.code] || { border: 'rgba(99,102,241,0.4)', accent: '#818cf8', pillBg: '#4f46e5' };
-
-      html += `
-        <div class="theme-column-card" style="background: #0f172a; border: 1px solid rgba(255,255,255,0.08); border-top: 3px solid ${vis.accent}; border-radius: 8px; display: flex; flex-direction: column; height: 100%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.35);">
-          <!-- Column Header -->
-          <div style="background: rgba(30, 41, 59, 0.85); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 6px 10px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 5px; min-width: 0;">
-              <span style="background: ${vis.pillBg}; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.05em; flex-shrink: 0;">THEME ${escapeHtml(th.code)}</span>
-              <span style="color: #ffffff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(th.name)}">${escapeHtml(th.name)}</span>
-            </div>
-            <span style="color: #94a3b8; font-size: 10px; font-weight: 600; flex-shrink: 0; margin-left: 4px;">${th.topics.length} Tasks · ${th.totalCount} W</span>
-          </div>
-
-          <!-- Topics List Container -->
-          <div class="theme-topic-list" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px; overflow-y: auto; scrollbar-width: thin;">
-      `;
-
-      th.topics.forEach((t, idx) => {
-        const displayNum = t.topicCode && t.topicCode !== 'ZZZ' ? t.topicCode : (idx + 1);
-
-        html += `
-          <div class="topic-item-card" data-topic="${escapeHtml(t.name)}" data-theme="${escapeHtml(th.name)}" style="background: rgba(30, 41, 59, 0.55); border: 1px solid rgba(255,255,255,0.05); border-radius: 5px; padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; transition: background-color 120ms ease;">
-            <!-- Row 1: Number, Title, Actions -->
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
-              <div style="display: flex; align-items: center; gap: 5px; min-width: 0; flex: 1;">
-                <span style="color: ${vis.accent}; font-size: 10px; font-weight: 800; width: 14px; text-align: center; flex-shrink: 0;">${displayNum}</span>
-                <span class="topic-title-text" style="color: #f8fafc; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 3px; flex-shrink: 0;">
-                <button class="btn-edit-topic-mini" data-topic="${escapeHtml(t.name)}" title="Rename Topic" style="background: transparent; border: none; cursor: pointer; color: #38bdf8; font-size: 11px; padding: 1px 3px; line-height: 1;">✏️</button>
-                <button class="btn-del-topic-mini" data-topic="${escapeHtml(t.name)}" title="Delete Topic" style="background: transparent; border: none; cursor: pointer; color: var(--clr-danger, #FF0000); font-size: 11px; padding: 1px 3px; line-height: 1;">🗑️</button>
-              </div>
-            </div>
-
-            <!-- Row 2: Metadata / Hierarchy Row (Institution, Program, Level) -->
-            <div style="display: flex; gap: 4px; align-items: center; font-size: 9px; padding-left: 19px; margin: 1px 0;">
-              <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 700; padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(56, 189, 248, 0.3);" title="Institution">${escapeHtml(t.institution || 'CEC')}</span>
-              <span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-weight: 700; padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(168, 85, 247, 0.3);" title="Program">${escapeHtml(t.program || 'Camp')}</span>
-              <span style="background: #334155; color: #f8fafc; font-weight: 700; padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, 0.15);" title="Level">${escapeHtml(typeof toOrdinalLevel === 'function' ? toOrdinalLevel(t.level) : ('Level ' + t.level))}</span>
-            </div>
-
-            <!-- Row 3: POS chips & Total count -->
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div style="display: flex; gap: 2.5px; align-items: center;">
-                <span style="background: rgba(var(--grade-star-rgb, 0, 192, 0), 0.18); color: #86efac; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.verbs} Verbs">${t.verbs}V</span>
-                <span style="background: rgba(255,255,0,0.18); color: #FFFF00; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.adjs} Adjectives">${t.adjs}A</span>
-                <span style="background: rgba(56,189,248,0.18); color: #38bdf8; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.nouns} Nouns">${t.nouns}N</span>
-                <span style="background: rgba(168,85,247,0.18); color: #c084fc; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;" title="${t.phrases} Phrases">${t.phrases}P</span>
-              </div>
-              <div style="display: flex; gap: 4px; align-items: center;">
-                <span style="background: rgba(255,255,255,0.06); color: #94a3b8; font-size: 9px; font-weight: 600; padding: 1px 4px; border-radius: 3px;" title="40 Words + 10 Phrases">Task: 40+10</span>
-                <span style="background: rgba(255,255,255,0.12); color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px;" title="Total Items">${t.totalCount}</span>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-
-      html += `
-          </div>
-
-          <!-- Exam Milestone Footer -->
-          <div style="background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(255,255,255,0.08); padding: 5px 8px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: #c7d2fe; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; gap: 4px;">
-                <span>🏆</span> THEME ${escapeHtml(th.code)} EXAMS
-              </span>
-              <span style="color: #818cf8; font-size: 9px; font-weight: 700;">Cumul. Scale</span>
-            </div>
-            <div style="display: flex; gap: 5px; justify-content: space-between;">
-              <div style="background: rgba(99,102,241,0.18); border: 1px solid rgba(99,102,241,0.35); border-radius: 4px; padding: 3px 6px; flex: 1; display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #a5b4fc; font-size: 9.5px; font-weight: 600;">Words Exam</span>
-                <span style="color: #ffffff; font-size: 11px; font-weight: 800;">${th.cumulativeWords} Q</span>
-              </div>
-              <div style="background: rgba(244,114,182,0.18); border: 1px solid rgba(244,114,182,0.35); border-radius: 4px; padding: 3px 6px; flex: 1; display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #f472b6; font-size: 9.5px; font-weight: 600;">Phrases Exam</span>
-                <span style="color: #ffffff; font-size: 11px; font-weight: 800;">${th.cumulativePhrases} Q</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    });
-
-    html += `</div>`; // Close grid
-  }
-
-  html += `</div>`; // Close main container
+    </div>
+  `;
   area.innerHTML = html;
 
-  // 7. Wire Events
-  // Auto-Generate Trigger (top button)
+  // 6. Wire Events
+  // Auto-Generate Trigger (Bottom Button)
   const triggerAutoGenerate = async () => {
     const importedLevels = Array.from(levelsSet).sort((a, b) => a - b);
     if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
@@ -1747,7 +1595,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
       const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261103_v105');
       await openAutoGenerateModal({
         availableLevels: importedLevels,
-        preSelectedLevels: importedLevels,
+        preSelectedLevels: [activeLevel],
         explicitClassId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
         onComplete: (res) => {
           // Success handled by modal
@@ -1759,33 +1607,30 @@ function _renderTopicBlueprintTab(area, words, topics) {
     }
   };
 
-  const btnGenTop = document.getElementById('btn-blueprint-auto-generate');
-  if (btnGenTop) btnGenTop.onclick = triggerAutoGenerate;
+  const btnAutogenBottom = document.getElementById('btn-blueprint-bottom-autogen');
+  if (btnAutogenBottom) btnAutogenBottom.onclick = triggerAutoGenerate;
 
-  // Level selector buttons
-  area.querySelectorAll('.btn-blueprint-lvl-select').forEach(btn => {
+  // Merge Topics (Bottom Button)
+  const btnMergeBottom = document.getElementById('btn-blueprint-bottom-merge');
+  if (btnMergeBottom) {
+    btnMergeBottom.onclick = () => {
+      openTopicDuplicateCheckerModal(levelTopics, words, () => {
+        if (typeof renderVocabularyVault === 'function') {
+          const container = document.getElementById('classes-detail-canvas');
+          if (container) renderVocabularyVault(container);
+        }
+      });
+    };
+  }
+
+  // Curriculum Selector Tabs
+  area.querySelectorAll('.btn-blueprint-curriculum-tab').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const targetLvl = parseInt(e.currentTarget.getAttribute('data-lvl'), 10);
       window._blueprintSelectedLevel = targetLvl;
       _renderTopicBlueprintTab(area, words, topics);
     });
   });
-
-  // View Mode switcher buttons (Board vs Table)
-  const btnBoard = document.getElementById('btn-blueprint-mode-board');
-  const btnTable = document.getElementById('btn-blueprint-mode-table');
-  if (btnBoard) {
-    btnBoard.onclick = () => {
-      window._blueprintViewMode = 'board';
-      _renderTopicBlueprintTab(area, words, topics);
-    };
-  }
-  if (btnTable) {
-    btnTable.onclick = () => {
-      window._blueprintViewMode = 'table';
-      _renderTopicBlueprintTab(area, words, topics);
-    };
-  }
 
   // Rename Topic
   area.querySelectorAll('.btn-edit-topic-mini').forEach(btn => {
@@ -1832,42 +1677,6 @@ function _renderTopicBlueprintTab(area, words, topics) {
     });
   });
 
-  // Topic Duplicate Merge Checker Modal
-  const btnDupCheck = document.getElementById('btn-topic-dup-checker');
-  if (btnDupCheck) {
-    btnDupCheck.onclick = () => {
-      openTopicDuplicateCheckerModal(levelTopics, words, () => {
-        if (typeof renderVocabularyVault === 'function') {
-          const container = document.getElementById('classes-detail-canvas');
-          if (container) renderVocabularyVault(container);
-        }
-      });
-    };
-  }
-
-  // Reset All Vault Words
-  const btnReset = document.getElementById('btn-reset-vault-header');
-  if (btnReset) {
-    btnReset.onclick = async () => {
-      if (!confirm('⚠️ DANGER: Soft-delete ALL words in the Vocabulary Vault? This action cannot be easily undone.')) return;
-      try {
-        showLoading();
-        const sb = await getSupabase();
-        const { error } = await sb.from('vocabulary_vault').update({ deleted_at: new Date().toISOString() }).neq('id', '00000000-0000-0000-0000-000000000000');
-        hideLoading();
-        if (error) throw error;
-        showToast('All words soft-deleted from Vault.', 'success');
-        if (typeof renderVocabularyVault === 'function') {
-          const container = document.getElementById('classes-detail-canvas');
-          if (container) renderVocabularyVault(container);
-        }
-      } catch (err) {
-        hideLoading();
-        showToast(`Failed to reset vault: ${err.message}`, 'error');
-      }
-    };
-  }
-
   // Live Topic Search
   const searchInput = document.getElementById('vault-topic-search');
   if (searchInput) {
@@ -1876,23 +1685,13 @@ function _renderTopicBlueprintTab(area, words, topics) {
       const countEl = document.getElementById('topic-count-display');
       let visible = 0;
 
-      if (activeViewMode === 'table') {
-        area.querySelectorAll('.blueprint-table-row').forEach(row => {
-          const tName = (row.getAttribute('data-topic') || '').toLowerCase();
-          const thName = (row.getAttribute('data-theme') || '').toLowerCase();
-          const match = !q || tName.includes(q) || thName.includes(q);
-          row.style.display = match ? '' : 'none';
-          if (match) visible++;
-        });
-      } else {
-        area.querySelectorAll('.topic-item-card').forEach(card => {
-          const tName = (card.getAttribute('data-topic') || '').toLowerCase();
-          const thName = (card.getAttribute('data-theme') || '').toLowerCase();
-          const match = !q || tName.includes(q) || thName.includes(q);
-          card.style.display = match ? 'flex' : 'none';
-          if (match) visible++;
-        });
-      }
+      area.querySelectorAll('.blueprint-table-row').forEach(row => {
+        const tName = (row.getAttribute('data-topic') || '').toLowerCase();
+        const thName = (row.getAttribute('data-theme') || '').toLowerCase();
+        const match = !q || tName.includes(q) || thName.includes(q);
+        row.style.display = match ? '' : 'none';
+        if (match) visible++;
+      });
       if (countEl) countEl.textContent = visible;
     });
   }
