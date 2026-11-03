@@ -187,7 +187,7 @@ export async function uploadStudentAvatar(file, studentId = null) {
   try {
     let getSupabase;
     try {
-      const mod = await import('../supabase.js?v=20261102_v104');
+      const mod = await import('../supabase.js?v=20261103_v105');
       getSupabase = mod.getSupabase;
     } catch (_) {
       const mod = await import('../supabase.js');

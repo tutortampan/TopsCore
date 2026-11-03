@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v52';
+const CACHE_NAME = 'topscore-cache-option-a-v53';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -7,12 +7,12 @@ const ASSETS_TO_CACHE = [
   './test.html',
   './result.html',
   './offline.html',
-  './css/style.css?v=20261028',
-  './css/admin.css?v=20261028',
-  './css/dashboard.css?v=20261028',
+  './css/style.css?v=20261103_v105',
+  './css/admin.css?v=20261103_v105',
+  './css/dashboard.css?v=20261102_v103',
   './css/auth.css?v=20261028',
   './css/test.css?v=20261028',
-  './css/result.css?v=20261102_v103',
+  './css/result.css?v=20261103_v105',
   './css/components/avatars.css?v=20261028',
   './js/app.js?v=20261029',
   './js/api.js?v=20261028',

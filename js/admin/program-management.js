@@ -1,6 +1,6 @@
-import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, clearAdminCache } from '../api.js?v=20261102_v104';
-import { showToast, escapeHtml, escHtml } from '../app.js?v=20261102_v104';
-import { DataGrid } from './datagrid.js?v=20261102_v104';
+import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, clearAdminCache } from '../api.js?v=20261103_v105';
+import { showToast, escapeHtml, escHtml } from '../app.js?v=20261103_v105';
+import { DataGrid } from './datagrid.js?v=20261103_v105';
 
 window.makeTableResizable = function(table, storageKey) {
   const cols = table.querySelectorAll('th');
@@ -621,7 +621,7 @@ window.openChangeLevelModal = async function(batchId, currentLevelId) {
     btn.innerText = 'Saving...';
     try {
       if (newLevelId !== currentLevelId) {
-        const { getSupabase } = await import('../supabase.js?v=20261102_v104');
+        const { getSupabase } = await import('../supabase.js?v=20261103_v105');
         const sb = await getSupabase();
 
         // Update batch

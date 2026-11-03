@@ -31,11 +31,11 @@ import {
   addAdditionalMember,
   toLevelLetter,
   labelAttemptRemedial
-} from '../api.js?v=20261102_v104';
-import { showToast, showLoading, hideLoading, getGrade, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS } from '../app.js?v=20261102_v104';
-import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=20261102_v104';
-import { openStudentProfile } from './student-management.js?v=20261102_v104';
-import { generateAvatarDataUri } from '../utils/avatar-engine.js?v=20261102_v104';
+} from '../api.js?v=20261103_v105';
+import { showToast, showLoading, hideLoading, getGrade, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS } from '../app.js?v=20261103_v105';
+import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=20261103_v105';
+import { openStudentProfile } from './student-management.js?v=20261103_v105';
+import { generateAvatarDataUri } from '../utils/avatar-engine.js?v=20261103_v105';
 
 // escapeHtml / escHtml imported canonically
 
@@ -1025,7 +1025,7 @@ Existing historical attempt records will NOT be modified.`;
 
       showLoading('Committing import to Question Bank...');
       try {
-        const sb = await (await import('../supabase.js?v=20261102_v104')).getSupabase();
+        const sb = await (await import('../supabase.js?v=20261103_v105')).getSupabase();
 
         // PHASE 1: ROBUST TOPIC PRE-FETCHING & NORMALIZATION
         const { data: dbTopics } = await sb.from('topics').select('id, name');

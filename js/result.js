@@ -5,11 +5,11 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261102_v104';
-import { isExam, getGradeColorByScore } from './grading.js?v=20261102_v104';
-import { getStudentSession, getAdminSession } from './session.js?v=20261102_v104';
-import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261102_v104';
-import { getSupabase } from './supabase.js?v=20261102_v104';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261103_v105';
+import { isExam, getGradeColorByScore } from './grading.js?v=20261103_v105';
+import { getStudentSession, getAdminSession } from './session.js?v=20261103_v105';
+import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261103_v105';
+import { getSupabase } from './supabase.js?v=20261103_v105';
 
 let session = getStudentSession();
 if (!session) {

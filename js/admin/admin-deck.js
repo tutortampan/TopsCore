@@ -401,7 +401,7 @@ export async function renderAdminProfile(container) {
     }
 
     try {
-      const { processAndCompressAvatar } = await import('../utils/avatar-engine.js?v=20261102_v104');
+      const { processAndCompressAvatar } = await import('../utils/avatar-engine.js?v=20261103_v105');
       const compressedDataUrl = await processAndCompressAvatar(file, 'admin');
 
       // Optimistic preview

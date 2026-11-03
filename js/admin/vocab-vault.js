@@ -33,9 +33,9 @@ import {
   exportVaultWords,
   updateTestDefinition,
   toOrdinalLevel
-} from '../api.js?v=20261102_v104';
-import { showToast, showLoading, hideLoading } from '../app.js?v=20261102_v104';
-import { getSupabase } from '../supabase.js?v=20261102_v104';
+} from '../api.js?v=20261103_v105';
+import { showToast, showLoading, hideLoading } from '../app.js?v=20261103_v105';
+import { getSupabase } from '../supabase.js?v=20261103_v105';
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -1730,7 +1730,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
     const importedLevels = Array.from(levelsSet).sort((a, b) => a - b);
     if (importedLevels.length === 0) return showToast('No levels detected in Blueprint', 'error');
     try {
-      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261102_v104');
+      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261103_v105');
       await openAutoGenerateModal({
         availableLevels: importedLevels,
         preSelectedLevels: importedLevels,
