@@ -1,4 +1,4 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, labelAttemptRemedial } from '../api.js?v=20261102_v103';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial } from '../api.js?v=20261102_v103';
 import { getSupabase } from '../supabase.js?v=20261102_v103';
 import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261102_v103';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=20261102_v103';
@@ -883,8 +883,8 @@ export async function renderStudents(area) {
             </div>
           </td>
           <td class="text-center">
-            <span class="badge badge-primary" style="font-size:0.75rem;">
-              ${escapeHtml(r.levelName || (typeof toLevelLetter === 'function' ? toLevelLetter(r.levelNumber) : `Level ${r.levelNumber}`))}
+            <span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-weight:700;font-size:0.75rem;white-space:nowrap;">
+              ${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(r.levelNumber || r.levelName) : (r.levelName || `Level ${r.levelNumber}`))}
             </span>
           </td>
           <td class="text-center">
@@ -1363,8 +1363,8 @@ export async function renderStudents(area) {
                 </div>
               </td>
               <td class="text-center">
-                <span class="badge badge-primary" style="font-size:0.75rem;">
-                  ${escapeHtml(d.levelName || `Level ${d.levelNumber || '3'}`)}
+                <span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-weight:700;font-size:0.75rem;white-space:nowrap;">
+                  ${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(d.levelNumber || d.levelName) : (d.levelName || `Level ${d.levelNumber || '3'}`))}
                 </span>
               </td>
               <td class="text-center">
@@ -2421,12 +2421,13 @@ export async function renderStudents(area) {
         label: 'Level',
         sortable: true,
         align: 'center',
-        width: '95px',
+        width: '80px',
         render: (row) => {
-          if (row.isAlumni || row.studentLevelNum === 0 || row.levelName === 'Alumni') {
-            return `<span class="badge" style="background:rgba(168,85,247,0.18);color:#c084fc;border:1px solid #c084fc;font-weight:700;font-size:0.75rem;">🎓 Alumni</span>`;
+          if (row.isAlumni || row.studentLevelNum === 0 || (row.levelName && row.levelName.toLowerCase() === 'alumni')) {
+            return `<span class="badge" style="background:rgba(168,85,247,0.18);color:#c084fc;border:1px solid #c084fc;font-weight:700;font-size:0.75rem;white-space:nowrap;">🎓 Alumni</span>`;
           }
-          return `<span class="text-sm fw-600" style="color:#ffffff;">${escapeHtml(row.levelName || '—')}</span>`;
+          const shortLvl = typeof toShortLevel === 'function' ? toShortLevel(row.studentLevelNum || row.levelName || '1') : (row.levelName || '—');
+          return `<span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-weight:700;font-size:0.75rem;white-space:nowrap;">${escapeHtml(shortLvl)}</span>`;
         }
       },
       // 5. Name

@@ -5697,3 +5697,10 @@ tfoot.datagrid-tfoot,
   background: rgba(15, 23, 42, 0.85) !important;
   flex-shrink: 0 !important;
 }
+
+/* Level column & badge anti-wrap standard across all admin tables */
+.cell-level,
+.cell-level span,
+.badge-tag-level {
+  white-space: nowrap !important;
+}

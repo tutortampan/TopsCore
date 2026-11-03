@@ -51,8 +51,11 @@ export function normalizeStudentNameForMatch(name) {
 /**
  * Konversi nomor level menjadi teks ordinal baku:
  * 1 -> 1st Level, 2 -> 2nd Level, 3 -> 3rd Level, 4 -> 4th Level, dst.
+ * 0 -> Alumni
+ * Jika short === true, memanggil toShortLevel: '1st', '2nd', '3rd', 'Alumni'
  */
-export function toOrdinalLevel(num) {
+export function toOrdinalLevel(num, short = false) {
+  if (short) return toShortLevel(num);
   const n = parseInt(num, 10);
   if (isNaN(n)) return '1st Level';
   if (n === 0) return 'Alumni';
@@ -66,9 +69,49 @@ export function toOrdinalLevel(num) {
   return `${n}${suffix} Level`;
 }
 
+/**
+ * Format teks level ringkas khusus untuk tabel & badge di seluruh panel admin:
+ * 1 -> '1st', 2 -> '2nd', 3 -> '3rd', 4 -> '4th'
+ * 0, 'Alumni', 'Ex' -> 'Alumni'
+ * Menormalisasi string seperti '1st Level', '2nd Level', 'Level 3', 'LVL 2' menjadi '1st', '2nd', '3rd'.
+ */
+export function toShortLevel(val) {
+  if (val == null || val === '') return '—';
+  const str = String(val).trim();
+  if (!str || str === '—' || str === '-') return '—';
+
+  const lower = str.toLowerCase();
+  if (lower === 'alumni' || lower === 'ex' || lower === 'alumnus' || str === '0') {
+    return 'Alumni';
+  }
+
+  let n = parseInt(str, 10);
+  if (isNaN(n)) {
+    const match = str.match(/\d+/);
+    if (match) n = parseInt(match[0], 10);
+  }
+
+  if (isNaN(n) || n < 1) return str;
+
+  const j = n % 10;
+  const k = n % 100;
+  let suffix = 'th';
+  if (j === 1 && k !== 11) suffix = 'st';
+  else if (j === 2 && k !== 12) suffix = 'nd';
+  else if (j === 3 && k !== 13) suffix = 'rd';
+
+  return `${n}${suffix}`;
+}
+
 /** Alias kompatibilitas mundur jika ada tampilan lama yang memanggil huruf */
 export function toLevelLetter(num) {
-  return toOrdinalLevel(num);
+  return toShortLevel(num);
+}
+
+if (typeof window !== 'undefined') {
+  window.toShortLevel = toShortLevel;
+  window.toOrdinalLevel = toOrdinalLevel;
+  window.toLevelLetter = toLevelLetter;
 }
 
 const MOCK_BATCHES = [

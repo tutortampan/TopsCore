@@ -1,4 +1,4 @@
-import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete } from '../api.js?v=20261102_v103';
+import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, toShortLevel } from '../api.js?v=20261102_v103';
 import { openCrudModal } from './crud-modals.js?v=20261102_v103';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261102_v103';
 
@@ -487,7 +487,7 @@ export async function renderCurriculum(area) {
                     <span style="font-weight: 600; font-size: 0.88rem; color: var(--fm-text-primary);" class="text-truncate" title="${escapeHtml(batch.name)}">${escapeHtml(batch.name)}</span>
                   </div>
                   <div style="text-align: center;">
-                    <span class="badge-tag badge-tag-level" style="width: 100%; justify-content: center; ${!batch.current_level_id ? 'opacity: 0.7; font-style: italic;' : ''}">${escapeHtml(lvlName)}</span>
+                    <span class="badge-tag badge-tag-level" style="width: 100%; justify-content: center; white-space: nowrap; ${!batch.current_level_id ? 'opacity: 0.7; font-style: italic;' : ''}">${escapeHtml(batch.current_level_id ? (typeof toShortLevel === 'function' ? toShortLevel(lvlName) : lvlName) : '—')}</span>
                   </div>
                   <div style="text-align: center;">
                     <span class="badge-tag" style="background: rgba(99, 102, 241, 0.12); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.25); width: 100%; justify-content: center; cursor: pointer;" title="View ${studentCount} enrolled students in this batch" onclick="window._filterBatchId='${batch.id}'; window._filterBatchName='${escapeHtml(batch.name)}'; if(window.loadSection) window.loadSection('students');">

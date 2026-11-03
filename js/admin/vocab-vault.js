@@ -33,6 +33,7 @@ import {
   exportVaultWords,
   updateTestDefinition,
   toOrdinalLevel,
+  toShortLevel,
   autoSyncClassTestsForLevel
 } from '../api.js?v=20261103_v105';
 import { showToast, showLoading, hideLoading } from '../app.js?v=20261103_v105';
@@ -148,7 +149,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
   const uniqueLevels = Array.from(new Set(words.map(w => parseInt(w.target_level)).filter(n => !isNaN(n) && n > 0))).sort((a, b) => a - b);
   if (uniqueLevels.length === 0) uniqueLevels.push(1, 2, 3);
-  const levelSelectOptions = uniqueLevels.map(lvl => `<option value="${lvl}">${typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : 'Level ' + lvl}</option>`).join('');
+  const levelSelectOptions = uniqueLevels.map(lvl => `<option value="${lvl}">${typeof toShortLevel === 'function' ? toShortLevel(lvl) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : lvl)}</option>`).join('');
 
   area.innerHTML = `
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
@@ -342,7 +343,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       <tr data-word-id="${escapeHtml(w.id)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
         <td class="cell-institution" style="padding: 6px 8px; font-weight: 600;"><span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(56, 189, 248, 0.35); display: inline-block;">${escapeHtml(w.institutions?.code || w.institution_code || w.institutions?.name || 'CEC')}</span></td>
         <td class="cell-program" style="padding: 6px 8px; font-weight: 600;"><span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(168, 85, 247, 0.35); display: inline-block;">${escapeHtml(w.programs?.name || w.program_name || 'Camp')}</span></td>
-        <td class="cell-level" style="padding: 6px 8px; font-weight: 600;"><span style="background: #334155; color: #f8fafc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.15); display: inline-block;">${escapeHtml(typeof toOrdinalLevel === 'function' ? toOrdinalLevel(w.target_level) : ('Level ' + (w.target_level || 1)))}</span></td>
+        <td class="cell-level" style="padding: 6px 8px; font-weight: 600;"><span style="background: #334155; color: #f8fafc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.15); display: inline-block; white-space: nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(w.target_level) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(w.target_level, true) : (w.target_level || '1st')))}</span></td>
         <td class="cell-theme-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#f472b6;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.theme_code || '—')}</span></td>
         <td class="cell-theme" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</td>
         <td class="cell-topic-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#a5b4fc;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.topic_code || '—')}</span></td>
@@ -1563,7 +1564,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
               <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);" class="blueprint-table-row" data-topic="${escapeHtml(t.name)}" data-theme="${escapeHtml(t.theme)}">
                 <td style="padding: 6px 10px;"><span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(56, 189, 248, 0.35); display: inline-block;">${escapeHtml(t.institution || displayInst)}</span></td>
                 <td style="padding: 6px 10px;"><span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(168, 85, 247, 0.35); display: inline-block;">${escapeHtml(t.program || displayProg)}</span></td>
-                <td style="padding: 6px 10px;"><span style="background: #334155; color: #f8fafc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.15); display: inline-block;">${escapeHtml(typeof toOrdinalLevel === 'function' ? toOrdinalLevel(t.level) : ('Level ' + t.level))}</span></td>
+                <td style="padding: 6px 10px;"><span style="background: #334155; color: #f8fafc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.15); display: inline-block; white-space: nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(t.level) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(t.level, true) : t.level))}</span></td>
                 <td style="padding: 6px 10px; color: #f472b6; font-family: monospace; font-weight: 700;">${escapeHtml(t.themeCode || '—')}</td>
                 <td style="padding: 6px 10px; color: #ffffff; font-weight: 600;">${escapeHtml(t.theme || '—')}</td>
                 <td style="padding: 6px 10px; color: #a5b4fc; font-family: monospace; font-weight: 700;">${escapeHtml(t.topicCode || '—')}</td>

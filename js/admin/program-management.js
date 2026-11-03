@@ -1,4 +1,4 @@
-import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, clearAdminCache } from '../api.js?v=20261103_v105';
+import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, clearAdminCache, toShortLevel } from '../api.js?v=20261103_v105';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261103_v105';
 import { DataGrid } from './datagrid.js?v=20261103_v105';
 
@@ -482,7 +482,7 @@ export async function renderUnifiedInstitutions(area) {
 
         prog.batches.forEach(batch => {
           const levelData = levelsMap[batch.raw.current_level_id];
-          const levelBadge = levelData ? `<span class="badge badge-primary">🏷️ ${escapeHtml(levelData.name)}</span>` : `<span class="badge badge-neutral">No Level Set</span>`;
+          const levelBadge = levelData ? `<span class="badge badge-primary" style="white-space:nowrap;font-weight:700;">🏷️ ${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(levelData.name || levelData.level_number) : levelData.name)}</span>` : `<span class="badge badge-neutral">No Level Set</span>`;
 
           html += `
             <tr class="level-row">

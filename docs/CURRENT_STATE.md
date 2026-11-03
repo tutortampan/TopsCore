@@ -1,10 +1,17 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-03 15:40 UTC+8
-Current Phase: Phase 296: Topic Blueprint Re-Design — Unified Curriculum Tabs, Single Table View, Bottom Action Bar & Safe System Settings Reset [COMPLETE]
+Last Updated: 2026-11-03 16:10 UTC+8
+Current Phase: Phase 297: Level Column Standardization — Compact '1st', '2nd', '3rd', 'Alumni' Format Across All Admin Panel Tables [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
+1. **Phase 297: Level Column Standardization [COMPLETE]:**
+   - Standardized level display across all admin panel tables to the compact format: `1st`, `2nd`, `3rd`, and `Alumni`.
+   - Built canonical `toShortLevel(val)` helper in `js/api.js` with full support for ordinal suffixes and alumni normalization.
+   - Fixed awkward two-line text wrapping (`2nd \n Level`) across Vocabulary Vault, Topic Blueprint, Student Registration, Student Inspection Modals, Curriculum Batches, Class Hub, and Program Management tables.
+   - Added anti-wrapping CSS rule `.cell-level, .cell-level span, .badge-tag-level { white-space: nowrap !important; }` in `css/admin.css`.
+   - Bumped cache buster in `admin.html` to `v20261103_v110`. 100% tests PASS (including 10/10 e2e runs).
+
 1. **Phase 296: Topic Blueprint Re-Design [COMPLETE]:**
    - Replaced duplicate institution/program badges and separate level buttons with unified Curriculum Tabs: `[ 🎯 CEC Camp 1st Level ] [ 🎯 CEC Camp 2nd Level ] [ 🎯 CEC Camp 3rd Level ]`.
    - Eliminated Board View and mode toggles; standardized solely on high-density Table View.

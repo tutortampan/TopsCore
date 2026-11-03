@@ -1,3 +1,56 @@
+## SESSION-20261103-1610
+
+Start: 2026-11-03 15:50 UTC+8
+End: 2026-11-03 16:10 UTC+8
+Agent: Antigravity
+
+### User Request
+"bagian level di semua tabel dicukup tulis 1st, 2nd, 3rd, Atau Alumni (atau kita Ex) di semua tebal admin panel, analisa, terapkan /goal" with attached screenshots showing awkward multi-line text wrapping ("2nd \n Level") in table columns.
+
+### Objective
+Standardize level display across all admin panel data tables to write compact ordinal numbers (`1st`, `2nd`, `3rd`, `4th`) and `Alumni`, removing redundant "Level" text inside columns already titled "LEVEL" and preventing cell line wrapping.
+
+### Work Performed
+1. Audited all tables across the admin panel for level columns:
+   - Vocabulary Vault Words/Phrases grid (`js/admin/vocab-vault.js`)
+   - Vocabulary Vault Topic Blueprint table (`js/admin/vocab-vault.js`)
+   - Students Registration table (`js/admin/student-management.js`)
+   - Student Detail & Grade Inspection tables (`js/admin/student-management.js`)
+   - Curriculum Management Batches grid (`js/admin/curriculum-management.js`)
+   - Class Hub Eligible Students table (`js/admin/app.js`)
+   - Test Hub Global Tests table (`js/admin/app.js`)
+   - Classes Management table (`js/admin/app.js`)
+   - Levels Management table (`js/admin/app.js`)
+   - Program Management Matrix table (`js/admin/program-management.js`)
+2. Implemented `toShortLevel(val)` in `js/api.js` supporting numeric or string inputs (`1`, `'2nd Level'`, `'Level 3'`, `'0'`, `'Alumni'`, `'Ex'`).
+3. Updated `toOrdinalLevel(num, short = false)` with `short` parameter delegating to `toShortLevel` while preserving default `'1st Level'` behavior for test suite assertions.
+4. Updated all 10 table renderers to use `toShortLevel` and added `white-space: nowrap;` styling.
+5. Added global CSS rule `.cell-level, .cell-level span, .badge-tag-level { white-space: nowrap !important; }` in `css/admin.css`.
+6. Bumped cache buster in `admin.html` to `v20261103_v110`.
+7. Verified with `npm test` and `node scripts/test_vocab_7x7_and_leveling_e2e.mjs` (10/10 consecutive runs, 132/132 assertions pass).
+
+### Files Changed
+- `js/api.js`
+- `js/admin/vocab-vault.js`
+- `js/admin/student-management.js`
+- `js/admin/curriculum-management.js`
+- `js/admin/app.js`
+- `js/admin/program-management.js`
+- `css/admin.css`
+- `admin.html`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- `npm test`: 40/40 JS syntax check PASSED, 27/27 service worker assets PASSED, student dashboard parity checks PASSED.
+- `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: 10/10 runs PASSED with 132/132 assertions verified without defect.
+
+### Resume From
+Ready for user inspection of all admin tables with clean, single-line `1st`, `2nd`, `3rd`, and `Alumni` badges.
+
+---
+
 ## SESSION-20261103-1540
 
 Start: 2026-11-03 15:15 UTC+8

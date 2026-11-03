@@ -1,3 +1,59 @@
+## [2026-11-03 16:10] — Phase 297: Level Column Standardization — Compact '1st', '2nd', '3rd', 'Alumni' Format Across All Admin Panel Tables
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 297  
+**Status:** PASS  
+
+### Why
+- User request: *"bagian level di semua tabel dicukup tulis 1st, 2nd, 3rd, Atau Alumni (atau kita Ex) di semua tebal admin panel, analisa, terapkan /goal"* with screenshots of awkward two-line text wrapping (`2nd \n Level`) inside narrow table column cells in Vocabulary Vault and other admin tables.
+- Since table column headers already declare `LEVEL`, writing redundant `"2nd Level"` or `"Level 2"` was cluttering cells and causing unnatural vertical word breaks on narrow viewports.
+
+### Changed
+1. **`js/api.js`**:
+   - Added canonical `toShortLevel(val)` helper function that converts numbers or strings (`1`, `'1st Level'`, `'Level 2'`, `'Alumni'`, `'Ex'`, `0`) into compact, authoritative table values: `'1st'`, `'2nd'`, `'3rd'`, `'4th'`, `'Alumni'`.
+   - Updated `toOrdinalLevel(num, short = false)`: when `short === true`, it delegates to `toShortLevel`. Default without arguments preserves backward-compatible `'1st Level'` for e2e tests.
+   - Updated `toLevelLetter(num)` to return `toShortLevel(num)`.
+   - Globally exposed `window.toShortLevel`, `window.toOrdinalLevel`, and `window.toLevelLetter`.
+2. **`js/admin/vocab-vault.js`**:
+   - Standardized `target_level` in Words & Phrases table (line 345) to use `toShortLevel(w.target_level)` with `white-space: nowrap;`.
+   - Standardized `t.level` in Topic Blueprint table (line 1566) to use `toShortLevel(t.level)` with `white-space: nowrap;`.
+   - Updated level dropdown filter options (line 151) to use `toShortLevel(lvl)`.
+3. **`js/admin/student-management.js`**:
+   - Standardized main Student Roster table Level column (line 2420) to render compact badges: `<span class="badge" style="background:#334155;color:#f8fafc;...">${toShortLevel(row.studentLevelNum || row.levelName)}</span>` (or `🎓 Alumni`).
+   - Standardized exam/task detail tables in student inspection modal (lines 887 and 1367) to use `toShortLevel`.
+4. **`js/admin/curriculum-management.js`**:
+   - Standardized Batches grid Level badge (line 490) to use `toShortLevel(lvlName)`.
+5. **`js/admin/app.js`**:
+   - Standardized Class Hub eligible students table Level cell (line 3839) to use `toShortLevel(sLvl)`.
+   - Standardized Test Hub global tests table Level cell (line 3610) to use `toShortLevel(...)`.
+   - Standardized Classes management table Level cell (line 4083) to use `toShortLevel(...)`.
+   - Standardized Levels management table Level cell (line 4196) to use `toShortLevel(r.level_number)`.
+6. **`js/admin/program-management.js`**:
+   - Standardized Program Matrix table Level badge (line 485) to use `toShortLevel(...)`.
+7. **`css/admin.css`**:
+   - Added `.cell-level, .cell-level span, .badge-tag-level { white-space: nowrap !important; }` rule ensuring no level cell in any table can wrap into two lines.
+8. **`admin.html`**:
+   - Bumped cache buster from `v20261103_v109` to `v20261103_v110`.
+
+### Files
+- `js/api.js`
+- `js/admin/vocab-vault.js`
+- `js/admin/student-management.js`
+- `js/admin/curriculum-management.js`
+- `js/admin/app.js`
+- `js/admin/program-management.js`
+- `css/admin.css`
+- `admin.html`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
+### Tests
+- command: `npm test` & `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`
+- result: `PASS` — 40/40 JS syntax pass, 27/27 manifest assets pass, student dashboard parity pass, and 10/10 consecutive e2e runs (132/132 assertions) passed with zero defects.
+
+---
+
 ## [2026-11-03 15:40] — Phase 296: Topic Blueprint Re-Design — Unified Curriculum Tabs, Single Table View, Bottom Action Bar & Safe System Settings Reset
 
 **Agent/Session:** Antigravity  

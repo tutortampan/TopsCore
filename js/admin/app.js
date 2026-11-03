@@ -375,7 +375,7 @@ import {
   mergeDuplicateStudents, detectDuplicateStudents, mergeStudentPair,
   detectDuplicateQuestions, resequenceTestQuestions, resolveDuplicateQuestionGroup, batchResolveTestDuplicateQuestions,
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
-  testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter,
+  testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter, toShortLevel,
   adminOverridePrerequisitesWithRemedial, autoSyncClassTestsForLevel
 } from '../api.js?v=20261103_v105';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261103_v105';
@@ -3607,7 +3607,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
                <td style="padding:0.75rem 1rem;font-weight:600;color:var(--clr-text);">${escapeHtml(a.title || 'Untitled')}</td>
                <td style="padding:0.75rem 1rem;"><span class="badge" style="${badgeColor}">${catLabel}</span></td>
                <td style="padding:0.75rem 1rem;color:var(--clr-text-muted);font-size:0.8rem;">${escapeHtml(c?.name || '—')}</td>
-               <td style="padding:0.75rem 1rem;color:var(--clr-text-muted);font-size:0.8rem;">${escapeHtml(a.levels?.name || '—')}</td>
+               <td style="padding:0.75rem 1rem;text-align:center;"><span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-size:0.75rem;font-weight:700;white-space:nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(a.levels?.name || a.levels?.level_number) : (a.levels?.name || '—'))}</span></td>
                <td style="padding:0.75rem 1rem;">
                   ${a.modules?.name ? `<span class="badge badge-neutral">${escapeHtml(a.modules.name)}</span>` : '—'}
                </td>
@@ -3836,7 +3836,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
                             <td style="padding:0.65rem 1rem;color:var(--clr-text-muted);">${escapeHtml(sInst)}</td>
                             <td style="padding:0.65rem 1rem;color:var(--clr-text-muted);">${escapeHtml(sProg)}</td>
                             <td style="padding:0.65rem 1rem;color:var(--clr-text-muted);">${b ? escapeHtml(b.name) : '—'}</td>
-                            <td style="padding:0.65rem 1rem;text-align:center;"><span class="badge badge-neutral" style="font-size:0.7rem;">${escapeHtml(sLvl)}</span></td>
+                            <td style="padding:0.65rem 1rem;text-align:center;"><span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-size:0.72rem;font-weight:700;white-space:nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(sLvl) : sLvl)}</span></td>
                             <td style="padding:0.65rem 1.25rem;font-weight:600;color:var(--clr-text);">${escapeHtml(s.name)}</td>
                             <td style="padding:0.65rem 1rem;text-align:center;">
                               <span class="badge ${s.is_active !== false ? 'badge-success' : 'badge-neutral'}" style="font-size:0.7rem;">${s.is_active !== false ? 'Active' : 'Inactive'}</span>
@@ -4080,7 +4080,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
             window._subjRecords[r.id] = r;
             const tr = document.createElement('tr');
             tr.innerHTML = `
-              <td class="text-muted fw-600">${escapeHtml(r.levels?.name || '&mdash;')}</td>
+              <td><span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-size:0.75rem;font-weight:700;white-space:nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(r.levels?.name || r.levels?.level_number) : (r.levels?.name || '&mdash;'))}</span></td>
               <td class="fw-600" style="color:var(--clr-text-1);">${escapeHtml(r.name)}</td>
               <td class="text-center"><span class="badge ${r.is_active ? 'badge-success' : 'badge-neutral'}">${r.is_active ? 'Active' : 'Inactive'}</span></td>
               <td class="text-right">
@@ -4193,7 +4193,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
           <td><span class="badge badge-neutral">${escapeHtml(progName)}</span></td>
           <td><span class="badge badge-neutral">${escapeHtml(programName)}</span></td>
           <td class="text-muted fw-600">${escapeHtml(r.classes?.name || '—')}</td>
-          <td class="text-center"><span class="badge badge-primary">Level ${toLevelLetter(r.level_number)}</span></td>
+          <td class="text-center"><span class="badge badge-primary" style="white-space:nowrap;font-weight:700;">${typeof toShortLevel === 'function' ? toShortLevel(r.level_number) : toLevelLetter(r.level_number)}</span></td>
           <td class="fw-600">${escapeHtml(r.name)}</td>
           <td class="text-center"><span class="badge ${r.is_active ? 'badge-success' : 'badge-neutral'}">${r.is_active ? 'Active' : 'Inactive'}</span></td>
           <td class="text-right">
