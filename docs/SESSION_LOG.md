@@ -1,3 +1,52 @@
+## SESSION-20261103-1340
+
+Start: 2026-11-03 13:44 UTC+8
+End: 2026-11-03 13:50 UTC+8
+Agent: Antigravity
+
+### User Request
+"tampilan class vocab ini perlu perbaikan,,, dalam 3rd Vocab ada batch 1134 yang levlnya masih 2, dan di kelas 2nd Vocab, ada camp 133 yang level 3. meskipun level 3 bisa kses level 2, tapi merka bukan siswa yang terdaftar secar formal di kelas itu."
+
+### Objective
+Fix Class Hub student roster to only show students whose effective level exactly matches the class's level.
+
+### Work Performed
+1. Read `js/admin/app.js` lines 1050–1200 to locate the bug.
+2. Confirmed root cause: `classStudents` filter at line 1183 only checked `program_id`, not level.
+3. Queried Supabase to get correct class/batch/level UUIDs.
+4. Confirmed `class_levels` junction table exists but has no entries for these two classes — fallback to `classes.level_id` needed.
+5. Implemented fix: added `allClassLevels` fetch + `level_id` to classes query + new level-aware filter.
+6. Bumped cache buster to `v20261103_v106`.
+7. Ran `npm test` → all PASS.
+8. Live DB verification confirmed correctness.
+
+### Commands Run
+- `npm test` → PASS
+- Node verification script against Supabase → ✅ ALL ASSERTIONS PASS
+
+### Results
+- 3rd Vocabulary: 29 students (22 Batch-133/Level-3, 0 from Batch-134/Level-2) ✅
+- 2nd Vocabulary: 17 students (all Batch-134/Level-2, 0 from Batch-133/Level-3) ✅
+
+### Files Changed
+- `js/admin/app.js` (lines ~1121–1212, +24/-3 lines)
+- `admin.html` (cache buster v106)
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- npm test: PASS (40 JS files, 27 manifest assets, parity checks)
+- Live DB: All assertions pass
+
+### Outstanding
+- None
+
+### Resume From
+Phase 293 complete. Next: monitor for edge cases with multi-level `class_levels` entries.
+
+---
+
 ## SESSION-20261103-0800
 
 Start: 2026-11-03 07:42 UTC+8

@@ -1120,8 +1120,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
 
         // Fetch ALL data relevant to this class and detailed test mapping
         // OPTIMIZATION: Flat students query without heavy nested joins (prevents 500 statement timeouts)
-        const [allClasses, allTests, allStudents, allPrograms, allBatches, allQuestions, allLevels, allVault, allAttempts, allInstitutions] = await Promise.all([
-          adminFetchAll('classes', 'id, name, program_id').catch(() => []),
+        const [allClasses, allTests, allStudents, allPrograms, allBatches, allQuestions, allLevels, allVault, allAttempts, allInstitutions, allClassLevels] = await Promise.all([
+          adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => []),
           adminFetchAll('tests').catch(() => []),
           adminFetchAll('students', 'id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id').catch(() => []),
           adminFetchAll('programs', 'id, name, institution_id').catch(() => []),
@@ -1130,7 +1130,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
           adminFetchAll('levels').catch(() => []),
           adminFetchAll('vocabulary_vault', 'id, target_level, theme_code, topic_code, word_type, deleted_at').catch(() => []),
           adminFetchAll('attempts').catch(() => []),
-          adminFetchAll('institutions', 'id, name').catch(() => [])
+          adminFetchAll('institutions', 'id, name').catch(() => []),
+          adminFetchAll('class_levels', 'class_id, level_id').catch(() => [])
         ]);
 
         if ((!classId || !allClasses.some(c => c.id === classId)) && allClasses && allClasses.length > 0) {
@@ -1177,16 +1178,37 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
         const isExam = isWeeklyExam;
         const allClassExams = classTests.filter(isWeeklyExam);
         const totalClassExams = allClassExams.length || 8;
-        // Find students that have access to this class's program
+        // Find students that have access to this class's program AND level
         const classProgramId = currentClass?.program_id;
         const programBatches = (allBatches || []).filter(b => b.program_id === classProgramId);
+
+        // Build the set of valid level IDs for this class (class_levels junction table, fallback to class.level_id)
+        const classLevelIds = new Set(
+          (allClassLevels || [])
+            .filter(cl => cl.class_id === classId)
+            .map(cl => cl.level_id)
+        );
+        if (classLevelIds.size === 0 && currentClass?.level_id) {
+          classLevelIds.add(currentClass.level_id);
+        }
+
         const classStudents = (allStudents || []).filter(s => {
           if (s.deleted_at) return false;
           if (s.is_active === false) return false;
+
           const batchObj = (allBatches || []).find(b => b.id === s.batch_id);
           const batchProgId = batchObj?.program_id;
-          if (classProgramId && (s.program_id === classProgramId || batchProgId === classProgramId)) return true;
-          return false;
+
+          // Program must match
+          const progMatch = classProgramId && (s.program_id === classProgramId || batchProgId === classProgramId);
+          if (!progMatch) return false;
+
+          // Level must match: student.level_id first, fallback to batch.current_level_id
+          // If no class level is defined, include all program students (safe fallback)
+          if (classLevelIds.size === 0) return true;
+          const studentEffectiveLevelId = s.level_id || batchObj?.current_level_id || null;
+          if (!studentEffectiveLevelId) return true; // No level data on student → include (safe fallback)
+          return classLevelIds.has(studentEffectiveLevelId);
         });
 
         const activeStudents = classStudents.filter(s => s.is_active !== false);

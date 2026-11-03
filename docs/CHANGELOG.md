@@ -1,3 +1,51 @@
+## [2026-11-03 13:49] — Phase 293: Fix Class Hub Roster — Level-Exact Student Filter
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 293
+**Status:** PASS
+
+### Why
+- Bug: Class Hub student roster showed students from the wrong level in the same program.
+  - `3rd Vocabulary` (Level 3) was showing Batch 134 (Level 2) students.
+  - `2nd Vocabulary` (Level 2) was showing Batch 133 (Level 3) students.
+- Root cause: `classStudents` filter in `renderClassHub` (`js/admin/app.js` lines 1183–1190) only checked `program_id` match — did NOT check level match.
+
+### Changed
+1. **`js/admin/app.js`** — `renderClassHub()`:
+   - Added `allClassLevels` to the `Promise.all` data fetch via `adminFetchAll('class_levels', 'class_id, level_id')`.
+   - Added `level_id` to the classes select query (`id, name, program_id, level_id`).
+   - Replaced old 8-line `classStudents` filter with new 21-line filter that:
+     1. Builds `classLevelIds` Set from `class_levels` junction table (keyed by `class_id`).
+     2. Falls back to `currentClass.level_id` if no `class_levels` entries exist.
+     3. Derives `studentEffectiveLevelId` = `student.level_id ?? batch.current_level_id`.
+     4. Only includes student if effective level is in `classLevelIds` (exact match).
+     5. Safe fallbacks: no class level defined → include all; no student level data → include.
+2. **`admin.html`** — bumped cache buster from `v20261103_v105` → `v20261103_v106`.
+
+### Files
+- `js/admin/app.js` (+24/-3 lines around line 1121–1212)
+- `admin.html` (cache buster line 535)
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
+### Database
+- No schema changes. Reads `class_levels` (existing table) and `classes.level_id` (existing column).
+
+### Tests
+- command: `npm test`
+- result: `PASS` — 40/40 JS syntax, 27/27 manifest assets, all parity checks PASSED.
+- Live DB verification: 3rd Vocab → 29 students (22 from Batch 133, **0** from Batch 134 ✅); 2nd Vocab → 17 students (all Batch 134, **0** from Batch 133 ✅).
+
+### Risks / Follow-up
+- Student dashboard access is unaffected (Level 3 students can still view lower-level content there).
+- Students with no `level_id` and no `batch.current_level_id` remain included as a safe fallback (they'll appear in all program classes).
+
+### Next Action
+- Monitor Class Hub in production for any edge cases with multi-level `class_levels` entries.
+
+---
+
 ## [2026-11-03 07:58] — Phase 292: Vocabulary Vault Institution, Program & Level Columns Integration
 
 **Agent/Session:** Antigravity  

@@ -1,11 +1,17 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-03 07:58 UTC+8
-Current Phase: Phase 292: Vocabulary Vault Institution, Program & Level Columns Integration [COMPLETE]
+Last Updated: 2026-11-03 13:49 UTC+8
+Current Phase: Phase 293: Fix Class Hub Roster — Level-Exact Student Filter [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Phase 292: Vocabulary Vault Institution, Program & Level Columns Integration:**
+1. **Phase 293: Fix Class Hub Roster — Level-Exact Student Filter [COMPLETE]:**
+   - **Root Cause Fixed**: `classStudents` filter in `renderClassHub` (`js/admin/app.js`) only matched program — now also matches level.
+   - **`js/admin/app.js`**: Added `allClassLevels` to the `Promise.all` fetch, added `level_id` to the classes query, replaced old filter with new level-aware filter using `class_levels` junction table (fallback to `class.level_id`). Effective student level = `student.level_id ?? batch.current_level_id`.
+   - **`admin.html`**: Cache buster bumped to `v20261103_v106`.
+   - **Verified**: DB live check — 3rd Vocab = 29 correct students (0 from wrong level); 2nd Vocab = 17 correct students (0 from wrong level). All tests PASS.
+
+1. **Phase 292: Vocabulary Vault Institution, Program & Level Columns Integration [COMPLETE]:**
    - **`js/api.js` Data Joins**: Updated `fetchVaultWords` select query to join `institutions(id, name, code)` and `programs(id, name, code)` on `vocabulary_vault`. All 820 items cleanly resolve with zero nulls.
    - **Words & Phrases Grid Table View**: Added explicit columns to `<thead>` and `renderRows` for `Institution`, `Program`, and `Level`:
      - Institution: Stylized cyan badge (`#38bdf8`) displaying `CEC`.
