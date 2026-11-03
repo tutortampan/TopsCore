@@ -1,3 +1,45 @@
+## SESSION-20261103-0800
+
+Start: 2026-11-03 07:42 UTC+8
+End: 2026-11-03 08:00 UTC+8
+Agent: Antigravity
+
+### User Request
+"di vocabulary vault tambahakan kolom institusi, program dan level dalam keterangan words dan Phrase. juga dalam Topic Blueprint. agar mudah dilihat. perbaiki /goal"
+
+### Objective
+1. Add explicit columns for Institution, Program, and Level in the Vocabulary Vault table view for both "Vocabulary Words" and "Phrases & Idioms" tabs.
+2. In "Topic Blueprint", prominently display Institution, Program, and Level metadata across both Board View and Table View, with interactive Level switching between 2nd Level and 3rd Level.
+3. Maintain all existing invariants: Result Page bright vibrant blue back button contrast, synchronized panel glow, 8-digit hex parsing safety, and 0 console errors.
+
+### Work Performed
+1. **API Joins (`js/api.js`)**:
+   - Updated `fetchVaultWords` to join `institutions(id, name, code)` and `programs(id, name, code)`. All 820 items in `vocabulary_vault` resolve CEC and Camp cleanly.
+2. **Vocabulary Vault Table Header & Badges (`js/admin/vocab-vault.js`)**:
+   - Added `Institution`, `Program`, `Level` columns to `<thead>` with fixed column widths and clean alignment.
+   - Rendered stylized pill badges in `renderRows`:
+     - Institution: Cyan `#38bdf8` (`CEC`)
+     - Program: Purple `#c084fc` (`Camp`)
+     - Level: Slate `#f8fafc` (`toOrdinalLevel()`, e.g., `2nd Level`, `3rd Level`)
+   - Added dynamic `vault-level-filter` dropdown to toolbar populated from `words.target_level`.
+   - Preserved row inline edit mode (`cell-level` input) and empty state `colspan="11"`.
+3. **Topic Blueprint Overhaul (`js/admin/vocab-vault.js`)**:
+   - Added prominent Institution (`INST: CEC`) and Program (`PROG: CAMP`) pills to the blueprint toolbar.
+   - Implemented interactive Level Selector buttons (`[ 🎯 2ND LEVEL ]`, `[ 🎯 3RD LEVEL ]`) dynamically detected from vault records.
+   - Added dual view mode switcher: `[ 🗺️ Board ]` and `[ 📊 Table ]`.
+   - In Board View: Added metadata hierarchy row `[CEC] [Camp] [2nd Level / 3rd Level]` to every single topic card.
+   - In Table View: Added explicit columns for `Institution`, `Program`, `Level`, `T.Code`, `Theme`, `Topic Code`, `Topic`, `Verbs`, `Adjs`, `Nouns`, `Phrases`, `Total Items`, and `Actions`.
+   - Updated bottom infobar with chips for Institution, Program, and Level metadata.
+
+### Verification
+- `node --check js/admin/vocab-vault.js`: PASS
+- `node scripts/check_all_js_syntax.cjs`: PASS (40/40 JS files passed).
+- `node scripts/test_result_page_parity.cjs`: PASS (100%).
+- `node scripts/verify_green_star_grading.mjs`: PASS (100%).
+
+### Resume From
+Vocabulary Vault and Topic Blueprint successfully updated with Institution, Program, and Level metadata.
+
 ## SESSION-20261103-0715
 
 Start: 2026-11-03 06:56 UTC+8
