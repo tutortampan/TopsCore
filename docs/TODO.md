@@ -1,3 +1,31 @@
+# ACTIVE DIRECTIVE: PHASE 300 — UNIFIED TOPIC BLUEPRINT CASCADING ROWSPAN MATRIX (OPSI B) [COMPLETE]
+
+- [x] Task 1: Analyze user mockups (Gambar 1 current, Gambar 2 outline, Gambar 3 grouped, Gambar 4 inline, and user-approved Opsi B).
+- [x] Task 2: Implement multi-level hierarchical grouping (Level $\rightarrow$ Theme $\rightarrow$ Topics) in `_renderTopicBlueprintTab` in `js/admin/vocab-vault.js`.
+- [x] Task 3: Build 11-column cascading `rowspan` matrix: `LEVEL` | `THEME CODE` | `THEME` | `TOPIC CODE` | `TOPIC` | `VERB` | `NOUN` | `ADJECTIVE` | `PHRASE` | `TOTAL` | `ACTION`.
+- [x] Task 4: Implement zero-layout-break live search (`#vault-topic-search`) with instantaneous `rowspan` recalculation on every keystroke.
+- [x] Task 5: Integrate unified toolbar filter tabs `[ 🎯 ALL LEVELS (23) ]`, `[ 🎯 1st (0) ]`, `[ 🎯 2nd (15) ]`, `[ 🎯 3rd (8) ]` and bottom infobar actions (`⚡ Auto-Generate`, `⚒️ Merge Topics`).
+- [x] Task 6: Add dark theme styling rules in `css/admin.css` (`#blueprint-matrix-table`, `.cell-level-group`, `.cell-theme-code`, `.cell-theme-name`).
+- [x] Task 7: Bump cache buster query parameter to `v=20261103_v113` across `admin.html`, `js/admin/app.js`, `js/admin/classes-management.js`, and `js/admin/vocab-vault.js`.
+- [x] Task 8: Verify with automated syntax validation (`node scripts/check_all_js_syntax.cjs`), CI parity suite (`npm.cmd test`), and live Playwright browser screenshot (`blueprint_opsi_b_verified.png`).
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 299 — REALTIME FULL STUDENT JOURNEY & HOUSEKEEPING RESET [COMPLETE]
+
+- [x] Task 1: Execute full realtime student journey (2nd Level $\rightarrow$ 3rd Level) with account `"Test"` on live Supabase PostgreSQL (46 distinct tests, 262 real DB attempts per run).
+- [x] Task 2: Fix runtime bugs discovered during live runs:
+  - `themeCodeFallback` reference error in `js/api.js`.
+  - Flexible exam lockout bypass in `startTest` Edge Function & API fallback.
+  - Proportional points normalization in `computeUnifiedScore` (`js/grading.js`).
+  - Direct DB mode for fast test execution (`TOPSCORE_DIRECT_DB === '1'`).
+  - Standardized compact level badges (`1st`, `2nd`, `3rd`, `Alumni`) across all admin tables.
+- [x] Task 3: Complete 4 consecutive defect-free cycles (1,048 real database attempts submitted, 100% deterministic score 141.9/150 pts).
+- [x] Task 4: Build automated reset utility `scripts/reset_test_student.mjs`.
+- [x] Task 5: Execute clean housekeeping reset: purge all 66 attempts and 3,280 attempt answers for student `"Test"`, restore to 2nd Level (Batch 134, active, PIN 1234).
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 292 — VOCABULARY VAULT INSTITUTION, PROGRAM & LEVEL INTEGRATION [COMPLETE]
 
 - [x] Task 1: Update `fetchVaultWords` in `js/api.js` to select joined relations `institutions(id, name, code)` and `programs(id, name, code)`.

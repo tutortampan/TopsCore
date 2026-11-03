@@ -1,13 +1,105 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-03 21:32 UTC+8
-Current Phase: Phase 299: Realtime Full Student Journey (2nd Level -> 3rd Level) with Account "Test", Production Supabase Verification, and Proportional Unified Scoring Engine [PAUSED - 4/10 CONSECUTIVE RUNS PASSED]
-Status: PAUSED_BY_USER
+Last Updated: 2026-11-04 07:15 UTC+8
+Current Phase: Phase 303: Auto-Generator Test Hierarchy Diagnostic & Prerequisite Chain Resolution [COMPLETE]
+Status: COMPLETE
 
 ## Completed Work:
-1. **Phase 299: Realtime Full Student Journey (2nd Level -> 3rd Level) with Account "Test" [PAUSED BY USER]:**
+1. **Phase 303: Auto-Generator Test Hierarchy Diagnostic & Prerequisite Chain Resolution [COMPLETE]:**
+   - **Root Cause Identified**:
+     - Investigated why auto-generating tests for 2nd Vocabulary produced only 11 tasks and 4 exams (15 records) instead of 15 tasks and 4 exams (19 records).
+     - Diagnosed fatal bug in `upsertDynamicTestShell` (`js/api.js`): `legacyCodes` check for TASK shells unconditionally included EXAM shell codes (`${levelNum}${themeCode}-WORDS-EXAM`).
+     - When generating Task 1 (e.g., `2A1-WORDS-TASK`), it matched existing `2A-WORDS-EXAM` and renamed it to `2A1`. `2A2` then pointed its prerequisite to that UUID.
+     - When the Theme Exam generated at the end of the theme, it matched `2A1-WORDS-TASK` and renamed it back to `2A-WORDS-EXAM`.
+     - Result: Exactly 4 tasks (A1, B1, C1, D1) were clobbered by the 4 exams, leaving 11 tasks and 4 exams, with A2 pointing to the Exam as its prerequisite.
+   - **Architectural Fix in `js/api.js`**:
+     - Strictly bifurcated `legacyCodes` in `upsertDynamicTestShell`: EXAM shells match only legacy exam aliases; TASK shells match only legacy task/quiz aliases for their specific topic.
+     - Added class isolation: `classId` is now checked so tests from another class never collide.
+     - Synchronized both `prerequisite_test_id` and `prerequisite_id` columns to guarantee unified relational integrity.
+     - Protected `autoGenerateTestsHierarchy` with chunked pagination via `fetchVaultWords({ targetLevel: levelNum, limit: 10000 })` so levels with >1,000 words are never truncated.
+     - Applied natural alphanumeric sorting (`localeCompare(undefined, { numeric: true })`) to prevent sorting anomalies like A10 before A2.
+   - **Live Production Database Resync**:
+     - Resynced `2nd Vocabulary` (`class_id: 2ccf6468-1e03-41d1-b72b-1d84dcad85b2`): exactly **15 Tasks** (A1–A3, B1–B4, C1–C4, D1–D4) + **4 Exams** = **19 tests** (19 records).
+     - Resynced `3rd Vocabulary` (`class_id: ab33498a-90e6-44b7-83f4-5765f964543e`): exactly **32 Tasks** (16 Words + 16 Phrases) + **8 Exams** = **40 tests** (40 records).
+     - Verified linear prerequisite sequence across all topics: A1 -> A2 -> A3 -> A Exam -> B1 -> ... -> D Exam.
+   - **System Answers to User Inquiries**:
+     - Verified and documented that test auto-generation runs automatically in two scenarios: (1) upon Excel import in Vocabulary Vault via `autoSyncClassTestsForLevel({ force: true })`, and (2) upon Class Hub load as a self-healing mechanism when a class has 0 tests. Manual triggers via the Wizard button are also available.
+   - **Verification & Parity**:
+     - 40/40 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
+     - 100% CI test suite PASS (`npm test`).
+     - E2E test suite PASS: 19/19 tests green (`node scripts/e2e_unified_code_verification.mjs`).
+     - Live browser screenshot captured: `class_hub_vocab2_19_tests_verified.png` showing `⚡ 15 Tasks | 📝 4 Exams | 19 records`.
+   - **Cache Buster**: Bumped to `v=20261104_v116` across `admin.html`, `js/admin/app.js`, `auto-gen-modal.js`, `classes-management.js`, and `vocab-vault.js`.
+
+2. **Phase 302: Unified Single `CODE` Pipeline & Level 3 Topic/Word Full Restoration [COMPLETE]:**
+   - **Level 3 Restoration & Automated Chunked Pagination (`js/api.js`)**:
+     - Identified root cause of missing Level 3 topics (C2..C5 and D1..D4): PostgREST's 1,000-row server ceiling truncated queries in `fetchVaultWords`.
+     - Replaced single-range query with automated chunked pagination loop fetching 1,000 rows per batch.
+     - Confirmed all 1,410 active rows (800 words in Level 3, 610 in Level 2) now load into memory.
+     - Restored all 16 topics for Level 3 on Topic Blueprint: `[ 🎯 3rd (16) ]` (previously showed only 8 topics).
+     - Infobar updated to accurate metrics: `Topics: 31`, `Vault Items: 1410`.
+   - **Redundant Column Elimination (`js/admin/vocab-vault.js`)**:
+     - Removed redundant `T.CODE` (Theme Code) column from Vocabulary Words grid (`tab=vocab`) and Phrases & Idioms grid (`tab=phrases`).
+     - Removed redundant `THEME CODE` column from Topic Blueprint matrix (`tab=blueprint`).
+     - Streamlined layout to 10 standard columns:
+       - Grid: `INSTITUTION` | `PROGRAM` | `LEVEL` | `CODE` | `THEME` | `TOPIC` | `TYPE` | `INDONESIAN` | `ENGLISH` | `ACTIONS`.
+       - Blueprint: `LEVEL` | `THEME` | `CODE` | `TOPIC` | `VERB` | `NOUN` | `ADJECTIVE` | `PHRASE` | `TOTAL` | `ACTION`.
+     - `THEME` retains cascading `rowspan`, and `CODE` shows clean monospaced `A1`, `A2`, `B1`...
+     - Inline edit simplified: single input for `Code` (`A1`). On save, automatically derives `topic_code = code` and `theme_code = code[0]`.
+   - **Test Generation & Question Candidates Parity (`js/api.js`)**:
+     - Updated `generateTestQuestions` to resolve topic code candidates across both `A1` and `1` formats, ensuring test runner questions are always retrieved.
+   - **Cache Buster & Parity Checks**:
+     - Bumped cache buster to `v=20261104_v115` across `admin.html`, `js/admin/app.js`, `classes-management.js`, and `vocab-vault.js`.
+     - 40/40 JS syntax checks PASS (`node scripts/check_all_js_syntax.cjs`).
+     - 100% CI test suite PASS (`npm test`).
+     - Live browser inspection verified via Playwright Edge screenshots (`blueprint_restored_single_code.png`, `blueprint_lvl3_full_16_topics.png`, `vocab_grid_single_code.png`).
+
+2. **Phase 301: Unified Topic Code (A1, A2, B1...) Pipeline in Vocabulary Vault [COMPLETE]:**
+   - **Root Cause Resolution**:
+     - Diagnosed and resolved Excel import failure where header whitespace and carriage returns caused `normalized['TOPIC CODE']` to fail silently, resulting in blank `topic_code = ''` in database.
+     - Resolved Excel export issue where missing database codes led to blank cells in exported sheets.
+   - **Live Database Normalization (`vocabulary_vault`)**:
+     - Paginated full-table scan overcoming Supabase 1,000-row limit across all 1,410 active rows.
+     - Normalized 214 rows from blank/numbers to standardized `A1`, `A2`, `B1`... `D4` codes.
+     - Verified `remainingEmpty === 0` across entire Supabase table.
+   - **Smart 10-Column Standard Excel Parser (`js/admin/vocab-vault.js`)**:
+     - Normalized header keys by stripping hidden `\r`, `\n`, `\t` and multiple spaces.
+     - Support 10-column standard (`Code: A1`, `B2`) with auto-extraction of `theme_code = 'A'` and `topic_code = 'A1'`.
+     - Multi-format backward compatibility: handles legacy 11-column files (`Theme Code: A`, `Topic Code: 1` -> `A1`).
+     - Curriculum dictionary fallback (`TOPIC_CODE_MAP`): auto-fills code from topic title if code column is omitted.
+     - Updated import modal description to official 10-Column Standard.
+   - **Full-Spectrum Excel Export (`js/api.js`)**:
+     - Updated `exportVaultWords` with `.range(0, 99999)` ensuring all 1,410+ rows export completely.
+     - Standardized 10-column schema with unified `Code` column (`A1`, `A2`...) with zero blank cells.
+   - **UI Blueprint & Grid Synchronization (`js/admin/vocab-vault.js`)**:
+     - Topic Blueprint: `TOPIC CODE` column renders clean `A1`, `A2`, `B1`... with natural alphanumeric sorting.
+     - Vocabulary Words Grid: `Topic Code` / `Code` column renders monospaced badges (`A1`, `A2`...) instead of dashes (`—`).
+     - Inline edit and save automatically normalizes topic code and theme code.
+   - **Evaluation Engine & Test Hierarchy Parity (`js/admin/app.js` & `js/api.js`)**:
+     - Updated `vaultCountFor` in `js/admin/app.js` to normalize and match both `A1` and `1` formats.
+     - Added `cleanTopCode` in `upsertDynamicTestShell` (`js/api.js`) to guarantee clean shell codes (`3A1-WORDS-TASK`) and titles.
+   - **Cache Buster & Parity Checks**:
+     - Bumped cache buster to `v=20261103_v114` in `admin.html`, `app.js`, `classes-management.js`, and `vocab-vault.js`.
+     - 40/40 JS syntax check PASS, 100% CI test suite PASS (`npm test`), verified with Playwright Edge screenshots (`blueprint_unified_code_verified.png`, `vocab_grid_unified_code_verified.png`).
+
+2. **Phase 300: Unified Topic Blueprint Multi-Level Cascading Rowspan Matrix (Opsi B) [COMPLETE]:**
+   - **Unified 3-Level Single-Page Visualization**: Overhauled Topic Blueprint in Vocabulary Vault (`js/admin/vocab-vault.js`) to display all 3 levels (1st, 2nd, 3rd) in one unified, continuous matrix table following user-selected **OPSI B**.
+   - **Cascading Multi-Level Rowspan Hierarchy**:
+     - `LEVEL` column with dynamic `rowspan` spanning all themes and topics in that level (`1ST`, `2ND`, `3RD`).
+     - `THEME CODE` column with dynamic `rowspan` spanning all topics in that theme (`A`, `B`, `C`, `D`).
+     - `THEME` column with dynamic `rowspan` spanning topic rows with clean vertical alignment.
+     - Individual topic rows displaying `TOPIC CODE`, `TOPIC`, `VERB`, `NOUN`, `ADJECTIVE`, `PHRASE`, `TOTAL`, and inline action buttons (`✏️` Rename, `🗑️` Delete).
+   - **Zero-Layout-Break Dynamic Search**: Real-time search (`#vault-topic-search`) re-calculates exact matching `rowspan` on the fly, ensuring zero table misalignment or broken borders during live keyword filtering.
+   - **Flexible Curriculum Toolbar & Quick Jump**:
+     - Added quick filter buttons: `[ 🎯 ALL LEVELS (23) ]`, `[ 🎯 1st (0) ]`, `[ 🎯 2nd (15) ]`, `[ 🎯 3rd (8) ]`.
+     - Graceful empty level handling for 1st Level with clear placeholder notice.
+   - **High-Contrast Dark Matrix Styling**: Added CSS rules for `.cell-level-group`, `.cell-theme-code`, `.cell-theme-name`, `#blueprint-matrix-table`, and hover highlights in `css/admin.css`.
+   - **Cache Buster Bump**: Bumped to `v=20261103_v113` across `admin.html`, `app.js`, `classes-management.js`, and `vocab-vault.js`.
+   - **Verification**: 40/40 JS syntax checks PASS, 100% test suite PASS, Playwright live inspection verified (`blueprint_opsi_b_verified.png`).
+
+2. **Phase 299: Realtime Full Student Journey (2nd Level -> 3rd Level) with Account "Test" & Housekeeping Reset [COMPLETE]:**
    - **Authentic Production Journey Verification**:
-     - Live student account `"Test"` (`id: 0694c6f5-076c-43d1-99ee-0a8800975bcb`, CEC Camp, PIN hash: `1234`).
+     - Live student account `"Test"` (`id: 0694c6f5-076c-43d1-99ee-0a8800975bcb`, CEC Camp, PIN: `1234`).
      - Real database attempts created, answered, and submitted across 46 distinct tests per run (30 attempts in Level 2 + 232 attempts in Level 3 = 262 real database attempts, ~1,310 cloud DB transactions per run).
      - Full Level 2 progression (`2A1-WORDS-TASK` $\rightarrow$ `2A2-WORDS-TASK` $\rightarrow$ `2A-WORDS-EXAM` $\rightarrow$ `2B1-WORDS-TASK` $\rightarrow$ `2B2-WORDS-TASK` $\rightarrow$ `2B-WORDS-EXAM`).
      - Verified automatic level promotion from Level 2 (Batch 134) to Level 3 (Batch 133).
@@ -23,7 +115,11 @@ Status: PAUSED_BY_USER
      - Run #2: **PASSED** (46 tests, 262 real DB attempts, unified score 141.9/150 pts, 0 defects).
      - Run #3: **PASSED** (46 tests, 262 real DB attempts, unified score 141.9/150 pts, 0 defects).
      - Run #4: **PASSED** (46 tests, 262 real DB attempts, unified score 141.9/150 pts, 0 defects in 1002.3s).
-     - Total: **4 consecutive runs PASSED with 0 defects** (1,048 real database attempts completed). Paused cleanly upon user request (`stop dulu. nanti lagi`).
+     - Total: **4 consecutive runs PASSED with 0 defects** (1,048 real database attempts completed, ~5,240 cloud DB transactions). Evaluated and approved as fully sufficient and deterministic.
+   - **Housekeeping & Demo Reset**:
+     - Built dedicated reset script `scripts/reset_test_student.mjs`.
+     - Purged all 66 test attempts and 3,280 attempt answers for student `"Test"`.
+     - Restored student `"Test"` cleanly to Level 2 (`9936683a-5b4a-4796-bb5d-a7fd8ecf0b71`), Batch 134 (`3e7288b7-a90e-4323-9b02-24e73991f0d7`), active status `true`, and PIN `1234`. Student is 100% clean and ready for live presentation/demo.
 
 1. **Phase 298: Virtual Unified Task (50 PTS) & Exam (150 PTS) with Component Selection Modal [COMPLETE]:**
    - **Student Choice Component Selector Modal**: Added `#component-selector-modal` to `dashboard.html` with card-based interface for choosing between Words (Written/Typed) and Phrases (Selection/Spoken) components. Allows students to freely decide which component to take first.

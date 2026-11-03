@@ -8,7 +8,7 @@ export async function openAutoGenerateModal(options = {}) {
     toShortLevel,
     escapeHtml, 
     escHtml 
-  } = await import('../api.js?v=20261103_v112');
+  } = await import('../api.js?v=20261104_v116');
   const { getSupabase } = await import('../supabase.js?v=20261027c');
 
   const { 

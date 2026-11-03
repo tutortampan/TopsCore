@@ -1,4 +1,4 @@
-import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsTests, autoGeneratePhrasesTests, toShortLevel } from '../api.js?v=20261103_v112';
+import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsTests, autoGeneratePhrasesTests, toShortLevel } from '../api.js?v=20261104_v116';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261102_v103';
 import { openTestBuilder } from './test-builder.js?v=20261102_v103';
 import { DataGrid } from './datagrid.js?v=20261102_v103';

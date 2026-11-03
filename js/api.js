@@ -664,7 +664,15 @@ export async function generateTestQuestions(sb, test) {
         .is('deleted_at', null)
         .eq('target_level', levelNum)
         .range(0, 4999);
-      if (themes && Array.isArray(themes) && themes.length > 0) {
+      if (topicCode) {
+        if (themeCode) query = query.eq('theme_code', themeCode);
+        const candidateCodes = [
+          String(topicCode).toUpperCase(),
+          (/^[0-9]+$/.test(String(topicCode)) && themeCode) ? `${String(themeCode).toUpperCase()}${topicCode}` : null,
+          String(topicCode).replace(/^[A-Za-z]/, '')
+        ].filter(Boolean);
+        query = query.in('topic_code', candidateCodes);
+      } else if (themes && Array.isArray(themes) && themes.length > 0) {
         query = query.in('theme_code', themes);
       } else if (isThemeTest && themeCode) {
         const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -675,9 +683,8 @@ export async function generateTestQuestions(sb, test) {
         } else {
           query = query.eq('theme_code', themeCode);
         }
-      } else {
-        if (themeCode) query = query.eq('theme_code', themeCode);
-        if (topicCode) query = query.eq('topic_code', topicCode);
+      } else if (themeCode) {
+        query = query.eq('theme_code', themeCode);
       }
       const res = await query;
       if (!res.error && res.data && res.data.length > 0) {
@@ -692,7 +699,15 @@ export async function generateTestQuestions(sb, test) {
         .is('deleted_at', null)
         .eq('target_level', levelNum)
         .range(0, 4999);
-      if (themes && Array.isArray(themes) && themes.length > 0) {
+      if (topicCode) {
+        if (themeCode) queryNoCat = queryNoCat.eq('theme_code', themeCode);
+        const candidateCodes = [
+          String(topicCode).toUpperCase(),
+          (/^[0-9]+$/.test(String(topicCode)) && themeCode) ? `${String(themeCode).toUpperCase()}${topicCode}` : null,
+          String(topicCode).replace(/^[A-Za-z]/, '')
+        ].filter(Boolean);
+        queryNoCat = queryNoCat.in('topic_code', candidateCodes);
+      } else if (themes && Array.isArray(themes) && themes.length > 0) {
         queryNoCat = queryNoCat.in('theme_code', themes);
       } else if (isThemeTest && themeCode) {
         const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -702,9 +717,8 @@ export async function generateTestQuestions(sb, test) {
         } else {
           queryNoCat = queryNoCat.eq('theme_code', themeCode);
         }
-      } else {
-        if (themeCode) queryNoCat = queryNoCat.eq('theme_code', themeCode);
-        if (topicCode) queryNoCat = queryNoCat.eq('topic_code', topicCode);
+      } else if (themeCode) {
+        queryNoCat = queryNoCat.eq('theme_code', themeCode);
       }
       const res2 = await queryNoCat;
       if (!res2.error && res2.data) {
@@ -2235,28 +2249,41 @@ export async function getServerTimeWita() {
 // ============================================================
 // VOCABULARY VAULT — CRUD & IMPORT
 // ============================================================
-export async function fetchVaultWords({ topic = null, search = null, targetLevel = null, limit = 2500, offset = 0 } = {}) {
+export async function fetchVaultWords({ topic = null, search = null, targetLevel = null, limit = 10000, offset = 0 } = {}) {
   const sb = await getSupabase();
-  let query = sb.from('vocabulary_vault')
-    .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category, institution_id, program_id, institutions(id, name, code), programs(id, name, code)')
-    .is('deleted_at', null)
-    .order('target_level', { ascending: true })
-    .order('theme_code', { ascending: true })
-    .order('topic_code', { ascending: true })
-    .order('word_type', { ascending: true })
-    .order('indonesian', { ascending: true })
-    .range(offset, offset + limit - 1);
+  const PAGE_SIZE = 1000;
+  let allData = [];
+  let curOffset = offset;
+  const maxToFetch = limit || 10000;
 
-  if (targetLevel !== null) query = query.eq('target_level', targetLevel);
-  if (topic) query = query.eq('topic', topic);
-  if (search) {
-    const term = search.trim();
-    query = query.or(`indonesian.ilike.%${term}%,english.ilike.%${term}%,topic.ilike.%${term}%`);
+  while (allData.length < maxToFetch) {
+    const chunkLimit = Math.min(PAGE_SIZE, maxToFetch - allData.length);
+    let query = sb.from('vocabulary_vault')
+      .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category, institution_id, program_id, institutions(id, name, code), programs(id, name, code)')
+      .is('deleted_at', null)
+      .order('target_level', { ascending: true })
+      .order('theme_code', { ascending: true })
+      .order('topic_code', { ascending: true })
+      .order('word_type', { ascending: true })
+      .order('indonesian', { ascending: true })
+      .range(curOffset, curOffset + chunkLimit - 1);
+
+    if (targetLevel !== null) query = query.eq('target_level', targetLevel);
+    if (topic) query = query.eq('topic', topic);
+    if (search) {
+      const term = search.trim();
+      query = query.or(`indonesian.ilike.%${term}%,english.ilike.%${term}%,topic.ilike.%${term}%`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData.push(...data);
+    if (data.length < chunkLimit) break;
+    curOffset += data.length;
   }
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data || [];
+  return allData;
 }
 
 export async function fetchVaultTopics(targetLevelNum = null) {
@@ -2386,12 +2413,22 @@ function sanitizeVaultRow(row) {
     }
   }
 
+  const thCode = String(row.theme_code || '').trim().replace(/\s+/g, ' ').toUpperCase();
+  let topCode = String(row.topic_code || '').trim().replace(/\s+/g, ' ').toUpperCase();
+
+  // If topCode is missing or just numeric, normalize it with themeCode
+  if (!topCode && thCode) {
+    topCode = `${thCode}1`;
+  } else if (/^[0-9]+$/.test(topCode) && thCode) {
+    topCode = `${thCode}${topCode}`;
+  }
+
   return {
     institution_id: row.institution_id || row.institutionId || null,
     program_id: row.program_id || row.programId || null,
-    theme_code: String(row.theme_code || '').trim().replace(/\s+/g, ' ').toUpperCase(),
+    theme_code: thCode || (topCode ? topCode[0] : 'A'),
     theme:      String(row.theme || '').trim().replace(/\s+/g, ' '),
-    topic_code: String(row.topic_code || '').trim().replace(/\s+/g, ' ').toUpperCase(),
+    topic_code: topCode || 'A1',
     topic:      String(row.topic || '').trim().replace(/\s+/g, ' '),
     indonesian: String(row.indonesian || '').trim().replace(/\s+/g, ' '),
     english:    canonicalEng,
@@ -2945,6 +2982,7 @@ export async function exportVaultWords(mode = 'all') {
   let query = sb.from('vocabulary_vault')
     .select('institution_id, program_id, target_level, theme_code, theme, topic_code, topic, indonesian, english, word_type, created_at, institutions!institution_id(name), programs!program_id(name)')
     .is('deleted_at', null)
+    .range(0, 99999)
     .order('target_level', { ascending: true })
     .order('theme_code', { ascending: true })
     .order('topic_code', { ascending: true })
@@ -2965,18 +3003,18 @@ export async function exportVaultWords(mode = 'all') {
 
   if (filteredWords.length === 0) throw new Error('No words found in Vault for this category.');
 
-  // Format data for Excel - 11 Column Standard
+  // Format data for Excel - 10 Column Unified Standard
   const exportData = filteredWords.map(w => {
     const wt = (w.word_type || '').toLowerCase();
     const isPhrase = ['expression', 'idiom', 'proverb'].includes(wt);
+    const code = (w.topic_code && w.topic_code.trim()) ? w.topic_code.trim() : ((w.theme_code || 'A') + '1');
     return {
       Institution: w.institutions?.name || 'CEC',
       Program: w.programs?.name || 'Camp',
       Level: w.target_level || '1',
       Category: isPhrase ? 'Phrases' : 'Words',
-      'Theme Code': w.theme_code || '',
+      Code: code,
       Theme: w.theme || '',
-      'Topic Code': w.topic_code || '',
       Topic: w.topic || '',
       Type: w.word_type || 'Vocab',
       Indonesian: w.indonesian || '',
@@ -3458,9 +3496,10 @@ export async function upsertDynamicTestShell(config) {
     : (isTest ? 120 : 5);
 
   // Standardized Shell Code: e.g. 3A1-WORDS-TASK, 3A1-PHRASES-TASK, 3A-WORDS-EXAM, 3A-PHRASES-EXAM
+  const cleanTopCode = topicCode ? String(topicCode).replace(/^[A-Za-z]/, '') : '1';
   const code = isPhrase
-    ? (isTest ? `${levelNum}${themeCode}-PHRASES-EXAM` : `${levelNum}${themeCode}${topicCode || '1'}-PHRASES-TASK`)
-    : (isTest ? `${levelNum}${themeCode}-WORDS-EXAM` : `${levelNum}${themeCode}${topicCode || '1'}-WORDS-TASK`);
+    ? (isTest ? `${levelNum}${themeCode}-PHRASES-EXAM` : `${levelNum}${themeCode}${cleanTopCode}-PHRASES-TASK`)
+    : (isTest ? `${levelNum}${themeCode}-WORDS-EXAM` : `${levelNum}${themeCode}${cleanTopCode}-WORDS-TASK`);
 
   // Standardized Title: e.g. "3rd Vocabulary A1 Words Task - Professional Identity"
   const ordinal = toOrdinal(levelNum);
@@ -3468,10 +3507,10 @@ export async function upsertDynamicTestShell(config) {
   const generatedTitle = isPhrase
     ? (isTest
         ? `${ordinal} Vocabulary ${themeCode} Phrases Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
-        : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Phrases Task${cleanTitle ? ' - ' + cleanTitle : ''}`)
+        : `${ordinal} Vocabulary ${themeCode}${cleanTopCode} Phrases Task${cleanTitle ? ' - ' + cleanTitle : ''}`)
     : (isTest
         ? `${ordinal} Vocabulary ${themeCode} Words Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
-        : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Words Task${cleanTitle ? ' - ' + cleanTitle : ''}`);
+        : `${ordinal} Vocabulary ${themeCode}${cleanTopCode} Words Task${cleanTitle ? ' - ' + cleanTitle : ''}`);
 
   // Default answer types: Spoken for Tasks (Words & Phrases), Spoken for Words Exam, Selection for Phrases Exam
   const defaultAnswerType = isTest ? (isPhrase ? 'selection' : 'written') : 'spoken';
@@ -3490,44 +3529,84 @@ export async function upsertDynamicTestShell(config) {
   }
 
   // Dedup: check by new standardized shell_code first
-  let { data: existing } = await sb.from('tests')
+  let query = sb.from('tests')
     .select('id, class_id, answer_type, payload')
     .eq('shell_code', code)
     .eq('program_id', programId)
     .eq('level_id', levelId)
-    .is('deleted_at', null)
-    .maybeSingle();
+    .is('deleted_at', null);
+
+  if (classId) {
+    query = query.eq('class_id', classId);
+  }
+
+  let { data: existing } = await query.maybeSingle();
 
   if (!existing) {
-    // Check legacy aliases (including previous -TASK, -TEST, etc.)
-    const legacyCodes = isPhrase
-      ? [
-          `${levelNum}${themeCode}-PHRASES-EXAM`,
-          `${levelNum}${themeCode}-PHRASES-TEST`,
-          `${levelNum}${themeCode}${topicCode || '1'}-PHRASES-QUIZ`,
-          `${levelNum}${themeCode}${topicCode || '1'}-PHRASES-TASK`,
-          isTest ? `${levelNum}${themeCode} Phrases Exam` : `${levelNum}${themeCode}${topicCode || '1'} Phrases Quiz`,
-          isTest ? `${levelNum}${themeCode} Phrases Test` : `${levelNum}${themeCode}${topicCode || '1'} Phrases Task`,
-          isTest ? `3VOCAB-${themeCode}-TEST-PHR` : `3VOCAB-${themeCode}${topicCode || '1'}-PHR`
-        ]
-      : [
-          `${levelNum}${themeCode}-WORDS-EXAM`,
-          `${levelNum}${themeCode}-WORDS-TEST`,
-          `${levelNum}${themeCode}${topicCode || '1'}-WORDS-QUIZ`,
-          `${levelNum}${themeCode}${topicCode || '1'}-WORDS-TASK`,
-          isTest ? `${levelNum}${themeCode} Words Exam` : `${levelNum}${themeCode}${topicCode || '1'} Words Quiz`,
-          isTest ? `${levelNum}${themeCode} Words Test` : `${levelNum}${themeCode}${topicCode || '1'} Words Task`,
-          isTest ? `${levelNum}${themeCode} Vocab Test` : `${levelNum}${themeCode}${topicCode || '1'} Vocab Task`,
-          isTest ? `3VOCAB-${themeCode}-TEST-WOR` : `3VOCAB-${themeCode}${topicCode || '1'}-WOR`
-        ];
+    // Check legacy aliases strictly matching tier (EXAM with legacy EXAMs, TASK with legacy TASKs)
+    let legacyCodes = [];
+    if (isTest) {
+      // EXAM legacy codes ONLY - strictly exams
+      legacyCodes = isPhrase
+        ? [
+            `${levelNum}${themeCode}-PHRASES-EXAM`,
+            `${levelNum}${themeCode}-PHRASES-TEST`,
+            `${levelNum}${themeCode} Phrases Exam`,
+            `${levelNum}${themeCode} Phrases Test`,
+            `${levelNum}VOCAB-${themeCode}-TEST-PHR`,
+            `3VOCAB-${themeCode}-TEST-PHR`
+          ]
+        : [
+            `${levelNum}${themeCode}-WORDS-EXAM`,
+            `${levelNum}${themeCode}-WORDS-TEST`,
+            `${levelNum}${themeCode} Words Exam`,
+            `${levelNum}${themeCode} Words Test`,
+            `${levelNum}${themeCode} Vocab Test`,
+            `${levelNum}VOCAB-${themeCode}-TEST-WOR`,
+            `3VOCAB-${themeCode}-TEST-WOR`
+          ];
+    } else {
+      // TASK legacy codes ONLY - strictly tasks/quizzes for this specific topic
+      const rawCode = topicCode || '1';
+      legacyCodes = isPhrase
+        ? [
+            `${levelNum}${themeCode}${cleanTopCode}-PHRASES-TASK`,
+            `${levelNum}${themeCode}${cleanTopCode}-PHRASES-QUIZ`,
+            `${levelNum}${themeCode}${rawCode}-PHRASES-TASK`,
+            `${levelNum}${themeCode}${rawCode}-PHRASES-QUIZ`,
+            `${levelNum}${themeCode}${cleanTopCode} Phrases Task`,
+            `${levelNum}${themeCode}${cleanTopCode} Phrases Quiz`,
+            `${levelNum}${themeCode}${rawCode} Phrases Task`,
+            `${levelNum}${themeCode}${rawCode} Phrases Quiz`,
+            `${levelNum}VOCAB-${themeCode}${cleanTopCode}-PHR`,
+            `3VOCAB-${themeCode}${cleanTopCode}-PHR`
+          ]
+        : [
+            `${levelNum}${themeCode}${cleanTopCode}-WORDS-TASK`,
+            `${levelNum}${themeCode}${cleanTopCode}-WORDS-QUIZ`,
+            `${levelNum}${themeCode}${rawCode}-WORDS-TASK`,
+            `${levelNum}${themeCode}${rawCode}-WORDS-QUIZ`,
+            `${levelNum}${themeCode}${cleanTopCode} Words Task`,
+            `${levelNum}${themeCode}${cleanTopCode} Words Quiz`,
+            `${levelNum}${themeCode}${rawCode} Words Task`,
+            `${levelNum}${themeCode}${rawCode} Words Quiz`,
+            `${levelNum}${themeCode}${cleanTopCode} Vocab Task`,
+            `${levelNum}VOCAB-${themeCode}${cleanTopCode}-WOR`,
+            `3VOCAB-${themeCode}${cleanTopCode}-WOR`
+          ];
+    }
+
+    legacyCodes = Array.from(new Set(legacyCodes.filter(c => c !== code)));
+
     for (const leg of legacyCodes) {
-      const { data: legacy } = await sb.from('tests')
+      let q = sb.from('tests')
         .select('id, class_id, answer_type, payload')
         .eq('shell_code', leg)
         .eq('program_id', programId)
         .eq('level_id', levelId)
-        .is('deleted_at', null)
-        .maybeSingle();
+        .is('deleted_at', null);
+      if (classId) q = q.eq('class_id', classId);
+      const { data: legacy } = await q.maybeSingle();
       if (legacy) { existing = legacy; break; }
     }
   }
@@ -3560,7 +3639,8 @@ export async function upsertDynamicTestShell(config) {
     status:                     'PUBLISHED',
     working_duration_minutes:   effectiveDurationMinutes,
     minimum_required_score:     effectiveMinScore,
-    prerequisite_test_id: prerequisiteId,
+    prerequisite_test_id:       prerequisiteId,
+    prerequisite_id:            prerequisiteId,
     answer_type:                effectiveAnswerType,
     is_dynamic_shell:           true,
     display_order:              displayOrder,
@@ -3752,22 +3832,28 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
       }
     }
 
-    // 1. Fetch Words for Level to know what themes and topics exist (Syllabus Isolated)
-    let vaultQuery = sb.from('vocabulary_vault')
-      .select('theme_code, theme, topic_code, topic, word_type')
-      .is('deleted_at', null)
-      .eq('target_level', levelNum);
+    // 1. Fetch Words for Level to know what themes and topics exist (Chunked Pagination Protected)
+    let words = [];
+    try {
+      words = await fetchVaultWords({ targetLevel: levelNum, limit: 10000 });
+    } catch (_) {
+      let vaultQuery = sb.from('vocabulary_vault')
+        .select('theme_code, theme, topic_code, topic, word_type, category')
+        .is('deleted_at', null)
+        .eq('target_level', levelNum);
 
-    if (institutionId) {
-      vaultQuery = vaultQuery.eq('institution_id', institutionId);
+      if (institutionId) {
+        vaultQuery = vaultQuery.eq('institution_id', institutionId);
+      }
+      if (programId) {
+        vaultQuery = vaultQuery.eq('program_id', programId);
+      }
+
+      const { data } = await vaultQuery;
+      words = data || [];
     }
-    if (programId) {
-      vaultQuery = vaultQuery.eq('program_id', programId);
-    }
 
-    const { data: words, error } = await vaultQuery;
-
-    if (error || !words || words.length === 0) continue;
+    if (!words || words.length === 0) continue;
 
     // 2. Build a map of themes -> topics -> categories
     const themeMap = new Map();
@@ -3776,7 +3862,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
       if (!w.theme_code || !w.topic_code) continue; // Skip legacy rows without codes
 
       const wt = (w.word_type || '').toLowerCase();
-      const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+      const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt) || w.category === 'phrases';
       const category = isPhrase ? 'phrases' : 'vocab';
 
       if (!themeMap.has(w.theme_code)) {
@@ -3807,10 +3893,10 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     const phrasesTestAns = config.phrasesTestAnswerType || 'selection';
     const testPass = config.testPassingScore !== undefined ? Number(config.testPassingScore) : 60;
 
-    // 3. Generate 40 Tests (20 Words + 20 Phrases) in strict Linear Sequential Chain
+    // 3. Generate Tests in strict Linear Sequential Chain
     for (const themeCode of sortedThemes) {
       const themeData = themeMap.get(themeCode);
-      const sortedTopics = Array.from(themeData.topics.keys()).sort();
+      const sortedTopics = Array.from(themeData.topics.keys()).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
       let hasAnyVocab = false;
       let hasAnyPhrases = false;

@@ -1,6 +1,6 @@
-import { DataGrid } from './datagrid.js?v=20261103_v112';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261103_v112';
-import { computeUnifiedScore, computeTopicPassLevel } from '../grading.js?v=20261103_v112';
+import { DataGrid } from './datagrid.js?v=20261104_v116';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261104_v116';
+import { computeUnifiedScore, computeTopicPassLevel } from '../grading.js?v=20261104_v116';
 
 if (typeof window !== 'undefined') {
   window.showToast = showToast;
@@ -378,26 +378,26 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter, toShortLevel,
   adminOverridePrerequisitesWithRemedial, autoSyncClassTestsForLevel
-} from '../api.js?v=20261103_v112';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261103_v112';
-import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261103_v112';
-import { getSupabase } from '../supabase.js?v=20261103_v112';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261103_v112';
-import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261103_v112';
-import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261103_v112';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261103_v112';
-import { renderTests } from './tests-management.js?v=20261103_v112';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261103_v112';
-import { renderVocabularyVault } from './vocab-vault.js?v=20261103_v112';
-import { renderModules } from './modules.js?v=20261103_v112';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261103_v112';
-import { renderExportQuestions } from './imports-exports.js?v=20261103_v112';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261103_v112';
-import { renderCurriculum } from './curriculum-management.js?v=20261103_v112';
-import { renderClassesHub } from './classes-hub.js?v=20261103_v112';
-import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261103_v112';
-import { openStudentFullEdit } from './student-management.js?v=20261103_v112';
-import { renderStudentsRegistration } from './student-registration.js?v=20261103_v112';
+} from '../api.js?v=20261104_v116';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261104_v116';
+import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261104_v116';
+import { getSupabase } from '../supabase.js?v=20261104_v116';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261104_v116';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261104_v116';
+import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261104_v116';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261104_v116';
+import { renderTests } from './tests-management.js?v=20261104_v116';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261104_v116';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261104_v116';
+import { renderModules } from './modules.js?v=20261104_v116';
+import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261104_v116';
+import { renderExportQuestions } from './imports-exports.js?v=20261104_v116';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261104_v116';
+import { renderCurriculum } from './curriculum-management.js?v=20261104_v116';
+import { renderClassesHub } from './classes-hub.js?v=20261104_v116';
+import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261104_v116';
+import { openStudentFullEdit } from './student-management.js?v=20261104_v116';
+import { renderStudentsRegistration } from './student-registration.js?v=20261104_v116';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -1259,9 +1259,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
             if (Number(v.target_level) !== Number(lvlNumber)) return false;
             const isPhrase = _PHRASE_TYPES.includes(_norm(v.word_type));
             if (!isUnified && wantPhrases !== isPhrase) return false;
-            if (themes) return themes.includes(v.theme_code);
+            if (themes && !themes.includes(v.theme_code)) return false;
             if (pl.theme_code && v.theme_code !== pl.theme_code) return false;
-            if (pl.topic_code && v.topic_code !== pl.topic_code) return false;
+            if (pl.topic_code) {
+              const normPlCode = (/^[A-Za-z]/.test(String(pl.topic_code))) ? String(pl.topic_code).toUpperCase() : `${String(pl.theme_code || '').toUpperCase()}${pl.topic_code}`;
+              const normVCode = (/^[A-Za-z]/.test(String(v.topic_code))) ? String(v.topic_code).toUpperCase() : `${String(v.theme_code || '').toUpperCase()}${v.topic_code}`;
+              if (normVCode !== normPlCode && String(v.topic_code).toUpperCase() !== String(pl.topic_code).toUpperCase()) return false;
+            }
             return true;
           }).length;
         };
@@ -1963,7 +1967,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
           // Open Test Generator & Settings Wizard
           document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
             try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261103_v112');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261104_v116');
               await openAutoGenerateModal({
                 explicitClassId: classId,
                 onComplete: () => {
@@ -4112,7 +4116,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261103_v112');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261104_v116');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -4443,7 +4447,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261103_v112');
+      const sm = await import('./student-management.js?v=20261104_v116');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }

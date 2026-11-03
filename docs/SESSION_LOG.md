@@ -1,3 +1,258 @@
+## SESSION-20261104-0715
+
+Start: 2026-11-04 06:40 UTC+8
+End: 2026-11-04 07:15 UTC+8
+Agent: Antigravity
+
+### User Request
+- "APAKAH TEST DALAM VOCAB SUDAH AUTO GENERATE TANPA KITA KLIK AUTO GENERATE? SAAT SAYA GENERATE TEST UNTUK VOCAB_2 CLASS, SEHRAUSNYA ADA 15 TOPIK DAN 4 EXAM, TAPI HANYA ADA 11 TOPIK DAN 4 EXAM, KENAPA INI TERJADI, CEK ANALAISA, PERIKSA, PERBIKI /goal"
+
+### Objective
+1. Clarify whether tests in Vocabulary classes auto-generate without manual user action.
+2. Investigate why generating tests for `2nd Vocabulary` resulted in 11 tasks and 4 exams (15 records) instead of 15 tasks and 4 exams (19 records).
+3. Identify and fix root cause in `js/api.js`.
+4. Resynchronize database test shells for `2nd Vocabulary` (and `3rd Vocabulary`).
+5. Verify live rendering in Edge browser and confirm 100% test suite pass.
+
+### Work Performed
+1. Answered Inquiry 1: Confirmed tests auto-generate automatically on two occasions: (a) upon Excel import in Vocabulary Vault via `autoSyncClassTestsForLevel({ force: true })`, and (b) upon navigating to Class Hub when a class has 0 tests (self-healing mechanism).
+2. Diagnosed Inquiry 2: Found fatal collision in `upsertDynamicTestShell` (`js/api.js` lines 3540–3572):
+   - `legacyCodes` fallback for tasks unconditionally evaluated `-WORDS-EXAM`.
+   - When Task 1 (e.g., `2A1-WORDS-TASK`) was generated, it found existing `2A-WORDS-EXAM` and renamed it to `2A1`.
+   - `2A2` was generated with its prerequisite pointing to that test ID.
+   - When the Theme Exam was generated at the end of Theme A, it matched `2A1-WORDS-TASK` and renamed it back to `2A-WORDS-EXAM`.
+   - Result: Exactly 4 tasks (A1, B1, C1, D1) were overwritten by the 4 exams, resulting in 11 tasks and 4 exams, with A2 pointing to the Exam as prerequisite.
+3. Fixed `upsertDynamicTestShell`:
+   - Strictly separated `legacyCodes` between `isTest` (Exams) and `!isTest` (Tasks).
+   - Added `classId` filter in existing test lookups to enforce class isolation.
+   - Set both `prerequisite_test_id` and `prerequisite_id` simultaneously.
+   - Updated `autoGenerateTestsHierarchy` with chunked pagination via `fetchVaultWords({ targetLevel: levelNum, limit: 10000 })`.
+   - Added natural alphanumeric topic sorting (`localeCompare(undefined, { numeric: true })`).
+4. Resynced database tests:
+   - `2nd Vocabulary`: Exactly 15 tasks + 4 exams = 19 tests with linear prerequisite sequence.
+   - `3rd Vocabulary`: Exactly 32 tasks + 8 exams = 40 tests.
+5. Verification:
+   - `node scripts/check_all_js_syntax.cjs`: 40/40 JS files PASS.
+   - `npm test`: 100% PASS.
+   - `node scripts/e2e_unified_code_verification.mjs`: 19/19 tests PASS.
+   - Live browser Playwright screenshot verified: `class_hub_vocab2_19_tests_verified.png` displaying `⚡ 15 Tasks | 📝 4 Exams | 19 records`.
+6. Bumped cache busters to `v=20261104_v116`.
+
+### Files Changed
+- `js/api.js`
+- `js/admin/auto-gen-modal.js`
+- `js/admin/app.js`
+- `js/admin/vocab-vault.js`
+- `js/admin/classes-management.js`
+- `admin.html`
+- `scripts/test_autogen_level2.mjs`
+- `scripts/capture_vocab2_tests_perfect.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Outstanding
+None. Both user questions thoroughly answered and the defect is 100% resolved.
+
+---
+
+## SESSION-20261104-0105
+
+Start: 2026-11-04 00:15 UTC+8
+End: 2026-11-04 01:05 UTC+8
+Agent: Antigravity
+
+### User Request
+- "sbeagian topic dan kosakata level 3 hilang di vocb vault, tolong cari, temukan pulihkan! gamabar 2 ada du akolom kode, theme code, dan Topic Code, ini cukup satu saja, Jadi Code atau Vocab Code Misanya cukup A1, yang A tidak perlu, hapus kolomnya, bersihkan dari sstem soal kode ini,,, kita pakai satu Code saja, kita tentukan namanya, kalau memang bisa dengan Code saja maka pakai itu atau perlu ada tambahan misalnya Vocab Code juga boleh. setalah dipalari kita telususri semua sistem, baik itu test, kleas, generate, SEMUA yang terkait kode di vocab vault ini, dan kita sesuaikan secara matang,,, mari kita kerjkana. /plan"
+- User approved plan artifact `plan_unified_code_and_restore_level3.md`.
+
+### Objective
+1. Investigate and restore missing Level 3 topics and words in Vocabulary Vault.
+2. Implement automated chunked pagination in `fetchVaultWords` to overcome PostgREST 1,000-row limit.
+3. Remove redundant `T.CODE` column from Vocabulary Words / Phrases grids and `THEME CODE` from Topic Blueprint.
+4. Establish single unified `CODE` column (`A1`, `A2`...) across all views.
+5. Verify live rendering with Playwright screenshots and ensure 100% test suite pass.
+
+### Work Performed
+1. Diagnosed that data was 100% intact in Supabase (800 active rows in Level 3, 610 in Level 2 = 1,410 total). The frontend only displayed 1,000 rows because `fetchVaultWords` was capped by PostgREST's 1,000-row server limit.
+2. Implemented automated chunked pagination in `fetchVaultWords` (`js/api.js`), fetching all 1,410 rows into browser memory.
+3. Restored all 16 topics for Level 3 on Topic Blueprint: `[ 🎯 3rd (16) ]` (Themes A, B, C, D) with 800 words/phrases.
+4. Removed `T.CODE` from Vocabulary Words grid and `THEME CODE` from Topic Blueprint (`js/admin/vocab-vault.js`).
+5. Standardized single `CODE` column header and badge display.
+6. Updated `generateTestQuestions` with resilient candidate topic codes (`A1` and `1`).
+7. Bumped cache busters to `v=20261104_v115` across `admin.html`, `js/admin/app.js`, `classes-management.js`, and `vocab-vault.js`.
+8. Captured live Playwright Edge screenshots (`blueprint_restored_single_code.png`, `blueprint_lvl3_full_16_topics.png`, `vocab_grid_single_code.png`).
+9. Updated `walkthrough.md`, `docs/CURRENT_STATE.md`, `docs/CHANGELOG.md`.
+
+### Files Changed
+- `js/api.js`
+- `js/admin/vocab-vault.js`
+- `admin.html`
+- `js/admin/app.js`
+- `js/admin/classes-management.js`
+- `scripts/patch_unified_code_and_pagination.mjs`
+- `scripts/capture_restored_vault.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+- `walkthrough.md`
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs` -> 40/40 JS files PASS.
+- `npm.cmd test` -> 100% PASS.
+- `node scripts/capture_restored_vault.mjs` -> PASS, verified all 16 Level 3 topics rendered and single CODE column active.
+
+### Resume From
+Unified Single `CODE` Pipeline & Level 3 Restoration complete and live in production. Ready for next user instruction.
+
+---
+
+## SESSION-20261104-0010
+
+Start: 2026-11-03 23:30 UTC+8
+End: 2026-11-04 00:10 UTC+8
+Agent: Antigravity
+
+### User Request
+- "saya coba impor vocab, tapi topic code tidak bisa terimpor dengan baik,,, dan saat saya expor topic code juga tidak keluar... saat ini ada 2 ode, tema dan topic,, apakah sebaiknya saya stukan jadi Code saja? jadi bukan A dan 1 tapi A1, A2, A3, A 4 langsung... analisa penyebabnya dan jelaskan /plan"
+- User approved plan artifact `plan_unified_topic_code.md`.
+
+### Objective
+1. Diagnose root cause of Excel import failure (`TOPIC CODE` becoming empty string / dashes `—`) and export blank cells.
+2. Unify `Theme Code` ('A') and `Topic Code` ('1') into a single unified `Code` ('A1', 'A2', 'B1'...) across database, parser, export, and UI.
+3. Normalize existing records in Supabase PostgreSQL database to standardized `A1`, `A2`... `D4`.
+4. Implement backward-compatible smart parser accepting 10-column standard (`Code: A1`) and 11-column legacy files (`Theme Code: A`, `Topic Code: 1`).
+5. Update Excel export to output 10 clean columns with full `.range(0, 99999)` pagination.
+6. Verify live rendering with Playwright screenshots and ensure 100% CI pass.
+
+### Work Performed
+1. Diagnosed root cause: header whitespace and carriage returns in Excel caused `normalized['TOPIC CODE']` in `js/admin/vocab-vault.js` line 631 to fail silently, inserting empty strings `''` into database, which subsequently led to blank cells during Excel export.
+2. Created and executed `scripts/fix_vault_topic_codes.mjs` with pagination, successfully updating 214 rows in Supabase to clean `A1`..`D4` format. 100% of all 1,410 active rows now have valid topic codes (0 empty).
+3. Updated Excel import parser in `js/admin/vocab-vault.js`: robust header normalization, smart extraction of `A1` into `theme_code = 'A'` and `topic_code = 'A1'`, combination of legacy numeric `1` + `A`, and fallback dictionary lookup (`TOPIC_CODE_MAP`).
+4. Updated `exportVaultWords` in `js/api.js`: added `.range(0, 99999)` for full-database exports, outputs standard 10 columns (`Institution`, `Program`, `Level`, `Category`, `Code`, `Theme`, `Topic`, `Type`, `Indonesian`, `English`).
+5. Added database insertion protection in `sanitizeVaultRow` (`js/api.js`) to guarantee `topic_code` can never enter database as empty string.
+6. Safeguarded evaluation engine parity in `js/admin/app.js` (`vaultCountFor`) and `js/api.js` (`upsertDynamicTestShell`).
+7. Bumped cache busters to `v=20261103_v114` across `admin.html`, `js/admin/app.js`, `classes-management.js`, and `vocab-vault.js`.
+8. Created `scripts/capture_unified_codes.mjs` and verified live Playwright screenshots `blueprint_unified_code_verified.png` and `vocab_grid_unified_code_verified.png`.
+9. Updated walkthrough documentation `walkthrough.md`.
+
+### Files Changed
+- `js/admin/vocab-vault.js`
+- `js/api.js`
+- `js/admin/app.js`
+- `admin.html`
+- `js/admin/classes-management.js`
+- `scripts/fix_vault_topic_codes.mjs`
+- `scripts/patch_unified_topic_pipeline.mjs`
+- `scripts/capture_unified_codes.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+- `walkthrough.md`
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs` -> 40/40 JS files PASS.
+- `npm.cmd test` -> 100% PASS.
+- `node scripts/capture_unified_codes.mjs` -> PASS, captured live screenshots `blueprint_unified_code_verified.png` and `vocab_grid_unified_code_verified.png`.
+- Supabase check: 0 empty topic codes remaining across 1,410 active rows.
+
+### Resume From
+Unified Topic Code (`A1`, `A2`, `B1`...) pipeline is fully operational live in production. Ready for next user instruction.
+
+---
+
+## SESSION-20261103-2325
+
+Start: 2026-11-03 22:45 UTC+8
+End: 2026-11-03 23:25 UTC+8
+Agent: Antigravity
+
+### User Request
+- "saya mau cek topic manager di Vocabulary Vault. apakah kita bisa buat 3 level Tema dan Topic itu semua dalam 1 halaman? mungkin dengan MODEL GAMBAR 2 ATAU GAMBAR 3, ANALISA PETAKAN /plan"
+- User uploaded mockups: Gambar 1 (Current), Gambar 2 (Outline), Gambar 3 (Grouped), Gambar 4 (Inline), and finally Opsi A vs Opsi B.
+- "PILIH A/B"
+- "BAIK, INI OPSI b"
+
+### Objective
+1. Unify all 3 curriculum levels (1st, 2nd, 3rd) of themes and topics into a single, continuous page in Vocabulary Vault Topic Blueprint.
+2. Implement user-selected **OPSI B** (Cascading Multi-Level Rowspan Matrix: `LEVEL` $\rightarrow$ `THEME CODE` $\rightarrow$ `THEME` $\rightarrow$ `TOPIC`).
+3. Guarantee zero-layout-break search filtering and maintain quick level jump controls.
+
+### Work Performed
+1. Authored implementation plan artifact `plan_unified_topic_blueprint.md` evaluating all design variants.
+2. Recommended Opsi B over Opsi A due to text truncation prevention, viewport responsiveness, and balanced data flow.
+3. Implemented cascading multi-level grouping and dynamic `rowspan` matrix in `js/admin/vocab-vault.js` (`_renderTopicBlueprintTab`).
+4. Implemented instant search filter with real-time `rowspan` recalculation.
+5. Added dark theme matrix styling in `css/admin.css` (`#blueprint-matrix-table`, `.cell-level-group`, `.cell-theme-code`, `.cell-theme-name`).
+6. Bumped cache busters to `v=20261103_v113` across `admin.html` and modules.
+7. Verified with automated syntax checks (`check_all_js_syntax.cjs`), CI suite (`npm.cmd test`), and captured live Playwright screenshot (`blueprint_opsi_b_verified.png`).
+8. Created comprehensive walkthrough artifact `walkthrough.md`.
+
+### Files Changed
+- `js/admin/vocab-vault.js`
+- `css/admin.css`
+- `admin.html`
+- `js/admin/app.js`
+- `js/admin/classes-management.js`
+- `scripts/capture_blueprint_opsi_b.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/TODO.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs` -> 40/40 JS files PASS.
+- `npm.cmd test` -> 100% PASS.
+- `node scripts/capture_blueprint_opsi_b.mjs` -> PASS, captured live screenshot `blueprint_opsi_b_verified.png`.
+
+### Resume From
+Topic Blueprint is running with Opsi B live in production. Ready for next user instruction.
+
+---
+
+## SESSION-20261103-2225
+
+Start: 2026-11-03 22:18 UTC+8
+End: 2026-11-03 22:25 UTC+8
+Agent: Antigravity
+
+### User Request
+- "process apa saja yang belum sesesai?"
+- "1, apakah perlu? atau 4 kali cukup? 2. ada saran?"
+- "🧹 Opsi Cepat (Housekeeping): Reset data riwayat attempt akun "Test" agar bersih kembali jika ingin digunakan untuk simulasi atau presentasi demonstrasi langsung."
+
+### Objective
+1. Provide comprehensive audit of in-progress vs completed processes.
+2. Evaluate sufficiency of 4/10 consecutive runs (concluded 4 runs with 1,048 attempts is mathematically and empirically sufficient).
+3. Execute clean housekeeping reset of student account "Test" (`id: 0694c6f5-076c-43d1-99ee-0a8800975bcb`).
+
+### Work Performed
+1. Audited database records for student "Test": 66 attempts and 3,280 attempt answers recorded from live test runs.
+2. Built `scripts/reset_test_student.mjs` for safe, reproducible cleanup:
+   - Purged all 3,280 `attempt_answers` in batches.
+   - Purged all 66 `attempts`.
+   - Restored student `"Test"` to 2nd Level (`9936683a-5b4a-4796-bb5d-a7fd8ecf0b71`), Batch 134 (`3e7288b7-a90e-4323-9b02-24e73991f0d7`), PIN `1234`, and active status `true`.
+3. Executed `node scripts/reset_test_student.mjs` and verified zero remaining attempts and correct level/batch assignment.
+4. Ran full suite syntax and parity tests (`node scripts/check_all_js_syntax.cjs` and `npm.cmd test`) — 100% PASS.
+5. Synchronized `docs/CURRENT_STATE.md`, `docs/TODO.md`, `docs/CHANGELOG.md`, and `docs/SESSION_LOG.md`.
+
+### Files Changed
+- `scripts/reset_test_student.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/TODO.md`
+- `docs/SESSION_LOG.md`
+- `docs/CHANGELOG.md`
+
+### Verification
+- `node scripts/reset_test_student.mjs`: verified 0 remaining attempts, student Test restored to 2nd Level (Batch 134).
+- `node scripts/check_all_js_syntax.cjs`: 40/40 JS syntax checks passed.
+- `npm.cmd test`: 100% passed (syntax, SW manifest, dashboard parity).
+
+### Resume From
+Account "Test" is completely clean and ready for live presentation/demo. Ready for user instruction on the next feature/module.
+
+---
+
 ## SESSION-20261103-2135
 
 Start: 2026-11-03 20:30 UTC+8
