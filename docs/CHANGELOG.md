@@ -1,3 +1,38 @@
+## [2026-11-03 15:05] — Phase 295: Class Tests Grid UI Streamlining — Remove Redundant Class/Level Columns, Expand Title, and Standardize 70% Badge
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 295  
+**Status:** PASS  
+
+### Why
+- User request: *"buang klom Class dan level,,, sebab sudah ada dalam nama kelas. Rapikan 2 hal yang kamus ebut juga"* with screenshot of `admin.html#class-hub` Class Tests sub-tab.
+- In the Class Tests sub-tab (`#class-tests-grid`):
+  1. The `CLASS` and `LEVEL` columns were redundant because the tab is already opened inside the specific class context.
+  2. The `TITLE` column was constrained by `max-width: 250px`, causing topic titles (e.g. `Professional Identity`, `CV & Resume`, `Job Interview`) to be clipped with ellipses (`...`).
+  3. The header badge displayed `🎯 Min. 60%`, inconsistent with the 7×7 Repetitive Mastery rule requiring 7 passes at $\ge 70\%$.
+
+### Changed
+1. **`js/admin/app.js`**:
+   - Removed redundant `classBoard` (`CLASS`) and `level` (`LEVEL`) column definitions from `class-tests-grid`.
+   - Expanded `TITLE` column width: removed `max-width: 250px` constraint, set `min-width: 280px; max-width: 600px;` with highlighted keywords (`Task`, `Test`, `Exam`) so titles display in full without truncation.
+   - Standardized header badge to `🎯 Min. 70%` on line 1721.
+   - Updated `PASS (%)` cell renderer to show `🎯 ${row.minScore || 70}%`.
+2. **`admin.html`**:
+   - Bumped cache buster from `v20261103_v107` to `v20261103_v108`.
+
+### Files
+- `js/admin/app.js` (+5/-15 lines)
+- `admin.html` (cache buster line 535)
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
+### Tests
+- command: `npm test`
+- result: `PASS` — 40/40 JS syntax, 27/27 manifest assets, parity checks PASSED.
+
+---
+
 ## [2026-11-03 14:24] — Phase 294: Zero-Maintenance Auto-Provisioning & Auto-Sync of Tests from Vocabulary Vault
 
 **Agent/Session:** Antigravity  

@@ -1,3 +1,37 @@
+## SESSION-20261103-1455
+
+Start: 2026-11-03 14:55 UTC+8
+End: 2026-11-03 15:05 UTC+8
+Agent: Antigravity
+
+### User Request
+"buang klom Class dan level,,, sebab sudah ada dalam nama kelas. Rapikan 2 hal yang kamus ebut juga" with attached screenshot of Class Tests grid.
+
+### Objective
+Remove redundant CLASS and LEVEL columns from the Class Tests sub-tab in Class Hub, expand TITLE width to prevent title clipping, and standardize passing badge to "Min. 70%".
+
+### Work Performed
+1. Audited `class-tests-grid` columns definition in `js/admin/app.js` (lines 1825–1915).
+2. Discovered `TITLE` was constrained to `max-width: 250px; text-overflow: ellipsis;`.
+3. Removed `classBoard` (`CLASS`) and `level` (`LEVEL`) columns.
+4. Expanded `TITLE` to `min-width: 280px; max-width: 600px;` with keyword styling for `Task`, `Test`, and `Exam`.
+5. Updated header badge on line 1721 from `Min. 60%` to `Min. 70%`.
+6. Updated `PASS (%)` cell renderer to show `🎯 ${row.minScore || 70}%`.
+7. Bumped cache buster in `admin.html` to `v20261103_v108`.
+8. Ran `npm test` — 40/40 syntax pass, manifest pass, parity pass.
+
+### Files Changed
+- `js/admin/app.js`
+- `admin.html`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
+### Verification
+- `npm test`: PASS
+
+---
+
 ## SESSION-20261103-1410
 
 Start: 2026-11-03 14:10 UTC+8

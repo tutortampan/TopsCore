@@ -1718,7 +1718,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
                       <div class="asm-meta-chips" style="display: inline-flex; align-items: center; gap: 6px;">
                         <span class="badge" style="background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.12); color: var(--grade-c, #ffff00); font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.3);">⚡ ${taskTests.length} Tasks</span>
                         <span class="badge" style="background: rgba(244, 114, 182, 0.12); color: #f472b6; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(244, 114, 182, 0.3);">📝 ${testTests.length} Exams</span>
-                        <span class="badge" style="background: rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.12); color: ${TOPSCORE_COLORS.STAR}; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.3);">🎯 Min. 60%</span>
+                        <span class="badge" style="background: rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.12); color: ${TOPSCORE_COLORS.STAR}; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.3);">🎯 Min. 70%</span>
                       </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -1831,7 +1831,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
                   let displayTitle = escapeHtml(row.title);
                   displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: var(--grade-c, #ffff00);">$1</span>');
                   displayTitle = displayTitle.replace(/\b(Test)\b/gi, '<span style="color: #f472b6;">$1</span>');
-                  return `<div class="fw-700" style="color:var(--clr-text-1); font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:250px;" title="${escapeHtml(row.title)}">${displayTitle}</div>`;
+                  displayTitle = displayTitle.replace(/\b(Exam)\b/gi, '<span style="color: #f472b6;">$1</span>');
+                  return `<div class="fw-700" style="color:var(--clr-text-1); font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:280px; max-width:600px;" title="${escapeHtml(row.title)}">${displayTitle}</div>`;
                 }
               },
               {
@@ -1854,18 +1855,6 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
                   if (!prereqDisplay) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
                   return `<div style="font-size:0.7rem; color:var(--clr-warning); font-family:monospace; font-weight:bold; white-space:nowrap; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(prereqDisplay)}">⚠️ ${escapeHtml(prereqDisplay)}</div>`;
                 }
-              },
-              {
-                key: 'classBoard',
-                label: 'CLASS',
-                sortable: true,
-                render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.classBoard || '-')}</div>`
-              },
-              {
-                key: 'level',
-                label: 'LEVEL',
-                sortable: true,
-                render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-primary); font-weight:600; white-space:nowrap;">${escapeHtml(row.level || '-')}</div>`
               },
               {
                 key: 'TestCategory',
@@ -1900,7 +1889,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
                 key: 'minScore',
                 label: 'PASS (%)',
                 sortable: true,
-                render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">&#127919; ${row.minScore || 60}</div>`
+                render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">🎯 ${row.minScore || 70}%</div>`
               },
               {
                 key: 'qCount',

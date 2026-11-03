@@ -1,10 +1,16 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-03 14:24 UTC+8
-Current Phase: Phase 294: Zero-Maintenance Auto-Provisioning & Auto-Sync of Tests from Vocabulary Vault [COMPLETE]
+Last Updated: 2026-11-03 15:05 UTC+8
+Current Phase: Phase 295: Class Tests Grid UI Streamlining — Remove Redundant Class/Level Columns, Expand Title, and Standardize 70% Badge [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
+1. **Phase 295: Class Tests Grid UI Streamlining [COMPLETE]:**
+   - Removed redundant `CLASS` and `LEVEL` columns from `class-tests-grid` in `js/admin/app.js`.
+   - Expanded `TITLE` column (`min-width: 280px; max-width: 600px;`), eliminating text clipping/ellipsis.
+   - Standardized header badge and column to `🎯 Min. 70%` matching the 7×7 Repetitive Mastery rule.
+   - `admin.html` cache buster bumped to `v20261103_v108`. 100% tests PASS.
+
 1. **Phase 294: Zero-Maintenance Auto-Provisioning & Auto-Sync of Tests from Vocabulary Vault [COMPLETE]:**
    - **Zero-Maintenance Architecture**: Tests are now automatically generated and synchronized whenever Vocabulary Vault data is imported or when a Vocabulary class is opened with 0 tests.
    - **`js/api.js`**: Enhanced `autoGenerateTestsHierarchy` with strict level/program/active-class targeting. Added `autoSyncClassTestsForLevel(levelNumberOrId, options)`.
