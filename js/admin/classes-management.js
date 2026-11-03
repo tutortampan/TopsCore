@@ -1,4 +1,4 @@
-import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsTests, autoGeneratePhrasesTests } from '../api.js?v=20261102_v103';
+import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsTests, autoGeneratePhrasesTests, toShortLevel } from '../api.js?v=20261103_v112';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261102_v103';
 import { openTestBuilder } from './test-builder.js?v=20261102_v103';
 import { DataGrid } from './datagrid.js?v=20261102_v103';
@@ -184,9 +184,9 @@ export async function renderClasses(area) {
       // Get level string
       let levelNames = [];
       if (cls.class_levels && cls.class_levels.length > 0) {
-        levelNames = cls.class_levels.map(cl => cl.levels?.name).filter(Boolean);
-      } else if (cls.levels?.name) {
-        levelNames = [cls.levels.name];
+        levelNames = cls.class_levels.map(cl => typeof toShortLevel === 'function' ? toShortLevel(cl.levels?.name || cl.levels?.level_number) : cl.levels?.name).filter(Boolean);
+      } else if (cls.levels?.name || cls.levels?.level_number) {
+        levelNames = [typeof toShortLevel === 'function' ? toShortLevel(cls.levels.name || cls.levels.level_number) : cls.levels.name];
       }
       const lvlStr = levelNames.length > 0 ? levelNames.join(', ') : '';
 
@@ -294,9 +294,9 @@ export async function renderClasses(area) {
         progClasses.forEach(cls => {
           let levelNames = [];
           if (cls.class_levels && cls.class_levels.length > 0) {
-            levelNames = cls.class_levels.map(cl => cl.levels?.name).filter(Boolean);
-          } else if (cls.levels?.name) {
-            levelNames = [cls.levels.name];
+            levelNames = cls.class_levels.map(cl => typeof toShortLevel === 'function' ? toShortLevel(cl.levels?.name || cl.levels?.level_number) : cl.levels?.name).filter(Boolean);
+          } else if (cls.levels?.name || cls.levels?.level_number) {
+            levelNames = [typeof toShortLevel === 'function' ? toShortLevel(cls.levels.name || cls.levels.level_number) : cls.levels.name];
           }
           const levelString = levelNames.length > 0 ? levelNames.join(', ') : 'Unassigned';
 

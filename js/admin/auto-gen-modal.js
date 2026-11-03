@@ -5,9 +5,10 @@ export async function openAutoGenerateModal(options = {}) {
     autoGenerateTestsHierarchy, 
     updateClassTestsConfig,
     adminFetchAll, 
+    toShortLevel,
     escapeHtml, 
     escHtml 
-  } = await import('../api.js?v=20261027c');
+  } = await import('../api.js?v=20261103_v112');
   const { getSupabase } = await import('../supabase.js?v=20261027c');
 
   const { 
@@ -160,7 +161,7 @@ export async function openAutoGenerateModal(options = {}) {
               <div style="display:flex; flex-wrap:wrap; gap:8px; background:#090d16; padding:6px 10px; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
                 ${displayLevels.map(lvl => `
                   <label style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem; cursor:pointer; color:#e2e8f0;">
-                    <input type="checkbox" class="wizard-level-chk" value="${lvl}" ${preSelectedLevels.includes(lvl) || preSelectedLevels.length === 0 ? 'checked' : ''} /> Level ${lvl}
+                    <input type="checkbox" class="wizard-level-chk" value="${lvl}" ${preSelectedLevels.includes(lvl) || preSelectedLevels.length === 0 ? 'checked' : ''} /> ${typeof toShortLevel === 'function' ? toShortLevel(lvl) : lvl}
                   </label>
                 `).join('')}
               </div>

@@ -15,3 +15,4 @@ c = c.replace(
 );
 fs.writeFileSync('js/api.js', c, 'utf-8');
 console.log('Fixed api.js declaration!');
+

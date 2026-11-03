@@ -861,14 +861,18 @@ export function computeUnifiedScore({
     if (att.points !== undefined && att.points !== null) {
       return Number(att.points);
     }
-    if (att.score !== undefined && att.score !== null) {
-      return Number(att.score);
-    }
     const pct = att.effective_score !== undefined && att.effective_score !== null
       ? Number(att.effective_score)
-      : (att.percentage !== undefined && att.percentage !== null ? Number(att.percentage) : null);
+      : (att.percentage !== undefined && att.percentage !== null
+          ? Number(att.percentage)
+          : (att.total_questions && att.score !== undefined
+              ? (Number(att.score) / Number(att.total_questions)) * 100
+              : null));
     if (pct !== null) {
       return Math.round((pct / 100) * max * 10) / 10;
+    }
+    if (att.score !== undefined && att.score !== null) {
+      return Math.min(Number(att.score), max);
     }
     return 0;
   };

@@ -33,3 +33,4 @@ jsFiles.forEach(file => {
   fs.writeFileSync(file, updated, 'utf-8');
   console.log(`Updated cache busters in ${file} to ?v=${newVersion}`);
 });
+

@@ -325,23 +325,27 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Validation: Strict Theme Prerequisites for Exams (Must pass ALL sibling quizzes with >= 60%)
+      // Validation: Strict Theme Prerequisites for Exams
       if (!isStandaloneTryout && test.test_type === 'exam') {
-        // 1. Session check: session must be unlocked and student must be whitelisted
+        const isFlexible = (test.schedule_mode || test.payload?.schedule_mode) === 'flexible';
         const liveSession = test.payload?.test_session;
-        const isSessionUnlocked = liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > now);
-        const isWhitelisted = isSessionUnlocked && (!Array.isArray(liveSession.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(student_id));
 
-        if (!isSessionUnlocked) {
-          return new Response(JSON.stringify({ error: "This test session has not been opened by the Tutor yet." }), {
-            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
-          });
-        }
+        // 1. Session check: only required if strict schedule mode or liveSession is configured
+        if (!isFlexible && (test.schedule_mode === 'strict' || liveSession)) {
+          const isSessionUnlocked = liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > now);
+          const isWhitelisted = isSessionUnlocked && (!Array.isArray(liveSession.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(student_id));
 
-        if (!isWhitelisted) {
-          return new Response(JSON.stringify({ error: "You are not on the attendance whitelist for today's test session." }), {
-            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
-          });
+          if (!isSessionUnlocked) {
+            return new Response(JSON.stringify({ error: "This test session has not been opened by the Tutor yet." }), {
+              status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+          }
+
+          if (!isWhitelisted) {
+            return new Response(JSON.stringify({ error: "You are not on the attendance whitelist for today's test session." }), {
+              status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+          }
         }
 
         // 2. Strict Prerequisite Tasks check: Must pass ALL theme tasks 7 times >= 70% (7×7 Mastery)

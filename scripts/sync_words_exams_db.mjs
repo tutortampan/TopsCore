@@ -17,3 +17,4 @@ if (error) {
 }
 
 console.log("Updated Words Exams in DB:", data);
+

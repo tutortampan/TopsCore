@@ -981,7 +981,9 @@ export async function startTest(studentId, testId) {
     ) {
       throw edgeErr; // Re-throw authoritative business logic, draft status & prerequisite access errors
     }
-    console.warn('Edge Function start-test unavailable, using client DB fallback:', edgeErr.message);
+    if (typeof process === 'undefined' || !process.env || process.env.TOPSCORE_DIRECT_DB !== '1') {
+      console.warn('Edge Function start-test unavailable, using client DB fallback:', edgeErr.message);
+    }
   }
 
   const sb = await getSupabase();
@@ -1073,7 +1075,7 @@ export async function startTest(studentId, testId) {
 
   // Guard: Strict Cross-Theme Prerequisite:
   // Taking ANY test (Task or Exam) in Theme B, C, or D requires passing prior theme's exams with >= 70%
-  const currentThemeFallback = String(themeCodeFallback || asmData.shell_code?.replace(/^[0-9]+/, '').charAt(0) || '').toUpperCase();
+  const currentThemeFallback = String(asmData.payload?.theme_code || asmData.shell_code?.replace(/^[0-9]+/, '').charAt(0) || '').toUpperCase();
   const themeSeqFallback = ['A', 'B', 'C', 'D'];
   const curThemeIdxFallback = themeSeqFallback.indexOf(currentThemeFallback);
 
@@ -1138,7 +1140,8 @@ export async function startTest(studentId, testId) {
                        (asmData.test_type || '').toLowerCase() !== 'quiz';
 
   let activeSession = null;
-  if (isFormalExam) {
+  const isFlexible = (asmData.schedule_mode || asmData.payload?.schedule_mode) === 'flexible';
+  if (isFormalExam && !isFlexible && (asmData.schedule_mode === 'strict' || asmData.payload?.test_session)) {
     const accessCheck = await checkStudentTestAccess(studentId, testId);
     if (!accessCheck.allowed) {
       const err = new Error(accessCheck.message);
@@ -1345,7 +1348,9 @@ export async function submitTest(attemptId, answersMap, options = {}) {
   try {
     result = await callEdgeFunction('submit-test', { attempt_id: attemptId, answers: answersMap, status: targetStatus });
   } catch (edgeErr) {
-    console.warn('Edge Function submit-test unavailable, using server RPC fallback:', edgeErr.message);
+    if (typeof process === 'undefined' || !process.env || process.env.TOPSCORE_DIRECT_DB !== '1') {
+      console.warn('Edge Function submit-test unavailable, using server RPC fallback:', edgeErr.message);
+    }
   }
 
   if (!result) {
@@ -3943,7 +3948,7 @@ export async function autoGeneratePhrasesTests({ classId, levelId, programId, in
 /**
  * Automatically provisions and synchronizes tests for a Vocabulary class based on Vocabulary Vault contents.
  * Safe, idempotent, zero-maintenance.
- * 
+ *
  * @param {number|string} levelNumberOrId - Level number (e.g. 2, 3) or level UUID
  * @param {Object} options - Options { programId, explicitClassId, force }
  * @returns {Promise<{synced: boolean, tasks?: number, tests?: number, updated?: number, reason?: string, error?: string}>}
@@ -4442,6 +4447,11 @@ export async function checkStudentTestAccess(studentId, testId) {
 
   if (!isFormalExam) {
     return { allowed: true, is_test: false };
+  }
+
+  const isFlexible = (asm.schedule_mode || asm.payload?.schedule_mode) === 'flexible';
+  if (isFlexible) {
+    return { allowed: true, is_test: true, is_flexible: true };
   }
 
   const session = asm.payload?.test_session;

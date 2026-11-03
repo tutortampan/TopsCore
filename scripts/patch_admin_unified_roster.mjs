@@ -40,3 +40,4 @@ if (!content.includes('asmPassCounts')) {
 // Write intermediate file
 fs.writeFileSync(filePath, content, 'utf-8');
 console.log("Step 1 & 2 completed in js/admin/app.js!");
+

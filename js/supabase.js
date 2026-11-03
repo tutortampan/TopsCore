@@ -83,6 +83,11 @@ export async function getSupabase() {
 
 // Add callEdgeFunction to easily invoke Edge Functions
 export async function callEdgeFunction(functionName, payload) {
+  if (typeof process !== 'undefined' && process.env && process.env.TOPSCORE_DIRECT_DB === '1') {
+    const err = new Error(`Edge function ${functionName} bypassed (TOPSCORE_DIRECT_DB enabled)`);
+    err.status = 404;
+    throw err;
+  }
   const sb = await getSupabase();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 25000);
