@@ -3880,4 +3880,28 @@ body.dashboard-page .completed-summary-val {
   box-shadow: 0 0 10px rgba(0, 192, 0, 0.25) !important;
 }
 
+/* Phase 298: Component Selection Modal Cards */
+.component-choice-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.component-choice-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+}
+
+#component-opt-words:hover {
+  border-color: #38bdf8 !important;
+  background: rgba(56, 189, 248, 0.15) !important;
+}
+
+#component-opt-phrases:hover {
+  border-color: #c084fc !important;
+  background: rgba(168, 85, 247, 0.15) !important;
+}
+
+.component-choice-card:active {
+  transform: scale(0.985);
+}
+
 

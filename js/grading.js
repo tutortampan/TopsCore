@@ -822,6 +822,118 @@ export function getTaskProgressVisual(passCount) {
   }
 }
 
+/**
+ * Authoritative Unified Topic & Exam Score Computer (Phase 298)
+ * Aggregates Best Points from Words and Phrases into a unified score and percentage (Rule 2.7).
+ *
+ * @param {Object} params
+ * @param {Object|null} params.wordsBest Best attempt record for Words component
+ * @param {Object|null} params.phrasesBest Best attempt record for Phrases component
+ * @param {number} [params.wordsMax=40] Maximum points for Words component (40 for Task, 120 for Exam)
+ * @param {number} [params.phrasesMax=10] Maximum points for Phrases component (10 for Task, 30 for Exam)
+ * @param {boolean} [params.hasPhrases=true] Whether this topic/class has a phrases component
+ * @returns {{
+ *   totalPoints: number,
+ *   maxPoints: number,
+ *   percentage: number,
+ *   grade: string,
+ *   gradeColor: string,
+ *   wordsPoints: number,
+ *   phrasesPoints: number,
+ *   wordsPct: number|null,
+ *   phrasesPct: number|null,
+ *   isRemedial: boolean,
+ *   isAttempted: boolean
+ * }}
+ */
+export function computeUnifiedScore({
+  wordsBest = null,
+  phrasesBest = null,
+  wordsMax = 40,
+  phrasesMax = 10,
+  hasPhrases = true
+} = {}) {
+  const parseAttemptPoints = (att, max) => {
+    if (!att) return null;
+    if (att.points_awarded !== undefined && att.points_awarded !== null) {
+      return Number(att.points_awarded);
+    }
+    if (att.points !== undefined && att.points !== null) {
+      return Number(att.points);
+    }
+    if (att.score !== undefined && att.score !== null) {
+      return Number(att.score);
+    }
+    const pct = att.effective_score !== undefined && att.effective_score !== null
+      ? Number(att.effective_score)
+      : (att.percentage !== undefined && att.percentage !== null ? Number(att.percentage) : null);
+    if (pct !== null) {
+      return Math.round((pct / 100) * max * 10) / 10;
+    }
+    return 0;
+  };
+
+  const parseAttemptPct = (att, max = 0) => {
+    if (!att) return null;
+    if (att.effective_score !== undefined && att.effective_score !== null) return Number(att.effective_score);
+    if (att.percentage !== undefined && att.percentage !== null) return Number(att.percentage);
+    if (att.score !== undefined && att.score !== null && max > 0) {
+      return Math.round((Number(att.score) / max) * 100);
+    }
+    return null;
+  };
+
+  const wordsPts = parseAttemptPoints(wordsBest, wordsMax);
+  const phrasesPts = hasPhrases ? parseAttemptPoints(phrasesBest, phrasesMax) : 0;
+  const wordsPct = parseAttemptPct(wordsBest, wordsMax);
+  const phrasesPct = hasPhrases ? parseAttemptPct(phrasesBest, phrasesMax) : null;
+
+  const isAttempted = wordsBest != null || (hasPhrases && phrasesBest != null);
+  const effectiveWordsPts = wordsPts ?? 0;
+  const effectivePhrasesPts = phrasesPts ?? 0;
+
+  const totalPoints = Math.round((effectiveWordsPts + effectivePhrasesPts) * 10) / 10;
+  const maxPoints = hasPhrases ? (wordsMax + phrasesMax) : wordsMax;
+  const percentage = (isAttempted && maxPoints > 0) ? Math.round((totalPoints / maxPoints) * 100) : 0;
+  const grade = isAttempted ? calculateGrade(percentage) : '—';
+  const gradeColor = isAttempted ? getGradeColorByScore(percentage) : '#94a3b8';
+
+  const isRemedial = Boolean(
+    wordsBest?.is_remedial || wordsBest?.is_remedial_unlocked ||
+    (hasPhrases && (phrasesBest?.is_remedial || phrasesBest?.is_remedial_unlocked))
+  );
+
+  return {
+    totalPoints,
+    maxPoints,
+    percentage,
+    grade,
+    gradeColor,
+    wordsPoints: effectiveWordsPts,
+    phrasesPoints: effectivePhrasesPts,
+    wordsPct,
+    phrasesPct,
+    isRemedial,
+    isAttempted
+  };
+}
+
+/**
+ * 7×7 Repetitive Mastery Topic Pass Level Resolver (Phase 298)
+ * Implements Synchronized Leveling via Math.min (WordsPasses, PhrasesPasses).
+ *
+ * @param {number} wordsPasses Successful pass count for Words (>= 70%)
+ * @param {number} phrasesPasses Successful pass count for Phrases (>= 70%)
+ * @param {boolean} [hasPhrases=true] Whether topic includes phrases
+ * @returns {number} Topic pass level (0..7)
+ */
+export function computeTopicPassLevel(wordsPasses = 0, phrasesPasses = 0, hasPhrases = true) {
+  const w = Math.min(Math.max(Number(wordsPasses) || 0, 0), 7);
+  if (!hasPhrases) return w;
+  const p = Math.min(Math.max(Number(phrasesPasses) || 0, 0), 7);
+  return Math.min(w, p);
+}
+
 /** Alias for normalizeAnswerText */
 export function normalizeWrittenAnswer(text) {
   return normalizeAnswerText(text);

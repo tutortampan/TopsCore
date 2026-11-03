@@ -1,5 +1,6 @@
-import { DataGrid } from './datagrid.js?v=20261103_v105';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261103_v105';
+import { DataGrid } from './datagrid.js?v=20261103_v111';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261103_v111';
+import { computeUnifiedScore, computeTopicPassLevel } from '../grading.js?v=20261103_v111';
 
 if (typeof window !== 'undefined') {
   window.showToast = showToast;
@@ -377,26 +378,26 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter, toShortLevel,
   adminOverridePrerequisitesWithRemedial, autoSyncClassTestsForLevel
-} from '../api.js?v=20261103_v105';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261103_v105';
-import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261103_v105';
-import { getSupabase } from '../supabase.js?v=20261103_v105';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261103_v105';
-import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261103_v105';
-import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261103_v105';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261103_v105';
-import { renderTests } from './tests-management.js?v=20261103_v105';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261103_v105';
-import { renderVocabularyVault } from './vocab-vault.js?v=20261103_v105';
-import { renderModules } from './modules.js?v=20261103_v105';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261103_v105';
-import { renderExportQuestions } from './imports-exports.js?v=20261103_v105';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261103_v105';
-import { renderCurriculum } from './curriculum-management.js?v=20261103_v105';
-import { renderClassesHub } from './classes-hub.js?v=20261103_v105';
-import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261103_v105';
-import { openStudentFullEdit } from './student-management.js?v=20261103_v105';
-import { renderStudentsRegistration } from './student-registration.js?v=20261103_v105';
+} from '../api.js?v=20261103_v111';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261103_v111';
+import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261103_v111';
+import { getSupabase } from '../supabase.js?v=20261103_v111';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261103_v111';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261103_v111';
+import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261103_v111';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261103_v111';
+import { renderTests } from './tests-management.js?v=20261103_v111';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261103_v111';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261103_v111';
+import { renderModules } from './modules.js?v=20261103_v111';
+import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261103_v111';
+import { renderExportQuestions } from './imports-exports.js?v=20261103_v111';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261103_v111';
+import { renderCurriculum } from './curriculum-management.js?v=20261103_v111';
+import { renderClassesHub } from './classes-hub.js?v=20261103_v111';
+import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261103_v111';
+import { openStudentFullEdit } from './student-management.js?v=20261103_v111';
+import { renderStudentsRegistration } from './student-registration.js?v=20261103_v111';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -1418,6 +1419,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
           // Map best attempt per test (Rule 2.7: report card stores HIGHEST score)
           const asmScores = {};
           const rowScoreSortVals = {};
+          const asmPassCounts = {};
 
           let completedCount = 0;         // ALL activities (quizzes + exams)
           const studentExamEntries = [];
@@ -1458,6 +1460,19 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
             }
 
             asmScores[asm.id] = bestAtt ? { ...bestAtt } : null;
+
+            const submittedAttsForPass = (atts || []).filter(a => {
+              const st = String(a.status || '').toLowerCase();
+              return ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
+            });
+            const maxQForPass = getAsmExpectedMax(asm);
+            const passCount = submittedAttsForPass.filter(a => {
+              const tq = Number(a.total_questions || maxQForPass);
+              const sc = a.score != null ? Math.min(Number(a.score), tq) : 0;
+              const pct = tq > 0 ? (sc / tq) * 100 : 0;
+              return pct >= 70;
+            }).length;
+            asmPassCounts[asm.id] = passCount;
           });
 
           // Step 2: Rule 2.10 Paired Theme Exam Remedial Synchronization ("Satu Paket")
@@ -1620,6 +1635,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
             latestScore,
             lastSubmittedAt,
             asmScores,
+            asmPassCounts,
             activeThemeCode: mastery.activeThemeCode || null,
             includedThemeCodes: mastery.includedThemeCodes || [],
             includedExamIds: mastery.includedExamIds || new Set(),
@@ -1947,7 +1963,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
           // Open Test Generator & Settings Wizard
           document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
             try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261103_v105');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261103_v111');
               await openAutoGenerateModal({
                 explicitClassId: classId,
                 onComplete: () => {
@@ -2116,12 +2132,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
               'D': 'super-hdr super-hdr-theme super-hdr-theme-d'
             };
 
+            const hasPhrasesComponents = classTests.some(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
+
             if (selectedTheme === 'ALL') {
               sortedActiveThemes.forEach(tc => {
                 const tName = themeNames[tc] ? ` (${themeNames[tc]})` : '';
                 const themeTests = themeGroups[tc] || [];
-                // In ALL view: render all individual exams (Word Exam & Phrase Exam, SCORE % + PTS) PLUS Theme Total columns
-                const colSpan = (themeTests.length * 2) + 2;
+                // In ALL view: Unified Exam (SCR + PTS = 2) + Theme Total (SCR + PTS = 2) = 4 columns
+                const colSpan = hasPhrasesComponents ? 4 : ((themeTests.length * 2) + 2);
                 dynamicSuperHeaders.push({
                   label: `THEME ${tc}${tName}`,
                   colSpan: colSpan,
@@ -2132,8 +2150,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
               if (themeGroups[selectedTheme] && themeGroups[selectedTheme].length > 0) {
                 const tName = themeNames[selectedTheme] ? ` (${themeNames[selectedTheme]})` : '';
                 const asmsInTheme = themeGroups[selectedTheme];
-                // All tasks + tests in theme (exams count for 2, quizzes count for 1), PLUS 2 for Theme Combined Score % & Total Points
-                const colSpan = asmsInTheme.reduce((acc, asm) => acc + (isWeeklyExam(asm) ? 2 : 1), 0) + 2;
+                const uniqueTopics = Array.from(new Set(asmsInTheme.filter(a => !isWeeklyExam(a)).map(a => String(a.payload?.topic_code || '1'))));
+                // Unified Tasks (1 col per topic) + Unified Exam (2 cols) + Theme Total (2 cols) = uniqueTopics.length + 4
+                const colSpan = hasPhrasesComponents
+                  ? (uniqueTopics.length + 4)
+                  : (asmsInTheme.reduce((acc, asm) => acc + (isWeeklyExam(asm) ? 2 : 1), 0) + 2);
                 dynamicSuperHeaders.push({
                   label: `THEME ${selectedTheme}${tName}`,
                   colSpan: colSpan,
@@ -2147,7 +2168,184 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
             sortedActiveThemes.forEach(tc => {
               const asmsInTheme = themeGroups[tc];
 
-              asmsInTheme.forEach(asm => {
+              if (hasPhrasesComponents) {
+                // Phase 298: Unified Columns for 3rd Vocabulary
+                // 1. Unified Tasks (Only in specific theme view, not ALL view)
+                if (selectedTheme !== 'ALL') {
+                  const topicCodes = Array.from(new Set(asmsInTheme.filter(a => !isWeeklyExam(a)).map(a => String(a.payload?.topic_code || '1')))).sort();
+                  topicCodes.forEach(topCode => {
+                    const wTask = asmsInTheme.find(a => !isWeeklyExam(a) && String(a.payload?.topic_code || '1') === topCode && !(a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
+                    const pTask = asmsInTheme.find(a => !isWeeklyExam(a) && String(a.payload?.topic_code || '1') === topCode && (a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
+                    const taskName = `Theme ${tc} • Topic ${topCode} Task (50 PTS)`;
+
+                    dynamicAsmCols.push({
+                      key: `unified_${tc}_${topCode}_task`,
+                      className: 'col-asm col-task col-unified-task',
+                      width: '42px',
+                      headerTitle: taskName,
+                      title: taskName,
+                      label: `
+                        <div class="asm-hdr-cell">
+                          <span class="test-num test-num-task" title="${escapeHtml(taskName)}">${tc}${topCode}</span>
+                          <span class="test-subtag test-subtag-task" style="color:var(--clr-accent-1, #6366f1); font-weight:700;">50p</span>
+                        </div>
+                      `,
+                      sortable: true,
+                      align: 'center',
+                      render: (val, row) => {
+                        const wAtt = wTask ? row.asmScores?.[wTask.id] : null;
+                        const pAtt = pTask ? row.asmScores?.[pTask.id] : null;
+                        const wPass = wTask ? (row.asmPassCounts?.[wTask.id] || 0) : 0;
+                        const pPass = pTask ? (row.asmPassCounts?.[pTask.id] || 0) : 0;
+                        const topicLevel = typeof computeTopicPassLevel === 'function' ? computeTopicPassLevel(wPass, pPass, true) : Math.min(wPass, pPass);
+
+                        const hasAny = wAtt || pAtt;
+                        if (!hasAny) {
+                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.70rem); font-weight:400;" title="Unattempted">&middot;</span>';
+                        }
+                        const isAnyProgress = (wAtt?.status === 'in_progress') || (pAtt?.status === 'in_progress');
+                        if (isAnyProgress) {
+                          return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.70rem) * 0.85);" title="In Progress">⏳</span>`;
+                        }
+
+                        const unified = computeUnifiedScore({
+                          wordsBest: wAtt,
+                          phrasesBest: pAtt,
+                          wordsMax: 40,
+                          phrasesMax: 10,
+                          hasPhrases: true
+                        });
+
+                        const attId = wAtt?.id || pAtt?.id || wAtt?.attempt_id || pAtt?.attempt_id;
+                        const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                        const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+
+                        return `
+                          <span class="asm-score asm-score-task"
+                                style="color:${unified.gradeColor}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.70rem); font-variant-numeric:tabular-nums;"
+                                ${clickAttr}
+                                title="${tc}${topCode} Unified Task&#10;Score: ${unified.percentage}% (${unified.totalPoints}/50 pts, Grade ${unified.grade})&#10;Words: ${unified.wordsPoints}/40 (${wPass}/7 passes)&#10;Phrases: ${unified.phrasesPoints}/10 (${pPass}/7 passes)&#10;Topic Mastery: Level ${topicLevel}/7&#10;Click to view result">
+                            ${unified.percentage}%
+                          </span>
+                        `;
+                      }
+                    });
+                  });
+                }
+
+                // 2. Unified Exam Columns (Words + Phrases Exam: 150 PTS)
+                const wExam = asmsInTheme.find(a => isWeeklyExam(a) && !(a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
+                const pExam = asmsInTheme.find(a => isWeeklyExam(a) && (a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
+                const examName = `Theme ${tc} Exam Package (150 PTS: 120 Words + 30 Phrases)`;
+
+                // Unified Exam SCR Column
+                dynamicAsmCols.push({
+                  key: `unified_${tc}_exam_scr`,
+                  className: 'col-asm col-exam col-exam-score',
+                  width: '38px',
+                  headerTitle: `${examName} (Score %)`,
+                  title: `${examName} (Score %)`,
+                  label: `
+                    <div class="asm-hdr-cell">
+                      <span class="test-num test-num-test" title="${escapeHtml(examName)}">${tc}</span>
+                      <span class="test-subtag test-subtag-test-score">SCR</span>
+                    </div>
+                  `,
+                  sortable: true,
+                  align: 'center',
+                  render: (val, row) => {
+                    const wAtt = wExam ? row.asmScores?.[wExam.id] : null;
+                    const pAtt = pExam ? row.asmScores?.[pExam.id] : null;
+
+                    const hasAny = wAtt || pAtt;
+                    if (!hasAny) {
+                      return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.70rem); font-weight:400;" title="Unattempted">&middot;</span>';
+                    }
+                    const isAnyProgress = (wAtt?.status === 'in_progress') || (pAtt?.status === 'in_progress');
+                    if (isAnyProgress) {
+                      return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.70rem) * 0.85);" title="In Progress">⏳</span>`;
+                    }
+
+                    const unified = computeUnifiedScore({
+                      wordsBest: wAtt,
+                      phrasesBest: pAtt,
+                      wordsMax: 120,
+                      phrasesMax: 30,
+                      hasPhrases: true
+                    });
+
+                    const attId = wAtt?.id || pAtt?.id || wAtt?.attempt_id || pAtt?.attempt_id;
+                    const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                    const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+                    const remSup = unified.isRemedial ? '<sup class="asm-rem-sup">R</sup>' : '';
+
+                    return `
+                      <span class="asm-score asm-score-test"
+                            style="color:${unified.gradeColor}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.70rem); font-variant-numeric:tabular-nums;"
+                            ${clickAttr}
+                            title="${tc} Unified Exam&#10;Score: ${unified.percentage}% (Grade ${unified.grade})&#10;Words Exam: ${unified.wordsPoints}/120 (${unified.wordsPct ?? 0}%)&#10;Phrases Exam: ${unified.phrasesPoints}/30 (${unified.phrasesPct ?? 0}%)&#10;Total: ${unified.totalPoints}/150 pts&#10;Click to view result">
+                        ${unified.percentage}%${remSup}
+                      </span>
+                    `;
+                  }
+                });
+
+                // Unified Exam PTS Column
+                dynamicAsmCols.push({
+                  key: `unified_${tc}_exam_pts`,
+                  className: 'col-asm col-exam col-exam-pts',
+                  width: '38px',
+                  headerTitle: `${examName} (Points)`,
+                  title: `${examName} (Points)`,
+                  label: `
+                    <div class="asm-hdr-cell">
+                      <span class="test-num test-num-test" title="${escapeHtml(examName)}">${tc}</span>
+                      <span class="test-subtag test-subtag-test-pts">PTS</span>
+                    </div>
+                  `,
+                  sortable: true,
+                  align: 'center',
+                  render: (val, row) => {
+                    const wAtt = wExam ? row.asmScores?.[wExam.id] : null;
+                    const pAtt = pExam ? row.asmScores?.[pExam.id] : null;
+
+                    const hasAny = wAtt || pAtt;
+                    if (!hasAny) {
+                      return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.70rem); font-weight:400;" title="Unattempted">&middot;</span>';
+                    }
+                    const isAnyProgress = (wAtt?.status === 'in_progress') || (pAtt?.status === 'in_progress');
+                    if (isAnyProgress) {
+                      return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.70rem) * 0.85);" title="In Progress">⏳</span>`;
+                    }
+
+                    const unified = computeUnifiedScore({
+                      wordsBest: wAtt,
+                      phrasesBest: pAtt,
+                      wordsMax: 120,
+                      phrasesMax: 30,
+                      hasPhrases: true
+                    });
+
+                    const attId = wAtt?.id || pAtt?.id || wAtt?.attempt_id || pAtt?.attempt_id;
+                    const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
+                    const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
+
+                    return `
+                      <span class="asm-score asm-score-test"
+                            style="color:${unified.gradeColor} !important; ${cursorStyle}"
+                            ${clickAttr}
+                            title="${tc} Unified Exam Points: ${unified.totalPoints}/150 pts (${unified.percentage}%)">
+                        <span style="font-weight:600; font-size:var(--matrix-font-size, 0.70rem); font-variant-numeric:tabular-nums; color:${unified.gradeColor} !important;">
+                          ${unified.totalPoints}
+                        </span>
+                      </span>
+                    `;
+                  }
+                });
+
+              } else {
+                // Fallback for classes without phrases (Words-only)
+                asmsInTheme.forEach(asm => {
                   const num = asm.display_order || (classTests.indexOf(asm) + 1);
                   const isTest = isWeeklyExam(asm);
                   const code = asm.payload?.shell_code || asm.shell_code || asm.title;
@@ -2355,6 +2553,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
                     });
                   }
                 });
+
+              } // End of hasPhrasesComponents check
 
               // 3. THEME COMBINED SCORE COLUMN (User requirement: "Score dan pointanya dijadikan satu")
               dynamicAsmCols.push({
@@ -3912,7 +4112,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261103_v105');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261103_v111');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -4243,7 +4443,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261103_v105');
+      const sm = await import('./student-management.js?v=20261103_v111');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }

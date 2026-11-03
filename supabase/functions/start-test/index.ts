@@ -349,7 +349,13 @@ Deno.serve(async (req) => {
         const isStudentRemedialAuthorized = isRemedialSession ||
           (Array.isArray(liveSession?.remedial_student_ids) && liveSession.remedial_student_ids.includes(student_id));
         const themeCode = test.payload?.theme_code;
-        if (themeCode && !isStudentRemedialAuthorized) {
+        const isExamTest = (test.test_type || '').toLowerCase() === 'exam' ||
+                           test.category === 'EXAM' ||
+                           (test.shell_code || '').endsWith('-EXAM');
+        const topicCode = test.payload?.topic_code;
+        const topicNum = parseInt(String(topicCode || ''), 10);
+
+        if (isExamTest && themeCode && !isStudentRemedialAuthorized) {
           const { data: siblingTasks } = await supabase
             .from('tests')
             .select('id, payload, test_type, category, shell_code')
@@ -391,64 +397,56 @@ Deno.serve(async (req) => {
               });
             }
           }
-        }
-
-        // 3. Strict Sequential Exam Prerequisite: If this is a Phrases Exam, student MUST pass Words Exam first (>= 70%)
-        const isQuiz = (test.test_type || '').toLowerCase() === 'quiz' || 
-                       (test.category || '').toLowerCase() === 'quiz' ||
-                       (test.category || '').toLowerCase() === 'task' ||
-                       (test.shell_code || '').toUpperCase().includes('QUIZ') ||
-                       (test.shell_code || '').toUpperCase().includes('TASK') ||
-                       (test.payload?.shell_code || '').toUpperCase().includes('QUIZ') ||
-                       (test.payload?.shell_code || '').toUpperCase().includes('TASK');
-
-        const isPhrasesExam = !isQuiz && (test.payload?.category === 'phrases' || 
-                              /PHRASES/i.test(test.shell_code || test.payload?.shell_code || '') || 
-                              /phrase/i.test(test.title || '') ||
-                              test.test_subtype === 'PHRASE_EXAM' ||
-                              test.test_subtype === 'PHRASE_TEST');
-        if (isPhrasesExam && themeCode) {
-          const { data: siblingWordsExams } = await supabase
+        } else if (!isExamTest && themeCode && topicNum > 1 && !isStudentRemedialAuthorized) {
+          // Phase 298: Linear Topic Gating — Topic K requires 7/7 Mastery on Topic K-1
+          const priorTopicCode = String(topicNum - 1);
+          const { data: priorTopicTasks } = await supabase
             .from('tests')
-            .select('id, title, payload, shell_code, test_subtype, minimum_required_score')
+            .select('id, payload, test_type, category, shell_code')
             .eq('class_id', test.class_id)
             .eq('level_id', test.level_id)
-            .eq('test_type', 'exam')
-            .neq('id', test.id)
-            .contains('payload', { theme_code: themeCode });
+            .is('deleted_at', null)
+            .contains('payload', { theme_code: themeCode, topic_code: priorTopicCode });
 
-          const wordsExam = (siblingWordsExams || []).find((t: any) => {
-            const cat = t.payload?.category;
-            const sc = t.shell_code || t.payload?.shell_code || '';
-            const ttl = t.title || '';
-            return cat === 'words' || /WORDS/i.test(sc) || /word/i.test(ttl) || t.test_subtype === 'VOCAB_EXAM' || t.test_subtype === 'VOCAB_TEST';
+          const filteredPriorTasks = (priorTopicTasks || []).filter((t: any) => {
+            const isEx = (t.test_type || '').toLowerCase() === 'exam' ||
+                         t.category === 'EXAM' ||
+                         (t.shell_code || '').endsWith('-EXAM');
+            return !isEx;
           });
 
-          if (wordsExam) {
-            const { data: wordsAttempts } = await supabase
+          if (filteredPriorTasks && filteredPriorTasks.length > 0) {
+            const priorTaskIds = filteredPriorTasks.map((t: any) => t.id);
+            const { data: priorAttempts } = await supabase
               .from('attempts')
-              .select('percentage, effective_score, status, is_remedial_unlocked, is_forgiven, is_remedial')
+              .select('test_id, percentage, effective_score, status')
               .eq('student_id', student_id)
-              .eq('test_id', wordsExam.id)
+              .in('test_id', priorTaskIds)
               .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
 
-            const reqScore = wordsExam.minimum_required_score || test.prerequisite_min_score || 70;
-            const hasPassedWords = (wordsAttempts || []).some((att: any) => {
-              if (att.is_forgiven) return true;
-              const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-              if (att.is_remedial_unlocked || att.is_remedial) {
-                return pct >= 60;
-              }
-              return pct >= reqScore;
-            });
+            const passCountByTask: Record<string, number> = {};
+            if (priorAttempts) {
+              priorAttempts.forEach((att: any) => {
+                const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+                if (pct >= 70) {
+                  passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
+                }
+              });
+            }
 
-            if (!hasPassedWords) {
-              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must pass the Words Exam (${wordsExam.title}) with at least ${reqScore}% before taking the Phrases Exam.` }), {
+            const unmasteredTask = priorTaskIds.find((tid: string) => (passCountByTask[tid] || 0) < 7);
+            if (unmasteredTask) {
+              return new Response(JSON.stringify({
+                error: `Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (7 passes with at least 70%) on Topic ${priorTopicCode} before starting Topic ${topicNum}.`
+              }), {
                 status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
               });
             }
           }
         }
+
+        // Phase 298: Intra-Theme Words Exam and Phrases Exam are flexible PEERS (neither locks the other).
+        // Sibling Words Exam check removed. Students can choose Words first or Phrases first.
 
         // 4. Strict Cross-Theme Exam Prerequisite: Taking Theme B, C, or D requires passing prior theme's exams (>= 70%)
         const themeSeq = ['A', 'B', 'C', 'D'];

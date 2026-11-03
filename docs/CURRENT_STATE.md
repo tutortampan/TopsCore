@@ -1,10 +1,33 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-03 16:10 UTC+8
-Current Phase: Phase 297: Level Column Standardization — Compact '1st', '2nd', '3rd', 'Alumni' Format Across All Admin Panel Tables [COMPLETE]
+Last Updated: 2026-11-03 19:40 UTC+8
+Current Phase: Phase 298: Virtual Unified Task (50 PTS) & Exam (150 PTS) with Component Selection Modal, 7×7 Math.min Leveling, Parallel Peer Exam Flow, and Strict Linear Topic Gating [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
+1. **Phase 298: Virtual Unified Task (50 PTS) & Exam (150 PTS) with Component Selection Modal [COMPLETE]:**
+   - **Student Choice Component Selector Modal**: Added `#component-selector-modal` to `dashboard.html` with card-based interface for choosing between Words (Written/Typed) and Phrases (Selection/Spoken) components. Allows students to freely decide which component to take first.
+   - **Virtual 50 PTS Task & 150 PTS Exam Representation**:
+     - Tasks are presented on the dashboard as a single unified card: `Theme X • Topic Y: Title`, `50 Items • 50 PTS (40 Words + 10 Phrases)`.
+     - Exams are presented as a single unified card: `Theme X Exam Package`, `150 Items • 150 PTS (120 Words + 30 Phrases)`.
+     - Single-component classes (e.g. `2nd Vocabulary` Level 2) automatically bypass modal selection and launch directly into test.
+   - **7×7 Repetitive Mastery with Math.min Leveling**:
+     - A topic round is completed if and only if both Words and Phrases achieve $\ge 70\%$.
+     - `computeTopicPassLevel(wordsPasses, phrasesPasses, hasPhrases)`: Calculated using `Math.min(wordsPasses, phrasesPasses)` for balanced mastery.
+     - Failing one part requires retaking only that failed part; the passed sibling retains its pass.
+   - **Strict Linear Topic Gating**:
+     - Topic $K$ strictly requires all tasks in Topic $K-1$ to reach 7 passes with $\ge 70\%$.
+     - Theme Exam strictly requires all Theme Tasks to reach 7 passes with $\ge 70\%$.
+     - Theme $K+1$ strictly requires both Words Exam and Phrases Exam of Theme $K$ to reach $\ge 70\%$.
+     - Parallel peer exams: Within the unlocked theme, Words Exam and Phrases Exam share the same prerequisite (`lastThemeTaskId`), allowing students to take either exam first.
+   - **Class Hub Roster Unified Columns (`js/admin/app.js`)**:
+     - For multi-component classes (3rd Vocabulary), dynamically renders unified columns: `A1 Task (50p)`, `A2 Task (50p)`, `A3 Task (50p)`, `A Exam (SCR %, PTS)` with breakdown tooltips and single-click access.
+     - Single-component classes (2nd Vocabulary) gracefully retain their individual column view.
+   - **Smart Peer Next Action Transition (`js/result.js`)**:
+     - When finishing a component, smart next action automatically balances sibling components in the same topic before moving on to the next topic.
+   - **Cache Buster Bump**: Bumped to `v20261103_v111` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, and core modules.
+   - **Verification**: 100% tests PASS (10/10 consecutive E2E runs with 132/132 assertions verified without defect).
+
 1. **Phase 297: Level Column Standardization [COMPLETE]:**
    - Standardized level display across all admin panel tables to the compact format: `1st`, `2nd`, `3rd`, and `Alumni`.
    - Built canonical `toShortLevel(val)` helper in `js/api.js` with full support for ordinal suffixes and alumni normalization.

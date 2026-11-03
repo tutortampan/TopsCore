@@ -1269,3 +1269,44 @@ Status: ACCEPTED
      - Grade B: **Electric Lime (`#95ff00ff`, `rgb(149, 255, 0)`)**.
      - Grade D: **Dark Orange (`#FF8C00`, `rgb(255, 140, 0)`)**.
      - Grade E: **Pure Red (`#FF0000`, `rgb(255, 0, 0)`)**.
+
+
+---
+
+## DECISION-043 — Virtual Unified Tasks (50 PTS) and Exams (150 PTS) with Component Choice Modal, 7×7 Math.min Leveling, Parallel Peer Exam Flow, and Strict Linear Topic Gating
+
+Date: 2026-11-03
+Status: ACCEPTED
+
+### Context
+In 3rd Vocabulary (Level 3), each topic consists of two components:
+1. Words Component (40 items, Written / Typed mode with tolerance matrix for typos & word forms).
+2. Phrases Component (10 items, Selection / Spoken mode).
+Exams correspondingly feature 120 Words and 30 Phrases (Total: 150 PTS).
+
+Students need flexibility to choose whether to do Words or Phrases first. Previously, Exams strictly forced Words Exam before Phrases Exam, and Tasks were displayed as separate 40-item and 10-item rows on the student dashboard, cluttering the view.
+
+### Decision
+1. **Virtual Unified Representation**:
+   - On the student dashboard and Class Hub roster, Tasks are presented as single unified 50 PTS items (`Theme X • Topic Y: Title`, `50 Items • 50 PTS (40 Words + 10 Phrases)`).
+   - Exams are presented as single unified 150 PTS items (`Theme X Exam Package`, `150 Items • 150 PTS (120 Words + 30 Phrases)`).
+   - Single-component classes (such as `2nd Vocabulary`) automatically bypass selection and launch directly into the test.
+2. **Component Selector Modal**:
+   - Clicking a unified card opens `#component-selector-modal`, allowing the student to freely choose which component to tackle first.
+   - Shows real-time pass count ($N/7$), best score percentage, item count, and time limit for each component.
+3. **7×7 Repetitive Mastery Leveling (`Math.min`)**:
+   - A topic round is completed if and only if both Words and Phrases achieve $\ge 70\%$.
+   - Topic Mastery Level is determined by `computeTopicPassLevel(wordsPasses, phrasesPasses, hasPhrases) = Math.min(wordsPasses, phrasesPasses)`.
+   - Failing one part only requires retaking that specific part; the passed sibling retains its status.
+4. **Strict Linear Topic Gating & Parallel Peer Exams**:
+   - Topic $K$ strictly requires all tasks in Topic $K-1$ to reach 7 passes with $\ge 70\%$.
+   - Theme Exam strictly requires all Theme Tasks to reach 7 passes with $\ge 70\%$.
+   - Theme $K+1$ strictly requires both Words Exam and Phrases Exam of Theme $K$ to reach $\ge 70\%$.
+   - Within an unlocked Theme, Words Exam and Phrases Exam are parallel peers sharing the same prerequisite (`lastThemeTaskId`), so students can take either first.
+5. **Admin Class Hub Roster Unified Columns**:
+   - In Class Hub matrix, multi-component classes render unified columns: `A1 Task (50p)`, `A2 Task (50p)`, `A3 Task (50p)`, `A Exam (SCR %, PTS)` with breakdown tooltips and single-click access.
+
+### Consequences
+- Eliminates 50% of visual row clutter on the student dashboard and Class Hub table.
+- Preserves high pedagogical evaluation fidelity (Written typo tolerance for Words, Selection for Phrases).
+- Ensures balanced, authentic mastery across both vocabulary and phrases.

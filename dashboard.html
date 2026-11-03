@@ -21,9 +21,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261102_v103" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261102_v103" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=20261102_v103" />
+  <link rel="stylesheet" href="css/style.css?v=20261103_v111" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261103_v111" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=20261103_v111" />
 
 
 </head>
@@ -242,6 +242,54 @@
           <button type="button" class="btn btn-secondary btn-block" id="btn-open-class-levels">
             🔍 View All Levels &amp; Detailed Tests
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Component Selector Modal (Phase 298: Choose Words or Phrases) -->
+    <div class="modal-backdrop hidden" id="component-selector-modal" role="dialog" aria-modal="true" aria-labelledby="component-modal-title">
+      <div class="modal-box component-selector-modal-box" style="max-width: 480px; padding: 1.5rem; background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+          <div>
+            <div id="component-modal-badge" style="font-size: 0.7rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">TOPIC ASSESSMENT</div>
+            <h3 id="component-modal-title" style="font-size: 1.15rem; font-weight: 800; color: #f8fafc; margin: 0;">Topic Title</h3>
+            <p id="component-modal-subtitle" style="font-size: 0.78rem; color: #94a3b8; margin: 4px 0 0 0;">Pilih bagian yang ingin Anda kerjakan terlebih dahulu:</p>
+          </div>
+          <button class="btn btn-ghost btn-icon btn-sm" id="close-component-modal" aria-label="Close" style="color: #94a3b8; font-size: 1.1rem; cursor: pointer; border: none; background: none;">✕</button>
+        </div>
+
+        <div id="component-modal-options" style="display: flex; flex-direction: column; gap: 0.85rem;">
+          <!-- Card Option A: Words -->
+          <div id="component-opt-words" role="button" tabindex="0" class="component-choice-card" style="padding: 1rem; border-radius: 12px; background: rgba(56, 189, 248, 0.08); border: 1.5px solid rgba(56, 189, 248, 0.3); cursor: pointer; transition: all 0.2s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 0.95rem; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+                <span>📝</span> <span id="component-words-title">Words Component</span>
+              </span>
+              <span id="component-words-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: rgba(56, 189, 248, 0.2); color: #38bdf8;">40 Soal</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #94a3b8;">
+              <span id="component-words-status">Progres: 0/7 Passes</span>
+              <span id="component-words-best" style="font-weight: 700; color: #f8fafc;">Best: —</span>
+            </div>
+          </div>
+
+          <!-- Card Option B: Phrases -->
+          <div id="component-opt-phrases" role="button" tabindex="0" class="component-choice-card" style="padding: 1rem; border-radius: 12px; background: rgba(168, 85, 247, 0.08); border: 1.5px solid rgba(168, 85, 247, 0.3); cursor: pointer; transition: all 0.2s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 0.95rem; font-weight: 800; color: #c084fc; display: flex; align-items: center; gap: 6px;">
+                <span>💬</span> <span id="component-phrases-title">Phrases Component</span>
+              </span>
+              <span id="component-phrases-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: rgba(168, 85, 247, 0.2); color: #c084fc;">10 Soal</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #94a3b8;">
+              <span id="component-phrases-status">Progres: 0/7 Passes</span>
+              <span id="component-phrases-best" style="font-weight: 700; color: #f8fafc;">Best: —</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1.25rem; text-align: center;">
+          <span style="font-size: 0.72rem; color: #64748b;">Kedua bagian wajib lulus ≥70% untuk menuntaskan 1 putaran 7×7.</span>
         </div>
       </div>
     </div>
@@ -555,12 +603,12 @@
     </div>
   </div>
 
-  <script type="module" src="./js/dashboard.js?v=20261102_v103"></script>
+  <script type="module" src="./js/dashboard.js?v=20261103_v111"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261102_v103')
+        navigator.serviceWorker.register('sw.js?v=20261103_v111')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

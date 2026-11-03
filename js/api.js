@@ -1,9 +1,9 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
-import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=20261102_v103';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261102_v103';
-import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261102_v103';
-import { escapeHtml, escHtml } from './app.js?v=20261102_v103';
+import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=20261103_v111';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261103_v111';
+import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261103_v111';
+import { escapeHtml, escHtml } from './app.js?v=20261103_v111';
 
 export function getGrade(pct) {
   return calculateGrade(pct);
@@ -1068,59 +1068,8 @@ export async function startTest(studentId, testId) {
     }
   }
 
-  // Guard: Strict Sequential Exam Prerequisite: If this is a Phrases Exam, student MUST pass Words Exam first (>= 60%)
-  const isQuizFallback = (asmData.test_type || '').toLowerCase() === 'quiz' ||
-                         (asmData.category || '').toLowerCase() === 'quiz' ||
-                         (asmData.shell_code || '').toUpperCase().includes('QUIZ') ||
-                         (asmData.shell_code || '').toUpperCase().includes('TASK') ||
-                         (asmData.payload?.shell_code || '').toUpperCase().includes('QUIZ');
-
-  const isPhrasesExamFallback = !isQuizFallback && isWeeklyExam(asmData) && Boolean(
-    asmData.payload?.category === 'phrases' ||
-    /PHRASES/i.test(asmData.shell_code || asmData.payload?.shell_code || '') ||
-    /phrase/i.test(asmData.title || '') ||
-    asmData.test_subtype === 'PHRASE_EXAM' ||
-    asmData.test_subtype === 'PHRASE_TEST'
-  );
-  const themeCodeFallback = asmData.payload?.theme_code;
-  if (isPhrasesExamFallback && themeCodeFallback && !isStandaloneTryout) {
-    const { data: siblingWordsExams } = await sb.from('tests')
-      .select('id, title, payload, shell_code, test_subtype, test_type, category')
-      .eq('class_id', asmData.class_id)
-      .eq('level_id', asmData.level_id)
-      .eq('test_type', 'exam')
-      .neq('id', asmData.id)
-      .contains('payload', { theme_code: themeCodeFallback });
-
-    const wordsExam = (siblingWordsExams || []).find(t => {
-      if (!isWeeklyExam(t)) return false;
-      const cat = t.payload?.category;
-      const sc = t.shell_code || t.payload?.shell_code || '';
-      const ttl = t.title || '';
-      return cat === 'words' || /WORDS/i.test(sc) || /word/i.test(ttl) || t.test_subtype === 'VOCAB_EXAM' || t.test_subtype === 'VOCAB_TEST';
-    });
-
-    if (wordsExam) {
-      const { data: wordsAttempts } = await sb.from('attempts')
-        .select('percentage, effective_score, status, is_remedial_unlocked, is_forgiven')
-        .eq('student_id', studentId)
-        .eq('test_id', wordsExam.id)
-        .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
-
-      const reqScore = wordsExam?.minimum_required_score || asmData.minimum_required_score || 70;
-      const hasPassedWords = (wordsAttempts || []).some(att => {
-        const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-        return pct >= reqScore || att.is_remedial_unlocked || att.is_forgiven;
-      });
-
-      if (!hasPassedWords) {
-        const pErr = new Error(`Prerequisite not completed. You must pass the Words Exam (${wordsExam.title}) with at least ${reqScore}% before taking the Phrases Exam.`);
-        pErr.code = 'WORDS_EXAM_REQUIRED';
-        pErr.status = 403;
-        throw pErr;
-      }
-    }
-  }
+  // Phase 298: Intra-theme Words Exam and Phrases Exam are flexible PEERS (can be taken in either order).
+  // Cross-Theme Prerequisite (Theme B requires Theme A) remains strictly enforced below.
 
   // Guard: Strict Cross-Theme Prerequisite:
   // Taking ANY test (Task or Exam) in Theme B, C, or D requires passing prior theme's exams with >= 70%
@@ -3520,7 +3469,7 @@ export async function upsertDynamicTestShell(config) {
         : `${ordinal} Vocabulary ${themeCode}${topicCode || '1'} Words Task${cleanTitle ? ' - ' + cleanTitle : ''}`);
 
   // Default answer types: Spoken for Tasks (Words & Phrases), Spoken for Words Exam, Selection for Phrases Exam
-  const defaultAnswerType = isTest ? (isPhrase ? 'selection' : 'spoken') : 'spoken';
+  const defaultAnswerType = isTest ? (isPhrase ? 'selection' : 'written') : 'spoken';
 
   // Expected question counts
   let expectedQuestions = 40;
@@ -3578,11 +3527,11 @@ export async function upsertDynamicTestShell(config) {
     }
   }
 
-  // Prioritize explicitly passed answerType, otherwise check existing or use defaultAnswerType
-  const effectiveAnswerType = answerType || (existing && existing.answer_type) || defaultAnswerType;
+  // Prioritize explicitly passed answerType; Words Exam is strictly written (Rule 2.13)
+  const effectiveAnswerType = answerType || ((isTest && !isPhrase) ? 'written' : (existing && existing.answer_type)) || defaultAnswerType;
   const effectiveMinScore = config.minimumRequiredScore !== undefined
     ? Number(config.minimumRequiredScore)
-    : (existing?.minimum_required_score || 60);
+    : 70;
 
   // Cumulative theme determination for weekly milestone tests
   const allThemesList = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -3864,6 +3813,9 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
       for (const topicCode of sortedTopics) {
         const topicObj = themeData.topics.get(topicCode);
         const topicName = topicObj.name;
+        // Peer prerequisite: both Words and Phrases in this topic share the exact same prerequisite
+        const topicPrereqId = lastTaskId;
+        let thisTopicLastId = null;
 
         // 1. Words Task (First in topic pair)
         if (topicObj.hasVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
@@ -3878,15 +3830,15 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
             answerType: wordsTaskAns,
             durationMinutes: wordsTaskDur,
             minimumRequiredScore: taskPass,
-            prerequisiteId: lastTaskId,
+            prerequisiteId: topicPrereqId,
             displayOrder: displayOrder++
           });
           if (action === 'inserted') results.tasks++;
           if (action === 'updated') results.updated++;
-          lastTaskId = testId;
+          thisTopicLastId = testId;
         }
 
-        // 2. Phrases Task (Second in topic pair, chained to Word Task)
+        // 2. Phrases Task (Peer in topic pair, shares same topicPrereqId)
         if (topicObj.hasPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
           hasAnyPhrases = true;
           const { testId, action } = await upsertDynamicTestShell({
@@ -3899,14 +3851,22 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
             answerType: phrasesTaskAns,
             durationMinutes: phrasesTaskDur,
             minimumRequiredScore: taskPass,
-            prerequisiteId: lastTaskId,
+            prerequisiteId: topicPrereqId,
             displayOrder: displayOrder++
           });
           if (action === 'inserted') results.tasks++;
           if (action === 'updated') results.updated++;
-          lastTaskId = testId;
+          thisTopicLastId = testId;
+        }
+
+        if (thisTopicLastId) {
+          lastTaskId = thisTopicLastId;
         }
       }
+
+      // Theme Exams: Both Words Exam and Phrases Exam are PEERS requiring all theme tasks
+      const lastThemeTaskId = lastTaskId;
+      let lastThemeExamId = null;
 
       // 3. Words Exam (First in exam pair)
       if (hasAnyVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
@@ -3920,15 +3880,15 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           answerType: wordsTestAns,
           durationMinutes: 120,
           minimumRequiredScore: testPass,
-          prerequisiteId: lastTaskId,
+          prerequisiteId: lastThemeTaskId,
           displayOrder: displayOrder++
         });
         if (action === 'inserted') results.tests++;
         if (action === 'updated') results.updated++;
-        lastTaskId = testId;
+        lastThemeExamId = testId;
       }
 
-      // 4. Phrases Exam (Second in exam pair, chained to Word Exam)
+      // 4. Phrases Exam (Peer in exam pair, shares same lastThemeTaskId)
       if (hasAnyPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
         const { testId, action } = await upsertDynamicTestShell({
           institutionId, programId, levelId, classId: targetClassId, levelNum,
@@ -3940,12 +3900,16 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           answerType: phrasesTestAns,
           durationMinutes: 120,
           minimumRequiredScore: testPass,
-          prerequisiteId: lastTaskId,
+          prerequisiteId: lastThemeTaskId,
           displayOrder: displayOrder++
         });
         if (action === 'inserted') results.tests++;
         if (action === 'updated') results.updated++;
-        lastTaskId = testId;
+        lastThemeExamId = testId;
+      }
+
+      if (lastThemeExamId) {
+        lastTaskId = lastThemeExamId;
       }
     }
   }

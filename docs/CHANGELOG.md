@@ -1,3 +1,63 @@
+## [2026-11-03 19:40] — Phase 298: Virtual Unified Task (50 PTS) & Exam (150 PTS) with Component Selection Modal, 7×7 Math.min Leveling, and Strict Linear Topic Gating
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 298  
+**Status:** PASS  
+
+### Why
+- User request & approved design (`plan_exam_order_choice.md`):
+  *"Opsi satu. lalu bagiaman dengan task 7x7? apakah selang seling ataukah siswa juga bisa memilih? jadi task dianggap 1 task, ada bagian frase dan kata, saat masuk task siswa memilih mana yang duluan, saat keduanya lulus 70% baru dainggap lulus 1 kali,,, untuk nilai task dan exam nilai words dan phrases dijumlahkan poinnya dan dijadikan 1 baik secara score, mapun points. apakah paham?"*
+- Provide student choice between Words and Phrases components with a clean Component Selector Modal.
+- Virtualize dual-component modules into single unified 50 PTS (Tasks) and 150 PTS (Exams) cards.
+- Implement $7 \times 7$ Repetitive Mastery with `Math.min(wordsPasses, phrasesPasses)` leveling so a topic round is only completed when both components achieve $\ge 70\%$.
+- Enforce strict linear topic gating: Topic $K$ strictly requires all tasks in Topic $K-1$ to reach 7 passes with $\ge 70\%$. Theme Exam strictly requires all Theme Tasks to reach 7 passes with $\ge 70\%$. Theme $K+1$ strictly requires both Theme $K$ exams to be passed $\ge 70\%$.
+- Allow students to choose between Words Exam and Phrases Exam in parallel once tasks reach 7/7 passes.
+
+### Changed
+1. **`js/grading.js`**:
+   - Added `computeUnifiedScore({ wordsBest, phrasesBest, wordsMax = 40, phrasesMax = 10, hasPhrases = true })`: Authoritatively computes unified points (summed), max points, percentage, and unified grade.
+   - Added `computeTopicPassLevel(wordsPasses, phrasesPasses, hasPhrases)`: Uses `Math.min` so topic round advances only when both parts pass.
+   - Updated `parseAttemptPoints` and `parseAttemptPct` to support raw `score` and `total_questions` from Supabase attempts table.
+2. **`js/api.js`**:
+   - Updated `autoGenerateTestsHierarchy`: Words Task and Phrases Task share the same prerequisite (`topicPrereqId`). Words Exam and Phrases Exam share the same prerequisite (`lastThemeTaskId`), enabling flexible parallel order.
+   - Updated `upsertDynamicTestShell`: Words Exam strictly defaults to `answer_type: 'written'` with `minimum_required_score: 70`.
+   - Synchronized all 40 test shells in `3rd Vocabulary` database records.
+3. **`supabase/functions/start-test/index.ts`**:
+   - Implemented Linear Topic Gating: Topic $K$ strictly requires all tasks in Topic $K-1$ to reach 7 passes with $\ge 70\%$.
+   - Removed artificial lock blocking Phrases Exam from starting before Words Exam.
+4. **`dashboard.html` & `css/dashboard.css`**:
+   - Added `#component-selector-modal` with modern choice cards for Words and Phrases components.
+   - Added `.component-choice-card` styles, hover effects, and responsive layout.
+5. **`js/dashboard.js`**:
+   - Added `triggerComponentChoiceModal(encodedData)` controller.
+   - Updated `openClassModal`: For multi-component classes (3rd Vocabulary), virtualizes tests into unified rows: `Theme X • Topic Y: Title`, `50 Items • 50 PTS (40 Words + 10 Phrases)` and `Theme X Exam Package`, `150 Items • 150 PTS (120 Words + 30 Phrases)`.
+   - Single-component classes (2nd Vocabulary) automatically bypass the modal and launch immediately.
+6. **`js/result.js`**:
+   - Added Smart Peer Next Action Transition (lines 424–445): Balances sibling task pass counts within the same topic before transitioning to next topic.
+7. **`js/admin/app.js`**:
+   - Updated Class Hub Roster table (`renderAttendanceGridMatrix`): For multi-component classes, dynamically renders unified columns: `A1 Task (50p)`, `A2 Task (50p)`, `A3 Task (50p)`, `A Exam (SCR %, PTS)` with breakdown tooltips and single-click access.
+   - Single-component classes retain individual columns.
+8. **Cache Busters Bump**:
+   - Bumped to `v20261103_v111` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, and core JS modules.
+
+### Files
+- `js/grading.js`
+- `js/api.js`
+- `supabase/functions/start-test/index.ts`
+- `dashboard.html`
+- `css/dashboard.css`
+- `js/dashboard.js`
+- `js/result.js`
+- `js/admin/app.js`
+- `admin.html`, `result.html`, `test.html`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: 40/40 JS files PASS syntax validation.
+- `node scripts/test_unified_parallel_exam_flow.mjs`: PASS (all unit tests verified with zero defects).
+- `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: PASS (10/10 consecutive runs, 132/132 assertions verified without defect).
+
+---
+
 ## [2026-11-03 16:10] — Phase 297: Level Column Standardization — Compact '1st', '2nd', '3rd', 'Alumni' Format Across All Admin Panel Tables
 
 **Agent/Session:** Antigravity  

@@ -3,12 +3,12 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=20261102_v103';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261102_v103';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261102_v103';
-    import { testMicrophoneCapability } from './speech.js?v=20261102_v103';
-    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261102_v103';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery } from './grading.js?v=20261102_v103';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=20261103_v111';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261103_v111';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261103_v111';
+    import { testMicrophoneCapability } from './speech.js?v=20261103_v111';
+    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261103_v111';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261103_v111';
 
     window._isBatchChampion = false;
 
@@ -183,7 +183,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261103_v111')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).maybeSingle();
           if (st?.gender) {
             currentGender = st.gender;
@@ -549,7 +549,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
         try {
-          const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261103_v111')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).maybeSingle();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
@@ -568,7 +568,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Background sync: memastikan localStorage selalu sinkron dengan database terbaru
         (async () => {
           try {
-            const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261103_v111')).getSupabase();
             const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).maybeSingle();
             if (st && st.photo_url !== photoUrl) {
               if (st.photo_url) {
@@ -622,7 +622,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
       if (!hasBirthday) {
         try {
-          const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261103_v111')).getSupabase();
           const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).maybeSingle();
           if (st && st.birth_date) {
             hasBirthday = true;
@@ -688,7 +688,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261103_v111')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).maybeSingle();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -698,7 +698,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./session.js?v=20261102_v103');
+             const { setStudentSession } = await import('./session.js?v=20261103_v111');
              setStudentSession(session);
           }
         }
@@ -748,7 +748,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./session.js?v=20261102_v103');
+            const { setStudentSession } = await import('./session.js?v=20261103_v111');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -1297,6 +1297,95 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
     }
 
+    // Phase 298: Component Selector Modal Trigger
+    window.triggerComponentChoiceModal = function(encodedData) {
+      try {
+        const data = JSON.parse(decodeURIComponent(encodedData));
+        const modal = document.getElementById('component-selector-modal');
+        if (!modal) return;
+
+        const badgeEl = document.getElementById('component-modal-badge');
+        const titleEl = document.getElementById('component-modal-title');
+        const subtitleEl = document.getElementById('component-modal-subtitle');
+
+        if (badgeEl) badgeEl.textContent = data.badge || 'TOPIC ASSESSMENT';
+        if (titleEl) titleEl.textContent = data.title || 'Topic Assessment';
+        if (subtitleEl) subtitleEl.textContent = data.subtitle || 'Pilih bagian yang ingin Anda kerjakan terlebih dahulu:';
+
+        const wordsCard = document.getElementById('component-opt-words');
+        const wordsTitle = document.getElementById('component-words-title');
+        const wordsBadge = document.getElementById('component-words-badge');
+        const wordsStatus = document.getElementById('component-words-status');
+        const wordsBestEl = document.getElementById('component-words-best');
+
+        if (data.wordsTestId) {
+          wordsCard.style.display = 'block';
+          if (wordsTitle) wordsTitle.textContent = data.isExam ? 'Words Exam' : 'Words Task';
+          if (wordsBadge) wordsBadge.textContent = data.isExam ? '120 Soal (Written Mode)' : '40 Soal (Speaking)';
+          if (wordsStatus) {
+            wordsStatus.textContent = data.isExam
+              ? (data.wordsBest ? `Score: ${Number(data.wordsBest.percentage || 0).toFixed(0)}%` : 'Belum Dikerjakan')
+              : `Progres: ${data.wordsPasses || 0}/7 Passes`;
+          }
+          if (wordsBestEl) {
+            wordsBestEl.textContent = data.wordsBest
+              ? `Best: ${Number(data.wordsBest.percentage || 0).toFixed(0)}% (${Number(data.wordsBest.points_awarded ?? data.wordsBest.points ?? 0)} PTS)`
+              : 'Best: —';
+          }
+          wordsCard.onclick = () => {
+            modal.classList.add('hidden');
+            location.href = `test.html?test_id=${data.wordsTestId}`;
+          };
+        } else {
+          wordsCard.style.display = 'none';
+        }
+
+        const phrasesCard = document.getElementById('component-opt-phrases');
+        const phrasesTitle = document.getElementById('component-phrases-title');
+        const phrasesBadge = document.getElementById('component-phrases-badge');
+        const phrasesStatus = document.getElementById('component-phrases-status');
+        const phrasesBestEl = document.getElementById('component-phrases-best');
+
+        if (data.phrasesTestId) {
+          phrasesCard.style.display = 'block';
+          if (phrasesTitle) phrasesTitle.textContent = data.isExam ? 'Phrases Exam' : 'Phrases Task';
+          if (phrasesBadge) phrasesBadge.textContent = data.isExam ? '30 Soal (Selection Mode)' : '10 Soal (Speaking)';
+          if (phrasesStatus) {
+            phrasesStatus.textContent = data.isExam
+              ? (data.phrasesBest ? `Score: ${Number(data.phrasesBest.percentage || 0).toFixed(0)}%` : 'Belum Dikerjakan')
+              : `Progres: ${data.phrasesPasses || 0}/7 Passes`;
+          }
+          if (phrasesBestEl) {
+            phrasesBestEl.textContent = data.phrasesBest
+              ? `Best: ${Number(data.phrasesBest.percentage || 0).toFixed(0)}% (${Number(data.phrasesBest.points_awarded ?? data.phrasesBest.points ?? 0)} PTS)`
+              : 'Best: —';
+          }
+          phrasesCard.onclick = () => {
+            modal.classList.add('hidden');
+            location.href = `test.html?test_id=${data.phrasesTestId}`;
+          };
+        } else {
+          phrasesCard.style.display = 'none';
+        }
+
+        modal.classList.remove('hidden');
+
+        const closeBtn = document.getElementById('close-component-modal');
+        if (closeBtn && !closeBtn._hasListener) {
+          closeBtn._hasListener = true;
+          closeBtn.onclick = () => modal.classList.add('hidden');
+        }
+        if (!modal._hasBackdropListener) {
+          modal._hasBackdropListener = true;
+          modal.onclick = (e) => {
+            if (e.target === modal) modal.classList.add('hidden');
+          };
+        }
+      } catch (err) {
+        console.error('[triggerComponentChoiceModal] Error:', err);
+      }
+    };
+
     // ── openClassModal: Opens the Level Modal for a Class ──
     // Called when a student clicks a Class card on the dashboard.
     async function openClassModal(subj, progress) {
@@ -1369,94 +1458,111 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Render
         let html = '';
         for (const lvl of sortedLevels) {
-          // Sort tests: last-attempted (most recent submitted_at / started_at) floats to top
-          const sortedTests = [...lvl.Tests].sort((a, b) => {
-            const aAtt = bestByTest[a.id] || inProgByTest[a.id];
-            const bAtt = bestByTest[b.id] || inProgByTest[b.id];
-            const aTime = aAtt ? new Date(aAtt.submitted_at || aAtt.started_at || 0).getTime() : 0;
-            const bTime = bAtt ? new Date(bAtt.submitted_at || bAtt.started_at || 0).getTime() : 0;
-            if (aTime !== bTime) return bTime - aTime; // most recently attempted first
-            return 0; // preserve original order for untouched tests
-          });
-
           let lvlHtml = '';
-          for (const Test of sortedTests) {
-            const best      = bestByTest[Test.id];
-            const inProg    = inProgByTest[Test.id];
-            // Rule 2.10: Paired Theme Exam Remedial Synchronization ("Satu Paket")
-            let hasThemeRemedial = false;
-            if (isExam(Test)) {
-              const rawTheme = Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
-              const tc = (rawTheme || 'A').toUpperCase();
-              const siblingExams = sortedTests.filter(t => isExam(t) && ((t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A')).toUpperCase() === tc));
-              hasThemeRemedial = siblingExams.some(sTest => {
-                const sBest = bestByTest[sTest.id];
-                return Boolean(sBest && (sBest.is_remedial_unlocked || sBest.is_remedial));
-              });
-            }
-            const isRem       = hasThemeRemedial || Boolean(best && (best.is_remedial_unlocked || best.is_remedial));
-            const rawBestPct  = best ? parseFloat(best.percentage || 0) : null;
-            const bestPct     = isRem && rawBestPct !== null ? Math.min(rawBestPct, 60.0) : rawBestPct;
-            const passed      = bestPct !== null && bestPct >= (Test.minimum_required_score || Test.pass_threshold || 60);
-            const grade       = bestPct !== null ? getGrade(bestPct) : null;
-            const gradeColor  = grade ? getGradeColorByScore(bestPct) : null;
 
-            // Prerequisite Gating Logic
-            let prereqMet = true;
-            let prereqTitle = '';
-            const prereqId = Test.prerequisite_test_id || Test.prerequisite_id;
-            if (prereqId) {
-               const prereqBest = bestByTest[prereqId];
-               const prereqPct = prereqBest ? parseFloat(prereqBest.percentage || 0) : null;
-               const pObj = Tests.find(a => a.id === prereqId);
-               const pMinScore = pObj ? (pObj.minimum_required_score || pObj.pass_threshold || 60) : 60;
-               prereqMet = prereqPct !== null && prereqPct >= pMinScore;
-               prereqTitle = pObj ? (pObj.display_name || pObj.title || pObj.name || 'Prerequisite') : 'Prerequisite Test';
-            }
+          const hasVocabComponents = lvl.Tests.some(t =>
+            t.payload?.category === 'words' || t.payload?.category === 'phrases' ||
+            /WORDS|PHRASE/i.test(t.shell_code || '') ||
+            (t.title || '').toLowerCase().includes('word') ||
+            (t.title || '').toLowerCase().includes('phrase')
+          );
 
-            // Sequential Intra-Theme & Inter-Theme Exam Prerequisite Gating
-            const liveSess = (Test.payload?.test_session);
-            const isSessLive = liveSess?.status === 'UNLOCKED' &&
-              (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > new Date()) &&
-              (!Array.isArray(liveSess.allowed_student_ids) || liveSess.allowed_student_ids.length === 0 || liveSess.allowed_student_ids.includes(session?.student_id));
+          if (hasVocabComponents) {
+            // Phase 298: Virtual Unified Task & Exam Presentation
+            const groups = [];
+            const groupMap = new Map();
 
-            const isRemedialSession = liveSess?.is_remedial === true ||
-              (Array.isArray(liveSess?.remedial_student_ids) && liveSess.remedial_student_ids.includes(session?.student_id));
-            const isStudentRemedialUnlocked = Boolean(bestByTest[Test.id]?.is_remedial_unlocked || bestByTest[Test.id]?.is_remedial);
+            for (const t of lvl.Tests) {
+              const isEx = isExam(t);
+              const tc = String(t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A')).toUpperCase();
+              const topCode = t.payload?.topic_code != null ? String(t.payload.topic_code) : null;
+              const isPhrase = t.payload?.category === 'phrases' || /PHRASE/i.test(t.shell_code || '') || (t.title || '').toLowerCase().includes('phrase');
 
-            // 7×7 Repetitive Mastery Hard Gate: Exams strictly require all Theme Tasks to reach 7/7 passes (>= 70%)
-            if (isExam(Test) && !isRemedialSession && !isStudentRemedialUnlocked) {
-              const currentThemeCode = String(Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-              if (currentThemeCode) {
-                const siblingTasks = sortedTests.filter(a =>
-                  !isExam(a) &&
-                  String(a.payload?.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase() === currentThemeCode
-                );
-                for (const st of siblingTasks) {
-                  const pCount = passCountByTest[st.id] || 0;
-                  if (pCount < 7) {
-                    prereqMet = false;
-                    prereqTitle = `All Theme ${currentThemeCode} Tasks (7/7 Passes Required)`;
-                    break;
-                  }
-                }
+              const key = isEx ? `exam_${tc}` : `task_${tc}_${topCode || '0'}`;
+
+              if (!groupMap.has(key)) {
+                const grp = {
+                  key,
+                  isExam: isEx,
+                  themeCode: tc,
+                  topicCode: topCode,
+                  themeName: t.payload?.theme_name || t.theme || null,
+                  topicName: t.payload?.topic_name || t.topic || null,
+                  displayOrder: t.display_order || 0,
+                  wordsTest: null,
+                  phrasesTest: null
+                };
+                groupMap.set(key, grp);
+                groups.push(grp);
+              }
+
+              const grp = groupMap.get(key);
+              if (isPhrase) {
+                grp.phrasesTest = t;
+              } else {
+                grp.wordsTest = t;
+              }
+              if (t.display_order && (!grp.displayOrder || t.display_order < grp.displayOrder)) {
+                grp.displayOrder = t.display_order;
+              }
+              if (!grp.topicName && (t.payload?.topic_name || t.topic)) {
+                grp.topicName = t.payload?.topic_name || t.topic;
+              }
+              if (!grp.themeName && (t.payload?.theme_name || t.theme)) {
+                grp.themeName = t.payload?.theme_name || t.theme;
               }
             }
 
-            // 1. Inter-Theme Gating: Theme B, C, D tests strictly require all prior theme's exams to be passed (>= 60%)
-            const currentTheme = String(Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-            const themeSequence = ['A', 'B', 'C', 'D'];
-            const curThemeIdx = themeSequence.indexOf(currentTheme);
+            groups.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
-            if (curThemeIdx > 0 && !isRemedialSession && !isStudentRemedialUnlocked) {
-              const priorTheme = themeSequence[curThemeIdx - 1];
-              const priorExams = Tests.filter(a => {
-                if (!isExam(a)) return false;
-                const tc = String(a.payload?.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-                return tc === priorTheme;
+            for (const grp of groups) {
+              const wordsTest = grp.wordsTest;
+              const phrasesTest = grp.phrasesTest;
+              const hasPhrases = Boolean(phrasesTest);
+              if (!wordsTest && !phrasesTest) continue;
+
+              const primaryTest = wordsTest || phrasesTest;
+
+              const wBest = wordsTest ? bestByTest[wordsTest.id] : null;
+              const pBest = phrasesTest ? bestByTest[phrasesTest.id] : null;
+
+              const wInProg = wordsTest ? inProgByTest[wordsTest.id] : null;
+              const pInProg = phrasesTest ? inProgByTest[phrasesTest.id] : null;
+              const activeInProg = wInProg || pInProg;
+
+              const wPasses = wordsTest ? (passCountByTest[wordsTest.id] || 0) : 0;
+              const pPasses = phrasesTest ? (passCountByTest[phrasesTest.id] || 0) : 0;
+
+              const topicLevel = computeTopicPassLevel(wPasses, pPasses, hasPhrases);
+              const taskVisual = !grp.isExam ? getTaskProgressVisual(topicLevel) : null;
+
+              const wordsMax = grp.isExam ? 120 : (hasPhrases ? 40 : 10);
+              const phrasesMax = grp.isExam ? 30 : 10;
+              const unifiedScore = computeUnifiedScore({
+                wordsBest: wBest,
+                phrasesBest: pBest,
+                wordsMax,
+                phrasesMax,
+                hasPhrases
               });
 
-              if (priorExams.length > 0) {
+              const liveSess = (wordsTest?.payload?.test_session) || (phrasesTest?.payload?.test_session);
+              const isRemedialSession = liveSess?.is_remedial === true ||
+                (Array.isArray(liveSess?.remedial_student_ids) && liveSess.remedial_student_ids.includes(session?.student_id));
+              const isStudentRemedialUnlocked = Boolean(
+                (wBest && (wBest.is_remedial_unlocked || wBest.is_remedial)) ||
+                (pBest && (pBest.is_remedial_unlocked || pBest.is_remedial))
+              );
+
+              let grpPrereqMet = true;
+              let grpPrereqTitle = '';
+
+              // 1. Inter-Theme Gating: Theme B, C, D requires all prior theme's exams passed (>= 70%)
+              const themeSeq = ['A', 'B', 'C', 'D'];
+              const curThemeIdx = themeSeq.indexOf(grp.themeCode);
+              if (curThemeIdx > 0 && !isRemedialSession && !isStudentRemedialUnlocked) {
+                const priorTheme = themeSeq[curThemeIdx - 1];
+                const priorExams = lvl.Tests.filter(t => isExam(t) && String(t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase() === priorTheme);
                 for (const pe of priorExams) {
                   const peBest = bestByTest[pe.id];
                   const peRawPct = peBest ? parseFloat(peBest.percentage || 0) : null;
@@ -1465,176 +1571,295 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                   const peMin = pe.minimum_required_score || pe.pass_threshold || 70;
                   const pePassed = pePct !== null && (pePct >= peMin || (peRem && pePct >= 60));
                   if (!pePassed) {
-                    prereqMet = false;
-                    prereqTitle = `Theme ${priorTheme} Exams (Passed ≥${peMin}% required)`;
+                    grpPrereqMet = false;
+                    grpPrereqTitle = `Theme ${priorTheme} Exams (Passed ≥${peMin}% required)`;
                     break;
                   }
                 }
               }
-            }
 
-            const isPhrasesExam = isExam(Test) && Boolean(
-              Test.category === 'phrases' || Test.test_subtype === 'PHRASE_EXAM' ||
-              (Test.title || '').toLowerCase().includes('phrase') ||
-              (Test.shell_code || '').toUpperCase().includes('PHRASE') ||
-              (Test.payload?.subtype || '').toUpperCase().includes('PHRASE')
-            );
-
-            // 2. Intra-Theme Sequential Gating: Phrases Exam requires sibling Words Exam >= 70%
-            if (prereqMet && isPhrasesExam && !isRemedialSession && !isStudentRemedialUnlocked) {
-              const siblingWordsExam = Tests.find(a =>
-                a.id !== Test.id &&
-                isExam(a) &&
-                (
-                  (Test.payload?.theme_code && a.payload?.theme_code === Test.payload.theme_code) ||
-                  ((a.title || '').substring(0, 3).toLowerCase() === (Test.title || '').substring(0, 3).toLowerCase())
-                ) &&
-                (
-                  a.category === 'words' || a.test_subtype === 'VOCAB_EXAM' ||
-                  (a.title || '').toLowerCase().includes('word') ||
-                  (a.shell_code || '').toUpperCase().includes('WORD') ||
-                  (a.payload?.subtype || '').toUpperCase().includes('WORD')
-                )
-              );
-              if (siblingWordsExam) {
-                const wBest = bestByTest[siblingWordsExam.id];
-                const wRawPct = wBest ? parseFloat(wBest.percentage || 0) : null;
-                const wRem = Boolean(wBest && (wBest.is_remedial_unlocked || wBest.is_remedial));
-                const wPct = wRem && wRawPct !== null ? Math.min(wRawPct, 60.0) : wRawPct;
-                const wMin = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 70;
-                const wPassed = wPct !== null && (wPct >= wMin || (wRem && wPct >= 60));
-                if (!wPassed) {
-                  prereqMet = false;
-                  prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
+              // 2. Exam Gating: Theme Exam requires all tasks in this theme to reach 7/7 passes
+              if (grpPrereqMet && grp.isExam && !isRemedialSession && !isStudentRemedialUnlocked) {
+                const siblingTasks = lvl.Tests.filter(t => !isExam(t) && String(t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase() === grp.themeCode);
+                for (const st of siblingTasks) {
+                  const pCount = passCountByTest[st.id] || 0;
+                  if (pCount < 7) {
+                    grpPrereqMet = false;
+                    grpPrereqTitle = `All Theme ${grp.themeCode} Tasks (7/7 Passes Required)`;
+                    break;
+                  }
                 }
               }
-            }
 
-            // Explicit Remedial Session bypass authorization
-            if (isRemedialSession || isStudentRemedialUnlocked) {
-              prereqMet = true;
-            }
+              // 3. Linear Topic Gating: Topic K requires Topic K-1 to reach 7/7 passes
+              if (grpPrereqMet && !grp.isExam && !isRemedialSession && !isStudentRemedialUnlocked) {
+                const curTopNum = parseInt(String(grp.topicCode || ''), 10);
+                if (curTopNum > 1) {
+                  const priorTopicStr = String(curTopNum - 1);
+                  const priorTasks = lvl.Tests.filter(t =>
+                    !isExam(t) &&
+                    String(t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase() === grp.themeCode &&
+                    String(t.payload?.topic_code || '') === priorTopicStr
+                  );
+                  for (const pt of priorTasks) {
+                    const pCount = passCountByTest[pt.id] || 0;
+                    if (pCount < 7) {
+                      grpPrereqMet = false;
+                      grpPrereqTitle = `Topic ${priorTopicStr} Tasks (7/7 Passes Required)`;
+                      break;
+                    }
+                  }
+                }
+              }
 
-            let statusBadge = '';
-            let actionBtn   = '';
-            let cardOpacity = '1';
-            let cardFilter = 'none';
+              const cardOpacity = grpPrereqMet ? '1' : '0.5';
+              const cardFilter = grpPrereqMet ? 'none' : 'grayscale(100%)';
 
-            if (!prereqMet) {
-              cardOpacity = '0.5';
-              cardFilter = 'grayscale(100%)';
-              statusBadge = `<span style="background:rgba(255,255,255,0.1);color:#a1a1aa;border:1px solid rgba(255,255,255,0.2);
-                              padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">🔒 Locked</span>`;
-              actionBtn = `<div style="text-align:right;">
-                             <span style="font-size:0.7rem;color:var(--clr-text-3);">Complete <b>${prereqTitle}</b><br>to unlock this test.</span>
-                           </div>`;
-            } else if (inProg) {
-              statusBadge = `<span style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.35);
-                              padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">&#9203; In Progress</span>`;
-              actionBtn   = `<button onclick="location.href='test.html?attempt_id=${inProg.id}&test_id=${inProg.test_id || ''}'"
-                              style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
-                              font-size:0.78rem;font-weight:700;cursor:pointer;">Resume ←’</button>`;
-            } else if (best) {
-              const isRemedialBest = Boolean(best.is_remedial_unlocked || best.is_remedial);
-              const badgeBg = passed ? `rgba(${TOPSCORE_COLORS.STAR_RGB},0.15)` : `rgba(${TOPSCORE_COLORS.E_RGB},0.12)`;
-              const badgeClr= passed ? (gradeColor || TOPSCORE_COLORS.STAR) : TOPSCORE_COLORS.E;
-              statusBadge = `<span style="background:${badgeBg};color:${badgeClr};border:1px solid ${badgeClr}44;
-                              padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">
-                              ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%${isRemedialBest ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</span>`;
+              const fallbackTopicName = (primaryTest.title || '')
+                .replace(/^.*?-\s*\d+[a-z]{2}\s+Level\s*-\s*/i, '')
+                .replace(/3rd Vocabulary\s+[A-D][0-9]*\s*(Words|Phrases)?\s*(Task|Exam)?\s*-\s*/i, '')
+                .replace(/2nd Vocabulary\s+[A-D][0-9]*\s*(Words)?\s*(Task|Exam)?\s*-\s*/i, '')
+                .replace(/Vocabulary Mastery /i, '')
+                .trim();
 
-              const isExam = (Test.test_type || '').toLowerCase() === 'exam' ||
-                             (Test.test_subtype || '').includes('TEST') ||
-                             (Test.shell_code || '').endsWith('-TEST');
+              const resolvedTopicTitle = grp.topicName || fallbackTopicName || `Topic ${grp.topicCode || '1'}`;
+              const resolvedThemeTitle = grp.themeName || fallbackTopicName || `Theme ${grp.themeCode}`;
 
-              if (isExam && !passed) {
-                if (best.is_remedial_unlocked) {
-                  actionBtn = `<button onclick="location.href='test.html?test_id=${Test.id}'"
-                                style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
-                                font-size:0.78rem;font-weight:700;cursor:pointer;">🔓 Remedial Attempt Authorized — Start Retake</button>`;
+              const displayTitle = grp.isExam
+                ? `Theme ${grp.themeCode} Exam — ${resolvedThemeTitle}`
+                : `Theme ${grp.themeCode} • Topic ${grp.topicCode}: ${resolvedTopicTitle}`;
+
+              const metaItems = `${unifiedScore.maxPoints} Items • ${unifiedScore.maxPoints} PTS`;
+
+              let statusBadgeHtml = '';
+              let actionBtnHtml = '';
+
+              if (!grpPrereqMet) {
+                statusBadgeHtml = `<span style="background:rgba(255,255,255,0.08);color:#a1a1aa;border:1px solid rgba(255,255,255,0.18);padding:3px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">🔒 Locked</span>`;
+                actionBtnHtml = `<div style="text-align:right;">
+                  <span style="font-size:0.68rem;color:var(--clr-text-3);">Requires <b>${escapeHtml(grpPrereqTitle)}</b></span>
+                </div>`;
+              } else if (activeInProg) {
+                statusBadgeHtml = `<span style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.35);padding:3px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">⏳ In Progress</span>`;
+                actionBtnHtml = `<button onclick="location.href='test.html?attempt_id=${activeInProg.id}&test_id=${activeInProg.test_id || ''}'"
+                                  style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">Resume ←</button>`;
+              } else {
+                if (grp.isExam) {
+                  if (unifiedScore.isAttempted) {
+                    statusBadgeHtml = `<span style="background:${unifiedScore.gradeColor}18;color:${unifiedScore.gradeColor};border:1px solid ${unifiedScore.gradeColor}44;padding:3px 8px;border-radius:4px;font-size:0.68rem;font-weight:800;">${unifiedScore.percentage}% (${unifiedScore.totalPoints}/${unifiedScore.maxPoints}p)</span>`;
+                  } else {
+                    statusBadgeHtml = `<span style="background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);padding:3px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">Not Started</span>`;
+                  }
+
+                  if (hasPhrases) {
+                    const modalData = encodeURIComponent(JSON.stringify({
+                      badge: `THEME ${grp.themeCode} OFFICIAL EXAM`,
+                      title: `Theme ${grp.themeCode} Exam — ${resolvedThemeTitle}`,
+                      subtitle: 'Pilih bagian yang ingin Anda kerjakan terlebih dahulu:',
+                      wordsTestId: wordsTest?.id,
+                      phrasesTestId: phrasesTest?.id,
+                      wordsBest: wBest,
+                      phrasesBest: pBest,
+                      isExam: true
+                    }));
+                    actionBtnHtml = `<button type="button" onclick="window.triggerComponentChoiceModal('${modalData}')"
+                                      style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.35);">
+                                      ${unifiedScore.isAttempted ? 'Kerjakan Exam' : 'Mulai Exam 🚀'}
+                                    </button>`;
+                  } else {
+                    actionBtnHtml = `<button onclick="location.href='test.html?test_id=${wordsTest.id}'"
+                                      style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.35);">
+                                      ${unifiedScore.isAttempted ? 'Kerjakan Exam' : 'Mulai Exam 🚀'}
+                                    </button>`;
+                  }
                 } else {
-                  actionBtn = `<div style="display:flex; flex-direction:column; align-items:flex-end; text-align:right;">
-                                 <span style="background:rgba(239,68,68,0.15);color:#f87171;padding:4px 8px;border-radius:4px;font-size:0.7rem;font-weight:700; border: 1px solid rgba(239,68,68,0.3); margin-bottom:4px;">🔒 Locked (Remediation Required)</span>
-                                 <button type="button" class="btn-flashcard-glow" onclick="window.openLobbyFlashcardsForAttempt('${best.id}')" style="margin-top:2px; margin-bottom:4px; padding:3px 10px; font-size:0.7rem; border-radius:6px; cursor:pointer;">🎯 Practice Missed Words</button>
-                                 <span style="font-size:0.65rem;color:var(--clr-text-3);">Official Exam score is below passing threshold.<br>Practice bottlenecks above or contact tutor.</span>
-                               </div>`;
+                  // Task
+                  const drillLabel = topicLevel >= 7 ? 'Drill Lagi 7×7' : (topicLevel > 0 ? 'Lanjut Drill' : 'Mulai Task 🚀');
+
+                  if (hasPhrases) {
+                    const modalData = encodeURIComponent(JSON.stringify({
+                      badge: `THEME ${grp.themeCode} • TOPIC ${grp.topicCode} DRILL`,
+                      title: `Topic ${grp.topicCode}: ${resolvedTopicTitle}`,
+                      subtitle: 'Pilih bagian yang ingin Anda kerjakan terlebih dahulu:',
+                      wordsTestId: wordsTest?.id,
+                      phrasesTestId: phrasesTest?.id,
+                      wordsBest: wBest,
+                      phrasesBest: pBest,
+                      wordsPasses: wPasses,
+                      phrasesPasses: pPasses,
+                      isExam: false
+                    }));
+                    actionBtnHtml = `<button type="button" onclick="window.triggerComponentChoiceModal('${modalData}')"
+                                      style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.35);">
+                                      ${drillLabel}
+                                    </button>`;
+                  } else {
+                    actionBtnHtml = `<button onclick="location.href='test.html?test_id=${wordsTest.id}'"
+                                      style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.35);">
+                                      ${drillLabel}
+                                    </button>`;
+                  }
                 }
-              } else {
-                let extraAction = '';
-                const isAsmPublished = ((Test.status || 'PUBLISHED').toUpperCase() === 'PUBLISHED' || (Test.status || '').toUpperCase() === 'ACTIVE');
-                if (
-                  isAsmPublished && (
-                    Test.category === 'TASK' ||
-                    (Test.test_type && Test.test_type.toLowerCase() === 'quiz') ||
-                    (Test.test_type && Test.test_type.includes('TASK')) ||
-                    (Test.title && Test.title.includes('Task')) ||
-                    Test.payload?.is_standalone_tryout === true ||
-                    !passed
-                  )
-                ) {
-                  extraAction = `<button onclick="location.href='test.html?test_id=${Test.id}'"
-                                style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
-                                font-size:0.78rem;font-weight:700;cursor:pointer;margin-left:8px;">Retake</button>`;
-                } else if (!isAsmPublished) {
-                  extraAction = `<span style="font-size:0.7rem; color:#94a3b8; margin-left:8px; font-style:italic;">(Draft)</span>`;
+              }
+
+              const taskProgressBadge = taskVisual
+                ? `<span class="task-progress-chip ${taskVisual.tierClass}" style="background:${taskVisual.bg};color:${taskVisual.color};border:1px solid ${taskVisual.border};">${taskVisual.text}</span>`
+                : '';
+
+              const gradeChip = (grp.isExam && unifiedScore.isAttempted)
+                ? `<span style="background:${unifiedScore.gradeColor}22;color:${unifiedScore.gradeColor};border:1px solid ${unifiedScore.gradeColor}44;padding:2px 7px;border-radius:4px;font-size:0.72rem;font-weight:800;">${getGradeSymbol(unifiedScore.grade)}</span>`
+                : '';
+
+              lvlHtml += `<div class="asm-modal-row" style="opacity:${cardOpacity}; filter:${cardFilter}; display:flex; justify-content:space-between; align-items:center; padding:10px 14px; margin-bottom:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px;">
+                <div class="asm-modal-info" style="flex:1;">
+                  <div style="font-size:0.88rem;font-weight:700;color:var(--clr-text-1);margin-bottom:3px;">
+                    ${escapeHtml(displayTitle)}
+                  </div>
+                  <div style="font-size:0.72rem;color:var(--clr-text-3);display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+                    <span>⚡ ${metaItems}</span>
+                    ${hasPhrases ? `
+                      <span>📝 Words: <b>${grp.isExam ? (wBest ? `${Number(wBest.percentage).toFixed(0)}%` : '—') : `${wPasses}/7`}</b></span>
+                      <span>💬 Phrases: <b>${grp.isExam ? (pBest ? `${Number(pBest.percentage).toFixed(0)}%` : '—') : `${pPasses}/7`}</b></span>
+                      ${unifiedScore.isAttempted ? `<span style="color:#f8fafc;">🏆 Total: <b>${unifiedScore.totalPoints}/${unifiedScore.maxPoints} PTS (${unifiedScore.percentage}%)</b></span>` : ''}
+                    ` : ''}
+                  </div>
+                </div>
+                <div class="asm-modal-actions" style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+                  ${!grp.isExam ? taskProgressBadge : gradeChip}
+                  ${statusBadgeHtml}
+                  ${actionBtnHtml}
+                </div>
+              </div>`;
+            }
+          } else {
+            // Sort tests: last-attempted (most recent submitted_at / started_at) floats to top
+            const sortedTests = [...lvl.Tests].sort((a, b) => {
+              const aAtt = bestByTest[a.id] || inProgByTest[a.id];
+              const bAtt = bestByTest[b.id] || inProgByTest[b.id];
+              const aTime = aAtt ? new Date(aAtt.submitted_at || aAtt.started_at || 0).getTime() : 0;
+              const bTime = bAtt ? new Date(bAtt.submitted_at || bAtt.started_at || 0).getTime() : 0;
+              if (aTime !== bTime) return bTime - aTime;
+              return 0;
+            });
+
+            for (const Test of sortedTests) {
+              const best      = bestByTest[Test.id];
+              const inProg    = inProgByTest[Test.id];
+              let hasThemeRemedial = false;
+              if (isExam(Test)) {
+                const rawTheme = Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+                const tc = (rawTheme || 'A').toUpperCase();
+                const siblingExams = sortedTests.filter(t => isExam(t) && ((t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A')).toUpperCase() === tc));
+                hasThemeRemedial = siblingExams.some(sTest => {
+                  const sBest = bestByTest[sTest.id];
+                  return Boolean(sBest && (sBest.is_remedial_unlocked || sBest.is_remedial));
+                });
+              }
+              const isRem       = hasThemeRemedial || Boolean(best && (best.is_remedial_unlocked || best.is_remedial));
+              const rawBestPct  = best ? parseFloat(best.percentage || 0) : null;
+              const bestPct     = isRem && rawBestPct !== null ? Math.min(rawBestPct, 60.0) : rawBestPct;
+              const passed      = bestPct !== null && bestPct >= (Test.minimum_required_score || Test.pass_threshold || 60);
+              const grade       = bestPct !== null ? getGrade(bestPct) : null;
+              const gradeColor  = grade ? getGradeColorByScore(bestPct) : null;
+
+              // Prerequisite Gating Logic
+              let prereqMet = true;
+              let prereqTitle = '';
+              const prereqId = Test.prerequisite_test_id || Test.prerequisite_id;
+              if (prereqId) {
+                 const prereqBest = bestByTest[prereqId];
+                 const prereqPct = prereqBest ? parseFloat(prereqBest.percentage || 0) : null;
+                 const pObj = Tests.find(a => a.id === prereqId);
+                 const pMinScore = pObj ? (pObj.minimum_required_score || pObj.pass_threshold || 60) : 60;
+                 prereqMet = prereqPct !== null && prereqPct >= pMinScore;
+                 prereqTitle = pObj ? (pObj.display_name || pObj.title || pObj.name || 'Prerequisite') : 'Prerequisite Test';
+              }
+
+              const liveSess = (Test.payload?.test_session);
+              const isRemedialSession = liveSess?.is_remedial === true ||
+                (Array.isArray(liveSess?.remedial_student_ids) && liveSess.remedial_student_ids.includes(session?.student_id));
+              const isStudentRemedialUnlocked = Boolean(bestByTest[Test.id]?.is_remedial_unlocked || bestByTest[Test.id]?.is_remedial);
+
+              if (isExam(Test) && !isRemedialSession && !isStudentRemedialUnlocked) {
+                const currentThemeCode = String(Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+                if (currentThemeCode) {
+                  const siblingTasks = sortedTests.filter(a =>
+                    !isExam(a) &&
+                    String(a.payload?.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase() === currentThemeCode
+                  );
+                  for (const st of siblingTasks) {
+                    const pCount = passCountByTest[st.id] || 0;
+                    if (pCount < 7) {
+                      prereqMet = false;
+                      prereqTitle = `All Theme ${currentThemeCode} Tasks (7/7 Passes Required)`;
+                      break;
+                    }
+                  }
                 }
+              }
+
+              if (isRemedialSession || isStudentRemedialUnlocked) {
+                prereqMet = true;
+              }
+
+              let statusBadge = '';
+              let actionBtn   = '';
+              let cardOpacity = '1';
+              let cardFilter = 'none';
+
+              if (!prereqMet) {
+                cardOpacity = '0.5';
+                cardFilter = 'grayscale(100%)';
+                statusBadge = `<span style="background:rgba(255,255,255,0.1);color:#a1a1aa;border:1px solid rgba(255,255,255,0.2);padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">🔒 Locked</span>`;
+                actionBtn = `<div style="text-align:right;">
+                               <span style="font-size:0.7rem;color:var(--clr-text-3);">Complete <b>${prereqTitle}</b><br>to unlock this test.</span>
+                             </div>`;
+              } else if (inProg) {
+                statusBadge = `<span style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.35);padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">&#9203; In Progress</span>`;
+                actionBtn   = `<button onclick="location.href='test.html?attempt_id=${inProg.id}&test_id=${inProg.test_id || ''}'"
+                                style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">Resume ←</button>`;
+              } else if (best) {
+                const isRemedialBest = Boolean(best.is_remedial_unlocked || best.is_remedial);
+                const badgeBg = passed ? `rgba(${TOPSCORE_COLORS.STAR_RGB},0.15)` : `rgba(${TOPSCORE_COLORS.E_RGB},0.12)`;
+                const badgeClr= passed ? (gradeColor || TOPSCORE_COLORS.STAR) : TOPSCORE_COLORS.E;
+                statusBadge = `<span style="background:${badgeBg};color:${badgeClr};border:1px solid ${badgeClr}44;padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">
+                                ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%${isRemedialBest ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</span>`;
+
                 actionBtn = `<div style="display:flex; align-items:center;">
                                <button onclick="location.href='result.html?attempt_id=${best.id}'"
-                                style="background:rgba(255,255,255,0.06);color:var(--clr-text-2);border:1px solid var(--clr-border);
-                                padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">View Result</button>
-                               ${extraAction}
-                             </div>`;
-              }
-            } else {
-              statusBadge = `<span style="background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);
-                              padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">Not Started</span>`;
-              actionBtn   = `<button onclick="location.href='test.html?test_id=${Test.id}'"
-                              style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
-                              font-size:0.78rem;font-weight:700;cursor:pointer;">Start Test ←’</button>`;
-            }
-
-            const isTaskItem = !isExam(Test);
-            const taskVisual = isTaskItem ? getTaskProgressVisual(passCountByTest[Test.id] || 0) : null;
-            const taskProgressBadge = taskVisual
-              ? `<span class="task-progress-chip ${taskVisual.tierClass}" style="background:${taskVisual.bg};color:${taskVisual.color};border:1px solid ${taskVisual.border};">${taskVisual.text}</span>`
-              : '';
-
-            // For Tasks: No cooldown, instant drill allowed anytime
-            if (isTaskItem && !inProg) {
-              const drillLabel = (taskVisual && taskVisual.count >= 7) ? 'Retake Drill' : ((taskVisual && taskVisual.count > 0) ? 'Drill Again' : 'Start Drill');
-              const drillBtn = `<button onclick="location.href='test.html?test_id=${Test.id}'"
-                                style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;
-                                font-size:0.78rem;font-weight:700;cursor:pointer;margin-left:6px;">${drillLabel}</button>`;
-              if (best) {
-                actionBtn = `<div style="display:flex; align-items:center;">
-                               <button onclick="location.href='result.html?attempt_id=${best.id}'"
-                                style="background:rgba(255,255,255,0.06);color:var(--clr-text-2);border:1px solid var(--clr-border);
-                                padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">View</button>
-                               ${drillBtn}
+                                style="background:rgba(255,255,255,0.06);color:var(--clr-text-2);border:1px solid var(--clr-border);padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">View Result</button>
                              </div>`;
               } else {
-                actionBtn = drillBtn;
+                statusBadge = `<span style="background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">Not Started</span>`;
+                actionBtn   = `<button onclick="location.href='test.html?test_id=${Test.id}'"
+                                style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">Start Test ←</button>`;
               }
+
+              const isTaskItem = !isExam(Test);
+              const taskVisual = isTaskItem ? getTaskProgressVisual(passCountByTest[Test.id] || 0) : null;
+              const taskProgressBadge = taskVisual
+                ? `<span class="task-progress-chip ${taskVisual.tierClass}" style="background:${taskVisual.bg};color:${taskVisual.color};border:1px solid ${taskVisual.border};">${taskVisual.text}</span>`
+                : '';
+
+              const gradeChip = !isTaskItem && grade ? `<span style="background:${gradeColor}22;color:${gradeColor};border:1px solid ${gradeColor}44;padding:2px 7px;border-radius:4px;font-size:0.72rem;font-weight:800;">${getGradeSymbol(grade)}</span>` : '';
+
+              lvlHtml += `<div class="asm-modal-row" style="opacity:${cardOpacity}; filter:${cardFilter}; display:flex; justify-content:space-between; align-items:center; padding:10px 14px; margin-bottom:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px;">
+                <div class="asm-modal-info">
+                  <div style="font-size:0.85rem;font-weight:600;color:var(--clr-text-1);white-space:normal;line-height:1.3;" title="${Test.Test_title || Test.title || 'Test'}">
+                    ${(Test.Test_title || Test.title || 'Test').replace(/^.*?-\s*\d+[a-z]{2}\s+Level\s*-\s*/i, '').replace(/Vocabulary Mastery /i, '')}
+                  </div>
+                  <div class="asm-modal-meta-group">
+                    ${formatAnswerType(Test.answer_type) ? `<div style="font-size:0.72rem;color:var(--clr-text-3);">${formatAnswerType(Test.answer_type)}</div>` : ''}
+                    ${(Test.time_limit_minutes && Number(Test.time_limit_minutes) > 0) ? `<div style="font-size:0.72rem;color:var(--clr-text-3);">⏱ ${Test.time_limit_minutes} min</div>` : ''}
+                  </div>
+                </div>
+                <div class="asm-modal-actions">
+                  ${isTaskItem ? taskProgressBadge : gradeChip}
+                  ${statusBadge}
+                  ${actionBtn}
+                </div>
+              </div>`;
             }
-
-            const gradeChip = !isTaskItem && grade ? `<span style="background:${gradeColor}22;color:${gradeColor};border:1px solid ${gradeColor}44;
-              padding:2px 7px;border-radius:4px;font-size:0.72rem;font-weight:800;">${getGradeSymbol(grade)}</span>` : '';
-
-            lvlHtml += `<div class="asm-modal-row" style="opacity:${cardOpacity}; filter:${cardFilter};" >
-              <div class="asm-modal-info">
-                <div style="font-size:0.85rem;font-weight:600;color:var(--clr-text-1);white-space:normal;line-height:1.3;" title="${Test.Test_title || Test.title || 'Test'}">
-                  ${(Test.Test_title || Test.title || 'Test').replace(/^.*?-\s*\d+[a-z]{2}\s+Level\s*-\s*/i, '').replace(/Vocabulary Mastery /i, '')}
-                </div>
-                <div class="asm-modal-meta-group">
-                  ${formatAnswerType(Test.answer_type) ? `<div style="font-size:0.72rem;color:var(--clr-text-3);">${formatAnswerType(Test.answer_type)}</div>` : ''}
-                  ${(Test.time_limit_minutes && Number(Test.time_limit_minutes) > 0) ? `<div style="font-size:0.72rem;color:var(--clr-text-3);">⏱ ${Test.time_limit_minutes} min</div>` : ''}
-                </div>
-              </div>
-              <div class="asm-modal-actions">
-                ${isTaskItem ? taskProgressBadge : gradeChip}
-                ${statusBadge}
-                ${actionBtn}
-              </div>
-            </div>`;
           }
           if (lvlHtml) {
             html += `<div style="margin-bottom:1.5rem;">
@@ -2531,7 +2756,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       try {
-        const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261103_v111')).getSupabase();
 
         // 1. Fetch active students in the same batch
         const { data: students, error: stuErr } = await sb
@@ -2928,7 +3153,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261103_v111')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).maybeSingle();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
@@ -2983,7 +3208,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./supabase.js?v=20261102_v103')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261103_v111')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
 
