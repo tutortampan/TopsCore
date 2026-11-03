@@ -3733,9 +3733,12 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
 
     let targetClassId = config.explicitClassId || null;
     if (!targetClassId) {
+      // Prioritize active vocabulary class assigned to this exact level and program
       const { data: classDataList } = await sb.from('classes')
-        .select('id')
+        .select('id, name')
         .eq('program_id', programId)
+        .eq('level_id', levelId)
+        .eq('is_active', true)
         .ilike('name', '%Vocab%')
         .is('deleted_at', null);
 
@@ -3744,6 +3747,8 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         const { data: anyClasses } = await sb.from('classes')
           .select('id')
           .eq('program_id', programId)
+          .eq('level_id', levelId)
+          .eq('is_active', true)
           .is('deleted_at', null)
           .limit(1);
         targetClassId = (anyClasses && anyClasses.length > 0) ? anyClasses[0].id : null;
@@ -3926,6 +3931,124 @@ export async function autoGeneratePhrasesTests({ classId, levelId, programId, in
     explicitClassId: classId,
     category: 'phrases'
   });
+}
+
+/**
+ * Automatically provisions and synchronizes tests for a Vocabulary class based on Vocabulary Vault contents.
+ * Safe, idempotent, zero-maintenance.
+ * 
+ * @param {number|string} levelNumberOrId - Level number (e.g. 2, 3) or level UUID
+ * @param {Object} options - Options { programId, explicitClassId, force }
+ * @returns {Promise<{synced: boolean, tasks?: number, tests?: number, updated?: number, reason?: string, error?: string}>}
+ */
+export async function autoSyncClassTestsForLevel(levelNumberOrId, options = {}) {
+  const sb = await getSupabase();
+  const { programId: optProgramId, explicitClassId, force = false } = options;
+
+  try {
+    // 1. Resolve level number and level ID
+    let levelNum = null;
+    let levelId = null;
+
+    if (typeof levelNumberOrId === 'number' || (!isNaN(Number(levelNumberOrId)) && String(levelNumberOrId).length <= 3)) {
+      levelNum = Number(levelNumberOrId);
+      const { data: lvl } = await sb.from('levels').select('id, level_number').eq('level_number', levelNum).maybeSingle();
+      levelId = lvl?.id || null;
+    } else {
+      levelId = String(levelNumberOrId);
+      const { data: lvl } = await sb.from('levels').select('id, level_number').eq('id', levelId).maybeSingle();
+      levelNum = lvl?.level_number != null ? Number(lvl.level_number) : null;
+    }
+
+    if (!levelNum || !levelId) {
+      return { synced: false, reason: 'level_not_found' };
+    }
+
+    // 2. Resolve programId
+    let programId = optProgramId;
+    if (!programId && explicitClassId) {
+      const { data: cls } = await sb.from('classes').select('program_id').eq('id', explicitClassId).maybeSingle();
+      programId = cls?.program_id;
+    }
+    if (!programId) {
+      const { data: progs } = await sb.from('programs').select('id').order('created_at').limit(1);
+      programId = progs?.[0]?.id || null;
+    }
+
+    if (!programId) {
+      return { synced: false, reason: 'program_not_found' };
+    }
+
+    // 3. Resolve targetClassId
+    let targetClassId = explicitClassId;
+    if (!targetClassId) {
+      const { data: classList } = await sb.from('classes')
+        .select('id, name')
+        .eq('program_id', programId)
+        .eq('level_id', levelId)
+        .eq('is_active', true)
+        .ilike('name', '%Vocab%')
+        .is('deleted_at', null);
+
+      targetClassId = (classList && classList.length > 0) ? classList[0].id : null;
+      if (!targetClassId) {
+        const { data: anyClass } = await sb.from('classes')
+          .select('id')
+          .eq('program_id', programId)
+          .eq('level_id', levelId)
+          .eq('is_active', true)
+          .is('deleted_at', null)
+          .limit(1);
+        targetClassId = anyClass?.[0]?.id || null;
+      }
+    }
+
+    if (!targetClassId) {
+      return { synced: false, reason: 'no_target_class_found' };
+    }
+
+    // 4. Check if vocabulary_vault has any words for this level
+    const { data: vaultWords, error: vErr } = await sb.from('vocabulary_vault')
+      .select('id, theme_code, topic_code')
+      .eq('target_level', levelNum)
+      .is('deleted_at', null)
+      .limit(10);
+
+    if (vErr || !vaultWords || vaultWords.length === 0) {
+      return { synced: false, reason: 'no_vault_words' };
+    }
+
+    // 5. If not force, check if tests are already provisioned for this class
+    if (!force) {
+      const { count: existingCount } = await sb.from('tests')
+        .select('*', { count: 'exact', head: true })
+        .eq('class_id', targetClassId)
+        .is('deleted_at', null);
+
+      if (existingCount && existingCount > 0) {
+        return { synced: false, reason: 'already_provisioned', count: existingCount, classId: targetClassId };
+      }
+    }
+
+    // 6. Run autoGenerateTestsHierarchy
+    const res = await autoGenerateTestsHierarchy([levelNum], {
+      programId,
+      explicitClassId: targetClassId
+    });
+
+    clearApiCache('tests');
+
+    return {
+      synced: true,
+      tasks: res.tasks,
+      tests: res.tests,
+      updated: res.updated,
+      classId: targetClassId
+    };
+  } catch (err) {
+    console.error('[autoSyncClassTestsForLevel] Error:', err);
+    return { synced: false, error: err.message };
+  }
 }
 
 export async function getSecuritySettings() {

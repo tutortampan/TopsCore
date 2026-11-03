@@ -1,10 +1,18 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-03 13:49 UTC+8
-Current Phase: Phase 293: Fix Class Hub Roster — Level-Exact Student Filter [COMPLETE]
+Last Updated: 2026-11-03 14:24 UTC+8
+Current Phase: Phase 294: Zero-Maintenance Auto-Provisioning & Auto-Sync of Tests from Vocabulary Vault [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
+1. **Phase 294: Zero-Maintenance Auto-Provisioning & Auto-Sync of Tests from Vocabulary Vault [COMPLETE]:**
+   - **Zero-Maintenance Architecture**: Tests are now automatically generated and synchronized whenever Vocabulary Vault data is imported or when a Vocabulary class is opened with 0 tests.
+   - **`js/api.js`**: Enhanced `autoGenerateTestsHierarchy` with strict level/program/active-class targeting. Added `autoSyncClassTestsForLevel(levelNumberOrId, options)`.
+   - **`js/admin/app.js`**: `renderClassHub` self-heals by automatically detecting if `classTests.length === 0` while vault words exist, generating tests on the fly and rendering the full thematic matrix without user manual action.
+   - **`js/admin/vocab-vault.js`**: Excel import automatically triggers background auto-sync for all imported levels.
+   - **Database**: Provisioned 6 test shells for `2nd Vocabulary` (Themes A and B).
+   - **Cache Buster**: `admin.html` bumped to `v20261103_v107`. 100% tests PASS.
+
 1. **Phase 293: Fix Class Hub Roster — Level-Exact Student Filter [COMPLETE]:**
    - **Root Cause Fixed**: `classStudents` filter in `renderClassHub` (`js/admin/app.js`) only matched program — now also matches level.
    - **`js/admin/app.js`**: Added `allClassLevels` to the `Promise.all` fetch, added `level_id` to the classes query, replaced old filter with new level-aware filter using `class_levels` junction table (fallback to `class.level_id`). Effective student level = `student.level_id ?? batch.current_level_id`.

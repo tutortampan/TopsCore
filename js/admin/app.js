@@ -376,7 +376,7 @@ import {
   detectDuplicateQuestions, resequenceTestQuestions, resolveDuplicateQuestionGroup, batchResolveTestDuplicateQuestions,
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter,
-  adminOverridePrerequisitesWithRemedial
+  adminOverridePrerequisitesWithRemedial, autoSyncClassTestsForLevel
 } from '../api.js?v=20261103_v105';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261103_v105';
 import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261103_v105';
@@ -1157,7 +1157,34 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261103
         const levelMap = {};
         (allLevels || []).forEach(l => { levelMap[l.id] = l; });
 
-        const classTests = (allTests || []).filter(a => a.class_id === classId);
+        let classTests = (allTests || []).filter(a => a.class_id === classId);
+
+        // Self-Healing / Auto-Provisioning: If class currently has 0 tests, automatically sync from Vocabulary Vault if data exists
+        if (classTests.length === 0 && currentClass) {
+          const classLevelId = currentClass.level_id;
+          const classLevelRec = classLevelId ? (allLevels || []).find(l => l.id === classLevelId) : null;
+          const classLevelNum = classLevelRec?.level_number;
+          if (classLevelNum) {
+            const hasVaultData = (allVault || []).some(v => Number(v.target_level) === Number(classLevelNum) && !v.deleted_at);
+            if (hasVaultData) {
+              try {
+                const syncRes = await autoSyncClassTestsForLevel(classLevelNum, {
+                  programId: currentClass.program_id,
+                  explicitClassId: classId
+                });
+                if (syncRes && syncRes.synced) {
+                  const freshTests = await adminFetchAll('tests');
+                  if (freshTests && freshTests.length > 0) {
+                    allTests = freshTests;
+                    classTests = allTests.filter(a => a.class_id === classId);
+                  }
+                }
+              } catch (syncErr) {
+                console.warn('[renderClassHub] Auto-provision failed:', syncErr);
+              }
+            }
+          }
+        }
 
         // Helper to accurately identify milestone exams vs quizzes (Strict Exam Filter)
         const isWeeklyExam = (asm) => {

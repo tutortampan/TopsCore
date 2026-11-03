@@ -1,3 +1,50 @@
+## SESSION-20261103-1410
+
+Start: 2026-11-03 14:10 UTC+8
+End: 2026-11-03 14:25 UTC+8
+Agent: Antigravity
+
+### User Request
+"tabel results 2nd dan 3rd vocab terlihat beda,,, pada dasarnya sistemnya sama,,, bukankah seharusnya mirip? seingat saya saya pernha membuat saran agar Test di kelas Vocab dibuat otomatis saat isi Vocabulary Vault diisi atau diupdate tanpa harus generate test. apakh itu memungkinkan? Iya lakukan /goal"
+
+### Objective
+Implement Zero-Maintenance Auto-Provisioning & Auto-Sync of Curriculum Tests from Vocabulary Vault so that tests and theme columns are automatically generated without manual "Auto-Generate" clicks.
+
+### Work Performed
+1. Audited why 2nd Vocabulary table appeared minimal compared to 3rd Vocabulary. Discovered that 3rd Vocabulary had 40 tests, while 2nd Vocabulary had 0 tests in DB.
+2. Verified that question items in TopsCore are already dynamic via `is_dynamic_shell: true`, but test shells in the `tests` table are required for curriculum mapping, prerequisites, and Class Hub columns.
+3. Created `autoSyncClassTestsForLevel(levelNumberOrId, options)` in `js/api.js`.
+4. Improved `autoGenerateTestsHierarchy` in `js/api.js` to strictly match active class by level and program.
+5. Added Self-Healing / Auto-Provisioning to `renderClassHub` in `js/admin/app.js`: if a Vocabulary class has 0 tests, it automatically provisions them from Vault on the fly.
+6. Added automatic background auto-sync to Excel Import in `js/admin/vocab-vault.js`.
+7. Provisioned 6 test shells for `2nd Vocabulary` (Themes A and B).
+8. Bumped cache buster in `admin.html` to `v20261103_v107`.
+9. Ran full test suite (`npm test`) — 100% PASS.
+
+### Commands Run
+- `node scripts/test_sync_level2.mjs`
+- `npm test` -> 40/40 JS syntax PASS, manifest PASS, exam parity PASS.
+
+### Results
+- `2nd Vocabulary` now has 6 tests across Themes A and B.
+- Any future vault import or opening of an empty class will automatically create all needed tasks and exams.
+
+### Files Changed
+- `js/api.js`
+- `js/admin/app.js`
+- `js/admin/vocab-vault.js`
+- `admin.html`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+- `docs/DECISIONS.md`
+
+### Verification
+- `npm test`: PASS
+- Supabase check: 2nd Vocabulary has 6 tests; Themes A and B recognized.
+
+---
+
 ## SESSION-20261103-1340
 
 Start: 2026-11-03 13:44 UTC+8

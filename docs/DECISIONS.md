@@ -1148,6 +1148,34 @@ Following a rigorous `/grill-me` architectural review with the Product Owner (Mr
 
 ---
 
+---
+
+## DECISION-042 — Zero-Maintenance Dynamic Curriculum Test Auto-Provisioning & Synchronization from Vocabulary Vault
+
+Date: 2026-11-03  
+Status: ACCEPTED  
+
+### Context
+1. Curriculum tests in Vocabulary classes previously required a manual 2-step process: (1) filling words and phrases in Vocabulary Vault, then (2) navigating to Test Management / Blueprint to click `[ Auto-Generate ]`.
+2. If tests were not manually generated, a newly created or populated vocabulary class (e.g. `2nd Vocabulary`) showed `Class Tests: 0` and failed to render curriculum theme columns (Theme A, B, C, D) in the Class Hub, causing user confusion.
+3. Although test question items are already dynamically populated at test runtime via `is_dynamic_shell: true`, test shells in the `tests` table are mandatory for tracking attempts, prerequisites, time limits, test sessions, and Class Hub columns.
+
+### Decision
+1. **Centralized Synchronization Engine (`autoSyncClassTestsForLevel`)**:
+   - Implemented in `js/api.js`. Given a level (number or UUID) and program, it inspects `vocabulary_vault` and automatically generates/updates all required test shells (Daily Tasks + Milestone Exams for each theme/topic) for the active Vocabulary class.
+2. **Dual-Trigger Automation (Zero-Maintenance)**:
+   - **Trigger A — On Class Hub Load (Self-Healing)**: When opening Class Hub (`renderClassHub` in `js/admin/app.js`), if a Vocabulary class has `classTests.length === 0` but `vocabulary_vault` contains words for that level, the system automatically calls `autoSyncClassTestsForLevel` on the fly, refreshes test data, and immediately renders the full thematic attendance matrix.
+   - **Trigger B — On Vocabulary Vault Import (Event-Driven)**: Upon successful Excel import in Vocabulary Vault (`vocab-vault.js`), the system automatically runs `autoSyncClassTestsForLevel` in the background for every imported level.
+3. **Strict Class Scoping**:
+   - `autoGenerateTestsHierarchy` now strictly targets active classes matching both `program_id = programId` and `level_id = levelId`, preventing cross-level test pollution.
+
+### Consequences
+- Eliminates manual test generation overhead entirely.
+- Ensures all vocabulary classes automatically reflect the exact themes and topics present in Vocabulary Vault.
+- Prevents blank or inconsistent class hub table layouts.
+
+---
+
 ## DECISION-041 — Result Page Wireframe Overhaul & Dual-View Parity, Direct Action Controls, and Strict A-Z ABCD Sidebar Architecture
 
 Date: 2026-11-03

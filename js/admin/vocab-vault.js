@@ -32,7 +32,8 @@ import {
   renameVaultTopic,
   exportVaultWords,
   updateTestDefinition,
-  toOrdinalLevel
+  toOrdinalLevel,
+  autoSyncClassTestsForLevel
 } from '../api.js?v=20261103_v105';
 import { showToast, showLoading, hideLoading } from '../app.js?v=20261103_v105';
 import { getSupabase } from '../supabase.js?v=20261103_v105';
@@ -814,6 +815,19 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       showToast(`&#10003; Import complete: ${result.inserted} inserted, ${result.updated} updated, ${result.skipped} skipped.`, 'success');
       const newWords = await fetchVaultWords({ limit: 10000, targetLevel: null });
       onSuccess(newWords);
+
+      // Auto-sync class tests for all imported levels in the background (Zero-Maintenance)
+      const importedLevels = Array.from(new Set((_parsedRows || []).map(r => r.target_level).filter(Boolean)));
+      if (importedLevels.length > 0) {
+        Promise.all(importedLevels.map(lvl => autoSyncClassTestsForLevel(lvl, { force: true }))).then(syncResults => {
+          const totalNew = syncResults.reduce((acc, r) => acc + (r.tasks || 0) + (r.tests || 0), 0);
+          if (totalNew > 0) {
+            showToast(`&#9889; Kurikulum otomatis disinkronkan: ${totalNew} test baru siap digunakan!`, 'info');
+          }
+        }).catch(err => {
+          console.warn('[vocab-vault] Auto-sync after import failed:', err);
+        });
+      }
     } catch (e) {
       hideLoading();
       showToast('Import failed: ' + e.message, 'error');

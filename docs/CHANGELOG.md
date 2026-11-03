@@ -1,3 +1,52 @@
+## [2026-11-03 14:24] — Phase 294: Zero-Maintenance Auto-Provisioning & Auto-Sync of Tests from Vocabulary Vault
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 294  
+**Status:** PASS  
+
+### Why
+- User request: *"seingat saya saya pernha membuat saran agar Test di kelas Vocab dibuat otomatis saat isi Vocabulary Vault diisi atau diupdate tanpa harus generate test. apakh itu memungkinkan? Iya lakukan /goal"*.
+- Previously, creating curriculum tests required a manual 2-step process: (1) filling Vocabulary Vault, then (2) opening the Auto-Generate modal to click `[ Auto-Generate ]`. If forgotten, classes (such as `2nd Vocabulary`) remained empty with `Class Tests: 0` and unrendered theme columns.
+
+### Changed
+1. **`js/api.js`**:
+   - Enhanced `autoGenerateTestsHierarchy`: Fixed `targetClassId` resolution when not explicitly passed — now strictly filters by `program_id = programId`, `level_id = levelId`, `is_active = true`, and `name ILIKE '%Vocab%'`.
+   - Added `autoSyncClassTestsForLevel(levelNumberOrId, options = {})`:
+     - Resolves level number, level UUID, program ID, and target active class.
+     - Detects vocabulary vault topics/themes for that level.
+     - Automatically generates or syncs test hierarchy (`tasks`, `tests`, `updated`).
+     - Clears API cache for `tests`.
+2. **`js/admin/app.js`**:
+   - Imported `autoSyncClassTestsForLevel` from `../api.js`.
+   - In `renderClassHub()`: Added automatic self-healing / auto-provisioning. If `classTests.length === 0` and `vocabulary_vault` contains words for that class's level, it triggers `autoSyncClassTestsForLevel` on the fly, refreshes `allTests` and `classTests`, and renders the full thematic grid without user intervention.
+3. **`js/admin/vocab-vault.js`**:
+   - Imported `autoSyncClassTestsForLevel`.
+   - In Excel Import (`confirm-import-btn`): Automatically runs `autoSyncClassTestsForLevel` in the background for all imported levels upon import completion, displaying an informative toast.
+4. **Database Provisioning**:
+   - Synchronized `2nd Vocabulary` (`class_id: 2ccf6468-1e03-41d1-b72b-1d84dcad85b2`, Level 2): created 6 test shells (4 Tasks: `2A1`, `2A2`, `2B1`, `2B2`; 2 Exams: `2A`, `2B`) matching the Level 2 Vault contents.
+5. **`admin.html`**:
+   - Bumped cache buster from `v20261103_v106` to `v20261103_v107`.
+
+### Files
+- `js/api.js` (+125/-2 lines)
+- `js/admin/app.js` (+29/-1 lines)
+- `js/admin/vocab-vault.js` (+15/-1 lines)
+- `admin.html` (cache buster line 535)
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+- `docs/DECISIONS.md`
+
+### Database
+- Created 6 test shells for `2nd Vocabulary` (`2A1-WORDS-TASK`, `2A2-WORDS-TASK`, `2A-WORDS-EXAM`, `2B1-WORDS-TASK`, `2B2-WORDS-TASK`, `2B-WORDS-EXAM`).
+
+### Tests
+- command: `npm test`
+- result: `PASS` — 40/40 JS syntax, 27/27 manifest assets, all parity checks PASSED.
+- Live verification: `2nd Vocabulary` now has 6 tests across Themes A and B.
+
+---
+
 ## [2026-11-03 13:49] — Phase 293: Fix Class Hub Roster — Level-Exact Student Filter
 
 **Agent/Session:** Antigravity
