@@ -3849,6 +3849,85 @@ body.sidebar-collapsed .admin-main {
   border-top: 2px solid #34d399;
 }
 
+#class-attendance-grid th.super-hdr-exam {
+  background: #2a1226 !important;
+  color: #f472b6 !important;
+  border-right: 2px solid rgba(244, 114, 182, 0.4) !important;
+  border-top: 2px solid #f472b6;
+}
+
+#class-attendance-grid th.super-hdr-action,
+#class-attendance-grid th.super-hdr-manual-input {
+  background: #0b1120 !important;
+  color: #38bdf8 !important;
+  border-top: 2px solid rgba(56, 189, 248, 0.5) !important;
+  border-left: 1px solid rgba(56, 189, 248, 0.25) !important;
+  font-weight: 800 !important;
+  font-size: 0.65rem !important;
+  letter-spacing: 0.04em !important;
+  text-align: center !important;
+}
+
+#class-attendance-grid th.col-action,
+#class-attendance-grid td.col-action,
+#class-attendance-grid th.col-manual-input,
+#class-attendance-grid td.col-manual-input {
+  width: 58px !important;
+  min-width: 58px !important;
+  max-width: 58px !important;
+  text-align: center !important;
+  padding: 1px 2px !important;
+  border-left: 1px solid rgba(56, 189, 248, 0.25) !important;
+}
+
+#class-attendance-grid .btn-manual-input-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-family: inherit;
+  font-size: 0.62rem !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease-in-out;
+  line-height: 1.2;
+}
+
+#class-attendance-grid .btn-manual-input-toggle:hover {
+  filter: brightness(1.25);
+  transform: scale(1.05);
+}
+
+#class-attendance-grid .btn-manual-input-toggle.active {
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
+#class-attendance-grid .input-matrix-exam-score,
+#class-attendance-grid .input-matrix-exam-pts {
+  box-shadow: 0 0 4px rgba(56, 189, 248, 0.4);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+#class-attendance-grid .input-matrix-exam-score:focus,
+#class-attendance-grid .input-matrix-exam-pts:focus {
+  outline: none;
+  border-color: #22c55e !important;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6) !important;
+}
+
+#class-attendance-grid .btn-matrix-action {
+  opacity: 0.85;
+  transition: opacity 0.15s, transform 0.15s;
+  cursor: pointer !important;
+}
+
+#class-attendance-grid .btn-matrix-action:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
 #class-attendance-grid .datagrid-thead tr:not(.datagrid-super-header-row) th {
   padding: 2px 1px !important;
   font-size: var(--matrix-badge-font, 0.58rem);
@@ -3891,14 +3970,14 @@ body.sidebar-collapsed .admin-main {
   z-index: 25 !important;
 }
 
-/* Individual Sticky Column Left Offsets & Widths (7 Columns: INST, PROGRAM, BATCH, STUDENT NAME, GRD, PROG, PTS) - Streamlined for 100% Zero-Scroll Viewport Fit */
+/* Individual Sticky Column Left Offsets & Widths (7 Columns: INSTITUTION, PROGRAM, BATCH, STUDENT NAME, PROGRESS, POINTS, GRADE) - Streamlined for 100% Zero-Scroll Viewport Fit */
 #class-attendance-grid .col-sticky-1 { left: 0px !important; width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
 #class-attendance-grid .col-sticky-2 { left: 34px !important; width: 44px !important; min-width: 44px !important; max-width: 44px !important; }
 #class-attendance-grid .col-sticky-3 { left: 78px !important; width: 36px !important; min-width: 36px !important; max-width: 36px !important; }
-#class-attendance-grid .col-sticky-4 { left: 114px !important; width: 110px !important; min-width: 110px !important; max-width: 110px !important; }
-#class-attendance-grid .col-sticky-5 { left: 224px !important; width: 28px !important; min-width: 28px !important; max-width: 28px !important; }
-#class-attendance-grid .col-sticky-6 { left: 252px !important; width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
-#class-attendance-grid .col-sticky-7 { left: 286px !important; width: 38px !important; min-width: 38px !important; max-width: 38px !important; }
+#class-attendance-grid .col-sticky-4 { left: 114px !important; width: 145px !important; min-width: 145px !important; max-width: 145px !important; }
+#class-attendance-grid .col-sticky-5 { left: 259px !important; width: 36px !important; min-width: 36px !important; max-width: 36px !important; }
+#class-attendance-grid .col-sticky-6 { left: 295px !important; width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
+#class-attendance-grid .col-sticky-7 { left: 329px !important; width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
 
 /* Sticky Border & Shadow Separator on Last Sticky Column (PTS) */
 #class-attendance-grid .col-sticky-last {

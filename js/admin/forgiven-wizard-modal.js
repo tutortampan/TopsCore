@@ -7,7 +7,7 @@ import {
   isWeeklyExam,
   escapeHtml,
   showToast
-} from '../api.js?v=20261104_v119';
+} from '../api.js?v=20261104_v122';
 
 export async function openForgivenWizard(options = {}) {
   const {

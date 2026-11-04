@@ -1737,7 +1737,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
   if (btnSettingsBottom) {
     btnSettingsBottom.onclick = async () => {
       try {
-        const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261104_v119');
+        const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261104_v122');
         await openTestSystemSettingsModal({
           classId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
           className: 'Curriculum Blueprint',

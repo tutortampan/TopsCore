@@ -1,9 +1,9 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
-import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=20261104_v119';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261104_v119';
-import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261104_v119';
-import { escapeHtml, escHtml, showToast } from './app.js?v=20261104_v119';
+import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=20261104_v122';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261104_v122';
+import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261104_v122';
+import { escapeHtml, escHtml, showToast } from './app.js?v=20261104_v122';
 
 export function getGrade(pct) {
   return calculateGrade(pct);
@@ -46,6 +46,92 @@ export function normalizeStudentNameForMatch(name) {
   if (!name) return '';
   const stripped = stripHonorific(name);
   return stripped.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Smart conditional abbreviation for student names displayed in dense matrix tables (Class Hub Attendance Matrix, etc.).
+ * Rule: "Kalau pendek, jangan disingkat".
+ * - If cleanName.length <= maxChars (default 19), returns original cleanName intact.
+ * - Pass 1: Common titles/prefixes:
+ *     Muhammad/Muhamad/Mohammad/Mochammad/Moch./Muh. -> M.
+ *     Lalu -> L.
+ *     Baiq -> Bq.
+ *     Raden Mas -> R.M.
+ *     Raden Ajeng -> R.A.
+ *     Raden -> R.
+ *   If length <= maxChars, returns result.
+ * - Pass 2: Compound religious prefixes (if still too long):
+ *     Abdul / Abdur -> Abd.
+ *   If length <= maxChars, returns result.
+ * - Pass 3: Middle name initials (for names with >= 3 words still > maxChars):
+ *     Abbreviates middle word(s) between primary name and last name to single letter initial with dot
+ *     (e.g. "Adinda Karunia Farela" -> "Adinda K. Farela", "L. Yuda Handika Prawira" -> "L. Yuda H. Prawira").
+ *   Stops as soon as length <= maxChars.
+ * - Preserves original casing format via cleanStudentName.
+ */
+export function formatMatrixStudentName(name, maxChars = 19) {
+  if (!name) return '';
+  const clean = cleanStudentName(name).trim();
+  if (!clean || clean.length <= maxChars) return clean;
+
+  let current = clean;
+
+  // Pass 1: Titles & Nobility / Religious Prefixes
+  // Muhammad variants
+  current = current.replace(/^(Muhammad|Muhamad|Mohammad|Mochammad|Moch\.?|Muh\.?)\s+/i, 'M. ');
+  if (current.length <= maxChars) return current;
+
+  // Lalu -> L.
+  current = current.replace(/^Lalu\s+/i, 'L. ');
+  if (current.length <= maxChars) return current;
+
+  // Baiq -> Bq.
+  current = current.replace(/^Baiq\s+/i, 'Bq. ');
+  if (current.length <= maxChars) return current;
+
+  // Raden Mas -> R.M.
+  current = current.replace(/^Raden\s+Mas\s+/i, 'R.M. ');
+  if (current.length <= maxChars) return current;
+
+  // Raden Ajeng -> R.A.
+  current = current.replace(/^Raden\s+Ajeng\s+/i, 'R.A. ');
+  if (current.length <= maxChars) return current;
+
+  // Raden -> R.
+  current = current.replace(/^Raden\s+/i, 'R. ');
+  if (current.length <= maxChars) return current;
+
+  // Pass 2: Religious compound prefix (Abdul / Abdur -> Abd.)
+  current = current.replace(/^(Abdul|Abdur)\s+/i, 'Abd. ');
+  if (current.length <= maxChars) return current;
+
+  // Pass 3: Middle Name Initializing
+  const words = current.split(/\s+/);
+  if (words.length >= 3) {
+    const firstIsTitle = words[0].endsWith('.') || words[0].length <= 3;
+    const middleStart = firstIsTitle ? 2 : 1;
+    const middleEnd = words.length - 2;
+
+    if (middleStart <= middleEnd) {
+      for (let i = middleEnd; i >= middleStart; i--) {
+        if (words[i].length > 2 || !words[i].endsWith('.')) {
+          words[i] = words[i].charAt(0).toUpperCase() + '.';
+          const candidate = words.join(' ');
+          if (candidate.length <= maxChars) return candidate;
+        }
+      }
+    }
+
+    if (words.join(' ').length > maxChars && firstIsTitle && words.length >= 3 && words[1].length > 2) {
+      words[1] = words[1].charAt(0).toUpperCase() + '.';
+      const candidate = words.join(' ');
+      if (candidate.length <= maxChars) return candidate;
+    }
+
+    current = words.join(' ');
+  }
+
+  return current;
 }
 
 /**
@@ -1849,6 +1935,11 @@ export async function adminInsert(table, payload) {
         }
         delete payload.duration_minutes;
       }
+      if ('prerequisite_test_id' in payload) {
+        payload.prerequisite_id = payload.prerequisite_test_id;
+      } else if ('prerequisite_id' in payload) {
+        payload.prerequisite_test_id = payload.prerequisite_id;
+      }
     }
     await enforceTestSystemGuard(sb, payload);
   }
@@ -1870,6 +1961,11 @@ export async function adminUpdate(table, id, payload) {
           payload.working_duration_minutes = payload.duration_minutes;
         }
         delete payload.duration_minutes;
+      }
+      if ('prerequisite_test_id' in payload) {
+        payload.prerequisite_id = payload.prerequisite_test_id;
+      } else if ('prerequisite_id' in payload) {
+        payload.prerequisite_test_id = payload.prerequisite_id;
       }
     }
     const { data: existing } = await sb.from('tests').select('id, module_id, class_id, level_id').eq('id', id).single();

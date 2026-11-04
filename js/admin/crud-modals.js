@@ -403,7 +403,8 @@ async function openCrudModal(section, record) {
 
       if (prereqSelect) {
         prereqSelect.disabled = false;
-        const isNoneSelected = !record || !record.prerequisite_test_id;
+        const currentPrereq = record ? (record.prerequisite_test_id || record.prerequisite_id || null) : null;
+        const isNoneSelected = !currentPrereq;
         prereqSelect.innerHTML = `<option value="" ${isNoneSelected ? 'selected' : ''}>None (Optional)</option>`;
         const allTests = await adminFetchAll('tests');
         const eligible = allTests.filter(e => !e.deleted_at && e.id !== _editId);
@@ -411,7 +412,7 @@ async function openCrudModal(section, record) {
           const opt = document.createElement('option');
           opt.value = e.id;
           opt.textContent = e.title || e.display_name || e.id;
-          if (record && record.prerequisite_test_id === e.id) opt.selected = true;
+          if (currentPrereq === e.id) opt.selected = true;
           prereqSelect.appendChild(opt);
         });
         updatePrereqRequirement();
@@ -823,6 +824,10 @@ function _initCrudModals() {
       if (payload.prerequisite_test_id === '') {
         payload.prerequisite_test_id = null;
       }
+      // CRITICAL: Always keep prerequisite_test_id and prerequisite_id synchronized in tests table!
+      if ('prerequisite_test_id' in payload) {
+        payload.prerequisite_id = payload.prerequisite_test_id;
+      }
 
       // Prerequisite Test Validation: Must fill if level and order are not Level A and Order 1
       if (_currentSection === 'Tests' || _currentSection === 'tests') {
@@ -885,6 +890,7 @@ function _initCrudModals() {
               }
               if ('prerequisite_test_id' in payloadToSave && (err.message?.includes('prerequisite') || err.message?.includes('PGRST204') || err.message?.includes('400'))) {
                 delete payloadToSave.prerequisite_test_id;
+                delete payloadToSave.prerequisite_id;
                 retried = true;
               }
               if ('test_order' in payloadToSave && (err.message?.includes('order') || err.message?.includes('PGRST204') || err.message?.includes('400'))) {
@@ -953,6 +959,7 @@ function _initCrudModals() {
               }
               if ('prerequisite_test_id' in payloadToSave && (err.message?.includes('prerequisite') || err.message?.includes('PGRST204') || err.message?.includes('400'))) {
                 delete payloadToSave.prerequisite_test_id;
+                delete payloadToSave.prerequisite_id;
                 retried = true;
               }
               if ('Test_order' in payloadToSave && (err.message?.includes('order') || err.message?.includes('PGRST204') || err.message?.includes('400'))) {

@@ -6,6 +6,7 @@
     "dbaeumer.vscode-eslint",       // ESLint — Integrates ESLint JavaScript into VS Code / Antigravity IDE
     "yandeu.five-server",           // Live Server (Five Server) — A better Live Server with instant updates & highlights
     "bierner.markdown-mermaid",     // Markdown Preview Mermaid Support — Adds Mermaid diagram and flowchart support
+    "formulahendry.auto-rename-tag", // Auto Rename Tag — Automatically rename paired HTML/XML tag
     "esbenp.prettier-vscode"        // Prettier - Code formatter — Code formatter using prettier
   ]
 }

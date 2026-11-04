@@ -21,9 +21,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261104_v119" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261104_v119" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=20261104_v119" />
+  <link rel="stylesheet" href="css/style.css?v=20261104_v123" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261104_v123" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=20261104_v123" />
 
 
 </head>
@@ -114,15 +114,14 @@
       </div>
     </section>
 
-    <!-- 3. ACHIEVEMENT STATUS CARD (50px) -->
-    <div class="dashboard-achievement-card" id="dashboard-achievement-card" aria-label="Achievement Status">
-      <span class="achievement-status-text" id="dashboard-achievement-text">—</span>
-      <button type="button" class="btn-flashcard-glow hidden" id="btn-lobby-flashcards" title="Practice Missed Words from Recent Tests" style="padding: 4px 12px; border-radius: 8px; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
-        🎯 Focus Practice <span id="lobby-fc-count-badge" style="background:#a855f7; color:#fff; border-radius:10px; padding:1px 6px; font-size:0.68rem; font-weight:800;">0</span>
-      </button>
+    <!-- 3. GRADE DESCRIPTION CARD (40px) -->
+    <div class="dashboard-grade-legend" id="dashboard-grade-legend" aria-label="Grade Achievement Status">
+      <span class="achievement-status-text" id="dashboard-achievement-text"></span>
+      <!-- Backward compatibility hidden items -->
+      <button type="button" class="hidden" id="btn-lobby-flashcards"><span id="lobby-fc-count-badge">0</span></button>
     </div>
 
-    <!-- 4. CLASSES SELECTOR BAR (50px: Unified Bar - click opens modal list) -->
+    <!-- 4. CLASSES SELECTOR BAR (40px: Unified Bar - click opens modal list) -->
     <section id="dashboard-classes-section" class="dashboard-classes-deck">
       <div id="dashboard-classes-bar" class="dashboard-classes-bar" role="button" tabindex="0" title="Click to switch class">
         <div class="classes-bar-left">
@@ -138,32 +137,59 @@
       <div id="dashboard-classes-boxes" class="dashboard-classes-boxes hidden" data-count="1"></div>
     </section>
 
-    <!-- 5. NEXT TEST SECTION (50px: Single Unified Card, no floating label) -->
-    <section id="up-next-section" class="dashboard-next-test-deck">
+    <!-- 5. PROGRESS POINTS / REPETITIONS ROW (40px: 7 boxes / last assessment) -->
+    <section id="dashboard-repetition-deck" class="dashboard-repetition-deck" aria-label="Repetition Mastery and Progress">
+      <div id="repetition-deck-left" class="repetition-deck-left">
+        <!-- Populated dynamically by renderRepetitionMasteryRow -->
+      </div>
+      <div id="repetition-deck-right" class="repetition-deck-right">
+        <!-- Populated dynamically by renderRepetitionMasteryRow -->
+      </div>
+    </section>
+
+    <!-- 6. NEXT ASSESSMENT BAR (40px: Single Unified Card, no floating label) -->
+    <section id="up-next-section" class="dashboard-next-test-deck" aria-label="Next Assessment">
       <div id="up-next-container" class="next-test-card">
         <!-- Populated dynamically by renderNextAssignmentHero -->
       </div>
     </section>
 
-    <!-- 6. RANK STANDINGS CARD (DYNAMIC RESPONSIVE FIT) -->
-    <section id="bottom-dock-section" class="dashboard-standings-card" aria-labelledby="standings-card-title">
-      <div class="standings-card-header">
-        <div class="standings-card-title" id="standings-card-title">RANK STANDINGS</div>
-        <div class="standings-my-rank" id="dock-my-rank-badge">
-          <span class="rank-label">MY RANK</span>
-          <span id="dock-my-rank-number" class="rank-number">#--</span>
+    <!-- 7. RANK STANDINGS & COMPLETED TESTS DUAL PANEL (DYNAMIC RESPONSIVE FIT) -->
+    <section id="bottom-dock-section" class="dashboard-standings-card" aria-label="Rankings and Completed Tests">
+      <!-- Dual-Tab Header -->
+      <div class="standings-card-header dock-tab-header">
+        <button type="button" class="dock-tab-btn active" id="btn-dock-standings" role="tab" aria-selected="true" aria-controls="dock-pane-standings">
+          <span class="tab-label-text">RANKING : MY RANK</span>
+          <span id="dock-my-rank-number" class="rank-number-chip">#--</span>
+        </button>
+        <button type="button" class="dock-tab-btn" id="btn-dock-completed" role="tab" aria-selected="false" aria-controls="dock-pane-completed">
+          <span class="tab-label-text">COMPLETED TESTS</span>
+          <span id="dock-completed-count-badge" class="count-badge">0</span>
+        </button>
+      </div>
+
+      <!-- Pane A: Batch Leaderboard Table -->
+      <div id="dock-pane-standings" class="dock-tab-pane active" role="tabpanel">
+        <div class="standings-table-header">
+          <span class="th-col th-rank">NO</span>
+          <span class="th-col th-name">STUDENTS NAME</span>
+          <span class="th-col th-point">POINT</span>
+          <span class="th-col th-grade">GRADE</span>
+        </div>
+        <div class="standings-table-wrap" id="batch-leaderboard-container">
+          <div class="empty-state p-4 text-center">
+            <div class="spinner"></div>
+            <p>Loading Rank Standings…</p>
+          </div>
         </div>
       </div>
-      <div class="standings-table-header">
-        <span class="th-col th-rank">NO</span>
-        <span class="th-col th-name">STUDENTS NAME</span>
-        <span class="th-col th-point">POINT</span>
-        <span class="th-col th-grade">GRADE</span>
-      </div>
-      <div class="standings-table-wrap" id="batch-leaderboard-container">
-        <div class="empty-state p-4 text-center">
-          <div class="spinner"></div>
-          <p>Loading Rank Standings…</p>
+
+      <!-- Pane B: Completed Tests Table (Latest on Top + Retry Button) -->
+      <div id="dock-pane-completed" class="dock-tab-pane hidden" role="tabpanel">
+        <div class="completed-table-wrap" id="completed-Tests-container">
+          <div class="empty-state p-4 text-center">
+            <p style="color:var(--clr-text-3);">Loading Completed Tests…</p>
+          </div>
         </div>
       </div>
     </section>
@@ -171,14 +197,13 @@
     <!-- Hidden compatibility elements for existing JS routines -->
     <div class="hidden" aria-hidden="true">
       <div class="classes-grid" id="classes-grid"></div>
-      <div class="dash-dock-tabs">
-        <button type="button" class="dash-dock-tab-btn active" id="btn-dock-standings"></button>
-        <button type="button" class="dash-dock-tab-btn" id="btn-dock-completed"></button>
+      <div id="dock-my-rank-badge"></div>
+      <div id="standings-card-title"></div>
+      <div id="leaderboard-my-summary">
+        <span id="leaderboard-my-rank"></span>
+        <span id="leaderboard-champion-name"></span>
       </div>
-      <div id="dock-pane-standings"></div>
-      <div id="dock-pane-completed">
-        <div id="completed-Tests-container"></div>
-      </div>
+    </div>
       <div id="leaderboard-my-summary">
         <span id="leaderboard-my-rank"></span>
         <span id="leaderboard-champion-name"></span>
@@ -603,12 +628,12 @@
     </div>
   </div>
 
-  <script type="module" src="./js/dashboard.js?v=20261104_v119"></script>
+  <script type="module" src="./js/dashboard.js?v=20261104_v123"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261104_v119')
+        navigator.serviceWorker.register('sw.js?v=20261104_v123')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

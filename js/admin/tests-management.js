@@ -450,7 +450,8 @@ export async function renderTests(area) {
     const progName = (classMap[r.program_id] || {}).name || (allClasses.find(c => c.id === r.program_id) || {}).name || 'Curriculum';
     const classBoardName = (boardClassMap[r.class_id] || {}).name || 'Class Board';
     const qCount = r.total_questions || (allQuestions || []).filter(q => q.test_id === r.id).length || 40;
-    const prereqItem = r.prerequisite_test_id ? TestMap[r.prerequisite_test_id] : null;
+    const prereqId = r.prerequisite_test_id || r.prerequisite_id;
+    const prereqItem = prereqId ? TestMap[prereqId] : null;
     const prereqText = prereqItem ? (prereqItem.title || prereqItem.name) : '';
 
     return {

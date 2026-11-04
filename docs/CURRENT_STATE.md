@@ -1,11 +1,156 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-04 14:15 UTC+8
-Current Phase: Phase 305: Forgiven & Exam Manual Override Wizard (Pacing Adjustment) [COMPLETE]
+Last Updated: 2026-11-04 19:20 UTC+8
+Current Phase: Phase 310: Student Dashboard Blueprint Alignment & Dual-Panel Completed Tests with Retry [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Phase 305: Forgiven & Exam Manual Override Wizard (Pacing Adjustment) [COMPLETE]:**
+1. **Phase 310: Student Dashboard Blueprint Alignment & Dual-Panel Completed Tests with Retry [COMPLETE]:**
+   - **Student Dashboard Blueprint Height Alignment (`dashboard.html`, `css/dashboard.css`)**:
+     - Top Bar: strict `50px`.
+     - Students Metadata Card: strict `150px`.
+     - Grade Description Card: strict `40px` (dynamically displays only the single description of the student's evaluated grade e.g. `VERY GOOD`, `GOOD`, `ENOUGH`, etc.; strictly blank `""` when no exam is taken yet).
+     - Class Selector Bar: strict `40px` (unified modal list trigger).
+     - Repetition Points Row: strict `40px` (7 square boxes for Vocab, or last assessment for non-vocab).
+     - Next Assessment Bar: strict `40px` (full title on left, REPEAT / LOCK / GO on right).
+     - Dynamic Dual-Panel Card: `flex: 1 1 0%` (absorbs dynamic remaining screen space).
+     - Bottom Banner: strict `50px` (`TopsCore © 2026 | Created by Mr. Top`).
+     - Vertical Gaps: uniform `10px` across the entire layout with zero window scroll.
+   - **Section 7 Dual-Panel System with Completed Tests & Retry Button (`js/dashboard.js`, `dashboard.html`)**:
+     - Dual-tab header with `#btn-dock-standings` (`RANKING : MY RANK`) and `#btn-dock-completed` (`COMPLETED TESTS`).
+     - `#dock-pane-standings`: Batch Leaderboard roster table (NO, Avatar, Title Mr./Miss, Full Name, Point, Grade).
+     - `#dock-pane-completed`: Completed tests table with newest completion at the very top (`submitted_at DESC`).
+     - Covers both Tasks and Exams with type badge pills (`TASK` / `EXAM`).
+     - Interactive `Retry` button (`btn-retry-test`) positioned directly beside each score, triggering `test.html?id=<testId>`.
+     - State persistence across reloads via `sessionStorage` (`topscore_dock_tab`).
+   - **Dynamic Theme & Border Color Directive**:
+     - Dashboard cards dynamically inherit `--tier-color` and `--tier-rgb` with radial gradient background aura based on the student's overall evaluation grade (`★`, `A`, `B`, `C`, `D`, `E`).
+   - **Verification & Tests**:
+     - 42/42 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
+     - 100% CI test suite PASS (`npm test`).
+     - Playwright E2E verification PASS (`scripts/test_dashboard_blueprint_e2e.mjs`):
+       - Verified all section heights match expected blueprint: 50px, 150px, 40px, 40px, 40px, 40px, flex 1, 50px (diff 0.0px).
+       - Verified dual tab switching between Leaderboard and Completed Tests.
+       - Verified descending completion sorting (`submitted_at DESC`, newest on top).
+       - Verified `Retry` buttons on every row beside score.
+       - Verified mobile viewport (390 x 844) preserves layout and heights.
+       - Screenshots archived: `dashboard_blueprint_completed_tab_verified.png`, `dashboard_blueprint_standings_tab_verified.png`, and `dashboard_blueprint_mobile_verified.png`.
+   - **Cache Buster**: Bumped to `v=20261104_v123` across `dashboard.html`, `js/dashboard.js`, and `css/dashboard.css`.
+
+2. **Phase 309: Inline Manual Exam Grade Input with Bi-directional Sync & Toggle [COMPLETE]:**
+   - **Manual Input Controller Architecture (`js/admin/app.js`)**:
+     - State tracking: `window._manualInputState = { activeStudentIds: new Set(), drafts: {} }`.
+     - Live bi-directional score $\leftrightarrow$ points calculation sync (`window.onMatrixExamScoreChange`, `window.onMatrixExamPtsChange`).
+     - Persistent save controller: `window.saveRowManualInput`, `window.toggleRowManualInput`, and `window.toggleAllManualInputMode` calling `adminApplyForgiven` (`action: 'manual'`) with tutor name `"Mr. Top"` and audit logging.
+   - **Header & Column Redesign**:
+     - Super header changed to `"MANUAL INPUT"` (`super-hdr-manual-input`) across both THEME VIEW and ALL VIEW.
+     - Header sub-tag: clickable toggle badge (`🟢 ON` / `⚪ OFF`) allowing tutors to toggle all rows at once.
+     - Row action button: replaced with interactive toggle button `✏️ EDIT` (when inactive) and `💾 SAVE` (when active).
+   - **Inline Cells Transformation**:
+     - When active: Exam Score % and Exam Points cells transform into sleek `<input type="number">` fields.
+     - Real-time calculation: typing 80 in Score % auto-populates 96 in Points (out of 120), and vice versa.
+     - On Save or Enter: updates Supabase database, re-renders grid, grants authentic Grade (e.g. Grade B `#95ff00`) and Points (96 PTS), displays `ᴹ` superscript, and closes manual input mode back to `✏️ EDIT`.
+   - **Verification & Tests**:
+     - 42/42 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
+     - 100% CI test suite PASS (`npm test`).
+     - Playwright E2E verification PASS (`scripts/test_manual_input_matrix_e2e.mjs`):
+       - Verified super header `"MANUAL INPUT"` and `"⚪ OFF"` badge.
+       - Verified clicking `"✏️ EDIT"` on `Abdul Basit` opens inputs and changes button to `"💾 SAVE"`.
+       - Verified typing `80` in score input calculates `96` in points input.
+       - Verified clicking `"💾 SAVE"` persists to Supabase and updates matrix (`80%ᴹ`, `96` PTS, Grade `B`).
+       - Verified button returns to `"✏️ EDIT"`.
+       - Verified ALL VIEW also supports `"MANUAL INPUT"`.
+       - Screenshots archived: `manual_input_active_editing_verified.png`, `manual_input_saved_verified.png`, and `manual_input_all_view_verified.png`.
+   - **Cache Buster**: Bumped to `v=20261104_v122` across HTML pages and core JS modules.
+
+2. **Phase 308: Smart Conditional Student Name Abbreviation & Matrix Column Fit [COMPLETE]:**
+   - **Smart Conditional Abbreviation Engine (`js/api.js`)**:
+     - Built and exported `formatMatrixStudentName(name, maxChars = 19)`.
+     - Preserves short names completely intact: if `cleanName.length <= maxChars` (e.g. 19 chars), no abbreviation is performed.
+       - Verified: `Lalu Arman Maulana` (18 chars), `Lalu Nune Mubarak` (17 chars), `Abdul Basit` (11 chars), and `Alfina Damayanti` (16 chars) remain unshortened.
+     - Automatically abbreviates titles when names exceed 19 characters:
+       - `Muhamad`/`Muhammad` $\rightarrow$ `M.` (`Muhamad Alifurrahman` $\rightarrow$ `M. Alifurrahman`, `Muhammad Ariwil Asrori` $\rightarrow$ `M. Ariwil Asrori`, `Muhammad Afyani Farobi` $\rightarrow$ `M. Afyani Farobi`).
+       - `Lalu` $\rightarrow$ `L.` and `Baiq` $\rightarrow$ `Bq.`.
+       - Middle names abbreviated to single letter initials with a dot (`Adinda Karunia Farela` $\rightarrow$ `Adinda K. Farela`, `Lalu Yuda Handika Prawira` $\rightarrow$ `L. Yuda H. Prawira`, `Abdul Qoyyim Hanif Dahuri` $\rightarrow$ `Abd. Q. H. Dahuri`).
+     - Preserves 100% full original names in database, hover tooltips (`title`), and student profile modals.
+   - **Matrix Column Fit & Sticky Width Expansion (`css/admin.css` & `js/admin/app.js`)**:
+     - Increased `col-sticky-4` (STUDENT NAME) width from 110px to 145px (`max-width: 140px;`).
+     - Aligned sticky offsets: Col 5 (`left: 259px`), Col 6 (`left: 295px`), Col 7 (`left: 329px`).
+     - Total table width in ALL VIEW remains compact (699px), fitting 100% on standard screens with ZERO horizontal scrollbar.
+   - **Verification & Tests**:
+     - 42/42 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
+     - 100% CI test suite PASS (`npm test`).
+     - E2E Playwright verification PASS (`scripts/test_smart_names_matrix_e2e.mjs`):
+       - Verified: 0 truncations across all 18 student rows (`Has '...': false`).
+       - Verified: `Lalu Arman Maulana`, `Lalu Nune Mubarak`, and `Abdul Basit` are NOT abbreviated.
+       - Verified: `Lalu Yuda Handika Prawira` $\rightarrow$ `L. Yuda H. Prawira`, `Adinda Karunia Farela` $\rightarrow$ `Adinda K. Farela`, `Muhamad Alifurrahman` $\rightarrow$ `M. Alifurrahman`.
+       - Screenshots archived: `smart_names_matrix_verified.png` and `smart_names_theme_view_verified.png`.
+   - **Cache Buster**: Bumped to `v=20261104_v121` across HTML pages and core JS modules.
+
+2. **Phase 307: Attendance Matrix Theme & All View Blueprint Redesign [COMPLETE]:**
+   - **Student Details Columns Natural Pedagogical Order (Left Pane)**:
+     - Reordered 7 sticky columns in `js/admin/app.js` (`renderAttendanceGridMatrix`): `INSTITUTION | PROGRAM | BATCH | STUDENT NAME | PROGRESS | POINTS | GRADE` (previously `GRD | PROG | PTS`).
+     - Aligned sticky offsets and widths in `css/admin.css` (`col-sticky-1` through `col-sticky-7`), with `col-sticky-last` drop-shadow separator on Col 7 (`GRADE`).
+     - Clean POINTS display: rendered as pure numeric points without trailing "pts" text, dynamically inheriting score tier color (`getGradeColorByScore`).
+   - **Academic Grade & Point Credit for Authentic Manual Override Scores**:
+     - Upgraded `computeMilestoneExamMastery` in `js/grading.js`: `cleanExamEntries` now excludes ONLY pure forgiven 0% entries (`isPureForgivenZero = Boolean(e.isForgiven) && !e.isManual && Number(e.effPoints ?? e.points ?? 0) === 0`).
+     - In `js/admin/app.js`, student gradebook metrics calculate authentic scores from completed exams (Rule 2.8), giving student `Test` Grade B (`#95ff00`) and 102 PTS from their 85% Exam A score instead of penalizing with unreached future weeks.
+   - **THEME VIEW (`selectedTheme !== 'ALL'`)**:
+     - Super Header 1: `[THEME NAME]` spanning over `TOPIC 1 | TOPIC 2 | TOPIC 3 | TOPIC 4 ...` (formative tasks).
+       - Cell content: strictly high-contrast repetition progress badge (`7/7`, `6/6`, `1/6`, `0/6`), removing stacked `0%` text for clean readability.
+     - Super Header 2: `EXAM` spanning over `SCORE | POINTS` (removes duplicate `TOT SCORE %` and `PTS EXAM PTS` columns).
+     - Super Header 3: `ACTION` with sub-column `BUTTON` (eye icon button `👁️` linking to student profile).
+   - **ALL VIEW (`selectedTheme === 'ALL'`)**:
+     - Formative drill tasks are completely hidden.
+     - Each active theme displays a compact 2-column block:
+       `THEME A (SCORE | POINTS) | THEME B (SCORE | POINTS) | THEME C (SCORE | POINTS) | THEME D (SCORE | POINTS)`.
+     - Exactly 15 columns total (7 student details + 8 theme exam cols), fitting 100% on the screen in `FIT SCREEN` mode with zero horizontal scrollbar.
+   - **Verification & Tests**:
+     - 42/42 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
+     - 100% CI test suite PASS (`npm test`).
+     - Full Playwright E2E verification PASS (`scripts/test_matrix_theme_and_all_view_e2e.mjs`):
+       - Verified Student Details column order (`PROGRESS | POINTS | GRADE`).
+       - Verified Student "Test" has Points 102 and Grade B.
+       - Verified Topic cells render strictly clean repetition badges (e.g. `1/6`, `6/6ᶠ`).
+       - Verified Super Headers (`STUDENT DETAILS | THEME A | EXAM | ACTION`).
+       - Verified duplicate TOT/PTS columns eliminated.
+       - Verified ALL VIEW has exactly 15 columns with formative tasks hidden.
+       - Verified Theme A exam score `85%ᶠ` and `102` in ALL VIEW.
+       - Screenshots captured and archived: `theme_view_verified.png` and `all_view_verified.png`.
+   - **Cache Buster**: Bumped to `v=20261104_v120` across HTML pages and core JS modules.
+
+2. **Phase 306: Configurable Task Mastery Repetitions & Blueprint Test System Settings [COMPLETE]:**
+   - **Configurable Repetitive Mastery Requirements**:
+     - Upgraded repetition engine in `js/grading.js`: `getTaskProgressVisual(passCount, targetReps)` and `computeTopicPassLevel(..., targetReps)` dynamically scale with class-specific `targetReps`.
+     - Multi-tier settings persistence in `js/api.js`: `fetchClassTestSettings` and `saveClassTestSettings` support `site_settings` table, `localStorage` fallback, and inspection of `tests` table in DB (`minimum_required_score` and `payload.task_repetitions`).
+     - Dynamic gating in `js/dashboard.js` and `js/api.js`: uses configured `targetReps` (e.g. 6) and `taskMinScore` (e.g. 50%) for task completion and topic gating.
+   - **Attendance Matrix Repetition Progress**:
+     - In `js/admin/app.js` (`renderAttendanceGridMatrix`): Vertically stacked `.asm-cell-task-wrap` in each topic column (`1, 2, 3, etc.`) rendering both the percentage score (`roundPct%` with `ᶠ`/`ᴹ`/`ᴿ`) and high-contrast repetition badge `.asm-rep-badge` (`passCount/targetReps`).
+     - Badges dynamically color-code: green (`#00c000`) when complete, cyan (`#38bdf8`) when in progress, muted slate (`#64748b`) when unattempted.
+   - **Inline Blueprint Exam Passing Score Column**:
+     - In the Blueprint / Class Tests table, replaced static text with `<input type="number" class="input-test-pass-score" ...>`.
+     - Typing any percentage (1–100%) and pressing Enter or blurring automatically invokes `updateTestPassingScore(testId, newVal)` and updates the database record immediately.
+   - **Centralized Test System Settings Panel**:
+     - Built `js/admin/test-system-settings-modal.js` modal dialog allowing tutors to configure:
+       - Target Repetitions (1–10x)
+       - Task Minimum Passing Score (1–100%)
+       - Exam Minimum Passing Score (1–100%)
+       - Scope Selection (This Class vs Global Default)
+       - Batch Apply Checkbox to update all existing tests in the class.
+     - Accessible via `⚙️ Test System Settings` button (`#btn-open-blueprint-settings`) in Class Tests tab and `⚙️ Test Settings` button (`#btn-blueprint-bottom-settings`) in Vocabulary Vault Blueprint.
+   - **Verification & Tests**:
+     - 42/42 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
+     - 100% CI test suite PASS (`npm test`).
+     - Full Playwright E2E verification PASS (`scripts/test_mastery_and_blueprint_settings_e2e.mjs`):
+       - Verified `saveClassTestSettings` and `fetchClassTestSettings` (set to 6 reps, 50% task min score, 60% exam min score).
+       - Verified `updateTestPassingScore` persisted to DB.
+       - Verified 54 repetition progress badges rendered in matrix cells (`6/6` and `0/6`).
+       - Verified 19 inline `PASS (%)` editable number inputs in tests table.
+       - Verified Test System Settings modal opens, edits, and saves successfully.
+       - Screenshots captured: `roster_matrix_repetition_progress_verified.png`, `blueprint_exam_pass_score_inline_verified.png`, and `test_system_settings_modal_verified.png`.
+   - **Cache Buster**: Bumped to `v=20261104_v119` across all HTML pages, core JS modules, and admin controllers.
+
+2. **Phase 305: Forgiven & Exam Manual Override Wizard (Pacing Adjustment) [COMPLETE]:**
    - **Context & Motivation**:
      - Class `2nd Vocabulary` (Batch `Camp 134`) already ran for 2 weeks offline. The tutor required students to begin directly from Week 3 (Theme C) without taking Week 1–2 tests online, while preserving curriculum integrity for future batches.
      - Implemented Solusi B: a 2-step Forgiven & Manual Override Wizard accessible from Class Hub (`admin.html#class-hub`).

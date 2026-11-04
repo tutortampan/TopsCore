@@ -36,7 +36,7 @@ async function runTest() {
   // 1. Locate 2nd Vocabulary class
   const { data: cls } = await sb.from('classes')
     .select('id, name, level_id')
-    .ilike('name', '%2nd Vocabulary%')
+    .eq('id', '2ccf6468-1e03-41d1-b72b-1d84dcad85b2')
     .single();
 
   if (!cls) throw new Error('2nd Vocabulary class not found!');
@@ -85,10 +85,10 @@ async function runTest() {
   console.log('    ✅ PASS: updateTestPassingScore verified in database!');
 
   // 4. Launch Playwright Browser for UI & E2E Validation
-  console.log('\n[4] Launching Playwright Chromium for Admin UI Verification...');
+  console.log('\n[4] Launching Playwright browser for Admin UI Verification...');
   const browser = await chromium.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    channel: 'msedge',
+    headless: true
   });
 
   const context = await browser.newContext({
@@ -96,23 +96,35 @@ async function runTest() {
   });
 
   const page = await context.newPage();
-
-  // Inject admin session
-  await page.addInitScript((cid) => {
-    sessionStorage.setItem('topscore_admin_session', JSON.stringify({
-      user: { id: 'admin-001', role: 'admin', name: 'Mr. Top' },
-      token: 'mock-token'
-    }));
-    sessionStorage.setItem('topscore_selected_class_id', cid);
-    localStorage.setItem('topscore_selected_class_id', cid);
-  }, cls.id);
-
-  // Navigate to Tutor Room: Class Hub Attendance (Roster Matrix)
-  console.log('    Navigating to admin.html#class-hub?tab=attendance...');
-  await page.goto(`http://127.0.0.1:5500/admin.html#class-hub?tab=attendance`, {
-    waitUntil: 'domcontentloaded',
-    timeout: 15000
+  page.on('console', msg => console.log('    [BROWSER CONSOLE]', msg.text()));
+  page.on('pageerror', err => console.log('    [BROWSER ERROR]', err.message));
+  page.on('response', resp => {
+    if (resp.status() >= 400) console.log('    [RESP ERROR]', resp.status(), resp.url());
   });
+
+  // Navigate to Tutor Room Admin Console
+  console.log('    Logging into Admin Console...');
+  await page.goto('http://127.0.0.1:5500/admin.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(1000);
+
+  const loginScreen = page.locator('#admin-login-screen');
+  if (await loginScreen.isVisible()) {
+    await page.fill('#admin-username', 'admin');
+    await page.fill('#admin-password', 'admin123');
+    await page.click('#admin-login-btn');
+    await page.waitForTimeout(2000);
+  }
+
+  // Render Class Hub Attendance tab for 2nd Vocabulary
+  console.log('    Rendering Class Hub for 2nd Vocabulary (Attendance tab)...');
+  await page.evaluate(async (cid) => {
+    window._selectedClassId = cid;
+    window._classHubActiveTab = 'attendance';
+    const area = document.getElementById('admin-content-area');
+    if (window.renderClassHub) {
+      await window.renderClassHub(area);
+    }
+  }, cls.id);
 
   await page.waitForTimeout(3000);
 

@@ -995,11 +995,12 @@ export function recalculateAttempt(answers, passingThreshold = 60) {
  * @returns {{ totalPoints: number, overallScore: number, grade: string, denominator: number, completedExamCount: number, completedWeeklyCount: number }}
  */
 export function computeMilestoneExamMastery(examEntries = [], allClassExams = []) {
-  // Exclude Forgiven exam entries from academic points and mastery calculations.
-  // An entry is Forgiven ONLY when explicitly flagged (no real submitted attempt in DB).
+  // Exclude Forgiven 0% exam entries from academic points and mastery calculations.
+  // Manual override exam scores (e.g., from offline paper) are authentic scores and must be included.
   const cleanExamEntries = (Array.isArray(examEntries) ? examEntries : []).filter(e => {
     if (!e) return false;
-    if (e.isForgiven) return false; // Only isForgiven set from app.js (no real attempt + in forgiven_student_ids)
+    const isPureForgivenZero = Boolean(e.isForgiven) && !e.isManual && Number(e.effPoints ?? e.points ?? 0) === 0;
+    if (isPureForgivenZero) return false;
     return true;
   });
 
