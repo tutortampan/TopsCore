@@ -3904,4 +3904,37 @@ body.dashboard-page .completed-summary-val {
   transform: scale(0.985);
 }
 
+/* Phase 305: Forgiven & Manual Override on Student Dashboard */
+.asm-forgiven-sup {
+  color: #f59e0b !important;
+  font-weight: 900 !important;
+  font-size: 0.62em !important;
+  cursor: help !important;
+  margin-left: 1px !important;
+  display: inline-block;
+}
+.asm-manual-sup {
+  color: #38bdf8 !important;
+  font-weight: 900 !important;
+  font-size: 0.62em !important;
+  cursor: help !important;
+  margin-left: 1px !important;
+  display: inline-block;
+}
+.btn-practice {
+  font-size: 0.74rem !important;
+  padding: 4px 12px !important;
+  border: 1px solid rgba(245, 158, 11, 0.45) !important;
+  color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.12) !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-practice:hover {
+  background: rgba(245, 158, 11, 0.22) !important;
+  border-color: #f59e0b !important;
+}
+
 

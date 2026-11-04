@@ -767,32 +767,33 @@ export function getAchievementStatus(grade, percentage = null) {
  * @param {number} passCount Number of successful attempts (percentage >= 70%)
  * @returns {{ count: number, text: string, color: string, bg: string, border: string, tierClass: string, isComplete: boolean }}
  */
-export function getTaskProgressVisual(passCount) {
-  const count = Math.min(Math.max(Number(passCount) || 0, 0), 7);
-  if (count === 7) {
+export function getTaskProgressVisual(passCount, targetReps = 7) {
+  const maxR = Number(targetReps) || 7;
+  const count = Math.min(Math.max(Number(passCount) || 0, 0), maxR);
+  if (count >= maxR) {
     return {
-      count: 7,
-      text: '7/7 ✓ Complete',
+      count: maxR,
+      text: `${maxR}/${maxR} ✓ Complete`,
       color: TOPSCORE_COLORS.STAR,
       bg: `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.15)`,
       border: `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`,
-      tierClass: 'tier-7',
+      tierClass: `tier-${maxR}`,
       isComplete: true
     };
-  } else if (count >= 5) {
+  } else if (count >= Math.ceil(maxR * 0.7)) {
     return {
       count,
-      text: `${count}/7`,
+      text: `${count}/${maxR}`,
       color: TOPSCORE_COLORS.B,
       bg: `rgba(${TOPSCORE_COLORS.B_RGB}, 0.15)`,
       border: `rgba(${TOPSCORE_COLORS.B_RGB}, 0.45)`,
       tierClass: `tier-${count}`,
       isComplete: false
     };
-  } else if (count >= 3) {
+  } else if (count >= Math.ceil(maxR * 0.4)) {
     return {
       count,
-      text: `${count}/7`,
+      text: `${count}/${maxR}`,
       color: TOPSCORE_COLORS.C,
       bg: `rgba(${TOPSCORE_COLORS.C_RGB}, 0.15)`,
       border: `rgba(${TOPSCORE_COLORS.C_RGB}, 0.45)`,
@@ -802,7 +803,7 @@ export function getTaskProgressVisual(passCount) {
   } else if (count >= 1) {
     return {
       count,
-      text: `${count}/7`,
+      text: `${count}/${maxR}`,
       color: TOPSCORE_COLORS.D,
       bg: `rgba(${TOPSCORE_COLORS.D_RGB}, 0.15)`,
       border: `rgba(${TOPSCORE_COLORS.D_RGB}, 0.45)`,
@@ -812,7 +813,7 @@ export function getTaskProgressVisual(passCount) {
   } else {
     return {
       count: 0,
-      text: '0/7',
+      text: `0/${maxR}`,
       color: TOPSCORE_COLORS.E,
       bg: `rgba(${TOPSCORE_COLORS.E_RGB}, 0.15)`,
       border: `rgba(${TOPSCORE_COLORS.E_RGB}, 0.45)`,
@@ -931,10 +932,11 @@ export function computeUnifiedScore({
  * @param {boolean} [hasPhrases=true] Whether topic includes phrases
  * @returns {number} Topic pass level (0..7)
  */
-export function computeTopicPassLevel(wordsPasses = 0, phrasesPasses = 0, hasPhrases = true) {
-  const w = Math.min(Math.max(Number(wordsPasses) || 0, 0), 7);
+export function computeTopicPassLevel(wordsPasses = 0, phrasesPasses = 0, hasPhrases = true, targetReps = 7) {
+  const maxR = Number(targetReps) || 7;
+  const w = Math.min(Math.max(Number(wordsPasses) || 0, 0), maxR);
   if (!hasPhrases) return w;
-  const p = Math.min(Math.max(Number(phrasesPasses) || 0, 0), 7);
+  const p = Math.min(Math.max(Number(phrasesPasses) || 0, 0), maxR);
   return Math.min(w, p);
 }
 

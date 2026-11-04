@@ -1,6 +1,7 @@
-import { DataGrid } from './datagrid.js?v=20261104_v117';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261104_v117';
-import { computeUnifiedScore, computeTopicPassLevel } from '../grading.js?v=20261104_v117';
+import { DataGrid } from './datagrid.js?v=20261104_v119';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261104_v119';
+import { computeUnifiedScore, computeTopicPassLevel } from '../grading.js?v=20261104_v119';
+import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings } from '../api.js?v=20261104_v119';
 
 if (typeof window !== 'undefined') {
   window.showToast = showToast;
@@ -378,26 +379,26 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter, toShortLevel,
   adminOverridePrerequisitesWithRemedial, autoSyncClassTestsForLevel
-} from '../api.js?v=20261104_v117';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261104_v117';
-import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261104_v117';
-import { getSupabase } from '../supabase.js?v=20261104_v117';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261104_v117';
-import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261104_v117';
-import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261104_v117';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261104_v117';
-import { renderTests } from './tests-management.js?v=20261104_v117';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261104_v117';
-import { renderVocabularyVault } from './vocab-vault.js?v=20261104_v117';
-import { renderModules } from './modules.js?v=20261104_v117';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261104_v117';
-import { renderExportQuestions } from './imports-exports.js?v=20261104_v117';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261104_v117';
-import { renderCurriculum } from './curriculum-management.js?v=20261104_v117';
-import { renderClassesHub } from './classes-hub.js?v=20261104_v117';
-import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261104_v117';
-import { openStudentFullEdit } from './student-management.js?v=20261104_v117';
-import { renderStudentsRegistration } from './student-registration.js?v=20261104_v117';
+} from '../api.js?v=20261104_v119';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261104_v119';
+import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261104_v119';
+import { getSupabase } from '../supabase.js?v=20261104_v119';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261104_v119';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261104_v119';
+import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261104_v119';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261104_v119';
+import { renderTests } from './tests-management.js?v=20261104_v119';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261104_v119';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261104_v119';
+import { renderModules } from './modules.js?v=20261104_v119';
+import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261104_v119';
+import { renderExportQuestions } from './imports-exports.js?v=20261104_v119';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261104_v119';
+import { renderCurriculum } from './curriculum-management.js?v=20261104_v119';
+import { renderClassesHub } from './classes-hub.js?v=20261104_v119';
+import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261104_v119';
+import { openStudentFullEdit } from './student-management.js?v=20261104_v119';
+import { renderStudentsRegistration } from './student-registration.js?v=20261104_v119';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -1371,6 +1372,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
         });
         if (curriculumTotalMaxPoints === 0) curriculumTotalMaxPoints = (classTests.length || 20) * 50;
 
+        // Fetch dynamic test system settings for this class (target repetitions & pass threshold)
+        const classTestSettings = (typeof fetchClassTestSettings === 'function')
+          ? await fetchClassTestSettings(classId || cid).catch(() => ({ taskRepetitions: 7, taskMinScore: 70, examMinScore: 60 }))
+          : { taskRepetitions: 7, taskMinScore: 70, examMinScore: 60 };
+        const targetReps = Number(classTestSettings?.taskRepetitions) || 7;
+        const taskMinScore = Number(classTestSettings?.taskMinScore) || 70;
+        const examMinScore = Number(classTestSettings?.examMinScore) || 60;
+
         // Calculate DataGrid format for Students
         window._classStudentsMap = {};
         const batchMap = {};
@@ -1470,12 +1479,16 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
               return ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
             });
             const maxQForPass = getAsmExpectedMax(asm);
-            const passCount = submittedAttsForPass.filter(a => {
+            let passCount = submittedAttsForPass.filter(a => {
+              if (a.is_forgiven) return true;
               const tq = Number(a.total_questions || maxQForPass);
               const sc = a.score != null ? Math.min(Number(a.score), tq) : 0;
               const pct = tq > 0 ? (sc / tq) * 100 : 0;
-              return pct >= 70;
+              return pct >= taskMinScore;
             }).length;
+            if (bestAtt?.is_forgiven) {
+              passCount = Math.max(passCount, targetReps);
+            }
             asmPassCounts[asm.id] = passCount;
           });
 
@@ -1738,10 +1751,16 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
                       <div class="asm-meta-chips" style="display: inline-flex; align-items: center; gap: 6px;">
                         <span class="badge" style="background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.12); color: var(--grade-c, #ffff00); font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.3);">⚡ ${taskTests.length} Tasks</span>
                         <span class="badge" style="background: rgba(244, 114, 182, 0.12); color: #f472b6; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(244, 114, 182, 0.3);">📝 ${testTests.length} Exams</span>
-                        <span class="badge" style="background: rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.12); color: ${TOPSCORE_COLORS.STAR}; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.3);">🎯 Min. 70%</span>
+                        <span class="badge" style="background: rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.12); color: ${TOPSCORE_COLORS.STAR}; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.3);" title="Repetisi: ${targetReps}x lulus (Min. ${taskMinScore}%), Exam: ${examMinScore}%">🎯 Min. ${taskMinScore}% (Task) / ${examMinScore}% (Exam)</span>
                       </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
+                      <button type="button" class="btn btn-warning btn-sm" id="btn-open-forgiven-wizard" style="font-size: 0.75rem; font-weight: 700; background: #d97706; border-color: #d97706; color: #fff;" title="Buka Wizard Forgiven &amp; Exam Manual Override">
+                        🛡️ Forgiven &amp; Override
+                      </button>
+                      <button type="button" class="btn btn-info btn-sm" id="btn-open-blueprint-settings" style="font-size: 0.75rem; font-weight: 700; background: #0ea5e9; border-color: #0ea5e9; color: #fff;" title="Buka Pengaturan Default Test System &amp; Blueprint">
+                        ⚙️ Test System Settings
+                      </button>
                       <button type="button" class="btn btn-secondary btn-sm" id="btn-open-blueprint-from-class" style="font-size: 0.75rem; font-weight: 600;" title="Buka Roadmap Kurikulum Lengkap di Test Blueprint">
                         🗺️ Buka Test Blueprint ↗
                       </button>
@@ -1909,7 +1928,26 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
                 key: 'minScore',
                 label: 'PASS (%)',
                 sortable: true,
-                render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">🎯 ${row.minScore || 70}%</div>`
+                render: (val, row) => {
+                  const testId = row.id;
+                  const currentMin = row.minScore || 60;
+                  const isExamTest = isWeeklyExam(row._raw);
+                  return `
+                    <div class="pass-pct-cell-wrap" style="display:flex; align-items:center; justify-content:center; gap:2px;">
+                      <span style="font-size:0.68rem; color:${isExamTest ? '#f472b6' : '#eab308'}; font-weight:800;" title="${isExamTest ? 'Exam Passing Threshold' : 'Task Passing Threshold'}">🎯</span>
+                      <input type="number" 
+                             class="input-test-pass-score" 
+                             data-test-id="${testId}" 
+                             data-shell-code="${escapeHtml(row.shellCode || row.title)}"
+                             data-original-val="${currentMin}" 
+                             value="${currentMin}" 
+                             min="1" max="100" 
+                             title="Ketik angka persentase kelulusan manual (Enter / Blur untuk simpan)"
+                             style="width:46px; height:22px; padding:0 2px; font-size:0.75rem; font-weight:700; text-align:center; background:#1e293b; border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#f8fafc;" />
+                      <span style="font-size:0.68rem; color:#94a3b8; font-weight:700;">%</span>
+                    </div>
+                  `;
+                }
               },
               {
                 key: 'qCount',
@@ -1964,10 +2002,84 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
             window.location.hash = '#vocab_vault';
           });
 
+          // Open Test System Settings Modal
+          document.getElementById('btn-open-blueprint-settings')?.addEventListener('click', async () => {
+            try {
+              const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261104_v119');
+              await openTestSystemSettingsModal({
+                classId: classId || cid,
+                className: currentClass?.name || 'Vocabulary Class',
+                onComplete: () => {
+                  window.renderClassHub(document.getElementById('admin-content-area'));
+                }
+              });
+            } catch (err) {
+              console.error(err);
+              showToast('Gagal membuka settings: ' + err.message, 'error');
+            }
+          });
+
+          // Inline Test Passing Score edit listener on #class-tests-grid
+          const classTestsGridEl = document.getElementById('class-tests-grid');
+          if (classTestsGridEl) {
+            classTestsGridEl.addEventListener('change', async (e) => {
+              const input = e.target.closest('.input-test-pass-score');
+              if (!input) return;
+              const testId = input.dataset.testId;
+              const origVal = parseFloat(input.dataset.originalVal) || 60;
+              const rawVal = parseFloat(input.value);
+              if (isNaN(rawVal) || rawVal < 1 || rawVal > 100) {
+                showToast('Persentase kelulusan harus antara 1% - 100%', 'error');
+                input.value = origVal;
+                return;
+              }
+              const newVal = Math.round(rawVal);
+              input.value = newVal;
+              try {
+                input.disabled = true;
+                await updateTestPassingScore(testId, newVal);
+                input.dataset.originalVal = newVal;
+                showToast(`Nilai kelulusan berhasil diubah menjadi ${newVal}%`, 'success');
+              } catch (err) {
+                console.error(err);
+                showToast('Gagal update nilai kelulusan: ' + err.message, 'error');
+                input.value = origVal;
+              } finally {
+                input.disabled = false;
+              }
+            });
+
+            classTestsGridEl.addEventListener('keydown', (e) => {
+              const input = e.target.closest('.input-test-pass-score');
+              if (input && e.key === 'Enter') {
+                input.blur();
+              }
+            });
+          }
+
+          // Open Forgiven & Exam Manual Override Wizard
+          document.getElementById('btn-open-forgiven-wizard')?.addEventListener('click', async () => {
+            try {
+              const { openForgivenWizard } = await import('./forgiven-wizard-modal.js?v=20261104_v119');
+              await openForgivenWizard({
+                classId: classId || cid,
+                classTests,
+                batches: allBatches,
+                students: studentsGridData,
+                onComplete: () => {
+                  window.renderClassHub(document.getElementById('admin-content-area'));
+                }
+              });
+            } catch (err) {
+              console.error(err);
+              showToast('Gagal membuka wizard: ' + err.message, 'error');
+            }
+          });
+
           // Open Test Generator & Settings Wizard
           document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
             try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261104_v117');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261104_v119');
               await openAutoGenerateModal({
                 explicitClassId: classId,
                 onComplete: () => {
@@ -2201,15 +2313,25 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
                         const pAtt = pTask ? row.asmScores?.[pTask.id] : null;
                         const wPass = wTask ? (row.asmPassCounts?.[wTask.id] || 0) : 0;
                         const pPass = pTask ? (row.asmPassCounts?.[pTask.id] || 0) : 0;
-                        const topicLevel = typeof computeTopicPassLevel === 'function' ? computeTopicPassLevel(wPass, pPass, true) : Math.min(wPass, pPass);
+                        const topicLevel = typeof computeTopicPassLevel === 'function' ? computeTopicPassLevel(wPass, pPass, true, targetReps) : Math.min(wPass, pPass);
 
                         const hasAny = wAtt || pAtt;
                         if (!hasAny) {
-                          return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.70rem); font-weight:400;" title="Unattempted">&middot;</span>';
+                          return `
+                            <div class="asm-cell-task-wrap" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; line-height:1.1;" title="${tc}${topCode} Unified Task&#10;Unattempted (0/${targetReps} passes)">
+                              <span class="asm-dot" style="font-size:var(--matrix-font-size, 0.70rem); font-weight:400; color:#475569;">&middot;</span>
+                              <span class="asm-rep-badge" style="font-size:0.58rem; font-weight:700; color:#475569; font-variant-numeric:tabular-nums;">0/${targetReps}</span>
+                            </div>
+                          `;
                         }
                         const isAnyProgress = (wAtt?.status === 'in_progress') || (pAtt?.status === 'in_progress');
                         if (isAnyProgress) {
-                          return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.70rem) * 0.85);" title="In Progress">⏳</span>`;
+                          return `
+                            <div class="asm-cell-task-wrap" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; line-height:1.1;" title="${tc}${topCode} Unified Task (In Progress)">
+                              <span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.70rem) * 0.85);">⏳</span>
+                              <span class="asm-rep-badge" style="font-size:0.58rem; font-weight:700; color:#eab308; font-variant-numeric:tabular-nums;">${topicLevel}/${targetReps}</span>
+                            </div>
+                          `;
                         }
 
                         const unified = computeUnifiedScore({
@@ -2224,13 +2346,27 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
                         const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                         const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
 
+                        const isForgiven = Boolean(wAtt?.is_forgiven || pAtt?.is_forgiven);
+                        const isManual = Boolean(wAtt?.is_manual_override || pAtt?.is_manual_override || (wAtt?.forgiven_reason && wAtt.forgiven_reason.startsWith('MANUAL_OVERRIDE')));
+                        const supBadge = isForgiven ? '<sup class="asm-forgiven-sup" title="Forgiven">ᶠ</sup>'
+                          : (isManual ? '<sup class="asm-manual-sup" title="Manual Score">ᴹ</sup>' : '');
+                        const cellColor = (isForgiven && Number(unified.percentage || 0) === 0) ? '#f59e0b' : unified.gradeColor;
+                        const repColor = topicLevel >= targetReps ? '#00c000' : (topicLevel > 0 ? '#38bdf8' : '#64748b');
+
                         return `
-                          <span class="asm-score asm-score-task"
-                                style="color:${unified.gradeColor}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.70rem); font-variant-numeric:tabular-nums;"
-                                ${clickAttr}
-                                title="${tc}${topCode} Unified Task&#10;Score: ${unified.percentage}% (${unified.totalPoints}/50 pts, Grade ${unified.grade})&#10;Words: ${unified.wordsPoints}/40 (${wPass}/7 passes)&#10;Phrases: ${unified.phrasesPoints}/10 (${pPass}/7 passes)&#10;Topic Mastery: Level ${topicLevel}/7&#10;Click to view result">
-                            ${unified.percentage}%
-                          </span>
+                          <div class="asm-cell-task-wrap"
+                               style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; line-height:1.1; ${cursorStyle}"
+                               ${clickAttr}
+                               title="${tc}${topCode} Unified Task&#10;Score: ${unified.percentage}% (${unified.totalPoints}/50 pts, Grade ${unified.grade})&#10;Words: ${unified.wordsPoints}/40 (${wPass}/${targetReps} passes)&#10;Phrases: ${unified.phrasesPoints}/10 (${pPass}/${targetReps} passes)&#10;Topic Mastery: Level ${topicLevel}/${targetReps}&#10;Click to view result">
+                            <span class="asm-score asm-score-task"
+                                  style="color:${cellColor}; font-weight:700; font-size:var(--matrix-font-size, 0.70rem); font-variant-numeric:tabular-nums;">
+                              ${unified.percentage}%${supBadge}
+                            </span>
+                            <span class="asm-rep-badge ${topicLevel >= targetReps ? 'rep-complete' : ''}"
+                                  style="font-size:0.58rem; font-weight:800; color:${repColor}; font-variant-numeric:tabular-nums; letter-spacing:-0.2px;">
+                              ${topicLevel}/${targetReps}
+                            </span>
+                          </div>
                         `;
                       }
                     });
@@ -2281,14 +2417,19 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
                     const attId = wAtt?.id || pAtt?.id || wAtt?.attempt_id || pAtt?.attempt_id;
                     const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                     const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-                    const remSup = unified.isRemedial ? '<sup class="asm-rem-sup">R</sup>' : '';
+                    const isForgiven = Boolean(wAtt?.is_forgiven || pAtt?.is_forgiven);
+                    const isManual = Boolean(wAtt?.is_manual_override || pAtt?.is_manual_override || (wAtt?.forgiven_reason && wAtt.forgiven_reason.startsWith('MANUAL_OVERRIDE')));
+                    const supBadge = isForgiven ? '<sup class="asm-forgiven-sup" title="Forgiven">ᶠ</sup>'
+                      : (isManual ? '<sup class="asm-manual-sup" title="Manual Score">ᴹ</sup>'
+                      : (unified.isRemedial ? '<sup class="asm-rem-sup">R</sup>' : ''));
+                    const cellColor = (isForgiven && Number(unified.percentage || 0) === 0) ? '#f59e0b' : unified.gradeColor;
 
                     return `
                       <span class="asm-score asm-score-test"
-                            style="color:${unified.gradeColor}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.70rem); font-variant-numeric:tabular-nums;"
+                            style="color:${cellColor}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.70rem); font-variant-numeric:tabular-nums;"
                             ${clickAttr}
                             title="${tc} Unified Exam&#10;Score: ${unified.percentage}% (Grade ${unified.grade})&#10;Words Exam: ${unified.wordsPoints}/120 (${unified.wordsPct ?? 0}%)&#10;Phrases Exam: ${unified.phrasesPoints}/30 (${unified.phrasesPct ?? 0}%)&#10;Total: ${unified.totalPoints}/150 pts&#10;Click to view result">
-                        ${unified.percentage}%${remSup}
+                        ${unified.percentage}%${supBadge}
                       </span>
                     `;
                   }
@@ -2417,14 +2558,29 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
                         const color = typeof getGradeColorByScore === 'function'
                           ? getGradeColorByScore(colorBasis)
                           : (colorBasis >= 60 ? '#FFFF00' : '#FF0000');
-                        const remSup = isRem ? '<sup class="asm-rem-sup">R</sup>' : '';
+                        const isForgiven = Boolean(att.is_forgiven);
+                        const isManual = Boolean(att.is_manual_override || (att.forgiven_reason && att.forgiven_reason.startsWith('MANUAL_OVERRIDE')));
+                        const forgivenBy = att.forgiven_by || 'Mr. Top';
+                        const forgivenAt = att.forgiven_at ? new Date(att.forgiven_at).toLocaleDateString('id-ID') : '';
+                        const reason = att.forgiven_reason || '';
+
+                        let supBadge = '';
+                        if (isForgiven) {
+                          supBadge = `<sup class="asm-forgiven-sup" title="Forgiven by ${escapeHtml(forgivenBy)}${forgivenAt ? ' — ' + forgivenAt : ''}${reason ? ': ' + escapeHtml(reason) : ''}">ᶠ</sup>`;
+                        } else if (isManual) {
+                          supBadge = `<sup class="asm-manual-sup" title="Manual Score by ${escapeHtml(forgivenBy)}${forgivenAt ? ' — ' + forgivenAt : ''}${reason ? ': ' + escapeHtml(reason) : ''}">ᴹ</sup>`;
+                        } else if (isRem) {
+                          supBadge = '<sup class="asm-rem-sup">R</sup>';
+                        }
+
+                        const cellColor = (isForgiven && roundPct === 0) ? '#f59e0b' : color;
 
                         return `
                           <span class="asm-score asm-score-test"
-                                style="color:${color}; ${cursorStyle} font-weight:500; font-size:var(--matrix-font-size, 0.70rem); font-variant-numeric:tabular-nums;"
+                                style="color:${cellColor}; ${cursorStyle} font-weight:500; font-size:var(--matrix-font-size, 0.70rem); font-variant-numeric:tabular-nums;"
                                 ${clickAttr}
                                 title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${roundPct}%&#10;Click to open result">
-                            ${roundPct}%${remSup}
+                            ${roundPct}%${supBadge}
                           </span>
                         `;
                       }
@@ -2505,9 +2661,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
                     dynamicAsmCols.push({
                       key: `test_${asm.id}`,
                       className: 'col-asm col-task',
-                      width: '32px',
-                      headerTitle: `${headerTooltip} (Task Score %)`,
-                      title: `${headerTooltip} (Task Score %)`,
+                      width: '38px',
+                      headerTitle: `${headerTooltip} (Task Score % • ${targetReps}× Passes Required)`,
+                      title: `${headerTooltip} (Task Score % • ${targetReps}× Passes Required)`,
                       label: `
                         <div class="asm-hdr-cell">
                           <span class="test-num test-num-task" title="${escapeHtml(headerTooltip)}">${num}</span>
@@ -2518,6 +2674,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
                       align: 'center',
                       render: (val, row) => {
                         const att = row.asmScores?.[asm.id];
+                        const passCount = row.asmPassCounts?.[asm.id] || 0;
                         const maxQ = getAsmExpectedMax(asm);
                         // FIX: Always use canonical max as denominator floor
                         const totalQ = Math.max(maxQ, Number(att?.total_questions || 0)) || maxQ;
@@ -2532,10 +2689,33 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
                         const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
                         const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
 
-                        if (!att) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+                        if (!att) {
+                          return `
+                            <div class="asm-cell-task-wrap" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; line-height:1.1;" title="${num}. [${tag}] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Unattempted (0/${targetReps} passes)">
+                              <span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700; color:#475569;">&middot;</span>
+                              <span class="asm-rep-badge" style="font-size:0.58rem; font-weight:700; color:#475569; font-variant-numeric:tabular-nums;">0/${targetReps}</span>
+                            </div>
+                          `;
+                        }
+
                         const st = String(att.status || '').toLowerCase();
-                        if (st === 'in_progress') return `<span style="color:#FFFF00; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
-                        if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
+                        if (st === 'in_progress') {
+                          return `
+                            <div class="asm-cell-task-wrap" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; line-height:1.1;" title="${num}. [${tag}] ${escapeHtml(code)}&#10;In Progress">
+                              <span style="color:#FFFF00; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);">⏳</span>
+                              <span class="asm-rep-badge" style="font-size:0.58rem; font-weight:700; color:#eab308; font-variant-numeric:tabular-nums;">${passCount}/${targetReps}</span>
+                            </div>
+                          `;
+                        }
+
+                        if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
+                          return `
+                            <div class="asm-cell-task-wrap" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; line-height:1.1;" title="${num}. [${tag}] ${escapeHtml(code)}&#10;Unattempted (0/${targetReps} passes)">
+                              <span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700; color:#475569;">&middot;</span>
+                              <span class="asm-rep-badge" style="font-size:0.58rem; font-weight:700; color:#475569; font-variant-numeric:tabular-nums;">0/${targetReps}</span>
+                            </div>
+                          `;
+                        }
 
                         const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
                         const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
@@ -2543,15 +2723,38 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
                         const color = typeof getGradeColorByScore === 'function'
                           ? getGradeColorByScore(effPct)
                           : (effPct >= 60 ? '#FFFF00' : '#FF0000');
-                        const remSup = isRem ? '<sup class="asm-rem-sup">R</sup>' : '';
+                        const isForgiven = Boolean(att.is_forgiven);
+                        const isManual = Boolean(att.is_manual_override || (att.forgiven_reason && att.forgiven_reason.startsWith('MANUAL_OVERRIDE')));
+                        const forgivenBy = att.forgiven_by || 'Mr. Top';
+                        const forgivenAt = att.forgiven_at ? new Date(att.forgiven_at).toLocaleDateString('id-ID') : '';
+                        const reason = att.forgiven_reason || '';
+
+                        let supBadge = '';
+                        if (isForgiven) {
+                          supBadge = `<sup class="asm-forgiven-sup" title="Forgiven by ${escapeHtml(forgivenBy)}${forgivenAt ? ' — ' + forgivenAt : ''}${reason ? ': ' + escapeHtml(reason) : ''}">ᶠ</sup>`;
+                        } else if (isManual) {
+                          supBadge = `<sup class="asm-manual-sup" title="Manual Score by ${escapeHtml(forgivenBy)}${forgivenAt ? ' — ' + forgivenAt : ''}${reason ? ': ' + escapeHtml(reason) : ''}">ᴹ</sup>`;
+                        } else if (isRem) {
+                          supBadge = '<sup class="asm-rem-sup">R</sup>';
+                        }
+
+                        const cellColor = (isForgiven && roundPct === 0) ? '#f59e0b' : color;
+                        const repColor = passCount >= targetReps ? '#00c000' : (passCount > 0 ? '#38bdf8' : '#64748b');
 
                         return `
-                          <span class="asm-score asm-score-task"
-                                style="color:${color}; ${cursorStyle} font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                                ${clickAttr}
-                                title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Score: ${roundPct}%&#10;Click to view result">
-                            ${roundPct}%${remSup}
-                          </span>
+                          <div class="asm-cell-task-wrap"
+                               style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; line-height:1.1; ${cursorStyle}"
+                               ${clickAttr}
+                               title="${num}. [${tag} SCORE] ${escapeHtml(code)}&#10;${escapeHtml(asm.title)}&#10;Best Score: ${roundPct}%&#10;Repetition Passes: ${passCount}/${targetReps} (Min. ${taskMinScore}%)&#10;Click to view result">
+                            <span class="asm-score asm-score-task"
+                                  style="color:${cellColor}; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;">
+                              ${roundPct}%${supBadge}
+                            </span>
+                            <span class="asm-rep-badge ${passCount >= targetReps ? 'rep-complete' : ''}"
+                                  style="font-size:0.58rem; font-weight:800; color:${repColor}; font-variant-numeric:tabular-nums; letter-spacing:-0.2px;">
+                              ${passCount}/${targetReps}
+                            </span>
+                          </div>
                         `;
                       }
                     });
@@ -4116,7 +4319,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261104_v117');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261104_v119');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -4447,7 +4650,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261104_v117');
+      const sm = await import('./student-management.js?v=20261104_v119');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }

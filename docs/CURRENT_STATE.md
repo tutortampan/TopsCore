@@ -1,11 +1,35 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-04 11:48 UTC+8
-Current Phase: Phase 304: Task Question Count Clamping, Permanent 50px Banners, and Strict Level Class Isolation [COMPLETE]
+Last Updated: 2026-11-04 14:15 UTC+8
+Current Phase: Phase 305: Forgiven & Exam Manual Override Wizard (Pacing Adjustment) [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Phase 304: Task Question Count Clamping, Permanent 50px Banners, and Strict Level Class Isolation [COMPLETE]:**
+1. **Phase 305: Forgiven & Exam Manual Override Wizard (Pacing Adjustment) [COMPLETE]:**
+   - **Context & Motivation**:
+     - Class `2nd Vocabulary` (Batch `Camp 134`) already ran for 2 weeks offline. The tutor required students to begin directly from Week 3 (Theme C) without taking Week 1–2 tests online, while preserving curriculum integrity for future batches.
+     - Implemented Solusi B: a 2-step Forgiven & Manual Override Wizard accessible from Class Hub (`admin.html#class-hub`).
+   - **Backend API & Database**:
+     - Migration `supabase/migrations/20261104130000_add_manual_override_column.sql`: validated `is_forgiven`, `forgiven_by`, `forgiven_at`, `forgiven_reason`, and `is_manual_override`.
+     - `adminApplyForgiven` & `adminRevokeForgiven` in `js/api.js`: full support for batch/student filtering, forgiving formative tasks (`0%ᶠ`), and manual exam scoring with Rule 2.10 grading enforcement (85% = Grade B, 102 PTS). Admin name `"Mr. Top"` embedded in audit logs and attempt reasons.
+   - **Admin Wizard UI (`js/admin/forgiven-wizard-modal.js`)**:
+     - Step 1: Batch dropdown filter, search input, quick select/clear all, dynamic chip count.
+     - Step 2: Formative tasks grouped by Theme (A, B, C, D) with theme toggles, milestone exam radio (`Abaikan`, `Forgive 0%ᶠ`, `Input Nilai Manual` with live bi-directional `%` $\leftrightarrow$ `PTS` calculation), Admin name (`Mr. Top`), audit reason input, `⚡ Setel Cepat Pekan 1 & 2` preset button, and Revoke action.
+     - Toolbar button `🛡️ Forgiven & Override` (`#btn-open-forgiven-wizard`) integrated into Class Hub.
+   - **Admin Roster Grid Matrix**:
+     - Superscripts `.asm-forgiven-sup` (`ᶠ`, `#f59e0b`) and `.asm-manual-sup` (`ᴹ`, `#38bdf8`) rendered in exam and task cells with rich tooltips displaying tutor name `"Mr. Top"`, date, and audit reason.
+   - **Student Gating & Dashboard Bypass**:
+     - In `js/dashboard.js`, forgiven tasks count as 7/7 passes to bypass the 7×7 repetitive mastery gate.
+     - Forgiven milestone exams unlock subsequent theme tasks (e.g. Forgiven Exam B unlocks Task C1).
+     - Student dashboard displays `0%ᶠ FORGIVEN` badge with `📖 Practice` button for optional review, and renders `ᶠ` / `ᴹ` superscripts.
+   - **Verification & Tests**:
+     - 41/41 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
+     - 100% CI test suite PASS (`npm test`).
+     - Full Playwright E2E verification PASS (`scripts/test_forgiven_wizard_e2e.mjs`): verified database records, manual exam override, modal interaction, roster superscript `ᶠ`, student lobby display, and revoke.
+     - Screenshots captured: `forgiven_wizard_modal_verified.png`, `class_hub_roster_forgiven_verified.png`, and `student_dashboard_forgiven_verified.png`.
+   - **Cache Buster**: Bumped to `v=20261104_v118` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/dashboard.js`, `js/result.js`, `js/test.js`, and `js/admin/app.js`.
+
+2. **Phase 304: Task Question Count Clamping, Permanent 50px Banners, and Strict Level Class Isolation [COMPLETE]:**
    - **Task Question Count Overload Resolved**:
      - Root cause: In `supabase/functions/start-test/index.ts`, `themes` was evaluated before `topicCode`, causing task `2A1` (`payload.themes = ['A']`) to query all 120 words of Theme A instead of topic A1 (40 words).
      - Fixed in both `supabase/functions/start-test/index.ts` and `js/api.js`: prioritized `topicCode` over `themes`, added multi-candidate code matching (`[topicCode.toUpperCase(), themeCode + topicCode, topicCode.replace(/^[A-Za-z]/, '')]`), and implemented a hard safety clamp against `test.total_questions` (Task = 40, Exam = 120/160).

@@ -5758,3 +5758,46 @@ tfoot.datagrid-tfoot,
 #blueprint-matrix-table tr.blueprint-table-row:hover td.cell-theme-name {
   background: rgba(30, 41, 59, 0.65) !important;
 }
+
+/* Phase 305: Forgiven & Manual Override Superscripts */
+.asm-forgiven-sup {
+  color: #f59e0b !important;
+  font-weight: 900 !important;
+  font-size: 0.62em !important;
+  cursor: help !important;
+  margin-left: 1px !important;
+  display: inline-block;
+}
+.asm-manual-sup {
+  color: #38bdf8 !important;
+  font-weight: 900 !important;
+  font-size: 0.62em !important;
+  cursor: help !important;
+  margin-left: 1px !important;
+  display: inline-block;
+}
+
+/* Phase 306: Task Repetition Progress in Roster Attendance Matrix */
+.asm-cell-task-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 1px !important;
+  line-height: 1.1 !important;
+  min-height: 24px !important;
+}
+
+.asm-rep-badge {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.58rem !important;
+  font-weight: 800 !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.2px !important;
+  line-height: 1 !important;
+}
+
+.asm-rep-badge.rep-complete {
+  color: #00c000 !important;
+  text-shadow: 0 0 6px rgba(0, 192, 0, 0.4);
+}

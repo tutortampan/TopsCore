@@ -3,12 +3,12 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession } from './api.js?v=20261104_v117';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261104_v117';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261104_v117';
-    import { testMicrophoneCapability } from './speech.js?v=20261104_v117';
-    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261104_v117';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261104_v117';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261104_v119';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261104_v119';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261104_v119';
+    import { testMicrophoneCapability } from './speech.js?v=20261104_v119';
+    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261104_v119';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261104_v119';
 
     window._isBatchChampion = false;
 
@@ -183,7 +183,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./supabase.js?v=20261104_v117')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261104_v119')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).maybeSingle();
           if (st?.gender) {
             currentGender = st.gender;
@@ -549,7 +549,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
         try {
-          const sb = await (await import('./supabase.js?v=20261104_v117')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261104_v119')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).maybeSingle();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
@@ -568,7 +568,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Background sync: memastikan localStorage selalu sinkron dengan database terbaru
         (async () => {
           try {
-            const sb = await (await import('./supabase.js?v=20261104_v117')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261104_v119')).getSupabase();
             const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).maybeSingle();
             if (st && st.photo_url !== photoUrl) {
               if (st.photo_url) {
@@ -622,7 +622,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
       if (!hasBirthday) {
         try {
-          const sb = await (await import('./supabase.js?v=20261104_v117')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261104_v119')).getSupabase();
           const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).maybeSingle();
           if (st && st.birth_date) {
             hasBirthday = true;
@@ -688,7 +688,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./supabase.js?v=20261104_v117')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261104_v119')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).maybeSingle();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -698,7 +698,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./session.js?v=20261104_v117');
+             const { setStudentSession } = await import('./session.js?v=20261104_v119');
              setStudentSession(session);
           }
         }
@@ -748,7 +748,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./session.js?v=20261104_v117');
+            const { setStudentSession } = await import('./session.js?v=20261104_v119');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -1434,6 +1434,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Sort levels by order
         const sortedLevels = [...levelMap.values()].sort((a, b) => a.order - b.order);
 
+        // Fetch dynamic test system settings for this class (target repetitions & pass threshold)
+        const testSettings = (typeof fetchClassTestSettings === 'function')
+          ? await fetchClassTestSettings(subj.id).catch(() => ({ taskRepetitions: 7, taskMinScore: 70, examMinScore: 60 }))
+          : { taskRepetitions: 7, taskMinScore: 70, examMinScore: 60 };
+        const targetReps = Number(testSettings?.taskRepetitions) || 7;
+        const taskMinScore = Number(testSettings?.taskMinScore) || 70;
+
         // Build attempts quick-lookup for this student
         const attemptsRaw = await fetchAllStudentAttempts(session.student_id).catch(() => []);
         const bestByTest = {};
@@ -1446,11 +1453,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const st  = (att.status || '').toLowerCase();
           if (st === 'in_progress') { inProgByTest[eid] = att; continue; }
           if (st === 'submitted' || st === 'auto_submitted' || st === 'evaluated') {
-            if (pct >= 70) {
+            if (att.is_forgiven) {
+              passCountByTest[eid] = Math.max(passCountByTest[eid] || 0, targetReps);
+            } else if (pct >= taskMinScore) {
               passCountByTest[eid] = (passCountByTest[eid] || 0) + 1;
             }
           }
-          if (!bestByTest[eid] || pct > parseFloat(bestByTest[eid].percentage || 0) || (pct === parseFloat(bestByTest[eid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByTest[eid].submitted_at || 0))) {
+          if (!bestByTest[eid] || pct > parseFloat(bestByTest[eid].percentage || 0) || (pct === parseFloat(bestByTest[eid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByTest[eid].submitted_at || 0)) || (att.is_forgiven && !bestByTest[eid])) {
             bestByTest[eid] = att;
           }
         }
@@ -1569,7 +1578,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                   const peRem = Boolean(peBest && (peBest.is_remedial_unlocked || peBest.is_remedial));
                   const pePct = peRem && peRawPct !== null ? Math.min(peRawPct, 60.0) : peRawPct;
                   const peMin = pe.minimum_required_score || pe.pass_threshold || 70;
-                  const pePassed = pePct !== null && (pePct >= peMin || (peRem && pePct >= 60));
+                  const pePassed = Boolean(peBest?.is_forgiven) || (pePct !== null && (pePct >= peMin || (peRem && pePct >= 60)));
                   if (!pePassed) {
                     grpPrereqMet = false;
                     grpPrereqTitle = `Theme ${priorTheme} Exams (Passed ≥${peMin}% required)`;
@@ -1578,20 +1587,20 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 }
               }
 
-              // 2. Exam Gating: Theme Exam requires all tasks in this theme to reach 7/7 passes
+              // 2. Exam Gating: Theme Exam requires all tasks in this theme to reach target passes
               if (grpPrereqMet && grp.isExam && !isRemedialSession && !isStudentRemedialUnlocked) {
                 const siblingTasks = lvl.Tests.filter(t => !isExam(t) && String(t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase() === grp.themeCode);
                 for (const st of siblingTasks) {
                   const pCount = passCountByTest[st.id] || 0;
-                  if (pCount < 7) {
+                  if (pCount < targetReps) {
                     grpPrereqMet = false;
-                    grpPrereqTitle = `All Theme ${grp.themeCode} Tasks (7/7 Passes Required)`;
+                    grpPrereqTitle = `All Theme ${grp.themeCode} Tasks (${targetReps}/${targetReps} Passes Required)`;
                     break;
                   }
                 }
               }
 
-              // 3. Linear Topic Gating: Topic K requires Topic K-1 to reach 7/7 passes
+              // 3. Linear Topic Gating: Topic K requires Topic K-1 to reach target passes
               if (grpPrereqMet && !grp.isExam && !isRemedialSession && !isStudentRemedialUnlocked) {
                 const curTopNum = parseInt(String(grp.topicCode || ''), 10);
                 if (curTopNum > 1) {
@@ -1603,9 +1612,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                   );
                   for (const pt of priorTasks) {
                     const pCount = passCountByTest[pt.id] || 0;
-                    if (pCount < 7) {
+                    if (pCount < targetReps) {
                       grpPrereqMet = false;
-                      grpPrereqTitle = `Topic ${priorTopicStr} Tasks (7/7 Passes Required)`;
+                      grpPrereqTitle = `Topic ${priorTopicStr} Tasks (${targetReps}/${targetReps} Passes Required)`;
                       break;
                     }
                   }
@@ -1771,7 +1780,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                  const prereqPct = prereqBest ? parseFloat(prereqBest.percentage || 0) : null;
                  const pObj = Tests.find(a => a.id === prereqId);
                  const pMinScore = pObj ? (pObj.minimum_required_score || pObj.pass_threshold || 60) : 60;
-                 prereqMet = prereqPct !== null && prereqPct >= pMinScore;
+                 prereqMet = Boolean(prereqBest?.is_forgiven) || (prereqPct !== null && prereqPct >= pMinScore);
                  prereqTitle = pObj ? (pObj.display_name || pObj.title || pObj.name || 'Prerequisite') : 'Prerequisite Test';
               }
 
@@ -1789,9 +1798,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                   );
                   for (const st of siblingTasks) {
                     const pCount = passCountByTest[st.id] || 0;
-                    if (pCount < 7) {
+                    if (pCount < targetReps) {
                       prereqMet = false;
-                      prereqTitle = `All Theme ${currentThemeCode} Tasks (7/7 Passes Required)`;
+                      prereqTitle = `All Theme ${currentThemeCode} Tasks (${targetReps}/${targetReps} Passes Required)`;
                       break;
                     }
                   }
@@ -1819,16 +1828,33 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 actionBtn   = `<button onclick="location.href='test.html?attempt_id=${inProg.id}&test_id=${inProg.test_id || ''}'"
                                 style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">Resume ←</button>`;
               } else if (best) {
+                const isForgivenBest = Boolean(best.is_forgiven);
+                const isManualBest = Boolean(best.is_manual_override || (best.forgiven_reason && best.forgiven_reason.startsWith('MANUAL_OVERRIDE')));
                 const isRemedialBest = Boolean(best.is_remedial_unlocked || best.is_remedial);
-                const badgeBg = passed ? `rgba(${TOPSCORE_COLORS.STAR_RGB},0.15)` : `rgba(${TOPSCORE_COLORS.E_RGB},0.12)`;
-                const badgeClr= passed ? (gradeColor || TOPSCORE_COLORS.STAR) : TOPSCORE_COLORS.E;
-                statusBadge = `<span style="background:${badgeBg};color:${badgeClr};border:1px solid ${badgeClr}44;padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">
-                                ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%${isRemedialBest ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</span>`;
 
-                actionBtn = `<div style="display:flex; align-items:center;">
-                               <button onclick="location.href='result.html?attempt_id=${best.id}'"
-                                style="background:rgba(255,255,255,0.06);color:var(--clr-text-2);border:1px solid var(--clr-border);padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">View Result</button>
-                             </div>`;
+                if (isForgivenBest && Number(bestPct || 0) === 0) {
+                  statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.35);padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">
+                                  0%<sup class="asm-forgiven-sup" style="color:#f59e0b;font-weight:900;font-size:0.65em;" title="Dimaafkan oleh Tutor — Tes telah dilewati">ᶠ</sup> FORGIVEN</span>`;
+                  actionBtn = `<div style="display:flex; align-items:center; gap:6px;">
+                                 <button onclick="location.href='test.html?test_id=${Test.id}'"
+                                  class="btn btn-practice"
+                                  style="background:rgba(245,158,11,0.12);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">📖 Practice</button>
+                               </div>`;
+                } else {
+                  const badgeBg = passed ? `rgba(${TOPSCORE_COLORS.STAR_RGB},0.15)` : `rgba(${TOPSCORE_COLORS.E_RGB},0.12)`;
+                  const badgeClr= passed ? (gradeColor || TOPSCORE_COLORS.STAR) : TOPSCORE_COLORS.E;
+                  const supHtml = isForgivenBest ? '<sup class="asm-forgiven-sup" style="color:#f59e0b;font-weight:900;font-size:0.65em;" title="Dimaafkan oleh Tutor">ᶠ</sup>'
+                    : (isManualBest ? '<sup class="asm-manual-sup" style="color:#38bdf8;font-weight:900;font-size:0.65em;" title="Manual Score">ᴹ</sup>'
+                    : (isRemedialBest ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''));
+
+                  statusBadge = `<span style="background:${badgeBg};color:${badgeClr};border:1px solid ${badgeClr}44;padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">
+                                  ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%${supHtml}</span>`;
+
+                  actionBtn = `<div style="display:flex; align-items:center;">
+                                 <button onclick="location.href='result.html?attempt_id=${best.id}'"
+                                  style="background:rgba(255,255,255,0.06);color:var(--clr-text-2);border:1px solid var(--clr-border);padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">View Result</button>
+                               </div>`;
+                }
               } else {
                 statusBadge = `<span style="background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">Not Started</span>`;
                 actionBtn   = `<button onclick="location.href='test.html?test_id=${Test.id}'"
@@ -1836,7 +1862,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               }
 
               const isTaskItem = !isExam(Test);
-              const taskVisual = isTaskItem ? getTaskProgressVisual(passCountByTest[Test.id] || 0) : null;
+              const taskVisual = isTaskItem ? getTaskProgressVisual(passCountByTest[Test.id] || 0, targetReps) : null;
               const taskProgressBadge = taskVisual
                 ? `<span class="task-progress-chip ${taskVisual.tierClass}" style="background:${taskVisual.bg};color:${taskVisual.color};border:1px solid ${taskVisual.border};">${taskVisual.text}</span>`
                 : '';
@@ -2026,7 +2052,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 const peRem = Boolean(peBest && (peBest.is_remedial_unlocked || peBest.is_remedial));
                 const pePct = peRem && peRawPct !== null ? Math.min(peRawPct, 60.0) : peRawPct;
                 const peMin = pe.minimum_required_score || pe.pass_threshold || 70;
-                const pePassed = pePct !== null && (pePct >= peMin || (peRem && pePct >= 60));
+                const pePassed = Boolean(peBest?.is_forgiven) || (pePct !== null && (pePct >= peMin || (peRem && pePct >= 60)));
                 if (!pePassed) {
                   prereqMet = false;
                   prereqTitle = `Theme ${priorTheme} Exams (Passed ≥${peMin}% required)`;
@@ -2108,7 +2134,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const pid = asm.prerequisite_id || asm.prerequisite_test_id || asm.prerequisite_Test_id;
           const prereqBest = bestByTest[pid];
           const prereqPct = prereqBest ? parseFloat(prereqBest.percentage || 0) : null;
-          prereqMet = prereqPct !== null && prereqPct >= (asm.prerequisite_min_score || 60);
+          prereqMet = Boolean(prereqBest?.is_forgiven) || (prereqPct !== null && prereqPct >= (asm.prerequisite_min_score || 60));
 
           const pObj = tests.find(a => a.id === pid);
           prereqTitle = pObj ? (pObj.title || pObj.Test_title || 'Prerequisite') : 'Prerequisite Test';
@@ -2756,7 +2782,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       try {
-        const sb = await (await import('./supabase.js?v=20261104_v117')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261104_v119')).getSupabase();
 
         // 1. Fetch active students in the same batch
         const { data: students, error: stuErr } = await sb
@@ -3153,7 +3179,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./supabase.js?v=20261104_v117')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261104_v119')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).maybeSingle();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
@@ -3208,7 +3234,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./supabase.js?v=20261104_v117')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261104_v119')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
 

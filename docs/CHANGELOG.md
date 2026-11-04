@@ -1,3 +1,52 @@
+## [2026-11-04 14:15] — Phase 305: Forgiven & Exam Manual Override Wizard (Pacing Adjustment)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 305
+**Status:** PASS
+
+### Why
+1. **Pacing Adjustment for Mid-Stream Batches**:
+   - The `2nd Vocabulary` class (Batch `Camp 134`) had been running for 2 weeks offline before joining the platform.
+   - The user wanted students to start directly from Week 3 (Theme C) without forcing them to sit through 8 computer tasks and 2 exams for Week 1 & 2.
+   - Deleting or unpublishing Week 1 & 2 tests was rejected because it would permanently destroy the curriculum and break batch portability for upcoming classes.
+   - Solusi B (Forgiven & Exam Manual Override Wizard) was selected via interactive `/grill-me` alignment and approved in `plan_forgiven_exam_manual_override.md`.
+
+### Changed
+1. **Database Schema & Backend API**:
+   - Migration `supabase/migrations/20261104130000_add_manual_override_column.sql`: verified `is_forgiven`, `forgiven_by`, `forgiven_at`, `forgiven_reason`, and added `is_manual_override` column to `attempts`.
+   - `js/api.js`:
+     - Added `adminApplyForgiven({ classId, studentIds, testActions, forgivenBy, reason })`: supports batch or student selection, marks formative tasks as forgiven (`0%ᶠ`), and supports offline milestone exam manual scoring (`%` and `PTS` with authoritative Rule 2.10 grading: e.g., 85% = Grade B).
+     - Added `adminRevokeForgiven({ classId, studentIds, testIds })`: revokes forgiven status and restores pristine attempt state.
+     - Protected `forgiven_by` UUID typing constraint by encoding tutor name `"Mr. Top"` into audit log payload and `forgiven_reason` (`[Mr. Top] Reason`).
+     - Exported `showToast` and updated cache buster to `v=20261104_v118`.
+2. **Admin Forgiven Wizard UI (`js/admin/forgiven-wizard-modal.js`)**:
+   - Built 2-step modal dialog:
+     - **Step 1: Pilih Siswa & Batch**: Batch dropdown filter, search input, quick select/clear all, dynamic chip count.
+     - **Step 2: Konfigurasi Task & Exam**: Formative tasks grouped by Theme (A, B, C, D) with quick toggle, milestone exam radio (`Abaikan`, `Forgive 0%ᶠ`, `Input Nilai Manual` with real-time bi-directional `%` $\leftrightarrow$ `PTS` synchronization), Admin name (`Mr. Top`), audit reason input, `⚡ Setel Cepat Pekan 1 & 2` 1-click preset button, and Revoke button.
+   - Integrated with Class Hub: added `🛡️ Forgiven & Override` button (`#btn-open-forgiven-wizard`) to Class Tests toolbar (`js/admin/app.js`).
+3. **Admin Roster Grid Matrix Superscripts (`js/admin/app.js`)**:
+   - Updated `renderAttendanceGridMatrix` across exam cells, task cells, and unified 3rd vocabulary cells.
+   - Renders superscript `.asm-forgiven-sup` (`ᶠ`, `#f59e0b`) for forgiven tasks/exams and `.asm-manual-sup` (`ᴹ`, `#38bdf8`) for manual overrides, with rich tooltip showing tutor name `"Mr. Top"`, date, and audit reason.
+4. **Student Gating & Dashboard Bypass (`js/dashboard.js`)**:
+   - Formative task gating: in `passCountByTest`, forgiven tasks are treated as having 7/7 passes, bypassing the 7×7 repetitive mastery gate.
+   - Inter-theme milestone exam gating: in prerequisite checks, forgiven exams unlock the subsequent theme tasks (e.g. Forgiven Exam B unlocks Task C1).
+   - Display: renders `0%ᶠ FORGIVEN` badge with `📖 Practice` button for unattempted forgiven tests, and displays `ᶠ` / `ᴹ` superscripts on student cards.
+5. **Styles & Cache Buster**:
+   - `css/admin.css` & `css/dashboard.css`: added styles for `.asm-forgiven-sup`, `.asm-manual-sup`, `.badge-forgiven`, and `.btn-practice`.
+   - Bumped cache buster to `v=20261104_v118` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/dashboard.js`, `js/result.js`, `js/test.js`, and `js/admin/app.js`.
+6. **Tests & Verification**:
+   - `node scripts/check_all_js_syntax.cjs`: 41/41 JS files PASS.
+   - `npm test`: 100% CI tests PASS (27 SW cache assets verified, ranking engine PASS).
+   - `scripts/test_forgiven_wizard_e2e.mjs`: Complete Playwright E2E verification PASS:
+     - Verified `adminApplyForgiven` updates `attempts` with `is_forgiven = true` and `[Mr. Top]` reason.
+     - Verified Exam A manual override: 85% = 102 PTS = Grade B per Rule 2.10.
+     - Verified UI modal opening and Step 1/2 workflow.
+     - Verified Roster superscript `ᶠ` rendering in Class Hub.
+     - Verified Revoke functionality.
+     - Captured and archived screenshots: `forgiven_wizard_modal_verified.png`, `class_hub_roster_forgiven_verified.png`, and `student_dashboard_forgiven_verified.png`.
+
+---
+
 ## [2026-11-04 11:45] — Phase 304: Task Question Count Clamping, Permanent 50px Banners, and Strict Level Class Isolation
 
 **Agent/Session:** Antigravity

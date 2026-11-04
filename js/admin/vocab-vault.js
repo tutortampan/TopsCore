@@ -1522,6 +1522,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
       <div class="bottom-info-chip"><span class="chip-label">Vault Items:</span><span class="chip-val">${words.length}</span></div>
     `;
     const rightHtml = `
+      <button class="btn btn-secondary btn-sm" id="btn-blueprint-bottom-settings" style="height: 30px; font-size: 11px; padding: 0 10px; font-weight: 700; background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.4); color: #38bdf8; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Test System Settings">⚙️ Test Settings</button>
       <button class="btn btn-secondary btn-sm" id="btn-blueprint-bottom-merge" style="height: 30px; font-size: 11px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.12); color: #f8fafc; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Merge Similar Topics">⚒️ Merge Topics</button>
       <button class="btn btn-primary btn-sm" id="btn-blueprint-bottom-autogen" style="background: var(--clr-primary); font-size: 11.5px; padding: 0 12px; height: 30px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(99,102,241,0.35); border: none; cursor: pointer; border-radius: 6px;" title="Auto-Generate Curriculum Tests">⚡ Auto-Generate</button>
     `;
@@ -1730,6 +1731,29 @@ function _renderTopicBlueprintTab(area, words, topics) {
   };
 
   bindRowActionHandlers();
+
+  // Bottom Buttons: Test System Settings
+  const btnSettingsBottom = document.getElementById('btn-blueprint-bottom-settings');
+  if (btnSettingsBottom) {
+    btnSettingsBottom.onclick = async () => {
+      try {
+        const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261104_v119');
+        await openTestSystemSettingsModal({
+          classId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
+          className: 'Curriculum Blueprint',
+          onComplete: () => {
+            if (typeof renderVocabularyVault === 'function') {
+              const container = document.getElementById('classes-detail-canvas');
+              if (container) renderVocabularyVault(container);
+            }
+          }
+        });
+      } catch (err) {
+        console.error(err);
+        if (window.showToast) window.showToast('Error opening test settings: ' + err.message, 'error');
+      }
+    };
+  }
 
   // Bottom Buttons: Auto-Generate
   const btnAutogenBottom = document.getElementById('btn-blueprint-bottom-autogen');

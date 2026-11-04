@@ -1,16 +1,16 @@
-import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261104_v117';
+import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261104_v119';
 /**
  * TopsCore — Test Engine Module
  * Extracted from test.html
  */
 
-import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261104_v117';
-    import { requireStudentSession } from './session.js?v=20261104_v117';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261104_v117';
-    import { startCountdown, isExpired } from './timer.js?v=20261104_v117';
-    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261104_v117';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261104_v117';
-    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261104_v117';
+import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261104_v119';
+    import { requireStudentSession } from './session.js?v=20261104_v119';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261104_v119';
+    import { startCountdown, isExpired } from './timer.js?v=20261104_v119';
+    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261104_v119';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261104_v119';
+    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261104_v119';
 
     // Arm wake lock gestures on first interaction
     bindWakeLockGestures();

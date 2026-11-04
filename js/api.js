@@ -1,15 +1,15 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
-import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=20261103_v111';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261103_v111';
-import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261103_v111';
-import { escapeHtml, escHtml } from './app.js?v=20261103_v111';
+import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=20261104_v119';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261104_v119';
+import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261104_v119';
+import { escapeHtml, escHtml, showToast } from './app.js?v=20261104_v119';
 
 export function getGrade(pct) {
   return calculateGrade(pct);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -591,19 +591,214 @@ export async function fetchStudentAttemptsForTest(studentId, testId) {
   return data || [];
 }
 
+// ============================================================
+// TEST SYSTEM SETTINGS & REPETITIVE MASTERY CONFIGURATION
+// ============================================================
+
+export async function fetchClassTestSettings(classId = null) {
+  const sb = await getSupabase();
+  const defaultSettings = {
+    taskRepetitions: 7,
+    taskMinScore: 70,
+    examMinScore: 60
+  };
+
+  const getLocal = (k) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) return window.localStorage.getItem(k);
+      if (typeof localStorage !== 'undefined') return localStorage.getItem(k);
+    } catch (_) {}
+    return null;
+  };
+
+  const setLocal = (k, v) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) window.localStorage.setItem(k, v);
+      else if (typeof localStorage !== 'undefined') localStorage.setItem(k, v);
+    } catch (_) {}
+  };
+
+  try {
+    const keys = ['default_test_system_settings'];
+    if (classId) keys.push(`class_test_settings_${classId}`);
+
+    const { data, error } = await sb.from('site_settings')
+      .select('key, value')
+      .in('key', keys);
+
+    if (!error && data && data.length > 0) {
+      const map = Object.fromEntries(data.map(r => [r.key, r.value]));
+      let raw = (classId && map[`class_test_settings_${classId}`]) || map['default_test_system_settings'];
+      if (raw) {
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const res = {
+          taskRepetitions: Math.max(1, parseInt(parsed.taskRepetitions, 10) || 7),
+          taskMinScore: Math.min(100, Math.max(1, parseInt(parsed.taskMinScore, 10) || 70)),
+          examMinScore: Math.min(100, Math.max(1, parseInt(parsed.examMinScore, 10) || 60))
+        };
+        if (classId) setLocal(`topscore_test_settings_${classId}`, JSON.stringify(res));
+        return res;
+      }
+    }
+  } catch (e) {
+    console.warn('[fetchClassTestSettings] site_settings query error, falling back:', e);
+  }
+
+  // Fallback 1: LocalStorage cache
+  if (classId) {
+    const local = getLocal(`topscore_test_settings_${classId}`);
+    if (local) {
+      try { return { ...defaultSettings, ...JSON.parse(local) }; } catch (_) {}
+    }
+  }
+  const globalLocal = getLocal('topscore_test_settings_global');
+  if (globalLocal) {
+    try { return { ...defaultSettings, ...JSON.parse(globalLocal) }; } catch (_) {}
+  }
+
+  // Fallback 2: Inspect existing class tests from DB
+  if (classId) {
+    try {
+      const { data: sampleTests } = await sb.from('tests')
+        .select('payload, minimum_required_score, test_type, shell_code, title')
+        .eq('class_id', classId)
+        .is('deleted_at', null)
+        .limit(15);
+
+      if (sampleTests && sampleTests.length > 0) {
+        const sampleTask = sampleTests.find(t => !isWeeklyExam(t));
+        const sampleExam = sampleTests.find(t => isWeeklyExam(t));
+        const derived = {
+          taskRepetitions: Math.max(1, parseInt(sampleTask?.payload?.task_repetitions, 10) || 7),
+          taskMinScore: Math.min(100, Math.max(1, parseInt(sampleTask?.minimum_required_score || sampleTask?.payload?.minimum_required_score, 10) || 70)),
+          examMinScore: Math.min(100, Math.max(1, parseInt(sampleExam?.minimum_required_score || sampleExam?.payload?.minimum_required_score, 10) || 60))
+        };
+        setLocal(`topscore_test_settings_${classId}`, JSON.stringify(derived));
+        return derived;
+      }
+    } catch (_) {}
+  }
+
+  return defaultSettings;
+}
+
+export async function saveClassTestSettings(classId, settings = {}, applyToExisting = false) {
+  const sb = await getSupabase();
+  const cleanSettings = {
+    taskRepetitions: Math.max(1, parseInt(settings.taskRepetitions, 10) || 7),
+    taskMinScore: Math.min(100, Math.max(1, parseInt(settings.taskMinScore, 10) || 70)),
+    examMinScore: Math.min(100, Math.max(1, parseInt(settings.examMinScore, 10) || 60))
+  };
+  const payloadStr = JSON.stringify(cleanSettings);
+
+  const isGlobal = settings.isGlobal || !classId;
+  const key = isGlobal ? 'default_test_system_settings' : `class_test_settings_${classId}`;
+
+  const setLocal = (k, v) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) window.localStorage.setItem(k, v);
+      else if (typeof localStorage !== 'undefined') localStorage.setItem(k, v);
+    } catch (_) {}
+  };
+
+  // 1. Save to localStorage cache
+  if (isGlobal) {
+    setLocal('topscore_test_settings_global', payloadStr);
+  }
+  if (classId) {
+    setLocal(`topscore_test_settings_${classId}`, payloadStr);
+  }
+
+  // 2. Try saving to site_settings (for production / authenticated)
+  try {
+    const { error } = await sb.from('site_settings').upsert({
+      key,
+      value: payloadStr,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'key' });
+
+    if (error) {
+      console.warn('[saveClassTestSettings] site_settings upsert note:', error.message);
+    }
+  } catch (err) {
+    console.warn('[saveClassTestSettings] Error:', err);
+  }
+
+  // 3. Persist into tests table for this class
+  let updatedCount = 0;
+  if (classId) {
+    try {
+      const { data: classTests } = await sb.from('tests')
+        .select('id, test_type, category, shell_code, title, payload')
+        .eq('class_id', classId)
+        .is('deleted_at', null);
+
+      if (classTests && classTests.length > 0) {
+        for (const t of classTests) {
+          const isExamTest = isWeeklyExam(t);
+          const newScore = isExamTest ? cleanSettings.examMinScore : cleanSettings.taskMinScore;
+          const updatedPayload = {
+            ...(t.payload || {}),
+            minimum_required_score: newScore,
+            min_score: newScore,
+            task_repetitions: cleanSettings.taskRepetitions
+          };
+
+          const updateFields = {
+            payload: updatedPayload
+          };
+          if (applyToExisting) {
+            updateFields.minimum_required_score = newScore;
+          }
+
+          await sb.from('tests').update(updateFields).eq('id', t.id);
+          updatedCount++;
+        }
+      }
+      clearApiCache('tests');
+    } catch (err) {
+      console.error('[saveClassTestSettings] Failed to apply to tests:', err);
+    }
+  }
+
+  return { success: true, settings: cleanSettings, updatedCount };
+}
+
+export async function updateTestPassingScore(testId, newScore) {
+  if (!testId) throw new Error('testId is required');
+  const validScore = Math.min(Math.max(parseInt(newScore, 10) || 60, 1), 100);
+  const sb = await getSupabase();
+
+  const { data: t } = await sb.from('tests').select('id, payload').eq('id', testId).single();
+  const updatedPayload = { ...(t?.payload || {}), minimum_required_score: validScore, min_score: validScore };
+
+  const { error } = await sb.from('tests').update({
+    minimum_required_score: validScore,
+    payload: updatedPayload
+  }).eq('id', testId);
+
+  if (error) throw error;
+  clearApiCache('tests');
+  return { success: true, newScore: validScore };
+}
+
 /**
- * Fetch count of successful attempts (percentage >= 70%) for each task of a student.
- * Used for the 7×7 Repetitive Mastery Engine.
+ * Fetches pass counts for tasks completed by a student.
+ * Dynamically evaluates against class-configured task repetitions and minimum score.
  *
  * @param {string} studentId
- * @param {string|null} classId Optional filter for class
- * @returns {Promise<Record<string, number>>} Map of test_id -> passCount (number of passes >= 70%)
+ * @param {string|null} classId
+ * @returns {Promise<Record<string, number>>} Map of test_id -> passCount
  */
 export async function fetchStudentTaskPassCounts(studentId, classId = null) {
   if (!studentId) return {};
   const sb = await getSupabase();
+  const testSettings = await fetchClassTestSettings(classId);
+  const targetReps = Number(testSettings?.taskRepetitions) || 7;
+  const taskMinScore = Number(testSettings?.taskMinScore) || 70;
+
   let query = sb.from('attempts')
-    .select('test_id, percentage, score, status, tests!inner(id, class_id, test_type, category, test_subtype)')
+    .select('test_id, percentage, score, status, is_forgiven, tests!inner(id, class_id, test_type, category, test_subtype)')
     .eq('student_id', studentId)
     .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
 
@@ -615,15 +810,19 @@ export async function fetchStudentTaskPassCounts(studentId, classId = null) {
   if (error || !data) {
     // Fallback: fetch attempts directly without inner join
     const { data: fallbackAtts } = await sb.from('attempts')
-      .select('test_id, percentage, score, status')
+      .select('test_id, percentage, score, status, is_forgiven')
       .eq('student_id', studentId)
       .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
     const passCounts = {};
     for (const a of (fallbackAtts || [])) {
       if (!a.test_id) continue;
-      const pct = parseFloat(a.percentage ?? a.score ?? 0);
-      if (pct >= 70) {
-        passCounts[a.test_id] = (passCounts[a.test_id] || 0) + 1;
+      if (a.is_forgiven) {
+        passCounts[a.test_id] = Math.max(passCounts[a.test_id] || 0, targetReps);
+      } else {
+        const pct = parseFloat(a.percentage ?? a.score ?? 0);
+        if (pct >= taskMinScore) {
+          passCounts[a.test_id] = (passCounts[a.test_id] || 0) + 1;
+        }
       }
     }
     return passCounts;
@@ -632,9 +831,13 @@ export async function fetchStudentTaskPassCounts(studentId, classId = null) {
   const passCounts = {};
   for (const a of data) {
     if (!a.test_id) continue;
-    const pct = parseFloat(a.percentage ?? a.score ?? 0);
-    if (pct >= 70) {
-      passCounts[a.test_id] = (passCounts[a.test_id] || 0) + 1;
+    if (a.is_forgiven) {
+      passCounts[a.test_id] = Math.max(passCounts[a.test_id] || 0, targetReps);
+    } else {
+      const pct = parseFloat(a.percentage ?? a.score ?? 0);
+      if (pct >= taskMinScore) {
+        passCounts[a.test_id] = (passCounts[a.test_id] || 0) + 1;
+      }
     }
   }
   return passCounts;
@@ -1049,7 +1252,7 @@ export async function startTest(studentId, testId) {
     }
   }
 
-  // Guard: 7×7 Repetitive Mastery Hard Gate: Taking an Exam requires 7 passes (>= 70%) on all sibling Tasks
+  // Guard: Repetitive Mastery Hard Gate: Taking an Exam requires dynamic target passes on all sibling Tasks
   if (isWeeklyExam(asmData) && !isStandaloneTryout) {
     const themeCode = asmData.payload?.theme_code || (asmData.shell_code ? asmData.shell_code.replace(/^[0-9]+/, '').charAt(0) : null);
     if (themeCode) {
@@ -1067,25 +1270,33 @@ export async function startTest(studentId, testId) {
       });
 
       if (themeTasks.length > 0) {
+        const testSettings = await fetchClassTestSettings(asmData.class_id);
+        const targetReps = Number(testSettings?.taskRepetitions) || 7;
+        const taskMinScore = Number(testSettings?.taskMinScore) || 70;
+
         const taskIds = themeTasks.map(t => t.id);
         const { data: taskAttempts } = await sb.from('attempts')
-          .select('test_id, percentage, effective_score, status')
+          .select('test_id, percentage, effective_score, status, is_forgiven')
           .eq('student_id', studentId)
           .in('test_id', taskIds)
           .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
 
         const passCountByTask = {};
         (taskAttempts || []).forEach(att => {
-          const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-          if (pct >= 70) {
-            passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
+          if (att.is_forgiven) {
+            passCountByTask[att.test_id] = Math.max(passCountByTask[att.test_id] || 0, targetReps);
+          } else {
+            const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+            if (pct >= taskMinScore) {
+              passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
+            }
           }
         });
 
-        const unmasteredTask = themeTasks.find(t => (passCountByTask[t.id] || 0) < 7);
+        const unmasteredTask = themeTasks.find(t => (passCountByTask[t.id] || 0) < targetReps);
         if (unmasteredTask) {
-          const mErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (7 passes with at least 70%) on all Theme Tasks before taking the Exam.`);
-          mErr.code = 'MASTERY_7X7_NOT_MET';
+          const mErr = new Error(`Prerequisite not completed. You must achieve Repetitive Mastery (${targetReps} passes with at least ${taskMinScore}%) on all Theme Tasks before taking the Exam.`);
+          mErr.code = 'MASTERY_REPETITION_NOT_MET';
           mErr.status = 403;
           throw mErr;
         }
@@ -3477,6 +3688,318 @@ export async function adminOverridePrerequisitesWithRemedial({
   };
 }
 
+/**
+ * Phase 305: Forgiven & Exam Manual Override
+ * Apply 'forgiven' flag to selected tests for selected students.
+ * Also supports manual score input for EXAM type tests.
+ */
+export async function adminApplyForgiven({
+  classId,
+  studentIds = [],
+  testActions = [],   // [{ testId, action: 'forgive'|'manual', percentage, score }]
+  forgivenBy = 'Mr. Top',
+  reason = 'Pacing Adjustment'
+}) {
+  const sb = await getSupabase();
+  if (!classId) throw new Error('classId is required for Forgiven / Override.');
+  if (!studentIds.length) throw new Error('No students selected.');
+  if (!testActions.length) throw new Error('No test actions specified.');
+
+  const nowIso = new Date().toISOString();
+  const inserts = [];
+  const updates = [];
+  const affectedSet = new Set();
+
+  const testIds = testActions.map(ta => ta.testId);
+  const { data: existing, error: existErr } = await sb
+    .from('attempts')
+    .select('id, student_id, test_id, status, score, percentage, effective_score, total_questions, is_best_score, is_forgiven, forgiven_by, forgiven_at, forgiven_reason, is_remedial_unlocked')
+    .in('student_id', studentIds)
+    .in('test_id', testIds);
+  if (existErr) throw existErr;
+
+  const byStudentTest = {};
+  (existing || []).forEach(a => {
+    const k = `${a.student_id}_${a.test_id}`;
+    if (!byStudentTest[k]) byStudentTest[k] = [];
+    byStudentTest[k].push(a);
+  });
+
+  // Fetch test metadata for totalQ
+  const { data: testMeta, error: metaErr } = await sb
+    .from('tests')
+    .select('id, shell_code, test_type, payload')
+    .in('id', testIds);
+  if (metaErr) throw metaErr;
+
+  const testMetaMap = {};
+  (testMeta || []).forEach(t => { testMetaMap[t.id] = t; });
+
+  const _gradeForScore = (pct) => {
+    if (pct >= 100) return '★';
+    if (pct >= 90)  return 'A';
+    if (pct >= 80)  return 'B';
+    if (pct >= 60)  return 'C';
+    if (pct >= 30)  return 'D';
+    return 'E';
+  };
+
+  const isUuid = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  const validForgivenBy = isUuid(forgivenBy) ? forgivenBy : null;
+  const adminLabel = (forgivenBy || 'Mr. Top').trim();
+
+  for (const sId of studentIds) {
+    for (const ta of testActions) {
+      const { testId, action, percentage: inputPct, score: inputScore } = ta;
+      const k = `${sId}_${testId}`;
+      const existingAtts = byStudentTest[k] || [];
+      const meta = testMetaMap[testId];
+      const isExamTest = isWeeklyExam(meta);
+      const totalQ = Number(meta?.payload?.total_questions || (isExamTest ? 120 : 40));
+
+      if (action === 'forgive') {
+        const forgiveReasonText = `[${adminLabel}] ${(reason || 'Pacing Adjustment').trim()}`;
+        const submittedAtts = existingAtts.filter(a =>
+          ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
+        );
+
+        if (submittedAtts.length > 0) {
+          submittedAtts.sort((x, y) => Number(y.percentage || y.score || 0) - Number(x.percentage || x.score || 0));
+          const topAtt = submittedAtts[0];
+          updates.push({
+            id: topAtt.id,
+            is_forgiven: true,
+            forgiven_by: validForgivenBy,
+            forgiven_at: nowIso,
+            forgiven_reason: forgiveReasonText,
+            is_best_score: true,
+            updated_at: nowIso
+          });
+          // Ensure other attempts for this test have is_best_score = false
+          existingAtts.forEach(att => {
+            if (att.id !== topAtt.id && att.is_best_score) {
+              updates.push({ id: att.id, is_best_score: false, updated_at: nowIso });
+            }
+          });
+        } else if (existingAtts.length > 0) {
+          // Has existing non-submitted/in_progress attempt: complete it as forgiven
+          const topAtt = existingAtts[0];
+          updates.push({
+            id: topAtt.id,
+            status: 'submitted',
+            score: 0,
+            correct_count: 0,
+            total_questions: totalQ,
+            percentage: 0,
+            effective_score: 0,
+            grade: 'E',
+            is_best_score: true,
+            is_forgiven: true,
+            forgiven_by: validForgivenBy,
+            forgiven_at: nowIso,
+            forgiven_reason: forgiveReasonText,
+            updated_at: nowIso
+          });
+        } else {
+          inserts.push({
+            student_id: sId,
+            test_id: testId,
+            attempt_number: 1,
+            started_at: nowIso,
+            expires_at: nowIso,
+            submitted_at: nowIso,
+            status: 'submitted',
+            score: 0,
+            correct_count: 0,
+            total_questions: totalQ,
+            percentage: 0,
+            effective_score: 0,
+            grade: 'E',
+            is_best_score: true,
+            is_forgiven: true,
+            forgiven_by: validForgivenBy,
+            forgiven_at: nowIso,
+            forgiven_reason: forgiveReasonText,
+            created_at: nowIso,
+            updated_at: nowIso
+          });
+        }
+        affectedSet.add(`${sId}_${testId}`);
+
+      } else if (action === 'manual') {
+        const pct = Math.max(0, Math.min(100, Number(inputPct) || 0));
+        const sc = inputScore != null
+          ? Number(inputScore)
+          : Math.round(totalQ * (pct / 100) * 10) / 10;
+        const grade = _gradeForScore(pct);
+        const manualReason = `MANUAL_OVERRIDE: ${pct}% (${sc}/${totalQ} PTS) by ${adminLabel}${reason ? ': ' + reason.trim() : ''}`;
+
+        const submittedAtts = existingAtts.filter(a =>
+          ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
+        );
+
+        if (submittedAtts.length > 0) {
+          submittedAtts.sort((x, y) => Number(y.percentage || y.score || 0) - Number(x.percentage || x.score || 0));
+          const topAtt = submittedAtts[0];
+          updates.push({
+            id: topAtt.id,
+            score: sc,
+            correct_count: Math.round(sc),
+            total_questions: totalQ,
+            percentage: pct,
+            effective_score: sc,
+            grade,
+            status: 'submitted',
+            is_best_score: true,
+            is_forgiven: false,
+            forgiven_by: validForgivenBy,
+            forgiven_at: nowIso,
+            forgiven_reason: manualReason,
+            updated_at: nowIso
+          });
+        } else {
+          inserts.push({
+            student_id: sId,
+            test_id: testId,
+            attempt_number: 1,
+            started_at: nowIso,
+            expires_at: nowIso,
+            submitted_at: nowIso,
+            status: 'submitted',
+            score: sc,
+            correct_count: Math.round(sc),
+            total_questions: totalQ,
+            percentage: pct,
+            effective_score: sc,
+            grade,
+            is_best_score: true,
+            is_forgiven: false,
+            forgiven_by: validForgivenBy,
+            forgiven_at: nowIso,
+            forgiven_reason: manualReason,
+            created_at: nowIso,
+            updated_at: nowIso
+          });
+        }
+        affectedSet.add(`${sId}_${testId}`);
+      }
+    }
+  }
+
+  // Execute inserts in safe chunks
+  const CHUNK = 40;
+  for (let i = 0; i < inserts.length; i += CHUNK) {
+    const batch = inserts.slice(i, i + CHUNK);
+    const { error: insErr } = await sb.from('attempts').insert(batch);
+    if (insErr) {
+      console.error('[adminApplyForgiven] Insert error:', insErr);
+      throw insErr;
+    }
+  }
+
+  // Execute updates
+  for (const u of updates) {
+    const { id, ...fields } = u;
+    const { error: updErr } = await sb.from('attempts').update(fields).eq('id', id);
+    if (updErr) {
+      console.error('[adminApplyForgiven] Update error:', updErr);
+      throw updErr;
+    }
+  }
+
+  // Audit log per Rule 2.19
+  try {
+    await sb.from('audit_logs').insert({
+      actor_role: 'ADMIN',
+      action: 'FORGIVEN_OVERRIDE',
+      entity_type: 'class',
+      entity_id: classId,
+      new_value: {
+        forgivenBy,
+        reason,
+        studentCount: studentIds.length,
+        testCount: testActions.length,
+        actions: testActions.map(ta => ({ testId: ta.testId, action: ta.action })),
+        createdCount: inserts.length,
+        updatedCount: updates.length
+      },
+      created_at: nowIso
+    });
+  } catch (auditErr) {
+    console.warn('[adminApplyForgiven] Audit log warning:', auditErr);
+  }
+
+  clearAdminCache('attempts');
+  clearAdminCache('tests');
+
+  return {
+    success: true,
+    createdCount: inserts.length,
+    updatedCount: updates.length,
+    affectedCount: affectedSet.size
+  };
+}
+
+/**
+ * Phase 305: Revoke all Forgiven/Manual attempts for selected students + tests.
+ * Removes the is_forgiven flag or deletes synthetic attempts if score was 0.
+ */
+export async function adminRevokeForgiven({ classId, studentIds = [], testIds = [] }) {
+  const sb = await getSupabase();
+  if (!classId || !studentIds.length || !testIds.length) {
+    throw new Error('classId, studentIds, and testIds are all required for revoke.');
+  }
+
+  const { data: targets, error } = await sb
+    .from('attempts')
+    .select('id, score, percentage, is_forgiven, forgiven_reason, forgiven_by')
+    .in('student_id', studentIds)
+    .in('test_id', testIds);
+  if (error) throw error;
+
+  const forgivenTargets = (targets || []).filter(a =>
+    a.is_forgiven || (a.forgiven_reason && a.forgiven_reason.startsWith('MANUAL_OVERRIDE'))
+  );
+
+  const toDelete = forgivenTargets.filter(a => a.is_forgiven && Number(a.score || 0) === 0);
+  const toReset = forgivenTargets.filter(a => !toDelete.includes(a));
+
+  const nowIso = new Date().toISOString();
+
+  if (toDelete.length > 0) {
+    const { error: delErr } = await sb.from('attempts').delete().in('id', toDelete.map(a => a.id));
+    if (delErr) throw delErr;
+  }
+
+  for (const a of toReset) {
+    await sb.from('attempts').update({
+      is_forgiven: false,
+      forgiven_by: null,
+      forgiven_at: null,
+      forgiven_reason: null,
+      updated_at: nowIso
+    }).eq('id', a.id);
+  }
+
+  try {
+    await sb.from('audit_logs').insert({
+      actor_role: 'ADMIN',
+      action: 'FORGIVEN_REVOKE',
+      entity_type: 'class',
+      entity_id: classId,
+      new_value: { studentIds, testIds, deletedCount: toDelete.length, resetCount: toReset.length },
+      created_at: nowIso
+    });
+  } catch (auditErr) {
+    console.warn('[adminRevokeForgiven] Audit log warning:', auditErr);
+  }
+
+  clearAdminCache('attempts');
+  clearAdminCache('tests');
+
+  return { success: true, deletedCount: toDelete.length, resetCount: toReset.length };
+}
+
 export const toOrdinal = (n) => {
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
@@ -4881,6 +5404,11 @@ if (typeof window !== 'undefined') {
   window.closeTestSession = closeTestSession;
   window.checkStudentTestAccess = checkStudentTestAccess;
   window.adminOverridePrerequisitesWithRemedial = adminOverridePrerequisitesWithRemedial;
+  window.adminApplyForgiven = adminApplyForgiven;
+  window.adminRevokeForgiven = adminRevokeForgiven;
+  window.fetchClassTestSettings = fetchClassTestSettings;
+  window.saveClassTestSettings = saveClassTestSettings;
+  window.updateTestPassingScore = updateTestPassingScore;
 }
 
 
