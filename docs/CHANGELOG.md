@@ -1,3 +1,33 @@
+## [2026-11-04 23:30] — Phase 311: Dual-Column Prerequisite Synchronization & Test Prerequisite Update Fix
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 311
+**Status:** PASS
+
+### Why
+- The user reported an issue where editing a test's prerequisite in the Edit Test modal (e.g., setting `2nd Vocabulary C1 Words Task` prerequisite to "None (Optional)") appeared to succeed in the modal, but the table still displayed `⚠️ 2B-WORDS-EXAM` as the prerequisite.
+- Root Cause:
+  1. The `tests` table in Supabase contains two columns for prerequisite linking: `prerequisite_test_id` and legacy `prerequisite_id`.
+  2. In `js/admin/crud-modals.js`: The form only updated `prerequisite_test_id = null`, but did not touch `prerequisite_id` (which remained `'90308450-e456-4070-9e55-96ce2c26fa31'`).
+  3. When rendering the table in `js/admin/app.js` (`renderClassHub`): `const prereqId = r?.prerequisite_test_id || r?.prerequisite_id;` fell back to `prerequisite_id`, so `2B-WORDS-EXAM` never disappeared.
+  4. In `crud-modals.js`: Opening the modal checked `!record || !record.prerequisite_test_id`, ignoring `prerequisite_id` and erroneously defaulting to "None (Optional)".
+
+### Changed
+1. **API Layer (`js/api.js`)**:
+   - In both `adminInsert` and `adminUpdate` for table `'tests'`, enforce bi-directional synchronization between `prerequisite_test_id` and `prerequisite_id` so they can never become desynchronized.
+2. **Modal Form Controller (`js/admin/crud-modals.js`)**:
+   - Reading: Evaluates `record ? (record.prerequisite_test_id || record.prerequisite_id || null) : null` to correctly show the current active prerequisite in the select dropdown.
+   - Shell Code Prefix: Added `[${e.shell_code}]` prefix to test options for crystal-clear identification by tutors.
+   - Saving: Sets `payload.prerequisite_id = payload.prerequisite_test_id` so both columns are updated together.
+   - Error Retries: Deletes both columns together if a column error occurs.
+3. **Database State (`public.tests`)**:
+   - Synchronized `2nd Vocabulary C1 Words Task` (`2C1-WORDS-TASK`): set both `prerequisite_test_id = null` and `prerequisite_id = null`.
+   - Synchronized `3rd Vocabulary A1 Phrases Task` (`3A1-PHRASES-TASK`): set `prerequisite_id = '2439a060-2292-4280-a70e-5cfb15b93065'`.
+   - Verified 0 remaining column mismatches across all active tests in Supabase.
+4. **Verification**:
+   - E2E Playwright test (`scripts/test_prerequisite_update_e2e.mjs`): PASS (100% verified: C1 row shows "—" with no warning badge).
+   - 42/42 JS syntax checks: PASS.
+
 ## [2026-11-04 19:20] — Phase 310: Student Dashboard Blueprint Alignment & Dual-Panel Completed Tests with Retry
 
 **Agent/Session:** Antigravity

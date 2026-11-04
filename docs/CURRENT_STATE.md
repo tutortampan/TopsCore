@@ -1,11 +1,27 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-04 19:20 UTC+8
-Current Phase: Phase 310: Student Dashboard Blueprint Alignment & Dual-Panel Completed Tests with Retry [COMPLETE]
+Last Updated: 2026-11-04 23:30 UTC+8
+Current Phase: Phase 311: Dual-Column Prerequisite Synchronization & Test Prerequisite Update Fix [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Phase 310: Student Dashboard Blueprint Alignment & Dual-Panel Completed Tests with Retry [COMPLETE]:**
+1. **Phase 311: Dual-Column Prerequisite Synchronization & Test Prerequisite Update Fix [COMPLETE]:**
+   - **Root Cause Resolution**:
+     - Database table `tests` contains both `prerequisite_test_id` and legacy `prerequisite_id`.
+     - `crud-modals.js` only updated `prerequisite_test_id` and left `prerequisite_id` stale, causing table fallback `r.prerequisite_test_id || r.prerequisite_id` to continue displaying the old prerequisite.
+   - **Dual-Column Synchronization (`js/api.js` & `js/admin/crud-modals.js`)**:
+     - Enforced bi-directional synchronization in `adminInsert` and `adminUpdate` for table `'tests'`.
+     - Updated `openCrudModal` to resolve existing prerequisite across both columns and display `[${shell_code}]` prefix in dropdown.
+     - Updated save handler to pass both `prerequisite_test_id` and `prerequisite_id`.
+   - **Database State (`public.tests`)**:
+     - Synchronized `2C1-WORDS-TASK` (`prerequisite_test_id = null`, `prerequisite_id = null`).
+     - Synchronized `3A1-PHRASES-TASK` (`prerequisite_id = '2439a060-2292-4280-a70e-5cfb15b93065'`).
+     - Zero mismatches remaining across active tests.
+   - **Verification**:
+     - `scripts/test_prerequisite_update_e2e.mjs`: PASS (100% verified: C1 row shows "—" with no warning badge).
+     - 42/42 JS syntax checks: PASS.
+
+2. **Phase 310: Student Dashboard Blueprint Alignment & Dual-Panel Completed Tests with Retry [COMPLETE]:**
    - **Student Dashboard Blueprint Height Alignment (`dashboard.html`, `css/dashboard.css`)**:
      - Top Bar: strict `50px`.
      - Students Metadata Card: strict `150px`.
@@ -14,7 +30,7 @@ Status: COMPLETE
      - Repetition Points Row: strict `40px` (7 square boxes for Vocab, or last assessment for non-vocab).
      - Next Assessment Bar: strict `40px` (full title on left, REPEAT / LOCK / GO on right).
      - Dynamic Dual-Panel Card: `flex: 1 1 0%` (absorbs dynamic remaining screen space).
-     - Bottom Banner: strict `50px` (`TopsCore © 2026 | Created by Mr. Top`).
+     - Bottom Banner: strict `50px` (`TopsCore Â© 2026 | Created by Mr. Top`).
      - Vertical Gaps: uniform `10px` across the entire layout with zero window scroll.
    - **Section 7 Dual-Panel System with Completed Tests & Retry Button (`js/dashboard.js`, `dashboard.html`)**:
      - Dual-tab header with `#btn-dock-standings` (`RANKING : MY RANK`) and `#btn-dock-completed` (`COMPLETED TESTS`).
@@ -24,7 +40,7 @@ Status: COMPLETE
      - Interactive `Retry` button (`btn-retry-test`) positioned directly beside each score, triggering `test.html?id=<testId>`.
      - State persistence across reloads via `sessionStorage` (`topscore_dock_tab`).
    - **Dynamic Theme & Border Color Directive**:
-     - Dashboard cards dynamically inherit `--tier-color` and `--tier-rgb` with radial gradient background aura based on the student's overall evaluation grade (`★`, `A`, `B`, `C`, `D`, `E`).
+     - Dashboard cards dynamically inherit `--tier-color` and `--tier-rgb` with radial gradient background aura based on the student's overall evaluation grade (`â˜…`, `A`, `B`, `C`, `D`, `E`).
    - **Verification & Tests**:
      - 42/42 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
      - 100% CI test suite PASS (`npm test`).
@@ -44,21 +60,21 @@ Status: COMPLETE
      - Persistent save controller: `window.saveRowManualInput`, `window.toggleRowManualInput`, and `window.toggleAllManualInputMode` calling `adminApplyForgiven` (`action: 'manual'`) with tutor name `"Mr. Top"` and audit logging.
    - **Header & Column Redesign**:
      - Super header changed to `"MANUAL INPUT"` (`super-hdr-manual-input`) across both THEME VIEW and ALL VIEW.
-     - Header sub-tag: clickable toggle badge (`🟢 ON` / `⚪ OFF`) allowing tutors to toggle all rows at once.
-     - Row action button: replaced with interactive toggle button `✏️ EDIT` (when inactive) and `💾 SAVE` (when active).
+     - Header sub-tag: clickable toggle badge (`ðŸŸ¢ ON` / `âšª OFF`) allowing tutors to toggle all rows at once.
+     - Row action button: replaced with interactive toggle button `âœï¸ EDIT` (when inactive) and `ðŸ’¾ SAVE` (when active).
    - **Inline Cells Transformation**:
      - When active: Exam Score % and Exam Points cells transform into sleek `<input type="number">` fields.
      - Real-time calculation: typing 80 in Score % auto-populates 96 in Points (out of 120), and vice versa.
-     - On Save or Enter: updates Supabase database, re-renders grid, grants authentic Grade (e.g. Grade B `#95ff00`) and Points (96 PTS), displays `ᴹ` superscript, and closes manual input mode back to `✏️ EDIT`.
+     - On Save or Enter: updates Supabase database, re-renders grid, grants authentic Grade (e.g. Grade B `#95ff00`) and Points (96 PTS), displays `á´¹` superscript, and closes manual input mode back to `âœï¸ EDIT`.
    - **Verification & Tests**:
      - 42/42 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
      - 100% CI test suite PASS (`npm test`).
      - Playwright E2E verification PASS (`scripts/test_manual_input_matrix_e2e.mjs`):
-       - Verified super header `"MANUAL INPUT"` and `"⚪ OFF"` badge.
-       - Verified clicking `"✏️ EDIT"` on `Abdul Basit` opens inputs and changes button to `"💾 SAVE"`.
+       - Verified super header `"MANUAL INPUT"` and `"âšª OFF"` badge.
+       - Verified clicking `"âœï¸ EDIT"` on `Abdul Basit` opens inputs and changes button to `"ðŸ’¾ SAVE"`.
        - Verified typing `80` in score input calculates `96` in points input.
-       - Verified clicking `"💾 SAVE"` persists to Supabase and updates matrix (`80%ᴹ`, `96` PTS, Grade `B`).
-       - Verified button returns to `"✏️ EDIT"`.
+       - Verified clicking `"ðŸ’¾ SAVE"` persists to Supabase and updates matrix (`80%á´¹`, `96` PTS, Grade `B`).
+       - Verified button returns to `"âœï¸ EDIT"`.
        - Verified ALL VIEW also supports `"MANUAL INPUT"`.
        - Screenshots archived: `manual_input_active_editing_verified.png`, `manual_input_saved_verified.png`, and `manual_input_all_view_verified.png`.
    - **Cache Buster**: Bumped to `v=20261104_v122` across HTML pages and core JS modules.
@@ -99,7 +115,7 @@ Status: COMPLETE
      - Super Header 1: `[THEME NAME]` spanning over `TOPIC 1 | TOPIC 2 | TOPIC 3 | TOPIC 4 ...` (formative tasks).
        - Cell content: strictly high-contrast repetition progress badge (`7/7`, `6/6`, `1/6`, `0/6`), removing stacked `0%` text for clean readability.
      - Super Header 2: `EXAM` spanning over `SCORE | POINTS` (removes duplicate `TOT SCORE %` and `PTS EXAM PTS` columns).
-     - Super Header 3: `ACTION` with sub-column `BUTTON` (eye icon button `👁️` linking to student profile).
+     - Super Header 3: `ACTION` with sub-column `BUTTON` (eye icon button `ðŸ‘ï¸` linking to student profile).
    - **ALL VIEW (`selectedTheme === 'ALL'`)**:
      - Formative drill tasks are completely hidden.
      - Each active theme displays a compact 2-column block:
@@ -111,11 +127,11 @@ Status: COMPLETE
      - Full Playwright E2E verification PASS (`scripts/test_matrix_theme_and_all_view_e2e.mjs`):
        - Verified Student Details column order (`PROGRESS | POINTS | GRADE`).
        - Verified Student "Test" has Points 102 and Grade B.
-       - Verified Topic cells render strictly clean repetition badges (e.g. `1/6`, `6/6ᶠ`).
+       - Verified Topic cells render strictly clean repetition badges (e.g. `1/6`, `6/6á¶ `).
        - Verified Super Headers (`STUDENT DETAILS | THEME A | EXAM | ACTION`).
        - Verified duplicate TOT/PTS columns eliminated.
        - Verified ALL VIEW has exactly 15 columns with formative tasks hidden.
-       - Verified Theme A exam score `85%ᶠ` and `102` in ALL VIEW.
+       - Verified Theme A exam score `85%á¶ ` and `102` in ALL VIEW.
        - Screenshots captured and archived: `theme_view_verified.png` and `all_view_verified.png`.
    - **Cache Buster**: Bumped to `v=20261104_v120` across HTML pages and core JS modules.
 
@@ -125,19 +141,19 @@ Status: COMPLETE
      - Multi-tier settings persistence in `js/api.js`: `fetchClassTestSettings` and `saveClassTestSettings` support `site_settings` table, `localStorage` fallback, and inspection of `tests` table in DB (`minimum_required_score` and `payload.task_repetitions`).
      - Dynamic gating in `js/dashboard.js` and `js/api.js`: uses configured `targetReps` (e.g. 6) and `taskMinScore` (e.g. 50%) for task completion and topic gating.
    - **Attendance Matrix Repetition Progress**:
-     - In `js/admin/app.js` (`renderAttendanceGridMatrix`): Vertically stacked `.asm-cell-task-wrap` in each topic column (`1, 2, 3, etc.`) rendering both the percentage score (`roundPct%` with `ᶠ`/`ᴹ`/`ᴿ`) and high-contrast repetition badge `.asm-rep-badge` (`passCount/targetReps`).
+     - In `js/admin/app.js` (`renderAttendanceGridMatrix`): Vertically stacked `.asm-cell-task-wrap` in each topic column (`1, 2, 3, etc.`) rendering both the percentage score (`roundPct%` with `á¶ `/`á´¹`/`á´¿`) and high-contrast repetition badge `.asm-rep-badge` (`passCount/targetReps`).
      - Badges dynamically color-code: green (`#00c000`) when complete, cyan (`#38bdf8`) when in progress, muted slate (`#64748b`) when unattempted.
    - **Inline Blueprint Exam Passing Score Column**:
      - In the Blueprint / Class Tests table, replaced static text with `<input type="number" class="input-test-pass-score" ...>`.
-     - Typing any percentage (1–100%) and pressing Enter or blurring automatically invokes `updateTestPassingScore(testId, newVal)` and updates the database record immediately.
+     - Typing any percentage (1â€“100%) and pressing Enter or blurring automatically invokes `updateTestPassingScore(testId, newVal)` and updates the database record immediately.
    - **Centralized Test System Settings Panel**:
      - Built `js/admin/test-system-settings-modal.js` modal dialog allowing tutors to configure:
-       - Target Repetitions (1–10x)
-       - Task Minimum Passing Score (1–100%)
-       - Exam Minimum Passing Score (1–100%)
+       - Target Repetitions (1â€“10x)
+       - Task Minimum Passing Score (1â€“100%)
+       - Exam Minimum Passing Score (1â€“100%)
        - Scope Selection (This Class vs Global Default)
        - Batch Apply Checkbox to update all existing tests in the class.
-     - Accessible via `⚙️ Test System Settings` button (`#btn-open-blueprint-settings`) in Class Tests tab and `⚙️ Test Settings` button (`#btn-blueprint-bottom-settings`) in Vocabulary Vault Blueprint.
+     - Accessible via `âš™ï¸ Test System Settings` button (`#btn-open-blueprint-settings`) in Class Tests tab and `âš™ï¸ Test Settings` button (`#btn-blueprint-bottom-settings`) in Vocabulary Vault Blueprint.
    - **Verification & Tests**:
      - 42/42 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
      - 100% CI test suite PASS (`npm test`).
@@ -152,25 +168,25 @@ Status: COMPLETE
 
 2. **Phase 305: Forgiven & Exam Manual Override Wizard (Pacing Adjustment) [COMPLETE]:**
    - **Context & Motivation**:
-     - Class `2nd Vocabulary` (Batch `Camp 134`) already ran for 2 weeks offline. The tutor required students to begin directly from Week 3 (Theme C) without taking Week 1–2 tests online, while preserving curriculum integrity for future batches.
+     - Class `2nd Vocabulary` (Batch `Camp 134`) already ran for 2 weeks offline. The tutor required students to begin directly from Week 3 (Theme C) without taking Week 1â€“2 tests online, while preserving curriculum integrity for future batches.
      - Implemented Solusi B: a 2-step Forgiven & Manual Override Wizard accessible from Class Hub (`admin.html#class-hub`).
    - **Backend API & Database**:
      - Migration `supabase/migrations/20261104130000_add_manual_override_column.sql`: validated `is_forgiven`, `forgiven_by`, `forgiven_at`, `forgiven_reason`, and `is_manual_override`.
-     - `adminApplyForgiven` & `adminRevokeForgiven` in `js/api.js`: full support for batch/student filtering, forgiving formative tasks (`0%ᶠ`), and manual exam scoring with Rule 2.10 grading enforcement (85% = Grade B, 102 PTS). Admin name `"Mr. Top"` embedded in audit logs and attempt reasons.
+     - `adminApplyForgiven` & `adminRevokeForgiven` in `js/api.js`: full support for batch/student filtering, forgiving formative tasks (`0%á¶ `), and manual exam scoring with Rule 2.10 grading enforcement (85% = Grade B, 102 PTS). Admin name `"Mr. Top"` embedded in audit logs and attempt reasons.
    - **Admin Wizard UI (`js/admin/forgiven-wizard-modal.js`)**:
      - Step 1: Batch dropdown filter, search input, quick select/clear all, dynamic chip count.
-     - Step 2: Formative tasks grouped by Theme (A, B, C, D) with theme toggles, milestone exam radio (`Abaikan`, `Forgive 0%ᶠ`, `Input Nilai Manual` with live bi-directional `%` $\leftrightarrow$ `PTS` calculation), Admin name (`Mr. Top`), audit reason input, `⚡ Setel Cepat Pekan 1 & 2` preset button, and Revoke action.
-     - Toolbar button `🛡️ Forgiven & Override` (`#btn-open-forgiven-wizard`) integrated into Class Hub.
+     - Step 2: Formative tasks grouped by Theme (A, B, C, D) with theme toggles, milestone exam radio (`Abaikan`, `Forgive 0%á¶ `, `Input Nilai Manual` with live bi-directional `%` $\leftrightarrow$ `PTS` calculation), Admin name (`Mr. Top`), audit reason input, `âš¡ Setel Cepat Pekan 1 & 2` preset button, and Revoke action.
+     - Toolbar button `ðŸ›¡ï¸ Forgiven & Override` (`#btn-open-forgiven-wizard`) integrated into Class Hub.
    - **Admin Roster Grid Matrix**:
-     - Superscripts `.asm-forgiven-sup` (`ᶠ`, `#f59e0b`) and `.asm-manual-sup` (`ᴹ`, `#38bdf8`) rendered in exam and task cells with rich tooltips displaying tutor name `"Mr. Top"`, date, and audit reason.
+     - Superscripts `.asm-forgiven-sup` (`á¶ `, `#f59e0b`) and `.asm-manual-sup` (`á´¹`, `#38bdf8`) rendered in exam and task cells with rich tooltips displaying tutor name `"Mr. Top"`, date, and audit reason.
    - **Student Gating & Dashboard Bypass**:
-     - In `js/dashboard.js`, forgiven tasks count as 7/7 passes to bypass the 7×7 repetitive mastery gate.
+     - In `js/dashboard.js`, forgiven tasks count as 7/7 passes to bypass the 7Ã—7 repetitive mastery gate.
      - Forgiven milestone exams unlock subsequent theme tasks (e.g. Forgiven Exam B unlocks Task C1).
-     - Student dashboard displays `0%ᶠ FORGIVEN` badge with `📖 Practice` button for optional review, and renders `ᶠ` / `ᴹ` superscripts.
+     - Student dashboard displays `0%á¶  FORGIVEN` badge with `ðŸ“– Practice` button for optional review, and renders `á¶ ` / `á´¹` superscripts.
    - **Verification & Tests**:
      - 41/41 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
      - 100% CI test suite PASS (`npm test`).
-     - Full Playwright E2E verification PASS (`scripts/test_forgiven_wizard_e2e.mjs`): verified database records, manual exam override, modal interaction, roster superscript `ᶠ`, student lobby display, and revoke.
+     - Full Playwright E2E verification PASS (`scripts/test_forgiven_wizard_e2e.mjs`): verified database records, manual exam override, modal interaction, roster superscript `á¶ `, student lobby display, and revoke.
      - Screenshots captured: `forgiven_wizard_modal_verified.png`, `class_hub_roster_forgiven_verified.png`, and `student_dashboard_forgiven_verified.png`.
    - **Cache Buster**: Bumped to `v=20261104_v118` across `admin.html`, `dashboard.html`, `result.html`, `test.html`, `js/dashboard.js`, `js/result.js`, `js/test.js`, and `js/admin/app.js`.
 
@@ -209,7 +225,7 @@ Status: COMPLETE
      - Protected `autoGenerateTestsHierarchy` with chunked pagination via `fetchVaultWords({ targetLevel: levelNum, limit: 10000 })` so levels with >1,000 words are never truncated.
      - Applied natural alphanumeric sorting (`localeCompare(undefined, { numeric: true })`) to prevent sorting anomalies like A10 before A2.
    - **Live Production Database Resync**:
-     - Resynced `2nd Vocabulary` (`class_id: 2ccf6468-1e03-41d1-b72b-1d84dcad85b2`): exactly **15 Tasks** (A1–A3, B1–B4, C1–C4, D1–D4) + **4 Exams** = **19 tests** (19 records).
+     - Resynced `2nd Vocabulary` (`class_id: 2ccf6468-1e03-41d1-b72b-1d84dcad85b2`): exactly **15 Tasks** (A1â€“A3, B1â€“B4, C1â€“C4, D1â€“D4) + **4 Exams** = **19 tests** (19 records).
      - Resynced `3rd Vocabulary` (`class_id: ab33498a-90e6-44b7-83f4-5765f964543e`): exactly **32 Tasks** (16 Words + 16 Phrases) + **8 Exams** = **40 tests** (40 records).
      - Verified linear prerequisite sequence across all topics: A1 -> A2 -> A3 -> A Exam -> B1 -> ... -> D Exam.
    - **System Answers to User Inquiries**:
@@ -218,7 +234,7 @@ Status: COMPLETE
      - 40/40 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
      - 100% CI test suite PASS (`npm test`).
      - E2E test suite PASS: 19/19 tests green (`node scripts/e2e_unified_code_verification.mjs`).
-     - Live browser screenshot captured: `class_hub_vocab2_19_tests_verified.png` showing `⚡ 15 Tasks | 📝 4 Exams | 19 records`.
+     - Live browser screenshot captured: `class_hub_vocab2_19_tests_verified.png` showing `âš¡ 15 Tasks | ðŸ“ 4 Exams | 19 records`.
    - **Cache Buster**: Bumped to `v=20261104_v116` across `admin.html`, `js/admin/app.js`, `auto-gen-modal.js`, `classes-management.js`, and `vocab-vault.js`.
 
 2. **Phase 302: Unified Single `CODE` Pipeline & Level 3 Topic/Word Full Restoration [COMPLETE]:**
@@ -226,7 +242,7 @@ Status: COMPLETE
      - Identified root cause of missing Level 3 topics (C2..C5 and D1..D4): PostgREST's 1,000-row server ceiling truncated queries in `fetchVaultWords`.
      - Replaced single-range query with automated chunked pagination loop fetching 1,000 rows per batch.
      - Confirmed all 1,410 active rows (800 words in Level 3, 610 in Level 2) now load into memory.
-     - Restored all 16 topics for Level 3 on Topic Blueprint: `[ 🎯 3rd (16) ]` (previously showed only 8 topics).
+     - Restored all 16 topics for Level 3 on Topic Blueprint: `[ ðŸŽ¯ 3rd (16) ]` (previously showed only 8 topics).
      - Infobar updated to accurate metrics: `Topics: 31`, `Vault Items: 1410`.
    - **Redundant Column Elimination (`js/admin/vocab-vault.js`)**:
      - Removed redundant `T.CODE` (Theme Code) column from Vocabulary Words grid (`tab=vocab`) and Phrases & Idioms grid (`tab=phrases`).
@@ -263,7 +279,7 @@ Status: COMPLETE
      - Standardized 10-column schema with unified `Code` column (`A1`, `A2`...) with zero blank cells.
    - **UI Blueprint & Grid Synchronization (`js/admin/vocab-vault.js`)**:
      - Topic Blueprint: `TOPIC CODE` column renders clean `A1`, `A2`, `B1`... with natural alphanumeric sorting.
-     - Vocabulary Words Grid: `Topic Code` / `Code` column renders monospaced badges (`A1`, `A2`...) instead of dashes (`—`).
+     - Vocabulary Words Grid: `Topic Code` / `Code` column renders monospaced badges (`A1`, `A2`...) instead of dashes (`â€”`).
      - Inline edit and save automatically normalizes topic code and theme code.
    - **Evaluation Engine & Test Hierarchy Parity (`js/admin/app.js` & `js/api.js`)**:
      - Updated `vaultCountFor` in `js/admin/app.js` to normalize and match both `A1` and `1` formats.
@@ -278,10 +294,10 @@ Status: COMPLETE
      - `LEVEL` column with dynamic `rowspan` spanning all themes and topics in that level (`1ST`, `2ND`, `3RD`).
      - `THEME CODE` column with dynamic `rowspan` spanning all topics in that theme (`A`, `B`, `C`, `D`).
      - `THEME` column with dynamic `rowspan` spanning topic rows with clean vertical alignment.
-     - Individual topic rows displaying `TOPIC CODE`, `TOPIC`, `VERB`, `NOUN`, `ADJECTIVE`, `PHRASE`, `TOTAL`, and inline action buttons (`✏️` Rename, `🗑️` Delete).
+     - Individual topic rows displaying `TOPIC CODE`, `TOPIC`, `VERB`, `NOUN`, `ADJECTIVE`, `PHRASE`, `TOTAL`, and inline action buttons (`âœï¸` Rename, `ðŸ—‘ï¸` Delete).
    - **Zero-Layout-Break Dynamic Search**: Real-time search (`#vault-topic-search`) re-calculates exact matching `rowspan` on the fly, ensuring zero table misalignment or broken borders during live keyword filtering.
    - **Flexible Curriculum Toolbar & Quick Jump**:
-     - Added quick filter buttons: `[ 🎯 ALL LEVELS (23) ]`, `[ 🎯 1st (0) ]`, `[ 🎯 2nd (15) ]`, `[ 🎯 3rd (8) ]`.
+     - Added quick filter buttons: `[ ðŸŽ¯ ALL LEVELS (23) ]`, `[ ðŸŽ¯ 1st (0) ]`, `[ ðŸŽ¯ 2nd (15) ]`, `[ ðŸŽ¯ 3rd (8) ]`.
      - Graceful empty level handling for 1st Level with clear placeholder notice.
    - **High-Contrast Dark Matrix Styling**: Added CSS rules for `.cell-level-group`, `.cell-theme-code`, `.cell-theme-name`, `#blueprint-matrix-table`, and hover highlights in `css/admin.css`.
    - **Cache Buster Bump**: Bumped to `v=20261103_v113` across `admin.html`, `app.js`, `classes-management.js`, and `vocab-vault.js`.
@@ -314,10 +330,10 @@ Status: COMPLETE
 1. **Phase 298: Virtual Unified Task (50 PTS) & Exam (150 PTS) with Component Selection Modal [COMPLETE]:**
    - **Student Choice Component Selector Modal**: Added `#component-selector-modal` to `dashboard.html` with card-based interface for choosing between Words (Written/Typed) and Phrases (Selection/Spoken) components. Allows students to freely decide which component to take first.
    - **Virtual 50 PTS Task & 150 PTS Exam Representation**:
-     - Tasks are presented on the dashboard as a single unified card: `Theme X • Topic Y: Title`, `50 Items • 50 PTS (40 Words + 10 Phrases)`.
-     - Exams are presented as a single unified card: `Theme X Exam Package`, `150 Items • 150 PTS (120 Words + 30 Phrases)`.
+     - Tasks are presented on the dashboard as a single unified card: `Theme X â€¢ Topic Y: Title`, `50 Items â€¢ 50 PTS (40 Words + 10 Phrases)`.
+     - Exams are presented as a single unified card: `Theme X Exam Package`, `150 Items â€¢ 150 PTS (120 Words + 30 Phrases)`.
      - Single-component classes (e.g. `2nd Vocabulary` Level 2) automatically bypass modal selection and launch directly into test.
-   - **7×7 Repetitive Mastery with Math.min Leveling**:
+   - **7Ã—7 Repetitive Mastery with Math.min Leveling**:
      - A topic round is completed if and only if both Words and Phrases achieve $\ge 70\%$.
      - `computeTopicPassLevel(wordsPasses, phrasesPasses, hasPhrases)`: Calculated using `Math.min(wordsPasses, phrasesPasses)` for balanced mastery.
      - Failing one part requires retaking only that failed part; the passed sibling retains its pass.
@@ -342,16 +358,16 @@ Status: COMPLETE
    - Bumped cache buster in `admin.html` to `v20261103_v110`. 100% tests PASS (including 10/10 e2e runs).
 
 1. **Phase 296: Topic Blueprint Re-Design [COMPLETE]:**
-   - Replaced duplicate institution/program badges and separate level buttons with unified Curriculum Tabs: `[ 🎯 CEC Camp 1st Level ] [ 🎯 CEC Camp 2nd Level ] [ 🎯 CEC Camp 3rd Level ]`.
+   - Replaced duplicate institution/program badges and separate level buttons with unified Curriculum Tabs: `[ ðŸŽ¯ CEC Camp 1st Level ] [ ðŸŽ¯ CEC Camp 2nd Level ] [ ðŸŽ¯ CEC Camp 3rd Level ]`.
    - Eliminated Board View and mode toggles; standardized solely on high-density Table View.
-   - Relocated `[ ⚒️ Merge Topics ]` and `[ ⚡ Auto-Generate ]` to the bottom-right corner inside the bottom infobar action area.
-   - Removed the dangerous Reset button from Vocabulary Vault and relocated it into **D — SYSTEM & DATA $\rightarrow$ System Settings (Danger Zone)** with mandatory `"RESET"` confirmation.
+   - Relocated `[ âš’ï¸ Merge Topics ]` and `[ âš¡ Auto-Generate ]` to the bottom-right corner inside the bottom infobar action area.
+   - Removed the dangerous Reset button from Vocabulary Vault and relocated it into **D â€” SYSTEM & DATA $\rightarrow$ System Settings (Danger Zone)** with mandatory `"RESET"` confirmation.
    - Cache buster bumped to `v20261103_v109`. 100% tests PASS.
 
 1. **Phase 295: Class Tests Grid UI Streamlining [COMPLETE]:**
    - Removed redundant `CLASS` and `LEVEL` columns from `class-tests-grid` in `js/admin/app.js`.
    - Expanded `TITLE` column (`min-width: 280px; max-width: 600px;`), eliminating text clipping/ellipsis.
-   - Standardized header badge and column to `🎯 Min. 70%` matching the 7×7 Repetitive Mastery rule.
+   - Standardized header badge and column to `ðŸŽ¯ Min. 70%` matching the 7Ã—7 Repetitive Mastery rule.
    - `admin.html` cache buster bumped to `v20261103_v108`. 100% tests PASS.
 
 1. **Phase 294: Zero-Maintenance Auto-Provisioning & Auto-Sync of Tests from Vocabulary Vault [COMPLETE]:**
@@ -362,11 +378,11 @@ Status: COMPLETE
    - **Database**: Provisioned 6 test shells for `2nd Vocabulary` (Themes A and B).
    - **Cache Buster**: `admin.html` bumped to `v20261103_v107`. 100% tests PASS.
 
-1. **Phase 293: Fix Class Hub Roster — Level-Exact Student Filter [COMPLETE]:**
-   - **Root Cause Fixed**: `classStudents` filter in `renderClassHub` (`js/admin/app.js`) only matched program — now also matches level.
+1. **Phase 293: Fix Class Hub Roster â€” Level-Exact Student Filter [COMPLETE]:**
+   - **Root Cause Fixed**: `classStudents` filter in `renderClassHub` (`js/admin/app.js`) only matched program â€” now also matches level.
    - **`js/admin/app.js`**: Added `allClassLevels` to the `Promise.all` fetch, added `level_id` to the classes query, replaced old filter with new level-aware filter using `class_levels` junction table (fallback to `class.level_id`). Effective student level = `student.level_id ?? batch.current_level_id`.
    - **`admin.html`**: Cache buster bumped to `v20261103_v106`.
-   - **Verified**: DB live check — 3rd Vocab = 29 correct students (0 from wrong level); 2nd Vocab = 17 correct students (0 from wrong level). All tests PASS.
+   - **Verified**: DB live check â€” 3rd Vocab = 29 correct students (0 from wrong level); 2nd Vocab = 17 correct students (0 from wrong level). All tests PASS.
 
 1. **Phase 292: Vocabulary Vault Institution, Program & Level Columns Integration [COMPLETE]:**
    - **`js/api.js` Data Joins**: Updated `fetchVaultWords` select query to join `institutions(id, name, code)` and `programs(id, name, code)` on `vocabulary_vault`. All 820 items cleanly resolve with zero nulls.
@@ -377,8 +393,8 @@ Status: COMPLETE
    - **Dynamic Level Filter**: Added `#vault-level-filter` to the toolbar populated dynamically from vault records, enabling instant filtering by Level across both single words and phrases.
    - **Topic Blueprint Overhaul**:
      - Added prominent Institution (`INST: CEC`) and Program (`PROG: CAMP`) badges to the blueprint toolbar.
-     - Implemented interactive Level Selector buttons (`[ 🎯 2ND LEVEL ]`, `[ 🎯 3RD LEVEL ]`) dynamically detected from vault records, enabling instant switching between 2nd Level and 3rd Level topics.
-     - Added View Mode Switcher (`[ 🗺️ Board ]` and `[ 📊 Table ]`).
+     - Implemented interactive Level Selector buttons (`[ ðŸŽ¯ 2ND LEVEL ]`, `[ ðŸŽ¯ 3RD LEVEL ]`) dynamically detected from vault records, enabling instant switching between 2nd Level and 3rd Level topics.
+     - Added View Mode Switcher (`[ ðŸ—ºï¸ Board ]` and `[ ðŸ“Š Table ]`).
      - In **Board View**: Every topic card features a dedicated metadata hierarchy row `[CEC] [Camp] [2nd Level / 3rd Level]`.
      - In **Table View**: Explicit columns for `Institution`, `Program`, `Level`, `T.Code`, `Theme`, `Topic Code`, `Topic`, `Verbs`, `Adjs`, `Nouns`, `Phrases`, `Total Items`, and `Actions`.
      - Bottom infobar chips updated with Institution, Program, and Level metadata.
@@ -432,11 +448,11 @@ Status: COMPLETE
 1. **Phase 1: Terminology Unification (Quiz -> Task 100%):**
    - Normalized all 32 database test shells in 3rd Vocabulary to Task (`category: TASK`, `shell_code: *-TASK`, `title: * Task`).
    - Unified terminology across `js/dashboard.js`, `js/admin/app.js`, `js/admin/vocab-vault.js`, `js/admin/crud-modals.js`, `js/test.js`, and `supabase/seed.sql`.
-2. **Phase 2: 7×7 Repetitive Mastery Engine & Hard Gate Exam:**
-   - Implemented `getTaskProgressVisual(passCount)` in `js/grading.js` with 5-tier gamified palette (Red `0/7` -> Star Green `7/7 ✓ Complete`).
+2. **Phase 2: 7Ã—7 Repetitive Mastery Engine & Hard Gate Exam:**
+   - Implemented `getTaskProgressVisual(passCount)` in `js/grading.js` with 5-tier gamified palette (Red `0/7` -> Star Green `7/7 âœ“ Complete`).
    - Implemented realtime pass counter in `js/api.js` and `task-progress-chip` in `js/dashboard.js`.
-   - Hard Gate Exam locked 🔒 until all prerequisite tasks reach 7/7 passes in Edge Function and client.
-   - Authorized remedial attempts exempted from 7×7 task prerequisite lock in `start-test` Edge Function and client.
+   - Hard Gate Exam locked ðŸ”’ until all prerequisite tasks reach 7/7 passes in Edge Function and client.
+   - Authorized remedial attempts exempted from 7Ã—7 task prerequisite lock in `start-test` Edge Function and client.
 3. **Phase 3: Words Exam Written Mode & 70% Threshold:**
    - Configured all 4 Words Exams (`3A-WORDS-EXAM` ... `3D-WORDS-EXAM`) with `answer_type = 'written'` and `minimum_required_score = 70`.
    - Verified Rule 2.13 written tolerance engine (exact match 1.0 pt, typo 0.5 pt, root form 0.5 pt).
@@ -446,12 +462,12 @@ Status: COMPLETE
    - Verified Batch 134 links to 2nd Level and inherits 2nd Vocabulary.
 5. **Phase 5: Level Progression System, Lifecycle Actions UI, Batch Transfer & Skor F:**
    - Updated Level 0 to `Alumni` (`toOrdinalLevel(0)` = `'Alumni'`).
-   - Implemented Lifecycle actions column in `js/admin/student-management.js`: `🚀 NEXT`, `🔒 HOLD`, `🔁 REPEAT`, `🔄 Transfer Batch`.
+   - Implemented Lifecycle actions column in `js/admin/student-management.js`: `ðŸš€ NEXT`, `ðŸ”’ HOLD`, `ðŸ” REPEAT`, `ðŸ”„ Transfer Batch`.
    - Implemented mass promotion `window.promoteAllEligibleStudents` and `window.promoteStudentNextLevel`.
    - Implemented `Transfer Batch` modal with `Inherit Batch Level`.
-   - Implemented `Skor F (Forgiven)` waiver (`55%ᶠ` Red E) and Remedial Cap 60% (`60%ᴿ` Yellow C) with audit logging.
+   - Implemented `Skor F (Forgiven)` waiver (`55%á¶ ` Red E) and Remedial Cap 60% (`60%á´¿` Yellow C) with audit logging.
    - Fixed Edge Function `start-test` level resolution to support Cumulative Retroactive Access (`testLevelNum <= studentLevelNum`) and Lifetime Universal Access for Alumni (`studentLevelNum === 0`).
-   - Added graduating batch filter dropdown to `🎓 Alumni` tab and hid promote button on alumni.
+   - Added graduating batch filter dropdown to `ðŸŽ“ Alumni` tab and hid promote button on alumni.
    - Persisted `alumni` status tab in `localStorage` and hash routing (Rule 2.20).
    - Fixed class modal in `js/dashboard.js` to render locked exams with unlock instructions rather than silently omitting them.
 6. **Phase 6: Multi-Tenant Vocabulary Vault & 11-Column Import/Export:**
@@ -459,7 +475,7 @@ Status: COMPLETE
    - Attributed all vault words to CEC and Camp.
    - Cascading dropdowns `[Institution] -> [Program] -> [Class] -> [Level]` in test gateway.
    - Standardized Excel import/export to 11 columns in `js/api.js` and `js/admin/vocab-vault.js`.
-7. **Phase 7: Full E2E Check System (10× Consecutive Pass Protocol):**
+7. **Phase 7: Full E2E Check System (10Ã— Consecutive Pass Protocol):**
    - Created `scripts/test_vocab_7x7_and_leveling_e2e.mjs` and `scripts/test_start_test_gating.mjs`.
    - Executed 10 consecutive full realtime E2E cycles: 10/10 PASS (132/132 assertions verified without defect).
    - Validated all 40 JavaScript files in workspace with `node --check` (100% clean).
@@ -475,7 +491,7 @@ Status: COMPLETE
    - Deleted `supabase/data.sql` (-7.32 MB exact duplicate of canonical `supabase/seed.sql`).
    - Deleted duplicate `docs/ASSESSMENT_EXECUTION_AUDIT.md` (canonical preserved in `docs/archive/`).
    - Cleaned 11 one-off inspect and redundant version bump scripts from `scripts/` root.
-   - Partitioned oversized `docs/CHANGELOG.md` (1.59 MB -> 111.4 KB) by safely archiving historical Phases 1–228 entries into `docs/archive/CHANGELOG_ARCHIVE.md`.
+   - Partitioned oversized `docs/CHANGELOG.md` (1.59 MB -> 111.4 KB) by safely archiving historical Phases 1â€“228 entries into `docs/archive/CHANGELOG_ARCHIVE.md`.
 
 2. **Production Dead Code Pruning (> 2,000 Lines Pruned):**
    - `js/admin/class.js`: Pruned dead functions `renderAssignments` (190 lines), `renderProgressView` (484 lines), and `renderRecalibrator` (8 lines).

@@ -411,7 +411,8 @@ async function openCrudModal(section, record) {
         eligible.sort((a, b) => (a.title || '').localeCompare(b.title || '')).forEach(e => {
           const opt = document.createElement('option');
           opt.value = e.id;
-          opt.textContent = e.title || e.display_name || e.id;
+          const codePrefix = e.shell_code ? `[${e.shell_code}] ` : '';
+          opt.textContent = codePrefix + (e.title || e.display_name || e.id);
           if (currentPrereq === e.id) opt.selected = true;
           prereqSelect.appendChild(opt);
         });
