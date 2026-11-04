@@ -1,9 +1,9 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
-import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=20261104_v122';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261104_v122';
-import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261104_v122';
-import { escapeHtml, escHtml, showToast } from './app.js?v=20261104_v122';
+import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=20261105_v124';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261105_v124';
+import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261105_v124';
+import { escapeHtml, escHtml, showToast } from './app.js?v=20261105_v124';
 
 export function getGrade(pct) {
   return calculateGrade(pct);
@@ -1320,18 +1320,41 @@ export async function startTest(studentId, testId) {
   const isStandaloneTryout = asmData.payload?.is_standalone_tryout === true;
   const prereqId = asmData.prerequisite_test_id || asmData.prerequisite_id;
   if (prereqId && !isStandaloneTryout) {
-    const { data: prereqAttempts } = await sb.from('attempts')
-      .select('score, percentage, status')
-      .eq('student_id', studentId)
-      .eq('test_id', prereqId)
-      .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
+    const [prereqAttRes, prereqTestRes] = await Promise.all([
+      sb.from('attempts')
+        .select('score, percentage, effective_score, status, is_forgiven')
+        .eq('student_id', studentId)
+        .eq('test_id', prereqId)
+        .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']),
+      sb.from('tests')
+        .select('id, title, test_type, test_subtype, category, shell_code, minimum_required_score')
+        .eq('id', prereqId)
+        .single()
+    ]);
+
+    const prereqAttempts = prereqAttRes.data || [];
+    const prereqTest = prereqTestRes.data;
 
     const reqScore = (asmData.minimum_required_score && parseFloat(asmData.minimum_required_score) > 0)
       ? parseFloat(asmData.minimum_required_score)
-      : 60;
-    const hasPassed = Boolean(prereqAttempts && prereqAttempts.some(a => (parseFloat(a.percentage || a.score || 0)) >= reqScore));
-    if (!hasPassed) {
-      const pErr = new Error(`Prerequisite not completed. You must score at least ${reqScore}% on the prerequisite test.`);
+      : (prereqTest?.minimum_required_score ? parseFloat(prereqTest.minimum_required_score) : 70);
+
+    const isPrereqExam = prereqTest ? isWeeklyExam(prereqTest) : false;
+    let passCount = 0;
+    prereqAttempts.forEach(a => {
+      if (a.is_forgiven) {
+        passCount = Math.max(passCount, 7);
+      } else {
+        const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || a.score || 0);
+        if (pct >= reqScore) {
+          passCount++;
+        }
+      }
+    });
+
+    const requiredPasses = isPrereqExam ? 1 : 7;
+    if (passCount < requiredPasses) {
+      const pErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${passCount}/${requiredPasses} passes with at least ${reqScore}%) on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`);
       pErr.code = 'PREREQUISITE_NOT_MET';
       pErr.status = 403;
       throw pErr;
@@ -1438,6 +1461,55 @@ export async function startTest(studentId, testId) {
         pErr.code = 'PRIOR_THEME_EXAMS_REQUIRED';
         pErr.status = 403;
         throw pErr;
+      }
+    }
+  }
+
+  // Guard: Linear Topic Gating - Topic K requires 7/7 Mastery on Topic K-1
+  const topicCodeFallback = asmData.payload?.topic_code;
+  const cleanTopicNumFallback = parseInt(String(topicCodeFallback || '').replace(/^[A-Za-z]+/, ''), 10);
+  if (!isWeeklyExam(asmData) && cleanTopicNumFallback > 1 && currentThemeFallback && !isStandaloneTryout && !isRemedialSessionFallback) {
+    const priorTopicNum = cleanTopicNumFallback - 1;
+    const { data: priorTopicTasks } = await sb.from('tests')
+      .select('id, title, payload, shell_code, test_type, test_subtype, category')
+      .eq('class_id', asmData.class_id)
+      .eq('level_id', asmData.level_id)
+      .is('deleted_at', null);
+
+    const filteredPriorTasks = (priorTopicTasks || []).filter(t => {
+      if (isWeeklyExam(t)) return false;
+      const tc = t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '');
+      if (String(tc).toUpperCase() !== currentThemeFallback) return false;
+      const topNum = parseInt(String(t.payload?.topic_code || '').replace(/^[A-Za-z]+/, ''), 10);
+      return topNum === priorTopicNum;
+    });
+
+    if (filteredPriorTasks.length > 0) {
+      const priorTaskIds = filteredPriorTasks.map(t => t.id);
+      const { data: priorTaskAttempts } = await sb.from('attempts')
+        .select('test_id, percentage, effective_score, status, is_forgiven')
+        .eq('student_id', studentId)
+        .in('test_id', priorTaskIds)
+        .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
+
+      const passCountByTask = {};
+      (priorTaskAttempts || []).forEach(att => {
+        if (att.is_forgiven) {
+          passCountByTask[att.test_id] = Math.max(passCountByTask[att.test_id] || 0, 7);
+        } else {
+          const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+          if (pct >= 70) {
+            passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
+          }
+        }
+      });
+
+      const unmasteredTask = filteredPriorTasks.find(t => (passCountByTask[t.id] || 0) < 7);
+      if (unmasteredTask) {
+        const topErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (7 passes with at least 70%) on Topic ${currentThemeFallback}${priorTopicNum} before starting Topic ${cleanTopicNumFallback}.`);
+        topErr.code = 'TOPIC_MASTERY_NOT_MET';
+        topErr.status = 403;
+        throw topErr;
       }
     }
   }

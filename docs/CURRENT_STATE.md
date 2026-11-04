@@ -1,11 +1,34 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-04 23:30 UTC+8
-Current Phase: Phase 311: Dual-Column Prerequisite Synchronization & Test Prerequisite Update Fix [COMPLETE]
+Last Updated: 2026-11-05 00:30 UTC+8
+Current Phase: Phase 312: 7×7 Repetitive Mastery Gating & Dynamic Pass Counter Action Button [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Phase 311: Dual-Column Prerequisite Synchronization & Test Prerequisite Update Fix [COMPLETE]:**
+1. **Phase 312: 7×7 Repetitive Mastery Gating & Dynamic Pass Counter Action Button [COMPLETE]:**
+   - **Section 3 Cleanup**:
+     - Purged legacy `#btn-lobby-flashcards` button from `#dashboard-grade-legend` in `dashboard.html`.
+     - Completely eliminated the mystery number "40" from Section 3.
+   - **7×7 Repetitive Mastery Gating (`js/dashboard.js`, `js/api.js`, `supabase/functions/start-test/index.ts`)**:
+     - Task items strictly enforce `passCount >= 7` with score $\ge 70\%$ (or `is_forgiven`) before a task is considered completed.
+     - Next Assessment remains locked on the current task until 7 passes are reached.
+     - Fixed topic code regex parsing: `parseInt(String(topicCode || '').replace(/^[A-Za-z]+/, ''), 10)` in both client dashboard and Edge Function, resolving the `parseInt('C2') === NaN` bug.
+     - In `startTest`, prerequisite task validation verifies `passCount >= 7`.
+   - **Dynamic Pass Counter Action Button (`js/dashboard.js`, `css/dashboard.css`)**:
+     - Replaced static retry button with interactive pass counter badge (numbers 0 to 7) matching official TopsCore grade tiers:
+       - 0–1 passes: Red (`#FF0000`, Grade E tier).
+       - 2–3 passes: Dark Orange (`#FF8C00`, Grade D tier).
+       - 4 passes: Yellow (`#FFFF00`, Grade C tier).
+       - 5–6 passes: Electric Lime (`#95ff00`, Grade B tier).
+       - 7 passes: Pure Green Play button (`#00c000`, Grade A / Star tier) indicating 7×7 completion.
+     - Clicking button immediately launches `test.html?id=<testId>` to begin the next repetition.
+     - Synchronized Section 5 repetitions row with active task progress.
+   - **Verification**:
+     - `scripts/test_7x7_gating_and_pass_button_e2e.mjs`: PASS 100% (Verified on Queen Isnantika Salsabila: Section 3 clean `FAIL`, Section 5 `1/7`, Section 6 stays on C1 with button `1` in Red E tier).
+     - 42/42 JS syntax checks: PASS.
+     - `npm test`: PASS 100%.
+
+2. **Phase 311: Dual-Column Prerequisite Synchronization & Test Prerequisite Update Fix [COMPLETE]:**
    - **Root Cause Resolution**:
      - Database table `tests` contains both `prerequisite_test_id` and legacy `prerequisite_id`.
      - `crud-modals.js` only updated `prerequisite_test_id` and left `prerequisite_id` stale, causing table fallback `r.prerequisite_test_id || r.prerequisite_id` to continue displaying the old prerequisite.

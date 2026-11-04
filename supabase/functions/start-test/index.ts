@@ -137,18 +137,35 @@ Deno.serve(async (req) => {
           .in("status", ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]),
         supabase
           .from("tests")
-          .select("id, payload")
+          .select("id, payload, test_type, test_subtype, category, shell_code, title")
           .eq("id", prereqId)
           .single()
       ]);
-      const prereqAttempts = prereqAttRes.data;
+      const prereqAttempts = prereqAttRes.data || [];
       const prereqTest = prereqTestRes.data;
 
       const reqScore = test.prerequisite_min_score || 70;
-      const hasPassed = Boolean(prereqAttempts && prereqAttempts.some((a: any) => a.is_forgiven || (a.is_remedial_unlocked && (a.effective_score || a.percentage || 0) >= 60) || (a.effective_score || a.percentage || 0) >= reqScore));
+      const isPrereqExam = (prereqTest?.test_type || '').toLowerCase() === 'exam' ||
+                           (prereqTest?.category || '').toUpperCase() === 'EXAM' ||
+                           (prereqTest?.shell_code || '').toUpperCase().endsWith('-EXAM');
 
-      if (!hasPassed) {
-        return new Response(JSON.stringify({ error: `Prerequisite not completed. You must score at least ${reqScore}% on the prerequisite test.` }), {
+      let passCount = 0;
+      (prereqAttempts || []).forEach((a: any) => {
+        if (a.is_forgiven) {
+          passCount = Math.max(passCount, 7);
+        } else {
+          const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || 0);
+          if (pct >= reqScore || (a.is_remedial_unlocked && pct >= 60)) {
+            passCount++;
+          }
+        }
+      });
+
+      const requiredPasses = isPrereqExam ? 1 : 7;
+      if (passCount < requiredPasses) {
+        return new Response(JSON.stringify({
+          error: `Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${passCount}/${requiredPasses} passes with at least ${reqScore}%) on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`
+        }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
@@ -357,7 +374,7 @@ Deno.serve(async (req) => {
                            test.category === 'EXAM' ||
                            (test.shell_code || '').endsWith('-EXAM');
         const topicCode = test.payload?.topic_code;
-        const topicNum = parseInt(String(topicCode || ''), 10);
+        const topicNum = parseInt(String(topicCode || '').replace(/^[A-Za-z]+/, ''), 10);
 
         if (isExamTest && themeCode && !isStudentRemedialAuthorized) {
           const { data: siblingTasks } = await supabase
@@ -379,7 +396,7 @@ Deno.serve(async (req) => {
             const taskIds = filteredTasks.map((t: any) => t.id);
             const { data: siblingAttempts } = await supabase
               .from('attempts')
-              .select('test_id, percentage, effective_score, is_best_score, status')
+              .select('test_id, percentage, effective_score, is_best_score, status, is_forgiven')
               .eq('student_id', student_id)
               .in('test_id', taskIds)
               .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
@@ -387,9 +404,13 @@ Deno.serve(async (req) => {
             const passCountByTask: Record<string, number> = {};
             if (siblingAttempts) {
               siblingAttempts.forEach((att: any) => {
-                const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-                if (pct >= 70) {
-                  passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
+                if (att.is_forgiven) {
+                  passCountByTask[att.test_id] = Math.max(passCountByTask[att.test_id] || 0, 7);
+                } else {
+                  const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+                  if (pct >= 70) {
+                    passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
+                  }
                 }
               });
             }
@@ -403,27 +424,30 @@ Deno.serve(async (req) => {
           }
         } else if (!isExamTest && themeCode && topicNum > 1 && !isStudentRemedialAuthorized) {
           // Phase 298: Linear Topic Gating — Topic K requires 7/7 Mastery on Topic K-1
-          const priorTopicCode = String(topicNum - 1);
+          const priorTopicNum = topicNum - 1;
           const { data: priorTopicTasks } = await supabase
             .from('tests')
             .select('id, payload, test_type, category, shell_code')
             .eq('class_id', test.class_id)
             .eq('level_id', test.level_id)
-            .is('deleted_at', null)
-            .contains('payload', { theme_code: themeCode, topic_code: priorTopicCode });
+            .is('deleted_at', null);
 
           const filteredPriorTasks = (priorTopicTasks || []).filter((t: any) => {
             const isEx = (t.test_type || '').toLowerCase() === 'exam' ||
                          t.category === 'EXAM' ||
                          (t.shell_code || '').endsWith('-EXAM');
-            return !isEx;
+            if (isEx) return false;
+            const tc = String(t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+            if (tc !== themeCode) return false;
+            const tTop = parseInt(String(t.payload?.topic_code || '').replace(/^[A-Za-z]+/, ''), 10);
+            return tTop === priorTopicNum;
           });
 
           if (filteredPriorTasks && filteredPriorTasks.length > 0) {
             const priorTaskIds = filteredPriorTasks.map((t: any) => t.id);
             const { data: priorAttempts } = await supabase
               .from('attempts')
-              .select('test_id, percentage, effective_score, status')
+              .select('test_id, percentage, effective_score, status, is_forgiven')
               .eq('student_id', student_id)
               .in('test_id', priorTaskIds)
               .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
@@ -431,9 +455,13 @@ Deno.serve(async (req) => {
             const passCountByTask: Record<string, number> = {};
             if (priorAttempts) {
               priorAttempts.forEach((att: any) => {
-                const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-                if (pct >= 70) {
-                  passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
+                if (att.is_forgiven) {
+                  passCountByTask[att.test_id] = Math.max(passCountByTask[att.test_id] || 0, 7);
+                } else {
+                  const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+                  if (pct >= 70) {
+                    passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
+                  }
                 }
               });
             }
@@ -441,8 +469,13 @@ Deno.serve(async (req) => {
             const unmasteredTask = priorTaskIds.find((tid: string) => (passCountByTask[tid] || 0) < 7);
             if (unmasteredTask) {
               return new Response(JSON.stringify({
-                error: `Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (7 passes with at least 70%) on Topic ${priorTopicCode} before starting Topic ${topicNum}.`
+                error: `Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (7 passes with at least 70%) on Topic ${themeCode}${priorTopicNum} before starting Topic ${topicNum}.`
               }), {
+                status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+              });
+            }
+          }
+        }
                 status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
               });
             }

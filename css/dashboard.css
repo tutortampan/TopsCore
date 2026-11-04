@@ -3075,6 +3075,60 @@ body.dashboard-page .next-asm-go-btn.is-start-green {
   box-shadow: 0 0 12px var(--grade-star-glow) !important;
 }
 
+/* Dynamic Pass Counter Button Tiers (Section 6) */
+body.dashboard-page .next-test-go-btn.pass-counter-btn,
+body.dashboard-page .next-asm-go-btn.pass-counter-btn {
+  font-size: 1.15rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Tier 0-1: Red E */
+body.dashboard-page .next-test-go-btn.is-pass-tier-e,
+body.dashboard-page .next-asm-go-btn.is-pass-tier-e {
+  background: var(--grade-e) !important;
+  color: #0F172A !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 0 10px rgba(var(--grade-e-rgb), 0.6) !important;
+}
+
+/* Tier 2-3: Orange D */
+body.dashboard-page .next-test-go-btn.is-pass-tier-d,
+body.dashboard-page .next-asm-go-btn.is-pass-tier-d {
+  background: var(--grade-d) !important;
+  color: #0F172A !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 0 10px rgba(var(--grade-d-rgb), 0.6) !important;
+}
+
+/* Tier 4: Yellow C */
+body.dashboard-page .next-test-go-btn.is-pass-tier-c,
+body.dashboard-page .next-asm-go-btn.is-pass-tier-c {
+  background: var(--grade-c) !important;
+  color: #0F172A !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 0 10px rgba(var(--grade-c-rgb), 0.6) !important;
+}
+
+/* Tier 5-6: Lime B */
+body.dashboard-page .next-test-go-btn.is-pass-tier-b,
+body.dashboard-page .next-asm-go-btn.is-pass-tier-b {
+  background: var(--grade-b) !important;
+  color: #0F172A !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 0 10px rgba(var(--grade-b-rgb), 0.6) !important;
+}
+
+/* Tier 7: Green Play A/Star */
+body.dashboard-page .next-test-go-btn.is-pass-tier-a,
+body.dashboard-page .next-asm-go-btn.is-pass-tier-a {
+  background: linear-gradient(135deg, #86efac 0%, var(--grade-star) 100%) !important;
+  color: #0F172A !important;
+  border: 1px solid var(--grade-star) !important;
+  box-shadow: 0 0 12px var(--grade-star-glow) !important;
+}
+
 body.dashboard-page .next-test-status-icon,
 body.dashboard-page .next-asm-status-icon {
   width: 32px !important;

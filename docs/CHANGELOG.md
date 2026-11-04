@@ -1,3 +1,42 @@
+## [2026-11-05 00:30] — Phase 312: 7×7 Repetitive Mastery Gating & Dynamic Pass Counter Action Button
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 312
+**Status:** PASS
+
+### Why
+- The user reported two core problems and one UX enhancement on the Student Dashboard (`dashboard.html`):
+  1. **7×7 Repetitive Mastery Bypass Bug**: A task requires 7 successful attempts ($\ge 70\%$ score) before opening access to the next task. However, when a student finished just 1 attempt with $\ge 70\%$, the next task unlocked immediately.
+     - Root Cause 1: `isPassed(t)` in `renderNextAssignmentHero` checked only a single attempt score `bestMap[t.id] >= req` without verifying that `passCountByTest[t.id] >= targetReps` (7 passes).
+     - Root Cause 2: Linear topic gating used `parseInt(String(grp.topicCode || ''), 10)` in `dashboard.js` and `supabase/functions/start-test/index.ts`. Since topic codes start with letters (e.g. `'C1'`, `'C2'`), `parseInt('C2', 10)` produced `NaN`, causing `curTopNum > 1` to evaluate to `false` and bypassing topic progression entirely.
+     - Root Cause 3: In `startTest` (`js/api.js` & Edge Function), prerequisite validation checked `prereqAttempts.some(...)` allowing 1 passing attempt to satisfy a prerequisite task.
+  2. **Mystery Number "40" in Section 3**: Beside the student's grade text (`FAIL 40`), the number 40 appeared.
+     - Root Cause: A legacy lobby flashcard button `<button id="btn-lobby-flashcards"><span id="lobby-fc-count-badge">0</span></button>` inside `#dashboard-grade-legend` unhid itself when 40 incorrect words were detected on the latest attempt (`missed.length = 40`).
+  3. **Section 6 Action Button Redesign**: Replace static retry button with an interactive pass counter badge (numbers 0 to 7) matching official TopsCore grade tiers:
+     - 0–1 passes: Red badge (`#FF0000`, Grade E tier).
+     - 2–3 passes: Dark Orange badge (`#FF8C00`, Grade D tier).
+     - 4 passes: Yellow badge (`#FFFF00`, Grade C tier).
+     - 5–6 passes: Electric Lime badge (`#95ff00`, Grade B tier).
+     - 7 passes: Pure Green Play button (`#00c000`, Grade A / Star tier) indicating 7×7 completion and ready for next task.
+
+### Changed
+1. **Grade Legend Strip Cleanup (`dashboard.html` & `js/dashboard.js`)**:
+   - Removed legacy `#btn-lobby-flashcards` button from `#dashboard-grade-legend`.
+   - Verified Section 3 displays only the student's clean grade description (e.g., `FAIL`), with 0 extraneous numbers.
+2. **7×7 Repetitive Mastery Gating Engine (`js/dashboard.js`, `js/api.js`, `supabase/functions/start-test/index.ts`)**:
+   - Updated `isPassed(t)`: A task item (`!isExam(t)`) requires `(passCountByTest[t.id] || 0) >= targetReps` (7 passes $\ge 70\%$ or `is_forgiven`). Next assessment will not jump to subsequent tasks until 7 passes are achieved.
+   - Fixed topic code regex parsing: `parseInt(String(topicCode || '').replace(/^[A-Za-z]+/, ''), 10)` across client dashboard and Edge Function, ensuring clean numeric parsing for `C1`, `C2`, etc.
+   - Updated `startTest` prerequisite checks: Prerequisite tasks strictly enforce `passCount >= 7` before allowing subsequent tasks to start.
+3. **Dynamic Pass Counter Action Button (`js/dashboard.js` & `css/dashboard.css`)**:
+   - Section 6 action button displays current pass count (0–6) with grade tier background, `#0F172A` text, and RGB tier glow.
+   - Once 7 passes are achieved, transforms into the green circle Play button (`#00c000`).
+   - Clicking the button directly launches `test.html?id=<testId>` to begin the next repetition.
+   - Synchronized Section 5 repetitions row with active task progress (displays `1/7` and `[✓][2][3][4][5][6][7]`).
+4. **Verification**:
+   - Automated Playwright E2E test (`scripts/test_7x7_gating_and_pass_button_e2e.mjs`): PASS 100%. Verified on real student Queen Isnantika Salsabila (Section 3 clean `FAIL`, Section 5 `1/7`, Section 6 Next Assessment stays on C1 with button `1` in Red E tier).
+   - `node scripts/check_all_js_syntax.cjs`: 42/42 files PASS 100%.
+   - `npm test`: PASS 100%.
+
 ## [2026-11-04 23:30] — Phase 311: Dual-Column Prerequisite Synchronization & Test Prerequisite Update Fix
 
 **Agent/Session:** Antigravity
