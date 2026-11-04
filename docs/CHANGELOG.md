@@ -1,8 +1,56 @@
+## [2026-11-04 11:45] — Phase 304: Task Question Count Clamping, Permanent 50px Banners, and Strict Level Class Isolation
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 304
+**Status:** PASS
+
+### Why
+1. **Task Question Count Overload**:
+   - In `2nd Vocabulary A1 Words Task`, expected 40 questions as listed in Class Hub, but the test runner loaded 120 questions (`0/120 Answered`).
+   - Root cause: In `supabase/functions/start-test/index.ts`, `themes` check ran before `topicCode`. For task `2A1`, `payload.themes = ['A']` matched first, pulling the entire Theme A (120 words across A1+A2+A3) instead of topic A1 (40 words). In addition, no server safety clamp was applied against `test.total_questions`.
+2. **Missing & Cut-off Banners**:
+   - In `test.html`, the top banner was tall/colliding (124px header containing title + avatar + buttons), and the bottom banner (`#bottom-ad-banner`) was nested inside `#fixed-bottom-area`.
+   - On mobile screens (height <= 740px), inner flex content overflow pushed `#fixed-bottom-area` past the viewport, and `body.test-page { overflow: hidden }` clipped the bottom banner completely.
+   - User design mandate: Top header 50px tailored to page function, bottom banner 50px permanent locked edge-to-edge.
+3. **Class Level Isolation Violation**:
+   - Student account `Test` (in `2nd Level`, `Batch 134`) saw `1st Vocabulary` (0% In Progress) in the `Select Class` modal.
+   - Root cause: `fetchStudentClasses` in `js/api.js` used cumulative `<=` check (`cLvlNum <= studentLevelNum`), and `renderClasses` in `js/dashboard.js` added previous level classes to `activeClasses`.
+
+### Changed
+1. **Edge Function & API Test Question Engine**:
+   - `supabase/functions/start-test/index.ts`: Prioritized `topicCode` lookup before `themes`. Added candidate code resolution `[topicCode.toUpperCase(), themeCode + topicCode, topicCode.replace(/^[A-Za-z]/, '')]`. Added strict safety clamp against `test.payload?.total_questions` or `test.total_questions` (40 for Task, 120/160 for Exam).
+   - `js/api.js`: Added question clamp in `generateTestQuestions`.
+2. **Strict Class Level Isolation**:
+   - `js/api.js`: Updated `fetchStudentClasses` to strictly match the student's active level (`cLvlNum === studentLevelNum` or `c.level_id === levelId`).
+   - `js/dashboard.js`: In `renderClasses`, strictly isolated active classes to the student's current level. Past level classes only appear in `completedClasses` for history/levels overview. Added validation check resetting `_selectedClassId` if previously selected class is not in `activeClasses`.
+3. **Permanent 50px Banners in Test Runner**:
+   - `test.html`:
+     - Standardized topbar into 50px top header: `<header class="dashboard-header test-header" id="test-top-header">` with Give Up button, circular student avatar, cloud sync indicator, and timer badge.
+     - Extracted `.test-title-bar` as an independent 34px strip directly above `.test-body`.
+     - Relocated `<footer id="bottom-ad-banner" class="topscore-locked-banner">` to be a permanent direct child of `body.test-page` at the very bottom.
+   - `css/test.css`:
+     - `.dashboard-header.test-header`: Strict 50px height (`flex-shrink: 0; min-height: 50px; max-height: 50px;`).
+     - `.test-title-bar`: 34px height, compact font, zero text overflow.
+     - `.test-fixed-bottom`: 48px navigation bar, 6px progress track.
+     - `#bottom-ad-banner`: Strict 50px height (`flex-shrink: 0 !important; z-index: 100 !important;`).
+     - Added Netlify floating badge collision suppression.
+4. **Cache Buster Bumping**:
+   - Bumped to `v=20261104_v117` across `test.html`, `dashboard.html`, `result.html`, `admin.html`, `js/test.js`, `js/dashboard.js`, `js/result.js`, and `js/admin/app.js`.
+5. **Verification & Tests**:
+   - `node scripts/check_all_js_syntax.cjs`: 40/40 JS files syntax PASS.
+   - `npm test`: 100% CI tests PASS (SW manifest 27 assets verified, ranking engine PASS).
+   - `node scripts/verify_phase_304_all_issues.mjs`: 24/24 E2E assertion checks PASS:
+     - 40 questions verified for task `2A1-WORDS-TASK` with zero words from A3 (`Menarik`).
+     - 0 past level classes in `Select Class` modal for Level 2 student.
+     - Playwright verified across 3 viewports: Top header = 50px, Bottom banner = 50px locked to viewport bottom edge with 0px cutoff.
+
+---
+
 ## [2026-11-04 07:15] — Phase 303: Auto-Generator Test Hierarchy Diagnostic & Prerequisite Chain Resolution
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 303  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 303
+**Status:** PASS
 
 ### Why
 - User asked whether Vocabulary tests auto-generate automatically without clicking the Auto-Generate button.
@@ -31,9 +79,9 @@
 
 ## [2026-11-04 01:00] — Phase 302: Unified Single `CODE` Pipeline & Level 3 Topic/Word Full Restoration
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 302  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 302
+**Status:** PASS
 
 ### Why
 - User reported missing Level 3 topics/words in Vocabulary Vault (only 8 topics, 390 words/phrases rendered).
@@ -68,9 +116,9 @@
 
 ## [2026-11-04 00:05] — Phase 301: Unified Topic Code (A1, A2, B1...) Pipeline in Vocabulary Vault
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 301  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 301
+**Status:** PASS
 
 ### Why
 - User experienced issue during Excel vocabulary import where `TOPIC CODE` was not imported (resulting in empty strings `''` and dashes `—` in the UI), and upon Excel export the `Topic Code` column was blank.
@@ -104,9 +152,9 @@
 
 ## [2026-11-03 23:20] — Phase 300: Unified Topic Blueprint Multi-Level Cascading Rowspan Matrix (Opsi B)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 300  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 300
+**Status:** PASS
 
 ### Why
 - User request:
@@ -134,9 +182,9 @@
 
 ## [2026-11-03 22:25] — Phase 299: Realtime Full Student Journey Complete & Housekeeping Reset of Account "Test"
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 299  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 299
+**Status:** PASS
 
 ### Why
 - Evaluated sufficiency of 4/10 consecutive defect-free runs (1,048 real DB attempts, 100% deterministic score 141.9/150 pts across Level 2 and Level 3). Concluded 4 runs are fully sufficient and representative.
@@ -168,9 +216,9 @@
 
 ## [2026-11-03 21:32] — Phase 299: Realtime Full Student Journey (2nd Level -> 3rd Level) with Account "Test", Production Supabase Verification, and Level Column Standardization [PAUSED - 4/10 CONSECUTIVE RUNS PASSED]
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 299  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 299
+**Status:** PASS
 
 ### Why
 - User request:
@@ -197,7 +245,7 @@
    - `js/admin/classes-management.js`: Mapped class level lists through `toShortLevel`.
    - `js/admin/app.js`: Standardized `levelNames` and eligible student level badges using `toShortLevel`.
    - `js/admin/auto-gen-modal.js`: Standardized level selectors to `toShortLevel(lvl)`.
-   - `js/admin/student-management.js`: Cleaned alumni badge to display `Alumni` cleanly without emoji.
+   - `js/admin/stude![alt text](image-1.png)nt-management.js`: Cleaned alumni badge to display `Alumni` cleanly without emoji.
    - `css/admin.css`: Enforced `.cell-level, .cell-level span, .badge-tag-level { white-space: nowrap !important; }`.
    - `admin.html`: Bumped cache-busting version string to `v=20261103_v112`.
 6. **`scripts/test_realtime_student_journey.mjs`**:
@@ -217,9 +265,9 @@
 
 ## [2026-11-03 19:40] — Phase 298: Virtual Unified Task (50 PTS) & Exam (150 PTS) with Component Selection Modal, 7×7 Math.min Leveling, and Strict Linear Topic Gating
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 298  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 298
+**Status:** PASS
 
 ### Why
 - User request & approved design (`plan_exam_order_choice.md`):
@@ -277,9 +325,9 @@
 
 ## [2026-11-03 16:10] — Phase 297: Level Column Standardization — Compact '1st', '2nd', '3rd', 'Alumni' Format Across All Admin Panel Tables
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 297  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 297
+**Status:** PASS
 
 ### Why
 - User request: *"bagian level di semua tabel dicukup tulis 1st, 2nd, 3rd, Atau Alumni (atau kita Ex) di semua tebal admin panel, analisa, terapkan /goal"* with screenshots of awkward two-line text wrapping (`2nd \n Level`) inside narrow table column cells in Vocabulary Vault and other admin tables.
@@ -333,9 +381,9 @@
 
 ## [2026-11-03 15:40] — Phase 296: Topic Blueprint Re-Design — Unified Curriculum Tabs, Single Table View, Bottom Action Bar & Safe System Settings Reset
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 296  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 296
+**Status:** PASS
 
 ### Why
 - User request: *"disini ada topc blueprint dimana kita bisa pilih berdasarkan tombol yang kita tekan,,, saya ingin agar kita buat topic bluprint dengan dasar institusi dan Program dan Level di tab atas jadi misalnya namanya : CEC Camp 1st Level, CEC Camp 2nd Level, CEC Camp 3rd Level. apakah itu lbih mudah dan bisa gunakan 1 view saja yaitu table View. bagian pada gambar 2 bisa kita hapus, dan pindahkan tombol merge, dan auto generte ke pojok kana bawah, tombol rResest taruh di dalam System Settings, SO I dont mispress it... Analyze, map out, discuss. lakukan /goal"*.
@@ -372,9 +420,9 @@
 
 ## [2026-11-03 15:05] — Phase 295: Class Tests Grid UI Streamlining — Remove Redundant Class/Level Columns, Expand Title, and Standardize 70% Badge
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 295  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 295
+**Status:** PASS
 
 ### Why
 - User request: *"buang klom Class dan level,,, sebab sudah ada dalam nama kelas. Rapikan 2 hal yang kamus ebut juga"* with screenshot of `admin.html#class-hub` Class Tests sub-tab.
@@ -407,9 +455,9 @@
 
 ## [2026-11-03 14:24] — Phase 294: Zero-Maintenance Auto-Provisioning & Auto-Sync of Tests from Vocabulary Vault
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 294  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 294
+**Status:** PASS
 
 ### Why
 - User request: *"seingat saya saya pernha membuat saran agar Test di kelas Vocab dibuat otomatis saat isi Vocabulary Vault diisi atau diupdate tanpa harus generate test. apakh itu memungkinkan? Iya lakukan /goal"*.
@@ -504,9 +552,9 @@
 
 ## [2026-11-03 07:58] — Phase 292: Vocabulary Vault Institution, Program & Level Columns Integration
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 292  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 292
+**Status:** PASS
 
 ### Why
 - User request: *"di vocabulary vault tambahakan kolom institusi, program dan level dalam keterangan words dan Phrase. juga dalam Topic Blueprint. agar mudah dilihat. perbaiki /goal"*.
@@ -541,9 +589,9 @@
 
 ## [2026-11-03 07:45] — Phase 291: Result Page Glow Alignment, 8-Digit Hex Fix & Bright Blue Back Button Contrast
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 291  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 291
+**Status:** PASS
 
 ### Why
 - User feedback and screenshots identified:
@@ -583,9 +631,9 @@
 
 ## [2026-11-03 07:25] — Phase 290: Side Panel Perpetual Alphabetical Ordering for ABCD Groups
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 290  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 290
+**Status:** PASS
 
 ### Why
 - User requirement: "di bagian side panel ini harus selalu berdasarkan uritan abjad. tolong diperbaiki, dan buat agar selalu secara abjad tiap isi ABCD".
@@ -621,9 +669,9 @@
 
 ## [2026-11-03 07:05] — Phase 289: Result Page Harmonized Glow & 40px Button Height Alignment
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 289  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 289
+**Status:** PASS
 
 ### Why
 - User review of Result Page screenshots identified:
@@ -654,9 +702,9 @@
 
 ## [2026-11-03 07:15] — Phase 288: Batch 132 Roster Activation & Ariwil Transfer to Batch 134
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 288  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 288
+**Status:** PASS
 
 ### Why
 - User reported that Batch 132 was completely empty ("tidak ada satu namapun, baik aktif maupun tidak").
@@ -693,9 +741,9 @@
 
 ## [2026-11-03 06:50] — Phase 287: Result Page Wireframe Overhaul & Dual-View Parity (Student & Tutor)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 287  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 287
+**Status:** PASS
 
 ### Why
 - Complete overhaul of TopsCore Result Page (`result.html`, `css/result.css`, `js/result.js`, `js/api.js`) to strictly match the user's wireframe specification with zero-scroll viewport, 100% Student Metadata parity (150px) with Student Dashboard, dual-view architecture (Student vs Tutor), 3-column equal Tutor controls (`NORMAL`, `REMIDI`, `FORGIVE`), composite dynamic metrics and score/grade panel (35%), and dynamic tier aura.
@@ -738,9 +786,9 @@
 
 ## [2026-11-03 03:00] — Phase 285: Vocab 7×7 & Level Progression Master System (All 7 Phases Complete)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 285  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 285
+**Status:** PASS
 
 ### Why
 - Implement authoritative 7×7 Repetitive Mastery Engine, Hard Gate Exam prerequisites, Words Exam Written mode with typo tolerance (Rule 2.13), reactivate 2nd Vocabulary class for Batch 134, Level Progression System (NEXT, HOLD, RETRY, REPEAT), Batch Transfer with Level Inheritance, Skor F (Forgiven) waiver, and Multi-Tenant Vocabulary Vault (CEC Camp attribution, 11-column Excel import/export).
@@ -785,9 +833,9 @@
 
 ## [2026-11-02 15:20] — Phase 284: Exhaustive Workspace Audit, Bloat Elimination, Dead Code Pruning & System Harmonization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 284  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 284
+**Status:** PASS
 
 ### Why
 - Comprehensive audit of the codebase to eliminate:
@@ -835,9 +883,9 @@
 
 ## [2026-11-02 01:38] — Phase 282: Universal v103 Cache Busters Synchronization Across All 22 JavaScript Modules
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 282  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 282
+**Status:** PASS
 
 ### Why
 - An internal import audit revealed that while primary HTML entrypoints were bumped to `v103`, 22 underlying ES module imports across `js/` and `js/admin/` were still requesting legacy `v99` strings.
@@ -858,9 +906,9 @@
 
 ## [2026-11-02 01:34] — Phase 281: Universal 10-Route Zero-Error Health Verification & PostgREST Defense-in-Depth
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 281  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 281
+**Status:** PASS
 
 ### Why
 - Extended full headless browser audit to cover `result.html` and `test.html` along with all previous 8 routes.
@@ -891,9 +939,9 @@
 
 ## [2026-11-02 01:25] — Phase 280: Comprehensive Multi-Route E2E Health Audit & PostgREST 406 Elimination
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 280  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 280
+**Status:** PASS
 
 ### Why
 - Proactive quality assurance and stability audit across all 5 primary application entrypoints and admin hash routes.
@@ -922,9 +970,9 @@
 
 ## [2026-11-02 01:10] — Phase 279: Milestone Denominator Standardization (1,900 PTS Canonical Curriculum) & Exam Roster Monotonicity Alignment
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 279  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 279
+**Status:** PASS
 
 ### Why
 - User Request: *"oke,,, sekarang saya masih merasa niai ini masih keliru, coba cek semua screenshot terkait nilai di halam hasil exam ini"*
@@ -950,9 +998,9 @@
 
 ## [2026-11-02 00:42] — Phase 277: Official Synchronization of Pasya Theme B Score (147 PTS), Resolution of IDE Save Conflict & 4-Way Reconciliation Finalization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 277  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 277
+**Status:** PASS
 
 ### Why
 - User Request: *"ini adalah nilai yang sempat direkam oleh data di luar sistem, coba cek lagi dan andingkan dengan data dari screenshot hasil ujian, seuiakn, lalu update"*

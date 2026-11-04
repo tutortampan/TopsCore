@@ -383,7 +383,7 @@ Deno.serve(async (req) => {
               .eq('student_id', student_id)
               .in('test_id', taskIds)
               .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
-              
+
             const passCountByTask: Record<string, number> = {};
             if (siblingAttempts) {
               siblingAttempts.forEach((att: any) => {
@@ -505,7 +505,7 @@ Deno.serve(async (req) => {
 
       const themeCode = test.payload.theme_code;
       const topicCode = test.payload.topic_code;
-      
+
       let levelNum = 1;
       if (test.level_id) {
         const { data: levelRec } = await supabase
@@ -517,11 +517,19 @@ Deno.serve(async (req) => {
       }
 
       let query = supabase.from("vocabulary_vault").select("*").is("deleted_at", null).eq("target_level", levelNum).range(0, 4999);
-      
+
       const isThemeTest = (test.category === 'EXAM' || test.category === 'TEST' || String(test.test_type).toLowerCase() === 'exam' || test.test_subtype === 'VOCAB_EXAM' || test.test_subtype === 'PHRASE_EXAM' || test.test_subtype === 'VOCAB_TEST' || test.test_subtype === 'PHRASE_TEST' || (test.shell_code && (test.shell_code.includes('-EXAM') || test.shell_code.includes('-TEST')))) && !topicCode;
 
       const themes = test.payload?.themes;
-      if (themes && Array.isArray(themes) && themes.length > 0) {
+      if (topicCode) {
+          if (themeCode) query = query.eq("theme_code", themeCode);
+          const candidateCodes = [
+              String(topicCode).toUpperCase(),
+              (/^[0-9]+$/.test(String(topicCode)) && themeCode) ? `${String(themeCode).toUpperCase()}${topicCode}` : null,
+              String(topicCode).replace(/^[A-Za-z]/, '')
+          ].filter(Boolean);
+          query = query.in("topic_code", candidateCodes);
+      } else if (themes && Array.isArray(themes) && themes.length > 0) {
           query = query.in("theme_code", themes);
       } else if (isThemeTest && themeCode) {
           const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -532,17 +540,16 @@ Deno.serve(async (req) => {
           } else {
               query = query.eq("theme_code", themeCode);
           }
-      } else {
-          if (themeCode) query = query.eq("theme_code", themeCode);
-          if (topicCode) query = query.eq("topic_code", topicCode);
+      } else if (themeCode) {
+          query = query.eq("theme_code", themeCode);
       }
-      
+
       const { data: vaultData } = await query;
       let vaultWords = vaultData || [];
       const category = test.payload.category || 'vocab';
-      const isUnified = category === 'all' || 
-                        category === 'unified' || 
-                        test.payload?.is_unified === true || 
+      const isUnified = category === 'all' ||
+                        category === 'unified' ||
+                        test.payload?.is_unified === true ||
                         test.payload?.is_unified_test === true;
 
       const orderSetting = String(test.question_order || test.payload?.question_order || 'random').toLowerCase();
@@ -583,13 +590,19 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Safety clamp: strictly respect configured total questions bounds (e.g. 40 for task, 120 for exam)
+      const maxTargetQuestions = test.payload?.total_questions || test.total_questions;
+      if (maxTargetQuestions && Number(maxTargetQuestions) > 0 && vaultWords.length > Number(maxTargetQuestions)) {
+        vaultWords = vaultWords.slice(0, Number(maxTargetQuestions));
+      }
+
       let dynamicAnswerType = ((test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE') ? test.answer_type : null) || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
       if (!test.payload?.answer_type && !(test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE')) {
          if (test.test_subtype === 'VOCAB_TASK' || test.test_subtype === 'PHRASE_TASK') dynamicAnswerType = 'spoken';
          else if (test.test_subtype === 'VOCAB_TEST') dynamicAnswerType = 'spoken';
          else if (test.test_subtype === 'PHRASE_TEST') dynamicAnswerType = 'selection';
       }
-      
+
       if (vaultWords && vaultWords.length > 0) {
         let distractorPool: any[] = [];
         const isSelectionMode = dynamicAnswerType === 'dropdown' || dynamicAnswerType === 'selection' || dynamicAnswerType === 'multiple_choice';
@@ -604,7 +617,7 @@ Deno.serve(async (req) => {
             if (allPhraseData) {
                 const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase'];
                 const isPhraseMode = category === 'phrases' || test.test_subtype === 'PHRASE_TASK' || test.test_subtype === 'PHRASE_TEST';
-                
+
                 distractorPool = allPhraseData.filter((r: any) => {
                     const wt = (r.word_type || '').toLowerCase();
                     const isPhrase = phraseTypes.includes(wt);
@@ -616,32 +629,32 @@ Deno.serve(async (req) => {
         snapQuestions = vaultWords.map((vw: any, idx: number) => {
              const accepted = vw.english ? vw.english.split('/').map((s: string) => s.trim()) : [];
              let options = null;
-             
+
              if (isSelectionMode) {
                  const correctAnswer = accepted[0] || "N/A";
                  let others = distractorPool.filter((r: any) => {
                      const eng = (r.english||'').split('/')[0].trim();
                      return eng && eng !== correctAnswer && !accepted.includes(eng);
                  });
-                 
+
                  const currentType = (vw.word_type || '').toLowerCase();
                  let homogenous = others.filter((r: any) => (r.word_type || '').toLowerCase() === currentType);
                  let heterogenous = others.filter((r: any) => (r.word_type || '').toLowerCase() !== currentType);
-                 
+
                  homogenous = homogenous.sort(() => 0.5 - Math.random());
                  heterogenous = heterogenous.sort(() => 0.5 - Math.random());
-                 
+
                  let finalDistractors = [];
                  if (homogenous.length >= 4) {
                      finalDistractors = homogenous.slice(0, 4);
                  } else {
                      finalDistractors = [...homogenous, ...heterogenous].slice(0, 4);
                  }
-                 
+
                  let stringDistractors = finalDistractors.map((r: any) => (r.english||'').split('/')[0].trim());
                  options = [correctAnswer, ...stringDistractors].sort(() => 0.5 - Math.random());
              }
-             
+
              return {
                  question_id: null,
                  item_code: vw.item_code || null,

@@ -1,11 +1,32 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-04 07:15 UTC+8
-Current Phase: Phase 303: Auto-Generator Test Hierarchy Diagnostic & Prerequisite Chain Resolution [COMPLETE]
+Last Updated: 2026-11-04 11:48 UTC+8
+Current Phase: Phase 304: Task Question Count Clamping, Permanent 50px Banners, and Strict Level Class Isolation [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Phase 303: Auto-Generator Test Hierarchy Diagnostic & Prerequisite Chain Resolution [COMPLETE]:**
+1. **Phase 304: Task Question Count Clamping, Permanent 50px Banners, and Strict Level Class Isolation [COMPLETE]:**
+   - **Task Question Count Overload Resolved**:
+     - Root cause: In `supabase/functions/start-test/index.ts`, `themes` was evaluated before `topicCode`, causing task `2A1` (`payload.themes = ['A']`) to query all 120 words of Theme A instead of topic A1 (40 words).
+     - Fixed in both `supabase/functions/start-test/index.ts` and `js/api.js`: prioritized `topicCode` over `themes`, added multi-candidate code matching (`[topicCode.toUpperCase(), themeCode + topicCode, topicCode.replace(/^[A-Za-z]/, '')]`), and implemented a hard safety clamp against `test.total_questions` (Task = 40, Exam = 120/160).
+     - Result: `2nd Vocabulary A1 Words Task` now loads exactly 40 questions (`0/40 Answered`) with 0 words from A2/A3.
+   - **Permanent 50px Top and Bottom Banners in Test Runner**:
+     - Converted test runner header into standard 50px top header: `<header class="dashboard-header test-header" id="test-top-header">` featuring Give Up button, student avatar circle, cloud sync indicator, and countdown timer badge.
+     - Extracted `.test-title-bar` as an independent 34px strip above `.test-body`.
+     - Relocated `<footer id="bottom-ad-banner" class="topscore-locked-banner">` to be a permanent direct child of `body.test-page` at the very bottom, fixed at 50px height (`flex-shrink: 0 !important; z-index: 100 !important;`).
+     - Added Netlify floating badge collision suppression so bottom banner remains 100% visible on all viewports without being cut off.
+   - **Strict Class Level Isolation**:
+     - Fixed `fetchStudentClasses` in `js/api.js` to strictly filter by the student's current active level (`cLvlNum === studentLevelNum` or `c.level_id === levelId`), removing the cumulative `<=` comparison.
+     - Updated `renderClasses` in `js/dashboard.js`: past level classes (`cLvlNum < studentLevelNum`) now only push to `completedClasses` for history review and are excluded from `activeClasses`.
+     - Result: Student account `Test` (in `2nd Level`) only sees `2nd Vocabulary` in the `Select Class` modal, with `1st Vocabulary` completely isolated.
+   - **Verification & Parity**:
+     - 40/40 JS files syntax check PASS (`node scripts/check_all_js_syntax.cjs`).
+     - 100% CI test suite PASS (`npm test`).
+     - `node scripts/verify_phase_304_all_issues.mjs`: 24/24 E2E assertion checks PASS.
+     - Captured and archived screenshots: `test_page_verified.png` (50px top header, 50px permanent bottom banner, 0/40 Answered) and `dashboard_classes_selector_verified.png` (only 2nd Vocabulary listed).
+   - **Cache Buster**: Bumped to `v=20261104_v117` across `test.html`, `dashboard.html`, `result.html`, `admin.html`, `js/test.js`, `js/dashboard.js`, `js/result.js`, and `js/admin/app.js`.
+
+2. **Phase 303: Auto-Generator Test Hierarchy Diagnostic & Prerequisite Chain Resolution [COMPLETE]:**
    - **Root Cause Identified**:
      - Investigated why auto-generating tests for 2nd Vocabulary produced only 11 tasks and 4 exams (15 records) instead of 15 tasks and 4 exams (19 records).
      - Diagnosed fatal bug in `upsertDynamicTestShell` (`js/api.js`): `legacyCodes` check for TASK shells unconditionally included EXAM shell codes (`${levelNum}${themeCode}-WORDS-EXAM`).

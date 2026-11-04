@@ -14,7 +14,7 @@ const sb = await getSupabase();
 const INSTITUTION_ID = 'f51d4c2c-7c24-42ef-8d8f-b0f3e524a447'; // CEC
 const PROGRAM_ID     = '11deb53c-434a-44b0-83ca-1cc9b239cab3'; // Camp
 const LEVEL_2_ID     = '9936683a-5b4a-4796-bb5d-a7fd8ecf0b71'; // 2nd Level
-const BATCH_134_ID   = '3e7288b7-a90e-4323-9b02-24e73991f0d7'; // Level 2 Batch (Camp 134)
+const BATCH_134_ID   = '3e7288b7-a90e-4323-9b02-24e73991f0d7'; // Level 2 Batch (Camp 134),btw
 const PIN_1234_HASH  = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'; // SHA-256 for "1234"
 
 console.log('--- RESETTING STUDENT ACCOUNT "Test" ---');

@@ -441,11 +441,14 @@ export async function fetchStudentClasses(programId, institutionId, levelId = nu
       return data;
     }
 
-    // Cumulative Retroactive Access: return classes whose level_number <= studentLevelNum
+    // Strict Level Isolation: Only return classes assigned to the student's current level
     return data.filter(c => {
+      if (c.level_id === levelId) return true;
       const cLvlNum = c.levels?.level_number;
-      if (cLvlNum == null) return true;
-      return cLvlNum <= studentLevelNum;
+      if (cLvlNum != null && studentLevelNum != null) {
+        return cLvlNum === studentLevelNum;
+      }
+      return false;
     });
   } catch (e) {
     console.warn('Classes query note:', e.message);
@@ -802,6 +805,12 @@ export async function generateTestQuestions(sb, test) {
       } else {
         vaultWords.sort((a, b) => (a.indonesian || '').localeCompare(b.indonesian || ''));
       }
+    }
+
+    // Safety clamp: strictly respect configured total questions bounds (e.g. 40 for task, 120 for exam)
+    const maxTargetQuestions = test.payload?.total_questions || test.total_questions;
+    if (maxTargetQuestions && Number(maxTargetQuestions) > 0 && vaultWords.length > Number(maxTargetQuestions)) {
+      vaultWords = vaultWords.slice(0, Number(maxTargetQuestions));
     }
 
     if (vaultWords && vaultWords.length > 0) {
