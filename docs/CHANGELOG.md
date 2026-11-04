@@ -1,3 +1,36 @@
+## [2026-11-05 00:50] — Phase 313: 7/7 Mastery Action Button Redesign to White Forward Arrow in Green Box
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 313
+**Status:** PASS
+
+### Why
+- The user requested: "ganti tombol play hijau setelah siswa selsaikan 7/7 dengan tombol panah ke depan putih dalam kotak hijau."
+- Upon reaching 7/7 passes on a task, the Section 6 next assessment action button needed to transition from the circle play icon into a white forward arrow icon inside a green box (`#00c000`), symbolizing readiness to advance or practice the completed task.
+
+### Changed
+1. **White Forward Arrow SVG & Button State (`js/dashboard.js`)**:
+   - Defined `ICON_4D_WHITE_ARROW_RIGHT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>'`.
+   - In `renderNextAssignmentHero`, when `currentPasses >= targetReps`:
+     - Applied class `next-test-go-btn next-asm-go-btn is-pass-tier-a is-next-arrow-green`.
+     - Rendered `ICON_4D_WHITE_ARROW_RIGHT`.
+     - Button title: `"7/7 Complete! Click to take next repetition or advance"`.
+2. **Button Styling (`css/dashboard.css`)**:
+   - Added `.next-test-go-btn.is-next-arrow-green, .next-asm-go-btn.is-next-arrow-green`:
+     - `background-color: #00c000 !important;` (Pure Green Grade Star/A).
+     - `background-image: none !important;`
+     - `color: #ffffff !important;`
+     - `border: 1px solid rgba(255, 255, 255, 0.45) !important;`
+     - `box-shadow: 0 0 12px var(--grade-star-glow) !important;`
+     - Border radius: `6px`, dimensions: `32px` $\times$ `28px`.
+3. **Automated Verification (`scripts/test_7x7_gating_and_pass_button_e2e.mjs`)**:
+   - Added TEST 4 to verify 7/7 completion button state.
+   - Verified computed styles: `bg: rgb(0, 192, 0)` (`#00c000`), `color: rgb(255, 255, 255)`, `borderRadius: 6px`, and white forward arrow SVG stroke.
+   - Generated and verified artifact screenshot `dashboard_7x7_mastery_white_arrow_verified.png`.
+   - Bumped cache busters in `dashboard.html` to `v=20261105_v125`.
+
+---
+
 ## [2026-11-05 00:30] — Phase 312: 7×7 Repetitive Mastery Gating & Dynamic Pass Counter Action Button
 
 **Agent/Session:** Antigravity

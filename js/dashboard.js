@@ -1082,21 +1082,22 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const className = classMap[nextTest.class_id]?.name || 'Class Module';
       const isTest = isExam(nextTest);
 
-      // Selected Icons: 1A (Solid Yellow Padlock), 2B (Red Rotate Undo), 3C (Green Circle Play)
+      // Selected Icons: 1A (Solid Yellow Padlock), 2B (Red Rotate Undo), 3C (Green Circle Play), 4D (White Forward Arrow)
       const ICON_1A_YELLOW_LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="#ffff00" stroke-width="2.6" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11.5" rx="3" fill="#ffff00" stroke="#cccc00" stroke-width="1"/><circle cx="12" cy="14.8" r="1.5" fill="#713f12"/><path d="M12 15.5v2.2" stroke="#713f12" stroke-width="1.6" stroke-linecap="round"/></svg>';
       const ICON_2B_RED_RETAKE  = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
       const ICON_3C_GREEN_PLAY  = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="#ffffff"/></svg>';
+      const ICON_4D_WHITE_ARROW_RIGHT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';
 
       if (!isTest) {
         const currentPasses = passCountByTest[nextTest.id] || 0;
         if (currentPasses >= targetReps) {
-          // 7 passes: Green Play Button (Grade A / Star tier) - ready for next task
+          // 7/7 passes: White Forward Arrow in Green Box (Ready to Advance / Next Task)
           container.innerHTML = `
             <div class="next-test-left next-asm-left">
               <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Test')}">${escapeHtml(nextTest.title || 'Test')}</span>
             </div>
-            <button type="button" class="next-test-go-btn next-asm-go-btn is-pass-tier-a is-start-green" title="Mastered (${currentPasses}/${targetReps} Passes) - Click to Practice or Advance" onclick="window.location.href='test.html?id=${nextTest.id}'">
-              ${ICON_3C_GREEN_PLAY}
+            <button type="button" class="next-test-go-btn next-asm-go-btn is-pass-tier-a is-next-arrow-green" title="7/7 Complete! Click to take next repetition or advance" onclick="window.location.href='test.html?id=${nextTest.id}'">
+              ${ICON_4D_WHITE_ARROW_RIGHT}
             </button>
           `;
         } else {

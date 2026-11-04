@@ -3120,13 +3120,22 @@ body.dashboard-page .next-asm-go-btn.is-pass-tier-b {
   box-shadow: 0 0 10px rgba(var(--grade-b-rgb), 0.6) !important;
 }
 
-/* Tier 7: Green Play A/Star */
+/* Tier 7: White Forward Arrow in Green Box (7/7 Complete) */
 body.dashboard-page .next-test-go-btn.is-pass-tier-a,
-body.dashboard-page .next-asm-go-btn.is-pass-tier-a {
-  background: linear-gradient(135deg, #86efac 0%, var(--grade-star) 100%) !important;
-  color: #0F172A !important;
-  border: 1px solid var(--grade-star) !important;
+body.dashboard-page .next-asm-go-btn.is-pass-tier-a,
+body.dashboard-page .next-test-go-btn.is-next-arrow-green,
+body.dashboard-page .next-asm-go-btn.is-next-arrow-green {
+  background-color: #00c000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
   box-shadow: 0 0 12px var(--grade-star-glow) !important;
+}
+
+body.dashboard-page .next-test-go-btn.is-pass-tier-a:hover,
+body.dashboard-page .next-asm-go-btn.is-pass-tier-a:hover {
+  filter: brightness(1.15) !important;
+  transform: scale(1.05) !important;
 }
 
 body.dashboard-page .next-test-status-icon,
