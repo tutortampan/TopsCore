@@ -1,11 +1,18 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-06 01:25 UTC+8
-Current Phase: Phase 325: Vocab & Universal Student Dashboard Master Blueprint (60-150-50-70-FLEX-60) & Universal "TopsCore by Mr. Top" Prominent Banner [COMPLETE]
+Last Updated: 2026-11-06 01:28 UTC+8
+Current Phase: Phase 327: Dashboard Next Test Card Layout Refinement & Universal Production Integrity [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Universal Bottom Banner Overhaul across ALL Pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`, and CSS)**:
+1. **Next Test Card 2-Column Blueprint Refinement (`dashboard.html`, `css/dashboard.css`, `js/dashboard.js`)**:
+   - Refined Next Test card into strict 2 columns according to the master blueprint spreadsheet layout:
+     - **Left Column (`.next-test-col-left`)**: Flex column containing Test Name title wrap (`.next-test-title-wrap`) on top and 20px Rainbow Pass Bar (`.rainbow-pass-bar`) on bottom.
+     - **Right Column (`.next-test-col-right`)**: Full-height 68px action column containing the 3-state action icon (Repetition 1-7 pass button, Yellow padlock `🔒` waiting state, or Green play `▶️` exam button).
+   - Resolved syntax anomaly in `js/dashboard.js` (removed duplicate closing brace at line 1166).
+   - Cleaned up obsolete header profile button CSS in `css/dashboard.css`.
+
+2. **Universal Bottom Banner Overhaul across ALL Pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`, and CSS)**:
    - Replaced old banner text (`TopsCore © 2026 | Created by Mr. Top`) with bold, enlarged branding: `<span class="banner-brand">TopsCore</span> <span class="banner-author">by Mr. Top</span>`.
    - **Enlarged and Emboldened ("Kita besarkan dan tebalkan")**:
      - `.banner-brand`: `font-size: clamp(1.05rem, 3vw, 1.25rem) !important; font-weight: 900 !important; color: #38bdf8 !important; text-shadow: 0 0 14px rgba(56, 189, 248, 0.45) !important;`
@@ -13,7 +20,7 @@ Status: COMPLETE
      - Banner container: `height: 60px !important; font-size: clamp(1rem, 2.8vw, 1.15rem) !important; font-weight: 800 !important; text-align: left !important; padding-left: clamp(16px, 4vw, 24px) !important;`
    - Automated regression test created: `scripts/test_bottom_banner_universal.mjs` verifying all 5 HTML files and 5 CSS files pass 100%.
 
-2. **Master Blueprint Layout (60-150-50-70-FLEX-60) (`dashboard.html`, `css/dashboard.css`, `js/dashboard.js`)**:
+3. **Master Blueprint Layout (60-150-50-70-FLEX-60) (`dashboard.html`, `css/dashboard.css`, `js/dashboard.js`)**:
    - **Header 60px**: Integrated Door Icon (`🚪`, `#btn-change-class`) to switch classes, `#dashboard-header-class-name` in center, and `#logout-btn` on right. Removed redundant header profile icon.
    - **Eliminated Classes Bar**: Saved 60px vertical space to maximize leaderboard real estate.
    - **Metadata Card 150px**: Breadcrumb (`CEC | CAMP | 134 | 2ND LEVEL`) on top, Score on left, Clickable 70px Avatar (`#banner-avatar-trigger`) in center with champion crown (`👑`), Grade on right, and Full Student Name with Title on bottom.
@@ -26,21 +33,21 @@ Status: COMPLETE
      - Tab 2: Completed Tests ordered strictly from latest accessible test down to earliest, with columns: `NO` | `TEST NAME` | `SCORE` | `GRADE` | `RETRY BUTTON ONLY` (launching test on click).
    - **TopsCore Banner 60px**: Fixed bottom footer locked at 60px, maintaining strict zero-scroll viewport on 800px devices.
 
-3. **Authoritative Grading & Palette Extensions (`js/grading.js`)**:
+4. **Authoritative Grading & Palette Extensions (`js/grading.js`)**:
    - Added `TOPSCORE_COLORS.X = '#8B5CF6'`, `TOPSCORE_COLORS.PURPLE = '#8B5CF6'`.
    - Added `GRADE_PALETTE.X` for Alumni.
    - Enhanced `getAchievementStatus` and `getGradeSymbol` for Grade `X`, `ALUMNI`, and `LET'S GO`.
 
-4. **Automated Testing & Full Verification**:
+5. **Automated Testing & Full Verification**:
    - Automated tests: `scripts/test_vocab_dashboard_blueprint.mjs` & `scripts/test_bottom_banner_universal.mjs`.
-   - Busted cache to `v=20261106_v136`, service worker to `topscore-cache-option-a-v64`.
-   - 45/45 JS syntax PASS.
-   - 27/27 SW manifest assets PASS.
-   - Exam Parity PASS.
-   - Homophones Spoken Mode 23/23 PASS.
-   - Prerequisite Deficit Guard PASS.
-   - Vocab Dashboard Blueprint PASS (100%).
-   - Universal Bottom Banner PASS (100%).
+   - Busted cache to `v=20261106_v137`, service worker to `topscore-cache-option-a-v65`.
+   - 45/45 JS syntax PASS (`check_all_js_syntax.cjs`).
+   - 27/27 SW manifest assets PASS (`generate_sw_manifest.mjs`).
+   - Exam Parity PASS (`test_student_dashboard_exam_parity.mjs`).
+   - Homophones Spoken Mode 23/23 PASS (`test_homophones_spoken_mode.mjs`).
+   - Prerequisite Deficit Guard PASS (`test_prerequisite_deficit_guard.mjs`).
+   - Vocab Dashboard Blueprint PASS 100% (`test_vocab_dashboard_blueprint.mjs`).
+   - Universal Bottom Banner PASS 100% (`test_bottom_banner_universal.mjs`).
 
 ## Completed Work:
 1. **Root-Cause Analysis & Fix for "Tidak Bisa Lanjut Task" (Ayya & Batch 134)**:

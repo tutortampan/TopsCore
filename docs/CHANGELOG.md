@@ -1,3 +1,43 @@
+## [2026-11-06 01:28] — Phase 327: Next Test Card 2-Column Blueprint Refinement & Production Integrity
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 327: Dashboard Next Test Card Layout Refinement & Production Integrity
+**Status:** PASS
+
+### Why
+- Align Next Test Card layout with the exact 2-column spreadsheet blueprint (`.next-test-col-left` for test title wrap and 20px rainbow pass bar; `.next-test-col-right` for full-height 68px test action icon box).
+- Resolve a syntax anomaly (duplicate closing brace) in `js/dashboard.js`.
+- Synchronize cache busting across all HTML and service worker files (`v=20261106_v137`, `topscore-cache-option-a-v65`).
+- Ensure all 7 test suites pass 100%.
+
+### Changed
+1. **Dashboard HTML & CSS Layout (`dashboard.html`, `css/dashboard.css`, `js/dashboard.js`)**:
+   - Refined `#up-next-container` structure to strict 2 columns: `.next-test-col-left` (flex: 1) and `.next-test-col-right` (width: 68px).
+   - Removed obsolete header profile button CSS.
+   - Cleaned up duplicate closing brace in `js/dashboard.js`.
+2. **Cache Busting**:
+   - Bumped cache busters across all 5 HTML files, JS imports, and Service Worker to `v=20261106_v137`.
+   - Updated Service Worker cache name to `topscore-cache-option-a-v65`.
+3. **Automated Verification**:
+   - All 7 test suites pass 100% (syntax, SW manifest, exam parity, homophones, prerequisite deficit guard, dashboard blueprint, universal banner).
+
+### Files
+- `css/dashboard.css`
+- `dashboard.html`
+- `js/dashboard.js`
+- `admin.html`
+- `index.html`
+- `test.html`
+- `result.html`
+- `sw.js`
+- `scripts/bump_cache_busters.mjs`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+
+### Tests
+- `npm test` -> 7/7 suites PASS (100%).
+
+---
+
 ## [2026-11-06 01:25] — Phase 326: Universal Bottom Banner Overhaul ("TopsCore by Mr. Top" Bolder & Bigger across ALL Pages)
 
 **Agent/Session:** Antigravity

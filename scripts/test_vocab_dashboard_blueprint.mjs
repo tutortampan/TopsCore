@@ -53,6 +53,8 @@ assert.ok(css.includes('.dashboard-header-brand'), 'Must define .dashboard-heade
 assert.ok(css.includes('#banner-avatar-trigger'), 'Must define #banner-avatar-trigger');
 assert.ok(css.includes('data-tier="X"'), 'Must support data-tier="X"');
 assert.ok(css.includes('data-tier="LET\'S GO"'), 'Must support data-tier="LET\'S GO"');
+assert.ok(css.includes('.next-test-col-left'), 'Must define .next-test-col-left');
+assert.ok(css.includes('.next-test-col-right'), 'Must define .next-test-col-right (Full-height 80px)');
 assert.ok(css.includes('.rainbow-pass-bar'), 'Must define .rainbow-pass-bar');
 assert.ok(css.includes('.rainbow-box'), 'Must define .rainbow-box');
 assert.ok(css.includes('rainbow-step-1'), 'Must define rainbow-step-1');
@@ -70,6 +72,8 @@ const js = fs.readFileSync('js/dashboard.js', 'utf8');
 assert.ok(js.includes('btn-change-class'), 'Must wire btn-change-class');
 assert.ok(js.includes('dashboard-header-class-name'), 'Must update dashboard-header-class-name');
 assert.ok(js.includes('banner-avatar-trigger'), 'Must wire banner-avatar-trigger to openProfile');
+assert.ok(js.includes('next-test-col-left'), 'Must render next-test-col-left');
+assert.ok(js.includes('next-test-col-right'), 'Must render next-test-col-right');
 assert.ok(js.includes('rainbow-pass-bar'), 'Must render rainbow-pass-bar');
 assert.ok(js.includes('is-exam-play'), 'Must render is-exam-play for unlocked exams');
 assert.ok(js.includes('is-exam-lock'), 'Must render is-exam-lock for waiting exams');

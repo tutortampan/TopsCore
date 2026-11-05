@@ -3,12 +3,12 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261106_v136';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261106_v136';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v136';
-    import { testMicrophoneCapability } from './speech.js?v=20261106_v136';
-    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v136';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261106_v136';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261106_v137';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261106_v137';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v137';
+    import { testMicrophoneCapability } from './speech.js?v=20261106_v137';
+    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v137';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261106_v137';
 
     window._isBatchChampion = false;
 
@@ -183,7 +183,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261106_v137')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).maybeSingle();
           if (st?.gender) {
             currentGender = st.gender;
@@ -549,7 +549,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
         try {
-          const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261106_v137')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).maybeSingle();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
@@ -568,7 +568,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Background sync: memastikan localStorage selalu sinkron dengan database terbaru
         (async () => {
           try {
-            const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261106_v137')).getSupabase();
             const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).maybeSingle();
             if (st && st.photo_url !== photoUrl) {
               if (st.photo_url) {
@@ -622,7 +622,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
       if (!hasBirthday) {
         try {
-          const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261106_v137')).getSupabase();
           const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).maybeSingle();
           if (st && st.birth_date) {
             hasBirthday = true;
@@ -688,7 +688,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261106_v137')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).maybeSingle();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -698,7 +698,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./session.js?v=20261106_v136');
+             const { setStudentSession } = await import('./session.js?v=20261106_v137');
              setStudentSession(session);
           }
         }
@@ -748,7 +748,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./session.js?v=20261106_v136');
+            const { setStudentSession } = await import('./session.js?v=20261106_v137');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -1100,20 +1100,22 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let rainbowHtml = '<div class="rainbow-pass-bar">';
         for (let s = 1; s <= 7; s++) {
           const isLit = s <= currentPasses;
-          rainbowHtml += `<span class="rainbow-box ${isLit ? 'is-lit' : 'is-dim'}" data-step="${s}">${isLit ? '✓' : s}</span>`;
+          rainbowHtml += `<span class="rainbow-box ${isLit ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
         }
         rainbowHtml += '</div>';
 
         container.innerHTML = `
-          <div class="next-test-row-top">
-            <div class="next-test-left next-asm-left">
+          <div class="next-test-col-left">
+            <div class="next-test-title-wrap">
               <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Task')}">${escapeHtml(nextTest.title || 'Task')}</span>
             </div>
-            <button type="button" class="next-test-go-btn next-asm-go-btn pass-counter-btn rainbow-step-${displayStep}" title="Repetition Pass ${currentPasses}/${targetReps} - Click to practice" onclick="event.stopPropagation(); window.location.href='test.html?id=${nextTest.id}'">
+            ${rainbowHtml}
+          </div>
+          <div class="next-test-col-right" title="Repetition Pass ${currentPasses}/${targetReps} - Click to practice">
+            <button type="button" class="next-test-go-btn next-asm-go-btn pass-counter-btn rainbow-step-${displayStep}">
               ${displayStep}
             </button>
           </div>
-          ${rainbowHtml}
         `;
         container.onclick = () => { window.location.href = `test.html?id=${nextTest.id}`; };
       } else {
@@ -1125,35 +1127,39 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         let rainbowHtml = '<div class="rainbow-pass-bar is-full-glow">';
         for (let s = 1; s <= 7; s++) {
-          rainbowHtml += `<span class="rainbow-box is-lit" data-step="${s}">✓</span>`;
+          rainbowHtml += `<span class="rainbow-box is-lit" data-step="${s}">${s}</span>`;
         }
         rainbowHtml += '</div>';
 
         if (isUnlocked && isWhitelisted) {
           const remMin = activeSession.remaining_minutes || 30;
           container.innerHTML = `
-            <div class="next-test-row-top">
-              <div class="next-test-left next-asm-left">
+            <div class="next-test-col-left">
+              <div class="next-test-title-wrap">
                 <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Official Exam')}">${escapeHtml(nextTest.title || 'Official Exam')}</span>
               </div>
-              <button type="button" class="next-test-go-btn next-asm-go-btn is-exam-play" title="Start Exam (${remMin}m left)" onclick="event.stopPropagation(); window.location.href='test.html?id=${nextTest.id}'">
+              ${rainbowHtml}
+            </div>
+            <div class="next-test-col-right" title="Start Exam (${remMin}m left)">
+              <button type="button" class="next-test-go-btn next-asm-go-btn is-exam-play">
                 ${ICON_3C_GREEN_PLAY}
               </button>
             </div>
-            ${rainbowHtml}
           `;
           container.onclick = () => { window.location.href = `test.html?id=${nextTest.id}`; };
         } else {
           container.innerHTML = `
-            <div class="next-test-row-top">
-              <div class="next-test-left next-asm-left">
+            <div class="next-test-col-left">
+              <div class="next-test-title-wrap">
                 <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Official Exam')}">${escapeHtml(nextTest.title || 'Official Exam')}</span>
               </div>
-              <span class="next-test-status-icon next-asm-status-icon is-exam-lock" title="Waiting for Tutor to unlock Exam">
+              ${rainbowHtml}
+            </div>
+            <div class="next-test-col-right" title="Waiting for Tutor to unlock Exam">
+              <span class="next-test-status-icon next-asm-status-icon is-exam-lock">
                 ${ICON_1A_YELLOW_LOCK}
               </span>
             </div>
-            ${rainbowHtml}
           `;
           container.onclick = null;
         }
@@ -1353,7 +1359,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const headerClassNameEl = document.getElementById('dashboard-header-class-name');
       if (activeClass) {
         if (nameEl) nameEl.textContent = activeClass.name;
-        if (headerClassNameEl) headerClassNameEl.textContent = activeClass.name;
+        if (headerClassNameEl) headerClassNameEl.textContent = String(activeClass.name || '').toUpperCase();
         if (pctEl) pctEl.textContent = `${activeClass._pct != null ? activeClass._pct : 0}%`;
       } else {
         if (nameEl) nameEl.textContent = 'No Classes Assigned';
@@ -2943,7 +2949,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       try {
-        const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261106_v137')).getSupabase();
 
         // 1. Fetch active students in the same batch
         const { data: students, error: stuErr } = await sb
@@ -3237,7 +3243,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                     <span class="leaderboard-student-name">${escHtml(displayTitleName)}</span>
                     ${isMe ? '<span style="color:#38bdf8; font-size:0.7rem; font-weight:700;">(You)</span>' : ''}
                   </div>
-                  <span class="leaderboard-sub-info">${st.completedCount} completed &bull; ${hasExam ? `${st.progressPct ?? st.overallScore}% Progress` : '—'}</span>
+                  
                 </div>
               </div>
               <div class="th-col th-point" style="display:flex; align-items:center; justify-content:flex-end;">
@@ -3363,7 +3369,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261106_v137')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).maybeSingle();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
@@ -3418,7 +3424,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261106_v137')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
 
