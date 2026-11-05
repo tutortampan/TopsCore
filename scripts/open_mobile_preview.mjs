@@ -31,6 +31,20 @@ async function isServerRunning(port = 5500) {
   });
 }
 
+// Helper to format proper URL with query parameters
+function resolvePageUrl(p, baseUrl) {
+  let target = p;
+  if (target === 'result.html' && !target.includes('attempt_id')) {
+    target = 'result.html?attempt_id=ba8cb716-6cdd-4017-a631-3ee0558ca04a';
+  }
+  if (baseUrl) {
+    return `${baseUrl}/${target}`;
+  }
+  const [filePath, query] = target.split('?');
+  const fullPath = `file:///${path.resolve(filePath).replace(/\\/g, '/')}`;
+  return query ? `${fullPath}?${query}` : fullPath;
+}
+
 async function run() {
   const serverUp = await isServerRunning(5500);
   const baseUrl = serverUp ? 'http://localhost:5500' : null;
@@ -67,6 +81,43 @@ async function run() {
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
   });
 
+  // Automatically seed active preview session for Student & Admin views
+  const ayyaSession = {
+    student_id: "bae52c8d-3456-4334-8f7a-7ba3c268c642",
+    student_name: "Mr. Ayya Sofyandi Mzeth",
+    gender: "male",
+    institution_id: "f51d4c2c-7c24-42ef-8d8f-b0f3e524a447",
+    institution_name: "CEC",
+    program_id: "11deb53c-434a-44b0-83ca-1cc9b239cab3",
+    program_name: "Camp",
+    class_id: "2ccf6468-1e03-41d1-b72b-1d84dcad85b2",
+    class_name: "2nd Vocabulary",
+    batch_id: "3e7288b7-a90e-4323-9b02-24e73991f0d7",
+    batch_name: "134",
+    level_id: "9936683a-5b4a-4796-bb5d-a7fd8ecf0b71",
+    level_number: 2,
+    level_name: "2ND LEVEL",
+    authenticated_at: new Date().toISOString()
+  };
+
+  const adminSession = {
+    user_id: "admin-preview-id",
+    email: "admin@topscore.lms",
+    role: "admin",
+    authenticated_at: new Date().toISOString()
+  };
+
+  await context.addInitScript(({ ayya, admin }) => {
+    try {
+      if (!sessionStorage.getItem('topscore_session')) {
+        sessionStorage.setItem('topscore_session', JSON.stringify(ayya));
+      }
+      if (!sessionStorage.getItem('topscore_admin_session')) {
+        sessionStorage.setItem('topscore_admin_session', JSON.stringify(admin));
+      }
+    } catch (_) {}
+  }, { ayya: ayyaSession, admin: adminSession });
+
   const previewDir = path.resolve('.mobile_previews');
   if ((isScreenshot || isAllScreenshots) && !fs.existsSync(previewDir)) {
     fs.mkdirSync(previewDir, { recursive: true });
@@ -78,10 +129,17 @@ async function run() {
 
     for (const p of pages) {
       const page = await context.newPage();
-      const pageUrl = baseUrl ? `${baseUrl}/${p}` : `file:///${path.resolve(p).replace(/\\/g, '/')}`;
+      const pageUrl = resolvePageUrl(p, baseUrl);
       try {
-        await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 5000 });
-        await page.waitForTimeout(600);
+        await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
+        await page.waitForFunction(() => {
+          const overlay = document.querySelector('.loading-overlay');
+          return !overlay || overlay.style.display === 'none';
+        }, { timeout: 20000 }).catch(() => {});
+        if (p === 'dashboard.html') {
+          await page.waitForSelector('#batch-leaderboard-container .leaderboard-row', { timeout: 10000 }).catch(() => {});
+        }
+        await page.waitForTimeout(1500);
         const outPath = path.join(previewDir, `${path.basename(p, '.html')}_390x800.png`);
         await page.screenshot({ path: outPath });
         console.log(`  ✅ Saved: .mobile_previews/${path.basename(outPath)}`);
@@ -98,10 +156,17 @@ async function run() {
 
   if (isScreenshot) {
     const page = await context.newPage();
-    const pageUrl = baseUrl ? `${baseUrl}/${targetPageArg}` : `file:///${path.resolve(targetPageArg).replace(/\\/g, '/')}`;
+    page.on('console', msg => console.log('  [Browser]', msg.text()));
+    page.on('pageerror', err => console.log('  [Browser Error]', err.message));
+    const pageUrl = resolvePageUrl(targetPageArg, baseUrl);
     console.log(`📸 Capturing mobile snapshot for ${targetPageArg} at 390x800...`);
-    await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 5000 });
-    await page.waitForTimeout(600);
+    await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.waitForFunction(() => {
+      const overlay = document.querySelector('.loading-overlay');
+      return !overlay || overlay.style.display === 'none';
+    }, { timeout: 20000 }).catch(() => {});
+    await page.waitForSelector('#batch-leaderboard-container .leaderboard-row', { timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(1500);
     const outPath = path.join(previewDir, `${path.basename(targetPageArg, '.html')}_390x800.png`);
     await page.screenshot({ path: outPath });
     console.log(`  ✅ Saved: .mobile_previews/${path.basename(outPath)}`);
@@ -111,7 +176,7 @@ async function run() {
 
   // Interactive Live Headed Mobile Emulation
   const page = await context.newPage();
-  const pageUrl = baseUrl ? `${baseUrl}/${targetPageArg}` : `file:///${path.resolve(targetPageArg).replace(/\\/g, '/')}`;
+  const pageUrl = resolvePageUrl(targetPageArg, baseUrl);
   console.log(`\n======================================================`);
   console.log(`📱 TopsCore Mobile Preview Launched!`);
   console.log(`Target: ${targetPageArg}`);

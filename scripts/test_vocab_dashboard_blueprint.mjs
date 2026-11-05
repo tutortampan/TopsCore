@@ -91,7 +91,7 @@ assert.ok(css.includes('leaderboard-student-name.is-current-user'), 'Must define
 // Internal Table Scrolling (Page Locked)
 assert.ok(css.includes('overscroll-behavior: contain !important;'), 'Table container must have overscroll-behavior: contain');
 assert.ok(css.includes('touch-action: pan-y !important;'), 'Table container must have touch-action: pan-y');
-assert.ok(css.includes('touch-action: none !important;'), 'Body must have touch-action: none to prevent page dragging');
+assert.ok(css.includes('touch-action: manipulation !important;'), 'Body must have touch-action: manipulation to allow smooth touch scrolling inside table containers');
 
 // Strict 10px Gap between panels
 assert.ok(css.includes('padding: 10px 14px 10px 14px !important;'), 'dashboard-content must have strict 10px vertical padding');
@@ -120,6 +120,8 @@ assert.ok(js.includes("overallGrade = 'X'"), 'Must set Grade X for alumni');
 assert.ok(js.includes('completed-retry-btn'), 'Must render completed-retry-btn in completed tests table');
 assert.ok(js.includes('task-grades-subrow'), 'Must render task-grades-subrow for tasks');
 assert.ok(js.includes('is-current-user'), 'Must highlight current user in leaderboard');
+assert.ok(js.includes('isTestPrereqMet'), 'Must check test prerequisites before including in completed tests');
+assert.ok(js.includes('completedOnlyTests'), 'Must filter completedOnlyTests strictly');
 assert.ok(js.includes('sortedAccessible'), 'Must sort accessible tests descending in completed pane');
 console.log('  ✅ PASS: js/dashboard.js logic hooks verified!\n');
 

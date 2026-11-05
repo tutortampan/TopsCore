@@ -3064,14 +3064,26 @@ body.dashboard-page .standings-row.rank-1-row {
 body.dashboard-page .completed-table-wrap {
   flex: 1 1 0% !important;
   min-height: 0 !important;
-  overflow-y: auto !important;
+  overflow-y: scroll !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  overscroll-behavior: contain !important;
   padding: 4px 6px !important;
-  -ms-overflow-style: none !important;
-  scrollbar-width: none !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(var(--tier-rgb), 0.6) rgba(15, 23, 42, 0.4) !important;
 }
 
 body.dashboard-page .completed-table-wrap::-webkit-scrollbar {
-  display: none !important;
+  width: 5px !important;
+  display: block !important;
+}
+body.dashboard-page .completed-table-wrap::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4) !important;
+  border-radius: 4px !important;
+}
+body.dashboard-page .completed-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(var(--tier-rgb), 0.6) !important;
+  border-radius: 4px !important;
 }
 
 body.dashboard-page .completed-test-row {
@@ -4449,7 +4461,7 @@ body.dashboard-page {
   max-height: 100dvh !important;
   overflow: hidden !important;
   overscroll-behavior: none !important;
-  touch-action: none !important;
+  touch-action: manipulation !important;
   background: radial-gradient(circle at 50% 15%, rgba(var(--tier-rgb), 0.16) 0%, transparent 65%), #070b19 !important;
 }
 
@@ -4818,27 +4830,46 @@ body.dashboard-page .completed-table-header {
 /* Scrollable Table Area with Touch Momentum */
 body.dashboard-page .standings-table-wrap,
 body.dashboard-page #batch-leaderboard-container,
+body.dashboard-page .completed-table-wrap,
 body.dashboard-page #completed-Tests-container {
   flex: 1 1 0% !important;
   min-height: 0 !important;
-  overflow-y: auto !important;
+  overflow-y: scroll !important;
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-y !important;
   overscroll-behavior: contain !important;
   scrollbar-width: thin !important;
-  scrollbar-color: rgba(var(--tier-rgb), 0.5) transparent !important;
+  scrollbar-color: rgba(var(--tier-rgb), 0.6) rgba(15, 23, 42, 0.4) !important;
 }
 
 body.dashboard-page #batch-leaderboard-container::-webkit-scrollbar,
+body.dashboard-page .standings-table-wrap::-webkit-scrollbar,
+body.dashboard-page .completed-table-wrap::-webkit-scrollbar,
 body.dashboard-page #completed-Tests-container::-webkit-scrollbar {
-  width: 4px !important;
+  width: 5px !important;
   display: block !important;
 }
 
-body.dashboard-page #batch-leaderboard-container::-webkit-scrollbar-thumb,
-body.dashboard-page #completed-Tests-container::-webkit-scrollbar-thumb {
-  background: rgba(var(--tier-rgb), 0.5) !important;
+body.dashboard-page #batch-leaderboard-container::-webkit-scrollbar-track,
+body.dashboard-page .standings-table-wrap::-webkit-scrollbar-track,
+body.dashboard-page .completed-table-wrap::-webkit-scrollbar-track,
+body.dashboard-page #completed-Tests-container::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4) !important;
   border-radius: 4px !important;
+}
+
+body.dashboard-page #batch-leaderboard-container::-webkit-scrollbar-thumb,
+body.dashboard-page .standings-table-wrap::-webkit-scrollbar-thumb,
+body.dashboard-page .completed-table-wrap::-webkit-scrollbar-thumb,
+body.dashboard-page #completed-Tests-container::-webkit-scrollbar-thumb {
+  background: rgba(var(--tier-rgb), 0.6) !important;
+  border-radius: 4px !important;
+}
+
+body.dashboard-page .completed-row,
+body.dashboard-page .completed-test-row,
+body.dashboard-page .standings-row {
+  touch-action: pan-y !important;
 }
 
 /* 7. Bottom Banner (60px) */

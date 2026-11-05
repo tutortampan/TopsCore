@@ -1,3 +1,61 @@
+## [2026-11-06 05:16] — Phase 340: Completed Tests Strict Filtering, Dynamic Exam Grade Colors, Leaderboard Account Owner Grade Color & Mobile Touch Scroll Fix
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 340: Completed Tests & Leaderboard Refinements
+**Status:** PASS
+
+### Why
+- The user reviewed live screenshots and requested 4 critical UX refinements:
+  1. Exam rows in Completed Tests should dynamically have their title font colored to match their earned grade/score (Pure Green for A/★, Electric Lime for B, Yellow for C, Red for E). Tasks remain crisp White (`#f8fafc`).
+  2. Remove uncompleted/unattempted tests (such as `2nd Vocabulary C Words Exam` with `— —` and `C4 Task` whose prerequisite C3 is not yet finished). Only legitimately completed tests should appear in `COMPLETED TESTS`.
+  3. Fix touch scrolling being blocked on mobile touchscreens and make the scrollbar visible.
+  4. On the batch leaderboard, the student who owns the logged-in account should have their name font color dynamically follow their earned grade color (e.g. Electric Lime `#95ff00` for Grade B).
+
+### Changed
+1. **Dynamic Exam Title Color in Completed Tests (`js/dashboard.js`)**:
+   - For tests of type Exam, `titleColor` dynamically matches `getGradeColorByScore(best.effPct)` with `font-weight: 800`.
+   - For tasks, `titleColor` remains `#f8fafc` (clean white) with `font-weight: 700`.
+2. **Strict Completed Tests Only Filtering (`js/dashboard.js`)**:
+   - Eliminated legacy `idx <= firstUncompletedIdx` code which previously injected unattempted and locked tests.
+   - Added `isTestPrereqMet(testItem)` verifying prerequisite fulfillment (parent tests, 7/7 passes for prerequisite tasks, minimum passing scores).
+   - Filter `completedOnlyTests` strictly requires:
+     1. Valid submitted attempt record exists (`bestByTest[t.id] != null`);
+     2. Score > 0 or valid non-failed grade (eliminating broken/dummy attempts);
+     3. Prerequisites are completely satisfied.
+   - `countBadge` dynamically reflects the true count of completed tests.
+3. **Touch Scroll Fix on Mobile & Sleek Visible Scrollbars (`css/dashboard.css`)**:
+   - Replaced `touch-action: none !important;` on `body.dashboard-page` with `touch-action: manipulation !important;`.
+   - Enabled `overflow-y: scroll !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-y !important; overscroll-behavior: contain !important;` on `.completed-table-wrap`, `#completed-Tests-container`, `.standings-table-wrap`, and `#batch-leaderboard-container`.
+   - Added visible 5px neon scrollbars with `--tier-rgb` glowing thumbs.
+   - Added `touch-action: pan-y !important;` to `.completed-row`, `.completed-test-row`, and `.standings-row`.
+4. **Leaderboard Account Owner (`isMe`) Name Color Follows Earned Grade (`js/dashboard.js`)**:
+   - In `loadBatchLeaderboard`, the logged-in student's name dynamically inherits their overall exam grade color (e.g. Electric Lime `#95ff00` for Grade B, Pure Green `#00c000ff` for Grade A) with `font-weight: 800` and matching text-shadow glow.
+   - Other students' names remain clean White/Silver (`#f1f5f9`).
+5. **Universal Cache Busting & Validation**:
+   - Cache buster bumped to `v=20261106_v149` across all 8 files.
+   - Service worker cache updated to `topscore-cache-option-a-v77` and verified with `scripts/generate_sw_manifest.mjs`.
+
+### Files
+- `js/dashboard.js`
+- `css/dashboard.css`
+- `dashboard.html`
+- `admin.html`
+- `index.html`
+- `test.html`
+- `result.html`
+- `js/result.js`
+- `sw.js`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (All 45 JS files syntax verified)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100% tests passed)
+- `node scripts/test_bottom_banner_universal.mjs`: PASS (100% tests passed)
+
+---
+
 ## [2026-11-06 04:58] — Phase 339: Mobile Viewport Emulation Engine, Categorized Extensions Stack & 1-Click Mobile Preview Tasks
 
 **Agent/Session:** Antigravity

@@ -1,37 +1,39 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-06 04:58 UTC+8
-Current Phase: Phase 339: Mobile Viewport Emulation Engine, Categorized Extensions Stack & 1-Click Mobile Preview Tasks [COMPLETE]
+Last Updated: 2026-11-06 05:16 UTC+8
+Current Phase: Phase 340: Completed Tests Strict Filtering, Dynamic Exam Grade Colors, Leaderboard Account Owner Grade Color & Touch Scroll Fix [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Curated Extensions Stack (`.vscode/extensions.json`)**:
-   - Structured into 5 clear categories tailored for 100% AI pair programming:
-     - **Mobile View & Live Emulation**: `ms-edgedevtools.vscode-edge-devtools`, `yandeu.five-server`, `ms-playwright.playwright`.
-     - **CSS & Visual Accuracy**: `pranaygp.vscode-css-peek`, `naumovs.color-highlight`.
-     - **HTML & Template Productivity**: `formulahendry.auto-close-tag`, `formulahendry.auto-rename-tag`, `christian-kohler.path-intellisense`.
-     - **Code Quality & Runtime Safety**: `usernamehw.errorlens`, `dbaeumer.vscode-eslint`, `esbenp.prettier-vscode`, `denoland.vscode-deno`.
-     - **AI Pair Programming & Architecture**: `kanezal.better-antigravity`, `bierner.markdown-mermaid`.
+1. **Dynamic Exam Title Color in Completed Tests (`js/dashboard.js`)**:
+   - For tests of type Exam, the title font dynamically matches the earned grade color (`scoreColor` from `getGradeColorByScore(best.effPct)`): Pure Green (`#00c000ff`) for A/★, Electric Lime (`#95ff00ff`) for B, Yellow (`#FFFF00`) for C, Orange (`#FF8C00`) for D, Red (`#FF0000`) for E.
+   - For tasks, title font remains clean crisp White (`#f8fafc`).
 
-2. **Mobile Viewport Emulation Engine (`scripts/open_mobile_preview.mjs`)**:
-   - Interactive mobile simulation window at exact 390x800 dimensions (touch enabled, DPR 2x).
-   - Automated snapshot capture supporting `--screenshot` and `--all-screenshots` across `dashboard.html`, `result.html`, `index.html`, `test.html`, `admin.html`.
+2. **Strict Completed Tests Only Filtering (`js/dashboard.js`)**:
+   - Eliminated legacy `idx <= firstUncompletedIdx` code which previously injected unattempted and locked tests (`— —`).
+   - Implemented `isTestPrereqMet(testItem)` verifying prerequisite fulfillment (parent tests, 7/7 passes for prerequisite tasks, minimum passing scores).
+   - Filter `completedOnlyTests` strictly requires:
+     1. Valid submitted attempt record exists (`bestByTest[t.id] != null`);
+     2. Score > 0 or valid non-failed grade (eliminating broken/dummy attempts);
+     3. Prerequisites are completely satisfied.
+   - Unattempted tests (such as `2nd Vocabulary C Words Exam` with `— —`) and locked tasks (such as `C4 Words Task` whose prerequisite C3 is not yet 7/7) are 100% excluded.
+   - Dock count badge dynamically reflects the true count of completed tests.
 
-3. **VS Code Tasks & NPM Scripts (`.vscode/tasks.json`, `package.json`)**:
-   - 1-click task `TopsCore: 📱 Launch Mobile View Preview (Pixel / iPhone 390x800)`
-   - 1-click task `TopsCore: 📸 Capture Mobile Snapshots (All Pages)`
-   - NPM scripts: `preview:mobile`, `preview:result`, `preview:admin`, `preview:all`.
+3. **Touch Scroll Fix on Mobile & Sleek Visible Scrollbars (`css/dashboard.css`)**:
+   - Replaced `touch-action: none !important;` on `body.dashboard-page` with `touch-action: manipulation !important;`. This resolves the root cause of mobile touch scrolling being suppressed across the viewport while maintaining zero-scroll viewport lock (`height: 100dvh; overflow: hidden; overscroll-behavior: none;`).
+   - Enabled `overflow-y: scroll !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-y !important; overscroll-behavior: contain !important;` across `.completed-table-wrap`, `#completed-Tests-container`, `.standings-table-wrap`, and `#batch-leaderboard-container`.
+   - Added visible 5px neon scrollbars with `--tier-rgb` glowing thumbs so users clearly see the table is scrollable.
+   - Added `touch-action: pan-y !important;` to `.completed-row`, `.completed-test-row`, and `.standings-row`.
 
-4. **Completed Tests "RETRY" Play Button & Task Top-7 Retention (`dashboard.html`, `js/dashboard.js`, `css/dashboard.css`)**:
-   - Header changed to `RETRY` with dynamic grade-colored Play button (`▶`).
-   - Exam titles in Sky Blue (`#38bdf8`), Task titles in White (`#f8fafc`).
-   - Task sub-row with 7 mini grade chips sorted from lowest to highest.
-   - Leaderboard `(You)` tag eliminated with Sky Blue name highlighting.
-   - Next Test card locked to strict left-alignment.
+4. **Leaderboard Account Owner (`isMe`) Name Color Follows Earned Grade (`js/dashboard.js`)**:
+   - In `loadBatchLeaderboard`, the logged-in student's name dynamically inherits their overall exam grade color (e.g. Electric Lime `#95ff00` for Grade B, Pure Green `#00c000ff` for Grade A) with `font-weight: 800` and matching text-shadow glow.
+   - Other students' names remain clean White/Silver (`#f1f5f9`).
 
-6. **System Verification & Cache Busting**:
-   - Cache buster bumped to `v=20261106_v148` and Service Worker to `topscore-cache-option-a-v76`.
-   - All automated test suites passing 100%.
+5. **Universal Cache Busting & Validation**:
+   - Cache buster bumped to `v=20261106_v149` across all 8 files (`sw.js`, `index.html`, `dashboard.html`, `admin.html`, `test.html`, `result.html`, `js/dashboard.js`, `js/result.js`).
+   - Service worker cache updated to `topscore-cache-option-a-v77` and verified with `scripts/generate_sw_manifest.mjs`.
+   - All 45 JS files passed syntax validation (`node scripts/check_all_js_syntax.cjs`).
+   - Blueprint and universal banner regression tests passed 100%.
 
 2. **Metadata Card Horizontal Laser Dividers (`css/dashboard.css`)**:
    - Fixed flexbox height collapse: set `height: 2px !important; min-height: 2px !important; max-height: 2px !important; flex-shrink: 0 !important;` so the dividers are never collapsed by flexbox inside the 150px card.
