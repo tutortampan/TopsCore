@@ -2324,7 +2324,7 @@ body.dashboard-page .dashboard-content {
   box-sizing: border-box !important;
 }
 
-/* Dedicated Bottom Banner (50px - Preserved & Anchored at Base) */
+/* Dedicated Bottom Banner (60px - Preserved & Anchored at Base) */
 body.dashboard-page .topscore-locked-banner,
 body.dashboard-page #bottom-ad-banner {
   position: fixed !important;
@@ -2334,12 +2334,14 @@ body.dashboard-page #bottom-ad-banner {
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
-  height: 50px !important;
-  min-height: 50px !important;
-  max-height: 50px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding-left: clamp(16px, 4vw, 24px) !important;
   flex-shrink: 0 !important;
   background: rgba(6, 11, 24, 0.95) !important;
   border-top: 1px solid rgba(56, 189, 248, 0.25) !important;
@@ -2350,7 +2352,6 @@ body.dashboard-page #bottom-ad-banner {
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4) !important;
   -webkit-backdrop-filter: blur(10px) !important;
   backdrop-filter: blur(10px) !important;
-  padding: 0 !important;
   padding-bottom: max(3px, env(safe-area-inset-bottom, 0px)) !important;
   box-sizing: border-box !important;
   font-size: 11px !important;

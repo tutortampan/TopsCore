@@ -5,11 +5,11 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261105_v131';
-import { isExam, getGradeColorByScore } from './grading.js?v=20261105_v131';
-import { getStudentSession, getAdminSession } from './session.js?v=20261105_v131';
-import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261105_v131';
-import { getSupabase } from './supabase.js?v=20261105_v131';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261105_v132';
+import { isExam, getGradeColorByScore } from './grading.js?v=20261105_v132';
+import { getStudentSession, getAdminSession } from './session.js?v=20261105_v132';
+import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261105_v132';
+import { getSupabase } from './supabase.js?v=20261105_v132';
 
 let session = getStudentSession();
 if (!session) {
@@ -619,14 +619,32 @@ if (!session) {
         topicEl.style.textShadow = `0 0 14px rgba(${rgbColor}, 0.55)`;
       }
 
-      // 4. Metrics Composite Card
-      const compositeCard = document.getElementById('result-metrics-composite-card');
+      // 4. Metrics Table Card
+      const compositeCard = document.getElementById('result-metrics-bar') || document.getElementById('result-metrics-composite-card');
       if (compositeCard) {
         compositeCard.dataset.tier = currentTier;
         compositeCard.style.setProperty('--tier-color', gradeColor);
         compositeCard.style.setProperty('--tier-rgb', rgbColor);
         compositeCard.style.borderColor = `rgba(${rgbColor}, 0.75)`;
-        compositeCard.style.boxShadow = `0 0 25px rgba(${rgbColor}, 0.35), 0 4px 16px rgba(0, 0, 0, 0.25)`;
+        compositeCard.style.boxShadow = `0 0 20px rgba(${rgbColor}, 0.35), 0 4px 16px rgba(0, 0, 0, 0.25)`;
+      }
+
+      // Dual Score & Grade Row (Row 5 - 40px)
+      const scoreGradeRow = document.getElementById('result-score-grade-card');
+      if (scoreGradeRow) {
+        scoreGradeRow.dataset.tier = currentTier;
+        scoreGradeRow.style.setProperty('--tier-color', gradeColor);
+        scoreGradeRow.style.setProperty('--tier-rgb', rgbColor);
+      }
+      const scoreBox = document.getElementById('result-score-box');
+      if (scoreBox) {
+        scoreBox.style.borderColor = `rgba(${rgbColor}, 0.75)`;
+        scoreBox.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.45)`;
+      }
+      const gradeBox = document.getElementById('result-grade-box');
+      if (gradeBox) {
+        gradeBox.style.borderColor = `rgba(${rgbColor}, 0.75)`;
+        gradeBox.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.45)`;
       }
 
       // Score % and Points inside composite card
@@ -641,7 +659,7 @@ if (!session) {
         ptsEl.style.textShadow = `0 0 10px rgba(${rgbColor}, 0.45)`;
       }
 
-      // 5. Evaluation Word Card (EXCELLENT, GOOD, ENOUGH, etc.)
+      // 5. Evaluation Word Card (Row 6 - 50px: EXCELLENT, GOOD, ENOUGH, etc.)
       const motEl = document.getElementById('result-motivation-msg');
       if (motEl) {
         motEl.dataset.tier = currentTier;
@@ -653,7 +671,14 @@ if (!session) {
         motEl.style.textShadow = `0 0 18px rgba(${rgbColor}, 0.75)`;
       }
 
-      // 6. Tutor active segment button (NORMAL / REMIDI / FORGIVE)
+      // 6. Next Milestone CTA Button
+      const nextBtn = document.querySelector('.btn-next-milestone');
+      if (nextBtn) {
+        nextBtn.style.borderColor = gradeColor;
+        nextBtn.style.boxShadow = `0 0 22px rgba(${rgbColor}, 0.55)`;
+      }
+
+      // 7. Tutor active segment button (NORMAL / REMIDI / FORGIVE)
       const activeSegment = document.querySelector('.remedial-segment-btn.active');
       if (activeSegment) {
         activeSegment.style.borderColor = gradeColor;

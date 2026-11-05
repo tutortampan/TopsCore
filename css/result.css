@@ -463,10 +463,10 @@
       justify-content: center !important;
       width: 100% !important;
       box-sizing: border-box !important;
-      padding: 2px 10px !important;
-      height: 40px !important;
-      min-height: 40px !important;
-      max-height: 40px !important;
+      padding: 4px 12px !important;
+      height: 60px !important;
+      min-height: 60px !important;
+      max-height: 60px !important;
       border-radius: 12px !important;
       text-align: center !important;
       cursor: pointer !important;
@@ -522,15 +522,15 @@
       gap: 8px !important;
       width: 100% !important;
       box-sizing: border-box !important;
-      height: 40px !important;
-      min-height: 40px !important;
-      max-height: 40px !important;
+      height: 60px !important;
+      min-height: 60px !important;
+      max-height: 60px !important;
       flex-shrink: 0 !important;
     }
     .remedial-segment-btn {
-      height: 40px !important;
-      min-height: 40px !important;
-      max-height: 40px !important;
+      height: 60px !important;
+      min-height: 60px !important;
+      max-height: 60px !important;
       padding: 0 4px !important;
       border-radius: 12px !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -1154,48 +1154,47 @@
       flex-shrink: 0 !important;
     }
 
-    /* Dual Score & Grade Row (Strict 60px Symmetrical 3 Columns: Score | Motivation/Legend | Grade) */
+    /* Dual Score & Grade Row (Strict 40px Symmetrical 2 Columns: Score | Grade) */
     .result-score-grade-row,
     .result-score-grade-card {
       display: grid !important;
-      grid-template-columns: 28% 44% 28% !important;
-      height: 60px !important;
-      min-height: 60px !important;
-      max-height: 60px !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 8px !important;
+      height: 40px !important;
+      min-height: 40px !important;
+      max-height: 40px !important;
       width: 100% !important;
       margin: 0 !important;
       box-sizing: border-box !important;
       flex-shrink: 0 !important;
-      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, 56, 189, 248), 0.1), transparent 75%), #0f172a !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
-      border-radius: 12px !important;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
-      overflow: hidden !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      overflow: visible !important;
       transition: all 0.3s ease !important;
     }
 
     .result-score-grade-row .score-grade-box,
     .result-score-grade-card .score-grade-box {
-      height: 60px !important;
-      min-height: 60px !important;
-      max-height: 60px !important;
+      height: 40px !important;
+      min-height: 40px !important;
+      max-height: 40px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       box-sizing: border-box !important;
       padding: 0 8px !important;
+      border-radius: 10px !important;
+      border: 1px solid rgba(var(--tier-rgb, 255, 255, 255), 0.35) !important;
+      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, 56, 189, 248), 0.12), transparent 75%), #0f172a !important;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25) !important;
       transition: all 0.3s ease !important;
-    }
-
-    .result-score-grade-row #result-score-box,
-    .result-score-grade-card #result-score-box {
-      border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
     .result-score-grade-row #result-percentage,
     .result-score-grade-card #result-percentage {
       font-family: 'Outfit', sans-serif !important;
-      font-size: clamp(1.4rem, 3.8vw, 1.85rem) !important;
+      font-size: clamp(1.2rem, 3.5vw, 1.55rem) !important;
       font-weight: 900 !important;
       letter-spacing: -0.02em !important;
       line-height: 1 !important;
@@ -1203,28 +1202,48 @@
       text-shadow: 0 0 16px rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.5) !important;
     }
 
-    .score-grade-center-box {
-      height: 60px !important;
-      min-height: 60px !important;
-      max-height: 60px !important;
+    .result-score-grade-row #result-grade-val,
+    .result-score-grade-card #result-grade-val {
+      font-family: 'Outfit', sans-serif !important;
+      font-size: clamp(1.2rem, 3.5vw, 1.6rem) !important;
+      font-weight: 900 !important;
+      line-height: 1 !important;
+      color: var(--tier-color, var(--grade-star)) !important;
+      display: inline-flex !important;
+      align-items: center !important;
+    }
+
+    /* Grade Description Card (Strict 50px - Muncul setelah animasi grade muncul) */
+    .result-grade-desc-card,
+    #result-motivation-msg {
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      width: 100% !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
       justify-content: center !important;
-      padding: 2px 4px !important;
-      box-sizing: border-box !important;
-      background: rgba(15, 23, 42, 0.6) !important;
+      padding: 4px 8px !important;
+      border-radius: 12px !important;
+      border: 1px solid rgba(var(--tier-rgb, 255, 255, 255), 0.35) !important;
+      background: radial-gradient(ellipse at center, rgba(var(--tier-rgb, 56, 189, 248), 0.15) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
       transition: all 0.4s ease !important;
       opacity: 0;
       overflow: hidden !important;
     }
-    .score-grade-center-box.cascade-revealed {
+    .result-grade-desc-card.cascade-revealed,
+    #result-motivation-msg.cascade-revealed {
       opacity: 1 !important;
     }
 
     .grade-predicate-text {
       font-family: 'Outfit', sans-serif !important;
-      font-size: clamp(11.5px, 2.6vw, 13.5px) !important;
+      font-size: clamp(11.5px, 2.8vw, 14px) !important;
       font-weight: 900 !important;
       letter-spacing: 0.08em !important;
       text-transform: uppercase !important;
@@ -1240,9 +1259,9 @@
 
     .grade-legend-hint {
       font-family: 'Inter', sans-serif !important;
-      font-size: 7px !important;
+      font-size: 7.5px !important;
       font-weight: 700 !important;
-      color: #64748b !important;
+      color: #94a3b8 !important;
       letter-spacing: 0.02em !important;
       text-align: center !important;
       line-height: 1.1 !important;
@@ -1252,24 +1271,6 @@
       overflow: hidden !important;
       text-overflow: ellipsis !important;
       max-width: 100% !important;
-    }
-
-    .result-score-grade-row #result-grade-box,
-    .result-score-grade-card #result-grade-box {
-      border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
-
-    .result-score-grade-row #result-grade-val,
-    .result-score-grade-card #result-grade-val {
-      font-family: 'Outfit', sans-serif !important;
-      font-size: clamp(1.4rem, 3.8vw, 1.9rem) !important;
-      font-weight: 900 !important;
-      line-height: 1 !important;
-      color: var(--tier-color, var(--grade-star)) !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      text-shadow: 0 0 16px rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.6) !important;
     }
 
     /* ===== 5. EVALUATION WORD CARD (EXACT 50px - FAIL / LESS / ENOUGH / GOOD / VERY GOOD / EXCELLENT) ===== */
@@ -2201,6 +2202,9 @@ body.result-page #bottom-ad-banner {
   height: 60px !important;
   min-height: 60px !important;
   max-height: 60px !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding-left: clamp(16px, 4vw, 24px) !important;
 }
 
 body.result-page .btn-breakdown-ghost,
@@ -2218,8 +2222,25 @@ body.result-page #back-dashboard-btn {
 }
 
 body.result-page .result-action-slot,
-body.result-page #smart-next-action-container {
+body.result-page #smart-next-action-container,
+body.result-page .btn-next-milestone,
+body.result-page .tutor-remedial-segmented,
+body.result-page .remedial-segment-btn {
   height: 60px !important;
   min-height: 60px !important;
   max-height: 60px !important;
+}
+
+body.result-page .result-score-grade-row,
+body.result-page #result-score-grade-card {
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+}
+
+body.result-page .result-grade-desc-card,
+body.result-page #result-motivation-msg {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
 }

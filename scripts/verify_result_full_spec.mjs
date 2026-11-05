@@ -81,8 +81,9 @@ async function verifyResult(viewMode = 'student') {
         `;
       } else {
         actSlot.innerHTML = `
-          <button type="button" class="btn btn-next-milestone" style="width:100%;height:60px;background:linear-gradient(135deg,#0284c7,#0369a1);border:1px solid #38bdf8;border-radius:12px;color:#fff;font-weight:800;font-size:13.5px;">
-            NEXT TEST FULL TITLE ➔
+          <button type="button" class="btn btn-next-milestone">
+            <span class="next-btn-tag">NEXT TEST</span>
+            <span class="next-btn-title">SHOPPING & CHOOSING PRODUCTS ➔</span>
           </button>
         `;
       }
@@ -99,8 +100,9 @@ async function verifyResult(viewMode = 'student') {
     const header = document.getElementById('result-page-header');
     const studentCard = document.getElementById('result-identity-card');
     const testTitle = document.getElementById('result-Test-name-container');
-    const metricsTable = document.getElementById('result-metrics-composite-card');
+    const metricsTable = document.getElementById('result-metrics-bar') || document.getElementById('result-metrics-composite-card');
     const scoreGradeRow = document.getElementById('result-score-grade-card');
+    const gradeDescCard = document.getElementById('result-motivation-msg');
     const actionSlot = document.getElementById('smart-next-action-container');
     const breakdownBtn = document.getElementById('toggle-answers-btn');
     const backBtn = document.getElementById('back-dashboard-btn');
@@ -118,6 +120,7 @@ async function verifyResult(viewMode = 'student') {
       testTitle: getBox(testTitle),
       metricsTable: getBox(metricsTable),
       scoreGradeRow: getBox(scoreGradeRow),
+      gradeDescCard: getBox(gradeDescCard),
       actionSlot: getBox(actionSlot),
       breakdownBtn: getBox(breakdownBtn),
       backBtn: getBox(backBtn),
@@ -143,4 +146,3 @@ async function main() {
 }
 
 main().catch(console.error);
-
