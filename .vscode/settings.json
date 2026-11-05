@@ -1,7 +1,6 @@
 {
   // ─── DENO (Supabase Edge Functions only — isolated) ─────────────────
   "deno.enable": false,
-  "deno.path": "C:\\Users\\Top\\.deno\\bin\\deno.exe",
   "deno.config": "supabase/functions/deno.json",
   "deno.enablePaths": [
     "supabase/functions"
