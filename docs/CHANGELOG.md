@@ -1,3 +1,63 @@
+## [2026-11-06 02:04] — Phase 330: Internal Table Scrolling, 120px Header, Metadata Sub-Rows (20/105/25), 70px Next Test & Uniform Tier Glow
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 330: Internal Table Scrolling, 120px Header, Metadata Sub-Rows (20/105/25), 70px Next Test & Uniform Tier Glow (/goal)
+**Status:** PASS
+
+### Why
+- The user requested that the Leaderboard table scrolls internally within its own boundaries rather than dragging/scrolling the entire page (`BAGIAN RANKING HARUSNYA SCROLL DI DALAM TABEL BUKAN SCROLL HALAMAN`).
+- The user also provided an updated master blueprint (`media_1793901313717_9b77114d.png`) specifying:
+  - Header column layout: `120px` (Door Icon) | `SISA SPACE %` (Full Class Name in ALL CAPS, centered) | `120px` (Logout Icon).
+  - Metadata card internal sub-row budget: `20px` (Meta) | `105px` (Score, Photo, Grade) | `25px` (Student Full Name with Title, strictly centered).
+  - Next Test card height: `70px` (50px Title Wrap + 20px Rainbow 1-7; 70px Full Action Column).
+  - Bolder, uniform tier glow and colors evenly distributed across all cards on both dashboard and result pages (`SEKALIAN GLOW DAN WARNANYA DIPERTEGAS DAN MERATA`).
+
+### Changed
+1. **Internal Table Scrolling & Viewport Lock (`css/dashboard.css`)**:
+   - `html, body.dashboard-page` and `.dashboard-content` locked with `overflow: hidden !important; overscroll-behavior: none !important; touch-action: none !important;`.
+   - `.standings-table-wrap`, `#batch-leaderboard-container`, and `#completed-Tests-container` configured with `overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-y !important; overscroll-behavior: contain !important;`.
+   - Sticky table headers pinned with `position: sticky; top: 0; z-index: 10;`.
+2. **Top Header Alignment (120px | Flex % | 120px) (`dashboard.html`, `css/dashboard.css`)**:
+   - Left wrapper: `width: 120px;` with Door icon.
+   - Brand: `flex: 1 1 auto; text-align: center; text-transform: uppercase;`.
+   - Right wrapper: `width: 120px;` with Logout icon.
+3. **Metadata Card Sub-Rows (20px | 105px | 25px Centered) (`css/dashboard.css`, `js/dashboard.js`)**:
+   - `#welcome-meta-wrapper`: 20px height.
+   - `.hero-metrics-row`: 96px height (105px block with dividers).
+   - `#welcome-name`: 25px height, strictly centered with `(Mr./Miss)` title formatting.
+4. **Next Test Card Updated to 70px (`css/dashboard.css`)**:
+   - Total card height: 70px.
+   - Left column: 38px title wrap + 20px rainbow 1-7.
+   - Right column: 64px width, full 70px height with 40px action button.
+5. **Enhanced & Uniform Dynamic Tier Glow (`css/dashboard.css`, `css/result.css`)**:
+   - Bolder `1.5px solid rgba(var(--tier-rgb), 0.70)` borders and uniform `0 0 22px rgba(var(--tier-rgb), 0.35)` box-shadows.
+   - Radial gradients applied evenly across all panels in both `dashboard.html` and `result.html`.
+6. **Automated Testing & SW Cache Bump**:
+   - Updated `scripts/test_vocab_dashboard_blueprint.mjs` verifying all new blueprint specs pass 100%.
+   - Cache buster bumped to `v=20261106_v139` and Service Worker to `topscore-cache-option-a-v67`.
+   - All 6 test suites passing 100%.
+
+### Files
+- `dashboard.html`
+- `css/dashboard.css`
+- `js/dashboard.js`
+- `css/result.css`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+- `scripts/bump_cache_busters.mjs`
+- `sw.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 files)
+- `node scripts/generate_sw_manifest.mjs`: PASS (27/27 assets)
+- `node scripts/test_student_dashboard_exam_parity.mjs`: PASS (100%)
+- `node scripts/test_homophones_spoken_mode.mjs`: PASS (23/23 tests)
+- `node scripts/test_prerequisite_deficit_guard.mjs`: PASS (100%)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+
+---
+
 ## [2026-11-06 01:52] — Phase 329: Dynamic Tier Aesthetics, Modal Polish & Character Encoding Remediation
 
 **Agent/Session:** Antigravity

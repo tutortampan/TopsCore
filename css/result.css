@@ -2339,3 +2339,27 @@ body.result-page .topscore-locked-banner {
   border-top: 1px solid rgba(var(--tier-rgb, 56, 189, 248), 0.25) !important;
   background: radial-gradient(ellipse 90% 70% at 50% 100%, rgba(var(--tier-rgb, 56, 189, 248), 0.08), transparent 75%), #070b19 !important;
 }
+
+
+/* Result Page Enhanced Uniform Glow & 1.5px Border */
+body.result-page.tier-glow-active #result-identity-card,
+body.result-page.tier-glow-active #result-Test-name-container,
+body.result-page.tier-glow-active #result-metrics-composite-card,
+body.result-page.tier-glow-active #result-score-box,
+body.result-page.tier-glow-active #result-grade-box,
+body.result-page.tier-glow-active #result-motivation-msg {
+  border: 1.5px solid rgba(var(--tier-rgb), 0.75) !important;
+  box-shadow: 0 0 25px rgba(var(--tier-rgb), 0.40), 0 8px 24px -6px rgba(0, 0, 0, 0.45) !important;
+}
+
+body.result-page.tier-glow-active .dashboard-header {
+  border-bottom: 1.5px solid rgba(var(--tier-rgb), 0.50) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.16), transparent 75%), rgba(9, 13, 22, 0.95) !important;
+  box-shadow: 0 4px 18px rgba(var(--tier-rgb), 0.20) !important;
+}
+
+body.result-page.tier-glow-active #bottom-ad-banner {
+  border-top: 1.5px solid rgba(var(--tier-rgb), 0.40) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 100%, rgba(var(--tier-rgb), 0.12), transparent 75%), #070b19 !important;
+  box-shadow: 0 -4px 18px rgba(var(--tier-rgb), 0.15) !important;
+}

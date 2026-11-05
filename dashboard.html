@@ -21,9 +21,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261106_v139" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261106_v139" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=20261106_v139" />
+  <link rel="stylesheet" href="css/style.css?v=20261106_v140" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261106_v140" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=20261106_v140" />
 
 
 </head>
@@ -34,15 +34,17 @@
   <!-- Top Navigation (Option B: Title on Left, Profile + Logout Actions on Right) -->
   <!-- Top Navigation (60px: Door Icon Left, Class Name Center, Logout Right) -->
   <header class="dashboard-header" id="dashboard-top-header">
-    <button class="header-action-btn header-door-btn" id="btn-change-class" title="Change Class" aria-label="Change Class">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"></path>
-        <path d="M2 20h20"></path>
-        <circle cx="14" cy="12" r="1.5" fill="currentColor"></circle>
-      </svg>
-    </button>
+    <div class="dashboard-header-left">
+      <button class="header-action-btn header-door-btn" id="btn-change-class" title="Change Class" aria-label="Change Class">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"></path>
+          <path d="M2 20h20"></path>
+          <circle cx="14" cy="12" r="1.5" fill="currentColor"></circle>
+        </svg>
+      </button>
+    </div>
     <div class="dashboard-header-brand" id="dashboard-header-class-name">SELECT CLASS</div>
-    <div class="dashboard-header-actions">
+    <div class="dashboard-header-right dashboard-header-actions">
       <button class="header-action-btn header-logout-btn" id="logout-btn" title="Logout" aria-label="Logout">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -618,12 +620,12 @@
     </div>
   </div>
 
-  <script type="module" src="./js/dashboard.js?v=20261106_v139"></script>
+  <script type="module" src="./js/dashboard.js?v=20261106_v140"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261106_v139')
+        navigator.serviceWorker.register('sw.js?v=20261106_v140')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

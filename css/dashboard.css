@@ -4431,3 +4431,391 @@ body.dashboard-page .topscore-locked-banner {
   border-top: 1px solid rgba(var(--tier-rgb), 0.3) !important;
   background: radial-gradient(ellipse 90% 70% at 50% 100%, rgba(var(--tier-rgb), 0.10), transparent 75%), #070b19 !important;
 }
+
+
+/* ==========================================================================
+   MASTER BLUEPRINT REFINEMENT: 50-10-150-10-50-10-70-10-FLEX-10-60
+   - Header: 50px (Left 120px | Brand Centered | Right 120px)
+   - Metadata: 150px (20px Meta | 105px Metrics & Photo | 25px Name Centered)
+   - Next Test: 70px (50px Title + 20px Rainbow | 70px Action Column)
+   - Table: Internal independent scrolling (Zero page scroll)
+   - Bolder & Even Tier Glow across all panels
+   ========================================================================== */
+
+/* 1. Global Viewport Lock (Zero-Scroll Outer Page) */
+html,
+body.dashboard-page {
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+  background: radial-gradient(circle at 50% 15%, rgba(var(--tier-rgb), 0.16) 0%, transparent 65%), #070b19 !important;
+}
+
+body.dashboard-page .dashboard-content {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
+  padding: 10px 14px 10px 14px !important; /* Strict 10px gap below Header & above Banner */
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important; /* Strict 10px gap between all inner panels */
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+/* 2. Top Header (50px: Left 120px | Brand Center | Right 120px) */
+body.dashboard-page .dashboard-header {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  padding: 0 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-shrink: 0 !important;
+  border-bottom: 1.5px solid rgba(var(--tier-rgb), 0.50) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.16), transparent 75%), rgba(9, 13, 22, 0.95) !important;
+  box-shadow: 0 4px 18px rgba(var(--tier-rgb), 0.20), 0 2px 10px rgba(0, 0, 0, 0.4) !important;
+  box-sizing: border-box !important;
+}
+
+body.dashboard-page .dashboard-header-left {
+  width: 120px !important;
+  min-width: 120px !important;
+  max-width: 120px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  flex-shrink: 0 !important;
+}
+
+body.dashboard-page .dashboard-header-brand {
+  flex: 1 1 auto !important;
+  text-align: center !important;
+  text-transform: uppercase !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: clamp(0.9rem, 3.4vw, 1.05rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  color: #f8fafc !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin: 0 !important;
+  padding: 0 4px !important;
+}
+
+body.dashboard-page .dashboard-header-right,
+body.dashboard-page .dashboard-header-actions {
+  width: 120px !important;
+  min-width: 120px !important;
+  max-width: 120px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-shrink: 0 !important;
+}
+
+/* 3. Hero Card (Students Metadata - Strict 150px Total Budget) */
+body.dashboard-page #welcome-banner-section {
+  height: 150px !important;
+  min-height: 150px !important;
+  max-height: 150px !important;
+  width: 100% !important;
+  border-radius: 14px !important;
+  padding: 6px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.70) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.20), transparent 75%), #0f172a !important;
+  box-shadow: 0 0 25px rgba(var(--tier-rgb), 0.35), 0 8px 24px -6px rgba(0, 0, 0, 0.45) !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+}
+
+/* Sub-Row 1: Breadcrumb (20px) */
+body.dashboard-page #welcome-meta-wrapper {
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  letter-spacing: 0.05em !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Sub-Row 2: Score | Foto | Grade (105px total block with dividers) */
+body.dashboard-page .hero-metrics-row {
+  height: 96px !important;
+  min-height: 96px !important;
+  max-height: 96px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.dashboard-page #banner-score-box,
+body.dashboard-page #banner-grade-box {
+  flex: 1 1 0% !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(23, 33, 56, 0.85) !important;
+  border-radius: 12px !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.65) !important;
+  box-shadow: 0 0 16px rgba(var(--tier-rgb), 0.35) !important;
+  box-sizing: border-box !important;
+}
+
+body.dashboard-page #banner-avatar-container {
+  width: 72px !important;
+  height: 72px !important;
+  border-radius: 50% !important;
+  padding: 3px !important;
+  background: rgba(15, 23, 42, 0.9) !important;
+  border: 2.5px solid var(--tier-color) !important;
+  box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.75), 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Sub-Row 3: Nama Lengkap Siswa dengan Title (25px, CENTERED) */
+body.dashboard-page #welcome-name {
+  height: 25px !important;
+  min-height: 25px !important;
+  max-height: 25px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: clamp(0.95rem, 3.2vw, 1.12rem) !important;
+  font-weight: 800 !important;
+  color: #f8fafc !important;
+  letter-spacing: 0.02em !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 4. Grade Description Card (50px) */
+body.dashboard-page .dashboard-grade-legend {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 10px !important;
+  padding: 0 14px !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.75) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.22), transparent 75%), #0f172a !important;
+  box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.40) !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+body.dashboard-page .dashboard-grade-legend .achievement-status-text {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 1.1rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: var(--tier-color) !important;
+  filter: drop-shadow(0 0 12px rgba(var(--tier-rgb), 0.85)) !important;
+}
+
+/* 5. Next Test Card: Exactly 70px (50px Title Wrap + 20px Rainbow / 70px Full Action Column) */
+body.dashboard-page .dashboard-next-test-deck,
+body.dashboard-page .next-test-card {
+  height: 70px !important;
+  min-height: 70px !important;
+  max-height: 70px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+}
+
+body.dashboard-page .next-test-card {
+  border-radius: 12px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  justify-content: space-between !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.65) !important;
+  background: radial-gradient(ellipse 90% 70% at 30% 50%, rgba(var(--tier-rgb), 0.18), transparent 75%), #0f172a !important;
+  box-shadow: 0 0 20px rgba(var(--tier-rgb), 0.32), 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+body.dashboard-page .next-test-col-left {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  padding: 4px 10px 4px 12px !important;
+  box-sizing: border-box !important;
+}
+
+body.dashboard-page .next-test-title-wrap {
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  min-width: 0 !important;
+}
+
+body.dashboard-page .next-test-title-wrap .next-asm-title {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: clamp(11.5px, 3.2vw, 13px) !important;
+  font-weight: 800 !important;
+  color: #f8fafc !important;
+  line-height: 1.25 !important;
+}
+
+body.dashboard-page .rainbow-pass-bar {
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+body.dashboard-page .next-test-col-right {
+  width: 64px !important;
+  min-width: 64px !important;
+  max-width: 64px !important;
+  height: 100% !important; /* Full 70px Height */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-left: 1.5px solid rgba(var(--tier-rgb), 0.40) !important;
+  background: rgba(var(--tier-rgb), 0.08) !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+body.dashboard-page .next-test-col-right .pass-counter-btn,
+body.dashboard-page .next-test-col-right .is-exam-lock,
+body.dashboard-page .next-test-col-right .is-exam-play {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 9px !important;
+}
+
+/* 6. Standings & Leaderboard: Scroll INSIDE Table (Page remains locked) */
+body.dashboard-page .dashboard-standings-card {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border-radius: 12px !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.60) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.16), transparent 75%), #0f172a !important;
+  box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.30), 0 6px 18px -5px rgba(0, 0, 0, 0.35) !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+body.dashboard-page .dock-tab-header {
+  flex-shrink: 0 !important;
+  z-index: 5 !important;
+}
+
+body.dashboard-page .dock-tab-pane {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Sticky Header inside Table */
+body.dashboard-page .standings-table-header,
+body.dashboard-page .completed-table-header {
+  flex-shrink: 0 !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  background: rgba(15, 23, 42, 0.96) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Scrollable Table Area with Touch Momentum */
+body.dashboard-page .standings-table-wrap,
+body.dashboard-page #batch-leaderboard-container,
+body.dashboard-page #completed-Tests-container {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  overscroll-behavior: contain !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(var(--tier-rgb), 0.5) transparent !important;
+}
+
+body.dashboard-page #batch-leaderboard-container::-webkit-scrollbar,
+body.dashboard-page #completed-Tests-container::-webkit-scrollbar {
+  width: 4px !important;
+  display: block !important;
+}
+
+body.dashboard-page #batch-leaderboard-container::-webkit-scrollbar-thumb,
+body.dashboard-page #completed-Tests-container::-webkit-scrollbar-thumb {
+  background: rgba(var(--tier-rgb), 0.5) !important;
+  border-radius: 4px !important;
+}
+
+/* 7. Bottom Banner (60px) */
+body.dashboard-page #bottom-ad-banner,
+body.dashboard-page .topscore-locked-banner {
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding-left: clamp(16px, 4vw, 24px) !important;
+  border-top: 1.5px solid rgba(var(--tier-rgb), 0.40) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 100%, rgba(var(--tier-rgb), 0.12), transparent 75%), #070b19 !important;
+  box-shadow: 0 -4px 18px rgba(var(--tier-rgb), 0.15) !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}

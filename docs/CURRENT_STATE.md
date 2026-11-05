@@ -1,31 +1,37 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-06 01:52 UTC+8
-Current Phase: Phase 329: Dynamic Tier Aesthetics, Modal Polish & Character Encoding Remediation [COMPLETE]
+Last Updated: 2026-11-06 02:04 UTC+8
+Current Phase: Phase 330: Internal Table Scrolling, 120px Header, Metadata Sub-Rows (20/105/25), 70px Next Test & Uniform Tier Glow [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Dynamic Score/Grade Tier Borders & Radial Backgrounds (`dashboard.html` & `result.html`)**:
-   - On `dashboard.html`: All cards (Metadata 150px, Grade Description 50px, Next Test 80px, Leaderboard flex remaining) and page background dynamically inherit `--tier-color` and `--tier-rgb` derived from authoritative score/grade calculation.
-   - For New Students without exams (`LET'S GO`) and Alumni (`ALUMNI`), the Purple Tier (`#8B5CF6`, RGB `139, 92, 246`) radiates cleanly across card borders and subtle radial gradients.
-   - On `result.html`: Immediately upon attempt scoring in `loadResult`, `--tier-color` and `--tier-rgb` ignite across the page background, top header, identity card, test title, metrics card, score/grade boxes, grade motivation card, and bottom banner.
+1. **Internal Table Scrolling & Viewport Lock (`css/dashboard.css`)**:
+   - Locked outer viewport (`html, body.dashboard-page`, `.dashboard-content`) with `overflow: hidden !important; overscroll-behavior: none !important; touch-action: none !important;`. The outer screen never scrolls or shakes on mobile touch gestures.
+   - Leaderboard (`#batch-leaderboard-container`) and Completed Tests (`#completed-Tests-container`) configured with independent internal scrolling: `overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-y !important; overscroll-behavior: contain !important;` with thin stylized tier scrollbar.
+   - Pinned sticky table headers (`.standings-table-header`, `.completed-table-header`).
 
-2. **Modal Polish & Character Encoding Remediation (`dashboard.html`, `js/dashboard.js`)**:
-   - Replaced mojibake characters in PIN placeholders with clean dot entities `••••`.
-   - Replaced legacy mojibake icon `ðŸ”` on class selector with crisp magnifying glass `🔍 View All Levels & Detailed Tests`.
-   - Updated modal description to official terminology: `Switch class to view your tasks and exams`.
-   - Repaired `restoreDashboardHashRoute` in `js/dashboard.js` to ensure clean transitions between modals (`#profile`, `#select-class`, `#levels`).
+2. **Top Header Alignment (120px | Flex % | 120px) (`dashboard.html`, `css/dashboard.css`)**:
+   - Column 1 (Left): `width: 120px !important;` housing Door Icon (`#btn-change-class`, Light Blue `#38bdf8`) aligned left.
+   - Column 2 (Center): `flex: 1 1 auto !important;` housing Full Class Name in ALL CAPS (`#dashboard-header-class-name`), centered.
+   - Column 3 (Right): `width: 120px !important;` housing Logout Icon (`#logout-btn`, Light Blue `#38bdf8`) aligned right.
 
-3. **Strict 10px Inter-Panel Gap Architecture (`css/dashboard.css`, `css/result.css`)**:
-   - Removed legacy `padding-bottom: 50px` on `body.dashboard-page`.
-   - Set `.dashboard-content` to `padding: 10px 14px 10px 14px !important;` and `gap: 10px !important;`.
-   - Set all panels to `margin: 0 !important;` and locked `#welcome-banner-section` to strict `height: 150px !important;`.
-   - Same strict 10px padding and 10px flex gap applied across all cards in `result.html` and `css/result.css`.
-   - Perfect zero-scroll budget achieved on standard 800px mobile viewport.
+3. **Metadata Card Sub-Row Budget (150px = 20px + 105px + 25px) (`css/dashboard.css`, `js/dashboard.js`)**:
+   - Sub-Row 1 (`20px`): `#welcome-meta-wrapper` (`CEC | CAMP | 134 | 2ND LEVEL`).
+   - Sub-Row 2 (`105px` block with dividers): `.hero-metrics-row` (Score box 60px, Photo circle 72px with champion crown, Grade box 60px).
+   - Sub-Row 3 (`25px`): `#welcome-name` (strictly `CENTERED`, displaying `(Mr./Miss) Nama Lengkap siswa`).
 
-4. **Cache Busting & Automated Testing**:
+4. **Next Test Card Updated to 70px (50px Title + 20px Rainbow 1-7) (`css/dashboard.css`)**:
+   - Top area: 50px test title wrap.
+   - Bottom area: 20px rainbow bar (1 to 7) stopping cleanly at divider.
+   - Right action column: 64px width, full-height 70px with 40px action button.
+
+5. **Enhanced & Uniform Dynamic Tier Glow across Dashboard & Result Pages (`css/dashboard.css`, `css/result.css`)**:
+   - Bolder `1.5px solid rgba(var(--tier-rgb), 0.70)` borders and uniform `0 0 22px rgba(var(--tier-rgb), 0.35)` box-shadows.
+   - Matte neon radial gradients applied evenly across all panels in both `dashboard.html` and `result.html`.
+
+6. **Cache Busting & Automated Testing**:
    - Cache buster bumped to `v=20261106_v139` and Service Worker to `topscore-cache-option-a-v67`.
-   - All 7 automated test suites passing 100%.
+   - All 6 automated test suites passing 100%.
 
 2. **Universal Bottom Banner Overhaul across ALL Pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`, and CSS)**:
    - Replaced old banner text (`TopsCore © 2026 | Created by Mr. Top`) with bold, enlarged branding: `<span class="banner-brand">TopsCore</span> <span class="banner-author">by Mr. Top</span>`.
