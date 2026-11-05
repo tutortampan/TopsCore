@@ -1,12 +1,27 @@
 {
   "recommendations": [
-    "kanezal.better-antigravity",    // Better Antigravity — Community-driven fixes and improvements for Antigravity
-    "denoland.vscode-deno",         // Deno — A language server client for Deno (Supabase Edge Functions)
-    "usernamehw.errorlens",         // Error Lens — Improve highlighting of errors, warnings and other language diagnostics
-    "dbaeumer.vscode-eslint",       // ESLint — Integrates ESLint JavaScript into VS Code / Antigravity IDE
-    "yandeu.five-server",           // Live Server (Five Server) — A better Live Server with instant updates & highlights
-    "bierner.markdown-mermaid",     // Markdown Preview Mermaid Support — Adds Mermaid diagram and flowchart support
-    "formulahendry.auto-rename-tag", // Auto Rename Tag — Automatically rename paired HTML/XML tag
-    "esbenp.prettier-vscode"        // Prettier - Code formatter — Code formatter using prettier
+    // ─── 📱 MOBILE VIEWPORT & LIVE EMULATION ────────────────────────────
+    "ms-edgedevtools.vscode-edge-devtools", // Microsoft Edge Tools — Live Mobile Device Emulation, Touch Simulation, & DevTools inside IDE
+    "yandeu.five-server",                  // Five Server — Instant Live Server with Remote QR Code for testing on real smartphones
+    "ms-playwright.playwright",            // Playwright Test — Mobile test runner & automated headed mobile viewport preview
+
+    // ─── 🎨 CSS & VISUAL ACCURACY ──────────────────────────────────────
+    "pranaygp.vscode-css-peek",            // CSS Peek — Jump to & view CSS definitions directly from HTML classes/IDs
+    "naumovs.color-highlight",             // Color Highlight — Inline color previews for hex/rgb (essential for TopsCore grading tiers)
+
+    // ─── ⚡ HTML & ASSET PRODUCTIVITY ──────────────────────────────────
+    "formulahendry.auto-close-tag",        // Auto Close Tag — Automatically closes HTML tags
+    "formulahendry.auto-rename-tag",       // Auto Rename Tag — Synchronously renames matching HTML tags
+    "christian-kohler.path-intellisense",  // Path Intellisense — Autocompletes filenames for assets, scripts, and styles
+
+    // ─── 🛡️ CODE QUALITY & RUNTIME SAFETY ──────────────────────────────
+    "usernamehw.errorlens",                // Error Lens — Instant inline error & warning highlighting
+    "dbaeumer.vscode-eslint",              // ESLint — Integrates ESLint for JavaScript quality checks
+    "esbenp.prettier-vscode",              // Prettier — Code formatter for consistent clean formatting
+    "denoland.vscode-deno",                // Deno — Language server for Supabase Edge Functions (isolated in supabase/functions)
+
+    // ─── 🤖 AI PAIR PROGRAMMING & ARCHITECTURE ────────────────────────
+    "kanezal.better-antigravity",           // Better Antigravity — Community-driven fixes and optimizations for Antigravity IDE
+    "bierner.markdown-mermaid"             // Markdown Mermaid — Renders Mermaid architecture diagrams in preview
   ]
 }

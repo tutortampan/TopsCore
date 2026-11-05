@@ -47,7 +47,7 @@ assert.ok(html.includes('id="up-next-section"'), 'Must have #up-next-section');
 assert.ok(html.includes('id="up-next-container"'), 'Must have #up-next-container');
 assert.ok(html.includes('id="bottom-dock-section"'), 'Must have #bottom-dock-section');
 assert.ok(html.includes('completed-table-header'), 'Must have .completed-table-header');
-assert.ok(html.includes('<span class="th-col th-action">ACTION</span>'), 'Must have ACTION column in completed table header');
+assert.ok(html.includes('<span class="th-col th-action">RETRY</span>'), 'Must have RETRY column in completed table header');
 assert.ok(!html.includes('id="dashboard-classes-bar" class="dashboard-classes-bar"'), 'Must NOT have visible dashboard-classes-bar (saved 60px vertical)');
 console.log('  ✅ PASS: dashboard.html DOM elements verified!\n');
 
@@ -63,10 +63,14 @@ assert.ok(css.includes('#banner-avatar-trigger'), 'Must define #banner-avatar-tr
 assert.ok(css.includes('data-tier="X"'), 'Must support data-tier="X"');
 assert.ok(css.includes('data-tier="LET\'S GO"'), 'Must support data-tier="LET\'S GO"');
 
-// Sub-Row Budget of 150px Metadata Card (20px / 100px block / 30px name)
+// Sub-Row Budget of 150px Metadata Card (20px / 1px / 93px / 1px / 35px per Phase 337 Blueprint)
 assert.ok(css.includes('height: 150px !important;'), 'welcome-banner-section must have strict 150px height');
 assert.ok(css.includes('height: 20px !important;'), 'welcome-meta-wrapper must have strict 20px height');
-assert.ok(css.includes('height: 30px !important;'), 'welcome-name must have strict 30px height (Phase 331)');
+assert.ok(css.includes('height: 93px !important;'), 'hero-metrics-row must have strict 93px height');
+assert.ok(css.includes('height: 35px !important;'), 'welcome-name must have strict 35px height');
+assert.ok(css.includes('width: 84px !important;') && css.includes('height: 84px !important;'), 'banner-avatar-container must have enlarged 84px diameter');
+assert.ok(css.includes('height: 1px !important;') && css.includes('min-height: 1px !important;'), 'dividers must have strict 1px height');
+assert.ok(css.includes('flex-shrink: 0 !important;'), 'dividers must have flex-shrink: 0');
 assert.ok(css.includes('.hero-name-divider'), 'Must define .hero-name-divider');
 
 // Next Test 70px (50px Title + 20px Rainbow)
@@ -78,6 +82,11 @@ assert.ok(css.includes('.next-test-topic-name'), 'Must define .next-test-topic-n
 // Completed Tests Typography: Bold Outfit 800 and 2-line wrap
 assert.ok(css.includes('-webkit-line-clamp: 2 !important;'), 'completed-col-name must support 2-line wrap');
 assert.ok(css.includes('color: #f8fafc !important;') && css.includes('font-size: 0.85rem !important;'), 'completed-col-num must be bright Outfit 800');
+
+// Task 7-Grade Sub-Row & Leaderboard Current User Highlighting
+assert.ok(css.includes('.task-grades-subrow'), 'Must define .task-grades-subrow');
+assert.ok(css.includes('.task-mini-grade'), 'Must define .task-mini-grade');
+assert.ok(css.includes('leaderboard-student-name.is-current-user'), 'Must define is-current-user on leaderboard');
 
 // Internal Table Scrolling (Page Locked)
 assert.ok(css.includes('overscroll-behavior: contain !important;'), 'Table container must have overscroll-behavior: contain');
@@ -109,6 +118,8 @@ assert.ok(js.includes('pass-counter-btn rainbow-step-'), 'Must render pass-count
 assert.ok(js.includes("overallGrade = \"LET'S GO\""), 'Must set LET\'S GO for students without exams');
 assert.ok(js.includes("overallGrade = 'X'"), 'Must set Grade X for alumni');
 assert.ok(js.includes('completed-retry-btn'), 'Must render completed-retry-btn in completed tests table');
+assert.ok(js.includes('task-grades-subrow'), 'Must render task-grades-subrow for tasks');
+assert.ok(js.includes('is-current-user'), 'Must highlight current user in leaderboard');
 assert.ok(js.includes('sortedAccessible'), 'Must sort accessible tests descending in completed pane');
 console.log('  ✅ PASS: js/dashboard.js logic hooks verified!\n');
 

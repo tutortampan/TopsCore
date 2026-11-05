@@ -17,6 +17,7 @@ supabase/migrations_bak/
 
 # Audit, screenshots, and test dumps
 audit_screenshots/
+.mobile_previews/
 temp_test/
 test-results/
 playwright-report/

@@ -10,6 +10,10 @@
     "test:duration": "node scripts/test_submit_and_duration.mjs",
     "test:prereq": "node scripts/test_sequential_exam_prerequisite.mjs",
     "test:e2e": "playwright test",
+    "preview:mobile": "node scripts/open_mobile_preview.mjs dashboard.html",
+    "preview:result": "node scripts/open_mobile_preview.mjs result.html",
+    "preview:admin": "node scripts/open_mobile_preview.mjs admin.html",
+    "preview:all": "node scripts/open_mobile_preview.mjs --all-screenshots",
     "test": "node scripts/check_all_js_syntax.cjs && node scripts/generate_sw_manifest.mjs && node scripts/test_student_dashboard_exam_parity.mjs && node scripts/test_homophones_spoken_mode.mjs && node scripts/test_prerequisite_deficit_guard.mjs && node scripts/test_vocab_dashboard_blueprint.mjs && node scripts/test_bottom_banner_universal.mjs",
     "serve": "serve . -p 5500",
     "build": "echo 'Static deploy ready'"

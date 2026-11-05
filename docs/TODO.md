@@ -1,3 +1,26 @@
+# ACTIVE DIRECTIVE: PHASE 339 — MOBILE VIEWPORT EMULATION ENGINE & OPTIMIZED AI EXTENSIONS STACK [COMPLETE]
+
+- [x] Task 1: Audit and reorganize `.vscode/extensions.json` into 5 curated categories: Mobile Viewport & Live Emulation, CSS & Visual Accuracy, HTML & Asset Productivity, Code Quality & Runtime Safety, and AI Pair Programming & Architecture.
+- [x] Task 2: Build 1-click mobile viewport emulation engine `scripts/open_mobile_preview.mjs` using Playwright system browser integration (390x800, touch, DPR 2x).
+- [x] Task 3: Support automated mobile snapshots (`--screenshot`, `--all-screenshots`) for `dashboard.html`, `result.html`, `index.html`, `test.html`, `admin.html`.
+- [x] Task 4: Add npm scripts in `package.json` (`preview:mobile`, `preview:result`, `preview:admin`, `preview:all`) and VS Code tasks in `.vscode/tasks.json`.
+- [x] Task 5: Add `.mobile_previews/` to `.gitignore`.
+- [x] Task 6: Verify with automated CI test suite `npm.cmd test` (100% PASS).
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 338 — COMPLETED TESTS "RETRY" PLAY BUTTON, TOP-7 TASK GRADE CHIPS, EXAM SKY BLUE TITLE & LEADERBOARD (YOU) ELIMINATION [COMPLETE]
+
+- [x] Task 1: Remove `(You)` text tag in leaderboard (`js/dashboard.js`), replace with Sky Blue `#38bdf8` bold font and text glow to prevent long student names from truncating.
+- [x] Task 2: Lock Next Test card to strict left-alignment (`text-align: left; align-items: flex-start;`).
+- [x] Task 3: Visual hierarchy for Completed Tests: Exam titles in bold Sky Blue (`#38bdf8`), Task titles in White (`#f8fafc`).
+- [x] Task 4: Update Completed Tests column header to `RETRY` (in `dashboard.html`), and render compact Play button (`▶`) with dynamic border, background, and icon fill matching the score/grade tier.
+- [x] Task 5: Implement Task Top-7 rolling retention logic: calculate/display the 7 highest scores per Task, sorted from lowest to highest across 7 mini grade chips.
+- [x] Task 6: Update `scripts/test_vocab_dashboard_blueprint.mjs` and bump cache busters across all 8 files to `v=20261106_v148` (SW `topscore-cache-option-a-v76`).
+- [x] Task 7: Execute full regression test verification (100% PASS).
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 326 — UNIVERSAL BOTTOM BANNER OVERHAUL ("TOPSCORE BY MR. TOP") [COMPLETE]
 
 - [x] Task 1: Replace legacy banner text across all pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`) with `<span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>`.

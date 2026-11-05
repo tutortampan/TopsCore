@@ -2,6 +2,30 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "TopsCore: 📱 Launch Mobile View Preview (Pixel / iPhone 390x800)",
+      "type": "shell",
+      "command": "node scripts/open_mobile_preview.mjs dashboard.html",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "TopsCore: 📸 Capture Mobile Snapshots (All Pages)",
+      "type": "shell",
+      "command": "node scripts/open_mobile_preview.mjs --all-screenshots",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "TopsCore: Verify System Health (CI Gate)",
       "type": "shell",
       "command": "npm.cmd test",
@@ -50,4 +74,3 @@
     }
   ]
 }
-

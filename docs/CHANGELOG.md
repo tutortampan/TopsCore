@@ -1,3 +1,416 @@
+## [2026-11-06 04:58] — Phase 339: Mobile Viewport Emulation Engine, Categorized Extensions Stack & 1-Click Mobile Preview Tasks
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 339: Mobile Viewport Preview & Curated Extensions Stack
+**Status:** PASS
+
+### Why
+- The user requested:
+  "kita barusan update extension kamu ada saran soal extension untuk cek tampilan mobile, kalau ada kamu lakukan saja, saya 100% pakai AI, jadi cek lagi extensi kita. dan terpakan amna susuan extensi yang terbaik! kerjakan sampai tuntas dan maksimal /goal"
+- For 100% AI development and mobile-first validation:
+  1. Need dedicated mobile device emulation (390x800, touch simulation, Retina DPR 2) directly inside the workspace without guessing.
+  2. Curated extension stack in `.vscode/extensions.json` organized into 5 clean categories: Mobile View, CSS & Color Verification, HTML & Productivity, Code Safety & Deno, and AI Pair Programming / Mermaid.
+  3. Integrated 1-click VS Code Tasks and npm scripts for instant interactive mobile preview and batch screenshot generation across all 5 core pages.
+
+### Changed
+1. **Curated Extensions Stack (`.vscode/extensions.json`)**:
+   - Organized into 5 distinct categories with clear purpose comments:
+     - **Mobile Viewport & Live Emulation:** `ms-edgedevtools.vscode-edge-devtools`, `yandeu.five-server`, `ms-playwright.playwright`.
+     - **CSS & Visual Accuracy:** `pranaygp.vscode-css-peek`, `naumovs.color-highlight`.
+     - **HTML & Asset Productivity:** `formulahendry.auto-close-tag`, `formulahendry.auto-rename-tag`, `christian-kohler.path-intellisense`.
+     - **Code Quality & Runtime Safety:** `usernamehw.errorlens`, `dbaeumer.vscode-eslint`, `esbenp.prettier-vscode`, `denoland.vscode-deno`.
+     - **AI Pair Programming & Architecture:** `kanezal.better-antigravity`, `bierner.markdown-mermaid`.
+2. **Dedicated Mobile Preview Engine (`scripts/open_mobile_preview.mjs`)**:
+   - Uses Playwright to launch system Edge/Chrome in exact mobile viewport dimensions (390x800), touch enabled, deviceScaleFactor 2x.
+   - Automatically connects to Five Server (`http://localhost:5500`) if running, or falls back to local file mode.
+   - Supports `--screenshot` for individual pages and `--all-screenshots` for batch capturing `dashboard.html`, `result.html`, `index.html`, `test.html`, `admin.html` into `.mobile_previews/`.
+3. **VS Code Tasks & NPM Scripts (`.vscode/tasks.json`, `package.json`)**:
+   - Added task `TopsCore: 📱 Launch Mobile View Preview (Pixel / iPhone 390x800)`
+   - Added task `TopsCore: 📸 Capture Mobile Snapshots (All Pages)`
+   - Added npm scripts: `preview:mobile`, `preview:result`, `preview:admin`, `preview:all`.
+4. **Git Ignore (`.gitignore`)**:
+   - Added `.mobile_previews/` to ignore local generated mobile snapshot artifacts.
+
+### Files
+- `.vscode/extensions.json`
+- `.vscode/tasks.json`
+- `scripts/open_mobile_preview.mjs`
+- `package.json`
+- `.gitignore`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `npm.cmd test`: PASS (All CI gate suites passing 100%)
+- `node scripts/open_mobile_preview.mjs --screenshot dashboard.html`: PASS (Captured 390x800 snapshot in 4s)
+
+---
+
+## [2026-11-06 04:50] — Phase 338: Completed Tests "RETRY" Play Button, Top-7 Task Grade Chips, Exam Sky Blue Title, and Leaderboard (You) Elimination
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 338: Completed Tests & Leaderboard UX Polish
+**Status:** PASS
+
+### Why
+- The user submitted detailed UX enhancements with 4 screenshots/blueprints (`media_1793910024460_b3c4c94b.png`, `media_1793910964386_ccbe4658.png`, `media_1793910986686_4d0a8cd9.png`, `media_1793911122731_7e7148de.png`):
+  1. Differentiate Exam vs Task titles in Completed Tests: Exam titles in Sky Blue (`#38bdf8`) with bold weight, Tasks in clean White (`#f8fafc`).
+  2. Change Completed Tests action column header from `ACTION` to `RETRY` (per Gambar 2), and render a clean, glowing Play button (`▶`) whose border, glow, and icon fill dynamically match the grade/score achieved on that test.
+  3. Task Top-7 Retention: For Tasks, only the 7 highest scores are tracked/displayed (sub-row in Gambar 2 shows the 7 highest grades from lowest to highest). When a student retries a Task and gets a higher score, their lowest score is superseded.
+  4. Leaderboard name clipping fix (Gambar 3): Remove `(You)` text tag which forced ellipsis truncation on long names; instead, highlight the current user's full name in vibrant Sky Blue (`#38bdf8`) with extra bold weight.
+  5. Next Test title strict left-alignment (Gambar 4): Enforce `align-items: flex-start` and `text-align: left` across next test primary name, topic name, and rainbow bar.
+
+### Changed
+1. **Leaderboard Student Name Highlighting (`js/dashboard.js`, `css/dashboard.css`)**:
+   - Removed `${isMe ? '...(You)...' : ''}`.
+   - Added `.leaderboard-student-name.is-current-user` styled with `#38bdf8` and `text-shadow: 0 0 10px rgba(56, 189, 248, 0.45)`.
+   - Prevents ellipsis truncation so full names like `Queen Isnantika Salsabila` fit completely.
+2. **Completed Tests Table Header & "RETRY" Play Button (`dashboard.html`, `js/dashboard.js`, `css/dashboard.css`)**:
+   - Changed `<span class="th-col th-action">ACTION</span>` to `<span class="th-col th-action">RETRY</span>` in `dashboard.html`.
+   - In `js/dashboard.js`, rendered clean Play button (`▶`) with dynamic border, background, and icon fill matching `scoreColor` and `scoreRgb`.
+   - Styled `.completed-retry-btn` to compact 28px x 26px centered button with hover scale.
+3. **Exam vs Task Title Hierarchy (`js/dashboard.js`)**:
+   - Exams rendered with `color: #38bdf8 !important; font-weight: 800 !important;`.
+   - Tasks rendered with `color: #f8fafc !important; font-weight: 700 !important;`.
+4. **Task Top-7 Lowest-to-Highest Grade Chips (`js/dashboard.js`, `css/dashboard.css`)**:
+   - Filtered submitted attempts per task, selected top 7 highest scores, sorted them from lowest to highest, and rendered `.task-grades-subrow` with 7 `.task-mini-grade` chips.
+   - Exams remain clean 1-line rows without the 7 chips.
+5. **Next Test Strict Left-Alignment (`css/dashboard.css`)**:
+   - `.next-test-col-left`, `.next-test-title-wrap`, `.next-test-primary-name`, `.next-test-topic-name`, and `.rainbow-pass-bar` locked to left alignment.
+6. **Automated Testing & Cache Invalidation**:
+   - Updated `scripts/test_vocab_dashboard_blueprint.mjs` asserting `RETRY` header, `.task-grades-subrow`, `.task-mini-grade`, and `.is-current-user`.
+   - Bumped cache busters across all 8 files (`index.html`, `dashboard.html`, `admin.html`, `test.html`, `result.html`, `sw.js`, `js/dashboard.js`, `js/result.js`) to `v=20261106_v148` and Service Worker to `topscore-cache-option-a-v76`.
+   - All tests passing 100%.
+
+### Files
+- `dashboard.html`
+- `js/dashboard.js`
+- `css/dashboard.css`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+- `sw.js`
+- `index.html`
+- `admin.html`
+- `test.html`
+- `result.html`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files)
+- `node scripts/test_bottom_banner_universal.mjs`: PASS (100%)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+
+---
+
+## [2026-11-06 04:16] — Phase 337: Calibrated 20px / 1px / 93px / 1px / 35px Metadata Blueprint with Bolder Name & Dynamic Bottom Banner
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 337: Bolder Student Name (35px), 93px Middle Row & Dynamic Bottom Banner Verification
+**Status:** PASS
+
+### Why
+- The user re-calibrated the design (`media_1793909269909_5fc4f1ca.png`) and instructed:
+  "saya desain lagi, namanya terlalu kecil, kita coba pakai 35. dan di bagian tengah saya perbaiki desainnya, coba cek... aanlisa dan terapkan sekaligus cek banner bawah dll"
+- Mathematical balance:
+  - Sub-Row 1 (Metadata): `20px`
+  - Divider Line 1: `1px` (slender 1px line)
+  - Sub-Row 2 (Panggung Tengah): `93px`
+  - Divider Line 2: `1px` (slender 1px line)
+  - Sub-Row 3 (Nama Lengkap Siswa): `35px`
+  - Sum: `20 + 1 + 93 + 1 + 35 = 150px` exactly!
+- To solve "namanya terlalu kecil", Sub-Row 3 was set to `35px` with an enlarged, bolder typography (`clamp(1.08rem, 3.6vw, 1.25rem)`, Outfit 800), perfectly centered vertically with 7.5px clearance above and below.
+- Panggung tengah (`.hero-metrics-row`) set to `93px`, housing the enlarged 84px avatar diameter and 56px score/grade boxes.
+- Bottom banner (`#bottom-ad-banner`) verified and explicitly hooked into `tierElements` in `js/dashboard.js` to ensure border, background, and shadow dynamically reflect the calculated score/grade tier.
+
+### Changed
+1. **Metadata Card Typography & Layout (`css/dashboard.css`)**:
+   - Sub-Row 3 `#welcome-name`: `height: 35px !important; min-height: 35px !important; max-height: 35px !important; font-size: clamp(1.08rem, 3.6vw, 1.25rem) !important; font-weight: 800 !important;`
+   - Sub-Row 2 `.hero-metrics-row`: `height: 93px !important; min-height: 93px !important; max-height: 93px !important;`
+   - `#banner-avatar-container`: `width: 84px !important; height: 84px !important;` (4.5px top/bottom clearance inside 93px).
+   - `#banner-score-box, #banner-grade-box`: `height: 56px !important; min-height: 56px !important; max-height: 56px !important;`
+2. **Bottom Banner Dynamic Tier Hook (`js/dashboard.js`)**:
+   - Added `#bottom-ad-banner` to `tierElements` array in `applyLobbyTierColors()` so it receives `--tier-color` and `--tier-rgb` on every class/grade update.
+3. **Automated Testing & Cache Invalidation**:
+   - Updated `scripts/test_vocab_dashboard_blueprint.mjs` asserting strict 93px middle row, 35px name row, and 84px avatar diameter.
+   - Bumped cache busters across all 8 files (`index.html`, `dashboard.html`, `admin.html`, `test.html`, `result.html`, `sw.js`, `js/dashboard.js`, `js/result.js`) to `v=20261106_v147` and Service Worker to `topscore-cache-option-a-v75`.
+   - All tests passing 100%.
+
+### Files
+- `css/dashboard.css`
+- `js/dashboard.js`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+- `sw.js`
+- `dashboard.html`
+- `index.html`
+- `admin.html`
+- `test.html`
+- `result.html`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files)
+- `node scripts/test_bottom_banner_universal.mjs`: PASS (100%)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+
+---
+
+## [2026-11-06 04:05] — Phase 336: Majestic 88px Photo & 20px / 1px / 98px / 1px / 30px Master Blueprint
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 336: Majestic Photo (88px) & 98px Center Stage Blueprint
+**Status:** PASS
+
+### Why
+- The user submitted the finalized blueprint `media_1793908074200_1507cc5e.png` and approved with "oke":
+  - `10px` Gap above card
+  - `20px` Sub-Row 1: Metadata breadcrumb (`INST | PROG | BATCH | LVL`)
+  - `1px`  Divider Line 1 (slender 1px line)
+  - `98px` Sub-Row 2: Panggung tengah (`score | Foto | grade`)
+  - `1px`  Divider Line 2 (slender 1px line)
+  - `30px` Sub-Row 3: Nama Lengkap Siswa (`(Mr./Miss) Full Name`)
+  - `10px` Gap below card
+  - Mathematical balance: `20 + 1 + 98 + 1 + 30 = 150px` exactly!
+- Inside the 98px center stage, the student photo diameter was set to **`88px`** (5px top & bottom clearance), creating a commanding, world-class avatar presentation with 24px tier glow.
+- Kotak Skor & Grade harmonized to 60px height.
+- Sub-Row 3 (`#welcome-name`) locked to 30px, centered with 6px vertical breathing room.
+
+### Changed
+1. **Metadata Card Center Stage (`css/dashboard.css`)**:
+   - `.hero-metrics-row`: `height: 98px !important; min-height: 98px !important; max-height: 98px !important;`
+   - `#banner-avatar-container`: `width: 88px !important; height: 88px !important; min-width: 88px !important; min-height: 88px !important;` with 24px tier glow and 4px shadow.
+   - `#banner-score-box, #banner-grade-box`: `height: 60px !important; min-height: 60px !important; max-height: 60px !important;`
+2. **Sub-Row 3 Nama Lengkap Siswa (`css/dashboard.css`)**:
+   - `#welcome-name`: `height: 30px !important; min-height: 30px !important; max-height: 30px !important;` centered, clean single line.
+3. **Automated Testing & Cache Invalidation**:
+   - Updated `scripts/test_vocab_dashboard_blueprint.mjs` asserting strict 98px middle row, 30px name row, and 88px avatar diameter.
+   - Bumped cache busters across all 8 files (`index.html`, `dashboard.html`, `admin.html`, `test.html`, `result.html`, `sw.js`, `js/dashboard.js`, `js/result.js`) to `v=20261106_v146` and Service Worker to `topscore-cache-option-a-v74`.
+   - All tests passing 100%.
+
+### Files
+- `css/dashboard.css`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+- `sw.js`
+- `dashboard.html`
+- `index.html`
+- `admin.html`
+- `test.html`
+- `result.html`
+- `js/dashboard.js`
+- `js/result.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files)
+- `node scripts/test_bottom_banner_universal.mjs`: PASS (100%)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+
+---
+
+## [2026-11-06 03:48] — Phase 335: Enlarged Photo (84px Diameter) & 20px / 1px / 93px / 1px / 35px Metadata Blueprint
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 335: Enlarged Photo & 93px Center Stage Calibration
+**Status:** PASS
+
+### Why
+- The user requested:
+  "fonya kurang besar, kalau begini, bagaimana?" with blueprint `media_1793907826910_b9378150.png`, followed by:
+  "perbesar lagi fotonya" (make the photo even bigger).
+- In the new blueprint `media_1793907826910_b9378150.png`:
+  - `20px` Sub-Row 1: Metadata (`INST | PROG | BATCH | LVL`)
+  - `1px`  Divider Line 1
+  - `93px` Sub-Row 2: Panggung tengah (`score | Foto | grade`)
+  - `1px`  Divider Line 2
+  - `35px` Sub-Row 3: Nama Lengkap Siswa (`(Mr./Miss) Full Name`)
+  - Mathematical balance: `20 + 1 + 93 + 1 + 35 = 150px` exactly!
+- To satisfy "perbesar lagi fotonya", the avatar circle diameter was dramatically enlarged from `62px` to **`84px`** (+35% larger diameter, +83% in visual surface area), filling almost the entire vertical height of the 93px row with 4.5px top/bottom clearance, mirroring the user's sketch.
+
+### Changed
+1. **Enlarged Photo / Avatar (`css/dashboard.css`)**:
+   - Set `#banner-avatar-container` to `width: 84px !important; height: 84px !important; min-width: 84px !important; min-height: 84px !important;` with 24px tier glow and 4px shadow.
+   - Panggung tengah `.hero-metrics-row` updated to `height: 93px !important; min-height: 93px !important; max-height: 93px !important;`.
+   - Score & Grade boxes harmonized to `height: 56px !important; min-height: 56px !important; max-height: 56px !important;`.
+2. **Sub-Row 3 Nama Lengkap Siswa (`css/dashboard.css`)**:
+   - `#welcome-name` calibrated to `height: 35px !important; min-height: 35px !important; max-height: 35px !important;` centered, fully visible without clipping.
+3. **Automated Testing & Cache Invalidation**:
+   - Updated `scripts/test_vocab_dashboard_blueprint.mjs` asserting strict 93px middle row, 35px name row, and 84px avatar diameter.
+   - Bumped cache busters across all 8 files (`index.html`, `dashboard.html`, `admin.html`, `test.html`, `result.html`, `sw.js`, `js/dashboard.js`, `js/result.js`) to `v=20261106_v145` and Service Worker to `topscore-cache-option-a-v73`.
+   - All tests passing 100%.
+
+### Files
+- `css/dashboard.css`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+- `sw.js`
+- `dashboard.html`
+- `index.html`
+- `admin.html`
+- `test.html`
+- `result.html`
+- `js/dashboard.js`
+- `js/result.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files)
+- `node scripts/test_bottom_banner_universal.mjs`: PASS (100%)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+
+---
+
+## [2026-11-06 03:32] — Phase 334: Slender 1px Dividers & 20px / 1px / 88px / 1px / 40px Metadata Blueprint
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 334: Slender 1px Divider Refinement & Exact Pixel Allocation
+**Status:** PASS
+
+### Why
+- The user reviewed the ratio and stated:
+  "SAYA SUKA UKURAN SEKARANG, TAPI GARISNYA TERLALU TEBAL, COBA PERBAIKI DENGAN INI" accompanied by blueprint image `media_1793906877071_d8ae951c.png`.
+- The user requested that the horizontal dividers between the sub-rows be refined to **slender 1px lines** (instead of heavy 2px laser lines with intense white glow).
+- The blueprint `media_1793906877071_d8ae951c.png` explicitly calibrates the exact pixel budget:
+  - `10px` Gap above card
+  - `20px` Sub-Row 1: Metadata breadcrumb (`INST | PROG | BATCH | LVL`)
+  - `1px`  Divider Line 1 (slender 1px line)
+  - `88px` Sub-Row 2: Panggung tengah (`score | Foto | grade`)
+  - `1px`  Divider Line 2 (slender 1px line)
+  - `40px` Sub-Row 3: Nama Lengkap Siswa (`(Mr./Miss) Full Name`)
+  - `10px` Gap below card
+  - `50px` Grade description card
+  - `10px` Gap below
+  - Mathematical balance: `20 + 1 + 88 + 1 + 40 = 150px` exactly.
+
+### Changed
+1. **Slender 1px Horizontal Dividers (`css/dashboard.css`)**:
+   - Set `.hero-divider`, `#welcome-meta-wrapper + .hero-divider`, `.hero-metrics-row + .hero-divider`, `.hero-name-divider` to `height: 1px !important; min-height: 1px !important; max-height: 1px !important; flex-shrink: 0 !important; margin: 0 !important;`.
+   - Replaced overpowering white glow with a slender, soft neon gradient: `linear-gradient(90deg, rgba(var(--tier-rgb, 234, 179, 8), 0.20) 0%, rgba(var(--tier-rgb, 234, 179, 8), 0.75) 15%, rgba(var(--tier-rgb, 234, 179, 8), 0.85) 50%, rgba(var(--tier-rgb, 234, 179, 8), 0.75) 85%, rgba(var(--tier-rgb, 234, 179, 8), 0.20) 100%) !important;` with delicate `box-shadow: 0 0 4px rgba(var(--tier-rgb, 234, 179, 8), 0.35) !important;`.
+2. **Sub-Row 2 Middle Stage Budget Allocation (`css/dashboard.css`)**:
+   - `.hero-metrics-row`: Locked to `height: 88px !important; min-height: 88px !important; max-height: 88px !important;`.
+   - `#banner-avatar-container`: Sized to `62px` with 22px tier glow, leaving comfortable headroom inside the 88px stage.
+3. **Sub-Row 3 Full Name Space (`css/dashboard.css`)**:
+   - `#welcome-name`: Locked to `height: 40px !important; min-height: 40px !important; max-height: 40px !important; font-size: clamp(1rem, 3.5vw, 1.2rem) !important;` centered, crystal clear.
+4. **Automated Testing & Cache Invalidation**:
+   - Updated `scripts/test_vocab_dashboard_blueprint.mjs` asserting strict 88px middle row, 1px divider height, and flex-shrink protection.
+   - Bumped cache busters across all 8 files (`index.html`, `dashboard.html`, `admin.html`, `test.html`, `result.html`, `sw.js`, `js/dashboard.js`, `js/result.js`) to `v=20261106_v144` and Service Worker to `topscore-cache-option-a-v72`.
+   - All tests passing 100%.
+
+### Files
+- `css/dashboard.css`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+- `sw.js`
+- `dashboard.html`
+- `index.html`
+- `admin.html`
+- `test.html`
+- `result.html`
+- `js/dashboard.js`
+- `js/result.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files)
+- `node scripts/test_bottom_banner_universal.mjs`: PASS (100%)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+
+---
+
+## [2026-11-06 03:10] — Phase 333: Master Blueprint Standardization (20px / 90px / 40px) for 150px Metadata Card
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 333: Master Blueprint Standardization & Sub-Row Budget Calibration
+**Status:** PASS
+
+### Why
+- The user provided an updated architectural diagram / spreadsheet snapshot (`media_1793905672744_fbac4ef1.png`) and asked:
+  "coba liat ini, apakah sma? kitapperlu buat stndarisasi ukuran yang pas, analisa, hitung"
+- Comprehensive Analysis & Comparison:
+  - Header (50px), Gap (10px), Total Metadata Card (150px), Gap (10px), Grade Description (50px) remain consistent.
+  - Sub-row heights inside the 150px Metadata Card were calibrated from `20 / 100 / 30` to **`20px / 90px / 40px`**:
+    - Sub-Row 1 (`INST | PROG | BATCH | LVL`): **20px**.
+    - Sub-Row 2 (`score | Foto | grade`): **90px** (86px content + 2px divider top + 2px divider bottom = 90px). Avatar 62px, score/grade boxes 52px.
+    - Sub-Row 3 (`(Mr./Miss) Nama Lengkap siswa`): **40px** (expanded by +10px from 30px, ensuring long student names have spacious vertical centering and never get clipped by the bottom border).
+  - Mathematical balance: `20px + 2px + 86px + 2px + 40px = 150px` exactly!
+
+### Changed
+1. **Metadata Card Sub-Row Standardization (`css/dashboard.css`)**:
+   - `#welcome-banner-section`: `padding: 0 14px !important; height: 150px !important;`.
+   - `#welcome-meta-wrapper`: `height: 20px !important;`.
+   - `.hero-metrics-row`: `height: 86px !important;` with 62px avatar circle and 52px score/grade boxes.
+   - `#welcome-name`: `height: 40px !important; font-size: clamp(1rem, 3.5vw, 1.2rem) !important;` strictly centered.
+   - Horizontal Dividers: 2px height, 0 margin, gleaming neon laser gradient.
+2. **Automated Testing & Cache Invalidation**:
+   - Updated `scripts/test_vocab_dashboard_blueprint.mjs` asserting the 40px name row and 20/90/40 standardization.
+   - Bumped cache busters across all files to `v=20261106_v143` and Service Worker to `topscore-cache-option-a-v71`.
+   - All tests passing 100%.
+
+### Files
+- `css/dashboard.css`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+- `sw.js`
+- `dashboard.html`
+- `index.html`
+- `admin.html`
+- `test.html`
+- `result.html`
+- `js/dashboard.js`
+- `js/result.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files)
+- `node scripts/generate_sw_manifest.mjs`: PASS (27/27 SW cache assets)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+
+---
+
+## [2026-11-06 02:54] — Phase 332: Root Cause Resolution for Metadata Card Dividers (Flex-Shrink, 2px Laser Gradient & Conflict Elimination)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 332: Metadata Card Horizontal Divider Polish
+**Status:** PASS
+
+### Why
+- The user sent a cropped screenshot of the Metadata Card (`media_1793904433955_7717f5d0.png`) showing that while the student name `Mr. Test` is centered and no longer cut off, the **horizontal divider lines between metadata, photo/score, and student name were completely invisible**.
+- Root Cause Analysis:
+  1. **Flexbox Collapse**: In `#welcome-banner-section` (height 150px, `display: flex; flex-direction: column; justify-content: space-between;`), child elements `#welcome-meta-wrapper` (20px), `.hero-metrics-row` (84px), and `#welcome-name` (30px) had explicit `min-height` set. The dividers (`.hero-divider` and `.hero-name-divider`) had `height: 1px` without `min-height` or `flex-shrink: 0`, causing flexbox to crush their height down to 0px.
+  2. **Transparent Edges**: The previous gradient had `transparent 0%` and `transparent 100%`, causing the lines directly beneath the Score box (`70%`) and Grade box (`C`) to be 100% transparent.
+  3. **Duplicate CSS Rules**: An older legacy block at line 2260 was defining dim gray gradients (`rgba(148, 163, 184, 0.25)`).
+
+### Changed
+1. **Consolidated High-Visibility Laser Dividers (`css/dashboard.css`)**:
+   - Locked divider dimensions: `height: 2px !important; min-height: 2px !important; max-height: 2px !important; flex-shrink: 0 !important; width: 100% !important; margin: 1px 0 !important;`.
+   - Vibrant neon gradient across 100% of card width: `linear-gradient(90deg, rgba(var(--tier-rgb, 234, 179, 8), 0.45) 0%, rgba(var(--tier-rgb, 234, 179, 8), 0.95) 15%, #ffffff 50%, rgba(var(--tier-rgb, 234, 179, 8), 0.95) 85%, rgba(var(--tier-rgb, 234, 179, 8), 0.45) 100%) !important;`.
+   - Dual glow: `box-shadow: 0 0 10px rgba(var(--tier-rgb, 234, 179, 8), 0.70), 0 0 3px rgba(255, 255, 255, 0.85) !important;`.
+   - Card vertical padding adjusted to `3px 14px 4px 14px` for mathematical sub-pixel accuracy within the 150px budget.
+   - Removed conflicting legacy rules from line 2260.
+2. **Cache Invalidation**:
+   - Bumped cache busters across all files to `v=20261106_v142` and Service Worker to `topscore-cache-option-a-v70`.
+   - Verified SW manifest and all automated tests passing 100%.
+
+### Files
+- `css/dashboard.css`
+- `sw.js`
+- `dashboard.html`
+- `index.html`
+- `admin.html`
+- `test.html`
+- `result.html`
+- `js/dashboard.js`
+- `js/result.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files)
+- `node scripts/generate_sw_manifest.mjs`: PASS (27/27 SW cache assets)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+
+---
+
 ## [2026-11-06 02:26] — Phase 331: Header 44px Widths, Metadata Sub-Rows (20/100/30), Glowing Dividers, 2-Line Next Test Title & Completed Tests Typography Parity
 
 **Agent/Session:** Antigravity

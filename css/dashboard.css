@@ -2260,26 +2260,22 @@ body.dashboard-page .dashboard-header-brand {
   text-overflow: ellipsis !important;
 }
 
-body.dashboard-page .hero-divider {
-  width: 100% !important;
-  height: 1px !important;
-  background: rgba(148, 163, 184, 0.25) !important;
-  margin: 2px 0 !important;
-}
-
-body.dashboard-page #welcome-meta-wrapper + .hero-divider {
-  margin: 2px 0 4px 0 !important;
-  background: linear-gradient(90deg, transparent 0%, rgba(148, 163, 184, 0.35) 25%, rgba(148, 163, 184, 0.35) 75%, transparent 100%) !important;
-}
-
+/* Refined 1px Slender Horizontal Dividers across Metadata Card (Phase 334 Master Blueprint) */
+body.dashboard-page .hero-divider,
+body.dashboard-page #welcome-meta-wrapper + .hero-divider,
 body.dashboard-page .hero-metrics-row + .hero-divider,
 body.dashboard-page .hero-name-divider {
   display: block !important;
   width: 100% !important;
   height: 1px !important;
-  margin: 4px 0 2px 0 !important;
-  background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.6) 80%, transparent 100%) !important;
-  box-shadow: 0 0 10px rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.4) !important;
+  min-height: 1px !important;
+  max-height: 1px !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  background: linear-gradient(90deg, rgba(var(--tier-rgb, 234, 179, 8), 0.20) 0%, rgba(var(--tier-rgb, 234, 179, 8), 0.75) 15%, rgba(var(--tier-rgb, 234, 179, 8), 0.85) 50%, rgba(var(--tier-rgb, 234, 179, 8), 0.75) 85%, rgba(var(--tier-rgb, 234, 179, 8), 0.20) 100%) !important;
+  box-shadow: 0 0 4px rgba(var(--tier-rgb, 234, 179, 8), 0.35) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 body.dashboard-page .hero-metrics-row {
@@ -2471,8 +2467,8 @@ body.dashboard-page .avatar-crown-badge.hidden {
 }
 
 body.dashboard-page #banner-avatar-container {
-  width: 74px !important;
-  height: 74px !important;
+  width: 84px !important;
+  height: 84px !important;
   border-radius: 50% !important;
   padding: 3px !important;
   background: rgba(15, 23, 42, 0.9) !important;
@@ -4318,17 +4314,16 @@ body.dashboard-page .completed-col-action {
 
 body.dashboard-page .completed-retry-btn {
   width: 28px !important;
-  height: 28px !important;
+  height: 26px !important;
+  min-width: 28px !important;
+  min-height: 26px !important;
   border-radius: 6px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: rgba(56, 189, 248, 0.12) !important;
-  border: 1px solid rgba(56, 189, 248, 0.3) !important;
-  color: #38bdf8 !important;
+  padding: 0 !important;
   cursor: pointer !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  padding: 0 !important;
 }
 body.dashboard-page .completed-retry-btn:hover {
   background: rgba(56, 189, 248, 0.25) !important;
@@ -4526,14 +4521,14 @@ body.dashboard-page .dashboard-header-actions {
   flex-shrink: 0 !important;
 }
 
-/* 3. Hero Card (Students Metadata - Strict 150px Total Budget: 20px / 100px / 30px) */
+/* 3. Hero Card (Students Metadata - Standardized 150px Budget: 20px / 1px / 88px / 1px / 40px) */
 body.dashboard-page #welcome-banner-section {
   height: 150px !important;
   min-height: 150px !important;
   max-height: 150px !important;
   width: 100% !important;
   border-radius: 14px !important;
-  padding: 4px 14px 6px 14px !important;
+  padding: 0 14px !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: space-between !important;
@@ -4564,7 +4559,7 @@ body.dashboard-page #welcome-meta-wrapper {
   padding: 0 !important;
 }
 
-/* Crisp Neon Horizontal Dividers */
+/* Refined 1px Slender Horizontal Dividers across Metadata Card (Phase 334 Master Blueprint) */
 body.dashboard-page .hero-divider,
 body.dashboard-page #welcome-meta-wrapper + .hero-divider,
 body.dashboard-page .hero-metrics-row + .hero-divider,
@@ -4572,16 +4567,21 @@ body.dashboard-page .hero-name-divider {
   display: block !important;
   width: 100% !important;
   height: 1px !important;
-  margin: 1px 0 !important;
-  background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb), 0.6) 80%, transparent 100%) !important;
-  box-shadow: 0 0 8px rgba(var(--tier-rgb), 0.4) !important;
+  min-height: 1px !important;
+  max-height: 1px !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  background: linear-gradient(90deg, rgba(var(--tier-rgb, 234, 179, 8), 0.20) 0%, rgba(var(--tier-rgb, 234, 179, 8), 0.75) 15%, rgba(var(--tier-rgb, 234, 179, 8), 0.85) 50%, rgba(var(--tier-rgb, 234, 179, 8), 0.75) 85%, rgba(var(--tier-rgb, 234, 179, 8), 0.20) 100%) !important;
+  box-shadow: 0 0 4px rgba(var(--tier-rgb, 234, 179, 8), 0.35) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
-/* Sub-Row 2: Score | Foto | Grade (100px total block budget: 84px content) */
+/* Sub-Row 2: Score | Foto | Grade (Strict 93px Sub-Row Budget per Blueprint, Enlarged 84px Photo) */
 body.dashboard-page .hero-metrics-row {
-  height: 84px !important;
-  min-height: 84px !important;
-  max-height: 84px !important;
+  height: 93px !important;
+  min-height: 93px !important;
+  max-height: 93px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -4593,9 +4593,9 @@ body.dashboard-page .hero-metrics-row {
 body.dashboard-page #banner-score-box,
 body.dashboard-page #banner-grade-box {
   flex: 1 1 0% !important;
-  height: 52px !important;
-  min-height: 52px !important;
-  max-height: 52px !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
   width: 56px !important;
   min-width: 56px !important;
   display: flex !important;
@@ -4610,28 +4610,28 @@ body.dashboard-page #banner-grade-box {
 }
 
 body.dashboard-page #banner-avatar-container {
-  width: 64px !important;
-  height: 64px !important;
-  min-width: 64px !important;
-  min-height: 64px !important;
+  width: 84px !important;
+  height: 84px !important;
+  min-width: 84px !important;
+  min-height: 84px !important;
   border-radius: 50% !important;
   padding: 3px !important;
   background: rgba(15, 23, 42, 0.9) !important;
   border: 2.5px solid var(--tier-color) !important;
-  box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.75), 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 0 24px rgba(var(--tier-rgb), 0.75), 0 4px 14px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Sub-Row 3: Nama Lengkap Siswa dengan Title (30px, CENTERED, Fully Visible) */
+/* Sub-Row 3: Nama Lengkap Siswa dengan Title (Strict 35px Total Sub-Row Budget, CENTERED & Bolder) */
 body.dashboard-page #welcome-name {
-  height: 30px !important;
-  min-height: 30px !important;
-  max-height: 30px !important;
+  height: 35px !important;
+  min-height: 35px !important;
+  max-height: 35px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
   font-family: 'Outfit', sans-serif !important;
-  font-size: clamp(0.95rem, 3.2vw, 1.15rem) !important;
+  font-size: clamp(1.08rem, 3.6vw, 1.25rem) !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
   letter-spacing: 0.02em !important;
@@ -4858,4 +4858,69 @@ body.dashboard-page .topscore-locked-banner {
   box-shadow: 0 -4px 18px rgba(var(--tier-rgb), 0.15) !important;
   box-sizing: border-box !important;
   margin: 0 !important;
+}
+
+/* Leaderboard Current User Highlighting (No (You) text) */
+body.dashboard-page .leaderboard-student-name.is-current-user {
+  color: #38bdf8 !important;
+  font-weight: 800 !important;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.45) !important;
+}
+
+/* Task 7-Grade Sub-Row in Completed Tests (Gambar 2 Blueprint) */
+body.dashboard-page .completed-col-name-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  gap: 3px !important;
+}
+body.dashboard-page .task-grades-subrow {
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  width: 100% !important;
+}
+body.dashboard-page .task-mini-grade {
+  width: 17px !important;
+  height: 15px !important;
+  min-width: 17px !important;
+  border-radius: 3px !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.65rem !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+  line-height: 1 !important;
+}
+body.dashboard-page .task-mini-grade.is-empty {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #64748b !important;
+  border: 1px dashed rgba(255, 255, 255, 0.18) !important;
+  box-shadow: none !important;
+}
+
+/* Strict Next Test Left-Alignment (Gambar 4 Blueprint) */
+body.dashboard-page .next-test-col-left {
+  align-items: flex-start !important;
+  text-align: left !important;
+}
+body.dashboard-page .next-test-title-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  text-align: left !important;
+  width: 100% !important;
+}
+body.dashboard-page .next-test-primary-name,
+body.dashboard-page .next-test-topic-name {
+  text-align: left !important;
+  align-self: flex-start !important;
+  width: 100% !important;
+}
+body.dashboard-page .rainbow-pass-bar {
+  justify-content: flex-start !important;
 }
