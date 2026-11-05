@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
       const priorTheme = themeSeqEdge[curThemeIdxEdge - 1];
       const { data: priorExams } = await supabase
         .from('tests')
-        .select('id, title, payload, shell_code, test_type')
+        .select('id, title, payload, shell_code, test_type, minimum_required_score')
         .eq('class_id', test.class_id)
         .eq('level_id', test.level_id)
         .eq('test_type', 'exam')
@@ -204,15 +204,19 @@ Deno.serve(async (req) => {
 
         const passedPriorIds = new Set();
         (priorAttempts || []).forEach((att: any) => {
+          const pe = matchingPriorExams.find((e: any) => e.id === att.test_id);
+          const reqScore = Number(pe?.minimum_required_score) || Number(pe?.payload?.min_score) || 60;
           const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-          if (pct >= 70 || att.is_remedial_unlocked || att.is_forgiven) {
+          if (pct >= reqScore || att.is_remedial_unlocked || att.is_forgiven) {
             passedPriorIds.add(att.test_id);
           }
         });
 
         const failedAny = priorExamIds.some((id: any) => !passedPriorIds.has(id));
         if (failedAny) {
-          return new Response(JSON.stringify({ error: `Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least 70% before taking Theme ${currentThemeEdge} tests.` }), {
+          const unpassedExam = matchingPriorExams.find((e: any) => !passedPriorIds.has(e.id));
+          const reqScore = Number(unpassedExam?.minimum_required_score) || Number(unpassedExam?.payload?.min_score) || 60;
+          return new Response(JSON.stringify({ error: `Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least ${reqScore}% before taking Theme ${currentThemeEdge} tests.` }), {
             status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
           });
         }
@@ -408,16 +412,19 @@ Deno.serve(async (req) => {
                   passCountByTask[att.test_id] = Math.max(passCountByTask[att.test_id] || 0, 7);
                 } else {
                   const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-                  if (pct >= 70) {
+                  const st = siblingTasks.find((t: any) => t.id === att.test_id);
+                  const minReq = Number(st?.minimum_required_score) || Number(st?.payload?.min_score) || 50;
+                  if (pct >= minReq) {
                     passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
                   }
                 }
               });
             }
 
-            const unmasteredTask = taskIds.find((tid: string) => (passCountByTask[tid] || 0) < 7);
+            const unmasteredTask = siblingTasks.find((t: any) => (passCountByTask[t.id] || 0) < 7);
             if (unmasteredTask) {
-              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (7 passes with at least 70%) on all Theme Tasks before taking the Exam.` }), {
+              const minReq = Number(unmasteredTask.minimum_required_score) || Number(unmasteredTask.payload?.min_score) || 50;
+              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (7 passes with at least ${minReq}%) on all Theme Tasks before taking the Exam.` }), {
                 status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
               });
             }
@@ -516,17 +523,21 @@ Deno.serve(async (req) => {
                 passedPriorIds.add(att.test_id);
                 return;
               }
+              const pe = matchingPriorExams.find((e: any) => e.id === att.test_id);
+              const reqScore = Number(pe?.minimum_required_score) || Number(pe?.payload?.min_score) || 60;
               const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
               if ((att.is_remedial_unlocked || att.is_remedial) && pct >= 60) {
                 passedPriorIds.add(att.test_id);
-              } else if (pct >= 70) {
+              } else if (pct >= reqScore) {
                 passedPriorIds.add(att.test_id);
               }
             });
 
             const failedAny = priorExamIds.some((id: any) => !passedPriorIds.has(id));
             if (failedAny) {
-              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least 70% before taking Theme ${themeCode} Exams.` }), {
+              const unpassedExam = matchingPriorExams.find((e: any) => !passedPriorIds.has(e.id));
+              const reqScore = Number(unpassedExam?.minimum_required_score) || Number(unpassedExam?.payload?.min_score) || 60;
+              return new Response(JSON.stringify({ error: `Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least ${reqScore}% before taking Theme ${themeCode} Exams.` }), {
                 status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
               });
             }

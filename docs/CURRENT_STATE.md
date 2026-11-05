@@ -1,26 +1,25 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-05 19:35 UTC+8
-Current Phase: Phase 324: Batch 134 Task Gating Resolution (Option 1), Dynamic Repetition Feedback, and Resilient Error Boundaries [COMPLETE]
+Last Updated: 2026-11-05 20:38 UTC+8
+Current Phase: Phase 325: Batch 134 Full Gating Resolution: Dynamic Exam KKM Alignment (60%), Task Threshold Sync, and Stuck Sessions Purge [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Batch 134 Diagnostic & Gating Resolution (Option 1 Selected)**:
-   - Deep inspection and validation for all students in Batch 134, particularly Cinta Laura, Muhammad Afyani Farobi, and Muhamad Alifurrahman ("Lifurahma"):
-     - **Muhammad Afyani Farobi**: 6/7 passes on `2C1-WORDS-TASK`. Needs 1 more pass on C1 (6/7 -> 7/7) to unlock C2.
-     - **Muhamad Alifurrahman**: 2/7 passes on `2C1-WORDS-TASK`. Needs 5 more passes on C1 (2/7 -> 7/7) to unlock C2.
-     - **Cinta Laura**: 9/7 passes on C1 (Mastered), 2/7 passes on C2. Active task is `2C2-WORDS-TASK (Cashier & Payment)`. Needs 5 more passes on C2 (2/7 -> 7/7) to unlock C3.
+1. **Batch 134 Full Diagnostic & Root Cause Penuntasan**:
+   - Audited all 18 students in Batch 134 (Class 2nd Vocabulary).
+   - Resolved the 70% vs 60% Exam KKM discrepancy:
+     - `supabase/functions/start-test/index.ts` and `js/api.js` updated to use dynamic `minimum_required_score || 60` instead of hardcoded 70%.
+     - Unblocked Farobi (69%), Cinta Laura (63%), Lifurahma (60%), Adinda (60%), and Ariwil (60%) on their active task drills.
+   - Fixed task minimum score check before exams to `taskMinScore` (50%) instead of 70%.
+   - Purged stuck accidental attempts on `2A-WORDS-EXAM` for Farobi and Ariwil.
 2. **Dynamic Locked Task Feedback (`js/dashboard.js`)**:
-   - Class modal and non-grouped task gating updated to display dynamic progress:
+   - Class modal and non-grouped task gating display dynamic progress:
      `Topic C1 (6/7 passes — 1 more needed)` or `Topic C2 (2/7 passes — 5 more needed)` instead of static `7/7 Passes Required`.
-   - Amber accent styling (`#fbbf24`) with high readability.
 3. **Resilient Error Boundary on Test Page (`js/test.js`)**:
-   - Enhanced `bootTest()` catch block to render a dedicated, clear glass modal when blocked by prerequisite gating (`PREREQUISITE_NOT_MET`, `TOPIC_MASTERY_NOT_MET`), with direct button to return to dashboard.
-   - Cleans up `topscore_test_id` and `topscore_attempt_id` in `sessionStorage` on error to avoid session poisoning.
-4. **Smart Next Milestone Logic (`js/result.js`)**:
-   - Added `at.is_forgiven` tolerance in pass calculation across `renderSmartNextAction`.
-5. **Cache Version & Validation**:
-   - Bumped to `v=20261105_v133`, SW cache `topscore-cache-option-a-v61`.
+   - Dedicated glass modal when blocked by prerequisite gating with clean explanation and button to return to dashboard.
+   - Automatic cleanup of cached test and attempt IDs in `sessionStorage`.
+4. **Cache Version & Validation**:
+   - Bumped to `v=20261105_v134`, SW cache `topscore-cache-option-a-v62`.
    - All tests passing 100% (syntax, SW manifest, exam parity, homophones, eligibility).
 1. **Catatan Wajib Zero-Empty-Space Layout Engine**:
    - Enforced on both `test.html` and `result.html`:

@@ -1,3 +1,50 @@
+## [2026-11-05 20:38] — Batch 134 Full Gating Resolution: Dynamic Exam KKM Alignment (60%), Task Threshold Sync, and Stuck Sessions Purge
+
+**Agent/Session:** Antigravity
+**Phase:** Full Batch 134 Progression & Cross-Theme Alignment (v134)
+**Status:** PASS
+
+### Why
+- User requested a complete diagnostic check of all students in Batch 134 in Class 2nd Vocabulary ("ada banyak yang gagal lanjut task, cek semua anggota batch 134").
+- Comprehensive audit of all 18 students uncovered the primary bottleneck:
+  1. `supabase/functions/start-test/index.ts` Section 5b (line 181-220) and `js/api.js` line 1462 had hardcoded an exam pass threshold of `>= 70%`. However, the official exam `minimum_required_score` configured in the database is **60%** (Grade C passing per `AGENTS.md`).
+  2. Because the dashboard (`dashboard.js`) correctly read 60% from the database, students who scored 60%–69% on Theme B Exam (Farobi 69%, Cinta Laura 63%, Muhamad Alifurrahman 60%, Adinda 60%, Ariwil 60%) showed Theme C tasks as UNLOCKED. But when clicking "Start" / "Lanjut Drill", `start-test` threw a 403 error, completely locking them out.
+  3. `supabase/functions/start-test/index.ts` line 411 also hardcoded 70% for task passes prior to exams, instead of the official task threshold (50%).
+  4. Students confused by the error opened Theme A Exam or task attempts that were left hanging as `in_progress`.
+
+### Changed
+1. **Dynamic Exam KKM in Edge Function (`supabase/functions/start-test/index.ts`)**:
+   - Section 5b: Selected `minimum_required_score` from `tests` and updated pass check to use `pe.minimum_required_score || pe.pass_threshold || 60` dynamically instead of hardcoded 70%.
+   - Section 2: Updated sibling task score check before exam from hardcoded 70% to `taskMinScore` (50%).
+   - Section 4: Updated cross-theme exam prerequisite check to dynamic `pe.minimum_required_score || 60`.
+2. **Client Fallback Gating Sync (`js/api.js`)**:
+   - Section 5b (line 1459): Replaced hardcoded 70% with dynamic `pe.minimum_required_score || pe.payload?.min_score || 60`.
+3. **Stuck In-Progress Sessions Cleanup**:
+   - Cancelled accidental hanging attempts on `2A-WORDS-EXAM` for `Mr. Muhammad Afyani Farobi` (`181053bd-6ae5-4778-9290-8a12dfb82b65`) and `Mr. Muhammad Ariwil Asrori` (`750d8ac4-24c6-481d-9cb3-a6cb1f91369f`).
+4. **Cache & Assets**:
+   - Bumped cache version to `v=20261105_v134` across all HTML and JS files.
+   - Bumped Service Worker cache name to `topscore-cache-option-a-v62`.
+5. **Testing & Verification**:
+   - `test_start_eligibility_three.mjs`: 100% PASS for all students (Farobi, Lifurahma, Cinta Laura, Adinda, Ariwil all allowed on active task drills; linear gating verified on ahead topics).
+   - `check_all_js_syntax.cjs`: 45/45 JS files passed syntax validation.
+   - `generate_sw_manifest.mjs`: All 27 assets verified on disk.
+   - `npm test`: 100% PASS with 0 errors.
+
+### Files
+- `supabase/functions/start-test/index.ts`
+- `js/api.js`
+- `scripts/bump_cache_busters.mjs`
+- `sw.js`
+- `index.html`
+- `dashboard.html`
+- `test.html`
+- `result.html`
+- `admin.html`
+- `scripts/test_start_eligibility_three.mjs`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
 ## [2026-11-05 19:35] — Batch 134 Task Gating Resolution (Option 1), Dynamic Repetition Feedback, and Resilient Error Boundaries
 
 **Agent/Session:** Antigravity

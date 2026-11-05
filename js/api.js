@@ -1,9 +1,9 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
-import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261105_v133';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261105_v133';
-import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261105_v133';
-import { escapeHtml, escHtml, showToast } from './app.js?v=20261105_v133';
+import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261105_v134';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261105_v134';
+import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261105_v134';
+import { escapeHtml, escHtml, showToast } from './app.js?v=20261105_v134';
 
 export function getGrade(pct) {
   return calculateGrade(pct);
@@ -1458,15 +1458,19 @@ export async function startTest(studentId, testId) {
 
       const passedPriorIds = new Set();
       (priorAttempts || []).forEach(att => {
+        const pe = matchingPriorExams.find(e => e.id === att.test_id);
+        const reqScore = Number(pe?.minimum_required_score) || Number(pe?.payload?.min_score) || 60;
         const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-        if (pct >= 70 || att.is_remedial_unlocked || att.is_forgiven) {
+        if (pct >= reqScore || att.is_remedial_unlocked || att.is_forgiven) {
           passedPriorIds.add(att.test_id);
         }
       });
 
       const failedAny = priorExamIds.some(id => !passedPriorIds.has(id));
       if (failedAny) {
-        const pErr = new Error(`Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least 70% before taking Theme ${currentThemeFallback} tests.`);
+        const unpassedExam = matchingPriorExams.find(e => !passedPriorIds.has(e.id));
+        const reqScore = Number(unpassedExam?.minimum_required_score) || Number(unpassedExam?.payload?.min_score) || 60;
+        const pErr = new Error(`Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least ${reqScore}% before taking Theme ${currentThemeFallback} tests.`);
         pErr.code = 'PRIOR_THEME_EXAMS_REQUIRED';
         pErr.status = 403;
         throw pErr;
