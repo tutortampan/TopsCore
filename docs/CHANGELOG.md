@@ -1,3 +1,64 @@
+## [2026-11-06 02:26] — Phase 331: Header 44px Widths, Metadata Sub-Rows (20/100/30), Glowing Dividers, 2-Line Next Test Title & Completed Tests Typography Parity
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 331: Master Blueprint Alignment & Mobile Screenshot Polish
+**Status:** PASS
+
+### Why
+- The user provided live smartphone feedback (`media_1793902025275_bf09baed.jpg`) and an updated master blueprint spreadsheet (`media_1793902416229_d61e0777.png`):
+  1. Full Class Name in header was truncated to `2ND VOCABUL...` because the 120px left and right icon columns consumed 240px. The user explicitly corrected both icon widths to `44px` with `SISA SPACE %` for the class name.
+  2. Student full name in metadata card was clipped by the bottom border. The user rebudgeted the 150px card to: `20px` (Meta) | `100px` (Photo/Score/Grade) | `30px` (Student Full Name with Title, centered).
+  3. Dividers between metadata, photo, and student name needed to be prominent, crisp, and glowing.
+  4. Next test title needed structured 2-line formatting ("tema dan topik di baris kedua").
+  5. Completed tests table titles were truncated with `...`, and row numbers were dim and small. User required completed test titles to be fully visible and row numbers to be bold, clear, matching the font (`Outfit`) and size of the test name.
+
+### Changed
+1. **Header Columns (44px | Flex % | 44px) (`css/dashboard.css`)**:
+   - `.dashboard-header-left` & `.dashboard-header-right`: Locked to `width: 44px !important; min-width: 44px !important; max-width: 44px !important;`.
+   - `.dashboard-header-brand`: `flex: 1 1 auto; font-size: clamp(0.95rem, 3.8vw, 1.15rem); font-weight: 800; white-space: nowrap; overflow: visible; text-overflow: clip;` providing ~310px of space on mobile so class names like `2ND VOCABULARY` display 100% in full without ellipsis.
+2. **Metadata Card Rebudgeted (20px | 100px | 30px) & Glowing Dividers (`css/dashboard.css`, `js/dashboard.js`)**:
+   - `#welcome-banner-section`: Padding adjusted to `4px 14px 6px 14px;`, height strictly locked at 150px with `overflow: hidden;`.
+   - `#welcome-meta-wrapper`: Height 20px, font weight 700.
+   - `.hero-divider` & `.hero-name-divider`: High-contrast neon gradient line with central glow (`rgba(var(--tier-rgb), 0.6)` to `#ffffff` glow `0 0 8px`).
+   - `.hero-metrics-row`: Height 84px inside 100px block budget (score/grade boxes 52px, avatar 64px).
+   - `#welcome-name`: Height 30px, flex centered, line-height 1, displaying `(Mr./Miss) Full Name` cleanly without bottom clipping.
+   - Initial name formatting updated in `js/dashboard.js` to immediately prepend `Mr.` / `Miss` on initial render.
+3. **Next Test 2-Line Structured Title ("Tema dan Topik di Baris Kedua") (`js/dashboard.js`, `css/dashboard.css`)**:
+   - Added `formatNextTestTitleHtml` to split titles with ` - `, ` – `, or `:` into Line 1 (Test code/type) and Line 2 (Theme/topic).
+   - `.next-test-title-wrap`: Height 40px, flex column centered. Line 1: `font-size: clamp(11px, 3vw, 12.5px); font-weight: 800; color: #f8fafc;`. Line 2: `font-size: clamp(10px, 2.7vw, 11.2px); font-weight: 700; color: #94a3b8;`.
+4. **Completed Tests Typography Parity (`css/dashboard.css`)**:
+   - `.completed-col-num`: Updated to `font-family: 'Outfit'; font-size: 0.85rem; font-weight: 800; color: #f8fafc; text-align: center;` (matching test name font, size, and weight).
+   - `.completed-col-name`: Removed `white-space: nowrap; text-overflow: ellipsis;`. Replaced with `white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25;` so all test titles are fully readable.
+5. **Automated Testing & Cache Invalidation**:
+   - Updated `scripts/test_vocab_dashboard_blueprint.mjs` asserting all Phase 331 rules pass 100%.
+   - Bumped cache busters across all files to `v=20261106_v141` and Service Worker to `topscore-cache-option-a-v69`.
+   - All 7 test suites passing 100%.
+
+### Files
+- `css/dashboard.css`
+- `js/dashboard.js`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+- `sw.js`
+- `dashboard.html`
+- `index.html`
+- `admin.html`
+- `test.html`
+- `result.html`
+- `js/result.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files)
+- `node scripts/generate_sw_manifest.mjs`: PASS (27/27 SW cache assets)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+- `node scripts/test_student_dashboard_exam_parity.mjs`: PASS (100%)
+- `node scripts/test_homophones_spoken_mode.mjs`: PASS (23/23 tests)
+- `node scripts/test_prerequisite_deficit_guard.mjs`: PASS (100%)
+- `node scripts/test_bottom_banner_universal.mjs`: PASS (100%)
+
+---
+
 ## [2026-11-06 02:04] — Phase 330: Internal Table Scrolling, 120px Header, Metadata Sub-Rows (20/105/25), 70px Next Test & Uniform Tier Glow
 
 **Agent/Session:** Antigravity

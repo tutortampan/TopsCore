@@ -1,37 +1,35 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-06 02:04 UTC+8
-Current Phase: Phase 330: Internal Table Scrolling, 120px Header, Metadata Sub-Rows (20/105/25), 70px Next Test & Uniform Tier Glow [COMPLETE]
+Last Updated: 2026-11-06 02:26 UTC+8
+Current Phase: Phase 331: Header 44px Widths, Metadata Sub-Rows (20/100/30), Glowing Dividers, 2-Line Next Test Title & Completed Tests Typography Parity [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Internal Table Scrolling & Viewport Lock (`css/dashboard.css`)**:
-   - Locked outer viewport (`html, body.dashboard-page`, `.dashboard-content`) with `overflow: hidden !important; overscroll-behavior: none !important; touch-action: none !important;`. The outer screen never scrolls or shakes on mobile touch gestures.
-   - Leaderboard (`#batch-leaderboard-container`) and Completed Tests (`#completed-Tests-container`) configured with independent internal scrolling: `overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-y !important; overscroll-behavior: contain !important;` with thin stylized tier scrollbar.
-   - Pinned sticky table headers (`.standings-table-header`, `.completed-table-header`).
+1. **Top Header Optimization (44px | Flex % | 44px) (`css/dashboard.css`)**:
+   - Left wrapper: `width: 44px !important;` housing Door Icon (`#btn-change-class`).
+   - Brand: `flex: 1 1 auto; font-size: clamp(0.95rem, 3.8vw, 1.15rem); font-weight: 800; white-space: nowrap; overflow: visible; text-align: center;`. Full Class Name (e.g. `2ND VOCABULARY`) receives full available space (~310px) and displays 100% in full without ellipsis truncation.
+   - Right wrapper: `width: 44px !important;` housing Logout Icon (`#logout-btn`).
 
-2. **Top Header Alignment (120px | Flex % | 120px) (`dashboard.html`, `css/dashboard.css`)**:
-   - Column 1 (Left): `width: 120px !important;` housing Door Icon (`#btn-change-class`, Light Blue `#38bdf8`) aligned left.
-   - Column 2 (Center): `flex: 1 1 auto !important;` housing Full Class Name in ALL CAPS (`#dashboard-header-class-name`), centered.
-   - Column 3 (Right): `width: 120px !important;` housing Logout Icon (`#logout-btn`, Light Blue `#38bdf8`) aligned right.
-
-3. **Metadata Card Sub-Row Budget (150px = 20px + 105px + 25px) (`css/dashboard.css`, `js/dashboard.js`)**:
+2. **Metadata Card Rebudgeted (20px | 100px | 30px) & Glowing Dividers (`css/dashboard.css`, `js/dashboard.js`)**:
+   - Total card height: Locked strictly at 150px (`padding: 4px 14px 6px 14px; overflow: hidden;`).
    - Sub-Row 1 (`20px`): `#welcome-meta-wrapper` (`CEC | CAMP | 134 | 2ND LEVEL`).
-   - Sub-Row 2 (`105px` block with dividers): `.hero-metrics-row` (Score box 60px, Photo circle 72px with champion crown, Grade box 60px).
-   - Sub-Row 3 (`25px`): `#welcome-name` (strictly `CENTERED`, displaying `(Mr./Miss) Nama Lengkap siswa`).
+   - Top Divider: `.hero-divider` styled with radiant neon gradient (`rgba(var(--tier-rgb), 0.6)` to `#fff` center glow `0 0 8px`).
+   - Sub-Row 2 (`100px` block budget): `.hero-metrics-row` (84px content height, Score box 52px, Photo circle 64px, Grade box 52px).
+   - Bottom Divider: `.hero-name-divider` styled with matching radiant neon gradient.
+   - Sub-Row 3 (`30px`): `#welcome-name` (height 30px, line-height 1, strictly `CENTERED`, displaying `(Mr./Miss) Nama Lengkap siswa` cleanly without bottom border clipping).
+   - Immediate name title prepending (`Mr.` / `Miss`) on dashboard load.
 
-4. **Next Test Card Updated to 70px (50px Title + 20px Rainbow 1-7) (`css/dashboard.css`)**:
-   - Top area: 50px test title wrap.
-   - Bottom area: 20px rainbow bar (1 to 7) stopping cleanly at divider.
-   - Right action column: 64px width, full-height 70px with 40px action button.
+3. **Next Test 2-Line Structured Title ("Tema dan Topik di Baris Kedua") (`js/dashboard.js`, `css/dashboard.css`)**:
+   - `formatNextTestTitleHtml`: Splits title at ` - `, ` – `, or `:` into Line 1 (test code/level) and Line 2 (theme/topic).
+   - Card height: 70px (40px title wrap + 20px rainbow 1-7 + 70px full action column).
 
-5. **Enhanced & Uniform Dynamic Tier Glow across Dashboard & Result Pages (`css/dashboard.css`, `css/result.css`)**:
-   - Bolder `1.5px solid rgba(var(--tier-rgb), 0.70)` borders and uniform `0 0 22px rgba(var(--tier-rgb), 0.35)` box-shadows.
-   - Matte neon radial gradients applied evenly across all panels in both `dashboard.html` and `result.html`.
+4. **Completed Tests Typography Parity (`css/dashboard.css`)**:
+   - `.completed-col-num`: Bold, prominent font (`font-family: 'Outfit'; font-size: 0.85rem; font-weight: 800; color: #f8fafc; text-align: center;`).
+   - `.completed-col-name`: Allows 2-line compact wrapping (`-webkit-line-clamp: 2; white-space: normal; line-height: 1.25;`), ensuring full test names are readable without truncation.
 
-6. **Cache Busting & Automated Testing**:
-   - Cache buster bumped to `v=20261106_v139` and Service Worker to `topscore-cache-option-a-v67`.
-   - All 6 automated test suites passing 100%.
+5. **System Verification & Cache Busting**:
+   - Cache buster bumped to `v=20261106_v141` and Service Worker to `topscore-cache-option-a-v69`.
+   - All 7 automated test suites passing 100%.
 
 2. **Universal Bottom Banner Overhaul across ALL Pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`, and CSS)**:
    - Replaced old banner text (`TopsCore © 2026 | Created by Mr. Top`) with bold, enlarged branding: `<span class="banner-brand">TopsCore</span> <span class="banner-author">by Mr. Top</span>`.

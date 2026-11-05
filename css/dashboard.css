@@ -4278,19 +4278,23 @@ body.dashboard-page .completed-row:hover {
 body.dashboard-page .completed-col-num {
   text-align: center !important;
   font-family: 'Outfit', sans-serif !important;
-  font-size: 0.75rem !important;
-  font-weight: 700 !important;
-  color: #64748b !important;
+  font-size: 0.85rem !important;
+  font-weight: 800 !important;
+  color: #f8fafc !important;
 }
 
 body.dashboard-page .completed-col-name {
   font-family: 'Outfit', sans-serif !important;
-  font-size: 0.8rem !important;
-  font-weight: 700 !important;
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
   color: #f8fafc !important;
-  white-space: nowrap !important;
+  white-space: normal !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  line-height: 1.25 !important;
   overflow: hidden !important;
-  text-overflow: ellipsis !important;
+  word-break: break-word !important;
   padding-right: 6px !important;
 }
 
@@ -4486,9 +4490,9 @@ body.dashboard-page .dashboard-header {
 }
 
 body.dashboard-page .dashboard-header-left {
-  width: 120px !important;
-  min-width: 120px !important;
-  max-width: 120px !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
@@ -4500,36 +4504,36 @@ body.dashboard-page .dashboard-header-brand {
   text-align: center !important;
   text-transform: uppercase !important;
   font-family: 'Outfit', sans-serif !important;
-  font-size: clamp(0.9rem, 3.4vw, 1.05rem) !important;
+  font-size: clamp(0.95rem, 3.8vw, 1.15rem) !important;
   font-weight: 800 !important;
-  letter-spacing: 0.06em !important;
+  letter-spacing: 0.05em !important;
   color: #f8fafc !important;
   white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
   margin: 0 !important;
   padding: 0 4px !important;
 }
 
 body.dashboard-page .dashboard-header-right,
 body.dashboard-page .dashboard-header-actions {
-  width: 120px !important;
-  min-width: 120px !important;
-  max-width: 120px !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-end !important;
   flex-shrink: 0 !important;
 }
 
-/* 3. Hero Card (Students Metadata - Strict 150px Total Budget) */
+/* 3. Hero Card (Students Metadata - Strict 150px Total Budget: 20px / 100px / 30px) */
 body.dashboard-page #welcome-banner-section {
   height: 150px !important;
   min-height: 150px !important;
   max-height: 150px !important;
   width: 100% !important;
   border-radius: 14px !important;
-  padding: 6px 14px !important;
+  padding: 4px 14px 6px 14px !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: space-between !important;
@@ -4539,6 +4543,7 @@ body.dashboard-page #welcome-banner-section {
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
   margin: 0 !important;
+  overflow: hidden !important;
 }
 
 /* Sub-Row 1: Breadcrumb (20px) */
@@ -4559,11 +4564,24 @@ body.dashboard-page #welcome-meta-wrapper {
   padding: 0 !important;
 }
 
-/* Sub-Row 2: Score | Foto | Grade (105px total block with dividers) */
+/* Crisp Neon Horizontal Dividers */
+body.dashboard-page .hero-divider,
+body.dashboard-page #welcome-meta-wrapper + .hero-divider,
+body.dashboard-page .hero-metrics-row + .hero-divider,
+body.dashboard-page .hero-name-divider {
+  display: block !important;
+  width: 100% !important;
+  height: 1px !important;
+  margin: 1px 0 !important;
+  background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb), 0.6) 20%, rgba(255, 255, 255, 0.85) 50%, rgba(var(--tier-rgb), 0.6) 80%, transparent 100%) !important;
+  box-shadow: 0 0 8px rgba(var(--tier-rgb), 0.4) !important;
+}
+
+/* Sub-Row 2: Score | Foto | Grade (100px total block budget: 84px content) */
 body.dashboard-page .hero-metrics-row {
-  height: 96px !important;
-  min-height: 96px !important;
-  max-height: 96px !important;
+  height: 84px !important;
+  min-height: 84px !important;
+  max-height: 84px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -4575,9 +4593,11 @@ body.dashboard-page .hero-metrics-row {
 body.dashboard-page #banner-score-box,
 body.dashboard-page #banner-grade-box {
   flex: 1 1 0% !important;
-  height: 60px !important;
-  min-height: 60px !important;
-  max-height: 60px !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+  width: 56px !important;
+  min-width: 56px !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -4590,8 +4610,10 @@ body.dashboard-page #banner-grade-box {
 }
 
 body.dashboard-page #banner-avatar-container {
-  width: 72px !important;
-  height: 72px !important;
+  width: 64px !important;
+  height: 64px !important;
+  min-width: 64px !important;
+  min-height: 64px !important;
   border-radius: 50% !important;
   padding: 3px !important;
   background: rgba(15, 23, 42, 0.9) !important;
@@ -4599,17 +4621,17 @@ body.dashboard-page #banner-avatar-container {
   box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.75), 0 4px 14px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Sub-Row 3: Nama Lengkap Siswa dengan Title (25px, CENTERED) */
+/* Sub-Row 3: Nama Lengkap Siswa dengan Title (30px, CENTERED, Fully Visible) */
 body.dashboard-page #welcome-name {
-  height: 25px !important;
-  min-height: 25px !important;
-  max-height: 25px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
   font-family: 'Outfit', sans-serif !important;
-  font-size: clamp(0.95rem, 3.2vw, 1.12rem) !important;
+  font-size: clamp(0.95rem, 3.2vw, 1.15rem) !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
   letter-spacing: 0.02em !important;
@@ -4618,6 +4640,7 @@ body.dashboard-page #welcome-name {
   text-overflow: ellipsis !important;
   margin: 0 !important;
   padding: 0 !important;
+  line-height: 1 !important;
 }
 
 /* 4. Grade Description Card (50px) */
@@ -4686,20 +4709,37 @@ body.dashboard-page .next-test-col-left {
 }
 
 body.dashboard-page .next-test-title-wrap {
-  height: 38px !important;
-  min-height: 38px !important;
-  max-height: 38px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
   display: flex !important;
-  align-items: center !important;
+  flex-direction: column !important;
+  justify-content: center !important;
   min-width: 0 !important;
+  gap: 1px !important;
 }
 
-body.dashboard-page .next-test-title-wrap .next-asm-title {
+body.dashboard-page .next-test-title-wrap .next-asm-title,
+body.dashboard-page .next-test-primary-name {
   font-family: 'Outfit', sans-serif !important;
-  font-size: clamp(11.5px, 3.2vw, 13px) !important;
+  font-size: clamp(11px, 3vw, 12.5px) !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
-  line-height: 1.25 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+body.dashboard-page .next-test-topic-name {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: clamp(10px, 2.7vw, 11.2px) !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  line-height: 1.15 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 body.dashboard-page .rainbow-pass-bar {

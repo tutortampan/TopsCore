@@ -3,12 +3,12 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261106_v140';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261106_v140';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v140';
-    import { testMicrophoneCapability } from './speech.js?v=20261106_v140';
-    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v140';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261106_v140';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261106_v141';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261106_v141';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v141';
+    import { testMicrophoneCapability } from './speech.js?v=20261106_v141';
+    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v141';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261106_v141';
 
     window._isBatchChampion = false;
 
@@ -18,10 +18,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     if (!session) throw new Error('Not authenticated');
 
     // Populate header & Welcome Banner
+    let initFormattedName = (session.student_name || 'Student').trim();
+    const initGender = (session.gender || '').toLowerCase();
+    const nameParts = initFormattedName.split(/\s+/);
+    const firstWord = (nameParts[0] || '').toLowerCase();
+    if (!['mr.', 'mr', 'miss', 'ms.', 'ms', 'mrs.', 'mrs', 'king', 'queen'].includes(firstWord)) {
+      if (initGender === 'male') initFormattedName = `Mr. ${initFormattedName}`;
+      else if (initGender === 'female') initFormattedName = `Miss ${initFormattedName}`;
+    }
     const headerStudentNameEl = document.getElementById('header-student-name');
-    if (headerStudentNameEl) headerStudentNameEl.textContent = session.student_name;
+    if (headerStudentNameEl) headerStudentNameEl.textContent = initFormattedName;
     const welcomeNameEl = document.getElementById('welcome-name');
-    if (welcomeNameEl) welcomeNameEl.textContent = session.student_name;
+    if (welcomeNameEl) welcomeNameEl.textContent = initFormattedName;
     const elInst = document.getElementById('meta-inst');
   const elProg = document.getElementById('meta-prog');
   const elBatch = document.getElementById('meta-batch');
@@ -183,7 +191,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./supabase.js?v=20261106_v140')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261106_v141')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).maybeSingle();
           if (st?.gender) {
             currentGender = st.gender;
@@ -549,7 +557,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
         try {
-          const sb = await (await import('./supabase.js?v=20261106_v140')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261106_v141')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).maybeSingle();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
@@ -568,7 +576,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Background sync: memastikan localStorage selalu sinkron dengan database terbaru
         (async () => {
           try {
-            const sb = await (await import('./supabase.js?v=20261106_v140')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261106_v141')).getSupabase();
             const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).maybeSingle();
             if (st && st.photo_url !== photoUrl) {
               if (st.photo_url) {
@@ -622,7 +630,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
       if (!hasBirthday) {
         try {
-          const sb = await (await import('./supabase.js?v=20261106_v140')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261106_v141')).getSupabase();
           const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).maybeSingle();
           if (st && st.birth_date) {
             hasBirthday = true;
@@ -688,7 +696,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./supabase.js?v=20261106_v140')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261106_v141')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).maybeSingle();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -698,7 +706,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./session.js?v=20261106_v140');
+             const { setStudentSession } = await import('./session.js?v=20261106_v141');
              setStudentSession(session);
           }
         }
@@ -748,7 +756,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./session.js?v=20261106_v140');
+            const { setStudentSession } = await import('./session.js?v=20261106_v141');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -1093,6 +1101,21 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const ICON_3C_GREEN_PLAY  = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="#ffffff"/></svg>';
       const ICON_4D_WHITE_ARROW_RIGHT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';
 
+      function formatNextTestTitleHtml(rawTitle) {
+        const titleStr = (rawTitle || '').trim();
+        // Check for common separators: " - ", " – ", " : "
+        const parts = titleStr.split(/\s+[-–:]\s+/);
+        if (parts.length > 1) {
+          const line1 = parts[0].trim();
+          const line2 = parts.slice(1).join(' - ').trim();
+          return `
+            <span class="next-test-primary-name" title="${escapeHtml(line1)}">${escapeHtml(line1)}</span>
+            <span class="next-test-topic-name" title="${escapeHtml(line2)}">${escapeHtml(line2)}</span>
+          `;
+        }
+        return `<span class="next-test-primary-name" title="${escapeHtml(titleStr)}">${escapeHtml(titleStr)}</span>`;
+      }
+
       if (!isTest) {
         const currentPasses = passCountByTest[nextTest.id] || 0;
         const displayStep = Math.max(1, Math.min(currentPasses + 1, targetReps));
@@ -1107,7 +1130,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         container.innerHTML = `
           <div class="next-test-col-left">
             <div class="next-test-title-wrap">
-              <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Task')}">${escapeHtml(nextTest.title || 'Task')}</span>
+              ${formatNextTestTitleHtml(nextTest.title || 'Task')}
             </div>
             ${rainbowHtml}
           </div>
@@ -1136,7 +1159,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           container.innerHTML = `
             <div class="next-test-col-left">
               <div class="next-test-title-wrap">
-                <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Official Exam')}">${escapeHtml(nextTest.title || 'Official Exam')}</span>
+                ${formatNextTestTitleHtml(nextTest.title || 'Official Exam')}
               </div>
               ${rainbowHtml}
             </div>
@@ -1151,7 +1174,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           container.innerHTML = `
             <div class="next-test-col-left">
               <div class="next-test-title-wrap">
-                <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Official Exam')}">${escapeHtml(nextTest.title || 'Official Exam')}</span>
+                ${formatNextTestTitleHtml(nextTest.title || 'Official Exam')}
               </div>
               ${rainbowHtml}
             </div>
@@ -2948,7 +2971,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       try {
-        const sb = await (await import('./supabase.js?v=20261106_v140')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261106_v141')).getSupabase();
 
         // 1. Fetch active students in the same batch
         const { data: students, error: stuErr } = await sb
@@ -3368,7 +3391,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./supabase.js?v=20261106_v140')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261106_v141')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).maybeSingle();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
@@ -3423,7 +3446,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./supabase.js?v=20261106_v140')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261106_v141')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
 
