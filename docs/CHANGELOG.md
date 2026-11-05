@@ -1,3 +1,140 @@
+## [2026-11-06 07:56] — Phase 350: Result Page Alignment (Hero Card 150px, Fullscreen Removal, & Grade Status Streamlining)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 350: Result Page Alignment
+**Status:** PASS
+
+### Why
+- The user requested:
+  1. Result page Hero Card must match the 150px layout from Student Dashboard (sub-rows: 20px meta + 1px divider + 93px avatar with 84px photo + 1px divider + 35px name, without score/grade boxes).
+  2. Fullscreen feature and header button must be deleted.
+  3. Grade description card must show ONLY the Grade Status word, cleaning the small subtitle hint line, with enlarged font.
+- User approved `result_page_hero_card_and_fullscreen_removal_plan.md`.
+
+### Changed
+1. **Hero Card 150px Alignment (`result.html`, `css/result.css`, `js/result.js`)**:
+   - Standardized `#result-identity-card` to exact 150px with `padding: 0 14px`, 14px border radius, and identical sub-row budget.
+   - Enlarged avatar `#result-avatar-container` to 84px × 84px with 2.5px tier border and luminous glow.
+   - Formatted student name with `Mr.` / `Miss` prefix where applicable.
+2. **Fullscreen Removal (`result.html`, `css/result.css`, `js/result.js`)**:
+   - Completely deleted `#result-fullscreen-btn`, `.btn-fullscreen-toggle`, and all associated JavaScript handlers (`requestFullscreenMode`, `exitFullscreenMode`, `isFullscreenActive`, `toggleFullscreenMode`, `initResultFullscreen`, and auto-request tap listener).
+3. **Streamlined & Enlarged Grade Description (`result.html`, `css/result.css`)**:
+   - Removed `.grade-legend-hint` subtitle.
+   - Enlarged `.grade-predicate-text` to `clamp(1.2rem, 4vw, 1.55rem)` Outfit 900 bold, centered in 50px card.
+4. **Renamed Back Button (`result.html`)**:
+   - Changed `BACK TO LOBBY` to `BACK TO CLASS` per blueprint.
+5. **Universal Cache Busting**:
+   - Bumped cache to `v=20261106_v158` across all 8 files.
+   - Updated Service Worker cache to `topscore-cache-option-a-v86`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files syntax verified)
+- `node scripts/generate_sw_manifest.mjs`: PASS (27/27 cache manifest assets exist)
+- `node scripts/verify_result_hero_and_grade_spec.mjs`: PASS (100% — verified 150px hero card, 84px avatar, fullscreen removed, 50px grade card, single enlarged status word, and 800px zero-scroll lock)
+- `npm.cmd test`: PASS (100% across all 7 test suites)
+
+---
+
+## [2026-11-06 07:46] — Phase 349: Pure Class Selector Modal (All Tests Button Removal)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 349: Pure Class Selector Modal
+**Status:** PASS
+
+### Why
+- The user requested: "disni saat pilih kelas kita ada tombol untuk akses all test,,, ini tidak perlu, tombol ganti kelas hanya memunculkan list kelas dalam bentuk class card , seseuai keals yang tersedia".
+- The user approved `class_selector_remove_all_tests_button_plan.md`.
+- Streamlines the class selection modal into a dedicated Class Lobby, removing secondary distraction buttons and keeping the interface clean and focused.
+
+### Changed
+1. **Removed 'View All Levels & Detailed Tests' Button (`dashboard.html`)**:
+   - Completely deleted `<div class="classes-selector-modal-actions">` and button `#btn-open-class-levels`.
+2. **Optimized Class Selector Modal Logic (`js/dashboard.js`)**:
+   - Removed obsolete event listener for `#btn-open-class-levels`.
+   - Polished selection flow: clicking any class card instantly switches the active class across header, next test, leaderboard, and completed tests, then smoothly closes the modal.
+3. **Refined Modal CSS (`css/dashboard.css`)**:
+   - Removed obsolete rules for `.classes-selector-modal-actions` and `#btn-open-class-levels`.
+   - Enhanced `.classes-selector-item.selected` with active tier border glow (`var(--tier-color, #38bdf8)`) and hover translateY animation.
+4. **Universal Cache Busting**:
+   - Bumped cache to `v=20261106_v157` across all 8 files.
+   - Updated Service Worker cache to `topscore-cache-option-a-v85`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files syntax verified)
+- `node scripts/generate_sw_manifest.mjs`: PASS (27/27 cache manifest assets exist)
+- `node scripts/verify_class_selector_modal.mjs`: PASS (100% — verified absence of button and presence of pure class cards)
+- `npm.cmd test`: PASS (100% across all 7 test suites)
+
+---
+
+## [2026-11-06 07:38] — Phase 348: 100% AI & Mobile-First Extension Suite Deployment
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 348: Extension Selection & IDE Optimization
+**Status:** PASS
+
+### Why
+- The user instructed: `c:\Users\Top\.gemini\antigravity\brain\4f866ce5-c626-47de-b358-d9b3e27c4788\extension_selection_plan.md laksankan ini!`.
+- Full deployment of the curated 14-extension stack to empower the "100% AI" workflow with instant in-editor mobile viewport simulation (390×800 px, touch emulation, Retina DPR 2x), remote smartphone testing via QR Code, and automated Playwright health gates.
+
+### Changed
+1. **Installed Curated Extensions**:
+   - `ms-edgedevtools.vscode-edge-devtools` (Edge DevTools & mobile touch emulator in editor).
+   - `yandeu.five-server` (Live Server with physical smartphone remote QR Code).
+   - `ms-playwright.playwright` (Playwright mobile test runner).
+   - `naumovs.color-highlight` (Inline color preview box for TopsCore official 6-tier palette).
+   - `pranaygp.vscode-css-peek` (Jump to CSS definition from HTML classes/IDs).
+   - `formulahendry.auto-close-tag` & `formulahendry.auto-rename-tag` (HTML productivity).
+   - `christian-kohler.path-intellisense` (Path & asset autocomplete).
+   - `usernamehw.errorlens` (Inline error & warning highlighting).
+   - `dbaeumer.vscode-eslint` & `esbenp.prettier-vscode` (Linter & formatter).
+   - `denoland.vscode-deno` (Deno language server for Supabase functions).
+   - `kanezal.better-antigravity` (Antigravity IDE optimizations).
+   - `bierner.markdown-mermaid` (Mermaid architecture diagram renderer).
+2. **Configuration Verified**:
+   - `.vscode/extensions.json` containing all 14 curated recommendations.
+   - `.vscode/tasks.json` containing 1-click mobile preview and snapshot tasks.
+   - `package.json` with `npm run preview:mobile`, `npm run preview:result`, and `npm run preview:all`.
+
+### Tests
+- `antigravity-ide.cmd --list-extensions`: PASS (all 14 extensions verified active)
+- `npm.cmd test`: PASS (100% across all 7 test suites)
+
+---
+
+## [2026-11-06 07:28] — Phase 347: Instant Pre-Paint Tier Hydration & Neutral Fallback
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 347: Dashboard Instant Tier Hydration & Neutral Fallback
+**Status:** PASS
+
+### Why
+- The user identified that the dashboard briefly flashed pink during initial loading, and requested:
+  1. Instant dashboard color restoration on open without flashing to a fallback color ("di awal buka kalau bisa jangan fallback ke warna awal, tapi langsung ke warna dashboard").
+  2. A neutral color (Slate Gray/White) for initial loading / new students ("LET'S GO").
+  3. Reserving Purple strictly for "ALUMNI".
+
+### Changed
+1. **Instant Pre-Paint Tier Hydration (`dashboard.html`)**:
+   - In `<head>`, synchronous script immediately reads `localStorage.getItem('topscore_tier_' + sess.student_id)` and sets `--tier-color` and `--tier-rgb` on `document.documentElement` before CSS or DOM renders.
+   - Returning students (e.g. Queen with Grade B Lime Green `#95ff00`) immediately render in their authentic color from millisecond zero. Zero color flash!
+2. **Neutral Slate Gray Fallback (`css/dashboard.css`, `js/grading.js`, `js/dashboard.js`)**:
+   - Replaced legacy `var(--grade-star)` fallback with **Neutral Slate Gray (`#94a3b8`, RGB: `148, 163, 184`)**.
+   - Students without completed exams (*"LET'S GO"*) display in calm, clean slate gray with white typography.
+3. **Dedicated Purple Tier Exclusively for ALUMNI (`#8B5CF6`)**:
+   - Purple is strictly reserved for students who have achieved Grade X (ALUMNI).
+4. **Universal Cache Busting**:
+   - Bumped cache to `v=20261106_v156` across all 8 files.
+   - Updated Service Worker cache to `topscore-cache-option-a-v84`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files syntax verified)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+- `node scripts/generate_sw_manifest.mjs`: PASS (27/27 cache manifest assets exist)
+- `node scripts/verify_instant_tier_and_neutral.mjs`: PASS (100% — verified `#95ff00` at pre-paint, `#94a3b8` on cold start)
+
+---
+
 ## [2026-11-06 06:21] — Phase 346: Dual Top & Bottom Boundary Borders on Completed Exam Rows
 
 **Agent/Session:** Antigravity

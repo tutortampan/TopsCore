@@ -1,38 +1,63 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-06 06:21 UTC+8
-Current Phase: Phase 346: Dual Top & Bottom Boundary Borders on Completed Exam Rows [COMPLETE]
+Last Updated: 2026-11-06 07:56 UTC+8
+Current Phase: Phase 350: Result Page Hero Card Alignment & Grade Streamlining [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Dual Top & Bottom Boundary Lines for Exam Rows (`js/dashboard.js`)**:
-   - Exam rows (`.completed-row.is-exam-row`) now receive both `border-top: 1.5px solid ${scoreColor}` and `border-bottom: 1.5px solid ${scoreColor}`, decisively framing each exam row from adjacent tasks and exams.
-   - Preserves horizontal radiant background gradient (`linear-gradient(90deg, rgba(${scoreRgb}, 0.18) 0%, rgba(${scoreRgb}, 0.05) 75%, transparent 100%)`).
-   - Title font and sequence number are Pure White (`#ffffff`), while Score, Grade circle, and Retry button retain their authentic earned tier colors.
+1. **Result Page Hero Card 150px Alignment (`result.html`, `css/result.css`, `js/result.js`)**:
+   - Standardized `#result-identity-card` to 150px with exact sub-rows from Student Dashboard: 20px meta pills, 1px divider, 93px avatar stage with enlarged 84px diameter photo circle, 1px divider, 35px student name with `Mr.` / `Miss` prefix.
+   - Sesuai spesifikasi blueprint: murni profil siswa tanpa kotak score dan grade di hero card.
+2. **Fullscreen Removal (`result.html`, `css/result.css`, `js/result.js`)**:
+   - Completely deleted `#result-fullscreen-btn`, `.btn-fullscreen-toggle`, and all JavaScript fullscreen handlers and auto-enter listeners.
+3. **Streamlined & Enlarged Grade Description (`result.html`, `css/result.css`)**:
+   - Cleaned the small subtitle hint line (`E=FAIL...`), displaying only the single prominent Grade Status word (`ENOUGH`, `GOOD`, `EXCELLENT`, etc.) with enlarged Outfit 900 font (`clamp(1.2rem, 4vw, 1.55rem)`), centered in the 50px card.
+4. **Action Button Renaming**:
+   - Updated button to `BACK TO CLASS` (matching blueprint).
+5. **Universal Cache Busting & Verification**:
+   - Cache bumped to `v=20261106_v158` (SW `topscore-cache-option-a-v86`).
+   - Verified via Playwright test `scripts/verify_result_hero_and_grade_spec.mjs` and full test suite (`npm.cmd test`). All passed 100%.
+   - Completely removed the button `🔍 View All Levels & Detailed Tests` (`#btn-open-class-levels`) and its footer container (`.classes-selector-modal-actions`).
+   - The modal now purely displays the list of available classes in the form of clean, interactive class cards (`.classes-selector-item`).
+   - Clicking a class card instantly updates the active class across the dashboard (top header name, next test card, standings, completed tests table) and smoothly closes the modal.
+   - Enhanced selected class card styling with active tier glow and balanced padding.
+   - Cache bumped to `v=20261106_v157` and Service Worker cache to `topscore-cache-option-a-v85`.
+   - Verified via Playwright test `scripts/verify_class_selector_modal.mjs` and full test suite (`npm.cmd test`).
+   - Installed all 14 curated extensions for Antigravity IDE:
+     - `ms-edgedevtools.vscode-edge-devtools`: DevTools, mobile device touch simulation, and live CSS sync in IDE.
+     - `yandeu.five-server`: Instant Live Server with Remote QR Code for testing on physical smartphones.
+     - `ms-playwright.playwright`: Playwright Test runner for headless & headed mobile verification.
+     - `naumovs.color-highlight`: Inline visual color preview for TopsCore official 6-tier grading scale.
+     - `pranaygp.vscode-css-peek`: Instant jump to CSS definition from HTML class/ID.
+     - `formulahendry.auto-close-tag`: Automatic HTML tag closing.
+     - `formulahendry.auto-rename-tag`: Synchronous open/close HTML tag renaming.
+     - `christian-kohler.path-intellisense`: Filename & asset autocomplete.
+     - `usernamehw.errorlens`: Instant inline JS/CSS syntax errors & warnings.
+     - `dbaeumer.vscode-eslint`: ESLint code quality integration.
+     - `esbenp.prettier-vscode`: Consistent code formatting.
+     - `denoland.vscode-deno`: Deno language server for Supabase Edge Functions.
+     - `kanezal.better-antigravity`: Optimizations for Antigravity IDE.
+     - `bierner.markdown-mermaid`: Mermaid architecture diagram rendering in markdown.
+   - Configured `.vscode/extensions.json` with comprehensive recommendations.
+   - Verified `.vscode/tasks.json` with 1-click mobile preview and snapshot tasks.
+   - Ran full test suite (`npm.cmd test`): all 7 test suites passed 100%.
 
-2. **Next Test Deck Sharp Corner Elimination (`css/dashboard.css`)**:
-   - Removed `.dashboard-next-test-deck` from the generic card border selector and explicitly styled `#up-next-section` as a transparent, borderless wrapper (`border: none !important; background: transparent !important; box-shadow: none !important;`).
-   - Added `border-top-right-radius: 13px !important; border-bottom-right-radius: 13px !important;` to `.next-test-col-right` and matching top/bottom-left radii to `.next-test-col-left`.
+2. **Neutral Slate Gray Fallback (`css/dashboard.css`, `js/grading.js`)**:
+   - Replaced legacy `var(--grade-star)` fallback with Neutral Slate Gray (`#94a3b8`, RGB: `148, 163, 184`).
+   - For cold starts or brand-new students who have never taken an exam (*"LET'S GO"*), all cards, borders, and placeholders render in calm, elegant slate gray with white typography.
+   - Zero pink or green flashes on cold start.
 
-3. **Star (★ / 100%) Pink Tier Color (`js/grading.js`, `css/style.css`)**:
-   - Transformed Star tier (100% score) to Electric Pink (`#ff2d87`, RGB: `255, 45, 135`) with white star glyph (`#FFFFFF`) and radiant ambient glow `rgba(255, 45, 135, 0.5)`.
-   - Distinct from Grade A (90%–99% Pure Green `#00c000ff`).
+3. **Dedicated Purple Tier Exclusively for ALUMNI (`#8B5CF6`)**:
+   - Reserved Purple strictly for students who have achieved ALUMNI status (Grade X).
 
-4. **White Table Headers (`css/dashboard.css`)**:
-   - Table headers on both Ranking/Standings and Completed Tests are Pure White (`#ffffff`) with `font-weight: 800`.
+4. **Dual Top & Bottom Boundary Lines for Exam Rows (`js/dashboard.js`)**:
+   - Exam rows (`.completed-row.is-exam-row`) receive both `border-top: 1.5px solid ${scoreColor}` and `border-bottom: 1.5px solid ${scoreColor}`, decisively framing each exam row from adjacent tasks and exams.
 
-5. **Completed Tests Exam A & Exam B Recovery (`js/dashboard.js`)**:
-   - Ensured all exams that have been taken and submitted with valid scores (> 0%) appear in Completed Tests without being blocked by draft status of old curriculum tasks.
-
-6. **Task 7-Attempt Average Scoring & Descending Chip Order (`js/dashboard.js`)**:
-   - Mini grade chips under Task titles are sorted descending from highest to lowest.
-   - Score and Grade columns for Tasks dynamically display the **average score** and derived grade of the student's top 7 attempts.
-
-7. **Universal Cache Busting & Verification**:
-   - Cache buster bumped to `v=20261106_v155` across all 8 files.
-   - Service Worker cache updated to `topscore-cache-option-a-v83` and verified with `scripts/generate_sw_manifest.mjs`.
+5. **Universal Cache Busting & Verification**:
+   - Cache buster bumped to `v=20261106_v156` across all 8 files.
+   - Service Worker cache updated to `topscore-cache-option-a-v84` and verified with `scripts/generate_sw_manifest.mjs`.
    - All 45 JS files passed syntax validation (`node scripts/check_all_js_syntax.cjs`).
-   - Master blueprint regression test suite passed 100%.
+   - Verified via Playwright test `scripts/verify_instant_tier_and_neutral.mjs`: Queen pre-paints in `#95ff00`, cold start defaults to `#94a3b8`.
    - Cache buster bumped to `v=20261106_v150` across all 8 files.
    - Service Worker cache updated to `topscore-cache-option-a-v78` and verified with `scripts/generate_sw_manifest.mjs`.
    - All 45 JS files passed syntax validation (`node scripts/check_all_js_syntax.cjs`).

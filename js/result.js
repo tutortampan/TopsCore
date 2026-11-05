@@ -5,11 +5,11 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261106_v155';
-import { isExam, getGradeColorByScore } from './grading.js?v=20261106_v155';
-import { getStudentSession, getAdminSession } from './session.js?v=20261106_v155';
-import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v155';
-import { getSupabase } from './supabase.js?v=20261106_v155';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261106_v156';
+import { isExam, getGradeColorByScore } from './grading.js?v=20261106_v156';
+import { getStudentSession, getAdminSession } from './session.js?v=20261106_v156';
+import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v156';
+import { getSupabase } from './supabase.js?v=20261106_v156';
 
 let session = getStudentSession();
 if (!session) {
@@ -848,16 +848,18 @@ if (!session) {
         // Fetch user photo + FEATURE 3: student name label
         // Fetch student identity, institutional metadata, and photo
         let studentFullName = session.student_name || 'Student';
+        let studentGender = session.gender || '';
         const targetStudentId = attempt.student_id || session.student_id;
         try {
           const supabase = await getSupabase();
           if (targetStudentId) {
             const { data: st } = await supabase.from('students')
-              .select('id, name, photo_url, batch_id, level_id, program_id, institution_id, institutions(name), programs(name), batches(name), levels(name)')
+              .select('id, name, gender, photo_url, batch_id, level_id, program_id, institution_id, institutions(name), programs(name), batches(name), levels(name)')
               .eq('id', targetStudentId)
               .maybeSingle();
             if (st) {
               studentFullName = st.name || studentFullName;
+              studentGender = st.gender || studentGender;
 
               // Populate institutional metadata hierarchy (Wireframe: Institution | Program | Batch | Level)
               const metaInstEl = document.getElementById('meta-inst');
@@ -913,7 +915,14 @@ if (!session) {
         // Render student name below divider in header card
         const nameLabel = document.getElementById('result-student-name-label');
         if (nameLabel && studentFullName) {
-          nameLabel.textContent = studentFullName;
+          let formattedName = studentFullName.trim();
+          const gender = (studentGender || session.gender || '').toLowerCase();
+          const firstWord = (formattedName.split(/\s+/)[0] || '').toLowerCase();
+          if (!['mr.', 'mr', 'miss', 'ms.', 'ms', 'mrs.', 'mrs', 'king', 'queen'].includes(firstWord)) {
+            if (gender === 'male') formattedName = `Mr. ${formattedName}`;
+            else if (gender === 'female') formattedName = `Miss ${formattedName}`;
+          }
+          nameLabel.textContent = formattedName;
         }
 
         // Authoritative Standard Grading System (Official Scale)
@@ -2013,80 +2022,5 @@ if (!session) {
         closeAnswersModal();
       }
     });
-
-    // ─── Smart Web Proctored Shield: Fullscreen Helpers for Result Page ───
-    async function requestFullscreenMode() {
-      try {
-        const docEl = document.documentElement;
-        if (docEl.requestFullscreen) await docEl.requestFullscreen();
-        else if (docEl.webkitRequestFullscreen) await docEl.webkitRequestFullscreen();
-        else if (docEl.mozRequestFullScreen) await docEl.mozRequestFullScreen();
-        else if (docEl.msRequestFullscreen) await docEl.msRequestFullscreen();
-      } catch (err) {
-        console.warn('Fullscreen request bypassed or denied:', err);
-      }
-    }
-
-    async function exitFullscreenMode() {
-      try {
-        if (document.exitFullscreen) await document.exitFullscreen();
-        else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
-        else if (document.mozCancelFullScreen) await document.mozCancelFullScreen();
-        else if (document.msExitFullscreen) await document.msExitFullscreen();
-      } catch (_) {}
-    }
-
-    function isFullscreenActive() {
-      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-    }
-
-    async function toggleFullscreenMode() {
-      if (isFullscreenActive()) {
-        await exitFullscreenMode();
-      } else {
-        await requestFullscreenMode();
-      }
-    }
-
-    function initResultFullscreen() {
-      const fsBtn = document.getElementById('result-fullscreen-btn');
-      const fsIcon = document.getElementById('fullscreen-icon');
-
-      function updateIcon() {
-        const active = isFullscreenActive();
-        if (fsIcon) fsIcon.textContent = active ? '🗗' : '⛶';
-        if (fsBtn) fsBtn.title = active ? 'Exit Fullscreen' : 'Enter Fullscreen';
-      }
-
-      if (fsBtn) {
-        fsBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          await toggleFullscreenMode();
-          updateIcon();
-        });
-      }
-
-      document.addEventListener('fullscreenchange', updateIcon);
-      document.addEventListener('webkitfullscreenchange', updateIcon);
-      updateIcon();
-
-      // If user clicks or taps anywhere on the page and fullscreen is not active yet, auto-request fullscreen
-      const autoEnterOnInteraction = async () => {
-        if (!isFullscreenActive()) {
-          await requestFullscreenMode();
-          updateIcon();
-        }
-      };
-      document.addEventListener('click', autoEnterOnInteraction, { once: true });
-
-      // When clicking back to lobby, gracefully exit fullscreen
-      document.getElementById('back-dashboard-btn')?.addEventListener('click', () => {
-        if (isFullscreenActive()) {
-          exitFullscreenMode();
-        }
-      });
-    }
-
-    initResultFullscreen();
 
     loadResult();

@@ -24,15 +24,16 @@ assert.strictEqual(getGradeSymbol('X'), 'X', 'getGradeSymbol("X") must return "X
 assert.strictEqual(getAchievementStatus('X'), 'ALUMNI', 'getAchievementStatus("X") must return "ALUMNI"');
 assert.strictEqual(getAchievementStatus("LET'S GO"), "LET'S GO", 'getAchievementStatus("LET\'S GO") must return "LET\'S GO"');
 assert.strictEqual(getAchievementStatus('—'), "LET'S GO", 'getAchievementStatus("—") must return "LET\'S GO"');
-assert.strictEqual(getGradeColor('X'), '#8B5CF6', 'getGradeColor("X") must be #8B5CF6');
-assert.strictEqual(getGradeColor("LET'S GO"), '#8B5CF6', 'getGradeColor("LET\'S GO") must be #8B5CF6');
+assert.strictEqual(getGradeColor('X'), '#8B5CF6', 'getGradeColor("X") must be #8B5CF6 (Alumni Purple)');
+assert.strictEqual(getGradeColor("LET'S GO"), '#94a3b8', 'getGradeColor("LET\'S GO") must be #94a3b8 (Neutral Slate Gray)');
 assert.strictEqual(getGradeColor('★'), '#ff2d87', 'getGradeColor("★") must be #ff2d87 (Pink)');
-console.log('  ✅ PASS: Star Pink Tier (#ff2d87), Purple Tier (#8B5CF6), Alumni Grade X, and LET\'S GO verified!\n');
+console.log('  ✅ PASS: Star Pink Tier (#ff2d87), Alumni Purple (#8B5CF6), and Neutral LET\'S GO (#94a3b8) verified!\n');
 
 // 2. Verify dashboard.html DOM Structure
 console.log('[2] Testing dashboard.html Structure:');
 const html = fs.readFileSync('dashboard.html', 'utf8');
 
+assert.ok(html.includes('topscore_tier_'), 'dashboard.html must have instant pre-paint tier hydration in head');
 assert.ok(html.includes('class="dashboard-header-left"'), 'Must have .dashboard-header-left');
 assert.ok(html.includes('class="dashboard-header-right dashboard-header-actions"'), 'Must have .dashboard-header-right');
 assert.ok(html.includes('id="btn-change-class"'), 'Must have #btn-change-class (Door Icon)');

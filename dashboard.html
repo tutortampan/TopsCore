@@ -10,6 +10,16 @@
         var sess = raw ? JSON.parse(raw) : null;
         if (!sess || !sess.student_id) {
           window.location.replace('index.html');
+          return;
+        }
+        // Instant Pre-Paint Tier Hydration: Apply authentic saved dashboard color before CSS/DOM paints
+        var cRaw = localStorage.getItem('topscore_tier_' + sess.student_id) || sessionStorage.getItem('topscore_tier_' + sess.student_id);
+        if (cRaw) {
+          var cached = JSON.parse(cRaw);
+          if (cached && cached.color && cached.rgb) {
+            document.documentElement.style.setProperty('--tier-color', cached.color);
+            document.documentElement.style.setProperty('--tier-rgb', cached.rgb);
+          }
         }
       } catch (_) {
         window.location.replace('index.html');
@@ -21,9 +31,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261106_v155" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261106_v155" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=20261106_v155" />
+  <link rel="stylesheet" href="css/style.css?v=20261106_v158" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261106_v158" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=20261106_v158" />
 
 
 </head>
@@ -254,11 +264,6 @@
         </div>
         <div id="classes-selector-modal-list" class="classes-selector-modal-list">
           <!-- Dynamically populated with active classes -->
-        </div>
-        <div class="classes-selector-modal-actions">
-          <button type="button" class="btn btn-secondary btn-block" id="btn-open-class-levels">
-            🔍 View All Levels &amp; Detailed Tests
-          </button>
         </div>
       </div>
     </div>
@@ -620,12 +625,12 @@
     </div>
   </div>
 
-  <script type="module" src="./js/dashboard.js?v=20261106_v155"></script>
+  <script type="module" src="./js/dashboard.js?v=20261106_v158"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261106_v155')
+        navigator.serviceWorker.register('sw.js?v=20261106_v158')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

@@ -2595,8 +2595,8 @@ body.dashboard-page #welcome-meta-wrapper .meta-sep {
    ============================================================ */
 :root,
 body.dashboard-page {
-  --tier-color: var(--grade-star);
-  --tier-rgb: var(--grade-star-rgb);
+  --tier-color: #94a3b8;
+  --tier-rgb: 148, 163, 184;
 }
 
 body.dashboard-page #welcome-banner-section,
@@ -3264,10 +3264,16 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
   transition: all 0.2s ease !important;
 }
 
-.classes-selector-item:hover,
-.classes-selector-item.selected {
+.classes-selector-item:hover {
   background: rgba(56, 189, 248, 0.12) !important;
-  border-color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.5) !important;
+  transform: translateY(-1px);
+}
+
+.classes-selector-item.selected {
+  background: rgba(56, 189, 248, 0.15) !important;
+  border: 1.5px solid var(--tier-color, #38bdf8) !important;
+  box-shadow: 0 0 16px rgba(var(--tier-rgb, 56, 189, 248), 0.35) !important;
 }
 
 /* Pinned Standing Summary Bar */
@@ -3557,17 +3563,6 @@ body.dashboard-page .completed-summary-val {
 
 .classes-selector-modal-desc {
   margin-top: 2px;
-}
-
-.classes-selector-modal-actions {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--clr-border);
-}
-
-#btn-open-class-levels {
-  font-size: 0.85rem;
-  padding: 8px 12px;
 }
 
 .personal-data-card {

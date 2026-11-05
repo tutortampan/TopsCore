@@ -681,8 +681,10 @@ export const TOPSCORE_COLORS = Object.freeze({
   D: '#FF8C00', // 30–59% Grade D (Dark Orange)
   E: '#FF0000', // 0–29% Grade E (Pure Red)
   FORGIVEN: '#FF0000', // Admin-Forgiven Prerequisite Override (Pure Red #FF0000)
-  X: '#8B5CF6', // Special Grade X for Alumni & New Student status (Purple)
+  X: '#8B5CF6', // Special Grade X for Alumni (Purple)
   PURPLE: '#8B5CF6',
+  NEUTRAL: '#94a3b8', // Neutral Slate Gray for Cold Start / LET'S GO / Placeholder
+  NEUTRAL_RGB: '148, 163, 184',
 
   // 2. RGB Equivalents for Opacities, Shadows, & Glows
   STAR_RGB: '255, 45, 135',
@@ -694,6 +696,7 @@ export const TOPSCORE_COLORS = Object.freeze({
   FORGIVEN_RGB: '255, 0, 0',
   X_RGB: '139, 92, 246',
   PURPLE_RGB: '139, 92, 246',
+  NEUTRAL_RGB: '148, 163, 184',
 
   // 3. Question Answer Evaluation Status (Result Page)
   CORRECT: '#00c000ff', // Full point (1.0 pt)  -> Pure Green (Star / A)
@@ -840,8 +843,9 @@ export function getGradeColorByScore(percentage) {
 export function getGradeColor(grade, isRemedial = false) {
   const g = String(grade || '').trim();
   if (g === '★' || g.toUpperCase() === 'S') return TOPSCORE_COLORS.STAR;
-  if (g.toUpperCase() === 'X' || g.toUpperCase() === 'ALUMNI' || g.toUpperCase() === "LET'S GO" || g.toUpperCase() === 'LETS GO') return TOPSCORE_COLORS.X;
-  return GRADE_PALETTE[g.toUpperCase()]?.color || '#94a3b8';
+  if (g.toUpperCase() === 'X' || g.toUpperCase() === 'ALUMNI') return TOPSCORE_COLORS.X;
+  if (g.toUpperCase() === "LET'S GO" || g.toUpperCase() === 'LETS GO' || g === '—' || g === '-') return TOPSCORE_COLORS.NEUTRAL;
+  return GRADE_PALETTE[g.toUpperCase()]?.color || TOPSCORE_COLORS.NEUTRAL;
 }
 
 export function getScoreColor(percentage, isRemedial = false) {

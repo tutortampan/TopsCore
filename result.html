@@ -22,9 +22,9 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Outfit:wght@400;600;700;800;900&amp;display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261106_v155" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261106_v155" />
-  <link rel="stylesheet" href="css/result.css?v=20261106_v155" />
+  <link rel="stylesheet" href="css/style.css?v=20261106_v158" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261106_v158" />
+  <link rel="stylesheet" href="css/result.css?v=20261106_v158" />
 </head>
 
 <body class="result-page">
@@ -35,11 +35,7 @@
   <header class="dashboard-header" id="result-page-header">
     <div class="result-header-left"></div>
     <div class="dashboard-header-brand" id="result-header-brand">RESULT PAGE</div>
-    <div class="result-header-right">
-      <button id="result-fullscreen-btn" class="btn-fullscreen-toggle" title="Toggle Fullscreen" type="button" aria-label="Toggle Fullscreen">
-        <span id="fullscreen-icon">⛶</span>
-      </button>
-    </div>
+    <div class="result-header-right"></div>
   </header>
 
   <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
@@ -135,13 +131,12 @@
       <!-- 5. Grade Description Card (Strict 50px - Muncul setelah animasi grade muncul) -->
       <div class="result-grade-desc-card cascade-item" id="result-motivation-msg">
         <span class="grade-predicate-text" id="result-predicate-text">&mdash;</span>
-        <span class="grade-legend-hint">E=FAIL / D=LESS / C=ENOUGH / B=GOOD / A=VERY GOOD / ★=EXCELLENT</span>
       </div>
 
       <!-- 6. Actions (Strict 60px Action Row, 50px Breakdown, 50px Back) -->
       <div class="result-action-slot cascade-item" id="smart-next-action-container"></div>
       <button class="btn btn-breakdown-ghost cascade-item" id="toggle-answers-btn" type="button">VIEW ANSWER BREAKDOWN</button>
-      <a href="dashboard.html" class="btn btn-dashboard-primary cascade-item" id="back-dashboard-btn">BACK TO LOBBY</a>
+      <a href="dashboard.html" class="btn btn-dashboard-primary cascade-item" id="back-dashboard-btn">BACK TO CLASS</a>
 
       <!-- Hidden compatibility elements -->
       <button class="btn btn-primary hidden" id="try-again-btn">Try Again</button>
@@ -210,11 +205,11 @@
     </div>
   </div>
 
-  <script type="module" src="./js/result.js?v=20261106_v155"></script>
+  <script type="module" src="./js/result.js?v=20261106_v158"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261106_v155').then(r => r.update()).catch(e => console.warn('SW:', e));
+        navigator.serviceWorker.register('sw.js?v=20261106_v158').then(r => r.update()).catch(e => console.warn('SW:', e));
       });
     }
   </script>

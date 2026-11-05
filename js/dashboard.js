@@ -1434,7 +1434,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           updateClassesBarUI();
           populateClassesSelectorModal(window._activeClasses);
           renderNextAssignmentHero(window._allTests, window._allAttempts, window._loadedClasses);
-          document.getElementById('classes-selector-modal')?.classList.add('hidden');
+          if (typeof renderCompletedTests === 'function') {
+            renderCompletedTests(window._allTests, window._allAttempts);
+          }
+          if (typeof renderLeaderboard === 'function' && window._loadedStudents) {
+            renderLeaderboard(window._loadedStudents, window._allAttempts, window._allTests);
+          }
+          closeSelectorModal();
         });
       });
 
@@ -1475,15 +1481,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         selectorModal._hasBackdropListener = true;
         selectorModal.addEventListener('click', (e) => {
           if (e.target === selectorModal) closeSelectorModal();
-        });
-      }
-      const btnOpenLevels = document.getElementById('btn-open-class-levels');
-      if (btnOpenLevels && !btnOpenLevels._hasClickListener) {
-        btnOpenLevels._hasClickListener = true;
-        btnOpenLevels.addEventListener('click', () => {
-          closeSelectorModal();
-          const cur = (window._activeClasses || []).find(c => c.id === window._selectedClassId) || (window._activeClasses || [])[0];
-          if (cur) openClassModal(cur, window._classesProgress);
         });
       }
     }
@@ -2679,8 +2676,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       } else if (!hasExam) {
         overallGrade = "LET'S GO";
-        targetColor = '#8B5CF6';
-        rgbColor = '139, 92, 246';
+        targetColor = '#94a3b8';
+        rgbColor = '148, 163, 184';
         if (gradeBadgeValue) gradeBadgeValue.textContent = '—';
         if (avgScoreDisplay) avgScoreDisplay.textContent = '—';
         if (achievementTextEl) {
@@ -2708,6 +2705,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       document.body.style.setProperty('--tier-rgb', rgbColor);
       window._tierColor = targetColor;
       window._tierRgb = rgbColor;
+
+      // Instant Pre-Paint Persistence: Store authentic student tier for zero-flash startup
+      try {
+        const tierPayload = JSON.stringify({
+          color: targetColor,
+          rgb: rgbColor,
+          grade: overallGrade,
+          updated_at: Date.now()
+        });
+        localStorage.setItem(`topscore_tier_${session.student_id}`, tierPayload);
+        sessionStorage.setItem(`topscore_tier_${session.student_id}`, tierPayload);
+      } catch (_) {}
 
       // 1. Ambient Hero Banner Aura & Modular CSS Variables across all Lobby Cards
       const tierElements = [
