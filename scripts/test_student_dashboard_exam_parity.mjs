@@ -114,20 +114,20 @@ function computeStudentStats(student, attempts, allTests) {
 
 function rankStudents(studentStatsList) {
   return [...studentStatsList].sort((a, b) => {
-    // 1. Primary: PROG % DESC (Progress first per user specification)
-    const progA = Number(a.progressPct ?? 0);
-    const progB = Number(b.progressPct ?? 0);
-    if (progA !== progB) return progB - progA;
-
-    // 2. Secondary: Global PTS DESC (latest exam points)
+    // 1. Primary: Global PTS DESC (Points first per user specification: Higher points must rank higher)
     const ptsA = Number(a.totalPoints ?? 0);
     const ptsB = Number(b.totalPoints ?? 0);
     if (ptsA !== ptsB) return ptsB - ptsA;
 
-    // 3. Tertiary: Global SCORE % DESC (unattempted exams sort after completed)
+    // 2. Secondary: Global SCORE % DESC (unattempted exams sort after completed)
     const scoreA = (a.completedWeeklyCount > 0) ? Number(a.overallScore ?? 0) : -1;
     const scoreB = (b.completedWeeklyCount > 0) ? Number(b.overallScore ?? 0) : -1;
     if (scoreA !== scoreB) return scoreB - scoreA;
+
+    // 3. Tertiary: PROG % DESC (overall curriculum progress)
+    const progA = Number(a.progressPct ?? 0);
+    const progB = Number(b.progressPct ?? 0);
+    if (progA !== progB) return progB - progA;
 
     // 4. Earliest submission
     if (a.lastSubmittedAt && b.lastSubmittedAt) {
@@ -259,17 +259,17 @@ if (statsPasya.overallScore === 5 && statsPasya.grade === 'E') {
   process.exit(1);
 }
 
-// Verify Ranking Order: Progress-First hierarchy
+// Verify Ranking Order: Points-First hierarchy (Higher points rank higher)
 const rankedMilestone = rankStudents([statsSuke, statsSofa, statsPasya]);
 console.log('  Ranked Results:');
 rankedMilestone.forEach((st, idx) => {
-  console.log(`    #${idx+1}: ${st.name} | PROG: ${st.progressPct}% | PTS: ${st.totalPoints} | SCORE: ${st.overallScore}% (${st.grade})`);
+  console.log(`    #${idx+1}: ${st.name} | PTS: ${st.totalPoints} | SCORE: ${st.overallScore}% (${st.grade}) | PROG: ${st.progressPct}%`);
 });
 
-if (rankedMilestone[0].id === 'suke' && rankedMilestone[1].id === 'sofa' && rankedMilestone[2].id === 'pasya') {
-  console.log('  ✅ PASS: Progress-First Ranking verified! Suke (45% PROG, 90 pts) > Sofa (43% PROG, 163.5 pts) > Pasya (20% PROG, 90 pts).');
+if (rankedMilestone[0].id === 'sofa' && rankedMilestone[1].id === 'suke' && rankedMilestone[2].id === 'pasya') {
+  console.log('  ✅ PASS: Points-First Ranking verified! Sofa (163.5 pts, 43% PROG) > Suke (90 pts, 8% score, 45% PROG) > Pasya (90 pts, 5% score, 20% PROG).');
 } else {
-  console.error('  ❌ FAIL: Ranking order does not prioritize Progress!');
+  console.error('  ❌ FAIL: Ranking order does not prioritize Points!');
   process.exit(1);
 }
 

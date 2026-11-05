@@ -1,11 +1,187 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-05 00:50 UTC+8
-Current Phase: Phase 313: 7/7 Mastery Action Button Redesign to White Forward Arrow in Green Box [COMPLETE]
+Last Updated: 2026-11-05 10:00 UTC+8
+Current Phase: Phase 319: Execution & Verification of Consolidated Master Plan for 7x7 Repetition Gating & Acoustic Homophones Engine [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Phase 313: 7/7 Mastery Action Button Redesign to White Forward Arrow in Green Box [COMPLETE]:**
+1. **Phase 319: Execution & Verification of Consolidated Master Plan for 7x7 Repetition Gating & Acoustic Homophones Engine [COMPLETE]:**
+   - **Plan Archival & Status Finalization**:
+     - All 6 plan artifacts in artifact repository marked as `[IMPLEMENTED] (SUDAH) — CLOSED / ARCHIVED` with `UserFacing: false`.
+     - `docs/Vocab_7x7_Level_Progression_Master_Plan.md` marked as `✅ 100% IMPLEMENTED & ARCHIVED (SELESAI)`.
+     - `docs/TODO.md` verified with 0 pending tasks remaining.
+     - Entire planning pipeline completely closed and clean.
+   - **7x7 Repetitive Mastery & Prerequisite Gating Harmonization**:
+     - Standardized `task_repetitions = 7` across database `tests.payload`, `site_settings`, Result Page, Student Dashboard, and `startTest` backend validators.
+     - Updated prerequisite pass checks to respect dynamic `minimum_required_score` (50% for C1/C2 tasks) rather than a rigid 70%.
+     - In `js/result.js`: vocabulary classes strictly evaluate `targetReps = 7`. The next milestone button renders `"CONTINUE THE DRILL (X/7): [TEST] →"` with grade-colored border until pass 7 is achieved.
+     - Verified Ayya Sofyandi Mzeth has 7/7 passes on 2C1 and is 100% eligible for 2C2 without 403 error.
+     - Verified Adinda Karunia Farela has 6/7 passes on 2C1 and is directed to complete drill 7/7 before 2C2 unlocks.
+   - **Acoustic Homophone Tolerance Engine (`js/grading.js`, `js/api.js`)**:
+     - Bidirectional `HOMOPHONE_MAP` and `isAcousticHomophoneMatch` deployed in `js/grading.js`.
+     - In `mode === 'spoken'` (STT), homophones (`buy/bye`, `wrap/rap`, `sea/see`, `meat/meet`, `hour/our`) receive **1.0 pt** (`correct`, `is_homophone: true`).
+     - In `mode === 'written'`, homophones are strictly rejected (spelling test maintained).
+     - Letter spelling with spaces (`"b u y"`, `"b-u-y"`) and hyphenated terms (`"high-quality"`, `"high quality"`) normalized and awarded 1.0 pt.
+   - **Cache & Deployment Verification**:
+     - Bumped cache busters across all HTML and JS files to `v=20261105_v129`.
+     - Service worker cache updated to `topscore-cache-option-a-v57`.
+     - Full test suite verified: `npm test` PASS 100% (45/45 syntax, 27 SW assets, Exam Parity, 23/23 Acoustic Homophones).
+
+2. **Phase 318: 7x7 Repetitive Mastery Harmonization, Ayya & Adinda Gating Resolution, Acoustic Homophone Engine & Result Page Fullscreen Integration [COMPLETE]:**
+   - **Ayya Sofyandi & Adinda Karunia Progression Deadlock Resolved (`js/api.js`, `supabase/functions/start-test/index.ts`, `scripts/harmonize_task_repetitions_to_7.mjs`)**:
+     - Identified root cause: `2nd Vocabulary` tests previously held `"task_repetitions": 6` in `tests.payload`.
+     - When Ayya and Adinda achieved pass #6 on `2C1-WORDS-TASK`, the result page evaluated `6 < 6` as FALSE, concluded the drill was finished, and displayed `"ADVANCE TO NEXT TASK: C2"`. But backend `startTest` strictly enforced 7 passes (`passCount >= 7`). Clicking C2 blocked them with `403 PREREQUISITE_NOT_MET`.
+     - Harmonized all 59 tests in database to `payload.task_repetitions = 7` via `scripts/harmonize_task_repetitions_to_7.mjs`.
+     - Updated prerequisite minimum passing score checks in both client validator (`js/api.js:1476-1518`) and Edge Function (`supabase/functions/start-test/index.ts:425-485`) to dynamically query `prereqTest.minimum_required_score` (e.g. 50% for C1/C2) instead of hardcoded 70%.
+     - Result page now reliably displays `"CONTINUE THE DRILL (6/7): [TEST TITLE] →"` until pass 7 is completed, whereupon C2 advances and starts seamlessly without 403 error.
+   - **Acoustic Homophone Tolerance Engine (`js/grading.js`, `supabase/functions/submit-test/index.ts`, `scripts/test_homophones_spoken_mode.mjs`)**:
+     - Built curated bidirectional `HOMOPHONE_MAP` covering 94+ common English homophone pairs (e.g. `buy` <-> `bye`/`by`, `wrap` <-> `rap`, `sea` <-> `see`, `hear` <-> `here`, `wait` <-> `weight`, `peace` <-> `piece`, `flower` <-> `flour`, `hole` <-> `whole`, `brake` <-> `break`).
+     - Added `isAcousticHomophoneMatch()` in `js/grading.js` and `supabase/functions/submit-test/index.ts`: active strictly in **Spoken / Speech-to-Text modes** (`mode === 'spoken'`). Awards **1.0 pt (correct)** with `is_homophone: true`.
+     - Written mode (typing) strictly rejects homophones (e.g. typing `"bye"` for `"buy"` receives 0.0 pts `incorrect`, typing `"weight"` for `"wait"` receives 0.0 pts `incorrect`).
+     - Automated test suite `scripts/test_homophones_spoken_mode.mjs` verified 23/23 tests pass with 100% accuracy.
+   - **Seamless Fullscreen Result Page (`result.html`, `js/result.js`, `css/result.css`, `js/test.js`)**:
+     - Preserved fullscreen mode upon test submission by bypassing `document.exitFullscreen()` in `js/test.js:doSubmit()`.
+     - Added glass toggle button (`#result-fullscreen-btn`, `⛶` / `🗗`) to `result.html` top header with smooth animations in `css/result.css`.
+     - In `js/result.js`: added `requestFullscreenMode()`, `exitFullscreenMode()`, `toggleFullscreenMode()`, auto-fullscreen on first user interaction, and clean exit when returning to the lobby (`#back-dashboard-btn`).
+   - **Plan Consolidation & Status Updates**:
+     - Audited all open plan artifacts: consolidated uncompleted work into `unified_7x7_repetition_homophones_and_fullscreen_plan.md`.
+     - Updated all artifacts to `[IMPLEMENTED]` with execution notes.
+   - **CI & Test Automation**:
+     - Integrated `test_homophones_spoken_mode.mjs` directly into `package.json` test runner.
+     - Bumped cache busters across all HTML and JS files to `v=20261105_v127`; verified `sw.js` cache manifest (27 assets).
+     - Ran full test suite: `npm test` PASS 100% across all 4 suites (Syntax, SW Manifest, Dashboard Parity, Acoustic Homophones).
+
+2. **Phase 317: Points-First Leaderboard Ranking, Effective Score Sanitization, Fullscreen Result Page & Repetition Gating Mapping [COMPLETE]:**
+   - **Points-First Standings Ranking Hierarchy (`js/dashboard.js`, `scripts/test_student_dashboard_exam_parity.mjs`)**:
+     - Updated standings leaderboard sort hierarchy in `renderBatchLeaderboard()`:
+       1. Primary: `ptsB - ptsA` (Total exam points DESC).
+       2. Secondary: `scoreB - scoreA` (Overall exam score percentage DESC).
+       3. Tertiary: `progB - progA` (Curriculum progress percentage DESC).
+       4. Quaternary: `lastSubmittedAt` ASC (Earliest milestone completion).
+       5. Quinquenary: `cleanName.localeCompare` (Alphabetical fallback).
+     - Higher points now strictly rank higher (e.g. Lalu Yuda 353 PTS ranks #6 above Adinda 243 PTS at #16).
+   - **Elimination of Score > 100% & Universal False Star (`★`) Inflation (`js/api.js`, `js/result.js`, `js/dashboard.js`)**:
+     - In `js/api.js:4075,4098` inside `batchSaveManualScores`: fixed critical bug that wrote raw points (`sc`) into `effective_score` instead of percentage (`pct`).
+     - In `js/result.js`: safely bounded `pct` and fallback to `rawPct` whenever `effective_score > 100.0`. Laura Fardila's result now renders Points `143`, Score `51.1%`, Grade `D`, Predicate `LESS` (Dark Orange `#FF8C00`), completely eliminating `143%` and false `★`.
+     - In `js/dashboard.js`: clamped `effPct` and `overallScore` to `[0, 100]`. Authentic grades (A, B, C, D, E) restored to the leaderboard roster.
+   - **Database Sanitization (`scripts/sanitize_attempts_effective_score.mjs`)**:
+     - Audited all 1,484 attempts across Supabase PostgreSQL.
+     - Idempotently sanitized all 241 corrupted attempt rows where `effective_score` held raw point counts. Verified remaining attempts with `effective_score > 100`: **0**.
+   - **Seamless Fullscreen Result Page (`result.html`, `js/result.js`, `css/result.css`, `js/test.js`)**:
+     - In `js/test.js:2729`: removed explicit `document.exitFullscreen()` on test submission, allowing the browser to smoothly maintain fullscreen across same-origin navigation into `result.html`.
+     - In `result.html` & `css/result.css`: added sleek glass fullscreen toggle button (`#result-fullscreen-btn`, `⛶` / `🗗`) to top header.
+     - In `js/result.js`: added `requestFullscreenMode()`, `exitFullscreenMode()`, `isFullscreenActive()`, `toggleFullscreenMode()`, auto-fullscreen on first user interaction, and graceful exit when returning to the lobby (`#back-dashboard-btn`).
+     - Continuing or advancing from Result Page directly launches `test.html` in fullscreen with zero modal interruption.
+   - **Comprehensive Repetition Gating & Homophone Tolerance Plan (`repetition_gating_and_homophones_plan.md`)**:
+     - Diagnosed Ayya and Adinda's exact attempts: both reached 6 qualified passes on `2C1-WORDS-TASK`. The result page loaded `task_repetitions = 6` from outdated `tests.payload`, told them to advance, and the backend rejected them because it enforced 7 passes.
+     - Formulated unified implementation plan combining 7x7 repetition alignment, dynamic threshold linking, and the acoustic homophone tolerance engine for spoken tests.
+   - **Cache Buster & Validation**:
+     - Bumped cache busters to `v=20261105_v128` across HTML, CSS, and JS files; bumped Service Worker cache name to `topscore-cache-option-a-v56`.
+     - Verified 45/45 JS syntax checks PASS; `npm test` PASS 100%.
+   - **Hyphen & Punctuation Tolerance ("high quality" vs "High-Quality") (`js/grading.js`, `js/api.js`, `supabase/migrations/`)**:
+     - Strips unicode and ASCII hyphens/dashes (`-`, `–`, `—`, `\u2010-\u2015\u2212\uFE63\uFF0D`), converting them to spaces and normalizing.
+     - Direct normalized and compact matching awards 1.0 pt (correct) when student answer differs only by punctuation or hyphenation.
+     - Added Post-Submit Answer Tolerance & Spelling Sync in `submitTest` (`js/api.js`) to guarantee student answers are never penalized by older server RPC logic.
+     - Migration `20261105080000_upgrade_answer_tolerance_and_spelling.sql` created and ready.
+   - **Letter-by-Letter Spelling Mode Support ("b u y" &rarr; "buy") (`js/grading.js`, `js/api.js`)**:
+     - Compares `compactStudent === compactOpt` via `stripAllPunctuationAndSpaces`.
+     - Words spelled letter-by-letter with spaces (mic/typing producing `"b u y"` or `"b. u. y."`, `"w r a p"`, `"m y t h"`) are collapsed to match the target word and scored 1.0 pt (correct).
+     - Homophones excluded per user directive.
+   - **Result Page 7x Repetition Drill Loop & Dynamic Grade Color CTA (`js/result.js`)**:
+     - Evaluates student passes on the current drill using `fetchClassTestSettings`.
+     - Retains current drill as next test until 7/7 passes reached.
+     - Formats button text according to authoritative specification:
+       - Passed attempt (< 7 total passes): `CONTINUE THE DRILL (X/7): [TITLE] →`
+       - Failed attempt (< 7 total passes): `RETRY THE DRILL (X/7): [TITLE] →`
+       - Completed 7/7 passes: `ADVANCE TO NEXT TASK: [C2 WORDS / PHRASES] →`
+     - Dynamically applies the earned grade color (`--tier-color` from `getGradeColorByScore`) to the CTA button border, text, and glow shadow.
+     - Direct restart: navigates directly to `test.html?id=${curAsm.id}` without returning to the lobby.
+   - **Service Worker Syntax Fix & Instant Cache Activation (`sw.js`)**:
+     - Removed duplicate `const url` on line 65 of `sw.js` that threw `SyntaxError` and trapped browsers on `v124`.
+     - Added `self.skipWaiting()` and `self.clients.claim()` for instant service worker activation.
+     - Added origin check bypass for third-party assets (Google Fonts) to prevent CSP/fetch errors.
+     - Added `sw.js` to `scripts/check_all_js_syntax.cjs`.
+   - **Vocabulary Vault Edit Button Crash Fix (`js/admin/vocab-vault.js`)**:
+     - Fixed `TypeError: Cannot set properties of null (setting 'innerHTML')` by adding `.cell-code.cell-topic-code` to table row rendering.
+     - Added robust null guards across all cell selectors in edit mode and optional chaining in save mode.
+   - **Mojibake Cleanup & Direct English Localization (`dashboard.html`)**:
+     - Cleaned corrupted `â† â€™` arrows on lines 487 and 542 into `&rarr;`.
+     - Localized line 270 and line 306 into Direct English per AGENTS.md Rule 2.12.
+     - Cleaned corrupted emoji characters across modals and buttons.
+   - **Historical Rescoring Execution (`scripts/apply_hyphen_and_spelling_rescore.mjs`)**:
+     - Executed targeted historical rescore: successfully upgraded 80 student answers where hyphens/punctuation/spelling spacing resulted in 0 points.
+     - Recalculated 40 student attempt records with updated points, percentages, and official grades.
+   - **Plan Artifact Marked as [IMPLEMENTED]**:
+     - Updated `answer_tolerance_homophones_and_vault_fix_plan.md` artifact header to `Status: [IMPLEMENTED]`.
+   - **Verification**:
+     - Answer Tolerance & Spelling Test: 5/5 test suites PASS (`node scripts/test_answer_tolerance_and_spelling.mjs`).
+     - Syntax checks: 45/45 JS files PASS (`node scripts/check_all_js_syntax.cjs`).
+     - Test suite: `npm test` PASS 100%.
+     - Cache busters bumped to `v=20261105_v127` and SW cache bumped to `topscore-cache-option-a-v55`.
+
+2. **Phase 315: Dashboard Blueprint Alignment, Exam Gating Fix, Section 5 Removal, Universal Fixed Bottom Banner & Cumulative Exam Questions Harmonization [COMPLETE]:**
+   - **Cumulative Exam Question Count (`QS`) Harmonization (`js/admin/app.js`)**:
+     - Fixed `vaultCountFor` in `js/admin/app.js` to correctly accumulate across themes for exams (`isTest=true`) without being overridden by `pl.theme_code`.
+     - Resulting table: Exam A = 120 QS, Exam B = 280 QS (120+160), Exam C = 480 QS (120+160+200), Exam D = 640 QS (120+160+200+160).
+     - Directly reconciles live Class Tests view with student historical attempt denominators (277/280).
+   - **Exam Premature Access & "Topic null" Bug Resolved (`js/api.js`, `js/dashboard.js`)**:
+     - Included `shell_code, payload` in `fetchTestsForStudentClass` query.
+     - Implemented multi-source extraction for `themeCode` and `topicCode` from `shell_code` and test title patterns in `dashboard.js`.
+     - Replaced `"Topic null"` display with clean `"Theme X: TopicTitle"`.
+     - Completely restored inter-theme and task-to-exam prerequisites gating (`🔒 Locked` until 7/7 task passes).
+   - **Student Score & Gradebook Parity (Rule 2.8) (`js/dashboard.js`)**:
+     - Aligned top card score and grade with completed exam attempts (e.g. Queen Isnantika Salsabila evaluates to 87% Grade B instead of 24% Grade E).
+     - Aligned leaderboard standings to compute `overallScore` from completed exam attempts, correctly displaying Points `366`, Grade `B`, and `${st.progressPct}% Progress`.
+   - **Dock Panel Header 50%/50% Alignment (`css/dashboard.css`)**:
+     - Configured `.dock-tab-header` to `justify-content: stretch` and `.dock-tab-btn` to `flex: 1 1 50%` (`width: 50%`), eliminating right-side empty space.
+   - **Blueprint 50px Standard Heights & 2-Line Next Assessment Title (`css/dashboard.css`)**:
+     - Standardized `.dashboard-grade-legend`, `.dashboard-classes-deck`, `.dashboard-next-test-deck`, and `.next-test-card` to exact 50px heights.
+     - Formatted `.next-test-title` to multi-line box clamp (`-webkit-line-clamp: 2`, `white-space: normal`), preventing title ellipsis cut-off.
+   - **Section 5 (7 Repetition Boxes Deck) Completely Removed (`dashboard.html`, `js/dashboard.js`, `css/dashboard.css`)**:
+     - Removed `<section id="dashboard-repetition-deck">` from `dashboard.html`.
+     - Removed styles from `css/dashboard.css` and cleaned JS DOM references in `js/dashboard.js`.
+   - **Universal Fixed Bottom Banner Across ALL Pages (`dashboard.css`, `test.css`, `result.css`)**:
+     - Styled `#bottom-ad-banner` and `.topscore-locked-banner` as `position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; height: 50px !important; z-index: 1000 !important;`.
+     - Added `padding-bottom: 50px !important;` to `body.dashboard-page` and `body.result-page`, and `margin-bottom: 50px !important;` to `.test-body`.
+   - **Result Page Next Milestone Button Boundary & Vercel CSP Fix (`css/result.css`, `vercel.json`, `sw.js`)**:
+     - Adjusted `.btn-next-milestone` to flexible height `46px-54px` with `-webkit-line-clamp: 2` on `.next-btn-title`.
+     - Added `https://fonts.googleapis.com https://fonts.gstatic.com` to `connect-src` in `vercel.json`.
+     - Patched offline document fallback in `sw.js` to ensure a valid `Response` object is always returned.
+   - **Verification**:
+     - Syntax checks: 42/42 JS files PASS (`node scripts/check_all_js_syntax.cjs`).
+     - Test suite: `npm test` PASS 100%.
+     - Cache busters bumped to `v=20261105_v126` and SW cache bumped to `topscore-cache-option-a-v54`.
+
+2. **Phase 314: Test & Result Page Overhaul, Pacing & POS Cleanup, Next Button Alignment, CSP/SW & Boundary Fixes [COMPLETE]:**
+   - **Yellow Pacing Badge Purge (`test.html`, `js/test.js`, `css/test.css`)**:
+     - Completely removed unrequested dynamic pacing badge (`#test-pacing-indicator` `⚡ ~20s/q`).
+     - Removed `updatePacingBadge` function, state calculations, and timer tick invocations in `js/test.js`.
+     - Removed CSS pacing badge and icon styles from `css/test.css`.
+   - **Part-of-Speech Cleanup in Question Prompt (`js/test.js`)**:
+     - Eliminated redundant `[ ADJECTIVE ]` badge (`displayType`) from the central question prompt card in both Written and Spoken/MCQ modes.
+     - Preserved the comprehensive 4-cell metadata table below the card (Theme, Category, Topic, Type/POS).
+   - **Test Navigation & Next Button Overhaul (`js/test.js`, `css/test.css`)**:
+     - Restored canonical `.btn-nav-next` class, ensuring strict 48px height matching `.btn-nav-prev` with cyan `#38bdf8` styling and border symmetry.
+     - Replaced non-standard question-skipping logic with sequential progression (`renderQuestion(idx + 1)`).
+     - Added dedicated transitions for Section changes (`Next Sec ➔`, `.btn-nav-next.is-next-sec`) and final submission (`Submit 📋`, `.btn-nav-next.is-submit`) with 48px height stability.
+   - **CORS Preflight & HEAD Request Optimization (`js/api.js`, `js/supabase.js`)**:
+     - Introduced an offline circuit breaker in `callEdgeFunction` to avoid repeated preflight network errors (`net::ERR_FAILED`) when Edge Functions are undeployed on Supabase Cloud.
+     - Refined attempt counting in `startTest` from `head: true` to `head: false, limit: 1`, preventing aborted `HEAD` requests (`net::ERR_ABORTED`).
+   - **Result Page CSP & Service Worker Error Fixes (`sw.js`, `netlify.toml`)**:
+     - Added origin check in `sw.js` to bypass third-party requests (`fonts.googleapis.com`), allowing native browser `<link>` loading without triggering `connect-src` CSP blocks.
+     - Handled offline `.catch()` gracefully by returning valid `Response` objects instead of `undefined`, eliminating `Uncaught (in promise) TypeError: Failed to convert value to 'Response'`.
+     - Updated `netlify.toml` CSP directive to include `https://fonts.googleapis.com` and `https://fonts.gstatic.com` in `connect-src`.
+   - **Result Page Next Assessment Button Boundary Overflow Fix (`css/result.css`, `js/result.js`)**:
+     - Fixed typo: corrected `"GO TO NEXT ASSESMENT:"` to `"GO TO NEXT ASSESSMENT:"`.
+     - Increased `.result-action-slot` and `.btn-next-milestone` height to 44px with balanced padding (3px 10px).
+     - Adjusted typography: tag to 8.5px and title to 11px (line-height: 1.15), ensuring long titles (like `2ND VOCABULARY C4 WORDS TASK - BUDGETING & TRIP PLANNING ➔`) fit completely within button borders with zero border overlap.
+   - **Verification**:
+     - Playwright E2E verification: PASS 100% on both `test.html` and `result.html` (`scrollHeight <= offsetHeight`, zero CSP errors, correct spelling, matching 46px/48px button heights, sequential navigation).
+     - Syntax checks: 42/42 JS files PASS (`node scripts/check_all_js_syntax.cjs`).
+     - Test suite: `npm test` PASS 100%.
+     - Cache busters bumped to `v=20261105_v125` across all modified files.
+
+2. **Phase 313: 7/7 Mastery Action Button Redesign to White Forward Arrow in Green Box [COMPLETE]:**
    - **White Forward Arrow in Green Box (`js/dashboard.js`, `css/dashboard.css`)**:
      - When a student completes 7/7 passes on a task item, Section 6 action button displays a white forward arrow icon (`stroke="#ffffff"`) enclosed in a pure green box (`#00c000`, `--grade-star`).
      - Button dimensions: `32px` $\times$ `28px`, border-radius: `6px`, with green star glow and high-contrast styling.
@@ -180,12 +356,12 @@ Status: COMPLETE
      - Badges dynamically color-code: green (`#00c000`) when complete, cyan (`#38bdf8`) when in progress, muted slate (`#64748b`) when unattempted.
    - **Inline Blueprint Exam Passing Score Column**:
      - In the Blueprint / Class Tests table, replaced static text with `<input type="number" class="input-test-pass-score" ...>`.
-     - Typing any percentage (1â€“100%) and pressing Enter or blurring automatically invokes `updateTestPassingScore(testId, newVal)` and updates the database record immediately.
+     - Typing any percentage (1–100%) and pressing Enter or blurring automatically invokes `updateTestPassingScore(testId, newVal)` and updates the database record immediately.
    - **Centralized Test System Settings Panel**:
      - Built `js/admin/test-system-settings-modal.js` modal dialog allowing tutors to configure:
-       - Target Repetitions (1â€“10x)
-       - Task Minimum Passing Score (1â€“100%)
-       - Exam Minimum Passing Score (1â€“100%)
+       - Target Repetitions (1–10x)
+       - Task Minimum Passing Score (1–100%)
+       - Exam Minimum Passing Score (1–100%)
        - Scope Selection (This Class vs Global Default)
        - Batch Apply Checkbox to update all existing tests in the class.
      - Accessible via `âš™ï¸ Test System Settings` button (`#btn-open-blueprint-settings`) in Class Tests tab and `âš™ï¸ Test Settings` button (`#btn-blueprint-bottom-settings`) in Vocabulary Vault Blueprint.
@@ -203,7 +379,7 @@ Status: COMPLETE
 
 2. **Phase 305: Forgiven & Exam Manual Override Wizard (Pacing Adjustment) [COMPLETE]:**
    - **Context & Motivation**:
-     - Class `2nd Vocabulary` (Batch `Camp 134`) already ran for 2 weeks offline. The tutor required students to begin directly from Week 3 (Theme C) without taking Week 1â€“2 tests online, while preserving curriculum integrity for future batches.
+     - Class `2nd Vocabulary` (Batch `Camp 134`) already ran for 2 weeks offline. The tutor required students to begin directly from Week 3 (Theme C) without taking Week 1–2 tests online, while preserving curriculum integrity for future batches.
      - Implemented Solusi B: a 2-step Forgiven & Manual Override Wizard accessible from Class Hub (`admin.html#class-hub`).
    - **Backend API & Database**:
      - Migration `supabase/migrations/20261104130000_add_manual_override_column.sql`: validated `is_forgiven`, `forgiven_by`, `forgiven_at`, `forgiven_reason`, and `is_manual_override`.
@@ -260,7 +436,7 @@ Status: COMPLETE
      - Protected `autoGenerateTestsHierarchy` with chunked pagination via `fetchVaultWords({ targetLevel: levelNum, limit: 10000 })` so levels with >1,000 words are never truncated.
      - Applied natural alphanumeric sorting (`localeCompare(undefined, { numeric: true })`) to prevent sorting anomalies like A10 before A2.
    - **Live Production Database Resync**:
-     - Resynced `2nd Vocabulary` (`class_id: 2ccf6468-1e03-41d1-b72b-1d84dcad85b2`): exactly **15 Tasks** (A1â€“A3, B1â€“B4, C1â€“C4, D1â€“D4) + **4 Exams** = **19 tests** (19 records).
+     - Resynced `2nd Vocabulary` (`class_id: 2ccf6468-1e03-41d1-b72b-1d84dcad85b2`): exactly **15 Tasks** (A1–A3, B1–B4, C1–C4, D1–D4) + **4 Exams** = **19 tests** (19 records).
      - Resynced `3rd Vocabulary` (`class_id: ab33498a-90e6-44b7-83f4-5765f964543e`): exactly **32 Tasks** (16 Words + 16 Phrases) + **8 Exams** = **40 tests** (40 records).
      - Verified linear prerequisite sequence across all topics: A1 -> A2 -> A3 -> A Exam -> B1 -> ... -> D Exam.
    - **System Answers to User Inquiries**:
@@ -314,7 +490,7 @@ Status: COMPLETE
      - Standardized 10-column schema with unified `Code` column (`A1`, `A2`...) with zero blank cells.
    - **UI Blueprint & Grid Synchronization (`js/admin/vocab-vault.js`)**:
      - Topic Blueprint: `TOPIC CODE` column renders clean `A1`, `A2`, `B1`... with natural alphanumeric sorting.
-     - Vocabulary Words Grid: `Topic Code` / `Code` column renders monospaced badges (`A1`, `A2`...) instead of dashes (`â€”`).
+     - Vocabulary Words Grid: `Topic Code` / `Code` column renders monospaced badges (`A1`, `A2`...) instead of dashes (`—`).
      - Inline edit and save automatically normalizes topic code and theme code.
    - **Evaluation Engine & Test Hierarchy Parity (`js/admin/app.js` & `js/api.js`)**:
      - Updated `vaultCountFor` in `js/admin/app.js` to normalize and match both `A1` and `1` formats.
@@ -396,7 +572,7 @@ Status: COMPLETE
    - Replaced duplicate institution/program badges and separate level buttons with unified Curriculum Tabs: `[ ðŸŽ¯ CEC Camp 1st Level ] [ ðŸŽ¯ CEC Camp 2nd Level ] [ ðŸŽ¯ CEC Camp 3rd Level ]`.
    - Eliminated Board View and mode toggles; standardized solely on high-density Table View.
    - Relocated `[ âš’ï¸ Merge Topics ]` and `[ âš¡ Auto-Generate ]` to the bottom-right corner inside the bottom infobar action area.
-   - Removed the dangerous Reset button from Vocabulary Vault and relocated it into **D â€” SYSTEM & DATA $\rightarrow$ System Settings (Danger Zone)** with mandatory `"RESET"` confirmation.
+   - Removed the dangerous Reset button from Vocabulary Vault and relocated it into **D — SYSTEM & DATA $\rightarrow$ System Settings (Danger Zone)** with mandatory `"RESET"` confirmation.
    - Cache buster bumped to `v20261103_v109`. 100% tests PASS.
 
 1. **Phase 295: Class Tests Grid UI Streamlining [COMPLETE]:**
@@ -413,11 +589,11 @@ Status: COMPLETE
    - **Database**: Provisioned 6 test shells for `2nd Vocabulary` (Themes A and B).
    - **Cache Buster**: `admin.html` bumped to `v20261103_v107`. 100% tests PASS.
 
-1. **Phase 293: Fix Class Hub Roster â€” Level-Exact Student Filter [COMPLETE]:**
-   - **Root Cause Fixed**: `classStudents` filter in `renderClassHub` (`js/admin/app.js`) only matched program â€” now also matches level.
+1. **Phase 293: Fix Class Hub Roster — Level-Exact Student Filter [COMPLETE]:**
+   - **Root Cause Fixed**: `classStudents` filter in `renderClassHub` (`js/admin/app.js`) only matched program — now also matches level.
    - **`js/admin/app.js`**: Added `allClassLevels` to the `Promise.all` fetch, added `level_id` to the classes query, replaced old filter with new level-aware filter using `class_levels` junction table (fallback to `class.level_id`). Effective student level = `student.level_id ?? batch.current_level_id`.
    - **`admin.html`**: Cache buster bumped to `v20261103_v106`.
-   - **Verified**: DB live check â€” 3rd Vocab = 29 correct students (0 from wrong level); 2nd Vocab = 17 correct students (0 from wrong level). All tests PASS.
+   - **Verified**: DB live check — 3rd Vocab = 29 correct students (0 from wrong level); 2nd Vocab = 17 correct students (0 from wrong level). All tests PASS.
 
 1. **Phase 292: Vocabulary Vault Institution, Program & Level Columns Integration [COMPLETE]:**
    - **`js/api.js` Data Joins**: Updated `fetchVaultWords` select query to join `institutions(id, name, code)` and `programs(id, name, code)` on `vocabulary_vault`. All 820 items cleanly resolve with zero nulls.
@@ -484,7 +660,7 @@ Status: COMPLETE
    - Normalized all 32 database test shells in 3rd Vocabulary to Task (`category: TASK`, `shell_code: *-TASK`, `title: * Task`).
    - Unified terminology across `js/dashboard.js`, `js/admin/app.js`, `js/admin/vocab-vault.js`, `js/admin/crud-modals.js`, `js/test.js`, and `supabase/seed.sql`.
 2. **Phase 2: 7Ã—7 Repetitive Mastery Engine & Hard Gate Exam:**
-   - Implemented `getTaskProgressVisual(passCount)` in `js/grading.js` with 5-tier gamified palette (Red `0/7` -> Star Green `7/7 âœ“ Complete`).
+   - Implemented `getTaskProgressVisual(passCount)` in `js/grading.js` with 5-tier gamified palette (Red `0/7` -> Star Green `7/7 ✓ Complete`).
    - Implemented realtime pass counter in `js/api.js` and `task-progress-chip` in `js/dashboard.js`.
    - Hard Gate Exam locked ðŸ”’ until all prerequisite tasks reach 7/7 passes in Edge Function and client.
    - Authorized remedial attempts exempted from 7Ã—7 task prerequisite lock in `start-test` Edge Function and client.
@@ -526,7 +702,7 @@ Status: COMPLETE
    - Deleted `supabase/data.sql` (-7.32 MB exact duplicate of canonical `supabase/seed.sql`).
    - Deleted duplicate `docs/ASSESSMENT_EXECUTION_AUDIT.md` (canonical preserved in `docs/archive/`).
    - Cleaned 11 one-off inspect and redundant version bump scripts from `scripts/` root.
-   - Partitioned oversized `docs/CHANGELOG.md` (1.59 MB -> 111.4 KB) by safely archiving historical Phases 1â€“228 entries into `docs/archive/CHANGELOG_ARCHIVE.md`.
+   - Partitioned oversized `docs/CHANGELOG.md` (1.59 MB -> 111.4 KB) by safely archiving historical Phases 1–228 entries into `docs/archive/CHANGELOG_ARCHIVE.md`.
 
 2. **Production Dead Code Pruning (> 2,000 Lines Pruned):**
    - `js/admin/class.js`: Pruned dead functions `renderAssignments` (190 lines), `renderProgressView` (484 lines), and `renderRecalibrator` (8 lines).

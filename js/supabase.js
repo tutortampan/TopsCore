@@ -1,3 +1,8 @@
+
+// Circuit Breaker for offline / undeployed Edge Functions
+const _offlineEdgeFunctions = new Set();
+export function isEdgeFunctionOffline(name) { return _offlineEdgeFunctions.has(name); }
+export function markEdgeFunctionOffline(name) { _offlineEdgeFunctions.add(name); }
 // TOPS CORE — Supabase Configuration & Client Init
 export const SUPABASE_CLOUD_URL = 'https://oclajpyumehpojepcczg.supabase.co';
 export const SUPABASE_CLOUD_ANON_KEY = 'sb_publishable_L9T-SJpuAqK5291UEVhKMg_i7lvWFGB';
@@ -83,6 +88,11 @@ export async function getSupabase() {
 
 // Add callEdgeFunction to easily invoke Edge Functions
 export async function callEdgeFunction(functionName, payload) {
+  if (_offlineEdgeFunctions.has(functionName)) {
+    const err = new Error(`Edge function ${functionName} offline (circuit breaker active)`);
+    err.status = 404;
+    throw err;
+  }
   if (typeof process !== 'undefined' && process.env && process.env.TOPSCORE_DIRECT_DB === '1') {
     const err = new Error(`Edge function ${functionName} bypassed (TOPSCORE_DIRECT_DB enabled)`);
     err.status = 404;
@@ -124,6 +134,9 @@ export async function callEdgeFunction(functionName, payload) {
     return data;
   } catch (err) {
     clearTimeout(timeoutId);
+    if (err.status === 404 || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
+      _offlineEdgeFunctions.add(functionName);
+    }
     if (err.name === 'AbortError') {
       throw new Error("AI Evaluation timed out. Your answer is saved, please refresh and try submitting again.");
     }

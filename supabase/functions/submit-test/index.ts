@@ -175,6 +175,147 @@ function isWordFormAnswerMatch(studentText: string, optText: string): boolean {
   return hasFormDiff;
 }
 
+const HOMOPHONE_MAP: Record<string, string[]> = {
+  'buy': ['bye', 'by'],
+  'bye': ['buy', 'by'],
+  'by': ['buy', 'bye'],
+  'wrap': ['rap'],
+  'rap': ['wrap'],
+  'sea': ['see'],
+  'see': ['sea'],
+  'hear': ['here'],
+  'here': ['hear'],
+  'right': ['write'],
+  'write': ['right'],
+  'meat': ['meet'],
+  'meet': ['meat'],
+  'flour': ['flower'],
+  'flower': ['flour'],
+  'hour': ['our'],
+  'our': ['hour'],
+  'son': ['sun'],
+  'sun': ['son'],
+  'piece': ['peace'],
+  'peace': ['piece'],
+  'whole': ['hole'],
+  'hole': ['whole'],
+  'wait': ['weight'],
+  'weight': ['wait'],
+  'break': ['brake'],
+  'brake': ['break'],
+  'stair': ['stare'],
+  'stare': ['stair'],
+  'tail': ['tale'],
+  'tale': ['tail'],
+  'bare': ['bear'],
+  'bear': ['bare'],
+  'weather': ['whether'],
+  'whether': ['weather'],
+  'knight': ['night'],
+  'night': ['knight'],
+  'week': ['weak'],
+  'weak': ['week'],
+  'road': ['rode'],
+  'rode': ['road'],
+  'mail': ['male'],
+  'male': ['mail'],
+  'to': ['too', 'two'],
+  'too': ['to', 'two'],
+  'two': ['to', 'too'],
+  'there': ['their', "they're"],
+  'their': ['there', "they're"],
+  "they're": ['there', 'their'],
+  'pair': ['pear'],
+  'pear': ['pair'],
+  'plain': ['plane'],
+  'plane': ['plain'],
+  'sail': ['sale'],
+  'sale': ['sail'],
+  'steal': ['steel'],
+  'steel': ['steal'],
+  'blew': ['blue'],
+  'blue': ['blew'],
+  'know': ['no'],
+  'no': ['know'],
+  'knew': ['new'],
+  'new': ['knew'],
+  'one': ['won'],
+  'won': ['one'],
+  'wear': ['where'],
+  'where': ['wear'],
+  'which': ['witch'],
+  'witch': ['which'],
+  'wood': ['would'],
+  'would': ['wood'],
+  'eight': ['ate'],
+  'ate': ['eight'],
+  'dear': ['deer'],
+  'deer': ['dear'],
+  'die': ['dye'],
+  'dye': ['die'],
+  'fair': ['fare'],
+  'fare': ['fair'],
+  'heal': ['heel'],
+  'heel': ['heal'],
+  'idle': ['idol'],
+  'idol': ['idle'],
+  'knot': ['not'],
+  'not': ['knot'],
+  'made': ['maid'],
+  'maid': ['made'],
+  'main': ['mane'],
+  'mane': ['main'],
+  'pale': ['pail'],
+  'pail': ['pale'],
+  'past': ['passed'],
+  'passed': ['past'],
+  'poor': ['pour'],
+  'pour': ['poor'],
+  'pray': ['prey'],
+  'prey': ['pray'],
+  'root': ['route'],
+  'route': ['root'],
+  'scene': ['seen'],
+  'seen': ['scene'],
+  'sight': ['site'],
+  'site': ['sight'],
+  'sole': ['soul'],
+  'soul': ['sole'],
+  'some': ['sum'],
+  'sum': ['some'],
+  'toe': ['tow'],
+  'tow': ['toe'],
+  'waist': ['waste'],
+  'waste': ['waist'],
+  'warn': ['worn'],
+  'worn': ['warn']
+};
+
+function isAcousticHomophoneMatch(studentText: string, targetText: string): boolean {
+  const normS = cleanPunctuationAndSymbols(studentText).toLowerCase().trim();
+  const normT = cleanPunctuationAndSymbols(targetText).toLowerCase().trim();
+  if (!normS || !normT) return false;
+  if (normS === normT) return true;
+
+  const sWords = normS.split(/\s+/).filter(Boolean);
+  const tWords = normT.split(/\s+/).filter(Boolean);
+  if (sWords.length !== tWords.length || sWords.length === 0) return false;
+
+  let hasHomophone = false;
+  for (let i = 0; i < tWords.length; i++) {
+    const sw = sWords[i];
+    const tw = tWords[i];
+    if (sw === tw) continue;
+    const homophones = HOMOPHONE_MAP[tw];
+    if (homophones && homophones.includes(sw)) {
+      hasHomophone = true;
+      continue;
+    }
+    return false;
+  }
+  return hasHomophone;
+}
+
 function evaluateStudentAnswer(
   studentAnswer: string,
   validAnswers: string[],
@@ -192,6 +333,10 @@ function evaluateStudentAnswer(
     const compactValid = stripAllPunctuationAndSpaces(rawValid);
 
     if (normStudent === normValid || (compactStudent && compactStudent === compactValid)) {
+      return { result: "correct", score: 1.0, is_correct: true, similarity_score: 1.0 };
+    }
+
+    if (isSpeech && isAcousticHomophoneMatch(normStudent, normValid)) {
       return { result: "correct", score: 1.0, is_correct: true, similarity_score: 1.0 };
     }
 

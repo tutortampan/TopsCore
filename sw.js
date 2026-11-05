@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v53';
+const CACHE_NAME = 'topscore-cache-option-a-v57';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -7,19 +7,19 @@ const ASSETS_TO_CACHE = [
   './test.html',
   './result.html',
   './offline.html',
-  './css/style.css?v=20261103_v105',
-  './css/admin.css?v=20261103_v105',
-  './css/dashboard.css?v=20261102_v103',
+  './css/style.css?v=20261105_v129',
+  './css/admin.css?v=20261105_v129',
+  './css/dashboard.css?v=20261105_v129',
   './css/auth.css?v=20261028',
   './css/test.css?v=20261028',
-  './css/result.css?v=20261103_v105',
+  './css/result.css?v=20261105_v129',
   './css/components/avatars.css?v=20261028',
   './js/app.js?v=20261029',
   './js/api.js?v=20261028',
   './js/auth.js?v=20261028',
-  './js/dashboard.js?v=20261102_v103_modal',
+  './js/dashboard.js?v=20261105_v129_modal',
   './js/test.js?v=20261028',
-  './js/result.js?v=20261102_v103',
+  './js/result.js?v=20261105_v129',
   './js/session.js?v=20261028',
   './js/supabase.js?v=20261028',
   './js/grading.js?v=20261028',
@@ -59,6 +59,9 @@ self.addEventListener('fetch', event => {
   if (event.request.url.includes('supabase.co')) return;
 
   const url = new URL(event.request.url);
+  // Bypass third-party origins (Google Fonts, CDNs) so browser loads them natively via <link> without Service Worker connect-src CSP restrictions
+  if (url.origin !== self.location.origin) return;
+
   const isDoc = event.request.destination === 'document' || url.pathname.endsWith('.html');
   const isScriptOrDoc = isDoc ||
     event.request.destination === 'script' ||
@@ -80,8 +83,10 @@ self.addEventListener('fetch', event => {
         if (cached) return cached;
         // If document navigation fails while completely offline, serve offline fallback
         if (isDoc) {
-          return caches.match('./offline.html');
+          const offlineResp = await caches.match('./offline.html');
+          if (offlineResp) return offlineResp;
         }
+        return new Response('', { status: 408, statusText: 'Network Failed or Offline' });
       })
     );
     return;
@@ -102,7 +107,7 @@ self.addEventListener('fetch', event => {
         return response;
       });
     }).catch(() => {
-      // Fallback
+      return new Response('', { status: 404, statusText: 'Not Found' });
     })
   );
 });

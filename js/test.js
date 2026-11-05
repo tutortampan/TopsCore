@@ -1,16 +1,16 @@
-import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261104_v122';
+import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261105_v129';
 /**
  * TopsCore — Test Engine Module
  * Extracted from test.html
  */
 
-import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261104_v122';
-    import { requireStudentSession } from './session.js?v=20261104_v122';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261104_v122';
-    import { startCountdown, isExpired } from './timer.js?v=20261104_v122';
-    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261104_v122';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261104_v122';
-    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261104_v122';
+import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261105_v129';
+    import { requireStudentSession } from './session.js?v=20261105_v129';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261105_v129';
+    import { startCountdown, isExpired } from './timer.js?v=20261105_v129';
+    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261105_v129';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261105_v129';
+    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261105_v129';
 
     // Arm wake lock gestures on first interaction
     bindWakeLockGestures();
@@ -1314,51 +1314,12 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       timerEl.classList.remove('warning', 'critical');
 
 
-    let _lastRemainingSeconds = 0;
-    function updatePacingBadge(remainingSeconds) {
-      if (remainingSeconds != null) _lastRemainingSeconds = remainingSeconds;
-      const badge = document.getElementById('test-pacing-indicator');
-      const valEl = document.getElementById('test-pacing-val');
-      if (!badge || !valEl) return;
-
-      const total = (allAnswerRows && allAnswerRows.length > 0) ? allAnswerRows.length : (answerRows?.length || 1);
-      const answered = Object.keys(answeredMap || {}).filter(k => {
-        const v = answeredMap[k];
-        return v !== undefined && v !== null && String(v).trim() !== '';
-      }).length;
-      const unanswered = Math.max(0, total - answered);
-
-      if (unanswered === 0) {
-        badge.className = 'test-pacing-badge pace-comfortable';
-        badge.title = 'All questions answered! Review before submitting.';
-        valEl.textContent = 'Done! ✓';
-        badge.classList.remove('hidden');
-        return;
-      }
-
-      const secPerQ = Math.round(_lastRemainingSeconds / Math.max(1, unanswered));
-      badge.classList.remove('hidden', 'pace-comfortable', 'pace-moderate', 'pace-urgent');
-
-      if (secPerQ >= 30) {
-        badge.classList.add('pace-comfortable');
-        badge.title = `Comfortable Pace: ~${secPerQ}s per question remaining (${unanswered} questions left)`;
-        valEl.textContent = `~${secPerQ}s/q`;
-      } else if (secPerQ >= 15) {
-        badge.classList.add('pace-moderate');
-        badge.title = `Moderate Pace: ~${secPerQ}s per question remaining (${unanswered} questions left)`;
-        valEl.textContent = `~${secPerQ}s/q`;
-      } else {
-        badge.classList.add('pace-urgent');
-        badge.title = `Urgent Pace: ~${secPerQ}s per question remaining! Speed up or skip difficult questions. (${unanswered} questions left)`;
-        valEl.textContent = `⚡ ~${secPerQ}s/q`;
-      }
-    }
+    // Pacing badge removed
 
       timerController = startCountdown(activeEndAt.toISOString(), {
         onTick(remaining) {
           display.textContent = formatTime(remaining);
-          updatePacingBadge(remaining);
-        },
+          },
         onWarning(remaining) {
           if (remaining <= 120) {
             timerEl.classList.add('critical');
@@ -1835,7 +1796,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           <div class="speech-question-text" style="font-size:clamp(18px, 4.5vw, 26px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
             ${escapeHtml(questionText)}
           </div>
-          ${displayType ? `<div style="font-size:10px; font-weight:800; letter-spacing:0.08em; color:#fbbf24; margin-top:4px; text-transform:uppercase; background:rgba(251,191,36,0.12); padding:1px 8px; border-radius:4px; border:1px solid rgba(251,191,36,0.25);">[ ${escapeHtml(displayType)} ]</div>` : ''}
+          
         `;
         upperGroup.appendChild(questionBox);
 
@@ -1890,7 +1851,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           <div class="speech-question-text" style="font-size:clamp(20px, 5vw, 26px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
             ${escapeHtml(questionText)}
           </div>
-          ${displayType ? `<div style="font-size:10px; font-weight:800; letter-spacing:0.08em; color:#fbbf24; margin-top:4px; text-transform:uppercase; background:rgba(251,191,36,0.12); padding:1px 8px; border-radius:4px; border:1px solid rgba(251,191,36,0.25);">[ ${escapeHtml(displayType)} ]</div>` : ''}
+          
         `;
         main.appendChild(questionBox);
 
@@ -1973,20 +1934,31 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         if (isLast) {
           if (isLastSection) {
             bottomNext.textContent = 'Submit 📋';
-            bottomNext.className = 'btn btn-success';
-            bottomNext.style.background = '#059669';
+            bottomNext.className = 'btn-nav-next is-submit';
+            bottomNext.style.background = '';
+            bottomNext.style.color = '';
+            bottomNext.style.borderColor = '';
             bottomNext.onclick = () => { saveCurrentAnswer(); openSubmitModal(); };
           } else {
             bottomNext.textContent = 'Next Sec ➔';
-            bottomNext.className = 'btn btn-success';
-            bottomNext.style.background = '#059669';
+            bottomNext.className = 'btn-nav-next is-next-sec';
+            bottomNext.style.background = '';
+            bottomNext.style.color = '';
+            bottomNext.style.borderColor = '';
             bottomNext.onclick = () => { nextSection(); };
           }
         } else {
           bottomNext.textContent = 'Next ➔';
-          bottomNext.className = 'btn btn-primary';
-          bottomNext.style.background = '#152c4e';
-          bottomNext.onclick = () => { saveCurrentAnswer(); let targetIdx = idx + 1; while(targetIdx < answerRows.length && answeredMap[answerRows[targetIdx].id] && answeredMap[answerRows[targetIdx].id].trim()) { targetIdx++; } if(targetIdx >= answerRows.length) targetIdx = idx + 1; renderQuestion(targetIdx); };
+          bottomNext.className = 'btn-nav-next';
+          bottomNext.style.background = '';
+          bottomNext.style.color = '';
+          bottomNext.style.borderColor = '';
+          bottomNext.onclick = () => {
+            saveCurrentAnswer();
+            if (idx < answerRows.length - 1) {
+              renderQuestion(idx + 1);
+            }
+          };
         }
       }
       updateNavGrid();
@@ -2754,7 +2726,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
     async function doSubmit(isAuto = false) {
       isTestActive = false; // Disable anti-cheat alerts on submission
-      if (isFullscreenActive()) {
+      // Maintain fullscreen seamlessly into Result Page per user specification
+      if (false && isFullscreenActive()) {
         try {
           if (document.exitFullscreen) await document.exitFullscreen();
           else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();

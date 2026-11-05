@@ -41,7 +41,7 @@
       padding: 0 14px !important;
       display: flex !important;
       align-items: center !important;
-      justify-content: center !important;
+      justify-content: space-between !important;
       flex-shrink: 0 !important;
       background: rgba(9, 13, 22, 0.95) !important;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -51,6 +51,44 @@
       top: 0 !important;
       z-index: 100 !important;
       box-sizing: border-box !important;
+    }
+
+    .result-page .result-header-left {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+
+    .result-page .result-header-right {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .result-page .btn-fullscreen-toggle {
+      width: 32px;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      color: #94a3b8;
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      padding: 0;
+    }
+
+    .result-page .btn-fullscreen-toggle:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: #38bdf8;
+      color: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
     }
 
     .result-page .dashboard-header-brand {

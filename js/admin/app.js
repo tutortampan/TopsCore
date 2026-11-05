@@ -1,7 +1,7 @@
-import { DataGrid } from './datagrid.js?v=20261104_v121';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261104_v121';
-import { computeUnifiedScore, computeTopicPassLevel } from '../grading.js?v=20261104_v121';
-import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven } from '../api.js?v=20261104_v121';
+import { DataGrid } from './datagrid.js?v=20261105_v129';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261105_v129';
+import { computeUnifiedScore, computeTopicPassLevel } from '../grading.js?v=20261105_v129';
+import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven } from '../api.js?v=20261105_v129';
 
 if (typeof window !== 'undefined') {
   window.showToast = showToast;
@@ -379,26 +379,26 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter, toShortLevel,
   adminOverridePrerequisitesWithRemedial, autoSyncClassTestsForLevel
-} from '../api.js?v=20261104_v121';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261104_v121';
-import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261104_v121';
-import { getSupabase } from '../supabase.js?v=20261104_v121';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261104_v121';
-import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261104_v121';
-import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261104_v121';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261104_v121';
-import { renderTests } from './tests-management.js?v=20261104_v121';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261104_v121';
-import { renderVocabularyVault } from './vocab-vault.js?v=20261104_v121';
-import { renderModules } from './modules.js?v=20261104_v121';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261104_v121';
-import { renderExportQuestions } from './imports-exports.js?v=20261104_v121';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261104_v124';
-import { renderCurriculum } from './curriculum-management.js?v=20261104_v121';
-import { renderClassesHub } from './classes-hub.js?v=20261104_v121';
-import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261104_v121';
-import { openStudentFullEdit } from './student-management.js?v=20261104_v121';
-import { renderStudentsRegistration } from './student-registration.js?v=20261104_v121';
+} from '../api.js?v=20261105_v129';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261105_v129';
+import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261105_v129';
+import { getSupabase } from '../supabase.js?v=20261105_v129';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261105_v129';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261105_v129';
+import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261105_v129';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261105_v129';
+import { renderTests } from './tests-management.js?v=20261105_v129';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261105_v129';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261105_v129';
+import { renderModules } from './modules.js?v=20261105_v129';
+import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261105_v129';
+import { renderExportQuestions } from './imports-exports.js?v=20261105_v129';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261105_v129';
+import { renderCurriculum } from './curriculum-management.js?v=20261105_v129';
+import { renderClassesHub } from './classes-hub.js?v=20261105_v129';
+import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261105_v129';
+import { openStudentFullEdit } from './student-management.js?v=20261105_v129';
+import { renderStudentsRegistration } from './student-registration.js?v=20261105_v129';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -1250,7 +1250,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
           const pl = r?.payload || {};
           const isUnified = pl.category === 'unified' || pl.is_unified === true || pl.is_unified_test === true || r?.test_type === 'UNIFIED_TEST';
           const wantPhrases = pl.category === 'phrases';
+          // isTest = true when this test is a cumulative Exam/Test (not a topic-level Task)
           const isTest = (r?.category === 'EXAM' || r?.category === 'TEST' || String(r?.test_type).toLowerCase() === 'exam' || (r?.shell_code && (r.shell_code.includes('-TEST') || r.shell_code.includes('-EXAM'))) || r?.test_subtype?.includes('EXAM') || r?.test_subtype?.includes('TEST')) && !pl.topic_code;
+          // For cumulative exams, build the full set of themes they cover
           let themes = (pl.themes && Array.isArray(pl.themes) && pl.themes.length > 0) ? pl.themes : null;
           if (!themes && isTest && pl.theme_code) {
             const idx = _ALL_THEMES.indexOf(String(pl.theme_code).toUpperCase());
@@ -1260,12 +1262,17 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
             if (Number(v.target_level) !== Number(lvlNumber)) return false;
             const isPhrase = _PHRASE_TYPES.includes(_norm(v.word_type));
             if (!isUnified && wantPhrases !== isPhrase) return false;
-            if (themes && !themes.includes(v.theme_code)) return false;
-            if (pl.theme_code && v.theme_code !== pl.theme_code) return false;
-            if (pl.topic_code) {
-              const normPlCode = (/^[A-Za-z]/.test(String(pl.topic_code))) ? String(pl.topic_code).toUpperCase() : `${String(pl.theme_code || '').toUpperCase()}${pl.topic_code}`;
-              const normVCode = (/^[A-Za-z]/.test(String(v.topic_code))) ? String(v.topic_code).toUpperCase() : `${String(v.theme_code || '').toUpperCase()}${v.topic_code}`;
-              if (normVCode !== normPlCode && String(v.topic_code).toUpperCase() !== String(pl.topic_code).toUpperCase()) return false;
+            if (isTest) {
+              // Cumulative exams: include all words in the themes array (A, A+B, A+B+C, etc.)
+              if (themes && !themes.includes(v.theme_code)) return false;
+            } else {
+              // Tasks: single-theme filter — only words matching this exact theme/topic
+              if (pl.theme_code && v.theme_code !== pl.theme_code) return false;
+              if (pl.topic_code) {
+                const normPlCode = (/^[A-Za-z]/.test(String(pl.topic_code))) ? String(pl.topic_code).toUpperCase() : `${String(pl.theme_code || '').toUpperCase()}${pl.topic_code}`;
+                const normVCode = (/^[A-Za-z]/.test(String(v.topic_code))) ? String(v.topic_code).toUpperCase() : `${String(v.theme_code || '').toUpperCase()}${v.topic_code}`;
+                if (normVCode !== normPlCode && String(v.topic_code).toUpperCase() !== String(pl.topic_code).toUpperCase()) return false;
+              }
             }
             return true;
           }).length;
@@ -2017,7 +2024,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
           // Open Test System Settings Modal
           document.getElementById('btn-open-blueprint-settings')?.addEventListener('click', async () => {
             try {
-              const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261104_v121');
+              const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261105_v129');
               await openTestSystemSettingsModal({
                 classId: classId || cid,
                 className: currentClass?.name || 'Vocabulary Class',
@@ -2072,7 +2079,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
           // Open Forgiven & Exam Manual Override Wizard
           document.getElementById('btn-open-forgiven-wizard')?.addEventListener('click', async () => {
             try {
-              const { openForgivenWizard } = await import('./forgiven-wizard-modal.js?v=20261104_v121');
+              const { openForgivenWizard } = await import('./forgiven-wizard-modal.js?v=20261105_v129');
               await openForgivenWizard({
                 classId: classId || cid,
                 classTests,
@@ -2091,7 +2098,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
           // Open Test Generator & Settings Wizard
           document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
             try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261104_v121');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261105_v129');
               await openAutoGenerateModal({
                 explicitClassId: classId,
                 onComplete: () => {
@@ -4549,7 +4556,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
         window.handleClassAutoGenerate = async (classId, levelId, category = null) => {
            if (!classId) return;
            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261104_v121');
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261105_v129');
               await openAutoGenerateModal({
                  explicitClassId: classId,
                  category: category,
@@ -4880,7 +4887,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261104
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261104_v121');
+      const sm = await import('./student-management.js?v=20261105_v129');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }

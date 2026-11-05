@@ -1,3 +1,228 @@
+## SESSION-20261105-1000
+
+Start: 2026-11-05 09:40 UTC+8
+End: 2026-11-05 10:00 UTC+8
+Agent: Antigravity
+
+### User Request
+- `/goal` directive to execute consolidated master plan for 7x7 Repetitive Mastery harmonization, acoustic homophone tolerance engine, and student progression deadlock resolution.
+
+### Objective
+- Audit open/pinned plans, state status (`SUDAH` vs `BELUM`), and consolidate remaining pending work into one master plan artifact: `unified_homophones_repetition_gating_and_system_alignment_plan.md`.
+- Implement acoustic homophone tolerance engine (`buy/bye`, `wrap/rap`, `sea/see`, `meat/meet`, `hour/our`) for spoken tests with 1.0 pt award, while maintaining spelling rigor for written tests.
+- Resolve Ayya Sofyandi & Adinda Karunia progression block at 6 passes by standardizing 7 passes and connecting passing score to `minimum_required_score` (50% for C1/C2 tasks).
+- Harmonize result page, dashboard pass counters, and `startTest` backend checks.
+- Bump cache buster to `v=20261105_v129` (SW `topscore-cache-option-a-v57`).
+
+### Work Performed
+1. Audited all 5 system plans:
+   - `dashboard_blueprint_and_exam_gating_plan.md`: **[IMPLEMENTED] (SUDAH)**
+   - `test_page_fixes_and_cleanup_plan.md`: **[IMPLEMENTED] (SUDAH)**
+   - `answer_tolerance_homophones_and_vault_fix_plan.md`: **[IMPLEMENTED] (SUDAH)**
+   - `ranking_points_priority_and_score_over100_fix_plan.md`: **[IMPLEMENTED] (SUDAH)**
+   - `unified_homophones_repetition_gating_and_system_alignment_plan.md`: **[IMPLEMENTED] (SUDAH)**
+2. Deployed Acoustic Homophone Engine in `js/grading.js`:
+   - Curated `HOMOPHONE_MAP` and `isAcousticHomophoneMatch`.
+   - In `mode === 'spoken'`, homophones receive 1.0 pt (`correct`, `is_homophone: true`).
+   - In `mode === 'written'`, homophones are strictly rejected (spelling test integrity).
+   - Letter spelling with spaces (`"b u y"`, `"b-u-y"`) and hyphens (`"high-quality"`, `"high quality"`) normalized to 1.0 pt.
+3. 7x7 Repetitive Mastery & Prerequisite Gating Harmonization:
+   - `fetchClassTestSettings`: sets default `taskMinScore: 50`.
+   - `fetchStudentTaskPassCounts`: inspects `effective_score` and individual `minimum_required_score`.
+   - `startTest`: validates prerequisites against task `minimum_required_score` (50%) with `targetReps: 7`.
+   - `result.js`: ensures vocabulary classes strictly use `targetReps: 7`. Renders `"CONTINUE THE DRILL (X/7): [TEST] →"` with grade color border until pass 7 is achieved.
+   - `dashboard.js`: aligns up-next drill logic and level modal pass count calculations with individual test minimum passing scores.
+4. Verified Ayya Sofyandi Mzeth has 7/7 passes on 2C1 and is 100% eligible for 2C2. Verified Adinda Karunia Farela has 6/7 passes on 2C1 and is directed to complete drill 7/7 before 2C2 unlocks.
+5. Cache & Deployment: Bumped cache busters across all HTML and JS files to `v=20261105_v129` and updated SW to `topscore-cache-option-a-v57`.
+6. Verified 100% test pass via `npm test`.
+
+### Verification
+- `npm test`: PASS (100%)
+  - `node scripts/check_all_js_syntax.cjs`: PASS (45/45 files)
+  - `node scripts/generate_sw_manifest.mjs`: PASS (27 assets valid)
+  - `node scripts/test_student_dashboard_exam_parity.mjs`: PASS
+  - `node scripts/test_homophones_spoken_mode.mjs`: PASS (23/23 tests)
+- `node scripts/test_prereq_simulation.mjs`: PASS (Ayya 7/7, Adinda 6/7)
+
+### Resume From
+All goals completed and verified. Production ready.
+
+---
+
+## SESSION-20261105-0950
+
+Start: 2026-11-05 08:35 UTC+8
+End: 2026-11-05 09:50 UTC+8
+Agent: Antigravity
+
+### User Requests
+1. "nilai dan rangking disini tidak menggambarkan urutan yang tepat, siswa dengan poin lebih tinngi mendapatkan rang lebih rendah... dan kenapa emua siswa dapat star? apa yang terjadi? pada gambar dua,,,spertinya ada kesalhan dalam penghitungan presentase untuk score, sebab tidak mungkin score lebih dari 100% pasti ada kesalahan,,, perbaiki! /plan"
+2. "saat mencapai 6 kali pengulangan siswa atas nama Ayya tidak bisa lanjut ke task berikutnya, dalam sistem ituseharusnya 7 , saya ingin tahu masalahnya. dan atas nama Adinda juga ada masalah saat lanjut, apa yang terjadi? coba petakan dan amsukkan dalam plan homofon untuk kita terapkan nanti."
+3. "halaman result kita buat agar full screen sama seperti halaman Test.? kalau bisa laksanakan ya!"
+4. "ada beberapa plan yang sedang terbuka dan di pin di halaman tengah, mana yang sudah dan belum? yang sudah tolong dinyatakan sudah dan yang belum dinyatakan belum. cek dan lakukan, dan kalau ada process yang belum jadikan semua plan itu jadi satu plan saja, gabungkan nama mereka /goal"
+
+### Objective
+1. Audit all open plans: mark finished plans as `SUDAH` (`[IMPLEMENTED]`), consolidate uncompleted items into a single unified plan (`unified_7x7_repetition_homophones_and_fullscreen_plan.md`), and execute it under `/goal`.
+2. Fix standings leaderboard rank inversion: prioritize total exam points (`PTS`) before percentage (`SCORE`).
+3. Fix score > 100% bug (Laura Fardila 143%) and false star inflation. Sanitize corrupted attempts in database.
+4. Diagnose and resolve Ayya Sofyandi and Adinda Karunia 6-repetition progression deadlock.
+5. Implement Acoustic Homophone Engine in `js/grading.js` and `supabase/functions/submit-test/index.ts` for spoken assessments (award 1.0 pt for homophones like "buy"/"bye", "wrap"/"rap", while written mode strictly rejects homophones).
+6. Enable seamless Fullscreen Result Page (`result.html`).
+
+### Work Performed
+1. Audited all 5 existing plans and marked them `[IMPLEMENTED]`. Created consolidated plan [unified_7x7_repetition_homophones_and_fullscreen_plan.md](file:///C:/Users/ASUS/.gemini/antigravity/brain/d0becf79-0b35-4dd7-9c68-d3cf720128cf/unified_7x7_repetition_homophones_and_fullscreen_plan.md).
+2. Resolved Ayya & Adinda deadlock: harmonized all 59 tests in database to `payload.task_repetitions = 7` using `scripts/harmonize_task_repetitions_to_7.mjs`. Updated prerequisite checks in `js/api.js` and `supabase/functions/start-test/index.ts` to dynamically use task's `minimum_required_score`.
+3. Standings leaderboard Points-First sorting implemented in `js/dashboard.js`.
+4. Fixed manual score bug in `js/api.js:batchSaveManualScores` where points were saved to `effective_score` instead of percentage. Sanitized 241 database rows via `scripts/sanitize_attempts_effective_score.mjs`. Clamped `effective_score` to [0, 100] in `js/result.js` and `js/dashboard.js`.
+5. Built `HOMOPHONE_MAP` and `isAcousticHomophoneMatch()` in `js/grading.js` and `supabase/functions/submit-test/index.ts`. Spoken mode awards 1.0 pt (correct), written mode rejects homophones.
+6. Seamless fullscreen on `result.html`: bypassed `document.exitFullscreen()` on test submit, added glass toggle button `#result-fullscreen-btn`, and graceful exit on lobby return.
+7. Bumped cache busters to `v=20261105_v127` and updated SW manifest.
+
+### Verification
+- `node scripts/test_homophones_spoken_mode.mjs`: PASS (23/23 tests).
+- `node scripts/test_student_dashboard_exam_parity.mjs`: PASS.
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files).
+- `npm test`: PASS 100% across all 4 suites.
+
+### Resume From
+All pending tasks and goals completely resolved. Production ready.
+
+---
+
+
+
+Start: 2026-11-05 07:35 UTC+8
+End: 2026-11-05 08:35 UTC+8
+Agent: Antigravity
+
+### User Requests
+1. "dalam sistem, saat siswa menjawab 'high quality' untuk 'high-quality' masih dinyatakan salah... kita sudah sepakati kalau tanda baca seperti ',', '.', '!', '-', dan lain2 tidak dihitung sebagai bagian dari penilaian. coba perbaiki ini, siswa sering mengeluh. begitu juga spasi, apakah bisa kita abaikan?... atau mungkin kita sediakan mode mengeja, selain berbicara? niat saya adalah saat mereka mengeja, spasinya diabaikan agar jawabannya bisa benar. /plan /grill-me saya tadi coba edit kata dalam vocabulary vault tapi setelah tekan tombolnya tidak ada reaksi apapun, coba diperbaiki. sekalian cek mojibake."
+2. "gambar 1, cek error yang muncul di result page. gambar 2. disana muncul tombol next test, sementara seharusnya mereka lakukan 7 kali, siswa terpaksa harus bolak balik ke lobby, perbaiki agar next test yang muncul adalah task yang sama kalau memang belum 7 kali di kelas Vocabulary. Masukkan ini dalam plan."
+3. "1. warna tombol TETAP MENGIKUTI warna grade yang diperoleh. E, D, C, B, A, STAR, label 'CONTINUE THE DRILL (X/7)', 'RETRY THE DRILL (X/7)', dan 'ADVANCE TO NEXT TASK: [C2 WORDS / PHRASES]'. 2. sepertinya homofon kita perlu tinjau dulu. jangan diterapkan. 3. saat mengeja 'buy' yang muncul adalah 'b u y' ini kita usahakan menjadi jawaban yang bisa diterima apabila hurufnya memang sama. cari cara dan buat rencana. 4. oke. selain itu apakah kamu ada lagi saran?"
+4. User approved plan: `answer_tolerance_homophones_and_vault_fix_plan.md`.
+
+### Objective
+Implement all approved tasks:
+1. Punctuation and hyphen tolerance ("high quality" vs "High-Quality").
+2. Letter spelling space tolerance ("b u y" -> "buy"). Homophones excluded per user directive.
+3. Result page 7x repetition drill loop with dynamic grade color CTA button.
+4. Service Worker syntax error and CSP fix in `sw.js`.
+5. Vocabulary Vault edit button click crash (`TypeError`) fix in `js/admin/vocab-vault.js`.
+6. Mojibake cleanup and Direct English localization in `dashboard.html`.
+7. Targeted historical rescore of past attempts in database.
+8. Mark plan as [IMPLEMENTED], bump cache busters to `v=20261105_v127`, SW cache to `v55`, and run all tests.
+
+### Work Performed
+1. `js/grading.js`: Added unicode dash/hyphen removal to `cleanPunctuationAndSymbols`; verified compact string matching in `evaluateAnswer` so spelling ("b u y" -> "buy") and hyphen stripping ("high quality" -> "High-Quality") award 1.0 pt.
+2. `js/api.js`: Passed `question_type` to `evaluateAnswer`; added Post-Submit Tolerance & Spelling Sync to audit scored attempts against client tolerance engine.
+3. `js/result.js`: Updated `determineNextMilestone()` to retain current drill as next test until 7/7 passes reached; formatted labels per user directive ("CONTINUE THE DRILL (X/7):", "RETRY THE DRILL (X/7):", "ADVANCE TO NEXT TASK:"); applied dynamic earned grade color (`--tier-color` from `getGradeColorByScore`) to the CTA button; enabled direct restart navigation.
+4. `sw.js`: Removed duplicate `const url` on line 65; added `self.skipWaiting()` and `self.clients.claim()`; added third-party origin bypass so Google Fonts load natively without CSP interception.
+5. `js/admin/vocab-vault.js`: Added `.cell-code.cell-topic-code` to table row rendering; added null-guards to all cell queries in edit mode; added optional chaining in save mode.
+6. `dashboard.html`: Cleaned `â† â€™` into `&rarr;`; localized Indonesian text into Direct English; restored clean emoji icons.
+7. `scripts/apply_hyphen_and_spelling_rescore.mjs`: Rescored 80 historical student answers and recalculated 40 student attempt records with updated scores, percentages, and official grades.
+8. `supabase/migrations/20261105080000_upgrade_answer_tolerance_and_spelling.sql`: Migration created with clean_answer_text, strip_answer_symbols, and emergency_submit_attempt RPC.
+9. Plan artifact: Marked as `Status: [IMPLEMENTED]`.
+10. Cache Buster Bump: Bumped to `v=20261105_v127` and SW cache to `v55`.
+
+### Verification
+- `node scripts/test_answer_tolerance_and_spelling.mjs`: PASS (5/5 suites).
+- `node scripts/check_all_js_syntax.cjs`: PASS (45 files checked).
+- `npm test`: PASS (Syntax + Manifest + Dashboard Parity 100%).
+
+---
+
+## SESSION-20261105-0735
+
+Start: 2026-11-05 06:10 UTC+8
+End: 2026-11-05 07:35 UTC+8
+Agent: Antigravity
+
+### User Requests
+1. "1. disni terlihat siswa bisa akses exam padahal belum waktunya,coba temukan akar masalahnya, dan petakan dengan baik, cari solusinya. 2. INI DESAIN dashboard. 3. coba cek ulang grade dan score siswa sesui yang ad di data results. 4. di bagian ini header panel belum pas, buat agar ukrannya sama di sepanjang tabel, ini sepertinya masih ada sisa ruang kosong, coba cek. 5. nama test belum full keluar. kalau emang harus ditambah tinggi panel, coba berikan estimasi ukurannya agar cocok. /plan"
+2. "tmabahkan pada plan atdi,,, bagian ini tidak perlu ada. lalu cek bottom banner di SEMUA halaman, pada dashborad, dan test page dia sering hilang, di result page juga cek lagi. masukkan juga dalam plan"
+3. "sebelum terapakan rencana, ini ada satu lagi, (gambar 1) pada jumlah soal exam, jumlah soal yanga ada seharsunya adalah akumulatif dari tiap tema, exam A tema A, Exam B tema A+B Tema C soal A+B+C dst... disini masih belum sesuai jumlah soal examnya. (Gambar 2) nilai siswa sepertinya mengambil dari jumlah soal yang ada di exam saat ini, setelah jumlah soal pada examdiperbaiki, maka coba sesuaikan nilai score dan grade mereka. masukkan dalam plan yang tadi kalau bisa, kalau tidak buat plan sendiri yang nanti akan saya terapkan terpisah,"
+4. "baik, urutkan sesuai saranmu, proceed dan setelah selsai, tandai plan ini sebagai "implemented" agar saya tidak salah kira bahwa dia belum diterapkan. /goal"
+
+### Objective
+Implement all 8 components in approved execution order:
+1. Component 7: Cumulative exam questions calculation in Admin Class Tests (`js/admin/app.js`).
+2. Component 1: Add `shell_code, payload` in `js/api.js` and restore prerequisites gating + eliminate "Topic null" in `js/dashboard.js`.
+3. Component 2: Student score and grade parity with completed exams (Rule 2.8) in `js/dashboard.js`.
+4. Component 3: Equal 50%/50% dock panel headers in `css/dashboard.css`.
+5. Component 4: 50px card heights and 2-line title clamp in `css/dashboard.css`.
+6. Component 5: Removal of 7-box repetition deck across `dashboard.html`, `js/dashboard.js`, `css/dashboard.css`.
+7. Component 6: Permanent fixed bottom banner across `css/dashboard.css`, `css/test.css`, `css/result.css`.
+8. Result page button boundary overflow and CSP resolution in `css/result.css`, `vercel.json`, `sw.js`.
+9. Cache buster bump to `v=20261105_v126`, SW cache to `v54`, tests pass, and mark plan IMPLEMENTED.
+
+### Work Performed
+1. `js/admin/app.js`: Fixed `vaultCountFor` so cumulative themes for exams are not discarded by `pl.theme_code`.
+2. `js/api.js` & `js/dashboard.js`: Added `shell_code, payload` to `fetchTestsForStudentClass`; added multi-source extraction for theme and topic codes; fixed title formatting to prevent "Topic null"; restored locking of exams until required tasks pass 7/7.
+3. `js/dashboard.js`: Calculated top card score and grade as average percentage of completed exams (87% Grade B for Queen Isnantika Salsabila); updated leaderboard rankings to match completed exam score.
+4. `css/dashboard.css`: Aligned `.dock-tab-header` to 50%/50% width without blank right margins; aligned card heights to 50px; clamped `.next-test-title` to 2 lines without ellipsis truncation; removed Section 5 repetition deck styles; set `.topscore-locked-banner` to fixed at bottom with 50px body padding.
+5. `dashboard.html`: Removed Section 5 repetition deck container.
+6. `css/test.css`: Fixed bottom banner to `position: fixed` with 50px margin on `.test-body`.
+7. `css/result.css`: Fixed bottom banner to `position: fixed` with 50px padding on body; adjusted `.btn-next-milestone` to 46px-54px flexible height with 2-line clamp on `.next-btn-title`.
+8. `vercel.json`: Added `https://fonts.googleapis.com https://fonts.gstatic.com` to `connect-src`.
+9. `sw.js`: Patched offline document fallback to ensure a valid `Response` is returned.
+10. Cache Buster & Tests: Bumped cache buster to `v=20261105_v126`; SW cache to `v54`; ran syntax check (42/42 PASS); ran `npm test` (PASS 100%).
+11. Plan: Marked `dashboard_blueprint_and_exam_gating_plan.md` as `IMPLEMENTED`.
+
+### Verification
+- `node scripts/check_all_js_syntax.cjs`: PASS (42/42 JS files passed syntax validation).
+- `npm test`: PASS (27 assets confirmed on disk, all student dashboard parity checks passed 100%).
+- All 8 plan components implemented and verified.
+
+---
+
+## SESSION-20261105-0600
+
+Start: 2026-11-05 05:20 UTC+8
+End: 2026-11-05 06:00 UTC+8
+Agent: Antigravity
+
+### User Requests
+1. "1. cek semua error pada halaman test 2. ngka berwarna kuing pada samping timer itu apa? saya tidak pernah minta, cek, kalau tidak penting, buang! 3. di bawah oal ada pnejelasan tentang part of speech, itu hapus, metadata soal sdah ada di bawah kolom soal. tombol next perludiperbaiki. cek lagi semua errornya /plan"
+2. "sekalian tambah di result page dicek error yang ada, dan di bagian pada gambar no 2 tulisan nama ssesemnt itu seprtinya sampai kwluar batas kotak, seuaikan danmasukkan dalam plan"
+
+### Objective
+1. Fix test page errors (CORS preflight & aborted `HEAD` request).
+2. Remove yellow pacing badge (`⚡ ~20s/q`) beside the timer.
+3. Remove redundant part-of-speech badge `[ ADJECTIVE ]` from prompt card.
+4. Overhaul Next button styling (`btn-nav-next`, 48px height) and sequential navigation (`renderQuestion(idx + 1)`).
+5. Fix result page console errors (Service Worker Google Fonts `TypeError` & CSP `connect-src` violation).
+6. Fix result page Next Assessment button boundary overflow & typo (`GO TO NEXT ASSESSMENT:`).
+
+### Work Performed
+1. `test.html`, `js/test.js`, `css/test.css`:
+   - Removed `#test-pacing-indicator` element, `updatePacingBadge` function, and CSS declarations.
+   - Removed `[ ${displayType} ]` from question card in both written and spoken/MCQ modes.
+   - Standardized `bottomNext`: kept `.btn-nav-next` class, 48px height, and sequential progression.
+2. `js/api.js`, `js/supabase.js`:
+   - Added circuit breaker for undeployed Edge Functions to avoid red CORS preflight errors.
+   - Replaced `select('*', { count: 'exact', head: true })` with `head: false, limit: 1` to prevent aborted requests.
+3. `sw.js`, `netlify.toml`:
+   - Bypassed third-party origins (`fonts.googleapis.com`) in `sw.js` to eliminate CSP `connect-src` errors.
+   - Returned valid `Response` in `.catch()` handlers to eliminate `TypeError: Failed to convert value to 'Response'`.
+   - Added fonts to `connect-src` in `netlify.toml`.
+4. `css/result.css`, `js/result.js`:
+   - Fixed typo to `"GO TO NEXT ASSESSMENT:"`.
+   - Increased slot and button height to 44px with balanced padding (3px 10px).
+   - Set tag font size to 8.5px and title font size to 11px (line-height: 1.15), completely resolving text overflow.
+5. Verification:
+   - Playwright E2E verification PASS 100% on `test.html` and `result.html`.
+   - Captured screenshots: `test_page_verified.png` and `result_page_verified.png`.
+   - 42/42 JS syntax checks PASS.
+   - `npm test` PASS 100%.
+
+### Outstanding
+- None.
+
+### Resume From
+Ready for user testing or next instruction.
+
+---
+
 ## SESSION-20261104-1940
 
 Start: 2026-11-04 18:30 UTC+8

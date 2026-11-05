@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
       const prereqAttempts = prereqAttRes.data || [];
       const prereqTest = prereqTestRes.data;
 
-      const reqScore = test.prerequisite_min_score || 70;
+      const reqScore = test.prerequisite_min_score || prereqTest?.minimum_required_score || 50;
       const isPrereqExam = (prereqTest?.test_type || '').toLowerCase() === 'exam' ||
                            (prereqTest?.category || '').toUpperCase() === 'EXAM' ||
                            (prereqTest?.shell_code || '').toUpperCase().endsWith('-EXAM');
@@ -427,7 +427,7 @@ Deno.serve(async (req) => {
           const priorTopicNum = topicNum - 1;
           const { data: priorTopicTasks } = await supabase
             .from('tests')
-            .select('id, payload, test_type, category, shell_code')
+            .select('id, payload, test_type, category, shell_code, minimum_required_score')
             .eq('class_id', test.class_id)
             .eq('level_id', test.level_id)
             .is('deleted_at', null);
@@ -452,6 +452,7 @@ Deno.serve(async (req) => {
               .in('test_id', priorTaskIds)
               .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
 
+            const taskMap: Record<string, any> = Object.fromEntries(filteredPriorTasks.map((t: any) => [t.id, t]));
             const passCountByTask: Record<string, number> = {};
             if (priorAttempts) {
               priorAttempts.forEach((att: any) => {
@@ -459,23 +460,20 @@ Deno.serve(async (req) => {
                   passCountByTask[att.test_id] = Math.max(passCountByTask[att.test_id] || 0, 7);
                 } else {
                   const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-                  if (pct >= 70) {
+                  const minReq = Number(taskMap[att.test_id]?.minimum_required_score || taskMap[att.test_id]?.payload?.min_score || 50);
+                  if (pct >= minReq) {
                     passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
                   }
                 }
               });
             }
 
-            const unmasteredTask = priorTaskIds.find((tid: string) => (passCountByTask[tid] || 0) < 7);
+            const unmasteredTask = filteredPriorTasks.find((t: any) => (passCountByTask[t.id] || 0) < 7);
             if (unmasteredTask) {
+              const unmasteredMin = unmasteredTask.minimum_required_score || unmasteredTask.payload?.min_score || 50;
               return new Response(JSON.stringify({
-                error: `Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (7 passes with at least 70%) on Topic ${themeCode}${priorTopicNum} before starting Topic ${topicNum}.`
+                error: `Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (7 passes with at least ${unmasteredMin}%) on Topic ${themeCode}${priorTopicNum} before starting Topic ${topicNum}.`
               }), {
-                status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
-              });
-            }
-          }
-        }
                 status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
               });
             }

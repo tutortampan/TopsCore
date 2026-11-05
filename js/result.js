@@ -5,11 +5,11 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261104_v122';
-import { isExam, getGradeColorByScore } from './grading.js?v=20261104_v122';
-import { getStudentSession, getAdminSession } from './session.js?v=20261104_v122';
-import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261104_v122';
-import { getSupabase } from './supabase.js?v=20261104_v122';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261105_v129';
+import { isExam, getGradeColorByScore } from './grading.js?v=20261105_v129';
+import { getStudentSession, getAdminSession } from './session.js?v=20261105_v129';
+import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261105_v129';
+import { getSupabase } from './supabase.js?v=20261105_v129';
 
 let session = getStudentSession();
 if (!session) {
@@ -421,17 +421,45 @@ if (!session) {
           return score >= req;
         };
 
-        let nextTest = published.find(a => !isPassed(a));
-
-        // Phase 298: Component Smart Peer Transition (Words vs Phrases)
         const curAsm = attempt.tests || attempt.Tests;
         const curThemeCode = curAsm?.payload?.theme_code || (curAsm?.shell_code ? curAsm.shell_code.replace(/^[0-9]+/, '').charAt(0) : '');
         const curTopicCode = curAsm?.payload?.topic_code != null ? String(curAsm.payload.topic_code) : null;
         const curIsExam = isExam(curAsm);
 
-        if (curThemeCode) {
-          if (!curIsExam && curTopicCode) {
-            // Task: Sibling component in the same topic needs balancing
+        // Fetch dynamic test system settings for this class (target repetitions & pass threshold)
+        const currentClass = (classes || []).find(c => c.id === currentClassId);
+        const isVocabClass = currentClass && (
+          /vocab/i.test(currentClass.name || '') ||
+          (allAssms || []).some(t => t.class_id === currentClassId && (/WORDS|PHRASE/i.test(t.shell_code || '') || /words|phrases/i.test(t.payload?.category || '')))
+        );
+        const testSettings = currentClassId ? await fetchClassTestSettings(currentClassId).catch(() => null) : null;
+        const targetReps = isVocabClass ? (Number(testSettings?.taskRepetitions) || 7) : (Number(testSettings?.taskRepetitions) || 1);
+        const minScore = Number(curAsm?.minimum_required_score) || Number(curAsm?.payload?.min_score) || Number(testSettings?.taskMinScore) || 50;
+
+        // Current drill pass count & outcome
+        const currentPassCount = (allAtts || []).filter(at =>
+          at.test_id === curAsm?.id &&
+          (parseFloat(at.percentage || 0) >= minScore || parseFloat(at.effective_score || 0) >= minScore)
+        ).length;
+        const currentAttemptPassed = (parseFloat(attempt.percentage || 0) >= minScore) || (parseFloat(attempt.effective_score || 0) >= minScore);
+
+        let nextTest = null;
+        let actionTag = 'GO TO NEXT ASSESSMENT:';
+
+        // 1. REPETITIVE DRILL LOOP: Stay on current task until target repetitions (e.g. 7 passes) are achieved
+        if (!curIsExam && targetReps > 1 && currentPassCount < targetReps) {
+          nextTest = curAsm;
+          if (currentAttemptPassed) {
+            actionTag = `CONTINUE THE DRILL (${currentPassCount}/${targetReps}):`;
+          } else {
+            actionTag = `RETRY THE DRILL (${currentPassCount}/${targetReps}):`;
+          }
+        } else {
+          // 2. Current drill completed (or Exam completed): Advance to next sibling task, next topic task, or next exam
+          actionTag = 'ADVANCE TO NEXT TASK:';
+
+          if (curThemeCode && !curIsExam && curTopicCode) {
+            // Task: Sibling component in same topic (e.g. phrases) needs balancing to target repetitions
             const siblingTask = published.find(a =>
               !isExam(a) &&
               a.id !== curAsm?.id &&
@@ -439,13 +467,15 @@ if (!session) {
               String(a.payload?.topic_code || '') === String(curTopicCode)
             );
             if (siblingTask) {
-              const siblingPassCount = (allAtts || []).filter(at => at.test_id === siblingTask.id && (parseFloat(at.percentage || 0) >= 70)).length;
-              const currentPassCount = (allAtts || []).filter(at => at.test_id === curAsm?.id && (parseFloat(at.percentage || 0) >= 70)).length;
-              if (siblingPassCount < currentPassCount || (siblingPassCount < 7 && currentPassCount >= 7)) {
+              const sibMin = Number(siblingTask.minimum_required_score) || Number(siblingTask.payload?.min_score) || minScore;
+              const siblingPassCount = (allAtts || []).filter(at => at.test_id === siblingTask.id && (parseFloat(at.percentage || 0) >= sibMin || parseFloat(at.effective_score || 0) >= sibMin)).length;
+              if (siblingPassCount < targetReps) {
                 nextTest = siblingTask;
               }
             }
-          } else if (curIsExam) {
+          }
+
+          if (!nextTest && curIsExam && curThemeCode) {
             // Exam: Sibling exam in the same theme
             const siblingExam = published.find(a =>
               isExam(a) &&
@@ -455,6 +485,16 @@ if (!session) {
             if (siblingExam && !isPassed(siblingExam)) {
               nextTest = siblingExam;
             }
+          }
+
+          if (!nextTest) {
+            // Find next uncompleted test in published list
+            nextTest = published.find(a => {
+              if (isExam(a)) return !isPassed(a);
+              const aMin = Number(a.minimum_required_score) || Number(a.payload?.min_score) || minScore;
+              const passes = (allAtts || []).filter(at => at.test_id === a.id && (parseFloat(at.percentage || 0) >= aMin || parseFloat(at.effective_score || 0) >= aMin)).length;
+              return passes < targetReps;
+            });
           }
         }
         if (!nextTest) {
@@ -468,13 +508,18 @@ if (!session) {
         }
 
         const isTest = isExam(nextTest);
-
         const nextName = nextTest.title || nextTest.shell_code || 'Next Test';
+        const safeAttemptPct = (() => {
+          const raw = Math.min(100.0, Math.max(0.0, parseFloat(attempt.percentage || 0)));
+          const eff = attempt.effective_score != null ? parseFloat(attempt.effective_score) : raw;
+          return (eff <= 100.0 && eff >= 0.0) ? eff : raw;
+        })();
+        const gradeColor = getGradeColorByScore(safeAttemptPct);
 
         if (!isTest) {
           container.innerHTML = `
-            <button class="btn-next-milestone" id="btn-next-milestone" type="button">
-              <span class="next-btn-tag">GO TO NEXT ASSESMENT:</span>
+            <button class="btn-next-milestone" id="btn-next-milestone" type="button" style="--tier-color: ${gradeColor}; border-color: ${gradeColor}; box-shadow: 0 4px 14px ${gradeColor}55;">
+              <span class="next-btn-tag">${escapeHtml(actionTag)}</span>
               <span class="next-btn-title">${escapeHtml(cleanTitle(nextName))} &rarr;</span>
             </button>
           `;
@@ -492,8 +537,8 @@ if (!session) {
 
           if (isUnlocked && isWhitelisted) {
             container.innerHTML = `
-              <button class="btn-next-milestone btn-next-test" id="btn-next-milestone" type="button">
-                <span class="next-btn-tag">GO TO NEXT ASSESMENT:</span>
+              <button class="btn-next-milestone btn-next-test" id="btn-next-milestone" type="button" style="--tier-color: ${gradeColor}; border-color: ${gradeColor}; box-shadow: 0 4px 14px ${gradeColor}55;">
+                <span class="next-btn-tag">${escapeHtml(actionTag)}</span>
                 <span class="next-btn-title">${escapeHtml(cleanTitle(nextName))} &rarr;</span>
               </button>
             `;
@@ -676,9 +721,20 @@ if (!session) {
 
         const asmData = attempt.tests || attempt.Tests;
         const testId = attempt.test_id || attempt.Test_id;
-        const rawPct = parseFloat(attempt.percentage || 0);
+        const rawPct = Math.min(100.0, Math.max(0.0, parseFloat(attempt.percentage || 0)));
         const isRemedial = Boolean(attempt.is_remedial_unlocked);
-        const pct = isRemedial ? Math.min(rawPct, 60.0) : parseFloat(attempt.effective_score ?? rawPct);
+
+        // SAFE EFFECTIVE SCORE RESOLUTION:
+        // effective_score represents percentage (0.0 to 100.0), NEVER raw question points!
+        // If database contains raw points (> 100), fall back to rawPct.
+        let effPct = rawPct;
+        if (attempt.effective_score != null) {
+          const parsedEff = parseFloat(attempt.effective_score);
+          if (parsedEff <= 100.0 && parsedEff >= 0.0) {
+            effPct = parsedEff;
+          }
+        }
+        const pct = isRemedial ? Math.min(effPct, 60.0) : Math.min(effPct, 100.0);
         const grade = getGrade(pct);
         const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, isRemedial) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
         const isGradeS = (grade === '★' || grade === 'S' || grade === 'STAR' || pct >= 100);
@@ -1891,5 +1947,80 @@ if (!session) {
         closeAnswersModal();
       }
     });
+
+    // ─── Smart Web Proctored Shield: Fullscreen Helpers for Result Page ───
+    async function requestFullscreenMode() {
+      try {
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) await docEl.requestFullscreen();
+        else if (docEl.webkitRequestFullscreen) await docEl.webkitRequestFullscreen();
+        else if (docEl.mozRequestFullScreen) await docEl.mozRequestFullScreen();
+        else if (docEl.msRequestFullscreen) await docEl.msRequestFullscreen();
+      } catch (err) {
+        console.warn('Fullscreen request bypassed or denied:', err);
+      }
+    }
+
+    async function exitFullscreenMode() {
+      try {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+        else if (document.mozCancelFullScreen) await document.mozCancelFullScreen();
+        else if (document.msExitFullscreen) await document.msExitFullscreen();
+      } catch (_) {}
+    }
+
+    function isFullscreenActive() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    }
+
+    async function toggleFullscreenMode() {
+      if (isFullscreenActive()) {
+        await exitFullscreenMode();
+      } else {
+        await requestFullscreenMode();
+      }
+    }
+
+    function initResultFullscreen() {
+      const fsBtn = document.getElementById('result-fullscreen-btn');
+      const fsIcon = document.getElementById('fullscreen-icon');
+
+      function updateIcon() {
+        const active = isFullscreenActive();
+        if (fsIcon) fsIcon.textContent = active ? '🗗' : '⛶';
+        if (fsBtn) fsBtn.title = active ? 'Exit Fullscreen' : 'Enter Fullscreen';
+      }
+
+      if (fsBtn) {
+        fsBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await toggleFullscreenMode();
+          updateIcon();
+        });
+      }
+
+      document.addEventListener('fullscreenchange', updateIcon);
+      document.addEventListener('webkitfullscreenchange', updateIcon);
+      updateIcon();
+
+      // If user clicks or taps anywhere on the page and fullscreen is not active yet, auto-request fullscreen
+      const autoEnterOnInteraction = async () => {
+        if (!isFullscreenActive()) {
+          await requestFullscreenMode();
+          updateIcon();
+        }
+      };
+      document.addEventListener('click', autoEnterOnInteraction, { once: true });
+
+      // When clicking back to lobby, gracefully exit fullscreen
+      document.getElementById('back-dashboard-btn')?.addEventListener('click', () => {
+        if (isFullscreenActive()) {
+          exitFullscreenMode();
+        }
+      });
+    }
+
+    initResultFullscreen();
 
     loadResult();

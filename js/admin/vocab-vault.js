@@ -35,9 +35,9 @@ import {
   toOrdinalLevel,
   toShortLevel,
   autoSyncClassTestsForLevel
-} from '../api.js?v=20261104_v116';
-import { showToast, showLoading, hideLoading } from '../app.js?v=20261104_v116';
-import { getSupabase } from '../supabase.js?v=20261104_v116';
+} from '../api.js?v=20261105_v129';
+import { showToast, showLoading, hideLoading } from '../app.js?v=20261105_v129';
+import { getSupabase } from '../supabase.js?v=20261105_v129';
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -154,10 +154,10 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
   area.innerHTML = `
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
       <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
-        
+
         <!-- Controls Bar -->
         <div style="padding: 4px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; flex-shrink: 0;">
-          
+
           <div class="table-toolbar-unified">
             <input type="search" id="vault-search" placeholder="🔍 Search Indonesian, English, or Topic..." class="toolbar-input-38" style="width: 220px;" />
             <select id="vault-level-filter" class="toolbar-input-38" style="width: 125px; cursor: pointer;">
@@ -228,7 +228,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     const importedLevels = Array.from(new Set(words.map(w => w.target_level || 1))).sort((a, b) => a - b);
     if (importedLevels.length === 0) importedLevels.push(1);
     try {
-      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261104_v116');
+      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261105_v129');
       await openAutoGenerateModal({
         availableLevels: importedLevels,
         preSelectedLevels: importedLevels,
@@ -343,7 +343,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
         <td class="cell-institution" style="padding: 6px 8px; font-weight: 600;"><span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(56, 189, 248, 0.35); display: inline-block;">${escapeHtml(w.institutions?.code || w.institution_code || w.institutions?.name || 'CEC')}</span></td>
         <td class="cell-program" style="padding: 6px 8px; font-weight: 600;"><span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(168, 85, 247, 0.35); display: inline-block;">${escapeHtml(w.programs?.name || w.program_name || 'Camp')}</span></td>
         <td class="cell-level" style="padding: 6px 8px; font-weight: 600;"><span style="background: #334155; color: #f8fafc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.15); display: inline-block; white-space: nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(w.target_level) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(w.target_level, true) : (w.target_level || '1st')))}</span></td>
-        <td class="cell-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#a5b4fc;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.topic_code || '—')}</span></td>
+        <td class="cell-code cell-topic-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#a5b4fc;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.topic_code || '—')}</span></td>
         <td class="cell-theme" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</td>
         <td class="cell-topic" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;" title="${escapeHtml(w.topic)}">${escapeHtml(w.topic)}</td>
         <td class="cell-wordtype" style="padding: 6px 12px;">
@@ -398,12 +398,12 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
         if (isEditing) {
           // Save
           const newThemeCode = (tr.querySelector('.edit-theme-code')?.value || '').trim().toUpperCase();
-          const newTheme = tr.querySelector('.edit-theme').value.trim();
+          const newTheme = (tr.querySelector('.edit-theme')?.value || '').trim();
           const newTopicCode = (tr.querySelector('.edit-topic-code')?.value || '').trim().toUpperCase();
-          const newTopic = tr.querySelector('.edit-topic').value.trim();
-          const newIndo = tr.querySelector('.edit-indo').value.trim();
-          const newEng = tr.querySelector('.edit-eng').value.trim();
-          const newType = tr.querySelector('.edit-type').value;
+          const newTopic = (tr.querySelector('.edit-topic')?.value || '').trim();
+          const newIndo = (tr.querySelector('.edit-indo')?.value || '').trim();
+          const newEng = (tr.querySelector('.edit-eng')?.value || '').trim();
+          const newType = tr.querySelector('.edit-type')?.value || word.word_type || 'Vocab';
           const newLevel = parseInt(tr.querySelector('.edit-level')?.value || '1', 10);
 
           if (!newTopic || !newIndo || !newEng) return showToast('Please fill all required fields.', 'error');
@@ -446,12 +446,34 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
         } else {
           // Enter edit mode
           tr.classList.add('editing');
-          tr.querySelector('.cell-level').innerHTML = '<input type="number" class="input edit-level" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.target_level || '1') + '">';
-          tr.querySelector('.cell-theme-code').innerHTML = '<input type="text" class="input edit-theme-code" style="width: 100%; padding: 2px 4px; font-size: 0.75rem; font-family: monospace; text-transform: uppercase;" value="' + escapeHtml(word.theme_code || '') + '" placeholder="e.g. T1">';
-          tr.querySelector('.cell-theme').innerHTML = '<input type="text" class="input edit-theme" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.theme || '') + '" placeholder="Theme name">';
-          tr.querySelector('.cell-topic-code').innerHTML = '<input type="text" class="input edit-topic-code" style="width: 100%; padding: 2px 4px; font-size: 0.75rem; font-family: monospace; text-transform: uppercase;" value="' + escapeHtml(word.topic_code || '') + '" placeholder="e.g. A1">';
-          tr.querySelector('.cell-topic').innerHTML = '<input type="text" class="input edit-topic" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.topic) + '" placeholder="Topic name">';
-          tr.querySelector('.cell-english').innerHTML = '<input type="text" class="input edit-eng" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.english) + '">';
+          const cellLevel = tr.querySelector('.cell-level');
+          if (cellLevel) cellLevel.innerHTML = '<input type="number" class="input edit-level" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.target_level || '1') + '">';
+
+          const cellThemeCode = tr.querySelector('.cell-theme-code');
+          if (cellThemeCode) {
+            cellThemeCode.innerHTML = '<input type="text" class="input edit-theme-code" style="width: 100%; padding: 2px 4px; font-size: 0.75rem; font-family: monospace; text-transform: uppercase;" value="' + escapeHtml(word.theme_code || '') + '" placeholder="e.g. T1">';
+          }
+
+          const cellTheme = tr.querySelector('.cell-theme');
+          if (cellTheme) {
+            cellTheme.innerHTML = '<input type="text" class="input edit-theme" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.theme || '') + '" placeholder="Theme name">';
+          }
+
+          const cellTopicCode = tr.querySelector('.cell-topic-code') || tr.querySelector('.cell-code');
+          if (cellTopicCode) {
+            cellTopicCode.innerHTML = '<input type="text" class="input edit-topic-code" style="width: 100%; padding: 2px 4px; font-size: 0.75rem; font-family: monospace; text-transform: uppercase;" value="' + escapeHtml(word.topic_code || '') + '" placeholder="e.g. A1">';
+          }
+
+          const cellTopic = tr.querySelector('.cell-topic');
+          if (cellTopic) {
+            cellTopic.innerHTML = '<input type="text" class="input edit-topic" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.topic) + '" placeholder="Topic name">';
+          }
+
+          const cellEng = tr.querySelector('.cell-english');
+          if (cellEng) {
+            cellEng.innerHTML = '<input type="text" class="input edit-eng" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.english) + '">';
+          }
+
           const phraseOpts = `
             <option value="Expression"${word.word_type === 'Expression' ? ' selected' : ''}>Expression</option>
             <option value="Idiom"${word.word_type === 'Idiom' ? ' selected' : ''}>Idiom</option>
@@ -464,15 +486,23 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             <option value="Adjective"${word.word_type === 'Adjective' ? ' selected' : ''}>Adjective</option>
             <option value="Adverb"${word.word_type === 'Adverb' ? ' selected' : ''}>Adverb</option>
           `;
-          tr.querySelector('.cell-wordtype').innerHTML = `<select class="input edit-type" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;">
-            <optgroup label="Words">
-              ${vocabOpts}
-            </optgroup>
-            <optgroup label="Phrases">
-              ${phraseOpts}
-            </optgroup>
-          </select>`;
-          tr.querySelector('.cell-indonesian').innerHTML = '<input type="text" class="input edit-indo" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.indonesian) + '">';
+          const cellWordType = tr.querySelector('.cell-wordtype');
+          if (cellWordType) {
+            cellWordType.innerHTML = `<select class="input edit-type" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;">
+              <optgroup label="Words">
+                ${vocabOpts}
+              </optgroup>
+              <optgroup label="Phrases">
+                ${phraseOpts}
+              </optgroup>
+            </select>`;
+          }
+
+          const cellIndo = tr.querySelector('.cell-indonesian');
+          if (cellIndo) {
+            cellIndo.innerHTML = '<input type="text" class="input edit-indo" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.indonesian) + '">';
+          }
+
           btn.innerHTML = '&#128190;'; // Save icon
           btn.title = 'Save';
           btn.style.color = '#00c000ff';
@@ -1636,7 +1666,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
       <div style="flex-shrink: 0; padding: 2px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
           <input type="search" id="vault-topic-search" placeholder="🔍 Search Topics & Themes..." style="width: 200px; height: 32px; font-size: 11.5px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
-          
+
           <!-- Unified Curriculum Tabs (ALL LEVELS + Per Level Filter) -->
           <div style="display: flex; gap: 4px; align-items: center; background: rgba(15,23,42,0.7); padding: 3px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1);" title="Filter Curriculum Level">
             <button type="button" class="btn-blueprint-curriculum-tab" data-lvl="ALL" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 12px; border-radius: 5px; cursor: pointer; transition: all 0.2s ease; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #ffffff; box-shadow: 0 2px 6px rgba(59,130,246,0.4);' : 'background: transparent; color: #94a3b8;'}">🎯 ALL LEVELS (${totalTopicsAll})</button>
@@ -1737,7 +1767,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
   if (btnSettingsBottom) {
     btnSettingsBottom.onclick = async () => {
       try {
-        const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261104_v122');
+        const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261105_v129');
         await openTestSystemSettingsModal({
           classId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
           className: 'Curriculum Blueprint',
@@ -1762,7 +1792,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
       const importedLevels = levels.filter(lvl => (levelStats[lvl]?.topics || 0) > 0);
       if (importedLevels.length === 0) return showToast('No levels with topics detected in Blueprint', 'error');
       try {
-        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261104_v116');
+        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261105_v129');
         await openAutoGenerateModal({
           availableLevels: importedLevels,
           preSelectedLevels: activeLevel === 'ALL' ? importedLevels : [Number(activeLevel)],

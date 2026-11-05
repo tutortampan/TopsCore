@@ -21,9 +21,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261105_v124" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261105_v125" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=20261105_v124" />
+  <link rel="stylesheet" href="css/style.css?v=20261105_v129" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261105_v129" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=20261105_v129" />
 
 
 </head>
@@ -83,7 +83,7 @@
 
         <!-- Center Avatar (Enlarged with Crown Anchor) -->
         <div class="banner-avatar-wrapper" onclick="document.getElementById('banner-photo-input').click();">
-          <span id="banner-avatar-crown" class="avatar-crown-badge hidden" title="Batch Champion">👑</span>
+          <span id="banner-avatar-crown" class="avatar-crown-badge hidden" title="Batch Champion">ðŸ‘‘</span>
           <div id="banner-avatar-container" title="Click to view or change profile">
             <span id="banner-avatar-initial">S</span>
             <img id="banner-avatar-img" class="hidden" alt="Profile Photo" />
@@ -125,7 +125,7 @@
         <div class="classes-bar-left">
           <span class="classes-bar-icon">📚</span>
           <span class="classes-bar-name" id="classes-bar-current-name">Select Class</span>
-          <span class="classes-bar-caret">▾</span>
+          <span class="classes-bar-caret">▼</span>
         </div>
         <div class="classes-bar-right">
           <span class="classes-bar-pct" id="classes-bar-progress-val">0%</span>
@@ -135,15 +135,6 @@
       <div id="dashboard-classes-boxes" class="dashboard-classes-boxes hidden" data-count="1"></div>
     </section>
 
-    <!-- 5. PROGRESS POINTS / REPETITIONS ROW (40px: 7 boxes / last assessment) -->
-    <section id="dashboard-repetition-deck" class="dashboard-repetition-deck" aria-label="Repetition Mastery and Progress">
-      <div id="repetition-deck-left" class="repetition-deck-left">
-        <!-- Populated dynamically by renderRepetitionMasteryRow -->
-      </div>
-      <div id="repetition-deck-right" class="repetition-deck-right">
-        <!-- Populated dynamically by renderRepetitionMasteryRow -->
-      </div>
-    </section>
 
     <!-- 6. NEXT ASSESSMENT BAR (40px: Single Unified Card, no floating label) -->
     <section id="up-next-section" class="dashboard-next-test-deck" aria-label="Next Assessment">
@@ -177,7 +168,7 @@
         <div class="standings-table-wrap" id="batch-leaderboard-container">
           <div class="empty-state p-4 text-center">
             <div class="spinner"></div>
-            <p>Loading Rank Standings…</p>
+            <p>Loading Rank Standings...</p>
           </div>
         </div>
       </div>
@@ -186,7 +177,7 @@
       <div id="dock-pane-completed" class="dock-tab-pane hidden" role="tabpanel">
         <div class="completed-table-wrap" id="completed-Tests-container">
           <div class="empty-state p-4 text-center">
-            <p style="color:var(--clr-text-3);">Loading Completed Tests…</p>
+            <p style="color:var(--clr-text-3);">Loading Completed Tests...</p>
           </div>
         </div>
       </div>
@@ -208,7 +199,7 @@
       </div>
     </div>
 
-    <!-- 🗂️ Flashcard Recovery Modal (Interactive Learning Retention) -->
+    <!-- ðŸ—‚ï¸ Flashcard Recovery Modal (Interactive Learning Retention) -->
     <div class="flashcard-modal-backdrop hidden" id="flashcard-modal" role="dialog" aria-modal="true" aria-label="Missed Words Flashcard Review">
       <div class="flashcard-modal-card">
         <div class="flashcard-modal-header">
@@ -263,7 +254,7 @@
         </div>
         <div class="classes-selector-modal-actions">
           <button type="button" class="btn btn-secondary btn-block" id="btn-open-class-levels">
-            🔍 View All Levels &amp; Detailed Tests
+            ðŸ” View All Levels &amp; Detailed Tests
           </button>
         </div>
       </div>
@@ -276,7 +267,7 @@
           <div>
             <div id="component-modal-badge" style="font-size: 0.7rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">TOPIC ASSESSMENT</div>
             <h3 id="component-modal-title" style="font-size: 1.15rem; font-weight: 800; color: #f8fafc; margin: 0;">Topic Title</h3>
-            <p id="component-modal-subtitle" style="font-size: 0.78rem; color: #94a3b8; margin: 4px 0 0 0;">Pilih bagian yang ingin Anda kerjakan terlebih dahulu:</p>
+            <p id="component-modal-subtitle" style="font-size: 0.78rem; color: #94a3b8; margin: 4px 0 0 0;">Choose which part you want to work on first:</p>
           </div>
           <button class="btn btn-ghost btn-icon btn-sm" id="close-component-modal" aria-label="Close" style="color: #94a3b8; font-size: 1.1rem; cursor: pointer; border: none; background: none;">✕</button>
         </div>
@@ -286,7 +277,7 @@
           <div id="component-opt-words" role="button" tabindex="0" class="component-choice-card" style="padding: 1rem; border-radius: 12px; background: rgba(56, 189, 248, 0.08); border: 1.5px solid rgba(56, 189, 248, 0.3); cursor: pointer; transition: all 0.2s ease;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <span style="font-size: 0.95rem; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
-                <span>📝</span> <span id="component-words-title">Words Component</span>
+                <span>ðŸ“</span> <span id="component-words-title">Words Component</span>
               </span>
               <span id="component-words-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: rgba(56, 189, 248, 0.2); color: #38bdf8;">40 Soal</span>
             </div>
@@ -300,7 +291,7 @@
           <div id="component-opt-phrases" role="button" tabindex="0" class="component-choice-card" style="padding: 1rem; border-radius: 12px; background: rgba(168, 85, 247, 0.08); border: 1.5px solid rgba(168, 85, 247, 0.3); cursor: pointer; transition: all 0.2s ease;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <span style="font-size: 0.95rem; font-weight: 800; color: #c084fc; display: flex; align-items: center; gap: 6px;">
-                <span>💬</span> <span id="component-phrases-title">Phrases Component</span>
+                <span>ðŸ’¬</span> <span id="component-phrases-title">Phrases Component</span>
               </span>
               <span id="component-phrases-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: rgba(168, 85, 247, 0.2); color: #c084fc;">10 Soal</span>
             </div>
@@ -312,7 +303,7 @@
         </div>
 
         <div style="margin-top: 1.25rem; text-align: center;">
-          <span style="font-size: 0.72rem; color: #64748b;">Kedua bagian wajib lulus ≥70% untuk menuntaskan 1 putaran 7×7.</span>
+          <span style="font-size: 0.72rem; color: #64748b;">Both parts must pass &ge;70% to complete 1 round of 7x7.</span>
         </div>
       </div>
     </div>
@@ -413,15 +404,15 @@
               <div class="profile-pin-inputs">
                 <div class="profile-pin-group">
                   <label class="profile-pin-label" for="pin-old">Current</label>
-                  <input type="password" id="pin-old" class="form-control profile-pin-input" placeholder="••••" maxlength="6" required />
+                  <input type="password" id="pin-old" class="form-control profile-pin-input" placeholder="â€¢â€¢â€¢â€¢" maxlength="6" required />
                 </div>
                 <div class="profile-pin-group">
                   <label class="profile-pin-label" for="pin-new">New PIN</label>
-                  <input type="password" id="pin-new" class="form-control profile-pin-input" placeholder="••••" maxlength="6" required />
+                  <input type="password" id="pin-new" class="form-control profile-pin-input" placeholder="â€¢â€¢â€¢â€¢" maxlength="6" required />
                 </div>
                 <div class="profile-pin-group">
                   <label class="profile-pin-label" for="pin-confirm">Confirm</label>
-                  <input type="password" id="pin-confirm" class="form-control profile-pin-input" placeholder="••••" maxlength="6" required />
+                  <input type="password" id="pin-confirm" class="form-control profile-pin-input" placeholder="â€¢â€¢â€¢â€¢" maxlength="6" required />
                 </div>
               </div>
               <button type="submit" class="btn btn-primary profile-pin-submit" id="save-pin-btn">Update PIN</button>
@@ -443,7 +434,7 @@
                   </tr>
                 </thead>
                 <tbody id="tbl-profile-history">
-                  <tr><td colspan="4" class="text-center text-muted p-4">Loading history…</td></tr>
+                  <tr><td colspan="4" class="text-center text-muted p-4">Loading history...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -470,7 +461,7 @@
     <div class="modal-backdrop hidden" id="gender-setup-modal" role="dialog" aria-modal="true" aria-labelledby="gender-setup-title">
       <div class="modal-box gender-setup-box">
         <div class="p-6">
-          <div class="setup-modal-icon">🌟</div>
+          <div class="setup-modal-icon">ðŸŒŸ</div>
           <h2 id="gender-setup-title" class="setup-modal-title">Personalize Your Account</h2>
           <p class="text-sm text-muted mb-6">
             Welcome to TOPS CORE! Please select your gender to personalize your title (<strong>Mr.</strong> / <strong>Miss</strong>):
@@ -479,21 +470,21 @@
           <!-- Gender Choice Cards -->
           <div class="d-flex gap-4 justify-center mb-6 gender-cards-row">
             <div class="gender-card p-5" id="opt-gender-male">
-              <div class="gender-card-icon">👨</div>
+              <div class="gender-card-icon">ðŸ‘¨</div>
               <div class="fw-800 text-lg gender-card-label">Male</div>
               <div class="badge badge-primary mt-2">Title: Mr.</div>
             </div>
             <div class="gender-card p-5" id="opt-gender-female">
-              <div class="gender-card-icon">👩</div>
+              <div class="gender-card-icon">ðŸ‘©</div>
               <div class="fw-800 text-lg gender-card-label">Female</div>
               <div class="badge badge-accent mt-2">Title: Miss</div>
             </div>
           </div>
 
-          <p class="text-xs text-muted mb-6">ℹ️  You can change this anytime later from your Profile settings.</p>
+          <p class="text-xs text-muted mb-6">ℹ️   You can change this anytime later from your Profile settings.</p>
 
           <button class="btn btn-primary btn-block setup-btn-confirm" id="btn-confirm-gender" disabled>
-            Confirm &amp; Continue ←’
+            Confirm &amp; Continue &rarr;
           </button>
         </div>
       </div>
@@ -503,7 +494,7 @@
     <div class="modal-backdrop hidden" id="photo-setup-modal" role="dialog" aria-modal="true" aria-labelledby="photo-setup-title">
       <div class="modal-box photo-setup-box">
         <div class="p-6">
-          <div class="setup-modal-icon">📸</div>
+          <div class="setup-modal-icon">📷</div>
           <h2 id="photo-setup-title" class="setup-modal-title">Student Photo &amp; Device Setup</h2>
           <p class="text-sm text-muted mb-4">
             Welcome to TOPS CORE! Please register your official profile photo and verify your microphone for speaking tests before entering the dashboard.
@@ -516,16 +507,16 @@
             <canvas id="webcam-canvas" class="hidden" width="320" height="320"></canvas>
             <div id="camera-loading-overlay" class="d-flex flex-column align-center justify-center camera-loading-overlay">
               <div class="spinner mb-2"></div>
-              <span>Connecting webcam…</span>
+              <span>Connecting webcam...</span>
             </div>
           </div>
 
           <!-- Camera Controls -->
           <div class="d-flex gap-2 justify-center mb-4 setup-controls-row">
-            <button type="button" class="btn btn-primary btn-sm" id="btn-snap-photo">📸 Capture Photo</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-snap-photo">📷 Capture Photo</button>
             <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-retake-photo">🔄 Retake Photo</button>
             <label class="btn btn-ghost btn-sm btn-upload-label">
-              📈  Upload Image File
+              📁  Upload Image File
               <input type="file" id="onboard-photo-file" accept="image/*" class="hidden" />
             </label>
           </div>
@@ -534,9 +525,9 @@
           <div class="p-3 rounded text-left mb-4" id="mic-status-card">
             <div class="d-flex align-center justify-between">
               <div class="d-flex align-center gap-2">
-                <span id="mic-status-icon">🎙️ </span>
+                <span id="mic-status-icon">🎙️ </span>
                 <div>
-                  <div class="text-xs fw-700" id="mic-status-title">Checking microphone…</div>
+                  <div class="text-xs fw-700" id="mic-status-title">Checking microphone...</div>
                   <div class="text-xs text-muted" id="mic-status-desc">Verifying audio device permissions for speaking tests</div>
                 </div>
               </div>
@@ -548,7 +539,7 @@
             ✓ Save Photo &amp; Enter Dashboard
           </button>
           <button type="button" class="btn btn-ghost btn-block" id="btn-skip-photo-setup">
-            Skip for now &amp; Continue to Dashboard ←’
+            Skip for now &amp; Continue to Dashboard &rarr;
           </button>
         </div>
       </div>
@@ -559,7 +550,7 @@
   <!-- Birthday Setup Modal -->
   <div id="birthday-setup-modal" class="modal-backdrop hidden">
     <div class="birthday-setup-card">
-      <div class="setup-card-icon">📅</div>
+      <div class="setup-card-icon">ðŸ“…</div>
       <h2 class="setup-card-title">Complete Your Profile</h2>
       <p class="setup-card-subtitle">
         Please enter your date of birth to continue. This is required for your student profile.
@@ -575,7 +566,7 @@
   <div id="education-setup-modal" class="modal-backdrop hidden">
     <div class="education-setup-card">
       <div class="education-setup-header">
-        <div class="setup-card-icon">🎓</div>
+        <div class="setup-card-icon">ðŸŽ“</div>
         <h2 class="setup-card-title">Academic Background (Hard Gate)</h2>
         <p class="setup-card-subtitle">
           Mandatory before dashboard access. Provide up to 2 latest academic institutions and years.
@@ -626,12 +617,12 @@
     </div>
   </div>
 
-  <script type="module" src="./js/dashboard.js?v=20261105_v125"></script>
+  <script type="module" src="./js/dashboard.js?v=20261105_v129"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261105_v124')
+        navigator.serviceWorker.register('sw.js?v=20261105_v129')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

@@ -3,12 +3,12 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261105_v124';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261105_v124';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261105_v124';
-    import { testMicrophoneCapability } from './speech.js?v=20261105_v124';
-    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261105_v124';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261105_v124';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261105_v129';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261105_v129';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261105_v129';
+    import { testMicrophoneCapability } from './speech.js?v=20261105_v129';
+    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261105_v129';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261105_v129';
 
     window._isBatchChampion = false;
 
@@ -183,7 +183,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./supabase.js?v=20261105_v124')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261105_v129')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).maybeSingle();
           if (st?.gender) {
             currentGender = st.gender;
@@ -549,7 +549,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
         try {
-          const sb = await (await import('./supabase.js?v=20261105_v124')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261105_v129')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).maybeSingle();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
@@ -568,7 +568,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Background sync: memastikan localStorage selalu sinkron dengan database terbaru
         (async () => {
           try {
-            const sb = await (await import('./supabase.js?v=20261105_v124')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261105_v129')).getSupabase();
             const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).maybeSingle();
             if (st && st.photo_url !== photoUrl) {
               if (st.photo_url) {
@@ -622,7 +622,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
       if (!hasBirthday) {
         try {
-          const sb = await (await import('./supabase.js?v=20261105_v124')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261105_v129')).getSupabase();
           const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).maybeSingle();
           if (st && st.birth_date) {
             hasBirthday = true;
@@ -688,7 +688,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./supabase.js?v=20261105_v124')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261105_v129')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).maybeSingle();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -698,7 +698,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./session.js?v=20261105_v124');
+             const { setStudentSession } = await import('./session.js?v=20261105_v129');
              setStudentSession(session);
           }
         }
@@ -748,7 +748,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./session.js?v=20261105_v124');
+            const { setStudentSession } = await import('./session.js?v=20261105_v129');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -887,12 +887,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (isVocab) {
         // 1. Vocabulary Class: 7 boxes of color & 0/7 up to 7/7
         let targetReps = 7;
-        let minScore = 70;
+        let minScore = 50;
         try {
           if (typeof fetchClassTestSettings === 'function' && activeClassId) {
             const settings = await fetchClassTestSettings(activeClassId).catch(() => null);
             if (settings?.taskRepetitions) targetReps = Number(settings.taskRepetitions) || 7;
-            if (settings?.taskMinScore) minScore = Number(settings.taskMinScore) || 70;
+            if (settings?.taskMinScore) minScore = Number(settings.taskMinScore) || 50;
           }
         } catch (_) {}
 
@@ -922,11 +922,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         classTasks.forEach(t => {
           const atts = taskAttemptsMap[t.id] || [];
           let passes = 0;
+          const tMin = Number(t.minimum_required_score) || Number(t.payload?.min_score) || minScore;
           atts.forEach(a => {
-            const pct = parseFloat(a.percentage ?? a.effective_score ?? 0);
+            const pct = parseFloat(a.effective_score ?? a.percentage ?? 0);
             const st = (a.status || '').toLowerCase();
             if (st === 'submitted' || st === 'auto_submitted' || st === 'evaluated') {
-              if (a.is_forgiven || pct >= minScore) passes++;
+              if (a.is_forgiven || pct >= tMin) passes++;
             }
           });
           passCountByTask[t.id] = passes;
@@ -989,15 +990,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       // Target repetitions & minimum score threshold
       let targetReps = 7;
-      let minScore = 70;
+      let minScore = 50;
       try {
         if (typeof fetchClassTestSettings === 'function' && activeClassId) {
           const settings = await fetchClassTestSettings(activeClassId).catch(() => null);
           if (settings?.taskRepetitions) targetReps = Number(settings.taskRepetitions) || 7;
-          if (settings?.taskMinScore) minScore = Number(settings.taskMinScore) || 70;
+          if (settings?.taskMinScore) minScore = Number(settings.taskMinScore) || 50;
         }
       } catch (_) {}
 
+      const allTestsMap = Object.fromEntries((allTests || []).map(t => [t.id, t]));
       const bestMap = {};
       const passCountByTest = {};
       const isForgivenByTest = {};
@@ -1005,7 +1007,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       (attempts || []).forEach(a => {
         const aid = a.test_id || a.Test_id;
         if (!aid) return;
-        const pct = parseFloat(a.percentage ?? a.effective_score ?? 0);
+        const pct = parseFloat(a.effective_score ?? a.percentage ?? 0);
         if (bestMap[aid] == null || pct > bestMap[aid]) {
           bestMap[aid] = pct;
         }
@@ -1016,8 +1018,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (st === 'submitted' || st === 'auto_submitted' || st === 'evaluated' || st === 'graded') {
           if (a.is_forgiven) {
             passCountByTest[aid] = Math.max(passCountByTest[aid] || 0, targetReps);
-          } else if (pct >= minScore) {
-            passCountByTest[aid] = (passCountByTest[aid] || 0) + 1;
+          } else {
+            const tMin = Number(allTestsMap[aid]?.minimum_required_score) || Number(allTestsMap[aid]?.payload?.min_score) || minScore;
+            if (pct >= tMin) {
+              passCountByTest[aid] = (passCountByTest[aid] || 0) + 1;
+            }
           }
         }
       });
@@ -1582,27 +1587,31 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         // Fetch dynamic test system settings for this class (target repetitions & pass threshold)
         const testSettings = (typeof fetchClassTestSettings === 'function')
-          ? await fetchClassTestSettings(subj.id).catch(() => ({ taskRepetitions: 7, taskMinScore: 70, examMinScore: 60 }))
-          : { taskRepetitions: 7, taskMinScore: 70, examMinScore: 60 };
+          ? await fetchClassTestSettings(subj.id).catch(() => ({ taskRepetitions: 7, taskMinScore: 50, examMinScore: 60 }))
+          : { taskRepetitions: 7, taskMinScore: 50, examMinScore: 60 };
         const targetReps = Number(testSettings?.taskRepetitions) || 7;
-        const taskMinScore = Number(testSettings?.taskMinScore) || 70;
+        const taskMinScore = Number(testSettings?.taskMinScore) || 50;
 
         // Build attempts quick-lookup for this student
         const attemptsRaw = await fetchAllStudentAttempts(session.student_id).catch(() => []);
+        const testsMap = Object.fromEntries(Tests.map(t => [t.id, t]));
         const bestByTest = {};
         const inProgByTest = {};
         const passCountByTest = {};
         for (const att of attemptsRaw) {
           const eid = att.test_id || att.Test_id;
           if (!eid) continue;
-          const pct = parseFloat(att.percentage ?? att.effective_score ?? 0);
+          const pct = parseFloat(att.effective_score ?? att.percentage ?? 0);
           const st  = (att.status || '').toLowerCase();
           if (st === 'in_progress') { inProgByTest[eid] = att; continue; }
           if (st === 'submitted' || st === 'auto_submitted' || st === 'evaluated') {
             if (att.is_forgiven) {
               passCountByTest[eid] = Math.max(passCountByTest[eid] || 0, targetReps);
-            } else if (pct >= taskMinScore) {
-              passCountByTest[eid] = (passCountByTest[eid] || 0) + 1;
+            } else {
+              const tMin = Number(testsMap[eid]?.minimum_required_score) || Number(testsMap[eid]?.payload?.min_score) || taskMinScore;
+              if (pct >= tMin) {
+                passCountByTest[eid] = (passCountByTest[eid] || 0) + 1;
+              }
             }
           }
           if (!bestByTest[eid] || pct > parseFloat(bestByTest[eid].percentage || 0) || (pct === parseFloat(bestByTest[eid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByTest[eid].submitted_at || 0)) || (att.is_forgiven && !bestByTest[eid])) {
@@ -1629,8 +1638,23 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
             for (const t of lvl.Tests) {
               const isEx = isExam(t);
-              const tc = String(t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A')).toUpperCase();
-              const topCode = t.payload?.topic_code != null ? String(t.payload.topic_code) : null;
+              // Robust theme/topic extraction with multi-source fallbacks
+              let _tc = t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : null);
+              if (!_tc && t.title) {
+                const _tm = t.title.match(/Theme\s+([A-D0-9]+)/i) || t.title.match(/Vocabulary\s+C([A-D0-9]+)/i);
+                if (_tm) _tc = _tm[1];
+              }
+              const tc = (_tc || 'A').toUpperCase();
+
+              let topCode = t.payload?.topic_code != null ? String(t.payload.topic_code) : null;
+              if (!topCode && t.shell_code) {
+                const _tm2 = t.shell_code.match(/^[0-9]+([A-D][0-9]+)/i);
+                if (_tm2) topCode = _tm2[1].toUpperCase();
+              }
+              if (!topCode && t.title) {
+                const _tm3 = t.title.match(/Vocabulary\s+([A-D][0-9]+)/i);
+                if (_tm3) topCode = _tm3[1].toUpperCase();
+              }
               const isPhrase = t.payload?.category === 'phrases' || /PHRASE/i.test(t.shell_code || '') || (t.title || '').toLowerCase().includes('phrase');
 
               const key = isEx ? `exam_${tc}` : `task_${tc}_${topCode || '0'}`;
@@ -1784,7 +1808,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
               const displayTitle = grp.isExam
                 ? `Theme ${grp.themeCode} Exam — ${resolvedThemeTitle}`
-                : `Theme ${grp.themeCode} • Topic ${grp.topicCode}: ${resolvedTopicTitle}`;
+                : (grp.topicCode
+                    ? `Theme ${grp.themeCode} • Topic ${grp.topicCode}: ${resolvedTopicTitle}`
+                    : `Theme ${grp.themeCode}: ${resolvedTopicTitle}`);
 
               const metaItems = `${unifiedScore.maxPoints} Items • ${unifiedScore.maxPoints} PTS`;
 
@@ -2519,8 +2545,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           };
 
       const hasExam = (mastery.completedExamCount ?? mastery.completedWeeklyCount ?? 0) > 0;
-      let avgPct = mastery.overallScore;
-      let overallGrade = mastery.grade;
+
+      // Rule 2.8: Use average of completed exam percentages as the academic score (not curriculum-wide denominator)
+      const validExamEntriesForCard = examEntries.filter(e => {
+        const isPureForgivenZero = Boolean(e.isForgiven) && !e.isManual && Number(e.effPoints ?? e.points ?? 0) === 0;
+        return !isPureForgivenZero;
+      });
+      let avgPct = validExamEntriesForCard.length > 0
+        ? Math.round(validExamEntriesForCard.reduce((sum, e) => sum + Number(e.effPct ?? e.pct ?? 0), 0) / validExamEntriesForCard.length)
+        : (hasExam ? mastery.overallScore : 0);
+      let overallGrade = validExamEntriesForCard.length > 0
+        ? (typeof calculateGrade === 'function' ? calculateGrade(avgPct) : mastery.grade)
+        : (hasExam ? mastery.grade : '—');
       let isGradeS = overallGrade === '★' || overallGrade === 'S' || avgPct >= 100;
       let targetColor = '#94a3b8';
       let rgbColor = '148, 163, 184';
@@ -2595,7 +2631,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         document.getElementById('dashboard-grade-legend'),
         document.getElementById('dashboard-achievement-card'),
         document.getElementById('bottom-dock-section'),
-        document.getElementById('dashboard-repetition-deck'),
         document.querySelector('.next-test-card'),
         document.getElementById('dashboard-classes-section'),
         document.getElementById('dashboard-classes-bar'),
@@ -2847,7 +2882,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       try {
-        const sb = await (await import('./supabase.js?v=20261105_v124')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261105_v129')).getSupabase();
 
         // 1. Fetch active students in the same batch
         const { data: students, error: stuErr } = await sb
@@ -2893,9 +2928,20 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             const key = att.test_id;
             if (!key) return;
             const totalQ = Number(att.total_questions || 50);
-            const rawPct = parseFloat(att.percentage || 0);
+            const rawPct = Math.min(100.0, Math.max(0.0, parseFloat(att.percentage || 0)));
             const isRemedial = Boolean(att.is_remedial_unlocked);
-            const effPct = isRemedial ? Math.min(rawPct, 60.0) : parseFloat(att.effective_score ?? rawPct);
+
+            // SAFE EFFECTIVE SCORE RESOLUTION:
+            // effective_score represents percentage (0.0 to 100.0), NEVER raw question points!
+            // If database contains raw points (> 100), fall back to rawPct.
+            let effPct = rawPct;
+            if (att.effective_score != null) {
+              const parsedEff = parseFloat(att.effective_score);
+              if (parsedEff <= 100.0 && parsedEff >= 0.0) {
+                effPct = parsedEff;
+              }
+            }
+            if (isRemedial) effPct = Math.min(effPct, 60.0);
 
             // Raw question points earned
             const rawScore = parseFloat(att.score != null ? att.score : (rawPct * totalQ / 100));
@@ -2973,9 +3019,19 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               };
 
           const totalPoints = mastery.totalPoints;
-          const overallScore = mastery.overallScore;
-          const grade = mastery.grade;
           const completedExamCount = mastery.completedExamCount ?? mastery.completedWeeklyCount ?? examItems.length;
+
+          // Rule 2.8: overallScore = average percentage of COMPLETED valid exams (not curriculum denominator)
+          const validExamItems = examItems.filter(e => {
+            const isPureForgivenZero = Boolean(e.isForgiven) && !e.isManual && Number(e.effPoints ?? e.points ?? 0) === 0;
+            return !isPureForgivenZero;
+          });
+          const overallScore = validExamItems.length > 0
+            ? Math.min(100, Math.max(0, Math.round(validExamItems.reduce((sum, e) => sum + Number(e.effPct ?? e.pct ?? 0), 0) / validExamItems.length)))
+            : 0;
+          const grade = validExamItems.length > 0
+            ? (typeof calculateGrade === 'function' ? calculateGrade(overallScore) : mastery.grade)
+            : '—';
 
           const cleanName = cleanStudentName(st.name || '');
 
@@ -2996,29 +3052,31 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           };
         });
 
-        // 4. Deterministic Multi-Tier Ranking (Progress-First Hierarchy, 100% Parity with Class Hub):
-        // 1. PROG % DESC (overall curriculum progress)
-        // 2. Global PTS DESC (total points from latest exam package: Words + Phrases)
-        // 3. Global SCORE % DESC (exam mastery; unattempted exams sort after completed)
+        // 4. Deterministic Multi-Tier Ranking (Points-First Standings Hierarchy):
+        // Standings columns are NO | STUDENTS NAME | POINT | GRADE.
+        // Higher points must always rank higher!
+        // 1. Global PTS DESC (total points earned)
+        // 2. Global SCORE % DESC (exam mastery percentage; unattempted exams sort after completed)
+        // 3. PROG % DESC (overall curriculum progress)
         // 4. Earliest last submission timestamp
         // 5. Alphabetical clean name
         studentStats.sort((a, b) => {
-          // 1. Primary: PROG % DESC
-          const progA = Number(a.progressPct ?? 0);
-          const progB = Number(b.progressPct ?? 0);
-          if (progA !== progB) return progB - progA;
-
-          // 2. Secondary: Global PTS DESC (latest exam points)
+          // 1. Primary: Global PTS DESC
           const ptsA = Number(a.totalPoints ?? 0);
           const ptsB = Number(b.totalPoints ?? 0);
           if (ptsA !== ptsB) return ptsB - ptsA;
 
-          // 3. Tertiary: Global SCORE % DESC (unattempted exams sort after completed)
+          // 2. Secondary: Global SCORE % DESC (unattempted exams sort after completed)
           const examCountA = a.completedExamCount ?? a.completedWeeklyCount ?? 0;
           const examCountB = b.completedExamCount ?? b.completedWeeklyCount ?? 0;
           const scoreA = (examCountA > 0) ? Number(a.overallScore ?? 0) : -1;
           const scoreB = (examCountB > 0) ? Number(b.overallScore ?? 0) : -1;
           if (scoreA !== scoreB) return scoreB - scoreA;
+
+          // 3. Tertiary: PROG % DESC (overall curriculum progress)
+          const progA = Number(a.progressPct ?? 0);
+          const progB = Number(b.progressPct ?? 0);
+          if (progA !== progB) return progB - progA;
 
           // 4. Earliest last submission timestamp
           if (a.lastSubmittedAt && b.lastSubmittedAt) {
@@ -3118,7 +3176,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                     <span class="leaderboard-student-name">${escHtml(displayTitleName)}</span>
                     ${isMe ? '<span style="color:#38bdf8; font-size:0.7rem; font-weight:700;">(You)</span>' : ''}
                   </div>
-                  <span class="leaderboard-sub-info">${st.completedCount} completed &bull; ${hasExam ? `${st.overallScore}% Progress` : '—'}</span>
+                  <span class="leaderboard-sub-info">${st.completedCount} completed &bull; ${hasExam ? `${st.progressPct ?? st.overallScore}% Progress` : '—'}</span>
                 </div>
               </div>
               <div class="th-col th-point" style="display:flex; align-items:center; justify-content:flex-end;">
@@ -3244,7 +3302,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./supabase.js?v=20261105_v124')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261105_v129')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).maybeSingle();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
@@ -3299,7 +3357,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./supabase.js?v=20261105_v124')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261105_v129')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
 

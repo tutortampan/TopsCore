@@ -1,9 +1,9 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
-import { getSupabase, SUPABASE_URL, callEdgeFunction } from './supabase.js?v=20261105_v124';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261105_v124';
-import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261105_v124';
-import { escapeHtml, escHtml, showToast } from './app.js?v=20261105_v124';
+import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261105_v129';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261105_v129';
+import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261105_v129';
+import { escapeHtml, escHtml, showToast } from './app.js?v=20261105_v129';
 
 export function getGrade(pct) {
   return calculateGrade(pct);
@@ -569,7 +569,7 @@ export async function fetchStudentProgress(studentId) {
 export async function fetchTestsForStudentClass(programId, classId, institutionId, levelId) {
   const sb = await getSupabase();
   let query = sb.from('tests')
-    .select('id, title, display_name, test_subtype, test_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, prerequisite_id, working_duration_minutes, schedule_mode, levels(id, name, level_number)')
+    .select('id, title, shell_code, payload, display_name, test_subtype, test_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, prerequisite_id, working_duration_minutes, schedule_mode, levels(id, name, level_number)')
     .eq('class_id', classId)
     .eq('status', 'PUBLISHED')
     .is('deleted_at', null)
@@ -685,7 +685,7 @@ export async function fetchClassTestSettings(classId = null) {
   const sb = await getSupabase();
   const defaultSettings = {
     taskRepetitions: 7,
-    taskMinScore: 70,
+    taskMinScore: 50,
     examMinScore: 60
   };
 
@@ -719,7 +719,7 @@ export async function fetchClassTestSettings(classId = null) {
         const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
         const res = {
           taskRepetitions: Math.max(1, parseInt(parsed.taskRepetitions, 10) || 7),
-          taskMinScore: Math.min(100, Math.max(1, parseInt(parsed.taskMinScore, 10) || 70)),
+          taskMinScore: Math.min(100, Math.max(1, parseInt(parsed.taskMinScore, 10) || 50)),
           examMinScore: Math.min(100, Math.max(1, parseInt(parsed.examMinScore, 10) || 60))
         };
         if (classId) setLocal(`topscore_test_settings_${classId}`, JSON.stringify(res));
@@ -756,7 +756,7 @@ export async function fetchClassTestSettings(classId = null) {
         const sampleExam = sampleTests.find(t => isWeeklyExam(t));
         const derived = {
           taskRepetitions: Math.max(1, parseInt(sampleTask?.payload?.task_repetitions, 10) || 7),
-          taskMinScore: Math.min(100, Math.max(1, parseInt(sampleTask?.minimum_required_score || sampleTask?.payload?.minimum_required_score, 10) || 70)),
+          taskMinScore: Math.min(100, Math.max(1, parseInt(sampleTask?.minimum_required_score || sampleTask?.payload?.minimum_required_score, 10) || 50)),
           examMinScore: Math.min(100, Math.max(1, parseInt(sampleExam?.minimum_required_score || sampleExam?.payload?.minimum_required_score, 10) || 60))
         };
         setLocal(`topscore_test_settings_${classId}`, JSON.stringify(derived));
@@ -772,7 +772,7 @@ export async function saveClassTestSettings(classId, settings = {}, applyToExist
   const sb = await getSupabase();
   const cleanSettings = {
     taskRepetitions: Math.max(1, parseInt(settings.taskRepetitions, 10) || 7),
-    taskMinScore: Math.min(100, Math.max(1, parseInt(settings.taskMinScore, 10) || 70)),
+    taskMinScore: Math.min(100, Math.max(1, parseInt(settings.taskMinScore, 10) || 50)),
     examMinScore: Math.min(100, Math.max(1, parseInt(settings.examMinScore, 10) || 60))
   };
   const payloadStr = JSON.stringify(cleanSettings);
@@ -881,10 +881,10 @@ export async function fetchStudentTaskPassCounts(studentId, classId = null) {
   const sb = await getSupabase();
   const testSettings = await fetchClassTestSettings(classId);
   const targetReps = Number(testSettings?.taskRepetitions) || 7;
-  const taskMinScore = Number(testSettings?.taskMinScore) || 70;
+  const taskMinScore = Number(testSettings?.taskMinScore) || 50;
 
   let query = sb.from('attempts')
-    .select('test_id, percentage, score, status, is_forgiven, tests!inner(id, class_id, test_type, category, test_subtype)')
+    .select('test_id, percentage, effective_score, score, status, is_forgiven, tests!inner(id, class_id, test_type, category, test_subtype, minimum_required_score, payload)')
     .eq('student_id', studentId)
     .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
 
@@ -896,7 +896,7 @@ export async function fetchStudentTaskPassCounts(studentId, classId = null) {
   if (error || !data) {
     // Fallback: fetch attempts directly without inner join
     const { data: fallbackAtts } = await sb.from('attempts')
-      .select('test_id, percentage, score, status, is_forgiven')
+      .select('test_id, percentage, effective_score, score, status, is_forgiven')
       .eq('student_id', studentId)
       .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
     const passCounts = {};
@@ -905,7 +905,7 @@ export async function fetchStudentTaskPassCounts(studentId, classId = null) {
       if (a.is_forgiven) {
         passCounts[a.test_id] = Math.max(passCounts[a.test_id] || 0, targetReps);
       } else {
-        const pct = parseFloat(a.percentage ?? a.score ?? 0);
+        const pct = a.effective_score != null ? Number(a.effective_score) : parseFloat(a.percentage ?? a.score ?? 0);
         if (pct >= taskMinScore) {
           passCounts[a.test_id] = (passCounts[a.test_id] || 0) + 1;
         }
@@ -920,8 +920,9 @@ export async function fetchStudentTaskPassCounts(studentId, classId = null) {
     if (a.is_forgiven) {
       passCounts[a.test_id] = Math.max(passCounts[a.test_id] || 0, targetReps);
     } else {
-      const pct = parseFloat(a.percentage ?? a.score ?? 0);
-      if (pct >= taskMinScore) {
+      const minReq = Number(a.tests?.minimum_required_score || a.tests?.payload?.min_score || taskMinScore);
+      const pct = a.effective_score != null ? Number(a.effective_score) : parseFloat(a.percentage ?? a.score ?? 0);
+      if (pct >= minReq) {
         passCounts[a.test_id] = (passCounts[a.test_id] || 0) + 1;
       }
     }
@@ -1294,7 +1295,10 @@ export async function startTest(studentId, testId) {
       throw edgeErr; // Re-throw authoritative business logic, draft status & prerequisite access errors
     }
     if (typeof process === 'undefined' || !process.env || process.env.TOPSCORE_DIRECT_DB !== '1') {
-      console.warn('Edge Function start-test unavailable, using client DB fallback:', edgeErr.message);
+      if (!isEdgeFunctionOffline('start-test')) {
+        console.info('Edge Function start-test offline, switching seamlessly to client DB fallback.');
+        markEdgeFunctionOffline('start-test');
+      }
     }
   }
 
@@ -1334,16 +1338,19 @@ export async function startTest(studentId, testId) {
 
     const prereqAttempts = prereqAttRes.data || [];
     const prereqTest = prereqTestRes.data;
+    const testSettings = await fetchClassTestSettings(asmData.class_id);
+    const targetReps = Number(testSettings?.taskRepetitions) || 7;
+    const defaultTaskMin = Number(testSettings?.taskMinScore) || 50;
 
     const reqScore = (asmData.minimum_required_score && parseFloat(asmData.minimum_required_score) > 0)
       ? parseFloat(asmData.minimum_required_score)
-      : (prereqTest?.minimum_required_score ? parseFloat(prereqTest.minimum_required_score) : 70);
+      : (prereqTest?.minimum_required_score ? parseFloat(prereqTest.minimum_required_score) : defaultTaskMin);
 
     const isPrereqExam = prereqTest ? isWeeklyExam(prereqTest) : false;
     let passCount = 0;
     prereqAttempts.forEach(a => {
       if (a.is_forgiven) {
-        passCount = Math.max(passCount, 7);
+        passCount = Math.max(passCount, targetReps);
       } else {
         const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || a.score || 0);
         if (pct >= reqScore) {
@@ -1352,7 +1359,7 @@ export async function startTest(studentId, testId) {
       }
     });
 
-    const requiredPasses = isPrereqExam ? 1 : 7;
+    const requiredPasses = isPrereqExam ? 1 : targetReps;
     if (passCount < requiredPasses) {
       const pErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${passCount}/${requiredPasses} passes with at least ${reqScore}%) on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`);
       pErr.code = 'PREREQUISITE_NOT_MET';
@@ -1381,7 +1388,8 @@ export async function startTest(studentId, testId) {
       if (themeTasks.length > 0) {
         const testSettings = await fetchClassTestSettings(asmData.class_id);
         const targetReps = Number(testSettings?.taskRepetitions) || 7;
-        const taskMinScore = Number(testSettings?.taskMinScore) || 70;
+        const taskMinScore = Number(testSettings?.taskMinScore) || 50;
+        const taskMap = Object.fromEntries(themeTasks.map(t => [t.id, t]));
 
         const taskIds = themeTasks.map(t => t.id);
         const { data: taskAttempts } = await sb.from('attempts')
@@ -1396,7 +1404,8 @@ export async function startTest(studentId, testId) {
             passCountByTask[att.test_id] = Math.max(passCountByTask[att.test_id] || 0, targetReps);
           } else {
             const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-            if (pct >= taskMinScore) {
+            const minReq = Number(taskMap[att.test_id]?.minimum_required_score || taskMap[att.test_id]?.payload?.min_score || taskMinScore);
+            if (pct >= minReq) {
               passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
             }
           }
@@ -1471,7 +1480,7 @@ export async function startTest(studentId, testId) {
   if (!isWeeklyExam(asmData) && cleanTopicNumFallback > 1 && currentThemeFallback && !isStandaloneTryout && !isRemedialSessionFallback) {
     const priorTopicNum = cleanTopicNumFallback - 1;
     const { data: priorTopicTasks } = await sb.from('tests')
-      .select('id, title, payload, shell_code, test_type, test_subtype, category')
+      .select('id, title, payload, shell_code, test_type, test_subtype, category, minimum_required_score')
       .eq('class_id', asmData.class_id)
       .eq('level_id', asmData.level_id)
       .is('deleted_at', null);
@@ -1485,6 +1494,8 @@ export async function startTest(studentId, testId) {
     });
 
     if (filteredPriorTasks.length > 0) {
+      const testSettings = await fetchClassTestSettings(asmData.class_id);
+      const targetReps = Number(testSettings?.taskRepetitions) || 7;
       const priorTaskIds = filteredPriorTasks.map(t => t.id);
       const { data: priorTaskAttempts } = await sb.from('attempts')
         .select('test_id, percentage, effective_score, status, is_forgiven')
@@ -1492,21 +1503,24 @@ export async function startTest(studentId, testId) {
         .in('test_id', priorTaskIds)
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
 
+      const taskMap = Object.fromEntries(filteredPriorTasks.map(t => [t.id, t]));
       const passCountByTask = {};
       (priorTaskAttempts || []).forEach(att => {
         if (att.is_forgiven) {
-          passCountByTask[att.test_id] = Math.max(passCountByTask[att.test_id] || 0, 7);
+          passCountByTask[att.test_id] = Math.max(passCountByTask[att.test_id] || 0, targetReps);
         } else {
           const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-          if (pct >= 70) {
+          const minReq = Number(taskMap[att.test_id]?.minimum_required_score || taskMap[att.test_id]?.payload?.min_score || 50);
+          if (pct >= minReq) {
             passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
           }
         }
       });
 
-      const unmasteredTask = filteredPriorTasks.find(t => (passCountByTask[t.id] || 0) < 7);
+      const unmasteredTask = filteredPriorTasks.find(t => (passCountByTask[t.id] || 0) < targetReps);
       if (unmasteredTask) {
-        const topErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (7 passes with at least 70%) on Topic ${currentThemeFallback}${priorTopicNum} before starting Topic ${cleanTopicNumFallback}.`);
+        const unmasteredMin = unmasteredTask.minimum_required_score || unmasteredTask.payload?.min_score || 50;
+        const topErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${targetReps} passes with at least ${unmasteredMin}%) on Topic ${currentThemeFallback}${priorTopicNum} before starting Topic ${cleanTopicNumFallback}.`);
         topErr.code = 'TOPIC_MASTERY_NOT_MET';
         topErr.status = 403;
         throw topErr;
@@ -1576,7 +1590,8 @@ export async function startTest(studentId, testId) {
     }
 
     const { count: priorCount } = await sb.from('attempts')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: false })
+      .limit(1)
       .eq('student_id', studentId)
       .eq('test_id', testId);
 
@@ -1762,7 +1777,7 @@ export async function submitTest(attemptId, answersMap, options = {}) {
 
       // Direct client evaluation fallback (guarantees student NEVER fails to submit or loses score)
       const { data: attempt } = await sb.from('attempts').select('id, is_remedial_unlocked').eq('id', attemptId).single();
-      const { data: attemptAnswers } = await sb.from('attempt_answers').select('id, student_answer, accepted_answers_snapshot, correct_answer_snapshot').eq('attempt_id', attemptId);
+      const { data: attemptAnswers } = await sb.from('attempt_answers').select('id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, question_snapshot, question_type_snapshot').eq('attempt_id', attemptId);
 
       let totalPoints = 0;
       let correctCount = 0;
@@ -1773,7 +1788,8 @@ export async function submitTest(attemptId, answersMap, options = {}) {
 
       for (const row of (attemptAnswers || [])) {
         const studentAns = answersDict.has(row.id) ? answersDict.get(row.id) : (row.student_answer || '');
-        const evalRes = evaluateAnswer(studentAns, row.accepted_answers_snapshot || row.correct_answer_snapshot);
+        const qType = row.question_snapshot?.answer_type || row.question_type_snapshot || 'written';
+        const evalRes = evaluateAnswer(studentAns, row.accepted_answers_snapshot || row.correct_answer_snapshot, qType);
         const score = evalRes.score || (evalRes.is_correct ? 1 : 0);
         totalPoints += score;
         if (score >= 1) correctCount++;
@@ -1809,6 +1825,58 @@ export async function submitTest(attemptId, answersMap, options = {}) {
       if (updAttErr) throw updAttErr;
       result = updAttempt || { id: attemptId, status: targetStatus, percentage: pct, grade: grade };
     }
+  }
+
+  // Post-submit Answer Tolerance & Spelling Sync:
+  // Verifies that answers scored by server RPC didn't penalize hyphens, letter spelling spaces, or valid word forms
+  try {
+    const sb = await getSupabase();
+    const { data: attAnsList } = await sb.from('attempt_answers')
+      .select('id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, question_snapshot, question_type_snapshot, score, is_correct, evaluation_result')
+      .eq('attempt_id', attemptId);
+
+    let needsRescore = false;
+    let newScore = 0;
+    let newCorrect = 0;
+    const totalQ = attAnsList?.length || 0;
+
+    for (const r of (attAnsList || [])) {
+      const qType = r.question_snapshot?.answer_type || r.question_type_snapshot || 'written';
+      const ev = evaluateAnswer(r.student_answer, r.accepted_answers_snapshot || r.correct_answer_snapshot, qType);
+      const trueScore = ev.score || 0;
+      if (trueScore > (r.score || 0)) {
+        needsRescore = true;
+        await sb.from('attempt_answers').update({
+          score: trueScore,
+          is_correct: trueScore >= 1,
+          evaluation_result: ev.result || (trueScore >= 1 ? 'correct' : 'minor'),
+          updated_at: new Date().toISOString()
+        }).eq('id', r.id);
+        newScore += trueScore;
+        if (trueScore >= 1) newCorrect++;
+      } else {
+        newScore += (r.score || 0);
+        if (r.is_correct || r.score >= 1) newCorrect++;
+      }
+    }
+
+    if (needsRescore && totalQ > 0) {
+      const pct = Math.round((newScore / totalQ) * 10000) / 100;
+      const { data: attData } = await sb.from('attempts').select('is_remedial_unlocked').eq('id', attemptId).single();
+      const effScore = attData?.is_remedial_unlocked ? Math.min(pct, 60.0) : pct;
+      const grade = getGrade(effScore);
+      const { data: fixedAtt } = await sb.from('attempts').update({
+        score: newScore,
+        correct_count: newCorrect,
+        percentage: pct,
+        effective_score: effScore,
+        grade: grade,
+        updated_at: new Date().toISOString()
+      }).eq('id', attemptId).select().single();
+      if (fixedAtt) result = fixedAtt;
+    }
+  } catch (syncErr) {
+    console.warn('Post-submit tolerance check notice:', syncErr);
   }
 
   // Authoritative Remedial Sync (Remedial retains earned score, grade follows score)
@@ -4015,7 +4083,7 @@ export async function adminApplyForgiven({
             correct_count: Math.round(sc),
             total_questions: totalQ,
             percentage: pct,
-            effective_score: sc,
+            effective_score: pct,
             grade,
             status: 'submitted',
             is_best_score: true,
@@ -4038,7 +4106,7 @@ export async function adminApplyForgiven({
             correct_count: Math.round(sc),
             total_questions: totalQ,
             percentage: pct,
-            effective_score: sc,
+            effective_score: pct,
             grade,
             is_best_score: true,
             is_forgiven: false,

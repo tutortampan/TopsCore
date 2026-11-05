@@ -17,7 +17,10 @@ function getJsFiles(dir) {
   return results;
 }
 
-const jsFiles = getJsFiles('js');
+const jsFiles = [
+  ...getJsFiles('js'),
+  ...fs.readdirSync('.').filter(f => f.endsWith('.js')).map(f => path.resolve(f))
+];
 console.log(`Scanning ${jsFiles.length} JavaScript files for syntax errors...`);
 
 let hasErrors = false;
