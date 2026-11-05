@@ -3,12 +3,12 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261105_v134';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261105_v134';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261105_v134';
-    import { testMicrophoneCapability } from './speech.js?v=20261105_v134';
-    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261105_v134';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261105_v134';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261106_v136';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261106_v136';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v136';
+    import { testMicrophoneCapability } from './speech.js?v=20261106_v136';
+    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v136';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261106_v136';
 
     window._isBatchChampion = false;
 
@@ -183,7 +183,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./supabase.js?v=20261105_v134')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).maybeSingle();
           if (st?.gender) {
             currentGender = st.gender;
@@ -549,7 +549,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
         try {
-          const sb = await (await import('./supabase.js?v=20261105_v134')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).maybeSingle();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
@@ -568,7 +568,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Background sync: memastikan localStorage selalu sinkron dengan database terbaru
         (async () => {
           try {
-            const sb = await (await import('./supabase.js?v=20261105_v134')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
             const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).maybeSingle();
             if (st && st.photo_url !== photoUrl) {
               if (st.photo_url) {
@@ -622,7 +622,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
       if (!hasBirthday) {
         try {
-          const sb = await (await import('./supabase.js?v=20261105_v134')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
           const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).maybeSingle();
           if (st && st.birth_date) {
             hasBirthday = true;
@@ -688,7 +688,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./supabase.js?v=20261105_v134')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).maybeSingle();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -698,7 +698,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./session.js?v=20261105_v134');
+             const { setStudentSession } = await import('./session.js?v=20261106_v136');
              setStudentSession(session);
           }
         }
@@ -748,7 +748,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./session.js?v=20261105_v134');
+            const { setStudentSession } = await import('./session.js?v=20261106_v136');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -1095,36 +1095,27 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       if (!isTest) {
         const currentPasses = passCountByTest[nextTest.id] || 0;
-        if (currentPasses >= targetReps) {
-          // 7/7 passes: White Forward Arrow in Green Box (Ready to Advance / Next Task)
-          container.innerHTML = `
-            <div class="next-test-left next-asm-left">
-              <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Test')}">${escapeHtml(nextTest.title || 'Test')}</span>
-            </div>
-            <button type="button" class="next-test-go-btn next-asm-go-btn is-pass-tier-a is-next-arrow-green" title="7/7 Complete! Click to take next repetition or advance" onclick="window.location.href='test.html?id=${nextTest.id}'">
-              ${ICON_4D_WHITE_ARROW_RIGHT}
-            </button>
-          `;
-        } else {
-          // 0-6 passes: Number Badge (0 to 6) with Tier Grade Color
-          let tierClass = 'is-pass-tier-e'; // 0 - 1 Red (Grade E)
-          if (currentPasses >= 5) {
-            tierClass = 'is-pass-tier-b'; // 5 - 6 Lime (Grade B)
-          } else if (currentPasses === 4) {
-            tierClass = 'is-pass-tier-c'; // 4 Yellow (Grade C)
-          } else if (currentPasses >= 2) {
-            tierClass = 'is-pass-tier-d'; // 2 - 3 Orange (Grade D)
-          }
+        const displayStep = Math.max(1, Math.min(currentPasses + 1, targetReps));
 
-          container.innerHTML = `
-            <div class="next-test-left next-asm-left">
-              <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Test')}">${escapeHtml(nextTest.title || 'Test')}</span>
-            </div>
-            <button type="button" class="next-test-go-btn next-asm-go-btn pass-counter-btn ${tierClass}" title="Repetition Pass ${currentPasses}/${targetReps} - Click to take repetition" onclick="window.location.href='test.html?id=${nextTest.id}'">
-              ${currentPasses}
-            </button>
-          `;
+        let rainbowHtml = '<div class="rainbow-pass-bar">';
+        for (let s = 1; s <= 7; s++) {
+          const isLit = s <= currentPasses;
+          rainbowHtml += `<span class="rainbow-box ${isLit ? 'is-lit' : 'is-dim'}" data-step="${s}">${isLit ? '✓' : s}</span>`;
         }
+        rainbowHtml += '</div>';
+
+        container.innerHTML = `
+          <div class="next-test-row-top">
+            <div class="next-test-left next-asm-left">
+              <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Task')}">${escapeHtml(nextTest.title || 'Task')}</span>
+            </div>
+            <button type="button" class="next-test-go-btn next-asm-go-btn pass-counter-btn rainbow-step-${displayStep}" title="Repetition Pass ${currentPasses}/${targetReps} - Click to practice" onclick="event.stopPropagation(); window.location.href='test.html?id=${nextTest.id}'">
+              ${displayStep}
+            </button>
+          </div>
+          ${rainbowHtml}
+        `;
+        container.onclick = () => { window.location.href = `test.html?id=${nextTest.id}`; };
       } else {
         const activeSession = await fetchActiveTestSession(nextTest.id, session.batch_id).catch(() => null);
         const isUnlocked = activeSession?.is_unlocked === true;
@@ -1132,37 +1123,39 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                               activeSession.allowed_student_ids.length === 0 ||
                               activeSession.allowed_student_ids.includes(session.student_id);
 
+        let rainbowHtml = '<div class="rainbow-pass-bar is-full-glow">';
+        for (let s = 1; s <= 7; s++) {
+          rainbowHtml += `<span class="rainbow-box is-lit" data-step="${s}">✓</span>`;
+        }
+        rainbowHtml += '</div>';
+
         if (isUnlocked && isWhitelisted) {
           const remMin = activeSession.remaining_minutes || 30;
-          // Unlocked exam -> 3C: Ready to take (Green Button with Circle Play)
           container.innerHTML = `
-            <div class="next-test-left next-asm-left">
-              <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Official Exam')}">${escapeHtml(nextTest.title || 'Official Exam')}</span>
+            <div class="next-test-row-top">
+              <div class="next-test-left next-asm-left">
+                <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Official Exam')}">${escapeHtml(nextTest.title || 'Official Exam')}</span>
+              </div>
+              <button type="button" class="next-test-go-btn next-asm-go-btn is-exam-play" title="Start Exam (${remMin}m left)" onclick="event.stopPropagation(); window.location.href='test.html?id=${nextTest.id}'">
+                ${ICON_3C_GREEN_PLAY}
+              </button>
             </div>
-            <button type="button" class="next-test-go-btn next-asm-go-btn is-start-green" title="Start Exam (${remMin}m left)" onclick="window.location.href='test.html?id=${nextTest.id}'">
-              ${ICON_3C_GREEN_PLAY}
-            </button>
+            ${rainbowHtml}
           `;
-        } else if (isUnlocked && !isWhitelisted) {
-          // 1A: Locked (Yellow Padlock)
-          container.innerHTML = `
-            <div class="next-test-left next-asm-left">
-              <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Official Exam')}">${escapeHtml(nextTest.title || 'Official Exam')}</span>
-            </div>
-            <span class="next-test-status-icon next-asm-status-icon is-locked-yellow" title="Locked - Prerequisite Required">
-              ${ICON_1A_YELLOW_LOCK}
-            </span>
-          `;
+          container.onclick = () => { window.location.href = `test.html?id=${nextTest.id}`; };
         } else {
-          // 1A: Waiting for Tutor (Yellow Padlock)
           container.innerHTML = `
-            <div class="next-test-left next-asm-left">
-              <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Official Exam')}">${escapeHtml(nextTest.title || 'Official Exam')}</span>
+            <div class="next-test-row-top">
+              <div class="next-test-left next-asm-left">
+                <span class="next-test-title next-asm-title" title="${escapeHtml(nextTest.title || 'Official Exam')}">${escapeHtml(nextTest.title || 'Official Exam')}</span>
+              </div>
+              <span class="next-test-status-icon next-asm-status-icon is-exam-lock" title="Waiting for Tutor to unlock Exam">
+                ${ICON_1A_YELLOW_LOCK}
+              </span>
             </div>
-            <span class="next-test-status-icon next-asm-status-icon is-locked-yellow" title="Waiting for Tutor (Locked)">
-              ${ICON_1A_YELLOW_LOCK}
-            </span>
+            ${rainbowHtml}
           `;
+          container.onclick = null;
         }
       }
     }
@@ -1357,11 +1350,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const activeClass = (window._activeClasses || []).find(c => c.id === window._selectedClassId) || (window._activeClasses || [])[0];
       const nameEl = document.getElementById('classes-bar-current-name');
       const pctEl = document.getElementById('classes-bar-progress-val');
+      const headerClassNameEl = document.getElementById('dashboard-header-class-name');
       if (activeClass) {
         if (nameEl) nameEl.textContent = activeClass.name;
+        if (headerClassNameEl) headerClassNameEl.textContent = activeClass.name;
         if (pctEl) pctEl.textContent = `${activeClass._pct != null ? activeClass._pct : 0}%`;
       } else {
         if (nameEl) nameEl.textContent = 'No Classes Assigned';
+        if (headerClassNameEl) headerClassNameEl.textContent = 'Select Class';
         if (pctEl) pctEl.textContent = '0%';
       }
     }
@@ -1424,6 +1420,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         classesBar.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' || e.key === ' ') openSelectorModal();
         });
+      }
+      const doorBtn = document.getElementById('btn-change-class');
+      if (doorBtn && !doorBtn._hasClickListener) {
+        doorBtn._hasClickListener = true;
+        doorBtn.addEventListener('click', openSelectorModal);
       }
       const closeBtn = document.getElementById('close-classes-selector-modal');
       if (closeBtn && !closeBtn._hasClickListener) {
@@ -2624,10 +2625,33 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       const achievementTextEl = document.getElementById('dashboard-achievement-text');
-      if (achievementTextEl) {
-        if (hasExam) {
-          const isAlumni = session.level_number === 0 || (session.level_name || '').toLowerCase() === 'alumni';
-          const statusWord = isAlumni ? 'ALUMNI' : getAchievementStatus(overallGrade, avgPct);
+      const isAlumni = session.level_number === 0 || (session.level_name || '').toLowerCase() === 'alumni';
+
+      if (isAlumni) {
+        overallGrade = 'X';
+        targetColor = '#8B5CF6';
+        rgbColor = '139, 92, 246';
+        if (gradeBadgeValue) gradeBadgeValue.textContent = 'X';
+        if (avgScoreDisplay) avgScoreDisplay.textContent = '—';
+        if (achievementTextEl) {
+          achievementTextEl.textContent = 'ALUMNI';
+          achievementTextEl.style.color = targetColor;
+          achievementTextEl.style.filter = `drop-shadow(0 0 10px rgba(${rgbColor}, 0.75))`;
+        }
+      } else if (!hasExam) {
+        overallGrade = "LET'S GO";
+        targetColor = '#8B5CF6';
+        rgbColor = '139, 92, 246';
+        if (gradeBadgeValue) gradeBadgeValue.textContent = '—';
+        if (avgScoreDisplay) avgScoreDisplay.textContent = '—';
+        if (achievementTextEl) {
+          achievementTextEl.textContent = "LET'S GO";
+          achievementTextEl.style.color = targetColor;
+          achievementTextEl.style.filter = `drop-shadow(0 0 10px rgba(${rgbColor}, 0.75))`;
+        }
+      } else {
+        const statusWord = getAchievementStatus(overallGrade, avgPct);
+        if (achievementTextEl) {
           achievementTextEl.textContent = statusWord;
           achievementTextEl.style.color = targetColor;
           if (isGradeS) {
@@ -2635,10 +2659,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           } else {
             achievementTextEl.style.filter = `drop-shadow(0 0 8px rgba(${rgbColor}, 0.6))`;
           }
-        } else {
-          achievementTextEl.textContent = '';
-          achievementTextEl.style.color = 'transparent';
-          achievementTextEl.style.filter = 'none';
         }
       }
 
@@ -2746,93 +2766,109 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     }
 
     // --- Render Completed Tests Section (Bottom of Dashboard - Dual Panel) ---
-    function renderCompletedTestsBottom(attempts = [], avgPct = 0) {
+    function renderCompletedTestsBottom(attempts = [], testsParam = null) {
       const container = document.getElementById('completed-Tests-container');
       const countBadge = document.getElementById('dock-completed-count-badge');
       if (!container) return;
 
-      // Filter out attempts on soft-deleted tests
+      const activeClassId = window._selectedClassId || (window._loadedClasses && window._loadedClasses[0]?.id);
+      const allClassTests = (Array.isArray(testsParam) && testsParam.length > 0)
+        ? testsParam
+        : (window._allTests || []);
+
+      // Published tests belonging to this active class (excluding deleted/draft)
+      const publishedClassTests = allClassTests.filter(t => {
+        const cid = t.class_id || t.Class_id;
+        const isClassMatch = !activeClassId || cid === activeClassId;
+        const isPub = (t.status || '').toUpperCase() === 'PUBLISHED';
+        return isClassMatch && isPub && !t.deleted_at;
+      });
+
+      // Filter valid submitted attempts for this student
       const validAttempts = (attempts || []).filter(att => {
         if (att.tests && att.tests.deleted_at) return false;
         const st = (att.status || '').toLowerCase();
         return st === 'submitted' || st === 'auto_submitted' || st === 'evaluated';
       });
 
+      // Map best score & best grade per test
+      const bestByTest = {};
+      validAttempts.forEach(att => {
+        const tid = att.test_id || att.tests?.id;
+        if (!tid) return;
+        const rawPct = parseFloat(att.percentage || 0);
+        const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+        const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+        const grade = att.grade || (typeof calculateGrade === 'function' ? calculateGrade(effPct) : 'E');
+        const prev = bestByTest[tid];
+        if (!prev || effPct > prev.effPct) {
+          bestByTest[tid] = { effPct, grade, isRem, rawPct };
+        }
+      });
+
+      // Determine accessible tests in progression order
+      // A test is accessible if it was completed (has attempt) OR was unlocked
+      const accessibleTests = publishedClassTests.filter((t, idx) => {
+        if (bestByTest[t.id]) return true;
+        // The first uncompleted test in curriculum is also accessible
+        const firstUncompletedIdx = publishedClassTests.findIndex(pt => !bestByTest[pt.id]);
+        return idx <= firstUncompletedIdx;
+      });
+
       if (countBadge) {
-        countBadge.textContent = validAttempts.length;
+        countBadge.textContent = Object.keys(bestByTest).length;
       }
 
-      if (!validAttempts.length) {
+      if (!accessibleTests.length) {
         container.innerHTML = `
-          <div class="empty-state p-4 text-center" style="padding: 28px 12px;">
-            <p style="color:var(--clr-text-3); font-size:0.82rem; margin:0;">No completed tests yet. Start with your assigned tests above!</p>
+          <div class="empty-state p-4 text-center" style="padding: 24px 12px;">
+            <p style="color:var(--clr-text-3); font-size:0.82rem; margin:0;">No accessible tests available yet.</p>
           </div>
         `;
         return;
       }
 
-      // Sort strictly descending by submitted_at so the latest taken is at the very top!
-      const sortedAttempts = [...validAttempts].sort((a, b) => {
-        const dateA = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
-        const dateB = b.submitted_at ? new Date(b.submitted_at).getTime() : 0;
-        return dateB - dateA;
-      });
+      // Order strictly from latest accessible test down to earliest (reverse of progression)
+      const sortedAccessible = [...accessibleTests].reverse();
 
       let html = '';
-      sortedAttempts.forEach(a => {
-        const testObj = a.tests || a.Tests || {};
-        const testId = a.test_id || a.Test_id || testObj.id || a.id;
-        const testTitle = testObj.title || testObj.name || 'English Test';
-        const isExamTest = typeof isWeeklyExam === 'function' ? isWeeklyExam(testObj) : (testObj.test_type === 'exam' || /exam/i.test(testTitle));
-        const typeLabel = isExamTest ? 'EXAM' : 'TASK';
-        const typeClass = isExamTest ? 'is-exam' : 'is-task';
+      sortedAccessible.forEach((t, idx) => {
+        const num = idx + 1;
+        const best = bestByTest[t.id];
+        const hasTaken = Boolean(best);
+        const testTitle = t.title || t.name || 'Test';
 
-        const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
-        const rawPct = parseFloat(a.percentage || 0);
-        const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-        const pctFormatted = effPct.toFixed(0);
-        const grade = a.grade || (typeof calculateGrade === 'function' ? calculateGrade(effPct) : 'E');
-        const displayGrade = (typeof getGradeSymbol === 'function') ? getGradeSymbol(grade, effPct, isRem) : grade;
-        const gradeColor = (typeof getGradeColorByScore === 'function') ? getGradeColorByScore(effPct) : (GRADE_PALETTE[grade]?.color || '#94a3b8');
+        let scoreHtml = '—';
+        let gradeHtml = '—';
 
-        const dateStr = a.submitted_at ? new Date(a.submitted_at).toLocaleDateString(undefined, {
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }) : 'Recent';
+        if (hasTaken) {
+          const scoreColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(best.effPct) : '#94a3b8';
+          const remSup = best.isRem ? '<sup class="asm-rem-sup" style="color:#eab308;font-size:0.65em;font-weight:800;margin-left:1px;">R</sup>' : '';
+          scoreHtml = `<span style="color:${scoreColor}; font-weight:800;">${best.effPct.toFixed(0)}%${remSup}</span>`;
 
-        const remSup = isRem ? '<sup class="asm-rem-sup" style="color:#eab308;font-size:0.65em;font-weight:800;margin-left:1px;">R</sup>' : '';
-        const isStar = grade === '★' || grade === 'S';
-        const textColor = isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
+          const dispGrade = typeof getGradeSymbol === 'function' ? getGradeSymbol(best.grade, best.effPct, best.isRem) : best.grade;
+          const isStar = dispGrade === '★' || dispGrade === 'S';
+          const textColor = isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
+          gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor}; color:${textColor}; width:24px; height:24px; font-size:11px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:800;">${dispGrade}</span>`;
+        }
 
         html += `
-          <div class="completed-test-row" onclick="window.location.href='result.html?attempt_id=${escapeHtml(a.id)}'">
-            <div class="completed-left">
-              <div class="completed-title-wrap">
-                <span class="completed-type-pill ${typeClass}">${typeLabel}</span>
-                <span class="completed-title" title="${escapeHtml(testTitle)}">${escapeHtml(testTitle)}</span>
-              </div>
-              <span class="completed-meta-date">${escapeHtml(dateStr)}</span>
-            </div>
-            <div class="completed-right">
-              <span class="completed-score-badge" style="color:${gradeColor};">
-                ${pctFormatted}%${remSup}
-              </span>
-              <div class="completed-grade-chip" style="background:${gradeColor}; color:${textColor};" title="Grade ${displayGrade}">
-                ${displayGrade}
-              </div>
+          <div class="completed-row" onclick="window.location.href='test.html?id=${t.id}'">
+            <span class="completed-col-num">${num}</span>
+            <span class="completed-col-name" title="${escapeHtml(testTitle)}">${escapeHtml(testTitle)}</span>
+            <span class="completed-col-score">${scoreHtml}</span>
+            <span class="completed-col-grade">${gradeHtml}</span>
+            <span class="completed-col-action">
               <button type="button" 
-                      class="btn-retry-test" 
+                      class="completed-retry-btn" 
                       title="Retry ${escapeHtml(testTitle)}" 
-                      onclick="event.stopPropagation(); window.location.href='test.html?id=${testId}'">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                      onclick="event.stopPropagation(); window.location.href='test.html?id=${t.id}'">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="1 4 1 10 7 10"></polyline>
                   <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
                 </svg>
-                <span>Retry</span>
               </button>
-            </div>
+            </span>
           </div>
         `;
       });
@@ -2907,7 +2943,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       try {
-        const sb = await (await import('./supabase.js?v=20261105_v134')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
 
         // 1. Fetch active students in the same batch
         const { data: students, error: stuErr } = await sb
@@ -3327,7 +3363,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./supabase.js?v=20261105_v134')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).maybeSingle();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
@@ -3382,7 +3418,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./supabase.js?v=20261105_v134')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261106_v136')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
 
@@ -3532,6 +3568,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       // Header avatar also opens profile modal
       document.getElementById('header-avatar')?.addEventListener('click', () => openProfile('profile'));
+      const bannerAvatarTrigger = document.getElementById('banner-avatar-trigger');
+      if (bannerAvatarTrigger && !bannerAvatarTrigger._hasClickListener) {
+        bannerAvatarTrigger._hasClickListener = true;
+        bannerAvatarTrigger.addEventListener('click', () => openProfile('profile'));
+        bannerAvatarTrigger.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') openProfile('profile');
+        });
+      }
     }
 
     // --- Level Modal close ---

@@ -330,8 +330,8 @@
 
     .result-summary-lbl {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-size: 11px !important;
-      font-weight: 600 !important;
+      font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-weight: 800 !important;
       letter-spacing: 0.08em !important;
       text-transform: uppercase !important;
       color: #94A3B8 !important;
@@ -757,8 +757,8 @@
       justify-content: center !important;
       gap: 6px !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-size: 0.75rem !important;
-      font-weight: 600 !important;
+      font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-weight: 800 !important;
       letter-spacing: 0.04em !important;
       text-transform: uppercase !important;
       color: #cbd5e1 !important;
@@ -1026,8 +1026,8 @@
       color: #94A3B8 !important;
       text-align: center !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-size: 11px !important;
-      font-weight: 600 !important;
+      font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-weight: 800 !important;
       letter-spacing: 0.04em !important;
       line-height: 1.2 !important;
     }
@@ -2244,3 +2244,43 @@ body.result-page #result-motivation-msg {
   min-height: 50px !important;
   max-height: 50px !important;
 }
+
+/* TOPSCORE LOCKED BANNER (PROMINENT, BIGGER & BOLDER: "TopsCore by Mr. Top") */
+
+/* ==========================================================================
+   TOPSCORE LOCKED BANNER (PROMINENT, BIGGER & BOLDER: "TopsCore by Mr. Top")
+   ========================================================================== */
+.topscore-locked-banner,
+#bottom-ad-banner {
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding-left: clamp(16px, 4vw, 24px) !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  box-sizing: border-box !important;
+}
+
+.topscore-locked-banner .banner-brand,
+#bottom-ad-banner .banner-brand {
+  font-size: clamp(1.05rem, 3vw, 1.25rem) !important;
+  font-weight: 900 !important;
+  color: #38bdf8 !important;
+  letter-spacing: 0.05em !important;
+  text-shadow: 0 0 14px rgba(56, 189, 248, 0.45) !important;
+}
+
+.topscore-locked-banner .banner-author,
+#bottom-ad-banner .banner-author {
+  font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-weight: 800 !important;
+  color: #f8fafc !important;
+  letter-spacing: 0.02em !important;
+}
+

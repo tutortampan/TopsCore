@@ -1,3 +1,167 @@
+## [2026-11-06 01:25] — Phase 326: Universal Bottom Banner Overhaul ("TopsCore by Mr. Top" Bolder & Bigger across ALL Pages)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 326: Universal Bottom Banner Branding & Typography Overhaul
+**Status:** PASS
+
+### Why
+- User requested replacement of the bottom banner text across all pages to: `"TopsCore by Mr. Top"`.
+- User requested that the typography be made significantly bolder and larger ("kita besarkan dan tebalkan") across all pages under the `/goal` directive.
+- Replaced old copyright-style branding (`TopsCore © 2026 | Created by Mr. Top`) with clean, prominent, and cohesive modern typography: `<span class="banner-brand">TopsCore</span> <span class="banner-author">by Mr. Top</span>`.
+
+### Changed
+1. **HTML Markup across ALL Pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`)**:
+   - Replaced all legacy banner HTML with uniform, accessible markup:
+     `<div id="bottom-ad-banner" class="topscore-locked-banner"><span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span></div>`
+     (or `<footer...>` on test and result pages).
+2. **CSS Typography & Prominence across ALL Sheets (`style.css`, `admin.css`, `dashboard.css`, `test.css`, `result.css`)**:
+   - Enlarged font-size to `clamp(1rem, 2.8vw, 1.15rem)` (up from 0.75rem / 11px).
+   - `.banner-brand`: `font-size: clamp(1.05rem, 3vw, 1.25rem) !important; font-weight: 900 !important; color: #38bdf8 !important; text-shadow: 0 0 14px rgba(56, 189, 248, 0.45) !important;`.
+   - `.banner-author`: `font-size: clamp(1rem, 2.8vw, 1.15rem) !important; font-weight: 800 !important; color: #f8fafc !important;`.
+   - Locked container height at 60px with crisp left-aligned padding: `padding-left: clamp(16px, 4vw, 24px) !important;`.
+3. **Automated Verification**:
+   - Created test suite: `scripts/test_bottom_banner_universal.mjs`.
+   - Added test to `package.json` test runner.
+   - All 7 test suites pass 100% with zero regressions.
+
+### Files
+- `index.html`
+- `admin.html`
+- `dashboard.html`
+- `test.html`
+- `result.html`
+- `css/style.css`
+- `css/admin.css`
+- `css/dashboard.css`
+- `css/test.css`
+- `css/result.css`
+- `package.json`
+- `scripts/test_bottom_banner_universal.mjs`
+- `scripts/update_banner_all_pages.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+## [2026-11-06 01:15] — Phase 325: Vocab & Universal Student Dashboard Master Blueprint (60-150-50-70-FLEX-60)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 325: Vocab & Universal Student Dashboard Master Blueprint (v136)
+**Status:** PASS
+
+### Why
+- User submitted hand-crafted blueprint spreadsheet diagram (`media_1793897504100_ef4a45a9.png`) with `/grill-me` directive to align on mobile ergonomics, pixel budgets, component definitions, and UX flows for the Student Dashboard (Lobby).
+- Architectural consensus achieved across 7 core components:
+  1. Header 60px with Door Icon to change classes and Logout (saving 60px by eliminating the separate classes bar).
+  2. Metadata Card 150px with breadcrumb header, Score, Clickable photo 70px to open profile modal, Grade symbol, and student full name.
+  3. Grade Description 50px featuring Purple Tier (`#8B5CF6`) for new students (`LET'S GO`) and alumni (`ALUMNI` Grade `X`).
+  4. Next Test Card 70px featuring Row 1 (50px) Next Test Full Name + 3-State Action Icon (Repetition numbers 1-7 for task drills, Yellow Padlock `🔒` when waiting for exam, Green Play `▶️` when exam is unlocked by tutor), and Row 2 (20px) 7 Rainbow Boxes (Red to Purple: `#EF4444`, `#F97316`, `#F59E0B`, `#EAB308`, `#84CC16`, `#06B6D4`, `#8B5CF6`).
+  5. Leaderboard & Completed Tests Dual Panel (`flex: 1 1 0%`) absorbing remaining screen space.
+  6. Completed Tests Table in Tab 2 ordered from the latest accessible test downwards, with columns: `NO` | `TEST NAME` | `SCORE` | `GRADE` | `RETRY BUTTON ONLY`.
+  7. Locked TopsCore Footer Banner 60px ensuring zero-scroll viewport on 800px mobile devices.
+
+### Changed
+1. **Frontend HTML (`dashboard.html`)**:
+   - Replaced old header with 60px header containing Door Icon (`#btn-change-class`), Class Name Brand (`#dashboard-header-class-name`), and Logout (`#logout-btn`).
+   - Removed old header profile button and moved its trigger to the 70px avatar (`#banner-avatar-trigger`).
+   - Removed old visible Classes Bar deck (saving 60px vertical space).
+   - Added table header with ACTION column to Pane B (`#dock-pane-completed`).
+2. **Frontend Styling (`css/dashboard.css`)**:
+   - Set `.dashboard-header` to 60px height.
+   - Added styles for `.header-door-btn`, `#banner-avatar-trigger`, Purple Tier (`[data-tier="X"]`, `[data-tier="ALUMNI"]`, `[data-tier="LET'S GO"]`).
+   - Set `.dashboard-next-test-deck` and `.next-test-card` to 70px height (44px Row 1 + 20px Rainbow Bar).
+   - Added styles for `.rainbow-pass-bar`, `.rainbow-box[data-step="1..7"]`, `.pass-counter-btn.rainbow-step-1..7`, `.is-exam-lock`, `.is-exam-play`.
+   - Added grid styling for `.completed-table-header`, `.completed-row`, and `.completed-retry-btn`.
+3. **Frontend Logic (`js/dashboard.js` & `js/grading.js`)**:
+   - `js/grading.js`: Added `TOPSCORE_COLORS.X = '#8B5CF6'`, `GRADE_PALETTE.X` for Alumni, updated `getAchievementStatus`, `getGradeSymbol`, and `getGradeColor`.
+   - `js/dashboard.js`:
+     - Synchronized `#dashboard-header-class-name` and wired `#btn-change-class` to class selector modal.
+     - Wired `#banner-avatar-trigger` to `openProfile('profile')`.
+     - Updated `renderSummaryMetrics` to handle `LET'S GO` (Purple Tier `#8B5CF6`) and `ALUMNI` (Grade `X`, `#8B5CF6`).
+     - Updated `renderNextAssignmentHero` to render 2-row layout with 7 Rainbow Boxes and 3-State Action Icons.
+     - Updated `renderCompletedTestsBottom` to display accessible tests in active class ordered descending from latest accessible test, with `RETRY BUTTON ONLY`.
+4. **Cache & Verification**:
+   - Created test suite: `scripts/test_vocab_dashboard_blueprint.mjs`.
+   - Bumped cache to `v=20261106_v136`, service worker cache to `topscore-cache-option-a-v64`.
+   - All 6 test suites passed 100%.
+
+### Files
+- `dashboard.html`
+- `css/dashboard.css`
+- `js/dashboard.js`
+- `js/grading.js`
+- `package.json`
+- `scripts/bump_cache_busters.mjs`
+- `sw.js`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+## [2026-11-06 00:20] — Phase 324: Option 1 Strict 7×7 Repetitive Mastery & Prerequisite Deficit Guard (Batch 134 Comprehensive Resolution)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 324: Option 1 Strict 7×7 Repetitive Mastery & Prerequisite Deficit Guard (v135)
+**Status:** PASS
+
+### Why
+- User requested investigation of student Mr. Ayya Sofyandi Mzeth (`bae52c8d-3456-4334-8f7a-7ba3c268c642`, Batch 134) who was stuck unable to continue tasks after submitting an attempt.
+- User selected "OPSI 1" (Standard 7×7 Repetitive Mastery pedagogy: students must complete true required repetitions without artificial bypasses) with the directive `/goal` to audit all students thoroughly across all batches and permanently resolve any loopholes causing deadlock or stuck tasks.
+- **Root Cause Diagnosed**:
+  - Ayya had completed:
+    - `2C1-WORDS-TASK`: 9 passes (>= 70%) -> Complete (surpassed 7/7).
+    - `2C2-WORDS-TASK`: 6 passes (>= 70%) -> **Incomplete** (needed 1 more pass to reach 7/7).
+    - `2C3-WORDS-TASK`: 3 passes (attempts: 81.25%, 75%, 80%).
+  - Ayya had previously been able to take `2C3` (before linear topic gating was tightened or through an older session).
+  - After submitting Attempt 3 on `2C3` with 80%, `result.js` evaluated only `currentPassCount < targetReps` (3 < 7) on the active test (`curAsm`), rendering the milestone action button as: `"CONTINUE THE DRILL (3/7): 2C3 Words Task →"`.
+  - When Ayya clicked this button, `test.html` called `startTest`, which checked prerequisites and detected that `2C2` only had 6/7 passes. `startTest` threw `403 PREREQUISITE_NOT_MET: Prerequisite 2C2-WORDS-TASK must be passed first!`.
+  - Result: The UI directed him to C3, but backend security correctly blocked C3 because C2 was incomplete—creating an endless deadlock.
+  - A full audit of Batch 134 revealed 6 other students (Lalu Yuda, Adinda, Alfina, Abdul Basit, Wildian) with similar historical prerequisite deficits across topics.
+
+### Changed
+1. **Prerequisite Deficit Guard in Result Page (`js/result.js`)**:
+   - Updated `renderNextMilestone` to perform full-curriculum prerequisite sequence validation using `isPassedByTest`.
+   - Identifies `earliestUncompleted` across all published tasks.
+   - If `earliestIndex < curIndex` (a downstream task was taken while an upstream prerequisite is incomplete), the button dynamically re-routes to the unfulfilled prerequisite with explicit action text: `COMPLETE PREREQUISITE (${prereqPasses}/${targetReps}): ${prereqTitle} →`.
+   - Completely eliminates false looping on blocked downstream tasks.
+2. **Actionable Prerequisite Incomplete Modal (`js/test.js` & `js/api.js`)**:
+   - `js/api.js`: Enriches `PREREQUISITE_NOT_MET`, `TOPIC_MASTERY_NOT_MET`, and `PRIOR_THEME_EXAMS_REQUIRED` errors with `prereqTestId` and `prereqTitle`.
+   - `js/test.js`: Modal now renders a direct green action button: `"Go to Prerequisite Task →"`, enabling 1-click navigation directly to the missing prerequisite without requiring dashboard navigation.
+3. **Comprehensive Cross-Student Audit (Batch 134 & Beyond)**:
+   - Ayya: Directed to 2C2 (6/7 passes).
+   - Lalu Yuda: Directed to 2C2 (6/7 passes).
+   - Adinda: Directed to 2C1 (6/7 passes).
+   - Alfina: Directed to 2C2 (5/7 passes).
+   - Abdul Basit: Directed to 2C1 (6/7 passes).
+   - Wildian: Directed to 2C2 (2/7 passes).
+   - All students are smoothly guided to complete their required 7 passes with zero 403 errors and zero stuck state.
+4. **Cache & Assets**:
+   - Bumped cache version to `v=20261105_v135` across all HTML and JS files via `scripts/bump_cache_busters.mjs`.
+   - Bumped Service Worker cache name to `topscore-cache-option-a-v63`.
+5. **Testing & Verification**:
+   - Added automated regression test `scripts/test_prerequisite_deficit_guard.mjs` to `package.json` test runner.
+   - `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files).
+   - `node scripts/generate_sw_manifest.mjs`: PASS (27/27 assets).
+   - `node scripts/test_student_dashboard_exam_parity.mjs`: PASS (100%).
+   - `node scripts/test_homophones_spoken_mode.mjs`: PASS (23/23 tests).
+   - `node scripts/test_prerequisite_deficit_guard.mjs`: PASS (100%).
+
+### Files
+- `js/result.js`
+- `js/api.js`
+- `js/test.js`
+- `package.json`
+- `scripts/bump_cache_busters.mjs`
+- `sw.js`
+- `index.html`
+- `dashboard.html`
+- `test.html`
+- `result.html`
+- `admin.html`
+- `scripts/test_prerequisite_deficit_guard.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
 ## [2026-11-05 20:38] — Batch 134 Full Gating Resolution: Dynamic Exam KKM Alignment (60%), Task Threshold Sync, and Stuck Sessions Purge
 
 **Agent/Session:** Antigravity

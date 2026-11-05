@@ -1,9 +1,9 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
-import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261105_v134';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261105_v134';
-import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261105_v134';
-import { escapeHtml, escHtml, showToast } from './app.js?v=20261105_v134';
+import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261106_v136';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261106_v136';
+import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261106_v136';
+import { escapeHtml, escHtml, showToast } from './app.js?v=20261106_v136';
 
 export function getGrade(pct) {
   return calculateGrade(pct);
@@ -1364,6 +1364,8 @@ export async function startTest(studentId, testId) {
       const pErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${passCount}/${requiredPasses} passes with at least ${reqScore}%) on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`);
       pErr.code = 'PREREQUISITE_NOT_MET';
       pErr.status = 403;
+      pErr.prereqTestId = prereqTest?.id;
+      pErr.prereqTitle = prereqTest?.title;
       throw pErr;
     }
   }
@@ -1473,6 +1475,8 @@ export async function startTest(studentId, testId) {
         const pErr = new Error(`Prerequisite not completed. You must pass all Theme ${priorTheme} Exams with at least ${reqScore}% before taking Theme ${currentThemeFallback} tests.`);
         pErr.code = 'PRIOR_THEME_EXAMS_REQUIRED';
         pErr.status = 403;
+        pErr.prereqTestId = unpassedExam?.id;
+        pErr.prereqTitle = unpassedExam?.title;
         throw pErr;
       }
     }
@@ -1527,6 +1531,8 @@ export async function startTest(studentId, testId) {
         const topErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${targetReps} passes with at least ${unmasteredMin}%) on Topic ${currentThemeFallback}${priorTopicNum} before starting Topic ${cleanTopicNumFallback}.`);
         topErr.code = 'TOPIC_MASTERY_NOT_MET';
         topErr.status = 403;
+        topErr.prereqTestId = unmasteredTask?.id;
+        topErr.prereqTitle = unmasteredTask?.title;
         throw topErr;
       }
     }

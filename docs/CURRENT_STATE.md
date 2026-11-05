@@ -1,26 +1,79 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-05 20:38 UTC+8
-Current Phase: Phase 325: Batch 134 Full Gating Resolution: Dynamic Exam KKM Alignment (60%), Task Threshold Sync, and Stuck Sessions Purge [COMPLETE]
+Last Updated: 2026-11-06 01:25 UTC+8
+Current Phase: Phase 325: Vocab & Universal Student Dashboard Master Blueprint (60-150-50-70-FLEX-60) & Universal "TopsCore by Mr. Top" Prominent Banner [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Batch 134 Full Diagnostic & Root Cause Penuntasan**:
-   - Audited all 18 students in Batch 134 (Class 2nd Vocabulary).
-   - Resolved the 70% vs 60% Exam KKM discrepancy:
-     - `supabase/functions/start-test/index.ts` and `js/api.js` updated to use dynamic `minimum_required_score || 60` instead of hardcoded 70%.
-     - Unblocked Farobi (69%), Cinta Laura (63%), Lifurahma (60%), Adinda (60%), and Ariwil (60%) on their active task drills.
-   - Fixed task minimum score check before exams to `taskMinScore` (50%) instead of 70%.
-   - Purged stuck accidental attempts on `2A-WORDS-EXAM` for Farobi and Ariwil.
-2. **Dynamic Locked Task Feedback (`js/dashboard.js`)**:
-   - Class modal and non-grouped task gating display dynamic progress:
-     `Topic C1 (6/7 passes — 1 more needed)` or `Topic C2 (2/7 passes — 5 more needed)` instead of static `7/7 Passes Required`.
-3. **Resilient Error Boundary on Test Page (`js/test.js`)**:
-   - Dedicated glass modal when blocked by prerequisite gating with clean explanation and button to return to dashboard.
-   - Automatic cleanup of cached test and attempt IDs in `sessionStorage`.
-4. **Cache Version & Validation**:
-   - Bumped to `v=20261105_v134`, SW cache `topscore-cache-option-a-v62`.
-   - All tests passing 100% (syntax, SW manifest, exam parity, homophones, eligibility).
+1. **Universal Bottom Banner Overhaul across ALL Pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`, and CSS)**:
+   - Replaced old banner text (`TopsCore © 2026 | Created by Mr. Top`) with bold, enlarged branding: `<span class="banner-brand">TopsCore</span> <span class="banner-author">by Mr. Top</span>`.
+   - **Enlarged and Emboldened ("Kita besarkan dan tebalkan")**:
+     - `.banner-brand`: `font-size: clamp(1.05rem, 3vw, 1.25rem) !important; font-weight: 900 !important; color: #38bdf8 !important; text-shadow: 0 0 14px rgba(56, 189, 248, 0.45) !important;`
+     - `.banner-author`: `font-size: clamp(1rem, 2.8vw, 1.15rem) !important; font-weight: 800 !important; color: #f8fafc !important;`
+     - Banner container: `height: 60px !important; font-size: clamp(1rem, 2.8vw, 1.15rem) !important; font-weight: 800 !important; text-align: left !important; padding-left: clamp(16px, 4vw, 24px) !important;`
+   - Automated regression test created: `scripts/test_bottom_banner_universal.mjs` verifying all 5 HTML files and 5 CSS files pass 100%.
+
+2. **Master Blueprint Layout (60-150-50-70-FLEX-60) (`dashboard.html`, `css/dashboard.css`, `js/dashboard.js`)**:
+   - **Header 60px**: Integrated Door Icon (`🚪`, `#btn-change-class`) to switch classes, `#dashboard-header-class-name` in center, and `#logout-btn` on right. Removed redundant header profile icon.
+   - **Eliminated Classes Bar**: Saved 60px vertical space to maximize leaderboard real estate.
+   - **Metadata Card 150px**: Breadcrumb (`CEC | CAMP | 134 | 2ND LEVEL`) on top, Score on left, Clickable 70px Avatar (`#banner-avatar-trigger`) in center with champion crown (`👑`), Grade on right, and Full Student Name with Title on bottom.
+   - **Grade Description Card 50px**: Added support for `LET'S GO` (Purple Tier `#8B5CF6`) for new students without exams and `ALUMNI` (Grade `X`, Purple Tier `#8B5CF6`).
+   - **Next Test Card 70px (50px + 20px)**:
+     - Row 1: Next Test Full Name + 3-State Action Icon (Repetition numbers 1-7 for tasks, Yellow Padlock `🔒` when waiting for exam, Green Play `▶️` when exam is unlocked by tutor).
+     - Row 2: 7 Rainbow Boxes (Red to Purple: `#EF4444`, `#F97316`, `#F59E0B`, `#EAB308`, `#84CC16`, `#06B6D4`, `#8B5CF6`). Displays vibrant lit state up to current pass count; emits full rainbow glow when at exam stage.
+   - **Standings & Completed Tests Dual Panel (Dinamis Sisa Layar)**:
+     - Tab 1: Leaderboard with Points-First hierarchy.
+     - Tab 2: Completed Tests ordered strictly from latest accessible test down to earliest, with columns: `NO` | `TEST NAME` | `SCORE` | `GRADE` | `RETRY BUTTON ONLY` (launching test on click).
+   - **TopsCore Banner 60px**: Fixed bottom footer locked at 60px, maintaining strict zero-scroll viewport on 800px devices.
+
+3. **Authoritative Grading & Palette Extensions (`js/grading.js`)**:
+   - Added `TOPSCORE_COLORS.X = '#8B5CF6'`, `TOPSCORE_COLORS.PURPLE = '#8B5CF6'`.
+   - Added `GRADE_PALETTE.X` for Alumni.
+   - Enhanced `getAchievementStatus` and `getGradeSymbol` for Grade `X`, `ALUMNI`, and `LET'S GO`.
+
+4. **Automated Testing & Full Verification**:
+   - Automated tests: `scripts/test_vocab_dashboard_blueprint.mjs` & `scripts/test_bottom_banner_universal.mjs`.
+   - Busted cache to `v=20261106_v136`, service worker to `topscore-cache-option-a-v64`.
+   - 45/45 JS syntax PASS.
+   - 27/27 SW manifest assets PASS.
+   - Exam Parity PASS.
+   - Homophones Spoken Mode 23/23 PASS.
+   - Prerequisite Deficit Guard PASS.
+   - Vocab Dashboard Blueprint PASS (100%).
+   - Universal Bottom Banner PASS (100%).
+
+## Completed Work:
+1. **Root-Cause Analysis & Fix for "Tidak Bisa Lanjut Task" (Ayya & Batch 134)**:
+   - Root Cause: Ayya (and other Batch 134 students) previously took downstream tasks (e.g. 2C3) before completing required 7 passes on upstream prerequisites (e.g. 2C2 at 6/7).
+   - In `result.js`, `renderNextMilestone` was previously evaluating `currentPassCount < targetReps` in isolation on the current test (`curAsm`), commanding the student to "CONTINUE THE DRILL: 2C3 (3/7)".
+   - When the student clicked this button, `test.html` called `startTest`, which checked prerequisites and returned `403 PREREQUISITE_NOT_MET (Prerequisite 2C2-WORDS-TASK must be passed first)`, creating a frustrating deadlock loop.
+2. **Pedagogical Integrity (Option 1 - 7×7 Repetitive Mastery Enforced)**:
+   - Preserved pedagogical rigor without artificial bypasses or lowering mastery standards.
+   - Ayya and all students must genuinely earn 7 passes (>= 70%) on every prerequisite task.
+3. **Prerequisite Deficit Guard Engine (`js/result.js`, `js/api.js`, `js/test.js`)**:
+   - `js/result.js`: Evaluates `isPassedByTest` across all published curriculum tests. If `earliestUncompleted` has an index lower than `curIndex`, the button dynamically targets the earliest prerequisite with label `COMPLETE PREREQUISITE (${passes}/${targetReps}): ${testTitle} →`.
+   - `js/api.js`: Enriches `PREREQUISITE_NOT_MET`, `TOPIC_MASTERY_NOT_MET`, and `PRIOR_THEME_EXAMS_REQUIRED` errors with `prereqTestId` and `prereqTitle`.
+   - `js/test.js`: In the "Prerequisite Incomplete" modal, renders a direct green action button: `"Go to Prerequisite Task →"` pointing to `e.prereqTestId`, giving the student an immediate one-click path to resolve the deficit.
+4. **Comprehensive Cross-Student Database Audit (Batch 134 & Beyond)**:
+   - Audited all students in Batch 134:
+     - Mr. Ayya: 2C1 (9/7), 2C2 (6/7), 2C3 (3/7) -> guided to 2C2.
+     - Lalu Yuda: 2C1 (7/7), 2C2 (6/7), 2C3 (1/7) -> guided to 2C2.
+     - Adinda: 2C1 (6/7), 2C2 (1/7), 2C3 (2/7), 2C4 (0/7) -> guided to 2C1.
+     - Alfina: 2C1 (7/7), 2C2 (5/7), 2C3 (1/7), 2C4 (0/7) -> guided to 2C2.
+     - Abdul Basit: 2C1 (6/7), 2C2 (1/7) -> guided to 2C1.
+     - Wildian: 2C1 (7/7), 2C2 (2/7), 2C3 (0/7) -> guided to 2C2.
+   - All 7 affected students are automatically routed to their prerequisite deficit with 0 errors.
+5. **System Verification & Cache Busting**:
+   - Automated regression test suite created: `scripts/test_prerequisite_deficit_guard.mjs`.
+   - Cache bust to `v=20261105_v135`, service worker cache to `topscore-cache-option-a-v63`.
+   - 45/45 JS syntax PASS.
+   - 27/27 SW manifest assets PASS.
+   - Exam Parity PASS.
+   - Homophones Spoken Mode 23/23 PASS.
+   - Prerequisite Deficit Guard 100% PASS.
+
+## Completed Work:
+1. **Test Page Precision Blueprint Overhaul (`test.html`, `css/test.css`, `js/test.js`)**:
 1. **Catatan Wajib Zero-Empty-Space Layout Engine**:
    - Enforced on both `test.html` and `result.html`:
      - All empty space is absorbed by the dynamic body container (`flex: 1 1 0; min-height: 0;`).

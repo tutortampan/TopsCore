@@ -5,11 +5,11 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261105_v134';
-import { isExam, getGradeColorByScore } from './grading.js?v=20261105_v134';
-import { getStudentSession, getAdminSession } from './session.js?v=20261105_v134';
-import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261105_v134';
-import { getSupabase } from './supabase.js?v=20261105_v134';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261106_v136';
+import { isExam, getGradeColorByScore } from './grading.js?v=20261106_v136';
+import { getStudentSession, getAdminSession } from './session.js?v=20261106_v136';
+import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v136';
+import { getSupabase } from './supabase.js?v=20261106_v136';
 
 let session = getStudentSession();
 if (!session) {
@@ -388,11 +388,15 @@ if (!session) {
         const myClassIds = new Set((classes || []).map(c => c.id));
 
         const bestMap = {};
+        const isForgivenByTest = {};
         (allAtts || []).forEach(a => {
           const aid = a.test_id;
-          const p = parseFloat(a.percentage || 0);
+          const p = parseFloat(a.effective_score != null ? a.effective_score : (a.percentage || 0));
           if (bestMap[aid] == null || p > bestMap[aid]) {
             bestMap[aid] = p;
+          }
+          if (a.is_forgiven) {
+            isForgivenByTest[aid] = true;
           }
         });
 
@@ -414,13 +418,6 @@ if (!session) {
           return (a.title || '').localeCompare(b.title || '');
         });
 
-        const isPassed = (t) => {
-          const score = bestMap[t.id];
-          if (score == null) return false;
-          const req = t.minimum_required_score || 60;
-          return score >= req;
-        };
-
         const curAsm = attempt.tests || attempt.Tests;
         const curThemeCode = curAsm?.payload?.theme_code || (curAsm?.shell_code ? curAsm.shell_code.replace(/^[0-9]+/, '').charAt(0) : '');
         const curTopicCode = curAsm?.payload?.topic_code != null ? String(curAsm.payload.topic_code) : null;
@@ -436,18 +433,48 @@ if (!session) {
         const targetReps = isVocabClass ? (Number(testSettings?.taskRepetitions) || 7) : (Number(testSettings?.taskRepetitions) || 1);
         const minScore = Number(curAsm?.minimum_required_score) || Number(curAsm?.payload?.min_score) || Number(testSettings?.taskMinScore) || 50;
 
+        // Map pass counts & completion status across all published tests in this class
+        const passCountByTest = {};
+        const isPassedByTest = {};
+        (published || []).forEach(t => {
+          if (isExam(t)) {
+            const score = bestMap[t.id];
+            const req = Number(t.minimum_required_score) || 60;
+            isPassedByTest[t.id] = Boolean((score != null && score >= req) || isForgivenByTest[t.id]);
+          } else {
+            const tMin = Number(t.minimum_required_score) || Number(t.payload?.min_score) || minScore;
+            const passes = (allAtts || []).filter(at =>
+              at.test_id === t.id &&
+              (at.is_forgiven || parseFloat(at.percentage || 0) >= tMin || parseFloat(at.effective_score || 0) >= tMin)
+            ).length;
+            passCountByTest[t.id] = passes;
+            isPassedByTest[t.id] = Boolean(passes >= targetReps || isForgivenByTest[t.id]);
+          }
+        });
+
         // Current drill pass count & outcome
-        const currentPassCount = (allAtts || []).filter(at =>
-          at.test_id === curAsm?.id &&
-          (at.is_forgiven || parseFloat(at.percentage || 0) >= minScore || parseFloat(at.effective_score || 0) >= minScore)
-        ).length;
+        const currentPassCount = passCountByTest[curAsm?.id] || 0;
         const currentAttemptPassed = Boolean(attempt.is_forgiven) || (parseFloat(attempt.percentage || 0) >= minScore) || (parseFloat(attempt.effective_score || 0) >= minScore);
 
         let nextTest = null;
         let actionTag = 'GO TO NEXT ASSESSMENT:';
 
-        // 1. REPETITIVE DRILL LOOP: Stay on current task until target repetitions (e.g. 7 passes) are achieved
-        if (!curIsExam && targetReps > 1 && currentPassCount < targetReps) {
+        // Find the true earliest uncompleted test in curriculum linear order
+        const earliestUncompleted = published.find(t => !isPassedByTest[t.id]);
+        const curIndex = published.findIndex(t => t.id === curAsm?.id);
+        const earliestIndex = earliestUncompleted ? published.findIndex(t => t.id === earliestUncompleted.id) : -1;
+
+        if (earliestIndex !== -1 && earliestIndex < curIndex) {
+          // CRITICAL PREREQUISITE DEFICIT GUARD:
+          // Student took a downstream test (e.g. C3), but an earlier prerequisite task (e.g. C2)
+          // has not completed required repetitions (e.g. 6/7 passes).
+          // We MUST NOT loop on the downstream task because startTest will reject with 403 PREREQUISITE_NOT_MET!
+          // Direct student immediately to the unfulfilled prerequisite task!
+          nextTest = earliestUncompleted;
+          const prereqPasses = passCountByTest[earliestUncompleted.id] || 0;
+          actionTag = `COMPLETE PREREQUISITE (${prereqPasses}/${targetReps}):`;
+        } else if (!curIsExam && targetReps > 1 && currentPassCount < targetReps) {
+          // 1. REPETITIVE DRILL LOOP: Current task has all prerequisites fulfilled, continue drill to targetReps
           nextTest = curAsm;
           if (currentAttemptPassed) {
             actionTag = `CONTINUE THE DRILL (${currentPassCount}/${targetReps}):`;
@@ -468,7 +495,7 @@ if (!session) {
             );
             if (siblingTask) {
               const sibMin = Number(siblingTask.minimum_required_score) || Number(siblingTask.payload?.min_score) || minScore;
-              const siblingPassCount = (allAtts || []).filter(at => at.test_id === siblingTask.id && (parseFloat(at.percentage || 0) >= sibMin || parseFloat(at.effective_score || 0) >= sibMin)).length;
+              const siblingPassCount = passCountByTest[siblingTask.id] || 0;
               if (siblingPassCount < targetReps) {
                 nextTest = siblingTask;
               }
@@ -482,19 +509,19 @@ if (!session) {
               a.id !== curAsm?.id &&
               String(a.payload?.theme_code || '').toUpperCase() === String(curThemeCode).toUpperCase()
             );
-            if (siblingExam && !isPassed(siblingExam)) {
+            if (siblingExam && !isPassedByTest[siblingExam.id]) {
               nextTest = siblingExam;
             }
           }
 
           if (!nextTest) {
             // Find next uncompleted test in published list
-            nextTest = published.find(a => {
-              if (isExam(a)) return !isPassed(a);
-              const aMin = Number(a.minimum_required_score) || Number(a.payload?.min_score) || minScore;
-              const passes = (allAtts || []).filter(at => at.test_id === a.id && (parseFloat(at.percentage || 0) >= aMin || parseFloat(at.effective_score || 0) >= aMin)).length;
-              return passes < targetReps;
-            });
+            nextTest = published.find(a => !isPassedByTest[a.id]);
+          }
+
+          // If nextTest is an exam and student just failed this same exam, label as RETAKE
+          if (nextTest && isExam(nextTest) && nextTest.id === curAsm?.id && !currentAttemptPassed) {
+            actionTag = 'RETAKE THE EXAM:';
           }
         }
         if (!nextTest) {

@@ -681,6 +681,8 @@ export const TOPSCORE_COLORS = Object.freeze({
   D: '#FF8C00', // 30–59% Grade D (Dark Orange)
   E: '#FF0000', // 0–29% Grade E (Pure Red)
   FORGIVEN: '#FF0000', // Admin-Forgiven Prerequisite Override (Pure Red #FF0000)
+  X: '#8B5CF6', // Special Grade X for Alumni & New Student status (Purple)
+  PURPLE: '#8B5CF6',
 
   // 2. RGB Equivalents for Opacities, Shadows, & Glows
   STAR_RGB: '0, 192, 0',
@@ -690,6 +692,8 @@ export const TOPSCORE_COLORS = Object.freeze({
   D_RGB: '255, 140, 0',
   E_RGB: '255, 0, 0',
   FORGIVEN_RGB: '255, 0, 0',
+  X_RGB: '139, 92, 246',
+  PURPLE_RGB: '139, 92, 246',
 
   // 3. Question Answer Evaluation Status (Result Page)
   CORRECT: '#00c000ff', // Full point (1.0 pt)  -> Pure Green (Star / A)
@@ -798,6 +802,21 @@ export const GRADE_PALETTE = {
     maxScore: 29,
     sparkle: false,
   },
+  X: {
+    symbol: 'X',
+    label: 'Alumni',
+    predicate: 'Alumni',
+    color: '#8B5CF6',
+    dark: '#6d28d9',
+    light: '#c4b5fd',
+    rgb: '139, 92, 246',
+    glow: 'rgba(139, 92, 246, 0.4)',
+    textColor: '#FFFFFF',
+    name: 'Alumni',
+    minScore: null,
+    maxScore: null,
+    sparkle: false,
+  },
 };
 
 /**
@@ -821,6 +840,7 @@ export function getGradeColorByScore(percentage) {
 export function getGradeColor(grade, isRemedial = false) {
   const g = String(grade || '').trim();
   if (g === '★' || g.toUpperCase() === 'S') return TOPSCORE_COLORS.STAR;
+  if (g.toUpperCase() === 'X' || g.toUpperCase() === 'ALUMNI' || g.toUpperCase() === "LET'S GO" || g.toUpperCase() === 'LETS GO') return TOPSCORE_COLORS.X;
   return GRADE_PALETTE[g.toUpperCase()]?.color || '#94a3b8';
 }
 
@@ -899,6 +919,12 @@ export function getAchievementStatus(grade, percentage = null) {
   if (g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR') {
     return 'EXCELLENT';
   }
+  if (g.toUpperCase() === 'X' || g.toUpperCase() === 'ALUMNI') {
+    return 'ALUMNI';
+  }
+  if (g.toUpperCase() === "LET'S GO" || g.toUpperCase() === 'LETS GO' || g === '—' || g === '-') {
+    return "LET'S GO";
+  }
   let effGrade = g.toUpperCase();
   if (!['A', 'B', 'C', 'D', 'E'].includes(effGrade)) {
     const p = parseFloat(percentage ?? 0);
@@ -916,7 +942,7 @@ export function getAchievementStatus(grade, percentage = null) {
     D: 'LESS',
     E: 'FAIL',
   };
-  return map[effGrade] || 'ENOUGH';
+  return map[effGrade] || "LET'S GO";
 }
 
 /**

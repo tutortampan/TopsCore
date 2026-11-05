@@ -1,16 +1,16 @@
-import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261105_v134';
+import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261106_v136';
 /**
  * TopsCore — Test Engine Module
  * Extracted from test.html
  */
 
-import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261105_v134';
-    import { requireStudentSession } from './session.js?v=20261105_v134';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261105_v134';
-    import { startCountdown, isExpired } from './timer.js?v=20261105_v134';
-    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261105_v134';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261105_v134';
-    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261105_v134';
+import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261106_v136';
+    import { requireStudentSession } from './session.js?v=20261106_v136';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261106_v136';
+    import { startCountdown, isExpired } from './timer.js?v=20261106_v136';
+    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261106_v136';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261106_v136';
+    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261106_v136';
 
     // Arm wake lock gestures on first interaction
     bindWakeLockGestures();
@@ -1194,7 +1194,12 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
                   ${escapeHtml(errMsg.replace(/^Error:\s*/, ''))}
                 </p>
                 <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-                  <button class="btn btn-primary" onclick="window.location.href='dashboard.html'" style="background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);color:#fff;font-weight:700;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;">
+                  ${e?.prereqTestId ? `
+                    <button class="btn btn-primary" onclick="window.location.href='test.html?id=${e.prereqTestId}'" style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:#fff;font-weight:700;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,0.35);">
+                      Go to Prerequisite Task &rarr;
+                    </button>
+                  ` : ''}
+                  <button class="btn btn-secondary" onclick="window.location.href='dashboard.html'" style="background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);color:#fff;font-weight:700;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;">
                     Return to Dashboard
                   </button>
                 </div>

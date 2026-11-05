@@ -2229,9 +2229,9 @@ body.dashboard-page {
 
 /* Header: Standard 50px Height */
 body.dashboard-page .dashboard-header {
-  height: 50px !important;
-  min-height: 50px !important;
-  max-height: 50px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
   padding: 0 14px !important;
   display: flex !important;
   align-items: center !important;
@@ -2354,8 +2354,8 @@ body.dashboard-page #bottom-ad-banner {
   backdrop-filter: blur(10px) !important;
   padding-bottom: max(3px, env(safe-area-inset-bottom, 0px)) !important;
   box-sizing: border-box !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
+  font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-weight: 800 !important;
   color: #cbd5e1 !important;
   letter-spacing: 0.04em !important;
   z-index: 1000 !important;
@@ -2724,8 +2724,8 @@ body.dashboard-page #welcome-meta-wrapper {
   margin: 0 !important;
   text-align: center !important;
   font-family: 'Inter', sans-serif !important;
-  font-size: 0.75rem !important;
-  font-weight: 600 !important;
+  font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-weight: 800 !important;
   letter-spacing: 0.04em !important;
   text-transform: uppercase !important;
   color: #cbd5e1 !important;
@@ -4126,4 +4126,341 @@ body.dashboard-page .completed-summary-val {
   border-color: #f59e0b !important;
 }
 
+
+
+/* ==========================================================================
+   PHASE 325: VOCAB & UNIVERSAL STUDENT DASHBOARD MASTER BLUEPRINT (60-150-50-70-FLEX-60)
+   ========================================================================== */
+
+/* Door Icon to Change Class */
+body.dashboard-page .header-door-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 10px !important;
+  background: rgba(30, 41, 59, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #38bdf8 !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+body.dashboard-page .header-door-btn:hover {
+  background: rgba(56, 189, 248, 0.15) !important;
+  border-color: #38bdf8 !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3) !important;
+}
+
+/* Header Brand Class Name (Centered & Truncated) */
+body.dashboard-page .dashboard-header-brand {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  color: #ffffff !important;
+  text-align: center !important;
+  flex: 1 1 auto !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  padding: 0 10px !important;
+  margin: 0 !important;
+}
+
+/* Clickable Avatar Wrapper in Metadata Card */
+body.dashboard-page #banner-avatar-trigger {
+  cursor: pointer !important;
+  transition: transform 0.2s ease !important;
+}
+body.dashboard-page #banner-avatar-trigger:hover {
+  transform: scale(1.04) !important;
+}
+
+/* Purple Tier Styling: New Students (LET'S GO) & Alumni (Grade X) */
+body.dashboard-page #welcome-banner-section[data-tier="X"],
+body.dashboard-page #welcome-banner-section[data-tier="ALUMNI"],
+body.dashboard-page #welcome-banner-section[data-tier="LET'S GO"] {
+  --tier-color: #8b5cf6 !important;
+  --tier-rgb: 139, 92, 246 !important;
+  border-color: rgba(139, 92, 246, 0.5) !important;
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.35), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(139, 92, 246, 0.18), transparent 75%), #0f172a !important;
+}
+
+/* Next Assessment Deck: Exact 70px Height (Row 1: 44px + Row 2: 20px + Padding 6px) */
+body.dashboard-page .dashboard-next-test-deck {
+  height: 70px !important;
+  min-height: 70px !important;
+  max-height: 70px !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.dashboard-page .next-test-card {
+  height: 70px !important;
+  min-height: 70px !important;
+  max-height: 70px !important;
+  width: 100% !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  padding: 6px 12px 6px 12px !important;
+  box-sizing: border-box !important;
+  gap: 2px !important;
+  cursor: pointer !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.12), transparent 75%), #0f172a !important;
+  border: 1px solid rgba(var(--tier-rgb), 0.35) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+body.dashboard-page .next-test-card:hover {
+  border-color: var(--tier-color) !important;
+  box-shadow: 0 0 16px rgba(var(--tier-rgb), 0.35) !important;
+}
+
+body.dashboard-page .next-test-row-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  gap: 10px !important;
+}
+
+/* 7 Kotak Pelangi (20px Height) */
+body.dashboard-page .rainbow-pass-bar {
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+body.dashboard-page .rainbow-box {
+  flex: 1 1 0% !important;
+  height: 18px !important;
+  border-radius: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-sizing: border-box !important;
+  user-select: none !important;
+}
+
+/* 7 Rainbow Colors: Red, Orange, Amber, Yellow, Lime, Cyan, Purple */
+body.dashboard-page .rainbow-box[data-step="1"].is-lit { background: #EF4444 !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(239, 68, 68, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+body.dashboard-page .rainbow-box[data-step="2"].is-lit { background: #F97316 !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(249, 115, 22, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+body.dashboard-page .rainbow-box[data-step="3"].is-lit { background: #F59E0B !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(245, 158, 11, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+body.dashboard-page .rainbow-box[data-step="4"].is-lit { background: #EAB308 !important; color: #0F172A !important; box-shadow: 0 0 8px rgba(234, 179, 8, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+body.dashboard-page .rainbow-box[data-step="5"].is-lit { background: #84CC16 !important; color: #0F172A !important; box-shadow: 0 0 8px rgba(132, 204, 22, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+body.dashboard-page .rainbow-box[data-step="6"].is-lit { background: #06B6D4 !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(6, 182, 212, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+body.dashboard-page .rainbow-box[data-step="7"].is-lit { background: #8B5CF6 !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(139, 92, 246, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+
+/* Dimmed / Unreached boxes */
+body.dashboard-page .rainbow-box.is-dim {
+  background: rgba(30, 41, 59, 0.45) !important;
+  border: 1px dashed rgba(255, 255, 255, 0.15) !important;
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Action Icons (3-State System) */
+body.dashboard-page .next-asm-go-btn.pass-counter-btn {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 800 !important;
+  font-size: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  transition: transform 0.2s ease !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+body.dashboard-page .next-asm-go-btn.pass-counter-btn:hover {
+  transform: scale(1.08) !important;
+}
+
+body.dashboard-page .pass-counter-btn.rainbow-step-1 { background: #EF4444 !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(239, 68, 68, 0.6) !important; }
+body.dashboard-page .pass-counter-btn.rainbow-step-2 { background: #F97316 !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(249, 115, 22, 0.6) !important; }
+body.dashboard-page .pass-counter-btn.rainbow-step-3 { background: #F59E0B !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(245, 158, 11, 0.6) !important; }
+body.dashboard-page .pass-counter-btn.rainbow-step-4 { background: #EAB308 !important; color: #0F172A !important; box-shadow: 0 0 10px rgba(234, 179, 8, 0.6) !important; }
+body.dashboard-page .pass-counter-btn.rainbow-step-5 { background: #84CC16 !important; color: #0F172A !important; box-shadow: 0 0 10px rgba(132, 204, 22, 0.6) !important; }
+body.dashboard-page .pass-counter-btn.rainbow-step-6 { background: #06B6D4 !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(6, 182, 212, 0.6) !important; }
+body.dashboard-page .pass-counter-btn.rainbow-step-7 { background: #8B5CF6 !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(139, 92, 246, 0.6) !important; }
+
+/* Yellow Padlock (Waiting for Exam) */
+body.dashboard-page .next-asm-go-btn.is-exam-lock {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  background: rgba(234, 179, 8, 0.15) !important;
+  border: 1.5px solid #EAB308 !important;
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.35) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: not-allowed !important;
+}
+
+/* Green Play Button (Exam Ready & Unlocked) */
+body.dashboard-page .next-asm-go-btn.is-exam-play {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  border: 1.5px solid #10b981 !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+body.dashboard-page .next-asm-go-btn.is-exam-play:hover {
+  transform: scale(1.08) !important;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.75) !important;
+}
+
+/* Completed Tests Table Header & Rows Grid */
+body.dashboard-page .completed-table-header {
+  display: grid !important;
+  grid-template-columns: 28px 1fr 48px 40px 38px !important;
+  align-items: center !important;
+  padding: 4px 12px !important;
+}
+
+body.dashboard-page .completed-table-header .th-score {
+  text-align: right !important;
+}
+body.dashboard-page .completed-table-header .th-action {
+  text-align: center !important;
+}
+
+body.dashboard-page .completed-row {
+  display: grid !important;
+  grid-template-columns: 28px 1fr 48px 40px 38px !important;
+  align-items: center !important;
+  padding: 6px 12px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  transition: background 0.15s ease !important;
+}
+body.dashboard-page .completed-row:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+body.dashboard-page .completed-col-num {
+  text-align: center !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+}
+
+body.dashboard-page .completed-col-name {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  color: #f8fafc !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  padding-right: 6px !important;
+}
+
+body.dashboard-page .completed-col-score {
+  text-align: right !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.8rem !important;
+  font-weight: 800 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+body.dashboard-page .completed-col-grade {
+  text-align: center !important;
+}
+
+body.dashboard-page .completed-col-action {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+body.dashboard-page .completed-retry-btn {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(56, 189, 248, 0.12) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #38bdf8 !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  padding: 0 !important;
+}
+body.dashboard-page .completed-retry-btn:hover {
+  background: rgba(56, 189, 248, 0.25) !important;
+  border-color: #38bdf8 !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4) !important;
+}
+
+/* TOPSCORE LOCKED BANNER (PROMINENT, BIGGER & BOLDER: "TopsCore by Mr. Top") */
+
+/* ==========================================================================
+   TOPSCORE LOCKED BANNER (PROMINENT, BIGGER & BOLDER: "TopsCore by Mr. Top")
+   ========================================================================== */
+.topscore-locked-banner,
+#bottom-ad-banner {
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding-left: clamp(16px, 4vw, 24px) !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  box-sizing: border-box !important;
+}
+
+.topscore-locked-banner .banner-brand,
+#bottom-ad-banner .banner-brand {
+  font-size: clamp(1.05rem, 3vw, 1.25rem) !important;
+  font-weight: 900 !important;
+  color: #38bdf8 !important;
+  letter-spacing: 0.05em !important;
+  text-shadow: 0 0 14px rgba(56, 189, 248, 0.45) !important;
+}
+
+.topscore-locked-banner .banner-author,
+#bottom-ad-banner .banner-author {
+  font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-weight: 800 !important;
+  color: #f8fafc !important;
+  letter-spacing: 0.02em !important;
+}
 
