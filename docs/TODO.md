@@ -1,3 +1,26 @@
+# ACTIVE DIRECTIVE: PHASE 326 — UNIVERSAL BOTTOM BANNER OVERHAUL ("TOPSCORE BY MR. TOP") [COMPLETE]
+
+- [x] Task 1: Replace legacy banner text across all pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`) with `<span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>`.
+- [x] Task 2: Enlarge and embolden typography across `style.css`, `admin.css`, `dashboard.css`, `test.css`, `result.css` (`font-size: clamp(1rem, 2.8vw, 1.15rem); font-weight: 800;` on container; `font-size: clamp(1.05rem, 3vw, 1.25rem); font-weight: 900;` on brand with ambient cyan glow; `font-size: clamp(1rem, 2.8vw, 1.15rem); font-weight: 800;` on author with white slate text).
+- [x] Task 3: Build automated test suite `scripts/test_bottom_banner_universal.mjs` verifying 100% presence and correct styling across all pages.
+- [x] Task 4: Integrate test suite into `package.json` test runner.
+- [x] Task 5: Execute full regression verification across all 7 test suites (100% PASS).
+
+---
+
+# ACTIVE DIRECTIVE: PHASE 325 — VOCAB & UNIVERSAL STUDENT DASHBOARD MASTER BLUEPRINT [COMPLETE]
+
+- [x] Task 1: Conduct `/grill-me` architectural interview on user-uploaded blueprint diagram (`media_1793897504100_ef4a45a9.png`).
+- [x] Task 2: Implement 60px Header with Door Icon (`🚪`, `#btn-change-class`), Class Name Brand, and Logout; eliminate separate Classes Bar to save 60px vertical space.
+- [x] Task 3: Implement 150px Metadata Card with breadcrumb header, Score, Clickable photo 70px to open profile modal, Grade symbol, and student full name.
+- [x] Task 4: Implement 50px Grade Description Card supporting Purple Tier (`#8B5CF6`) for new students (`LET'S GO`) and alumni (`ALUMNI` Grade `X`).
+- [x] Task 5: Implement 70px Next Test Card featuring Row 1 (50px) Next Test Full Name + 3-State Action Icon (Repetition numbers 1-7 for task drills, Yellow Padlock `🔒` when waiting for exam, Green Play `▶️` when exam is unlocked by tutor), and Row 2 (20px) 7 Rainbow Boxes (Red to Purple).
+- [x] Task 6: Implement Dynamic Leaderboard (Tab 1: Points-First ranking) and Completed Tests Table (Tab 2: ordered from latest accessible test downwards, columns: `NO` | `TEST NAME` | `SCORE` | `GRADE` | `RETRY BUTTON ONLY`).
+- [x] Task 7: Extend `js/grading.js` with Grade `X` (Alumni), `TOPSCORE_COLORS.X = '#8B5CF6'`, and `LET'S GO` status.
+- [x] Task 8: Build automated test suite `scripts/test_vocab_dashboard_blueprint.mjs` verifying DOM, styles, and logic hooks (100% PASS).
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 300 — UNIFIED TOPIC BLUEPRINT CASCADING ROWSPAN MATRIX (OPSI B) [COMPLETE]
 
 - [x] Task 1: Analyze user mockups (Gambar 1 current, Gambar 2 outline, Gambar 3 grouped, Gambar 4 inline, and user-approved Opsi B).
