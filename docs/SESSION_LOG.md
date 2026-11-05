@@ -1,3 +1,59 @@
+## SESSION-20261105-1240
+
+Start: 2026-11-05 12:20 UTC+8
+End: 2026-11-05 12:40 UTC+8
+Agent: Antigravity
+
+### User Request
+1. "cek error console, lalu cek tombol prev - sisa pertanyaa- next yang tidak terlihat perbaiki, buat jaraknya 20 px dari lower banner. /plan"
+2. "kenapa ini masih terjadi? perbaiki /goal" (with screenshot of `Could not resolve Deno executable...`)
+
+### Objective
+- Permanently resolve the Deno executable notification across Antigravity IDE User Settings and isolated Edge Functions.
+- Eliminate browser console CORS preflight `ERR_FAILED` (404) for `start-test` via persistent circuit breaker and pre-registered undeployed cloud functions.
+- Fix `test.html` navigation controls (`Prev`, `0/40 Answered`, `Next`, and progress track) so they are fully visible with exact 20px spacing above the 50px locked lower banner.
+
+### Work Performed
+1. Diagnosed Deno resolution:
+   - Antigravity IDE evaluates User Settings (`C:\Users\Top\AppData\Roaming\Antigravity IDE\User\settings.json`) where `deno.path` was missing.
+   - IDE process environment was launched prior to PATH updates.
+   - `.vscode/settings.json` previously had `"deno.enable": true`, causing Deno LSP to activate on all root files (markdown and browser JS).
+   - Added `"deno.path": "C:\\Users\\Top\\.deno\\bin\\deno.exe"` to User Settings.
+   - Updated `.vscode/settings.json` to `"deno.enable": false` with `"deno.enablePaths": ["supabase/functions"]`.
+   - Removed deprecated `allowJs` from `supabase/functions/deno.json`.
+   - Verified `deno check` runs cleanly with 0 warnings.
+2. Diagnosed CORS preflight error:
+   - Supabase Cloud edge runtime returns `404 Not Found` for undeployed edge function `start-test`.
+   - The browser logged CORS preflight errors because 404 is not an OK HTTP status.
+   - Enhanced `js/supabase.js`: pre-registered undeployed cloud functions (`start-test`, `submit-test`, etc.) and persisted offline state in `sessionStorage` (`topscore_offline_edge_functions`).
+   - Client DB fallback executes immediately without unresolvable network calls.
+3. Fixed `test.html` layout:
+   - Removed destructive `margin: 0 auto 50px auto` from `body.test-page .test-body`.
+   - Set `.test-fixed-bottom`: `margin: 0 auto 70px auto !important;` (50px fixed footer + 20px requested gap).
+   - Automated Puppeteer browser test verified: `bannerRect.top: 750`, `bottomAreaRect.bottom: 730`, `gapBetweenAreaAndBanner: 20px`, `prevVisible: true`, `counterVisible: true`, `nextVisible: true`.
+4. Cache & Verification:
+   - Bumped cache busters across all HTML and JS files to `v=20261105_v130`.
+   - Bumped service worker cache name to `topscore-cache-option-a-v58`.
+   - Full test suite verified: `npm test` PASS 100%.
+
+### Files Changed
+- `C:\Users\Top\AppData\Roaming\Antigravity IDE\User\settings.json`
+- `.vscode/settings.json`
+- `supabase/functions/deno.json`
+- `css/test.css`
+- `js/supabase.js`
+- `test.html`, `admin.html`, `dashboard.html`, `result.html`, `index.html`, `sw.js`
+- `scripts/bump_cache_busters.mjs`, `scripts/verify_test_layout.mjs`
+- `docs/CHANGELOG.md`, `docs/CURRENT_STATE.md`, `docs/SESSION_LOG.md`
+
+### Verification
+- `node scripts/verify_test_layout.mjs` -> `gapBetweenAreaAndBanner: 20px`, all buttons visible.
+- `deno check` -> PASS with 0 warnings.
+- `npm test` -> 45/45 syntax, 27 SW assets, Exam Parity, 23/23 Acoustic Homophones PASS.
+
+### Resume From
+Ready for user interaction.
+
 ## SESSION-20261105-1000
 
 Start: 2026-11-05 09:40 UTC+8

@@ -1,11 +1,28 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-05 10:00 UTC+8
-Current Phase: Phase 319: Execution & Verification of Consolidated Master Plan for 7x7 Repetition Gating & Acoustic Homophones Engine [COMPLETE]
+Last Updated: 2026-11-05 12:40 UTC+8
+Current Phase: Phase 320: Deno User Settings, CORS Preflight Circuit Breaker & Test UI Nav Spacing [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Phase 319: Execution & Verification of Consolidated Master Plan for 7x7 Repetition Gating & Acoustic Homophones Engine [COMPLETE]:**
+1. **Permanent Deno Executable Resolution for Antigravity IDE**:
+   - Injected `"deno.path": "C:\\Users\\Top\\.deno\\bin\\deno.exe"` into global User settings `C:\Users\Top\AppData\Roaming\Antigravity IDE\User\settings.json`.
+   - Updated `.vscode/settings.json`: set `"deno.enable": false` while keeping `"deno.enablePaths": ["supabase/functions"]`, strictly isolating Deno LSP to Edge Functions as specified by official vscode-deno documentation.
+   - Removed deprecated `allowJs` from `supabase/functions/deno.json`, allowing `deno check` to run cleanly with 0 warnings.
+   - Verified Edge Functions typechecking (`deno check`) runs cleanly across `start-test` and `submit-test`.
+
+2. **Start-Test Preflight CORS Error Elimination (`js/supabase.js`)**:
+   - Enhanced Edge Function circuit breaker with `sessionStorage` persistence (`topscore_offline_edge_functions`).
+   - Pre-registered undeployed cloud functions (`start-test`, `submit-test`, `student-login`, `evaluate-test`, `generate-narrative`) so client DB fallback executes immediately without making unresolvable preflight HTTP calls that log CORS failures in the browser console.
+
+3. **Test Page Bottom Navigation & 20px Lower Banner Distance (`css/test.css`)**:
+   - Removed destructive `margin: 0 auto 50px auto` from `body.test-page .test-body`, allowing `.test-body` to flex naturally (`flex: 1; min-height: 0;`).
+   - Set `.test-fixed-bottom`: `margin: 0 auto 70px auto !important;` (50px fixed footer + 20px requested gap).
+   - Verified in headless browser (400x800 viewport): `gapBetweenAreaAndBanner: 20px`, `prevVisible: true`, `counterVisible: true`, `nextVisible: true`.
+   - Bumped cache busters across all HTML and JS files to `v=20261105_v130`; bumped Service Worker cache name to `topscore-cache-option-a-v58`.
+   - Full test suite verified: `npm test` PASS 100% across all 4 suites (Syntax, SW Manifest, Dashboard Parity, Acoustic Homophones).
+
+2. **Phase 319: Execution & Verification of Consolidated Master Plan for 7x7 Repetition Gating & Acoustic Homophones Engine [COMPLETE]:**
    - **Plan Archival & Status Finalization**:
      - All 6 plan artifacts in artifact repository marked as `[IMPLEMENTED] (SUDAH) — CLOSED / ARCHIVED` with `UserFacing: false`.
      - `docs/Vocab_7x7_Level_Progression_Master_Plan.md` marked as `✅ 100% IMPLEMENTED & ARCHIVED (SELESAI)`.

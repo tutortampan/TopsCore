@@ -1,8 +1,40 @@
 
 // Circuit Breaker for offline / undeployed Edge Functions
-const _offlineEdgeFunctions = new Set();
-export function isEdgeFunctionOffline(name) { return _offlineEdgeFunctions.has(name); }
-export function markEdgeFunctionOffline(name) { _offlineEdgeFunctions.add(name); }
+// Known undeployed Edge Functions in Supabase Cloud are pre-registered so that client DB fallback
+// executes immediately without triggering CORS preflight network errors in browser console.
+const KNOWN_UNDEPLOYED_FUNCTIONS = ['start-test', 'submit-test', 'student-login', 'evaluate-test', 'generate-narrative'];
+
+const _offlineEdgeFunctions = new Set(
+  (() => {
+    const list = [...KNOWN_UNDEPLOYED_FUNCTIONS];
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        const stored = sessionStorage.getItem('topscore_offline_edge_functions');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) list.push(...parsed);
+        } else {
+          sessionStorage.setItem('topscore_offline_edge_functions', JSON.stringify(list));
+        }
+      }
+    } catch (_) {}
+    return list;
+  })()
+);
+
+export function isEdgeFunctionOffline(name) {
+  if (typeof USE_LOCAL !== 'undefined' && USE_LOCAL) return false;
+  return _offlineEdgeFunctions.has(name);
+}
+
+export function markEdgeFunctionOffline(name) {
+  _offlineEdgeFunctions.add(name);
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('topscore_offline_edge_functions', JSON.stringify([..._offlineEdgeFunctions]));
+    }
+  } catch (_) {}
+}
 // TOPS CORE — Supabase Configuration & Client Init
 export const SUPABASE_CLOUD_URL = 'https://oclajpyumehpojepcczg.supabase.co';
 export const SUPABASE_CLOUD_ANON_KEY = 'sb_publishable_L9T-SJpuAqK5291UEVhKMg_i7lvWFGB';
@@ -88,7 +120,7 @@ export async function getSupabase() {
 
 // Add callEdgeFunction to easily invoke Edge Functions
 export async function callEdgeFunction(functionName, payload) {
-  if (_offlineEdgeFunctions.has(functionName)) {
+  if (isEdgeFunctionOffline(functionName)) {
     const err = new Error(`Edge function ${functionName} offline (circuit breaker active)`);
     err.status = 404;
     throw err;
@@ -134,8 +166,8 @@ export async function callEdgeFunction(functionName, payload) {
     return data;
   } catch (err) {
     clearTimeout(timeoutId);
-    if (err.status === 404 || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
-      _offlineEdgeFunctions.add(functionName);
+    if (err.status === 404 || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError') || err.name === 'TypeError') {
+      markEdgeFunctionOffline(functionName);
     }
     if (err.name === 'AbortError') {
       throw new Error("AI Evaluation timed out. Your answer is saved, please refresh and try submitting again.");

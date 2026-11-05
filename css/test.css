@@ -31,7 +31,7 @@
       position: relative !important;
       width: 95% !important;
       max-width: 440px !important;
-      margin: 0 auto 50px auto !important;
+      margin: 0 auto !important;
       padding: 0 !important;
       box-sizing: border-box !important;
     }
@@ -913,7 +913,8 @@ body.test-page .dashboard-header.test-header {
   box-sizing: border-box;
 }
 
-.test-fixed-bottom {
+.test-fixed-bottom,
+body.test-page #fixed-bottom-area {
   flex-shrink: 0 !important;
   z-index: 100 !important;
   display: flex !important;
@@ -922,9 +923,9 @@ body.test-page .dashboard-header.test-header {
   align-items: center !important;
   width: 100% !important;
   max-width: 100vw !important;
-  margin: 0 auto !important;
+  margin: 0 auto calc(50px + 20px + env(safe-area-inset-bottom, 0px)) auto !important; /* Exactly 20px above 50px locked lower banner */
   box-sizing: border-box !important;
-  padding: 4px 0 4px 0 !important;
+  padding: 4px 0 0 0 !important;
 }
 
 .test-bottom-container {

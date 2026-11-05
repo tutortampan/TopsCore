@@ -1,6 +1,6 @@
-import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, toShortLevel } from '../api.js?v=20261105_v129';
-import { openCrudModal } from './crud-modals.js?v=20261105_v129';
-import { showToast, escapeHtml, escHtml } from '../app.js?v=20261105_v129';
+import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, toShortLevel } from '../api.js?v=20261105_v130';
+import { openCrudModal } from './crud-modals.js?v=20261105_v130';
+import { showToast, escapeHtml, escHtml } from '../app.js?v=20261105_v130';
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
