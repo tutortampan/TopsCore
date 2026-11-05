@@ -1,10 +1,27 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-05 16:00 UTC+8
-Current Phase: Phase 323: Catatan Wajib Zero-Empty-Space Integration, Gambar 3 Result Layout, 30px Test Counter, 60px Left-Aligned Banner & Dynamic Tier Glow [COMPLETE]
+Last Updated: 2026-11-05 19:35 UTC+8
+Current Phase: Phase 324: Batch 134 Task Gating Resolution (Option 1), Dynamic Repetition Feedback, and Resilient Error Boundaries [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
+1. **Batch 134 Diagnostic & Gating Resolution (Option 1 Selected)**:
+   - Deep inspection and validation for all students in Batch 134, particularly Cinta Laura, Muhammad Afyani Farobi, and Muhamad Alifurrahman ("Lifurahma"):
+     - **Muhammad Afyani Farobi**: 6/7 passes on `2C1-WORDS-TASK`. Needs 1 more pass on C1 (6/7 -> 7/7) to unlock C2.
+     - **Muhamad Alifurrahman**: 2/7 passes on `2C1-WORDS-TASK`. Needs 5 more passes on C1 (2/7 -> 7/7) to unlock C2.
+     - **Cinta Laura**: 9/7 passes on C1 (Mastered), 2/7 passes on C2. Active task is `2C2-WORDS-TASK (Cashier & Payment)`. Needs 5 more passes on C2 (2/7 -> 7/7) to unlock C3.
+2. **Dynamic Locked Task Feedback (`js/dashboard.js`)**:
+   - Class modal and non-grouped task gating updated to display dynamic progress:
+     `Topic C1 (6/7 passes — 1 more needed)` or `Topic C2 (2/7 passes — 5 more needed)` instead of static `7/7 Passes Required`.
+   - Amber accent styling (`#fbbf24`) with high readability.
+3. **Resilient Error Boundary on Test Page (`js/test.js`)**:
+   - Enhanced `bootTest()` catch block to render a dedicated, clear glass modal when blocked by prerequisite gating (`PREREQUISITE_NOT_MET`, `TOPIC_MASTERY_NOT_MET`), with direct button to return to dashboard.
+   - Cleans up `topscore_test_id` and `topscore_attempt_id` in `sessionStorage` on error to avoid session poisoning.
+4. **Smart Next Milestone Logic (`js/result.js`)**:
+   - Added `at.is_forgiven` tolerance in pass calculation across `renderSmartNextAction`.
+5. **Cache Version & Validation**:
+   - Bumped to `v=20261105_v133`, SW cache `topscore-cache-option-a-v61`.
+   - All tests passing 100% (syntax, SW manifest, exam parity, homophones, eligibility).
 1. **Catatan Wajib Zero-Empty-Space Layout Engine**:
    - Enforced on both `test.html` and `result.html`:
      - All empty space is absorbed by the dynamic body container (`flex: 1 1 0; min-height: 0;`).

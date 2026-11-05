@@ -1,16 +1,16 @@
-import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261105_v132';
+import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261105_v133';
 /**
  * TopsCore — Test Engine Module
  * Extracted from test.html
  */
 
-import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261105_v132';
-    import { requireStudentSession } from './session.js?v=20261105_v132';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261105_v132';
-    import { startCountdown, isExpired } from './timer.js?v=20261105_v132';
-    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261105_v132';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261105_v132';
-    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261105_v132';
+import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261105_v133';
+    import { requireStudentSession } from './session.js?v=20261105_v133';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261105_v133';
+    import { startCountdown, isExpired } from './timer.js?v=20261105_v133';
+    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261105_v133';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261105_v133';
+    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261105_v133';
 
     // Arm wake lock gestures on first interaction
     bindWakeLockGestures();
@@ -1168,8 +1168,44 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         }
       } catch(e) {
         hideLoading();
-        showToast(e.message, 'error');
-        setTimeout(() => window.location.href = 'dashboard.html', 2000);
+        // Clear cached IDs in sessionStorage so invalid or blocked tests don't poison subsequent sessions
+        sessionStorage.removeItem('topscore_test_id');
+        sessionStorage.removeItem('topscore_attempt_id');
+
+        const errMsg = e?.message || String(e) || 'Unable to start test.';
+        const isPrereqIssue = errMsg.includes('Prerequisite') || 
+                              errMsg.includes('Repetitive Mastery') || 
+                              errMsg.includes('PREREQUISITE') || 
+                              errMsg.includes('TOPIC_MASTERY') ||
+                              errMsg.includes('PRIOR_THEME_EXAMS_REQUIRED');
+
+        if (isPrereqIssue) {
+          const main = document.getElementById('test-main');
+          if (main) {
+            main.style.display = 'flex';
+            main.style.justifyContent = 'center';
+            main.style.alignItems = 'center';
+            main.style.minHeight = '70vh';
+            main.innerHTML = `
+              <div class="glass-panel text-center p-5 mx-auto" style="max-width:540px;background:rgba(18,24,38,0.96);border:1px solid rgba(245,158,11,0.35);border-radius:16px;box-shadow:0 20px 45px rgba(0,0,0,0.6);padding:2.5rem 1.75rem;text-align:center;">
+                <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+                <h2 class="fw-800 text-xl mb-3" style="color:#fbbf24;font-size:1.4rem;font-weight:800;margin-bottom:0.75rem;">Prerequisite Incomplete</h2>
+                <p class="text-sm" style="color:#e2e8f0;line-height:1.6;margin-bottom:1.75rem;font-size:0.95rem;">
+                  ${escapeHtml(errMsg.replace(/^Error:\s*/, ''))}
+                </p>
+                <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                  <button class="btn btn-primary" onclick="window.location.href='dashboard.html'" style="background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);color:#fff;font-weight:700;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;">
+                    Return to Dashboard
+                  </button>
+                </div>
+              </div>
+            `;
+            return;
+          }
+        }
+
+        showToast(errMsg, 'error');
+        setTimeout(() => window.location.href = 'dashboard.html', 3000);
       }
     }
 

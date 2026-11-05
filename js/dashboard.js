@@ -3,12 +3,12 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261105_v130';
-    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261105_v130';
-    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261105_v130';
-    import { testMicrophoneCapability } from './speech.js?v=20261105_v130';
-    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261105_v130';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261105_v130';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261105_v133';
+    import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261105_v133';
+    import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261105_v133';
+    import { testMicrophoneCapability } from './speech.js?v=20261105_v133';
+    import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261105_v133';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261105_v133';
 
     window._isBatchChampion = false;
 
@@ -183,7 +183,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let currentGender = session.gender;
       if (!currentGender) {
         try {
-          const sb = await (await import('./supabase.js?v=20261105_v130')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261105_v133')).getSupabase();
           const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).maybeSingle();
           if (st?.gender) {
             currentGender = st.gender;
@@ -549,7 +549,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
         try {
-          const sb = await (await import('./supabase.js?v=20261105_v130')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261105_v133')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).maybeSingle();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
@@ -568,7 +568,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Background sync: memastikan localStorage selalu sinkron dengan database terbaru
         (async () => {
           try {
-            const sb = await (await import('./supabase.js?v=20261105_v130')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261105_v133')).getSupabase();
             const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).maybeSingle();
             if (st && st.photo_url !== photoUrl) {
               if (st.photo_url) {
@@ -622,7 +622,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
       if (!hasBirthday) {
         try {
-          const sb = await (await import('./supabase.js?v=20261105_v130')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261105_v133')).getSupabase();
           const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).maybeSingle();
           if (st && st.birth_date) {
             hasBirthday = true;
@@ -688,7 +688,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function checkAndPromptEducation() {
       let hasEducation = false;
       try {
-        const sb = await (await import('./supabase.js?v=20261105_v130')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261105_v133')).getSupabase();
         const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).maybeSingle();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -698,7 +698,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
-             const { setStudentSession } = await import('./session.js?v=20261105_v130');
+             const { setStudentSession } = await import('./session.js?v=20261105_v133');
              setStudentSession(session);
           }
         }
@@ -748,7 +748,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           try {
             await updateStudentEducation(session.student_id, eduList);
             session.education = eduList;
-            const { setStudentSession } = await import('./session.js?v=20261105_v130');
+            const { setStudentSession } = await import('./session.js?v=20261105_v133');
             setStudentSession(session);
             showToast('Academic background verified!', 'success');
             doResolve();
@@ -1786,7 +1786,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                     const pCount = passCountByTest[pt.id] || 0;
                     if (pCount < targetReps) {
                       grpPrereqMet = false;
-                      grpPrereqTitle = `Topic ${grp.themeCode}${priorTopicNum} Tasks (${targetReps}/${targetReps} Passes Required)`;
+                      const remaining = targetReps - pCount;
+                      grpPrereqTitle = `Topic ${grp.themeCode}${priorTopicNum} (${pCount}/${targetReps} passes — ${remaining} more needed)`;
                       break;
                     }
                   }
@@ -1818,9 +1819,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               let actionBtnHtml = '';
 
               if (!grpPrereqMet) {
-                statusBadgeHtml = `<span style="background:rgba(255,255,255,0.08);color:#a1a1aa;border:1px solid rgba(255,255,255,0.18);padding:3px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">🔒 Locked</span>`;
-                actionBtnHtml = `<div style="text-align:right;">
-                  <span style="font-size:0.68rem;color:var(--clr-text-3);">Requires <b>${escapeHtml(grpPrereqTitle)}</b></span>
+                statusBadgeHtml = `<span style="background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);padding:3px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">🔒 Locked</span>`;
+                actionBtnHtml = `<div style="text-align:right;max-width:240px;line-height:1.3;">
+                  <span style="font-size:0.72rem;color:#cbd5e1;">Needs <b>${escapeHtml(grpPrereqTitle)}</b></span>
                 </div>`;
               } else if (activeInProg) {
                 statusBadgeHtml = `<span style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.35);padding:3px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">⏳ In Progress</span>`;
@@ -1975,6 +1976,30 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                     if (pCount < targetReps) {
                       prereqMet = false;
                       prereqTitle = `All Theme ${currentThemeCode} Tasks (${targetReps}/${targetReps} Passes Required)`;
+                      break;
+                    }
+                  }
+                }
+              }
+
+              if (prereqMet && !isExam(Test) && !isRemedialSession && !isStudentRemedialUnlocked) {
+                const currentThemeCode = String(Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+                const curTopNum = parseInt(String(Test.payload?.topic_code || '').replace(/^[A-Za-z]+/, ''), 10);
+                if (curTopNum > 1 && currentThemeCode) {
+                  const priorTopicNum = curTopNum - 1;
+                  const priorTasks = sortedTests.filter(a => {
+                    if (isExam(a)) return false;
+                    const aTheme = String(a.payload?.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+                    if (aTheme !== currentThemeCode) return false;
+                    const aTopNum = parseInt(String(a.payload?.topic_code || '').replace(/^[A-Za-z]+/, ''), 10);
+                    return aTopNum === priorTopicNum;
+                  });
+                  for (const pt of priorTasks) {
+                    const pCount = passCountByTest[pt.id] || 0;
+                    if (pCount < targetReps) {
+                      prereqMet = false;
+                      const remaining = targetReps - pCount;
+                      prereqTitle = `Topic ${currentThemeCode}${priorTopicNum} (${pCount}/${targetReps} passes — ${remaining} more needed)`;
                       break;
                     }
                   }
@@ -2882,7 +2907,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       try {
-        const sb = await (await import('./supabase.js?v=20261105_v130')).getSupabase();
+        const sb = await (await import('./supabase.js?v=20261105_v133')).getSupabase();
 
         // 1. Fetch active students in the same batch
         const { data: students, error: stuErr } = await sb
@@ -3302,7 +3327,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Fetch and display existing student photo and personal data
       (async () => {
         try {
-          const sb = await (await import('./supabase.js?v=20261105_v130')).getSupabase();
+          const sb = await (await import('./supabase.js?v=20261105_v133')).getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).maybeSingle();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
@@ -3357,7 +3382,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           showLoading('Saving Personal Data...');
           try {
-            const sb = await (await import('./supabase.js?v=20261105_v130')).getSupabase();
+            const sb = await (await import('./supabase.js?v=20261105_v133')).getSupabase();
             const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
             if (error) throw error;
 

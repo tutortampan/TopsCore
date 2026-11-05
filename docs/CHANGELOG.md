@@ -1,3 +1,59 @@
+## [2026-11-05 19:35] — Batch 134 Task Gating Resolution (Option 1), Dynamic Repetition Feedback, and Resilient Error Boundaries
+
+**Agent/Session:** Antigravity
+**Phase:** 7×7 Repetitive Mastery Alignment & Dynamic Prerequisite Gating (v133)
+**Status:** PASS
+
+### Why
+- User reported that 3 students in Batch 134 (Cinta Laura, Muhammad Afyani Farobi, Muhamad Alifurrahman / "Lifurahma") in Class 2nd Vocabulary were having issues continuing to the next task drill.
+- User selected **Option 1**: maintain standard 7×7 Repetitive Mastery pedagogy, ensure students fulfill required repetitions, eliminate friction in prerequisite messaging, audit end-to-end errors, stage and accept all changes, commit, and push to main.
+
+### Root Cause Analysis & Diagnostic Findings
+1. **Mr. Muhammad Afyani Farobi**: Completed 6/7 passes on `2C1-WORDS-TASK`. Encountered earlier `task_repetitions: 6` DB payload bug where result page told him to "Advance to C2" but edge function start-test required 7 passes and returned 403. Resolution: needs 1 more pass on C1 (6/7 -> 7/7) whereupon C2 unlocks automatically.
+2. **Mr. Muhamad Alifurrahman (Lifurahma)**: Completed 2/7 passes on `2C1-WORDS-TASK`. In earlier Themes A and B, tasks had been bulk-forgiven after 1 attempt, leading to the assumption that 1-2 attempts was enough to advance. Resolution: needs 5 more passes on C1 (2/7 -> 7/7) before C2 unlocks.
+3. **Miss Cinta Laura**: Completed 9/7 passes on `2C1-WORDS-TASK` (Mastered), 2/7 passes on `2C2-WORDS-TASK`, and 1 attempt on `2C3-WORDS-TASK` taken previously before linear prerequisite gating was enforced. When attempting to resume C3, system blocked access because C2 only had 2/7 passes. Resolution: active task is `2C2-WORDS-TASK (Cashier & Payment)`. Needs 5 more passes on C2 (2/7 -> 7/7) before C3 unlocks.
+4. **UX Friction**:
+   - Class modal locked state previously displayed static text: `Requires Topic C1 Tasks (7/7 Passes Required)` without showing student's current count or remaining count.
+   - `test.html` on prerequisite 403 error previously showed a brief 2-second toast and immediately redirected back to dashboard, disorienting students.
+   - Session storage did not clear `topscore_test_id` on blocked start, which could lead to retrying blocked test IDs.
+
+### Changed
+1. **Dynamic Locked Task Feedback (`js/dashboard.js`)**:
+   - Updated modal and non-grouped task gating to compute and display dynamic progress:
+     `Topic C1 (6/7 passes — 1 more needed)` or `Topic C2 (2/7 passes — 5 more needed)` instead of static `7/7 Passes Required`.
+   - Updated locked badge to high-visibility amber accent (`#fbbf24`) with clean explanation.
+2. **Resilient Error Boundary on Test Page (`js/test.js`)**:
+   - Enhanced `bootTest()` catch block: when `startTest` fails due to prerequisite gating (`PREREQUISITE_NOT_MET`, `TOPIC_MASTERY_NOT_MET`, etc.), renders an elegant glass modal explaining the exact remaining requirements with a direct button to return to the dashboard.
+   - Cleans up `topscore_test_id` and `topscore_attempt_id` in `sessionStorage` on error to prevent cache contamination.
+3. **Smart Next Milestone Logic (`js/result.js`)**:
+   - Added `at.is_forgiven` tolerance to pass counting across `renderSmartNextAction` to guarantee that forgiven historical attempts count towards repetition quotas.
+4. **Cache & Assets**:
+   - Bumped cache buster to `v=20261105_v133` across all HTML and JS files.
+   - Bumped Service Worker cache name to `topscore-cache-option-a-v61`.
+5. **Testing & E2E Validation**:
+   - `check_all_js_syntax.cjs`: 45/45 JS files passed syntax validation.
+   - `generate_sw_manifest.mjs`: All 27 assets verified on disk.
+   - `test_student_dashboard_exam_parity.mjs`: 100% PASS.
+   - `test_homophones_spoken_mode.mjs`: 23/23 PASS.
+   - `test_start_eligibility_three.mjs`: 100% PASS (verified Farobi, Lifurahma, and Cinta eligibility on active and locked tasks).
+   - `npm test`: 100% PASS with 0 errors.
+
+### Files
+- `js/dashboard.js`
+- `js/test.js`
+- `js/result.js`
+- `scripts/bump_cache_busters.mjs`
+- `sw.js`
+- `index.html`
+- `dashboard.html`
+- `test.html`
+- `result.html`
+- `admin.html`
+- `scripts/test_start_eligibility_three.mjs`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_LOG.md`
+
 ## [2026-11-05 16:00] — Catatan Wajib Zero-Empty-Space Integration, Gambar 3 Result Layout, 30px Test Counter, 60px Left-Aligned Banner & Dynamic Tier Glow
 
 **Agent/Session:** Antigravity

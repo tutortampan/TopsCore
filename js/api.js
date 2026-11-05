@@ -1,9 +1,9 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
-import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261105_v132';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261105_v132';
-import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261105_v132';
-import { escapeHtml, escHtml, showToast } from './app.js?v=20261105_v132';
+import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261105_v133';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261105_v133';
+import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261105_v133';
+import { escapeHtml, escHtml, showToast } from './app.js?v=20261105_v133';
 
 export function getGrade(pct) {
   return calculateGrade(pct);

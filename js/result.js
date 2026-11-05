@@ -5,11 +5,11 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261105_v132';
-import { isExam, getGradeColorByScore } from './grading.js?v=20261105_v132';
-import { getStudentSession, getAdminSession } from './session.js?v=20261105_v132';
-import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261105_v132';
-import { getSupabase } from './supabase.js?v=20261105_v132';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261105_v133';
+import { isExam, getGradeColorByScore } from './grading.js?v=20261105_v133';
+import { getStudentSession, getAdminSession } from './session.js?v=20261105_v133';
+import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261105_v133';
+import { getSupabase } from './supabase.js?v=20261105_v133';
 
 let session = getStudentSession();
 if (!session) {
@@ -439,9 +439,9 @@ if (!session) {
         // Current drill pass count & outcome
         const currentPassCount = (allAtts || []).filter(at =>
           at.test_id === curAsm?.id &&
-          (parseFloat(at.percentage || 0) >= minScore || parseFloat(at.effective_score || 0) >= minScore)
+          (at.is_forgiven || parseFloat(at.percentage || 0) >= minScore || parseFloat(at.effective_score || 0) >= minScore)
         ).length;
-        const currentAttemptPassed = (parseFloat(attempt.percentage || 0) >= minScore) || (parseFloat(attempt.effective_score || 0) >= minScore);
+        const currentAttemptPassed = Boolean(attempt.is_forgiven) || (parseFloat(attempt.percentage || 0) >= minScore) || (parseFloat(attempt.effective_score || 0) >= minScore);
 
         let nextTest = null;
         let actionTag = 'GO TO NEXT ASSESSMENT:';
