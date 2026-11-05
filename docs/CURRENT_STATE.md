@@ -1,16 +1,14 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-06 01:28 UTC+8
-Current Phase: Phase 327: Dashboard Next Test Card Layout Refinement & Universal Production Integrity [COMPLETE]
+Last Updated: 2026-11-06 01:37 UTC+8
+Current Phase: Phase 328: Student Dashboard Metadata Score Population & Cache v138 [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Next Test Card 2-Column Blueprint Refinement (`dashboard.html`, `css/dashboard.css`, `js/dashboard.js`)**:
-   - Refined Next Test card into strict 2 columns according to the master blueprint spreadsheet layout:
-     - **Left Column (`.next-test-col-left`)**: Flex column containing Test Name title wrap (`.next-test-title-wrap`) on top and 20px Rainbow Pass Bar (`.rainbow-pass-bar`) on bottom.
-     - **Right Column (`.next-test-col-right`)**: Full-height 68px action column containing the 3-state action icon (Repetition 1-7 pass button, Yellow padlock `🔒` waiting state, or Green play `▶️` exam button).
-   - Resolved syntax anomaly in `js/dashboard.js` (removed duplicate closing brace at line 1166).
-   - Cleaned up obsolete header profile button CSS in `css/dashboard.css`.
+1. **Student Dashboard Metadata Score Population (`js/dashboard.js`)**:
+   - Fixed missing `textContent` population on `#bottom-stat-avg-score` (`scoreVal.textContent = hasExam ? `${avgPct}%` : '—';`).
+   - Verified live in Google Chrome with student Ayya: Score displays accurately (`82%`) in glowing Electric Lime matching Grade B.
+   - Verified Completed Tests tab with 100% precision (ordered descending from latest accessible test with Retry button).
 
 2. **Universal Bottom Banner Overhaul across ALL Pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`, and CSS)**:
    - Replaced old banner text (`TopsCore © 2026 | Created by Mr. Top`) with bold, enlarged branding: `<span class="banner-brand">TopsCore</span> <span class="banner-author">by Mr. Top</span>`.
@@ -40,7 +38,7 @@ Status: COMPLETE
 
 5. **Automated Testing & Full Verification**:
    - Automated tests: `scripts/test_vocab_dashboard_blueprint.mjs` & `scripts/test_bottom_banner_universal.mjs`.
-   - Busted cache to `v=20261106_v137`, service worker to `topscore-cache-option-a-v65`.
+   - Busted cache to `v=20261106_v138`, service worker to `topscore-cache-option-a-v66`.
    - 45/45 JS syntax PASS (`check_all_js_syntax.cjs`).
    - 27/27 SW manifest assets PASS (`generate_sw_manifest.mjs`).
    - Exam Parity PASS (`test_student_dashboard_exam_parity.mjs`).

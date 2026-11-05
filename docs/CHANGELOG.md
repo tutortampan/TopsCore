@@ -1,3 +1,36 @@
+## [2026-11-06 01:37] — Phase 328: Student Dashboard Metadata Score Population & Cache v138
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 328: Student Dashboard Metadata Score Population & Cache v138
+**Status:** PASS
+
+### Why
+- The score span `#bottom-stat-avg-score` in `banner-score-box` was not updating its `textContent` with the calculated exam average percentage, leaving it at `—` even when the student had valid completed exams.
+- Fix ensures that students with completed exams dynamically display their percentage score in glowing grade color (e.g. `82%` in Electric Lime for Ayya).
+
+### Changed
+1. **JavaScript Logic (`js/dashboard.js`)**:
+   - Added `scoreVal.textContent = hasExam ? `${avgPct}%` : '—';` in `dashboard.js`.
+2. **Visual Verification**:
+   - Tested live in Google Chrome with Ayya's account via Puppeteer: Score `82%` rendered beautifully beside 70px photo and Grade `B`.
+3. **Cache Busting**:
+   - Bumped cache to `v=20261106_v138` and Service Worker to `topscore-cache-option-a-v66`.
+
+### Files
+- `js/dashboard.js`
+- `admin.html`
+- `dashboard.html`
+- `index.html`
+- `test.html`
+- `result.html`
+- `sw.js`
+- `scripts/bump_cache_busters.mjs`
+
+### Tests
+- `npm test` -> 7/7 suites PASS (100%).
+
+---
+
 ## [2026-11-06 01:28] — Phase 327: Next Test Card 2-Column Blueprint Refinement & Production Integrity
 
 **Agent/Session:** Antigravity

@@ -35,9 +35,9 @@ import {
   toOrdinalLevel,
   toShortLevel,
   autoSyncClassTestsForLevel
-} from '../api.js?v=20261106_v137';
-import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v137';
-import { getSupabase } from '../supabase.js?v=20261106_v137';
+} from '../api.js?v=20261106_v138';
+import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v138';
+import { getSupabase } from '../supabase.js?v=20261106_v138';
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -228,7 +228,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     const importedLevels = Array.from(new Set(words.map(w => w.target_level || 1))).sort((a, b) => a - b);
     if (importedLevels.length === 0) importedLevels.push(1);
     try {
-      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261106_v137');
+      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261106_v138');
       await openAutoGenerateModal({
         availableLevels: importedLevels,
         preSelectedLevels: importedLevels,
@@ -1767,7 +1767,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
   if (btnSettingsBottom) {
     btnSettingsBottom.onclick = async () => {
       try {
-        const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261106_v137');
+        const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261106_v138');
         await openTestSystemSettingsModal({
           classId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
           className: 'Curriculum Blueprint',
@@ -1792,7 +1792,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
       const importedLevels = levels.filter(lvl => (levelStats[lvl]?.topics || 0) > 0);
       if (importedLevels.length === 0) return showToast('No levels with topics detected in Blueprint', 'error');
       try {
-        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261106_v137');
+        const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261106_v138');
         await openAutoGenerateModal({
           availableLevels: importedLevels,
           preSelectedLevels: activeLevel === 'ALL' ? importedLevels : [Number(activeLevel)],
