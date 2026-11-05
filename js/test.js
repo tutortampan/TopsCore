@@ -1772,6 +1772,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (themeName) {
         displayTheme = `${themeName}`;
       }
+      displayTheme = displayTheme.replace(/\bEESSENTIALS\b/gi, "ESSENTIALS");
 
       let displayTopic = snap?.topic || snap?.metadata?.topic || row?.topic_snapshot || '';
       if (!displayTopic && testData?.title) {
