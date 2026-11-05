@@ -38,7 +38,7 @@ function resolvePageUrl(p, baseUrl) {
     target = 'result.html?attempt_id=ba8cb716-6cdd-4017-a631-3ee0558ca04a';
   }
   if (target === 'test.html' && !target.includes('test_id')) {
-    target = 'test.html?test_id=8e43939e-3718-42cb-a664-eb92930cc712';
+    target = 'test.html?test_id=93ed8f86-1427-4d04-8a97-31531fb26851';
   }
   if (baseUrl) {
     return `${baseUrl}/${target}`;
