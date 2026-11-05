@@ -5,11 +5,11 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261105_v130';
-import { isExam, getGradeColorByScore } from './grading.js?v=20261105_v130';
-import { getStudentSession, getAdminSession } from './session.js?v=20261105_v130';
-import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261105_v130';
-import { getSupabase } from './supabase.js?v=20261105_v130';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261105_v131';
+import { isExam, getGradeColorByScore } from './grading.js?v=20261105_v131';
+import { getStudentSession, getAdminSession } from './session.js?v=20261105_v131';
+import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261105_v131';
+import { getSupabase } from './supabase.js?v=20261105_v131';
 
 let session = getStudentSession();
 if (!session) {
@@ -889,7 +889,13 @@ if (!session) {
         // 5. Achievement Status (Rule DECISION-018: strictly FAIL, LESS, ENOUGH, GOOD, VERY GOOD, EXCELLENT)
         const motEl = document.getElementById('result-motivation-msg');
         if (motEl) {
-          motEl.textContent = getAchievementStatus(grade, pct);
+          const statusText = getAchievementStatus(grade, pct);
+          const predEl = document.getElementById('result-predicate-text');
+          if (predEl) {
+            predEl.textContent = statusText;
+          } else {
+            motEl.textContent = statusText;
+          }
           motEl.style.display = 'flex';
           motEl.classList.remove('hidden');
           motEl.dataset.tier = currentTier;

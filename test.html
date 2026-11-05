@@ -24,18 +24,26 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261105_v130" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261105_v130" />
-  <link rel="stylesheet" href="css/test.css?v=20261105_v130" />
+  <link rel="stylesheet" href="css/style.css?v=20261105_v131" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261105_v131" />
+  <link rel="stylesheet" href="css/test.css?v=20261105_v131" />
 </head>
 <body class="test-page notranslate" translate="no">
 
-  <!-- Top Header Banner: Exactly 50px Height Permanent TopsCore Global Topbar -->
-  <header class="dashboard-header test-header" id="test-top-header">
-    <!-- Left: Flag & Give Up Button (Red, [🚩 Give up!]) -->
+  <!-- 1. Top Header: FULL TEST NAME (2 Baris: Test Title + Tema/Topic di baris kedua) — 50px -->
+  <header class="test-top-header" id="test-top-header">
+    <div class="test-title-inner">
+      <h1 id="test-main-title" class="test-main-title" title="Test Title">TEST TITLE</h1>
+      <p id="test-title-sub" class="test-title-sub">THEME / TOPIC</p>
+    </div>
+  </header>
+
+  <!-- 2. Controls & Student Strip (50px): Give Up | Student Photo | Dynamic Timer -->
+  <div class="test-controls-bar" id="test-controls-bar">
+    <!-- Left: Give up button (Red background, white flag) -->
     <div class="test-giveup-wrap">
       <button id="giveup-btn" class="btn-giveup" onclick="window.openSubmitModal()" title="Give up / End Test">
-        <span class="giveup-flag-icon">🚩</span>
+        <span class="giveup-flag-icon">🏳️</span>
         <span>Give up!</span>
       </button>
     </div>
@@ -45,18 +53,13 @@
       <img id="test-student-avatar" class="test-student-avatar" src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20240%20320%22%20width%3D%22240%22%20height%3D%22320%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22avatarGrad_S%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%22100%25%22%20y2%3D%22100%25%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%236366f1%22%20%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%234338ca%22%20%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%22240%22%20height%3D%22320%22%20rx%3D%2216%22%20fill%3D%22url(%23avatarGrad_S)%22%20%2F%3E%0A%20%20%3Ccircle%20cx%3D%22120%22%20cy%3D%22120%22%20r%3D%2250%22%20fill%3D%22rgba(255%2C255%2C255%2C0.2)%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M%2036%20288%20C%2036%20210%2C%20204%20210%2C%20204%20288%20Z%22%20fill%3D%22rgba(255%2C255%2C255%2C0.2)%22%20%2F%3E%0A%20%20%3Ctext%20x%3D%22120%22%20y%3D%22138%22%20font-family%3D%22-apple-system%2C%20BlinkMacSystemFont%2C%20'Segoe%20UI'%2C%20Roboto%2C%20sans-serif%22%20font-size%3D%2254%22%20font-weight%3D%22800%22%20fill%3D%22%23ffffff%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3ES%3C%2Ftext%3E%0A%3C%2Fsvg%3E" alt="Student" />
     </div>
 
-    <!-- Right: Countdown Timer Badge & Cloud Sync Indicator -->
+    <!-- Right: Countdown Timer Badge (Dynamic Background Color green -> red) -->
     <div class="test-timer-wrap">
       <div class="test-timer shrink-0" id="test-timer">
         <span class="timer-icon">⌛</span>
         <span id="timer-display" class="timer-display">18:02</span>
       </div>
     </div>
-  </header>
-
-  <!-- TEST TITLE STRIP -->
-  <div class="test-title-bar">
-    <h1 id="test-main-title" class="test-main-title" title="Test Title">TEST TITLE</h1>
   </div>
 
   <!-- TEST body -->
@@ -94,29 +97,20 @@
     </div>
   </div>
 
-  <!-- Fixed Bottom Area (Navigation & Progress Track) -->
+  <!-- Fixed Bottom Area (New Design: Row 1 = PREV/NEXT, Row 2 = Counter) -->
   <div id="fixed-bottom-area" class="test-fixed-bottom">
-    <!-- Navigation row: Exactly 54px height -->
+    <!-- Row 1: PREV | NEXT (Exact 40px) -->
     <div class="test-bottom-container">
       <div class="bottom-nav-bar">
         <button id="bottom-prev-btn" class="btn-nav-prev" disabled>&larr; Prev</button>
-        
-        <!-- 0/40 Answered (54px) -->
-        <div id="question-counter" class="question-counter" onclick="window.toggleMatrixPopup()" title="Tap to view question grid">
-          <span id="question-counter-text">0/40 Answered</span>
-        </div>
-
         <button id="bottom-next-btn" class="btn-nav-next">Next &rarr;</button>
       </div>
     </div>
 
-    <!-- PROGRESS LINE: Exactly 6px height docked container -->
-    <div class="test-progress-outer">
-      <div id="progress-bar-toggle" class="test-progress-track" onclick="window.toggleMatrixPopup()" title="Tap to view question grid">
-        <div class="test-progress-bar-bg">
-          <div class="test-progress-fill" id="test-progress-fill"></div>
-        </div>
-        <span id="progress-text-percent" class="hidden">0%</span>
+    <!-- Row 2: 0/100 Counter (Exact 40px, Full Width) -->
+    <div class="test-bottom-container">
+      <div id="question-counter" class="question-counter" onclick="window.toggleMatrixPopup()" title="Tap to view question grid">
+        <span id="question-counter-text">0/40 Answered</span>
       </div>
     </div>
   </div>
@@ -266,10 +260,10 @@
     </div>
   </div>
 
-  <script type="module" src="./js/test.js?v=20261105_v130"></script>
+  <script type="module" src="./js/test.js?v=20261105_v131"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=20261105_v130')
+      navigator.serviceWorker.register('sw.js?v=20261105_v131')
         .then(registration => registration.update())
         .catch(err => console.warn('SW registration failed:', err));
     }

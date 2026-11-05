@@ -22,9 +22,9 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Outfit:wght@400;600;700;800;900&amp;display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261105_v130" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261105_v130" />
-  <link rel="stylesheet" href="css/result.css?v=20261105_v130" />
+  <link rel="stylesheet" href="css/style.css?v=20261105_v131" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261105_v131" />
+  <link rel="stylesheet" href="css/result.css?v=20261105_v131" />
 </head>
 
 <body class="result-page">
@@ -89,7 +89,7 @@
         <span id="result-Test-name" class="hidden"></span>
       </div>
 
-      <!-- 3. Dynamic Vertical Metrics & Score/Grade Composite Card (35% Dynamic) -->
+      <!-- 3. Dynamic Vertical Metrics Table (Dinamis di sisa layar) -->
       <div class="result-metrics-composite-card cascade-item" id="result-metrics-composite-card">
         <div class="result-metrics-table-inner" id="result-metrics-bar">
           <!-- Row 1: CORRECT -->
@@ -117,25 +117,26 @@
             <span class="metric-stacked-val" id="res-points">0</span>
           </div>
         </div>
-
-        <!-- Internal Divider between metrics and score/grade -->
-        <div class="metrics-score-grade-divider"></div>
-
-        <!-- Dual Score & Grade Row (50px Side-by-Side Symmetrical) -->
-        <div class="result-score-grade-row" id="result-score-grade-card">
-          <!-- Kotak Score Bersih -->
-          <div class="score-grade-box score-box" id="result-score-box">
-            <span class="score-grade-val" id="result-percentage">0%</span>
-          </div>
-          <!-- Kotak Grade Bersih -->
-          <div class="score-grade-box grade-box" id="result-grade-box">
-            <span class="score-grade-val grade-delayed" id="result-grade-val">&mdash;</span>
-          </div>
-        </div>
       </div>
 
-      <!-- 4. Evaluation / Motivation Word Card (FAIL / LESS / ENOUGH / GOOD / VERY GOOD / EXCELLENT - 50px / 15%) -->
-      <div class="result-evaluation-card cascade-item" id="result-motivation-msg">&mdash;</div>
+      <!-- 4. Score & Grade Composite Row (Strict 60px Symmetrical 3 Columns) -->
+      <div class="result-score-grade-row cascade-item" id="result-score-grade-card">
+        <!-- Col 1: Score (Percentage) -->
+        <div class="score-grade-box score-box" id="result-score-box">
+          <span class="score-grade-val" id="result-percentage">0%</span>
+        </div>
+
+        <!-- Col 2: Grade Predicate / Legend (Muncul setelah animasi grade) -->
+        <div class="score-grade-center-box" id="result-motivation-msg">
+          <span class="grade-predicate-text" id="result-predicate-text">&mdash;</span>
+          <span class="grade-legend-hint">E=FAIL / D=LESS / C=ENOUGH / B=GOOD / A=VERY GOOD / ★=EXCELLENT</span>
+        </div>
+
+        <!-- Col 3: Grade Symbol (★ / A / B / C / D / E) -->
+        <div class="score-grade-box grade-box" id="result-grade-box">
+          <span class="score-grade-val grade-delayed" id="result-grade-val">&mdash;</span>
+        </div>
+      </div>
 
       <!-- 5. Actions (Next Milestone/Remedial 40px, Breakdown 40px, Back 40px) -->
       <div class="result-action-slot cascade-item" id="smart-next-action-container"></div>
@@ -209,11 +210,11 @@
     </div>
   </div>
 
-  <script type="module" src="./js/result.js?v=20261105_v130"></script>
+  <script type="module" src="./js/result.js?v=20261105_v131"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261105_v130').then(r => r.update()).catch(e => console.warn('SW:', e));
+        navigator.serviceWorker.register('sw.js?v=20261105_v131').then(r => r.update()).catch(e => console.warn('SW:', e));
       });
     }
   </script>

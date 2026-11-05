@@ -1,16 +1,16 @@
-import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261105_v130';
+import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261105_v131';
 /**
  * TopsCore — Test Engine Module
  * Extracted from test.html
  */
 
-import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261105_v130';
-    import { requireStudentSession } from './session.js?v=20261105_v130';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261105_v130';
-    import { startCountdown, isExpired } from './timer.js?v=20261105_v130';
-    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261105_v130';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261105_v130';
-    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261105_v130';
+import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261105_v131';
+    import { requireStudentSession } from './session.js?v=20261105_v131';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261105_v131';
+    import { startCountdown, isExpired } from './timer.js?v=20261105_v131';
+    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261105_v131';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261105_v131';
+    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261105_v131';
 
     // Arm wake lock gestures on first interaction
     bindWakeLockGestures();
@@ -977,6 +977,16 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             const rawTitle = testData?.title || testData?.test_title || testData?.name || testDisplayName || 'Test';
             titleEl.textContent = rawTitle;
             titleEl.setAttribute('title', rawTitle);
+          }
+          // Populate 2nd-line subtitle: class name + level
+          const subEl = document.getElementById('test-title-sub');
+          if (subEl) {
+            const subParts = [
+              testData?.classes?.name || '',
+              testData?.levels?.name ? (String(testData.levels.name).toLowerCase().includes('level') ? testData.levels.name : 'Level ' + testData.levels.name) : ''
+            ].filter(Boolean);
+            subEl.textContent = subParts.length ? subParts.join(' \u00b7 ') : '';
+            subEl.style.display = subEl.textContent ? '' : 'none';
           }
         } catch(e) {}
 
@@ -2246,7 +2256,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       }
 
       topRow.appendChild(langSelect); topRow.appendChild(statusEl);
-      area.appendChild(topRow);
+      controlArea.appendChild(topRow);
 
       const transcriptBox = document.createElement('div');
       transcriptBox.id = `speech-transcript-${row.id}`;

@@ -123,9 +123,9 @@
       -ms-overflow-style: none !important;
       width: 100% !important;
       max-width: 100% !important;
-      height: calc(100dvh - 100px) !important; /* 50px top header + 50px bottom banner */
-      max-height: calc(100dvh - 100px) !important;
-      min-height: calc(100dvh - 100px) !important;
+      height: calc(100dvh - 110px) !important; /* 50px top header + 60px bottom banner */
+      max-height: calc(100dvh - 110px) !important; /* 50px top header + 60px bottom banner */
+      min-height: calc(100dvh - 110px) !important; /* 50px top header + 60px bottom banner */
     }
     .result-page #result-content::-webkit-scrollbar,
     .result-hero::-webkit-scrollbar,
@@ -216,9 +216,9 @@
       align-items: center !important;
       justify-content: center !important;
       gap: 2px !important;
-      height: 50px !important;
-      min-height: 50px !important;
-      max-height: 50px !important;
+      height: 60px !important;
+      min-height: 60px !important;
+      max-height: 60px !important;
       background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, 56, 189, 248), 0.12), transparent 75%), #0f172a !important;
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
       border-radius: 12px !important;
@@ -557,23 +557,41 @@
       border-color: rgba(255, 255, 255, 0.25) !important;
       color: #E2E8F0 !important;
     }
+    .remedial-segment-btn.segment-normal {
+      border: 1px solid rgba(52, 211, 153, 0.4) !important;
+      color: #6ee7b7 !important;
+      background: rgba(5, 150, 105, 0.15) !important;
+    }
     .remedial-segment-btn.segment-normal.active {
-      background: rgba(56, 189, 248, 0.2) !important;
-      border-color: rgba(56, 189, 248, 0.7) !important;
-      color: #38BDF8 !important;
-      box-shadow: 0 0 16px rgba(56, 189, 248, 0.4) !important;
+      background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+      border: 2px solid #34d399 !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 20px rgba(5, 150, 105, 0.6) !important;
+      font-weight: 900 !important;
+    }
+    .remedial-segment-btn.segment-remidi {
+      border: 1px solid rgba(250, 204, 21, 0.4) !important;
+      color: #fef08a !important;
+      background: rgba(202, 138, 4, 0.15) !important;
     }
     .remedial-segment-btn.segment-remidi.active {
-      background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.2) !important;
-      border-color: rgba(var(--grade-c-rgb, 255, 255, 0), 0.8) !important;
-      color: var(--grade-c, #FFFF00) !important;
-      box-shadow: 0 0 16px rgba(var(--grade-c-rgb, 255, 255, 0), 0.4) !important;
+      background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%) !important;
+      border: 2px solid #facc15 !important;
+      color: #0f172a !important;
+      box-shadow: 0 0 20px rgba(234, 179, 8, 0.6) !important;
+      font-weight: 900 !important;
+    }
+    .remedial-segment-btn.segment-forgive {
+      border: 1px solid rgba(248, 113, 113, 0.4) !important;
+      color: #fca5a5 !important;
+      background: rgba(220, 38, 38, 0.15) !important;
     }
     .remedial-segment-btn.segment-forgive.active {
-      background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.2) !important;
-      border-color: rgba(var(--grade-e-rgb, 255, 0, 0), 0.8) !important;
-      color: var(--grade-e, #FF0000) !important;
-      box-shadow: 0 0 16px rgba(var(--grade-e-rgb, 255, 0, 0), 0.4) !important;
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+      border: 2px solid #f87171 !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 20px rgba(220, 38, 38, 0.6) !important;
+      font-weight: 900 !important;
     }
 
     /* ===== CERTIFICATE CARD HEADER (REMOVED PER USER REQUEST) ===== */
@@ -1136,26 +1154,31 @@
       flex-shrink: 0 !important;
     }
 
-    /* Dual Score & Grade Row (50px Side-by-Side Symmetrical) */
+    /* Dual Score & Grade Row (Strict 60px Symmetrical 3 Columns: Score | Motivation/Legend | Grade) */
     .result-score-grade-row,
     .result-score-grade-card {
       display: grid !important;
-      grid-template-columns: 1fr 1fr !important;
-      height: 50px !important;
-      min-height: 50px !important;
-      max-height: 50px !important;
+      grid-template-columns: 28% 44% 28% !important;
+      height: 60px !important;
+      min-height: 60px !important;
+      max-height: 60px !important;
       width: 100% !important;
       margin: 0 !important;
       box-sizing: border-box !important;
       flex-shrink: 0 !important;
-      background: rgba(23, 33, 56, 0.5) !important;
+      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, 56, 189, 248), 0.1), transparent 75%), #0f172a !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 12px !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+      overflow: hidden !important;
+      transition: all 0.3s ease !important;
     }
 
     .result-score-grade-row .score-grade-box,
     .result-score-grade-card .score-grade-box {
-      height: 50px !important;
-      min-height: 50px !important;
-      max-height: 50px !important;
+      height: 60px !important;
+      min-height: 60px !important;
+      max-height: 60px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
@@ -1166,7 +1189,7 @@
 
     .result-score-grade-row #result-score-box,
     .result-score-grade-card #result-score-box {
-      border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
     .result-score-grade-row #result-percentage,
@@ -1178,6 +1201,62 @@
       line-height: 1 !important;
       color: var(--tier-color, var(--grade-star)) !important;
       text-shadow: 0 0 16px rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.5) !important;
+    }
+
+    .score-grade-center-box {
+      height: 60px !important;
+      min-height: 60px !important;
+      max-height: 60px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 2px 4px !important;
+      box-sizing: border-box !important;
+      background: rgba(15, 23, 42, 0.6) !important;
+      transition: all 0.4s ease !important;
+      opacity: 0;
+      overflow: hidden !important;
+    }
+    .score-grade-center-box.cascade-revealed {
+      opacity: 1 !important;
+    }
+
+    .grade-predicate-text {
+      font-family: 'Outfit', sans-serif !important;
+      font-size: clamp(11.5px, 2.6vw, 13.5px) !important;
+      font-weight: 900 !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase !important;
+      color: var(--tier-color, var(--grade-star)) !important;
+      text-shadow: 0 0 14px rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.6) !important;
+      line-height: 1.2 !important;
+      text-align: center !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      max-width: 100% !important;
+    }
+
+    .grade-legend-hint {
+      font-family: 'Inter', sans-serif !important;
+      font-size: 7px !important;
+      font-weight: 700 !important;
+      color: #64748b !important;
+      letter-spacing: 0.02em !important;
+      text-align: center !important;
+      line-height: 1.1 !important;
+      margin-top: 2px !important;
+      text-transform: uppercase !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      max-width: 100% !important;
+    }
+
+    .result-score-grade-row #result-grade-box,
+    .result-score-grade-card #result-grade-box {
+      border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
     .result-score-grade-row #result-grade-val,
@@ -1578,318 +1657,14 @@
         margin-bottom: 2px !important;
       }
       #result-Test-name-container {
-        padding: 3px 8px !important;
-        margin-bottom: 3px !important;
-      }
-      #result-metrics-bar {
-        margin-bottom: 5px !important;
-      }
-      #result-metrics-bar > .unified-metric-item {
-        padding: 4px 6px !important;
-      }
-      .result-hero .btn {
-        padding: 7px 10px !important;
-        font-size: 0.8rem !important;
-      }
-      .result-action-buttons-wrap .btn,
-      .result-action-buttons-wrap .btn-dashboard-primary,
-      .result-action-buttons-wrap .btn-breakdown-ghost,
-      .result-action-buttons-wrap .remedial-segment-btn,
-      .result-action-buttons-wrap .btn-next-milestone .next-btn-title {
-        font-size: 13px !important;
-        line-height: 1.2 !important;
-      }
-      .result-accuracy-wrap {
-        margin-bottom: 3px !important;
-      }
-      .answers-modal-backdrop {
-        padding: 0.4rem !important;
-        align-items: flex-end !important; /* Bottom sheet feeling on mobile */
-      }
-      .answers-modal-card {
-        max-height: 88vh !important;
-        max-height: 88dvh !important;
-        border-radius: 18px 18px 8px 8px !important;
-      }
-      .answers-modal-header {
-        padding: 0.75rem 1rem !important;
-      }
-      .answers-modal-scroll-body {
-        padding: 0.85rem 0.75rem !important;
-      }
-      .answers-modal-footer {
-        padding: 0.65rem 1rem !important;
-      }
-    }
-
-    /* ===== UNIVERSAL TOP-TO-BOTTOM SEQUENTIAL CASCADE SYSTEM ===== */
-    /* Level 1: Major Cards */
-    .cascade-item {
-      opacity: 0 !important;
-      visibility: hidden !important;
-      transform: translateY(-14px) !important;
-      transition: opacity 0.38s cubic-bezier(0.2, 0.8, 0.25, 1), transform 0.38s cubic-bezier(0.2, 0.8, 0.25, 1) !important;
-      will-change: opacity, transform;
-    }
-    .cascade-item.cascade-revealed {
-      opacity: 1 !important;
-      visibility: visible !important;
-      transform: translateY(0) !important;
-    }
-
-    /* Level 2: Metric Table Rows (Slide in horizontally from left one by one) */
-    .cascade-metric-row {
-      opacity: 0 !important;
-      transform: translateX(-16px) !important;
-      transition: opacity 0.32s cubic-bezier(0.2, 0.8, 0.25, 1), transform 0.32s cubic-bezier(0.2, 0.8, 0.25, 1), background 0.15s ease !important;
-      will-change: opacity, transform;
-    }
-    .cascade-metric-row.cascade-revealed {
-      opacity: 1 !important;
-      transform: translateX(0) !important;
-    }
-
-    /* Level 3: Evaluation Word Card (Springy Pop-in with Aura) */
-    .result-evaluation-card.cascade-item {
-      opacity: 0 !important;
-      transform: scale(0.92) translateY(-8px) !important;
-      transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-    }
-    .result-evaluation-card.cascade-item.cascade-revealed {
-      opacity: 1 !important;
-      transform: scale(1) translateY(0) !important;
-    }
-
-    /* Level 4: Action Button Items (Cascade in from above) */
-    .cascade-btn-item {
-      opacity: 0 !important;
-      transform: translateY(-8px) !important;
-      transition: opacity 0.32s cubic-bezier(0.2, 0.8, 0.25, 1), transform 0.32s cubic-bezier(0.2, 0.8, 0.25, 1) !important;
-      will-change: opacity, transform;
-    }
-    .cascade-btn-item.cascade-revealed {
-      opacity: 1 !important;
-      transform: translateY(0) !important;
-    }
-
-    /* Fallback / Legacy keyframe support */
-    @keyframes result-fade-up {
-      from {
-        opacity: 0;
-        transform: translateY(12px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* Accessibility: Respect Reduced Motion Preference */
-    @media (prefers-reduced-motion: reduce) {
-      .cascade-item,
-      .cascade-metric-row,
-      .cascade-btn-item,
-      .score-grade-val.grade-revealed,
-      .score-grade-box.grade-box.box-stamped {
-        opacity: 1 !important;
-        visibility: visible !important;
-        transform: none !important;
-        transition: none !important;
-        animation: none !important;
-      }
-    }
-
-    /* ===== SVG SCORE RING (FEATURE 2) ===== */
-    .result-score-ring-wrapper {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: clamp(84px, 14vh, 102px);
-      height: clamp(84px, 14vh, 102px);
-    }
-    .result-score-ring-svg {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      transform: rotate(-90deg);
-    }
-    .ring-track {
-      fill: none;
-      stroke: rgba(255, 255, 255, 0.08);
-      stroke-width: 5;
-    }
-    .ring-progress {
-      fill: none;
-      stroke: #38bdf8;
-      stroke-width: 5;
-      stroke-linecap: round;
-      stroke-dasharray: 314.16;
-      stroke-dashoffset: 314.16;
-      transition: stroke 0.3s ease;
-    }
-    /* Avatar inside ring must be smaller than ring wrapper */
-    .result-score-ring-wrapper .result-avatar-circle {
-      width: clamp(62px, 10.5vh, 76px) !important;
-      height: clamp(62px, 10.5vh, 76px) !important;
-    }
-
-    /* ===== STUDENT NAME LABEL (FEATURE 3) ===== */
-    .result-student-name-label {
-      font-family: 'Outfit', sans-serif;
-      font-size: clamp(0.8rem, 2.5vw, 0.95rem);
-      font-weight: 700;
-      color: #e2e8f0;
-      margin-top: 3px;
-      letter-spacing: 0.02em;
-      text-align: center;
-      max-width: 200px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* Ensure portrait stage stacks vertically for name label below ring */
-    .result-portrait-stage {
+      display: flex !important;
       flex-direction: column !important;
-      gap: 0 !important;
-    }
-
-    /* Allow points row to inline badge */
-    .result-points-row {
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    /* ===== COMPREHENSIVE MOBILE ZERO-SCROLL CALIBRATION ===== */
-    @media (max-width: 640px) {
-      .result-hero {
-        padding: 0 !important;
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        max-width: 100% !important;
-        height: 100% !important;
-        gap: 10px !important;
-      }
-      .result-hero-row {
-        gap: 10px !important;
-        margin: 2px auto 5px auto !important;
-      }
-      .result-score-row {
-        gap: 8px !important;
-      }
-      .result-score-ring-wrapper {
-        width: 86px !important;
-        height: 86px !important;
-      }
-      .result-score-ring-wrapper .result-avatar-circle {
-        width: 86px !important;
-        height: 86px !important;
-      }
-      .result-student-name-label {
-        font-size: 1.15rem !important;
-        font-weight: 800 !important;
-        margin-top: 2px !important;
-      }
-      #result-percentage {
-        font-size: clamp(2rem, 4.4vh, 2.4rem) !important;
-        margin-bottom: 0 !important;
-      }
-      .pure-stamp .stamp-grade-symbol {
-        font-size: clamp(1.9rem, 4.2vh, 2.3rem) !important;
-      }
-      .result-motivation-msg {
-        font-size: 0.74rem !important;
-        margin: 1px 0 2px 0 !important;
-      }
-      #result-Test-name-container {
-        padding: 2px 8px !important;
-        margin: 0 auto !important;
-      }
-      #result-Test-name {
-        font-size: 0.76rem !important;
-      }
-      .result-points-row {
-        margin: 1px auto 3px auto !important;
-      }
-      .result-points-box {
-        padding: 2px 12px !important;
-      }
-      .pts-label {
-        font-size: 0.65rem !important;
-      }
-      .pts-val {
-        font-size: 0.92rem !important;
-      }
-      .result-rank-badge {
-        display: none !important;
-      }
-      #result-metrics-bar {
-        margin: 0 auto !important;
-      }
-      .metric-lbl {
-        font-size: 0.7rem !important;
-      }
-      .metric-val {
-        font-size: 0.85rem !important;
-      }
-      .d-flex.gap-3 {
-        gap: 4px !important;
-      }
-      .result-hero .btn {
-        padding: 6px 10px !important;
-        font-size: 0.8rem !important;
-      }
-      .result-action-buttons-wrap .btn,
-      .result-action-buttons-wrap .btn-dashboard-primary,
-      .result-action-buttons-wrap .btn-breakdown-ghost,
-      .result-action-buttons-wrap .remedial-segment-btn,
-      .result-action-buttons-wrap .btn-next-milestone .next-btn-title {
-        font-size: 13px !important;
-        line-height: 1.2 !important;
-      }
-      .security-policy-card {
-        padding: 5px 8px !important;
-        font-size: 0.72rem !important;
-      }
-    }
-
-    @media (max-height: 720px) {
-      .result-hero {
-        padding: 0 !important;
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        height: 100% !important;
-      }
-      .result-score-ring-wrapper {
-        width: 86px !important;
-        height: 86px !important;
-      }
-      .result-score-ring-wrapper .result-avatar-circle {
-        width: 86px !important;
-        height: 86px !important;
-      }
-      .result-stamp-stage {
-        min-height: 56px !important;
-      }
-      .result-grade-stamp {
-        width: 56px !important;
-        height: 56px !important;
-      }
-      #result-percentage {
-        font-size: 1.75rem !important;
-      }
-    }
-
-    /* ===== BOTTOM BANNER (50px ALL ACROSS THE PAGE) ===== */
-    .result-page #bottom-ad-banner,
-    .result-page .topscore-locked-banner {
-      height: 50px !important;
-      min-height: 50px !important;
-      max-height: 50px !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 2px !important;
+      height: 60px !important;
+      min-height: 60px !important;
+      max-height: 60px !important;
       background: rgba(9, 13, 22, 0.95) !important;
       border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
       display: flex !important;
@@ -2233,9 +2008,9 @@
     .result-action-slot {
       width: 100% !important;
       max-width: 100% !important;
-      height: 40px !important;
-      min-height: 40px !important;
-      max-height: 40px !important;
+      height: 60px !important;
+      min-height: 60px !important;
+      max-height: 60px !important;
       flex-shrink: 0 !important;
       margin: 0 auto !important;
       display: flex !important;
@@ -2418,4 +2193,33 @@ body.result-page.tier-glow-active .tutor-remedial-segmented .remedial-segment-bt
   background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%) !important;
   box-shadow: 0 6px 20px rgba(37, 99, 235, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
   transform: translateY(-1px) !important;
+}
+
+/* Explicit 60px Banner & 50px Action Buttons per Image 2 Specification */
+body.result-page .topscore-locked-banner,
+body.result-page #bottom-ad-banner {
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
+}
+
+body.result-page .btn-breakdown-ghost,
+body.result-page #toggle-answers-btn {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+}
+
+body.result-page .btn-dashboard-primary,
+body.result-page #back-dashboard-btn {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+}
+
+body.result-page .result-action-slot,
+body.result-page #smart-next-action-container {
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
 }
