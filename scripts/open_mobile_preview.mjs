@@ -37,6 +37,9 @@ function resolvePageUrl(p, baseUrl) {
   if (target === 'result.html' && !target.includes('attempt_id')) {
     target = 'result.html?attempt_id=ba8cb716-6cdd-4017-a631-3ee0558ca04a';
   }
+  if (target === 'test.html' && !target.includes('test_id')) {
+    target = 'test.html?test_id=8e43939e-3718-42cb-a664-eb92930cc712';
+  }
   if (baseUrl) {
     return `${baseUrl}/${target}`;
   }
@@ -101,10 +104,10 @@ async function run() {
   };
 
   const adminSession = {
-    user_id: "admin-preview-id",
-    email: "admin@topscore.lms",
+    token: "admin_preview_active_session",
     role: "admin",
-    authenticated_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
   };
 
   await context.addInitScript(({ ayya, admin }) => {
