@@ -1,3 +1,68 @@
+## SESSION-20261106-0504
+
+Start: 2026-11-06 04:00 UTC+8
+End: 2026-11-06 05:04 UTC+8
+Agent: Antigravity
+
+### User Request
+1. "SAYA SUKA UKURAN SEKARANG, TAPI GARISNYA TERLALU TEBAL, COBA PERBAIKI DENGAN INI" (Metadata card spreadsheet 20/1/93/1/35).
+2. "pada bagian ini apakah kamu ada ide untuk meningkatkann user interfacenya? saya punya ide untuk membuat nama exam menjadi berbeda warna dengan task, misalnya Task putih, maka exam biru muda... dan kita mungkin bisa tambahkan di kolom action itu tulisan 'retry' daripada Icon... kita perbaiki agar Task hanya menyimpan 7 nilai tertinggi saja... lalu apakah memungkinkan di bawah baris yang berisi row untuk task, kita taruh di bawahnya berapa grade yang didapat, 7 yang tertinggi saja, dari paling rendah ke paling tinggi... DI GAMBAR 3, ADA TULISAN NAMA DAN TULISAN 'YOU' ITU SEPERTINYA TIDAK PERLU, SEBA MEMBUAT NAM TERPOTONG, MUNGKIN CUKUP FONT PADA NAMANYA DIBUAT WARNA LIGHT BLUE... PADA GAMBAR 4, NAMA TEST DIBUAT RATA KIRI... /plan"
+3. "BAGIAN 2. NAMA KOLOM DIRUBAH JADI 'retry' DAN ISINYA CUKUP TOMBOL SAJA. Masukkan dalam plan"
+4. "kita barusan update extension kamu ada saran soal extension untuk cek tampilan mobile, kalau ada kamu lakukan saja, saya 100% pakai AI, jadi cek lagi extensi kita. dan terpakan amna susuan extensi yang terbaik! kerjakan sampai tuntas dan maksimal /goal"
+5. "Continue"
+
+### Objective
+- Calibrate the student metadata card to exact 20/1/93/1/35 blueprint (height 35px for name, font enlarged to `clamp(1.08rem, 3.6vw, 1.25rem)` Outfit 800, centered).
+- Polish Completed Tests table: Sky Blue `#38bdf8` Exam titles, White `#f8fafc` Task titles, column header `RETRY` with dynamic grade-colored Play button (`▶`), and Top-7 rolling score grade chips for Tasks.
+- Leaderboard UX Polish: Eliminate `(You)` tag to prevent name ellipsis clipping, highlight active student in Sky Blue with text glow.
+- Lock Next Test card to strict left alignment.
+- Curate `.vscode/extensions.json` for 100% AI pair programming (5 categories, 12 extensions).
+- Build 1-click mobile viewport emulation engine (`scripts/open_mobile_preview.mjs`) with touch simulation, 390x800 resolution, and automated snapshot generator.
+- Integrate npm scripts (`preview:mobile`, `preview:result`, `preview:admin`, `preview:all`) and VS Code tasks.
+- Commit all changes cleanly to Git and push to GitHub `origin/main`.
+
+### Work Performed
+1. **Metadata Card & Bottom Banner (Phase 337)**:
+   - Calibrated `.hero-metrics-row` to 93px, avatar container to 84px diameter, and `#welcome-name` to 35px height with enlarged bold typography.
+   - Connected bottom banner `#bottom-ad-banner` to dynamic tier border and background glow.
+2. **Completed Tests & Leaderboard (Phase 338)**:
+   - Changed column header to `RETRY`.
+   - Rendered compact Play button (`▶`) styled dynamically with test grade/score tier colors.
+   - Differentiated Exam (Sky Blue `#38bdf8`) vs Task (White `#f8fafc`) titles.
+   - Implemented Top-7 rolling retention chips sorted from lowest to highest for Tasks.
+   - Removed `(You)` text tag in leaderboard, added `.is-current-user` Sky Blue highlight with text glow (100% full name display).
+   - Locked Next Test card to strict left alignment.
+3. **Extensions & Mobile Emulation Engine (Phase 339)**:
+   - Structured `.vscode/extensions.json` into 5 clean categories.
+   - Created `scripts/open_mobile_preview.mjs` using Playwright with system browser (`channel: 'msedge'`), supporting interactive viewport (390x800, DPR 2x, touch) and batch snapshot captures.
+   - Added npm scripts and `.vscode/tasks.json` entries.
+   - Added `.mobile_previews/` to `.gitignore`.
+4. **Testing, Commit & Remote Push**:
+   - Bumped cache to `v=20261106_v148` and Service Worker to `topscore-cache-option-a-v76`.
+   - Verified with `npm.cmd test` (7/7 test suites passing 100%).
+   - Staged and committed changes: commit `71b5a08`.
+   - Pushed successfully to `origin/main` on GitHub.
+   - Captured mobile snapshots for all 5 core pages into `.mobile_previews/`.
+
+### Verification
+- `check_all_js_syntax.cjs`: PASS (45/45 JS files)
+- `generate_sw_manifest.mjs`: PASS (27/27 files exist on disk)
+- `test_student_dashboard_exam_parity.mjs`: PASS (100%)
+- `test_homophones_spoken_mode.mjs`: PASS (23/23 tests)
+- `test_prerequisite_deficit_guard.mjs`: PASS (100%)
+- `test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+- `test_bottom_banner_universal.mjs`: PASS (100%)
+- `open_mobile_preview.mjs --all-screenshots`: PASS (5/5 pages captured)
+- `git status`: PASS (Clean, synced with origin/main)
+
+### Outstanding
+- None. System is in 100% passing state and synchronized with GitHub.
+
+### Resume From
+- Ready for next user instructions or feedback.
+
+---
+
 ## SESSION-20261106-0155
 
 Start: 2026-11-06 01:28 UTC+8
