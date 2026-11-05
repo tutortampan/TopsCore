@@ -1,15 +1,20 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-05 12:40 UTC+8
-Current Phase: Phase 320: Deno User Settings, CORS Preflight Circuit Breaker & Test UI Nav Spacing [COMPLETE]
+Last Updated: 2026-11-05 13:05 UTC+8
+Current Phase: Phase 321: Live PATH Bridge & Workspace Untrusted Path Bypass for Deno [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Permanent Deno Executable Resolution for Antigravity IDE**:
-   - Injected `"deno.path": "C:\\Users\\Top\\.deno\\bin\\deno.exe"` into global User settings `C:\Users\Top\AppData\Roaming\Antigravity IDE\User\settings.json`.
-   - Updated `.vscode/settings.json`: set `"deno.enable": false` while keeping `"deno.enablePaths": ["supabase/functions"]`, strictly isolating Deno LSP to Edge Functions as specified by official vscode-deno documentation.
-   - Removed deprecated `allowJs` from `supabase/functions/deno.json`, allowing `deno check` to run cleanly with 0 warnings.
-   - Verified Edge Functions typechecking (`deno check`) runs cleanly across `start-test` and `submit-test`.
+1. **Permanent Deno Resolution & PATH Bridge for Antigravity IDE**:
+   - Identified root cause of popup notification `"Could not resolve Deno executable..."`:
+     1. Having `"deno.path"` in `.vscode/settings.json` (Workspace scope) marked the binary as an untrusted custom workspace binary, prompting a VS Code security approval modal. If unapproved or dismissed, it fell back to searching `process.env.PATH`.
+     2. Because Antigravity IDE was launched before Deno was installed, its inherited process environment did not yet include `C:\Users\Top\.deno\bin`.
+   - Solution deployed:
+     - Populated `C:\Users\Top\AppData\Roaming\npm\deno.exe` (a path already present in Antigravity IDE's inherited launch PATH).
+     - Removed `"deno.path"` from `.vscode/settings.json`, eliminating the workspace-level untrusted binary security prompt.
+     - Kept `"deno.path": "C:\\Users\\Top\\.deno\\bin\\deno.exe"` in Global User Settings (`C:\Users\Top\AppData\Roaming\Antigravity IDE\User\settings.json`) where it is globally trusted.
+     - Deno language server and CLI now resolve instantaneously on any shell or IDE context (`Get-Command deno` -> `C:\Users\Top\AppData\Roaming\npm\deno.exe`).
+     - Verified `deno check` runs cleanly on Edge Functions. Full `npm test` passes 100% (23/23).
 
 2. **Start-Test Preflight CORS Error Elimination (`js/supabase.js`)**:
    - Enhanced Edge Function circuit breaker with `sessionStorage` persistence (`topscore_offline_edge_functions`).
