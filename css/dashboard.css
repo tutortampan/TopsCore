@@ -2602,7 +2602,6 @@ body.dashboard-page {
 body.dashboard-page #welcome-banner-section,
 body.dashboard-page .dashboard-grade-legend,
 body.dashboard-page .dashboard-classes-deck,
-body.dashboard-page .dashboard-next-test-deck,
 body.dashboard-page .next-test-card,
 body.dashboard-page .dashboard-standings-card {
   border: 1px solid rgba(var(--tier-rgb), 0.35) !important;
@@ -4284,11 +4283,36 @@ body.dashboard-page .completed-row:hover {
 }
 
 body.dashboard-page .completed-col-num {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   text-align: center !important;
   font-family: 'Outfit', sans-serif !important;
   font-size: 0.85rem !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
+}
+
+body.dashboard-page .completed-row.is-exam-row {
+  transition: background 0.2s ease, border-color 0.2s ease, filter 0.2s ease !important;
+}
+body.dashboard-page .completed-row.is-exam-row:hover {
+  filter: brightness(1.2) !important;
+}
+
+body.dashboard-page .exam-number-box {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  padding: 0 3px !important;
+  border-radius: 4px !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.78rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
 }
 
 body.dashboard-page .completed-col-name {
@@ -4684,12 +4708,27 @@ body.dashboard-page .dashboard-grade-legend .achievement-status-text {
   filter: drop-shadow(0 0 12px rgba(var(--tier-rgb), 0.85)) !important;
 }
 
-/* 5. Next Test Card: Exactly 70px (50px Title Wrap + 20px Rainbow / 70px Full Action Column) */
-body.dashboard-page .dashboard-next-test-deck,
+/* 5. Next Test Card: Exactly 80px (60px Title Wrap + 20px Rainbow / 80px Action Column) */
+body.dashboard-page #up-next-section,
+body.dashboard-page .dashboard-next-test-deck {
+  height: 80px !important;
+  min-height: 80px !important;
+  max-height: 80px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
 body.dashboard-page .next-test-card {
-  height: 70px !important;
-  min-height: 70px !important;
-  max-height: 70px !important;
+  height: 80px !important;
+  min-height: 80px !important;
+  max-height: 80px !important;
   width: 100% !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
@@ -4697,7 +4736,7 @@ body.dashboard-page .next-test-card {
 }
 
 body.dashboard-page .next-test-card {
-  border-radius: 12px !important;
+  border-radius: 14px !important;
   display: flex !important;
   flex-direction: row !important;
   align-items: stretch !important;
@@ -4718,12 +4757,14 @@ body.dashboard-page .next-test-col-left {
   justify-content: space-between !important;
   padding: 4px 10px 4px 12px !important;
   box-sizing: border-box !important;
+  border-top-left-radius: 13px !important;
+  border-bottom-left-radius: 13px !important;
 }
 
 body.dashboard-page .next-test-title-wrap {
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
@@ -4766,10 +4807,10 @@ body.dashboard-page .rainbow-pass-bar {
 }
 
 body.dashboard-page .next-test-col-right {
-  width: 64px !important;
-  min-width: 64px !important;
-  max-width: 64px !important;
-  height: 100% !important; /* Full 70px Height */
+  width: 68px !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
+  height: 100% !important; /* Full 80px Height */
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -4777,14 +4818,16 @@ body.dashboard-page .next-test-col-right {
   background: rgba(var(--tier-rgb), 0.08) !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
+  border-top-right-radius: 13px !important;
+  border-bottom-right-radius: 13px !important;
 }
 
 body.dashboard-page .next-test-col-right .pass-counter-btn,
 body.dashboard-page .next-test-col-right .is-exam-lock,
 body.dashboard-page .next-test-col-right .is-exam-play {
-  width: 40px !important;
-  height: 40px !important;
-  border-radius: 9px !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 10px !important;
 }
 
 /* 6. Standings & Leaderboard: Scroll INSIDE Table (Page remains locked) */
@@ -4954,4 +4997,20 @@ body.dashboard-page .next-test-topic-name {
 }
 body.dashboard-page .rainbow-pass-bar {
   justify-content: flex-start !important;
+}
+
+/* Active Table Headers: Pure White (#ffffff) for Maximum Contrast */
+body.dashboard-page .standings-table-header,
+body.dashboard-page .completed-table-header {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+}
+
+body.dashboard-page .standings-table-header span,
+body.dashboard-page .completed-table-header span,
+body.dashboard-page .standings-table-header .th-col,
+body.dashboard-page .completed-table-header .th-col {
+  color: #ffffff !important;
+  font-weight: 800 !important;
 }

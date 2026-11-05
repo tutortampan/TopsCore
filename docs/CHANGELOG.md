@@ -1,3 +1,215 @@
+## [2026-11-06 06:21] — Phase 346: Dual Top & Bottom Boundary Borders on Completed Exam Rows
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 346: Exam Row Border Refinement
+**Status:** PASS
+
+### Why
+- The user requested: "apakah bisa kita buat garis pembatas untuk row exam ada di bagian atas dan bawah, saat ini hanya bawah saja. agar lebih tegas." with an attached screenshot.
+- Adding a top border (`border-top`) in addition to the bottom border (`border-bottom`) frames each exam row completely, providing a crisp division between preceding task rows and succeeding exam rows.
+
+### Changed
+1. **Dual Boundary Dividers (`js/dashboard.js`)**:
+   - Updated Exam rows (`.completed-row.is-exam-row`) to include both `border-top: 1.5px solid ${scoreColor} !important;` and `border-bottom: 1.5px solid ${scoreColor} !important;`.
+   - Exam B (99% / Grade A) is now bounded above and below by luminous green divider lines.
+   - Exam A (74% / Grade C) is bounded above and below by luminous yellow divider lines.
+2. **Universal Cache Busting**:
+   - Bumped cache to `v=20261106_v155` across all 8 files.
+   - Updated Service Worker cache to `topscore-cache-option-a-v83`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files syntax verified)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+- Live Playwright screenshot (`.mobile_previews/completed_tests_exam_crop.png`): Confirmed crisp top and bottom borders on both Exam B and Exam A.
+
+---
+
+## [2026-11-06 06:18] — Phase 345: Hybrid Premium Milestone Styling for Completed Exam Rows
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 345: Hybrid Milestone Polish
+**Status:** PASS
+
+### Why
+- The user requested to apply the "Hybrid Premium Milestone" design for Exam rows in the Completed Tests table.
+- Balances high-contrast text readability (pure white titles and sequence numbers) with authentic achievement motivation (solid earned grade circle badges, score colors, retry button tier glows, and soft horizontal radiant row gradients).
+
+### Changed
+1. **Horizontal Radiant Row Gradient (`js/dashboard.js`)**:
+   - Replaced heavy solid/translucent block tint with a sleek horizontal gradient: `background: linear-gradient(90deg, rgba(${scoreRgb}, 0.18) 0%, rgba(${scoreRgb}, 0.05) 75%, transparent 100%) !important;`.
+   - Retained dynamic score-colored bottom divider line: `border-bottom: 1.5px solid ${scoreColor} !important; box-shadow: 0 1px 6px rgba(${scoreRgb}, 0.25) !important;`.
+2. **Pure White Title & Number Typography (`js/dashboard.js`)**:
+   - Exam Title font and Sequence Number (`NO`) are Pure White (`#ffffff`), matching the clean look of tasks.
+3. **Restored Authentic Grade & Control Accents (`js/dashboard.js`)**:
+   - Score percentage, Grade circle badge (`.grade-circle`), and Retry play button dynamically inherit the student's authentic earned tier color (Green for Grade A, Yellow for Grade C).
+4. **Universal Cache Busting**:
+   - Bumped cache to `v=20261106_v154` across all 8 files.
+   - Updated Service Worker cache to `topscore-cache-option-a-v82`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files syntax verified)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+- Live Playwright screenshot (`.mobile_previews/completed_tests_exam_crop.png`): Confirmed balanced gradient, crisp white titles, and vivid grade circles.
+
+---
+
+## [2026-11-06 06:12] — Phase 344: Exam Row Inverted Color Scheme (Grade-Colored Background, Pure White Content)
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 344: Exam Row Inverted Styling
+**Status:** PASS
+
+### Why
+- The user requested: "saya berubah pikiran, kalau awalnya fontnya yangberubah wran, maka sekarang kita rubah untuk Exam, fontnya tetap putih seperti task, tapi warna row-nya yang berubah mnegikuti warna grade yang diperoleh. warna score, grade, tombol jadi putih, paham? /plan langsung laksanakn setelah buat plan".
+- Inverted contrast model: The row background itself carries the dynamic grade tint (`rgba(${scoreRgb}, 0.22)`) and score border line, while all internal elements (Title, Score, Grade Circle, Retry Button, Sequence Number) are rendered in crisp, luminous pure white.
+
+### Changed
+1. **Dynamic Grade-Colored Row Background (`js/dashboard.js`, `css/dashboard.css`)**:
+   - For Exam rows (`.completed-row.is-exam-row`):
+     - `background: rgba(${scoreRgb}, 0.22) !important;`
+     - `border-bottom: 1.5px solid ${scoreColor} !important;`
+     - `box-shadow: inset 0 0 16px rgba(${scoreRgb}, 0.12), 0 1px 6px rgba(${scoreRgb}, 0.25) !important;`
+     - Exam B (99% / Grade A) gets radiant green background.
+     - Exam A (74% / Grade C) gets radiant yellow background.
+2. **Pure White Typography & Controls (`js/dashboard.js`)**:
+   - Title: `#ffffff !important; font-weight: 800;` (identical to tasks).
+   - Score: `<span style="color:#ffffff !important; font-weight:800;">${best.effPct.toFixed(0)}%</span>`.
+   - Grade: `<span class="grade-circle grade-circle-exam-white" style="background:#ffffff !important; color:#0f172a !important; ...">${dispGrade}</span>`.
+   - Button: White border (`1.5px solid #ffffff`), white play icon (`fill="#ffffff"`), and white glow (`box-shadow: 0 0 10px rgba(255, 255, 255, 0.35)`).
+   - Number: Plain white text `${num}`.
+3. **Universal Cache Busting**:
+   - Bumped cache to `v=20261106_v153` across all 8 files.
+   - Updated Service Worker cache to `topscore-cache-option-a-v81`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files syntax verified)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+- Live Playwright screenshot (`.mobile_previews/completed_tests_exam_crop.png`): Verified Exam B (Green row with white content) and Exam A (Yellow row with white content).
+
+---
+
+## [2026-11-06 06:05] — Phase 343: Exam Row Colored Boundary Line & Colored Number Box in Completed Tests
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 343: Exam Row Boundary & Number Box Polish
+**Status:** PASS
+
+### Why
+- The user requested: "untuk baris yang ada examnya buat pada row yangberisi exam garisnya ada garis batas baris berwarna sesuai skor yang di dapat, lalu pada bagian nomer juga buat agar angkanya ada dalam kotak yang berawrna sesuai skor yang didapatkan, paham? analisa, pelajari, terapkan /plan buat plan tapi langung proceed" with an uploaded screenshot.
+- Exam rows represent major curriculum milestones; giving them a dynamic score-colored dividing line and sequence number badge visually distinguishes them from recurring daily practice tasks.
+
+### Changed
+1. **Dynamic Exam Row Boundary Line (`js/dashboard.js`, `css/dashboard.css`)**:
+   - Exam rows (`.completed-row.is-exam-row`) dynamically receive a boundary divider line (`border-bottom: 1.5px solid ${scoreColor} !important;`) matching the earned score color (Green `#00c000` for 99% Grade A, Yellow `#ffff00` for 74% Grade C), paired with an ambient neon drop glow (`box-shadow: 0 1px 6px rgba(${btnRgb}, 0.25)`).
+   - Task rows retain standard neutral divider lines (`rgba(255, 255, 255, 0.04)`).
+2. **Dynamic Exam Row Number Box (`js/dashboard.js`, `css/dashboard.css`)**:
+   - In the `NO` column, exam sequence numbers are enclosed in `.exam-number-box` with `background: ${scoreColor}`, `color: ${textColor}` (`#0F172A` for grades A–E, `#FFFFFF` for Star ★), `border-radius: 4px`, and `box-shadow: 0 0 8px rgba(${btnRgb}, 0.4)`.
+   - Task numbers remain clean plain white digits.
+3. **Universal Cache Busting**:
+   - Bumped cache to `v=20261106_v152` across all 8 files.
+   - Updated Service Worker cache to `topscore-cache-option-a-v80`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files syntax verified)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+- Live Playwright screenshot (`.mobile_previews/completed_tests_exam_crop.png`): Verified Exam B (Green box & line) and Exam A (Yellow box & line).
+
+---
+
+## [2026-11-06 05:52] — Phase 342: Complete Elimination of Sharp Corners on Next Test Deck & 14px Smooth Panel Curvature
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 342: Next Test Deck Corner Refinement
+**Status:** PASS
+
+### Why
+- The user inspected the Next Test card and noted: "masih ada sudut tajam di panel ini" with an uploaded screenshot.
+- Root cause:
+  - In `css/dashboard.css`, `.dashboard-next-test-deck` was included in a legacy selector (`line 2605`) that gave it a 1px border, background, and shadow, but lacked `border-radius`.
+  - Because `#up-next-section` wraps `.next-test-card`, the sharp 90-degree outer rectangular corners of `.dashboard-next-test-deck` were protruding behind the rounded corners of `.next-test-card`.
+  - Additionally, `.next-test-col-right` needed dedicated top/bottom-right border radii so its background did not bleed across the outer border.
+
+### Changed
+1. **Removed `.dashboard-next-test-deck` from Generic Border Selector (`css/dashboard.css`)**:
+   - Explicitly styled `#up-next-section` / `.dashboard-next-test-deck` as a transparent, borderless wrapper (`border: none !important; background: transparent !important; box-shadow: none !important;`).
+2. **Dedicated Child Column Border Radii (`css/dashboard.css`)**:
+   - Added `border-top-right-radius: 13px !important; border-bottom-right-radius: 13px !important;` to `.next-test-col-right`.
+   - Added `border-top-left-radius: 13px !important; border-bottom-left-radius: 13px !important;` to `.next-test-col-left`.
+3. **Universal Cache Busting**:
+   - Bumped cache to `v=20261106_v151` across all 8 files.
+   - Updated Service Worker cache to `topscore-cache-option-a-v79`.
+
+### Tests
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+- `node scripts/test_bottom_banner_universal.mjs`: PASS (100%)
+- Live Playwright element crop snapshot (`.mobile_previews/next_test_card_crop.png`): Confirmed all 4 corners are seamlessly rounded (`14px`).
+
+---
+
+## [2026-11-06 05:43] — Phase 341: Star Pink Tier, White Table Headers, Exam A & B Recovery, Task 7-Attempt Average Scoring, & 80px Next Test Card
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 341: Star Pink Tier, White Headers & Task Average Scoring
+**Status:** PASS
+
+### Why
+- The user requested 6 key refinements:
+  1. Star (★ / 100%) grade tier color changed from Green to Pink.
+  2. Table header text on active tables changed from muted gray to Pure White (`#ffffff`).
+  3. Recover Exam A and Exam B in Completed Tests (exams already taken with valid scores must always appear).
+  4. Task 7-grade mini chips ordered descending from highest to lowest.
+  5. Task Score & Grade calculated as the average of the student's top 7 attempts.
+  6. Next Test card dimensions updated to 80px total height (60px title area + 20px rainbow progress) with refined 14px smooth corners.
+
+### Changed
+1. **Star (★ / 100%) Pink Tier Color (`js/grading.js`, `css/style.css`)**:
+   - `TOPSCORE_COLORS.STAR: '#ff2d87'` (Electric Pink), `STAR_RGB: '255, 45, 135'`.
+   - `GRADE_PALETTE['★']` updated with dark `#be185d`, light `#f472b6`, and glow `rgba(255, 45, 135, 0.5)`.
+   - CSS variable `--grade-star: #ff2d87;`, `--grade-star-rgb: 255, 45, 135;`.
+   - Badge gradient updated to `linear-gradient(135deg, #f472b6 0%, var(--grade-star) 100%)`.
+2. **White Table Headers (`css/dashboard.css`)**:
+   - Added rule enforcing pure white `#ffffff` with `font-weight: 800` across `.standings-table-header` and `.completed-table-header`.
+3. **Completed Tests Exam A & B Recovery (`js/dashboard.js`)**:
+   - In `renderCompletedTestsBottom`, all exams with submitted attempts (> 0%) are included without being blocked by draft prior tasks.
+   - For Queen: C3 Task, C2 Task, C1 Task, B Words Exam, and A Words Exam are all displayed in reverse order.
+4. **Task Descending 7-Grade Chips & Average Scoring (`js/dashboard.js`)**:
+   - Top 7 attempts for each task are sorted descending (highest to lowest: e.g. `[★] [★] [★] [A] [A] [A] [B]`).
+   - Task `SCORE` displays the average percentage (`taskAvgPct%`) and `GRADE` displays `taskAvgGrade`.
+   - Score text, retry button border, background, and icon inherit `getGradeColorByScore(taskAvgPct)`.
+5. **Next Test Card 80px & 14px Radius (`css/dashboard.css`)**:
+   - Expanded height to 80px (52px title wrap for test name and topic, 20px rainbow pass bar).
+   - Corner radius set to 14px matching student metadata card.
+   - Action column height set to 80px with 44px counter button.
+6. **Universal Cache Busting & Verification**:
+   - Cache buster bumped to `v=20261106_v150` across all 8 files.
+   - Service Worker cache updated to `topscore-cache-option-a-v78`.
+   - All 45 JS files passed syntax validation.
+   - Blueprint regression tests passed 100%.
+
+### Files
+- `js/grading.js`
+- `css/style.css`
+- `css/dashboard.css`
+- `js/dashboard.js`
+- `dashboard.html`
+- `admin.html`
+- `index.html`
+- `test.html`
+- `result.html`
+- `js/result.js`
+- `sw.js`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 files)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+- `node scripts/test_bottom_banner_universal.mjs`: PASS (100%)
+- `scripts/capture_phase341_live.mjs`: Verified live visual output in mobile viewport (390x800).
+
+---
+
 ## [2026-11-06 05:16] — Phase 340: Completed Tests Strict Filtering, Dynamic Exam Grade Colors, Leaderboard Account Owner Grade Color & Mobile Touch Scroll Fix
 
 **Agent/Session:** Antigravity

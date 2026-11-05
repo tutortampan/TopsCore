@@ -11,7 +11,9 @@ import {
 console.log('=== TEST: VOCAB & UNIVERSAL STUDENT DASHBOARD MASTER BLUEPRINT V2 (PHASE 331) ===\n');
 
 // 1. Verify grading.js exports & rules
-console.log('[1] Testing grading.js Purple Tier & Alumni Grade X:');
+console.log('[1] Testing grading.js Purple Tier, Alumni Grade X, and Star Pink:');
+assert.strictEqual(TOPSCORE_COLORS.STAR, '#ff2d87', 'TOPSCORE_COLORS.STAR must be #ff2d87 (Electric Pink)');
+assert.strictEqual(TOPSCORE_COLORS.STAR_RGB, '255, 45, 135', 'TOPSCORE_COLORS.STAR_RGB must be 255, 45, 135');
 assert.strictEqual(TOPSCORE_COLORS.X, '#8B5CF6', 'TOPSCORE_COLORS.X must be #8B5CF6 (Purple)');
 assert.strictEqual(TOPSCORE_COLORS.X_RGB, '139, 92, 246', 'TOPSCORE_COLORS.X_RGB must be 139, 92, 246');
 assert.ok(GRADE_PALETTE.X, 'GRADE_PALETTE.X must exist');
@@ -24,7 +26,8 @@ assert.strictEqual(getAchievementStatus("LET'S GO"), "LET'S GO", 'getAchievement
 assert.strictEqual(getAchievementStatus('—'), "LET'S GO", 'getAchievementStatus("—") must return "LET\'S GO"');
 assert.strictEqual(getGradeColor('X'), '#8B5CF6', 'getGradeColor("X") must be #8B5CF6');
 assert.strictEqual(getGradeColor("LET'S GO"), '#8B5CF6', 'getGradeColor("LET\'S GO") must be #8B5CF6');
-console.log('  ✅ PASS: Purple Tier (#8B5CF6), Alumni Grade X, and LET\'S GO verified!\n');
+assert.strictEqual(getGradeColor('★'), '#ff2d87', 'getGradeColor("★") must be #ff2d87 (Pink)');
+console.log('  ✅ PASS: Star Pink Tier (#ff2d87), Purple Tier (#8B5CF6), Alumni Grade X, and LET\'S GO verified!\n');
 
 // 2. Verify dashboard.html DOM Structure
 console.log('[2] Testing dashboard.html Structure:');
@@ -73,11 +76,12 @@ assert.ok(css.includes('height: 1px !important;') && css.includes('min-height: 1
 assert.ok(css.includes('flex-shrink: 0 !important;'), 'dividers must have flex-shrink: 0');
 assert.ok(css.includes('.hero-name-divider'), 'Must define .hero-name-divider');
 
-// Next Test 70px (50px Title + 20px Rainbow)
-assert.ok(css.includes('height: 70px !important;'), 'Next Test card must be exactly 70px');
+// Next Test 80px (60px Title + 20px Rainbow per Phase 341 Blueprint)
+assert.ok(css.includes('height: 80px !important;'), 'Next Test card must be exactly 80px');
 assert.ok(css.includes('.next-test-col-right'), 'Must define .next-test-col-right');
 assert.ok(css.includes('.next-test-primary-name'), 'Must define .next-test-primary-name');
 assert.ok(css.includes('.next-test-topic-name'), 'Must define .next-test-topic-name');
+assert.ok(css.includes('Active Table Headers: Pure White'), 'Must enforce pure white table headers');
 
 // Completed Tests Typography: Bold Outfit 800 and 2-line wrap
 assert.ok(css.includes('-webkit-line-clamp: 2 !important;'), 'completed-col-name must support 2-line wrap');
@@ -86,6 +90,8 @@ assert.ok(css.includes('color: #f8fafc !important;') && css.includes('font-size:
 // Task 7-Grade Sub-Row & Leaderboard Current User Highlighting
 assert.ok(css.includes('.task-grades-subrow'), 'Must define .task-grades-subrow');
 assert.ok(css.includes('.task-mini-grade'), 'Must define .task-mini-grade');
+assert.ok(css.includes('.exam-number-box'), 'Must define .exam-number-box for colored exam number chips');
+assert.ok(css.includes('.completed-row.is-exam-row'), 'Must define .completed-row.is-exam-row');
 assert.ok(css.includes('leaderboard-student-name.is-current-user'), 'Must define is-current-user on leaderboard');
 
 // Internal Table Scrolling (Page Locked)
@@ -120,9 +126,11 @@ assert.ok(js.includes("overallGrade = 'X'"), 'Must set Grade X for alumni');
 assert.ok(js.includes('completed-retry-btn'), 'Must render completed-retry-btn in completed tests table');
 assert.ok(js.includes('task-grades-subrow'), 'Must render task-grades-subrow for tasks');
 assert.ok(js.includes('is-current-user'), 'Must highlight current user in leaderboard');
-assert.ok(js.includes('isTestPrereqMet'), 'Must check test prerequisites before including in completed tests');
+assert.ok(js.includes('taskAvgPct'), 'Must compute taskAvgPct as average of top 7 attempts');
 assert.ok(js.includes('completedOnlyTests'), 'Must filter completedOnlyTests strictly');
 assert.ok(js.includes('sortedAccessible'), 'Must sort accessible tests descending in completed pane');
+assert.ok(js.includes('linear-gradient(90deg'), 'Must render hybrid gradient on exam rows');
+assert.ok(js.includes('is-exam-row'), 'Must add is-exam-row class with colored border-bottom');
 console.log('  ✅ PASS: js/dashboard.js logic hooks verified!\n');
 
 // 5. Verify Result Page (result.html, css/result.css, js/result.js)

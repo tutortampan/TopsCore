@@ -672,8 +672,8 @@ export const isWeeklyExam = isExam; // Backward compatibility alias
  */
 export const TOPSCORE_COLORS = Object.freeze({
   // 1. Grade & Score Tiers (Nilai Ujian & Persentase)
-  STAR: '#00c000ff', // 100% Star ★ (Pure Green - #00c000ff)
-  STAR_8HEX: '#00c000ff', // 8-digit hex alias with alpha
+  STAR: '#ff2d87', // 100% Star ★ (Electric Pink - #ff2d87)
+  STAR_8HEX: '#ff2d87ff', // 8-digit hex alias with alpha
   A: '#00c000ff', // 90–99% Grade A (Pure Green - Identical to Star)
   A_8HEX: '#00c000ff', // 8-digit hex alias with alpha
   B: '#95ff00ff', // 80–89% Grade B (Electric Lime - #95ff00ff)
@@ -685,7 +685,7 @@ export const TOPSCORE_COLORS = Object.freeze({
   PURPLE: '#8B5CF6',
 
   // 2. RGB Equivalents for Opacities, Shadows, & Glows
-  STAR_RGB: '0, 192, 0',
+  STAR_RGB: '255, 45, 135',
   A_RGB: '0, 192, 0',
   B_RGB: '149, 255, 0',
   C_RGB: '255, 255, 0',
@@ -713,10 +713,10 @@ const STAR_THEME = {
   label: 'Excellent',
   predicate: 'Excellent',
   color: TOPSCORE_COLORS.STAR,
-  dark: '#006400',
-  light: '#86efac',
+  dark: '#be185d',
+  light: '#f472b6',
   rgb: TOPSCORE_COLORS.STAR_RGB,
-  glow: 'rgba(0, 192, 0, 0.5)',
+  glow: 'rgba(255, 45, 135, 0.5)',
   textColor: TOPSCORE_COLORS.TEXT_STAR,
   name: 'Excellent (100%)',
   minScore: 100,

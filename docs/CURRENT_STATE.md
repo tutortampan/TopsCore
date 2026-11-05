@@ -1,39 +1,42 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-06 05:16 UTC+8
-Current Phase: Phase 340: Completed Tests Strict Filtering, Dynamic Exam Grade Colors, Leaderboard Account Owner Grade Color & Touch Scroll Fix [COMPLETE]
+Last Updated: 2026-11-06 06:21 UTC+8
+Current Phase: Phase 346: Dual Top & Bottom Boundary Borders on Completed Exam Rows [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Dynamic Exam Title Color in Completed Tests (`js/dashboard.js`)**:
-   - For tests of type Exam, the title font dynamically matches the earned grade color (`scoreColor` from `getGradeColorByScore(best.effPct)`): Pure Green (`#00c000ff`) for A/★, Electric Lime (`#95ff00ff`) for B, Yellow (`#FFFF00`) for C, Orange (`#FF8C00`) for D, Red (`#FF0000`) for E.
-   - For tasks, title font remains clean crisp White (`#f8fafc`).
+1. **Dual Top & Bottom Boundary Lines for Exam Rows (`js/dashboard.js`)**:
+   - Exam rows (`.completed-row.is-exam-row`) now receive both `border-top: 1.5px solid ${scoreColor}` and `border-bottom: 1.5px solid ${scoreColor}`, decisively framing each exam row from adjacent tasks and exams.
+   - Preserves horizontal radiant background gradient (`linear-gradient(90deg, rgba(${scoreRgb}, 0.18) 0%, rgba(${scoreRgb}, 0.05) 75%, transparent 100%)`).
+   - Title font and sequence number are Pure White (`#ffffff`), while Score, Grade circle, and Retry button retain their authentic earned tier colors.
 
-2. **Strict Completed Tests Only Filtering (`js/dashboard.js`)**:
-   - Eliminated legacy `idx <= firstUncompletedIdx` code which previously injected unattempted and locked tests (`— —`).
-   - Implemented `isTestPrereqMet(testItem)` verifying prerequisite fulfillment (parent tests, 7/7 passes for prerequisite tasks, minimum passing scores).
-   - Filter `completedOnlyTests` strictly requires:
-     1. Valid submitted attempt record exists (`bestByTest[t.id] != null`);
-     2. Score > 0 or valid non-failed grade (eliminating broken/dummy attempts);
-     3. Prerequisites are completely satisfied.
-   - Unattempted tests (such as `2nd Vocabulary C Words Exam` with `— —`) and locked tasks (such as `C4 Words Task` whose prerequisite C3 is not yet 7/7) are 100% excluded.
-   - Dock count badge dynamically reflects the true count of completed tests.
+2. **Next Test Deck Sharp Corner Elimination (`css/dashboard.css`)**:
+   - Removed `.dashboard-next-test-deck` from the generic card border selector and explicitly styled `#up-next-section` as a transparent, borderless wrapper (`border: none !important; background: transparent !important; box-shadow: none !important;`).
+   - Added `border-top-right-radius: 13px !important; border-bottom-right-radius: 13px !important;` to `.next-test-col-right` and matching top/bottom-left radii to `.next-test-col-left`.
 
-3. **Touch Scroll Fix on Mobile & Sleek Visible Scrollbars (`css/dashboard.css`)**:
-   - Replaced `touch-action: none !important;` on `body.dashboard-page` with `touch-action: manipulation !important;`. This resolves the root cause of mobile touch scrolling being suppressed across the viewport while maintaining zero-scroll viewport lock (`height: 100dvh; overflow: hidden; overscroll-behavior: none;`).
-   - Enabled `overflow-y: scroll !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-y !important; overscroll-behavior: contain !important;` across `.completed-table-wrap`, `#completed-Tests-container`, `.standings-table-wrap`, and `#batch-leaderboard-container`.
-   - Added visible 5px neon scrollbars with `--tier-rgb` glowing thumbs so users clearly see the table is scrollable.
-   - Added `touch-action: pan-y !important;` to `.completed-row`, `.completed-test-row`, and `.standings-row`.
+3. **Star (★ / 100%) Pink Tier Color (`js/grading.js`, `css/style.css`)**:
+   - Transformed Star tier (100% score) to Electric Pink (`#ff2d87`, RGB: `255, 45, 135`) with white star glyph (`#FFFFFF`) and radiant ambient glow `rgba(255, 45, 135, 0.5)`.
+   - Distinct from Grade A (90%–99% Pure Green `#00c000ff`).
 
-4. **Leaderboard Account Owner (`isMe`) Name Color Follows Earned Grade (`js/dashboard.js`)**:
-   - In `loadBatchLeaderboard`, the logged-in student's name dynamically inherits their overall exam grade color (e.g. Electric Lime `#95ff00` for Grade B, Pure Green `#00c000ff` for Grade A) with `font-weight: 800` and matching text-shadow glow.
-   - Other students' names remain clean White/Silver (`#f1f5f9`).
+4. **White Table Headers (`css/dashboard.css`)**:
+   - Table headers on both Ranking/Standings and Completed Tests are Pure White (`#ffffff`) with `font-weight: 800`.
 
-5. **Universal Cache Busting & Validation**:
-   - Cache buster bumped to `v=20261106_v149` across all 8 files (`sw.js`, `index.html`, `dashboard.html`, `admin.html`, `test.html`, `result.html`, `js/dashboard.js`, `js/result.js`).
-   - Service worker cache updated to `topscore-cache-option-a-v77` and verified with `scripts/generate_sw_manifest.mjs`.
+5. **Completed Tests Exam A & Exam B Recovery (`js/dashboard.js`)**:
+   - Ensured all exams that have been taken and submitted with valid scores (> 0%) appear in Completed Tests without being blocked by draft status of old curriculum tasks.
+
+6. **Task 7-Attempt Average Scoring & Descending Chip Order (`js/dashboard.js`)**:
+   - Mini grade chips under Task titles are sorted descending from highest to lowest.
+   - Score and Grade columns for Tasks dynamically display the **average score** and derived grade of the student's top 7 attempts.
+
+7. **Universal Cache Busting & Verification**:
+   - Cache buster bumped to `v=20261106_v155` across all 8 files.
+   - Service Worker cache updated to `topscore-cache-option-a-v83` and verified with `scripts/generate_sw_manifest.mjs`.
    - All 45 JS files passed syntax validation (`node scripts/check_all_js_syntax.cjs`).
-   - Blueprint and universal banner regression tests passed 100%.
+   - Master blueprint regression test suite passed 100%.
+   - Cache buster bumped to `v=20261106_v150` across all 8 files.
+   - Service Worker cache updated to `topscore-cache-option-a-v78` and verified with `scripts/generate_sw_manifest.mjs`.
+   - All 45 JS files passed syntax validation (`node scripts/check_all_js_syntax.cjs`).
+   - Master blueprint regression test suite passed 100%.
 
 2. **Metadata Card Horizontal Laser Dividers (`css/dashboard.css`)**:
    - Fixed flexbox height collapse: set `height: 2px !important; min-height: 2px !important; max-height: 2px !important; flex-shrink: 0 !important;` so the dividers are never collapsed by flexbox inside the 150px card.

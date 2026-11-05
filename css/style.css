@@ -40,9 +40,9 @@
      TOPSCORE SINGLE AUTHORITATIVE COLOR MASTER VAULT
      Strictly 1 single source of truth across Result, Admin, & Student
      ============================================================ */
-  --grade-star: #00c000ff;
-  --grade-star-rgb: 0, 192, 0;
-  --grade-star-glow: rgba(0, 192, 0, 0.5);
+  --grade-star: #ff2d87;
+  --grade-star-rgb: 255, 45, 135;
+  --grade-star-glow: rgba(255, 45, 135, 0.5);
 
   --grade-a: #00c000ff;
   --grade-a-rgb: 0, 192, 0;
@@ -1073,7 +1073,7 @@ tbody tr:last-child td {
 .grade-circle.grade-circle-star,
 .grade-circle.grade-circle-★,
 .grade-circle.grade-circle-s {
-  background: linear-gradient(135deg, #86efac 0%, var(--grade-star) 100%) !important;
+  background: linear-gradient(135deg, #f472b6 0%, var(--grade-star) 100%) !important;
   color: var(--badge-text-star) !important;
   font-size: 0.72rem !important;
   font-weight: 900 !important;
