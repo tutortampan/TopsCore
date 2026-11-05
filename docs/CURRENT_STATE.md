@@ -1,14 +1,31 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-06 01:37 UTC+8
-Current Phase: Phase 328: Student Dashboard Metadata Score Population & Cache v138 [COMPLETE]
+Last Updated: 2026-11-06 01:52 UTC+8
+Current Phase: Phase 329: Dynamic Tier Aesthetics, Modal Polish & Character Encoding Remediation [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Student Dashboard Metadata Score Population (`js/dashboard.js`)**:
-   - Fixed missing `textContent` population on `#bottom-stat-avg-score` (`scoreVal.textContent = hasExam ? `${avgPct}%` : '—';`).
-   - Verified live in Google Chrome with student Ayya: Score displays accurately (`82%`) in glowing Electric Lime matching Grade B.
-   - Verified Completed Tests tab with 100% precision (ordered descending from latest accessible test with Retry button).
+1. **Dynamic Score/Grade Tier Borders & Radial Backgrounds (`dashboard.html` & `result.html`)**:
+   - On `dashboard.html`: All cards (Metadata 150px, Grade Description 50px, Next Test 80px, Leaderboard flex remaining) and page background dynamically inherit `--tier-color` and `--tier-rgb` derived from authoritative score/grade calculation.
+   - For New Students without exams (`LET'S GO`) and Alumni (`ALUMNI`), the Purple Tier (`#8B5CF6`, RGB `139, 92, 246`) radiates cleanly across card borders and subtle radial gradients.
+   - On `result.html`: Immediately upon attempt scoring in `loadResult`, `--tier-color` and `--tier-rgb` ignite across the page background, top header, identity card, test title, metrics card, score/grade boxes, grade motivation card, and bottom banner.
+
+2. **Modal Polish & Character Encoding Remediation (`dashboard.html`, `js/dashboard.js`)**:
+   - Replaced mojibake characters in PIN placeholders with clean dot entities `••••`.
+   - Replaced legacy mojibake icon `ðŸ”` on class selector with crisp magnifying glass `🔍 View All Levels & Detailed Tests`.
+   - Updated modal description to official terminology: `Switch class to view your tasks and exams`.
+   - Repaired `restoreDashboardHashRoute` in `js/dashboard.js` to ensure clean transitions between modals (`#profile`, `#select-class`, `#levels`).
+
+3. **Strict 10px Inter-Panel Gap Architecture (`css/dashboard.css`, `css/result.css`)**:
+   - Removed legacy `padding-bottom: 50px` on `body.dashboard-page`.
+   - Set `.dashboard-content` to `padding: 10px 14px 10px 14px !important;` and `gap: 10px !important;`.
+   - Set all panels to `margin: 0 !important;` and locked `#welcome-banner-section` to strict `height: 150px !important;`.
+   - Same strict 10px padding and 10px flex gap applied across all cards in `result.html` and `css/result.css`.
+   - Perfect zero-scroll budget achieved on standard 800px mobile viewport.
+
+4. **Cache Busting & Automated Testing**:
+   - Cache buster bumped to `v=20261106_v139` and Service Worker to `topscore-cache-option-a-v67`.
+   - All 7 automated test suites passing 100%.
 
 2. **Universal Bottom Banner Overhaul across ALL Pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`, and CSS)**:
    - Replaced old banner text (`TopsCore © 2026 | Created by Mr. Top`) with bold, enlarged branding: `<span class="banner-brand">TopsCore</span> <span class="banner-author">by Mr. Top</span>`.

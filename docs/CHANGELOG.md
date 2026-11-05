@@ -1,3 +1,62 @@
+## [2026-11-06 01:52] — Phase 329: Dynamic Tier Aesthetics, Modal Polish & Character Encoding Remediation
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 329: Dynamic Score/Grade Tier Borders & Backgrounds + Strict 10px Inter-Panel Gaps across Dashboard & Result Pages (/goal)
+**Status:** PASS
+
+### Why
+- The user requested that both the border color and background color on the Student Dashboard (`dashboard.html`) and Result Page (`result.html`) strictly follow the score/grade calculation tier.
+- The user also requested a strict 10px gap between all panels across both pages (`COBA CEK ANATR PANEL HARUS ADA JARAK 10PX`), eliminating uneven margins or collapsed spacing.
+- Cleaned up character encoding mojibake in PIN placeholders (`••••`) and modal buttons (`🔍 View All Levels & Detailed Tests`).
+- Fixed route modal transitions in `restoreDashboardHashRoute`.
+
+### Changed
+1. **Strict 10px Inter-Panel Gap Architecture (`css/dashboard.css`, `css/result.css`)**:
+   - `dashboard-content`: Configured as flex column with `gap: 10px !important;` and `padding: 10px 14px 10px 14px !important;`.
+   - Removed legacy `padding-bottom: 50px` on `body.dashboard-page`.
+   - All panels (`#welcome-banner-section`, `#dashboard-grade-legend`, `#up-next-section`, `#bottom-dock-section`) now have explicit `margin: 0 !important;` so that every vertical gap is mathematically and visually locked at 10px.
+   - Set `#welcome-banner-section` to strict `height: 150px !important;` matching master blueprint budget.
+   - Same strict 10px padding, 10px flex gap, and 0 margin applied across all cards in `result.html` and `css/result.css`.
+2. **Dynamic Score/Grade Tier Borders and Radial Backgrounds (`css/dashboard.css`, `js/dashboard.js`, `css/result.css`, `js/result.js`)**:
+   - `dashboard.html`:
+     - Dynamic `--tier-color` and `--tier-rgb` applied to all cards (Metadata, Grade Description, Next Test, Leaderboard) and page background.
+     - Even for New Students (unattempted exams: `LET'S GO`) and Alumni (`ALUMNI`), the Purple Tier (`#8B5CF6`, `139, 92, 246`) dynamically radiates across all borders and radial gradients.
+   - `result.html`:
+     - Immediately upon result evaluation in `loadResult`, `--tier-color` and `--tier-rgb` are set on document element and body with `tier-glow-active`.
+     - Page background, header, identity card, test title card, metrics card, score/grade boxes, grade predicate card, and bottom banner radiate the earned grade color (Green, Lime, Yellow, Orange, Red).
+3. **Modal Polish & Character Encoding Remediation (`dashboard.html`, `js/dashboard.js`)**:
+   - Replaced mojibake characters in PIN placeholders with clean dot entities `••••`.
+   - Replaced legacy mojibake icon `ðŸ”` on class selector with crisp magnifying glass `🔍 View All Levels & Detailed Tests`.
+   - Updated modal description to official terminology: `Switch class to view your tasks and exams`.
+   - Repaired `restoreDashboardHashRoute` in `js/dashboard.js` to ensure clean transitions between modals.
+4. **Automated Testing & SW Cache Bump**:
+   - Updated `scripts/test_vocab_dashboard_blueprint.mjs` with comprehensive checks for 10px gaps and dynamic tier borders/backgrounds across both pages.
+   - Bumped cache to `v=20261106_v139` and Service Worker cache to `topscore-cache-option-a-v67`.
+   - All 7 test suites passing 100%.
+
+### Files
+- `css/dashboard.css`
+- `js/dashboard.js`
+- `css/result.css`
+- `js/result.js`
+- `dashboard.html`
+- `result.html`
+- `scripts/test_vocab_dashboard_blueprint.mjs`
+- `scripts/bump_cache_busters.mjs`
+- `sw.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 files)
+- `node scripts/generate_sw_manifest.mjs`: PASS (27/27 assets)
+- `node scripts/test_student_dashboard_exam_parity.mjs`: PASS (100%)
+- `node scripts/test_homophones_spoken_mode.mjs`: PASS (23/23 tests)
+- `node scripts/test_prerequisite_deficit_guard.mjs`: PASS (100%)
+- `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%)
+
+---
+
 ## [2026-11-06 01:37] — Phase 328: Student Dashboard Metadata Score Population & Cache v138
 
 **Agent/Session:** Antigravity

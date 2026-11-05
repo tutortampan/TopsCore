@@ -2284,3 +2284,58 @@ body.result-page #result-motivation-msg {
   letter-spacing: 0.02em !important;
 }
 
+
+
+/* Strict 10px Gap & Dynamic Tier Background for Result Page */
+body.result-page {
+  background: radial-gradient(circle at 50% 15%, rgba(var(--tier-rgb, 56, 189, 248), 0.14) 0%, transparent 65%), #070b19 !important;
+}
+
+body.result-page.tier-glow-active {
+  background: radial-gradient(circle at 50% 15%, rgba(var(--tier-rgb), 0.16) 0%, transparent 65%), #070b19 !important;
+}
+
+.result-page .dashboard-header {
+  border-bottom: 1px solid rgba(var(--tier-rgb, 56, 189, 248), 0.35) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, 56, 189, 248), 0.12), transparent 75%), rgba(9, 13, 22, 0.95) !important;
+}
+
+.result-page #result-content {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
+  padding: 10px 14px 10px 14px !important; /* Strict 10px gap below Header and above Banner */
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important; /* Strict 10px gap between all inner panels */
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.result-hero {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important; /* Strict 10px gap between all cards in hero */
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure all cards have margin: 0 so gap: 10px is exact */
+.result-identity-card,
+#result-Test-name-container,
+#result-metrics-composite-card,
+#result-score-grade-card,
+#result-motivation-msg,
+.result-action-slot,
+#toggle-answers-btn,
+#back-dashboard-btn {
+  margin: 0 !important;
+}
+
+body.result-page #bottom-ad-banner,
+body.result-page .topscore-locked-banner {
+  border-top: 1px solid rgba(var(--tier-rgb, 56, 189, 248), 0.25) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 100%, rgba(var(--tier-rgb, 56, 189, 248), 0.08), transparent 75%), #070b19 !important;
+}

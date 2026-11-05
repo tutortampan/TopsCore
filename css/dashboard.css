@@ -2222,8 +2222,7 @@ body.dashboard-page {
   flex-direction: column !important;
   margin: 0 !important;
   padding: 0 !important;
-  padding-bottom: 50px !important;
-  background: #070b19 !important;
+  background: radial-gradient(circle at 50% 15%, rgba(var(--tier-rgb), 0.12) 0%, transparent 65%), #070b19 !important;
   box-sizing: border-box !important;
 }
 
@@ -4373,3 +4372,62 @@ body.dashboard-page .completed-retry-btn:hover {
   letter-spacing: 0.02em !important;
 }
 
+
+
+/* Strict 10px Gap Between Panels & Unified Container (Zero-Scroll 800px) */
+body.dashboard-page .dashboard-content {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
+  padding: 10px 14px 10px 14px !important; /* Strict 10px gap below Header and above Banner */
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important; /* Strict 10px gap between all inner panels */
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+/* Ensure ALL panels inside dashboard-content have margin: 0 so gap: 10px is exact */
+body.dashboard-page #welcome-banner-section,
+body.dashboard-page .welcome-banner,
+body.dashboard-page #dashboard-grade-legend,
+body.dashboard-page .dashboard-grade-legend,
+body.dashboard-page #up-next-section,
+body.dashboard-page .dashboard-next-test-deck,
+body.dashboard-page #bottom-dock-section,
+body.dashboard-page .dashboard-standings-card {
+  margin: 0 !important;
+}
+
+/* Metadata Card: Strict 150px Height with Dynamic Tier Border and Background */
+body.dashboard-page #welcome-banner-section {
+  height: 150px !important;
+  min-height: 150px !important;
+  max-height: 150px !important;
+  width: 100% !important;
+  border-radius: 14px !important;
+  padding: 8px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.65) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.18), transparent 75%), #0f172a !important;
+  box-shadow: 0 0 25px rgba(var(--tier-rgb), 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+/* Header Dynamic Tier Accent */
+body.dashboard-page .dashboard-header {
+  border-bottom: 1px solid rgba(var(--tier-rgb), 0.35) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.12), transparent 75%), rgba(9, 13, 22, 0.95) !important;
+}
+
+/* TopsCore Locked Banner Dynamic Tier Accent */
+body.dashboard-page #bottom-ad-banner,
+body.dashboard-page .topscore-locked-banner {
+  border-top: 1px solid rgba(var(--tier-rgb), 0.3) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 100%, rgba(var(--tier-rgb), 0.10), transparent 75%), #070b19 !important;
+}

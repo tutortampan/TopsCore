@@ -21,9 +21,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261106_v138" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261106_v138" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=20261106_v138" />
+  <link rel="stylesheet" href="css/style.css?v=20261106_v139" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261106_v139" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=20261106_v139" />
 
 
 </head>
@@ -246,7 +246,7 @@
         <div class="modal-header">
           <div>
             <h3 id="classes-selector-modal-title">📚 Select Class</h3>
-            <p class="text-muted text-xs classes-selector-modal-desc">Switch class to view your quizzes and exams</p>
+            <p class="text-muted text-xs classes-selector-modal-desc">Switch class to view your tasks and exams</p>
           </div>
           <button class="btn btn-ghost btn-icon btn-sm" id="close-classes-selector-modal" aria-label="Close">✕</button>
         </div>
@@ -255,7 +255,7 @@
         </div>
         <div class="classes-selector-modal-actions">
           <button type="button" class="btn btn-secondary btn-block" id="btn-open-class-levels">
-            ðŸ” View All Levels &amp; Detailed Tests
+            🔍 View All Levels &amp; Detailed Tests
           </button>
         </div>
       </div>
@@ -405,15 +405,15 @@
               <div class="profile-pin-inputs">
                 <div class="profile-pin-group">
                   <label class="profile-pin-label" for="pin-old">Current</label>
-                  <input type="password" id="pin-old" class="form-control profile-pin-input" placeholder="â€¢â€¢â€¢â€¢" maxlength="6" required />
+                  <input type="password" id="pin-old" class="form-control profile-pin-input" placeholder="••••" maxlength="6" required />
                 </div>
                 <div class="profile-pin-group">
                   <label class="profile-pin-label" for="pin-new">New PIN</label>
-                  <input type="password" id="pin-new" class="form-control profile-pin-input" placeholder="â€¢â€¢â€¢â€¢" maxlength="6" required />
+                  <input type="password" id="pin-new" class="form-control profile-pin-input" placeholder="••••" maxlength="6" required />
                 </div>
                 <div class="profile-pin-group">
                   <label class="profile-pin-label" for="pin-confirm">Confirm</label>
-                  <input type="password" id="pin-confirm" class="form-control profile-pin-input" placeholder="â€¢â€¢â€¢â€¢" maxlength="6" required />
+                  <input type="password" id="pin-confirm" class="form-control profile-pin-input" placeholder="••••" maxlength="6" required />
                 </div>
               </div>
               <button type="submit" class="btn btn-primary profile-pin-submit" id="save-pin-btn">Update PIN</button>
@@ -471,12 +471,12 @@
           <!-- Gender Choice Cards -->
           <div class="d-flex gap-4 justify-center mb-6 gender-cards-row">
             <div class="gender-card p-5" id="opt-gender-male">
-              <div class="gender-card-icon">ðŸ‘¨</div>
+              <div class="gender-card-icon">👨</div>
               <div class="fw-800 text-lg gender-card-label">Male</div>
               <div class="badge badge-primary mt-2">Title: Mr.</div>
             </div>
             <div class="gender-card p-5" id="opt-gender-female">
-              <div class="gender-card-icon">ðŸ‘©</div>
+              <div class="gender-card-icon">👩</div>
               <div class="fw-800 text-lg gender-card-label">Female</div>
               <div class="badge badge-accent mt-2">Title: Miss</div>
             </div>
@@ -551,7 +551,7 @@
   <!-- Birthday Setup Modal -->
   <div id="birthday-setup-modal" class="modal-backdrop hidden">
     <div class="birthday-setup-card">
-      <div class="setup-card-icon">ðŸ“…</div>
+      <div class="setup-card-icon">📅</div>
       <h2 class="setup-card-title">Complete Your Profile</h2>
       <p class="setup-card-subtitle">
         Please enter your date of birth to continue. This is required for your student profile.
@@ -618,12 +618,12 @@
     </div>
   </div>
 
-  <script type="module" src="./js/dashboard.js?v=20261106_v138"></script>
+  <script type="module" src="./js/dashboard.js?v=20261106_v139"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261106_v138')
+        navigator.serviceWorker.register('sw.js?v=20261106_v139')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

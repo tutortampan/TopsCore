@@ -1,9 +1,9 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial } from '../api.js?v=20261106_v138';
-import { getSupabase } from '../supabase.js?v=20261106_v138';
-import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261106_v138';
-import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=20261106_v138';
-import { DataGrid } from './datagrid.js?v=20261106_v138';
-import { exportStudentDossier } from './dossier_export.js?v=20261106_v138';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial } from '../api.js?v=20261106_v139';
+import { getSupabase } from '../supabase.js?v=20261106_v139';
+import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261106_v139';
+import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=20261106_v139';
+import { DataGrid } from './datagrid.js?v=20261106_v139';
+import { exportStudentDossier } from './dossier_export.js?v=20261106_v139';
 
 if (typeof window !== 'undefined') {
   window.exportStudentDossier = exportStudentDossier;
@@ -2341,7 +2341,7 @@ export async function renderStudents(area) {
         btn.textContent = 'Saving...';
         btn.disabled = true;
 
-        const sb = (await import('../supabase.js?v=20261106_v138')).getSupabase ? await (await import('../supabase.js?v=20261106_v138')).getSupabase() : null;
+        const sb = (await import('../supabase.js?v=20261106_v139')).getSupabase ? await (await import('../supabase.js?v=20261106_v139')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); close(); return; }
 
         for (const id of selectedIds) {
@@ -2361,7 +2361,7 @@ export async function renderStudents(area) {
 
       overlay.querySelector('#bulk-activate').onclick = async () => {
         close();
-        const sb = (await import('../supabase.js?v=20261106_v138')).getSupabase ? await (await import('../supabase.js?v=20261106_v138')).getSupabase() : null;
+        const sb = (await import('../supabase.js?v=20261106_v139')).getSupabase ? await (await import('../supabase.js?v=20261106_v139')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); return; }
         for (const id of selectedIds) await sb.from('students').update({ is_active: true }).eq('id', id);
         showToast(`Activated ${selectedIds.length} students.`, 'success');
@@ -2370,7 +2370,7 @@ export async function renderStudents(area) {
 
       overlay.querySelector('#bulk-deactivate').onclick = async () => {
         close();
-        const sb = (await import('../supabase.js?v=20261106_v138')).getSupabase ? await (await import('../supabase.js?v=20261106_v138')).getSupabase() : null;
+        const sb = (await import('../supabase.js?v=20261106_v139')).getSupabase ? await (await import('../supabase.js?v=20261106_v139')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); return; }
         for (const id of selectedIds) await sb.from('students').update({ is_active: false }).eq('id', id);
         showToast(`Deactivated ${selectedIds.length} students.`, 'success');

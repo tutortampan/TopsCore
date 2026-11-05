@@ -8,7 +8,7 @@ import {
   getAchievementStatus
 } from '../js/grading.js';
 
-console.log('=== TEST: VOCAB & UNIVERSAL STUDENT DASHBOARD MASTER BLUEPRINT ===\n');
+console.log('=== TEST: VOCAB & UNIVERSAL STUDENT DASHBOARD & RESULT BLUEPRINT ===\n');
 
 // 1. Verify grading.js exports & rules
 console.log('[1] Testing grading.js Purple Tier & Alumni Grade X:');
@@ -44,8 +44,8 @@ assert.ok(html.includes('<span class="th-col th-action">ACTION</span>'), 'Must h
 assert.ok(!html.includes('id="dashboard-classes-bar" class="dashboard-classes-bar"'), 'Must NOT have visible dashboard-classes-bar (saved 60px vertical)');
 console.log('  ✅ PASS: dashboard.html DOM elements verified!\n');
 
-// 3. Verify css/dashboard.css Pixel Precision & Styles
-console.log('[3] Testing css/dashboard.css Pixel Precision:');
+// 3. Verify css/dashboard.css Pixel Precision & Strict 10px Gap
+console.log('[3] Testing css/dashboard.css Pixel Precision & Strict 10px Gap:');
 const css = fs.readFileSync('css/dashboard.css', 'utf8');
 
 assert.ok(css.includes('.header-door-btn'), 'Must define .header-door-btn');
@@ -63,7 +63,13 @@ assert.ok(css.includes('.is-exam-lock'), 'Must define .is-exam-lock (Yellow Padl
 assert.ok(css.includes('.is-exam-play'), 'Must define .is-exam-play (Green Play Button)');
 assert.ok(css.includes('.completed-row'), 'Must define .completed-row');
 assert.ok(css.includes('.completed-retry-btn'), 'Must define .completed-retry-btn');
-console.log('  ✅ PASS: css/dashboard.css blueprint styles verified!\n');
+
+// Strict 10px Gap between panels
+assert.ok(css.includes('padding: 10px 14px 10px 14px !important;'), 'dashboard-content must have strict 10px vertical padding');
+assert.ok(css.includes('gap: 10px !important;'), 'dashboard-content must have strict 10px gap between panels');
+assert.ok(css.includes('height: 150px !important;'), 'welcome-banner-section must have strict 150px height');
+assert.ok(css.includes('rgba(var(--tier-rgb), 0.12)'), 'body.dashboard-page background must dynamically use tier-rgb glow');
+console.log('  ✅ PASS: css/dashboard.css 10px gaps and tier styles verified!\n');
 
 // 4. Verify js/dashboard.js Logic Hooks
 console.log('[4] Testing js/dashboard.js Logic:');
@@ -82,7 +88,19 @@ assert.ok(js.includes("overallGrade = \"LET'S GO\""), 'Must set LET\'S GO for st
 assert.ok(js.includes("overallGrade = 'X'"), 'Must set Grade X for alumni');
 assert.ok(js.includes('completed-retry-btn'), 'Must render completed-retry-btn in completed tests table');
 assert.ok(js.includes('sortedAccessible'), 'Must sort accessible tests descending in completed pane');
+assert.ok(js.includes('el.style.borderColor = `rgba(${rgbColor}'), 'All panels must dynamically set borderColor from score/grade calculation');
 console.log('  ✅ PASS: js/dashboard.js logic hooks verified!\n');
 
-console.log('=== ALL VOCAB & UNIVERSAL DASHBOARD BLUEPRINT CHECKS PASSED 100% ===');
+// 5. Verify Result Page (result.html, css/result.css, js/result.js)
+console.log('[5] Testing Result Page Dynamic Tier & 10px Gaps:');
+const resCss = fs.readFileSync('css/result.css', 'utf8');
+const resJs = fs.readFileSync('js/result.js', 'utf8');
 
+assert.ok(resCss.includes('body.result-page.tier-glow-active'), 'Result CSS must define tier-glow-active');
+assert.ok(resCss.includes('gap: 10px !important;'), 'Result hero must enforce strict 10px gap between cards');
+assert.ok(resCss.includes('padding: 10px 14px 10px 14px !important;'), 'Result content must enforce strict 10px vertical padding');
+assert.ok(resJs.includes('Immediate application of dynamic tier colors'), 'Result JS must immediately apply dynamic tier variables on data load');
+assert.ok(resJs.includes('activateTierGlow'), 'Result JS must invoke activateTierGlow');
+console.log('  ✅ PASS: Result page dynamic tier and 10px gaps verified!\n');
+
+console.log('=== ALL VOCAB & UNIVERSAL DASHBOARD + RESULT BLUEPRINT CHECKS PASSED 100% ===');

@@ -5,11 +5,11 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261106_v138';
-import { isExam, getGradeColorByScore } from './grading.js?v=20261106_v138';
-import { getStudentSession, getAdminSession } from './session.js?v=20261106_v138';
-import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v138';
-import { getSupabase } from './supabase.js?v=20261106_v138';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261106_v139';
+import { isExam, getGradeColorByScore } from './grading.js?v=20261106_v139';
+import { getStudentSession, getAdminSession } from './session.js?v=20261106_v139';
+import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v139';
+import { getSupabase } from './supabase.js?v=20261106_v139';
 
 let session = getStudentSession();
 if (!session) {
@@ -937,6 +937,14 @@ if (!session) {
         const currentTier = isGradeSOr100 ? '★' : grade;
         let gradeColor = typeof getGradeColor === 'function' ? getGradeColor(grade) : (TOPSCORE_COLORS.STAR || '#00c000ff');
         const rgbColor = TOPSCORE_COLORS[`${isGradeSOr100 ? 'STAR' : (grade === '★' ? 'STAR' : grade)}_RGB`] || hexToRgbString(gradeColor);
+
+        // Immediate application of dynamic tier colors and variables across page
+        document.documentElement.style.setProperty('--tier-color', gradeColor);
+        document.documentElement.style.setProperty('--tier-rgb', rgbColor);
+        document.body.style.setProperty('--tier-color', gradeColor);
+        document.body.style.setProperty('--tier-rgb', rgbColor);
+        document.body.classList.add('tier-glow-active');
+        activateTierGlow(gradeColor, rgbColor, currentTier, isGradeSOr100);
 
         // 5. Achievement Status (Rule DECISION-018: strictly FAIL, LESS, ENOUGH, GOOD, VERY GOOD, EXCELLENT)
         const motEl = document.getElementById('result-motivation-msg');
