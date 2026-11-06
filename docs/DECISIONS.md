@@ -1313,7 +1313,7 @@ Students need flexibility to choose whether to do Words or Phrases first. Previo
 
 ---
 
-## DECISION-044 — Master Terminology & Spatial Architecture (Student Portal, Class, Class Lobby, Test Desk, Result Page, Task & Exam)
+## DECISION-044 — Master Terminology & Spatial Architecture (Student Portal, Class, Lobby, Test Desk, Result Page, Task & Exam)
 
 Date: 2026-11-06
 Status: ACCEPTED
@@ -1336,9 +1336,9 @@ The user officially decided on the 6 foundational spatial and taxonomy terms for
    - The primary study room for the selected subject/class.
    - Title: `Class — TOPS CORE`.
    - Header center prominently features the active Class Name (e.g. `2ND VOCABULARY`).
-3. **Modal Pemilih / Pengganti Kelas (Ikon 🚪)**: **CLASS LOBBY**
+3. **Modal Pemilih / Pengganti Kelas (Ikon 🚪)**: **LOBBY**
    - The academic directory modal where students view active classes and switch to another room.
-   - Modal Title: `🚪 Class Lobby`, Header door button tooltip: `Class Lobby (Change Class)`.
+   - Modal Title: `🚪 Lobby`, Header door button tooltip: `Lobby`.
 4. **Halaman Hasil (`result.html`)**: **RESULT PAGE**
    - Return navigation:
      - Student: **`BACK TO CLASS`** (returns student directly to their current class).

@@ -7,7 +7,7 @@ Status: COMPLETE
 ## Completed Work:
 1. **Master Terminology & Spatial Architecture (`index.html`, `dashboard.html`, `test.html`, `result.html`, `admin.html`, `js/result.js`)**:
    - **Login (`index.html`) = STUDENT PORTAL**: Title updated to `Student Portal — TOPS CORE`, subtitle updated to `Student Portal — Sign in to continue`, and search placeholder in Step 2 fixed from "Search class..." to "Search program...".
-   - **Dashboard (`dashboard.html`) = CLASS**: Title updated to `Class — TOPS CORE`, header door button tooltip updated to `Class Lobby (Change Class)`, compatibility brand to `CLASS`, and modal title updated to `🚪 Class Lobby` with subtitle "Select a class to enter".
+   - **Dashboard (`dashboard.html`) = CLASS**: Title updated to `Class — TOPS CORE`, header door button tooltip updated to `Lobby`, compatibility brand to `CLASS`, and modal title updated to `🚪 Lobby` with subtitle "Select a class to enter".
    - **Assessment Area (`test.html`) = TEST DESK**: Title updated to `Test Desk — TOPS CORE`, meta description updated to `Complete your assessment on the TOPS CORE Test Desk.`
    - **Result Page Return Navigation (`result.html`, `js/result.js`)**: Fixed dynamic override in `js/result.js` to strictly enforce `BACK TO CLASS` for student views and `BACK TO ROOM` for tutor/admin views.
    - **Testing Classification**: Formally documented `TASK` (formative practice, top-7 rolling scores) and `EXAM` (formal assessment milestone), removing temporal labels ("daily" / "weekly") to reflect pure pedagogical function and weighting.
