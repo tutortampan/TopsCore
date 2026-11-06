@@ -26,14 +26,14 @@
       }
     })();
   </script>
-  <title>Student's Lobby — TOPS CORE</title>
-  <meta name="description" content="Student's Lobby on TOPS CORE — track progress, view Classes, and start Tests." />
+  <title>Class — TOPS CORE</title>
+  <meta name="description" content="Class on TOPS CORE — track progress, view standings, and take tests." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261106_v158" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261106_v158" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=20261106_v158" />
+  <link rel="stylesheet" href="css/style.css?v=20261106_v159" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261106_v159" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=20261106_v159" />
 
 
 </head>
@@ -45,7 +45,7 @@
   <!-- Top Navigation (60px: Door Icon Left, Class Name Center, Logout Right) -->
   <header class="dashboard-header" id="dashboard-top-header">
     <div class="dashboard-header-left">
-      <button class="header-action-btn header-door-btn" id="btn-change-class" title="Change Class" aria-label="Change Class">
+      <button class="header-action-btn header-door-btn" id="btn-change-class" title="Class Lobby (Change Class)" aria-label="Class Lobby (Change Class)">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"></path>
           <path d="M2 20h20"></path>
@@ -121,7 +121,7 @@
         <div id="welcome-level-panel"></div>
         <span id="stat-overall-score">0%</span>
         <span id="bottom-stat-best-score">0%</span>
-        <div id="dashboard-header-brand">THE STUDENT'S LOBBY</div>
+        <div id="dashboard-header-brand">CLASS</div>
         <button id="view-profile-btn"></button>
         <div id="header-avatar"><span id="header-avatar-initial">S</span><img id="header-avatar-img" class="hidden" alt="Profile" /></div>
         <div id="dashboard-classes-section">
@@ -257,8 +257,8 @@
       <div class="modal-box classes-selector-modal-box">
         <div class="modal-header">
           <div>
-            <h3 id="classes-selector-modal-title">📚 Select Class</h3>
-            <p class="text-muted text-xs classes-selector-modal-desc">Switch class to view your tasks and exams</p>
+            <h3 id="classes-selector-modal-title">&#128682; Class Lobby</h3>
+            <p class="text-muted text-xs classes-selector-modal-desc">Select a class to enter</p>
           </div>
           <button class="btn btn-ghost btn-icon btn-sm" id="close-classes-selector-modal" aria-label="Close">✕</button>
         </div>
@@ -625,12 +625,12 @@
     </div>
   </div>
 
-  <script type="module" src="./js/dashboard.js?v=20261106_v158"></script>
+  <script type="module" src="./js/dashboard.js?v=20261106_v159"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261106_v158')
+        navigator.serviceWorker.register('sw.js?v=20261106_v159')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

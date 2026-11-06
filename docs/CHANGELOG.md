@@ -1,3 +1,51 @@
+## [2026-11-06 08:26] — Phase 351: Master Terminology & Spatial Architecture Alignment
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 351: Master Terminology & Spatial Architecture
+**Status:** PASS
+
+### Why
+- The user reviewed and confirmed the 6 core spatial & terminology questions from `topscore_terminology_and_spatial_mapping_plan.md`:
+  1. Student Login: **STUDENT PORTAL**
+  2. Student Dashboard: **CLASS**
+  3. Class Switcher Modal: **CLASS LOBBY**
+  4. Return Navigation on Result Page: **`BACK TO CLASS`** (Student) / **`BACK TO ROOM`** (Tutor)
+  5. Assessment Classification: **TASK** and **EXAM** (differentiated strictly by weight and pedagogical purpose, without temporal "daily" or "weekly" labels)
+  6. Assessment Execution Screen: **TEST DESK**
+- Resolves spatial ambiguity across the platform and fixes minor discrepancies (e.g. placeholder typo in program search and dynamic overwrite of the back button).
+
+### Changed
+1. **`index.html` (Student Portal)**:
+   - `<title>` updated to `Student Portal — TOPS CORE`.
+   - Brand subtitle updated to `<p>Student Portal — Sign in to continue</p>`.
+   - Step 2 search placeholder fixed from `Search class...` to `Search program...`.
+2. **`dashboard.html` (Class)**:
+   - `<title>` updated to `Class — TOPS CORE`.
+   - Door button updated with title/aria-label: `Class Lobby (Change Class)`.
+   - Compatibility brand element updated to `CLASS`.
+   - Modal title updated to `🚪 Class Lobby` with subtitle "Select a class to enter".
+3. **`test.html` (Test Desk)**:
+   - `<title>` updated to `Test Desk — TOPS CORE`.
+   - Meta description updated to `Complete your assessment on the TOPS CORE Test Desk.`
+4. **`result.html` & `js/result.js` (`BACK TO CLASS` / `BACK TO ROOM`)**:
+   - Fixed line 843 in `js/result.js` to ensure the button dynamically displays `BACK TO CLASS` for students (and `BACK TO ROOM` for tutors), eliminating legacy `BACK TO LOBBY`.
+   - Updated profile return tooltip to `Back to Class`.
+5. **`admin.html`**:
+   - Footer link updated to `← Student Portal`.
+6. **Architecture Decisions (`docs/DECISIONS.md`)**:
+   - Recorded `DECISION-044 — Master Terminology & Spatial Architecture (Student Portal, Class, Class Lobby, Test Desk, Result Page, Task & Exam)`.
+7. **Universal Cache Busting**:
+   - Bumped cache to `v=20261106_v159` across HTML files and `sw.js`.
+   - Service Worker cache updated to `topscore-cache-option-a-v87`.
+
+### Tests
+- `node scripts/check_all_js_syntax.cjs`: PASS (45/45 JS files syntax verified)
+- `node scripts/generate_sw_manifest.mjs`: PASS (27/27 cache manifest assets exist)
+- `node scripts/verify_result_hero_and_grade_spec.mjs`: PASS (100% — verified BACK TO CLASS and strict sub-row geometry)
+- `npm.cmd test`: PASS (100% across all 7 test suites)
+
+---
+
 ## [2026-11-06 07:56] — Phase 350: Result Page Alignment (Hero Card 150px, Fullscreen Removal, & Grade Status Streamlining)
 
 **Agent/Session:** Antigravity

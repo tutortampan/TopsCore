@@ -1,11 +1,24 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-06 07:56 UTC+8
-Current Phase: Phase 350: Result Page Hero Card Alignment & Grade Streamlining [COMPLETE]
+Last Updated: 2026-11-06 08:26 UTC+8
+Current Phase: Phase 351: Master Terminology & Spatial Architecture Alignment [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Result Page Hero Card 150px Alignment (`result.html`, `css/result.css`, `js/result.js`)**:
+1. **Master Terminology & Spatial Architecture (`index.html`, `dashboard.html`, `test.html`, `result.html`, `admin.html`, `js/result.js`)**:
+   - **Login (`index.html`) = STUDENT PORTAL**: Title updated to `Student Portal — TOPS CORE`, subtitle updated to `Student Portal — Sign in to continue`, and search placeholder in Step 2 fixed from "Search class..." to "Search program...".
+   - **Dashboard (`dashboard.html`) = CLASS**: Title updated to `Class — TOPS CORE`, header door button tooltip updated to `Class Lobby (Change Class)`, compatibility brand to `CLASS`, and modal title updated to `🚪 Class Lobby` with subtitle "Select a class to enter".
+   - **Assessment Area (`test.html`) = TEST DESK**: Title updated to `Test Desk — TOPS CORE`, meta description updated to `Complete your assessment on the TOPS CORE Test Desk.`
+   - **Result Page Return Navigation (`result.html`, `js/result.js`)**: Fixed dynamic override in `js/result.js` to strictly enforce `BACK TO CLASS` for student views and `BACK TO ROOM` for tutor/admin views.
+   - **Testing Classification**: Formally documented `TASK` (formative practice, top-7 rolling scores) and `EXAM` (formal assessment milestone), removing temporal labels ("daily" / "weekly") to reflect pure pedagogical function and weighting.
+   - **Admin Link (`admin.html`)**: Back link updated to `← Student Portal`.
+   - **DECISION-044**: Recorded authoritative architectural decision in `docs/DECISIONS.md`.
+2. **Universal Cache Busting & Verification**:
+   - Cache bumped to `v=20261106_v159` across all HTML files and `sw.js`.
+   - Service Worker cache updated to `topscore-cache-option-a-v87`.
+   - Verified via Playwright test `scripts/verify_result_hero_and_grade_spec.mjs` and full test suite (`npm.cmd test`). All passed 100%.
+
+3. **Result Page Hero Card 150px Alignment (`result.html`, `css/result.css`, `js/result.js`)**:
    - Standardized `#result-identity-card` to 150px with exact sub-rows from Student Dashboard: 20px meta pills, 1px divider, 93px avatar stage with enlarged 84px diameter photo circle, 1px divider, 35px student name with `Mr.` / `Miss` prefix.
    - Sesuai spesifikasi blueprint: murni profil siswa tanpa kotak score dan grade di hero card.
 2. **Fullscreen Removal (`result.html`, `css/result.css`, `js/result.js`)**:

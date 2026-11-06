@@ -139,6 +139,11 @@ async function testResultPageSpec() {
   });
   if (hintExists) throw new Error('FAIL: Hint text should not be visible in grade description card');
 
+  // 3.5. Verify Back Button Label is strictly BACK TO CLASS
+  const backBtnText = await page.evaluate(() => document.getElementById('back-dashboard-btn')?.innerText.trim());
+  console.log('Back button text:', backBtnText);
+  if (backBtnText !== 'BACK TO CLASS') throw new Error(`FAIL: Back button must be 'BACK TO CLASS', got '${backBtnText}'`);
+
   // 4. Verify Zero Outer Scroll
   const scrollInfo = await page.evaluate(() => ({
     bodyScrollHeight: document.body.scrollHeight,

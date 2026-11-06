@@ -828,7 +828,7 @@ if (!session) {
           }
         } else {
           if (profileBtn) {
-            profileBtn.title = "Back to Student's Lobby";
+            profileBtn.title = "Back to Class";
             profileBtn.onclick = () => location.href = 'dashboard.html';
           }
           if (logoutBtn) {
@@ -840,7 +840,7 @@ if (!session) {
           }
           const backBtn = document.getElementById('back-dashboard-btn');
           if (backBtn) {
-            backBtn.textContent = 'BACK TO LOBBY';
+            backBtn.textContent = 'BACK TO CLASS';
             backBtn.href = 'dashboard.html';
           }
         }
@@ -1352,7 +1352,7 @@ if (!session) {
           <div class="empty-state__icon">&#10060;</div>
           <h3>Could not load results</h3>
           <p class="text-muted">${escapeHtml(e.message)}</p>
-          <a href="dashboard.html" class="btn btn-primary mt-4">Back to Student's Lobby</a>
+          <a href="dashboard.html" class="btn btn-primary mt-4">Back to Class</a>
         `;
       }
     }

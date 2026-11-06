@@ -1310,3 +1310,47 @@ Students need flexibility to choose whether to do Words or Phrases first. Previo
 - Eliminates 50% of visual row clutter on the student dashboard and Class Hub table.
 - Preserves high pedagogical evaluation fidelity (Written typo tolerance for Words, Selection for Phrases).
 - Ensures balanced, authentic mastery across both vocabulary and phrases.
+
+---
+
+## DECISION-044 — Master Terminology & Spatial Architecture (Student Portal, Class, Class Lobby, Test Desk, Result Page, Task & Exam)
+
+Date: 2026-11-06
+Status: ACCEPTED
+
+### Context
+In previous phases, various terms were used interchangeably or ambiguously across the frontend:
+1. `index.html` was titled "Student's Lobby", even though the student has not yet entered or authenticated via PIN.
+2. `dashboard.html` was also titled "Student's Lobby", but the content was 100% focused on a single active Class (e.g., `2ND VOCABULARY`), with the top door icon used to change classes.
+3. In `result.html`, the return button text drifted between `BACK TO LOBBY` and `BACK TO CLASS`.
+4. Testing taxonomy needed clarity on `TASK` vs `EXAM` without unnecessary temporal constraints ("daily" / "weekly").
+5. The assessment interface `test.html` needed a distinct, professional spatial term.
+
+### Decision
+The user officially decided on the 6 foundational spatial and taxonomy terms for TopsCore LMS:
+1. **Halaman Login Siswa (`index.html`)**: **STUDENT PORTAL**
+   - The entrance where students authenticate via Institution -> Program -> Batch -> Student Name -> Personal PIN.
+   - Title: `Student Portal — TOPS CORE`, Subtitle: `Student Portal — Sign in to continue`.
+   - Program search placeholder updated to `Search program...`.
+2. **Dashboard Siswa (`dashboard.html`)**: **CLASS**
+   - The primary study room for the selected subject/class.
+   - Title: `Class — TOPS CORE`.
+   - Header center prominently features the active Class Name (e.g. `2ND VOCABULARY`).
+3. **Modal Pemilih / Pengganti Kelas (Ikon 🚪)**: **CLASS LOBBY**
+   - The academic directory modal where students view active classes and switch to another room.
+   - Modal Title: `🚪 Class Lobby`, Header door button tooltip: `Class Lobby (Change Class)`.
+4. **Halaman Hasil (`result.html`)**: **RESULT PAGE**
+   - Return navigation:
+     - Student: **`BACK TO CLASS`** (returns student directly to their current class).
+     - Tutor / Admin: **`BACK TO ROOM`** (returns tutor to the Admin Class Hub monitor).
+5. **Klasifikasi Ujian**: **TASK** dan **EXAM**
+   - **TASK**: Formative mastery practice (7x7 repetitive mastery model, storing top-7 scores).
+   - **EXAM**: Formal assessment milestone with high weighting and time limits.
+   - There are strictly NO "daily" (harian) or "weekly" (mingguan) labels; distinction is based purely on educational weight and pedagogical function.
+6. **Halaman Pengerjaan Soal (`test.html`)**: **TEST DESK**
+   - Title: `Test Desk — TOPS CORE`, Meta description: `Complete your assessment on the TOPS CORE Test Desk.`
+
+### Consequences
+- Eliminates dual "Lobby" confusion between login and dashboard.
+- Establishes a natural, crystal-clear mental model for students and tutors.
+- Synchronizes titles, meta descriptions, button text, and documentation across the codebase.
