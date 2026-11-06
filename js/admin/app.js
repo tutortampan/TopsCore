@@ -1,7 +1,7 @@
-import { DataGrid } from './datagrid.js?v=20261106_v140';
-import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261106_v140';
-import { computeUnifiedScore, computeTopicPassLevel } from '../grading.js?v=20261106_v140';
-import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven } from '../api.js?v=20261106_v140';
+import { DataGrid } from './datagrid.js?v=20261106_v160';
+import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261106_v160';
+import { computeUnifiedScore, computeTopicPassLevel } from '../grading.js?v=20261106_v160';
+import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven } from '../api.js?v=20261106_v160';
 
 if (typeof window !== 'undefined') {
   window.showToast = showToast;
@@ -379,26 +379,26 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter, toShortLevel,
   adminOverridePrerequisitesWithRemedial, autoSyncClassTestsForLevel
-} from '../api.js?v=20261106_v140';
-import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261106_v140';
-import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261106_v140';
-import { getSupabase } from '../supabase.js?v=20261106_v140';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261106_v140';
-import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261106_v140';
-import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261106_v140';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261106_v140';
-import { renderTests } from './tests-management.js?v=20261106_v140';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261106_v140';
-import { renderVocabularyVault } from './vocab-vault.js?v=20261106_v140';
-import { renderModules } from './modules.js?v=20261106_v140';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261106_v140';
-import { renderExportQuestions } from './imports-exports.js?v=20261106_v140';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261106_v140';
-import { renderCurriculum } from './curriculum-management.js?v=20261106_v140';
-import { renderClassesHub } from './classes-hub.js?v=20261106_v140';
-import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261106_v140';
-import { openStudentFullEdit } from './student-management.js?v=20261106_v140';
-import { renderStudentsRegistration } from './student-registration.js?v=20261106_v140';
+} from '../api.js?v=20261106_v160';
+import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261106_v160';
+import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261106_v160';
+import { getSupabase } from '../supabase.js?v=20261106_v160';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261106_v160';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261106_v160';
+import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261106_v160';
+import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261106_v160';
+import { renderTests } from './tests-management.js?v=20261106_v160';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261106_v160';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261106_v160';
+import { renderModules } from './modules.js?v=20261106_v160';
+import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261106_v160';
+import { renderExportQuestions } from './imports-exports.js?v=20261106_v160';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261106_v160';
+import { renderCurriculum } from './curriculum-management.js?v=20261106_v160';
+import { renderClassesHub } from './classes-hub.js?v=20261106_v160';
+import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261106_v160';
+import { openStudentFullEdit } from './student-management.js?v=20261106_v160';
+import { renderStudentsRegistration } from './student-registration.js?v=20261106_v160';
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');

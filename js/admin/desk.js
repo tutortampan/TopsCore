@@ -17,10 +17,10 @@ import {
   testSupabaseConnection,
   previewRecalibrateTest,
   applyRecalibrateTest
-} from '../api.js?v=20261102_v103';
-import { getSupabase } from '../supabase.js?v=20261102_v103';
-import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261102_v103';
-import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=20261102_v103';
+} from '../api.js?v=20261106_v160';
+import { getSupabase } from '../supabase.js?v=20261106_v160';
+import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
+import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=20261106_v160';
 
 // escapeHtml / escHtml imported canonically
 

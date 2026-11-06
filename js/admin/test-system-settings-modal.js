@@ -1,6 +1,6 @@
 // TOPS CORE — Test System Settings Modal (Phase 306)
 // Centralized configuration for task repetitions, task passing score, and exam passing score.
-import { fetchClassTestSettings, saveClassTestSettings, escapeHtml, showToast } from '../api.js?v=20261104_v122';
+import { fetchClassTestSettings, saveClassTestSettings, escapeHtml, showToast } from '../api.js?v=20261106_v160';
 
 export async function openTestSystemSettingsModal(options = {}) {
   const {

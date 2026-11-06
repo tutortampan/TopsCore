@@ -1,16 +1,16 @@
-import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261106_v140';
+import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261106_v160';
 /**
  * TopsCore — Test Engine Module
  * Extracted from test.html
  */
 
-import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261106_v140';
-    import { requireStudentSession } from './session.js?v=20261106_v140';
-    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261106_v140';
-    import { startCountdown, isExpired } from './timer.js?v=20261106_v140';
-    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261106_v140';
-    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261106_v140';
-    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261106_v140';
+import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261106_v160';
+    import { requireStudentSession } from './session.js?v=20261106_v160';
+    import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261106_v160';
+    import { startCountdown, isExpired } from './timer.js?v=20261106_v160';
+    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261106_v160';
+    import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261106_v160';
+    import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261106_v160';
 
     // Arm wake lock gestures on first interaction
     bindWakeLockGestures();
@@ -819,12 +819,26 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       }
     }
 
+    function isFullscreenSupported() {
+      const docEl = document.documentElement;
+      return !!(
+        document.fullscreenEnabled ||
+        document.webkitFullscreenEnabled ||
+        document.mozFullScreenEnabled ||
+        document.msFullscreenEnabled ||
+        docEl?.requestFullscreen ||
+        docEl?.webkitRequestFullscreen ||
+        docEl?.mozRequestFullScreen ||
+        docEl?.msRequestFullscreen
+      );
+    }
+
     function isFullscreenActive() {
       return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
     }
 
     function handleFullscreenChange() {
-      if (!isTestActive) return;
+      if (!isTestActive || !isFullscreenSupported()) return;
       const pauseModal = document.getElementById('fullscreen-pause-modal');
       if (!pauseModal) return;
 
@@ -839,7 +853,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
     document.getElementById('btn-resume-fullscreen')?.addEventListener('click', async () => {
-      await requestFullscreenMode();
+      if (isFullscreenSupported()) {
+        await requestFullscreenMode();
+      }
       document.getElementById('fullscreen-pause-modal')?.classList.add('hidden');
     });
 

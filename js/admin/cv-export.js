@@ -5,7 +5,7 @@
  * Complies with TopsCore ABCD Architecture [Panel A].
  */
 
-import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=20261102_v103';
+import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=20261106_v160';
 
 export function generateExecutiveCV(profile, workRecords = [], skills = []) {
   let container = document.getElementById("cv-print-container");

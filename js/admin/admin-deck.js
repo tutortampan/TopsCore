@@ -1,8 +1,8 @@
-import { adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, formatStudentName } from '../api.js?v=20261102_v103';
-import { getSupabase } from '../supabase.js?v=20261102_v103';
-import { generateExecutiveCV } from './cv-export.js?v=20261102_v103';
-import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=20261102_v103';
-import { showToast, escapeHtml, escHtml } from '../app.js?v=20261102_v103';
+import { adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, formatStudentName } from '../api.js?v=20261106_v160';
+import { getSupabase } from '../supabase.js?v=20261106_v160';
+import { generateExecutiveCV } from './cv-export.js?v=20261106_v160';
+import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=20261106_v160';
+import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 
 // escapeHtml / escHtml imported canonically
 

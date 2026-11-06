@@ -1,9 +1,9 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial } from '../api.js?v=20261106_v140';
-import { getSupabase } from '../supabase.js?v=20261106_v140';
-import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261106_v140';
-import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=20261106_v140';
-import { DataGrid } from './datagrid.js?v=20261106_v140';
-import { exportStudentDossier } from './dossier_export.js?v=20261106_v140';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial } from '../api.js?v=20261106_v160';
+import { getSupabase } from '../supabase.js?v=20261106_v160';
+import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261106_v160';
+import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=20261106_v160';
+import { DataGrid } from './datagrid.js?v=20261106_v160';
+import { exportStudentDossier } from './dossier_export.js?v=20261106_v160';
 
 if (typeof window !== 'undefined') {
   window.exportStudentDossier = exportStudentDossier;

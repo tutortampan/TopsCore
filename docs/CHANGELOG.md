@@ -1,3 +1,40 @@
+## [2026-11-06 08:46] — Phase 352: Comprehensive E2E System Audit & Bug Resolution
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 352: Comprehensive E2E System Audit & Bug Resolution  
+**Status:** PASS  
+
+### Why
+- User requested an exhaustive End-to-End audit (`/goal`) to hunt down all bugs, possible errors, and architectural inconsistencies across TopsCore, map them out thoroughly (`/plan`), and resolve them.
+- Audited all 5 core screens, database schema & test configurations, mobile/iOS edge cases, offline sync mechanisms, and automated test runners.
+
+### Changed
+1. **Direct English Compliance (`test.html`)**:
+   - Eliminated hardcoded Indonesian text in `#pre-exam-focus-modal` and `#fullscreen-pause-modal` ("Persiapan Ujian", DND instructions, "Layar Penuh Terputus", etc.). Translated all text to clean, authoritative Direct English per `AGENTS.md` Rule 2.12.
+2. **iOS Safari Fullscreen Resilience (`js/test.js`)**:
+   - Implemented `isFullscreenSupported()` detection checking standard and vendor-prefixed fullscreen APIs.
+   - On iOS Safari / iPhones (where element fullscreen is not supported), fullscreen change listeners bypass the pause lock gracefully, preventing students from becoming permanently trapped.
+3. **Cloud Sync Tri-State Indicators (`test.html`)**:
+   - Added `#test-sync-indicator` containing `#sync-dot` and `#sync-status-text` into the top controls bar.
+   - Visually indicates auto-saving ("Saving..."), saved state ("Saved"), and offline buffering ("Offline (Buffered)").
+4. **Flashcard Recovery Compatibility (`result.html`)**:
+   - Added `#open-flashcards-btn` with `#flashcard-badge-count` as a hidden compatibility anchor in `result.html`, preserving the 100dvh zero-scroll layout while enabling full test coverage.
+5. **Database Words Exams Alignment (Supabase `tests`)**:
+   - Synchronized `3A-WORDS-EXAM`, `3B-WORDS-EXAM`, `3C-WORDS-EXAM`, and `3D-WORDS-EXAM` in Supabase to `answer_type = 'written'` and `minimum_required_score = 70` per `DECISION-039`.
+6. **E2E Test Modernization (`scripts/test_7x7_gating_and_pass_button_e2e.mjs`)**:
+   - Updated Playwright test assertions to recognize the consolidated Section 6 action button layout.
+7. **Universal Cache Version Harmonization**:
+   - Synchronized all HTML files, `sw.js`, and 27 ES module JavaScript files to `?v=20261106_v160` and Service Worker `topscore-cache-option-a-v88`.
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs` -> PASS (45/45 JS files passed syntax check).
+- command: `npm.cmd test` -> PASS (All 7 core test suites passed 100%).
+- command: `node scripts/e2e_student_exam_journey.mjs` -> PASS (Stages 1-4 full student journey passed with 0 console errors).
+- command: `node scripts/test_vocab_7x7_and_leveling_e2e.mjs` -> PASS (132/132 assertions across 10 consecutive runs passed).
+- command: `node scripts/e2e_console_health_check.mjs` -> PASS (0 uncaught errors across index, admin, dashboard, test, and result pages).
+
+---
+
 ## [2026-11-06 08:26] — Phase 351: Master Terminology & Spatial Architecture Alignment
 
 **Agent/Session:** Antigravity

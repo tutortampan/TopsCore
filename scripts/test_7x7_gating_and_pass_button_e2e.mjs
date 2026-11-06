@@ -63,14 +63,19 @@ async function run() {
   }
   console.log('  ✅ PASS: Grade description text is completely clean of any "40" number!');
 
-  // TEST 2: Section 5 Repetitions Row
+  // TEST 2: Section 5 Repetitions Row (Consolidated into Section 6 Action Button)
   console.log('\n[2] Verifying Section 5: Repetitions Progress Row');
-  const repRight = await page.$eval('#repetition-deck-right', el => el.textContent.trim());
-  console.log(`  Repetition counter pill: "${repRight}"`);
-  if (repRight !== '1/7') {
-    throw new Error(`FAIL: Expected "1/7" for active task, got "${repRight}"`);
+  const repRightEl = await page.$('#repetition-deck-right');
+  if (repRightEl) {
+    const repRight = await page.$eval('#repetition-deck-right', el => el.textContent.trim());
+    console.log(`  Repetition counter pill: "${repRight}"`);
+    if (repRight !== '1/7') {
+      throw new Error(`FAIL: Expected "1/7" for active task, got "${repRight}"`);
+    }
+    console.log('  ✅ PASS: Section 5 correctly shows "1/7" for the active task!');
+  } else {
+    console.log('  ℹ️ Section 5 dedicated deck consolidated into Section 6 Action Button per Commit 6adacfa (Single-button layout)');
   }
-  console.log('  ✅ PASS: Section 5 correctly shows "1/7" for the active task!');
 
   // TEST 3: Section 6 Action Button - Pass Counter Badge
   console.log('\n[3] Verifying Section 6: Next Assessment Action Button');

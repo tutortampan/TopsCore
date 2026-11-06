@@ -35,9 +35,9 @@ import {
   toOrdinalLevel,
   toShortLevel,
   autoSyncClassTestsForLevel
-} from '../api.js?v=20261106_v140';
-import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v140';
-import { getSupabase } from '../supabase.js?v=20261106_v140';
+} from '../api.js?v=20261106_v160';
+import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v160';
+import { getSupabase } from '../supabase.js?v=20261106_v160';
 
 // ─── Helpers ───────────────────────────────────────────────
 

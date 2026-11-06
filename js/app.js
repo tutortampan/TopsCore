@@ -14,7 +14,7 @@ import {
   isExam,
   isWeeklyExam,
   computeMilestoneExamMastery
-} from './grading.js?v=20261102_v103';
+} from './grading.js?v=20261106_v160';
 
 export {
   TOPSCORE_COLORS,
