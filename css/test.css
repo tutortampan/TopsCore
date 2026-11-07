@@ -491,10 +491,21 @@
       box-sizing: border-box !important;
     }
 
-    #question-interaction-group .question-box-prompt {
-      flex: 3 1 0 !important;
-      min-height: 0 !important;
+    /* ============================================================
+       UNIFIED & ADAPTIVE QUESTION BOX (ALL ANSWERING MODES)
+       Written, Spoken, Multiple Choice & Phrase Selection
+       ============================================================ */
+    .question-box-prompt,
+    #question-interaction-group .question-box-prompt,
+    .test-main-content > .question-box-prompt {
+      width: 100% !important;
+      max-width: 440px !important;
+      height: clamp(96px, 16.5vh, 125px) !important;
+      min-height: 90px !important;
+      max-height: 125px !important;
+      flex: 0 0 auto !important;
       display: flex !important;
+      flex-direction: column !important;
       align-items: center !important;
       justify-content: center !important;
       text-align: center !important;
@@ -509,8 +520,9 @@
       backdrop-filter: blur(16px) !important;
     }
 
+    .question-box-prompt .speech-question-text,
     #question-interaction-group .question-box-prompt .speech-question-text {
-      font-size: clamp(18px, 4.5vw, 26px) !important;
+      font-size: clamp(19px, 4.8vw, 25px) !important;
       line-height: 1.25 !important;
       font-weight: 800 !important;
       color: #f8fafc !important;
@@ -522,9 +534,15 @@
       text-shadow: 0 2px 10px rgba(0,0,0,0.5) !important;
     }
 
+    .metadata-grid,
+    .metadata-table,
     #question-interaction-group .metadata-grid {
-      flex: 1 1 0 !important;
-      min-height: 0 !important;
+      width: 100% !important;
+      max-width: 440px !important;
+      height: clamp(34px, 5.5vh, 40px) !important;
+      min-height: 34px !important;
+      max-height: 42px !important;
+      flex: 0 0 auto !important;
       display: grid !important;
       grid-template-columns: 1fr 1fr !important;
       grid-template-rows: 1fr 1fr !important;
@@ -532,11 +550,10 @@
       align-items: center !important;
       box-sizing: border-box !important;
       margin: 0 auto !important;
-      width: 100% !important;
     }
 
     #question-interaction-group #answer-container-written {
-      flex: 3 1 0 !important;
+      flex: 1 1 0 !important;
       min-height: 0 !important;
       display: flex !important;
       flex-direction: column !important;
@@ -553,6 +570,19 @@
       backdrop-filter: blur(14px) !important;
       position: relative !important;
       width: 100% !important;
+    }
+
+    #interaction-container {
+      width: 100% !important;
+      max-width: 440px !important;
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      margin: 0 auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+      gap: 5px !important;
+      box-sizing: border-box !important;
     }
 
     /* Virtual Keyboard (Authentic 1:1 Native Gboard Dark Replica - Priority Lock) */

@@ -26,14 +26,14 @@
       }
     })();
   </script>
-  <title>Class — TOPS CORE</title>
-  <meta name="description" content="Class on TOPS CORE — track progress, view standings, and take tests." />
+  <title>Class Hub — TOPS CORE</title>
+  <meta name="description" content="Class Hub on TOPS CORE — track progress, view Classes, and start Tests." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261106_v160" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261106_v160" />
-  <link rel="stylesheet" href="css/components/avatars.css?v=20261106_v160" />
+  <link rel="stylesheet" href="css/style.css?v=20261107_v161" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261107_v161" />
+  <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
 
 
 </head>
@@ -45,7 +45,7 @@
   <!-- Top Navigation (60px: Door Icon Left, Class Name Center, Logout Right) -->
   <header class="dashboard-header" id="dashboard-top-header">
     <div class="dashboard-header-left">
-      <button class="header-action-btn header-door-btn" id="btn-change-class" title="Lobby" aria-label="Lobby">
+      <button class="header-action-btn header-door-btn" id="btn-change-class" title="Class Lobby" aria-label="Class Lobby">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"></path>
           <path d="M2 20h20"></path>
@@ -625,12 +625,12 @@
     </div>
   </div>
 
-  <script type="module" src="./js/dashboard.js?v=20261106_v160"></script>
+  <script type="module" src="./js/dashboard.js?v=20261107_v161"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261106_v160')
+        navigator.serviceWorker.register('sw.js?v=20261107_v161')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

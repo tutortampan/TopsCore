@@ -433,6 +433,20 @@ Rules:
 - **Modal & Detail State Continuity**: Opening modals or detail views (such as `#profile-<studentId>`, `#levels-<classId>`, `#select-class`, `#profile-history`) must maintain clean background view state and restore the prior view cleanly upon modal dismissal without flashing blank canvases or switching screens.
 - **Authoritative Contract**: Any future module or screen added to TopsCore MUST implement this route and state persistence pattern.
 
+## 2.21 Master Terminology & Spatial Architecture
+
+The platform strictly uses authoritative spatial and pedagogical terminology across all screens:
+1. **Student Gate (`index.html`)**: The primary authentication entrance (Institution -> Program -> Batch -> Student Name -> Personal PIN).
+2. **Class Hub (`dashboard.html`)**: The active subject/class study room (header displays class name e.g. `2ND VOCABULARY`).
+3. **Class Lobby (`#classes-selector-modal`)**: The academic directory modal where students view available classes as cards and switch rooms.
+4. **Test Room (`test.html`)**: The assessment interface for taking tasks and exams.
+5. **Result Page (`result.html`)**: The authoritative evaluation scoreboard. Navigation button:
+   - Student: `BACK TO CLASS` (returns student to their current class).
+   - Tutor: `BACK TO ROOM` (returns tutor to monitor).
+6. **Task vs Exam**:
+   - `TASK`: Formative practice drill (7x7 repetitive mastery model).
+   - `EXAM`: Formal assessment milestone with time limits and prerequisite weighting.
+
 ---
 
 # 3. TARGET ARCHITECTURE

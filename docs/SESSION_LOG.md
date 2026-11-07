@@ -1,3 +1,47 @@
+## SESSION-20261107-1240
+
+Start: 2026-11-07 12:15 UTC+8  
+End: 2026-11-07 12:40 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"buat adaptif, tapi ukrannya jadi sama." (Make Question Box adaptive, but make its size identical across all answering methods).
+
+### Objective
+- Standardize the Question Box (`.question-box-prompt`) on `test.html` across all answering modes (Written, Spoken, Multiple Choice, and Phrase chips).
+- Ensure Question Box dimensions are identical at any given screen size while remaining fluidly responsive (adaptive) across small mobile, standard mobile, large phone, and desktop viewports without overflowing the 100dvh viewport.
+
+### Work Performed
+1. **Refactored `css/test.css`**:
+   - Set `.question-box-prompt` and `#question-interaction-group .question-box-prompt` to `width: 100% !important; max-width: 440px !important; height: clamp(96px, 16.5vh, 125px) !important; min-height: 90px !important; max-height: 125px !important; flex: 0 0 auto !important;`.
+   - Unified question text styling to `font-size: clamp(19px, 4.8vw, 25px) !important; line-height: 1.25 !important; font-weight: 800 !important;`.
+   - Unified `.metadata-grid` and `.metadata-table` to `height: clamp(34px, 5.5vh, 40px) !important; min-height: 34px !important; max-height: 42px !important; flex: 0 0 auto !important;`.
+   - Updated `#answer-container-written` and `#interaction-container` to `flex: 1 1 0 !important; min-height: 0 !important;` so the lower area absorbs all remaining vertical space cleanly.
+2. **Refactored `js/test.js`**:
+   - Standardized Written and Non-Written DOM generation to use identical classes and inline styles.
+   - Removed hardcoded percentage heights (`calc(30% - 3px)` and `calc(60% - 7px)`) in favor of centralized CSS rules.
+3. **Automated Verification**:
+   - Verified pixel-perfect uniformity across 4 viewports using Playwright:
+     - iPhone SE (375×667): 356px × 110px (All modes match)
+     - iPhone 14/15/16 (390×800): 371px × 125px (All modes match)
+     - iPhone 14 Pro Max (430×932): 409px × 125px (All modes match)
+     - Desktop HD (1280×800): 440px × 125px (All modes match)
+   - `npm.cmd test`: All 7 core test suites passed 100%.
+   - `scripts/e2e_student_exam_journey.mjs`: Stages 1-4 full student journey passed 100%.
+   - `scripts/e2e_console_health_check.mjs`: 0 console errors across all 5 primary pages.
+
+### Commands Run
+- `npm.cmd test` -> PASS
+- `node scripts/e2e_student_exam_journey.mjs` -> PASS
+- `node scripts/e2e_console_health_check.mjs` -> PASS
+
+### Verification
+- 100% pixel match across modes and viewports.
+- 0 console errors on all pages.
+- Zero vertical overflow / scrollbar in test room.
+
+---
+
 ## SESSION-20261106-0847
 
 Start: 2026-11-06 08:30 UTC+8  

@@ -1,3 +1,83 @@
+## [2026-11-07 12:40] — Phase 355: Test Room Question Box Adaptive Uniformity across All Answering Modes
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 355: Test Room Question Box Adaptive Uniformity  
+**Status:** PASS  
+
+### Why
+- The user requested making the question box adaptive while keeping its dimensions identical across all answering methods (Written, Spoken, Multiple Choice, and Phrase chips).
+- Previously, Written mode used flex ratio 3:1:3 resulting in a ~185px question box, whereas Spoken/MCQ modes used `height: calc(30% - 3px); max-height: 120px;`, creating a visible ~65px height discrepancy between modes.
+
+### Changed
+1. **Centralized CSS Rules (`css/test.css`)**:
+   - Standardized `.question-box-prompt`, `#question-interaction-group .question-box-prompt`, and `.test-main-content > .question-box-prompt` with:
+     - `width: 100% !important; max-width: 440px !important;`
+     - `height: clamp(96px, 16.5vh, 125px) !important;`
+     - `min-height: 90px !important; max-height: 125px !important;`
+     - `flex: 0 0 auto !important;`
+   - Unified question text styling to `font-size: clamp(19px, 4.8vw, 25px) !important; line-height: 1.25 !important; font-weight: 800 !important;`.
+   - Unified `.metadata-grid` and `.metadata-table` to `height: clamp(34px, 5.5vh, 40px) !important; min-height: 34px !important; max-height: 42px !important; flex: 0 0 auto !important;`.
+   - Updated `#answer-container-written` and `#interaction-container` to `flex: 1 1 0 !important; min-height: 0 !important;` so the answer section absorbs remaining vertical space fluidly without scrolling the 100dvh viewport.
+2. **DOM Alignment (`js/test.js`)**:
+   - Refactored DOM creation in `renderVocabularyWordTest` for both Written and Non-Written branches to use the standardized class `.question-box-prompt` and inline clamp fallback.
+   - Removed hardcoded percentage heights (`calc(30% - 3px)`, `calc(60% - 7px)`) in favor of clean flexbox behavior.
+
+### Tests
+- Playwright Viewport Verification:
+  - iPhone SE (375×667): Written = 356px × 110px | Spoken = 356px × 110px | MCQ = 356px × 110px (100% match)
+  - iPhone 14/15/16 (390×800): Written = 371px × 125px | Spoken = 371px × 125px | MCQ = 371px × 125px (100% match)
+  - iPhone 14 Pro Max (430×932): Written = 409px × 125px | Spoken = 409px × 125px | MCQ = 409px × 125px (100% match)
+  - Desktop HD (1280×800): Written = 440px × 125px | Spoken = 440px × 125px | MCQ = 440px × 125px (100% match)
+- command: `npm.cmd test` -> PASS (All 7 core test suites passed 100%).
+- command: `node scripts/e2e_student_exam_journey.mjs` -> PASS (Stages 1-4 completed).
+- command: `node scripts/e2e_console_health_check.mjs` -> PASS (0 console errors across all 5 pages).
+
+---
+
+## [2026-11-07 12:15] — Phase 354: Master Terminology & Spatial Architecture Alignment
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 354: Master Terminology & Spatial Architecture Alignment  
+**Status:** PASS  
+
+### Why
+- User approved `topscore_terminology_and_spatial_mapping_plan.md` to establish an unambiguous, intuitive spatial vocabulary across all TopsCore interfaces:
+  - `index.html`: **Student Gate** (portal gerbang masuk/login PIN siswa)
+  - `dashboard.html`: **Class Hub** (ruang kelas aktif siswa tempat progres, tugas & ujian)
+  - `#classes-selector-modal`: **Class Lobby** (lobi direktori untuk melihat dan memilih kartu kelas)
+  - `test.html`: **Test Room** (ruang pengerjaan tes/asesmen)
+  - `result.html`: **Result Page** (halaman hasil dengan navigasi `BACK TO CLASS` untuk siswa & `BACK TO ROOM` untuk tutor monitor).
+
+### Changed
+1. **Student Gate (`index.html`)**:
+   - Page title set to `<title>Student Gate — TOPS CORE</title>`.
+   - Header subtitle brand set to `<p>Student Gate — Sign in to continue</p>`.
+   - Meta description and search placeholders updated cleanly.
+2. **Class Hub & Class Lobby (`dashboard.html`)**:
+   - Page title set to `<title>Class Hub — TOPS CORE</title>`.
+   - Header left door button tooltip set to `Class Lobby` (`title="Class Lobby"`).
+   - Class name remains prominent in header center (`2ND VOCABULARY`).
+   - `#classes-selector-modal` acts strictly as the Class Lobby card directory.
+3. **Test Room (`test.html`)**:
+   - Page title set to `<title>Test Room — TOPS CORE</title>`.
+   - Meta description set to `Complete your assessment in the TOPS CORE Test Room.`
+4. **Result Page (`result.html`)**:
+   - Page title set to `<title>Result Page — TOPS CORE</title>`.
+   - Standardized return buttons: `BACK TO CLASS` for student sessions, `BACK TO ROOM` for tutor monitor.
+5. **Governance & Documentation**:
+   - Added Rule **2.21 Master Terminology & Spatial Architecture** to `AGENTS.md`.
+   - Updated **DECISION-044** in `docs/DECISIONS.md`.
+6. **Universal Cache Busting**:
+   - Bumped cache identifier to `v=20261107_v161` across all core files.
+   - Updated Service Worker cache to `topscore-cache-option-a-v89`.
+
+### Tests
+- command: `node scripts/check_all_js_syntax.cjs` -> PASS (45/45 JS files passed syntax check).
+- command: `node scripts/generate_sw_manifest.mjs` -> PASS (27/27 cache manifest assets exist).
+- command: `npm.cmd test` -> PASS (All 7 core test suites passed 100%).
+
+---
+
 ## [2026-11-07 10:15] — Phase 353: Multi-Tenant Boundary Hardening, Batch 134 7x7 Audit & Comprehensive Health Check
 
 **Agent/Session:** Antigravity  

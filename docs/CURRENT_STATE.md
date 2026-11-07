@@ -1,45 +1,49 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-07 10:10 UTC+8
-Current Phase: Phase 353: Full System Deep Health Audit & Multi-Tenant Boundary Hardening [COMPLETE]
+Last Updated: 2026-11-07 12:40 UTC+8
+Current Phase: Phase 355: Test Room Question Box Adaptive Uniformity [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Batch 134 & Ayya 7×7 Repetitive Mastery Deep Audit**:
-   - Audited all 18 students in Batch 134 across all 19 tests in 2nd Vocabulary.
-   - Verified that Mr. Ayya Sofyandi Mzeth completed all 4 tasks in Theme C: 2C1 (9/7), 2C2 (8/7), 2C3 (7/7), 2C4 (7/7).
-   - Identified timeline: 2C4 was at 6/7 passes until Attempt #8 at 23:17 WIB (which passed at 92.5%), unlocking `2C-WORDS-EXAM` successfully.
-   - Verified all 4 qualified students in Batch 134 have `2C-WORDS-EXAM` UNLOCKED: Miss Havvina Solehah, Miss Riska Fetrosia, Miss Sari Hikmah, Mr. Ayya Sofyandi Mzeth.
-   - Verified the remaining 14 students have exact, mathematically sound prerequisite locks with zero false locks or leakage.
+1. **Unified Adaptive Question Box (`test.html`) Across All Answering Modes**:
+   - Standardized Question Box prompt dimensions to `width: 100% !important; max-width: 440px !important; height: clamp(96px, 16.5vh, 125px) !important; min-height: 90px !important; max-height: 125px !important; flex: 0 0 auto !important;` in `css/test.css` and `js/test.js`.
+   - Unified question text styling to `font-size: clamp(19px, 4.8vw, 25px) !important; line-height: 1.25 !important; font-weight: 800 !important;`.
+   - Standardized metadata table to `height: clamp(34px, 5.5vh, 40px) !important; min-height: 34px !important; max-height: 42px !important; flex: 0 0 auto !important;`.
+   - Set interaction/answer container (`#answer-container-written` and `#interaction-container`) to `flex: 1 1 0 !important; min-height: 0 !important;` to fluidly absorb remaining vertical space without viewport overflow.
+   - Tested across 4 device viewports via Playwright with 100% pixel-perfect uniformity:
+     - iPhone SE (375×667): Written = 356px × 110px | Spoken = 356px × 110px | MCQ = 356px × 110px (Identical)
+     - iPhone 14/15/16 (390×800): Written = 371px × 125px | Spoken = 371px × 125px | MCQ = 371px × 125px (Identical)
+     - iPhone 14 Pro Max (430×932): Written = 409px × 125px | Spoken = 409px × 125px | MCQ = 409px × 125px (Identical)
+     - Desktop HD (1280×800): Written = 440px × 125px | Spoken = 440px × 125px | MCQ = 440px × 125px (Identical)
 
-2. **Multi-Tenant Boundary Hardening & Distractor Pool Isolation**:
-   - Repaired syntax glitch in `js/api.js`.
+2. **Master Terminology & Spatial Architecture Alignment (Phase 354)**:
+   - `index.html`: **Student Gate** (`<title>Student Gate — TOPS CORE</title>`, `<p>Student Gate — Sign in to continue</p>`).
+   - `dashboard.html`: **Class Hub** (`<title>Class Hub — TOPS CORE</title>`, header door tooltip: `Class Lobby`).
+   - `#classes-selector-modal`: **Class Lobby** (pure directory of active class cards).
+   - `result.html`: **Result Page** with **`BACK TO CLASS`** for students.
+   - `test.html`: **Test Room** (`<title>Test Room — TOPS CORE</title>`).
+   - Rule 2.21 added to `AGENTS.md`, DECISION-044 updated in `docs/DECISIONS.md`.
+
+3. **Multi-Tenant Boundary Hardening & Distractor Pool Isolation (Phase 353)**:
    - Updated `fetchVaultWords`, `fetchVaultTopics`, and `fetchVaultStats` in `js/api.js` to accept `programId` and `institutionId`.
-   - Hardened `generateTestQuestions` distractor pool selection: filtered options to match `testProgramId`, strictly preventing cross-tenant distractor leakage.
-   - Static & dynamic Edge Function tenant boundaries: verified `start-test` and `submit-test` 403 blocks for cross-program/cross-institution test attempts.
-   - Verified `scripts/test_tenant_isolation_batch134_vs_evnikom.mjs`: all 57/57 assertions PASS.
+   - Hardened `generateTestQuestions` distractor pool selection matching `testProgramId`.
+   - Edge Functions `start-test` and `submit-test` 403 blocks verified for cross-program attempts.
 
-3. **System-Wide Zombie Attempt & Timer Health Check**:
-   - Queried all `in_progress` attempts across the entire Supabase database.
-   - Result: Exactly 1 active attempt (Miss Isnantika Salsabila on 2C4, actively running on time), with 0 overdue, orphaned, or stuck zombie attempts.
-
-4. **Automated Test Suites Execution**:
-   - `npm.cmd test`: All 7 core test suites passed 100% (syntax, SW manifest, dashboard parity, homophones, prerequisite deficit guard, vocab dashboard blueprint, universal bottom banner).
-   - `scripts/test_task_7x7_logic.mjs`: 100% PASS.
-   - `scripts/test_prerequisite_deficit_guard.mjs`: 100% PASS.
-   - `scripts/audit_all_batches_health.mjs`: 100% healthy, 0 null-level students across all batches.
+4. **Automated E2E Console Health & Regression Verification**:
+   - `npm.cmd test`: All 7 core test suites passed 100%.
+   - `scripts/e2e_student_exam_journey.mjs`: Stages 1-4 full student journey passed 100%.
+   - `scripts/e2e_console_health_check.mjs`: 0 console errors across all 5 primary pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`).
 
 ## Verification Results:
 - `node scripts/check_all_js_syntax.cjs` -> PASS (45/45 JS files passed)
 - `npm.cmd test` -> PASS (All 7 core test suites passed 100%)
-- `node scripts/test_tenant_isolation_batch134_vs_evnikom.mjs` -> PASS (57/57 assertions passed)
-- `node scripts/test_task_7x7_logic.mjs` -> PASS (All 7x7 tests passed)
-- `node scripts/test_prerequisite_deficit_guard.mjs` -> PASS (100% precision)
+- `node scripts/e2e_student_exam_journey.mjs` -> PASS (Stages 1-4 completed)
+- `node scripts/e2e_console_health_check.mjs` -> PASS (0 console errors across all 5 pages)
 
 ## Current Architecture
 - Static HTML5 / CSS3 / Modular ES6 JavaScript frontend.
 - Supabase PostgreSQL + Auth + Storage + Edge Functions backend.
-- Service Worker offline caching via `sw.js` (`topscore-cache-option-a-v88`).
+- Service Worker offline caching via `sw.js` (`topscore-cache-option-a-v89`).
 
 ## Known Issues
 - None. System is completely healthy and verified.
