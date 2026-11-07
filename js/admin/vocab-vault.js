@@ -608,13 +608,14 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
         <div style="flex:1;">
           <label class="form-label text-xs fw-700">Fallback Institution (if blank in Excel)</label>
           <select id="vault-import-inst" class="form-control" style="width:100%;font-size:0.85rem;">
-            <option value="f51d4c2c-7c24-42ef-8d8f-b0f3e524a447" selected>CEC (Central English Course)</option>
+            <option value="637fea53-ca64-4e1c-8ff7-6fd4dbdd8260">TOP</option>
+            <option value="f51d4c2c-7c24-42ef-8d8f-b0f3e524a447">CEC (Central English Course)</option>
           </select>
         </div>
         <div style="flex:1;">
           <label class="form-label text-xs fw-700">Fallback Program (if blank in Excel)</label>
           <select id="vault-import-prog" class="form-control" style="width:100%;font-size:0.85rem;">
-            <option value="11deb53c-434a-44b0-83ca-1cc9b239cab3" selected>Camp</option>
+            <option value="">Loading programs...</option>
           </select>
         </div>
       </div>
@@ -630,6 +631,46 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
     </div>
   `;
   document.body.appendChild(modal);
+
+  let _availableInsts = [];
+  let _availableProgs = [];
+
+  (async () => {
+    try {
+      const sb = await getSupabase();
+      const [{ data: instData }, { data: progData }] = await Promise.all([
+        sb.from('institutions').select('id, name, code').is('deleted_at', null).order('name'),
+        sb.from('programs').select('id, name, code, institution_id').is('deleted_at', null).order('name')
+      ]);
+      _availableInsts = instData || [];
+      _availableProgs = progData || [];
+
+      const instSel = document.getElementById('vault-import-inst');
+      const progSel = document.getElementById('vault-import-prog');
+      if (!instSel || !progSel) return;
+
+      if (_availableInsts.length > 0) {
+        instSel.innerHTML = _availableInsts.map(i => {
+          const label = i.code ? `${i.name} (${i.code})` : i.name;
+          return `<option value="${i.id}">${escapeHtml(label)}</option>`;
+        }).join('');
+      }
+
+      const updateProgOptions = () => {
+        const selectedInstId = instSel.value;
+        const matchingProgs = _availableProgs.filter(p => !p.institution_id || p.institution_id === selectedInstId);
+        progSel.innerHTML = matchingProgs.map(p => {
+          const label = p.code ? `${p.name} (${p.code})` : p.name;
+          return `<option value="${p.id}">${escapeHtml(label)}</option>`;
+        }).join('');
+      };
+
+      instSel.addEventListener('change', updateProgOptions);
+      updateProgOptions();
+    } catch (e) {
+      console.warn('Failed to load institutions/programs for vault import modal:', e);
+    }
+  })();
 
   const close = () => modal.remove();
   document.getElementById('close-import-modal')?.addEventListener('click', close);
@@ -649,8 +690,8 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       const wb = XLSX.read(buffer, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
-      const fallbackInstId = document.getElementById('vault-import-inst')?.value || 'f51d4c2c-7c24-42ef-8d8f-b0f3e524a447';
-      const fallbackProgId = document.getElementById('vault-import-prog')?.value || '11deb53c-434a-44b0-83ca-1cc9b239cab3';
+      const fallbackInstId = document.getElementById('vault-import-inst')?.value || '637fea53-ca64-4e1c-8ff7-6fd4dbdd8260';
+      const fallbackProgId = document.getElementById('vault-import-prog')?.value || '';
 
       // Normalize column names (supports 10-column unified standard and legacy 11-column standard with smart fallback)
       _parsedRows = raw.map(row => {
@@ -695,9 +736,35 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
           rawThemeCode = rawCode[0].toUpperCase();
         }
 
+        let rowInstId = fallbackInstId;
+        let rowProgId = fallbackProgId;
+
+        const rawInst = normalized.INSTITUTION || normalized['INSTITUTION NAME'] || normalized.INSTITUTE || '';
+        if (rawInst && _availableInsts.length > 0) {
+          const m = _availableInsts.find(i => 
+            i.id.toLowerCase() === rawInst.toLowerCase() ||
+            (i.name && i.name.toLowerCase() === rawInst.toLowerCase()) ||
+            (i.code && i.code.toLowerCase() === rawInst.toLowerCase())
+          );
+          if (m) rowInstId = m.id;
+        }
+
+        const rawProg = normalized.PROGRAM || normalized['PROGRAM NAME'] || '';
+        if (rawProg && _availableProgs.length > 0) {
+          const m = _availableProgs.find(p => 
+            p.id.toLowerCase() === rawProg.toLowerCase() ||
+            (p.name && p.name.toLowerCase() === rawProg.toLowerCase()) ||
+            (p.code && p.code.toLowerCase() === rawProg.toLowerCase())
+          );
+          if (m) {
+            rowProgId = m.id;
+            if (m.institution_id && !rawInst) rowInstId = m.institution_id;
+          }
+        }
+
         return {
-          institution_id: fallbackInstId,
-          program_id: fallbackProgId,
+          institution_id: rowInstId,
+          program_id: rowProgId,
           level: normalized.LEVEL || normalized.TARGET_LEVEL || '1',
           category: normalized.CATEGORY || '',
           theme_code: rawThemeCode.toUpperCase(),

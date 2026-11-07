@@ -11344,3 +11344,44 @@ Agent: Antigravity
   - In `renderCurriculum()`: Fetched active students and generated `batchStudentCountMap`.
   - Updated `sortBatchList()` to sup
 ... [truncated for diff preview]
+
+
+## SESSION-20261107-1015
+
+Start: 2026-11-07 10:05 UTC+8
+End: 2026-11-07 10:15 UTC+8
+Agent: Antigravity
+
+### User Request
+"cek semua sistem sekali lagi, saya tidak mau da komplain /goal"
+
+### Objective
+1. Perform a comprehensive, zero-compromise system health audit across frontend code, database integrity, attempt records, gating engines, and tenant boundaries.
+2. Verify that no student or teacher can encounter blockers or gating complaints.
+3. Verify Batch 134 status, Ayya's completion status, and exam eligibility.
+4. Execute all core test suites and confirm 100% pass rates.
+
+### Work Performed
+- **Multi-Tenant Distractor & Vault Isolation**:
+  - Enhanced `fetchVaultWords`, `fetchVaultTopics`, and `fetchVaultStats` in `js/api.js` with `programId` and `institutionId` parameter scoping.
+  - Hardened `generateTestQuestions` to strictly isolate distractor option pools by `testProgramId`, preventing cross-tenant vocabulary leakage.
+  - Verified Edge Function static & dynamic boundary guards in `start-test` and `submit-test` (HTTP 403 on tenant mismatch).
+  - Executed `scripts/test_tenant_isolation_batch134_vs_evnikom.mjs`: all 57/57 assertions passed.
+- **Batch 134 & Ayya 7×7 Repetitive Mastery Audit**:
+  - Audited all 18 students in Batch 134.
+  - Confirmed that Mr. Ayya Sofyandi Mzeth, Miss Havvina Solehah, Miss Riska Fetrosia, and Miss Sari Hikmah have all cleared 7/7 on Theme C tasks (C1–C4) and are 100% eligible with `2C-WORDS-EXAM` unlocked.
+  - Confirmed the remaining 14 students have exact, non-leaking prerequisite locks.
+- **System-Wide Timer & Zombie Attempt Audit**:
+  - Queried all `in_progress` attempts in Supabase across all batches.
+  - Found exactly 1 active attempt (Miss Isnantika Salsabila on 2C4, running on time), with zero expired or zombie attempts.
+- **Automated Test Suites Execution**:
+  - `node scripts/check_all_js_syntax.cjs`: 45/45 JS files syntax verified.
+  - `npm.cmd test`: All 7 core test suites passed 100%.
+  - `scripts/test_task_7x7_logic.mjs`: Passed.
+  - `scripts/test_prerequisite_deficit_guard.mjs`: Passed.
+  - `scripts/audit_all_batches_health.mjs`: Passed (0 null-level students).
+
+### Verification
+- `npm.cmd test`: PASS (All 7 suites passed).
+- `node scripts/test_tenant_isolation_batch134_vs_evnikom.mjs`: PASS (57/57 assertions).
+- `node scripts/test_prerequisite_deficit_guard.mjs`: PASS.

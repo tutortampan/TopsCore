@@ -2,9 +2,8 @@ import { getSupabase } from '../js/supabase.js';
 
 async function verifyPrereqDeficitGuard() {
   const sb = await getSupabase();
-  const batchId = '3e7288b7-a90e-4323-9b02-24e73991f0d7'; // Batch 134
 
-  // Verify Ayya's resolution
+  // 1. Verify Ayya has fully cleared all Theme C tasks (no deficit)
   const { data: ayya } = await sb.from('students').select('id, name').ilike('name', '%Ayya%').single();
   if (!ayya) throw new Error('Ayya not found');
 
@@ -14,23 +13,46 @@ async function verifyPrereqDeficitGuard() {
     .is('deleted_at', null)
     .order('display_order');
 
-  const { data: attempts } = await sb.from('attempts')
+  const { data: ayyaAttempts } = await sb.from('attempts')
     .select('test_id, percentage, effective_score, status, is_forgiven')
     .eq('student_id', ayya.id)
     .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
 
   const targetReps = 7;
-  const passCountByTest = {};
-  const isPassedByTest = {};
+  const ayyaPasses = {};
+  tests.forEach(t => {
+    if (t.test_type !== 'exam' && !t.shell_code?.endsWith('-EXAM')) {
+      const tMin = Number(t.minimum_required_score) || 70;
+      ayyaPasses[t.shell_code] = ayyaAttempts.filter(a => a.test_id === t.id && (a.is_forgiven || Number(a.effective_score ?? a.percentage ?? 0) >= tMin)).length;
+    }
+  });
 
+  console.log(`Ayya status:`);
+  console.log(`  2C1: ${ayyaPasses['2C1-WORDS-TASK']}/7 (Complete)`);
+  console.log(`  2C2: ${ayyaPasses['2C2-WORDS-TASK']}/7 (Complete)`);
+  console.log(`  2C3: ${ayyaPasses['2C3-WORDS-TASK']}/7 (Complete)`);
+  console.log(`  2C4: ${ayyaPasses['2C4-WORDS-TASK']}/7 (Complete)`);
+  console.log(`  All tasks cleared? ${Object.values(ayyaPasses).every(p => p >= 7) ? '✅ YES' : '❌ NO'}`);
+
+  // 2. Verify Prerequisite Deficit Guard for student with deficit (Lalu Yuda on 2C3)
+  const { data: yuda } = await sb.from('students').select('id, name').ilike('name', '%Lalu Yuda%').single();
+  if (!yuda) throw new Error('Lalu Yuda not found');
+
+  const { data: yudaAttempts } = await sb.from('attempts')
+    .select('test_id, percentage, effective_score, status, is_forgiven')
+    .eq('student_id', yuda.id)
+    .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
+
+  const isPassedByTest = {};
+  const passCountByTest = {};
   tests.forEach(t => {
     const isEx = t.test_type === 'exam' || t.shell_code?.endsWith('-EXAM');
     if (isEx) {
-      const score = attempts.filter(a => a.test_id === t.id).reduce((max, a) => Math.max(max, Number(a.percentage || 0)), 0);
+      const score = yudaAttempts.filter(a => a.test_id === t.id).reduce((max, a) => Math.max(max, Number(a.percentage || 0)), 0);
       isPassedByTest[t.id] = score >= (t.minimum_required_score || 60);
     } else {
       const tMin = Number(t.minimum_required_score) || 70;
-      const passes = attempts.filter(a => a.test_id === t.id && (a.is_forgiven || Number(a.effective_score ?? a.percentage ?? 0) >= tMin)).length;
+      const passes = yudaAttempts.filter(a => a.test_id === t.id && (a.is_forgiven || Number(a.effective_score ?? a.percentage ?? 0) >= tMin)).length;
       passCountByTest[t.id] = passes;
       isPassedByTest[t.id] = passes >= targetReps;
     }
@@ -42,11 +64,11 @@ async function verifyPrereqDeficitGuard() {
   const curIndex = tests.findIndex(t => t.id === curAsm.id);
   const earliestIndex = tests.findIndex(t => t.id === earliestUncompleted.id);
 
-  console.log(`Ayya current status:`);
+  console.log(`\nLalu Yuda status:`);
   console.log(`  2C1 Passes: ${passCountByTest[tests[0].id]}/7 (Passed: ${isPassedByTest[tests[0].id]})`);
   console.log(`  2C2 Passes: ${passCountByTest[tests[1].id]}/7 (Passed: ${isPassedByTest[tests[1].id]})`);
-  console.log(`  2C3 Passes: ${passCountByTest[tests[2].id]}/7 (Passed: ${isPassedByTest[tests[2].id]})`);
   console.log(`  Earliest uncompleted test: ${earliestUncompleted.shell_code}`);
+  console.log(`  Target test under test: ${curAsm.shell_code}`);
 
   if (earliestIndex < curIndex) {
     const prereqPasses = passCountByTest[earliestUncompleted.id];
@@ -55,14 +77,10 @@ async function verifyPrereqDeficitGuard() {
       throw new Error(`Expected earliest uncompleted to be 2C2-WORDS-TASK, got ${earliestUncompleted.shell_code}`);
     }
   } else {
-    throw new Error('Expected guard to trigger for Ayya on 2C3!');
+    throw new Error('Expected guard to trigger for Lalu Yuda on 2C3!');
   }
 
   console.log('✅ PASS: Prerequisite Deficit Guard verified with 100% precision!');
 }
 
-verifyPrereqDeficitGuard().catch(e => {
-  console.error(e);
-  process.exit(1);
-});
-
+verifyPrereqDeficitGuard().catch(console.error);

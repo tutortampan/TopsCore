@@ -95,11 +95,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fallback: If no explicit assignment rules exist, allow if institution matches
+    let testProgramId = test.program_id;
+    if (!testProgramId && test.class_id) {
+      const { data: clsRec } = await supabase.from("classes").select("program_id").eq("id", test.class_id).maybeSingle();
+      if (clsRec?.program_id) testProgramId = clsRec.program_id;
+    }
+
+    // Fallback: If no explicit assignment rules exist, allow if institution and program match
     if (!isEligible && (!assignments || assignments.length === 0)) {
-      if (!test.institution_id || test.institution_id === student.institution_id) {
+      const instMatch = !test.institution_id || !student.institution_id || test.institution_id === student.institution_id;
+      const progMatch = !testProgramId || !student.program_id || testProgramId === student.program_id;
+      if (instMatch && progMatch) {
         isEligible = true;
       }
+    }
+
+    // Strict multi-tenant isolation guard: never permit cross-program test access
+    if (testProgramId && student.program_id && testProgramId !== student.program_id) {
+      isEligible = false;
     }
 
     if (!isEligible) {

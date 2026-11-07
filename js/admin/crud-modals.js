@@ -52,7 +52,7 @@ const formFields = {
   ],
 
   classes: [
-    { id: 'institution_id', label: 'Institution', type: 'select', source: 'institutions', required: false, uiOnly: true },
+    { id: 'institution_id', label: 'Institution', type: 'select', source: 'institutions', required: false },
     { id: 'program_id', label: 'Program', type: 'select', source: 'programs', required: true, dependsOn: 'institution_id' },
     { id: 'name', label: 'Class Name', type: 'text', required: true, placeholder: 'e.g. Vocabulary' },
     { id: 'code', label: 'Class Code', type: 'text', required: false, placeholder: 'e.g. VOCABULARY_1, BASIC_ENGLISH_1' },

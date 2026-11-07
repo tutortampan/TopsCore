@@ -948,6 +948,7 @@ export async function generateTestQuestions(sb, test) {
     }
 
     const isThemeTest = (test.category === 'EXAM' || test.category === 'TEST' || String(test.test_type).toLowerCase() === 'exam' || (test.shell_code && (test.shell_code.includes('-EXAM') || test.shell_code.includes('-TEST'))) || test.test_subtype === 'VOCAB_EXAM' || test.test_subtype === 'PHRASE_EXAM' || test.test_subtype === 'VOCAB_TEST' || test.test_subtype === 'PHRASE_TEST') && !topicCode;
+    const testProgramId = test.program_id || test.programId;
 
     // Resilient vocabulary query: try with category column first, fallback without category column
     let vaultData = null;
@@ -957,6 +958,7 @@ export async function generateTestQuestions(sb, test) {
         .is('deleted_at', null)
         .eq('target_level', levelNum)
         .range(0, 4999);
+      if (testProgramId) query = query.eq('program_id', testProgramId);
       if (topicCode) {
         if (themeCode) query = query.eq('theme_code', themeCode);
         const candidateCodes = [
@@ -992,6 +994,7 @@ export async function generateTestQuestions(sb, test) {
         .is('deleted_at', null)
         .eq('target_level', levelNum)
         .range(0, 4999);
+      if (testProgramId) queryNoCat = queryNoCat.eq('program_id', testProgramId);
       if (topicCode) {
         if (themeCode) queryNoCat = queryNoCat.eq('theme_code', themeCode);
         const candidateCodes = [
@@ -1076,11 +1079,13 @@ export async function generateTestQuestions(sb, test) {
       // Secondary Safety Fallback: If strict theme/topic yielded 0 words, fallback to general words for this level
       if (vaultWords.length === 0) {
         console.warn(`[Vault Fallback] 0 words for theme ${themeCode}/topic ${topicCode}, pulling general level ${levelNum} vault items.`);
-        const { data: generalVault } = await sb.from('vocabulary_vault')
+        let generalQuery = sb.from('vocabulary_vault')
           .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level')
           .is('deleted_at', null)
           .eq('target_level', levelNum)
           .limit(100);
+        if (testProgramId) generalQuery = generalQuery.eq('program_id', testProgramId);
+        const { data: generalVault } = await generalQuery;
         if (generalVault && generalVault.length > 0) {
           vaultWords = generalVault.filter(w => {
             const wt = (w.word_type || '').toLowerCase();
@@ -1110,6 +1115,7 @@ export async function generateTestQuestions(sb, test) {
 
       if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
         let allDataQuery = sb.from('vocabulary_vault').select('english, word_type').is('deleted_at', null);
+        if (testProgramId) allDataQuery = allDataQuery.eq('program_id', testProgramId);
         const { data: allData } = await allDataQuery;
         if (allData) {
           const isTargetPhrase = (category === 'phrases' || test.test_subtype === 'PHRASE_TASK' || test.test_subtype === 'PHRASE_TEST');
@@ -2715,7 +2721,7 @@ export async function getServerTimeWita() {
 // ============================================================
 // VOCABULARY VAULT — CRUD & IMPORT
 // ============================================================
-export async function fetchVaultWords({ topic = null, search = null, targetLevel = null, limit = 10000, offset = 0 } = {}) {
+export async function fetchVaultWords({ topic = null, search = null, targetLevel = null, programId = null, institutionId = null, limit = 10000, offset = 0 } = {}) {
   const sb = await getSupabase();
   const PAGE_SIZE = 1000;
   let allData = [];
@@ -2735,6 +2741,8 @@ export async function fetchVaultWords({ topic = null, search = null, targetLevel
       .range(curOffset, curOffset + chunkLimit - 1);
 
     if (targetLevel !== null) query = query.eq('target_level', targetLevel);
+    if (programId !== null && programId !== undefined) query = query.eq('program_id', programId);
+    if (institutionId !== null && institutionId !== undefined) query = query.eq('institution_id', institutionId);
     if (topic) query = query.eq('topic', topic);
     if (search) {
       const term = search.trim();
@@ -2752,7 +2760,7 @@ export async function fetchVaultWords({ topic = null, search = null, targetLevel
   return allData;
 }
 
-export async function fetchVaultTopics(targetLevelNum = null) {
+export async function fetchVaultTopics(targetLevelNum = null, programId = null, institutionId = null) {
   const sb = await getSupabase();
   let query = sb.from('vocabulary_vault')
     .select('topic')
@@ -2760,6 +2768,12 @@ export async function fetchVaultTopics(targetLevelNum = null) {
 
   if (targetLevelNum !== null) {
     query = query.eq('target_level', targetLevelNum);
+  }
+  if (programId !== null && programId !== undefined) {
+    query = query.eq('program_id', programId);
+  }
+  if (institutionId !== null && institutionId !== undefined) {
+    query = query.eq('institution_id', institutionId);
   }
 
   const { data, error } = await query.order('topic', { ascending: true });
@@ -2780,11 +2794,16 @@ export async function moveVaultTopicsToLevel(topicNames, targetLevel) {
   if (error) throw error;
 }
 
-export async function fetchVaultStats() {
+export async function fetchVaultStats(programId = null, institutionId = null) {
   const sb = await getSupabase();
-  const { data, error } = await sb.from('vocabulary_vault')
+  let query = sb.from('vocabulary_vault')
     .select('target_level, topic')
     .is('deleted_at', null);
+
+  if (programId !== null && programId !== undefined) query = query.eq('program_id', programId);
+  if (institutionId !== null && institutionId !== undefined) query = query.eq('institution_id', institutionId);
+
+  const { data, error } = await query;
   if (error) throw error;
 
   const stats = {};
@@ -5656,5 +5675,3 @@ if (typeof window !== 'undefined') {
   window.saveClassTestSettings = saveClassTestSettings;
   window.updateTestPassingScore = updateTestPassingScore;
 }
-
-

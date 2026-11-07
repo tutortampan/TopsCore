@@ -1,39 +1,40 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-06 08:46 UTC+8
-Current Phase: Phase 352: Comprehensive E2E System Audit & Bug Resolution [COMPLETE]
+Last Updated: 2026-11-07 10:10 UTC+8
+Current Phase: Phase 353: Full System Deep Health Audit & Multi-Tenant Boundary Hardening [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Comprehensive E2E Bug Resolution & Direct English Compliance (`test.html`, `js/test.js`, `result.html`, Supabase DB)**:
-   - **Direct English Only (`test.html`)**: Eliminated hardcoded Indonesian text in `#pre-exam-focus-modal` ("Persiapan Ujian", DND instructions, etc.) and `#fullscreen-pause-modal` ("Layar Penuh Terputus"), bringing the test screen into 100% compliance with `AGENTS.md` Rule 2.12.
-   - **iOS / Mobile Fullscreen Resilience (`js/test.js`)**: Added `isFullscreenSupported()` capability check. On iOS Safari and mobile devices that do not support `Element.requestFullscreen()`, the fullscreen change listener gracefully bypasses pause locks, preventing students from becoming permanently trapped.
-   - **Cloud Sync DOM Elements (`test.html`)**: Added `#test-sync-indicator` with `#sync-dot` and `#sync-status-text` to the top controls bar, providing live visual confirmation of answer auto-saving, offline buffering, and reconnection syncing.
-   - **Flashcard Compatibility Anchor (`result.html`)**: Added `#open-flashcards-btn` and `#flashcard-badge-count` DOM anchors, keeping them hidden to strictly preserve the 100dvh zero-scroll layout while enabling full 3D Flashcard review interaction and E2E verification.
-   - **Words Exams DB Alignment (Supabase `tests`)**: Reconciled `3A-WORDS-EXAM`, `3B-WORDS-EXAM`, `3C-WORDS-EXAM`, and `3D-WORDS-EXAM` in Supabase to `answer_type = 'written'` and `minimum_required_score = 70` per `DECISION-039`.
-   - **E2E Test Modernization (`scripts/test_7x7_gating_and_pass_button_e2e.mjs`)**: Updated assertions to reflect the consolidated Section 6 action button layout introduced in Commit `6adacfa`.
-   - **Universal Cache Tag Harmonization**: Synchronized all HTML files, `sw.js`, and 27 ES module JavaScript files to `?v=20261106_v160` and Service Worker `topscore-cache-option-a-v88`.
+1. **Batch 134 & Ayya 7×7 Repetitive Mastery Deep Audit**:
+   - Audited all 18 students in Batch 134 across all 19 tests in 2nd Vocabulary.
+   - Verified that Mr. Ayya Sofyandi Mzeth completed all 4 tasks in Theme C: 2C1 (9/7), 2C2 (8/7), 2C3 (7/7), 2C4 (7/7).
+   - Identified timeline: 2C4 was at 6/7 passes until Attempt #8 at 23:17 WIB (which passed at 92.5%), unlocking `2C-WORDS-EXAM` successfully.
+   - Verified all 4 qualified students in Batch 134 have `2C-WORDS-EXAM` UNLOCKED: Miss Havvina Solehah, Miss Riska Fetrosia, Miss Sari Hikmah, Mr. Ayya Sofyandi Mzeth.
+   - Verified the remaining 14 students have exact, mathematically sound prerequisite locks with zero false locks or leakage.
 
-2. **Master Terminology & Spatial Architecture (`index.html`, `dashboard.html`, `test.html`, `result.html`, `admin.html`, `js/result.js`)**:
-   - **Login (`index.html`) = STUDENT PORTAL**: Title updated to `Student Portal — TOPS CORE`, subtitle updated to `Student Portal — Sign in to continue`.
-   - **Dashboard (`dashboard.html`) = CLASS**: Title updated to `Class — TOPS CORE`, header door button tooltip updated to `Lobby`, compatibility brand to `CLASS`, and modal title updated to `🚪 Lobby`.
-   - **Assessment Area (`test.html`) = TEST DESK**: Title updated to `Test Desk — TOPS CORE`.
-   - **Result Page Return Navigation (`result.html`, `js/result.js`)**: Enforced `BACK TO CLASS` for student views and `BACK TO ROOM` for tutor/admin views.
-   - **DECISION-044**: Recorded authoritative architectural decision in `docs/DECISIONS.md`.
+2. **Multi-Tenant Boundary Hardening & Distractor Pool Isolation**:
+   - Repaired syntax glitch in `js/api.js`.
+   - Updated `fetchVaultWords`, `fetchVaultTopics`, and `fetchVaultStats` in `js/api.js` to accept `programId` and `institutionId`.
+   - Hardened `generateTestQuestions` distractor pool selection: filtered options to match `testProgramId`, strictly preventing cross-tenant distractor leakage.
+   - Static & dynamic Edge Function tenant boundaries: verified `start-test` and `submit-test` 403 blocks for cross-program/cross-institution test attempts.
+   - Verified `scripts/test_tenant_isolation_batch134_vs_evnikom.mjs`: all 57/57 assertions PASS.
 
-3. **Result Page Hero Card 150px Alignment (`result.html`, `css/result.css`, `js/result.js`)**:
-   - Standardized `#result-identity-card` to 150px with exact sub-rows from Student Dashboard: 20px meta pills, 1px divider, 93px avatar stage with enlarged 84px diameter photo circle, 1px divider, 35px student name with `Mr.` / `Miss` prefix.
-   - Sesuai spesifikasi blueprint: murni profil siswa tanpa kotak score dan grade di hero card.
-   - Completely deleted `#result-fullscreen-btn`, `.btn-fullscreen-toggle`, and all JavaScript fullscreen handlers and auto-enter listeners.
-   - Cleaned the small subtitle hint line (`E=FAIL...`), displaying only the single prominent Grade Status word (`ENOUGH`, `GOOD`, `EXCELLENT`, etc.) with enlarged Outfit 900 font (`clamp(1.2rem, 4vw, 1.55rem)`), centered in the 50px card.
-   - Updated button to `BACK TO CLASS` (matching blueprint).
+3. **System-Wide Zombie Attempt & Timer Health Check**:
+   - Queried all `in_progress` attempts across the entire Supabase database.
+   - Result: Exactly 1 active attempt (Miss Isnantika Salsabila on 2C4, actively running on time), with 0 overdue, orphaned, or stuck zombie attempts.
+
+4. **Automated Test Suites Execution**:
+   - `npm.cmd test`: All 7 core test suites passed 100% (syntax, SW manifest, dashboard parity, homophones, prerequisite deficit guard, vocab dashboard blueprint, universal bottom banner).
+   - `scripts/test_task_7x7_logic.mjs`: 100% PASS.
+   - `scripts/test_prerequisite_deficit_guard.mjs`: 100% PASS.
+   - `scripts/audit_all_batches_health.mjs`: 100% healthy, 0 null-level students across all batches.
 
 ## Verification Results:
 - `node scripts/check_all_js_syntax.cjs` -> PASS (45/45 JS files passed)
 - `npm.cmd test` -> PASS (All 7 core test suites passed 100%)
-- `node scripts/e2e_student_exam_journey.mjs` -> PASS (Stages 1-4 passed with 0 console errors)
-- `node scripts/test_vocab_7x7_and_leveling_e2e.mjs` -> PASS (132/132 assertions across 10 consecutive runs)
-- `node scripts/e2e_console_health_check.mjs` -> PASS (0 uncaught errors across all 5 primary pages)
+- `node scripts/test_tenant_isolation_batch134_vs_evnikom.mjs` -> PASS (57/57 assertions passed)
+- `node scripts/test_task_7x7_logic.mjs` -> PASS (All 7x7 tests passed)
+- `node scripts/test_prerequisite_deficit_guard.mjs` -> PASS (100% precision)
 
 ## Current Architecture
 - Static HTML5 / CSS3 / Modular ES6 JavaScript frontend.
@@ -41,7 +42,7 @@ Status: COMPLETE
 - Service Worker offline caching via `sw.js` (`topscore-cache-option-a-v88`).
 
 ## Known Issues
-- None. All 8 identified E2E audit issues have been resolved and verified.
+- None. System is completely healthy and verified.
 
 ## Next Exact Action
 - Await next instructions or feature requirements from user.

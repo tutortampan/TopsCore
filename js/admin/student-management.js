@@ -75,8 +75,8 @@ export async function renderStudents(area) {
     adminFetchAll('programs', 'id, name, institution_id, is_active'),
     adminFetchAll('batches', 'id, name, program_id, is_active, current_level_id'),
     adminFetchAll('assignments', 'student_id, batch_id, test_id').catch(() => []),
-    adminFetchAll('tests', 'id, title, test_type, shell_code, payload, display_order, category, level_id, class_id, levels(name, level_number)').catch(() => []),
-    adminFetchAll('classes', 'id, name, is_active').catch(() => [])
+    adminFetchAll('tests', 'id, title, test_type, shell_code, payload, display_order, category, level_id, class_id, program_id, institution_id, levels(name, level_number)').catch(() => []),
+    adminFetchAll('classes', 'id, name, program_id, institution_id, is_active').catch(() => [])
   ]);
   const levelsMap = new Map();
   (allLevels || []).forEach(l => levelsMap.set(l.id, l));
@@ -127,7 +127,11 @@ export async function renderStudents(area) {
     );
     const studentBatch = (allBatches || []).find(b => b.id === s.batch_id);
     const studentLevelId = s.level_id || studentBatch?.current_level_id;
-    const levelAssesIds = studentLevelId ? (allTests || []).filter(a => a.level_id === studentLevelId).map(a => a.id) : [];
+    const levelAssesIds = studentLevelId ? (allTests || []).filter(a => {
+      if (a.level_id !== studentLevelId) return false;
+      const tProg = a.program_id || classesMap.get(a.class_id)?.program_id;
+      return !tProg || !s.program_id || tProg === s.program_id;
+    }).map(a => a.id) : [];
     const assignedAssesIds = new Set([...sAssignments.map(a => a.test_id), ...levelAssesIds]);
     const totalAssigned = assignedAssesIds.size || 40;
 
@@ -249,6 +253,8 @@ export async function renderStudents(area) {
     // Academic Score, Grade, and Points are evaluated EXCLUSIVELY from Exams
     const studentLevelExams = (allTests || []).filter(a => {
       if (studentLevelId && a.level_id && a.level_id !== studentLevelId) return false;
+      const tProg = a.program_id || classesMap.get(a.class_id)?.program_id;
+      if (tProg && s.program_id && tProg !== s.program_id) return false;
       return isWeeklyExam(a);
     });
 
@@ -293,7 +299,9 @@ export async function renderStudents(area) {
     // Find all exams required for student's current active level
     const currentLevelExams = (allTests || []).filter(t => {
       const matchLvl = (studentLevelId && t.level_id === studentLevelId) || (t.levels?.level_number === studentLevelNum);
-      return matchLvl && isWeeklyExam(t);
+      const tProg = t.program_id || classesMap.get(t.class_id)?.program_id;
+      const matchProg = !tProg || !s.program_id || tProg === s.program_id;
+      return matchLvl && matchProg && isWeeklyExam(t);
     });
 
     let allCurrentExamsPassed = currentLevelExams.length > 0;

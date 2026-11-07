@@ -556,27 +556,36 @@ export async function renderTests(area) {
 
   window._allTestCardsData = drawerRows;
 
-  // Available Classes for Topbar Navigation
-  const availableClasses = [
-    { id: 'ab33498a-90e6-44b7-83f4-5765f964543e', name: '3rd Vocabulary', icon: '📚', count: liveData.length },
-    { id: 'd58ec3c9-5589-45e7-8eb2-42a921a001c8', name: '1st Storytelling', icon: '📖', count: 0 },
-    { id: '02d023cb-59c4-42a8-9952-227fe7280174', name: '2nd Storytelling', icon: '📖', count: 0 },
-    { id: '2f7727ca-d898-4a94-abed-51d6a908d4b9', name: 'Speaking Projects', icon: '🎙️', count: 0 },
-    { id: 'e364cc30-98a9-4fdb-b3af-e3be88bff7fc', name: 'Public Speaking', icon: '🗣️', count: 0 },
-    { id: '35332f51-0fe0-444b-8c45-bd2a780def5e', name: 'Basic English', icon: '🔤', count: 0 }
-  ];
-
-  (allBoardClasses || []).forEach(bc => {
-    if (!availableClasses.some(ac => ac.id === bc.id || _norm(ac.name) === _norm(bc.name))) {
-      const cnt = (rawData || []).filter(t => t.class_id === bc.id && !t.deleted_at).length;
-      availableClasses.push({ id: bc.id, name: bc.name, icon: '📚', count: cnt });
+  // Available Classes for Topbar Navigation (Built purely from DB)
+  const classIconMap = {
+    'vocab': '📚',
+    'story': '📖',
+    'speaking': '🎙️',
+    'public': '🗣️',
+    'basic': '🔤'
+  };
+  const getIcon = (name) => {
+    const n = (name || '').toLowerCase();
+    for (const [k, ic] of Object.entries(classIconMap)) {
+      if (n.includes(k)) return ic;
     }
-  });
+    return '📚';
+  };
+
+  const availableClasses = [];
+  (allBoardClasses || [])
+    .filter(bc => bc.is_active !== false && !bc.deleted_at)
+    .forEach(bc => {
+      if (!availableClasses.some(ac => ac.id === bc.id)) {
+        const cnt = (rawData || []).filter(t => t.class_id === bc.id && !t.deleted_at).length;
+        availableClasses.push({ id: bc.id, name: bc.name, icon: getIcon(bc.name), count: cnt });
+      }
+    });
 
   if (!window._activeTestClassId) {
     const savedTestClassId = localStorage.getItem('topscore_admin_tests_class_id');
     const isValidClass = savedTestClassId && (savedTestClassId === 'all' || availableClasses.some(c => c.id === savedTestClassId));
-    window._activeTestClassId = isValidClass ? savedTestClassId : 'ab33498a-90e6-44b7-83f4-5765f964543e';
+    window._activeTestClassId = isValidClass ? savedTestClassId : (availableClasses[0]?.id || 'all');
   }
   const currentClassObj = availableClasses.find(c => c.id === window._activeTestClassId) || { name: 'All Classes', count: liveData.length };
 

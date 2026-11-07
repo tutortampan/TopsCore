@@ -44,14 +44,17 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
   const elProg = document.getElementById('meta-prog');
   const elBatch = document.getElementById('meta-batch');
   const elLvl = document.getElementById('meta-lvl');
-  if (elInst) elInst.textContent = session.institution_name || 'CEC';
+  if (elInst) elInst.textContent = session.institution_name || session.institution?.name || 'TOP';
 
   // Title case for program
-  const prgName = session.program_name ? session.program_name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : 'Camp';
+  const prgName = session.program_name ? session.program_name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : 'Evnikom';
   if (elProg) elProg.textContent = prgName.toUpperCase();
 
-  if (elBatch) elBatch.textContent = session.batch_name ? String(session.batch_name).replace(/[^0-9]/g, '') || session.batch_name : '131';
-  if (elLvl) elLvl.textContent = session.level_name ? (session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level') : '3rd Level';
+  if (elBatch) {
+    const rawB = session.batch_name || '';
+    elBatch.textContent = rawB.replace(/^batch\s*/i, '') || rawB || '—';
+  }
+  if (elLvl) elLvl.textContent = session.level_name ? (session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level') : '1st Level';
 
   // Suppress old welcome-meta logic
   const welcomeMetaEl = document.getElementById('welcome-meta');
@@ -804,7 +807,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
   const parts = [
     session.institution_name,
     progName,
-              session.batch_name ? 'Batch ' + session.batch_name : null
+              session.batch_name ? (String(session.batch_name).toLowerCase().startsWith('batch') ? session.batch_name : 'Batch ' + session.batch_name) : null
             ].filter(Boolean);
 
             welcomeMetaEl.innerHTML = '';

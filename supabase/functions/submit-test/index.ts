@@ -417,6 +417,19 @@ Deno.serve(async (req) => {
 
     const targetTestId = attempt.test_id;
 
+    // Strict tenant boundary check
+    const [{ data: testRec }, { data: studRec }] = await Promise.all([
+      supabase.from("tests").select("id, program_id, test_type, test_subtype, class_id, level_id, minimum_required_score, payload, classes(level_id, program_id)").eq("id", targetTestId).single(),
+      supabase.from("students").select("id, program_id, batch_id").eq("id", attempt.student_id).single()
+    ]);
+
+    const testProg = testRec?.program_id || testRec?.classes?.program_id;
+    if (testProg && studRec?.program_id && testProg !== studRec.program_id) {
+      return new Response(JSON.stringify({ error: "Tenant mismatch: test does not belong to student program." }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
     // Idempotency check
     const currentStatus = String(attempt.status || "").toLowerCase();
     if (["submitted", "auto_submitted", "evaluated"].includes(currentStatus)) {
@@ -560,35 +573,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 8. Auto-Leveling Logic for Exams
-    const { data: testRec } = await supabase
-      .from("tests")
-      .select("test_type, test_subtype, class_id, level_id, minimum_required_score, payload, classes(level_id)")
-      .eq("id", targetTestId)
-      .single();
-
-    const levelUpThreshold = Number(testRec?.minimum_required_score ?? testRec?.payload?.minimum_required_score ?? 70);
-    if (testRec && testRec.test_type === 'exam' && roundedPct >= levelUpThreshold) {
-      if (testRec.classes && testRec.classes.level_id) {
-         const { data: currLevel } = await supabase.from("levels").select("level_number").eq("id", testRec.classes.level_id).single();
-         if (currLevel) {
-           const nextLevelNum = currLevel.level_number + 1;
-           const { data: nextLevel } = await supabase.from("levels").select("id").eq("level_number", nextLevelNum).maybeSingle();
-           if (nextLevel) {
-             const { data: studRec } = await supabase.from("students").select("batch_id").eq("id", attempt.student_id).single();
-             if (studRec && studRec.batch_id) {
-                const { data: batchRec } = await supabase.from("batches").select("current_level_id").eq("id", studRec.batch_id).single();
-                if (batchRec && batchRec.current_level_id) {
-                   const { data: batchLevel } = await supabase.from("levels").select("level_number").eq("id", batchRec.current_level_id).single();
-                   if (!batchLevel || batchLevel.level_number < nextLevelNum) {
-                      await supabase.from("batches").update({ current_level_id: nextLevel.id }).eq("id", studRec.batch_id);
-                   }
-                }
-             }
-           }
-         }
-      }
-    }
+    // 8. Milestone Progression: Student attempt is recorded. Batch leveling is evaluated comprehensively,
+    // not prematurely on a single individual submission.
 
     return new Response(JSON.stringify({
       message: "Test submitted successfully.",

@@ -10,7 +10,7 @@ async function renderExportQuestions(area) {
   showLoading('Loading tests for export…');
   let tests = [];
   try {
-    tests = await adminFetchAll('tests', 'id, title, test_type, class_id, level_id');
+    tests = await adminFetchAll('tests', 'id, title, test_type, class_id, level_id, program_id, institution_id, classes(name), levels(name), programs(name), institutions(name)');
   } catch (err) {
     console.warn('Export tests fetch warning:', err);
   } finally {
@@ -64,13 +64,14 @@ async function renderExportQuestions(area) {
       }
 
       const sortedQuestions = questions.sort((a,b) => (a.question_order || 0) - (b.question_order || 0));
-      const programName = testClasses?.data?.[0]?.programs?.name || 'Camp';
+      const programName = testClasses?.data?.[0]?.programs?.name || selectedTest?.programs?.name || 'Program';
+      const instName = selectedTest?.institutions?.name || 'TOP';
 
       const excelData = sortedQuestions.map((q, idx) => ({
-        'PROGRAM': selectedTest?.institutions?.name || 'CEC',
+        'PROGRAM': instName,
         'CLASS': programName,
         'Class': q.metadata?.classItem || q.metadata?.Class || selectedTest?.classes?.name || 'Vocab',
-        'LEVEL': selectedTest?.levels?.name || '3rd Step',
+        'LEVEL': selectedTest?.levels?.name || '1st Level',
         'TITLE': q.metadata?.title || selectedTest?.title || 'Practice 1',
         'WEEK': q.metadata?.week || '1',
         'DAY': q.metadata?.day || '1',

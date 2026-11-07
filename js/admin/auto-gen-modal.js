@@ -288,8 +288,9 @@ export async function openAutoGenerateModal(options = {}) {
             </div>
           </div>
 
-          <!-- Hidden program ID helper -->
-          <input type="hidden" id="wizard-prog-id" value="${window.currentProgId || programs[0].id}" />
+          <!-- Hidden program and institution ID helpers -->
+          <input type="hidden" id="wizard-prog-id" value="${matchedClass?.program_id || window.currentProgId || programs[0]?.id || ''}" />
+          <input type="hidden" id="wizard-inst-id" value="${matchedClass?.institution_id || ''}" />
         </div>
 
         <!-- Modal Footer: Action Buttons -->
@@ -331,6 +332,7 @@ export async function openAutoGenerateModal(options = {}) {
     const getWizardConfig = () => {
       const selectedLevels = Array.from(overlay.querySelectorAll('.wizard-level-chk:checked')).map(cb => parseInt(cb.value, 10));
       const progId = overlay.querySelector('#wizard-prog-id').value;
+      const institutionId = overlay.querySelector('#wizard-inst-id')?.value || null;
       const category = overlay.querySelector('#wizard-scope-select').value;
       const durEl = overlay.querySelector('#wizard-quiz-dur') || overlay.querySelector('#wizard-task-dur');
       const wordsDurEl = overlay.querySelector('#wizard-quiz-words-dur');
@@ -352,6 +354,7 @@ export async function openAutoGenerateModal(options = {}) {
       return {
         selectedLevels,
         progId,
+        institutionId,
         category,
         quizDuration,
         taskDuration: quizDuration,
@@ -433,6 +436,7 @@ export async function openAutoGenerateModal(options = {}) {
       try {
         const res = await autoGenerateTestsHierarchy(cfg.selectedLevels, {
           programId: cfg.progId,
+          institutionId: cfg.institutionId,
           explicitClassId: cfg.targetClassId,
           category: cfg.category,
           taskDurationMinutes: cfg.taskDuration,
