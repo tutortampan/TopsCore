@@ -1,4 +1,114 @@
-﻿## [2026-11-08 23:40] — Phase 365: Anti-Cheat Hardening, 5s Countdown, Dual-Defense & Test Room Layout Invariant (v165)
+## [2026-11-09 06:48] — Phase 367: Institution Tab Header Naming, Full-Green Active Badges & Grade-Score Toolbar Streamlining (v167)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 367: Institution Tab Header Naming, Full-Green Active Badges & Grade-Score Toolbar Streamlining  
+**Status:** PASS  
+
+### Why
+- In the Organization / Curriculum screen, the topbar tab displayed `"Program (1)"` and `"Programs (2)"` instead of the institution's actual name (`TOP`, `CEC`).
+- The `Active` status badge and `${count} Batches` badge displayed green text but had an unintended pink/magenta border and background because `--grade-star-rgb: 255, 45, 135` was inherited by `.badge-tag-ongoing` and `.badge-success`.
+- On the Class Hub Grade & Score page, the user requested the removal of unnecessary display controls (`DISPLAY: [🔍 FIT SCREEN] [-- 100% SCROLL]`, pan arrows, and `[⤢ Full Width]`) while maintaining natural scrollability and the score legend.
+
+### Changed
+1. **Institution Dynamic Topbar Tabs (`js/admin/curriculum-management.js`)**:
+   - Replaced static label assignment (`count === 1 ? 'Program' : 'Programs'`) with `label: inst.name` and `title: inst.name`.
+2. **Full-Green Active Status & Batch Badges (`css/style.css`, `css/admin.css`, `js/admin/curriculum-management.js`)**:
+   - Added `--clr-success-rgb: 0, 192, 0;` and `--clr-success-glow: rgba(0, 192, 0, 0.4);` to `css/style.css`.
+   - Updated `.badge-tag-ongoing` and `.badge-success` in `css/admin.css` to pure green background `rgba(0, 192, 0, 0.15)`, pure green border `1px solid rgba(0, 192, 0, 0.35)`, and solid text `#00c000ff`.
+   - Updated `.btn-success`, `.badge-success`, and `.toast-success` in `css/style.css` to use `--clr-success-rgb`.
+   - Updated inline batch badges in `curriculum-management.js` to pure green.
+   - Purged `.attendance-theme-pill.mode-fit.active` pink styling from `css/admin.css`.
+3. **Grade & Score Toolbar Cleanup (`js/admin/app.js`)**:
+   - Removed `attendance-view-mode-container` (`DISPLAY: FIT SCREEN` / `100% SCROLL`).
+   - Removed `attendance-pan-controls` (`[◀]` / `[▶]`).
+   - Removed `matrix-fullwidth-btn` (`Full Width`).
+   - Standardized `fitMatrixToScreen` on clean 100% scale (`tbl.style.zoom = '1'`) with smooth horizontal scrolling (`overflow-x: auto`) and mouse-wheel scrolling.
+   - Preserved theme filter pills and full score legend (`WRD`, `PHR`, `PTS`, `SCORE %`, `ᴿ`, `★`).
+4. **Cache & Version Bumping (`sw.js`, `admin.html`)**:
+   - Bumped Service Worker cache to `topscore-cache-option-a-v94`.
+   - Bumped query string version to `?v=20261109_v167` in `admin.html`.
+
+### Files
+- `js/admin/curriculum-management.js`
+- `js/admin/app.js`
+- `css/style.css`
+- `css/admin.css`
+- `admin.html`
+- `sw.js`
+- `scripts/test_ui_tab_badges_and_grade_score_v167.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/DECISIONS.md`
+- `docs/SESSION_LOG.md`
+
+### Tests
+- `node scripts/test_ui_tab_badges_and_grade_score_v167.mjs` -> PASS (28/28 assertions passed 100%)
+- `node scripts/test_multi_program_theme_blueprint_v166.mjs` -> PASS (29/29 assertions passed 100%)
+- `node scripts/test_tenant_isolation_batch134_vs_evnikom.mjs` -> PASS (57/57 multi-tenant assertions passed 100%)
+
+---
+
+## [2026-11-09 01:45] — Phase 366: Multi-Program Theme Assignment, 2-Tier Topic Blueprint Matrix & Class Hub Vault Quick-Action (v166)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 366: Multi-Program Theme Assignment, 2-Tier Topic Blueprint Matrix & Class Hub Vault Quick-Action  
+**Status:** PASS  
+
+### Why
+- Multi-tenancy and curriculum material isolation for client programs sharing the same class structure and level mechanics (**CEC Camp**, **Evnikom**, **Sheraton**, **Tamata Persada**).
+- User requested that binding should be at the **Theme level (not word/phrase level)**. A Theme (Theme Code + Target Level) can be assigned to one or multiple Programs across institutions (e.g., Hotel theme `E1` at Level 2 assigned to both Sheraton and Tamata Persada).
+- User provided an exact spreadsheet sketch for the Topic Blueprint matrix with 2-tier headers, WORD and PHRASE sub-breakdowns, institution groups, and a toggleable Edit Mode (On/Off).
+
+### Changed
+1. **Database Migration & Normalization**:
+   - Created table `public.theme_program_assignments` with composite unique key `(theme_code, target_level, program_id)`, indexes, and RLS policies.
+   - Normalized program names & codes: `Sheraton` (`SHERATON`), `Camp` (`CAMP`), `Evnikom` (`EVNIKOM`), `Tamata Persada` (`TAMATA`).
+   - Normalized Class names with clear program prefixes (`Camp 1st/2nd/3rd Vocabulary`, `Evnikom 1st Vocabulary`, `Sheraton 1st Vocabulary`, `Tamata 1st Vocabulary`) and soft-deleted orphaned classes.
+   - Backfilled baseline assignments for 9 distinct existing vault themes across Camp and Evnikom.
+   - Saved versioned migration: `supabase/migrations/20261109010000_theme_program_assignments.sql`.
+2. **API Dynamic Theme Resolution (`js/api.js`)**:
+   - Added `fetchThemeProgramAssignments()` and `toggleThemeProgramAssignment({ themeCode, targetLevel, programId, assign })`.
+   - Updated `fetchVaultWords({ programId, targetLevel, ... })` to resolve assigned themes dynamically without word duplication across programs.
+   - Updated `generateTestQuestions(sb, test)` to scope questions and distractors strictly to assigned themes.
+   - Enhanced `importVaultWords()` to automatically upsert `theme_program_assignments` for all imported themes matching their target program and level.
+3. **Auto-Generate Modal (`js/admin/auto-gen-modal.js`)**:
+   - Replaced hardcoded `institutions[0]` lookup with dynamic resolution from `matchedClass.institution_id` and `matchedClass.program_id`.
+4. **2-Tier Topic Blueprint Matrix (`js/admin/vocab-vault.js`, `css/admin.css`)**:
+   - Restructured table header into a 2-tier matrix exactly matching user's sketch:
+     - Row 1: `LEVEL`, `code`, `Theme Name`, `Topic`, `WORD` (colspan 4), `PHRASE` (colspan 3), `Total`, Institution Group (`CEC`: `Camp`, `TOP`: `Evnikom`, `Tamata`, `Sheraton`), `EDIT MODE (On/Off)` (colspan 2).
+     - Row 2: Sub-headers for `VERB`, `NOUN`, `ADJECTIVE`, `OTHER`, `Expression`, `Idiom`, `Proverb`, Program columns, `RENAME`, `DELETE`.
+   - Added Edit Mode toggle: Red `OFF` (read-only/inert) vs Green `ON` (interactive cell clicking toggling `yes` $\leftrightarrow$ `—` with live DB persistence, and enabled action buttons).
+5. **Class Hub "Open Vault" Quick-Action (`js/admin/classes-hub.js`)**:
+   - Added `📚 Open Vault` quick-action button in the Class Hub header toolbar.
+   - Added `📚 Vault` direct action button in every Vocabulary class row.
+   - Implemented `window.openVocabVaultFromClassHub(progId)` to seamlessly route to `#vocab_vault` with the Topic Blueprint tab active.
+6. **Universal Cache & Version Harmonization (`sw.js`, `admin.html`)**:
+   - Cache bumped to `topscore-cache-option-a-v93`.
+   - Query version bumped to `?v=20261109_v166` in `admin.html`.
+
+### Files
+- `supabase/migrations/20261109010000_theme_program_assignments.sql`
+- `js/api.js`
+- `js/admin/vocab-vault.js`
+- `js/admin/auto-gen-modal.js`
+- `js/admin/classes-hub.js`
+- `css/admin.css`
+- `admin.html`
+- `sw.js`
+- `scripts/test_multi_program_theme_blueprint_v166.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/DECISIONS.md`
+- `docs/SESSION_LOG.md`
+
+### Tests
+- command: `node scripts/test_multi_program_theme_blueprint_v166.mjs` -> PASS (29/29 assertions passed 100%)
+- command: `node scripts/test_tenant_isolation_batch134_vs_evnikom.mjs` -> PASS (57/57 multi-tenant assertions passed 100%)
+- command: `node scripts/test_anti_cheat_and_layout_v165.mjs` -> PASS (14/14 tests passed 100%)
+
+---
+
+## [2026-11-08 23:40] — Phase 365: Anti-Cheat Hardening, 5s Countdown, Dual-Defense & Test Room Layout Invariant (v165)
 
 **Agent/Session:** Antigravity  
 **Phase:** Phase 365: Anti-Cheat Hardening, 5s Countdown, Dual-Defense & Test Room Layout Invariant  

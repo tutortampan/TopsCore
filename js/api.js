@@ -983,6 +983,21 @@ export async function generateTestQuestions(sb, test) {
     const isThemeTest = (test.category === 'EXAM' || test.category === 'TEST' || String(test.test_type).toLowerCase() === 'exam' || (test.shell_code && (test.shell_code.includes('-EXAM') || test.shell_code.includes('-TEST'))) || test.test_subtype === 'VOCAB_EXAM' || test.test_subtype === 'PHRASE_EXAM' || test.test_subtype === 'VOCAB_TEST' || test.test_subtype === 'PHRASE_TEST') && !topicCode;
     const testProgramId = test.program_id || test.programId;
 
+    // Resolve multi-program theme assignments if testProgramId is specified
+    let assignedThemeCodes = null;
+    if (testProgramId) {
+      try {
+        const { data: tpaData } = await sb.from('theme_program_assignments')
+          .select('theme_code')
+          .eq('program_id', testProgramId)
+          .eq('target_level', levelNum)
+          .eq('is_active', true);
+        if (tpaData && tpaData.length > 0) {
+          assignedThemeCodes = tpaData.map(a => (a.theme_code || '').trim().toUpperCase()).filter(Boolean);
+        }
+      } catch (_) {}
+    }
+
     // Resilient vocabulary query: try with category column first, fallback without category column
     let vaultData = null;
     try {
@@ -991,7 +1006,11 @@ export async function generateTestQuestions(sb, test) {
         .is('deleted_at', null)
         .eq('target_level', levelNum)
         .range(0, 4999);
-      if (testProgramId) query = query.eq('program_id', testProgramId);
+      if (assignedThemeCodes && assignedThemeCodes.length > 0) {
+        query = query.in('theme_code', assignedThemeCodes);
+      } else if (testProgramId) {
+        query = query.eq('program_id', testProgramId);
+      }
       if (topicCode) {
         if (themeCode) query = query.eq('theme_code', themeCode);
         const candidateCodes = [
@@ -1027,7 +1046,11 @@ export async function generateTestQuestions(sb, test) {
         .is('deleted_at', null)
         .eq('target_level', levelNum)
         .range(0, 4999);
-      if (testProgramId) queryNoCat = queryNoCat.eq('program_id', testProgramId);
+      if (assignedThemeCodes && assignedThemeCodes.length > 0) {
+        queryNoCat = queryNoCat.in('theme_code', assignedThemeCodes);
+      } else if (testProgramId) {
+        queryNoCat = queryNoCat.eq('program_id', testProgramId);
+      }
       if (topicCode) {
         if (themeCode) queryNoCat = queryNoCat.eq('theme_code', themeCode);
         const candidateCodes = [
@@ -1150,18 +1173,26 @@ export async function generateTestQuestions(sb, test) {
           .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, category, target_level')
           .is('deleted_at', null)
           .range(0, 4999);
-        if (testProgramId) allDataQuery = allDataQuery.eq('program_id', testProgramId);
+        if (assignedThemeCodes && assignedThemeCodes.length > 0) {
+          allDataQuery = allDataQuery.in('theme_code', assignedThemeCodes);
+        } else if (testProgramId) {
+          allDataQuery = allDataQuery.eq('program_id', testProgramId);
+        }
         if (levelNum) allDataQuery = allDataQuery.eq('target_level', levelNum);
         const { data: allData } = await allDataQuery;
         if (allData && allData.length > 0) {
           vaultCandidatePool = allData;
         } else {
-          // Fallback if target_level returned empty, pull from same program without level restriction
+          // Fallback if target_level returned empty, pull from same assigned themes or program without level restriction
           let broaderQuery = sb.from('vocabulary_vault')
             .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, category, target_level')
             .is('deleted_at', null)
             .range(0, 4999);
-          if (testProgramId) broaderQuery = broaderQuery.eq('program_id', testProgramId);
+          if (assignedThemeCodes && assignedThemeCodes.length > 0) {
+            broaderQuery = broaderQuery.in('theme_code', assignedThemeCodes);
+          } else if (testProgramId) {
+            broaderQuery = broaderQuery.eq('program_id', testProgramId);
+          }
           const { data: broaderData } = await broaderQuery;
           vaultCandidatePool = broaderData || [];
         }
@@ -2755,6 +2786,21 @@ export async function fetchVaultWords({ topic = null, search = null, targetLevel
   let curOffset = offset;
   const maxToFetch = limit || 10000;
 
+  // Resolve multi-program theme assignments if programId and targetLevel are specified
+  let assignedThemeCodes = null;
+  if (programId && targetLevel !== null) {
+    try {
+      const { data: tpaData } = await sb.from('theme_program_assignments')
+        .select('theme_code')
+        .eq('program_id', programId)
+        .eq('target_level', targetLevel)
+        .eq('is_active', true);
+      if (tpaData && tpaData.length > 0) {
+        assignedThemeCodes = tpaData.map(a => (a.theme_code || '').trim().toUpperCase()).filter(Boolean);
+      }
+    } catch (_) {}
+  }
+
   while (allData.length < maxToFetch) {
     const chunkLimit = Math.min(PAGE_SIZE, maxToFetch - allData.length);
     let query = sb.from('vocabulary_vault')
@@ -2768,8 +2814,14 @@ export async function fetchVaultWords({ topic = null, search = null, targetLevel
       .range(curOffset, curOffset + chunkLimit - 1);
 
     if (targetLevel !== null) query = query.eq('target_level', targetLevel);
-    if (programId !== null && programId !== undefined) query = query.eq('program_id', programId);
-    if (institutionId !== null && institutionId !== undefined) query = query.eq('institution_id', institutionId);
+    if (assignedThemeCodes && assignedThemeCodes.length > 0) {
+      query = query.in('theme_code', assignedThemeCodes);
+    } else if (programId !== null && programId !== undefined) {
+      query = query.eq('program_id', programId);
+    }
+    if (institutionId !== null && institutionId !== undefined && (!assignedThemeCodes || assignedThemeCodes.length === 0)) {
+      query = query.eq('institution_id', institutionId);
+    }
     if (topic) query = query.eq('topic', topic);
     if (search) {
       const term = search.trim();
@@ -3011,6 +3063,37 @@ export async function importVaultWords(rows, resolutionMap = {}, onProgress = nu
   }
 
   results.skipped = rows.length - results.inserted - results.updated;
+
+  // Auto-register theme_program_assignments for imported themes with program_id
+  const uniqueAssignments = new Map();
+  for (const item of [...toInsert, ...toUpdate]) {
+    if (item.theme_code && item.target_level && item.program_id) {
+      const key = `${item.theme_code}_${item.target_level}_${item.program_id}`;
+      if (!uniqueAssignments.has(key)) {
+        uniqueAssignments.set(key, {
+          theme_code: item.theme_code,
+          target_level: item.target_level,
+          program_id: item.program_id,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        });
+      }
+    }
+  }
+
+  if (uniqueAssignments.size > 0) {
+    try {
+      const assignmentList = Array.from(uniqueAssignments.values());
+      const { error: assignErr } = await sb.from('theme_program_assignments')
+        .upsert(assignmentList, { onConflict: 'theme_code, target_level, program_id' });
+      if (assignErr) {
+        console.warn('[importVaultWords] theme_program_assignments upsert error:', assignErr);
+      }
+    } catch (e) {
+      console.warn('[importVaultWords] Failed to auto-register theme_program_assignments:', e);
+    }
+  }
+
   clearApiCache('vault');
   return results;
 }
@@ -3099,6 +3182,49 @@ export async function deleteVaultTheme(theme) {
     .eq('theme', theme)
     .is('deleted_at', null);
   if (error) throw error;
+  clearApiCache('vault');
+  return true;
+}
+
+// ─── Theme-Program Multi-Tenant Assignments ────────────────
+export async function fetchThemeProgramAssignments() {
+  const sb = await getSupabase();
+  const { data, error } = await sb
+    .from('theme_program_assignments')
+    .select('id, theme_code, target_level, program_id, is_active')
+    .is('is_active', true);
+  if (error) {
+    console.warn('fetchThemeProgramAssignments notice:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+export async function toggleThemeProgramAssignment({ themeCode, targetLevel, programId, assign }) {
+  const sb = await getSupabase();
+  const thCode = String(themeCode).trim().toUpperCase();
+  const lvl = parseInt(targetLevel, 10);
+
+  if (assign) {
+    const { error } = await sb
+      .from('theme_program_assignments')
+      .upsert({
+        theme_code: thCode,
+        target_level: lvl,
+        program_id: programId,
+        is_active: true,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'theme_code,target_level,program_id' });
+    if (error) throw error;
+  } else {
+    const { error } = await sb
+      .from('theme_program_assignments')
+      .delete()
+      .eq('theme_code', thCode)
+      .eq('target_level', lvl)
+      .eq('program_id', programId);
+    if (error) throw error;
+  }
   clearApiCache('vault');
   return true;
 }
@@ -4659,7 +4785,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     // 1. Fetch Words for Level to know what themes and topics exist (Chunked Pagination Protected)
     let words = [];
     try {
-      words = await fetchVaultWords({ targetLevel: levelNum, limit: 10000 });
+      words = await fetchVaultWords({ targetLevel: levelNum, programId, limit: 10000 });
     } catch (_) {
       let vaultQuery = sb.from('vocabulary_vault')
         .select('theme_code, theme, topic_code, topic, word_type, category')

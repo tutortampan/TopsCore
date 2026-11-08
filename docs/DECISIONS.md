@@ -1386,3 +1386,61 @@ When Multiple Choice questions were dynamically assembled from `vocabulary_vault
 - Dramatically increases pedagogical rigor and authenticity of multiple choice vocabulary tests.
 - Prevents giveaways where length or unrelated meaning reveals the answer.
 - Eliminates visual color clashes on audio controls across all test modes.
+
+---
+
+## DECISION-046 — Multi-Program Theme Assignment Architecture, 2-Tier Topic Blueprint Matrix, and Edit Mode Protection
+
+Date: 2026-11-09
+Status: ACCEPTED
+
+### Context
+Client programs (**CEC Camp**, **Evnikom**, **Sheraton**, **Tamata Persada**) operate on the TopsCore platform across different institutions (`CEC` and `TOP`). While they share identical class structures (Vocabulary, Storytelling, Public Speaking) and level mechanics (1st, 2nd, 3rd Level), their curriculum materials vary: some themes are exclusive to one program (e.g., Hotel theme `E1` at Level 2 for Sheraton), while others can be shared across programs or even institutions (e.g., sharing the Hotel theme with Tamata Persada) without duplicating hundreds of vocabulary words.
+
+### Decision
+1. **Binding at Theme Level (`theme_program_assignments`)**:
+   - Rather than binding individual words or entire classes statically to programs, curriculum assignment is established at the **Theme level**: composite key `(theme_code, target_level, program_id)`.
+   - Table `public.theme_program_assignments` stores this many-to-many relationship with RLS enabled.
+   - When generating questions or distractors, the system dynamically queries assigned theme codes for the target `(program_id, level)` and retrieves words matching those themes. Words are stored once in `vocabulary_vault`.
+2. **2-Tier Topic Blueprint Matrix UI**:
+   - Redesigned the Topic Blueprint tab in `js/admin/vocab-vault.js` to match the spreadsheet matrix format:
+     - Header Tier 1: `LEVEL`, `code`, `Theme Name`, `Topic`, `WORD` (colspan 4), `PHRASE` (colspan 3), `Total`, Institution Group (`CEC`: `Camp`, `TOP`: `Evnikom`, `Tamata`, `Sheraton`), `EDIT MODE (On/Off)` (colspan 2).
+     - Header Tier 2: `VERB`, `NOUN`, `ADJECTIVE`, `OTHER`, `Expression`, `Idiom`, `Proverb`, Program columns, `RENAME`, `DELETE`.
+3. **Edit Mode Guard (On Green / Off Red)**:
+   - Defaults to `OFF` (Red `#dc2626`). In OFF mode, clicking program assignment cells or action buttons (`RENAME`, `DELETE`) is inert, protecting against accidental modifications while browsing.
+   - When toggled `ON` (Green `#16a34a` with pulse glow), clicking program cells immediately toggles `yes` $\leftrightarrow$ `—` and persists to the database via API, while action buttons become active.
+4. **Automated Excel Import Assignment**:
+   - When an Excel file is imported into `vocabulary_vault`, all unique `(theme_code, target_level, program_id)` triples are automatically upserted into `theme_program_assignments`.
+5. **Class Hub "Open Vault" Shortcut**:
+   - Added `📚 Open Vault` in the Class Hub header toolbar and `📚 Vault` on Vocabulary class rows to navigate directly to the Topic Blueprint tab in `#vocab_vault`.
+
+### Consequences
+- True multi-tenant curriculum isolation and selective sharing without duplicating vocabulary words or creating messy database forks.
+- Completely prevents accidental edits to curriculum allocations with Edit Mode protection.
+- Immediate navigation between Class management and Vocabulary Blueprint.
+
+---
+
+## DECISION-047 — Institution Topbar Dynamic Labeling, Full-Green Success Badge System, and Streamlined Grade & Score Roster
+
+Date: 2026-11-09
+Status: ACCEPTED
+
+### Context
+In the Organization screen, topbar tabs displayed generic strings `"Program (1)"` and `"Programs (2)"` due to an incorrect property mapping overriding `tab.label`. Additionally, active status pills and program batch counters exhibited an unintended pink/magenta border and background because `--grade-star-rgb: 255, 45, 135` was improperly used for general success badge styles. Finally, the Grade & Score roster matrix toolbar contained redundant controls (`FIT SCREEN`, `100% SCROLL`, pan buttons, `Full Width`) that squeezed font sizes via CSS zoom down to unreadable levels.
+
+### Decision
+1. **Dynamic Institution Naming on Topbar**:
+   - `curriculum-management.js` assigns `label: inst.name` and `title: inst.name` so that top tabs immediately reflect the institution identity (`TOP [1]`, `CEC [2]`).
+2. **Authoritative Full-Green Success & Active Palette**:
+   - Explicitly defined `--clr-success-rgb: 0, 192, 0;` and `--clr-success-glow: rgba(0, 192, 0, 0.4);` in `css/style.css`.
+   - Updated `.badge-tag-ongoing`, `.badge-success`, `.btn-success`, and program batch counters to pure green (`#00c000ff` text, `rgba(0, 192, 0, 0.15)` background, `1px solid rgba(0, 192, 0, 0.35)` border) with zero pink contamination.
+3. **Streamlined Grade & Score Layout**:
+   - Removed the `DISPLAY: FIT SCREEN / 100% SCROLL` switcher, pan buttons, and `Full Width` button.
+   - Standardized the matrix on standard uncompressed 100% scale (`zoom: 1`) with smooth horizontal scrolling (`overflow-x: auto`), comfortable row heights ($\ge 22\text{px}$), and readable font sizes ($\ge 8.5\text{px}$).
+   - Preserved theme filter pills and score legend (`WRD`, `PHR`, `PTS`, `SCORE %`, `ᴿ`, `★`).
+
+### Consequences
+- Immediate, accurate institution branding in the top navigation.
+- Consistent visual language: active/ongoing states are 100% pure green without magenta/pink bleed.
+- Clean, legible, and uncluttered Grade & Score student roster.

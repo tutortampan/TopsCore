@@ -30,12 +30,17 @@ import {
   fetchTestDefinitions,
   adminFetchAll,
   renameVaultTopic,
+  renameVaultTheme,
+  deleteVaultTopic,
+  deleteVaultTheme,
   exportVaultWords,
   updateTestDefinition,
   toOrdinalLevel,
   toShortLevel,
-  autoSyncClassTestsForLevel
-} from '../api.js?v=20261106_v160';
+  autoSyncClassTestsForLevel,
+  fetchThemeProgramAssignments,
+  toggleThemeProgramAssignment
+} from '../api.js?v=20261109_v166';
 import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 
@@ -56,11 +61,17 @@ function parseWita(localStr) {
 export async function renderVocabularyVault(area) {
   showLoading();
   try {
-    const [words, topics] = await Promise.all([
+    const [words, topics, institutions, programs, themeAssignments] = await Promise.all([
       fetchVaultWords({ limit: 10000, targetLevel: null }),
-      fetchVaultTopics()
+      fetchVaultTopics(),
+      adminFetchAll('institutions', 'id, name, code, is_active, deleted_at').catch(() => []),
+      adminFetchAll('programs', 'id, name, code, institution_id, is_active, deleted_at').catch(() => []),
+      fetchThemeProgramAssignments().catch(() => [])
     ]);
     hideLoading();
+
+    // Cache metadata for sub-tabs and re-renders
+    window._vaultMeta = { institutions, programs, themeAssignments };
 
     // FIX: normalize word_type to lowercase before comparison
     // DB stores PascalCase: "Proverb", "Idiom", "Expression" — phraseTypes list is lowercase
@@ -95,7 +106,7 @@ export async function renderVocabularyVault(area) {
       }
       tabContent.innerHTML = '';
       if (activeVaultTab === 'blueprint' || activeVaultTab === 'topics') {
-        _renderTopicBlueprintTab(tabContent, words, topics);
+        _renderTopicBlueprintTab(tabContent, words, topics, window._vaultMeta);
       } else if (activeVaultTab === 'vocab') {
         _renderVaultGrid(tabContent, words, topics, 'single_words');
       } else if (activeVaultTab === 'phrases') {
@@ -1504,8 +1515,8 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 }
 
 
-// ─── Unified Topic Blueprint Panel (Opsi B: Cascading Rowspan Matrix) ────
-function _renderTopicBlueprintTab(area, words, topics) {
+// ─── Unified Topic Blueprint Panel (Two-Tier Multi-Tenant Matrix) ────
+function _renderTopicBlueprintTab(area, words, topics, meta = {}) {
   const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase', 'phrasal verb'];
   const isPhrase = (wt) => phraseTypes.includes(String(wt || '').toLowerCase());
 
@@ -1548,31 +1559,39 @@ function _renderTopicBlueprintTab(area, words, topics) {
         themeCode: thCode,
         themeName: thObj.name,
         level: lvl,
-        institution: w.institutions?.code || w.institution_code || 'CEC',
-        program: w.programs?.name || w.program_name || 'Camp',
         verbs: 0,
         nouns: 0,
         adjs: 0,
-        phrases: 0,
+        others: 0,
+        expressions: 0,
+        idioms: 0,
+        proverbs: 0,
         totalWords: 0,
         totalPhrases: 0,
         totalCount: 0
       });
     }
     const tpObj = thObj.topicsMap.get(tpKey);
-    tpObj.totalCount++;
 
     const wt = String(w.word_type || '').toLowerCase();
-    if (wt === 'verb') tpObj.verbs++;
-    else if (wt === 'noun') tpObj.nouns++;
-    else if (wt === 'adjective' || wt === 'adj') tpObj.adjs++;
-    else if (isPhrase(wt) || w.category === 'phrases') tpObj.phrases++;
+    const isExpr = ['expression', 'phrase', 'phrasal verb'].includes(wt);
+    const isIdiom = wt === 'idiom';
+    const isProv = wt === 'proverb';
+    const isVerb = wt === 'verb';
+    const isNoun = wt === 'noun';
+    const isAdj = wt === 'adjective' || wt === 'adj';
 
-    if (isPhrase(wt) || w.category === 'phrases') {
-      tpObj.totalPhrases++;
-    } else {
-      tpObj.totalWords++;
-    }
+    if (isVerb) tpObj.verbs++;
+    else if (isNoun) tpObj.nouns++;
+    else if (isAdj) tpObj.adjs++;
+    else if (isExpr) tpObj.expressions++;
+    else if (isIdiom) tpObj.idioms++;
+    else if (isProv) tpObj.proverbs++;
+    else tpObj.others++;
+
+    tpObj.totalWords = tpObj.verbs + tpObj.nouns + tpObj.adjs + tpObj.others;
+    tpObj.totalPhrases = tpObj.expressions + tpObj.idioms + tpObj.proverbs;
+    tpObj.totalCount = tpObj.totalWords + tpObj.totalPhrases;
   });
 
   // Count topics & words per level
@@ -1606,17 +1625,68 @@ function _renderTopicBlueprintTab(area, words, topics) {
   }
   window._blueprintSelectedLevel = activeLevel;
 
+  // Multi-Tenant Hierarchy Setup (Group Programs by Institution)
+  const activeInsts = (meta?.institutions || []).filter(i => !i.deleted_at && i.is_active !== false);
+  const activeProgs = (meta?.programs || []).filter(p => !p.deleted_at && p.is_active !== false);
+  const assignments = meta?.themeAssignments || [];
+
+  // Group programs under each institution
+  const instProgGroups = [];
+  activeInsts.sort((a, b) => (a.code || a.name).localeCompare(b.code || b.name));
+
+  activeInsts.forEach(inst => {
+    const progs = activeProgs.filter(p => p.institution_id === inst.id);
+    if (progs.length > 0) {
+      instProgGroups.push({
+        inst,
+        programs: progs.sort((a, b) => a.name.localeCompare(b.name))
+      });
+    }
+  });
+
+  // Fallback if no institutions loaded from DB
+  if (instProgGroups.length === 0) {
+    instProgGroups.push({
+      inst: { id: 'cec', name: 'CEC', code: 'CEC' },
+      programs: [{ id: '11deb53c-434a-44b0-83ca-1cc9b239cab3', name: 'Camp', code: 'CAMP' }]
+    });
+    instProgGroups.push({
+      inst: { id: 'top', name: 'TOP', code: 'TOP' },
+      programs: [
+        { id: 'cfeda206-a7a9-4979-a90c-ce7fd436fcd0', name: 'Evnikom', code: 'EVNIKOM' },
+        { id: 'd80f47ef-0683-4137-8430-f6cae33e98cc', name: 'Tamata', code: 'TAMATA' },
+        { id: '20d64d86-6e8b-4677-a3c9-e497fa5d9177', name: 'Sheraton', code: 'SHERATON' }
+      ]
+    });
+  }
+
+  const allOrderedProgs = instProgGroups.flatMap(g => g.programs);
+
+  // Assignment quick lookup set: key = `${themeCode}_${targetLevel}_${programId}`
+  const assignSet = new Set(
+    assignments
+      .filter(a => a.is_active !== false)
+      .map(a => `${String(a.theme_code).trim().toUpperCase()}_${parseInt(a.target_level, 10)}_${a.program_id}`)
+  );
+
+  // Edit Mode state (persisted in sessionStorage)
+  if (typeof window._blueprintEditMode === 'undefined') {
+    const stored = sessionStorage.getItem('topscore_blueprint_edit_mode');
+    window._blueprintEditMode = (stored === '1');
+  }
+  let isEditMode = window._blueprintEditMode;
+
   // Setup Bottom Infobar
   if (window.setBottomInfobar) {
     const activeLevelLabel = activeLevel === 'ALL' ? 'All (1st, 2nd, 3rd)' : (typeof toShortLevel === 'function' ? toShortLevel(activeLevel) + ' Level' : `Level ${activeLevel}`);
     const activeTopicsCount = activeLevel === 'ALL' ? totalTopicsAll : (levelStats[activeLevel]?.topics || 0);
 
     const leftHtml = `
-      <div class="bottom-info-chip"><span class="chip-label">Institution:</span><span class="chip-val" style="color: #38bdf8;">CEC</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Program:</span><span class="chip-val" style="color: #c084fc;">Camp</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Blueprint:</span><span class="chip-val" style="color: #38bdf8;">Multi-Tenant Matrix</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Levels:</span><span class="chip-val" style="color: #f8fafc;">${escapeHtml(activeLevelLabel)}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Topics:</span><span class="chip-val">${activeTopicsCount}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Vault Items:</span><span class="chip-val">${words.length}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Edit Mode:</span><span class="chip-val" style="color: ${isEditMode ? '#22c55e' : '#ef4444'}; font-weight: 800;">${isEditMode ? 'ON (Hijau)' : 'OFF (Merah)'}</span></div>
     `;
     const rightHtml = `
       <button class="btn btn-secondary btn-sm" id="btn-blueprint-bottom-settings" style="height: 30px; font-size: 11px; padding: 0 10px; font-weight: 700; background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.4); color: #38bdf8; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Test System Settings">⚙️ Test Settings</button>
@@ -1650,11 +1720,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
           .sort((a, b) => (a.topicCode || '').localeCompare(b.topicCode || '', undefined, { numeric: true, sensitivity: 'base' }));
 
         if (topics.length > 0) {
-          filteredThemes.push({
-            code: th.code,
-            name: th.name,
-            topics: topics
-          });
+          filteredThemes.push({ code: th.code, name: th.name, topics });
           visibleTopicsCount += topics.length;
         }
       });
@@ -1662,12 +1728,13 @@ function _renderTopicBlueprintTab(area, words, topics) {
       // If level is empty or no topics match search
       if (filteredThemes.length === 0) {
         if (!q) {
+          const totalColspan = 8 + allOrderedProgs.length + 2;
           rowsHtml += `
             <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-              <td class="cell-level-group" style="text-align: center; vertical-align: middle; font-weight: 800; font-size: 11.5px; background: rgba(15, 23, 42, 0.95); border-right: 1px solid rgba(255,255,255,0.12); color: #38bdf8; padding: 14px 6px;">
+              <td class="cell-level-group" style="text-align: center; vertical-align: middle; font-weight: 800; font-size: 11px; background: rgba(15, 23, 42, 0.95); border-right: 1px solid rgba(255,255,255,0.12); color: #38bdf8; padding: 14px 6px;">
                 ${escapeHtml(lvlLabel)}
               </td>
-              <td colspan="9" style="text-align: center; padding: 16px 12px; color: #64748b; font-size: 11px; background: rgba(15, 23, 42, 0.4);">
+              <td colspan="${totalColspan - 1}" style="text-align: center; padding: 16px 12px; color: #64748b; font-size: 11px; background: rgba(15, 23, 42, 0.4);">
                 No topics registered for <strong>${escapeHtml(lvlLabel)} Level</strong> yet.
                 <span style="opacity: 0.8; margin-left: 6px;">(Ready for Excel import)</span>
               </td>
@@ -1682,35 +1749,69 @@ function _renderTopicBlueprintTab(area, words, topics) {
 
       filteredThemes.forEach((th, thIdx) => {
         const themeTotalRows = th.topics.length;
+        const thCode = String(th.code || '').trim().toUpperCase();
 
         th.topics.forEach((tp, tpIdx) => {
           const isFirstInLevel = (thIdx === 0 && tpIdx === 0);
           const isFirstInTheme = (tpIdx === 0);
 
           rowsHtml += `
-            <tr class="blueprint-table-row" data-level="${lvl}" data-theme="${escapeHtml(th.name)}" data-topic="${escapeHtml(tp.name)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
+            <tr class="blueprint-table-row" data-level="${lvl}" data-theme-code="${thCode}" data-topic="${escapeHtml(tp.name)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
               ${isFirstInLevel ? `
                 <td rowspan="${levelTotalRows}" class="cell-level-group" style="text-align: center; vertical-align: middle; font-weight: 800; font-size: 11.5px; background: rgba(15, 23, 42, 0.95); border-right: 1px solid rgba(255,255,255,0.12); color: #38bdf8; letter-spacing: 0.5px; padding: 6px;">
                   ${escapeHtml(lvlLabel)}
                 </td>
               ` : ''}
 
+              <td class="cell-code" style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 6px 4px; border-right: 1px solid rgba(255,255,255,0.06); font-size: 10.5px;">${escapeHtml(tp.topicCode || '—')}</td>
+
               ${isFirstInTheme ? `
-                <td rowspan="${themeTotalRows}" class="cell-theme-name" style="vertical-align: middle; font-weight: 700; font-size: 11px; background: rgba(30, 41, 59, 0.35); border-right: 1px solid rgba(255,255,255,0.1); color: #ffffff; padding: 6px 12px;">
+                <td rowspan="${themeTotalRows}" class="cell-theme-name" style="vertical-align: middle; font-weight: 700; font-size: 11px; background: rgba(30, 41, 59, 0.35); border-right: 1px solid rgba(255,255,255,0.1); color: #ffffff; padding: 6px 10px;">
                   ${escapeHtml(th.name || '—')}
                 </td>
               ` : ''}
 
-              <td class="cell-code" style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 6px 6px; border-right: 1px solid rgba(255,255,255,0.06);">${escapeHtml(tp.topicCode || '—')}</td>
-              <td style="color: #ffffff; font-weight: 600; padding: 6px 10px; border-right: 1px solid rgba(255,255,255,0.06);">${escapeHtml(tp.name)}</td>
-              <td style="text-align: center; padding: 6px 4px; border-right: 1px solid rgba(255,255,255,0.06);"><span style="background: rgba(0, 192, 0, 0.18); color: #86efac; font-size: 10px; font-weight: 700; padding: 1.5px 6px; border-radius: 3px; display: inline-block; min-width: 22px;">${tp.verbs}</span></td>
-              <td style="text-align: center; padding: 6px 4px; border-right: 1px solid rgba(255,255,255,0.06);"><span style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; font-size: 10px; font-weight: 700; padding: 1.5px 6px; border-radius: 3px; display: inline-block; min-width: 22px;">${tp.nouns}</span></td>
-              <td style="text-align: center; padding: 6px 4px; border-right: 1px solid rgba(255,255,255,0.06);"><span style="background: rgba(255, 255, 0, 0.18); color: #FFFF00; font-size: 10px; font-weight: 700; padding: 1.5px 6px; border-radius: 3px; display: inline-block; min-width: 22px;">${tp.adjs}</span></td>
-              <td style="text-align: center; padding: 6px 4px; border-right: 1px solid rgba(255,255,255,0.06);"><span style="background: rgba(168, 85, 247, 0.18); color: #c084fc; font-size: 10px; font-weight: 700; padding: 1.5px 6px; border-radius: 3px; display: inline-block; min-width: 22px;">${tp.phrases}</span></td>
-              <td style="text-align: center; font-weight: 800; color: #ffffff; padding: 6px 6px; border-right: 1px solid rgba(255,255,255,0.1);">${tp.totalCount}</td>
-              <td style="padding: 6px 8px; text-align: center; position: sticky; right: 0; background: #0f172a; border-left: 1px solid rgba(255, 255, 255, 0.1);">
-                <button class="btn-edit-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Rename Topic" style="background: transparent; border: none; cursor: pointer; color: #38bdf8; font-size: 11px; padding: 1px 3px;">✏️</button>
-                <button class="btn-del-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Delete Topic" style="background: transparent; border: none; cursor: pointer; color: #FF0000; font-size: 11px; padding: 1px 3px;">🗑️</button>
+              <td style="color: #f1f5f9; font-weight: 600; padding: 6px 10px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11px;">${escapeHtml(tp.name)}</td>
+
+              <!-- WORD Breakdown (4 columns) -->
+              <td style="text-align: center; padding: 6px 3px; border-right: 1px solid rgba(255,255,255,0.06);"><span style="background: rgba(0, 192, 0, 0.18); color: #86efac; font-size: 10px; font-weight: 700; padding: 1.5px 4px; border-radius: 3px; display: inline-block; min-width: 20px;">${tp.verbs || 0}</span></td>
+              <td style="text-align: center; padding: 6px 3px; border-right: 1px solid rgba(255,255,255,0.06);"><span style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; font-size: 10px; font-weight: 700; padding: 1.5px 4px; border-radius: 3px; display: inline-block; min-width: 20px;">${tp.nouns || 0}</span></td>
+              <td style="text-align: center; padding: 6px 3px; border-right: 1px solid rgba(255,255,255,0.06);"><span style="background: rgba(255, 255, 0, 0.18); color: #FFFF00; font-size: 10px; font-weight: 700; padding: 1.5px 4px; border-radius: 3px; display: inline-block; min-width: 20px;">${tp.adjs || 0}</span></td>
+              <td style="text-align: center; padding: 6px 3px; border-right: 1px solid rgba(255,255,255,0.1);"><span style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; font-size: 10px; font-weight: 700; padding: 1.5px 4px; border-radius: 3px; display: inline-block; min-width: 20px;">${tp.others || 0}</span></td>
+
+              <!-- PHRASE Breakdown (3 columns) -->
+              <td style="text-align: center; padding: 6px 3px; border-right: 1px solid rgba(255,255,255,0.06);"><span style="background: rgba(168, 85, 247, 0.18); color: #c084fc; font-size: 10px; font-weight: 700; padding: 1.5px 4px; border-radius: 3px; display: inline-block; min-width: 20px;">${tp.expressions || 0}</span></td>
+              <td style="text-align: center; padding: 6px 3px; border-right: 1px solid rgba(255,255,255,0.06);"><span style="background: rgba(244, 114, 182, 0.18); color: #f472b6; font-size: 10px; font-weight: 700; padding: 1.5px 4px; border-radius: 3px; display: inline-block; min-width: 20px;">${tp.idioms || 0}</span></td>
+              <td style="text-align: center; padding: 6px 3px; border-right: 1px solid rgba(255,255,255,0.1);"><span style="background: rgba(251, 191, 36, 0.18); color: #fbbf24; font-size: 10px; font-weight: 700; padding: 1.5px 4px; border-radius: 3px; display: inline-block; min-width: 20px;">${tp.proverbs || 0}</span></td>
+
+              <!-- Total (Words + Phrases) -->
+              <td style="text-align: center; font-weight: 800; color: #ffffff; padding: 6px 4px; border-right: 1px solid rgba(255,255,255,0.1); font-size: 11px;">${tp.totalCount}</td>
+
+              <!-- Multi-Tenant Program Assignment Cells -->
+              ${allOrderedProgs.map(p => {
+                const assignKey = `${thCode}_${lvl}_${p.id}`;
+                const isAssigned = assignSet.has(assignKey);
+                return `
+                  <td class="cell-program-assignment ${isEditMode ? 'editable' : 'locked'}" 
+                      data-level="${lvl}" 
+                      data-theme-code="${thCode}" 
+                      data-program-id="${p.id}" 
+                      data-program-name="${escapeHtml(p.name)}" 
+                      data-assigned="${isAssigned ? 'true' : 'false'}" 
+                      style="text-align: center; padding: 6px 4px; border-right: 1px solid rgba(255,255,255,0.06); cursor: ${isEditMode ? 'pointer' : 'default'};">
+                    ${isAssigned 
+                      ? '<span class="badge-theme-assigned">yes</span>' 
+                      : '<span class="badge-theme-unassigned">—</span>'}
+                  </td>
+                `;
+              }).join('')}
+
+              <!-- EDIT MODE Actions (RENAME & DELETE) -->
+              <td style="padding: 6px 4px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">
+                <button type="button" class="btn-edit-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Rename Topic" ${!isEditMode ? 'disabled style="background:transparent;border:none;opacity:0.25;cursor:not-allowed;"' : 'style="background:transparent;border:none;opacity:1;cursor:pointer;color:#38bdf8;font-size:12px;padding:1px 3px;"'}>✏️</button>
+              </td>
+              <td style="padding: 6px 4px; text-align: center; position: sticky; right: 0; background: #0f172a; border-left: 1px solid rgba(255, 255, 255, 0.1);">
+                <button type="button" class="btn-del-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Delete Topic" ${!isEditMode ? 'disabled style="background:transparent;border:none;opacity:0.25;cursor:not-allowed;"' : 'style="background:transparent;border:none;opacity:1;cursor:pointer;color:#FF0000;font-size:12px;padding:1px 3px;"'}>🗑️</button>
               </td>
             </tr>
           `;
@@ -1753,21 +1854,64 @@ function _renderTopicBlueprintTab(area, words, topics) {
         </div>
       </div>
 
-      <!-- 📊 OPSI B: Multi-Level Cascading Rowspan Matrix -->
-      <div class="table-wrap sticky-first" style="flex: 1; overflow-y: auto; min-height: 0; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
-        <table id="blueprint-matrix-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
+      <!-- 📊 Two-Tier Multi-Tenant Topic Blueprint Matrix -->
+      <div class="table-wrap sticky-first" style="flex: 1; overflow-y: auto; overflow-x: auto; min-height: 0; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+        <table id="blueprint-matrix-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 11px;">
           <thead style="background: #1e293b; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid rgba(255, 255, 255, 0.12);">
+            <!-- Tier 1: Main Category Groups -->
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+              <th rowspan="2" style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">LEVEL</th>
+              <th rowspan="2" style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">code</th>
+              <th rowspan="2" style="padding: 8px 10px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 130px; border-right: 1px solid rgba(255,255,255,0.1);">Theme Name</th>
+              <th rowspan="2" style="padding: 8px 10px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 150px; border-right: 1px solid rgba(255,255,255,0.08);">Topic</th>
+              
+              <!-- WORD Group Header (4 columns) -->
+              <th colspan="4" style="padding: 6px 4px; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.15); text-transform: uppercase; font-size: 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">WORD</th>
+              
+              <!-- PHRASE Group Header (3 columns) -->
+              <th colspan="3" style="padding: 6px 4px; font-weight: 800; color: #c084fc; background: rgba(168, 85, 247, 0.15); text-transform: uppercase; font-size: 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">PHRASE</th>
+              
+              <th rowspan="2" style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 50px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">Total</th>
+              
+              <!-- Program Groups by Institution -->
+              ${instProgGroups.map(g => {
+                const isTop = (g.inst.code || g.inst.name).toUpperCase().includes('TOP');
+                const bg = isTop ? 'rgba(99, 102, 241, 0.25)' : 'rgba(14, 165, 233, 0.25)';
+                const color = isTop ? '#a5b4fc' : '#38bdf8';
+                return `<th colspan="${g.programs.length}" style="padding: 6px 6px; font-weight: 800; color: ${color}; background: ${bg}; text-transform: uppercase; font-size: 10.5px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">${escapeHtml(g.inst.code || g.inst.name)}</th>`;
+              }).join('')}
+
+              <!-- EDIT MODE Group Header with ON/OFF Toggle -->
+              <th colspan="2" style="padding: 6px 8px; font-weight: 800; text-align: center; position: sticky; right: 0; background: #1e293b; border-left: 1px solid rgba(255, 255, 255, 0.12); z-index: 12;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                  <span style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">EDIT MODE</span>
+                  <button type="button" id="blueprint-edit-mode-toggle" class="btn-edit-mode-toggle ${isEditMode ? 'mode-on' : 'mode-off'}" style="padding: 2px 8px; font-size: 9.5px; font-weight: 800; border-radius: 12px; cursor: pointer; transition: all 0.2s ease; border: 1px solid ${isEditMode ? '#22c55e' : '#ef4444'}; background: ${isEditMode ? '#16a34a' : '#dc2626'}; color: #ffffff;" title="Edit mode on (hijau) / off (merah)">${isEditMode ? 'ON' : 'OFF'}</button>
+                </div>
+              </th>
+            </tr>
+
+            <!-- Tier 2: Sub-headers -->
             <tr>
-              <th style="padding: 8px 10px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10.5px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">LEVEL</th>
-              <th style="padding: 8px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10.5px; min-width: 140px; border-right: 1px solid rgba(255,255,255,0.1);">THEME</th>
-              <th style="padding: 8px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10.5px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">CODE</th>
-              <th style="padding: 8px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10.5px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08);">TOPIC</th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10.5px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">VERB</th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10.5px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">NOUN</th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10.5px; width: 60px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">ADJECTIVE</th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10.5px; width: 60px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">PHRASE</th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10.5px; width: 60px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">TOTAL</th>
-              <th style="padding: 8px 10px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10.5px; text-align: center; width: 80px; position: sticky; right: 0; background: #1e293b; border-left: 1px solid rgba(255, 255, 255, 0.1);">ACTION</th>
+              <!-- WORD Sub-headers -->
+              <th style="padding: 6px 4px; font-weight: 700; color: #86efac; font-size: 9px; width: 42px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06); background: rgba(0, 192, 0, 0.08);">VERB</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: #38bdf8; font-size: 9px; width: 42px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06); background: rgba(56, 189, 248, 0.08);">NOUN</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: #FFFF00; font-size: 9px; width: 42px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06); background: rgba(255, 255, 0, 0.08);">ADJECTIVE</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: #cbd5e1; font-size: 9px; width: 42px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1); background: rgba(148, 163, 184, 0.08);">OTHER</th>
+
+              <!-- PHRASE Sub-headers -->
+              <th style="padding: 6px 4px; font-weight: 700; color: #c084fc; font-size: 9px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06); background: rgba(168, 85, 247, 0.08);">Expression</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: #f472b6; font-size: 9px; width: 45px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06); background: rgba(244, 114, 182, 0.08);">Idiom</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: #fbbf24; font-size: 9px; width: 45px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1); background: rgba(251, 191, 36, 0.08);">Proverb</th>
+
+              <!-- Program Sub-headers -->
+              ${allOrderedProgs.map(p => {
+                const shortProgName = p.name.replace(' Persada', '');
+                return `<th style="padding: 6px 4px; font-weight: 700; color: #e2e8f0; font-size: 9.5px; min-width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">${escapeHtml(shortProgName)}</th>`;
+              }).join('')}
+
+              <!-- EDIT MODE Sub-headers -->
+              <th style="padding: 6px 4px; font-weight: 700; color: #38bdf8; font-size: 9px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">RENAME</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: #f87171; font-size: 9px; width: 48px; text-align: center; position: sticky; right: 0; background: #1e293b; border-left: 1px solid rgba(255,255,255,0.1);">DELETE</th>
             </tr>
           </thead>
           <tbody id="blueprint-matrix-tbody">
@@ -1781,9 +1925,61 @@ function _renderTopicBlueprintTab(area, words, topics) {
 
   // 4. Wire Action Handlers
   const bindRowActionHandlers = () => {
+    // Program Assignment Cell Clicks
+    area.querySelectorAll('.cell-program-assignment').forEach(cell => {
+      cell.onclick = async (e) => {
+        const cellProg = e.currentTarget;
+        if (!window._blueprintEditMode) {
+          showToast('Aktifkan EDIT MODE (On) di kanan atas tabel untuk mengubah penugasan tema', 'warning');
+          return;
+        }
+
+        const lvl = cellProg.getAttribute('data-level');
+        const thCode = cellProg.getAttribute('data-theme-code');
+        const progId = cellProg.getAttribute('data-program-id');
+        const progName = cellProg.getAttribute('data-program-name');
+        const isCurrentlyAssigned = (cellProg.getAttribute('data-assigned') === 'true');
+        const newAssigned = !isCurrentlyAssigned;
+
+        // Immediate visual update across all rows sharing this theme and level
+        const siblingCells = area.querySelectorAll(`.cell-program-assignment[data-level="${lvl}"][data-theme-code="${thCode}"][data-program-id="${progId}"]`);
+        siblingCells.forEach(sc => {
+          sc.setAttribute('data-assigned', newAssigned ? 'true' : 'false');
+          sc.innerHTML = newAssigned 
+            ? '<span class="badge-theme-assigned">yes</span>' 
+            : '<span class="badge-theme-unassigned">—</span>';
+        });
+
+        // Update local assignSet
+        const assignKey = `${thCode}_${lvl}_${progId}`;
+        if (newAssigned) assignSet.add(assignKey);
+        else assignSet.delete(assignKey);
+
+        try {
+          await toggleThemeProgramAssignment({ themeCode: thCode, targetLevel: lvl, programId: progId, assign: newAssigned });
+          showToast(`Tema ${thCode} (Level ${lvl}) ${newAssigned ? 'di-assign ke ' + progName : 'dilepas dari ' + progName}`, 'success');
+        } catch (err) {
+          // Revert on error
+          siblingCells.forEach(sc => {
+            sc.setAttribute('data-assigned', isCurrentlyAssigned ? 'true' : 'false');
+            sc.innerHTML = isCurrentlyAssigned 
+              ? '<span class="badge-theme-assigned">yes</span>' 
+              : '<span class="badge-theme-unassigned">—</span>';
+          });
+          if (isCurrentlyAssigned) assignSet.add(assignKey);
+          else assignSet.delete(assignKey);
+          showToast('Gagal mengubah penugasan: ' + err.message, 'error');
+        }
+      };
+    });
+
     // Rename Topic
     area.querySelectorAll('.btn-edit-topic-mini').forEach(btn => {
       btn.onclick = async (e) => {
+        if (!window._blueprintEditMode) {
+          showToast('Aktifkan EDIT MODE (On) untuk mengubah nama topik', 'warning');
+          return;
+        }
         const oldTopic = e.currentTarget.getAttribute('data-topic');
         const newTopic = prompt(`Rename topic "${oldTopic}" to:`, oldTopic);
         if (!newTopic || newTopic.trim() === '' || newTopic === oldTopic) return;
@@ -1806,6 +2002,10 @@ function _renderTopicBlueprintTab(area, words, topics) {
     // Delete Topic
     area.querySelectorAll('.btn-del-topic-mini').forEach(btn => {
       btn.onclick = async (e) => {
+        if (!window._blueprintEditMode) {
+          showToast('Aktifkan EDIT MODE (On) untuk menghapus topik', 'warning');
+          return;
+        }
         const topic = e.currentTarget.getAttribute('data-topic');
         if (!confirm(`Delete topic "${topic}" and all its vocabulary items from Vault?`)) return;
         try {
@@ -1828,6 +2028,57 @@ function _renderTopicBlueprintTab(area, words, topics) {
   };
 
   bindRowActionHandlers();
+
+  // EDIT MODE Toggle Button Wire
+  const editModeToggleBtn = document.getElementById('blueprint-edit-mode-toggle');
+  if (editModeToggleBtn) {
+    editModeToggleBtn.onclick = (e) => {
+      e.stopPropagation();
+      window._blueprintEditMode = !window._blueprintEditMode;
+      isEditMode = window._blueprintEditMode;
+      try {
+        sessionStorage.setItem('topscore_blueprint_edit_mode', isEditMode ? '1' : '0');
+      } catch (_) {}
+
+      // Update toggle button appearance
+      editModeToggleBtn.className = `btn-edit-mode-toggle ${isEditMode ? 'mode-on' : 'mode-off'}`;
+      editModeToggleBtn.style.background = isEditMode ? '#16a34a' : '#dc2626';
+      editModeToggleBtn.style.borderColor = isEditMode ? '#22c55e' : '#ef4444';
+      editModeToggleBtn.textContent = isEditMode ? 'ON' : 'OFF';
+
+      // Update interactive program cells
+      area.querySelectorAll('.cell-program-assignment').forEach(cell => {
+        cell.className = `cell-program-assignment ${isEditMode ? 'editable' : 'locked'}`;
+        cell.style.cursor = isEditMode ? 'pointer' : 'default';
+      });
+
+      // Update action buttons (RENAME & DELETE)
+      area.querySelectorAll('.btn-edit-topic-mini').forEach(btn => {
+        btn.disabled = !isEditMode;
+        btn.style.opacity = isEditMode ? '1' : '0.25';
+        btn.style.cursor = isEditMode ? 'pointer' : 'not-allowed';
+      });
+      area.querySelectorAll('.btn-del-topic-mini').forEach(btn => {
+        btn.disabled = !isEditMode;
+        btn.style.opacity = isEditMode ? '1' : '0.25';
+        btn.style.cursor = isEditMode ? 'pointer' : 'not-allowed';
+      });
+
+      // Update bottom infobar indicator
+      const infoModeEl = document.querySelector('.bottom-info-chip:last-child .chip-val');
+      if (infoModeEl) {
+        infoModeEl.style.color = isEditMode ? '#22c55e' : '#ef4444';
+        infoModeEl.textContent = isEditMode ? 'ON (Hijau)' : 'OFF (Merah)';
+      }
+
+      showToast(
+        isEditMode 
+          ? 'EDIT MODE diaktifkan (Hijau). Klik sel program untuk toggle status tema, atau klik ✏️ / 🗑️.' 
+          : 'EDIT MODE dinonaktifkan (Merah). Tabel terkunci / mode aman.',
+        isEditMode ? 'success' : 'info'
+      );
+    };
+  }
 
   // Bottom Buttons: Test System Settings
   const btnSettingsBottom = document.getElementById('btn-blueprint-bottom-settings');
@@ -1897,7 +2148,7 @@ function _renderTopicBlueprintTab(area, words, topics) {
     btn.addEventListener('click', (e) => {
       const targetLvl = e.currentTarget.getAttribute('data-lvl');
       window._blueprintSelectedLevel = targetLvl;
-      _renderTopicBlueprintTab(area, words, topics);
+      _renderTopicBlueprintTab(area, words, topics, meta);
     });
   });
 

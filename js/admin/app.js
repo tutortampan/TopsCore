@@ -1802,23 +1802,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                         <button type="button" class="attendance-theme-pill theme-c ${window._classAttendanceThemeFilter === 'C' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('C')" data-theme="C">🟧 THEME C (12)</button>
                         <button type="button" class="attendance-theme-pill theme-d ${window._classAttendanceThemeFilter === 'D' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('D')" data-theme="D">🟩 THEME D (10)</button>
                       </div>
-
-                      <div class="attendance-view-mode-pills" id="attendance-view-mode-container" style="display:flex; align-items:center; gap:4px; border-left:1px solid rgba(255,255,255,0.12); padding-left:8px;">
-                        <span style="font-size:0.68rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.03em;">DISPLAY:</span>
-                        <button type="button" class="attendance-theme-pill mode-fit ${(!window._attendanceViewMode || window._attendanceViewMode === 'fit') ? 'active' : ''}" onclick="window._toggleAttendanceViewMode('fit')" title="Scale tests to fit comfortably on screen" data-mode="fit">🔍 FIT SCREEN</button>
-                        <button type="button" class="attendance-theme-pill mode-scroll ${window._attendanceViewMode === 'scroll' ? 'active' : ''}" onclick="window._toggleAttendanceViewMode('scroll')" title="100% full scale with smooth horizontal scroll and mouse wheel" data-mode="scroll">↔️ 100% SCROLL</button>
-                      </div>
-
-                      <div id="attendance-pan-controls" style="display:${window._attendanceViewMode === 'scroll' ? 'inline-flex' : 'none'}; align-items:center; gap:4px;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="window._panAttendanceMatrix(-400)" title="Pan Left" style="padding:2px 8px; font-size:0.75rem; height:24px; line-height:1;">◀</button>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="window._panAttendanceMatrix(400)" title="Pan Right" style="padding:2px 8px; font-size:0.75rem; height:24px; line-height:1;">▶</button>
-                      </div>
                     </div>
 
                     <div style="display:flex; align-items:center; gap:10px; font-size:0.68rem; color:#94a3b8;">
-                      <button type="button" class="btn btn-secondary btn-sm" onclick="window._toggleFullWidthMatrix()" id="matrix-fullwidth-btn" title="Toggle Sidebar for maximum table width" style="padding:2px 8px; font-size:0.72rem; height:24px; line-height:1; display:inline-flex; align-items:center; gap:4px;">
-                        <span>⇱</span> <span id="matrix-fullwidth-text">Full Width</span>
-                      </button>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FFFF00; font-weight:800;">WRD</span> Word</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#00FFFF; font-weight:800;">PHR</span> Phrase</span>
                       <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">PTS</span> Points</span>
@@ -1954,13 +1940,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   return `
                     <div class="pass-pct-cell-wrap" style="display:flex; align-items:center; justify-content:center; gap:2px;">
                       <span style="font-size:0.68rem; color:${isExamTest ? '#f472b6' : '#eab308'}; font-weight:800;" title="${isExamTest ? 'Exam Passing Threshold' : 'Task Passing Threshold'}">🎯</span>
-                      <input type="number" 
-                             class="input-test-pass-score" 
-                             data-test-id="${testId}" 
+                      <input type="number"
+                             class="input-test-pass-score"
+                             data-test-id="${testId}"
                              data-shell-code="${escapeHtml(row.shellCode || row.title)}"
-                             data-original-val="${currentMin}" 
-                             value="${currentMin}" 
-                             min="1" max="100" 
+                             data-original-val="${currentMin}"
+                             value="${currentMin}"
+                             min="1" max="100"
                              title="Ketik angka persentase kelulusan manual (Enter / Blur untuk simpan)"
                              style="width:46px; height:22px; padding:0 2px; font-size:0.75rem; font-weight:700; text-align:center; background:#1e293b; border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#f8fafc;" />
                       <span style="font-size:0.68rem; color:#94a3b8; font-weight:700;">%</span>
@@ -2190,7 +2176,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             const valNum = Number(valStr);
             const clampedPct = Math.max(0, Math.min(100, isNaN(valNum) ? 0 : valNum));
             const calcPts = Math.round(totalQ * (clampedPct / 100) * 10) / 10;
-            
+
             window._manualInputState.drafts[studentId][testId] = {
               score: clampedPct,
               pts: calcPts,
@@ -2217,7 +2203,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             const valNum = Number(valStr);
             const clampedPts = Math.max(0, Math.min(totalQ, isNaN(valNum) ? 0 : valNum));
             const calcScore = totalQ > 0 ? Math.round((clampedPts / totalQ) * 100) : 0;
-            
+
             window._manualInputState.drafts[studentId][testId] = {
               score: calcScore,
               pts: clampedPts,
@@ -2234,7 +2220,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
           window.saveRowManualInput = async (studentId, testId, totalQ) => {
             const studentDraft = window._manualInputState.drafts[studentId] || {};
             let dirtyTestIds = Object.keys(studentDraft).filter(tId => studentDraft[tId]?.isDirty);
-            
+
             if (testId && !dirtyTestIds.includes(testId)) {
               const scoreInput = document.querySelector(`.input-matrix-exam-score-${studentId}-${testId}`);
               const ptsInput = document.querySelector(`.input-matrix-exam-pts-${studentId}-${testId}`);
@@ -2300,7 +2286,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
               }
               setTimeout(() => {
-                const selector = testId 
+                const selector = testId
                   ? `.input-matrix-exam-score-${studentId}-${testId}`
                   : `.input-matrix-exam-score[data-student-id="${studentId}"]`;
                 const firstInput = document.querySelector(selector);
@@ -3551,50 +3537,32 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             const count = rows.length || 25;
             const headerHeight = 44; // super-header (~20px) + column header (~22px)
             const footerHeight = 26; // summary row (~26px)
-            const isScrollMode = (window._attendanceViewMode === 'scroll');
-            const scrollbarHeight = isScrollMode ? 14 : 0;
-            const rowHeight = Math.max(16, (availHeight - headerHeight - footerHeight - scrollbarHeight) / count);
+            const scrollbarHeight = 14;
+            const rowHeight = Math.max(22, (availHeight - headerHeight - footerHeight - scrollbarHeight) / count);
 
             grid.style.setProperty('--matrix-row-height', `${rowHeight.toFixed(2)}px`);
 
-            // Anti-crowding: optimize font size and cell padding for Fit Screen mode
-            const fontSize = Math.min(10.0, Math.max(7.5, rowHeight * 0.35));
-            const badgeFont = Math.min(8.5, Math.max(6.5, rowHeight * 0.28));
-            const padY = Math.max(0, Math.min(2, Math.floor((rowHeight - 16) / 4)));
+            // Optimal font size and cell padding for clean, readable horizontal scroll mode
+            const fontSize = Math.min(11.0, Math.max(8.5, rowHeight * 0.38));
+            const badgeFont = Math.min(9.5, Math.max(7.5, rowHeight * 0.32));
+            const padY = Math.max(1, Math.min(4, Math.floor((rowHeight - 16) / 4)));
 
             grid.style.setProperty('--matrix-font-size', `${fontSize.toFixed(1)}px`);
             grid.style.setProperty('--matrix-badge-font', `${badgeFont.toFixed(1)}px`);
-            grid.style.setProperty('--matrix-cell-padding', `${padY}px 2px`);
+            grid.style.setProperty('--matrix-cell-padding', `${padY}px 4px`);
 
-            // Apply fit-to-screen zoom or standard scrollable layout
+            // Clean standard scrollable layout (no forced zoom shrinking)
             const wrap = grid.querySelector('.table-wrap');
             const tbl = wrap?.querySelector('table.datagrid-table');
             if (wrap && tbl) {
-              const currentFilter = window._classAttendanceThemeFilter || 'ALL';
-              const isFitMode = (!window._attendanceViewMode || window._attendanceViewMode === 'fit');
+              wrap.style.overflowX = 'auto';
+              tbl.style.zoom = '1';
 
-              if (isFitMode && currentFilter === 'ALL') {
-                wrap.style.overflowX = 'hidden';
-                tbl.style.zoom = '1';
-                const naturalWidth = tbl.scrollWidth || 2688;
-                const containerWidth = wrap.clientWidth || 1650;
-                if (naturalWidth > containerWidth) {
-                  const zoomRatio = (containerWidth / naturalWidth).toFixed(4);
-                  tbl.style.zoom = String(zoomRatio);
-                } else {
-                  tbl.style.zoom = '1';
-                }
-              } else {
-                wrap.style.overflowX = 'auto';
-                tbl.style.zoom = '1';
-              }
-
-              // Attach mouse wheel horizontal scroll in scroll mode
+              // Attach mouse wheel horizontal scroll
               if (!wrap._wheelAttached) {
                 wrap._wheelAttached = true;
                 wrap.addEventListener('wheel', (e) => {
-                  const isScroll = (window._attendanceViewMode === 'scroll') || (window._classAttendanceThemeFilter && window._classAttendanceThemeFilter !== 'ALL');
-                  if (isScroll && e.deltaY !== 0 && wrap.scrollWidth > wrap.clientWidth) {
+                  if (e.deltaY !== 0 && wrap.scrollWidth > wrap.clientWidth) {
                     e.preventDefault();
                     wrap.scrollLeft += e.deltaY * 1.5;
                   }
@@ -3607,41 +3575,6 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             renderAttendanceGridMatrix(targetTheme);
           };
 
-          window._toggleAttendanceViewMode = (mode) => {
-            window._attendanceViewMode = mode;
-            try { localStorage.setItem('topscore_attendance_view_mode', mode); } catch(e) {}
-            const container = document.getElementById('attendance-view-mode-container');
-            if (container) {
-              container.querySelectorAll('.attendance-theme-pill').forEach(b => {
-                b.classList.toggle('active', (b.dataset.mode || 'fit') === mode);
-              });
-            }
-            const panControls = document.getElementById('attendance-pan-controls');
-            if (panControls) {
-              panControls.style.display = (mode === 'scroll') ? 'inline-flex' : 'none';
-            }
-            fitMatrixToScreen();
-          };
-
-          window._panAttendanceMatrix = (offset) => {
-            const wrap = document.querySelector('#class-attendance-grid .table-wrap');
-            if (wrap) {
-              wrap.scrollBy({ left: offset, behavior: 'smooth' });
-            }
-          };
-
-          window._toggleFullWidthMatrix = () => {
-            document.body.classList.toggle('sidebar-collapsed');
-            const isCollapsed = document.body.classList.contains('sidebar-collapsed');
-            const btnText = document.getElementById('matrix-fullwidth-text');
-            if (btnText) btnText.textContent = isCollapsed ? 'Normal Width' : 'Full Width';
-            setTimeout(fitMatrixToScreen, 150);
-          };
-
-          // Mount initial grid view with stored view mode (default: fit)
-          if (!window._attendanceViewMode) {
-            try { window._attendanceViewMode = localStorage.getItem('topscore_attendance_view_mode') || 'fit'; } catch(e) { window._attendanceViewMode = 'fit'; }
-          }
           renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
 
           if (window._attendanceResizeHandler) {

@@ -2123,7 +2123,7 @@ textarea.form-control {
   letter-spacing: 0.04em;
 }
 
-.test-status.published  { background: rgba(var(--grade-star-rgb), 0.12); color: var(--fm-accent-pitch);    border: 1px solid rgba(var(--grade-star-rgb), 0.3); }
+.test-status.published  { background: rgba(0, 192, 0, 0.12); color: var(--fm-accent-pitch);    border: 1px solid rgba(0, 192, 0, 0.35); }
 .test-status.draft      { background: rgba(var(--grade-d-rgb), 0.12); color: var(--fm-accent-amber);    border: 1px solid rgba(var(--grade-d-rgb), 0.3); }
 .test-status.unpublished{ background: rgba(100, 116, 139, 0.1); color: var(--fm-text-muted);      border: 1px solid rgba(100, 116, 139, 0.2); }
 .test-status.archived   { background: rgba(var(--grade-e-rgb), 0.1);   color: var(--fm-accent-crimson);  border: 1px solid rgba(var(--grade-e-rgb), 0.2); }
@@ -2948,7 +2948,7 @@ tr.deleted-row td {
   text-transform: uppercase;
 }
 
-.badge-success  { background: rgba(var(--grade-star-rgb), 0.12); color: var(--clr-success); border: 1px solid rgba(var(--grade-star-rgb), 0.3); }
+.badge-success  { background: rgba(0, 192, 0, 0.15) !important; color: #00c000ff !important; border: 1px solid rgba(0, 192, 0, 0.35) !important; font-weight: 700; }
 .badge-warning  { background: rgba(var(--grade-d-rgb), 0.12);  color: var(--clr-warning); border: 1px solid rgba(var(--grade-d-rgb), 0.3); }
 .badge-muted    { background: rgba(255,255,255,0.06); color: var(--clr-text-3); border: 1px solid var(--clr-border); }
 .badge-danger   { background: rgba(var(--grade-e-rgb), 0.12);   color: var(--clr-danger); border: 1px solid rgba(var(--grade-e-rgb), 0.3); }
@@ -3209,9 +3209,10 @@ tr.deleted-row td {
 }
 
 .badge-tag-ongoing {
-  background: rgba(var(--grade-star-rgb), 0.15);
-  color: var(--clr-success);
-  border: 1px solid rgba(var(--grade-star-rgb), 0.3);
+  background: rgba(0, 192, 0, 0.15) !important;
+  color: #00c000ff !important;
+  border: 1px solid rgba(0, 192, 0, 0.35) !important;
+  font-weight: 700;
 }
 
 .badge-tag-upcoming {
@@ -3733,19 +3734,6 @@ body.sidebar-collapsed .admin-main {
   max-width: 100vw !important;
 }
 
-.attendance-theme-pill.mode-fit.active {
-  background: rgba(var(--grade-star-rgb), 0.25) !important;
-  border-color: var(--grade-star) !important;
-  color: #86efac !important;
-  box-shadow: 0 0 8px var(--grade-star-glow) !important;
-}
-
-.attendance-theme-pill.mode-scroll.active {
-  background: rgba(56, 189, 248, 0.25) !important;
-  border-color: #38bdf8 !important;
-  color: #38bdf8 !important;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4) !important;
-}
 
 #class-attendance-grid table.datagrid-table {
   table-layout: fixed !important;
@@ -5836,6 +5824,60 @@ tfoot.datagrid-tfoot,
 #blueprint-matrix-table tr.blueprint-table-row:hover td.cell-theme-code,
 #blueprint-matrix-table tr.blueprint-table-row:hover td.cell-theme-name {
   background: rgba(30, 41, 59, 0.65) !important;
+}
+
+/* Phase 366: Topic Blueprint Two-Tier Matrix & Multi-Tenant Program Assignment */
+.btn-edit-mode-toggle {
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+.btn-edit-mode-toggle.mode-off {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border: 1px solid #ef4444 !important;
+  box-shadow: 0 1px 4px rgba(220, 38, 38, 0.35);
+}
+.btn-edit-mode-toggle.mode-off:hover {
+  background: #b91c1c !important;
+}
+.btn-edit-mode-toggle.mode-on {
+  background: #16a34a !important;
+  color: #ffffff !important;
+  border: 1px solid #22c55e !important;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+}
+.btn-edit-mode-toggle.mode-on:hover {
+  background: #15803d !important;
+}
+.cell-program-assignment {
+  user-select: none;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.cell-program-assignment.editable:hover {
+  background: rgba(59, 130, 246, 0.2) !important;
+}
+.cell-program-assignment.editable:active {
+  transform: scale(0.96);
+}
+.badge-theme-assigned {
+  display: inline-block;
+  background: rgba(34, 197, 94, 0.18);
+  color: #22c55e;
+  border: 1px solid #22c55e;
+  padding: 1.5px 8px;
+  border-radius: 4px;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.25);
+}
+.badge-theme-unassigned {
+  color: #64748b;
+  font-weight: 600;
+  font-size: 11px;
 }
 
 /* Phase 305: Forgiven & Manual Override Superscripts */

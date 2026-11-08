@@ -1,48 +1,44 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-08 23:40 UTC+8
-Current Phase: Phase 365: Anti-Cheat Hardening, 5s Countdown, Dual-Defense & Test Room Layout Invariant (v165) [COMPLETE]
+Last Updated: 2026-11-09 06:48 UTC+8
+Current Phase: Phase 367: Institution Tab Header Naming, Full-Green Active Badges & Grade-Score Toolbar Streamlining (v167) [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Screen Area Covered / Split-Screen (25%–100%) Detection (`js/test.js`)**:
-   - Implemented dynamic display area tracking using `visualViewport` and window dimensions.
-   - Triggers `Screen Area Covered / Split-Screen Detected (X% reduction)` whenever visible area or height/width shrinks by 25% or more.
-   - Monitors `window.resize`, `visualViewport.resize`, `visibilitychange`, and `focus`.
+1. **Institution Dynamic Topbar Tabs (`js/admin/curriculum-management.js`)**:
+   - Fixed mapping in `institutionTabs` where `tab.label` was previously set to generic strings `"Program"` / `"Programs"`, causing topbar tabs to render as `"Program (1)"` and `"Programs (2)"`.
+   - Updated to assign `label: inst.name` and `title: inst.name`, correctly rendering the institution's true identity (e.g. `TOP (1)`, `CEC (2)`).
 
-2. **Strict 5-Second Warning Countdown (`js/test.js`)**:
-   - Auto-submit countdown on the red warning screen is strictly 5 seconds (`durationSeconds = 5`).
-   - If countdown reaches 0 before the student resumes fullscreen, the test auto-submits.
+2. **Full-Green Active Status & Batch Badges (`css/style.css`, `css/admin.css`, `js/admin/curriculum-management.js`)**:
+   - Diagnosed root cause of pink borders on green badges: `--grade-star-rgb: 255, 45, 135` (Hot Pink) was inherited by `.badge-tag-ongoing`, `.badge-success`, `.btn-success`, and `${progBatches.length} Batches`.
+   - Defined authoritative CSS variables `--clr-success-rgb: 0, 192, 0;` and `--clr-success-glow: rgba(0, 192, 0, 0.4);` in `css/style.css`.
+   - Refactored `.badge-tag-ongoing`, `.badge-success`, `.btn-success`, `.toast-success`, and inline program batch badges to pure green (`#00c000ff` / `rgba(0, 192, 0, 0.15)` background / `1px solid rgba(0, 192, 0, 0.35)` border) with zero pink bleed.
 
-3. **Dual-Defense Anti-Cheat Against OS Timer Suspension (`js/test.js`)**:
-   - Added `_focusLostTimestamp` delta tracking: if student leaves the screen for $\ge 3$ seconds, on wake-up/return the cheat alert triggers even if Android OS suspended JavaScript `setTimeout` execution.
-   - Removed mobile blur bypass and input-focus guard that previously suppressed blur events during active tests.
+3. **Grade & Score Toolbar Cleanup & Natural Scroll Layout (`js/admin/app.js`, `css/admin.css`)**:
+   - Removed unnecessary display controls from Grade & Score matrix toolbar:
+     - Removed `attendance-view-mode-container` (`DISPLAY: [🔍 FIT SCREEN] [-- 100% SCROLL]`).
+     - Removed `attendance-pan-controls` (`[◀]` and `[▶]` buttons).
+     - Removed `matrix-fullwidth-btn` (`[⤢ Full Width]` toggle).
+   - Standardized table layout on clean, uncompressed natural horizontal scroll (`wrap.style.overflowX = 'auto'`, `tbl.style.zoom = '1'`) with smooth mouse-wheel horizontal panning and comfortable row heights/font sizes.
+   - Preserved theme filter pills (`THEME VIEW: ALL (EXAMS ONLY), THEME A, THEME B, THEME C, THEME D`) and complete score legend (`WRD`, `PHR`, `PTS`, `SCORE %`, `ᴿ`, `★`).
 
-4. **DOM Appending Order & 3:1:3:3 Geometric Ratio (`js/test.js`, `css/test.css`)**:
-   - Enforced strict DOM appending order across all test modes (Written, Spoken, MCQ, Chips):
-     `Metadata Table (Top, Flex 1)` -> `Question Box (Flex 3)` -> `Answer Area (Flex 3 or 6)` -> `Control Area (Flex 3)`.
-   - Verified 1:1 parity and golden invariant ratios with 100% automated test pass.
-
-5. **Universal Netlify Badge Blocker & Runtime Purge (`css/test.css`, `js/test.js`)**:
-   - Added universal CSS rule hiding and destroying Netlify injected badges and drawers.
-   - Added `purgeExternalBadges()` and `MutationObserver` in `js/test.js` to ensure the bottom ad banner is completely visible and left-aligned.
-
-6. **Universal Cache & Version Harmonization (`sw.js`, `test.html`)**:
-   - Cache bumped to `topscore-cache-option-a-v92`.
-   - Query version bumped to `?v=20261108_v165`.
+4. **Universal Cache & Asset Harmonization (`sw.js`, `admin.html`)**:
+   - Service Worker cache bumped to `topscore-cache-option-a-v94`.
+   - Asset query string bumped to `?v=20261109_v167` in `admin.html`.
 
 ## Verification Results:
-- `node scripts/test_anti_cheat_and_layout_v165.mjs` -> PASS (14/14 tests passed 100%)
-- `node scripts/test_unified_test_room_ratios.mjs` -> PASS (100% parity across all test room modes)
-- `node scripts/test_bottom_banner_universal.mjs` -> PASS (Universal bottom banner validated)
-- `node -c js/test.js` & `node -c sw.js` -> PASS (Clean syntax validation)
+- `node scripts/test_ui_tab_badges_and_grade_score_v167.mjs` -> PASS (28/28 assertions passed 100%)
+- `node scripts/test_multi_program_theme_blueprint_v166.mjs` -> PASS (29/29 assertions passed 100%)
+- `node scripts/test_tenant_isolation_batch134_vs_evnikom.mjs` -> PASS (57/57 multi-tenant assertions passed 100%)
+- `node --check` across modified JavaScript files -> PASS (0 syntax errors)
 
 ## Current Architecture
 - Static HTML5 / CSS3 / Modular ES6 JavaScript frontend.
 - Supabase PostgreSQL + Auth + Storage + Edge Functions backend.
+- Multi-Program theme-level authorization via `theme_program_assignments` table.
 - Single Source of Truth grading and distractor matching in `js/grading.js`.
-- Strict 3:1:3:3 and 3:1:6 geometric layout ratios enforced across test modes.
-- Dual-Defense proctoring engine with split-screen detection and 5-second countdown.
+- Streamlined Grade & Score matrix with natural horizontal scrolling.
+- Pure green authoritative status and badge color palette.
 - Service Worker offline caching via `sw.js`.
 
 ## Known Issues

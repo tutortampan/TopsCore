@@ -73,6 +73,8 @@
 
   /* Status colours */
   --clr-success: #00c000ff;
+  --clr-success-rgb: 0, 192, 0;
+  --clr-success-glow: rgba(0, 192, 0, 0.4);
   --clr-warning: #ff8c00;
   --clr-danger: #ff0000;
   --clr-info: #06b6d4;
@@ -336,13 +338,13 @@ a:hover {
 
 /* Success button */
 .btn-success {
-  background: rgba(var(--grade-star-rgb), 0.15);
+  background: rgba(var(--clr-success-rgb), 0.15);
   color: var(--clr-success);
-  border: 1px solid rgba(var(--grade-star-rgb), 0.3);
+  border: 1px solid rgba(var(--clr-success-rgb), 0.35);
 }
 
 .btn-success:hover {
-  background: rgba(var(--grade-star-rgb), 0.25);
+  background: rgba(var(--clr-success-rgb), 0.25);
 }
 
 /* Warning button */
@@ -470,9 +472,9 @@ select.form-control {
 }
 
 .badge-success {
-  background: rgba(var(--grade-star-rgb), 0.15);
+  background: rgba(var(--clr-success-rgb), 0.15);
   color: var(--clr-success);
-  border: 1px solid rgba(var(--grade-star-rgb), 0.25);
+  border: 1px solid rgba(var(--clr-success-rgb), 0.35);
 }
 
 .badge-danger {
@@ -595,8 +597,8 @@ select.form-control {
 }
 
 .toast-success {
-  background: rgba(var(--grade-star-rgb), 0.12);
-  border-color: rgba(var(--grade-star-rgb), 0.3);
+  background: rgba(var(--clr-success-rgb), 0.12);
+  border-color: rgba(var(--clr-success-rgb), 0.35);
   color: #86efac;
 }
 

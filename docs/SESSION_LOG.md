@@ -1,8 +1,111 @@
+## SESSION-20261109-0648
+
+Start: 2026-11-09 06:36 UTC+8
+End: 2026-11-09 06:48 UTC+8
+Agent: Antigravity
+
+### User Request
+"bagian atas Tab tertulis Program,,,seharusnya tertulis nama institusi disana,,, lalu tombol ketrangan aktif itu seharusnya full hijau, eknapa ada pink? gambar 3. di halaman grade and score disana ada beberapa yang saya tidak perlukan, msalnya fitur di gambar 4 , dibuang saja. /plan"
+- User attached 3 images:
+  1. Organization view showing topbar tab titled "Program (1)" and "Programs (2)".
+  2. Zoom-in of `Active` and `1 Batches` badge with green text but pink border/background.
+  3. Crop of Grade & Score toolbar showing `DISPLAY: [🔍 FIT SCREEN] [-- 100% SCROLL]`, `[⤢ Full Width]`, and score legend.
+- Approval on artifact `plan_ui_perbaikan_institusi_badge_dan_grade_score.md`.
+
+### Objective
+- Fix topbar tab label in Organization screen so it displays institution names (`TOP`, `CEC`) instead of "Program".
+- Eliminate pink/magenta border and background on active status pills and batch counters, making them 100% pure green.
+- Remove redundant display mode toggles (`FIT SCREEN`, `100% SCROLL`, pan buttons, `Full Width`) from Grade & Score page, standardizing on a clean, legible natural scrollable matrix.
+
+### Work Performed
+1. **Curriculum & Organization Tab Labeling (`js/admin/curriculum-management.js`)**:
+   - Replaced static string assignment in `institutionTabs` with `label: inst.name` and `title: inst.name`.
+   - Replaced pink-tinted fallback badge style for batch counts with pure green `rgba(0, 192, 0, 0.15)` background and `rgba(0, 192, 0, 0.35)` border.
+2. **Authoritative Full-Green Palette (`css/style.css`, `css/admin.css`)**:
+   - Defined `--clr-success-rgb: 0, 192, 0;` and `--clr-success-glow: rgba(0, 192, 0, 0.4);` in `css/style.css`.
+   - Updated `.badge-tag-ongoing` and `.badge-success` in `css/admin.css` to pure green.
+   - Updated `.btn-success`, `.badge-success`, and `.toast-success` in `css/style.css` to use `--clr-success-rgb`.
+   - Purged `.attendance-theme-pill.mode-fit.active` pink styling.
+3. **Grade & Score Toolbar Cleanup (`js/admin/app.js`)**:
+   - Removed `attendance-view-mode-container`, `attendance-pan-controls`, and `matrix-fullwidth-btn`.
+   - Updated `fitMatrixToScreen` to standard 100% uncompressed scale (`zoom: 1`) with smooth horizontal scrolling (`overflow-x: auto`), comfortable row height ($\ge 22\text{px}$), and readable font sizes ($\ge 8.5\text{px}$).
+   - Preserved theme filters and score legend (`WRD`, `PHR`, `PTS`, `SCORE %`, `ᴿ`, `★`).
+4. **Cache & Version Bumping (`sw.js`, `admin.html`)**:
+   - Bumped Service Worker cache to `topscore-cache-option-a-v94`.
+   - Bumped query string version to `?v=20261109_v167` in `admin.html`.
+5. **Testing & Verification**:
+   - Created and ran `scripts/test_ui_tab_badges_and_grade_score_v167.mjs`: 28/28 assertions passed (100%).
+   - Ran `scripts/test_multi_program_theme_blueprint_v166.mjs`: 29/29 assertions passed (100%).
+   - Ran `scripts/test_tenant_isolation_batch134_vs_evnikom.mjs`: 57/57 assertions passed (100%).
+   - Verified JavaScript syntax: 0 errors.
+
+### Commands Run
+- `node scripts/test_ui_tab_badges_and_grade_score_v167.mjs`
+- `node scripts/test_multi_program_theme_blueprint_v166.mjs`
+- `node scripts/test_tenant_isolation_batch134_vs_evnikom.mjs`
+- `git status --short`
+
+---
+
+## SESSION-20261109-0145
+
+Start: 2026-11-09 00:30 UTC+8
+End: 2026-11-09 01:45 UTC+8
+Agent: Antigravity
+
+### User Request
+1. "saya kemarin bertanya soal program yang berbda dalam sistem ini, yaitu Evnikom, dan Sheraton, dan Kemungkinan Tamata Persada... sayamau tanya baaimana solusinya? saat mereka punya bentuk kelas yang serupa dengan sistem yang sama tapi materi yang berbda,,, vault yang sama dan sistem level yang sama. apakah kita bisa buat agar kelas punya ikatan tertutp dengan program? dan program dengan institusi? dalam Vault ada bagian kata dimana Institusi, program ditentukan untuk setiap vocab disana,,, apakah kita bagi dengan memebrikan pembeda pada kelas? atau pada program? atau bagaimana? cek yang ada saat ini. dan saya ingin kita buat rencana yang benar2 matabg. /grill-me"
+2. "Kita perlu tambahkan fitur dimana tema di vocabulary vault bisa ditentukan aakn diterpakn di kelas untuk program mana,,, jadi misalnya vocab benda2 di hotel untuk sheraton punya tema benda2 di hotel, maka saat kita berikan opsi agar bisa diakses oleh kelas di tamata maka tema dengan topik yang sama dan kosakata yang sama bisa diakses oleh program lain, atau bahkan institusi lain,,, saat ini apakah itu bisa diterapkan? coba cek, dan analisa"
+3. "Baik, jadi bukan kosakata atau phrase yang terikat pada program, tapi tema. itu yang saya inginkan, nanti bisa ditentukan tema itu masuk ke program mana, kita gunakan fitur ini pada halaman topic bluprint... model tabelnya harus kita Rubah juga disana Coba cek desin pada gambar" [Attached spreadsheet layout sketch]
+4. Approval on artifact `pelan_arsitektur_multi_program_topscore.md`.
+
+### Objective
+- Design and implement multi-program curriculum material partitioning across **CEC Camp**, **Evnikom**, **Sheraton**, and **Tamata Persada**.
+- Establish database table `public.theme_program_assignments` with composite key `(theme_code, target_level, program_id)` and RLS.
+- Normalize program codes (`CAMP`, `EVNIKOM`, `SHERATON`, `TAMATA`) and class names (`Camp 1st/2nd/3rd Vocabulary`, `Evnikom 1st Vocabulary`, `Sheraton 1st Vocabulary`, `Tamata 1st Vocabulary`).
+- Overhaul Topic Blueprint in `js/admin/vocab-vault.js` to render the exact 2-tier matrix from the user's sketch with Edit Mode protection (Green ON / Red OFF).
+- Enhance `importVaultWords()` in `js/api.js` to automatically register new themes in `theme_program_assignments`.
+- Add "Open Vault" shortcut buttons in Class Hub header and class rows.
+- Ensure 100% test coverage and zero multi-tenant data leakage.
+
+### Work Performed
+1. **Interactive Design Alignment & Master Plan**:
+   - Conducted structured `/grill-me` interview and created comprehensive plan artifact `pelan_arsitektur_multi_program_topscore.md` which the user approved.
+2. **Database Migration & Backfill**:
+   - Created table `public.theme_program_assignments` with composite unique constraint `(theme_code, target_level, program_id)`.
+   - Updated Program `Sheraton` (`SHERATON`), `Camp` (`CAMP`), `Evnikom` (`EVNIKOM`), and `Tamata Persada` (`TAMATA`).
+   - Normalized classes with explicit program prefixes, created missing classes, and soft-deleted unassigned orphans.
+   - Backfilled baseline assignments for all 9 existing themes.
+   - Saved `supabase/migrations/20261109010000_theme_program_assignments.sql`.
+3. **API & Dynamic Theme Resolution (`js/api.js`)**:
+   - Added `fetchThemeProgramAssignments()` and `toggleThemeProgramAssignment()`.
+   - Updated `fetchVaultWords()`, `generateTestQuestions()`, and `autoGenerateTestsHierarchy()` to resolve words strictly via theme assignments.
+   - Enhanced `importVaultWords()` to auto-register imported themes in `theme_program_assignments`.
+4. **Topic Blueprint 2-Tier Matrix & Edit Mode Guard (`js/admin/vocab-vault.js`, `css/admin.css`)**:
+   - Built 2-tier table matching user's sketch: `LEVEL`, `code`, `Theme Name`, `Topic`, `WORD` (`VERB`, `NOUN`, `ADJECTIVE`, `OTHER`), `PHRASE` (`Expression`, `Idiom`, `Proverb`), `Total`, Program columns grouped by institution (`CEC`: `Camp`, `TOP`: `Evnikom`, `Tamata`, `Sheraton`), `EDIT MODE` (`RENAME`, `DELETE`).
+   - Implemented Edit Mode toggle: Red `OFF` (read-only/inert) vs Green `ON` (interactive cell clicking toggling `yes` $\leftrightarrow$ `—` with live DB persistence and active buttons).
+5. **Class Hub "Open Vault" Quick-Action (`js/admin/classes-hub.js`)**:
+   - Added header toolbar button `📚 Open Vault` and class row button `📚 Vault`.
+6. **Cache & Assets**:
+   - Bumped `sw.js` cache to `topscore-cache-option-a-v93` and `admin.html` query version to `v=20261109_v166`.
+7. **Verification**:
+   - Created and ran `scripts/test_multi_program_theme_blueprint_v166.mjs`: 29/29 assertions passed (100%).
+   - Ran `scripts/test_tenant_isolation_batch134_vs_evnikom.mjs`: 57/57 assertions passed (100%).
+   - Ran `scripts/test_anti_cheat_and_layout_v165.mjs`: 14/14 tests passed (100%).
+
+### Commands Run
+- `node scripts/test_multi_program_theme_blueprint_v166.mjs`
+- `node scripts/test_tenant_isolation_batch134_vs_evnikom.mjs`
+- `node scripts/test_anti_cheat_and_layout_v165.mjs`
+- `git status --short`
+
+---
+
 ## SESSION-20261108-2108
 
-Start: 2026-11-08 20:45 UTC+8  
-End: 2026-11-08 21:08 UTC+8  
-Agent: Antigravity  
+Start: 2026-11-08 20:45 UTC+8
+End: 2026-11-08 21:08 UTC+8
+Agent: Antigravity
 
 ### User Request
 1. "gambar 1. kenapa alifurrahman tetulis levl 1? coba cek, dia 2nd Level. Gambar 2, tertulis 5 dari 6 atemmpts , harusnya 7 knapa begitu cari tahu! /plan"
@@ -52,9 +155,9 @@ Agent: Antigravity
 
 ## SESSION-20261108-2025
 
-Start: 2026-11-08 20:07 UTC+8  
-End: 2026-11-08 20:25 UTC+8  
-Agent: Antigravity  
+Start: 2026-11-08 20:07 UTC+8
+End: 2026-11-08 20:25 UTC+8
+Agent: Antigravity
 
 ### User Request
 "c:\Users\Top\.gemini\antigravity\brain\30a62a11-0f8a-437c-9e78-d3df01a06514\unrequested_pacing_adjustment_audit_and_restoration_plan.md opsi 1 (recommended)"
@@ -85,9 +188,9 @@ Agent: Antigravity
 
 ## SESSION-20261108-2020
 
-Start: 2026-11-08 20:10 UTC+8  
-End: 2026-11-08 20:20 UTC+8  
-Agent: Antigravity  
+Start: 2026-11-08 20:10 UTC+8
+End: 2026-11-08 20:20 UTC+8
+Agent: Antigravity
 
 ### User Request
 "Continue" (Enforce strict 3:1:3:3 and 3:1:6 Test Room Ratio Parity across all 5 test modes)
@@ -120,9 +223,9 @@ Agent: Antigravity
 
 ## SESSION-20261108-2010
 
-Start: 2026-11-08 20:00 UTC+8  
-End: 2026-11-08 20:10 UTC+8  
-Agent: Antigravity  
+Start: 2026-11-08 20:00 UTC+8
+End: 2026-11-08 20:10 UTC+8
+Agent: Antigravity
 
 ### User Request
 "Continue" (Cohort Pacing Adjustment & Theme C Acceleration for Batch 134)
@@ -153,9 +256,9 @@ Agent: Antigravity
 
 ## SESSION-20261108-2000
 
-Start: 2026-11-08 19:30 UTC+8  
-End: 2026-11-08 20:00 UTC+8  
-Agent: Antigravity  
+Start: 2026-11-08 19:30 UTC+8
+End: 2026-11-08 20:00 UTC+8
+Agent: Antigravity
 
 ### User Request
 "cek siswa atas nama lifurrahman , kenapa dia masih belum bia akses task harian,, selsaiakn /goal"
@@ -195,9 +298,9 @@ Agent: Antigravity
 
 ## SESSION-20261107-1240
 
-Start: 2026-11-07 12:15 UTC+8  
-End: 2026-11-07 12:40 UTC+8  
-Agent: Antigravity  
+Start: 2026-11-07 12:15 UTC+8
+End: 2026-11-07 12:40 UTC+8
+Agent: Antigravity
 
 ### User Request
 "buat adaptif, tapi ukrannya jadi sama." (Make Question Box adaptive, but make its size identical across all answering methods).
@@ -239,9 +342,9 @@ Agent: Antigravity
 
 ## SESSION-20261106-0847
 
-Start: 2026-11-06 08:30 UTC+8  
-End: 2026-11-06 08:47 UTC+8  
-Agent: Antigravity  
+Start: 2026-11-06 08:30 UTC+8
+End: 2026-11-06 08:47 UTC+8
+Agent: Antigravity
 
 ### User Request
 "lakukan cek e2e, cari semua bug atau possible error atau problem yang ada, /goal lalu buat linya, petakan buat plan yang lengkap, /plan"

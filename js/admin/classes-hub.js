@@ -123,6 +123,18 @@ export async function renderClassesHub(area) {
       renderView();
     };
 
+    window.openVocabVaultFromClassHub = (progId) => {
+      window._activeVaultTab = 'blueprint';
+      try {
+        localStorage.setItem('topscore_admin_vault_tab', 'blueprint');
+      } catch (_) {}
+      if (typeof window.loadSection === 'function') {
+        window.loadSection('vocab_vault');
+      } else {
+        window.location.hash = '#vocab_vault';
+      }
+    };
+
     const renderView = () => {
       const activeInstFilter = window._classesHubActiveInst || 'all';
 
@@ -173,6 +185,11 @@ export async function renderClassesHub(area) {
         const eligibleCount = getEligibleStudentCountForClass(cls);
         const studentsHtml  = '<span class="badge-tag" style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-size:0.75rem;padding:2px 8px;" title="' + eligibleCount + ' students eligible to take this class">👥 ' + eligibleCount + '</span>';
 
+        const isVocab = (cls.name || '').toLowerCase().includes('vocab');
+        const vocabBtnHtml = isVocab
+          ? '<button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:0.75rem;border-color:rgba(99,102,241,0.3);color:#818cf8;" title="Open Vocabulary Vault for this class" onclick="window.openVocabVaultFromClassHub(\'' + (cls.program_id || '') + '\')">📚 Vault</button>'
+          : '';
+
         return '<div class="classes-hub-grid-row ' + isDimmed + '">' +
           '<div class="d-flex align-center gap-2" style="min-width:0;">' +
             '<span style="font-size:0.95rem;">📖</span>' +
@@ -183,6 +200,7 @@ export async function renderClassesHub(area) {
           '<div style="text-align:center;">' + studentsHtml + '</div>' +
           '<div style="text-align:center;"><span class="badge-tag ' + (cls.is_active ? 'badge-tag-ongoing' : 'badge-tag-completed') + '">' + (cls.is_active ? '🟢 Active' : '⚪ Inactive') + '</span></div>' +
           '<div class="tree-actions-right" style="justify-content:flex-end;">' +
+            vocabBtnHtml +
             '<label class="toggle-switch" title="Toggle Active"><input type="checkbox" onchange="window.toggleClassesHubEntity(\'classes\',\'' + cls.id + '\',this.checked)" ' + (cls.is_active ? 'checked' : '') + '><span class="toggle-slider"></span></label>' +
             '<button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:0.75rem;" onclick="window.openClassesHubEdit(\'classes\',\'' + cls.id + '\')">✏️ Edit</button>' +
             '<button class="btn btn-danger btn-sm"    style="padding:3px 7px;font-size:0.75rem;" onclick="window.deleteClassesHubRecord(\'classes\',\'' + cls.id + '\',\'' + escapeHtml(cls.name) + '\')">🗑️</button>' +
@@ -314,6 +332,7 @@ export async function renderClassesHub(area) {
           '</div>' +
           '<div class="d-flex align-center gap-2">' +
             '<span class="text-xs text-muted">' + filteredClasses.length + ' Classes · ' + activeLevels.length + ' Levels</span>' +
+            '<button class="btn btn-secondary btn-sm" onclick="window.openVocabVaultFromClassHub()" style="font-size:0.75rem;padding:4px 9px;" title="Open Topic Blueprint & Vocabulary Vault">📚 Open Vault</button>' +
             '<button class="btn btn-primary btn-sm" onclick="window.openClassesHubAddLevel()" style="font-size:0.75rem;padding:4px 9px;">+ Add Level</button>' +
           '</div>' +
         '</div>' +

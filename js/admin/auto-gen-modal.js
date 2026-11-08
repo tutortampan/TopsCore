@@ -38,17 +38,21 @@ export async function openAutoGenerateModal(options = {}) {
       adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => [])
     ]);
 
-    if (!institutions.length) throw new Error('No institutions found.');
-    const instId = institutions[0].id; 
-    const programs = await fetchPrograms(instId);
-    if (!programs.length) throw new Error('No programs found.');
-
-    loading.remove();
-
-    // Determine current active class
+    // Determine current active class first
     const currentClassId = explicitClassId || window._selectedClassId || localStorage.getItem('topscore_selected_class_id');
     const matchedClass = allClasses.find(c => String(c.id) === String(currentClassId));
     const className = matchedClass ? matchedClass.name : 'Vocabulary Class';
+
+    let instId = matchedClass?.institution_id || (institutions.length > 0 ? institutions[0].id : null);
+    let programs = [];
+    if (instId) {
+      try { programs = await fetchPrograms(instId); } catch (_) {}
+    }
+    if (!programs.length && institutions.length > 0) {
+      try { programs = await fetchPrograms(institutions[0].id); } catch (_) {}
+    }
+
+    loading.remove();
 
     // Default quiz durations based on empirical pacing data (Phase 219):
     // Words Quiz (40 Qs, spoken): students need ~27s/q → 15 minutes
