@@ -1,3 +1,69 @@
+## [2026-11-09 07:30] — Phase 371: Hotfix Words Exam Written Mode Synchronization across Active Attempts & Database
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 371: Hotfix Words Exam Written Mode Synchronization  
+**Status:** PASS  
+
+### Why
+- Students currently taking `2nd Vocabulary C Words Exam - SHOPPING ESSENTIALS` (`2C-WORDS-EXAM`) received the spoken (microphone) interface instead of the written keyboard interface.
+- Root cause:
+  - While `tests.answer_type` was `'written'`, `tests.payload.answer_type` contained legacy `'spoken'`.
+  - In `startTest` (`js/api.js`), the query `.select(...)` omitted `answer_type`, causing fallback to `payload.answer_type` (`'spoken'`) when generating attempt questions.
+  - Snapshots in `attempt_answers` inherited `answer_type: 'spoken'`.
+
+### Changed
+1. **Frontend Test Engine (`js/test.js`)**:
+   - Hardened `answerType` detection in `renderQuestion` and virtual keyboard handler: strictly enforces `written` mode whenever `testData.answer_type === 'written'` or `shell_code` ends with `-WORDS-EXAM` or title includes `WORDS EXAM`.
+2. **API & Edge Functions (`js/api.js`, `supabase/functions/start-test/index.ts`)**:
+   - Added `answer_type` to `tests` selection in `startTest`.
+   - Guaranteed `ansType` / `dynamicAnswerType` prioritizes `test.answer_type === 'written'` and `-WORDS-EXAM` shells.
+3. **Database Synchronization (`tests` & `attempt_answers`)**:
+   - Updated all 10 `*-WORDS-EXAM` tests in Supabase to `answer_type = 'written'` and `payload.answer_type = 'written'`.
+   - Updated all 3,520 question snapshots across the 9 currently active in-progress student attempts to `answer_type: 'written'`.
+4. **Cache & Asset Version Bumping (`test.html`, `sw.js`)**:
+   - Bumped `test.html` script version to `?v=20261109_v168`.
+   - Bumped `sw.js` cache to `topscore-cache-option-a-v95`.
+
+### Files
+- `js/test.js`
+- `js/api.js`
+- `supabase/functions/start-test/index.ts`
+- `test.html`
+- `sw.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `docs/SESSION_LOG.md`
+
+---
+
+## [2026-11-09 07:20] — Phase 370: Theme Manager vs Theme Blueprint (Test Auto-Generator) Separation
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 370: Theme Manager vs Theme Blueprint Separation  
+**Status:** PASS  
+
+### Why
+- User requested splitting the monolithic and overcrowded `Topic Blueprint` table (16+ columns) into 2 dedicated tabs:
+  1. `Theme Manager`: focused on theme/topic hierarchy and multi-tenant program distribution.
+  2. `Theme Blueprint`: focused on vocabulary test auto-generator, settings, and real-time test status monitoring.
+
+### Changed
+1. **Vocabulary Vault Topbar Tabs (`js/admin/vocab-vault.js`)**:
+   - Redefined 4 tabs: `theme_manager`, `blueprint`, `vocab`, `phrases`.
+   - Persisted route state via URL hash (`#vocab_vault?tab=...`) and `localStorage` (Rule 2.20).
+2. **Theme Manager Tab (`_renderThemeManagerTab`)**:
+   - Eliminated 7 cramped part-of-speech columns, replacing with a single summary badge `Vault Items`.
+   - Expanded program columns (`CEC - CAMP`, `TOP - EVNIKOM`, `TOP - TAMATA`, `TOP - SHERATON`) with wide, high-contrast badges (`🟢 Active` / `⚪ —`).
+   - Single-click toggle program assignment with instant feedback.
+3. **Theme Blueprint Tab (`_renderThemeBlueprintTab`)**:
+   - Glassmorphic Hero Command Bar with Target Program selector, Level filter, pacing snapshot, and `⚡ Auto-Generate All Tests` button.
+   - Real-time Test Readiness Matrix displaying actual tests from Supabase with `✅ Ready` vs `⚠️ Missing` status badges.
+   - Readiness KPI progress bar.
+4. **CSS Styles & Router (`css/admin.css`, `js/admin/app.js`)**:
+   - Added styles for program badges, test readiness badges, and hero bar.
+
+---
+
 ## [2026-11-09 06:48] — Phase 367: Institution Tab Header Naming, Full-Green Active Badges & Grade-Score Toolbar Streamlining (v167)
 
 **Agent/Session:** Antigravity  

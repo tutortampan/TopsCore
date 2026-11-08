@@ -432,6 +432,9 @@ Deno.serve(async (req) => {
           title: test.title,
           test_type: test.test_type,
           test_subtype: test.test_subtype,
+          shell_code: test.shell_code || test.payload?.shell_code,
+          answer_type: test.answer_type || test.payload?.answer_type,
+          payload: test.payload,
           working_duration_minutes: test.working_duration_minutes,
           question_order: test.question_order || test.payload?.question_order || 'random'
         }
@@ -965,6 +968,9 @@ Deno.serve(async (req) => {
         title: test.title,
         test_type: test.test_type,
         test_subtype: test.test_subtype,
+        shell_code: test.shell_code || test.payload?.shell_code,
+        answer_type: test.answer_type || test.payload?.answer_type,
+        payload: test.payload,
         working_duration_minutes: durationMinutes,
         question_order: test.question_order || test.payload?.question_order || 'random'
       }
