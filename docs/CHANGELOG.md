@@ -1,3 +1,43 @@
+## [2026-11-08 19:31] — Phase 357: Vault Intelligent Distractor Selection Engine & MCQ/UI Polish
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 357: Vault Intelligent Distractor Selection Engine & MCQ/UI Polish  
+**Status:** PASS  
+
+### Why
+- The user requested that Multiple Choice questions sourcing items from `vocabulary_vault` must intelligently select distractors that are as similar and plausible as possible to the correct answer ("saat ada multiple choice yang mengambil dari vault, maka usahakan mengambil pilihan jawaban yang semirip mungkin dengan yang benar dan pengacaunya dari yang ada di vault").
+- The user also asked for clarification on Multiple Choice option counts ("untuk multiple choice question, berapa pilihan opsinya?") and noticed an unexpected color tint on the microphone button ("dan warna microphone sepertinya beda, apa yang terjadi?").
+- Root cause for microphone color: `.speech-mic-btn-lg` was defined with `linear-gradient(135deg, #86efac, var(--grade-star))`, but `--grade-star` in `css/style.css` is `#ff2d87` (Magenta/Pink). This created an unintended pink halo and muddy gradient instead of pure green.
+- Previous distractor selection in `supabase/functions/start-test/index.ts` and `js/api.js` relied on naive random sorting (`fisherYates` / `0.5 - Math.random()`), yielding distractors unrelated in topic, structure, or length.
+
+### Changed
+1. **Authoritative Heuristic Distractor Engine (`js/grading.js`)**:
+   - Added `scoreDistractorSimilarity(target, candidate)` and `rankDistractorsForVaultItem(target, candidatePool, count)`.
+   - Implemented 5-factor scoring model: Topic Proximity (+35 pts), Word Type/POS (+25 pts), Word Count / Length Parity (+20 pts), Lexical / Collocation Overlap (+15 pts), and Tie-Breaker Jitter (0–3 pts).
+   - Implemented strict anti-leak safety filters (target word exclusion, slash-separated synonyms exclusion, matching Indonesian translation exclusion, words vs phrases modality isolation).
+2. **Synchronized Client & Server Generators**:
+   - Updated `js/api.js`: Loaded comprehensive vault metadata in `generateTestQuestions()` and routed distractor generation through `rankDistractorsForVaultItem()`.
+   - Updated `supabase/functions/start-test/index.ts`: Integrated identical ranking logic in the authoritative Edge Function.
+3. **5-Option MCQ Standardization**:
+   - Standardized Multiple Choice questions to provide 5 balanced options (1 correct answer + 4 plausible distractors, labeled A–E).
+   - Updated catalog mock scenario in `scripts/capture_all_test_types_catalog.mjs`.
+4. **Microphone Button Pure Emerald Green Polish**:
+   - Updated `css/test.css`: `.speech-mic-btn-lg` now uses `linear-gradient(135deg, #4ade80 0%, #16a34a 100%)`, border `rgba(22, 163, 74, 0.45)`, and box-shadow `rgba(22, 163, 74, 0.4)`.
+   - Updated `js/test.js`: Inline styles for idle, listening reset, and error states updated to pure emerald green.
+   - Updated selected option card gradient in `js/test.js` from pinkish to harmonious emerald/cyan.
+5. **New Automated Test Suite (`scripts/test_smart_distractor_engine.mjs`)**:
+   - Added 16 unit tests asserting topic priority, POS priority, length parity, particle overlap, anti-leak guards, 5-option output, and small pool fallback resilience.
+   - Added to `package.json` `npm test` script.
+6. **Regenerated Visual Catalog**:
+   - Re-ran `scripts/capture_all_test_types_catalog.mjs` to produce updated mobile and desktop screenshots showing 5-option MCQ and emerald green microphone button.
+
+### Tests
+- command: `node scripts/test_smart_distractor_engine.mjs` -> PASS (16/16 tests passed).
+- command: `node scripts/capture_all_test_types_catalog.mjs` -> PASS (All 7 screenshots generated).
+- command: `npm.cmd test` -> PASS (All 8 core test suites passed 100%).
+
+---
+
 ## [2026-11-08 19:25] — Phase 356: All Test Types Visual Catalog Harness & IDE Extension Suite Upgrade
 
 **Agent/Session:** Antigravity  

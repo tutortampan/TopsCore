@@ -1356,3 +1356,33 @@ The user officially approved the master taxonomy and spatial architecture for To
 - Eliminates dual "Lobby" confusion between login and dashboard.
 - Establishes a natural, crystal-clear mental model for students and tutors.
 - Synchronizes titles, meta descriptions, button text, and documentation across the codebase.
+
+---
+
+## DECISION-045 — Vault Intelligent Distractor Selection Heuristics, 5-Option MCQ Standardization, and Emerald Green Audio UI Polish
+
+Date: 2026-11-08
+Status: ACCEPTED
+
+### Context
+When Multiple Choice questions were dynamically assembled from `vocabulary_vault`, candidate distractors were previously filtered by `word_type` and randomly shuffled. This caused pedagogically weak distractors (unrelated themes, jarring length discrepancies, or random phrases). Furthermore, Multiple Choice option counts were not consistently documented in mock visual previews, and the speech microphone button displayed an unintended pink/magenta tint due to an inherited `--grade-star` variable.
+
+### Decision
+1. **Authoritative Heuristic Distractor Engine (`js/grading.js`, `js/api.js`, `supabase/functions/start-test/index.ts`)**:
+   - Implemented a 5-dimension scoring model in `scoreDistractorSimilarity`:
+     - Topic Proximity (+35 pts) & Theme Proximity (+15 pts)
+     - Word Type / Part of Speech Match (+25 pts)
+     - Length & Structural Parity (+20 pts for phrases, +15 pts for single words)
+     - Lexical & Collocation Overlap (+15 pts for shared head verb/tail particle)
+     - Jitter Tie-Breaker (0 to 3 pts)
+   - Strict Anti-Leak Filters: Disqualify exact target match, alternate slash synonyms, identical Indonesian translations, and cross-category leaks.
+   - Dual-Path Parity: Applied identically to both frontend generation and Edge Functions.
+2. **5-Option Multiple Choice Standard (A, B, C, D, E)**:
+   - Multiple Choice items standardize on 5 distinct options (1 correct answer + 4 plausible distractors).
+3. **Microphone Button Pure Emerald Green Polish**:
+   - Replaced pinkish `var(--grade-star)` gradients on `.speech-mic-btn-lg` with pure Emerald Green (`linear-gradient(135deg, #4ade80 0%, #16a34a 100%)`, border `rgba(22, 163, 74, 0.45)`).
+
+### Consequences
+- Dramatically increases pedagogical rigor and authenticity of multiple choice vocabulary tests.
+- Prevents giveaways where length or unrelated meaning reveals the answer.
+- Eliminates visual color clashes on audio controls across all test modes.

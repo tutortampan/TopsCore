@@ -15,7 +15,7 @@
     "preview:admin": "node scripts/open_mobile_preview.mjs admin.html",
     "preview:tests": "node scripts/capture_all_test_types_catalog.mjs",
     "preview:all": "node scripts/open_mobile_preview.mjs --all-screenshots",
-    "test": "node scripts/check_all_js_syntax.cjs && node scripts/generate_sw_manifest.mjs && node scripts/test_student_dashboard_exam_parity.mjs && node scripts/test_homophones_spoken_mode.mjs && node scripts/test_prerequisite_deficit_guard.mjs && node scripts/test_vocab_dashboard_blueprint.mjs && node scripts/test_bottom_banner_universal.mjs",
+    "test": "node scripts/check_all_js_syntax.cjs && node scripts/generate_sw_manifest.mjs && node scripts/test_student_dashboard_exam_parity.mjs && node scripts/test_homophones_spoken_mode.mjs && node scripts/test_prerequisite_deficit_guard.mjs && node scripts/test_vocab_dashboard_blueprint.mjs && node scripts/test_bottom_banner_universal.mjs && node scripts/test_smart_distractor_engine.mjs",
     "serve": "serve . -p 5500",
     "build": "echo 'Static deploy ready'"
   },

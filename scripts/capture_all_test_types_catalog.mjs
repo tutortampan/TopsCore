@@ -126,7 +126,7 @@ const TEST_SCENARIOS = [
   },
   {
     id: 'multiple_choice_mode',
-    name: 'Multiple Choice Mode (4 Option Cards)',
+    name: 'Multiple Choice Mode (5 Standard Options A-E)',
     filename: 'test_type_4_multiple_choice_mode.png',
     testData: {
       title: '3rd Vocabulary D Phrases Exam - High-Frequency',
@@ -146,9 +146,10 @@ const TEST_SCENARIOS = [
         correct_answer: 'take charge of the emergency',
         options_snapshot: [
           'take charge of the emergency',
-          'step down from the position',
-          'postpone the entire schedule',
-          'ignore the surrounding warning'
+          'take control of the incident',
+          'take responsibility for the crisis',
+          'bring the situation under control',
+          'step in during the emergency'
         ],
         theme: 'High-Frequency',
         theme_code: 'D',

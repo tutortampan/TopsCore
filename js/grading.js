@@ -1346,3 +1346,172 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
     includedExamIds: new Set((allClassExams || []).filter(isExam).map(t => t.id))
   };
 }
+
+// ============================================================
+// VAULT DISTRACTOR SELECTION & SIMILARITY ENGINE (PHASE 357)
+// ============================================================
+
+/**
+ * Calculates a multi-attribute similarity score between a target vault item and a candidate distractor.
+ * Higher score = more plausible and pedagogically effective distractor.
+ *
+ * Dimensions:
+ * 1. Topic & Theme Proximity (0 to 35 pts)
+ * 2. Word Type / POS Match (0 to 25 pts)
+ * 3. Length & Structural Parity (0 to 20 pts)
+ * 4. Lexical / Syntactic Overlap (0 to 15 pts)
+ * 5. Tie-Breaker Jitter (0 to 3 pts)
+ *
+ * @param {Object} target Target vault item being tested
+ * @param {Object} candidate Candidate item from vault
+ * @returns {number} Composite similarity score
+ */
+export function scoreDistractorSimilarity(target, candidate) {
+  if (!target || !candidate) return 0;
+  let score = 0;
+
+  // 1. Topic & Theme Proximity (Max 35 pts)
+  const targetTopic = (target.topic || target.topic_code || '').trim().toLowerCase();
+  const candTopic = (candidate.topic || candidate.topic_code || '').trim().toLowerCase();
+  const targetTheme = (target.theme || target.theme_code || '').trim().toLowerCase();
+  const candTheme = (candidate.theme || candidate.theme_code || '').trim().toLowerCase();
+
+  if (targetTopic && candTopic && targetTopic === candTopic) {
+    score += 35;
+  } else if (targetTheme && candTheme && targetTheme === candTheme) {
+    score += 15;
+  }
+
+  // 2. Part of Speech / Word Type Match (Max 25 pts)
+  const targetType = (target.word_type || '').trim().toLowerCase();
+  const candType = (candidate.word_type || '').trim().toLowerCase();
+  if (targetType && candType) {
+    if (targetType === candType) {
+      score += 25;
+    } else {
+      const verbGroup = ['verb', 'phrasal verb', 'irregular verb'];
+      const modifierGroup = ['adjective', 'adverb'];
+      if ((verbGroup.includes(targetType) && verbGroup.includes(candType)) ||
+          (modifierGroup.includes(targetType) && modifierGroup.includes(candType))) {
+        score += 12;
+      }
+    }
+  }
+
+  // 3. Length & Structural Parity (Max 20 pts)
+  const targetEng = (target.english || '').split('/')[0].trim();
+  const candEng = (candidate.english || '').split('/')[0].trim();
+  const targetWords = targetEng.split(/\s+/).filter(Boolean);
+  const candWords = candEng.split(/\s+/).filter(Boolean);
+
+  if (targetWords.length > 1 || candWords.length > 1) {
+    // Multi-word phrase/idiom matching
+    const wordDiff = Math.abs(targetWords.length - candWords.length);
+    if (wordDiff === 0) {
+      score += 20;
+    } else if (wordDiff === 1) {
+      score += 10;
+    }
+  } else {
+    // Single word length parity
+    const charDiff = Math.abs(targetEng.length - candEng.length);
+    if (charDiff <= 2) {
+      score += 15;
+    } else if (charDiff <= 4) {
+      score += 8;
+    }
+  }
+
+  // 4. Lexical / Syntactic Overlap & Collocation (Max 15 pts)
+  const tLower = targetEng.toLowerCase();
+  const cLower = candEng.toLowerCase();
+
+  if (targetWords.length > 1 && candWords.length > 1) {
+    const tFirst = targetWords[0].toLowerCase();
+    const cFirst = candWords[0].toLowerCase();
+    const tLast = targetWords[targetWords.length - 1].toLowerCase();
+    const cLast = candWords[candWords.length - 1].toLowerCase();
+
+    if (tFirst === cFirst || tLast === cLast) {
+      score += 15;
+    } else {
+      const tTokens = new Set(targetWords.map(w => w.toLowerCase()));
+      const hasOverlap = candWords.some(w => tTokens.has(w.toLowerCase()));
+      if (hasOverlap) score += 8;
+    }
+  } else {
+    // Single words: shared common prefix or suffix (>= 3 chars)
+    if (tLower.length >= 4 && cLower.length >= 4) {
+      if (tLower.slice(0, 3) === cLower.slice(0, 3) || tLower.slice(-3) === cLower.slice(-3)) {
+        score += 10;
+      }
+    }
+  }
+
+  // 5. Deterministic tie-breaker / jitter (0 to 3 pts)
+  score += Math.random() * 3;
+
+  return score;
+}
+
+/**
+ * Selects and ranks the top distractors from a candidate pool for a target vault item.
+ * Strictly enforces anti-leak filters, Indonesian synonym protection, and modality bounds.
+ *
+ * @param {Object} target Target vault item
+ * @param {Array<Object>} candidatePool Pool of vault items
+ * @param {number} count Number of distractors needed (default: 4 for 5-option MCQ)
+ * @returns {Array<string>} Top ranked distractor English strings
+ */
+export function rankDistractorsForVaultItem(target, candidatePool, count = 4) {
+  if (!target || !Array.isArray(candidatePool) || candidatePool.length === 0) {
+    return [];
+  }
+
+  const accepted = (target.english ? target.english.split('/') : [])
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean);
+  const targetIndo = (target.indonesian || '').trim().toLowerCase();
+  const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase'];
+  const isTargetPhrase = phraseTypes.includes((target.word_type || '').toLowerCase()) || target.category === 'phrases';
+
+  // 1. Strict Eligibility & Anti-Leak Filtering
+  const seenCandidates = new Set();
+  const eligible = candidatePool.filter(cand => {
+    if (!cand) return false;
+    const candEng = (cand.english || '').split('/')[0].trim();
+    if (!candEng) return false;
+    const candEngLower = candEng.toLowerCase();
+    if (seenCandidates.has(candEngLower)) return false;
+
+    // Anti-leak: cannot match any accepted answer
+    if (accepted.includes(candEngLower)) return false;
+    const candVariants = (cand.english || '').split('/').map(s => s.trim().toLowerCase()).filter(Boolean);
+    if (candVariants.some(v => accepted.includes(v))) return false;
+
+    // Indonesian translation collision check
+    if (targetIndo && (cand.indonesian || '').trim().toLowerCase() === targetIndo) return false;
+
+    // Modality alignment: words only compete with words, phrases only with phrases
+    const isCandPhrase = phraseTypes.includes((cand.word_type || '').toLowerCase()) || cand.category === 'phrases';
+    if (isTargetPhrase !== isCandPhrase) return false;
+
+    seenCandidates.add(candEngLower);
+    return true;
+  });
+
+  if (eligible.length === 0) return [];
+
+  // 2. Score all eligible candidates
+  const scored = eligible.map(cand => ({
+    candidate: cand,
+    english: (cand.english || '').split('/')[0].trim(),
+    score: scoreDistractorSimilarity(target, cand)
+  }));
+
+  // 3. Sort descending by similarity score
+  scored.sort((a, b) => b.score - a.score);
+
+  // 4. Return top `count` items as strings
+  return scored.slice(0, count).map(s => s.english);
+}

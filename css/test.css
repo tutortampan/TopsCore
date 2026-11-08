@@ -257,15 +257,15 @@
       width: clamp(56px, 14vw, 72px);
       height: clamp(56px, 14vw, 72px);
       border-radius: 50%;
-      border: 3px solid rgba(var(--grade-star-rgb), 0.4);
-      background: linear-gradient(135deg, #86efac, var(--grade-star));
+      border: 3px solid rgba(22, 163, 74, 0.45);
+      background: linear-gradient(135deg, #4ade80 0%, #16a34a 100%);
       color: #0F172A;
       font-size: 1.8rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 16px var(--grade-star-glow);
+      box-shadow: 0 0 18px rgba(22, 163, 74, 0.4), 0 8px 16px rgba(0, 0, 0, 0.35);
       transition: transform 0.15s, box-shadow 0.15s;
       position: relative;
       -webkit-tap-highlight-color: transparent;
@@ -273,7 +273,7 @@
     }
     .speech-mic-btn-lg:hover {
       transform: scale(1.05);
-      box-shadow: 0 0 28px var(--grade-star-glow);
+      box-shadow: 0 0 28px rgba(22, 163, 74, 0.65), 0 8px 16px rgba(0, 0, 0, 0.4);
     }
     .speech-mic-btn-lg.listening {
       background: linear-gradient(135deg, var(--grade-e), #990000);

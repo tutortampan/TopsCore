@@ -1,58 +1,55 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-08 19:25 UTC+8
-Current Phase: Phase 356: All Test Types Visual Catalog Harness & IDE Extension Suite Upgrade [COMPLETE]
+Last Updated: 2026-11-08 19:31 UTC+8
+Current Phase: Phase 357: Vault Intelligent Distractor Selection Engine & MCQ/UI Polish [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **IDE & Workspace Extension Suite Upgrade (17 Curated Extensions)**:
-   - Audited all installed extensions via `antigravity-ide.cmd --list-extensions` and `--update-extensions`.
-   - Installed 3 mission-critical extensions for TopsCore's architecture:
-     - `eamodio.gitlens` (v19.5.0): Multi-phase commit history, file blame, and git line tracking across 350+ phases.
-     - `rangav.vscode-thunder-client` (v3.2.4): Lightweight in-editor REST API client for testing Supabase Edge Functions (`start-test`, `submit-test`, `calculate-result`).
-     - `mikestead.dotenv` (v1.0.1): Full `.env` environment variable syntax highlighting and auto-completion.
-   - Synchronized `.vscode/extensions.json` with 17 curated recommendations organized into 6 clean categories:
-     1. Mobile Viewport & Live Emulation (`vscode-edge-devtools`, `five-server`, `playwright`)
-     2. CSS & Visual Accuracy (`vscode-css-peek`, `color-highlight`)
-     3. HTML, API & Asset Productivity (`auto-close-tag`, `auto-rename-tag`, `path-intellisense`, `vscode-thunder-client`, `dotenv`)
-     4. Code Quality & Runtime Safety (`errorlens`, `vscode-eslint`, `prettier-vscode`, `vscode-deno`)
-     5. Version Control & Traceability (`gitlens`)
-     6. AI Pair Programming & Architecture (`better-antigravity`, `markdown-mermaid`)
-   - Added 1-click Visual Test Catalog task to `.vscode/tasks.json` (`TopsCore: 🧪 Capture All Test Types Catalog Screenshots`).
-   - Added `"preview:tests": "node scripts/capture_all_test_types_catalog.mjs"` to `package.json`.
+1. **Intelligent Vault Distractor Selection Engine (`js/grading.js`, `js/api.js`, `supabase/functions/start-test/index.ts`)**:
+   - Built authoritative pedagogical distractor heuristic engine (`scoreDistractorSimilarity`, `rankDistractorsForVaultItem`).
+   - Dimensions scored:
+     - Topic & Theme Proximity: +35 pts for matching topic, +15 pts for matching theme.
+     - Word Type / Part of Speech: +25 pts for exact POS match, +12 pts for compatible family.
+     - Length & Structural Parity: +20 pts for matching word count in phrases, +15 pts for single-word length within $\pm 2$ characters.
+     - Lexical & Collocation Overlap: +15 pts for shared head verb or tail particle (e.g. *turn up*, *turn down*), +10 pts for common affixes.
+     - Deterministic Tie-Breaker Jitter: 0 to 3 pts pseudo-random jitter to vary options across retakes.
+   - Strict Anti-Leak & Safety Guards:
+     - Exact English target disqualified.
+     - Alternate slash-separated answers strictly disqualified (e.g. *shut down / close* excludes both).
+     - Matching Indonesian translation disqualified to prevent semantic duplicate choices.
+     - Modality isolation: Words only compete with words, Phrases only with phrases.
+   - Synchronized across both the client-side generator (`js/api.js`) and authoritative Supabase Edge Function (`supabase/functions/start-test/index.ts`).
 
-2. **All Test Types Visual Catalog & High-Resolution Screenshot Production**:
-   - Documented and verified all 5 active test modalities on Test Room (`test.html`):
-     - Mode 1: Written Mode (Native Gboard QWERTY virtual keyboard)
-     - Mode 2: Spoken Words Mode (Acoustic homophone tolerance, waveform visualizer, mic action button)
-     - Mode 3: Spoken Phrases Mode (Speech-to-text phrase recognition, multi-word forgiveness)
-     - Mode 4: Multiple Choice Mode (4 option cards A, B, C, D with cyan selection state)
-     - Mode 5: Phrase Chips Mode (Interactive sentence builder tiles)
-   - Built zero-mutation deterministic test harness hook `window.__renderTestScenario` in `js/test.js`.
-   - Captured high-resolution screenshots across Mobile (390×844) and Desktop (1280×800) using Playwright.
-   - Enhanced `test.html` session hydration guard to check both `sessionStorage` and `localStorage`.
+2. **Multiple Choice 5-Option Standardization (A, B, C, D, E)**:
+   - Standardized Multiple Choice questions to provide 5 balanced options (1 correct answer + 4 plausible distractors).
+   - Updated catalog mockup scenario in `scripts/capture_all_test_types_catalog.mjs` to feature 5 standard options.
 
-3. **Unified Adaptive Question Box Across All Answering Modes (Phase 355)**:
-   - Standardized Question Box prompt dimensions to `width: 100% !important; max-width: 440px !important; height: clamp(96px, 16.5vh, 125px) !important; min-height: 90px !important; max-height: 125px !important; flex: 0 0 auto !important;` in `css/test.css` and `js/test.js`.
-   - Tested across 4 viewports with 100% pixel-perfect uniformity (371×125px on standard mobile).
+3. **Microphone Button Pure Emerald Green UI Polish (`css/test.css`, `js/test.js`)**:
+   - Fixed root-cause color mismatch where `.speech-mic-btn-lg` was blending light green with `--grade-star` (`#ff2d87` Magenta/Pink).
+   - Replaced with pure Emerald Green: `linear-gradient(135deg, #4ade80 0%, #16a34a 100%)`, border `rgba(22, 163, 74, 0.45)`, glow `rgba(22, 163, 74, 0.45)`.
+   - Also updated selected option card glow from pink to emerald/cyan (`rgba(16, 185, 129, 0.2)`).
 
-4. **Automated Test Suites Execution**:
-   - `npm.cmd test`: All 7 core test suites passed 100%.
-   - `node scripts/capture_all_test_types_catalog.mjs`: All 7 catalog screenshots generated with 0 errors.
+4. **New Automated Test Suite (`scripts/test_smart_distractor_engine.mjs`)**:
+   - Added 16 unit tests covering topic priority, POS priority, word count parity, particle overlap, anti-leak guards, 5-option output, and fallback resilience.
+   - Integrated into `package.json` test pipeline (`npm test`).
+
+5. **Visual Screenshot Regeneration**:
+   - Re-executed `scripts/capture_all_test_types_catalog.mjs`, producing updated high-res screenshots with 5-option MCQ and pure emerald green microphone button.
 
 ## Verification Results:
 - `node scripts/check_all_js_syntax.cjs` -> PASS (45/45 JS files passed)
-- `npm.cmd test` -> PASS (All 7 core test suites passed 100%)
-- `node scripts/capture_all_test_types_catalog.mjs` -> PASS (7/7 screenshots captured cleanly)
-- `antigravity-ide.cmd --list-extensions` -> PASS (17/17 extensions active)
+- `node scripts/test_smart_distractor_engine.mjs` -> PASS (16/16 tests passed)
+- `npm.cmd test` -> PASS (All 8 core test suites passed 100%)
+- `node scripts/capture_all_test_types_catalog.mjs` -> PASS (7/7 catalog screenshots captured)
 
 ## Current Architecture
 - Static HTML5 / CSS3 / Modular ES6 JavaScript frontend.
 - Supabase PostgreSQL + Auth + Storage + Edge Functions backend.
-- Service Worker offline caching via `sw.js` (`topscore-cache-option-a-v89`).
+- Single Source of Truth grading and distractor matching in `js/grading.js`.
+- Service Worker offline caching via `sw.js`.
 
 ## Known Issues
 - None. System is completely healthy and verified.
 
 ## Next Exact Action
-- Present visual screenshots to user in direct response.
+- Present results and visual screenshots to user.

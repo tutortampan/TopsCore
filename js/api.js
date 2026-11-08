@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261106_v160';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261106_v160';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, scoreDistractorSimilarity, rankDistractorsForVaultItem } from './grading.js?v=20261106_v160';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261106_v160';
 import { escapeHtml, escHtml, showToast } from './app.js?v=20261106_v160';
 
@@ -9,7 +9,7 @@ export function getGrade(pct) {
   return calculateGrade(pct);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, scoreDistractorSimilarity, rankDistractorsForVaultItem, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -1109,29 +1109,28 @@ export async function generateTestQuestions(sb, test) {
     }
 
     if (vaultWords && vaultWords.length > 0) {
-      let allEnglishAnswers = [];
-      let typeDistractorPools = {};
+      let vaultCandidatePool = [];
       const ansType = test.answer_type || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
 
       if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
-        let allDataQuery = sb.from('vocabulary_vault').select('english, word_type').is('deleted_at', null);
+        let allDataQuery = sb.from('vocabulary_vault')
+          .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, category, target_level')
+          .is('deleted_at', null)
+          .range(0, 4999);
         if (testProgramId) allDataQuery = allDataQuery.eq('program_id', testProgramId);
+        if (levelNum) allDataQuery = allDataQuery.eq('target_level', levelNum);
         const { data: allData } = await allDataQuery;
-        if (allData) {
-          const isTargetPhrase = (category === 'phrases' || test.test_subtype === 'PHRASE_TASK' || test.test_subtype === 'PHRASE_TEST');
-          const filteredAllData = allData.filter(r => {
-            const wt = (r.word_type || '').toLowerCase();
-            const isP = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
-            return isTargetPhrase ? isP : !isP;
-          });
-          allEnglishAnswers = filteredAllData.map(r => (r.english || '').split('/')[0].trim()).filter(Boolean);
-          filteredAllData.forEach(r => {
-            const wt = (r.word_type || 'Vocab').toLowerCase();
-            const eng = (r.english || '').split('/')[0].trim();
-            if (!eng) return;
-            if (!typeDistractorPools[wt]) typeDistractorPools[wt] = [];
-            typeDistractorPools[wt].push(eng);
-          });
+        if (allData && allData.length > 0) {
+          vaultCandidatePool = allData;
+        } else {
+          // Fallback if target_level returned empty, pull from same program without level restriction
+          let broaderQuery = sb.from('vocabulary_vault')
+            .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, category, target_level')
+            .is('deleted_at', null)
+            .range(0, 4999);
+          if (testProgramId) broaderQuery = broaderQuery.eq('program_id', testProgramId);
+          const { data: broaderData } = await broaderQuery;
+          vaultCandidatePool = broaderData || [];
         }
       }
 
@@ -1142,12 +1141,7 @@ export async function generateTestQuestions(sb, test) {
 
         if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
           const numDistractors = (ansType === 'dropdown_10') ? 9 : 4;
-          const wordType = (vw.word_type || 'Vocab').toLowerCase();
-          let sameTypePool = (typeDistractorPools[wordType] || []).filter(a => !accepted.includes(a));
-          fisherYates(sameTypePool);
-          const globalPool = allEnglishAnswers.filter(a => !accepted.includes(a) && !sameTypePool.includes(a));
-          fisherYates(globalPool);
-          const distractors = [...sameTypePool, ...globalPool].slice(0, numDistractors);
+          const distractors = rankDistractorsForVaultItem(vw, vaultCandidatePool, numDistractors);
           optionsSnapshot = fisherYates([correctAns, ...distractors]);
         }
 

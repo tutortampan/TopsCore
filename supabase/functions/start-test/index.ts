@@ -9,6 +9,144 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ============================================================
+// VAULT DISTRACTOR SELECTION & SIMILARITY ENGINE (PHASE 357)
+// ============================================================
+
+function scoreDistractorSimilarity(target: any, candidate: any): number {
+  if (!target || !candidate) return 0;
+  let score = 0;
+
+  // 1. Topic & Theme Proximity (Max 35 pts)
+  const targetTopic = (target.topic || target.topic_code || '').trim().toLowerCase();
+  const candTopic = (candidate.topic || candidate.topic_code || '').trim().toLowerCase();
+  const targetTheme = (target.theme || target.theme_code || '').trim().toLowerCase();
+  const candTheme = (candidate.theme || candidate.theme_code || '').trim().toLowerCase();
+
+  if (targetTopic && candTopic && targetTopic === candTopic) {
+    score += 35;
+  } else if (targetTheme && candTheme && targetTheme === candTheme) {
+    score += 15;
+  }
+
+  // 2. Part of Speech / Word Type Match (Max 25 pts)
+  const targetType = (target.word_type || '').trim().toLowerCase();
+  const candType = (candidate.word_type || '').trim().toLowerCase();
+  if (targetType && candType) {
+    if (targetType === candType) {
+      score += 25;
+    } else {
+      const verbGroup = ['verb', 'phrasal verb', 'irregular verb'];
+      const modifierGroup = ['adjective', 'adverb'];
+      if ((verbGroup.includes(targetType) && verbGroup.includes(candType)) ||
+          (modifierGroup.includes(targetType) && modifierGroup.includes(candType))) {
+        score += 12;
+      }
+    }
+  }
+
+  // 3. Length & Structural Parity (Max 20 pts)
+  const targetEng = (target.english || '').split('/')[0].trim();
+  const candEng = (candidate.english || '').split('/')[0].trim();
+  const targetWords = targetEng.split(/\s+/).filter(Boolean);
+  const candWords = candEng.split(/\s+/).filter(Boolean);
+
+  if (targetWords.length > 1 || candWords.length > 1) {
+    const wordDiff = Math.abs(targetWords.length - candWords.length);
+    if (wordDiff === 0) {
+      score += 20;
+    } else if (wordDiff === 1) {
+      score += 10;
+    }
+  } else {
+    const charDiff = Math.abs(targetEng.length - candEng.length);
+    if (charDiff <= 2) {
+      score += 15;
+    } else if (charDiff <= 4) {
+      score += 8;
+    }
+  }
+
+  // 4. Lexical / Syntactic Overlap & Collocation (Max 15 pts)
+  const tLower = targetEng.toLowerCase();
+  const cLower = candEng.toLowerCase();
+
+  if (targetWords.length > 1 && candWords.length > 1) {
+    const tFirst = targetWords[0].toLowerCase();
+    const cFirst = candWords[0].toLowerCase();
+    const tLast = targetWords[targetWords.length - 1].toLowerCase();
+    const cLast = candWords[candWords.length - 1].toLowerCase();
+
+    if (tFirst === cFirst || tLast === cLast) {
+      score += 15;
+    } else {
+      const tTokens = new Set(targetWords.map((w: string) => w.toLowerCase()));
+      const hasOverlap = candWords.some((w: string) => tTokens.has(w.toLowerCase()));
+      if (hasOverlap) score += 8;
+    }
+  } else {
+    if (tLower.length >= 4 && cLower.length >= 4) {
+      if (tLower.slice(0, 3) === cLower.slice(0, 3) || tLower.slice(-3) === cLower.slice(-3)) {
+        score += 10;
+      }
+    }
+  }
+
+  // 5. Deterministic tie-breaker / jitter (0 to 3 pts)
+  score += Math.random() * 3;
+
+  return score;
+}
+
+function rankDistractorsForVaultItem(target: any, candidatePool: any[], count = 4): string[] {
+  if (!target || !Array.isArray(candidatePool) || candidatePool.length === 0) {
+    return [];
+  }
+
+  const accepted = (target.english ? target.english.split('/') : [])
+    .map((s: string) => s.trim().toLowerCase())
+    .filter(Boolean);
+  const targetIndo = (target.indonesian || '').trim().toLowerCase();
+  const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase'];
+  const isTargetPhrase = phraseTypes.includes((target.word_type || '').toLowerCase()) || target.category === 'phrases';
+
+  const seenCandidates = new Set<string>();
+  const eligible = candidatePool.filter((cand: any) => {
+    if (!cand) return false;
+    const candEng = (cand.english || '').split('/')[0].trim();
+    if (!candEng) return false;
+    const candEngLower = candEng.toLowerCase();
+    if (seenCandidates.has(candEngLower)) return false;
+
+    // Anti-leak: cannot match any accepted answer
+    if (accepted.includes(candEngLower)) return false;
+    const candVariants = (cand.english || '').split('/').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+    if (candVariants.some((v: string) => accepted.includes(v))) return false;
+
+    // Indonesian translation collision check
+    if (targetIndo && (cand.indonesian || '').trim().toLowerCase() === targetIndo) return false;
+
+    // Modality alignment: words only compete with words, phrases only with phrases
+    const isCandPhrase = phraseTypes.includes((cand.word_type || '').toLowerCase()) || cand.category === 'phrases';
+    if (isTargetPhrase !== isCandPhrase) return false;
+
+    seenCandidates.add(candEngLower);
+    return true;
+  });
+
+  if (eligible.length === 0) return [];
+
+  const scored = eligible.map((cand: any) => ({
+    candidate: cand,
+    english: (cand.english || '').split('/')[0].trim(),
+    score: scoreDistractorSimilarity(target, cand)
+  }));
+
+  scored.sort((a: any, b: any) => b.score - a.score);
+
+  return scored.slice(0, count).map((s: any) => s.english);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { status: 200, headers: corsHeaders });
@@ -663,21 +801,20 @@ Deno.serve(async (req) => {
         const isSelectionMode = dynamicAnswerType === 'dropdown' || dynamicAnswerType === 'selection' || dynamicAnswerType === 'multiple_choice';
         if (isSelectionMode) {
             let distractorQuery = supabase.from('vocabulary_vault')
-                .select('english, word_type')
+                .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, category, target_level')
                 .eq('target_level', levelNum)
                 .is('deleted_at', null)
                 .range(0, 4999);
 
-            const { data: allPhraseData } = await distractorQuery;
-            if (allPhraseData) {
-                const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase'];
-                const isPhraseMode = category === 'phrases' || test.test_subtype === 'PHRASE_TASK' || test.test_subtype === 'PHRASE_TEST';
-
-                distractorPool = allPhraseData.filter((r: any) => {
-                    const wt = (r.word_type || '').toLowerCase();
-                    const isPhrase = phraseTypes.includes(wt);
-                    return isPhraseMode ? isPhrase : !isPhrase;
-                });
+            const { data: allData } = await distractorQuery;
+            if (allData && allData.length > 0) {
+                distractorPool = allData;
+            } else {
+                const { data: broaderData } = await supabase.from('vocabulary_vault')
+                    .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, category, target_level')
+                    .is('deleted_at', null)
+                    .range(0, 4999);
+                distractorPool = broaderData || [];
             }
         }
 
@@ -687,27 +824,9 @@ Deno.serve(async (req) => {
 
              if (isSelectionMode) {
                  const correctAnswer = accepted[0] || "N/A";
-                 let others = distractorPool.filter((r: any) => {
-                     const eng = (r.english||'').split('/')[0].trim();
-                     return eng && eng !== correctAnswer && !accepted.includes(eng);
-                 });
-
-                 const currentType = (vw.word_type || '').toLowerCase();
-                 let homogenous = others.filter((r: any) => (r.word_type || '').toLowerCase() === currentType);
-                 let heterogenous = others.filter((r: any) => (r.word_type || '').toLowerCase() !== currentType);
-
-                 homogenous = homogenous.sort(() => 0.5 - Math.random());
-                 heterogenous = heterogenous.sort(() => 0.5 - Math.random());
-
-                 let finalDistractors = [];
-                 if (homogenous.length >= 4) {
-                     finalDistractors = homogenous.slice(0, 4);
-                 } else {
-                     finalDistractors = [...homogenous, ...heterogenous].slice(0, 4);
-                 }
-
-                 let stringDistractors = finalDistractors.map((r: any) => (r.english||'').split('/')[0].trim());
-                 options = [correctAnswer, ...stringDistractors].sort(() => 0.5 - Math.random());
+                 const numDistractors = (dynamicAnswerType === 'dropdown_10') ? 9 : 4;
+                 const rankedDistractors = rankDistractorsForVaultItem(vw, distractorPool, numDistractors);
+                 options = [correctAnswer, ...rankedDistractors].sort(() => 0.5 - Math.random());
              }
 
              return {
