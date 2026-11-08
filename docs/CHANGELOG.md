@@ -1,3 +1,39 @@
+## [2026-11-08 20:20] — Phase 360: Strict 3:1:3:3 and 3:1:6 Test Room Ratio Parity Across All 5 Test Modes
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 360: Strict 3:1:3:3 and 3:1:6 Test Room Ratio Parity Across All 5 Test Modes  
+**Status:** PASS  
+
+### Why
+- The user instructed to make the Question Box adaptive while ensuring its rendered size is 100% identical across all question modalities ("buat adaptif, tapi ukurannya jadi sama").
+- In previous layouts, Written and Spoken modes contained 4 stacked items (`flex: 3 : 1 : 3 : 3`), while Multiple Choice and Phrase Chips contained 3 stacked items (`flex: 3 : 1 : 6`).
+- Because 4 items incur 3 flex gaps (18px) while 3 items incur only 2 gaps (12px), the 6px surplus space in 3-item modes expanded the Question Box by 5.34px (174.67px vs 169.33px), violating strict cross-mode uniformity.
+- An exact mathematical layout solution was required to guarantee 0.00px delta across all 5 test types and an exact 2.00x height ratio for Multiple Choice / Phrase Chips option areas.
+
+### Changed
+1. **Mathematical Ratio Engine in `css/test.css` & `js/test.js`**:
+   - Enforced `flex: 3 1 0` for `.question-box-prompt` across all modes.
+   - Enforced `flex: 1 1 0` (`min-height: 32px; max-height: 42px`) for `.metadata-grid` / `.metadata-table`.
+   - Enforced `flex: 3 1 0` for `#answer-container-written` and `#virtual-keyboard-container` (Written Mode 1:1:1 parity).
+   - Enforced `flex: 3 1 0` for `#speech-answer-container` and `#speech-control-container` (Spoken Mode 1:1:1 parity).
+   - Enforced `flex: 6 1 0` for `#answer-container-mc` and `#answer-container-chips`.
+   - Balanced the gap discrepancy by applying `margin: 0 auto 6px auto !important` to `#answer-container-mc` and `#answer-container-chips`. This absorbs the missing 6px gap and guarantees that free space (546px) is identical across 3-element and 4-element modes.
+2. **Automated Playwright Ratio Regression Suite (`scripts/test_unified_test_room_ratios.mjs`)**:
+   - Built an end-to-end Playwright test suite checking:
+     1. Written Mode 1:1 Parity (Question vs Answer): `0.00px` delta (PASS).
+     2. Spoken Words 1:1 Parity (Question vs Answer vs Mic): `0.00px` delta (PASS).
+     3. Spoken Phrases 1:1 Parity (Question vs Answer vs Mic): `0.00px` delta (PASS).
+     4. Cross-Mode Question Uniformity (Written vs Spoken): `0.00px` delta (PASS).
+     5. Multiple Choice Mode (Question Uniformity & 2.00x Ratio): `0.00px` delta, `2.00x` ratio (PASS).
+     6. Phrase Chips Mode (Question Uniformity & 2.00x Ratio): `0.00px` delta, `2.00x` ratio (PASS).
+   - Added `"test:ratios": "node scripts/test_unified_test_room_ratios.mjs"` to `package.json`.
+
+### Tests
+- command: `node scripts/test_unified_test_room_ratios.mjs` -> PASS (All 6 ratio checks passed 100%).
+- command: `npm.cmd test` -> PASS (All 8 core test suites passed 100%).
+
+---
+
 ## [2026-11-08 20:10] — Phase 359: Batch 134 Cohort Pacing Adjustment & Theme C Acceleration
 
 **Agent/Session:** Antigravity  

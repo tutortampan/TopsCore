@@ -1,3 +1,38 @@
+## SESSION-20261108-2020
+
+Start: 2026-11-08 20:10 UTC+8  
+End: 2026-11-08 20:20 UTC+8  
+Agent: Antigravity  
+
+### User Request
+"Continue" (Enforce strict 3:1:3:3 and 3:1:6 Test Room Ratio Parity across all 5 test modes)
+
+### Objective
+- Standardize the Question Box and answering areas on `test.html` to achieve mathematically identical heights across all 5 answering modes.
+- Eliminate the 5.34px gap discrepancy between 4-item modes (Written, Spoken) and 3-item modes (MCQ, Phrase Chips).
+- Verify with automated Playwright browser tests.
+
+### Work Performed
+1. **Ratio Engine Harmonization**:
+   - Refactored `css/test.css` and `js/test.js` to implement strict `3 : 1 : 3 : 3` (Writing & Speaking) and `3 : 1 : 6` (MCQ & Phrase Chips) flex distribution.
+   - Set `margin: 0 auto 6px auto !important` on `#answer-container-mc` and `#answer-container-chips` to equalize total gap/margin space (18px) across all modes.
+2. **Automated Verification**:
+   - Built `scripts/test_unified_test_room_ratios.mjs` verifying:
+     - Written Mode: 168.00px Q == 168.00px A == 168.00px Keyboard (Delta: 0.00px).
+     - Spoken Words: 168.00px Q == 168.00px A == 168.00px Mic (Delta: 0.00px).
+     - Spoken Phrases: 168.00px Q == 168.00px A == 168.00px Mic (Delta: 0.00px).
+     - Cross-Mode Question Delta: 0.00px (100% pixel-perfect match).
+     - MCQ & Phrase Chips Lower Container: 336.00px = exactly 2.00x Question Box.
+   - Added `test:ratios` script to `package.json`.
+3. **CI Regression**:
+   - `npm.cmd test`: All 8 core suites passed 100%.
+
+### Commands Run
+- `node scripts/test_unified_test_room_ratios.mjs` -> PASS (6/6 checks passed 100%)
+- `npm.cmd test` -> PASS
+
+---
+
 ## SESSION-20261108-2010
 
 Start: 2026-11-08 20:00 UTC+8  
