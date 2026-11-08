@@ -10,7 +10,7 @@ Status: COMPLETE
    - Updated `js/test.js` to strictly enforce `written` mode for any test with `answer_type === 'written'` or ending with `-WORDS-EXAM`.
    - Updated all 10 `*-WORDS-EXAM` tests in Supabase to `answer_type = 'written'` and `payload.answer_type = 'written'`.
    - Updated all 3,520 question snapshots across all 9 in-progress student attempts in `attempt_answers` to `answer_type: 'written'`.
-   - Bumped `test.html` and `sw.js` cache versions to `v168` / `v95`.
+   - Bumped `test.html` and `sw.js` cache versions to `v171` / `v96`.
 
 2. **Vocabulary Vault Topbar Tabs Architecture (`js/admin/vocab-vault.js`)**:
    - Split monolithic `Topic Blueprint` into two distinct tabs:

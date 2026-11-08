@@ -1,3 +1,33 @@
+## SESSION-20261109-0735
+
+Start: 2026-11-09 07:22 UTC+8
+End: 2026-11-09 07:35 UTC+8
+Agent: Antigravity
+
+### User Request
+"saat ini sesng berlangsung exam taoi bentuknya speoken, seharusnya written pada 2nd level vcab, apa yang terajdi? analisa, lalu buat jadi ketik untuk EXAM sesuai yang ada di test list"
+
+### Objective
+- Root-cause analyze why the ongoing 2nd Level Vocab Exam (2C-WORDS-EXAM) presented as spoken (speech-to-text) to students instead of written typing.
+- Switch all ongoing active attempts and future exam sessions to written mode immediately without data or timer loss.
+
+### Work Performed
+1. Root Cause Analysis:
+   - attempt_answers.question_snapshot stored answer_type: 'spoken' when the test was initially launched.
+   - supabase/functions/start-test/index.ts omitted shell_code and answer_type from the test payload returned on resume.
+2. Database Patch for Active Student Sessions:
+   - Updated tests record for 2C-WORDS-EXAM (6705f171-7b17-48d1-9391-e301f663a411) and 2D-WORDS-EXAM to answer_type: 'written'.
+   - Updated all 3,520 question snapshots across all 8 active in-progress attempts in attempt_answers to answer_type: 'written' (verified: 0 spoken, 440 written per student).
+3. Hardening & Cache Busting:
+   - Hardened js/test.js to strictly enforce written mode when shell_code ends with -WORDS-EXAM, or title includes WORDS EXAM, or answer_type is written.
+   - Hardened supabase/functions/start-test/index.ts to return shell_code, answer_type, and payload on new and resumed attempts.
+   - Bumped test.html to v171 and sw.js cache name to topscore-cache-option-a-v96.
+4. Verification:
+   - node scripts/test_multi_program_theme_blueprint_v166.mjs: PASS (31/31 passed 100%).
+   - node scripts/test_vocab_7x7_and_leveling_e2e.mjs: PASS (132/132 assertions x 10 runs passed).
+
+---
+
 ## SESSION-20261109-0720
 
 Start: 2026-11-09 06:55 UTC+8

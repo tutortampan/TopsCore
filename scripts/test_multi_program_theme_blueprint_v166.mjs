@@ -158,23 +158,25 @@ async function runTests() {
     assign: false
   });
 
-  // 5. Verify Frontend File Structure & Invariants
-  console.log('\n[5] Verifying Frontend Two-Tier Matrix Invariants...');
+  // 5. Verify Frontend Split Architecture & Invariants (Phase 332)
+  console.log('\n[5] Verifying Frontend Split Architecture & Invariants (Phase 332)...');
   const fs = await import('fs');
   const vocabVaultCode = fs.readFileSync('js/admin/vocab-vault.js', 'utf8');
 
+  assert(vocabVaultCode.includes('_renderThemeManagerTab'), 'vocab-vault.js contains dedicated _renderThemeManagerTab');
+  assert(vocabVaultCode.includes('_renderThemeBlueprintTab'), 'vocab-vault.js contains dedicated _renderThemeBlueprintTab');
   assert(vocabVaultCode.includes('btn-edit-mode-toggle'), 'vocab-vault.js contains EDIT MODE toggle button');
   assert(vocabVaultCode.includes('cell-program-assignment'), 'vocab-vault.js contains cell-program-assignment interactive cells');
-  assert(vocabVaultCode.includes('badge-theme-assigned'), 'vocab-vault.js renders badge-theme-assigned ("yes")');
+  assert(vocabVaultCode.includes('badge-program-assigned'), 'vocab-vault.js renders badge-program-assigned ("🟢 Active")');
   assert(vocabVaultCode.includes('toggleThemeProgramAssignment'), 'vocab-vault.js imports and uses toggleThemeProgramAssignment');
-  assert(vocabVaultCode.includes('WORD'), 'vocab-vault.js includes two-tier WORD header');
-  assert(vocabVaultCode.includes('PHRASE'), 'vocab-vault.js includes two-tier PHRASE header');
-  assert(vocabVaultCode.includes('Expression') && vocabVaultCode.includes('Idiom') && vocabVaultCode.includes('Proverb'), 'vocab-vault.js includes Expression, Idiom, Proverb subheaders');
+  assert(vocabVaultCode.includes('bp-hero-command-bar'), 'vocab-vault.js includes bp-hero-command-bar in Theme Blueprint');
+  assert(vocabVaultCode.includes('btn-bp-autogen'), 'vocab-vault.js includes Auto-Generate button in Theme Blueprint');
 
   const adminCss = fs.readFileSync('css/admin.css', 'utf8');
   assert(adminCss.includes('.btn-edit-mode-toggle.mode-off'), 'admin.css contains .btn-edit-mode-toggle.mode-off (Red)');
   assert(adminCss.includes('.btn-edit-mode-toggle.mode-on'), 'admin.css contains .btn-edit-mode-toggle.mode-on (Green)');
-  assert(adminCss.includes('.badge-theme-assigned'), 'admin.css contains .badge-theme-assigned styling');
+  assert(adminCss.includes('.badge-program-assigned'), 'admin.css contains .badge-program-assigned styling');
+  assert(adminCss.includes('.badge-test-ready'), 'admin.css contains .badge-test-ready styling');
 
   console.log('\n================================================================');
   console.log(`ALL TESTS PASSED: ${passedTests}/${totalTests} (100%)`);

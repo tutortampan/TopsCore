@@ -1845,7 +1845,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Themes: <strong style="color:#ffffff;">${totalThemesAll}</strong></span>
           <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Topics: <strong style="color:#ffffff;" id="topic-count-display">${initialRender.visibleTopicsCount}</strong></span>
           <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Items: <strong style="color:#38bdf8;">${words.length}</strong></span>
-          <button type="button" id="btn-theme-edit-toggle" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 6px; cursor: pointer; border: 1px solid ${isEditMode ? '#22c55e' : '#ef4444'}; background: ${isEditMode ? '#16a34a' : '#dc2626'}; color: #ffffff;" title="Edit mode on (hijau) / off (merah)">EDIT MODE: ${isEditMode ? 'ON' : 'OFF'}</button>
+          <button type="button" id="btn-theme-edit-toggle" class="btn-edit-mode-toggle ${isEditMode ? 'mode-on' : 'mode-off'}" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 6px; cursor: pointer; border: 1px solid ${isEditMode ? '#22c55e' : '#ef4444'}; background: ${isEditMode ? '#16a34a' : '#dc2626'}; color: #ffffff;" title="Edit mode on (hijau) / off (merah)">EDIT MODE: ${isEditMode ? 'ON' : 'OFF'}</button>
         </div>
       </div>
 
