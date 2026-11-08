@@ -1,3 +1,51 @@
+## [2026-11-08 21:08] — Phase 362: Cohort Level Pill Sync & 7x7 Repetitive Mastery Quota Locking
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 362: Cohort Level Pill Sync & 7x7 Repetitive Mastery Quota Locking  
+**Status:** PASS  
+
+### Why
+- The user reported two critical issues from live student screenshots (`Mr. Muhamad Alifurrahman`, Batch 134):
+  1. **Gambar 1 (`dashboard.html`)**: The top identity pill displayed `CEC | CAMP | 134 | 1ST LEVEL` when the student was definitively `2nd Level` in the database.
+  2. **Gambar 2 (`result.html`)**: The CTA button displayed `CONTINUE THE DRILL (5/6)` instead of the mandatory 7 repetitions (`7x7 Repetitive Mastery`).
+- A comprehensive cohort audit across all 82 students revealed that **67 students** in 2nd and 3rd Level (81.7% of the cohort) suffered from the same `1ST LEVEL` display bug due to `js/auth.js` omitting level fields from session creation, and active drillers were exposed to premature unlocking if clients evaluated stale cached `taskRepetitions: 6`.
+
+### Changed
+1. **Student Level Session Hydration (`js/api.js`, `js/auth.js`)**:
+   - `js/api.js` (`verifyStudentLogin`): Enhanced direct DB query to select `level_id`, `levels(id, level_number, name)`, and `batches(current_level_id, levels(id, level_number, name))`. Returns fully hydrated `level_id`, `level_number`, and `level_name`.
+   - `js/auth.js`: Updated `setStudentSession` invocation to pass `level_id`, `level_number`, and `level_name`, guaranteeing that `topscore_session` is hydrated at login.
+2. **Dashboard DOM Header Sync (`js/dashboard.js`)**:
+   - Immediate startup now renders `session.level_name` (or level ordinal) in uppercase (`2ND LEVEL`, `3RD LEVEL`).
+   - `fetchStudentLevel` async callback explicitly updates `#meta-lvl` in the DOM upon resolving, ensuring instant live synchronization.
+3. **Strict 7x7 Repetitive Mastery Invariant Locking (`js/api.js`, `js/result.js`, `js/dashboard.js`, `js/session.js`, `js/admin/app.js`, `js/admin/test-system-settings-modal.js`)**:
+   - `js/api.js` (`fetchClassTestSettings`): Enforced `Math.max(7, ...)` for vocabulary/formative task repetitions. Added automated `localStorage` cache sanitization to upgrade any legacy cache `< 7` to 7.
+   - `js/session.js`: Added self-executing `sanitizeRepetitionSettings()` to purge or upgrade any `topscore_test_settings_*` cache keys where `taskRepetitions < 7`.
+   - `js/result.js` (`determineNextMilestone`): Enforced `Math.max(7, ...)` on `targetReps`. Button actionTag strictly displays `CONTINUE THE DRILL (X/7):`.
+   - `js/dashboard.js` (`renderNextAssignmentHero`): Enforced `Math.max(7, ...)` on `targetReps`. Next Action Badge and 7-box rainbow bars remain in 100% mathematical parity.
+   - `js/admin/test-system-settings-modal.js`: Enforced `min="7"` in HTML input and `Math.max(7, ...)` on save.
+4. **Universal Cache & Service Worker Harmonization (`sw.js`, `dashboard.html`, `result.html`)**:
+   - Bumped cache to `topscore-cache-option-a-v90` and module script versions to `v=20261108_v162`.
+
+### Files
+- `js/api.js`
+- `js/auth.js`
+- `js/dashboard.js`
+- `js/result.js`
+- `js/session.js`
+- `js/admin/app.js`
+- `js/admin/test-system-settings-modal.js`
+- `sw.js`
+- `dashboard.html`
+- `result.html`
+- `scripts/verify_cohort_level_and_reps.mjs`
+
+### Tests
+- command: `node scripts/verify_cohort_level_and_reps.mjs` -> PASS (All 5 cohort tests passed 100%).
+- command: `node --check js/api.js js/auth.js js/dashboard.js js/result.js js/session.js js/admin/app.js js/admin/test-system-settings-modal.js` -> PASS (Zero syntax errors).
+- command: `node scripts/test_smart_distractor_engine.mjs` -> PASS (16/16 tests passed).
+
+---
+
 ## [2026-11-08 20:25] — Rule 0 Enforcement: Revert of Unrequested Batch 134 Pacing Adjustments (Option 1)
 
 **Agent/Session:** Antigravity  

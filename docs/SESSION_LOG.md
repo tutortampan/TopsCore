@@ -1,3 +1,55 @@
+## SESSION-20261108-2108
+
+Start: 2026-11-08 20:45 UTC+8  
+End: 2026-11-08 21:08 UTC+8  
+Agent: Antigravity  
+
+### User Request
+1. "gambar 1. kenapa alifurrahman tetulis levl 1? coba cek, dia 2nd Level. Gambar 2, tertulis 5 dari 6 atemmpts , harusnya 7 knapa begitu cari tahu! /plan"
+2. "coba cek apkah ada siswa lain yang mengalam hal sama , masukkan dalam plan yang tadi kalau ada, analisa secara menyeluruh!"
+3. Approval on artifact `alifurrahman_level_and_result_drill_repetition_plan.md`.
+
+### Objective
+- Investigate why Alifurrahman was showing `1ST LEVEL` on `dashboard.html` despite being `2nd Level` in database.
+- Investigate why `result.html` button showed `CONTINUE THE DRILL (5/6)` instead of `(5/7)`.
+- Audit all 82 students in database for level mismatches and repetition progress issues.
+- Implement structural fixes to ensure:
+  1. Student level is properly populated into session and synchronized to the DOM on `dashboard.html`.
+  2. 7x7 Repetitive Mastery quota (denominator 7) is strictly enforced across `result.js`, `api.js`, and `dashboard.js`.
+  3. Contaminated `localStorage` cache is automatically sanitized.
+
+### Work Performed
+1. **Cohort-Wide Comprehensive Database & Attempt Audit**:
+   - Analyzed all 82 active students across 10 batches in Supabase:
+     - 49 students in 3rd Level (Batches 133, 131, 132, 123).
+     - 18 students in 2nd Level (Batch 134).
+     - 14 students in Alumni.
+     - 1 student in 1st Level.
+   - Identified that **67 students** (all 2nd and 3rd Level students) were vulnerable to the `1ST LEVEL` dashboard pill display glitch due to `js/auth.js` omitting level fields from session creation.
+   - Identified active drillers (`Mr. Abdul Basit`, `Mr. Wildian Yusroni`, `Mr. Lalu Yuda`, `Mr. Muhammad Masyan Hafizi`) at risk of premature unlocking if client evaluated stale cached `taskRepetitions: 6`.
+2. **Implementation of Structural Fixes**:
+   - `js/api.js`: Enhanced `verifyStudentLogin` to join `levels` and `batches` tables, returning hydrated `level_id`, `level_number`, and `level_name`.
+   - `js/auth.js`: Updated `setStudentSession` invocation to pass `level_id`, `level_number`, and `level_name`.
+   - `js/dashboard.js`: Rendered uppercase level name on initial render, and added explicit DOM update in `fetchStudentLevel` async callback.
+   - `js/api.js`: Enforced `taskRepetitions: Math.max(7, ...)` and added cache sanitization to upgrade any legacy cache `< 7` to 7.
+   - `js/session.js`: Added self-executing `sanitizeRepetitionSettings()` to purge or upgrade any `topscore_test_settings_*` cache keys where `taskRepetitions < 7`.
+   - `js/result.js`: Enforced `Math.max(7, ...)` on `targetReps`. Button actionTag strictly displays `CONTINUE THE DRILL (X/7):`.
+   - `js/admin/test-system-settings-modal.js`: Enforced `min="7"` in HTML input and `Math.max(7, ...)` on save.
+   - Bumped cache to `topscore-cache-option-a-v90` and script versions to `v=20261108_v162`.
+3. **Automated Verification**:
+   - Created and ran `scripts/verify_cohort_level_and_reps.mjs`: All 5 cohort verification tests passed 100%.
+   - Validated syntax with `node --check` across all 7 modified JS files: zero errors.
+   - Ran `node scripts/test_smart_distractor_engine.mjs`: 16/16 tests passed.
+
+### Commands Run
+- `node scripts/audit_all_students.mjs`
+- `node scripts/audit_drilling_students.mjs`
+- `node scripts/verify_cohort_level_and_reps.mjs`
+- `node --check js/api.js js/auth.js js/dashboard.js js/result.js js/session.js js/admin/app.js js/admin/test-system-settings-modal.js`
+- `node scripts/test_smart_distractor_engine.mjs`
+
+---
+
 ## SESSION-20261108-2025
 
 Start: 2026-11-08 20:07 UTC+8  
