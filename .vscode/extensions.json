@@ -9,16 +9,21 @@
     "pranaygp.vscode-css-peek",            // CSS Peek — Jump to & view CSS definitions directly from HTML classes/IDs
     "naumovs.color-highlight",             // Color Highlight — Inline color previews for hex/rgb (essential for TopsCore grading tiers)
 
-    // ─── ⚡ HTML & ASSET PRODUCTIVITY ──────────────────────────────────
+    // ─── ⚡ HTML, API & ASSET PRODUCTIVITY ──────────────────────────────
     "formulahendry.auto-close-tag",        // Auto Close Tag — Automatically closes HTML tags
     "formulahendry.auto-rename-tag",       // Auto Rename Tag — Synchronously renames matching HTML tags
     "christian-kohler.path-intellisense",  // Path Intellisense — Autocompletes filenames for assets, scripts, and styles
+    "rangav.vscode-thunder-client",        // Thunder Client — Lightweight REST API client for testing Supabase Edge Functions
+    "mikestead.dotenv",                    // DotENV — Syntax highlighting & env variable support for .env files
 
     // ─── 🛡️ CODE QUALITY & RUNTIME SAFETY ──────────────────────────────
     "usernamehw.errorlens",                // Error Lens — Instant inline error & warning highlighting
     "dbaeumer.vscode-eslint",              // ESLint — Integrates ESLint for JavaScript quality checks
     "esbenp.prettier-vscode",              // Prettier — Code formatter for consistent clean formatting
     "denoland.vscode-deno",                // Deno — Language server for Supabase Edge Functions (isolated in supabase/functions)
+
+    // ─── 🔍 VERSION CONTROL & TRACEABILITY ──────────────────────────────
+    "eamodio.gitlens",                     // GitLens — Supercharges Git with line blame, visual file history, and multi-phase commit tracing
 
     // ─── 🤖 AI PAIR PROGRAMMING & ARCHITECTURE ────────────────────────
     "kanezal.better-antigravity",           // Better Antigravity — Community-driven fixes and optimizations for Antigravity IDE

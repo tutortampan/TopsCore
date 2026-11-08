@@ -22,7 +22,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     window.escapeHtml = escapeHtml;
 
     window.openSubmitModal = openSubmitModal;
-    
+
     const session = requireStudentSession();
     if (!session) throw new Error('Not authenticated');
 
@@ -751,7 +751,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
     window.addEventListener('beforeunload', (e) => {
       if (isTestActive) {
-        // BUG FIX: Do NOT call submitOnPageExit() here! 
+        // BUG FIX: Do NOT call submitOnPageExit() here!
         // If the user clicks 'Cancel' on the browser's reload warning, they should be able to continue.
         // Actual forceful submission is handled reliably by the 'pagehide' event if they do leave.
         e.preventDefault();
@@ -907,12 +907,12 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           hideLoading();
           return;
         }
-        
+
         if (testData?.schedule_mode === 'fixed') {
           const witaNow = await getServerTimeWita();
           const witaStart = testData.window_start ? new Date(testData.window_start) : null;
           const witaEnd = testData.window_end ? new Date(testData.window_end) : null;
-          
+
           if (witaStart && witaNow < witaStart) {
             hideLoading();
             alert('This test has not started yet. Please wait until ' + witaStart.toLocaleString());
@@ -1017,7 +1017,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             const fallbackParts = [session.batch_name ? `Batch ${session.batch_name}` : '', session.program_name].filter(Boolean);
             detailsEl.textContent = fallbackParts.length ? fallbackParts.join(' • ') : 'Cake English Course';
           }
-          
+
           fetch(`${SUPABASE_URL}/rest/v1/students?id=eq.${session.student_id}&select=*,institutions(name),programs(name),batches(name),levels(name)`, {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
           }).then(r => r.json()).then(stuRes => {
@@ -1031,18 +1031,18 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
               } else if (avatarEl) {
                 avatarEl.src = generateAvatarDataUri(session.student_name || 'S', s.gender);
               }
-              
+
               let age = '';
               if (s.date_of_birth) {
                 const ageNum = Math.floor((new Date() - new Date(s.date_of_birth)) / 31557600000);
                 if (ageNum > 0) age = ageNum + 'thn';
               }
-              
+
               const inst = s.institutions?.name || '';
               const prog = s.programs?.name || '';
               const batch = s.batches?.name || '';
               const lvl = s.levels?.name ? 'Lvl ' + s.levels.name : '';
-              
+
               const details = [age, inst, prog, batch, lvl].filter(Boolean).join(' • ');
               if (detailsEl) detailsEl.textContent = details;
             } else if (avatarEl) {
@@ -1189,9 +1189,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         sessionStorage.removeItem('topscore_attempt_id');
 
         const errMsg = e?.message || String(e) || 'Unable to start test.';
-        const isPrereqIssue = errMsg.includes('Prerequisite') || 
-                              errMsg.includes('Repetitive Mastery') || 
-                              errMsg.includes('PREREQUISITE') || 
+        const isPrereqIssue = errMsg.includes('Prerequisite') ||
+                              errMsg.includes('Repetitive Mastery') ||
+                              errMsg.includes('PREREQUISITE') ||
                               errMsg.includes('TOPIC_MASTERY') ||
                               errMsg.includes('PRIOR_THEME_EXAMS_REQUIRED');
 
@@ -1347,7 +1347,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         : attemptData?.expected_end_at
           ? new Date(attemptData.expected_end_at)
           : null;
-      
+
       let sectionEndAt = null;
       if (currentSection && currentSection.time_limit_minutes) {
          let secStartedStr = localStorage.getItem(`topscore_sec_started_${attemptData.id}_${currentSectionIndex}`);
@@ -2032,11 +2032,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
     // Visual Testing & Catalog Harness Hook (Zero-mutation instant scenario rendering)
     window.__renderTestScenario = function(scenario) {
-      hideLoading();
-      document.querySelectorAll('.loading-overlay, #loading-overlay, .toast, #toast-container, .toast-notification').forEach(el => {
-        el.style.display = 'none';
-        el.remove();
-      });
+      document.getElementById('loading-overlay')?.classList.add('hidden');
       document.getElementById('pre-exam-focus-modal')?.classList.add('hidden');
       document.getElementById('fullscreen-pause-modal')?.classList.add('hidden');
 
@@ -2109,7 +2105,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         options = correctItem ? [...distractors, correctItem] : distractors;
       }
       options = options.sort(() => 0.5 - Math.random());
-      
+
       const letters = ['A','B','C','D','E','F','G','H','I','J'];
       options.forEach((opt, i) => {
         const optText = typeof opt === 'string' ? opt : opt.text || opt.value || JSON.stringify(opt);
@@ -2120,9 +2116,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
         btn.setAttribute('tabindex', '0');
         btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(var(--grade-star-rgb, 0, 192, 0), 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:clamp(12.5px, 3.2vw, 14.5px); font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 16px rgba(6,182,212,0.25)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
-        
+
         btn.innerHTML = `<div class="mc-letter" style="background:${isSelected ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; color:${isSelected ? '#000000' : '#94a3b8'}; border-radius:8px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:11.5px; font-weight:800;">${letters[i] || i+1}</div><div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25; text-align:left;">${optText}</div>`;
-        
+
         btn.addEventListener('click', () => {
           area.querySelectorAll('.mc-option').forEach(o => {
             o.classList.remove('selected');
@@ -2263,7 +2259,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         hintBtn.innerHTML = '💡 Hint';
         hintBtn.title = 'Get first-letter clue (Task practice only)';
         hintBtn.style.cssText = 'font-size:11px; font-weight:700; color:#fbbf24; background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
-        
+
         const hintDisplay = document.createElement('div');
         hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:#fbbf24; margin-top:3px; display:none;';
         const mask = primaryTarget.split(' ').map(w => {
@@ -2361,7 +2357,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         hintBtn.innerHTML = '💡 Hint';
         hintBtn.title = 'Get first-letter clue (Quiz practice only)';
         hintBtn.style.cssText = 'font-size:11px; font-weight:700; color:#fbbf24; background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
-        
+
         const hintDisplay = document.createElement('div');
         hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:#fbbf24; margin-top:3px; display:none;';
         const mask = primaryTarget.split(' ').map(w => {
@@ -2384,7 +2380,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       micBtn.className = 'speech-mic-btn-lg';
       micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(var(--grade-star-rgb, 0, 192, 0), 0.4); background:linear-gradient(135deg, #86efac 0%, var(--grade-star, #00c000ff) 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 0 24px rgba(var(--grade-star-rgb, 0, 192, 0), 0.45), 0 8px 16px rgba(0,0,0,0.35); flex-shrink:0;';
       micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
-      
+
       const micHelp = document.createElement('div');
       micHelp.style.cssText = 'margin-top:4px; font-size:clamp(11px, 2.5vw, 13px); color:#94a3b8; font-weight:700; letter-spacing:0.04em;';
       micHelp.textContent = 'Tap to Speak';
@@ -2582,9 +2578,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (!popup) return;
       const isCurrentlyShown = popup.style.display !== 'none';
       const shouldShow = typeof show !== 'undefined' ? show : !isCurrentlyShown;
-      
+
       popup.style.display = shouldShow ? 'flex' : 'none';
-      
+
       const mainContent = document.getElementById('test-main');
       if (mainContent) {
         if (shouldShow) {
@@ -2851,7 +2847,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       try {
         const targetStatus = isAuto ? 'auto_submitted' : 'submitted';
         const result = await submitTest(attemptData.id, payload, { status: targetStatus });
-        
+
         if (String(testData?.test_type).toLowerCase() === 'exam' || ['EXAM', 'TEST'].includes(testData?.category)) {
           try {
             await checkAndTriggerLevelUp(session.student_id, testData.level_id);
@@ -2859,13 +2855,13 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             console.error('Level up check failed:', e);
           }
         }
-        
+
         // Clean up safety buffers on successful submission
-        try { 
+        try {
           localStorage.removeItem(`topscore_local_answers_${attemptData.id}`);
           sessionStorage.removeItem(`topscore_fallback_payload_${attemptData.id}`);
         } catch (_) {}
-        
+
         hideLoading();
         sessionStorage.setItem('topscore_attempt_id', attemptData.id);
         window.location.href = 'result.html';
@@ -2986,7 +2982,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if(!window.activeKeyboardInput) return;
       // Do not intercept if the user is using modifier keys (like Ctrl+R, F5, etc.)
       if(e.ctrlKey || e.altKey || e.metaKey) return;
-      
+
       const vkContainer = getVirtualKeyboard();
       if (!vkContainer || vkContainer.style.display === 'none') return; // Only if written question is active
 
@@ -2998,7 +2994,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         e.preventDefault();
         window.activeKeyboardInput.value += '\n';
         window.activeKeyboardInput.dispatchEvent(new Event('input'));
-      } else if (e.key.length === 1) { 
+      } else if (e.key.length === 1) {
         // Single character key
         e.preventDefault();
         window.activeKeyboardInput.value += e.key;
