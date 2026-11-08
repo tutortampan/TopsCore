@@ -493,17 +493,15 @@
 
     /* ============================================================
        UNIFIED & ADAPTIVE QUESTION BOX (ALL ANSWERING MODES)
-       Written, Spoken, Multiple Choice & Phrase Selection
+       Strict 3 : 1 : 3 : 3 (Speaking & Writing) and 3 : 1 : 6 (MCQ & Chips)
        ============================================================ */
     .question-box-prompt,
     #question-interaction-group .question-box-prompt,
     .test-main-content > .question-box-prompt {
       width: 100% !important;
       max-width: 440px !important;
-      height: clamp(96px, 16.5vh, 125px) !important;
-      min-height: 90px !important;
-      max-height: 125px !important;
-      flex: 0 0 auto !important;
+      flex: 3 1 0 !important;
+      min-height: 80px !important;
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
@@ -522,7 +520,7 @@
 
     .question-box-prompt .speech-question-text,
     #question-interaction-group .question-box-prompt .speech-question-text {
-      font-size: clamp(19px, 4.8vw, 25px) !important;
+      font-size: clamp(18px, 4.5vw, 24px) !important;
       line-height: 1.25 !important;
       font-weight: 800 !important;
       color: #f8fafc !important;
@@ -539,10 +537,9 @@
     #question-interaction-group .metadata-grid {
       width: 100% !important;
       max-width: 440px !important;
-      height: clamp(34px, 5.5vh, 40px) !important;
-      min-height: 34px !important;
+      flex: 1 1 0 !important;
+      min-height: 32px !important;
       max-height: 42px !important;
-      flex: 0 0 auto !important;
       display: grid !important;
       grid-template-columns: 1fr 1fr !important;
       grid-template-rows: 1fr 1fr !important;
@@ -552,16 +549,17 @@
       margin: 0 auto !important;
     }
 
+    #answer-container-written,
     #question-interaction-group #answer-container-written {
-      flex: 1 1 0 !important;
-      min-height: 0 !important;
+      flex: 3 1 0 !important;
+      min-height: 80px !important;
       display: flex !important;
       flex-direction: column !important;
       justify-content: center !important;
       align-items: center !important;
       overflow-y: auto !important;
       box-sizing: border-box !important;
-      padding: 4px 12px !important;
+      padding: 6px 12px !important;
       background: linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%) !important;
       border: 1px solid rgba(56, 189, 248, 0.2) !important;
       border-radius: 12px !important;
@@ -570,12 +568,13 @@
       backdrop-filter: blur(14px) !important;
       position: relative !important;
       width: 100% !important;
+      max-width: 440px !important;
     }
 
     #interaction-container {
       width: 100% !important;
       max-width: 440px !important;
-      flex: 1 1 0 !important;
+      flex: 6 1 0 !important;
       min-height: 0 !important;
       margin: 0 auto !important;
       display: flex !important;
@@ -585,14 +584,80 @@
       box-sizing: border-box !important;
     }
 
+    #speech-answer-container {
+      width: 100% !important;
+      max-width: 440px !important;
+      flex: 3 1 0 !important;
+      min-height: 80px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      overflow-y: auto !important;
+      box-sizing: border-box !important;
+      padding: 6px 12px !important;
+      background: linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%) !important;
+      border: 1px solid rgba(56, 189, 248, 0.2) !important;
+      border-radius: 14px !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+      -webkit-backdrop-filter: blur(14px) !important;
+      backdrop-filter: blur(14px) !important;
+      position: relative !important;
+    }
+
+    #speech-control-container,
+    .speech-mic-panel {
+      width: 100% !important;
+      max-width: 440px !important;
+      flex: 3 1 0 !important;
+      min-height: 80px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 6px !important;
+      margin: 0 auto !important;
+      box-sizing: border-box !important;
+      padding: 6px 16px !important;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(10, 16, 30, 0.85) 100%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 14px !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+      -webkit-backdrop-filter: blur(14px) !important;
+      backdrop-filter: blur(14px) !important;
+      position: relative !important;
+    }
+
+    #answer-container-mc,
+    #answer-container-chips {
+      width: 100% !important;
+      max-width: 440px !important;
+      flex: 6 1 0 !important;
+      min-height: 28px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      gap: clamp(4px, 0.8vh, 8px) !important;
+      padding: 13px 8px !important;
+      background: linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 14px !important;
+      -webkit-overflow-scrolling: touch !important;
+      box-sizing: border-box !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      backdrop-filter: blur(16px) !important;
+      overflow-y: auto !important;
+      margin-bottom: 6px !important;
+    }
+
     /* Virtual Keyboard (Authentic 1:1 Native Gboard Dark Replica - Priority Lock) */
     #virtual-keyboard-container { 
       width: 100% !important;
       max-width: 440px !important;
-      flex-shrink: 0 !important;
-      height: 186px !important;
-      min-height: 186px !important;
-      max-height: 186px !important;
+      flex: 3 1 0 !important;
+      min-height: 140px !important;
+      max-height: 220px !important;
       margin: 0 auto !important;
       padding: 6px 4px !important; 
       background: #1e293b !important; 
@@ -606,31 +671,6 @@
       box-sizing: border-box !important; 
       z-index: 1000; 
       overflow: hidden !important;
-    }
-
-    /* ===== SPEECH MIC CONTROL PANEL (186px fixed — matches keyboard height) ===== */
-    .speech-mic-panel {
-      width: 100% !important;
-      max-width: 440px !important;
-      height: 186px !important;
-      min-height: 186px !important;
-      max-height: 186px !important;
-      flex-shrink: 0 !important;
-      display: flex !important;
-      flex-direction: column !important;
-      align-items: center !important;
-      justify-content: center !important;
-      gap: 8px !important;
-      margin: 0 auto !important;
-      box-sizing: border-box !important;
-      padding: 10px 16px !important;
-      background: linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(10, 16, 30, 0.85) 100%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
-      border-radius: 14px !important;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
-      -webkit-backdrop-filter: blur(14px) !important;
-      backdrop-filter: blur(14px) !important;
-      position: relative !important;
     }
 
     .vk-row { 
@@ -663,8 +703,9 @@
 
     .vk-key { 
       flex: 1 1 0 !important; 
-      height: clamp(36px, 5vh, 42px) !important;
+      height: 100% !important;
       min-height: 0 !important;
+      max-height: 46px !important;
       display: flex !important; 
       align-items: center !important; 
       justify-content: center !important; 

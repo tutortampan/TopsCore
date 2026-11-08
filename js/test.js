@@ -1851,26 +1851,22 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       let answerArea, controlArea;
 
       if (isWritten) {
-        // Upper Content Area taking 100% of remaining body height above locked keyboard
-        const upperGroup = document.createElement('div');
-        upperGroup.id = 'question-interaction-group';
-        upperGroup.style.cssText = 'flex:1; min-height:0; display:flex; flex-direction:column; justify-content:space-between; gap:6px; overflow:hidden; width:100% !important; max-width:440px !important; margin:0 auto !important; box-sizing:border-box;';
-
-        // 1. Question Box (Unified Adaptive Specification across all modes)
+        // 1. Question Box (Unified Adaptive Specification: Flex 3)
         const questionBox = document.createElement('div');
-        questionBox.className = 'w-full flex flex-col shrink-0 question-box-prompt';
-        questionBox.style.cssText = 'width:100% !important; max-width:440px !important; height:clamp(96px, 16.5vh, 125px) !important; min-height:90px !important; max-height:125px !important; flex:0 0 auto !important; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px);';
+        questionBox.id = 'question-box-prompt';
+        questionBox.className = 'w-full flex flex-col question-box-prompt';
+        questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); margin:0 auto !important;';
         questionBox.innerHTML = `
-          <div class="speech-question-text" style="font-size:clamp(19px, 4.8vw, 25px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
+          <div class="speech-question-text" style="font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
             ${escapeHtml(questionText)}
           </div>
         `;
-        upperGroup.appendChild(questionBox);
+        main.appendChild(questionBox);
 
-        // 2. Metadata Grid (Unified height matching Spoken & MCQ)
+        // 2. Metadata Grid (Unified height: Flex 1)
         const metadataTable = document.createElement('div');
-        metadataTable.className = 'w-full shrink-0 metadata-grid';
-        metadataTable.style.cssText = 'width:100% !important; max-width:440px !important; height:clamp(34px, 5.5vh, 40px) !important; min-height:34px !important; max-height:42px !important; flex:0 0 auto !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; align-items:center; box-sizing:border-box; margin:0 auto !important;';
+        metadataTable.className = 'w-full metadata-grid metadata-table';
+        metadataTable.style.cssText = 'width:100% !important; max-width:440px !important; flex:1 1 0 !important; min-height:32px !important; max-height:42px !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; align-items:center; box-sizing:border-box; margin:0 auto !important;';
         metadataTable.innerHTML = `
           <!-- Row 1 Left: Theme name only -->
           <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
@@ -1889,41 +1885,41 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             <span style="color:#cbd5e1; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayType)}">${escapeHtml(displayType)}</span>
           </div>
         `;
-        upperGroup.appendChild(metadataTable);
+        main.appendChild(metadataTable);
 
-        // 3. Answer Box (Fluidly absorbs remaining space above keyboard)
+        // 3. Answer Box (Flex 3: Matches questionBox 1:1)
         answerArea = document.createElement('div');
         answerArea.id = 'answer-container-written';
-        answerArea.className = 'w-full flex flex-col justify-center items-center shrink-0';
-        answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:1 1 0 !important; min-height:0; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow-y:auto; box-sizing:border-box; padding:4px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:12px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); position:relative;';
-        upperGroup.appendChild(answerArea);
+        answerArea.className = 'w-full flex flex-col justify-center items-center';
+        answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow-y:auto; box-sizing:border-box; padding:6px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:12px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); position:relative; margin:0 auto !important;';
+        main.appendChild(answerArea);
 
-        main.appendChild(upperGroup);
-
-        // Child 2 of main: Virtual Keyboard Container (locked priority anchor)
+        // 4. Virtual Keyboard Container (Flex 3: Matches questionBox & answerArea 1:1)
         if (vk) {
           vk.style.display = 'flex';
-          vk.style.cssText = 'flex-shrink:0 !important; height:auto !important; max-height:210px !important; margin:0 auto !important; box-sizing:border-box !important; width:100% !important; max-width:440px !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; padding:6px 4px !important; gap:4px !important; overflow:hidden !important;';
+          vk.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:140px !important; max-height:220px !important; margin:0 auto !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; padding:6px 4px !important; gap:4px !important; overflow:hidden !important;';
           main.appendChild(vk);
           controlArea = vk;
         }
 
         renderWritten(answerArea, controlArea, row, savedAnswer, snap, vk);
       } else {
-        // Speech & MCQ mode: exact unified adaptive specifications identical to Written mode
+        // 1. Question Box (Unified Adaptive Specification: Flex 3)
         const questionBox = document.createElement('div');
-        questionBox.className = 'w-full flex flex-col shrink-0 question-box-prompt';
-        questionBox.style.cssText = `width:100% !important; max-width:440px !important; height:clamp(96px, 16.5vh, 125px) !important; min-height:90px !important; max-height:125px !important; flex:0 0 auto !important; margin:0 auto !important; display:flex; align-items:center; justify-content:center; text-align:center; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); box-sizing:border-box; flex-shrink:0; padding:6px 14px; overflow:hidden;`;
+        questionBox.id = 'question-box-prompt';
+        questionBox.className = 'w-full flex flex-col question-box-prompt';
+        questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); margin:0 auto !important;';
         questionBox.innerHTML = `
-          <div class="speech-question-text" style="font-size:clamp(19px, 4.8vw, 25px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
+          <div class="speech-question-text" style="font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
             ${escapeHtml(questionText)}
           </div>
         `;
         main.appendChild(questionBox);
 
+        // 2. Metadata Grid (Unified height: Flex 1)
         const metadataTable = document.createElement('div');
-        metadataTable.className = 'w-full shrink-0 metadata-grid metadata-table';
-        metadataTable.style.cssText = `width:100% !important; max-width:440px !important; height:clamp(34px, 5.5vh, 40px) !important; min-height:34px !important; max-height:42px !important; flex:0 0 auto !important; margin:0 auto !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; box-sizing:border-box;`;
+        metadataTable.className = 'w-full metadata-grid metadata-table';
+        metadataTable.style.cssText = 'width:100% !important; max-width:440px !important; flex:1 1 0 !important; min-height:32px !important; max-height:42px !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; align-items:center; box-sizing:border-box; margin:0 auto !important;';
         metadataTable.innerHTML = `
           <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
             <span style="color:#38bdf8; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
@@ -1939,37 +1935,39 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           </div>
         `;
         main.appendChild(metadataTable);
-        // Speech & MCQ mode: interactionContainer fluidly absorbs remaining space
-        const interactionContainer = document.createElement('div');
-        interactionContainer.id = 'interaction-container';
-        interactionContainer.className = 'w-full flex-1 flex flex-col min-h-0';
-        interactionContainer.style.cssText = `flex:1 1 0 !important; min-height:0 !important; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; overflow:hidden; gap:5px; box-sizing:border-box;`;
-        main.appendChild(interactionContainer);
 
         if (answerType === 'speech_to_text' || answerType === 'spoken') {
+          // 3. Speaking Answer Transcript Box (Flex 3: Matches questionBox 1:1)
           answerArea = document.createElement('div');
+          answerArea.id = 'speech-answer-container';
           answerArea.className = 'w-full flex flex-col justify-between';
-          answerArea.style.cssText = 'height:calc(50% - 3px); min-height:calc(50% - 3px); max-height:calc(50% - 3px); overflow-y:auto; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:8px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); box-sizing:border-box; position:relative;';
-          interactionContainer.appendChild(answerArea);
+          answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; overflow-y:auto; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:6px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); box-sizing:border-box; position:relative;';
+          main.appendChild(answerArea);
 
+          // 4. Speaking Mic Control Panel (Flex 3: Matches questionBox & answerArea 1:1)
           controlArea = document.createElement('div');
-          controlArea.className = 'w-full flex flex-col items-center justify-center shrink-0';
-          controlArea.style.cssText = 'height:calc(50% - 3px); min-height:calc(50% - 3px); max-height:calc(50% - 3px); flex-shrink:0; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:6px 0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(10, 16, 30, 0.85) 100%); border:1px solid rgba(255, 255, 255, 0.08); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35); backdrop-filter:blur(14px); box-sizing:border-box;';
-          interactionContainer.appendChild(controlArea);
+          controlArea.id = 'speech-control-container';
+          controlArea.className = 'w-full flex flex-col items-center justify-center speech-mic-panel';
+          controlArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; margin:0 auto !important; padding:6px 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(10, 16, 30, 0.85) 100%); border:1px solid rgba(255, 255, 255, 0.08); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35); backdrop-filter:blur(14px); box-sizing:border-box; position:relative;';
+          main.appendChild(controlArea);
 
           renderSpeech(answerArea, controlArea, row, savedAnswer, snap);
         } else if (answerType === 'multiple_choice' || answerType === 'selection') {
+          // 3. Multiple Choice Options Container (Flex 6: Full options area)
           answerArea = document.createElement('div');
-          answerArea.className = 'w-full flex-1 flex flex-col';
-          answerArea.style.cssText = 'height:100%; min-height:100%; max-height:100%; overflow-y:auto; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; justify-content:space-between; gap:clamp(4px, 0.8vh, 8px); padding:6px 8px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(255, 255, 255, 0.12); border-radius:14px; -webkit-overflow-scrolling:touch; box-sizing:border-box; box-shadow:0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(16px);';
-          interactionContainer.appendChild(answerArea);
+          answerArea.id = 'answer-container-mc';
+          answerArea.className = 'w-full flex flex-col';
+          answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:6 1 0 !important; min-height:28px !important; overflow-y:auto; margin:0 auto !important; display:flex; flex-direction:column; justify-content:space-between; gap:clamp(4px, 0.8vh, 8px); padding:13px 8px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(255, 255, 255, 0.12); border-radius:14px; -webkit-overflow-scrolling:touch; box-sizing:border-box; box-shadow:0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(16px); margin-bottom:6px !important;';
+          main.appendChild(answerArea);
 
           renderMC(answerArea, row, savedAnswer, snap);
         } else {
+          // 3. Phrase Chips Container (Flex 6: Full chips area)
           answerArea = document.createElement('div');
-          answerArea.className = 'w-full flex-1 flex flex-col';
-          answerArea.style.cssText = 'height:100%; min-height:100%; max-height:100%; overflow-y:auto; width:100% !important; max-width:440px !important; margin:0 auto !important; display:flex; flex-direction:column; justify-content:space-between; gap:clamp(4px, 0.8vh, 8px); padding:6px 8px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(255, 255, 255, 0.12); border-radius:14px; -webkit-overflow-scrolling:touch; box-sizing:border-box; box-shadow:0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(16px);';
-          interactionContainer.appendChild(answerArea);
+          answerArea.id = 'answer-container-chips';
+          answerArea.className = 'w-full flex flex-col';
+          answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:6 1 0 !important; min-height:28px !important; overflow-y:auto; margin:0 auto !important; display:flex; flex-direction:column; justify-content:space-between; gap:clamp(4px, 0.8vh, 8px); padding:13px 8px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(255, 255, 255, 0.12); border-radius:14px; -webkit-overflow-scrolling:touch; box-sizing:border-box; box-shadow:0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(16px); margin-bottom:6px !important;';
+          main.appendChild(answerArea);
 
           renderPhraseChips(answerArea, row, savedAnswer, snap);
         }
