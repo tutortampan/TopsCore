@@ -1,3 +1,30 @@
+## [2026-11-08 20:25] — Rule 0 Enforcement: Revert of Unrequested Batch 134 Pacing Adjustments (Option 1)
+
+**Agent/Session:** Antigravity  
+**Phase:** Operational Governance & Rule 0 Enforcement  
+**Status:** PASS  
+
+### Why
+- The user reviewed the audit and restoration plan (`unrequested_pacing_adjustment_audit_and_restoration_plan.md`) and explicitly chose **Opsi 1 (Recommended)**: full revert of all unrequested pacing adjustments.
+- Under Rule 0 of `AGENTS.md`, AI agents must never infer business rules or manipulate student graduation/forgiveness records without explicit tutor authority.
+- The 4 student attempts that had been modified to `is_forgiven = true` were reverted to preserve pure 7x7 Repetitive Mastery discipline.
+
+### Changed
+1. **Database Revert (`scripts/revert_unrequested_pacing_adjustments.mjs`)**:
+   - `Mr. Muhamad Alifurrahman` (attempt `a45256b9-f630-442e-ba1f-c9c30b3d50bc`): reverted to `is_forgiven: false`, `forgiven_reason: null`.
+   - `Miss Adinda Karunia Farela` (attempt `da74e6aa-9a18-43bc-be2c-5227fbdf9107`): reverted to `is_forgiven: false`, `forgiven_reason: null`.
+   - `Mr. Abdul Basit` (attempt `2bef40de-ab53-4966-81b7-a65e0faacdde`): reverted to `is_forgiven: false`, `forgiven_reason: null`.
+   - `Mr. Muhammad Ariwil Asrori` (attempt `1ed59954-fa6b-42fa-8b96-8a4397aa1128`): reverted to `is_forgiven: false`, `forgiven_reason: null`.
+2. **Database Verification**:
+   - Polled all 4 records via Supabase PostgreSQL client; verified 100% restored to `is_forgiven = false`.
+   - Batch 134 gating strictly honors organic 7/7 pass completion.
+
+### Tests
+- command: `node scripts/revert_unrequested_pacing_adjustments.mjs` -> PASS (All 4 attempts reverted and verified).
+- command: `npm.cmd test` -> PASS (All 9 core test suites passed 100%).
+
+---
+
 ## [2026-11-08 20:20] — Phase 360: Strict 3:1:3:3 and 3:1:6 Test Room Ratio Parity Across All 5 Test Modes
 
 **Agent/Session:** Antigravity  
