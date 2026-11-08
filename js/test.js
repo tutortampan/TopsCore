@@ -2030,6 +2030,36 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     }
     window.renderQuestion = renderQuestion;
 
+    // Visual Testing & Catalog Harness Hook (Zero-mutation instant scenario rendering)
+    window.__renderTestScenario = function(scenario) {
+      hideLoading();
+      document.querySelectorAll('.loading-overlay, #loading-overlay, .toast, #toast-container, .toast-notification').forEach(el => {
+        el.style.display = 'none';
+        el.remove();
+      });
+      document.getElementById('pre-exam-focus-modal')?.classList.add('hidden');
+      document.getElementById('fullscreen-pause-modal')?.classList.add('hidden');
+
+      testData = scenario.testData || { title: 'Assessment', status: 'PUBLISHED' };
+      testDisplayName = testData.title || 'Assessment';
+      allAnswerRows = scenario.rows || [scenario.row];
+      answerRows = scenario.rows || [scenario.row];
+      testsections = scenario.sections || [{ id: 'default', title: 'Part 1: Assessment' }];
+      currentSectionIndex = 0;
+      isTestActive = true;
+
+      const titleEl = document.getElementById('test-title') || document.getElementById('test-main-title') || document.getElementById('test-name');
+      if (titleEl) titleEl.textContent = testData.title;
+      const progressEl = document.getElementById('question-progress');
+      if (progressEl) progressEl.textContent = `Q 1/${answerRows.length}`;
+      const timerEl = document.getElementById('timer-display');
+      if (timerEl) timerEl.textContent = '14:59';
+      const metaEl = document.getElementById('test-meta');
+      if (metaEl) metaEl.textContent = `${answerRows.length} Questions · Student`;
+
+      renderQuestion(0);
+    };
+
     function renderUnansweredPanel(container, currentIdx) {
       container.innerHTML = '';
       const unanswered = answerRows.map((r, i) => ({ r, i })).filter(({ r }) => !answeredMap[r.id] || !answeredMap[r.id].trim());

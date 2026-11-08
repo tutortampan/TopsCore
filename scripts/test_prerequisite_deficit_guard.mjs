@@ -59,7 +59,7 @@ async function verifyPrereqDeficitGuard() {
   });
 
   const earliestUncompleted = tests.find(t => !isPassedByTest[t.id]);
-  const curAsm = tests.find(t => t.shell_code === '2C3-WORDS-TASK');
+  const curAsm = tests.find(t => t.shell_code === '2C4-WORDS-TASK');
 
   const curIndex = tests.findIndex(t => t.id === curAsm.id);
   const earliestIndex = tests.findIndex(t => t.id === earliestUncompleted.id);
@@ -73,11 +73,11 @@ async function verifyPrereqDeficitGuard() {
   if (earliestIndex < curIndex) {
     const prereqPasses = passCountByTest[earliestUncompleted.id];
     console.log(`  Guard triggered: points to unfulfilled prerequisite ${earliestUncompleted.shell_code} (${prereqPasses}/7)`);
-    if (earliestUncompleted.shell_code !== '2C2-WORDS-TASK') {
-      throw new Error(`Expected earliest uncompleted to be 2C2-WORDS-TASK, got ${earliestUncompleted.shell_code}`);
+    if (earliestUncompleted.shell_code !== '2C3-WORDS-TASK') {
+      throw new Error(`Expected earliest uncompleted to be 2C3-WORDS-TASK, got ${earliestUncompleted.shell_code}`);
     }
   } else {
-    throw new Error('Expected guard to trigger for Lalu Yuda on 2C3!');
+    throw new Error('Expected guard to trigger for Lalu Yuda on 2C4!');
   }
 
   console.log('✅ PASS: Prerequisite Deficit Guard verified with 100% precision!');

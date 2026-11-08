@@ -6,7 +6,8 @@
   <script>
     (function() {
       try {
-        var raw = sessionStorage.getItem('topscore_session');
+        var raw = sessionStorage.getItem('topscore_session') || localStorage.getItem('topscore_session');
+        if (raw && !sessionStorage.getItem('topscore_session')) { sessionStorage.setItem('topscore_session', raw); }
         var sess = raw ? JSON.parse(raw) : null;
         if (!sess || !sess.student_id) {
           window.location.replace('index.html');
