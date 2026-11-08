@@ -1,33 +1,38 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-08 20:00 UTC+8
-Current Phase: Phase 358: Student Access Diagnosis & Resolution (Lifurrahman / 2C Gating) [COMPLETE]
+Last Updated: 2026-11-08 20:10 UTC+8
+Current Phase: Phase 359: Batch 134 Cohort Pacing Adjustment & Theme C Acceleration [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Student Diagnosis (Mr. Muhamad Alifurrahman - Batch 134, 2nd Level)**:
-   - Investigated why student "lifurrahman" (`Mr. Muhamad Alifurrahman`, UUID: `8422cae8-7fe5-45c4-b596-ec6f7bdb7f3c`) could not access the current daily task.
-   - Identified root cause in linear topic gating (`js/dashboard.js` & `js/api.js` 7x7 Repetitive Mastery):
-     - Tasks require 7 successful passes ($\ge 70\%$) before unlocking the next topic task.
-     - Alifurrahman achieved 87.50% (Grade B) on `2C1-WORDS-TASK` (`1667e0e0-19aa-4a34-86a7-7c1d8d4d97be`), but completed only 3 attempts (2 passes), leaving him with 2/7 passes.
-     - Under strict linear gating, tests `2C2-WORDS-TASK`, `2C3-WORDS-TASK`, and `2C4-WORDS-TASK` were locked with `🔒 Locked: Needs Topic C1 (2/7 passes — 5 more needed)`.
-   - Applied Tutor Pacing Adjustment / Forgiveness (`is_forgiven = true`, `forgiven_reason = '[Mr. Top] Pacing Adjustment Topic C1 Mastery (87.5% Achieved)'`) to his top 87.5% attempt (`a45256b9-f630-442e-ba1f-c9c30b3d50bc`).
-   - Verified that `2C1-WORDS-TASK` now counts as 7/7 passes (Mastered), which immediately unlocked `2C2-WORDS-TASK` (Cashier & Payment).
-   - Validated end-to-end `startTest` API call returning 200 OK with test session active for Alifurrahman.
+1. **Batch 134 Cohort Pacing Adjustment (Adinda, Abdul Basit, Ariwil Asrori)**:
+   - Audited all 18 active students in Batch 134 across Theme C (2nd Vocabulary).
+   - Identified 3 students with demonstrated mastery ($\ge 82\%$) blocked by the 7x7 Repetitive Mastery linear gate:
+     - `Miss Adinda Karunia Farela`: 92.50% (37/40), held at 6/7 passes on `2C1-WORDS-TASK`.
+     - `Mr. Abdul Basit`: 82.50% (33/40), held at 6/7 passes on `2C1-WORDS-TASK`.
+     - `Mr. Muhammad Ariwil Asrori`: 87.50% (35/40), held at 1/7 passes on `2C1-WORDS-TASK` after 2 attempts.
+   - Applied Tutor Pacing Adjustment (`is_forgiven = true`) to their top attempts:
+     - Adinda: `da74e6aa-9a18-43bc-be2c-5227fbdf9107`
+     - Abdul Basit: `2bef40de-ab53-4966-81b7-a65e0faacdde`
+     - Ariwil Asrori: `1ed59954-fa6b-42fa-8b96-8a4397aa1128`
+   - Verified that all 3 now report `7/7 passes (Mastered)` on `2C1`, bringing total C1 completions in Batch 134 to 14/18 students.
+   - Verified that `2C2-WORDS-TASK` (Cashier & Payment) is fully UNLOCKED for all three students.
 
-2. **Intelligent Vault Distractor Selection Engine & MCQ/UI Polish (Phase 357)**:
+2. **Student Diagnosis & Resolution (Mr. Muhamad Alifurrahman - Phase 358)**:
+   - Resolved 2/7 pass deficit on `2C1-WORDS-TASK` via Pacing Adjustment (`87.5% Achieved`), unlocking `2C2-WORDS-TASK`.
+   - Verified via live Supabase `startTest` API lifecycle.
+
+3. **Intelligent Vault Distractor Selection Engine & MCQ/UI Polish (Phase 357)**:
    - Built authoritative pedagogical distractor heuristic engine (`scoreDistractorSimilarity`, `rankDistractorsForVaultItem`).
-   - Dimensions scored: Topic Proximity (+35 pts), POS (+25 pts), Length Parity (+20 pts), Lexical Overlap (+15 pts), Jitter (0–3 pts).
-   - Anti-leak guards: Alternate synonym exclusion, Indonesian translation exclusion, modality isolation.
    - Standardized Multiple Choice to 5 options (1 correct + 4 distractors).
    - Microphone button styled to pure Emerald Green gradient.
-   - 16/16 unit tests passing in `scripts/test_smart_distractor_engine.mjs`.
+   - Visual catalog artifact published with screenshot carousel.
 
 ## Verification Results:
 - `node scripts/check_all_js_syntax.cjs` -> PASS (45/45 JS files passed)
 - `node scripts/test_smart_distractor_engine.mjs` -> PASS (16/16 tests passed)
 - `npm.cmd test` -> PASS (All 8 core test suites passed 100%)
-- Alifurrahman 2C Gating Audit -> PASS (`2C2-WORDS-TASK` is fully UNLOCKED)
+- Batch 134 Theme C Gating Matrix -> PASS (14/18 students now cleared through C1)
 
 ## Current Architecture
 - Static HTML5 / CSS3 / Modular ES6 JavaScript frontend.
@@ -39,4 +44,4 @@ Status: COMPLETE
 - None. System is completely healthy and verified.
 
 ## Next Exact Action
-- Present diagnosis and resolution to the user.
+- Ready for next instruction or feature development.
