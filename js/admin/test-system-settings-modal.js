@@ -71,11 +71,11 @@ export async function openTestSystemSettingsModal(options = {}) {
             Berapa kali siswa harus mencapai nilai kelulusan pada tiap task sebelum ujian tema (Exam) terbuka.
           </p>
           <div style="display: flex; align-items: center; gap: 12px;">
-            <input type="number" id="setting-task-repetitions" min="1" max="10" value="${cur.taskRepetitions || 7}" style="
+            <input type="number" id="setting-task-repetitions" min="7" max="10" value="${Math.max(7, cur.taskRepetitions || 7)}" style="
               width: 80px; padding: 6px 10px; font-size: 0.95rem; font-weight: 800; text-align: center;
               background: #1e293b; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff;
             ">
-            <span style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600;">Kali Lulus Repetisi per Task</span>
+            <span style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600;">Kali Lulus Repetisi per Task (Min. 7x Rule 2.21)</span>
           </div>
         </div>
 
@@ -172,7 +172,7 @@ export async function openTestSystemSettingsModal(options = {}) {
 
   // Save handler
   overlay.querySelector('#btn-save-settings').addEventListener('click', async () => {
-    const taskRepetitions = parseInt(overlay.querySelector('#setting-task-repetitions').value, 10) || 7;
+    const taskRepetitions = Math.max(7, parseInt(overlay.querySelector('#setting-task-repetitions').value, 10) || 7);
     const taskMinScore = parseInt(overlay.querySelector('#setting-task-min-score').value, 10) || 70;
     const examMinScore = parseInt(overlay.querySelector('#setting-exam-min-score').value, 10) || 60;
     const isGlobal = overlay.querySelector('input[name="setting_scope"]:checked').value === 'global';

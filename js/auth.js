@@ -404,6 +404,9 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
           program_name: state.programName,
           batch_id: state.batchId,
           batch_name: state.batchName,
+          level_id: result.student?.level_id || null,
+          level_number: result.student?.level_number || null,
+          level_name: result.student?.level_name || null,
         });
 
         saveLogin();

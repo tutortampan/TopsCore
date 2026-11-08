@@ -430,7 +430,7 @@ if (!session) {
           (allAssms || []).some(t => t.class_id === currentClassId && (/WORDS|PHRASE/i.test(t.shell_code || '') || /words|phrases/i.test(t.payload?.category || '')))
         );
         const testSettings = currentClassId ? await fetchClassTestSettings(currentClassId).catch(() => null) : null;
-        const targetReps = isVocabClass ? (Number(testSettings?.taskRepetitions) || 7) : (Number(testSettings?.taskRepetitions) || 1);
+        const targetReps = isVocabClass ? Math.max(7, Number(testSettings?.taskRepetitions) || 7) : (Number(testSettings?.taskRepetitions) || 1);
         const minScore = Number(curAsm?.minimum_required_score) || Number(curAsm?.payload?.min_score) || Number(testSettings?.taskMinScore) || 50;
 
         // Map pass counts & completion status across all published tests in this class

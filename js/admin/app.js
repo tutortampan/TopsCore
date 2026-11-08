@@ -1383,7 +1383,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
         const classTestSettings = (typeof fetchClassTestSettings === 'function')
           ? await fetchClassTestSettings(classId || cid).catch(() => ({ taskRepetitions: 7, taskMinScore: 70, examMinScore: 60 }))
           : { taskRepetitions: 7, taskMinScore: 70, examMinScore: 60 };
-        const targetReps = Number(classTestSettings?.taskRepetitions) || 7;
+        const targetReps = Math.max(7, Number(classTestSettings?.taskRepetitions) || 7);
         const taskMinScore = Number(classTestSettings?.taskMinScore) || 70;
         const examMinScore = Number(classTestSettings?.examMinScore) || 60;
 

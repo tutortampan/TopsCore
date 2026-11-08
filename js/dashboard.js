@@ -54,7 +54,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     const rawB = session.batch_name || '';
     elBatch.textContent = rawB.replace(/^batch\s*/i, '') || rawB || '—';
   }
-  if (elLvl) elLvl.textContent = session.level_name ? (session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level') : '1st Level';
+  if (elLvl) {
+    const rawLvl = session.level_name || (session.level_number ? toOrdinalLevel(session.level_number) : null);
+    elLvl.textContent = rawLvl ? (rawLvl.toLowerCase().includes('level') ? rawLvl : rawLvl + ' Level').toUpperCase() : '1ST LEVEL';
+  }
 
   // Suppress old welcome-meta logic
   const welcomeMetaEl = document.getElementById('welcome-meta');
@@ -801,6 +804,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           session.level_name = studentLvl.level_name;
           sessionStorage.setItem('topscore_session', JSON.stringify(session));
 
+          // Explicitly update DOM header pill
+          const elLvl = document.getElementById('meta-lvl');
+          if (elLvl && studentLvl.level_name) {
+            const formatted = studentLvl.level_name.toLowerCase().includes('level') ? studentLvl.level_name : studentLvl.level_name + ' Level';
+            elLvl.textContent = formatted.toUpperCase();
+          }
+
           const welcomeMetaEl = document.getElementById('welcome-meta');
           if (welcomeMetaEl) {
             const progName = session.program_name ? session.program_name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : '';
@@ -912,7 +922,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         try {
           if (typeof fetchClassTestSettings === 'function' && activeClassId) {
             const settings = await fetchClassTestSettings(activeClassId).catch(() => null);
-            if (settings?.taskRepetitions) targetReps = Number(settings.taskRepetitions) || 7;
+            if (settings?.taskRepetitions) targetReps = Math.max(7, Number(settings.taskRepetitions) || 7);
             if (settings?.taskMinScore) minScore = Number(settings.taskMinScore) || 50;
           }
         } catch (_) {}
@@ -1015,7 +1025,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       try {
         if (typeof fetchClassTestSettings === 'function' && activeClassId) {
           const settings = await fetchClassTestSettings(activeClassId).catch(() => null);
-          if (settings?.taskRepetitions) targetReps = Number(settings.taskRepetitions) || 7;
+          if (settings?.taskRepetitions) targetReps = Math.max(7, Number(settings.taskRepetitions) || 7);
           if (settings?.taskMinScore) minScore = Number(settings.taskMinScore) || 50;
         }
       } catch (_) {}
@@ -1629,7 +1639,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const testSettings = (typeof fetchClassTestSettings === 'function')
           ? await fetchClassTestSettings(subj.id).catch(() => ({ taskRepetitions: 7, taskMinScore: 50, examMinScore: 60 }))
           : { taskRepetitions: 7, taskMinScore: 50, examMinScore: 60 };
-        const targetReps = Number(testSettings?.taskRepetitions) || 7;
+        const targetReps = Math.max(7, Number(testSettings?.taskRepetitions) || 7);
         const taskMinScore = Number(testSettings?.taskMinScore) || 50;
 
         // Build attempts quick-lookup for this student

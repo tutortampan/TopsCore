@@ -403,7 +403,11 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
   const sb = await getSupabase();
   const { data: student, error } = await sb
     .from('students')
-    .select('id, name, gender, pin_hash, is_active, program_id, institution_id, batch_id')
+    .select(`
+      id, name, gender, pin_hash, is_active, program_id, institution_id, batch_id, level_id,
+      levels:level_id(id, level_number, name),
+      batches:batch_id(current_level_id, levels:current_level_id(id, level_number, name))
+    `)
     .eq('id', studentId)
     .single();
 
@@ -418,13 +422,20 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
   const pinHash = await sha256(pin);
   if (student.pin_hash !== pinHash) throw new Error('Invalid PIN. Please try again.');
 
+  const lvlId = student.level_id || student.batches?.current_level_id || null;
+  const lvlNum = student.levels?.level_number || student.batches?.levels?.level_number || 1;
+  const lvlName = student.levels?.name || student.batches?.levels?.name || '1st Level';
+
   return {
     success: true,
     student: {
       id: student.id,
       name: formatStudentName(student.name, student.gender),
       gender: student.gender,
-      batch_id: student.batch_id
+      batch_id: student.batch_id,
+      level_id: lvlId,
+      level_number: lvlNum,
+      level_name: lvlName
     }
   };
 }
@@ -718,7 +729,7 @@ export async function fetchClassTestSettings(classId = null) {
       if (raw) {
         const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
         const res = {
-          taskRepetitions: Math.max(1, parseInt(parsed.taskRepetitions, 10) || 7),
+          taskRepetitions: Math.max(7, parseInt(parsed.taskRepetitions, 10) || 7),
           taskMinScore: Math.min(100, Math.max(1, parseInt(parsed.taskMinScore, 10) || 50)),
           examMinScore: Math.min(100, Math.max(1, parseInt(parsed.examMinScore, 10) || 60))
         };
@@ -730,16 +741,38 @@ export async function fetchClassTestSettings(classId = null) {
     console.warn('[fetchClassTestSettings] site_settings query error, falling back:', e);
   }
 
-  // Fallback 1: LocalStorage cache
+  // Fallback 1: LocalStorage cache with Rule 2.21 7x7 sanitization
   if (classId) {
     const local = getLocal(`topscore_test_settings_${classId}`);
     if (local) {
-      try { return { ...defaultSettings, ...JSON.parse(local) }; } catch (_) {}
+      try {
+        const parsed = JSON.parse(local);
+        const res = {
+          ...defaultSettings,
+          ...parsed,
+          taskRepetitions: Math.max(7, parseInt(parsed.taskRepetitions, 10) || 7)
+        };
+        if (parsed.taskRepetitions && parsed.taskRepetitions < 7) {
+          setLocal(`topscore_test_settings_${classId}`, JSON.stringify(res));
+        }
+        return res;
+      } catch (_) {}
     }
   }
   const globalLocal = getLocal('topscore_test_settings_global');
   if (globalLocal) {
-    try { return { ...defaultSettings, ...JSON.parse(globalLocal) }; } catch (_) {}
+    try {
+      const parsed = JSON.parse(globalLocal);
+      const res = {
+        ...defaultSettings,
+        ...parsed,
+        taskRepetitions: Math.max(7, parseInt(parsed.taskRepetitions, 10) || 7)
+      };
+      if (parsed.taskRepetitions && parsed.taskRepetitions < 7) {
+        setLocal('topscore_test_settings_global', JSON.stringify(res));
+      }
+      return res;
+    } catch (_) {}
   }
 
   // Fallback 2: Inspect existing class tests from DB
@@ -755,7 +788,7 @@ export async function fetchClassTestSettings(classId = null) {
         const sampleTask = sampleTests.find(t => !isWeeklyExam(t));
         const sampleExam = sampleTests.find(t => isWeeklyExam(t));
         const derived = {
-          taskRepetitions: Math.max(1, parseInt(sampleTask?.payload?.task_repetitions, 10) || 7),
+          taskRepetitions: Math.max(7, parseInt(sampleTask?.payload?.task_repetitions, 10) || 7),
           taskMinScore: Math.min(100, Math.max(1, parseInt(sampleTask?.minimum_required_score || sampleTask?.payload?.minimum_required_score, 10) || 50)),
           examMinScore: Math.min(100, Math.max(1, parseInt(sampleExam?.minimum_required_score || sampleExam?.payload?.minimum_required_score, 10) || 60))
         };
@@ -771,7 +804,7 @@ export async function fetchClassTestSettings(classId = null) {
 export async function saveClassTestSettings(classId, settings = {}, applyToExisting = false) {
   const sb = await getSupabase();
   const cleanSettings = {
-    taskRepetitions: Math.max(1, parseInt(settings.taskRepetitions, 10) || 7),
+    taskRepetitions: Math.max(7, parseInt(settings.taskRepetitions, 10) || 7),
     taskMinScore: Math.min(100, Math.max(1, parseInt(settings.taskMinScore, 10) || 50)),
     examMinScore: Math.min(100, Math.max(1, parseInt(settings.examMinScore, 10) || 60))
   };

@@ -25,6 +25,26 @@ const ADMIN_SESSION_KEY = 'topscore_admin_session';
   }
 })();
 
+// Rule 2.21 Invariant Sanitization: Ensure any cached test settings enforce at least 7 task repetitions
+(function sanitizeRepetitionSettings() {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('topscore_test_settings_')) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object' && parsed.taskRepetitions && Number(parsed.taskRepetitions) < 7) {
+            parsed.taskRepetitions = 7;
+            localStorage.setItem(key, JSON.stringify(parsed));
+          }
+        }
+      }
+    }
+  } catch (_) {}
+})();
+
 export function setStudentSession(data) {
   const session = {
     student_id: data.student_id,
