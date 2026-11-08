@@ -1,46 +1,33 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-08 19:31 UTC+8
-Current Phase: Phase 357: Vault Intelligent Distractor Selection Engine & MCQ/UI Polish [COMPLETE]
+Last Updated: 2026-11-08 20:00 UTC+8
+Current Phase: Phase 358: Student Access Diagnosis & Resolution (Lifurrahman / 2C Gating) [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Intelligent Vault Distractor Selection Engine (`js/grading.js`, `js/api.js`, `supabase/functions/start-test/index.ts`)**:
+1. **Student Diagnosis (Mr. Muhamad Alifurrahman - Batch 134, 2nd Level)**:
+   - Investigated why student "lifurrahman" (`Mr. Muhamad Alifurrahman`, UUID: `8422cae8-7fe5-45c4-b596-ec6f7bdb7f3c`) could not access the current daily task.
+   - Identified root cause in linear topic gating (`js/dashboard.js` & `js/api.js` 7x7 Repetitive Mastery):
+     - Tasks require 7 successful passes ($\ge 70\%$) before unlocking the next topic task.
+     - Alifurrahman achieved 87.50% (Grade B) on `2C1-WORDS-TASK` (`1667e0e0-19aa-4a34-86a7-7c1d8d4d97be`), but completed only 3 attempts (2 passes), leaving him with 2/7 passes.
+     - Under strict linear gating, tests `2C2-WORDS-TASK`, `2C3-WORDS-TASK`, and `2C4-WORDS-TASK` were locked with `🔒 Locked: Needs Topic C1 (2/7 passes — 5 more needed)`.
+   - Applied Tutor Pacing Adjustment / Forgiveness (`is_forgiven = true`, `forgiven_reason = '[Mr. Top] Pacing Adjustment Topic C1 Mastery (87.5% Achieved)'`) to his top 87.5% attempt (`a45256b9-f630-442e-ba1f-c9c30b3d50bc`).
+   - Verified that `2C1-WORDS-TASK` now counts as 7/7 passes (Mastered), which immediately unlocked `2C2-WORDS-TASK` (Cashier & Payment).
+   - Validated end-to-end `startTest` API call returning 200 OK with test session active for Alifurrahman.
+
+2. **Intelligent Vault Distractor Selection Engine & MCQ/UI Polish (Phase 357)**:
    - Built authoritative pedagogical distractor heuristic engine (`scoreDistractorSimilarity`, `rankDistractorsForVaultItem`).
-   - Dimensions scored:
-     - Topic & Theme Proximity: +35 pts for matching topic, +15 pts for matching theme.
-     - Word Type / Part of Speech: +25 pts for exact POS match, +12 pts for compatible family.
-     - Length & Structural Parity: +20 pts for matching word count in phrases, +15 pts for single-word length within $\pm 2$ characters.
-     - Lexical & Collocation Overlap: +15 pts for shared head verb or tail particle (e.g. *turn up*, *turn down*), +10 pts for common affixes.
-     - Deterministic Tie-Breaker Jitter: 0 to 3 pts pseudo-random jitter to vary options across retakes.
-   - Strict Anti-Leak & Safety Guards:
-     - Exact English target disqualified.
-     - Alternate slash-separated answers strictly disqualified (e.g. *shut down / close* excludes both).
-     - Matching Indonesian translation disqualified to prevent semantic duplicate choices.
-     - Modality isolation: Words only compete with words, Phrases only with phrases.
-   - Synchronized across both the client-side generator (`js/api.js`) and authoritative Supabase Edge Function (`supabase/functions/start-test/index.ts`).
-
-2. **Multiple Choice 5-Option Standardization (A, B, C, D, E)**:
-   - Standardized Multiple Choice questions to provide 5 balanced options (1 correct answer + 4 plausible distractors).
-   - Updated catalog mockup scenario in `scripts/capture_all_test_types_catalog.mjs` to feature 5 standard options.
-
-3. **Microphone Button Pure Emerald Green UI Polish (`css/test.css`, `js/test.js`)**:
-   - Fixed root-cause color mismatch where `.speech-mic-btn-lg` was blending light green with `--grade-star` (`#ff2d87` Magenta/Pink).
-   - Replaced with pure Emerald Green: `linear-gradient(135deg, #4ade80 0%, #16a34a 100%)`, border `rgba(22, 163, 74, 0.45)`, glow `rgba(22, 163, 74, 0.45)`.
-   - Also updated selected option card glow from pink to emerald/cyan (`rgba(16, 185, 129, 0.2)`).
-
-4. **New Automated Test Suite (`scripts/test_smart_distractor_engine.mjs`)**:
-   - Added 16 unit tests covering topic priority, POS priority, word count parity, particle overlap, anti-leak guards, 5-option output, and fallback resilience.
-   - Integrated into `package.json` test pipeline (`npm test`).
-
-5. **Visual Screenshot Regeneration**:
-   - Re-executed `scripts/capture_all_test_types_catalog.mjs`, producing updated high-res screenshots with 5-option MCQ and pure emerald green microphone button.
+   - Dimensions scored: Topic Proximity (+35 pts), POS (+25 pts), Length Parity (+20 pts), Lexical Overlap (+15 pts), Jitter (0–3 pts).
+   - Anti-leak guards: Alternate synonym exclusion, Indonesian translation exclusion, modality isolation.
+   - Standardized Multiple Choice to 5 options (1 correct + 4 distractors).
+   - Microphone button styled to pure Emerald Green gradient.
+   - 16/16 unit tests passing in `scripts/test_smart_distractor_engine.mjs`.
 
 ## Verification Results:
 - `node scripts/check_all_js_syntax.cjs` -> PASS (45/45 JS files passed)
 - `node scripts/test_smart_distractor_engine.mjs` -> PASS (16/16 tests passed)
 - `npm.cmd test` -> PASS (All 8 core test suites passed 100%)
-- `node scripts/capture_all_test_types_catalog.mjs` -> PASS (7/7 catalog screenshots captured)
+- Alifurrahman 2C Gating Audit -> PASS (`2C2-WORDS-TASK` is fully UNLOCKED)
 
 ## Current Architecture
 - Static HTML5 / CSS3 / Modular ES6 JavaScript frontend.
@@ -52,4 +39,4 @@ Status: COMPLETE
 - None. System is completely healthy and verified.
 
 ## Next Exact Action
-- Present results and visual screenshots to user.
+- Present diagnosis and resolution to the user.
