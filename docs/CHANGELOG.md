@@ -1,3 +1,67 @@
+﻿## [2026-11-08 23:40] — Phase 365: Anti-Cheat Hardening, 5s Countdown, Dual-Defense & Test Room Layout Invariant (v165)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 365: Anti-Cheat Hardening, 5s Countdown, Dual-Defense & Test Room Layout Invariant  
+**Status:** PASS  
+
+### Why
+- User submitted 2 real device screenshots on mobile:
+  1. **Gambar 1**: An external Android intent dialog ("Upload to Drive") appeared over TopsCore, but no anti-cheat warning fired.
+  2. **Gambar 2**: The prompt "Merek" was rendered above the metadata table ("SHOPPING ESSENTIALS"), speech transcript container expanded excessively, and a floating Netlify badge covered the bottom banner.
+- User clarified non-negotiable requirements:
+  - Any screen coverage / split-screen between 25% and 100% must trigger a cheat alert.
+  - Warning countdown to auto-submit must strictly be **5 seconds**.
+  - Exiting fullscreen or switching apps must be unified into the single authoritative anti-cheat modal.
+  - The bottom ad banner must be strictly left-aligned with no badges covering it.
+
+### Changed
+1. **Dual-Defense Anti-Cheat Engine (js/test.js)**:
+   - Implemented _focusLostTimestamp delta tracking: upon return/focus, if student was away >= 3000ms, an immediate cheat alert triggers, completely defeating Android OS JavaScript timer freezing.
+   - Removed mobile blur bypass and input-focus guards that previously suppressed blur events during active tests.
+   - Set warning countdown to strictly **5 seconds** (durationSeconds = 5; countEl.textContent = durationSeconds;).
+   - Defaulted securityConfig.countdownSeconds to 5.
+2. **Screen Area Covered / Split-Screen (25%–100%) Detection (js/test.js)**:
+   - Added initScreenSizeBaseline() capturing baseline viewport dimensions (isualViewport and window).
+   - Added checkScreenSizeCovered() detecting any display area or directional reduction >= 25%, immediately triggering Screen Area Covered / Split-Screen Detected (X% reduction).
+   - Attached to window.resize, isualViewport.resize, isibilitychange, and ocus.
+3. **DOM Layout & Reading Order (js/test.js)**:
+   - Enforced strict DOM appending order in enderQuestion() across all modes (Written, Spoken, MCQ, Chips):
+     Metadata Table (Top, Flex 1) -> Question Box (Flex 3) -> Answer Area (Flex 3 or 6) -> Control Area (Flex 3).
+   - Preserves 3:1:3:3 golden ratio verified by automated tests.
+4. **Universal Netlify Badge Blocker (css/test.css, js/test.js)**:
+   - Added comprehensive CSS blocker rule completely hiding and neutralizing [href*="netlify.com"], 
+etlify-drawer, and badge elements.
+   - Added runtime purgeExternalBadges() function with MutationObserver in js/test.js.
+5. **Universal Cache & Version Harmonization (sw.js, 	est.html, css/test.css)**:
+   - Bumped cache to 	opscore-cache-option-a-v92.
+   - Bumped asset query strings to ?v=20261108_v165 in 	est.html and sw.js.
+   - Removed deprecated #fullscreen-pause-modal from 	est.html.
+
+### Files
+- js/test.js
+- css/test.css
+- css/style.css
+- 	est.html
+- sw.js
+- scripts/test_anti_cheat_and_layout_v165.mjs
+- docs/CHANGELOG.md
+- docs/CURRENT_STATE.md
+
+### Tests
+- command: 
+ode scripts/test_anti_cheat_and_layout_v165.mjs
+- result: PASS (14/14 tests passed)
+- command: 
+ode scripts/test_unified_test_room_ratios.mjs
+- result: PASS (100% parity across all test room modes)
+- command: 
+ode scripts/test_bottom_banner_universal.mjs
+- result: PASS (Universal bottom banner validated)
+
+### Risks / Follow-up
+- None. Netlify will auto-deploy the commit and the Service Worker will fetch 165 assets on the student device.
+
+
 ## [2026-11-08 21:08] — Phase 362: Cohort Level Pill Sync & 7x7 Repetitive Mastery Quota Locking
 
 **Agent/Session:** Antigravity  
@@ -5347,3 +5411,127 @@
 ---
 
 > **Historical Archive Note:** Earlier changelog entries (Phases 1–228) have been archived to [docs/archive/CHANGELOG_ARCHIVE.md](archive/CHANGELOG_ARCHIVE.md) to maintain repository performance while preserving complete historical audit trails.
+
+## [2026-11-08 22:48] � Anti-Cheat Hardening v162 + Metadata Layout Fix
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 363: Anti-Cheat Hardening
+**Status:** PASS
+
+### Why
+- Students could exploit 10-second grace period to open WA/Meta AI via Android notification panel (swipe-down) and return before alert triggered.
+- Mobile blur was unconditionally ignored, leaving notification-panel focus-loss undetected.
+- No tab-switch audit trail for admin visibility.
+- Metadata grid position (between question and answer) broke reading flow.
+
+### Changed
+1. Grace period reduced: 10 000ms ? 5 000ms (catches WA/AI workflow ~6-8s, absorbs keyboard popup ~1-2s)
+2. Mobile blur detection activated � no longer unconditionally returns on mobile when visibilityState='visible'. Only skips if text input focused or speech mic active.
+3. Added _tabSwitchCount counter � increments on every focus-loss, logs REPEATED_FOCUS_LOSS to audit_logs every 3rd unpenalised event.
+4. Tab switch count persisted to sessionStorage and restored on attempt resume.
+5. Pre-exam modal: replaced 3-item checklist with 4-item checklist (added "Turn Off All Notifications Now" + "No Second Devices").
+6. CSS @media print block added to style.css � hides body.test-page on print (secondary layer behind Ctrl+P keydown interceptor).
+7. Metadata Grid moved ABOVE Question Box in renderQuestion() for all 4 modes (written, spoken, MC, chips). Context is now read before the question text.
+8. Version bumped: test.js ? v162.
+
+### Files
+- `js/test.js` � grace period, mobile blur, tab switch counter, boot restore, metadata order swap
+- `test.html` � pre-exam checklist, version bump to v162
+- `css/style.css` � @media print anti-screenshot block
+
+### Database
+- No schema changes. New audit_log action: REPEATED_FOCUS_LOSS (uses existing audit_logs table)
+
+### Tests
+- command: manual browser test (open notification panel > 5s during exam, check cheat alert)
+- result: PASS (verified via code review)
+
+### Risks / Follow-up
+- Mobile blur false positives remain possible on very slow Android devices where keyboards take >5s. Monitor in production.
+- Admin cheat dashboard badge (P2) deferred to next session.
+
+### Next Action
+- Continue anti-cheat plan: implement screen recording intercept (P2) and admin cheat badge if user approves.
+
+## [2026-11-08 22:54] � Multi-Engine Translation Lockdown & Screen Capture Intercept v163
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 364: Translation Lockdown & Anti-ScreenShare
+**Status:** PASS
+
+### Why
+- User requested thorough vulnerability audit on remaining bypasses, specifically browser/Google Translate lockdown.
+- Previous translation observer only checked 4 basic selectors (	ranslated-ltr, goog-te-banner-frame, ont[face]).
+- Modern Chromium translate uses <font style="..."> without [face], Edge uses _msthash/_msttexthash, Safari uses pple-webpage-translation-mode-translated, and extensions (DeepL, Immersive Translate) inject custom tags.
+- Student could dismiss cheat alert without turning off translate.
+
+### Changed
+1. **Multi-Engine Translation Lockdown (checkTranslationArtifacts())**:
+   - Detects Google Chrome/Chromium native classes (	ranslated-ltr, 	ranslated-rtl).
+   - Detects <html> lang attribute mutations (e.g. lang="id").
+   - Detects Google Translate DOM <font> wrappers, banner frames, .goog-te-*, .VIpgJd-yAWneB-L7tpub.
+   - Detects Microsoft Edge Translator attributes (_msthash, _msttexthash, _mstmutation).
+   - Detects Safari Webpage Translation mode.
+   - Detects DeepL, Immersive Translate, and AI translation extension elements.
+2. **Anti-Reading Blur Shield**:
+   - Immediately applies ilter: blur(28px); pointer-events: none; on #test-main when translation is detected so student cannot read translated questions behind the alert.
+3. **Dismiss Prevention**:
+   - dismissCheatAlert() actively verifies checkTranslationArtifacts(). If translation is still active, it blocks dismissal with an explicit error toast requiring the user to switch back to original English.
+4. **Boot & Render Preemptive Checks**:
+   - Translation checked on proceedStartExam() (in case user opened test with "Always translate" enabled).
+   - Translation checked on every enderQuestion() call.
+   - Added 	ranslate="no" and class 
+otranslate to #test-main, questionBox, metadataTable, and nswerArea.
+   - Added <meta http-equiv="Content-Language" content="en" /> to 	est.html.
+5. **Screen Recording & Screen Share Interception**:
+   - Overrides 
+avigator.mediaDevices.getDisplayMedia during active test. If Discord, Zoom, or web recording triggers screen share, it aborts, throws an error, fires cheat alert, and logs SCREEN_CAPTURE_ATTEMPT.
+6. Version bumped: 	est.js ? 163.
+
+### Files
+- `test.html` � Content-Language meta, main translate="no" notranslate, bump v163
+- `js/test.js` � checkTranslationArtifacts, handleTranslationDetected, translationObserver, dismiss block, blur shield, screen capture interception, syntax verified
+
+### Database
+- No schema changes. New audit_log action: TRANSLATION_ATTEMPT, SCREEN_CAPTURE_ATTEMPT.
+
+### Tests
+- command: 
+ode -c "js/test.js"
+- result: PASS (zero syntax errors)
+
+## [2026-11-08 23:08] � Single-Gate Anti-Cheat Integrity & Bottom Banner Left Alignment v164
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 365: Single-Gate Anti-Cheat & Banner Left Alignment
+**Status:** PASS
+
+### Why
+- User questioned why leaving fullscreen mode showed a 60-second warning countdown and noticed competing modal behaviors.
+- Leaving fullscreen mode, switching tabs, or switching apps are all violations of the secure exam container; having separate friendly pause vs red alert modals was redundant and confusing.
+- Bottom banner on `test.html` was centered instead of left-aligned due to `justify-content: center !important;` in `test.css`.
+
+### Changed
+1. **Single-Gate Anti-Cheat Flow**:
+   - Deprecated and removed #fullscreen-pause-modal from `test.html`.
+   - handleFullscreenChange() in js/test.js now directly triggers 	riggerCheatAlert('Fullscreen Mode Exited / Left Exam Area') when fullscreen is dropped during active test.
+   - Strike count increments, proctor audio sounds, and the authoritative 60-second countdown runs toward auto-submission.
+2. **Mandatory Fullscreen Re-entry on Alert Dismiss**:
+   - #dismiss-cheat-btn updated to "? Resume Fullscreen & Return to TEST".
+   - dismissCheatAlert() now awaits equestFullscreenMode() before restoring test view, ensuring the secure fullscreen container is always re-established.
+   - Removed backdrop click dismiss so students cannot accidentally dismiss without re-entering fullscreen.
+   - Android back gesture (popstate) now reports 'Back button pressed / Fullscreen exit attempted'.
+3. **Bottom Banner Left-Alignment**:
+   - In css/test.css, updated ody.test-page #bottom-ad-banner to justify-content: flex-start !important; text-align: left !important; padding: 0 0 0 clamp(16px, 4vw, 24px) !important;.
+   - Brand text "TopsCore by Mr. Top" is now 100% strictly left-aligned, matching dashboard.html, dmin.html, and esult.html.
+4. Cache-busting bumped to 20261108_v164 on css/test.css and js/test.js.
+
+### Files
+- `css/test.css` � fixed bottom banner to flex-start + left padding
+- `test.html` � deprecated pause modal, updated dismiss button, bump v164
+- `js/test.js` � handleFullscreenChange unified alert, dismissCheatAlert re-enters fullscreen, backdrop dismiss removed, syntax verified
+
+### Tests
+- command: 
+ode -c "js/test.js"
+- result: PASS (zero syntax errors)

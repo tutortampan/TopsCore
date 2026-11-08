@@ -72,7 +72,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     let _activeOscNodes = []; // track all active oscillator/source nodes for clean stop
     let _activeGainNodes = [];
     let _activeAudioSource = null; // for custom audio buffer source
-    let securityConfig = { enabled: true, soundEnabled: true, countdownSeconds: 30, soundType: 'police_siren', customSoundB64: '' };
+    let securityConfig = { enabled: true, soundEnabled: true, countdownSeconds: 5, soundType: 'police_siren', customSoundB64: '' };
 
     // Mobile Audio Unlock on first interaction
     const unlockAudio = () => {
@@ -377,7 +377,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           for (let i = 0; i < 3; i++) {
             history.pushState({ TESTLocked: true, step: i }, '', location.href);
           }
-          triggerCheatAlert('Return button pressed / Navigation attempted');
+          triggerCheatAlert('Back button pressed / Fullscreen exit attempted');
         }
       });
     }
@@ -405,15 +405,6 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       // Guard 1: Ignore blur events if speech recognition or mic is active (prevents false alarms on Android/Chrome OS intent)
       if (window._isSpeechRecognitionEngaged && (reason.includes('focus') || reason.includes('blur'))) {
         return;
-      }
-
-      // Guard 2: Mobile / Keyboard Focus Guard (prevents false alarms on Gboard/Samsung virtual keyboard, autocorrect taps, or text selection)
-      if (document.visibilityState === 'visible' && (reason.includes('focus') || reason.includes('blur'))) {
-        const activeEl = document.activeElement;
-        const tag = (activeEl?.tagName || '').toLowerCase();
-        if (tag === 'textarea' || tag === 'input' || window.activeKeyboardInput) {
-          return;
-        }
       }
 
       const now = Date.now();
@@ -498,7 +489,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         dismissBtn.style.color = '#ffffff';
         dismissBtn.style.border = '2px solid #ffffff';
         dismissBtn.style.boxShadow = '0 0 25px rgba(var(--grade-e-rgb, 255, 0, 0), 0.85)';
-        dismissBtn.textContent = isFinalWarning ? 'Return to My TEST (Final Warning)' : 'Return to My TEST';
+        dismissBtn.textContent = isFinalWarning ? '⛶ Resume Fullscreen (Final Warning)' : '⛶ Resume Fullscreen & Return to TEST';
       }
 
       if (overlay) overlay.style.display = 'flex';
@@ -510,7 +501,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         startPoliceSiren();
       }
 
-      const durationSeconds = Math.max(securityConfig.countdownSeconds || 60, 60);
+      const durationSeconds = 5; // User requirement: exact 5s countdown
       cheatDeadline = Date.now() + (durationSeconds * 1000);
       if (countEl) countEl.textContent = durationSeconds;
 
@@ -530,7 +521,35 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       }, 500);
     }
 
-    function dismissCheatAlert() {
+    async function dismissCheatAlert() {
+      // Re-verify translator state — do NOT permit dismiss if translation is still actively altering the page!
+      const activeTrans = checkTranslationArtifacts();
+      if (activeTrans) {
+        showToast(`🚨 Translation active (${activeTrans})! Please turn off Translate in your browser.`, 'error', 6000);
+        const reasonEl = document.getElementById('cheat-reason');
+        if (reasonEl) {
+          reasonEl.textContent = `🚨 CANNOT RESUME: ${activeTrans}! Please disable Translation (select "Show original English") to continue your exam.`;
+        }
+        return false;
+      }
+
+      // Re-enter Fullscreen mode to restore the secure test container
+      if (isFullscreenSupported() && !isFullscreenActive()) {
+        try {
+          await requestFullscreenMode();
+        } catch (err) {
+          console.warn('Could not re-enter fullscreen:', err);
+        }
+      }
+      setTimeout(initScreenSizeBaseline, 500);
+
+      // Restore question readability
+      const main = document.getElementById('test-main');
+      if (main) {
+        main.style.filter = '';
+        main.style.pointerEvents = '';
+      }
+
       if (cheatInterval) { clearInterval(cheatInterval); cheatInterval = null; }
       stopPoliceSiren();
       isCheatAlertActive = false;
@@ -542,23 +561,15 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (window.activeKeyboardInput) {
         try { window.activeKeyboardInput.focus(); } catch (_) {}
       }
+      return true;
     }
 
-    document.getElementById('dismiss-cheat-btn')?.addEventListener('click', (e) => {
+    document.getElementById('dismiss-cheat-btn')?.addEventListener('click', async (e) => {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
       }
-      dismissCheatAlert();
-    });
-    document.getElementById('cheat-overlay')?.addEventListener('click', (e) => {
-      if (e.target === document.getElementById('cheat-overlay')) {
-        if (e) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-        dismissCheatAlert();
-      }
+      await dismissCheatAlert();
     });
 
     // Global Anti-Cheat Clipboard & Context Interception
@@ -633,16 +644,98 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       }
     }, true);
 
+    // Screen Capture & Media Sharing Interception (Anti-Discord / Anti-ScreenShare)
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+        const origGetDisplayMedia = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
+        navigator.mediaDevices.getDisplayMedia = async function(...args) {
+          if (isTestActive) {
+            triggerCheatAlert('Screen Recording or Screen Share Detected');
+            logCheatingEvent(session.student_id, testId, 'SCREEN_CAPTURE_ATTEMPT', {
+              timestamp: new Date().toISOString()
+            });
+            throw new Error('Screen capture is prohibited during examinations.');
+          }
+          return origGetDisplayMedia(...args);
+        };
+      }
+    } catch (_) {}
+
     // Screen Wake Lock & Keep-Awake Engine is managed via ./js/wake-lock.js
 
-    // Smart Focus Grace Period Engine (10-second buffer to absorb notifications, phone calls, or quick swipes)
+    // ─── Dual-Defense Anti-Cheat Focus & Screen Coverage Engine ─────────────
     let _blurGraceTimer = null;
+    let _focusLostTimestamp = null;
+    let _tabSwitchCount = 0; // Tab-switch / focus-loss counter per attempt
+
+    // Screen Area Covered / Split-Screen Detection (25%–100% reduction)
+    let baselineViewportHeight = 0;
+    let baselineViewportWidth = 0;
+
+    function initScreenSizeBaseline() {
+      const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const w = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+      if (h > 50 && w > 50) {
+        baselineViewportHeight = h;
+        baselineViewportWidth = w;
+      }
+    }
+
+    function checkScreenSizeCovered() {
+      if (!isTestActive || !securityConfig.enabled || isCheatAlertActive) return;
+      const curH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const curW = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+
+      if (baselineViewportHeight > 50 && baselineViewportWidth > 50 && curH > 0 && curW > 0) {
+        const baselineArea = baselineViewportHeight * baselineViewportWidth;
+        const curArea = curH * curW;
+        const areaReduction = (baselineArea - curArea) / baselineArea;
+
+        const sameOrientation = (baselineViewportHeight >= baselineViewportWidth) === (curH >= curW);
+        const hReduction = (baselineViewportHeight - curH) / baselineViewportHeight;
+        const wReduction = (baselineViewportWidth - curW) / baselineViewportWidth;
+
+        // Triggers if display area is reduced by >= 25% (Split Screen, floating app, multi-window)
+        const isCovered = (sameOrientation && (hReduction >= 0.25 || wReduction >= 0.25)) || (areaReduction >= 0.25);
+
+        if (isCovered) {
+          const percent = Math.round(Math.max(areaReduction, sameOrientation ? Math.max(hReduction, wReduction) : 0) * 100);
+          triggerCheatAlert(`Screen Area Covered / Split-Screen Detected (${percent}% reduction)`);
+        }
+      }
+    }
+
+    window.addEventListener('resize', checkScreenSizeCovered);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', checkScreenSizeCovered);
+    }
+
+    function incrementTabSwitchCount(reason) {
+      _tabSwitchCount++;
+      try {
+        const attId = attemptData?.id || sessionStorage.getItem('topscore_attempt_id');
+        if (attId) sessionStorage.setItem(`topscore_tab_switches_${attId}`, String(_tabSwitchCount));
+      } catch (_) {}
+      // Log to audit_logs every 3rd unpenalised focus-loss so admin can spot repeat offenders
+      if (_tabSwitchCount % 3 === 0) {
+        logCheatingEvent(session.student_id, testId, 'REPEATED_FOCUS_LOSS', {
+          tab_switch_count: _tabSwitchCount,
+          reason,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
 
     function handleFocusLost(reason) {
       if (!isTestActive || !securityConfig.enabled) return;
       if (isCheatAlertActive) return;
 
       saveCurrentAnswer();
+      incrementTabSwitchCount(reason);
+
+      if (!_focusLostTimestamp) {
+        _focusLostTimestamp = Date.now();
+      }
 
       if (_blurGraceTimer) clearTimeout(_blurGraceTimer);
       _blurGraceTimer = setTimeout(() => {
@@ -650,10 +743,24 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           triggerCheatAlert(reason);
         }
         _blurGraceTimer = null;
-      }, 10000);
+      }, 3000); // 3s buffer absorbs transient audio intents, but flags external apps & intent dialogs
     }
 
     function handleFocusRestored() {
+      if (_focusLostTimestamp) {
+        const awayDurationMs = Date.now() - _focusLostTimestamp;
+        _focusLostTimestamp = null;
+        if (_blurGraceTimer) {
+          clearTimeout(_blurGraceTimer);
+          _blurGraceTimer = null;
+        }
+        // Dual-Defense against OS timer suspension:
+        // If student was away for >= 3.0s, trigger immediately upon wake-up!
+        if (awayDurationMs >= 3000) {
+          triggerCheatAlert(`Left exam screen for ${(awayDurationMs / 1000).toFixed(1)}s`);
+          return;
+        }
+      }
       if (_blurGraceTimer) {
         clearTimeout(_blurGraceTimer);
         _blurGraceTimer = null;
@@ -664,6 +771,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && isTestActive) {
         handleFocusRestored();
+        checkScreenSizeCovered();
         requestScreenWakeLock();
         saveCurrentAnswer();
 
@@ -697,6 +805,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     window.addEventListener('focus', () => {
       handleFocusRestored();
       if (isTestActive) {
+        checkScreenSizeCovered();
         saveCurrentAnswer();
         if (isCheatAlertActive && cheatDeadline > 0) {
           if (Date.now() >= cheatDeadline) {
@@ -723,22 +832,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (!securityConfig.enabled) return;
       if (!isTestActive) return;
 
-      // Mobile / Virtual Keyboard Guard:
-      // If the page is still visible, blur is typically triggered by virtual keyboard opening/closing,
-      // native autocomplete/autocorrect popups, speech mic intent, or tapping text selection.
-      const isMobileDevice = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      if (document.visibilityState === 'visible') {
-        if (isMobileDevice) {
-          return; // On mobile devices, ignore window blur if page is fully visible
-        }
-        const activeEl = document.activeElement;
-        const tag = (activeEl?.tagName || '').toLowerCase();
-        if (tag === 'textarea' || tag === 'input' || window.activeKeyboardInput || window._isSpeechRecognitionEngaged) {
-          return;
-        }
-      }
+      // Always safe to skip if speech mic is active (mic permission dialog or recognition intent fires blur on Android/ChromeOS)
+      if (window._isSpeechRecognitionEngaged) return;
 
-      handleFocusLost('Screen lost focus / Side panel or external app opened');
+      handleFocusLost('Screen lost focus / External app or dialog opened');
     });
 
     // On pagehide / minimize: safely buffer current answers to storage only.
@@ -768,17 +865,102 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       }
     });
 
-    // Translation Detector: Alert if translation extensions or browser translation features alter the page
-    const translationObserver = new MutationObserver(() => {
+    // ─── Authoritative Multi-Engine Translation Lockdown ─────────────
+    function checkTranslationArtifacts() {
+      const html = document.documentElement;
+      const body = document.body;
+      if (!html || !body) return null;
+
+      // 1. Google Chrome & Chromium translation state (classes on html/body)
       if (
-        document.documentElement.classList.contains('translated-ltr') ||
-        document.documentElement.classList.contains('translated-rtl') ||
-        document.querySelector('.goog-te-banner-frame, #goog-gt-, font[face], .skiptranslate')
+        html.classList.contains('translated-ltr') ||
+        html.classList.contains('translated-rtl') ||
+        body.classList.contains('translated-ltr') ||
+        body.classList.contains('translated-rtl')
       ) {
-        triggerCheatAlert('Browser Translator Detected! Please disable Google/Browser Translate.');
+        return 'Google Chrome page translation active';
+      }
+
+      // 2. Language attribute manipulation (TopsCore is strictly English: en)
+      const currentLang = (html.getAttribute('lang') || '').toLowerCase();
+      if (currentLang && !currentLang.startsWith('en')) {
+        return `Language tag altered to "${currentLang}"`;
+      }
+
+      // 3. Google Translate DOM wrappers (<font> elements, banners, frames)
+      // TopsCore never emits legacy <font> tags; any <font> in DOM is an automated translation wrapper
+      if (document.querySelector('font, .goog-te-banner-frame, #goog-gt-, .goog-te-combo, .skiptranslate, [class*="goog-te"], .VIpgJd-yAWneB-L7tpub')) {
+        return 'Google Translate DOM elements detected';
+      }
+
+      // 4. Microsoft Edge Translator attributes
+      if (document.querySelector('[_msthash], [_msttexthash], [_mstmutation]')) {
+        return 'Microsoft Edge Translator detected';
+      }
+
+      // 5. Apple Safari Translate
+      if (
+        html.classList.contains('apple-webpage-translation-mode-translated') ||
+        body.classList.contains('apple-webpage-translation-mode-translated') ||
+        document.querySelector('[class*="apple-webpage-translation"]')
+      ) {
+        return 'Safari Webpage Translation detected';
+      }
+
+      // 6. Third-party extensions (DeepL, Immersive Translate, etc.)
+      if (document.querySelector('deepl-inline-translate, [class*="deepl-"], [class*="immersive-translate"], [data-immersive-translate]')) {
+        return 'Third-party Translator Extension detected';
+      }
+
+      return null;
+    }
+
+    function handleTranslationDetected(reason) {
+      if (!isTestActive || !securityConfig.enabled) return;
+
+      // Blur the question area immediately to prevent reading translated questions
+      const main = document.getElementById('test-main');
+      if (main) {
+        main.style.filter = 'blur(28px)';
+        main.style.pointerEvents = 'none';
+      }
+
+      triggerCheatAlert(`Browser Translator Detected (${reason})! Please restore original English.`);
+
+      logCheatingEvent(session.student_id, testId, 'TRANSLATION_ATTEMPT', {
+        reason: reason,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const translationObserver = new MutationObserver(() => {
+      if (!isTestActive) return;
+      const reason = checkTranslationArtifacts();
+      if (reason) {
+        handleTranslationDetected(reason);
       }
     });
-    translationObserver.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
+    translationObserver.observe(document.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true
+    });
+
+    // ─── Universal Netlify Badge & External Floating Injections Purge ───
+    function purgeExternalBadges() {
+      try {
+        const netlifyEls = document.querySelectorAll('a[href*="netlify.com"], netlify-drawer, [data-netlify-badge], .netlify-badge, #netlify-badge');
+        netlifyEls.forEach(el => {
+          const container = el.closest('div') || el;
+          container.remove();
+        });
+      } catch (_) {}
+    }
+    purgeExternalBadges();
+    try {
+      const badgeObserver = new MutationObserver(() => purgeExternalBadges());
+      badgeObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    } catch (_) {}
 
     // Seeded shuffle for question_order = 'random'
     function shuffleWithSeed(array, seedStr) {
@@ -839,25 +1021,16 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
     function handleFullscreenChange() {
       if (!isTestActive || !isFullscreenSupported()) return;
-      const pauseModal = document.getElementById('fullscreen-pause-modal');
-      if (!pauseModal) return;
 
       if (!isFullscreenActive()) {
-        pauseModal.classList.remove('hidden');
+        triggerCheatAlert('Fullscreen Mode Exited / Left Exam Area');
       } else {
-        pauseModal.classList.add('hidden');
+        setTimeout(initScreenSizeBaseline, 500);
       }
     }
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-
-    document.getElementById('btn-resume-fullscreen')?.addEventListener('click', async () => {
-      if (isFullscreenSupported()) {
-        await requestFullscreenMode();
-      }
-      document.getElementById('fullscreen-pause-modal')?.classList.add('hidden');
-    });
 
     // —— Boot ——
     async function bootTest() {
@@ -869,6 +1042,14 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
         const result = await startTest(session.student_id, testId);
         attemptData = result.attempt;
+        // Restore tab-switch counter from previous session (attempt resume)
+        try {
+          const attId = attemptData?.id;
+          if (attId) {
+            const saved = parseInt(sessionStorage.getItem(`topscore_tab_switches_${attId}`), 10);
+            if (!isNaN(saved) && saved > 0) _tabSwitchCount = saved;
+          }
+        } catch (_) {}
         testData = result.test || result.TEST || {};
         testsections = result.sections || [];
         allAnswerRows = result.answers || [];
@@ -1169,6 +1350,12 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           requestScreenWakeLock();
           lockHistory();
           startSessionHeartbeatGuard();
+          setTimeout(initScreenSizeBaseline, 500);
+          // Immediate translation check on exam start
+          const initialTrans = checkTranslationArtifacts();
+          if (initialTrans) {
+            handleTranslationDetected(initialTrans);
+          }
         };
 
         if (preExamModal && !isFullscreenActive()) {
@@ -1843,29 +2030,26 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       const main = document.getElementById('test-main');
       main.innerHTML = '';
-      main.className = 'test-main-content flex-1 flex flex-col items-center min-h-0 w-full mx-auto';
+      main.className = 'test-main-content notranslate flex-1 flex flex-col items-center min-h-0 w-full mx-auto';
+      main.setAttribute('translate', 'no');
       main.style.cssText = 'flex:1; display:flex; flex-direction:column; justify-content:flex-start; align-items:center; min-height:100%; height:100%; max-height:100%; overflow:hidden; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:0; box-sizing:border-box; gap:6px;';
+
+      // Preemptive translation check on question change
+      const activeTrans = checkTranslationArtifacts();
+      if (activeTrans) {
+        handleTranslationDetected(activeTrans);
+      }
 
       const isWritten = (answerType === 'written');
 
       let answerArea, controlArea;
 
       if (isWritten) {
-        // 1. Question Box (Unified Adaptive Specification: Flex 3)
-        const questionBox = document.createElement('div');
-        questionBox.id = 'question-box-prompt';
-        questionBox.className = 'w-full flex flex-col question-box-prompt';
-        questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); margin:0 auto !important;';
-        questionBox.innerHTML = `
-          <div class="speech-question-text" style="font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
-            ${escapeHtml(questionText)}
-          </div>
-        `;
-        main.appendChild(questionBox);
+        // 1. Metadata Grid (Unified height: Flex 1) — rendered ABOVE question box for context-first reading
 
-        // 2. Metadata Grid (Unified height: Flex 1)
         const metadataTable = document.createElement('div');
-        metadataTable.className = 'w-full metadata-grid metadata-table';
+        metadataTable.className = 'w-full metadata-grid metadata-table notranslate';
+        metadataTable.setAttribute('translate', 'no');
         metadataTable.style.cssText = 'width:100% !important; max-width:440px !important; flex:1 1 0 !important; min-height:32px !important; max-height:42px !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; align-items:center; box-sizing:border-box; margin:0 auto !important;';
         metadataTable.innerHTML = `
           <!-- Row 1 Left: Theme name only -->
@@ -1887,10 +2071,24 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         `;
         main.appendChild(metadataTable);
 
+        // 2. Question Box (Unified Adaptive Specification: Flex 3)
+        const questionBox = document.createElement('div');
+        questionBox.id = 'question-box-prompt';
+        questionBox.className = 'w-full flex flex-col question-box-prompt notranslate';
+        questionBox.setAttribute('translate', 'no');
+        questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); margin:0 auto !important;';
+        questionBox.innerHTML = `
+          <div class="speech-question-text notranslate" translate="no" style="font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
+            ${escapeHtml(questionText)}
+          </div>
+        `;
+        main.appendChild(questionBox);
+
         // 3. Answer Box (Flex 3: Matches questionBox 1:1)
         answerArea = document.createElement('div');
         answerArea.id = 'answer-container-written';
-        answerArea.className = 'w-full flex flex-col justify-center items-center';
+        answerArea.className = 'w-full flex flex-col justify-center items-center notranslate';
+        answerArea.setAttribute('translate', 'no');
         answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow-y:auto; box-sizing:border-box; padding:6px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:12px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); position:relative; margin:0 auto !important;';
         main.appendChild(answerArea);
 
@@ -1904,21 +2102,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
         renderWritten(answerArea, controlArea, row, savedAnswer, snap, vk);
       } else {
-        // 1. Question Box (Unified Adaptive Specification: Flex 3)
-        const questionBox = document.createElement('div');
-        questionBox.id = 'question-box-prompt';
-        questionBox.className = 'w-full flex flex-col question-box-prompt';
-        questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); margin:0 auto !important;';
-        questionBox.innerHTML = `
-          <div class="speech-question-text" style="font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
-            ${escapeHtml(questionText)}
-          </div>
-        `;
-        main.appendChild(questionBox);
-
-        // 2. Metadata Grid (Unified height: Flex 1)
+        // 1. Metadata Grid (Unified height: Flex 1) — rendered ABOVE question box for context-first reading
         const metadataTable = document.createElement('div');
-        metadataTable.className = 'w-full metadata-grid metadata-table';
+        metadataTable.className = 'w-full metadata-grid metadata-table notranslate';
+        metadataTable.setAttribute('translate', 'no');
         metadataTable.style.cssText = 'width:100% !important; max-width:440px !important; flex:1 1 0 !important; min-height:32px !important; max-height:42px !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; align-items:center; box-sizing:border-box; margin:0 auto !important;';
         metadataTable.innerHTML = `
           <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
@@ -1935,6 +2122,19 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           </div>
         `;
         main.appendChild(metadataTable);
+
+        // 2. Question Box (Unified Adaptive Specification: Flex 3)
+        const questionBox = document.createElement('div');
+        questionBox.id = 'question-box-prompt';
+        questionBox.className = 'w-full flex flex-col question-box-prompt notranslate';
+        questionBox.setAttribute('translate', 'no');
+        questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); margin:0 auto !important;';
+        questionBox.innerHTML = `
+          <div class="speech-question-text notranslate" translate="no" style="font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
+            ${escapeHtml(questionText)}
+          </div>
+        `;
+        main.appendChild(questionBox);
 
         if (answerType === 'speech_to_text' || answerType === 'spoken') {
           // 3. Speaking Answer Transcript Box (Flex 3: Matches questionBox 1:1)

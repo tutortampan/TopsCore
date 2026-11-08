@@ -1877,3 +1877,16 @@ body.test-page {
   letter-spacing: 0.02em !important;
 }
 
+
+/* ============================================================
+   Anti-Cheat: Block Print / Screenshot via Ctrl+P
+   Hides the entire test page body in print mode.
+   The keydown Ctrl+P interceptor in test.js triggers a cheat
+   alert; this CSS is a secondary layer for browser-native print.
+   ============================================================ */
+@media print {
+  body.test-page {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}

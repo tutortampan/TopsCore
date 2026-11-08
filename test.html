@@ -20,14 +20,15 @@
   <meta name="google" content="notranslate" />
   <meta name="googlebot" content="notranslate" />
   <meta name="robots" content="notranslate" />
+  <meta http-equiv="Content-Language" content="en" />
   <title>Test Room — TOPS CORE</title>
   <meta name="description" content="Complete your assessment in the TOPS CORE Test Room." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261107_v161" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261107_v161" />
-  <link rel="stylesheet" href="css/test.css?v=20261107_v161" />
+  <link rel="stylesheet" href="css/style.css?v=20261108_v165" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261108_v165" />
+  <link rel="stylesheet" href="css/test.css?v=20261108_v165" />
 </head>
 <body class="test-page notranslate" translate="no">
 
@@ -70,7 +71,7 @@
   <!-- TEST body -->
   <div class="test-body">
     <!-- Main question area -->
-    <main class="test-main-content" id="test-main" aria-live="polite">
+    <main class="test-main-content notranslate" id="test-main" translate="no" aria-live="polite">
       <div class="question-card">
         <div class="empty-state">
           <div class="spinner"></div>
@@ -158,21 +159,28 @@
       
       <div class="focus-checklist">
         <div class="focus-check-item">
-          <span class="check-ico">🔕</span>
+          <span class="check-ico">&#x1F515;</span>
           <div class="check-text">
-            <strong>Enable 'Do Not Disturb' (DND)</strong>
-            <span>Silence WhatsApp, chat alerts, and notifications on your device.</span>
+            <strong>Turn Off All Notifications Now</strong>
+            <span>Silence WhatsApp, Meta AI, Instagram, Telegram, and all chat apps. Opening any notification during the exam triggers an automatic warning recorded in your exam log.</span>
           </div>
         </div>
         <div class="focus-check-item">
-          <span class="check-ico">⛶</span>
+          <span class="check-ico">&#x1F4F5;</span>
+          <div class="check-text">
+            <strong>No Second Devices</strong>
+            <span>Using another phone, tablet, or computer to look up answers is an integrity violation. All focus events are monitored and logged.</span>
+          </div>
+        </div>
+        <div class="focus-check-item">
+          <span class="check-ico">&#x26F6;</span>
           <div class="check-text">
             <strong>Fullscreen Focus Mode</strong>
             <span>The exam opens in fullscreen for optimal visibility and zero distractions.</span>
           </div>
         </div>
         <div class="focus-check-item">
-          <span class="check-ico">⏱️</span>
+          <span class="check-ico">&#x23F1;&#xFE0F;</span>
           <div class="check-text">
             <strong>Independent Completion</strong>
             <span>Work independently until you complete and submit your exam.</span>
@@ -186,21 +194,7 @@
     </div>
   </div>
 
-  <!-- Fullscreen Pause Modal (Friendly Pause when fullscreen is exited) -->
-  <div id="fullscreen-pause-modal" class="pre-exam-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="fullscreen-pause-title">
-    <div class="pre-exam-focus-box">
-      <div class="focus-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">⏸️</div>
-      <h2 id="fullscreen-pause-title" class="focus-title">Exam Paused: Fullscreen Exited</h2>
-      <p class="focus-subtitle">This exam requires fullscreen mode to maintain test integrity and focus.</p>
-      <p style="font-size: 13px; color: #94a3b8; margin: 12px 0 20px 0; line-height: 1.5;">
-        Please click the button below to resume fullscreen mode and continue your exam.
-      </p>
-      <button type="button" class="btn btn-primary btn-focus-start" id="btn-resume-fullscreen">
-        ⛶ Resume Fullscreen &amp; Continue
-      </button>
-    </div>
-  </div>
-
+  <!-- Fullscreen Pause Modal deprecated in Phase 365: Consolidated into unified #cheat-overlay -->
   <!-- Anti-Cheat Flashing Overlay -->
   <div id="cheat-overlay" role="alertdialog" aria-modal="true" aria-labelledby="cheat-title">
     <div class="cheat-box">
@@ -212,7 +206,7 @@
       </div>
       <div class="cheat-countdown-label">Seconds to Auto-Submit</div>
       <button type="button" class="btn btn-primary cheat-dismiss-btn" id="dismiss-cheat-btn">
-        Return to My TEST
+        &#x26F6; Resume Fullscreen &amp; Return to TEST
       </button>
     </div>
   </div>
@@ -265,10 +259,10 @@
     </div>
   </div>
 
-  <script type="module" src="./js/test.js?v=20261107_v161"></script>
+  <script type="module" src="./js/test.js?v=20261108_v165"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=20261107_v161')
+      navigator.serviceWorker.register('sw.js?v=20261108_v165')
         .then(registration => registration.update())
         .catch(err => console.warn('SW registration failed:', err));
     }
