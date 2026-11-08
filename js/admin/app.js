@@ -588,7 +588,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
           try { localStorage.setItem('topscore_selected_class_id', params.class_id); } catch(_) {}
         }
       } else if (targetSec === 'vocab_vault') {
-        const tab = subTab || localStorage.getItem('topscore_admin_vault_tab') || 'blueprint';
+        const tab = subTab || localStorage.getItem('topscore_admin_vault_tab') || 'theme_manager';
         window._activeVaultTab = tab;
         try { localStorage.setItem('topscore_admin_vault_tab', tab); } catch(_) {}
       } else if (targetSec === 'student-registration') {

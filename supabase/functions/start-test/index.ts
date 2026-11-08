@@ -790,6 +790,9 @@ Deno.serve(async (req) => {
       }
 
       let dynamicAnswerType = ((test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE') ? test.answer_type : null) || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
+      if (test.answer_type === 'written' || (test.shell_code && test.shell_code.endsWith('-WORDS-EXAM')) || (test.title && test.title.toUpperCase().includes('WORDS EXAM'))) {
+        dynamicAnswerType = 'written';
+      }
       if (!test.payload?.answer_type && !(test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE')) {
          if (test.test_subtype === 'VOCAB_TASK' || test.test_subtype === 'PHRASE_TASK') dynamicAnswerType = 'spoken';
          else if (test.test_subtype === 'VOCAB_TEST') dynamicAnswerType = 'spoken';

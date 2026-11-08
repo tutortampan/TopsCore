@@ -1166,7 +1166,10 @@ export async function generateTestQuestions(sb, test) {
 
     if (vaultWords && vaultWords.length > 0) {
       let vaultCandidatePool = [];
-      const ansType = test.answer_type || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
+      let ansType = test.answer_type || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
+      if (test.answer_type === 'written' || (test.shell_code && test.shell_code.endsWith('-WORDS-EXAM')) || (test.title && test.title.toUpperCase().includes('WORDS EXAM'))) {
+        ansType = 'written';
+      }
 
       if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
         let allDataQuery = sb.from('vocabulary_vault')
@@ -1370,7 +1373,7 @@ export async function startTest(studentId, testId) {
 
   // 1. Ambil detail test
   const { data: asmData, error: asmErr } = await sb.from('tests')
-    .select('id, title, status, deleted_at, test_subtype, test_type, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_test_id, prerequisite_id, payload, module_id, question_order')
+    .select('id, title, status, deleted_at, test_subtype, test_type, answer_type, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_test_id, prerequisite_id, payload, module_id, question_order')
     .eq('id', testId)
     .single();
   if (asmErr || !asmData) throw new Error('Test not found.');

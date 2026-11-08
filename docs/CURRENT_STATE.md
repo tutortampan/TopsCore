@@ -1,44 +1,54 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-09 06:48 UTC+8
-Current Phase: Phase 367: Institution Tab Header Naming, Full-Green Active Badges & Grade-Score Toolbar Streamlining (v167) [COMPLETE]
+Last Updated: 2026-11-09 07:20 UTC+8
+Current Phase: Phase 370: Theme Manager vs Theme Blueprint (Test Auto-Generator) Separation [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Institution Dynamic Topbar Tabs (`js/admin/curriculum-management.js`)**:
-   - Fixed mapping in `institutionTabs` where `tab.label` was previously set to generic strings `"Program"` / `"Programs"`, causing topbar tabs to render as `"Program (1)"` and `"Programs (2)"`.
-   - Updated to assign `label: inst.name` and `title: inst.name`, correctly rendering the institution's true identity (e.g. `TOP (1)`, `CEC (2)`).
+1. **Vocabulary Vault Topbar Tabs Architecture (`js/admin/vocab-vault.js`)**:
+   - Split monolithic `Topic Blueprint` into two distinct tabs:
+     - `theme_manager` (🗺️ Theme Manager)
+     - `blueprint` (⚡ Theme Blueprint - Vocabulary Tests Auto-Generator)
+   - Preserved `vocab` (📦 Vocabulary Words) and `phrases` (💬 Phrases & Idioms) for word-level CRUD and import/export.
+   - Enforced route and state persistence across page reloads via URL hash (`#vocab_vault?tab=theme_manager` or `#vocab_vault?tab=blueprint`) and bidirectional `localStorage` (Rule 2.20).
 
-2. **Full-Green Active Status & Batch Badges (`css/style.css`, `css/admin.css`, `js/admin/curriculum-management.js`)**:
-   - Diagnosed root cause of pink borders on green badges: `--grade-star-rgb: 255, 45, 135` (Hot Pink) was inherited by `.badge-tag-ongoing`, `.badge-success`, `.btn-success`, and `${progBatches.length} Batches`.
-   - Defined authoritative CSS variables `--clr-success-rgb: 0, 192, 0;` and `--clr-success-glow: rgba(0, 192, 0, 0.4);` in `css/style.css`.
-   - Refactored `.badge-tag-ongoing`, `.badge-success`, `.btn-success`, `.toast-success`, and inline program batch badges to pure green (`#00c000ff` / `rgba(0, 192, 0, 0.15)` background / `1px solid rgba(0, 192, 0, 0.35)` border) with zero pink bleed.
+2. **Dedicated Theme Manager View (`_renderThemeManagerTab`)**:
+   - Streamlined table from 16+ cramped columns down to an airy, readable curriculum matrix.
+   - Replaced 7 overcrowded part-of-speech columns with an elegant summary chip (`40 items (30W · 10P)`).
+   - Dedicated prominent columns for multi-tenant program distribution (`CEC - CAMP`, `TOP - EVNIKOM`, `TOP - TAMATA`, `TOP - SHERATON`) with high-contrast `🟢 Active` / `⚪ —` badges.
+   - One-click instant assignment toggling with real-time UI synchronization and toast feedback.
+   - Topic renaming, deletion, and merge duplicate topics integrated cleanly.
 
-3. **Grade & Score Toolbar Cleanup & Natural Scroll Layout (`js/admin/app.js`, `css/admin.css`)**:
-   - Removed unnecessary display controls from Grade & Score matrix toolbar:
-     - Removed `attendance-view-mode-container` (`DISPLAY: [🔍 FIT SCREEN] [-- 100% SCROLL]`).
-     - Removed `attendance-pan-controls` (`[◀]` and `[▶]` buttons).
-     - Removed `matrix-fullwidth-btn` (`[⤢ Full Width]` toggle).
-   - Standardized table layout on clean, uncompressed natural horizontal scroll (`wrap.style.overflowX = 'auto'`, `tbl.style.zoom = '1'`) with smooth mouse-wheel horizontal panning and comfortable row heights/font sizes.
-   - Preserved theme filter pills (`THEME VIEW: ALL (EXAMS ONLY), THEME A, THEME B, THEME C, THEME D`) and complete score legend (`WRD`, `PHR`, `PTS`, `SCORE %`, `ᴿ`, `★`).
+3. **Dedicated Theme Blueprint & Auto-Generator View (`_renderThemeBlueprintTab`)**:
+   - Created top Glassmorphic Hero Command Bar with:
+     - Target Program selector dropdown (Camp, Evnikom, Tamata, etc.)
+     - Curriculum Level filter tabs (`ALL LEVELS`, `1st Level`, `2nd Level`, `3rd Level`)
+     - Pacing snapshot chips (`Task: 15 min · 60%`, `Exam: 30 min · 60%`, `Format: Spoken 7x7`)
+     - Primary button `⚡ Auto-Generate All Tests` (calls `openAutoGenerateModal` with active context)
+     - `⚙️ Test Settings` button (calls `openTestSystemSettingsModal`)
+   - Real-time Test Readiness Matrix displaying actual tests from Supabase:
+     - Practice Task status (`✅ Ready (15m · Min 60%)` vs `⚠️ Missing`)
+     - Milestone Exam status (`✅ Ready (30m · Min 60%)` vs `⚠️ Missing`)
+     - Direct `👁️ Class Hub` deep-link action button per row.
+   - Overall Readiness KPI progress bar (`X / Y Tests Ready`).
 
-4. **Universal Cache & Asset Harmonization (`sw.js`, `admin.html`)**:
-   - Service Worker cache bumped to `topscore-cache-option-a-v94`.
-   - Asset query string bumped to `?v=20261109_v167` in `admin.html`.
+4. **Styles & Router Updates (`css/admin.css`, `js/admin/app.js`)**:
+   - Added badge and hero bar styles: `.badge-program-assigned`, `.badge-program-unassigned`, `.badge-test-ready`, `.badge-test-missing`, `.bp-hero-command-bar`.
+   - Updated router default in `js/admin/app.js` to preserve `#vocab_vault` sub-tabs cleanly.
 
 ## Verification Results:
-- `node scripts/test_ui_tab_badges_and_grade_score_v167.mjs` -> PASS (28/28 assertions passed 100%)
-- `node scripts/test_multi_program_theme_blueprint_v166.mjs` -> PASS (29/29 assertions passed 100%)
-- `node scripts/test_tenant_isolation_batch134_vs_evnikom.mjs` -> PASS (57/57 multi-tenant assertions passed 100%)
-- `node --check` across modified JavaScript files -> PASS (0 syntax errors)
+- `node --check js/admin/vocab-vault.js` -> PASS (0 syntax errors)
+- `node --check js/admin/app.js` -> PASS (0 syntax errors)
+- `node scripts/test_vocab_dashboard_blueprint.mjs` -> PASS (100% Passed)
+- `node scripts/test_vocab_7x7_and_leveling_e2e.mjs` -> PASS (132/132 assertions × 10 consecutive runs)
 
 ## Current Architecture
 - Static HTML5 / CSS3 / Modular ES6 JavaScript frontend.
 - Supabase PostgreSQL + Auth + Storage + Edge Functions backend.
+- Separated Theme Management from Vocabulary Test Generation in Vocabulary Vault.
 - Multi-Program theme-level authorization via `theme_program_assignments` table.
 - Single Source of Truth grading and distractor matching in `js/grading.js`.
 - Streamlined Grade & Score matrix with natural horizontal scrolling.
-- Pure green authoritative status and badge color palette.
 - Service Worker offline caching via `sw.js`.
 
 ## Known Issues

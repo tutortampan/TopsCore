@@ -1930,7 +1930,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (typeof snap === 'string') {
         try { snap = JSON.parse(snap); } catch { snap = { question_text: snap, answer_type: 'spoken' }; }
       }
-      const answerType = snap?.answer_type || row.answer_type || testData?.answer_type || testData?.payload?.answer_type || 'spoken';
+      let answerType = snap?.answer_type || row.answer_type || testData?.answer_type || testData?.payload?.answer_type || 'spoken';
+      if (testData?.answer_type === 'written' || (testData?.shell_code && testData.shell_code.endsWith('-WORDS-EXAM')) || (testData?.title && testData.title.toUpperCase().includes('WORDS EXAM'))) {
+        answerType = 'written';
+      }
       const questionText = snap?.question_text || snap?.questionText || snap?.question || snap?.text || snap?.soal || snap?.indonesia || row.question_text_snapshot || (typeof row.question_snapshot === 'string' ? row.question_snapshot : '') || 'Question text unavailable';
       // Extract Theme (Name + Code), Topic, Category, and Type for 4 corners
       const THEME_NAMES = {
@@ -2799,7 +2802,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
              if (typeof snap === 'string') {
                try { snap = JSON.parse(snap); } catch { snap = {}; }
              }
-             const answerType = snap?.answer_type || row.answer_type || 'written';
+             let answerType = snap?.answer_type || row.answer_type || testData?.answer_type || 'written';
+             if (testData?.answer_type === 'written' || (testData?.shell_code && testData.shell_code.endsWith('-WORDS-EXAM')) || (testData?.title && testData.title.toUpperCase().includes('WORDS EXAM'))) {
+               answerType = 'written';
+             }
              if ((answerType === 'written' || answerType.includes('written')) && vk) {
                vk.style.display = 'flex';
              }

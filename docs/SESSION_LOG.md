@@ -1,3 +1,50 @@
+## SESSION-20261109-0720
+
+Start: 2026-11-09 06:55 UTC+8
+End: 2026-11-09 07:20 UTC+8
+Agent: Antigravity
+
+### User Request
+"saya kurang suka tampilan ni, tapi saya belum terlalu punya ide apa yang perlu di rubah,,, apakah kamu punya ide? misalnya membuat menjadi 2 halaman, dimana ada tab yang isisnya Theme manger, dimana tema di atur untuk ada di program mana saja, dan Tema bluprint yang berisi vocabulary tests auto generator,,, supaya 2 halaman punya interface dan fungsi yang berbda, saya suka tampilan yang sekali lihat semua ada di halaman,, saat ini sedikit terlalu banyak,,, appakah kamu paham? /plan"
+- User attached screenshot of `admin.html#vocab_vault` (Topic Blueprint matrix showing 16+ columns with parts of speech, programs, and edit actions overcrowded).
+- User approved implementation plan artifact `split_theme_manager_and_blueprint_plan.md`.
+
+### Objective
+- Split the overcrowded single `Topic Blueprint` table into 2 dedicated, focused tabs:
+  1. `Theme Manager` (Program distribution, theme hierarchy, instant assignment toggle).
+  2. `Theme Blueprint` (Vocabulary tests auto-generator, test readiness status matrix, generator controls).
+- Keep `Vocabulary Words` and `Phrases & Idioms` accessible.
+- Comply with Rule 2.20 state persistence.
+
+### Work Performed
+1. **Vocabulary Vault Topbar Tabs (`js/admin/vocab-vault.js`)**:
+   - Defined 4 topbar tabs: `theme_manager`, `blueprint`, `vocab`, `phrases`.
+   - Integrated URL hash parameter parsing (`#vocab_vault?tab=...`) and bidirectional `localStorage`.
+2. **Dedicated Theme Manager View (`_renderThemeManagerTab`)**:
+   - Removed 7 crowded part-of-speech columns, replacing them with a summary badge (`40 items (30W · 10P)`).
+   - Expanded multi-tenant program columns (`CEC - CAMP`, `TOP - EVNIKOM`, `TOP - TAMATA`, `TOP - SHERATON`) with wide, high-contrast badges (`🟢 Active` / `⚪ —`).
+   - Enabled single-click program toggle with immediate DOM synchronization and Supabase persistence.
+   - Built clean header toolbar with Search, Level Selector Tabs, Theme/Topic/Item metrics, Edit Mode toggle, and Merge Topics.
+3. **Dedicated Theme Blueprint View (`_renderThemeBlueprintTab`)**:
+   - Created Glassmorphic Hero Command Bar at top with:
+     - Target Program dropdown (Camp, Evnikom, Tamata, etc.)
+     - Curriculum Level tabs (`ALL LEVELS`, `1st`, `2nd`, `3rd`)
+     - Pacing snapshot badges (`15m Task`, `30m Exam`, `Spoken 7x7`)
+     - Prominent `⚡ Auto-Generate All Tests` button and `⚙️ Test Settings` button.
+   - Built real-time Test Readiness Matrix displaying actual tests from Supabase:
+     - Task status (`✅ Ready` vs `⚠️ Missing`)
+     - Exam status (`✅ Ready` vs `⚠️ Missing`)
+     - `👁️ Class Hub` deep link.
+   - Built Readiness KPI progress bar.
+4. **Styles & Router (`css/admin.css`, `js/admin/app.js`)**:
+   - Added styles for `.badge-program-assigned`, `.badge-program-unassigned`, `.badge-test-ready`, `.badge-test-missing`, `.bp-hero-command-bar`.
+   - Updated router default tab to `theme_manager`.
+5. **Testing & Verification**:
+   - `node --check js/admin/vocab-vault.js`: PASS (0 errors).
+   - `node --check js/admin/app.js`: PASS (0 errors).
+   - `node scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%).
+   - `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: PASS (132/132 assertions × 10 runs).
+
 ## SESSION-20261109-0648
 
 Start: 2026-11-09 06:36 UTC+8
