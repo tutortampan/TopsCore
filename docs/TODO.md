@@ -1,3 +1,16 @@
+# ACTIVE DIRECTIVE: PHASE 372 — VOCABULARY VAULT UX SPLIT (THEME MANAGER & BLUEPRINT) & LIVE WORDS EXAM WRITTEN MODE [COMPLETE]
+
+- [x] Task 1: Split monolithic 16+ column Topic Blueprint in `js/admin/vocab-vault.js` into two dedicated tabs: `theme_manager` (🗺️ Theme Manager) and `blueprint` (⚡ Theme Blueprint).
+- [x] Task 2: Implement dedicated Theme Manager view: replace 7 crowded POS columns with a single summary chip (`40 items (30W · 10P)`), expand multi-tenant program distribution columns with high-contrast badges (`🟢 Active` / `⚪ —`), and protect with EDIT MODE toggle.
+- [x] Task 3: Implement dedicated Theme Blueprint view: Glassmorphic Hero Command Bar with Target Program dropdown, Level selector tabs, Pacing snapshot chips, `⚡ Auto-Generate All Tests` action, and real-time Test Readiness Matrix (`✅ Ready` vs `⚠️ Missing`).
+- [x] Task 4: Enforce Rule 2.20 route and state persistence across reloads via URL hash (`#vocab_vault?tab=...`) and bidirectional `localStorage`.
+- [x] Task 5: Root-cause analyze live exam issue on `2C-WORDS-EXAM`: update `tests` table (`answer_type: 'written'`), update `attempt_answers.question_snapshot` to `written` for all 8 active student attempts (440 questions each, zero progress lost).
+- [x] Task 6: Harden `js/test.js` and `supabase/functions/start-test/index.ts` to guarantee written mode for Words Exam.
+- [x] Task 7: Bump cache busters (`test.html?v=20261109_v171`, `sw.js` cache name `topscore-cache-option-a-v96`).
+- [x] Task 8: Verify 100% test suite passing (`scripts/test_vocab_7x7_and_leveling_e2e.mjs`, `scripts/test_multi_program_theme_blueprint_v166.mjs`).
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 339 — MOBILE VIEWPORT EMULATION ENGINE & OPTIMIZED AI EXTENSIONS STACK [COMPLETE]
 
 - [x] Task 1: Audit and reorganize `.vscode/extensions.json` into 5 curated categories: Mobile Viewport & Live Emulation, CSS & Visual Accuracy, HTML & Asset Productivity, Code Quality & Runtime Safety, and AI Pair Programming & Architecture.
