@@ -28,7 +28,8 @@ Status: COMPLETE
 
 4. **Batch 134 Pacing & Cohort Achievements**:
    - `Miss Alfina Damayanti`: Completed all 7 passes on `2C4-WORDS-TASK` (7/7 passes, 100% ★); fully unlocked `2C-WORDS-EXAM - SHOPPING ESSENTIALS` on Class Hub.
-   - `Mr. Lalu Yuda Handika Prawira`: Achieved 5 consecutive high passes (97.5%, 100%, 100%, 100%, 100%) on `2C4-WORDS-TASK` (5/7 passes).
+   - `Mr. Lalu Yuda Handika Prawira`: Completed all 7 passes on `2C4-WORDS-TASK` (7/7 passes, with 6 consecutive 100% ★ scores); officially completed all Theme C Tasks (C1 7/7, C2 7/7, C3 7/7, C4 7/7) and fully unlocked `2C-WORDS-EXAM - SHOPPING ESSENTIALS`.
+   - `Mr. Muhamad Alifurrahman`: Completed organic mastery on C1 (100% ★) and successfully submitted & passed Attempt 1 on `2C2-WORDS-TASK` (75.00% Grade C).
    - `Mr. Wildian Yusroni`: Achieved 6 passes on `2C2-WORDS-TASK` (best 72.5%).
    - `Mr. Lalu Nune Mubarak`: Achieved 3 consecutive passes on `2C1-WORDS-TASK` (81.25%).
    - `Miss Adinda Karunia Farela`: Achieved 82.50% pass on `2C2-WORDS-TASK`.
