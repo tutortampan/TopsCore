@@ -32,6 +32,9 @@ When sources conflict:
 ## 0.1 Command Execution Authority
 The user has granted standing, unconditional permission to execute all `powershell` commands proactively for diagnostics, verification, health checks, database queries, and test scripts across the workspace without requesting confirmation each time.
 
+### 0.1.1 Git Commit & Push Restriction (STRICT STANDING RULE)
+**NEVER execute `git commit` or `git push` autonomously.** All commits and pushes are strictly gated: the agent MUST NOT commit or push changes until the user explicitly commands it ("no commit until I say so!"). All changes must remain uncommitted in the working tree for user review until explicit approval is given.
+
 ---
 
 # 1. PRODUCT
@@ -456,6 +459,26 @@ Whenever an instruction, sub-task, or investigation originates from a side threa
    Side Quest — <Descriptive Title>
    ```
 3. **Isolation of Scope**: The Side Quest plan must specifically isolate the side request, its technical diagnostic, proposed resolution, and regression checklist without modifying the active milestone scope of the primary roadmap.
+
+## 2.23 Zero Outer Page Scroll & Table-Only Viewport Lock (/learn)
+
+The admin workspace (`admin.html`) MUST strictly enforce a single-screen `100vh` viewport lock with ZERO outer page vertical scrolling.
+
+Rules:
+- **No Outer Scrollbars**: Under NO circumstances may `.admin-main`, `.admin-content`, or the browser window generate an outer vertical scrollbar that scrolls the entire page up and down.
+- **Docked Header & Infobar**: The topbar (`admin-topbar`, sub-tabs, filter controls) and bottom infobar (`admin-bottom-infobar`) MUST remain permanently pinned/docked in the viewport with zero vertical displacement.
+- **Table-Only Vertical Scroll**: Vertical scrolling is permitted EXCLUSIVELY inside the table body container (`.table-wrap` / `tbody`).
+- **Sticky Table Headers**: Table headers (`thead th`) MUST use `position: sticky; top: 0; z-index: 10;` so column headers remain visible at all times as rows scroll underneath.
+- **No Double Scrollbars**: Having both an outer scrollbar and an inner table scrollbar is strictly prohibited.
+
+## 2.24 Global Master Edit Mode Across All Admin Pages (/learn)
+
+All admin screens in Tutor's Room (`admin.html`) MUST strictly obey the Global Master Edit Mode toggle located in the top-right corner of the global topbar.
+
+Rules:
+- **Master Header Toggle**: Permanently positioned in the top-right of `admin-topbar`, toggling between `EDIT MODE: OFF` (Safe View-Only) and `EDIT MODE: ON` (Active Editing).
+- **Absolute Hiding when OFF**: When Edit Mode is OFF, ALL edit buttons, rename pencils, delete trash cans, inline input steppers, "+ Add" creation buttons, manual score overrides, and destructive actions across ALL pages (Domains A, B, C, D) MUST be COMPLETELY HIDDEN (`display: none !important;`). The interface must render as a pristine, distraction-free read-only view.
+- **Global Scope**: Applies universally to Curriculum, Dashboard, Organization, Batches, Students Registration, Class Hub, Vocabulary Vault, Modules, and System Settings.
 
 ---
 

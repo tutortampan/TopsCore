@@ -1,45 +1,47 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-09 22:46 UTC+8
-Current Phase: Phase 387: Tutor Role & Strict Access Control (RBAC) [COMPLETE] & Side Quest (VS Code Extensions) [COMPLETE]
+Last Updated: 2026-11-10 07:15 UTC+8
+Current Phase: Phase 389: Single-Responsibility Column Principle Overhaul Across All Tables [COMPLETE]
 Status: COMPLETE
 
-## Completed Work (Phase 387 & Side Quest):
-1. **Unified Session Role Engine (`js/session.js`)**:
-   - Extended `setAdminSession(data)` to store authoritative user roles (`admin` or `tutor`) and usernames.
-   - Added `getAdminRole()`, `isTutorRole()`, and `isAdminRole()` helpers with SSR/Node safe-fallbacks.
+## Completed Work (Phase 389):
+1. **Single-Responsibility Column Principle Implementation ("1 Kolom = 1 Jenis Info")**:
+   - Enforced the architectural rule that every table column must contain strictly ONE discrete data metric or status code.
+   - The ONLY permitted exception to have multiple items in a cell is Action Button / Edit Button columns.
 
-2. **Dual-Credential Authentication (`js/admin/app.js`)**:
-   - Administrator authentication: Master credentials (`admin` / `admin123` or custom admin password override) or Supabase Auth.
-   - Tutor Proctor authentication: Tutor credentials (`tutor` / `tutor123` or custom tutor password configured by admin; aliases: `tutor`, `guru`, `proctor`, `pengawas`).
-   - Fast-boot CSS tagging via `admin-init.js` ensuring immediate `role-tutor` body class to eliminate layout flashing on page refresh.
+2. **Vocabulary Vault — Theme Manager (`js/admin/vocab-vault.js`)**:
+   - Split composite `VAULT ITEMS` (`40 items (40W · 0P)`) into 3 dedicated numeric columns:
+     - `TOTAL`: Total item count badge (`40`)
+     - `WORDS`: Discrete word count (`40`)
+     - `PHRASES`: Discrete phrase count (`0`)
+   - Removed inline edit/delete action buttons (✏️ 🗑️) from `Theme Name` and `Topic Name` data cells; consolidated all edit, rename, and delete actions into the dedicated `ACTIONS` column.
 
-3. **Strict Route & Navigation Guards**:
-   - `loadSection()` & URL hash router strictly restrict tutors to `class-hub` (and `test-access` alias). Direct URL manipulation (e.g. `#tests`, `#settings`, `#students`, `#organization`, `#curriculum`, `#modules`, `#vocab_vault`) triggers a warning toast and auto-redirects to `class-hub`.
-   - Sidebar UI dynamically scopes out Domain A (Admin), Domain B (Board), Domain D (System & Data), and non-permitted items in Domain C (`vocab_vault`, `tests`), leaving strictly the Class selector list for proctoring.
+3. **Vocabulary Vault — Test Blueprint (`js/admin/vocab-vault.js`)**:
+   - Split composite `TEST SETTINGS` (`15m · 70% · 7x7`) into 3 dedicated columns:
+     - `DURATION`: Discrete duration value (`15 min` when OFF, number stepper input when ON)
+     - `PASS SCORE`: Discrete passing score (`70%` when OFF, percentage stepper input when ON)
+     - `FORMAT`: Discrete delivery format badge (`7×7 Spoken`)
+   - Split `VOCAB POOL` into 3 discrete columns: `ITEMS`, `WORDS`, `PHRASES`.
+   - Cleaned `TASK STATUS` and `EXAM STATUS` columns to status-only pills (`✓ Ready` or `▲ Missing`), completely stripping out embedded duration and passing score text.
 
-4. **Class Hub & Proctoring Specialization**:
-   - Class Hub tabs filtered: Tutors strictly access `test-sessions` ("Buka Tutup Ujian", live test taker monitoring, time extensions, late additions) and `attendance` ("Cek Nilai", scorecards, points, percentages). `tests` (Test Builder, Generator, Blueprints) is completely excluded.
-   - Attendance Matrix scoped: Manual grade override super-header, column, and inline edit buttons are removed for tutors.
-   - Backend operation guards: `window._editRecord`, `window._deleteRecord`, `window.openCrudModal`, `window.openStudentFullEdit`, `window.saveRowManualInput`, `window.toggleRowManualInput`, `window.toggleAllManualInputMode`, and `labelAttemptRemedial` block tutor invocation with permission denied notices.
+4. **Test Analytics & Pacing Drawer (`js/admin/tests-management.js`)**:
+   - Split composite `Test & Shell Code` into `Test Title` and `Shell Code`.
+   - Split composite `Duration / Limit` into `Avg Duration` (with progress indicator) and `Time Limit`.
 
-5. **System Settings Management (`js/admin/desk.js`)**:
-   - Added "Tutor Proctor Credentials" security card in Pilar D allowing master administrators to update or reset the custom tutor password (`topscore_tutor_custom_password`).
+5. **Student Roster Grid Fallback (`js/admin/student-management.js`)**:
+   - Split fallback composite `Tests` (`${row.completedTests} / ${row.totalAssigned}`) into `Completed` and `Assigned` columns.
 
-6. **Automated Verification Suite**:
-   - Created dedicated automated test suite `scripts/test_tutor_role_rbac.mjs` (`npm run test:rbac`), integrated directly into `npm test`.
-   - Verified 8 distinct RBAC invariants: 100% PASS with 0 defects.
-   - Full suite verified: `npm run test:syntax`, `npm run test:imports`, `npm run test:health`, `npm test` all 100% PASS.
+6. **Automated Verification**:
+   - Extended `scripts/test_vocab_vault_and_edit_mode.mjs` with comprehensive invariants asserting single-responsibility headers, absence of composite settings/parenthetical items, and status pill purity.
+   - Full test suite execution (`npm test`) passed 100% with zero regressions.
 
-7. **Side Quest: VS Code Extensions Optimization (Option 1)**:
-   - Evaluated `.vscode/extensions.json` recommendation stack.
-   - Removed redundant `formulahendry.auto-close-tag` and `formulahendry.auto-rename-tag`.
-   - Replaced duplicate overhead with native VS Code core settings (`editor.linkedEditing: true`), eliminating potential cursor stutter on large HTML files like `admin.html`. Total recommendations streamlined from 17 to 15.
-
-## Files Changed In Latest Step:
-- `.vscode/extensions.json`
+## Files Changed:
+- `js/admin/vocab-vault.js`
+- `js/admin/tests-management.js`
+- `js/admin/student-management.js`
+- `scripts/test_vocab_vault_and_edit_mode.mjs`
 - `docs/CHANGELOG.md`
 - `docs/CURRENT_STATE.md`
 
 ## Next Exact Action:
-- Commit and push changes to `main`.
+- Ready for user review. All changes remain uncommitted in the working tree per Rule 0.1.1.

@@ -1,3 +1,97 @@
+## [2026-11-10 07:15] — Phase 389: Single-Responsibility Column Principle Overhaul Across All Tables
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 389  
+**Status:** PASS  
+
+### Why
+- The user invoked `/plan` to enforce the Single-Responsibility Column Principle across all tables in the platform:
+  *"Semua kolom hanya boleh berisi 1 jenis info, setiap info harus hanya punya satu kolom. Kolom yang boleh punya beberapa item dalam satu kolom HANYA Action Button atau Edit Button."*
+- Trigger screenshots uploaded by user:
+  1. `TEST SETTINGS` column crammed with `15m · 70% · 7x7` (Duration + Passing % + Format).
+  2. `VAULT ITEMS` column crammed with `40 items (40W · 0P)` (Total Count + Word Count + Phrase Count).
+  3. Status columns packing minutes and passing scores into status badges (`✓ Ready (15m · Min 70%)`).
+
+### Changed
+1. **`js/admin/vocab-vault.js` (Theme Manager)**:
+   - Split composite `VAULT ITEMS` (`40 items (40W · 0P)`) into 3 dedicated columns:
+     - `TOTAL`: Total items badge (`40`)
+     - `WORDS`: Discrete word count (`40`)
+     - `PHRASES`: Discrete phrase count (`0`)
+   - Removed inline action buttons (✏️ 🗑️) from `Theme Name` and `Topic Name` data cells; consolidated all edit, rename, and delete actions into the dedicated `ACTIONS` column.
+2. **`js/admin/vocab-vault.js` (Test Blueprint)**:
+   - Split composite `TEST SETTINGS` (`15m · 70% · 7x7`) into 3 dedicated columns:
+     - `DURATION`: Discrete duration value (`15 min` when OFF, number stepper input when ON)
+     - `PASS SCORE`: Discrete passing percentage (`70%` when OFF, percentage stepper input when ON)
+     - `FORMAT`: Discrete format badge (`7×7 Spoken`)
+   - Split `VOCAB POOL` into 3 discrete columns: `ITEMS`, `WORDS`, `PHRASES`.
+   - Cleaned `TASK STATUS` and `EXAM STATUS` columns to status-only badges (`✓ Ready` or `▲ Missing`), eliminating embedded duration/score text.
+3. **`js/admin/tests-management.js` (Analytics Pacing Drawer)**:
+   - Split `Test & Shell Code` into `Test Title` and `Shell Code`.
+   - Split `Duration / Limit` into `Avg Duration` and `Time Limit`.
+4. **`js/admin/student-management.js` (Roster Grid Fallback)**:
+   - Split fallback composite `Tests` (`${row.completedTests} / ${row.totalAssigned}`) into `Completed` and `Assigned` columns.
+5. **`scripts/test_vocab_vault_and_edit_mode.mjs`**:
+   - Added automated assertions for single-responsibility headers, absence of composite items, and status pill purity.
+
+### Verification
+- `scripts/check_all_js_syntax.cjs`: PASS (43 files validated).
+- `scripts/test_vocab_vault_and_edit_mode.mjs`: PASS (100% assertions verified).
+- `npm test`: 100% PASS across all 11 test suites.
+
+---
+
+## [2026-11-09 23:51] — Phase 388: Global Master Edit Mode, Zero-Scroll Viewport Lock & Vocabulary Vault Overhaul
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 388  
+**Status:** PASS  
+
+### Why
+- The user expressed strong dissatisfaction with the interface, functionality, layout, and structural condition of the Vocabulary Vault (`#vocab_vault`: Theme Manager and Theme Blueprint).
+- Specifically:
+  1. Cluttered headers, duplicate buttons, and redundant bottom infobars.
+  2. Double vertical scrollbars causing the outer page to scroll vertically and push bottom bars offscreen.
+  3. Desired a global master "Edit Mode" toggle in the top-right header across all admin screens, where all edit/delete/modify controls are completely hidden when Edit Mode is OFF.
+  4. Desired a strict spatial layout law: Top is solely for Tab Names and Table Search/Filters; Bottom infobar is for Metadata/Stats and Quick Action Buttons.
+  5. Desired Theme-level Institution and Program assignment inherited automatically by topics in Theme Manager.
+  6. Desired Test Blueprint to be a Batch Configuration Grid with multi-select checkboxes and selective/batch test generation via a confirmation modal wizard.
+
+### Changed
+1. **`AGENTS.md`**:
+   - Added Section 2.23: `Zero Outer Page Scroll & Table-Only Viewport Lock (/learn)` enforcing 100vh single-screen lock without outer vertical scrollbars and restricting vertical scrolling exclusively to the inner table container.
+   - Added Section 2.24: `Global Master Edit Mode Across All Admin Pages (/learn)` establishing top-right master toggle governance and complete hiding of editing controls when OFF across Domains A, B, C, and D.
+2. **`admin.html`**:
+   - Added `#global-edit-mode-toggle` in `<header class="admin-topbar">` under `.admin-topbar-actions`.
+3. **`js/session.js` & `js/admin/admin-init.js`**:
+   - Exported `getGlobalEditMode()`, `setGlobalEditMode()`, `toggleGlobalEditMode()`, and `initGlobalEditMode()`.
+   - Wired bidirectional state persistence in `localStorage` (`topscore_global_edit_mode`) and dispatched `admin-edit-mode-changed` events.
+   - Auto-initialized in `admin-init.js` for fast boot with zero layout flashing.
+4. **`css/admin.css`**:
+   - Locked `.admin-main` and `.admin-content` to `overflow: hidden !important;`, completely eradicating outer page vertical scrollbars.
+   - Ensured sticky table headers (`thead th { position: sticky; top: 0; z-index: 10; }`).
+   - Implemented zero-leakage hiding rule: `body:not(.global-edit-mode-on) .edit-mode-only... { display: none !important; }`.
+   - Styled toggle: dark slate pill for `EDIT: OFF` vs emerald green glow for `EDIT: ON`.
+5. **`js/admin/vocab-vault.js`**:
+   - Refactored `_renderThemeManagerTab()` to a modernized flat data table (no rowspans).
+   - Added `openThemeProgramAssignModal` for Theme-level Institution & Program assignments with automatic topic inheritance.
+   - Renamed tab to "Test Blueprint", converted to Batch Configuration Grid with multi-select checkboxes.
+   - Cleaned top toolbar (program select + level filters + search only; removed hero bar and duration clutter).
+   - Docked test readiness metrics and quick action buttons (`⚙️ Test Settings`, `⚡ Auto-Generate All Tests`) in bottom infobar.
+   - Relocated button clutter in Words & Phrases to bottom infobar and gated actions with `.edit-mode-only`.
+6. **`scripts/test_vocab_vault_and_edit_mode.mjs` & `package.json`**:
+   - Created dedicated verification suite and integrated into `npm test`.
+
+### Verification
+- `scripts/check_all_js_syntax.cjs`: PASS (43 files validated).
+- `scripts/verify_all_api_imports.mjs`: PASS (100% export/import match).
+- `scripts/test_tutor_role_rbac.mjs`: PASS (100%).
+- `scripts/test_vocab_vault_and_edit_mode.mjs`: PASS (100%).
+- `scripts/test_vocab_dashboard_blueprint.mjs`: PASS (100%).
+- `scripts/test_unified_test_room_ratios.mjs`: PASS (100%).
+
+---
+
 ## [2026-11-09 22:46] — Side Quest: VS Code Extensions Audit & Optimization (Option 1)
 
 **Agent/Session:** Antigravity  

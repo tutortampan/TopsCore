@@ -651,10 +651,12 @@ export async function renderTests(area) {
       <table class="tac-pacing-table" id="tac-pacing-table">
         <thead>
           <tr>
-            <th>Test &amp; Shell Code</th>
-            <th style="width:105px;">Type</th>
+            <th style="min-width:140px;">Test Title</th>
+            <th style="width:95px; text-align:center;">Shell Code</th>
+            <th style="width:90px; text-align:center;">Type</th>
             <th style="width:85px; text-align:center;">Submissions</th>
-            <th style="width:130px;">Duration / Limit</th>
+            <th style="width:90px; text-align:center;">Avg Duration</th>
+            <th style="width:80px; text-align:center;">Time Limit</th>
             <th style="width:75px; text-align:center;">Pass Rate</th>
             <th style="width:105px; text-align:center;">Timeout Rate</th>
             <th style="width:125px; text-align:center;">Pacing Status</th>
@@ -666,9 +668,11 @@ export async function renderTests(area) {
             <tr data-test-type="${r.testTypeKey}" data-pacing-status="${r.pacingStatus.toLowerCase()}" data-search-text="${escapeHtml((r.title + ' ' + r.shellCode).toLowerCase())}">
               <td>
                 <div style="font-weight:700; color:#f8fafc; font-size:0.76rem;">${escapeHtml(r.title)}</div>
-                ${r.shellCode ? `<div class="badge mt-1" style="background:rgba(255,255,255,0.05); color:#94a3b8; font-family:monospace; font-size:0.65rem; border:1px solid rgba(255,255,255,0.08);">${escapeHtml(r.shellCode)}</div>` : ''}
               </td>
-              <td>
+              <td style="text-align:center;">
+                ${r.shellCode ? `<span class="badge" style="background:rgba(255,255,255,0.05); color:#94a3b8; font-family:monospace; font-size:0.65rem; border:1px solid rgba(255,255,255,0.08);">${escapeHtml(r.shellCode)}</span>` : '<span class="text-muted">—</span>'}
+              </td>
+              <td style="text-align:center;">
                 <span class="tac-badge ${r.isExam ? 'badge-purple-soft' : 'badge-blue-soft'}" style="font-size:0.62rem; font-weight:700;">
                   ${r.isExam ? '🎓 Exam' : '⚡ Quiz'}
                 </span>
@@ -676,13 +680,16 @@ export async function renderTests(area) {
               <td style="text-align:center;">
                 <strong style="color:#f8fafc;">${r.completedCount}</strong>
               </td>
-              <td>
-                <div style="font-weight:700; color:#f8fafc; font-size:0.75rem;">⏱️ ${r.durDisplay} / ${r.timeLimit}m</div>
+              <td style="text-align:center;">
+                <div style="font-weight:700; color:#f8fafc; font-size:0.75rem;">⏱️ ${r.durDisplay}</div>
                 ${r.testAvgDurSec ? `
-                  <div style="height:3px; width:75px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; margin-top:3px;">
+                  <div style="height:3px; width:65px; margin:3px auto 0; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
                     <div style="width:${Math.min(100, Math.round((r.testAvgDurSec / (r.timeLimit * 60)) * 100))}%; height:100%; background:${(r.testAvgDurSec / (r.timeLimit * 60)) > 0.85 ? '#fbbf24' : '#38bdf8'};"></div>
                   </div>
                 ` : ''}
+              </td>
+              <td style="text-align:center;">
+                <span style="color:#cbd5e1; font-weight:600; font-size:0.75rem;">${r.timeLimit}m</span>
               </td>
               <td style="text-align:center;">
                 ${r.completedCount > 0 ? `<strong style="color:${getGradeColorByScore(r.passRate)}; font-size:0.78rem;">${r.passRate}%</strong>` : '<span class="text-muted">—</span>'}
@@ -704,7 +711,7 @@ export async function renderTests(area) {
             </tr>
           `).join('')}
           <tr id="tac-pacing-no-results" style="display:none;">
-            <td colspan="8" style="text-align:center; padding:2.5rem 1rem; color:#94a3b8;">
+            <td colspan="10" style="text-align:center; padding:2.5rem 1rem; color:#94a3b8;">
               <div style="font-size:1.5rem; margin-bottom:6px;">🔍</div>
               <div style="font-weight:700; color:#f8fafc; font-size:0.85rem;">No Tests Found</div>
               <div style="font-size:0.75rem; margin-top:2px;">Try adjusting your search query or filter selection.</div>

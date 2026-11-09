@@ -153,3 +153,62 @@ export function requireAdminSession(redirectTo = '/admin.html') {
   }
   return session;
 }
+
+// ─── Global Master Edit Mode (AGENTS.md Rule 2.24) ───────────
+const GLOBAL_EDIT_MODE_KEY = 'topscore_global_edit_mode';
+
+export function getGlobalEditMode() {
+  try {
+    return localStorage.getItem(GLOBAL_EDIT_MODE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function setGlobalEditMode(active) {
+  const bool = Boolean(active);
+  try {
+    localStorage.setItem(GLOBAL_EDIT_MODE_KEY, String(bool));
+  } catch (_) {}
+
+  if (typeof document !== 'undefined' && document.body) {
+    if (bool) {
+      document.body.classList.add('global-edit-mode-on');
+      document.body.classList.remove('global-edit-mode-off');
+    } else {
+      document.body.classList.remove('global-edit-mode-on');
+      document.body.classList.add('global-edit-mode-off');
+    }
+
+    const btn = document.getElementById('global-edit-mode-toggle');
+    if (btn) {
+      btn.className = `btn btn-sm btn-edit-mode-global ${bool ? 'mode-on' : 'mode-off'}`;
+      const icon = btn.querySelector('.edit-mode-icon');
+      const label = btn.querySelector('.edit-mode-label');
+      if (icon) icon.textContent = bool ? '🔓' : '🔒';
+      if (label) label.textContent = bool ? 'EDIT: ON' : 'EDIT: OFF';
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window._globalEditMode = bool;
+    window.dispatchEvent(new CustomEvent('admin-edit-mode-changed', { detail: { active: bool } }));
+  }
+  return bool;
+}
+
+export function toggleGlobalEditMode() {
+  return setGlobalEditMode(!getGlobalEditMode());
+}
+
+export function initGlobalEditMode() {
+  const active = getGlobalEditMode();
+  return setGlobalEditMode(active);
+}
+
+if (typeof window !== 'undefined') {
+  window.getGlobalEditMode = getGlobalEditMode;
+  window.setGlobalEditMode = setGlobalEditMode;
+  window.toggleGlobalEditMode = toggleGlobalEditMode;
+  window.initGlobalEditMode = initGlobalEditMode;
+}

@@ -97,7 +97,7 @@ export async function renderVocabularyVault(area) {
 
     const buildVaultTabs = (activeId) => [
       { id: 'theme_manager', icon: '🗺️', val: themesCount, title: 'Theme Manager', label: 'Theme Manager' },
-      { id: 'blueprint', icon: '⚡', val: topicsCount, title: 'Theme Blueprint', label: 'Theme Blueprint' },
+      { id: 'blueprint', icon: '⚡', val: topicsCount, title: 'Test Blueprint', label: 'Test Blueprint' },
       { id: 'vocab', icon: '📦', val: wordsCount, label: 'Vocabulary Words' },
       { id: 'phrases', icon: '💬', val: phrasesCount, label: 'Phrases & Idioms' }
     ];
@@ -203,14 +203,6 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
               <span id="vault-count" style="color: #f8fafc; font-weight: 700;">${words.length}</span> ${mode === 'phrases' ? 'phrases' : 'words'}
             </span>
           </div>
-
-          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-            <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-import-vault">&#128229; Import Excel</button>
-            <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-export-vault">&#128228; Export Excel</button>
-            <button class="btn btn-secondary btn-sm toolbar-btn-38" id="btn-check-duplicates">&#9874; Check Dups</button>
-            <button class="btn btn-primary btn-sm toolbar-btn-38" id="btn-manual-auto-generate" style="background:var(--clr-primary);">&#9881; Auto-Gen</button>
-            <button class="btn btn-primary btn-sm toolbar-btn-38" id="btn-create-vocab-test">${mode === 'phrases' ? '+ Phrase Exam' : '+ Vocab Exam'}</button>
-          </div>
         </div>
 
         <!-- Table Area -->
@@ -227,7 +219,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
                 <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 85px; line-height: 1.2;">Type</th>
                 <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">Indonesian</th>
                 <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">English</th>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: right; width: 85px; position: sticky; right: 0; background: rgba(15, 23, 42, 0.95); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 20; line-height: 1.2;">Actions</th>
+                <th class="edit-mode-only" style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: right; width: 85px; position: sticky; right: 0; background: rgba(15, 23, 42, 0.95); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 20; line-height: 1.2;">Actions</th>
               </tr>
             </thead>
             <tbody id="vault-tbody"></tbody>
@@ -332,8 +324,54 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       }
     }
 
-    const rightHtml = '';
+    const rightHtml = `
+      <button class="btn btn-secondary btn-sm" id="btn-import-vault" style="height:30px; font-size:11px; padding:0 10px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.12); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">📥 Import Excel</button>
+      <button class="btn btn-secondary btn-sm" id="btn-export-vault" style="height:30px; font-size:11px; padding:0 10px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.12); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">📤 Export Excel</button>
+      <button class="btn btn-secondary btn-sm" id="btn-check-duplicates" style="height:30px; font-size:11px; padding:0 10px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.12); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">🔍 Check Dups</button>
+    `;
     window.setBottomInfobar(leftHtml, rightHtml);
+    bindVaultGridBottomActions();
+  }
+
+  function bindVaultGridBottomActions() {
+    const btnExp = document.getElementById('btn-export-vault');
+    if (btnExp && !btnExp.dataset.bound) {
+      btnExp.dataset.bound = 'true';
+      btnExp.addEventListener('click', async () => {
+        try {
+          const oldText = btnExp.innerHTML;
+          btnExp.innerHTML = '⏳ Exporting...';
+          btnExp.disabled = true;
+          await exportVaultWords(mode);
+          btnExp.innerHTML = oldText;
+          btnExp.disabled = false;
+        } catch (e) {
+          showToast('Export failed: ' + e.message, 'error');
+          btnExp.innerHTML = '📤 Export Excel';
+          btnExp.disabled = false;
+        }
+      });
+    }
+
+    const btnImp = document.getElementById('btn-import-vault');
+    if (btnImp && !btnImp.dataset.bound) {
+      btnImp.dataset.bound = 'true';
+      btnImp.addEventListener('click', () => openImportModal(_allWords, topics, (newWords) => {
+        _allWords = [..._allWords, ...newWords];
+        filterAndRender();
+      }, mode));
+    }
+
+    const btnDups = document.getElementById('btn-check-duplicates');
+    if (btnDups && !btnDups.dataset.bound) {
+      btnDups.dataset.bound = 'true';
+      btnDups.addEventListener('click', () => {
+        openDuplicateCheckerModal(_allWords, (updatedWords) => {
+          _allWords = updatedWords;
+          filterAndRender();
+        });
+      });
+    }
   }
 
   function renderRows(filtered) {
@@ -381,7 +419,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
           <button type="button" class="btn-vault-speak" data-speak="${escapeHtml(w.english)}" style="background:transparent; border:none; cursor:pointer; padding:0 4px; font-size:12px; color:var(--clr-accent-1, #6366f1); opacity:0.85; transition:transform 0.15s ease;" title="Listen Native Pronunciation">🔊</button>
           ${escapeHtml(w.english)}
         </td>
-        <td style="padding: 6px 12px; text-align: right; position: sticky; right: 0; background: var(--fm-bg-panel, #0f172a); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 5;">
+        <td class="edit-mode-only" style="padding: 6px 12px; text-align: right; position: sticky; right: 0; background: var(--fm-bg-panel, #0f172a); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 5;">
           <button class="btn btn-xs btn-edit-vault" data-edit-vault="${escapeHtml(w.id)}" style="background: transparent; color: #3b82f6; border: 1px solid #3b82f6; font-size: 10px; padding: 2px 6px;" title="Edit word">&#9998;</button>
           <button class="btn btn-danger btn-xs" data-del-vault="${escapeHtml(w.id)}" title="Delete word" style="font-size: 10px; padding: 2px 6px;">&#128465;</button>
         </td>
@@ -1534,7 +1572,6 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 // ─── Phase 370: Theme Manager Tab (Program Distribution & Theme Hierarchy) ────
 function _renderThemeManagerTab(area, words, topics, meta = {}) {
   const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase', 'phrasal verb'];
-  const isPhrase = (wt) => phraseTypes.includes(String(wt || '').toLowerCase());
 
   // 1. Group words by Level -> Theme Code -> Topic
   const levelsSet = new Set([1, 2, 3]);
@@ -1575,42 +1612,20 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
         themeCode: thCode,
         themeName: thObj.name,
         level: lvl,
-        verbs: 0,
-        nouns: 0,
-        adjs: 0,
-        others: 0,
-        expressions: 0,
-        idioms: 0,
-        proverbs: 0,
         totalWords: 0,
         totalPhrases: 0,
         totalCount: 0
       });
     }
     const tpObj = thObj.topicsMap.get(tpKey);
-
     const wt = String(w.word_type || '').toLowerCase();
-    const isExpr = ['expression', 'phrase', 'phrasal verb'].includes(wt);
-    const isIdiom = wt === 'idiom';
-    const isProv = wt === 'proverb';
-    const isVerb = wt === 'verb';
-    const isNoun = wt === 'noun';
-    const isAdj = wt === 'adjective' || wt === 'adj';
-
-    if (isVerb) tpObj.verbs++;
-    else if (isNoun) tpObj.nouns++;
-    else if (isAdj) tpObj.adjs++;
-    else if (isExpr) tpObj.expressions++;
-    else if (isIdiom) tpObj.idioms++;
-    else if (isProv) tpObj.proverbs++;
-    else tpObj.others++;
-
-    tpObj.totalWords = tpObj.verbs + tpObj.nouns + tpObj.adjs + tpObj.others;
-    tpObj.totalPhrases = tpObj.expressions + tpObj.idioms + tpObj.proverbs;
+    const isExpr = phraseTypes.includes(wt);
+    if (isExpr) tpObj.totalPhrases++;
+    else tpObj.totalWords++;
     tpObj.totalCount = tpObj.totalWords + tpObj.totalPhrases;
   });
 
-  // Count topics & words per level
+  // Count totals
   const levelStats = {};
   let totalTopicsAll = 0;
   let totalThemesAll = 0;
@@ -1636,7 +1651,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     totalPhrasesAll += pCount;
   });
 
-  // Active level selection (ALL by default or specific level)
+  // Active level selection
   let activeLevel = window._themeManagerSelectedLevel || 'ALL';
   if (activeLevel !== 'ALL' && !levels.includes(Number(activeLevel))) {
     activeLevel = 'ALL';
@@ -1650,7 +1665,6 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
 
   const instProgGroups = [];
   activeInsts.sort((a, b) => (a.code || a.name).localeCompare(b.code || b.name));
-
   activeInsts.forEach(inst => {
     const progs = activeProgs.filter(p => p.institution_id === inst.id);
     if (progs.length > 0) {
@@ -1685,14 +1699,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
       .map(a => `${String(a.theme_code).trim().toUpperCase()}_${parseInt(a.target_level, 10)}_${a.program_id}`)
   );
 
-  // Edit Mode state (persisted in sessionStorage)
-  if (typeof window._blueprintEditMode === 'undefined') {
-    const stored = sessionStorage.getItem('topscore_blueprint_edit_mode');
-    window._blueprintEditMode = (stored === '1');
-  }
-  let isEditMode = window._blueprintEditMode;
-
-  // Setup Bottom Infobar for Theme Manager
+  // Setup Bottom Infobar for Theme Manager (Rule 2.23 / 2.24 Layout Law)
   if (window.setBottomInfobar) {
     const activeLevelLabel = activeLevel === 'ALL' ? 'All (1st, 2nd, 3rd)' : (typeof toShortLevel === 'function' ? toShortLevel(activeLevel) + ' Level' : `Level ${activeLevel}`);
     const activeTopicsCount = activeLevel === 'ALL' ? totalTopicsAll : (levelStats[activeLevel]?.topics || 0);
@@ -1704,15 +1711,14 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
       <div class="bottom-info-chip"><span class="chip-label">Themes:</span><span class="chip-val">${activeThemesCount}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Topics:</span><span class="chip-val">${activeTopicsCount}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Vault Items:</span><span class="chip-val">${words.length}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Edit Mode:</span><span class="chip-val" style="color: ${isEditMode ? '#22c55e' : '#ef4444'}; font-weight: 800;">${isEditMode ? 'ON (Hijau)' : 'OFF (Merah)'}</span></div>
     `;
     const rightHtml = `
-      <button class="btn btn-secondary btn-sm" id="btn-theme-bottom-merge" style="height: 30px; font-size: 11px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.12); color: #f8fafc; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Merge Similar Topics">⚒️ Merge Topics</button>
+      <button class="btn btn-secondary btn-sm btn-merge-topics edit-mode-only" id="btn-theme-bottom-merge" style="height: 30px; font-size: 11px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.12); color: #f8fafc; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Merge Similar Topics">⚒️ Merge Topics</button>
     `;
     window.setBottomInfobar(leftHtml, rightHtml);
   }
 
-  // Build Clean Table Rows (Theme Manager: NO POS columns!)
+  // Modernized Flat Data Table Builder (Zero Rowspans)
   const buildTableBodyHtml = (searchQuery = '') => {
     const q = (searchQuery || '').toLowerCase().trim();
     const levelsToRender = (activeLevel === 'ALL') ? levels : [Number(activeLevel)];
@@ -1723,10 +1729,12 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
       const themesMap = levelGroups.get(lvl);
       const lvlLabel = (typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`).toUpperCase();
 
-      const filteredThemes = [];
       const themeList = Array.from(themesMap.values()).sort((a, b) => a.code.localeCompare(b.code));
 
       themeList.forEach(th => {
+        const thCode = String(th.code || '').trim().toUpperCase();
+        const assignedProgs = allOrderedProgs.filter(p => assignSet.has(`${thCode}_${lvl}_${p.id}`));
+
         const topics = Array.from(th.topicsMap.values())
           .filter(t => {
             if (!q) return true;
@@ -1734,88 +1742,52 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           })
           .sort((a, b) => (a.topicCode || '').localeCompare(b.topicCode || '', undefined, { numeric: true, sensitivity: 'base' }));
 
-        if (topics.length > 0) {
-          filteredThemes.push({ code: th.code, name: th.name, topics });
-          visibleTopicsCount += topics.length;
-        }
-      });
+        if (topics.length === 0) return;
+        visibleTopicsCount += topics.length;
 
-      if (filteredThemes.length === 0) {
-        if (!q) {
-          const totalColspan = 5 + allOrderedProgs.length + 2;
-          rowsHtml += `
-            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-              <td class="cell-level-group" style="text-align: center; vertical-align: middle; font-weight: 800; font-size: 11px; background: rgba(15, 23, 42, 0.95); border-right: 1px solid rgba(255,255,255,0.12); color: #38bdf8; padding: 14px 6px;">
-                ${escapeHtml(lvlLabel)}
-              </td>
-              <td colspan="${totalColspan - 1}" style="text-align: center; padding: 16px 12px; color: #64748b; font-size: 11px; background: rgba(15, 23, 42, 0.4);">
-                No topics registered for <strong>${escapeHtml(lvlLabel)} Level</strong> yet.
-              </td>
-            </tr>
-          `;
-        }
-        return;
-      }
+        // Assigned programs badge pills
+        const assignedPillsHtml = assignedProgs.length > 0
+          ? assignedProgs.map(p => `<span class="badge-prog-pill" style="display:inline-flex;align-items:center;gap:4px;background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-right:4px;">🟢 ${escapeHtml(p.name)}</span>`).join('')
+          : `<span style="color:#64748b;font-size:10.5px;font-style:italic;">None Assigned</span>`;
 
-      const levelTotalRows = filteredThemes.reduce((sum, th) => sum + th.topics.length, 0);
-
-      filteredThemes.forEach((th, thIdx) => {
-        const themeTotalRows = th.topics.length;
-        const thCode = String(th.code || '').trim().toUpperCase();
-
-        th.topics.forEach((tp, tpIdx) => {
-          const isFirstInLevel = (thIdx === 0 && tpIdx === 0);
-          const isFirstInTheme = (tpIdx === 0);
-
+        topics.forEach(tp => {
           rowsHtml += `
             <tr class="blueprint-table-row" data-level="${lvl}" data-theme-code="${thCode}" data-topic="${escapeHtml(tp.name)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-              ${isFirstInLevel ? `
-                <td rowspan="${levelTotalRows}" class="cell-level-group" style="text-align: center; vertical-align: middle; font-weight: 800; font-size: 11.5px; background: rgba(15, 23, 42, 0.95); border-right: 1px solid rgba(255,255,255,0.12); color: #38bdf8; letter-spacing: 0.5px; padding: 6px;">
-                  ${escapeHtml(lvlLabel)}
-                </td>
-              ` : ''}
-
-              <td class="cell-code" style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); font-size: 11px;">${escapeHtml(tp.topicCode || '—')}</td>
-
-              ${isFirstInTheme ? `
-                <td rowspan="${themeTotalRows}" class="cell-theme-name" style="vertical-align: middle; font-weight: 700; font-size: 11.5px; background: rgba(30, 41, 59, 0.35); border-right: 1px solid rgba(255,255,255,0.1); color: #ffffff; padding: 8px 12px;">
-                  ${escapeHtml(th.name || '—')}
-                </td>
-              ` : ''}
-
-              <td style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px;">${escapeHtml(tp.name)}</td>
-
-              <!-- Clean Summary Items Chip (Replaces 7 POS Columns) -->
+              <td style="text-align: center; font-weight: 800; font-size: 11px; color: #38bdf8; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08);">
+                ${escapeHtml(lvlLabel)}
+              </td>
+              <td style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11px;">
+                ${escapeHtml(tp.topicCode || '—')}
+              </td>
+              <td style="color: #ffffff; font-weight: 700; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px;">
+                <span>${escapeHtml(th.name || '—')}</span>
+              </td>
+              <td style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px;">
+                <span>${escapeHtml(tp.name)}</span>
+              </td>
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
+                <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 700; padding: 2px 7px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(56, 189, 248, 0.3); font-variant-numeric: tabular-nums;">${tp.totalCount}</span>
+              </td>
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
+                <span style="color: #cbd5e1; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalWords}</span>
+              </td>
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.1); white-space: nowrap;">
-                <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 700; padding: 2.5px 8px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(56, 189, 248, 0.3);">${tp.totalCount} items</span>
-                <span style="font-size: 10px; color: #94a3b8; margin-left: 4px; font-weight: 500;">(${tp.totalWords}W · ${tp.totalPhrases}P)</span>
+                <span style="color: #a78bfa; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalPhrases}</span>
               </td>
-
-              <!-- Multi-Tenant Program Assignment Cells (Wide & High Contrast) -->
-              ${allOrderedProgs.map(p => {
-                const assignKey = `${thCode}_${lvl}_${p.id}`;
-                const isAssigned = assignSet.has(assignKey);
-                return `
-                  <td class="cell-program-assignment ${isEditMode ? 'editable' : 'locked'}" 
-                      data-level="${lvl}" 
-                      data-theme-code="${thCode}" 
-                      data-program-id="${p.id}" 
-                      data-program-name="${escapeHtml(p.name)}" 
-                      data-assigned="${isAssigned ? 'true' : 'false'}" 
-                      style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); cursor: ${isEditMode ? 'pointer' : 'default'};">
-                    ${isAssigned 
-                      ? '<span class="badge-program-assigned">🟢 Active</span>' 
-                      : '<span class="badge-program-unassigned">⚪ —</span>'}
-                  </td>
-                `;
-              }).join('')}
-
-              <!-- Actions (Rename & Delete) -->
-              <td style="padding: 6px 4px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06); width: 44px;">
-                <button type="button" class="btn-edit-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Rename Topic" ${!isEditMode ? 'disabled style="background:transparent;border:none;opacity:0.25;cursor:not-allowed;"' : 'style="background:transparent;border:none;opacity:1;cursor:pointer;color:#38bdf8;font-size:12px;padding:2px 4px;"'}>✏️</button>
+              <td style="padding: 8px 10px; border-right: 1px solid rgba(255,255,255,0.08);">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;">
+                  <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
+                    ${assignedPillsHtml}
+                  </div>
+                  <button type="button" class="btn btn-xs btn-assign-pill edit-mode-only" data-theme-code="${thCode}" data-level="${lvl}" data-theme-name="${escapeHtml(th.name)}" style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;" title="Assign to Institutions &amp; Programs">
+                    ⚙️ Assign
+                  </button>
+                </div>
               </td>
-              <td style="padding: 6px 4px; text-align: center; position: sticky; right: 0; background: #0f172a; border-left: 1px solid rgba(255, 255, 255, 0.1); width: 44px;">
-                <button type="button" class="btn-del-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Delete Topic" ${!isEditMode ? 'disabled style="background:transparent;border:none;opacity:0.25;cursor:not-allowed;"' : 'style="background:transparent;border:none;opacity:1;cursor:pointer;color:#FF0000;font-size:12px;padding:2px 4px;"'}>🗑️</button>
+              <td class="edit-mode-only" style="padding: 6px 6px; text-align: center; width: 95px; white-space: nowrap;">
+                <button type="button" class="btn-edit-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Rename Topic" style="background:transparent;border:none;cursor:pointer;color:#38bdf8;font-size:12px;padding:2px 3px;">✏️</button>
+                <button type="button" class="btn-edit-theme-mini" data-theme-name="${escapeHtml(th.name)}" data-theme-code="${thCode}" title="Rename Theme (${escapeHtml(th.name)})" style="background:transparent;border:none;cursor:pointer;color:#a5b4fc;font-size:11px;padding:2px 3px;">🏷️</button>
+                <button type="button" class="btn-del-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Delete Topic" style="background:transparent;border:none;cursor:pointer;color:#f87171;font-size:12px;padding:2px 3px;">🗑️</button>
               </td>
             </tr>
           `;
@@ -1823,20 +1795,31 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
       });
     });
 
+    if (visibleTopicsCount === 0) {
+      rowsHtml = `
+        <tr>
+          <td colspan="9" style="text-align: center; padding: 24px; color: #64748b; font-size: 12px;">
+            No matching topics found for the selected filter.
+          </td>
+        </tr>
+      `;
+    }
+
     return { rowsHtml, visibleTopicsCount };
   };
 
   const initialRender = buildTableBodyHtml('');
 
   let html = `
-    <div style="display: flex; flex-direction: column; height: 100%; max-height: calc(100vh - 120px); box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; gap: 6px; padding: 0 4px 6px 4px;">
-      <!-- Top Control Toolbar -->
+    <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; gap: 8px;">
+      
+      <!-- Top Control Toolbar (Clean & Direct: Search + Level Filters Only) -->
       <div style="flex-shrink: 0; padding: 2px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-          <input type="search" id="vault-topic-search" placeholder="🔍 Search Themes or Topics..." style="width: 220px; height: 32px; font-size: 11.5px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
+          <input type="search" id="vault-topic-search" placeholder="🔍 Search Themes or Topics..." style="width: 240px; height: 32px; font-size: 11.5px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
 
           <!-- Curriculum Level Selector Tabs -->
-          <div style="display: flex; gap: 4px; align-items: center; background: rgba(15,23,42,0.7); padding: 3px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1);" title="Filter Curriculum Level">
+          <div style="display: flex; gap: 3px; align-items: center; background: rgba(15,23,42,0.7); padding: 3px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1);" title="Filter Curriculum Level">
             <button type="button" class="btn-theme-curriculum-tab" data-lvl="ALL" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 12px; border-radius: 5px; cursor: pointer; transition: all 0.2s ease; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #ffffff; box-shadow: 0 2px 6px rgba(59,130,246,0.4);' : 'background: transparent; color: #94a3b8;'}">🎯 ALL LEVELS (${totalTopicsAll})</button>
             ${levels.map(lvl => {
               const isActive = (String(activeLevel) === String(lvl));
@@ -1847,45 +1830,25 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           </div>
         </div>
 
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Themes: <strong style="color:#ffffff;">${totalThemesAll}</strong></span>
-          <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Topics: <strong style="color:#ffffff;" id="topic-count-display">${initialRender.visibleTopicsCount}</strong></span>
-          <span style="background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 11px; padding: 5px 9px; border-radius: 5px;">Items: <strong style="color:#38bdf8;">${words.length}</strong></span>
-          <button type="button" id="btn-theme-edit-toggle" class="btn-edit-mode-toggle ${isEditMode ? 'mode-on' : 'mode-off'}" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 6px; cursor: pointer; border: 1px solid ${isEditMode ? '#22c55e' : '#ef4444'}; background: ${isEditMode ? '#16a34a' : '#dc2626'}; color: #ffffff;" title="Edit mode on (hijau) / off (merah)">EDIT MODE: ${isEditMode ? 'ON' : 'OFF'}</button>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size: 11px; color: #94a3b8;">Showing <strong id="topic-count-display" style="color: #38bdf8;">${initialRender.visibleTopicsCount}</strong> topics</span>
         </div>
       </div>
 
-      <!-- Clean Theme Distribution Matrix Table -->
-      <div class="table-wrap sticky-first" style="flex: 1; overflow-y: auto; overflow-x: auto; min-height: 0; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
-        <table id="blueprint-matrix-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 11px;">
+      <!-- Modernized Flat Data Table (ONLY Container With Vertical Scroll) -->
+      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+        <table id="theme-manager-flat-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 11px;">
           <thead style="background: #1e293b; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid rgba(255, 255, 255, 0.12);">
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
-              <th rowspan="2" style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">LEVEL</th>
-              <th rowspan="2" style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">CODE</th>
-              <th rowspan="2" style="padding: 8px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 150px; border-right: 1px solid rgba(255,255,255,0.1);">Theme Name</th>
-              <th rowspan="2" style="padding: 8px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08);">Topic</th>
-              <th rowspan="2" style="padding: 8px 8px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 10px; min-width: 120px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">Vault Items</th>
-              
-              <!-- Institution Group Headers -->
-              ${instProgGroups.map(g => {
-                const isTop = (g.inst.code || g.inst.name).toUpperCase().includes('TOP');
-                const bg = isTop ? 'rgba(99, 102, 241, 0.25)' : 'rgba(14, 165, 233, 0.25)';
-                const color = isTop ? '#a5b4fc' : '#38bdf8';
-                return `<th colspan="${g.programs.length}" style="padding: 6px 8px; font-weight: 800; color: ${color}; background: ${bg}; text-transform: uppercase; font-size: 10.5px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">${escapeHtml(g.inst.code || g.inst.name)}</th>`;
-              }).join('')}
-
-              <th colspan="2" style="padding: 6px 8px; font-weight: 800; text-align: center; position: sticky; right: 0; background: #1e293b; border-left: 1px solid rgba(255, 255, 255, 0.12); z-index: 12; width: 90px;">ACTIONS</th>
-            </tr>
-
-            <!-- Tier 2: Program Sub-headers -->
             <tr>
-              ${allOrderedProgs.map(p => {
-                const shortProgName = p.name.replace(' Persada', '');
-                return `<th style="padding: 6px 8px; font-weight: 700; color: #e2e8f0; font-size: 10px; min-width: 80px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">${escapeHtml(shortProgName)}</th>`;
-              }).join('')}
-
-              <th style="padding: 6px 4px; font-weight: 700; color: #38bdf8; font-size: 9px; width: 45px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">RENAME</th>
-              <th style="padding: 6px 4px; font-weight: 700; color: #f87171; font-size: 9px; width: 45px; text-align: center; position: sticky; right: 0; background: #1e293b; border-left: 1px solid rgba(255,255,255,0.1);">DELETE</th>
+              <th style="padding: 9px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">LEVEL</th>
+              <th style="padding: 9px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">CODE</th>
+              <th style="padding: 9px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 160px; border-right: 1px solid rgba(255,255,255,0.1);">Theme Name</th>
+              <th style="padding: 9px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08);">Topic Name</th>
+              <th style="padding: 9px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 10px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">TOTAL</th>
+              <th style="padding: 9px 6px; font-weight: 800; color: #818cf8; text-transform: uppercase; font-size: 10px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">WORDS</th>
+              <th style="padding: 9px 6px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 10px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">PHRASES</th>
+              <th style="padding: 9px 12px; font-weight: 800; color: #4ade80; text-transform: uppercase; font-size: 10px; min-width: 220px; border-right: 1px solid rgba(255,255,255,0.08);">Assigned Programs</th>
+              <th class="edit-mode-only" style="padding: 9px 8px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 10px; width: 95px; text-align: center;">ACTIONS</th>
             </tr>
           </thead>
           <tbody id="theme-manager-tbody">
@@ -1897,50 +1860,61 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
   `;
   area.innerHTML = html;
 
-  // Bind Handlers
+  // Bind Row Actions & Assignment Popovers
   const bindRowActionHandlers = () => {
-    // Single-click Program Assignment Toggle
-    area.querySelectorAll('.cell-program-assignment').forEach(cell => {
-      cell.onclick = async (e) => {
-        const cellProg = e.currentTarget;
-        if (!window._blueprintEditMode) {
-          showToast('Aktifkan EDIT MODE (On) di kanan atas tabel untuk mengubah penugasan tema ke program', 'warning');
-          return;
-        }
-
-        const lvl = cellProg.getAttribute('data-level');
-        const thCode = cellProg.getAttribute('data-theme-code');
-        const progId = cellProg.getAttribute('data-program-id');
-        const progName = cellProg.getAttribute('data-program-name');
-        const isCurrentlyAssigned = (cellProg.getAttribute('data-assigned') === 'true');
-        const newAssigned = !isCurrentlyAssigned;
-
-        // Immediate visual update across all rows sharing this theme and level
-        const siblingCells = area.querySelectorAll(`.cell-program-assignment[data-level="${lvl}"][data-theme-code="${thCode}"][data-program-id="${progId}"]`);
-        siblingCells.forEach(sc => {
-          sc.setAttribute('data-assigned', newAssigned ? 'true' : 'false');
-          sc.innerHTML = newAssigned 
-            ? '<span class="badge-program-assigned">🟢 Active</span>' 
-            : '<span class="badge-program-unassigned">⚪ —</span>';
+    // Assign Theme to Programs
+    area.querySelectorAll('.btn-assign-pill').forEach(btn => {
+      btn.onclick = (e) => {
+        const thCode = e.currentTarget.getAttribute('data-theme-code');
+        const thName = e.currentTarget.getAttribute('data-theme-name');
+        const lvl = parseInt(e.currentTarget.getAttribute('data-level'), 10);
+        openThemeProgramAssignModal(thCode, thName, lvl, instProgGroups, assignSet, () => {
+          _renderThemeManagerTab(area, words, topics, meta);
         });
+      };
+    });
 
-        const assignKey = `${thCode}_${lvl}_${progId}`;
-        if (newAssigned) assignSet.add(assignKey);
-        else assignSet.delete(assignKey);
-
+    // Rename Theme
+    area.querySelectorAll('.btn-edit-theme-mini').forEach(btn => {
+      btn.onclick = async (e) => {
+        const oldName = e.currentTarget.getAttribute('data-theme-name');
+        const thCode = e.currentTarget.getAttribute('data-theme-code');
+        const newName = prompt(`Rename Theme "${oldName}" to:`, oldName);
+        if (!newName || newName.trim() === '' || newName === oldName) return;
         try {
-          await toggleThemeProgramAssignment({ themeCode: thCode, targetLevel: lvl, programId: progId, assign: newAssigned });
-          showToast(`Tema ${thCode} (Level ${lvl}) ${newAssigned ? 'di-assign ke ' + progName : 'dilepas dari ' + progName}`, 'success');
+          showLoading('Renaming theme...');
+          await renameVaultTheme(oldName, newName.trim());
+          hideLoading();
+          showToast(`Theme renamed to "${newName.trim()}"`, 'success');
+          if (typeof renderVocabularyVault === 'function') {
+            const container = document.getElementById('classes-detail-canvas');
+            if (container) renderVocabularyVault(container);
+          }
         } catch (err) {
-          siblingCells.forEach(sc => {
-            sc.setAttribute('data-assigned', isCurrentlyAssigned ? 'true' : 'false');
-            sc.innerHTML = isCurrentlyAssigned 
-              ? '<span class="badge-program-assigned">🟢 Active</span>' 
-              : '<span class="badge-program-unassigned">⚪ —</span>';
-          });
-          if (isCurrentlyAssigned) assignSet.add(assignKey);
-          else assignSet.delete(assignKey);
-          showToast('Gagal mengubah penugasan: ' + err.message, 'error');
+          hideLoading();
+          showToast('Failed to rename theme: ' + err.message, 'error');
+        }
+      };
+    });
+
+    // Delete Theme
+    area.querySelectorAll('.btn-del-theme-mini').forEach(btn => {
+      btn.onclick = async (e) => {
+        const thName = e.currentTarget.getAttribute('data-theme-name');
+        const thCode = e.currentTarget.getAttribute('data-theme-code');
+        if (!confirm(`Delete theme "${thName}" and all associated items in Vault?`)) return;
+        try {
+          showLoading('Deleting theme...');
+          await deleteVaultTheme(thName);
+          hideLoading();
+          showToast(`Theme "${thName}" deleted.`, 'success');
+          if (typeof renderVocabularyVault === 'function') {
+            const container = document.getElementById('classes-detail-canvas');
+            if (container) renderVocabularyVault(container);
+          }
+        } catch (err) {
+          hideLoading();
+          showToast('Failed to delete theme: ' + err.message, 'error');
         }
       };
     });
@@ -1948,15 +1922,11 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     // Rename Topic
     area.querySelectorAll('.btn-edit-topic-mini').forEach(btn => {
       btn.onclick = async (e) => {
-        if (!window._blueprintEditMode) {
-          showToast('Aktifkan EDIT MODE (On) untuk mengubah nama topik', 'warning');
-          return;
-        }
         const oldTopic = e.currentTarget.getAttribute('data-topic');
         const newTopic = prompt(`Rename topic "${oldTopic}" to:`, oldTopic);
         if (!newTopic || newTopic.trim() === '' || newTopic === oldTopic) return;
         try {
-          showLoading();
+          showLoading('Renaming topic...');
           await renameVaultTopic(oldTopic, newTopic.trim());
           hideLoading();
           showToast(`Topic renamed to "${newTopic.trim()}"`, 'success');
@@ -1974,18 +1944,12 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     // Delete Topic
     area.querySelectorAll('.btn-del-topic-mini').forEach(btn => {
       btn.onclick = async (e) => {
-        if (!window._blueprintEditMode) {
-          showToast('Aktifkan EDIT MODE (On) untuk menghapus topik', 'warning');
-          return;
-        }
         const topic = e.currentTarget.getAttribute('data-topic');
         if (!confirm(`Delete topic "${topic}" and all its vocabulary items from Vault?`)) return;
         try {
-          showLoading();
-          const sb = await getSupabase();
-          const { error } = await sb.from('vocabulary_vault').update({ deleted_at: new Date().toISOString() }).eq('topic', topic);
+          showLoading('Deleting topic...');
+          await deleteVaultTopic(topic);
           hideLoading();
-          if (error) throw error;
           showToast(`Topic "${topic}" deleted.`, 'success');
           if (typeof renderVocabularyVault === 'function') {
             const container = document.getElementById('classes-detail-canvas');
@@ -2000,46 +1964,6 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
   };
 
   bindRowActionHandlers();
-
-  // Edit Mode Toggle Button
-  const editToggleBtn = document.getElementById('btn-theme-edit-toggle');
-  if (editToggleBtn) {
-    editToggleBtn.onclick = () => {
-      window._blueprintEditMode = !window._blueprintEditMode;
-      isEditMode = window._blueprintEditMode;
-      try {
-        sessionStorage.setItem('topscore_blueprint_edit_mode', isEditMode ? '1' : '0');
-      } catch (_) {}
-
-      editToggleBtn.style.background = isEditMode ? '#16a34a' : '#dc2626';
-      editToggleBtn.style.borderColor = isEditMode ? '#22c55e' : '#ef4444';
-      editToggleBtn.textContent = `EDIT MODE: ${isEditMode ? 'ON' : 'OFF'}`;
-
-      area.querySelectorAll('.cell-program-assignment').forEach(cell => {
-        cell.className = `cell-program-assignment ${isEditMode ? 'editable' : 'locked'}`;
-        cell.style.cursor = isEditMode ? 'pointer' : 'default';
-      });
-
-      area.querySelectorAll('.btn-edit-topic-mini').forEach(btn => {
-        btn.disabled = !isEditMode;
-        btn.style.opacity = isEditMode ? '1' : '0.25';
-        btn.style.cursor = isEditMode ? 'pointer' : 'not-allowed';
-      });
-      area.querySelectorAll('.btn-del-topic-mini').forEach(btn => {
-        btn.disabled = !isEditMode;
-        btn.style.opacity = isEditMode ? '1' : '0.25';
-        btn.style.cursor = isEditMode ? 'pointer' : 'not-allowed';
-      });
-
-      const infoModeEl = document.querySelector('.bottom-info-chip:last-child .chip-val');
-      if (infoModeEl) {
-        infoModeEl.style.color = isEditMode ? '#22c55e' : '#ef4444';
-        infoModeEl.textContent = isEditMode ? 'ON (Hijau)' : 'OFF (Merah)';
-      }
-
-      showToast(isEditMode ? 'EDIT MODE diaktifkan. Klik sel program untuk toggle status tema.' : 'EDIT MODE dimatikan (Tabel terkunci).', isEditMode ? 'success' : 'info');
-    };
-  }
 
   // Curriculum Selector Tabs
   area.querySelectorAll('.btn-theme-curriculum-tab').forEach(btn => {
@@ -2064,7 +1988,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     });
   }
 
-  // Merge Topics Button
+  // Merge Topics Bottom Handler
   const btnMergeBottom = document.getElementById('btn-theme-bottom-merge');
   if (btnMergeBottom) {
     btnMergeBottom.onclick = () => {
@@ -2084,8 +2008,91 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
   }
 }
 
+// ─── Theme Institution & Program Assignment Modal ────────────
+function openThemeProgramAssignModal(themeCode, themeName, targetLevel, instProgGroups, assignSet, onSave) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop modal-z-1000';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.innerHTML = `
+    <div class="modal-box" style="max-width: 560px; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+        <div>
+          <h3 style="margin:0; font-size:15px; font-weight:800; color:#f8fafc;">🏛️ Assign Theme to Programs</h3>
+          <div style="font-size:12px; color:#38bdf8; margin-top:2px;">Theme: <strong>${escapeHtml(themeName)}</strong> (${escapeHtml(themeCode)}) &bull; Level ${targetLevel}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm close-modal-btn" style="color:#94a3b8; font-size:16px; cursor:pointer;">✕</button>
+      </div>
 
-// ─── Phase 370: Theme Blueprint & Vocabulary Test Generator Tab ────
+      <p style="font-size:11.5px; color:#94a3b8; margin-bottom:14px;">
+        Specify which Institution and Program uses this theme. All topics under this theme automatically inherit these assignments.
+      </p>
+
+      <div style="display:flex; flex-direction:column; gap:12px; max-height:360px; overflow-y:auto; padding-right:4px;">
+        ${instProgGroups.map(g => `
+          <div style="background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 12px;">
+            <div style="font-size:11px; font-weight:800; text-transform:uppercase; color:#a5b4fc; margin-bottom:8px; letter-spacing:0.5px;">
+              ${escapeHtml(g.inst.name || g.inst.code)}
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:8px;">
+              ${g.programs.map(p => {
+                const assignKey = `${themeCode}_${targetLevel}_${p.id}`;
+                const checked = assignSet.has(assignKey);
+                return `
+                  <label style="display:flex; align-items:center; gap:8px; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.1); padding:8px 10px; border-radius:6px; cursor:pointer; font-size:11.5px; color:#f1f5f9; font-weight:600;">
+                    <input type="checkbox" class="cb-theme-assign-prog" data-prog-id="${p.id}" data-prog-name="${escapeHtml(p.name)}" ${checked ? 'checked' : ''} style="accent-color:#22c55e; width:15px; height:15px; cursor:pointer;">
+                    <span>${escapeHtml(p.name)}</span>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
+        <button class="btn btn-secondary btn-sm close-modal-btn">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="btn-save-theme-assignments" style="background:#22c55e; border:none; font-weight:800; padding:0 14px;">Save Assignments</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+  modal.querySelectorAll('.close-modal-btn').forEach(b => b.addEventListener('click', close));
+
+  modal.querySelector('#btn-save-theme-assignments')?.addEventListener('click', async () => {
+    const checkboxes = modal.querySelectorAll('.cb-theme-assign-prog');
+    showLoading('Saving assignments...');
+    try {
+      for (const cb of checkboxes) {
+        const progId = cb.getAttribute('data-prog-id');
+        const isChecked = cb.checked;
+        const assignKey = `${themeCode}_${targetLevel}_${progId}`;
+        const wasChecked = assignSet.has(assignKey);
+        if (isChecked !== wasChecked) {
+          await toggleThemeProgramAssignment({
+            themeCode,
+            targetLevel,
+            programId: progId,
+            assign: isChecked
+          });
+          if (isChecked) assignSet.add(assignKey);
+          else assignSet.delete(assignKey);
+        }
+      }
+      hideLoading();
+      showToast(`Assignments updated for Theme "${themeName}"`, 'success');
+      close();
+      if (onSave) onSave();
+    } catch (e) {
+      hideLoading();
+      showToast('Failed to save assignments: ' + e.message, 'error');
+    }
+  });
+}
+
+// ─── Phase 370: Test Blueprint & Vocabulary Test Generator Tab ────
 async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   showLoading();
   const sb = await getSupabase();
@@ -2196,127 +2203,173 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     if (!classId) return null;
     const classTests = tests.filter(t => t.class_id === classId);
     const cleanNum = tpCode.replace(/^[A-Z]+/i, '');
-    const matchShell = classTests.find(t => (t.test_type === 'quiz' || (t.shell_code && t.shell_code.includes('TASK'))) && 
-      (t.shell_code && (t.shell_code.toUpperCase().includes(`${lvl}${thCode}${cleanNum}-WORDS-TASK`) || t.shell_code.toUpperCase().includes(`${lvl}${thCode}${cleanNum}-PHRASES-TASK`))));
-    if (matchShell) return matchShell;
-
-    const matchTitle = classTests.find(t => (t.test_type === 'quiz' || (t.shell_code && t.shell_code.includes('TASK'))) && 
-      ((t.payload && t.payload.topic === tpName) || (t.title && t.title.toLowerCase().includes(tpName.toLowerCase()))));
-    return matchTitle || null;
+    return classTests.find(t => (t.test_type === 'quiz' || (t.shell_code && t.shell_code.includes('TASK'))) && 
+      (t.shell_code && (t.shell_code.toUpperCase().includes(`${lvl}${thCode}${cleanNum}-WORDS-TASK`) || t.shell_code.toUpperCase().includes(`${lvl}${thCode}${cleanNum}-PHRASES-TASK`)))) ||
+      classTests.find(t => t.title && t.title.toLowerCase().includes(tpName.toLowerCase()));
   };
 
   // Helper: Find Exam for theme
   const findExamForTheme = (lvl, thCode, thName, classId) => {
     if (!classId) return null;
     const classTests = tests.filter(t => t.class_id === classId);
-    const matchShell = classTests.find(t => (t.test_type === 'exam' || (t.shell_code && t.shell_code.includes('EXAM'))) && 
-      (t.shell_code && (t.shell_code.toUpperCase().includes(`${lvl}${thCode}-WORDS-EXAM`) || t.shell_code.toUpperCase().includes(`${lvl}${thCode}-PHRASES-EXAM`))));
-    if (matchShell) return matchShell;
-
-    const matchTitle = classTests.find(t => (t.test_type === 'exam' || (t.shell_code && t.shell_code.includes('EXAM'))) && 
-      ((t.payload && t.payload.theme_code === thCode) || (t.title && t.title.toLowerCase().includes(thName.toLowerCase()))));
-    return matchTitle || null;
+    return classTests.find(t => (t.test_type === 'exam' || (t.shell_code && t.shell_code.includes('EXAM'))) &&
+      (t.shell_code && t.shell_code.toUpperCase().includes(`${lvl}${thCode}-WORDS-EXAM`))) ||
+      classTests.find(t => t.title && t.title.toLowerCase().includes(thName.toLowerCase()) && (t.test_type === 'exam' || (t.title.toUpperCase().includes('EXAM'))));
   };
 
-  // Build Readiness Matrix Rows
+  // Count overall tasks & exams ready vs expected
   let totalTasksExpected = 0;
   let totalTasksReady = 0;
   let totalExamsExpected = 0;
   let totalExamsReady = 0;
 
+  const levelsToScan = activeLevel === 'ALL' ? levels : [Number(activeLevel)];
+  levelsToScan.forEach(lvl => {
+    const targetClass = getLevelClass(lvl);
+    const thMap = levelGroups.get(lvl);
+    if (!thMap) return;
+
+    thMap.forEach(th => {
+      totalExamsExpected++;
+      const thExam = findExamForTheme(lvl, th.code, th.name, targetClass?.id);
+      if (thExam) totalExamsReady++;
+
+      th.topicsMap.forEach(tp => {
+        totalTasksExpected++;
+        const tpTask = findTaskForTopic(lvl, th.code, tp.topicCode, tp.name, targetClass?.id);
+        if (tpTask) totalTasksReady++;
+      });
+    });
+  });
+
+  const totalExpectedAll = totalTasksExpected + totalExamsExpected;
+  const totalReadyAll = totalTasksReady + totalExamsReady;
+  const pctReady = totalExpectedAll > 0 ? Math.round((totalReadyAll / totalExpectedAll) * 100) : 0;
+  const selectedProg = activeProgs.find(p => p.id === selectedProgId);
+
+  // Setup Bottom Infobar for Test Blueprint (Rule 2.23 & 2.24)
+  if (window.setBottomInfobar) {
+    const leftHtml = `
+      <div class="bottom-info-chip"><span class="chip-label">View:</span><span class="chip-val" style="color: #38bdf8;">Test Blueprint</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Program:</span><span class="chip-val" style="color: #f8fafc;">${escapeHtml(selectedProg?.name || 'All')}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Tasks:</span><span class="chip-val" style="color: #22c55e;">${totalTasksReady}/${totalTasksExpected}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Exams:</span><span class="chip-val" style="color: #c084fc;">${totalExamsReady}/${totalExamsExpected}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Readiness:</span><span class="chip-val" style="color: ${pctReady === 100 ? '#22c55e' : '#f59e0b'}; font-weight: 800;">${pctReady}%</span></div>
+    `;
+    const rightHtml = `
+      <button class="btn btn-secondary btn-sm" id="btn-bp-settings" style="height: 32px; font-size: 11px; font-weight: 700; background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.4); color: #38bdf8; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Test System Settings">⚙️ Test Settings</button>
+      <button class="btn btn-primary btn-sm" id="btn-bp-autogen" style="background: var(--clr-primary); font-size: 12px; padding: 0 14px; height: 32px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 10px rgba(99,102,241,0.45); border: none; cursor: pointer; border-radius: 6px;" title="Auto-Generate Curriculum Tests">⚡ Auto-Generate All Tests</button>
+    `;
+    window.setBottomInfobar(leftHtml, rightHtml);
+  }
+
+  // Batch Configuration Grid Table Rows Builder
   const buildBlueprintTableRows = (searchQuery = '') => {
     const q = (searchQuery || '').toLowerCase().trim();
-    const levelsToRender = (activeLevel === 'ALL') ? levels : [Number(activeLevel)];
     let rowsHtml = '';
+    let renderedCount = 0;
 
-    levelsToRender.forEach(lvl => {
-      const themesMap = levelGroups.get(lvl);
-      const lvlLabel = (typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`).toUpperCase();
+    levelsToScan.forEach(lvl => {
       const targetClass = getLevelClass(lvl);
+      const thMap = levelGroups.get(lvl);
+      if (!thMap) return;
 
-      const filteredThemes = [];
-      const themeList = Array.from(themesMap.values()).sort((a, b) => a.code.localeCompare(b.code));
+      const lvlLabel = (typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`).toUpperCase();
+      const themeList = Array.from(thMap.values()).sort((a, b) => a.code.localeCompare(b.code));
 
       themeList.forEach(th => {
+        const thCode = String(th.code || '').trim().toUpperCase();
+        const thExam = findExamForTheme(lvl, thCode, th.name, targetClass?.id);
+
         const topics = Array.from(th.topicsMap.values())
           .filter(t => {
             if (!q) return true;
-            return t.name.toLowerCase().includes(q) || th.name.toLowerCase().includes(q) || th.code.toLowerCase().includes(q);
+            return t.name.toLowerCase().includes(q) || th.name.toLowerCase().includes(q) || t.topicCode.toLowerCase().includes(q);
           })
           .sort((a, b) => (a.topicCode || '').localeCompare(b.topicCode || '', undefined, { numeric: true, sensitivity: 'base' }));
 
-        if (topics.length > 0) {
-          filteredThemes.push({ code: th.code, name: th.name, topics });
-        }
-      });
+        if (topics.length === 0) return;
 
-      if (filteredThemes.length === 0) return;
+        topics.forEach(tp => {
+          renderedCount++;
+          const tpTask = findTaskForTopic(lvl, thCode, tp.topicCode, tp.name, targetClass?.id);
+          const taskReady = Boolean(tpTask);
+          const examReady = Boolean(thExam);
 
-      const levelTotalRows = filteredThemes.reduce((sum, th) => sum + th.topics.length, 0);
-
-      filteredThemes.forEach((th, thIdx) => {
-        const themeTotalRows = th.topics.length;
-        const thCode = String(th.code || '').trim().toUpperCase();
-        const examTest = findExamForTheme(lvl, thCode, th.name, targetClass?.id);
-
-        totalExamsExpected++;
-        if (examTest) totalExamsReady++;
-
-        th.topics.forEach((tp, tpIdx) => {
-          const isFirstInLevel = (thIdx === 0 && tpIdx === 0);
-          const isFirstInTheme = (tpIdx === 0);
-          const taskTest = findTaskForTopic(lvl, thCode, tp.topicCode, tp.name, targetClass?.id);
-
-          totalTasksExpected++;
-          if (taskTest) totalTasksReady++;
+          // Pacing defaults
+          const taskDuration = tpTask?.working_duration_minutes || 15;
+          const taskScore = tpTask?.minimum_required_score || 60;
+          const examDuration = thExam?.working_duration_minutes || 30;
+          const examScore = thExam?.minimum_required_score || 60;
 
           rowsHtml += `
-            <tr class="blueprint-table-row" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-              ${isFirstInLevel ? `
-                <td rowspan="${levelTotalRows}" class="cell-level-group" style="text-align: center; vertical-align: middle; font-weight: 800; font-size: 11.5px; background: rgba(15, 23, 42, 0.95); border-right: 1px solid rgba(255,255,255,0.12); color: #38bdf8; padding: 6px;">
-                  ${escapeHtml(lvlLabel)}
-                </td>
-              ` : ''}
-
-              <td class="cell-code" style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); font-size: 11px;">${escapeHtml(tp.topicCode || '—')}</td>
-
-              ${isFirstInTheme ? `
-                <td rowspan="${themeTotalRows}" class="cell-theme-name" style="vertical-align: middle; font-weight: 700; font-size: 11.5px; background: rgba(30, 41, 59, 0.35); border-right: 1px solid rgba(255,255,255,0.1); color: #ffffff; padding: 8px 12px;">
-                  ${escapeHtml(th.name || '—')}
-                </td>
-              ` : ''}
-
-              <td style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px;">${escapeHtml(tp.name)}</td>
-
-              <!-- Vocab Pool -->
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.1);">
-                <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 700; padding: 2.5px 8px; border-radius: 4px; font-size: 11px;">${tp.totalCount} items</span>
-                <span style="font-size: 10px; color: #94a3b8; margin-left: 4px;">(${tp.totalWords}W · ${tp.totalPhrases}P)</span>
+            <tr class="blueprint-table-row" data-topic-code="${escapeHtml(tp.topicCode)}" data-level="${lvl}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); width: 40px;">
+                <input type="checkbox" class="bp-row-select-cb" data-topic-code="${escapeHtml(tp.topicCode)}" data-level="${lvl}" data-topic-name="${escapeHtml(tp.name)}" style="accent-color: #6366f1; width: 14px; height: 14px; cursor: pointer;">
+              </td>
+              <td style="text-align: center; font-weight: 800; font-size: 11px; color: #38bdf8; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08);">
+                ${escapeHtml(lvlLabel)}
+              </td>
+              <td style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11px;">
+                ${escapeHtml(tp.topicCode || '—')}
+              </td>
+              <td style="color: #ffffff; font-weight: 700; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px;">
+                ${escapeHtml(th.name || '—')}
+              </td>
+              <td style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px;">
+                ${escapeHtml(tp.name)}
+              </td>
+              <!-- Vocab Pool Split (Single Responsibility) -->
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap;">
+                <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 700; padding: 2px 7px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(56, 189, 248, 0.3); font-variant-numeric: tabular-nums;">${tp.totalCount}</span>
+              </td>
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap;">
+                <span style="color: #cbd5e1; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalWords}</span>
+              </td>
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.1); white-space: nowrap;">
+                <span style="color: #a78bfa; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalPhrases}</span>
+              </td>
+              
+              <!-- Test Settings Split: Duration -->
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap;">
+                <span class="bp-setting-badge" style="font-size: 11px; font-weight: 700; color: #f8fafc; font-variant-numeric: tabular-nums;">${taskDuration} min</span>
+                <span class="bp-setting-input edit-mode-only" style="align-items:center; gap:2px;">
+                  <input type="number" class="bp-inline-duration" data-topic="${escapeHtml(tp.name)}" value="${taskDuration}" min="5" max="180" style="width:44px; height:24px; font-size:11px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 3px; text-align:center;">
+                  <span style="font-size:10px; color:#94a3b8;">m</span>
+                </span>
               </td>
 
-              <!-- Task Status (Practice) -->
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08);">
-                ${taskTest 
-                  ? `<span class="badge-test-ready" title="${escapeHtml(taskTest.title)}">✅ Ready (${taskTest.working_duration_minutes || 15}m · Min ${taskTest.minimum_required_score || 60}%)</span>`
-                  : `<span class="badge-test-missing">⚠️ Missing</span>`}
+              <!-- Test Settings Split: Pass Score -->
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap;">
+                <span class="bp-setting-badge" style="font-size: 11px; font-weight: 700; color: #FFFF00; font-variant-numeric: tabular-nums;">${taskScore}%</span>
+                <span class="bp-setting-input edit-mode-only" style="align-items:center; gap:2px;">
+                  <input type="number" class="bp-inline-score" data-topic="${escapeHtml(tp.name)}" value="${taskScore}" min="10" max="100" style="width:44px; height:24px; font-size:11px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 3px; text-align:center;">
+                  <span style="font-size:10px; color:#94a3b8;">%</span>
+                </span>
               </td>
 
-              <!-- Exam Status (Milestone) -->
-              ${isFirstInTheme ? `
-                <td rowspan="${themeTotalRows}" style="vertical-align: middle; text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); background: rgba(30, 41, 59, 0.25);">
-                  ${examTest 
-                    ? `<span class="badge-test-ready" style="background:rgba(168,85,247,0.16);color:#c084fc;border-color:rgba(168,85,247,0.35);" title="${escapeHtml(examTest.title)}">✅ Ready (${examTest.working_duration_minutes || 30}m · Min ${examTest.minimum_required_score || 60}%)</span>`
-                    : `<span class="badge-test-missing">⚠️ Missing</span>`}
-                </td>
-              ` : ''}
+              <!-- Test Settings Split: Delivery Format -->
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.1); white-space: nowrap;">
+                <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 700; padding: 2px 7px; border-radius: 4px; font-size: 10.5px; border: 1px solid rgba(56, 189, 248, 0.3);">7×7 Spoken</span>
+              </td>
+
+              <!-- Task Status (Single Responsibility: Status Only) -->
+              <td style="text-align: center; padding: 8px 8px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
+                ${taskReady 
+                  ? `<span style="background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.4); color: #4ade80; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 10.5px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>` 
+                  : `<span style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 10.5px; display: inline-flex; align-items: center; gap: 4px;">▲ Missing</span>`}
+              </td>
+
+              <!-- Exam Status (Single Responsibility: Status Only) -->
+              <td style="text-align: center; padding: 8px 8px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
+                ${examReady 
+                  ? `<span style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 10.5px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>` 
+                  : `<span style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 10.5px; display: inline-flex; align-items: center; gap: 4px;">▲ Missing</span>`}
+              </td>
 
               <!-- Actions -->
-              <td style="text-align: center; padding: 8px 6px;">
-                ${targetClass ? `
-                  <button type="button" class="btn btn-secondary btn-sm btn-goto-class-hub" data-class-id="${targetClass.id}" style="padding: 3px 8px; font-size: 10.5px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; border-radius: 4px; cursor: pointer;">👁️ Class Hub</button>
-                ` : `
-                  <span style="color: #64748b; font-size: 10px;">No Class</span>
-                `}
+              <td style="text-align: center; padding: 6px 8px; white-space: nowrap;">
+                ${targetClass ? `<button type="button" class="btn btn-secondary btn-sm btn-goto-class-hub" data-class-id="${targetClass.id}" style="height: 26px; font-size: 10.5px; padding: 0 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;" title="Open Class Hub">👁️ Class Hub</button>` : '<span style="color:#64748b;font-size:10px;">No Class</span>'}
               </td>
             </tr>
           `;
@@ -2324,99 +2377,69 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
       });
     });
 
+    if (renderedCount === 0) {
+      rowsHtml = `
+        <tr>
+          <td colspan="14" style="text-align: center; padding: 24px; color: #64748b; font-size: 12px;">
+            No topics or tests found matching the current criteria.
+          </td>
+        </tr>
+      `;
+    }
+
     return rowsHtml;
   };
 
   const initialRows = buildBlueprintTableRows('');
-  const overallReadyCount = totalTasksReady + totalExamsReady;
-  const overallExpectedCount = totalTasksExpected + totalExamsExpected;
-  const pctReady = overallExpectedCount > 0 ? Math.round((overallReadyCount / overallExpectedCount) * 100) : 100;
-
-  // Setup Bottom Infobar for Theme Blueprint
-  if (window.setBottomInfobar) {
-    const activeProgName = activeProgs.find(p => p.id === selectedProgId)?.name || 'Camp';
-    const leftHtml = `
-      <div class="bottom-info-chip"><span class="chip-label">View:</span><span class="chip-val" style="color: #a855f7;">Theme Blueprint & Generator</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Program:</span><span class="chip-val" style="color: #38bdf8;">${escapeHtml(activeProgName)}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Tasks Ready:</span><span class="chip-val" style="color: #22c55e;">${totalTasksReady} / ${totalTasksExpected}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Exams Ready:</span><span class="chip-val" style="color: #c084fc;">${totalExamsReady} / ${totalExamsExpected}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Readiness:</span><span class="chip-val" style="color: ${pctReady === 100 ? '#22c55e' : '#f59e0b'}; font-weight: 800;">${pctReady}% Ready</span></div>
-    `;
-    const rightHtml = `
-      <button class="btn btn-secondary btn-sm" id="btn-bp-bottom-settings" style="height: 30px; font-size: 11px; padding: 0 10px; font-weight: 700; background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.4); color: #38bdf8; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">⚙️ Test Settings</button>
-      <button class="btn btn-primary btn-sm" id="btn-bp-bottom-autogen" style="background: var(--clr-primary); font-size: 11.5px; padding: 0 12px; height: 30px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(99,102,241,0.35); border: none; cursor: pointer; border-radius: 6px;">⚡ Auto-Generate</button>
-    `;
-    window.setBottomInfobar(leftHtml, rightHtml);
-  }
 
   let html = `
-    <div style="display: flex; flex-direction: column; height: 100%; max-height: calc(100vh - 120px); box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; gap: 8px; padding: 0 4px 6px 4px;">
+    <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; gap: 8px;">
       
-      <!-- ⚡ Hero Command Bar for Auto-Generator -->
-      <div class="bp-hero-command-bar">
-        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <label style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Target Program</label>
-            <select id="bp-program-select" style="height: 32px; font-size: 12px; width: 170px; background: rgba(30,41,59,0.9); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 0 8px; cursor: pointer; outline: none; font-weight: 600;">
+      <!-- Top Control Toolbar (Clean & Minimal: Program Select + Level Tabs + Search Only) -->
+      <div style="flex-shrink: 0; padding: 2px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Program:</label>
+            <select id="bp-program-select" style="height: 30px; font-size: 11.5px; width: 170px; background: rgba(30,41,59,0.9); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 0 8px; cursor: pointer; outline: none; font-weight: 600;">
               ${activeProgs.map(p => `<option value="${p.id}" ${p.id === selectedProgId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
             </select>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <label style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Curriculum Level</label>
-            <div style="display: flex; gap: 3px; align-items: center; background: rgba(15,23,42,0.7); padding: 2px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
-              <button type="button" class="btn-bp-level-tab" data-lvl="ALL" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 10px; border-radius: 5px; cursor: pointer; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'}">ALL LEVELS</button>
-              ${levels.map(lvl => {
-                const isActive = (String(activeLevel) === String(lvl));
-                const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
-                return `<button type="button" class="btn-bp-level-tab" data-lvl="${lvl}" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 10px; border-radius: 5px; cursor: pointer; border: none; ${isActive ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'}">${shortLbl}</button>`;
-              }).join('')}
-            </div>
-          </div>
-
-          <!-- Pacing Snapshot -->
-          <div style="display: flex; gap: 8px; align-items: center; padding-left: 8px; border-left: 1px solid rgba(255,255,255,0.1);">
-            <div style="font-size: 10.5px; color: #cbd5e1; background: rgba(30,41,59,0.7); border: 1px solid rgba(255,255,255,0.08); padding: 4px 8px; border-radius: 5px;">
-              <span style="color:#94a3b8;">Task:</span> <strong style="color:#f8fafc;">15 min</strong> · <strong style="color:#FFFF00;">60%</strong>
-            </div>
-            <div style="font-size: 10.5px; color: #cbd5e1; background: rgba(30,41,59,0.7); border: 1px solid rgba(255,255,255,0.08); padding: 4px 8px; border-radius: 5px;">
-              <span style="color:#94a3b8;">Exam:</span> <strong style="color:#f8fafc;">30 min</strong> · <strong style="color:#FFFF00;">60%</strong>
-            </div>
-            <div style="font-size: 10.5px; color: #cbd5e1; background: rgba(30,41,59,0.7); border: 1px solid rgba(255,255,255,0.08); padding: 4px 8px; border-radius: 5px;">
-              <span style="color:#94a3b8;">Format:</span> <strong style="color:#38bdf8;">Spoken 7x7</strong>
-            </div>
+          <div style="display: flex; gap: 3px; align-items: center; background: rgba(15,23,42,0.7); padding: 2px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+            <button type="button" class="btn-bp-level-tab" data-lvl="ALL" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 10px; border-radius: 5px; cursor: pointer; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'}">ALL LEVELS</button>
+            ${levels.map(lvl => {
+              const isActive = (String(activeLevel) === String(lvl));
+              const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
+              return `<button type="button" class="btn-bp-level-tab" data-lvl="${lvl}" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 10px; border-radius: 5px; cursor: pointer; border: none; ${isActive ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'};">${shortLbl}</button>`;
+            }).join('')}
           </div>
         </div>
 
-        <!-- Primary Generator Action Buttons -->
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <button class="btn btn-secondary btn-sm" id="btn-bp-settings" style="height: 32px; font-size: 11px; font-weight: 700; background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.4); color: #38bdf8; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Test System Settings">⚙️ Test Settings</button>
-          <button class="btn btn-primary btn-sm" id="btn-bp-autogen" style="background: var(--clr-primary); font-size: 12px; padding: 0 14px; height: 34px; font-weight: 800; display: inline-flex; align-items: center; gap: 7px; box-shadow: 0 2px 10px rgba(99,102,241,0.45); border: none; cursor: pointer; border-radius: 6px;" title="Auto-Generate Curriculum Tests">⚡ Auto-Generate All Tests</button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="search" id="bp-search-input" placeholder="🔍 Search Topics &amp; Tests..." style="width: 220px; height: 28px; font-size: 11px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 5px; padding: 0 8px; outline: none;">
         </div>
       </div>
 
-      <!-- Test Readiness KPI Bar -->
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 2px; flex-shrink: 0; font-size: 11px; color: #94a3b8;">
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <span>Tasks Ready: <strong style="color: #22c55e;">${totalTasksReady} / ${totalTasksExpected}</strong></span>
-          <span>Exams Ready: <strong style="color: #c084fc;">${totalExamsReady} / ${totalExamsExpected}</strong></span>
-          <span>Total Readiness: <strong style="color: ${pctReady === 100 ? '#22c55e' : '#f59e0b'};">${pctReady}%</strong></span>
-        </div>
-        <input type="search" id="bp-search-input" placeholder="🔍 Search Topics & Tests..." style="width: 220px; height: 28px; font-size: 11px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 5px; padding: 0 8px; outline: none;">
-      </div>
-
-      <!-- Test Status Matrix Table -->
-      <div class="table-wrap sticky-first" style="flex: 1; overflow-y: auto; overflow-x: auto; min-height: 0; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+      <!-- Batch Configuration Grid (ONLY Container With Vertical Scroll) -->
+      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
         <table id="blueprint-matrix-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 11px;">
           <thead style="background: #1e293b; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid rgba(255, 255, 255, 0.12);">
             <tr>
+              <th style="padding: 8px 6px; text-align: center; width: 40px; border-right: 1px solid rgba(255,255,255,0.06);">
+                <input type="checkbox" id="bp-select-all-cb" style="accent-color: #6366f1; width: 14px; height: 14px; cursor: pointer;" title="Select All">
+              </th>
               <th style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">LEVEL</th>
               <th style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">CODE</th>
-              <th style="padding: 8px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 150px; border-right: 1px solid rgba(255,255,255,0.1);">Theme Name</th>
-              <th style="padding: 8px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08);">Topic</th>
-              <th style="padding: 8px 8px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 10px; min-width: 110px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">Vocab Pool</th>
-              <th style="padding: 8px 10px; font-weight: 800; color: #86efac; text-transform: uppercase; font-size: 10px; min-width: 160px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">Task Status (Practice)</th>
-              <th style="padding: 8px 10px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 10px; min-width: 160px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">Exam Status (Milestone)</th>
+              <th style="padding: 8px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 130px; border-right: 1px solid rgba(255,255,255,0.1);">Theme Name</th>
+              <th style="padding: 8px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 150px; border-right: 1px solid rgba(255,255,255,0.08);">Topic Name</th>
+              <th style="padding: 8px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">ITEMS</th>
+              <th style="padding: 8px 6px; font-weight: 800; color: #818cf8; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">WORDS</th>
+              <th style="padding: 8px 6px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">PHRASES</th>
+              <th style="padding: 8px 6px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 10px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">DURATION</th>
+              <th style="padding: 8px 6px; font-weight: 800; color: #FFFF00; text-transform: uppercase; font-size: 10px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">PASS SCORE</th>
+              <th style="padding: 8px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 10px; width: 80px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">FORMAT</th>
+              <th style="padding: 8px 10px; font-weight: 800; color: #86efac; text-transform: uppercase; font-size: 10px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">Task Status</th>
+              <th style="padding: 8px 10px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 10px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">Exam Status</th>
               <th style="padding: 8px 8px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 10px; width: 90px; text-align: center;">ACTIONS</th>
             </tr>
           </thead>
@@ -2459,6 +2482,15 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     };
   }
 
+  // Select All Checkbox Handler
+  const selectAllCb = document.getElementById('bp-select-all-cb');
+  if (selectAllCb) {
+    selectAllCb.onchange = (e) => {
+      const isChecked = e.target.checked;
+      area.querySelectorAll('.bp-row-select-cb').forEach(cb => cb.checked = isChecked);
+    };
+  }
+
   // Action Button Binds
   const bindBpActionHandlers = () => {
     area.querySelectorAll('.btn-goto-class-hub').forEach(btn => {
@@ -2493,16 +2525,18 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     }
   };
 
-  const btnSettingsTop = document.getElementById('btn-bp-settings');
-  if (btnSettingsTop) btnSettingsTop.onclick = triggerSettings;
-  const btnSettingsBottom = document.getElementById('btn-bp-bottom-settings');
+  const btnSettingsBottom = document.getElementById('btn-bp-settings');
   if (btnSettingsBottom) btnSettingsBottom.onclick = triggerSettings;
 
-  // Auto-Generate Trigger
+  // Auto-Generate Trigger (1+3 Hybrid Confirmation Modal Wizard)
   const triggerAutoGenerate = async () => {
     const importedLevels = levels.filter(lvl => (levelGroups.get(lvl)?.size || 0) > 0);
     if (importedLevels.length === 0) return showToast('No levels with topics detected in Blueprint', 'error');
     const targetClass = getLevelClass(activeLevel === 'ALL' ? importedLevels[0] : Number(activeLevel));
+
+    // Check if selective checkboxes are checked
+    const selectedCheckboxes = Array.from(area.querySelectorAll('.bp-row-select-cb:checked'));
+    const selectedTopicNames = selectedCheckboxes.map(cb => cb.getAttribute('data-topic-name'));
 
     try {
       const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261106_v140');
@@ -2510,6 +2544,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
         availableLevels: importedLevels,
         preSelectedLevels: activeLevel === 'ALL' ? importedLevels : [Number(activeLevel)],
         explicitClassId: targetClass?.id || null,
+        selectedTopics: selectedTopicNames.length > 0 ? selectedTopicNames : null,
         onComplete: () => {
           if (typeof renderVocabularyVault === 'function') {
             const container = document.getElementById('classes-detail-canvas');
@@ -2523,9 +2558,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     }
   };
 
-  const btnAutogenTop = document.getElementById('btn-bp-autogen');
-  if (btnAutogenTop) btnAutogenTop.onclick = triggerAutoGenerate;
-  const btnAutogenBottom = document.getElementById('btn-bp-bottom-autogen');
+  const btnAutogenBottom = document.getElementById('btn-bp-autogen');
   if (btnAutogenBottom) btnAutogenBottom.onclick = triggerAutoGenerate;
 }
 

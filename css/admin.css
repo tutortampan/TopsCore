@@ -3500,19 +3500,37 @@ tr.deleted-row td {
 }
 
 /* ============================================================
-   ZERO-SCROLL VOCABULARY VAULT VIEWPORT LOCK
+   ZERO-SCROLL VIEWPORT LOCK (AGENTS.md Rule 2.23)
    ============================================================ */
-.admin-content:has(#vault-tab-content) {
+.admin-main {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.admin-content {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow: hidden !important; /* STRICT: No outer scrollbar */
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 6px 12px 0 12px !important;
+  box-sizing: border-box !important;
+}
+
+.admin-content:has(#vault-tab-content),
+.admin-content:has(#student-grid-container),
+.admin-content:has(#programs-grid-container),
+.admin-content:has(#batches-grid-container),
+.admin-content:has(#class-datagrid-container),
+.admin-content:has(.test-analytics-dashboard) {
   padding: 4px 10px 0 10px !important;
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;
-  box-sizing: border-box !important;
-  height: calc(100vh - 50px - 28px) !important;
-}
-
-.admin-content:has(#vault-tab-content):has(+ #admin-bottom-infobar:not(.hidden)) {
-  height: calc(100vh - 50px - 50px - 28px) !important;
+  height: auto !important;
 }
 
 #vault-tab-content {
@@ -3527,26 +3545,131 @@ tr.deleted-row td {
   box-sizing: border-box !important;
 }
 
-/* ============================================================
-   FULL-HEIGHT WORKSPACE INTEGRATION FOR STUDENT ROSTER & GRIDS
-   ============================================================ */
-.admin-content:has(#student-grid-container),
-.admin-content:has(#programs-grid-container),
-.admin-content:has(#batches-grid-container),
-.admin-content:has(#class-datagrid-container) {
-  padding: 6px 12px 0 12px !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
-  box-sizing: border-box !important;
-  height: calc(100vh - 50px - 50px) !important;
+/* The ONLY vertically scrolling element is the table container */
+.table-wrap {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  box-sizing: border-box;
 }
 
-.admin-content:has(#student-grid-container):has(+ #admin-bottom-infobar:not(.hidden)),
-.admin-content:has(#programs-grid-container):has(+ #admin-bottom-infobar:not(.hidden)),
-.admin-content:has(#batches-grid-container):has(+ #admin-bottom-infobar:not(.hidden)),
-.admin-content:has(#class-datagrid-container):has(+ #admin-bottom-infobar:not(.hidden)) {
-  height: calc(100vh - 50px - 50px - 50px) !important;
+.table-wrap table thead th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  background: #1e293b !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ============================================================
+   GLOBAL MASTER EDIT MODE (AGENTS.md Rule 2.24)
+   ============================================================ */
+.admin-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-bottom: 6px;
+}
+
+.btn-edit-mode-global {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.btn-edit-mode-global.mode-off {
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #94a3b8;
+}
+
+.btn-edit-mode-global.mode-off:hover {
+  background: rgba(51, 65, 85, 0.95);
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-edit-mode-global.mode-off .edit-mode-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #64748b;
+  display: inline-block;
+}
+
+.btn-edit-mode-global.mode-on {
+  background: rgba(22, 101, 52, 0.35);
+  border: 1px solid #22c55e;
+  color: #4ade80;
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.35);
+}
+
+.btn-edit-mode-global.mode-on:hover {
+  background: rgba(22, 101, 52, 0.55);
+}
+
+.btn-edit-mode-global.mode-on .edit-mode-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  display: inline-block;
+  animation: edit-mode-pulse 1.8s infinite;
+}
+
+@keyframes edit-mode-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* Zero-Leakage Hiding Rule: When Global Edit Mode is OFF, hide ALL editing controls across ALL pages */
+body:not(.global-edit-mode-on) .edit-mode-only,
+body:not(.global-edit-mode-on) .btn-edit,
+body:not(.global-edit-mode-on) .btn-delete,
+body:not(.global-edit-mode-on) [data-action="edit"],
+body:not(.global-edit-mode-on) [data-action="delete"],
+body:not(.global-edit-mode-on) .row-action-delete,
+body:not(.global-edit-mode-on) .row-action-edit,
+body:not(.global-edit-mode-on) .btn-add-record,
+body:not(.global-edit-mode-on) .inline-edit-input,
+body:not(.global-edit-mode-on) .table-edit-actions,
+body:not(.global-edit-mode-on) .manual-score-input,
+body:not(.global-edit-mode-on) .btn-merge-topics,
+body:not(.global-edit-mode-on) .btn-theme-edit-action,
+body:not(.global-edit-mode-on) .btn-topic-edit-action,
+body:not(.global-edit-mode-on) .btn-assign-popover-trigger,
+body:not(.global-edit-mode-on) .bp-setting-input,
+body:not(.global-edit-mode-on) .vault-inline-edit-btn,
+body:not(.global-edit-mode-on) .vault-inline-delete-btn,
+body:not(.global-edit-mode-on) .btn-add-theme-action,
+body:not(.global-edit-mode-on) .btn-add-topic-action {
+  display: none !important;
+}
+
+/* When Edit Mode is OFF, static view badges for test settings are visible */
+body:not(.global-edit-mode-on) .bp-setting-badge {
+  display: inline-flex !important;
+}
+
+/* When Edit Mode is ON, static badges are hidden, inline inputs are shown */
+body.global-edit-mode-on .bp-setting-badge {
+  display: none !important;
+}
+body.global-edit-mode-on .bp-setting-input {
+  display: inline-flex !important;
 }
 
 #student-grid-container,

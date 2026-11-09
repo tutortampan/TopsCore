@@ -2511,13 +2511,25 @@ export async function renderStudents(area) {
       ...(perClassColDefs.length > 0 ? perClassColDefs : [
         {
           key: 'completedTests',
-          label: 'Tests',
+          label: 'Completed',
           sortable: true,
           align: 'center',
-          width: '95px',
+          width: '80px',
           render: (row) => `
             <div class="fw-700" style="font-size:0.9rem;color:var(--clr-text-1);">
-              ${row.completedTests} <span class="text-xs text-muted" style="font-weight:400;">/ ${row.totalAssigned}</span>
+              ${row.completedTests}
+            </div>
+          `
+        },
+        {
+          key: 'totalAssigned',
+          label: 'Assigned',
+          sortable: true,
+          align: 'center',
+          width: '80px',
+          render: (row) => `
+            <div class="fw-600 text-muted" style="font-size:0.85rem;">
+              ${row.totalAssigned}
             </div>
           `
         }

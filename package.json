@@ -22,7 +22,8 @@
     "test:ratios": "node scripts/test_unified_test_room_ratios.mjs",
     "preview:all": "node scripts/open_mobile_preview.mjs --all-screenshots",
     "test:rbac": "node scripts/test_tutor_role_rbac.mjs",
-    "test": "node scripts/check_all_js_syntax.cjs && node scripts/generate_sw_manifest.mjs && node scripts/test_tutor_role_rbac.mjs && node scripts/test_student_dashboard_exam_parity.mjs && node scripts/test_homophones_spoken_mode.mjs && node scripts/test_prerequisite_deficit_guard.mjs && node scripts/test_vocab_dashboard_blueprint.mjs && node scripts/test_bottom_banner_universal.mjs && node scripts/test_smart_distractor_engine.mjs && node scripts/test_unified_test_room_ratios.mjs",
+    "test:vault": "node scripts/test_vocab_vault_and_edit_mode.mjs",
+    "test": "node scripts/check_all_js_syntax.cjs && node scripts/generate_sw_manifest.mjs && node scripts/test_tutor_role_rbac.mjs && node scripts/test_vocab_vault_and_edit_mode.mjs && node scripts/test_student_dashboard_exam_parity.mjs && node scripts/test_homophones_spoken_mode.mjs && node scripts/test_prerequisite_deficit_guard.mjs && node scripts/test_vocab_dashboard_blueprint.mjs && node scripts/test_bottom_banner_universal.mjs && node scripts/test_smart_distractor_engine.mjs && node scripts/test_unified_test_room_ratios.mjs",
     "serve": "serve . -p 5500",
     "build": "echo 'Static deploy ready'"
   },

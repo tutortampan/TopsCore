@@ -1,8 +1,25 @@
 // TOPSCORE LMS — Admin Initialization & Fast-Boot Controller
 // Centralizes sidebar hydration, record drawer controls, auth gate, and service worker registration
 import { DataGrid } from './datagrid.js?v=20261106_v160';
+import { initGlobalEditMode, toggleGlobalEditMode } from '../session.js?v=20261106_v160';
 if (typeof window !== 'undefined') {
   window.DataGrid = DataGrid;
+}
+
+export function initGlobalEditModeToggle() {
+  initGlobalEditMode();
+  const btn = document.getElementById('global-edit-mode-toggle');
+  if (btn && !btn.dataset.bound) {
+    btn.dataset.bound = 'true';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const newState = toggleGlobalEditMode();
+      if (typeof window.showToast === 'function') {
+        window.showToast(newState ? '🔓 Global Edit Mode ACTIVE: Editing controls enabled' : '🔒 Global Edit Mode OFF: Safe read-only view', newState ? 'success' : 'info');
+      }
+    });
+  }
 }
 
 export function initAuthGate() {
@@ -199,12 +216,14 @@ if (typeof document !== 'undefined') {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       initAuthGate();
+      initGlobalEditModeToggle();
       initSidebarCache();
       initRecordDrawer();
       registerServiceWorker();
     });
   } else {
     initAuthGate();
+    initGlobalEditModeToggle();
     initSidebarCache();
     initRecordDrawer();
     registerServiceWorker();
