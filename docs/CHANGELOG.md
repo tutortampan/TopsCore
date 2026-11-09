@@ -1,3 +1,84 @@
+## [2026-11-09 08:31] — Phase 375: Admin Zero-Stale Cache Invalidation & Written Exam Telemetry Monitoring
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 375  
+**Status:** PASS  
+
+### Why
+- The user uploaded a screenshot of `http://127.0.0.1:5500/admin.html#vocab_vault` showing the legacy monolithic 16-column matrix because the browser's Service Worker and disk cache were serving obsolete pre-cached versions.
+- Service Worker was aggressively caching `admin.html` and admin modules, preventing live development and UI updates from appearing immediately on refresh.
+- Ongoing written exam `2C-WORDS-EXAM - SHOPPING ESSENTIALS` required continuous telemetry monitoring across Batch 134 students.
+
+### Changed
+1. **Admin Console Service Worker Cache Bypass (`sw.js`)**:
+   - Upgraded Service Worker cache name to `topscore-cache-option-a-v98`.
+   - Added bypass for requests matching `admin` or `/admin/` so `admin.html`, `css/admin.css`, and `js/admin/*` are always fetched directly from the server without Service Worker caching.
+   - Removed `admin.html`, `css/admin.css`, and `js/admin/admin-init.js` from `ASSETS_TO_CACHE`.
+2. **Auto Cache Purge (`admin.html`)**:
+   - Added script in `<head>` of `admin.html` to automatically delete all non-current `topscore-cache-*` caches upon page load.
+3. **Module Cache Busters (`js/admin/admin-init.js`, `js/admin/app.js`)**:
+   - Synchronized `tests-access.js` import to `?v=20261109_v172`.
+   - Defaulted `registerServiceWorker(swPath)` in `admin-init.js` to `sw.js?v=20261109_v172`.
+4. **Live Written Exam Telemetry (Minute 74 of 90)**:
+   - Monitored all 8 students in Batch 134:
+     - Miss Alfina Damayanti: 262 / 440
+     - Miss Cinta Laura: 245 / 440
+     - Miss Isnantika Salsabila: 241 / 440
+     - Mr. Lalu Yuda Handika Prawira: 233 / 440
+     - Miss Riska Fetrosia: 222 / 440
+     - Mr. Ayya Sofyandi Mzeth: 156 / 440
+     - Miss Havvina Solehah: 151 / 440
+     - Miss Adinda Karunia Farela: 144 / 440
+
+### Files
+- `sw.js`
+- `admin.html`
+- `js/admin/admin-init.js`
+- `js/admin/app.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
+## [2026-11-09 08:25] — Phase 374: Exam Eligibility Bugfix, Late Students Modal & Direct Card Duration Controls
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 374  
+**Status:** PASS  
+
+### Why
+- Students who had legitimately completed 7x7 tasks were evaluated as ineligible for exams (`0 out of 18 eligible`), forcing tutors to use "Tutor Override" for everyone.
+- Root cause: `evaluateStudentsEligibility` tried to read `a.tests.shell_code` on flat attempt records where `a.tests` was undefined, plus hardcoded `Object.keys(priorBestScores).length < 2` (requiring 2 prior exams when only 1 exists in `Camp 2nd Vocabulary`).
+- In the Late Arrival modal ("+ Susulan"), eligible students were missing because of the eligibility bug and lack of a Tutor Override option.
+- Exam cards did not display test duration (`working_duration_minutes`) on the card header or locked box.
+- Tutors had to navigate inside the Live Monitor modal just to extend exam time. A direct `⏱️ + Waktu` quick-action popover on the card was requested.
+
+### Changed
+1. **Smart Eligibility Engine Bugfix (`js/admin/tests-access.js`)**:
+   - Passed `classTests` into `evaluateStudentsEligibility` and created `testMap = Object.fromEntries(classTests.map(t => [t.id, t]))`.
+   - Fixed prior exam attempt lookup: `t = a.tests || a.test || testMap[a.test_id] || testMap[a.Test_id] || {}`.
+   - Dynamically counted required prior exams for prior theme: `requiredPriorCount = Math.max(1, priorPublishedExams.length)`.
+   - Verified that 12 out of 18 students in Batch 134 are now **automatically eligible** without requiring Tutor Override!
+2. **Late Students Modal ("+ Susulan") Enhancements**:
+   - Added `#late-modal-override-checkbox` (`🛡️ Tutor Override (Izinkan semua siswa susulan)`) to the template.
+   - Wired `lateOverrideActive` state in `openThemeLateModal` to allow tutors to enroll any student as a late arrival when needed.
+3. **Card Duration Badge & Direct "+ Waktu" Popover ("Di Luar")**:
+   - Added `⏱️ 90 Mins` duration badge to Theme Card headers and Locked state box.
+   - Added direct `⏱️ + Waktu` button with quick popover on LIVE cards outside the monitor modal (`+5m`, `+10m`, `+15m`, `+30m`, `Kustom...`).
+   - Connected directly to `extendTestSessionTime()` in `js/api.js`.
+4. **Verification**:
+   - `node scripts/test_batch_eligibility.mjs`: PASS (12/18 automatically eligible).
+   - `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: PASS (10/10 runs, 132/132 assertions).
+   - `node scripts/test_multi_program_theme_blueprint_v166.mjs`: PASS (31/31 assertions).
+
+### Files
+- `js/admin/tests-access.js`
+- `scripts/test_batch_eligibility.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## [2026-11-09 08:06] — Phase 373: Vocabulary Vault Cache Busters & Tab Count Polish
 
 **Agent/Session:** Antigravity  

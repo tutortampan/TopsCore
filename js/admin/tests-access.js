@@ -22,6 +22,7 @@ import {
   removeStudentFromTestSession,
   fetchLiveTestSessionData,
   closeTestSession,
+  extendTestSessionTime,
   getGrade
 } from '../api.js?v=20261106_v160';
 import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261106_v160';
@@ -382,7 +383,14 @@ export async function renderClassTestSessions(container, context = {}) {
               </div>
             </div>
 
-            <div id="late-modal-students-list" style="max-height:220px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(0,0,0,0.3); padding:8px; display:flex; flex-direction:column; gap:6px;">
+            <!-- Tutor Override for Late Arrival -->
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:6px; margin-bottom:8px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.78rem; font-weight:700; color:#fbbf24; margin:0;">
+              <input type="checkbox" id="late-modal-override-checkbox" style="width:15px; height:15px; cursor:pointer;">
+              <span>🛡️ Tutor Override (Izinkan semua siswa susulan)</span>
+            </label>
+          </div>
+          <div id="late-modal-students-list" style="max-height:220px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(0,0,0,0.3); padding:8px; display:flex; flex-direction:column; gap:6px;">
               <!-- Populated dynamically with UNENROLLED ELIGIBLE students only -->
             </div>
             <div class="text-xs" style="color:#94a3b8; margin-top:6px;">
@@ -618,11 +626,36 @@ function renderThemeCard(theme, context) {
         <button type="button" class="btn btn-sm btn-theme-live-monitor" data-theme="${code}" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); border: 1px solid #3b82f6; color: #ffffff; font-weight: 700; width: 100%; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(37,99,235,0.35);">
           <span>👁️</span> Monitor Live & Status Ujian (${allowedStudentIds.length})
         </button>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <button type="button" class="btn btn-sm btn-theme-add-late" data-theme="${code}" style="background: #4f46e5; border-color: #4338ca; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 10px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+        <div style="display: flex; gap: 6px; align-items: center; position: relative;">
+          <!-- Direct Extend Time Quick Button ('Di Luar') -->
+          <div style="position: relative; flex: 1;">
+            <button type="button" class="btn btn-sm btn-card-add-time" data-theme="${code}" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #0284c7; color: #38bdf8; font-weight: 700; width: 100%; padding: 7px 6px; border-radius: 6px; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Tambah Waktu Ujian Langsung (Tanpa Masuk Monitor)">
+              <span>⏱️</span> + Waktu
+            </button>
+            <!-- Popover Dropdown Menu -->
+            <div id="card-add-time-menu-${code}" class="card-add-time-menu" style="display: none; position: absolute; left: 0; bottom: calc(100% + 6px); background: #0f172a; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; box-shadow: 0 12px 30px rgba(0,0,0,0.85); z-index: 99999; min-width: 170px; padding: 6px; flex-direction: column; gap: 3px;">
+              <div style="font-size: 0.68rem; font-weight: 700; color: #94a3b8; padding: 3px 6px; border-bottom: 1px solid rgba(255,255,255,0.08);">Perpanjang Ujian Theme ${code}:</div>
+              <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="5" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                <span>⏱️ +5 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
+              </button>
+              <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="10" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                <span>⏱️ +10 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
+              </button>
+              <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="15" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                <span>⏱️ +15 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
+              </button>
+              <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="30" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                <span>⏱️ +30 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
+              </button>
+              <button type="button" class="btn-card-add-time-custom" data-theme="${code}" style="text-align:left; background:rgba(255,255,255,0.06); border:none; color:#fbbf24; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:700; cursor:pointer; margin-top:2px;">
+                ⚙️ Kustom Menit...
+              </button>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-theme-add-late" data-theme="${code}" style="background: #4f46e5; border-color: #4338ca; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 6px; border-radius: 6px; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
             <span>👥</span> + Susulan
           </button>
-          <button type="button" class="btn btn-sm btn-theme-close-session" data-theme="${code}" style="background: #FF0000; border-color: #cc0000; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 10px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+          <button type="button" class="btn btn-sm btn-theme-close-session" data-theme="${code}" style="background: #FF0000; border-color: #cc0000; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 6px; border-radius: 6px; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
             <span>🔒</span> Tutup Sesi
           </button>
         </div>
@@ -631,10 +664,15 @@ function renderThemeCard(theme, context) {
   } else {
     stateContent = `
       <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.18); border-radius: 8px; padding: 12px 14px; margin: 12px 0 16px;">
-        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: #fbbf24;">
-          <span>🔒</span> LOCKED &bull; No Active Session
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: #fbbf24;">
+            <span>🔒</span> LOCKED &bull; No Active Session
+          </div>
+          <span style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; background: rgba(255,255,255,0.06); padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">
+            ⏱️ ${wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 60} Mins
+          </span>
         </div>
-        <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">
+        <div style="font-size: 0.75rem; color: #94a3b8;">
           Prerequisites: ${tasks.length} Quizzes Theme ${code} (Min 60%)
         </div>
       </div>
@@ -658,10 +696,17 @@ function renderThemeCard(theme, context) {
       
       <div>
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-          <span style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 4px; background: ${bgRgba}; color: ${color}; border: 1px solid ${borderRgba};">
-            THEME ${code}
-          </span>
-          <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">2 Simultaneous Modules</span>
+          <div>
+            <span style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 4px; background: ${bgRgba}; color: ${color}; border: 1px solid ${borderRgba};">
+              THEME ${code}
+            </span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="badge-theme-duration" style="font-size: 0.72rem; font-weight: 700; color: #cbd5e1; background: rgba(255,255,255,0.06); padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); display: inline-flex; align-items: center; gap: 4px;" title="Official Exam Duration">
+              <span>⏱️</span> ${wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 60} Mins
+            </span>
+            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">${wordsTest && phrasesTest ? '2 Simultaneous Modules' : '1 Module'}</span>
+          </div>
         </div>
 
         <h4 style="margin: 4px 0 0; font-size: 1.15rem; font-weight: 800; color: #ffffff;">
@@ -735,6 +780,106 @@ function bindTestSessionsEvents(container, themesData, context) {
       if (!theme) return;
 
       openThemeLiveMonitorModal(container, theme, context);
+    });
+  });
+
+  // 3c. Card Direct Extend Time Triggers ('Di Luar')
+  container.querySelectorAll('.btn-card-add-time').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const menu = container.querySelector(`#card-add-time-menu-${themeCode}`);
+      if (!menu) return;
+
+      // Close all other menus first
+      container.querySelectorAll('.card-add-time-menu').forEach(m => {
+        if (m !== menu) m.style.display = 'none';
+      });
+
+      // Toggle current menu
+      menu.style.display = (menu.style.display === 'flex' || menu.style.display === 'block') ? 'none' : 'flex';
+    });
+  });
+
+  // Close menus when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.btn-card-add-time') && !e.target.closest('.card-add-time-menu')) {
+      container.querySelectorAll('.card-add-time-menu').forEach(m => {
+        m.style.display = 'none';
+      });
+    }
+  });
+
+  // Quick preset buttons (+5, +10, +15, +30)
+  container.querySelectorAll('.btn-card-add-time-opt').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const mins = parseInt(e.currentTarget.getAttribute('data-mins'), 10);
+      const theme = themesData.find(t => t.code === themeCode);
+      if (!theme || isNaN(mins) || mins <= 0) return;
+
+      // Close menu
+      const menu = container.querySelector(`#card-add-time-menu-${themeCode}`);
+      if (menu) menu.style.display = 'none';
+
+      showLoading();
+      try {
+        const promises = [];
+        if (theme.wordsTest) promises.push(extendTestSessionTime(theme.wordsTest.id, mins));
+        if (theme.phrasesTest) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
+        await Promise.all(promises);
+
+        showToast(`⏱️ Waktu ujian Theme ${theme.code} berhasil diperpanjang +${mins} menit!`, 'success');
+        if (window.renderClassHub) {
+          window.renderClassHub(document.getElementById('admin-content-area'));
+        }
+      } catch (err) {
+        console.error('Error extending session time from card:', err);
+        showToast('Gagal menambah waktu ujian: ' + err.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    });
+  });
+
+  // Custom minute button
+  container.querySelectorAll('.btn-card-add-time-custom').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const theme = themesData.find(t => t.code === themeCode);
+      if (!theme) return;
+
+      // Close menu
+      const menu = container.querySelector(`#card-add-time-menu-${themeCode}`);
+      if (menu) menu.style.display = 'none';
+
+      const input = prompt(`Masukkan jumlah menit tambahan untuk Theme ${theme.code}:`, '15');
+      if (input === null) return;
+      const mins = parseInt(input.trim(), 10);
+      if (isNaN(mins) || mins <= 0 || mins > 180) {
+        showToast('Jumlah menit tidak valid (masukkan 1 - 180 menit)', 'warning');
+        return;
+      }
+
+      showLoading();
+      try {
+        const promises = [];
+        if (theme.wordsTest) promises.push(extendTestSessionTime(theme.wordsTest.id, mins));
+        if (theme.phrasesTest) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
+        await Promise.all(promises);
+
+        showToast(`⏱️ Waktu ujian Theme ${theme.code} berhasil diperpanjang +${mins} menit!`, 'success');
+        if (window.renderClassHub) {
+          window.renderClassHub(document.getElementById('admin-content-area'));
+        }
+      } catch (err) {
+        console.error('Error extending session time from card:', err);
+        showToast('Gagal menambah waktu ujian: ' + err.message, 'error');
+      } finally {
+        hideLoading();
+      }
     });
   });
 
@@ -840,6 +985,7 @@ function openThemeSessionModal(container, theme, mode, context) {
       themeTasks: theme.tasks,
       wordsTest: theme.wordsTest,
       phrasesTest: theme.phrasesTest,
+      classTests: context.classTests || [],
       allAttempts: context.allAttempts || [],
       mode
     });
@@ -1000,6 +1146,7 @@ function openThemeSessionModal(container, theme, mode, context) {
       themeTasks: theme.tasks,
       wordsTest: theme.wordsTest,
       phrasesTest: theme.phrasesTest,
+      classTests: context.classTests || [],
       allAttempts: context.allAttempts || [],
       mode
     });
@@ -1146,6 +1293,7 @@ function openThemeLateModal(container, theme, context) {
     themeTasks: theme.tasks,
     wordsTest: theme.wordsTest,
     phrasesTest: theme.phrasesTest,
+    classTests: context.classTests || [],
     allAttempts: context.allAttempts || [],
     mode
   });
@@ -1154,9 +1302,19 @@ function openThemeLateModal(container, theme, context) {
 
   let checkedLateIds = new Set();
   let lateSearchQuery = '';
+  let lateOverrideActive = false;
+
+  const lateOverrideCheckbox = modal.querySelector('#late-modal-override-checkbox');
+  if (lateOverrideCheckbox) {
+    lateOverrideCheckbox.checked = false;
+    lateOverrideCheckbox.onchange = () => {
+      lateOverrideActive = lateOverrideCheckbox.checked;
+      renderLateList();
+    };
+  }
 
   const renderLateList = () => {
-    let list = eligibleLateList;
+    let list = lateOverrideActive ? evaluated : eligibleLateList;
     const q = lateSearchQuery.trim().toLowerCase();
     if (q) {
       list = list.filter(e => (e.student.name || '').toLowerCase().includes(q));
@@ -1215,7 +1373,8 @@ function openThemeLateModal(container, theme, context) {
   };
 
   modal.querySelector('#btn-late-modal-select-all').onclick = () => {
-    eligibleLateList.forEach(e => checkedLateIds.add(e.student.id));
+    const listToSelect = lateOverrideActive ? evaluated : eligibleLateList;
+    listToSelect.forEach(e => checkedLateIds.add(e.student.id));
     renderLateList();
   };
 
@@ -2037,7 +2196,8 @@ function openKickConfirmationModal(container, studentId, studentName, theme, onD
  * Smart Eligibility Engine:
  * Evaluates whether students meet prerequisite quizzes and prior exam status.
  */
-function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes, wordsTest, phrasesTest, allAttempts = [], mode }) {
+function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes, wordsTest, phrasesTest, classTests = [], allAttempts = [], mode }) {
+  const testMap = Object.fromEntries((classTests || []).map(t => [t.id, t]));
   const results = [];
   const activeQuizzes = themeQuizzes || themeTasks || theme?.quizzes || theme?.tasks || [];
 
@@ -2076,7 +2236,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
     if (curThemeIdx > 0) {
       priorThemeCode = themeSeq[curThemeIdx - 1];
       const priorExamAtts = studAtts.filter(a => {
-        const t = a.tests || a.test || {};
+        const t = a.tests || a.test || testMap[a.test_id] || testMap[a.Test_id] || {};
         const shell = String(t.shell_code || a.shell_code || '');
         const title = String(t.title || a.title || '');
         const isEx = t.test_type === 'exam' || /EXAM/i.test(shell) || /EXAM/i.test(title);
@@ -2100,7 +2260,18 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
             }
           }
         });
-        const failedPrior = Object.keys(priorBestScores).length < 2 || Object.values(priorBestScores).some(sc => sc < 60);
+        // Dynamic prior exam count: count actual published exams for prior theme
+        const priorPublishedExams = (classTests || []).filter(t => {
+          const shell = String(t.shell_code || '');
+          const title = String(t.title || '');
+          const isEx = t.test_type === 'exam' || /EXAM/i.test(shell) || /EXAM/i.test(title);
+          const m = shell.match(/^[0-9]+([A-Za-z])/);
+          const tc = m ? m[1].toUpperCase() : (title.match(/Theme\s+([A-Za-z])/i)?.[1]?.toUpperCase() || '');
+          const isPub = t.status === 'PUBLISHED' && !t.deleted_at;
+          return isEx && tc === priorThemeCode && isPub;
+        });
+        const requiredPriorCount = Math.max(1, priorPublishedExams.length);
+        const failedPrior = Object.keys(priorBestScores).length < requiredPriorCount || Object.values(priorBestScores).some(sc => sc < 60);
         if (failedPrior) {
           priorThemePassed = false;
         }

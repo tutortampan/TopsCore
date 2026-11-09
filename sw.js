@@ -1,14 +1,12 @@
-const CACHE_NAME = 'topscore-cache-option-a-v97';
+const CACHE_NAME = 'topscore-cache-option-a-v98';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './admin.html',
   './dashboard.html',
   './test.html',
   './result.html',
   './offline.html',
   './css/style.css?v=20261109_v172',
-  './css/admin.css?v=20261109_v172',
   './css/dashboard.css?v=20261108_v165',
   './css/auth.css?v=20261028',
   './css/test.css?v=20261108_v165',
@@ -23,7 +21,6 @@ const ASSETS_TO_CACHE = [
   './js/session.js?v=20261108_v162',
   './js/supabase.js?v=20261028',
   './js/grading.js?v=20261028',
-  './js/admin/admin-init.js?v=20261029',
   './js/vendor/supabase.js',
   './js/vendor/xlsx.full.min.js?v=20261027d',
   './js/wake-lock.js?v=20261027d'
@@ -61,6 +58,9 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   // Bypass third-party origins (Google Fonts, CDNs) so browser loads them natively via <link> without Service Worker connect-src CSP restrictions
   if (url.origin !== self.location.origin) return;
+
+  // Bypass Service Worker entirely for Tutor's Room admin console and modules to ensure zero-stale cache
+  if (url.pathname.includes('admin') || url.pathname.includes('/admin/')) return;
 
   const isDoc = event.request.destination === 'document' || url.pathname.endsWith('.html');
   const isScriptOrDoc = isDoc ||

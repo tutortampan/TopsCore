@@ -19,6 +19,17 @@
   <script src="./js/vendor/xlsx.full.min.js?v=20261107_v161" defer
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=20261107_v161';"></script>
 
+  <script>
+    if ('caches' in window) {
+      caches.keys().then(keys => {
+        keys.forEach(k => {
+          if (k.startsWith('topscore-cache') && k !== 'topscore-cache-option-a-v98') {
+            caches.delete(k);
+          }
+        });
+      });
+    }
+  </script>
 </head>
 
 <body>

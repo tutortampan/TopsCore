@@ -388,7 +388,7 @@ import { renderClasses as _renderClassesModule, loadClassLearningPath } from './
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261106_v160';
 import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261106_v160';
 import { renderTests } from './tests-management.js?v=20261106_v160';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261106_v160';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261109_v172';
 import { renderVocabularyVault } from './vocab-vault.js?v=20261109_v172';
 import { renderModules } from './modules.js?v=20261106_v160';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261106_v160';
