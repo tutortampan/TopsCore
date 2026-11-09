@@ -516,9 +516,27 @@ export async function renderClassTestSessions(container, context = {}) {
           </div>
         </div>
 
-        <!-- Student Cards Container -->
-        <div id="live-modal-students-container" style="padding:16px 24px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:10px;">
-          <!-- Populated dynamically -->
+        <!-- Sortable Live Monitor Table Container -->
+        <div style="padding:14px 24px; overflow-y:auto; flex:1; display:flex; flex-direction:column;">
+          <div class="live-monitor-table-wrapper">
+            <table class="live-monitor-table">
+              <thead>
+                <tr>
+                  <th class="sortable-th" data-sort-key="name">NAMA <span class="sort-icon" id="th-sort-name">⇅</span></th>
+                  <th class="sortable-th" data-sort-key="status">STATUS TEST <span class="sort-icon" id="th-sort-status">⇅</span></th>
+                  <th class="sortable-th" data-sort-key="progress">PROGRESS <span class="sort-icon" id="th-sort-progress">⇅</span></th>
+                  <th class="sortable-th" data-sort-key="score">SCORE (REALTIME) <span class="sort-icon" id="th-sort-score">⇅</span></th>
+                  <th style="text-align: center; width: 85px;">PEEK</th>
+                  <th class="sortable-th" data-sort-key="alarm" style="text-align: center; width: 120px;">ALARM <span class="sort-icon" id="th-sort-alarm">⇅</span></th>
+                  <th style="text-align: right; width: 190px;">ACTION</th>
+                </tr>
+              </thead>
+              <tbody id="live-modal-table-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+          <div id="live-modal-students-container" style="display:none;"></div>
         </div>
 
         <!-- Modal Footer -->
@@ -637,137 +655,134 @@ export async function renderClassTestSessions(container, context = {}) {
  * Renders a single unified Theme Card
  */
 function renderThemeCard(theme, context) {
-  const { code, name, color, bgRgba, borderRgba, wordsTest, phrasesTest, tasks, isLive, remainingMinutes, liveBatchName, allowedStudentIds, isRemedial } = theme;
-  
-  let stateContent = '';
-  let actionButtons = '';
+  const { code, name, color, bgRgba, borderRgba, wordsTest, phrasesTest, tasks, isLive, remainingMinutes, liveBatchName, allowedStudentIds = [], isRemedial } = theme;
+  const durationMins = wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 60;
+  const enrolledCount = (allowedStudentIds && allowedStudentIds.length) ? allowedStudentIds.length : 0;
 
-  if (isLive) {
-    stateContent = `
-      <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px 14px; margin: 12px 0 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 800; color: #34d399;">
-            <span class="status-dot dot-live" style="width: 8px; height: 8px; border-radius: 50%; background: #00c000; box-shadow: 0 0 8px rgba(0,192,0,0.6);"></span>
-            LIVE (${remainingMinutes}m remaining)
-          </span>
-          <span style="font-size: 0.72rem; font-weight: 800; padding: 2px 7px; border-radius: 4px; ${isRemedial ? 'background: rgba(255, 255, 0, 0.2); border: 1px solid #FFFF00; color: #FFFF00;' : 'background: rgba(0, 192, 0, 0.2); border: 1px solid #00c000; color: #86efac;'}">
-            ${isRemedial ? 'REMEDIAL (MAX 60%)' : 'NORMAL (FULL SCORE)'}
-          </span>
-        </div>
-        <div style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600;">
-          👥 ${escapeHtml(liveBatchName)} &bull; ${allowedStudentIds.length} Enrolled Students
+  // Row 1: Test Metadata Header (Deep Navy #021a44 block)
+  const metadataBlock = `
+    <div class="card-block-metadata">
+      <div class="card-meta-top" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+        <span class="theme-pill" style="font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; padding:2px 8px; border-radius:4px; background:${bgRgba}; color:${color}; border:1px solid ${borderRgba};">
+          THEME ${code}
+        </span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          ${isLive ? `
+            <span style="font-size:0.72rem; font-weight:800; padding:2px 7px; border-radius:4px; ${isRemedial ? 'background:rgba(255,255,0,0.25); border:1px solid #FFFF00; color:#FFFF00;' : 'background:rgba(0,192,0,0.25); border:1px solid #00c000; color:#86efac;'}">
+              🟢 LIVE (${remainingMinutes}m left)
+            </span>
+            <span class="duration-badge" style="font-size:0.72rem; font-weight:700; color:#cbd5e1; background:rgba(255,255,255,0.06); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.1);">
+              👥 ${escapeHtml(liveBatchName || '')} (${enrolledCount} Siswa)
+            </span>
+          ` : `
+            <span class="duration-badge" style="font-size:0.72rem; font-weight:700; color:#cbd5e1; background:rgba(255,255,255,0.06); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.1);" title="Official Exam Duration">
+              <span>⏱️</span> ${durationMins} Mins
+            </span>
+            <span style="font-size:0.72rem; color:#94a3b8; font-weight:600;">
+              ${wordsTest && phrasesTest ? '2 Modules' : '1 Module'}
+            </span>
+          `}
         </div>
       </div>
-    `;
+      <h4 style="margin:2px 0 0; font-size:1.15rem; font-weight:900; color:#ffffff;">
+        ${escapeHtml(name)} Test
+      </h4>
+      <div style="font-size:0.75rem; color:#93c5fd; margin-top:2px; display:flex; gap:8px;">
+        <span>📝 Words (Written)</span>
+        <span>&bull;</span>
+        <span>💬 Phrases (Dropdown)</span>
+      </div>
+    </div>
+  `;
 
-    actionButtons = `
-      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
-        <!-- Baris Atas: 3 Tombol Aksi Sejajar (+ Students | + Add Time | Close Session) -->
-        <div style="display: flex; gap: 6px; align-items: center; position: relative;">
-          <!-- 1. + Students (Hijau) -->
-          <button type="button" class="btn btn-sm btn-theme-add-late" data-theme="${code}" style="background: #00c000; border-color: #059669; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 6px; border-radius: 6px; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Tambah Siswa Susulan / Late Arrivals">
-            <span>👥</span> + Students
-          </button>
-
-          <!-- 2. + Add Time (Kuning Amber) -->
-          <div style="position: relative; flex: 1;">
-            <button type="button" class="btn btn-sm btn-card-add-time" data-theme="${code}" style="background: #f59e0b; border: 1px solid #d97706; color: #0f172a; font-weight: 800; width: 100%; padding: 7px 6px; border-radius: 6px; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Perpanjang Waktu Ujian Langsung (Tanpa Masuk Monitor)">
-              <span>⏱️</span> + Add Time
-            </button>
-            <!-- Popover Dropdown Menu -->
-            <div id="card-add-time-menu-${code}" class="card-add-time-menu" style="display: none; position: absolute; left: 0; bottom: calc(100% + 6px); background: #0f172a; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; box-shadow: 0 12px 30px rgba(0,0,0,0.85); z-index: 99999; min-width: 170px; padding: 6px; flex-direction: column; gap: 3px;">
-              <div style="font-size: 0.68rem; font-weight: 700; color: #94a3b8; padding: 3px 6px; border-bottom: 1px solid rgba(255,255,255,0.08);">Perpanjang Ujian Theme ${code}:</div>
-              <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="5" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-                <span>⏱️ +5 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
-              </button>
-              <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="10" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-                <span>⏱️ +10 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
-              </button>
-              <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="15" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-                <span>⏱️ +15 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
-              </button>
-              <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="30" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-                <span>⏱️ +30 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
-              </button>
-              <button type="button" class="btn-card-add-time-custom" data-theme="${code}" style="text-align:left; background:rgba(255,255,255,0.06); border:none; color:#fbbf24; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:700; cursor:pointer; margin-top:2px;">
-                ⚙️ Kustom Menit...
-              </button>
-            </div>
-          </div>
-
-          <!-- 3. Close Session (Merah) -->
-          <button type="button" class="btn btn-sm btn-theme-close-session" data-theme="${code}" style="background: #dc2626; border-color: #b91c1c; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 6px; border-radius: 6px; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Tutup Sesi Ujian Aktif">
-            <span>🔒</span> Close Session
-          </button>
-        </div>
-
-        <!-- Baris Bawah: Tombol Monitor Utama (Biru Lebar Penuh) -->
-        <button type="button" class="btn btn-sm btn-theme-live-monitor" data-theme="${code}" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); border: 1px solid #3b82f6; color: #ffffff; font-weight: 700; width: 100%; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(37,99,235,0.35);">
-          <span>👁️</span> Monitor Live & Status Ujian (${allowedStudentIds.length})
+  // Row 2: Primary Action Row (Height 54px)
+  let row2Content = '';
+  if (isLive) {
+    // LIVE VIEW: Full width button in Row 2 (Deep Navy / Royal Blue glow)
+    row2Content = `
+      <div style="height:54px;">
+        <button type="button" class="btn btn-wireframe-live-view btn-theme-live-monitor" data-theme="${code}">
+          <span>👁️</span> LIVE VIEW &bull; MONITOR REALTIME (${enrolledCount} SISWA)
         </button>
       </div>
     `;
   } else {
-    stateContent = `
-      <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.18); border-radius: 8px; padding: 12px 14px; margin: 12px 0 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: #fbbf24;">
-            <span>🔒</span> LOCKED &bull; No Active Session
-          </div>
-          <span style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; background: rgba(255,255,255,0.06); padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">
-            ⏱️ ${wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 60} Mins
-          </span>
-        </div>
-        <div style="font-size: 0.75rem; color: #94a3b8;">
-          Prerequisites: ${tasks.length} Quizzes Theme ${code} (Min 60%)
-        </div>
-      </div>
-    `;
-
-    actionButtons = `
-      <div style="display: flex; gap: 8px; align-items: center; margin-top: auto;">
-        <button type="button" class="btn btn-sm btn-theme-open-session" data-theme="${code}" data-mode="normal" style="background: #00c000; border-color: #009900; color: #ffffff; font-weight: 700; flex: 1; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Open normal test session (full score) for eligible students">
-          <span>🟢</span> Open Normal
+    // NORMAL (Green #00a82d) | REMIDI (Yellow #ffe600 with dark slate text #0f172a)
+    row2Content = `
+      <div class="card-block-row-buttons">
+        <button type="button" class="btn btn-wireframe-normal btn-theme-open-session" data-theme="${code}" data-mode="normal" title="Buka Sesi Normal (Nilai Penuh)">
+          <span>🟢</span> NORMAL
         </button>
-        <button type="button" class="btn btn-sm btn-theme-open-session" data-theme="${code}" data-mode="remedial" style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; font-weight: 700; flex: 1; padding: 8px 10px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Open remedial session (max 60% score) for students needing retake">
-          <span>🟡</span> Open Remedial
+        <button type="button" class="btn btn-wireframe-remidi btn-theme-open-session" data-theme="${code}" data-mode="remedial" title="Buka Sesi Remedial (Maksimal 60%)">
+          <span>🟡</span> REMIDI
         </button>
       </div>
     `;
   }
 
-  return `
-    <div class="card theme-test-card" style="background: var(--fm-bg-panel, #0f172a); border: 1px solid ${borderRgba}; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 16px rgba(0,0,0,0.25); position: relative; overflow: hidden;">
-      <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: ${color};"></div>
-      
-      <div>
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-          <div>
-            <span style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 4px; background: ${bgRgba}; color: ${color}; border: 1px solid ${borderRgba};">
-              THEME ${code}
-            </span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="badge-theme-duration" style="font-size: 0.72rem; font-weight: 700; color: #cbd5e1; background: rgba(255,255,255,0.06); padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); display: inline-flex; align-items: center; gap: 4px;" title="Official Exam Duration">
-              <span>⏱️</span> ${wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 60} Mins
-            </span>
-            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">${wordsTest && phrasesTest ? '2 Simultaneous Modules' : '1 Module'}</span>
+  // Row 3: Status / Secondary Controls (Height 54px)
+  let row3Content = '';
+  if (isLive) {
+    // +LATE STUDENTS (Green) | EDIT TIME (Yellow) | CLOSE SESSION (Red)
+    row3Content = `
+      <div class="card-block-row-buttons" style="position:relative;">
+        <!-- 1. +Late Students -->
+        <button type="button" class="btn btn-wireframe-late btn-theme-add-late" data-theme="${code}" title="Tambah Siswa Susulan / Late Arrivals">
+          <span>👥</span> +LATE STUDENTS
+        </button>
+
+        <!-- 2. Edit Time (Yellow with Dropdown Popover) -->
+        <div style="position:relative; flex:1; height:100%;">
+          <button type="button" class="btn btn-wireframe-edit-time btn-card-add-time" data-theme="${code}" style="width:100%;" title="Perpanjang Waktu Ujian">
+            <span>⏱️</span> EDIT TIME
+          </button>
+          <div id="card-add-time-menu-${code}" class="card-add-time-menu" style="display:none; position:absolute; left:0; bottom:calc(100% + 6px); background:#0f172a; border:1px solid rgba(255,255,255,0.18); border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,0.85); z-index:99999; min-width:175px; padding:6px; flex-direction:column; gap:3px;">
+            <div style="font-size:0.68rem; font-weight:700; color:#94a3b8; padding:3px 6px; border-bottom:1px solid rgba(255,255,255,0.08);">Perpanjang Ujian Theme ${code}:</div>
+            <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="5" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+              <span>⏱️ +5 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
+            </button>
+            <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="10" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+              <span>⏱️ +10 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
+            </button>
+            <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="15" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+              <span>⏱️ +15 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
+            </button>
+            <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="30" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+              <span>⏱️ +30 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
+            </button>
+            <button type="button" class="btn-card-add-time-custom" data-theme="${code}" style="text-align:left; background:rgba(255,255,255,0.06); border:none; color:#fbbf24; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:700; cursor:pointer; margin-top:2px;">
+              ⚙️ Kustom Menit...
+            </button>
           </div>
         </div>
 
-        <h4 style="margin: 4px 0 0; font-size: 1.15rem; font-weight: 800; color: #ffffff;">
-          ${escapeHtml(name)} Test
-        </h4>
-        <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 3px; display: flex; gap: 8px;">
-          <span>📝 Words (Written)</span>
-          <span>&bull;</span>
-          <span>💬 Phrases (Dropdown)</span>
-        </div>
-
-        ${stateContent}
+        <!-- 3. Close Session -->
+        <button type="button" class="btn btn-wireframe-close btn-theme-close-session" data-theme="${code}" title="Tutup Sesi Ujian Aktif">
+          <span>🔒</span> CLOSE SESSION
+        </button>
       </div>
+    `;
+  } else {
+    // LOCKED (Red #e60000)
+    row3Content = `
+      <div class="box-wireframe-locked">
+        <div style="font-size:0.88rem; font-weight:900; display:flex; align-items:center; gap:6px;">
+          <span>🔒</span> LOCKED &bull; NO ACTIVE SESSION
+        </div>
+        <div style="font-size:0.72rem; color:#fecaca; margin-top:2px; font-weight:600;">
+          Prerequisites: ${tasks.length} Quizzes Theme ${code} (Min 60%)
+        </div>
+      </div>
+    `;
+  }
 
-      ${actionButtons}
+  return `
+    <div class="theme-test-card-frame" style="border: 2px solid ${borderRgba}; background: ${bgRgba};">
+      <div class="theme-test-card-inner">
+        ${metadataBlock}
+        ${row2Content}
+        ${row3Content}
+      </div>
     </div>
   `;
 }
@@ -1509,6 +1524,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   const modeBadgeEl = modal.querySelector('#live-modal-mode-badge');
   const remainingEl = modal.querySelector('#live-modal-remaining');
   const studentsContainer = modal.querySelector('#live-modal-students-container');
+  const tableBody = modal.querySelector('#live-modal-table-body') || studentsContainer;
   const autoPollCheckbox = modal.querySelector('#live-modal-auto-poll');
   const searchInput = modal.querySelector('#live-modal-search');
   const refreshBtn = modal.querySelector('#btn-live-modal-refresh');
@@ -1554,6 +1570,22 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   if (searchInput) searchInput.value = '';
   _liveMonitorSearchQuery = '';
   _liveMonitorActiveFilter = 'all';
+  let _liveSortKey = 'alarm';
+  let _liveSortDirection = 'desc';
+
+  // Attach header sort click listeners
+  modal.querySelectorAll('.sortable-th').forEach(th => {
+    th.onclick = (e) => {
+      const key = e.currentTarget.getAttribute('data-sort-key');
+      if (_liveSortKey === key) {
+        _liveSortDirection = _liveSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        _liveSortKey = key;
+        _liveSortDirection = (key === 'name') ? 'asc' : 'desc';
+      }
+      renderLiveMonitorUI();
+    };
+  });
 
   let processedStudents = [];
   let _realtimeChannel = null;
@@ -1894,24 +1926,51 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       displayList = displayList.filter(s => (s.student.name || '').toLowerCase().includes(q));
     }
 
-    // Sort: alarms first, then in_progress, then submitted, then not_started
+    // Dynamic Column Sorting
     displayList.sort((a, b) => {
-      if (b.alarmCount !== a.alarmCount) return b.alarmCount - a.alarmCount;
-      const order = { 'in_progress': 1, 'submitted': 2, 'not_started': 3, 'cancelled': 4 };
-      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
-      return (a.student.name || '').localeCompare(b.student.name || '');
+      let cmp = 0;
+      if (_liveSortKey === 'name') {
+        cmp = (a.student.name || '').localeCompare(b.student.name || '');
+      } else if (_liveSortKey === 'status') {
+        const order = { 'in_progress': 1, 'submitted': 2, 'not_started': 3, 'cancelled': 4 };
+        cmp = (order[a.status] || 5) - (order[b.status] || 5);
+      } else if (_liveSortKey === 'progress') {
+        cmp = (a.answeredPercent || 0) - (b.answeredPercent || 0);
+      } else if (_liveSortKey === 'score') {
+        const sA = a.isEvaluated ? a.effectiveScore : -1;
+        const sB = b.isEvaluated ? b.effectiveScore : -1;
+        cmp = sA - sB;
+      } else if (_liveSortKey === 'alarm') {
+        cmp = (a.alarmCount || 0) - (b.alarmCount || 0);
+      }
+      return _liveSortDirection === 'asc' ? cmp : -cmp;
+    });
+
+    // Update Header Sort Icons
+    modal.querySelectorAll('.sortable-th').forEach(th => {
+      const key = th.getAttribute('data-sort-key');
+      const icon = th.querySelector('.sort-icon');
+      if (key === _liveSortKey) {
+        th.classList.add('active-sort');
+        if (icon) icon.textContent = _liveSortDirection === 'asc' ? '▲' : '▼';
+      } else {
+        th.classList.remove('active-sort');
+        if (icon) icon.textContent = '⇅';
+      }
     });
 
     if (displayList.length === 0) {
-      studentsContainer.innerHTML = `
-        <div style="padding: 30px; text-align: center; color: #94a3b8; font-size: 0.85rem;">
-          ${q ? `Tidak ada siswa yang cocok dengan "${escapeHtml(q)}".` : 'Tidak ada siswa pada filter ini.'}
-        </div>
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="7" style="padding: 40px 20px; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+            ${q ? `Tidak ada siswa yang cocok dengan "${escapeHtml(q)}".` : 'Tidak ada siswa pada filter ini.'}
+          </td>
+        </tr>
       `;
       return;
     }
 
-    studentsContainer.innerHTML = displayList.map(item => {
+    tableBody.innerHTML = displayList.map(item => {
       const s = item.student;
       const initial = (s.name || 'S').charAt(0).toUpperCase();
       const scoreColor = item.isEvaluated ? getGradeColorByScore(item.effectiveScore) : '#64748b';
@@ -1936,110 +1995,119 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       `;
 
       const hasAlarmAlert = item.alarmCount > 0;
-      const cardBorder = hasAlarmAlert ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid rgba(255,255,255,0.08)';
-      const cardBg = hasAlarmAlert ? 'rgba(239, 68, 68, 0.04)' : 'rgba(255,255,255,0.025)';
-      const cardShadow = hasAlarmAlert ? '0 0 14px rgba(239, 68, 68, 0.15)' : 'none';
+      const rowClass = hasAlarmAlert ? 'live-table-row row-alarm-highlight' : 'live-table-row';
 
       return `
-        <div class="live-student-card" style="background: ${cardBg}; border: ${cardBorder}; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; box-shadow: ${cardShadow}; transition: all 0.2s;">
-          <!-- 1. Student Identity & Heartbeat Telemetry -->
-          <div style="display: flex; align-items: center; gap: 12px; min-width: 240px;">
-            <div style="position: relative; width: 38px; height: 38px; flex-shrink: 0;">
-              <div style="width: 100%; height: 100%; border-radius: 50%; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-                ${initial}
+        <tr class="${rowClass}">
+          <!-- 1. NAMA -->
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="position:relative; width:34px; height:34px; flex-shrink:0;">
+                <div style="width:100%; height:100%; border-radius:50%; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800; box-shadow:0 2px 6px rgba(0,0,0,0.3);">
+                  ${initial}
+                </div>
+                ${item.isPulsing ? `
+                  <span style="position:absolute; bottom:-1px; right:-1px; width:11px; height:11px; border-radius:50%; background:${item.heartbeatColor}; border:2px solid #0b1329; box-shadow:0 0 6px ${item.heartbeatColor}; animation:pulse 1.5s infinite;"></span>
+                ` : `
+                  <span style="position:absolute; bottom:-1px; right:-1px; width:9px; height:9px; border-radius:50%; background:${item.heartbeatColor}; border:2px solid #0b1329;"></span>
+                `}
               </div>
-              <!-- Telemetry Pulse Ring -->
-              ${item.isPulsing ? `
-                <span style="position: absolute; bottom: -1px; right: -1px; width: 12px; height: 12px; border-radius: 50%; background: ${item.heartbeatColor}; border: 2px solid #0b1329; box-shadow: 0 0 6px ${item.heartbeatColor}; animation: pulse 1.5s infinite;"></span>
-              ` : `
-                <span style="position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-radius: 50%; background: ${item.heartbeatColor}; border: 2px solid #0b1329;"></span>
-              `}
-            </div>
-            <div>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 0.92rem; font-weight: 700; color: #ffffff;">${escapeHtml(s.name || 'Unnamed')}</span>
-                <span style="font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); color: ${item.heartbeatColor}; border: 1px solid rgba(255,255,255,0.08);">
-                  ${item.heartbeatText}
-                </span>
-              </div>
-              <div style="font-size: 0.73rem; color: #94a3b8; display: flex; align-items: center; gap: 6px; margin-top: 2px; flex-wrap: wrap;">
-                <span>${escapeHtml(theme.liveBatchName)}</span>
-                <span>&bull;</span>
-                <span style="color: #cbd5e1; font-weight: 600;">${item.activityFeed}</span>
-                ${item.velocityText ? `<span style="color:#38bdf8; font-weight:700;">${item.velocityText}</span>` : ''}
+              <div>
+                <div style="font-size:0.88rem; font-weight:700; color:#ffffff;">${escapeHtml(s.name || 'Unnamed')}</div>
+                <div style="font-size:0.72rem; color:#94a3b8; display:flex; align-items:center; gap:4px; margin-top:2px;">
+                  <span style="background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:3px; border:1px solid rgba(255,255,255,0.08);">${escapeHtml(theme.liveBatchName || '')}</span>
+                </div>
               </div>
             </div>
-          </div>
+          </td>
 
-          <!-- 2. Soal Terjawab (Progress Bar) -->
-          <div style="min-width: 170px; flex: 1;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 5px;">
-              <span style="color: #94a3b8;">Soal Terjawab:</span>
-              <span style="font-weight: 800; color: #ffffff;">${item.answeredCount} / ${item.totalQuestions} (${item.answeredPercent}%)</span>
+          <!-- 2. STATUS TEST -->
+          <td>
+            <div style="display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:5px; background:rgba(255,255,255,0.05); color:${item.heartbeatColor}; border:1px solid rgba(255,255,255,0.08);">
+              <span style="width:7px; height:7px; border-radius:50%; background:${item.heartbeatColor};"></span>
+              ${item.heartbeatText}
             </div>
-            <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
-              <div style="height: 100%; width: ${item.answeredPercent}%; background: linear-gradient(90deg, #3b82f6, #00c000ff); border-radius: 3px; transition: width 0.3s ease;"></div>
+            <div style="font-size:0.72rem; color:#cbd5e1; font-weight:600; margin-top:3px;">
+              ${escapeHtml(item.activeModule || 'Exam')}
             </div>
-          </div>
+          </td>
 
-          <!-- 3. Alarm / Anti-Cheat Status (Clickable for details) -->
-          <div style="min-width: 110px; text-align: center;">
+          <!-- 3. PROGRESS -->
+          <td style="min-width: 170px;">
+            <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:4px;">
+              <span style="color:#94a3b8;">Soal:</span>
+              <span style="font-weight:800; color:#ffffff;">${item.answeredCount} / ${item.totalQuestions} (${item.answeredPercent}%)</span>
+            </div>
+            <div style="height:5px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+              <div style="height:100%; width:${item.answeredPercent}%; background:linear-gradient(90deg, #3b82f6, #00c000ff); border-radius:3px; transition:width 0.3s ease;"></div>
+            </div>
+            <div style="font-size:0.7rem; color:#94a3b8; margin-top:3px; display:flex; align-items:center; gap:4px;">
+              <span style="color:#cbd5e1;">${item.activityFeed}</span>
+              ${item.velocityText ? `<span style="color:#38bdf8; font-weight:700;">&bull; ${item.velocityText}</span>` : ''}
+            </div>
+          </td>
+
+          <!-- 4. SCORE (REALTIME) -->
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              ${gradeCircleHtml}
+              <div>
+                <div style="font-size:0.92rem; font-weight:800; color:${scoreColor};">
+                  ${scoreDisplay}
+                </div>
+                <div style="font-size:0.7rem; color:#94a3b8;">
+                  ${item.scoreLabel}
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- 5. PEEK -->
+          <td style="text-align:center;">
+            <button type="button" class="btn btn-xs btn-inspect-student-answers" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; font-weight:700; font-size:0.75rem; padding:5px 9px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; cursor:pointer;" title="Intip lembar jawaban & riwayat pengerjaan siswa">
+              <span>👁️</span> Intip
+            </button>
+          </td>
+
+          <!-- 6. ALARM -->
+          <td style="text-align:center;">
             ${item.alarmCount === 0 ? `
-              <span style="font-size: 0.75rem; font-weight: 700; color: #34d399; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+              <span style="font-size:0.75rem; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">
                 🛡️ 0x Bersih
               </span>
             ` : `
-              <span class="btn-inspect-student-alarms" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="font-size: 0.75rem; font-weight: 800; color: #FF0000; background: rgba(255,0,0,0.2); border: 1px solid #FF0000; padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(255,0,0,0.3); cursor: pointer; transition: transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Klik untuk lihat rincian ${item.alarmCount}x alarm anti-cheat">
+              <span class="btn-inspect-student-alarms" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="font-size:0.75rem; font-weight:800; color:#FF0000; background:rgba(255,0,0,0.2); border:1px solid #FF0000; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(255,0,0,0.3); cursor:pointer;" title="Klik untuk lihat rincian ${item.alarmCount}x alarm anti-cheat">
                 🚨 ${item.alarmCount}x ALARM 🔍
               </span>
             `}
-          </div>
+          </td>
 
-          <!-- 4. Skor / Akurasi Real-Time -->
-          <div style="min-width: 120px; display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
-            <div style="text-align: right;">
-              <div style="font-size: 0.95rem; font-weight: 800; color: ${scoreColor};">
-                ${scoreDisplay}
-              </div>
-              <div style="font-size: 0.7rem; color: #94a3b8;">
-                ${item.scoreLabel}
-              </div>
+          <!-- 7. ACTION -->
+          <td style="text-align:right;">
+            <div style="display:inline-flex; align-items:center; gap:5px; justify-content:flex-end;">
+              ${item.targetAtt && item.status === 'in_progress' ? `
+                <button type="button" class="btn btn-xs btn-student-add-time" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; font-weight:700; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Beri tambahan waktu khusus siswa ini (+10m)">
+                  <span>⏱️</span> +Waktu
+                </button>
+              ` : ''}
+
+              ${item.targetAtt && (item.status === 'submitted' || item.status === 'cancelled') ? `
+                <button type="button" class="btn btn-xs btn-student-reopen-attempt" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#34d399; font-weight:700; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Buka kembali sesi ujian siswa ini (Resume Attempt)">
+                  <span>🔄</span> Resume
+                </button>
+              ` : ''}
+
+              <button type="button" class="btn btn-xs btn-kick-student" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(255,0,0,0.15); border:1px solid rgba(255,0,0,0.35); color:#ff6b6b; font-weight:700; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Keluarkan siswa dari sesi ujian">
+                <span>🚫</span> Keluarkan
+              </button>
             </div>
-            ${gradeCircleHtml}
-          </div>
-
-          <!-- 5. Interactive Tutor Action Suite -->
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <!-- Inspect Live Answers -->
-            <button type="button" class="btn btn-sm btn-inspect-student-answers" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.35); color: #38bdf8; font-weight: 700; font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" title="Intip lembar jawaban & riwayat pengerjaan siswa">
-              <span>👁️</span> Intip
-            </button>
-
-            <!-- Individual +Time (if in_progress) -->
-            ${item.targetAtt && item.status === 'in_progress' ? `
-              <button type="button" class="btn btn-sm btn-student-add-time" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.35); color: #fbbf24; font-weight: 700; font-size: 0.75rem; padding: 6px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" title="Beri tambahan waktu khusus siswa ini (+10m)">
-                <span>⏱️</span> +Waktu
-              </button>
-            ` : ''}
-
-            <!-- Resume / Re-open (if submitted or cancelled) -->
-            ${item.targetAtt && (item.status === 'submitted' || item.status === 'cancelled') ? `
-              <button type="button" class="btn btn-sm btn-student-reopen-attempt" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.35); color: #34d399; font-weight: 700; font-size: 0.75rem; padding: 6px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" title="Buka kembali sesi ujian siswa ini (Resume Attempt)">
-                <span>🔄</span> Resume
-              </button>
-            ` : ''}
-
-            <!-- Kick -->
-            <button type="button" class="btn btn-sm btn-kick-student" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background: rgba(255,0,0,0.12); border: 1px solid rgba(255,0,0,0.3); color: #ff6b6b; font-weight: 700; font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#FF0000'; this.style.color='#fff';" onmouseout="this.style.background='rgba(255,0,0,0.12)'; this.style.color='#ff6b6b';" title="Keluarkan siswa dari sesi ujian">
-              <span>🚫</span>
-            </button>
-          </div>
-        </div>
+          </td>
+        </tr>
       `;
     }).join('');
 
     // Attach kick listener
-    studentsContainer.querySelectorAll('.btn-kick-student').forEach(btn => {
+    tableBody.querySelectorAll('.btn-kick-student').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const studentId = e.currentTarget.getAttribute('data-student-id');
         const studentName = e.currentTarget.getAttribute('data-student-name');
@@ -2058,7 +2126,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     });
 
     // Attach Inspect Live Answers listener
-    studentsContainer.querySelectorAll('.btn-inspect-student-answers').forEach(btn => {
+    tableBody.querySelectorAll('.btn-inspect-student-answers').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const studentId = e.currentTarget.getAttribute('data-student-id');
         const found = processedStudents.find(p => p.student.id === studentId);
@@ -2171,7 +2239,7 @@ Status akan kembali menjadi 'in_progress' dan sisa waktu pengerjaan diperpanjang
     });
 
     // Attach Individual +Time listener
-    studentsContainer.querySelectorAll('.btn-student-add-time').forEach(btn => {
+    tableBody.querySelectorAll('.btn-student-add-time').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const attemptId = e.currentTarget.getAttribute('data-attempt-id');
         const studentName = e.currentTarget.getAttribute('data-student-name') || 'Siswa';
@@ -2191,7 +2259,7 @@ Status akan kembali menjadi 'in_progress' dan sisa waktu pengerjaan diperpanjang
     });
 
     // Attach Reopen / Resume Attempt listener
-    studentsContainer.querySelectorAll('.btn-student-reopen-attempt').forEach(btn => {
+    tableBody.querySelectorAll('.btn-student-reopen-attempt').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const attemptId = e.currentTarget.getAttribute('data-attempt-id');
         const studentName = e.currentTarget.getAttribute('data-student-name') || 'Siswa';
@@ -2215,7 +2283,7 @@ Status akan kembali 'in_progress' dan waktu ujian ditambah +30 menit agar siswa 
     });
 
     // Attach inspect alarm detail listener
-    studentsContainer.querySelectorAll('.btn-inspect-student-alarms').forEach(btn => {
+    tableBody.querySelectorAll('.btn-inspect-student-alarms').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const studentId = e.currentTarget.getAttribute('data-student-id');
         const found = processedStudents.find(p => p.student.id === studentId);

@@ -6021,3 +6021,295 @@ tfoot.datagrid-tfoot,
 }
 
 
+
+/* ==========================================================================
+   Exam Session Cards & Sortable Live Monitor Table (Wireframe Alignment)
+   ========================================================================== */
+
+/* Outer frame and card layout */
+.theme-test-card-frame {
+  border: 2px solid #0284c7 !important;
+  background: #0284c7 !important;
+  padding: 8px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+.theme-test-card-frame:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(2, 132, 199, 0.35) !important;
+}
+
+.theme-test-card-inner {
+  background: #0b1329 !important;
+  border-radius: 9px !important;
+  padding: 14px 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  height: 100% !important;
+  position: relative !important;
+}
+
+/* Row 1: Test Metadata */
+.card-block-metadata {
+  background: #021a44 !important;
+  border: 1px solid #1e3a8a !important;
+  border-radius: 8px !important;
+  padding: 10px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  min-height: 72px !important;
+}
+
+/* Row 2 & 3: Button Rows */
+.card-block-row-buttons {
+  display: flex !important;
+  gap: 10px !important;
+  height: 54px !important;
+  align-items: stretch !important;
+}
+
+/* Semantics: Green = Normal / +Late */
+.btn-wireframe-normal {
+  background: #00a82d !important;
+  border: 1px solid #008022 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.04em !important;
+  flex: 1 !important;
+  height: 100% !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 168, 45, 0.35) !important;
+  cursor: pointer !important;
+  transition: filter 0.15s, transform 0.15s !important;
+}
+.btn-wireframe-normal:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btn-wireframe-late {
+  background: #00a82d !important;
+  border: 1px solid #008022 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 0.78rem !important;
+  flex: 1 !important;
+  height: 100% !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  box-shadow: 0 4px 10px rgba(0, 168, 45, 0.3) !important;
+  cursor: pointer !important;
+  transition: filter 0.15s, transform 0.15s !important;
+}
+.btn-wireframe-late:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* Semantics: Yellow = Remidi / Edit Time (Dark text #0F172A per Rule 2.10) */
+.btn-wireframe-remidi {
+  background: #ffe600 !important;
+  border: 1px solid #d4c000 !important;
+  color: #0f172a !important;
+  font-weight: 900 !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.04em !important;
+  flex: 1 !important;
+  height: 100% !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  box-shadow: 0 4px 12px rgba(255, 230, 0, 0.3) !important;
+  cursor: pointer !important;
+  transition: filter 0.15s, transform 0.15s !important;
+}
+.btn-wireframe-remidi:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.btn-wireframe-edit-time {
+  background: #ffe600 !important;
+  border: 1px solid #d4c000 !important;
+  color: #0f172a !important;
+  font-weight: 900 !important;
+  font-size: 0.78rem !important;
+  flex: 1 !important;
+  height: 100% !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  box-shadow: 0 4px 10px rgba(255, 230, 0, 0.3) !important;
+  cursor: pointer !important;
+  transition: filter 0.15s, transform 0.15s !important;
+}
+.btn-wireframe-edit-time:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+/* Semantics: Red = Locked / Close Session */
+.box-wireframe-locked {
+  background: #e60000 !important;
+  border: 1px solid #b30000 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.03em !important;
+  width: 100% !important;
+  height: 54px !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 14px rgba(230, 0, 0, 0.35) !important;
+}
+
+.btn-wireframe-close {
+  background: #e60000 !important;
+  border: 1px solid #b30000 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 0.78rem !important;
+  flex: 1 !important;
+  height: 100% !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  box-shadow: 0 4px 10px rgba(230, 0, 0, 0.3) !important;
+  cursor: pointer !important;
+  transition: filter 0.15s, transform 0.15s !important;
+}
+.btn-wireframe-close:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* Semantics: Deep Navy / Royal Blue = Live View in Row 2 */
+.btn-wireframe-live-view {
+  background: #021a44 !important;
+  border: 2px solid #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 900 !important;
+  font-size: 0.92rem !important;
+  letter-spacing: 0.04em !important;
+  width: 100% !important;
+  height: 54px !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.45) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+.btn-wireframe-live-view:hover {
+  background: #1e3a8a !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 6px 22px rgba(56, 189, 248, 0.5) !important;
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Sortable Live Monitor Data Table
+   ========================================================================== */
+.live-monitor-table-wrapper {
+  overflow-x: auto;
+  overflow-y: auto;
+  flex: 1;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #080d1a;
+}
+
+.live-monitor-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.82rem;
+}
+
+.live-monitor-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #0f172a;
+}
+
+.live-monitor-table thead th {
+  padding: 11px 14px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+}
+
+.live-monitor-table thead th.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s, background-color 0.15s;
+}
+.live-monitor-table thead th.sortable-th:hover {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.06);
+}
+
+.live-monitor-table thead th.sortable-th.active-sort {
+  color: #38bdf8;
+}
+
+.sort-icon {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+.active-sort .sort-icon {
+  color: #38bdf8;
+  font-weight: 900;
+}
+
+.live-table-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background-color 0.15s ease;
+}
+.live-table-row:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.live-table-row td {
+  padding: 10px 14px;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.live-table-row.row-alarm-highlight {
+  background: rgba(239, 68, 68, 0.05);
+}
+.live-table-row.row-alarm-highlight:hover {
+  background: rgba(239, 68, 68, 0.09);
+}

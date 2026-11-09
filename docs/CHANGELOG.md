@@ -6006,3 +6006,51 @@ ode -c "js/test.js"
 - command: 
 ode -c "js/test.js"
 - result: PASS (zero syntax errors)
+
+## [2026-11-09 09:55] — Versi Warna Exam Card Session Wireframe & Sortable Live Monitor Table
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 380: Versi Warna Exam Card Session Wireframe & Sortable Live Monitor Table
+**Status:** PASS
+
+### Why
+- User requested redesigning the cluttered Live Test Session Monitor (Gambar 1) into a clean, sticky-header sortable table with 7 dedicated columns: NAMA, STATUS TEST, PROGRESS, SCORE (REALTIME), PEEK, ALARM, and ACTION.
+- User provided an updated colored wireframe for the Exam Card Session (Gambar 2 vs Gambar 3 vs Versi Warna) featuring strict vertical symmetry (10px gaps, equal 54px–60px row heights), primary actions in row 2 (NORMAL/REMIDI on locked card, LIVE VIEW on live card), and secondary session management tools in row 3 (+LATE STUDENTS, EDIT TIME, CLOSE SESSION).
+
+### Changed
+1. **Exam Session Card Redesign (`js/admin/tests-access.js`, `css/admin.css`)**:
+   - Replaced old card structure with semantic 3-row wireframe layout:
+     - Row 1: Deep Navy `#021a44` Metadata Block (Theme chip, duration, module count, title, module chips; includes live tag and batch info if active).
+     - Row 2: Primary Action Row:
+       - Locked: Green `#00a82d` `[ NORMAL ]` & Yellow `#ffe600` `[ REMIDI ]` with dark text `#0f172a`.
+       - Live: Full-width Deep Navy/Royal Blue `#021a44` / `#2563eb` `[ LIVE VIEW • MONITOR REALTIME ]`.
+     - Row 3: Secondary / Status Controls Row:
+       - Locked: Red `#e60000` `[ LOCKED • NO ACTIVE SESSION ]` with prerequisites text.
+       - Live: Green `#00a82d` `[ +LATE STUDENTS ]`, Yellow `#ffe600` `[ EDIT TIME ]` (with popover menu), and Red `#e60000` `[ CLOSE SESSION ]`.
+   - Card framing: Outer cyan/sky accent outline (`#0284c7`).
+2. **Sortable Live Monitor Data Table (`js/admin/tests-access.js`, `css/admin.css`)**:
+   - Replaced `.live-student-card` flex container with `.live-monitor-table` featuring sticky `<thead>` and 7 sortable/action columns:
+     - `NAMA`: Avatar + Name + Batch (sortable A-Z / Z-A).
+     - `STATUS TEST`: Heartbeat pulse dot + Active module (sortable by activity status).
+     - `PROGRESS`: Answered fraction + Slim gradient bar + Velocity telemetry (sortable 0%–100%).
+     - `SCORE (REALTIME)`: Accuracy % + Authoritative grade circle badge (`TOPSCORE_COLORS`), `--` if unattempted (sortable high-low).
+     - `PEEK`: Dedicated `[ 👁️ Intip ]` button triggering live student answer sheet modal `#modal-student-live-answers`.
+     - `ALARM`: Shield badge `🛡️ 0x Bersih` or red alert `🚨 Xx ALARM 🔍` with 1-click drilldown into anti-cheat modal `#modal-student-live-alarms` (sortable, alarms-first default).
+     - `ACTION`: `⏱️ +Waktu`, `🔄 Resume`, and `🚫 Keluarkan`.
+   - Dynamic sorting engine updates rows smoothly without resetting scroll position or search filter.
+3. **Visual Proof & Verification Artifacts**:
+   - `comparison_session_card_new_vs_current.png`: Comparative visual evidence.
+   - `live_table_and_card_session_verified.png`: Final verification screenshot.
+
+### Files
+- `css/admin.css` — added `.theme-test-card-frame`, `.theme-test-card-inner`, `.btn-wireframe-*`, `.box-wireframe-locked`, `.live-monitor-table-wrapper`, `.live-monitor-table`, `.sortable-th`, `.sort-icon`, `.live-table-row`, `.row-alarm-highlight`
+- `js/admin/tests-access.js` — updated `renderThemeCard`, modal HTML, `openThemeLiveMonitorModal`, `renderLiveMonitorUI` with sorting engine and table row mapping
+- `docs/CURRENT_STATE.md` — updated current state to Phase 380 COMPLETE
+
+### Tests
+- command: `node -c js/admin/tests-access.js`
+- result: PASS (zero syntax errors)
+- command: `node scripts/test_batch_eligibility.mjs`
+- result: PASS (14/18 eligible, Mr. Test verified)
+- command: `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`
+- result: PASS (10/10 consecutive runs, 132/132 assertions, zero defects)
