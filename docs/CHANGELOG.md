@@ -1,3 +1,25 @@
+## [2026-11-09 22:46] — Side Quest: VS Code Extensions Audit & Optimization (Option 1)
+
+**Agent/Session:** Antigravity  
+**Phase:** Side Quest  
+**Status:** PASS  
+
+### Why
+- The user requested Option 1 from the VS Code Extensions Audit (`Side Quest — VS Code Extensions Audit.md`).
+- Two extensions (`formulahendry.auto-close-tag` and `formulahendry.auto-rename-tag`) were redundant with native VS Code core features (`html.autoClosingTags: true` and `"editor.linkedEditing": true`).
+- `auto-rename-tag` was prone to cursor stutter and lag on large HTML files (e.g., `admin.html` with 3,800+ lines).
+
+### Changed
+1. **`.vscode/extensions.json`**:
+   - Removed `formulahendry.auto-close-tag` and `formulahendry.auto-rename-tag`.
+   - Cleaned up the HTML & Productivity category to maintain 15 lean, high-performance recommendations.
+
+### Verification
+- `.vscode/extensions.json` syntax validation: PASS (valid JSON with comments, 15 items).
+- `npm.cmd test`: PASS (100% across all suites).
+
+---
+
 ## [2026-11-09 19:20] — Phase 387: Tutor Role & Strict Role-Based Access Control (RBAC)
 
 **Agent/Session:** Antigravity  

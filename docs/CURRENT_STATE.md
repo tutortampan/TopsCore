@@ -1,10 +1,10 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-09 19:20 UTC+8
-Current Phase: Phase 387: Tutor Role & Strict Access Control (RBAC) [COMPLETE]
+Last Updated: 2026-11-09 22:46 UTC+8
+Current Phase: Phase 387: Tutor Role & Strict Access Control (RBAC) [COMPLETE] & Side Quest (VS Code Extensions) [COMPLETE]
 Status: COMPLETE
 
-## Completed Work (Phase 387):
+## Completed Work (Phase 387 & Side Quest):
 1. **Unified Session Role Engine (`js/session.js`)**:
    - Extended `setAdminSession(data)` to store authoritative user roles (`admin` or `tutor`) and usernames.
    - Added `getAdminRole()`, `isTutorRole()`, and `isAdminRole()` helpers with SSR/Node safe-fallbacks.
@@ -30,6 +30,16 @@ Status: COMPLETE
    - Created dedicated automated test suite `scripts/test_tutor_role_rbac.mjs` (`npm run test:rbac`), integrated directly into `npm test`.
    - Verified 8 distinct RBAC invariants: 100% PASS with 0 defects.
    - Full suite verified: `npm run test:syntax`, `npm run test:imports`, `npm run test:health`, `npm test` all 100% PASS.
+
+7. **Side Quest: VS Code Extensions Optimization (Option 1)**:
+   - Evaluated `.vscode/extensions.json` recommendation stack.
+   - Removed redundant `formulahendry.auto-close-tag` and `formulahendry.auto-rename-tag`.
+   - Replaced duplicate overhead with native VS Code core settings (`editor.linkedEditing: true`), eliminating potential cursor stutter on large HTML files like `admin.html`. Total recommendations streamlined from 17 to 15.
+
+## Files Changed In Latest Step:
+- `.vscode/extensions.json`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
 
 ## Next Exact Action:
 - Commit and push changes to `main`.
