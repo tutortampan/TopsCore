@@ -1,42 +1,43 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-09 08:31 UTC+8
-Current Phase: Phase 375: Admin Zero-Stale Cache Invalidation & Written Exam Telemetry Monitoring [COMPLETE]
+Last Updated: 2026-11-09 09:05 UTC+8
+Current Phase: Phase 377: Permanent ServiceWorker Elimination on Tutor Console & Vocab Vault Split Verification [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Admin Console Service Worker Cache Bypass (`sw.js`)**:
-   - Upgraded Service Worker cache name to `topscore-cache-option-a-v98`.
-   - Added explicit bypass in `sw.js` for any request matching `admin` or `/admin/`, ensuring that `admin.html`, `css/admin.css`, and `js/admin/*` are NEVER cached or intercepted by the service worker.
-   - Removed `admin.html`, `css/admin.css`, and `js/admin/admin-init.js` from `ASSETS_TO_CACHE` precache list.
-   - Added automatic Cache Storage cleaner in `<head>` of `admin.html` to instantly delete obsolete `topscore-cache-*` caches on load.
-   - Updated `registerServiceWorker(swPath = 'sw.js?v=20261109_v172')` in `js/admin/admin-init.js`.
+1. **Permanent Service Worker Elimination for Tutor Console (`admin.html`, `js/admin/admin-init.js`)**:
+   - Injected unconditional ServiceWorker unregistration and Cache Storage deletion in `<head>` of `admin.html`.
+   - Updated `registerServiceWorker()` in `js/admin/admin-init.js` to strictly unregister all service workers and wipe `topscore-cache*` on load.
+   - Bumped cache busters across `admin.html`, `sw.js` (to `v99`), and `js/admin/app.js` (to `v173`).
+2. **Vocabulary Vault Split Architecture Verification (`js/admin/vocab-vault.js`)**:
+   - Tab 1: `🗺️ Theme Manager` (Multi-tenant program distribution, 0 crowded POS columns, clean items chips `40 items (30W · 10P)`, instant program toggle pills, CRUD rename/delete).
+   - Tab 2: `⚡ Theme Blueprint` (Auto-Generator command bar, test readiness matrix per topic/theme for Practice Tasks & Milestone Exams, 1-click generator launch).
+   - All 31 assertions in `scripts/test_multi_program_theme_blueprint_v166.mjs` PASSED (100%).
+3. **Live Written Exam Telemetry Tracking (`2C-WORDS-EXAM`)**:
+   - Tracking 8 students in Batch 134 answering 440 questions.
+   - Leaderboard: Miss Isnantika Salsabila (418/440), Miss Alfina Damayanti (381/440), Miss Cinta Laura (344/440), Miss Riska Fetrosia (341/440), Mr. Lalu Yuda Handika Prawira (309/440).
+   - Auto-close countdown approaching 09:15:14 WIB.
 
-2. **Cache Buster Synchronization (`v=20261109_v172`)**:
-   - Bumped `tests-access.js` import in `js/admin/app.js` to `?v=20261109_v172`.
-   - All critical admin modules (`vocab-vault.js`, `tests-access.js`, `app.js`, `admin-init.js`) now use synchronized cache buster query parameters.
+2. **Side Quest 1: Forgive / Dispensasi Nilai KKM Standardization**:
+   - Migrated all 87 task attempts of `Mr. Test` (`0694c6f5-076c-43d1-99ee-0a8800975bcb`) from 100% (Grade ★) to KKM 60% (Grade C, 24/40 points).
+   - Standardized `adminApplyForgiven` in `js/api.js` to automatically set forgiven attempts to the test's minimum required score (`minimum_required_score || 60`, Grade C).
 
-3. **Live Written Exam Telemetry Monitoring (Batch 134, Minute 74 of 90)**:
-   - Exam: `2C-WORDS-EXAM - SHOPPING ESSENTIALS` (Test ID: `6705f171-7b17-48d1-9391-e301f663a411`)
-   - Class: `Camp 2nd Vocabulary`
-   - Real-time student progress:
-     - Miss Alfina Damayanti: 262 / 440 (Leader)
-     - Miss Cinta Laura: 245 / 440 (Top 2)
-     - Miss Isnantika Salsabila: 241 / 440 (Top 3)
-     - Mr. Lalu Yuda Handika Prawira: 233 / 440 (Top 4)
-     - Miss Riska Fetrosia: 222 / 440 (Top 5)
-     - Mr. Ayya Sofyandi Mzeth: 156 / 440
-     - Miss Havvina Solehah: 151 / 440 (Active resumed session)
-     - Miss Adinda Karunia Farela: 144 / 440
-   - All 8 students actively typing in Written mode without technical defects or network bottlenecks.
+3. **Side Quest 2: Leaderboard Grade Font Contrast**:
+   - Removed `color: #ffffff !important;` from `.leaderboard-grade-chip` in `css/dashboard.css`.
+   - Applied `TOPSCORE_COLORS.TEXT_DARK` (`#0F172A`) with `!important` to `.leaderboard-grade-chip` in `js/dashboard.js` for grades A, B, C, D, E, and `TEXT_STAR` (`#FFFFFF`) only for Grade ★ per AGENTS.md Rule 2.10.
 
-## Database State:
-- `tests.payload.test_session.allowed_student_ids` contains 12 enrolled students for `2C-WORDS-EXAM` (`6705f171-7b17-48d1-9391-e301f663a411`).
-- `attempt_answers` actively receiving typed strings via `save-answer` Edge Function.
+4. **Side Quest 3: Live Card Buttons Reorganization**:
+   - Row 1 (Top, 3 buttons):
+     - `[👥 + Students]` (Green: `#00c000`)
+     - `[⏱️ + Add Time]` (Yellow Amber: `#f59e0b`, dark text `#0f172a`, font-weight 800)
+     - `[🔒 Close Session]` (Red: `#dc2626`)
+   - Row 2 (Bottom, 1 full-width button):
+     - `[👁️ Monitor Live & Status Ujian (X)]` (Blue: `linear-gradient(135deg, #2563eb, #1d4ed8)`)
 
-## Test Verification:
-- `node scripts/test_ui_tab_badges_and_grade_score_v167.mjs`: PASS (28/28 assertions).
-- `node scripts/test_multi_program_theme_blueprint_v166.mjs`: PASS (31/31 assertions).
-- `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: PASS (10/10 runs, 132/132 assertions).
-- `node --check js/admin/tests-access.js`: PASS.
-- `node --check js/admin/app.js`: PASS.
+5. **Side Quest 4: Ratification of `/learn` Side Quest Protocol in `AGENTS.md`**:
+   - Formalized Rule 2.22 in `AGENTS.md` establishing dedicated plan artifacts named `Side Quest — <Title>` for all `/btw` or side-branched conversations.
+
+## Verification:
+- `node scripts/test_batch_eligibility.mjs`: PASS (13/18 eligible, Mr. Test verified eligible).
+- `node scripts/test_multi_program_theme_blueprint_v166.mjs`: PASS (31/31 assertions, 100%).
+- `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: PASS (10/10 consecutive runs, 132/132 assertions).

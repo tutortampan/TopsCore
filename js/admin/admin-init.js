@@ -172,14 +172,18 @@ export function initRecordDrawer() {
   };
 }
 
-export function registerServiceWorker(swPath = 'sw.js?v=20261109_v172') {
+export function registerServiceWorker() {
+  // Tutor's Room Admin Console must NEVER be cached by Service Worker
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register(swPath)
-        .then(reg => {
-          reg.update();
-        })
-        .catch(err => console.warn('ServiceWorker registration failed:', err));
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(reg => reg.unregister());
+    });
+  }
+  if ('caches' in window) {
+    caches.keys().then(keys => {
+      keys.forEach(k => {
+        if (k.startsWith('topscore-cache')) caches.delete(k);
+      });
     });
   }
 }

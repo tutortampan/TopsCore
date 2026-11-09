@@ -1,3 +1,93 @@
+## [2026-11-09 09:05] — Phase 377: Permanent ServiceWorker Elimination on Tutor Console & Vocab Vault Split Verification
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 377  
+**Status:** PASS  
+
+### Why
+- User submitted screenshot of `admin.html#vocab_vault` showing legacy 16-column matrix with old tabs (`Topic Blueprint 34`) due to persistent browser caching and active ServiceWorker on port 5500.
+- Tutor's Room is a live administrative console and must never be intercepted or cached by Service Worker.
+- Need to unregister any active SW on `admin.html`, wipe all `topscore-cache*` caches automatically on load, bump cache busters to `v173`, and confirm live exam progress approaching 09:15 WIB close.
+
+### Changed
+1. **Unconditional ServiceWorker Unregistration & Cache Purge (`admin.html`, `js/admin/admin-init.js`)**:
+   - `admin.html` `<head>`: Injected immediate unregister loop for all `serviceWorker` registrations and complete deletion of all `topscore-cache*` storage.
+   - `js/admin/admin-init.js`: Replaced `navigator.serviceWorker.register()` with explicit `unregister()` and cache deletion so admin console is strictly fresh and live.
+2. **Asset Cache-Busters Bumped to v173 (`admin.html`, `sw.js`, `js/admin/app.js`)**:
+   - `sw.js`: Bumped cache name to `topscore-cache-option-a-v99`.
+   - `admin.html`: Bumped `admin.css?v=20261109_v173`, `admin-init.js?v=20261109_v173`, `app.js?v=20261109_v173`.
+   - `js/admin/app.js`: Bumped `vocab-vault.js?v=20261109_v173`.
+3. **Split Architecture Verification (`js/admin/vocab-vault.js`)**:
+   - Verified 100% test passing of `_renderThemeManagerTab` (Theme Manager, program distribution, 0 crowded POS columns) and `_renderThemeBlueprintTab` (Theme Blueprint, auto-generator command bar, test readiness matrix).
+
+### Verification
+- `node scripts/test_ui_tab_badges_and_grade_score_v167.mjs`: PASS (28/28 assertions, 100%).
+- `node scripts/test_multi_program_theme_blueprint_v166.mjs`: PASS (31/31 assertions, 100%).
+- `node --check js/admin/admin-init.js`: PASS.
+- `node --check js/admin/app.js`: PASS.
+
+### Files
+- `admin.html`
+- `sw.js`
+- `js/admin/admin-init.js`
+- `js/admin/app.js`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+
+## [2026-11-09 08:56] — Phase 376: Unified Live Exam Mission Control, Forgive KKM Standardization, Leaderboard Contrast & Side Quest Protocol
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 376  
+**Status:** PASS  
+
+### Why
+- The Live Test Session Monitor felt static ("kurang live") because statuses were flat database enums without active heartbeat telemetry, students with 0 answers were penalized with a harsh red `0% E Below Passing`, and tutors only had a single blunt "Keluarkan" button.
+- User requested to unify the Live Monitor enhancement with two side quests:
+  1. Forgive/dispensasi tasks should give KKM minimum passing score (60% / Grade C), not 100% Star ★.
+  2. Leaderboard grade chips had white font on bright yellow/lime backgrounds due to `color: #ffffff !important;` in `css/dashboard.css`.
+  3. Live card buttons needed reorganization: Row 1 (+ Students | + Add Time | Close Session), Row 2 (Monitor Live).
+  4. Ratify `/learn` Side Quest Protocol into `AGENTS.md` (Rule 2.22).
+
+### Changed
+1. **Live Test Session Monitor Transformation ("Mission Control") (`js/admin/tests-access.js`, `js/api.js`)**:
+   - Heartbeat Telemetry: Real-time pulse indicator on student avatars (`🟢 Aktif Menjawab`, `🟡 Idle 2m`, `🔴 Away / Tidak Aktif`, `⚪ Belum Masuk`).
+   - Micro-Activity Feed: Displays last answered question with relative timestamp (`Terakhir: Soal #285 (14s lalu)`), velocity indicator (`⚡ 1.4 q/m`), and projected finish time (`ETA ~18m`).
+   - Polished Running Score: Replaced harsh red `0% E Below Passing` for beginners with neutral `-- (Memulai Ujian...)`. Displays running accuracy (`Akurasi (X/Y)`) once answering begins.
+   - Interactive Action Suite per Student:
+     - `👁️ Intip`: Opens `#modal-student-live-answers` showing real-time question-by-question breakdown, student inputs, correctness badges, and quick actions.
+     - `⏱️ +Waktu`: Allows tutors to grant +10m time specifically to an individual student (`extendIndividualAttemptTime`).
+     - `🔄 Resume`: Allows tutors to unblock/reopen an interrupted or auto-submitted attempt (`reopenStudentAttempt`).
+     - `🚫 Keluarkan`: Kick student with confirmation modal.
+   - 1-Second Countdown Ticker: Header now displays real-time ticking countdown (`⏳ 41m 58s`).
+   - Security Alarm Flare: Highlights cards of students with anti-cheat alarms with red glow border and 1-click incident inspector.
+2. **Side Quest 1: Forgive KKM Standardization (`js/api.js`, Supabase DB)**:
+   - Migrated all 87 task attempts of `Mr. Test` (`0694c6f5-076c-43d1-99ee-0a8800975bcb`) from 100% (Grade ★) to KKM 60% (Grade C, 24/40 points).
+   - Standardized `adminApplyForgiven` in `js/api.js` to set forgiven attempts to test minimum required score (`minimum_required_score || 60`, Grade C).
+3. **Side Quest 2: Leaderboard Grade Font Contrast (`css/dashboard.css`, `js/dashboard.js`)**:
+   - Removed `color: #ffffff !important;` from `.leaderboard-grade-chip` in `css/dashboard.css`.
+   - Applied `TOPSCORE_COLORS.TEXT_DARK` (`#0F172A`) with `!important` to `.leaderboard-grade-chip` in `js/dashboard.js` for grades A, B, C, D, E, and `TEXT_STAR` (`#FFFFFF`) only for Grade ★ per AGENTS.md Rule 2.10.
+4. **Side Quest 3: Live Card Buttons Reorganization (`js/admin/tests-access.js`)**:
+   - Row 1 (Top, 3 buttons): `[👥 + Students]` (Green), `[⏱️ + Add Time]` (Yellow Amber), `[🔒 Close Session]` (Red).
+   - Row 2 (Bottom, 1 full-width button): `[👁️ Monitor Live & Status Ujian (X)]` (Blue).
+5. **Side Quest 4: Ratification of `/learn` Side Quest Protocol in `AGENTS.md`**:
+   - Formalized Rule 2.22 in `AGENTS.md` establishing dedicated plan artifacts named `Side Quest — <Title>` for all `/btw` or side-branched conversations.
+
+### Verification
+- `node scripts/test_batch_eligibility.mjs`: PASS (13/18 eligible, Mr. Test verified eligible).
+- `node scripts/test_multi_program_theme_blueprint_v166.mjs`: PASS (31/31 assertions, 100%).
+- `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: PASS (10/10 consecutive runs, 132/132 assertions).
+
+### Files
+- `AGENTS.md`
+- `css/dashboard.css`
+- `js/admin/tests-access.js`
+- `js/api.js`
+- `js/dashboard.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## [2026-11-09 08:31] — Phase 375: Admin Zero-Stale Cache Invalidation & Written Exam Telemetry Monitoring
 
 **Agent/Session:** Antigravity  

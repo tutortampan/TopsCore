@@ -447,6 +447,16 @@ The platform strictly uses authoritative spatial and pedagogical terminology acr
    - `TASK`: Formative practice drill (7x7 repetitive mastery model).
    - `EXAM`: Formal assessment milestone with time limits and prerequisite weighting.
 
+## 2.22 Side Quest Protocol for Side Conversations (/btw)
+
+Whenever an instruction, sub-task, or investigation originates from a side thread (`/btw`) or side-branched conversation:
+1. **Dedicated Plan Artifact**: The agent MUST NOT merge the request into the main phase plan.
+2. **Authoritative Naming Convention**: The agent MUST create a dedicated plan artifact named:
+   ```text
+   Side Quest — <Descriptive Title>
+   ```
+3. **Isolation of Scope**: The Side Quest plan must specifically isolate the side request, its technical diagnostic, proposed resolution, and regression checklist without modifying the active milestone scope of the primary roadmap.
+
 ---
 
 # 3. TARGET ARCHITECTURE

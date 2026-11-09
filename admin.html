@@ -13,17 +13,25 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20261109_v172" />
-  <link rel="stylesheet" href="css/admin.css?v=20261109_v172" />
+  <link rel="stylesheet" href="css/admin.css?v=20261109_v173" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
   <!-- SheetJS for Excel Import / Export -->
   <script src="./js/vendor/xlsx.full.min.js?v=20261107_v161" defer
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=20261107_v161';"></script>
 
   <script>
+    // Tutor's Room Admin Console: Completely unregister Service Worker and purge caches
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        for (var i = 0; i < regs.length; i++) {
+          regs[i].unregister();
+        }
+      });
+    }
     if ('caches' in window) {
-      caches.keys().then(keys => {
-        keys.forEach(k => {
-          if (k.startsWith('topscore-cache') && k !== 'topscore-cache-option-a-v98') {
+      caches.keys().then(function(keys) {
+        keys.forEach(function(k) {
+          if (k.startsWith('topscore-cache')) {
             caches.delete(k);
           }
         });
@@ -542,8 +550,8 @@
     </div>
   </div>
 
-<script type="module" src="./js/admin/admin-init.js?v=20261109_v172"></script>
-  <script type="module" src="js/admin/app.js?v=20261109_v172"></script>
+<script type="module" src="./js/admin/admin-init.js?v=20261109_v173"></script>
+  <script type="module" src="js/admin/app.js?v=20261109_v173"></script>
 
 
 

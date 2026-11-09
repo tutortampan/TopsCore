@@ -23,6 +23,8 @@ import {
   fetchLiveTestSessionData,
   closeTestSession,
   extendTestSessionTime,
+  extendIndividualAttemptTime,
+  reopenStudentAttempt,
   getGrade
 } from '../api.js?v=20261106_v160';
 import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261106_v160';
@@ -589,6 +591,43 @@ export async function renderClassTestSessions(container, context = {}) {
         </div>
       </div>
     </div>
+
+    <!-- Modal 6: Inspect Student Live Answers Modal -->
+    <div id="modal-student-live-answers" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:10010; padding:16px;">
+      <div class="modal-box card" style="background:#0b1329; border:1px solid rgba(56,189,248,0.35); border-radius:14px; width:100%; max-width:850px; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.95);">
+        <!-- Header -->
+        <div style="padding:16px 22px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.9); flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:38px; height:38px; border-radius:50%; background:#0284c7; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.05rem; box-shadow:0 2px 10px rgba(2,132,199,0.4);" id="inspect-answers-avatar">
+              S
+            </div>
+            <div>
+              <h4 id="inspect-answers-student-name" style="margin:0; font-size:1.15rem; font-weight:800; color:#ffffff;">Lembar Jawaban Siswa</h4>
+              <div id="inspect-answers-meta" style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Progres dan status jawaban real-time</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div id="inspect-answers-score-badge" style="padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:800; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">
+              Akurasi: --
+            </div>
+            <button type="button" class="btn btn-ghost btn-icon" id="btn-close-inspect-answers" style="color:#94a3b8; font-size:1.3rem;">✕</button>
+          </div>
+        </div>
+
+        <!-- Answers List Container -->
+        <div id="inspect-answers-content" style="padding:16px 22px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px;">
+          <!-- Dynamically populated answer rows -->
+        </div>
+
+        <!-- Footer -->
+        <div style="padding:14px 22px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.35); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div style="display:flex; gap:8px;" id="inspect-answers-quick-actions">
+            <!-- Dynamic student actions: +10m, Resume -->
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-dismiss-inspect-answers" style="font-size:0.8rem; padding:6px 16px;">Tutup</button>
+        </div>
+      </div>
+    </div>
   `;
 
   bindTestSessionsEvents(container, themesData, context);
@@ -623,14 +662,17 @@ function renderThemeCard(theme, context) {
 
     actionButtons = `
       <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
-        <button type="button" class="btn btn-sm btn-theme-live-monitor" data-theme="${code}" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); border: 1px solid #3b82f6; color: #ffffff; font-weight: 700; width: 100%; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(37,99,235,0.35);">
-          <span>👁️</span> Monitor Live & Status Ujian (${allowedStudentIds.length})
-        </button>
+        <!-- Baris Atas: 3 Tombol Aksi Sejajar (+ Students | + Add Time | Close Session) -->
         <div style="display: flex; gap: 6px; align-items: center; position: relative;">
-          <!-- Direct Extend Time Quick Button ('Di Luar') -->
+          <!-- 1. + Students (Hijau) -->
+          <button type="button" class="btn btn-sm btn-theme-add-late" data-theme="${code}" style="background: #00c000; border-color: #059669; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 6px; border-radius: 6px; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Tambah Siswa Susulan / Late Arrivals">
+            <span>👥</span> + Students
+          </button>
+
+          <!-- 2. + Add Time (Kuning Amber) -->
           <div style="position: relative; flex: 1;">
-            <button type="button" class="btn btn-sm btn-card-add-time" data-theme="${code}" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #0284c7; color: #38bdf8; font-weight: 700; width: 100%; padding: 7px 6px; border-radius: 6px; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Tambah Waktu Ujian Langsung (Tanpa Masuk Monitor)">
-              <span>⏱️</span> + Waktu
+            <button type="button" class="btn btn-sm btn-card-add-time" data-theme="${code}" style="background: #f59e0b; border: 1px solid #d97706; color: #0f172a; font-weight: 800; width: 100%; padding: 7px 6px; border-radius: 6px; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Perpanjang Waktu Ujian Langsung (Tanpa Masuk Monitor)">
+              <span>⏱️</span> + Add Time
             </button>
             <!-- Popover Dropdown Menu -->
             <div id="card-add-time-menu-${code}" class="card-add-time-menu" style="display: none; position: absolute; left: 0; bottom: calc(100% + 6px); background: #0f172a; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; box-shadow: 0 12px 30px rgba(0,0,0,0.85); z-index: 99999; min-width: 170px; padding: 6px; flex-direction: column; gap: 3px;">
@@ -652,13 +694,17 @@ function renderThemeCard(theme, context) {
               </button>
             </div>
           </div>
-          <button type="button" class="btn btn-sm btn-theme-add-late" data-theme="${code}" style="background: #4f46e5; border-color: #4338ca; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 6px; border-radius: 6px; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
-            <span>👥</span> + Susulan
-          </button>
-          <button type="button" class="btn btn-sm btn-theme-close-session" data-theme="${code}" style="background: #FF0000; border-color: #cc0000; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 6px; border-radius: 6px; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
-            <span>🔒</span> Tutup Sesi
+
+          <!-- 3. Close Session (Merah) -->
+          <button type="button" class="btn btn-sm btn-theme-close-session" data-theme="${code}" style="background: #dc2626; border-color: #b91c1c; color: #ffffff; font-weight: 700; flex: 1; padding: 7px 6px; border-radius: 6px; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" title="Tutup Sesi Ujian Aktif">
+            <span>🔒</span> Close Session
           </button>
         </div>
+
+        <!-- Baris Bawah: Tombol Monitor Utama (Biru Lebar Penuh) -->
+        <button type="button" class="btn btn-sm btn-theme-live-monitor" data-theme="${code}" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); border: 1px solid #3b82f6; color: #ffffff; font-weight: 700; width: 100%; padding: 8px 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(37,99,235,0.35);">
+          <span>👁️</span> Monitor Live & Status Ujian (${allowedStudentIds.length})
+        </button>
       </div>
     `;
   } else {
@@ -1433,6 +1479,7 @@ function openThemeLateModal(container, theme, context) {
 }
 
 let _livePollingTimer = null;
+let _liveSecondCountdownTimer = null;
 let _liveMonitorActiveFilter = 'all';
 let _liveMonitorSearchQuery = '';
 
@@ -1449,6 +1496,10 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   if (_livePollingTimer) {
     clearInterval(_livePollingTimer);
     _livePollingTimer = null;
+  }
+  if (_liveSecondCountdownTimer) {
+    clearInterval(_liveSecondCountdownTimer);
+    _liveSecondCountdownTimer = null;
   }
 
   // Header Elements
@@ -1483,7 +1534,23 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     modeBadgeEl.textContent = '🟢 NORMAL (FULL SCORE)';
   }
 
-  remainingEl.textContent = `${theme.remainingMinutes}m`;
+  // 1-Second Live Countdown Ticker
+  const targetEndMs = (theme.wordsTest?.payload?.test_session?.auto_close_at || theme.phrasesTest?.payload?.test_session?.auto_close_at)
+    ? new Date(theme.wordsTest?.payload?.test_session?.auto_close_at || theme.phrasesTest?.payload?.test_session?.auto_close_at).getTime()
+    : Date.now() + (theme.remainingMinutes || 60) * 60000;
+
+  const updateRemainingDisplay = () => {
+    const diffMs = targetEndMs - Date.now();
+    if (diffMs <= 0) {
+      remainingEl.innerHTML = '<span style="color:#ef4444; font-weight:900;">⏰ HABIS</span>';
+    } else {
+      const mins = Math.floor(diffMs / 60000);
+      const secs = Math.floor((diffMs % 60000) / 1000);
+      remainingEl.innerHTML = `<span style="color:#38bdf8; font-weight:800;">${mins}m ${secs < 10 ? '0' : ''}${secs}s</span>`;
+    }
+  };
+  updateRemainingDisplay();
+  _liveSecondCountdownTimer = setInterval(updateRemainingDisplay, 1000);
   if (searchInput) searchInput.value = '';
   _liveMonitorSearchQuery = '';
   _liveMonitorActiveFilter = 'all';
@@ -1596,7 +1663,8 @@ async function openThemeLiveMonitorModal(container, theme, context) {
               ? (sessionData.answers || []).filter(ans => studAttempts.some(a => a.id === ans.attempt_id)) 
               : []);
 
-        const answeredCount = targetAnswers.filter(ans => ans.student_answer && ans.student_answer.trim()).length;
+        const validAnswers = targetAnswers.filter(ans => ans.student_answer && ans.student_answer.trim());
+        const answeredCount = validAnswers.length;
         
         // Accurate total questions calculation
         let totalQuestions = 0;
@@ -1615,10 +1683,72 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
         const answeredPercent = totalQuestions > 0 ? Math.min(100, Math.round((answeredCount / totalQuestions) * 100)) : 0;
 
-        // Real-time Score calculation
+        // Telemetry: Heartbeat & Last Activity
+        const lastAns = validAnswers[validAnswers.length - 1];
+        const lastActivityTime = lastAns?.answered_at || lastAns?.updated_at || lastAns?.created_at;
+        const activitySecAgo = lastActivityTime ? Math.max(0, Math.floor((Date.now() - new Date(lastActivityTime).getTime()) / 1000)) : null;
+
+        let heartbeat = 'not_started';
+        let heartbeatText = 'Belum Masuk';
+        let heartbeatColor = '#94a3b8';
+        let isPulsing = false;
+
+        if (status === 'in_progress') {
+          if (activitySecAgo !== null && activitySecAgo <= 90) {
+            heartbeat = 'active';
+            heartbeatText = 'Aktif Menjawab';
+            heartbeatColor = '#34d399';
+            isPulsing = true;
+          } else if (activitySecAgo !== null && activitySecAgo <= 300) {
+            heartbeat = 'idle';
+            heartbeatText = `Idle ${Math.floor(activitySecAgo / 60)}m`;
+            heartbeatColor = '#fbbf24';
+          } else if (activitySecAgo !== null && activitySecAgo > 300) {
+            heartbeat = 'away';
+            heartbeatText = `Tidak Aktif ${Math.floor(activitySecAgo / 60)}m`;
+            heartbeatColor = '#f87171';
+          } else {
+            heartbeat = 'starting';
+            heartbeatText = 'Memulai Ujian';
+            heartbeatColor = '#38bdf8';
+            isPulsing = true;
+          }
+        } else if (status === 'submitted') {
+          heartbeat = 'completed';
+          heartbeatText = 'Selesai';
+          heartbeatColor = '#00c000ff';
+        }
+
+        // Micro-activity feed
+        let activityFeed = '';
+        if (status === 'in_progress') {
+          if (answeredCount > 0 && activitySecAgo !== null) {
+            const agoStr = activitySecAgo < 60 ? `${activitySecAgo}s lalu` : `${Math.floor(activitySecAgo / 60)}m lalu`;
+            activityFeed = `Terakhir: Soal #${answeredCount} (${agoStr})`;
+          } else {
+            activityFeed = 'Belum ada soal dijawab';
+          }
+        } else if (status === 'submitted') {
+          activityFeed = 'Semua soal tersubmit';
+        } else {
+          activityFeed = 'Menunggu siswa membuka ujian';
+        }
+
+        // Velocity & ETA
+        let velocityText = '';
+        if (status === 'in_progress' && answeredCount > 1 && targetAtt?.started_at) {
+          const elapsedMins = Math.max(0.5, (Date.now() - new Date(targetAtt.started_at).getTime()) / 60000);
+          const qPerMin = (answeredCount / elapsedMins).toFixed(1);
+          const remainingQ = Math.max(0, totalQuestions - answeredCount);
+          const etaMins = qPerMin > 0 ? Math.ceil(remainingQ / qPerMin) : 0;
+          velocityText = `⚡ ${qPerMin} q/m · ETA ~${etaMins}m`;
+        }
+
+        // Polished running score & evaluation
         let rawScore = 0;
         let effectiveScore = 0;
         let isEvaluated = false;
+        let scoreLabel = 'Belum Ada Skor';
 
         if (status === 'submitted') {
           const validSub = [wAtt, pAtt].filter(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
@@ -1626,7 +1756,6 @@ async function openThemeLiveMonitorModal(container, theme, context) {
             let sumEff = 0;
             validSub.forEach(a => {
               let eff = parseFloat(a.effective_score ?? a.percentage ?? 0);
-              // Self-heal: If recorded score is 0 but student answered questions, compute on the fly
               if (eff === 0) {
                 const subAnswers = (sessionData.answers || []).filter(ans => ans.attempt_id === a.id);
                 const subAnswered = subAnswers.filter(ans => ans.student_answer && ans.student_answer.trim()).length;
@@ -1642,15 +1771,23 @@ async function openThemeLiveMonitorModal(container, theme, context) {
             effectiveScore = Math.round(sumEff / validSub.length);
             rawScore = effectiveScore;
             isEvaluated = true;
+            scoreLabel = effectiveScore >= 60 ? 'Passing' : 'Below Passing';
           }
         } else if (status === 'in_progress' && targetAtt) {
-          const correctCount = countCorrectAnswers(targetAnswers);
-          rawScore = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
-          effectiveScore = theme.isRemedial ? Math.min(rawScore, 60) : rawScore;
-          isEvaluated = true;
+          if (answeredCount === 0) {
+            isEvaluated = false;
+            scoreLabel = 'Memulai Ujian...';
+          } else {
+            isEvaluated = true;
+            const correctCount = countCorrectAnswers(targetAnswers);
+            const runningAccuracy = Math.round((correctCount / answeredCount) * 100);
+            rawScore = runningAccuracy;
+            effectiveScore = theme.isRemedial ? Math.min(rawScore, 60) : rawScore;
+            scoreLabel = `Akurasi (${correctCount}/${answeredCount})`;
+          }
         }
 
-        const grade = getGrade(effectiveScore);
+        const grade = isEvaluated ? getGrade(effectiveScore) : '-';
 
         // Alarms / Anti-cheat details
         const studCheats = (sessionData.cheatLogs || []).filter(c => c.actor_user_id === student.id);
@@ -1667,15 +1804,24 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           statusText,
           statusColor,
           activeModule,
+          targetAtt,
+          targetAnswers,
           answeredCount,
           totalQuestions,
           answeredPercent,
           rawScore,
           effectiveScore,
           isEvaluated,
+          scoreLabel,
           grade,
           alarmCount,
           alarmList,
+          heartbeat,
+          heartbeatText,
+          heartbeatColor,
+          isPulsing,
+          activityFeed,
+          velocityText,
           hasAttempts: studAttempts.length > 0
         };
       });
@@ -1768,15 +1914,15 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     studentsContainer.innerHTML = displayList.map(item => {
       const s = item.student;
       const initial = (s.name || 'S').charAt(0).toUpperCase();
-      const scoreColor = getGradeColorByScore(item.effectiveScore);
+      const scoreColor = item.isEvaluated ? getGradeColorByScore(item.effectiveScore) : '#64748b';
       const isRemedialCap = theme.isRemedial;
       const scoreDisplay = item.isEvaluated 
         ? `${item.effectiveScore}%${isRemedialCap ? '<sup style="font-size:0.65em; font-weight:900; color:inherit; margin-left:1px;">R</sup>' : ''}`
         : '--';
 
-      const isStar = item.grade === '★' || item.grade === 'Star' || item.grade === 'S' || item.effectiveScore === 100;
-      const gradeText = isStar ? '★' : item.grade;
-      const circleText = isStar ? '#ffffff' : '#0f172a';
+      const isStar = item.isEvaluated && (item.grade === '★' || item.grade === 'Star' || item.grade === 'S' || item.effectiveScore === 100);
+      const gradeText = isStar ? '★' : (item.isEvaluated ? item.grade : '-');
+      const circleText = isStar ? '#ffffff' : (item.isEvaluated ? '#0f172a' : '#64748b');
       const circleClass = isStar ? 'grade-circle-star' : `grade-circle-${(item.grade || 'e').toLowerCase()}`;
 
       const gradeCircleHtml = item.isEvaluated ? `
@@ -1789,20 +1935,38 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         </div>
       `;
 
+      const hasAlarmAlert = item.alarmCount > 0;
+      const cardBorder = hasAlarmAlert ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid rgba(255,255,255,0.08)';
+      const cardBg = hasAlarmAlert ? 'rgba(239, 68, 68, 0.04)' : 'rgba(255,255,255,0.025)';
+      const cardShadow = hasAlarmAlert ? '0 0 14px rgba(239, 68, 68, 0.15)' : 'none';
+
       return `
-        <div class="live-student-card" style="background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
-          <!-- 1. Student Identity -->
-          <div style="display: flex; align-items: center; gap: 12px; min-width: 220px;">
-            <div style="width: 36px; height: 36px; border-radius: 50%; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,0.3); flex-shrink: 0;">
-              ${initial}
+        <div class="live-student-card" style="background: ${cardBg}; border: ${cardBorder}; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; box-shadow: ${cardShadow}; transition: all 0.2s;">
+          <!-- 1. Student Identity & Heartbeat Telemetry -->
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 240px;">
+            <div style="position: relative; width: 38px; height: 38px; flex-shrink: 0;">
+              <div style="width: 100%; height: 100%; border-radius: 50%; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                ${initial}
+              </div>
+              <!-- Telemetry Pulse Ring -->
+              ${item.isPulsing ? `
+                <span style="position: absolute; bottom: -1px; right: -1px; width: 12px; height: 12px; border-radius: 50%; background: ${item.heartbeatColor}; border: 2px solid #0b1329; box-shadow: 0 0 6px ${item.heartbeatColor}; animation: pulse 1.5s infinite;"></span>
+              ` : `
+                <span style="position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-radius: 50%; background: ${item.heartbeatColor}; border: 2px solid #0b1329;"></span>
+              `}
             </div>
             <div>
-              <div style="font-size: 0.92rem; font-weight: 700; color: #ffffff;">${escapeHtml(s.name || 'Unnamed')}</div>
-              <div style="font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.92rem; font-weight: 700; color: #ffffff;">${escapeHtml(s.name || 'Unnamed')}</span>
+                <span style="font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); color: ${item.heartbeatColor}; border: 1px solid rgba(255,255,255,0.08);">
+                  ${item.heartbeatText}
+                </span>
+              </div>
+              <div style="font-size: 0.73rem; color: #94a3b8; display: flex; align-items: center; gap: 6px; margin-top: 2px; flex-wrap: wrap;">
                 <span>${escapeHtml(theme.liveBatchName)}</span>
                 <span>&bull;</span>
-                <span style="color: ${item.statusColor}; font-weight: 700;">${item.statusText}</span>
-                ${item.activeModule !== 'None' ? `<span style="background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; font-size:0.7rem; color:#cbd5e1;">${escapeHtml(item.activeModule)}</span>` : ''}
+                <span style="color: #cbd5e1; font-weight: 600;">${item.activityFeed}</span>
+                ${item.velocityText ? `<span style="color:#38bdf8; font-weight:700;">${item.velocityText}</span>` : ''}
               </div>
             </div>
           </div>
@@ -1819,7 +1983,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           </div>
 
           <!-- 3. Alarm / Anti-Cheat Status (Clickable for details) -->
-          <div style="min-width: 120px; text-align: center;">
+          <div style="min-width: 110px; text-align: center;">
             ${item.alarmCount === 0 ? `
               <span style="font-size: 0.75rem; font-weight: 700; color: #34d399; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                 🛡️ 0x Bersih
@@ -1831,23 +1995,43 @@ async function openThemeLiveMonitorModal(container, theme, context) {
             `}
           </div>
 
-          <!-- 4. Skor Real-Time -->
+          <!-- 4. Skor / Akurasi Real-Time -->
           <div style="min-width: 120px; display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
             <div style="text-align: right;">
               <div style="font-size: 0.95rem; font-weight: 800; color: ${scoreColor};">
                 ${scoreDisplay}
               </div>
               <div style="font-size: 0.7rem; color: #94a3b8;">
-                ${item.isEvaluated ? `${item.effectiveScore >= 60 ? 'Passing' : 'Below Passing'}` : 'Belum Ada Skor'}
+                ${item.scoreLabel}
               </div>
             </div>
             ${gradeCircleHtml}
           </div>
 
-          <!-- 5. Tombol Keluarkan (Kick) -->
-          <div style="display: flex; align-items: center;">
-            <button type="button" class="btn btn-sm btn-kick-student" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background: rgba(255,0,0,0.15); border: 1px solid rgba(255,0,0,0.4); color: #ff6b6b; font-weight: 700; font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#FF0000'; this.style.color='#fff';" onmouseout="this.style.background='rgba(255,0,0,0.15)'; this.style.color='#f87171';">
-              <span>🚫</span> Keluarkan
+          <!-- 5. Interactive Tutor Action Suite -->
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <!-- Inspect Live Answers -->
+            <button type="button" class="btn btn-sm btn-inspect-student-answers" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.35); color: #38bdf8; font-weight: 700; font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" title="Intip lembar jawaban & riwayat pengerjaan siswa">
+              <span>👁️</span> Intip
+            </button>
+
+            <!-- Individual +Time (if in_progress) -->
+            ${item.targetAtt && item.status === 'in_progress' ? `
+              <button type="button" class="btn btn-sm btn-student-add-time" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.35); color: #fbbf24; font-weight: 700; font-size: 0.75rem; padding: 6px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" title="Beri tambahan waktu khusus siswa ini (+10m)">
+                <span>⏱️</span> +Waktu
+              </button>
+            ` : ''}
+
+            <!-- Resume / Re-open (if submitted or cancelled) -->
+            ${item.targetAtt && (item.status === 'submitted' || item.status === 'cancelled') ? `
+              <button type="button" class="btn btn-sm btn-student-reopen-attempt" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.35); color: #34d399; font-weight: 700; font-size: 0.75rem; padding: 6px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;" title="Buka kembali sesi ujian siswa ini (Resume Attempt)">
+                <span>🔄</span> Resume
+              </button>
+            ` : ''}
+
+            <!-- Kick -->
+            <button type="button" class="btn btn-sm btn-kick-student" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background: rgba(255,0,0,0.12); border: 1px solid rgba(255,0,0,0.3); color: #ff6b6b; font-weight: 700; font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#FF0000'; this.style.color='#fff';" onmouseout="this.style.background='rgba(255,0,0,0.12)'; this.style.color='#ff6b6b';" title="Keluarkan siswa dari sesi ujian">
+              <span>🚫</span>
             </button>
           </div>
         </div>
@@ -1870,6 +2054,163 @@ async function openThemeLiveMonitorModal(container, theme, context) {
             // Background sync Class Hub if open
           }
         });
+      });
+    });
+
+    // Attach Inspect Live Answers listener
+    studentsContainer.querySelectorAll('.btn-inspect-student-answers').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const studentId = e.currentTarget.getAttribute('data-student-id');
+        const found = processedStudents.find(p => p.student.id === studentId);
+        if (!found) return;
+
+        const inspectModal = container.querySelector('#modal-student-live-answers');
+        if (!inspectModal) return;
+
+        inspectModal.querySelector('#inspect-answers-avatar').textContent = (found.student.name || 'S').charAt(0).toUpperCase();
+        inspectModal.querySelector('#inspect-answers-student-name').textContent = found.student.name || 'Siswa';
+        inspectModal.querySelector('#inspect-answers-meta').textContent = `${found.activeModule} • ${found.answeredCount} / ${found.totalQuestions} Soal Terjawab • ${found.heartbeatText}`;
+        inspectModal.querySelector('#inspect-answers-score-badge').textContent = `Akurasi: ${found.isEvaluated ? found.effectiveScore + '%' : '--'}`;
+
+        const contentBox = inspectModal.querySelector('#inspect-answers-content');
+        const answers = found.targetAnswers || [];
+
+        if (answers.length === 0) {
+          contentBox.innerHTML = `
+            <div style="padding: 30px; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+              Belum ada lembar jawaban yang tersimpan untuk siswa ini.
+            </div>
+          `;
+        } else {
+          contentBox.innerHTML = answers.map((ans, idx) => {
+            const num = idx + 1;
+            const prompt = ans.question_snapshot || ans.topic_snapshot || `Soal #${num}`;
+            const studentInput = (ans.student_answer || '').trim();
+            const isCorrect = ans.is_correct === true || ans.score >= 1;
+            const isPartial = ans.score > 0 && ans.score < 1;
+            const isAnswered = Boolean(studentInput);
+
+            let statusBadge = '';
+            if (!isAnswered) {
+              statusBadge = '<span style="color:#94a3b8; font-size:0.75rem; font-weight:700;">⏳ Belum Diisi</span>';
+            } else if (isCorrect) {
+              statusBadge = '<span style="color:#34d399; font-size:0.75rem; font-weight:800; background:rgba(16,185,129,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.3);">✅ Benar (1.0 pt)</span>';
+            } else if (isPartial) {
+              statusBadge = '<span style="color:#fbbf24; font-size:0.75rem; font-weight:800; background:rgba(245,158,11,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(245,158,11,0.3);">🟡 Partial (0.5 pt)</span>';
+            } else {
+              statusBadge = '<span style="color:#f87171; font-size:0.75rem; font-weight:800; background:rgba(239,68,68,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);">❌ Salah (0 pt)</span>';
+            }
+
+            return `
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                <div style="flex:1;">
+                  <div style="font-size:0.75rem; font-weight:700; color:#38bdf8;">Soal #${num}</div>
+                  <div style="font-size:0.85rem; font-weight:600; color:#ffffff; margin-top:2px;">${escapeHtml(prompt)}</div>
+                  <div style="font-size:0.8rem; color:#cbd5e1; margin-top:4px;">
+                    Jawaban Siswa: <strong style="color:${isAnswered ? '#ffffff' : '#64748b'};">${escapeHtml(studentInput || '(Kosong)')}</strong>
+                  </div>
+                </div>
+                <div>${statusBadge}</div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // Quick actions in inspect modal
+        const quickBox = inspectModal.querySelector('#inspect-answers-quick-actions');
+        quickBox.innerHTML = '';
+        if (found.targetAtt && found.status === 'in_progress') {
+          const btnAddTime = document.createElement('button');
+          btnAddTime.className = 'btn btn-sm';
+          btnAddTime.style.cssText = 'background:rgba(245,158,11,0.2); border:1px solid #f59e0b; color:#fbbf24; font-weight:700; font-size:0.78rem; padding:6px 12px; border-radius:6px; cursor:pointer;';
+          btnAddTime.innerHTML = '⏱️ +10 Menit Siswa Ini';
+          btnAddTime.onclick = async () => {
+            showLoading();
+            try {
+              await extendIndividualAttemptTime(found.targetAtt.id, 10);
+              showToast(`⏱️ Waktu untuk ${found.student.name} berhasil ditambah +10 menit!`, 'success');
+              inspectModal.classList.add('hidden');
+              await loadLiveData(true);
+            } catch (err) {
+              showToast('Gagal menambah waktu: ' + err.message, 'error');
+            } finally {
+              hideLoading();
+            }
+          };
+          quickBox.appendChild(btnAddTime);
+        } else if (found.targetAtt && (found.status === 'submitted' || found.status === 'cancelled')) {
+          const btnResume = document.createElement('button');
+          btnResume.className = 'btn btn-sm';
+          btnResume.style.cssText = 'background:rgba(16,185,129,0.2); border:1px solid #10b981; color:#34d399; font-weight:700; font-size:0.78rem; padding:6px 12px; border-radius:6px; cursor:pointer;';
+          btnResume.innerHTML = '🔄 Buka Kunci / Resume Attempt';
+          btnResume.onclick = async () => {
+            const confirmed = confirm(`Buka kembali sesi ujian untuk ${found.student.name}?
+Status akan kembali menjadi 'in_progress' dan sisa waktu pengerjaan diperpanjang +30 menit.`);
+            if (!confirmed) return;
+            showLoading();
+            try {
+              await reopenStudentAttempt(found.targetAtt.id, 30);
+              showToast(`🔄 Ujian ${found.student.name} berhasil dibuka kembali!`, 'success');
+              inspectModal.classList.add('hidden');
+              await loadLiveData(false);
+            } catch (err) {
+              showToast('Gagal membuka kembali ujian: ' + err.message, 'error');
+            } finally {
+              hideLoading();
+            }
+          };
+          quickBox.appendChild(btnResume);
+        }
+
+        const closeInspect = () => inspectModal.classList.add('hidden');
+        inspectModal.querySelector('#btn-close-inspect-answers').onclick = closeInspect;
+        inspectModal.querySelector('#btn-dismiss-inspect-answers').onclick = closeInspect;
+
+        inspectModal.classList.remove('hidden');
+      });
+    });
+
+    // Attach Individual +Time listener
+    studentsContainer.querySelectorAll('.btn-student-add-time').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const attemptId = e.currentTarget.getAttribute('data-attempt-id');
+        const studentName = e.currentTarget.getAttribute('data-student-name') || 'Siswa';
+        if (!attemptId) return;
+
+        showLoading();
+        try {
+          await extendIndividualAttemptTime(attemptId, 10);
+          showToast(`⏱️ Waktu untuk ${studentName} berhasil ditambah +10 menit!`, 'success');
+          await loadLiveData(true);
+        } catch (err) {
+          showToast('Gagal menambah waktu: ' + err.message, 'error');
+        } finally {
+          hideLoading();
+        }
+      });
+    });
+
+    // Attach Reopen / Resume Attempt listener
+    studentsContainer.querySelectorAll('.btn-student-reopen-attempt').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const attemptId = e.currentTarget.getAttribute('data-attempt-id');
+        const studentName = e.currentTarget.getAttribute('data-student-name') || 'Siswa';
+        if (!attemptId) return;
+
+        const confirmed = confirm(`Buka kembali sesi ujian untuk ${studentName}?
+Status akan kembali 'in_progress' dan waktu ujian ditambah +30 menit agar siswa dapat melanjutkan.`);
+        if (!confirmed) return;
+
+        showLoading();
+        try {
+          await reopenStudentAttempt(attemptId, 30);
+          showToast(`🔄 Ujian ${studentName} berhasil dibuka kembali!`, 'success');
+          await loadLiveData(false);
+        } catch (err) {
+          showToast('Gagal membuka kembali ujian: ' + err.message, 'error');
+        } finally {
+          hideLoading();
+        }
       });
     });
 
@@ -2021,6 +2362,10 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     if (_livePollingTimer) {
       clearInterval(_livePollingTimer);
       _livePollingTimer = null;
+    }
+    if (_liveSecondCountdownTimer) {
+      clearInterval(_liveSecondCountdownTimer);
+      _liveSecondCountdownTimer = null;
     }
     if (_realtimeChannel) {
       try {

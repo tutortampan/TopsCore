@@ -4180,6 +4180,10 @@ export async function adminApplyForgiven({
 
       if (action === 'forgive') {
         const forgiveReasonText = `[${adminLabel}] ${(reason || 'Pacing Adjustment').trim()}`;
+        const kkmPct = Number(meta?.payload?.minimum_required_score || 60);
+        const kkmScore = Math.round(totalQ * (kkmPct / 100));
+        const kkmGrade = _gradeForScore(kkmPct);
+
         const submittedAtts = existingAtts.filter(a =>
           ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
         );
@@ -4187,8 +4191,15 @@ export async function adminApplyForgiven({
         if (submittedAtts.length > 0) {
           submittedAtts.sort((x, y) => Number(y.percentage || y.score || 0) - Number(x.percentage || x.score || 0));
           const topAtt = submittedAtts[0];
+          const currPct = Number(topAtt.percentage || topAtt.score || 0);
+          const needsKkmBoost = currPct < kkmPct;
+
           updates.push({
             id: topAtt.id,
+            score: needsKkmBoost ? kkmScore : topAtt.score,
+            percentage: needsKkmBoost ? kkmPct : topAtt.percentage,
+            effective_score: needsKkmBoost ? kkmPct : (topAtt.effective_score || topAtt.percentage),
+            grade: needsKkmBoost ? kkmGrade : topAtt.grade,
             is_forgiven: true,
             forgiven_by: validForgivenBy,
             forgiven_at: nowIso,
@@ -4203,17 +4214,17 @@ export async function adminApplyForgiven({
             }
           });
         } else if (existingAtts.length > 0) {
-          // Has existing non-submitted/in_progress attempt: complete it as forgiven
+          // Has existing non-submitted/in_progress attempt: complete it as forgiven at KKM
           const topAtt = existingAtts[0];
           updates.push({
             id: topAtt.id,
             status: 'submitted',
-            score: 0,
-            correct_count: 0,
+            score: kkmScore,
+            correct_count: kkmScore,
             total_questions: totalQ,
-            percentage: 0,
-            effective_score: 0,
-            grade: 'E',
+            percentage: kkmPct,
+            effective_score: kkmPct,
+            grade: kkmGrade,
             is_best_score: true,
             is_forgiven: true,
             forgiven_by: validForgivenBy,
@@ -4222,6 +4233,7 @@ export async function adminApplyForgiven({
             updated_at: nowIso
           });
         } else {
+          // Insert new forgiven attempt at standard KKM (60% Grade C)
           inserts.push({
             student_id: sId,
             test_id: testId,
@@ -4230,12 +4242,12 @@ export async function adminApplyForgiven({
             expires_at: nowIso,
             submitted_at: nowIso,
             status: 'submitted',
-            score: 0,
-            correct_count: 0,
+            score: kkmScore,
+            correct_count: kkmScore,
             total_questions: totalQ,
-            percentage: 0,
-            effective_score: 0,
-            grade: 'E',
+            percentage: kkmPct,
+            effective_score: kkmPct,
+            grade: kkmGrade,
             is_best_score: true,
             is_forgiven: true,
             forgiven_by: validForgivenBy,
@@ -5796,8 +5808,9 @@ export async function fetchLiveTestSessionData({ testIds = [], studentIds = [], 
   let answersData = [];
   if (attemptIds.length > 0) {
     const { data: answers } = await sb.from('attempt_answers')
-      .select('id, attempt_id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, is_correct, score, updated_at')
-      .in('attempt_id', attemptIds);
+      .select('id, attempt_id, question_id, question_snapshot, student_answer, accepted_answers_snapshot, correct_answer_snapshot, is_correct, score, evaluation_result, answered_at, created_at, updated_at')
+      .in('attempt_id', attemptIds)
+      .order('created_at', { ascending: true });
     answersData = answers || [];
   }
 
@@ -5806,6 +5819,55 @@ export async function fetchLiveTestSessionData({ testIds = [], studentIds = [], 
     cheatLogs: cheatLogs || [],
     answers: answersData
   };
+}
+
+/**
+ * Extend exam time for an individual student attempt (e.g. tech glitch recovery)
+ */
+export async function extendIndividualAttemptTime(attemptId, additionalMinutes = 10) {
+  const sb = await getSupabase();
+  if (!attemptId || !additionalMinutes) throw new Error('attemptId and additionalMinutes required');
+
+  const { data: att, error: fetchErr } = await sb
+    .from('attempts')
+    .select('id, expires_at, status')
+    .eq('id', attemptId)
+    .single();
+  if (fetchErr) throw fetchErr;
+
+  const currentExpiry = att.expires_at ? new Date(att.expires_at).getTime() : Date.now();
+  const baseMs = Math.max(Date.now(), currentExpiry);
+  const newExpiry = new Date(baseMs + additionalMinutes * 60000).toISOString();
+
+  const { error: updErr } = await sb
+    .from('attempts')
+    .update({ expires_at: newExpiry, updated_at: new Date().toISOString() })
+    .eq('id', attemptId);
+  if (updErr) throw updErr;
+
+  return { success: true, newExpiry };
+}
+
+/**
+ * Re-open an interrupted or auto-submitted attempt for a student to resume
+ */
+export async function reopenStudentAttempt(attemptId, additionalMinutes = 30) {
+  const sb = await getSupabase();
+  if (!attemptId) throw new Error('attemptId required');
+
+  const newExpiry = new Date(Date.now() + additionalMinutes * 60000).toISOString();
+  const { error } = await sb
+    .from('attempts')
+    .update({
+      status: 'in_progress',
+      submitted_at: null,
+      expires_at: newExpiry,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', attemptId);
+  if (error) throw error;
+
+  return { success: true, newExpiry };
 }
 
 if (typeof window !== 'undefined') {
@@ -5817,6 +5879,8 @@ if (typeof window !== 'undefined') {
   window.addLateStudentsToSession = addLateStudentsToSession;
   window.removeStudentFromTestSession = removeStudentFromTestSession;
   window.extendTestSessionTime = extendTestSessionTime;
+  window.extendIndividualAttemptTime = extendIndividualAttemptTime;
+  window.reopenStudentAttempt = reopenStudentAttempt;
   window.resetStudentTestAlarms = resetStudentTestAlarms;
   window.fetchLiveTestSessionData = fetchLiveTestSessionData;
   window.labelAttemptRemedial = labelAttemptRemedial;
