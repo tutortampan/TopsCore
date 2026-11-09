@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261106_v160';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, scoreDistractorSimilarity, rankDistractorsForVaultItem } from './grading.js?v=20261106_v160';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261106_v160';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261106_v160';
 import { escapeHtml, escHtml, showToast } from './app.js?v=20261106_v160';
 
@@ -9,7 +9,7 @@ export function getGrade(pct) {
   return calculateGrade(pct);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, scoreDistractorSimilarity, rankDistractorsForVaultItem, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -403,11 +403,7 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
   const sb = await getSupabase();
   const { data: student, error } = await sb
     .from('students')
-    .select(`
-      id, name, gender, pin_hash, is_active, program_id, institution_id, batch_id, level_id,
-      levels:level_id(id, level_number, name),
-      batches:batch_id(current_level_id, levels:current_level_id(id, level_number, name))
-    `)
+    .select('id, name, gender, pin_hash, is_active, program_id, institution_id, batch_id')
     .eq('id', studentId)
     .single();
 
@@ -422,20 +418,13 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
   const pinHash = await sha256(pin);
   if (student.pin_hash !== pinHash) throw new Error('Invalid PIN. Please try again.');
 
-  const lvlId = student.level_id || student.batches?.current_level_id || null;
-  const lvlNum = student.levels?.level_number || student.batches?.levels?.level_number || 1;
-  const lvlName = student.levels?.name || student.batches?.levels?.name || '1st Level';
-
   return {
     success: true,
     student: {
       id: student.id,
       name: formatStudentName(student.name, student.gender),
       gender: student.gender,
-      batch_id: student.batch_id,
-      level_id: lvlId,
-      level_number: lvlNum,
-      level_name: lvlName
+      batch_id: student.batch_id
     }
   };
 }
@@ -729,7 +718,7 @@ export async function fetchClassTestSettings(classId = null) {
       if (raw) {
         const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
         const res = {
-          taskRepetitions: Math.max(7, parseInt(parsed.taskRepetitions, 10) || 7),
+          taskRepetitions: Math.max(1, parseInt(parsed.taskRepetitions, 10) || 7),
           taskMinScore: Math.min(100, Math.max(1, parseInt(parsed.taskMinScore, 10) || 50)),
           examMinScore: Math.min(100, Math.max(1, parseInt(parsed.examMinScore, 10) || 60))
         };
@@ -741,38 +730,16 @@ export async function fetchClassTestSettings(classId = null) {
     console.warn('[fetchClassTestSettings] site_settings query error, falling back:', e);
   }
 
-  // Fallback 1: LocalStorage cache with Rule 2.21 7x7 sanitization
+  // Fallback 1: LocalStorage cache
   if (classId) {
     const local = getLocal(`topscore_test_settings_${classId}`);
     if (local) {
-      try {
-        const parsed = JSON.parse(local);
-        const res = {
-          ...defaultSettings,
-          ...parsed,
-          taskRepetitions: Math.max(7, parseInt(parsed.taskRepetitions, 10) || 7)
-        };
-        if (parsed.taskRepetitions && parsed.taskRepetitions < 7) {
-          setLocal(`topscore_test_settings_${classId}`, JSON.stringify(res));
-        }
-        return res;
-      } catch (_) {}
+      try { return { ...defaultSettings, ...JSON.parse(local) }; } catch (_) {}
     }
   }
   const globalLocal = getLocal('topscore_test_settings_global');
   if (globalLocal) {
-    try {
-      const parsed = JSON.parse(globalLocal);
-      const res = {
-        ...defaultSettings,
-        ...parsed,
-        taskRepetitions: Math.max(7, parseInt(parsed.taskRepetitions, 10) || 7)
-      };
-      if (parsed.taskRepetitions && parsed.taskRepetitions < 7) {
-        setLocal('topscore_test_settings_global', JSON.stringify(res));
-      }
-      return res;
-    } catch (_) {}
+    try { return { ...defaultSettings, ...JSON.parse(globalLocal) }; } catch (_) {}
   }
 
   // Fallback 2: Inspect existing class tests from DB
@@ -788,7 +755,7 @@ export async function fetchClassTestSettings(classId = null) {
         const sampleTask = sampleTests.find(t => !isWeeklyExam(t));
         const sampleExam = sampleTests.find(t => isWeeklyExam(t));
         const derived = {
-          taskRepetitions: Math.max(7, parseInt(sampleTask?.payload?.task_repetitions, 10) || 7),
+          taskRepetitions: Math.max(1, parseInt(sampleTask?.payload?.task_repetitions, 10) || 7),
           taskMinScore: Math.min(100, Math.max(1, parseInt(sampleTask?.minimum_required_score || sampleTask?.payload?.minimum_required_score, 10) || 50)),
           examMinScore: Math.min(100, Math.max(1, parseInt(sampleExam?.minimum_required_score || sampleExam?.payload?.minimum_required_score, 10) || 60))
         };
@@ -804,7 +771,7 @@ export async function fetchClassTestSettings(classId = null) {
 export async function saveClassTestSettings(classId, settings = {}, applyToExisting = false) {
   const sb = await getSupabase();
   const cleanSettings = {
-    taskRepetitions: Math.max(7, parseInt(settings.taskRepetitions, 10) || 7),
+    taskRepetitions: Math.max(1, parseInt(settings.taskRepetitions, 10) || 7),
     taskMinScore: Math.min(100, Math.max(1, parseInt(settings.taskMinScore, 10) || 50)),
     examMinScore: Math.min(100, Math.max(1, parseInt(settings.examMinScore, 10) || 60))
   };
@@ -981,20 +948,11 @@ export async function generateTestQuestions(sb, test) {
     }
 
     const isThemeTest = (test.category === 'EXAM' || test.category === 'TEST' || String(test.test_type).toLowerCase() === 'exam' || (test.shell_code && (test.shell_code.includes('-EXAM') || test.shell_code.includes('-TEST'))) || test.test_subtype === 'VOCAB_EXAM' || test.test_subtype === 'PHRASE_EXAM' || test.test_subtype === 'VOCAB_TEST' || test.test_subtype === 'PHRASE_TEST') && !topicCode;
-    const testProgramId = test.program_id || test.programId;
-
-    // Resolve multi-program theme assignments if testProgramId is specified
-    let assignedThemeCodes = null;
-    if (testProgramId) {
+    let testProgramId = test.program_id || test.programId;
+    if (!testProgramId && test.class_id) {
       try {
-        const { data: tpaData } = await sb.from('theme_program_assignments')
-          .select('theme_code')
-          .eq('program_id', testProgramId)
-          .eq('target_level', levelNum)
-          .eq('is_active', true);
-        if (tpaData && tpaData.length > 0) {
-          assignedThemeCodes = tpaData.map(a => (a.theme_code || '').trim().toUpperCase()).filter(Boolean);
-        }
+        const { data: cRec } = await sb.from('classes').select('program_id').eq('id', test.class_id).maybeSingle();
+        if (cRec?.program_id) testProgramId = cRec.program_id;
       } catch (_) {}
     }
 
@@ -1006,11 +964,7 @@ export async function generateTestQuestions(sb, test) {
         .is('deleted_at', null)
         .eq('target_level', levelNum)
         .range(0, 4999);
-      if (assignedThemeCodes && assignedThemeCodes.length > 0) {
-        query = query.in('theme_code', assignedThemeCodes);
-      } else if (testProgramId) {
-        query = query.eq('program_id', testProgramId);
-      }
+      if (testProgramId) query = query.eq('program_id', testProgramId);
       if (topicCode) {
         if (themeCode) query = query.eq('theme_code', themeCode);
         const candidateCodes = [
@@ -1046,11 +1000,7 @@ export async function generateTestQuestions(sb, test) {
         .is('deleted_at', null)
         .eq('target_level', levelNum)
         .range(0, 4999);
-      if (assignedThemeCodes && assignedThemeCodes.length > 0) {
-        queryNoCat = queryNoCat.in('theme_code', assignedThemeCodes);
-      } else if (testProgramId) {
-        queryNoCat = queryNoCat.eq('program_id', testProgramId);
-      }
+      if (testProgramId) queryNoCat = queryNoCat.eq('program_id', testProgramId);
       if (topicCode) {
         if (themeCode) queryNoCat = queryNoCat.eq('theme_code', themeCode);
         const candidateCodes = [
@@ -1135,13 +1085,12 @@ export async function generateTestQuestions(sb, test) {
       // Secondary Safety Fallback: If strict theme/topic yielded 0 words, fallback to general words for this level
       if (vaultWords.length === 0) {
         console.warn(`[Vault Fallback] 0 words for theme ${themeCode}/topic ${topicCode}, pulling general level ${levelNum} vault items.`);
-        let generalQuery = sb.from('vocabulary_vault')
+        let generalVaultQuery = sb.from('vocabulary_vault')
           .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level')
           .is('deleted_at', null)
-          .eq('target_level', levelNum)
-          .limit(100);
-        if (testProgramId) generalQuery = generalQuery.eq('program_id', testProgramId);
-        const { data: generalVault } = await generalQuery;
+          .eq('target_level', levelNum);
+        if (testProgramId) generalVaultQuery = generalVaultQuery.eq('program_id', testProgramId);
+        const { data: generalVault } = await generalVaultQuery.limit(100);
         if (generalVault && generalVault.length > 0) {
           vaultWords = generalVault.filter(w => {
             const wt = (w.word_type || '').toLowerCase();
@@ -1165,39 +1114,29 @@ export async function generateTestQuestions(sb, test) {
     }
 
     if (vaultWords && vaultWords.length > 0) {
-      let vaultCandidatePool = [];
-      let ansType = test.answer_type || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
-      if (test.answer_type === 'written' || (test.shell_code && test.shell_code.endsWith('-WORDS-EXAM')) || (test.title && test.title.toUpperCase().includes('WORDS EXAM'))) {
-        ansType = 'written';
-      }
+      let allEnglishAnswers = [];
+      let typeDistractorPools = {};
+      const ansType = test.answer_type || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
 
       if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
-        let allDataQuery = sb.from('vocabulary_vault')
-          .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, category, target_level')
-          .is('deleted_at', null)
-          .range(0, 4999);
-        if (assignedThemeCodes && assignedThemeCodes.length > 0) {
-          allDataQuery = allDataQuery.in('theme_code', assignedThemeCodes);
-        } else if (testProgramId) {
-          allDataQuery = allDataQuery.eq('program_id', testProgramId);
-        }
-        if (levelNum) allDataQuery = allDataQuery.eq('target_level', levelNum);
+        let allDataQuery = sb.from('vocabulary_vault').select('english, word_type').is('deleted_at', null);
+        if (testProgramId) allDataQuery = allDataQuery.eq('program_id', testProgramId);
         const { data: allData } = await allDataQuery;
-        if (allData && allData.length > 0) {
-          vaultCandidatePool = allData;
-        } else {
-          // Fallback if target_level returned empty, pull from same assigned themes or program without level restriction
-          let broaderQuery = sb.from('vocabulary_vault')
-            .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, category, target_level')
-            .is('deleted_at', null)
-            .range(0, 4999);
-          if (assignedThemeCodes && assignedThemeCodes.length > 0) {
-            broaderQuery = broaderQuery.in('theme_code', assignedThemeCodes);
-          } else if (testProgramId) {
-            broaderQuery = broaderQuery.eq('program_id', testProgramId);
-          }
-          const { data: broaderData } = await broaderQuery;
-          vaultCandidatePool = broaderData || [];
+        if (allData) {
+          const isTargetPhrase = (category === 'phrases' || test.test_subtype === 'PHRASE_TASK' || test.test_subtype === 'PHRASE_TEST');
+          const filteredAllData = allData.filter(r => {
+            const wt = (r.word_type || '').toLowerCase();
+            const isP = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+            return isTargetPhrase ? isP : !isP;
+          });
+          allEnglishAnswers = filteredAllData.map(r => (r.english || '').split('/')[0].trim()).filter(Boolean);
+          filteredAllData.forEach(r => {
+            const wt = (r.word_type || 'Vocab').toLowerCase();
+            const eng = (r.english || '').split('/')[0].trim();
+            if (!eng) return;
+            if (!typeDistractorPools[wt]) typeDistractorPools[wt] = [];
+            typeDistractorPools[wt].push(eng);
+          });
         }
       }
 
@@ -1208,7 +1147,12 @@ export async function generateTestQuestions(sb, test) {
 
         if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
           const numDistractors = (ansType === 'dropdown_10') ? 9 : 4;
-          const distractors = rankDistractorsForVaultItem(vw, vaultCandidatePool, numDistractors);
+          const wordType = (vw.word_type || 'Vocab').toLowerCase();
+          let sameTypePool = (typeDistractorPools[wordType] || []).filter(a => !accepted.includes(a));
+          fisherYates(sameTypePool);
+          const globalPool = allEnglishAnswers.filter(a => !accepted.includes(a) && !sameTypePool.includes(a));
+          fisherYates(globalPool);
+          const distractors = [...sameTypePool, ...globalPool].slice(0, numDistractors);
           optionsSnapshot = fisherYates([correctAns, ...distractors]);
         }
 
@@ -1373,7 +1317,7 @@ export async function startTest(studentId, testId) {
 
   // 1. Ambil detail test
   const { data: asmData, error: asmErr } = await sb.from('tests')
-    .select('id, title, status, deleted_at, test_subtype, test_type, answer_type, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_test_id, prerequisite_id, payload, module_id, question_order')
+    .select('id, title, status, deleted_at, test_subtype, test_type, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_test_id, prerequisite_id, payload, module_id, question_order')
     .eq('id', testId)
     .single();
   if (asmErr || !asmData) throw new Error('Test not found.');
@@ -2789,21 +2733,6 @@ export async function fetchVaultWords({ topic = null, search = null, targetLevel
   let curOffset = offset;
   const maxToFetch = limit || 10000;
 
-  // Resolve multi-program theme assignments if programId and targetLevel are specified
-  let assignedThemeCodes = null;
-  if (programId && targetLevel !== null) {
-    try {
-      const { data: tpaData } = await sb.from('theme_program_assignments')
-        .select('theme_code')
-        .eq('program_id', programId)
-        .eq('target_level', targetLevel)
-        .eq('is_active', true);
-      if (tpaData && tpaData.length > 0) {
-        assignedThemeCodes = tpaData.map(a => (a.theme_code || '').trim().toUpperCase()).filter(Boolean);
-      }
-    } catch (_) {}
-  }
-
   while (allData.length < maxToFetch) {
     const chunkLimit = Math.min(PAGE_SIZE, maxToFetch - allData.length);
     let query = sb.from('vocabulary_vault')
@@ -2817,14 +2746,8 @@ export async function fetchVaultWords({ topic = null, search = null, targetLevel
       .range(curOffset, curOffset + chunkLimit - 1);
 
     if (targetLevel !== null) query = query.eq('target_level', targetLevel);
-    if (assignedThemeCodes && assignedThemeCodes.length > 0) {
-      query = query.in('theme_code', assignedThemeCodes);
-    } else if (programId !== null && programId !== undefined) {
-      query = query.eq('program_id', programId);
-    }
-    if (institutionId !== null && institutionId !== undefined && (!assignedThemeCodes || assignedThemeCodes.length === 0)) {
-      query = query.eq('institution_id', institutionId);
-    }
+    if (programId) query = query.eq('program_id', programId);
+    if (institutionId) query = query.eq('institution_id', institutionId);
     if (topic) query = query.eq('topic', topic);
     if (search) {
       const term = search.trim();
@@ -2842,7 +2765,7 @@ export async function fetchVaultWords({ topic = null, search = null, targetLevel
   return allData;
 }
 
-export async function fetchVaultTopics(targetLevelNum = null, programId = null, institutionId = null) {
+export async function fetchVaultTopics(targetLevelNum = null, programId = null) {
   const sb = await getSupabase();
   let query = sb.from('vocabulary_vault')
     .select('topic')
@@ -2851,11 +2774,8 @@ export async function fetchVaultTopics(targetLevelNum = null, programId = null, 
   if (targetLevelNum !== null) {
     query = query.eq('target_level', targetLevelNum);
   }
-  if (programId !== null && programId !== undefined) {
+  if (programId) {
     query = query.eq('program_id', programId);
-  }
-  if (institutionId !== null && institutionId !== undefined) {
-    query = query.eq('institution_id', institutionId);
   }
 
   const { data, error } = await query.order('topic', { ascending: true });
@@ -2876,16 +2796,11 @@ export async function moveVaultTopicsToLevel(topicNames, targetLevel) {
   if (error) throw error;
 }
 
-export async function fetchVaultStats(programId = null, institutionId = null) {
+export async function fetchVaultStats() {
   const sb = await getSupabase();
-  let query = sb.from('vocabulary_vault')
+  const { data, error } = await sb.from('vocabulary_vault')
     .select('target_level, topic')
     .is('deleted_at', null);
-
-  if (programId !== null && programId !== undefined) query = query.eq('program_id', programId);
-  if (institutionId !== null && institutionId !== undefined) query = query.eq('institution_id', institutionId);
-
-  const { data, error } = await query;
   if (error) throw error;
 
   const stats = {};
@@ -2908,7 +2823,7 @@ export async function fetchVaultStats(programId = null, institutionId = null) {
 export async function checkVaultDuplicates(newRows) {
   const sb = await getSupabase();
   const { data: vaultData, error } = await sb.from('vocabulary_vault')
-    .select('id, theme, topic, indonesian, english, target_level, word_type')
+    .select('id, theme, topic, indonesian, english, target_level, word_type, program_id')
     .is('deleted_at', null);
   if (error) throw error;
   const vault = vaultData || [];
@@ -2927,6 +2842,7 @@ export async function checkVaultDuplicates(newRows) {
     const rowType = normStr(row.word_type || 'Verb');
 
     const conflict = vault.find(v =>
+        (!row.program_id || !v.program_id || v.program_id === row.program_id) &&
         normStr(v.topic) === rowTopic &&
         (normStr(v.indonesian) === rowInd || normStr(v.english) === rowEng)
     );
@@ -3066,37 +2982,6 @@ export async function importVaultWords(rows, resolutionMap = {}, onProgress = nu
   }
 
   results.skipped = rows.length - results.inserted - results.updated;
-
-  // Auto-register theme_program_assignments for imported themes with program_id
-  const uniqueAssignments = new Map();
-  for (const item of [...toInsert, ...toUpdate]) {
-    if (item.theme_code && item.target_level && item.program_id) {
-      const key = `${item.theme_code}_${item.target_level}_${item.program_id}`;
-      if (!uniqueAssignments.has(key)) {
-        uniqueAssignments.set(key, {
-          theme_code: item.theme_code,
-          target_level: item.target_level,
-          program_id: item.program_id,
-          is_active: true,
-          updated_at: new Date().toISOString()
-        });
-      }
-    }
-  }
-
-  if (uniqueAssignments.size > 0) {
-    try {
-      const assignmentList = Array.from(uniqueAssignments.values());
-      const { error: assignErr } = await sb.from('theme_program_assignments')
-        .upsert(assignmentList, { onConflict: 'theme_code, target_level, program_id' });
-      if (assignErr) {
-        console.warn('[importVaultWords] theme_program_assignments upsert error:', assignErr);
-      }
-    } catch (e) {
-      console.warn('[importVaultWords] Failed to auto-register theme_program_assignments:', e);
-    }
-  }
-
   clearApiCache('vault');
   return results;
 }
@@ -3185,49 +3070,6 @@ export async function deleteVaultTheme(theme) {
     .eq('theme', theme)
     .is('deleted_at', null);
   if (error) throw error;
-  clearApiCache('vault');
-  return true;
-}
-
-// ─── Theme-Program Multi-Tenant Assignments ────────────────
-export async function fetchThemeProgramAssignments() {
-  const sb = await getSupabase();
-  const { data, error } = await sb
-    .from('theme_program_assignments')
-    .select('id, theme_code, target_level, program_id, is_active')
-    .is('is_active', true);
-  if (error) {
-    console.warn('fetchThemeProgramAssignments notice:', error.message);
-    return [];
-  }
-  return data || [];
-}
-
-export async function toggleThemeProgramAssignment({ themeCode, targetLevel, programId, assign }) {
-  const sb = await getSupabase();
-  const thCode = String(themeCode).trim().toUpperCase();
-  const lvl = parseInt(targetLevel, 10);
-
-  if (assign) {
-    const { error } = await sb
-      .from('theme_program_assignments')
-      .upsert({
-        theme_code: thCode,
-        target_level: lvl,
-        program_id: programId,
-        is_active: true,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'theme_code,target_level,program_id' });
-    if (error) throw error;
-  } else {
-    const { error } = await sb
-      .from('theme_program_assignments')
-      .delete()
-      .eq('theme_code', thCode)
-      .eq('target_level', lvl)
-      .eq('program_id', programId);
-    if (error) throw error;
-  }
   clearApiCache('vault');
   return true;
 }
@@ -4180,10 +4022,6 @@ export async function adminApplyForgiven({
 
       if (action === 'forgive') {
         const forgiveReasonText = `[${adminLabel}] ${(reason || 'Pacing Adjustment').trim()}`;
-        const kkmPct = Number(meta?.payload?.minimum_required_score || 60);
-        const kkmScore = Math.round(totalQ * (kkmPct / 100));
-        const kkmGrade = _gradeForScore(kkmPct);
-
         const submittedAtts = existingAtts.filter(a =>
           ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
         );
@@ -4191,15 +4029,8 @@ export async function adminApplyForgiven({
         if (submittedAtts.length > 0) {
           submittedAtts.sort((x, y) => Number(y.percentage || y.score || 0) - Number(x.percentage || x.score || 0));
           const topAtt = submittedAtts[0];
-          const currPct = Number(topAtt.percentage || topAtt.score || 0);
-          const needsKkmBoost = currPct < kkmPct;
-
           updates.push({
             id: topAtt.id,
-            score: needsKkmBoost ? kkmScore : topAtt.score,
-            percentage: needsKkmBoost ? kkmPct : topAtt.percentage,
-            effective_score: needsKkmBoost ? kkmPct : (topAtt.effective_score || topAtt.percentage),
-            grade: needsKkmBoost ? kkmGrade : topAtt.grade,
             is_forgiven: true,
             forgiven_by: validForgivenBy,
             forgiven_at: nowIso,
@@ -4214,17 +4045,17 @@ export async function adminApplyForgiven({
             }
           });
         } else if (existingAtts.length > 0) {
-          // Has existing non-submitted/in_progress attempt: complete it as forgiven at KKM
+          // Has existing non-submitted/in_progress attempt: complete it as forgiven
           const topAtt = existingAtts[0];
           updates.push({
             id: topAtt.id,
             status: 'submitted',
-            score: kkmScore,
-            correct_count: kkmScore,
+            score: 0,
+            correct_count: 0,
             total_questions: totalQ,
-            percentage: kkmPct,
-            effective_score: kkmPct,
-            grade: kkmGrade,
+            percentage: 0,
+            effective_score: 0,
+            grade: 'E',
             is_best_score: true,
             is_forgiven: true,
             forgiven_by: validForgivenBy,
@@ -4233,7 +4064,6 @@ export async function adminApplyForgiven({
             updated_at: nowIso
           });
         } else {
-          // Insert new forgiven attempt at standard KKM (60% Grade C)
           inserts.push({
             student_id: sId,
             test_id: testId,
@@ -4242,12 +4072,12 @@ export async function adminApplyForgiven({
             expires_at: nowIso,
             submitted_at: nowIso,
             status: 'submitted',
-            score: kkmScore,
-            correct_count: kkmScore,
+            score: 0,
+            correct_count: 0,
             total_questions: totalQ,
-            percentage: kkmPct,
-            effective_score: kkmPct,
-            grade: kkmGrade,
+            percentage: 0,
+            effective_score: 0,
+            grade: 'E',
             is_best_score: true,
             is_forgiven: true,
             forgiven_by: validForgivenBy,
@@ -4800,7 +4630,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     // 1. Fetch Words for Level to know what themes and topics exist (Chunked Pagination Protected)
     let words = [];
     try {
-      words = await fetchVaultWords({ targetLevel: levelNum, programId, limit: 10000 });
+      words = await fetchVaultWords({ targetLevel: levelNum, programId, institutionId, limit: 10000 });
     } catch (_) {
       let vaultQuery = sb.from('vocabulary_vault')
         .select('theme_code, theme, topic_code, topic, word_type, category')
@@ -5808,9 +5638,8 @@ export async function fetchLiveTestSessionData({ testIds = [], studentIds = [], 
   let answersData = [];
   if (attemptIds.length > 0) {
     const { data: answers } = await sb.from('attempt_answers')
-      .select('id, attempt_id, question_id, question_snapshot, student_answer, accepted_answers_snapshot, correct_answer_snapshot, is_correct, score, evaluation_result, answered_at, created_at, updated_at')
-      .in('attempt_id', attemptIds)
-      .order('created_at', { ascending: true });
+      .select('id, attempt_id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, is_correct, score, updated_at')
+      .in('attempt_id', attemptIds);
     answersData = answers || [];
   }
 
@@ -5819,55 +5648,6 @@ export async function fetchLiveTestSessionData({ testIds = [], studentIds = [], 
     cheatLogs: cheatLogs || [],
     answers: answersData
   };
-}
-
-/**
- * Extend exam time for an individual student attempt (e.g. tech glitch recovery)
- */
-export async function extendIndividualAttemptTime(attemptId, additionalMinutes = 10) {
-  const sb = await getSupabase();
-  if (!attemptId || !additionalMinutes) throw new Error('attemptId and additionalMinutes required');
-
-  const { data: att, error: fetchErr } = await sb
-    .from('attempts')
-    .select('id, expires_at, status')
-    .eq('id', attemptId)
-    .single();
-  if (fetchErr) throw fetchErr;
-
-  const currentExpiry = att.expires_at ? new Date(att.expires_at).getTime() : Date.now();
-  const baseMs = Math.max(Date.now(), currentExpiry);
-  const newExpiry = new Date(baseMs + additionalMinutes * 60000).toISOString();
-
-  const { error: updErr } = await sb
-    .from('attempts')
-    .update({ expires_at: newExpiry, updated_at: new Date().toISOString() })
-    .eq('id', attemptId);
-  if (updErr) throw updErr;
-
-  return { success: true, newExpiry };
-}
-
-/**
- * Re-open an interrupted or auto-submitted attempt for a student to resume
- */
-export async function reopenStudentAttempt(attemptId, additionalMinutes = 30) {
-  const sb = await getSupabase();
-  if (!attemptId) throw new Error('attemptId required');
-
-  const newExpiry = new Date(Date.now() + additionalMinutes * 60000).toISOString();
-  const { error } = await sb
-    .from('attempts')
-    .update({
-      status: 'in_progress',
-      submitted_at: null,
-      expires_at: newExpiry,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', attemptId);
-  if (error) throw error;
-
-  return { success: true, newExpiry };
 }
 
 if (typeof window !== 'undefined') {
@@ -5879,8 +5659,6 @@ if (typeof window !== 'undefined') {
   window.addLateStudentsToSession = addLateStudentsToSession;
   window.removeStudentFromTestSession = removeStudentFromTestSession;
   window.extendTestSessionTime = extendTestSessionTime;
-  window.extendIndividualAttemptTime = extendIndividualAttemptTime;
-  window.reopenStudentAttempt = reopenStudentAttempt;
   window.resetStudentTestAlarms = resetStudentTestAlarms;
   window.fetchLiveTestSessionData = fetchLiveTestSessionData;
   window.labelAttemptRemedial = labelAttemptRemedial;
@@ -5895,3 +5673,5 @@ if (typeof window !== 'undefined') {
   window.saveClassTestSettings = saveClassTestSettings;
   window.updateTestPassingScore = updateTestPassingScore;
 }
+
+

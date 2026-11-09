@@ -2,13 +2,27 @@
 // Supports: English US, English UK. Audio is NOT stored.
 // Provides: retry, permission, unsupported-browser states.
 
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+function getSpeechRecognitionClass() {
+  if (typeof window !== 'undefined') {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+  return null;
+}
+
+/**
+ * Check if current client is iOS / iPadOS (Safari or WKWebView).
+ */
+export function isIOS() {
+  if (typeof navigator === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
 
 /**
  * Check browser speech recognition support.
  */
 export function isSpeechSupported() {
-  return !!SpeechRecognition;
+  return !!getSpeechRecognitionClass();
 }
 
 /**
@@ -148,33 +162,44 @@ export function createSpeechSession({
 } = {}) {
   if (!isSpeechSupported()) {
     onError?.('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
-    return { start: () => {}, stop: () => {}, isListening: () => false };
+    return { start: () => {}, stop: () => {}, abort: () => {}, isListening: () => false, getState: () => 'idle' };
   }
 
-  const recognition = new SpeechRecognition();
+  const SpeechRecClass = getSpeechRecognitionClass();
+  const recognition = new SpeechRecClass();
   recognition.lang = lang;
   recognition.continuous = false;
   recognition.interimResults = true;
   recognition.maxAlternatives = 1;
 
   const maxDurationSecs = parseInt(
-    localStorage.getItem('ai_max_audio_duration_seconds') ||
-    window.TOPSCORE_CONFIG?.maxAudioDuration ||
+    (typeof localStorage !== 'undefined' ? localStorage.getItem('ai_max_audio_duration_seconds') : null) ||
+    (typeof window !== 'undefined' ? window.TOPSCORE_CONFIG?.maxAudioDuration : null) ||
     '180',
     10
   );
   let _maxDurationTimer = null;
-  let _listening = false;
+  let _watchdogTimer = null;
+  // Robust state machine: 'idle' | 'starting' | 'listening' | 'stopping'
+  let _state = 'idle';
+
+  function _clearWatchdog() {
+    if (_watchdogTimer) {
+      clearTimeout(_watchdogTimer);
+      _watchdogTimer = null;
+    }
+  }
 
   recognition.onstart = () => {
-    _listening = true;
+    _clearWatchdog();
+    _state = 'listening';
     onStart?.();
 
     // Cost Guard: Hard cap audio recording duration
     if (maxDurationSecs > 0) {
       if (_maxDurationTimer) clearTimeout(_maxDurationTimer);
       _maxDurationTimer = setTimeout(() => {
-        if (_listening) {
+        if (_state === 'listening') {
           console.warn(`[Cost Guard] Maximum recording ceiling reached (${maxDurationSecs}s). Stopping recording.`);
           try { recognition.stop(); } catch(_) {}
           onError?.(`Cost Guard: Maximum recording limit of ${maxDurationSecs}s reached.`);
@@ -199,24 +224,37 @@ export function createSpeechSession({
   };
 
   recognition.onerror = (event) => {
-    _listening = false;
+    _clearWatchdog();
+    _state = 'idle';
     if (_maxDurationTimer) {
       clearTimeout(_maxDurationTimer);
       _maxDurationTimer = null;
     }
+    const isApple = isIOS();
+    let notAllowedMsg = 'Microphone permission was denied. Please allow access in browser settings.';
+    let serviceNotAllowedMsg = 'Speech service not allowed. Please check browser settings.';
+    let audioCaptureMsg = 'Microphone not found or busy. Please check your device settings.';
+
+    if (isApple) {
+      notAllowedMsg = 'Microphone blocked on iPhone. Tap "aA" in Safari address bar > Website Settings > Microphone > Allow, or tap "Type Instead".';
+      serviceNotAllowedMsg = 'Dictation disabled on iPhone. Check Settings > General > Keyboard > Enable Dictation, or tap "Type Instead".';
+      audioCaptureMsg = 'Microphone busy on iPhone. Please close other voice apps and tap to retry, or tap "Type Instead".';
+    }
+
     const messages = {
-      'no-speech':         'No speech was detected. Please try again.',
-      'audio-capture':     'Microphone not found. Please check your device settings.',
-      'not-allowed':       'Microphone permission was denied. Please allow access in your browser settings.',
-      'network':           'Network error during recognition. Please check your connection.',
-      'aborted':           'Recognition was aborted.',
-      'service-not-allowed': 'Speech service not allowed. Please check browser settings.',
+      'no-speech':           isApple ? 'No speech detected. On iPhone, speak immediately after tapping mic.' : 'No speech was detected. Please tap mic and speak clearly.',
+      'audio-capture':       audioCaptureMsg,
+      'not-allowed':         notAllowedMsg,
+      'network':             'Network error during recognition. Please check your internet connection.',
+      'aborted':             'Recognition stopped.',
+      'service-not-allowed': serviceNotAllowedMsg,
     };
     onError?.(messages[event.error] || `Recognition error: ${event.error}`);
   };
 
   recognition.onend = () => {
-    _listening = false;
+    _clearWatchdog();
+    _state = 'idle';
     if (_maxDurationTimer) {
       clearTimeout(_maxDurationTimer);
       _maxDurationTimer = null;
@@ -226,24 +264,68 @@ export function createSpeechSession({
 
   return {
     start() {
-      if (!_listening) {
-        try {
-          recognition.start();
-        } catch (e) {
-          onError?.(`Could not start recognition: ${e.message}`);
+      // Prevent concurrent/double starts
+      if (_state !== 'idle') return false;
+      _state = 'starting';
+
+      // 4-second watchdog in case browser speech service hangs on start
+      _clearWatchdog();
+      _watchdogTimer = setTimeout(() => {
+        if (_state === 'starting') {
+          console.warn('[SpeechSession] Watchdog timeout: microphone initialization took >4s. Forcing abort.');
+          _state = 'idle';
+          try { recognition.abort(); } catch(_) {}
+          onError?.('Microphone initialization timed out. Please tap to retry.');
         }
+      }, 4000);
+
+      try {
+        recognition.start();
+        return true;
+      } catch (e) {
+        if (e.name === 'InvalidStateError' || e.message?.includes('invalid state')) {
+          // iOS Safari WebKit transient state: retry once after brief hardware release
+          setTimeout(() => {
+            if (_state === 'starting') {
+              try {
+                recognition.start();
+              } catch (retryErr) {
+                _clearWatchdog();
+                _state = 'idle';
+                onError?.(`Could not start recognition: ${retryErr.message}`);
+              }
+            }
+          }, 80);
+          return true;
+        }
+        _clearWatchdog();
+        _state = 'idle';
+        onError?.(`Could not start recognition: ${e.message}`);
+        return false;
       }
     },
     stop() {
+      _clearWatchdog();
       if (_maxDurationTimer) {
         clearTimeout(_maxDurationTimer);
         _maxDurationTimer = null;
       }
-      if (_listening) {
-        try { recognition.stop(); } catch {}
+      if (_state === 'listening' || _state === 'starting') {
+        _state = 'stopping';
+        try { recognition.stop(); } catch (_) {}
       }
     },
-    isListening() { return _listening; },
+    abort() {
+      _clearWatchdog();
+      if (_maxDurationTimer) {
+        clearTimeout(_maxDurationTimer);
+        _maxDurationTimer = null;
+      }
+      _state = 'idle';
+      try { recognition.abort(); } catch (_) {}
+    },
+    getState() { return _state; },
+    isListening() { return _state === 'listening' || _state === 'starting'; },
   };
 }
 

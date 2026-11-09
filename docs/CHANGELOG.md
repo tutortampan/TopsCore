@@ -1,3 +1,90 @@
+## [2026-11-09 14:40] — Phase 382: iPhone / iOS Microphone & AudioSession Stabilization
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 382  
+**Status:** PASS  
+
+### Why
+- On iPhone (iOS Safari / WebKit), students frequently experienced unresponsive microphones, microphone permission errors (`not-allowed`, `audio-capture`), or the mic stopping immediately after tapping.
+- Deep analysis revealed 3 hardware & OS-level conflicts unique to Apple iOS:
+  1. **AVAudioSession Output Hijack**: Unlocking `AudioContext` on user gesture sets iOS `AVAudioSession` into output/playback mode. While active, WebKit fails to transition to input/record mode for `webkitSpeechRecognition`.
+  2. **WakeLock Fallback Video Hijack**: `wake-lock.js` had a touch listener that triggered `fallbackVideo.play()` on every touch event, overriding iOS audio focus during speech recording.
+  3. **CoreAudio Teardown Latency**: Calling `recognition.abort()` on iOS WebKit releases hardware asynchronously (30-50ms). Starting a new session immediately causes an `InvalidStateError`.
+  4. **iOS Dictation Pre-requisite**: iOS WebKit speech recognition relies on iOS Siri/Dictation being enabled in System Settings.
+
+### Changed
+1. **Audio Route Guard & AudioContext Suspension (`js/test.js`)**:
+   - In `unlockAudio()`, AudioContext is unlocked via user touch and immediately suspended (`audioCtx.suspend()`) so it never hijacks `AVAudioSession` in playback mode.
+   - In `micBtn` click handler, added an explicit iOS Audio Route Guard: suspends `audioCtx` and pauses any active media before invoking `SpeechRecognition`.
+   - In `stopPoliceSiren()` and `abortActiveSpeechSession()`, explicitly calls `audioCtx.suspend()` to restore clean input focus to the microphone.
+2. **WakeLock Video Conflict Resolution (`js/wake-lock.js`)**:
+   - Guarded gesture listener: suppresses fallback video playback if `window._isSpeechRecognitionEngaged` is true.
+   - Restricted fallback video playback strictly to devices where the native W3C Wake Lock API is unavailable.
+3. **WebKit InvalidStateError iOS Retry & Watchdog (`js/speech.js`)**:
+   - Added iOS detection helper `isIOS()`.
+   - Implemented an automatic 80ms retry on `InvalidStateError` specifically tuned for iOS CoreAudio latency.
+   - Enforced 4-state lifecycle (`idle`, `starting`, `listening`, `stopping`) with 4000ms watchdog auto-recovery.
+   - Added friendly, actionable iOS-specific instructions in Indonesian/English for permission and Dictation settings.
+
+### Verification
+- `node -c js/speech.js; node -c js/wake-lock.js; node -c js/test.js`: PASS (0 syntax errors).
+- `node scripts/test_input_modes_responsiveness.mjs`: PASS (100% assertions passed).
+- `node scripts/test_batch_eligibility.mjs`: PASS (14/18 eligible).
+- `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: PASS (10/10 consecutive runs, 132/132 assertions, 100%).
+
+### Files
+- `js/speech.js`
+- `js/wake-lock.js`
+- `js/test.js`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+## [2026-11-09 12:10] — Phase 381: Comprehensive Test Room Input Modes Responsiveness & Reliability Overhaul
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 381  
+**Status:** PASS  
+
+### Why
+- Students reported unresponsiveness, freezing, and hard-to-click buttons during spoken tests, as well as occasional microphone unresponsiveness.
+- Deep investigation revealed 4 distinct root causes:
+  1. Main thread starvation from synchronous `updateNavGrid()` running on every interim speech event (10-20x/s).
+  2. Orphaned `SpeechRecognition` instances across question navigation causing Chromium audio device mutex locks.
+  3. Asynchronous state deadlock on mic stop/start with no watchdog timer.
+  4. Missing `touch-action: manipulation` producing a 300ms tap-delay on mobile devices.
+- Comprehensive audit of other input modes also revealed an unmanaged auto-advance `setTimeout` in Multiple Choice / Phrase Chips causing ghost question skipping when students tapped quickly.
+
+### Changed
+1. **Speech Engine & Lifecycle Optimization (`js/speech.js`)**:
+   - Upgraded `createSpeechSession` with a 4-state lifecycle (`idle`, `starting`, `listening`, `stopping`) to block rapid double-taps.
+   - Added synchronous `abort()` method (`recognition.abort()`) for instant 0ms hardware release without waiting for cloud transcription.
+   - Added a 4000ms Watchdog Timer to auto-recover if browser speech engine hangs on startup.
+   - Guarded against missing `window`/`localStorage` in Node.js test environments.
+2. **Test Room Engine (`js/test.js`)**:
+   - Added `currentActiveSpeechSession` controller and `abortActiveSpeechSession()` called across all navigation events (`renderQuestion`, `bottomNext`, `bottomPrev`, matrix jump, submit modal).
+   - Replaced heavy `updateNavGrid()` on `onResult` with `updateActiveChipOnly()`.
+   - Added emergency typing fallback button (`⌨️ Type Instead`) to guarantee zero loss of student points.
+   - Implemented managed Multiple Choice auto-advance engine (`_mcAutoAdvanceTimer`, `scheduleMcAutoAdvance`, `cancelMcAutoAdvance`) to eliminate question skipping.
+   - Implemented in-place Shift toggling in `renderKeyboardKeys()` to eliminate DOM rebuilds on letter case changes.
+3. **Global Touch Latency & Animations (`css/test.css`)**:
+   - Added `touch-action: manipulation !important;` and `-webkit-tap-highlight-color: transparent;` across all interactive test room elements.
+   - Added instant `:active` scaling states for tactile 0ms visual feedback.
+   - Added glowing focus ring `#answer-container-written:focus-within` for written mode.
+
+### Verification
+- `node scripts/test_input_modes_responsiveness.mjs`: PASS (100% assertions passed: 4-state speech machine, anti-double-tap, 0ms abort, 4s watchdog auto-recovery, and debounced managed auto-advance).
+- `node scripts/test_batch_eligibility.mjs`: PASS (14/18 eligible, Mr. Test verified eligible).
+- `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: PASS (10/10 consecutive runs, 132/132 assertions, 100%).
+- Syntax checks `node -c js/speech.js; node -c js/test.js`: PASS (0 errors).
+
+### Files
+- `js/speech.js`
+- `js/test.js`
+- `css/test.css`
+- `scripts/test_input_modes_responsiveness.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
 ## [2026-11-09 09:25] — Phase 379: Theme Blueprint Schema Column Alignment & 100% Test Readiness Detection
 
 **Agent/Session:** Antigravity  

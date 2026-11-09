@@ -185,10 +185,13 @@ export function bindWakeLockGestures() {
 
   const onGesture = () => {
     if (isArmed) {
+      // Never interfere with iOS/Android audio session while student is speaking or recording!
+      if (typeof window !== 'undefined' && window._isSpeechRecognitionEngaged) return;
       if (!nativeSentinel && 'wakeLock' in navigator) {
         requestNativeLock().catch(() => {});
       }
-      if (fallbackVideo && fallbackVideo.paused) {
+      // Only play fallback video if native wake lock API is completely unavailable
+      if (!nativeSentinel && fallbackVideo && fallbackVideo.paused) {
         fallbackVideo.play().catch(() => {});
       }
     }

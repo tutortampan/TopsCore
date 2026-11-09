@@ -1792,4 +1792,63 @@ div:has(> a[href*="netlify.com"]) {
   z-index: -9999 !important;
 }
 
+/* ==========================================================================
+   COMPREHENSIVE RESPONSIVENESS & TOUCH ENHANCEMENTS (All Modes)
+   ========================================================================== */
+.speech-mic-btn-lg,
+.mc-option,
+.phrase-chip,
+.vk-key,
+.btn-nav-prev,
+.btn-nav-next,
+.question-counter,
+.q-nav-btn,
+.switch-typing-btn {
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.speech-mic-btn-lg:active {
+  transform: scale(0.92) !important;
+  transition: transform 0.05s ease !important;
+}
+
+.mc-option:active,
+.phrase-chip:active {
+  transform: scale(0.97) !important;
+  opacity: 0.9 !important;
+  transition: transform 0.05s ease !important;
+}
+
+.btn-nav-prev:active,
+.btn-nav-next:active {
+  transform: scale(0.95) !important;
+  opacity: 0.88 !important;
+  transition: transform 0.05s ease !important;
+}
+
+.question-counter:active {
+  transform: scale(0.98) !important;
+  opacity: 0.9 !important;
+  transition: transform 0.05s ease !important;
+}
+
+.q-nav-btn:active {
+  transform: scale(0.9) !important;
+  transition: transform 0.05s ease !important;
+}
+
+.switch-typing-btn:active {
+  transform: scale(0.94) !important;
+  background: rgba(56, 189, 248, 0.25) !important;
+  transition: transform 0.05s ease !important;
+}
+
+/* Enhanced Focus State for Written Mode */
+#answer-container-written:focus-within {
+  border-color: rgba(56, 189, 248, 0.5) !important;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+
 

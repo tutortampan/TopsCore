@@ -65,6 +65,40 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     let answeredMap = {}; // attempt_answer_id -> student_answer
     window.answeredMap = answeredMap;
 
+    // —— Global Speech Session & Auto-Advance Controllers ——
+    let currentActiveSpeechSession = null;
+    let _mcAutoAdvanceTimer = null;
+
+    function abortActiveSpeechSession() {
+      if (currentActiveSpeechSession) {
+        try { currentActiveSpeechSession.abort(); } catch (_) {}
+        currentActiveSpeechSession = null;
+      }
+      window._isSpeechRecognitionEngaged = false;
+      // Release iOS AVAudioSession from any active AudioContext output lock
+      if (audioCtx && audioCtx.state === 'running') {
+        try { audioCtx.suspend().catch(() => {}); } catch (_) {}
+      }
+    }
+
+    function cancelMcAutoAdvance() {
+      if (_mcAutoAdvanceTimer) {
+        clearTimeout(_mcAutoAdvanceTimer);
+        _mcAutoAdvanceTimer = null;
+      }
+    }
+
+    function scheduleMcAutoAdvance(delay = 400) {
+      cancelMcAutoAdvance();
+      _mcAutoAdvanceTimer = setTimeout(() => {
+        _mcAutoAdvanceTimer = null;
+        const nextBtn = document.getElementById('bottom-next-btn');
+        if (nextBtn && nextBtn.textContent.includes('Next') && !nextBtn.disabled) {
+          nextBtn.click();
+        }
+      }, delay);
+    }
+
     // —— Anti-Cheat State & Multi-Sound Alert Engine ——
     let isTestActive = false;
     let cheatInterval = null;
@@ -74,14 +108,22 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     let _activeAudioSource = null; // for custom audio buffer source
     let securityConfig = { enabled: true, soundEnabled: true, countdownSeconds: 5, soundType: 'police_siren', customSoundB64: '' };
 
-    // Mobile Audio Unlock on first interaction
+    // Mobile Audio Unlock on first interaction (iOS / Android Safe)
     const unlockAudio = () => {
       try {
         if (!audioCtx) {
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
+        // iOS Safari AudioSession Guard:
+        // Unlock audio context via user-gesture, then immediately suspend so hardware mic is NOT blocked!
         if (audioCtx && audioCtx.state === 'suspended') {
-          audioCtx.resume();
+          audioCtx.resume().then(() => {
+            if (audioCtx && audioCtx.state === 'running') {
+              audioCtx.suspend().catch(() => {});
+            }
+          }).catch(() => {});
+        } else if (audioCtx && audioCtx.state === 'running') {
+          audioCtx.suspend().catch(() => {});
         }
       } catch (_) {}
       document.removeEventListener('click', unlockAudio);
@@ -363,6 +405,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         }
         if (navigator.vibrate) {
           try { navigator.vibrate(0); } catch (_) {}
+        }
+        if (audioCtx && audioCtx.state === 'running') {
+          try { audioCtx.suspend().catch(() => {}); } catch (_) {}
         }
       } catch (_) {}
     }
@@ -1854,6 +1899,19 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         const letters = isShifted
           ? ['Q','W','E','R','T','Y','U','I','O','P','A','S','D','F','G','H','J','K','L','Z','X','C','V','B','N','M']
           : ['q','w','e','r','t','y','u','i','o','p','a','s','d','f','g','h','j','k','l','z','x','c','v','b','n','m'];
+
+        // Fast path: In-place update if keyboard layout already has letter keys (zero DOM recreation)
+        const existingLetterKeys = vk.querySelectorAll('.vk-key:not(.special):not(.vk-comma):not(.vk-dot):not(.space)');
+        if (existingLetterKeys.length === 26) {
+          existingLetterKeys.forEach((btn, idx) => {
+            btn.setAttribute('data-key', letters[idx]);
+            btn.textContent = letters[idx];
+          });
+          const shiftBtn = vk.querySelector('.vk-shift');
+          if (shiftBtn) shiftBtn.classList.toggle('active', isShifted);
+          return;
+        }
+
         vk.innerHTML = `
           <div class="vk-row vk-row-1">
             <button class="vk-key" data-key="${letters[0]}">${letters[0]}</button><button class="vk-key" data-key="${letters[1]}">${letters[1]}</button><button class="vk-key" data-key="${letters[2]}">${letters[2]}</button><button class="vk-key" data-key="${letters[3]}">${letters[3]}</button><button class="vk-key" data-key="${letters[4]}">${letters[4]}</button><button class="vk-key" data-key="${letters[5]}">${letters[5]}</button><button class="vk-key" data-key="${letters[6]}">${letters[6]}</button><button class="vk-key" data-key="${letters[7]}">${letters[7]}</button><button class="vk-key" data-key="${letters[8]}">${letters[8]}</button><button class="vk-key" data-key="${letters[9]}">${letters[9]}</button>
@@ -1892,6 +1950,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
     // —— Render Question ——
     function renderQuestion(idx) {
+      abortActiveSpeechSession();
+      cancelMcAutoAdvance();
       currentIndex = idx;
       let row = answerRows[idx];
       if (!row && allAnswerRows && allAnswerRows.length > 0) {
@@ -2185,6 +2245,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         const canGoPrev = (idx > 0) || (currentSectionIndex > 0);
         bottomPrev.disabled = !canGoPrev;
         bottomPrev.onclick = () => {
+          cancelMcAutoAdvance();
+          abortActiveSpeechSession();
           saveCurrentAnswer();
           if (idx > 0) {
             renderQuestion(idx - 1);
@@ -2204,14 +2266,23 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             bottomNext.style.background = '';
             bottomNext.style.color = '';
             bottomNext.style.borderColor = '';
-            bottomNext.onclick = () => { saveCurrentAnswer(); openSubmitModal(); };
+            bottomNext.onclick = () => {
+              cancelMcAutoAdvance();
+              abortActiveSpeechSession();
+              saveCurrentAnswer();
+              openSubmitModal();
+            };
           } else {
             bottomNext.textContent = 'Next Sec ➔';
             bottomNext.className = 'btn-nav-next is-next-sec';
             bottomNext.style.background = '';
             bottomNext.style.color = '';
             bottomNext.style.borderColor = '';
-            bottomNext.onclick = () => { nextSection(); };
+            bottomNext.onclick = () => {
+              cancelMcAutoAdvance();
+              abortActiveSpeechSession();
+              nextSection();
+            };
           }
         } else {
           bottomNext.textContent = 'Next ➔';
@@ -2220,6 +2291,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           bottomNext.style.color = '';
           bottomNext.style.borderColor = '';
           bottomNext.onclick = () => {
+            cancelMcAutoAdvance();
+            abortActiveSpeechSession();
             saveCurrentAnswer();
             if (idx < answerRows.length - 1) {
               renderQuestion(idx + 1);
@@ -2341,10 +2414,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           if (activeLetter) { activeLetter.style.background = '#06b6d4'; activeLetter.style.color = '#000000'; }
 
           answeredMap[row.id] = optText;
-          updateNavGrid();
-          autoSave(row.id, optText);
-          const nextBtn = document.getElementById('bottom-next-btn');
-          if (nextBtn && nextBtn.textContent.includes('Next')) setTimeout(() => nextBtn.click(), 400);
+          updateActiveChipOnly(row.id, optText);
+          scheduleDebouncedAutoSave(row.id, optText, 400);
+          scheduleMcAutoAdvance(400);
         });
         area.appendChild(btn);
       });
@@ -2386,10 +2458,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           btn.style.boxShadow = '0 0 16px rgba(6,182,212,0.25)';
           btn.style.color = '#ffffff';
           answeredMap[row.id] = optText;
-          updateNavGrid();
-          autoSave(row.id, optText);
-          const nextBtn = document.getElementById('bottom-next-btn');
-          if (nextBtn && nextBtn.textContent.includes('Next')) setTimeout(() => nextBtn.click(), 400);
+          updateActiveChipOnly(row.id, optText);
+          scheduleDebouncedAutoSave(row.id, optText, 400);
+          scheduleMcAutoAdvance(400);
         });
         area.appendChild(btn);
       });
@@ -2579,7 +2650,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       const micBtn = document.createElement('button');
       micBtn.className = 'speech-mic-btn-lg';
-      micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(22, 163, 74, 0.45); background:linear-gradient(135deg, #4ade80 0%, #16a34a 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 0 24px rgba(22, 163, 74, 0.45), 0 8px 16px rgba(0,0,0,0.35); flex-shrink:0;';
+      micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(22, 163, 74, 0.45); background:linear-gradient(135deg, #4ade80 0%, #16a34a 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 0 24px rgba(22, 163, 74, 0.45), 0 8px 16px rgba(0,0,0,0.35); flex-shrink:0; touch-action:manipulation;';
       micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
 
       const micHelp = document.createElement('div');
@@ -2589,10 +2660,51 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       controlArea.appendChild(micBtn);
       controlArea.appendChild(micHelp);
 
-      let speechSessionObj = null;
+      // Emergency Typing Fallback Option (Zero-Stuck Guarantee)
+      const switchTypingBtn = document.createElement('button');
+      switchTypingBtn.type = 'button';
+      switchTypingBtn.className = 'switch-typing-btn';
+      switchTypingBtn.innerHTML = '⌨️ Type Instead';
+      switchTypingBtn.title = 'Switch to typing mode if microphone is having issues';
+      switchTypingBtn.style.cssText = 'font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); border-radius:12px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s; touch-action:manipulation;';
+      switchTypingBtn.addEventListener('click', () => {
+        abortActiveSpeechSession();
+        area.innerHTML = '';
+        controlArea.innerHTML = '';
+        const vk = getVirtualKeyboard();
+        if (vk) {
+          vk.style.display = 'flex';
+          vk.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:140px !important; max-height:220px !important; margin:0 auto !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; padding:6px 4px !important; gap:4px !important; overflow:hidden !important;';
+          controlArea.appendChild(vk);
+        }
+        renderWritten(area, vk || controlArea, row, answeredMap[row.id] || savedAnswer, snap, vk);
+      });
+      controlArea.appendChild(switchTypingBtn);
+
       micBtn.addEventListener('click', () => {
-        if (speechSessionObj?.isListening()) { speechSessionObj.stop(); return; }
-        speechSessionObj = createSpeechSession({
+        if (currentActiveSpeechSession?.isListening()) {
+          micHelp.textContent = 'Processing...';
+          statusEl.textContent = '● Processing...';
+          currentActiveSpeechSession.stop();
+          return;
+        }
+
+        // Clean any stale session synchronously before starting
+        abortActiveSpeechSession();
+
+        // iOS Audio Route Guard: Suspend audioCtx and pause any background media before starting mic
+        if (audioCtx && audioCtx.state === 'running') {
+          try { audioCtx.suspend().catch(() => {}); } catch (_) {}
+        }
+        const fbv = document.querySelector('video[webkit-playsinline]');
+        if (fbv && !fbv.paused) {
+          try { fbv.pause(); } catch (_) {}
+        }
+
+        micHelp.textContent = 'Connecting...';
+        statusEl.textContent = '● Connecting mic...';
+
+        currentActiveSpeechSession = createSpeechSession({
           lang: langSelect.value,
           onStart() {
             window._isSpeechRecognitionEngaged = true;
@@ -2604,7 +2716,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             statusEl.innerHTML = '● Listening <span class="speech-wave-bars"><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span></span>';
             if (speechWordCounter) statusEl.appendChild(speechWordCounter);
             statusEl.style.color = 'var(--grade-e, #FF0000)';
-            micHelp.textContent = 'Listening...';
+            micHelp.textContent = 'Listening... (Tap to stop)';
             transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.4); font-style:italic;">Listening...</span>';
           },
           onResult(interim) {
@@ -2612,10 +2724,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             if (speechWordCounter && typeof updateSpeechWordCount === 'function') {
               updateSpeechWordCount(interim);
             }
-            // Real-time interim commit (guarantees student speech is never lost on sudden timeout or navigation)
+            // Ultra-lightweight interim update: update ONLY active chip (no DOM tree thrashing)
             if (interim && interim.trim()) {
               answeredMap[row.id] = interim.trim();
-              updateNavGrid();
+              updateActiveChipOnly(row.id, interim.trim());
             }
           },
           onFinal(transcript) {
@@ -2624,12 +2736,13 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
               updateSpeechWordCount(transcript);
             }
             answeredMap[row.id] = transcript;
-            updateNavGrid();
+            updateActiveChipOnly(row.id, transcript);
             persistLocalBuffer();
-            autoSave(row.id, transcript);
+            scheduleDebouncedAutoSave(row.id, transcript, 600);
           },
           onEnd() {
-            setTimeout(() => { window._isSpeechRecognitionEngaged = false; }, 1500);
+            window._isSpeechRecognitionEngaged = false;
+            currentActiveSpeechSession = null;
             micBtn.classList.remove('listening');
             micBtn.style.background = 'linear-gradient(135deg, #4ade80 0%, #16a34a 100%)';
             micBtn.style.borderColor = 'rgba(22, 163, 74, 0.45)';
@@ -2641,9 +2754,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             if (boxText && !boxText.includes('Listening...') && !boxText.includes('Tap to Speak')) {
               if (!answeredMap[row.id] || answeredMap[row.id] !== boxText) {
                 answeredMap[row.id] = boxText;
-                updateNavGrid();
+                updateActiveChipOnly(row.id, boxText);
                 persistLocalBuffer();
-                autoSave(row.id, boxText);
+                scheduleDebouncedAutoSave(row.id, boxText, 600);
               }
             }
 
@@ -2654,7 +2767,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             micHelp.textContent = 'Tap to Speak';
           },
           onError(msg) {
-            setTimeout(() => { window._isSpeechRecognitionEngaged = false; }, 1500);
+            window._isSpeechRecognitionEngaged = false;
+            currentActiveSpeechSession = null;
             micBtn.classList.remove('listening');
             micBtn.style.background = 'linear-gradient(135deg, #4ade80 0%, #16a34a 100%)';
             micBtn.style.borderColor = 'rgba(22, 163, 74, 0.45)';
@@ -2667,7 +2781,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             showToast(msg, 'warning');
           }
         });
-        speechSessionObj.start();
+        currentActiveSpeechSession.start();
       });
     }
 
@@ -2845,6 +2959,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
     // —— Submit Modal ——
     function openSubmitModal() {
+      cancelMcAutoAdvance();
+      abortActiveSpeechSession();
       const activeMap = window.answeredMap || answeredMap;
       const answered = allAnswerRows.filter(r => !!(activeMap[r.id] && activeMap[r.id].trim())).length;
       const total = allAnswerRows.length;
