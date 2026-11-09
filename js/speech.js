@@ -182,6 +182,9 @@ export function createSpeechSession({
   let _watchdogTimer = null;
   // Robust state machine: 'idle' | 'starting' | 'listening' | 'stopping'
   let _state = 'idle';
+  let _isAborted = false;
+  let _isStopping = false;
+  let _latestInterim = '';
 
   function _clearWatchdog() {
     if (_watchdogTimer) {
@@ -219,8 +222,14 @@ export function createSpeechSession({
         interim += t;
       }
     }
-    if (interim) onResult?.(interim);
-    if (final)   onFinal?.(normalizeTranscript(final));
+    if (interim) {
+      _latestInterim = interim;
+      onResult?.(interim);
+    }
+    if (final) {
+      _latestInterim = final;
+      onFinal?.(normalizeTranscript(final));
+    }
   };
 
   recognition.onerror = (event) => {
@@ -230,6 +239,24 @@ export function createSpeechSession({
       clearTimeout(_maxDurationTimer);
       _maxDurationTimer = null;
     }
+
+    // Suppress errors if session was intentionally aborted or stopped
+    if (_isAborted || _isStopping) {
+      return;
+    }
+
+    // iOS WebKit Safari / Chrome Silence or Transient Abort Handling
+    if (event.error === 'aborted') {
+      // Auto-Commit Salvage: If student spoke words and WebKit aborted on pause, commit the text!
+      if (_latestInterim && _latestInterim.trim()) {
+        try {
+          onFinal?.(normalizeTranscript(_latestInterim.trim()));
+        } catch (_) {}
+      }
+      // Never display a disruptive warning toast for 'aborted'
+      return;
+    }
+
     const isApple = isIOS();
     let notAllowedMsg = 'Microphone permission was denied. Please allow access in browser settings.';
     let serviceNotAllowedMsg = 'Speech service not allowed. Please check browser settings.';
@@ -246,7 +273,6 @@ export function createSpeechSession({
       'audio-capture':       audioCaptureMsg,
       'not-allowed':         notAllowedMsg,
       'network':             'Network error during recognition. Please check your internet connection.',
-      'aborted':             'Recognition stopped.',
       'service-not-allowed': serviceNotAllowedMsg,
     };
     onError?.(messages[event.error] || `Recognition error: ${event.error}`);
@@ -259,6 +285,9 @@ export function createSpeechSession({
       clearTimeout(_maxDurationTimer);
       _maxDurationTimer = null;
     }
+    if (_isAborted) {
+      return;
+    }
     onEnd?.();
   };
 
@@ -267,6 +296,8 @@ export function createSpeechSession({
       // Prevent concurrent/double starts
       if (_state !== 'idle') return false;
       _state = 'starting';
+      _isAborted = false;
+      _isStopping = false;
 
       // 4-second watchdog in case browser speech service hangs on start
       _clearWatchdog();
@@ -305,6 +336,7 @@ export function createSpeechSession({
       }
     },
     stop() {
+      _isStopping = true;
       _clearWatchdog();
       if (_maxDurationTimer) {
         clearTimeout(_maxDurationTimer);
@@ -316,12 +348,18 @@ export function createSpeechSession({
       }
     },
     abort() {
+      _isAborted = true;
       _clearWatchdog();
       if (_maxDurationTimer) {
         clearTimeout(_maxDurationTimer);
         _maxDurationTimer = null;
       }
       _state = 'idle';
+      // CRITICAL: Strip all event listeners immediately to prevent asynchronous ghost events from destroying subsequent sessions
+      recognition.onstart = null;
+      recognition.onresult = null;
+      recognition.onerror = null;
+      recognition.onend = null;
       try { recognition.abort(); } catch (_) {}
     },
     getState() { return _state; },

@@ -2982,6 +2982,37 @@ export async function importVaultWords(rows, resolutionMap = {}, onProgress = nu
   }
 
   results.skipped = rows.length - results.inserted - results.updated;
+
+  // Auto-register theme_program_assignments for imported themes with program_id
+  const uniqueAssignments = new Map();
+  for (const item of [...toInsert, ...toUpdate]) {
+    if (item.theme_code && item.target_level && item.program_id) {
+      const key = `${item.theme_code}_${item.target_level}_${item.program_id}`;
+      if (!uniqueAssignments.has(key)) {
+        uniqueAssignments.set(key, {
+          theme_code: item.theme_code,
+          target_level: item.target_level,
+          program_id: item.program_id,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        });
+      }
+    }
+  }
+
+  if (uniqueAssignments.size > 0) {
+    try {
+      const assignmentList = Array.from(uniqueAssignments.values());
+      const { error: assignErr } = await sb.from('theme_program_assignments')
+        .upsert(assignmentList, { onConflict: 'theme_code, target_level, program_id' });
+      if (assignErr) {
+        console.warn('[importVaultWords] theme_program_assignments upsert error:', assignErr);
+      }
+    } catch (e) {
+      console.warn('[importVaultWords] Failed to auto-register theme_program_assignments:', e);
+    }
+  }
+
   clearApiCache('vault');
   return results;
 }
@@ -3070,6 +3101,49 @@ export async function deleteVaultTheme(theme) {
     .eq('theme', theme)
     .is('deleted_at', null);
   if (error) throw error;
+  clearApiCache('vault');
+  return true;
+}
+
+// ─── Theme-Program Multi-Tenant Assignments ────────────────
+export async function fetchThemeProgramAssignments() {
+  const sb = await getSupabase();
+  const { data, error } = await sb
+    .from('theme_program_assignments')
+    .select('id, theme_code, target_level, program_id, is_active')
+    .is('is_active', true);
+  if (error) {
+    console.warn('fetchThemeProgramAssignments notice:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+export async function toggleThemeProgramAssignment({ themeCode, targetLevel, programId, assign }) {
+  const sb = await getSupabase();
+  const thCode = String(themeCode).trim().toUpperCase();
+  const lvl = parseInt(targetLevel, 10);
+
+  if (assign) {
+    const { error } = await sb
+      .from('theme_program_assignments')
+      .upsert({
+        theme_code: thCode,
+        target_level: lvl,
+        program_id: programId,
+        is_active: true,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'theme_code,target_level,program_id' });
+    if (error) throw error;
+  } else {
+    const { error } = await sb
+      .from('theme_program_assignments')
+      .delete()
+      .eq('theme_code', thCode)
+      .eq('target_level', lvl)
+      .eq('program_id', programId);
+    if (error) throw error;
+  }
   clearApiCache('vault');
   return true;
 }
@@ -5650,6 +5724,55 @@ export async function fetchLiveTestSessionData({ testIds = [], studentIds = [], 
   };
 }
 
+/**
+ * Extend exam time for an individual student attempt (e.g. tech glitch recovery)
+ */
+export async function extendIndividualAttemptTime(attemptId, additionalMinutes = 10) {
+  const sb = await getSupabase();
+  if (!attemptId || !additionalMinutes) throw new Error('attemptId and additionalMinutes required');
+
+  const { data: att, error: fetchErr } = await sb
+    .from('attempts')
+    .select('id, expires_at, status')
+    .eq('id', attemptId)
+    .single();
+  if (fetchErr) throw fetchErr;
+
+  const currentExpiry = att.expires_at ? new Date(att.expires_at).getTime() : Date.now();
+  const baseMs = Math.max(Date.now(), currentExpiry);
+  const newExpiry = new Date(baseMs + additionalMinutes * 60000).toISOString();
+
+  const { error: updErr } = await sb
+    .from('attempts')
+    .update({ expires_at: newExpiry, updated_at: new Date().toISOString() })
+    .eq('id', attemptId);
+  if (updErr) throw updErr;
+
+  return { success: true, newExpiry };
+}
+
+/**
+ * Re-open an interrupted or auto-submitted attempt for a student to resume
+ */
+export async function reopenStudentAttempt(attemptId, additionalMinutes = 30) {
+  const sb = await getSupabase();
+  if (!attemptId) throw new Error('attemptId required');
+
+  const newExpiry = new Date(Date.now() + additionalMinutes * 60000).toISOString();
+  const { error } = await sb
+    .from('attempts')
+    .update({
+      status: 'in_progress',
+      submitted_at: null,
+      expires_at: newExpiry,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', attemptId);
+  if (error) throw error;
+
+  return { success: true, newExpiry };
+}
+
 if (typeof window !== 'undefined') {
   window.adminFetchAll = adminFetchAll;
   window.adminUpdate = adminUpdate;
@@ -5659,6 +5782,8 @@ if (typeof window !== 'undefined') {
   window.addLateStudentsToSession = addLateStudentsToSession;
   window.removeStudentFromTestSession = removeStudentFromTestSession;
   window.extendTestSessionTime = extendTestSessionTime;
+  window.extendIndividualAttemptTime = extendIndividualAttemptTime;
+  window.reopenStudentAttempt = reopenStudentAttempt;
   window.resetStudentTestAlarms = resetStudentTestAlarms;
   window.fetchLiveTestSessionData = fetchLiveTestSessionData;
   window.labelAttemptRemedial = labelAttemptRemedial;
@@ -5672,6 +5797,8 @@ if (typeof window !== 'undefined') {
   window.fetchClassTestSettings = fetchClassTestSettings;
   window.saveClassTestSettings = saveClassTestSettings;
   window.updateTestPassingScore = updateTestPassingScore;
+  window.fetchThemeProgramAssignments = fetchThemeProgramAssignments;
+  window.toggleThemeProgramAssignment = toggleThemeProgramAssignment;
 }
 
 

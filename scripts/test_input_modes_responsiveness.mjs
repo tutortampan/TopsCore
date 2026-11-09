@@ -139,10 +139,76 @@ async function testMcAutoAdvanceSafety() {
   console.log('  ✓ Manual Next safely cancels pending auto-advance; zero ghost skips');
 }
 
+async function testGhostAbortDecouplingAndInterimSalvage() {
+  console.log('\n[TEST 4] Ghost Abort Decoupling & Interim Transcript Salvage (iOS WebKit)');
+
+  let session1ErrorTriggered = false;
+  let lastMockInstance = null;
+
+  class TrackedMockSpeechRecognition extends MockSpeechRecognition {
+    constructor() {
+      super();
+      lastMockInstance = this;
+    }
+  }
+  globalThis.window.SpeechRecognition = TrackedMockSpeechRecognition;
+
+  // 1. Ghost Abort Decoupling: Old session aborted must never dispatch async errors
+  const session1 = createSpeechSession({
+    onError: () => { session1ErrorTriggered = true; }
+  });
+  session1.start();
+  const mockRec1 = lastMockInstance;
+
+  // Session 1 is aborted (e.g. user taps mic again or switches question)
+  session1.abort();
+
+  // Simulate WebKit asynchronously firing 'aborted' error after abort()
+  if (mockRec1.onerror) {
+    mockRec1.onerror({ error: 'aborted' });
+  }
+
+  assert.strictEqual(session1ErrorTriggered, false, 'Aborted session must strip listeners so no ghost error fires');
+  console.log('  ✓ Ghost abort decoupling verified: zero asynchronous error contamination');
+
+  // 2. Interim Transcript Salvage: If WebKit aborts on silence/pause, interim text must be auto-committed
+  let savedFinal = '';
+  let session2ErrorTriggered = false;
+
+  const session2 = createSpeechSession({
+    onFinal: (txt) => { savedFinal = txt; },
+    onError: () => { session2ErrorTriggered = true; }
+  });
+  session2.start();
+  const mockRec2 = lastMockInstance;
+
+  // Wait for onstart
+  await new Promise(r => setTimeout(r, 60));
+
+  // Simulate interim speech input
+  mockRec2.onresult({
+    resultIndex: 0,
+    results: [
+      [{ transcript: 'apple banana orange', isFinal: false }]
+    ]
+  });
+
+  // Simulate WebKit abruptly aborting due to iOS silence timeout
+  mockRec2.onerror({ error: 'aborted' });
+
+  assert.strictEqual(savedFinal, 'apple banana orange', 'Interim transcript must be auto-committed on WebKit silence abort');
+  assert.strictEqual(session2ErrorTriggered, false, 'Silence abort must NOT trigger disruptive error toast');
+  console.log('  ✓ Interim transcript salvage verified: spoken text preserved on iOS silence abort');
+
+  // Restore default mock
+  globalThis.window.SpeechRecognition = MockSpeechRecognition;
+}
+
 async function run() {
   await testSpeechLifecycle();
   await testWatchdogRecovery();
   await testMcAutoAdvanceSafety();
+  await testGhostAbortDecouplingAndInterimSalvage();
   console.log('\n======================================================');
   console.log('🎉 ALL INPUT MODES & RESPONSIVENESS TESTS PASSED (100%)');
   console.log('======================================================');

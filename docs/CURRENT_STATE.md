@@ -1,33 +1,26 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-09 14:40 UTC+8
-Current Phase: Phase 382: iPhone / iOS Microphone & AudioSession Stabilization [COMPLETE]
+Last Updated: 2026-11-09 15:26 UTC+8
+Current Phase: Phase 384: Tutor's Room Module Import Alignment & API Contract Restoration [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **iPhone / iOS AudioSession Conflict Resolution (`js/test.js`, `js/wake-lock.js`)**:
-   - Resolved `AVAudioSession` output mode hijack: `unlockAudio()` now immediately calls `audioCtx.suspend()` after unlocking so it does not block iOS from switching to microphone input mode.
-   - Added iOS Audio Route Guard in test room microphone handler to suspend `audioCtx` and pause active media before initializing `webkitSpeechRecognition`.
-   - Updated `js/wake-lock.js` to prevent fallback video playback when speech recognition is active (`window._isSpeechRecognitionEngaged`), eliminating audio focus conflicts on iOS Safari.
-   - Added `audioCtx.suspend()` to `stopPoliceSiren` and `abortActiveSpeechSession` to immediately release audio output routing.
+1. **API Module Contract Restoration (`js/api.js`)**:
+   - Restored missing exports `fetchThemeProgramAssignments` and `toggleThemeProgramAssignment` in `js/api.js`, resolving `Uncaught SyntaxError: The requested module '../api.js' does not provide an export named 'fetchThemeProgramAssignments'` on Tutor's Room (`admin.html`).
+   - Restored missing exports `extendIndividualAttemptTime` and `reopenStudentAttempt` in `js/api.js` for live test monitoring in `tests-access.js`.
+   - Restored `theme_program_assignments` automatic upsert in `importVaultWords`.
+   - Exposed all restored methods on `window` (`window.fetchThemeProgramAssignments`, `window.toggleThemeProgramAssignment`, `window.extendIndividualAttemptTime`, `window.reopenStudentAttempt`).
 
-2. **WebKit CoreAudio Latency & iOS Dictation Guidance (`js/speech.js`)**:
-   - Implemented an automatic 80ms retry mechanism on `InvalidStateError` specifically tuned for WebKit's asynchronous audio hardware teardown latency.
-   - Added 4000ms Watchdog Timer to auto-recover if speech recognition hangs during initialization.
-   - Added platform-aware error guidance for iPhone users (instructing how to enable microphone in Safari `aA` menu > Website Settings and how to enable Dictation in iOS Settings > General > Keyboard).
+2. **Automated Verification of 100% JS Module Imports (`scripts/verify_all_api_imports.mjs`)**:
+   - Built automated scanner verifying all 42 JavaScript modules across `js/` against `api.js` exports.
+   - Result: 100% of all 42 modules match `api.js` exports with zero missing symbols.
 
-3. **Input Modes Responsiveness & Reliability Overhaul (`js/speech.js`, `js/test.js`, `css/test.css`)**:
-   - Replaced heavy synchronous `updateNavGrid()` with ultra-lightweight `updateActiveChipOnly()` on interim speech events (CPU utilization reduced from 100% to <5%).
-   - Implemented 4-state speech machine (`idle`, `starting`, `listening`, `stopping`) with anti-double-tap guard.
-   - Implemented synchronous `abort()` method (`recognition.abort()`) for 0ms hardware mic release on question navigation (`renderQuestion`, `bottomNext`, `bottomPrev`, matrix jump).
-   - Added Emergency Typing Fallback option (`⌨️ Type Instead`) to guarantee students can complete answers and earn full score even if local hardware or network STT fails.
-   - Fixed unmanaged Multiple Choice auto-advance `setTimeout` bug that previously skipped questions on rapid taps.
-   - Optimized `renderKeyboardKeys()` with in-place shifting for virtual keyboard.
-   - Added `touch-action: manipulation !important;` and `-webkit-tap-highlight-color: transparent !important;` across all interactive test room buttons for zero tap latency.
+3. **iPhone Safari & Chrome Ghost Abort Elimination (Phases 382–383)**:
+   - Full Ghost Abort decoupling, event listener stripping on abort, auto-commit interim transcript salvage, and AudioSession / WakeLock clean isolation.
 
 ## Verification:
-- Syntax checks `node -c js/speech.js; node -c js/wake-lock.js; node -c js/test.js`: PASS (0 errors).
-- `node scripts/test_input_modes_responsiveness.mjs`: PASS (100% assertions passed: 4-state speech machine, anti-double-tap, 0ms abort, 4s watchdog auto-recovery, and debounced managed auto-advance).
-- `node scripts/test_batch_eligibility.mjs`: PASS (14/18 eligible, Mr. Test verified eligible).
+- `node scripts/verify_all_api_imports.mjs`: PASS (All 42 JS modules match 100%).
+- `node -c js/api.js; node -c js/admin/vocab-vault.js; node -c js/admin/tests-access.js`: PASS (0 syntax errors).
+- `node scripts/test_input_modes_responsiveness.mjs`: PASS (100% assertions passed).
 - `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: PASS (10/10 consecutive runs, 132/132 assertions, 100%).
 - "No commit" constraint adhered to.

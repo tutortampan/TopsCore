@@ -114,12 +114,15 @@ export async function requestScreenWakeLock() {
   isArmed = true;
   wakeLockState.requested = true;
 
-  // 1. Try Native W3C Wake Lock API first
+  // 1. Try Native W3C Wake Lock API first (Supported on iOS 16.4+, Chrome, Edge)
   const nativeOk = await requestNativeLock();
 
-  // 2. Regardless of native support, or if native is unsupported / failed (e.g. HTTP on LAN / lack of user gesture),
-  // spin up silent media loop fallback so mobile OS NEVER dims the screen
-  const fallbackOk = await playFallbackVideo();
+  // 2. Only spin up silent video fallback if native API is completely unavailable or failed,
+  // preventing audio session route conflicts on iOS Safari!
+  let fallbackOk = false;
+  if (!nativeOk) {
+    fallbackOk = await playFallbackVideo();
+  }
 
   // 3. Start pulse timer to ensure lock doesn't drop
   if (!pulseTimer && typeof window !== 'undefined') {
@@ -129,8 +132,12 @@ export async function requestScreenWakeLock() {
         if (!nativeSentinel && 'wakeLock' in navigator) {
           requestNativeLock().catch(() => {});
         }
-        if (fallbackVideo && fallbackVideo.paused) {
-          fallbackVideo.play().catch(() => {});
+        // Only pulse fallback video if native lock is absent and speech is NOT engaged
+        if (!nativeSentinel && (!('wakeLock' in navigator) || !wakeLockState.nativeActive)) {
+          if (typeof window !== 'undefined' && window._isSpeechRecognitionEngaged) return;
+          if (fallbackVideo && fallbackVideo.paused) {
+            fallbackVideo.play().catch(() => {});
+          }
         }
       }
     }, 15000);

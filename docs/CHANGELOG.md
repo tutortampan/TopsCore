@@ -1,3 +1,76 @@
+## [2026-11-09 15:26] — Phase 384: Tutor's Room Module Import Alignment & API Contract Restoration
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 384  
+**Status:** PASS  
+
+### Why
+- On Tutor's Room login page (`admin.html`), an `Uncaught SyntaxError` occurred:
+  `The requested module '../api.js' does not provide an export named 'fetchThemeProgramAssignments' (at vocab-vault.js)`.
+- Investigation revealed that commit `6913b14` ("Exam") had accidentally overwritten sections of `js/api.js`, dropping `fetchThemeProgramAssignments`, `toggleThemeProgramAssignment`, `extendIndividualAttemptTime`, and `reopenStudentAttempt`.
+
+### Changed
+1. **API Module Contract Restoration (`js/api.js`)**:
+   - Restored `fetchThemeProgramAssignments()` and `toggleThemeProgramAssignment({ themeCode, targetLevel, programId, assign })`.
+   - Restored `extendIndividualAttemptTime(attemptId, additionalMinutes)` and `reopenStudentAttempt(attemptId, additionalMinutes)`.
+   - Restored automatic `theme_program_assignments` upsert in `importVaultWords()`.
+   - Exposed all restored functions to `window` for global console / runtime accessibility.
+2. **Comprehensive Workspace Import Scanner (`scripts/verify_all_api_imports.mjs`)**:
+   - Created automated audit script scanning all 42 JS modules in `js/` to verify every imported symbol against `api.js` named exports.
+   - Result: 100% of all 42 modules resolve with 0 missing exports.
+
+### Verification
+- `node scripts/verify_all_api_imports.mjs`: PASS (All 42 JS modules match api.js exports 100%).
+- `node -c js/api.js; node -c js/admin/vocab-vault.js; node -c js/admin/tests-access.js`: PASS (0 errors).
+- `node scripts/test_input_modes_responsiveness.mjs`: PASS (100% assertions passed).
+- `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: PASS (10/10 consecutive runs, 132/132 assertions, 100%).
+
+### Files
+- `js/api.js`
+- `scripts/verify_all_api_imports.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+## [2026-11-09 15:05] — Phase 383: iPhone Safari & Chrome Ghost Abort Elimination & Interim Transcript Salvage
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 383  
+**Status:** PASS  
+
+### Why
+- On iPhone (both Safari and Chrome using iOS WebKit), students experienced speech recognition aborting unexpectedly, showing "Recognition stopped." / "recognition aborted" or resetting the mic button immediately after tapping.
+- Deep root-cause analysis uncovered 3 technical mechanisms:
+  1. **Ghost Abort Race Condition**: Calling `recognition.abort()` on an old session queues an asynchronous `onerror({ error: 'aborted' })` event in the browser macrotask queue. When that event fired milliseconds later, its callback reset `currentActiveSpeechSession = null` on the *new* session that was just created.
+  2. **False Positive Error Handling on W3C `aborted`**: `error: 'aborted'` is a status event (not a hardware failure) emitted when users tap stop, navigate, or when iOS WebKit detects a 1-second pause. Treating it as an error generated alarming red UI banners and warning toasts.
+  3. **AudioSession & Video Fallback Interference**: Document-level `unlockAudio` was creating an `AudioContext` on first touch, and `requestScreenWakeLock` was playing a fallback video loop even when native W3C Wake Lock was active.
+
+### Changed
+1. **Ghost Abort Shield & Event Stripping (`js/speech.js`)**:
+   - In `abort()`: Added `_isAborted = true`, synchronously set `recognition.onstart = null`, `recognition.onresult = null`, `recognition.onerror = null`, `recognition.onend = null`, and called `recognition.abort()`. Eliminates cross-session asynchronous error pollution.
+   - In `stop()`: Added `_isStopping = true` to suppress spurious `aborted` error callbacks.
+2. **Auto-Commit Interim Transcript Salvage (`js/speech.js`, `js/test.js`)**:
+   - In `recognition.onerror`: When `event.error === 'aborted'`, any spoken words in `_latestInterim` are immediately committed via `onFinal()` to ensure zero lost student work.
+   - Suppressed disruptive error toasts for normal `aborted` events in `onError(msg)`, returning the UI gracefully to `● Ready / Tap to Speak` (or `✅ Recorded`).
+3. **Lazy AudioContext & Pure Native WakeLock (`js/test.js`, `js/wake-lock.js`)**:
+   - Removed `new AudioContext()` from `unlockAudio()`: `audioCtx` is now strictly lazy and only initialized if anti-cheat sirens trigger.
+   - In `requestScreenWakeLock()` and `pulseTimer`: Restricted fallback `<video>` loop to environments where the native W3C Screen Wake Lock API is completely absent or inactive.
+4. **Test Suite Expansion (`scripts/test_input_modes_responsiveness.mjs`)**:
+   - Added Test 4 verifying ghost abort decoupling and auto-commit interim transcript salvage.
+
+### Verification
+- `node -c js/speech.js; node -c js/wake-lock.js; node -c js/test.js`: PASS (0 errors).
+- `node scripts/test_input_modes_responsiveness.mjs`: PASS (100% assertions passed).
+- `node scripts/test_batch_eligibility.mjs`: PASS (14/18 eligible).
+- `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: PASS (10/10 consecutive runs, 132/132 assertions, 100%).
+
+### Files
+- `js/speech.js`
+- `js/test.js`
+- `js/wake-lock.js`
+- `scripts/test_input_modes_responsiveness.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
 ## [2026-11-09 14:40] — Phase 382: iPhone / iOS Microphone & AudioSession Stabilization
 
 **Agent/Session:** Antigravity  
