@@ -2090,7 +2090,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   showLoading();
   const sb = await getSupabase();
   const [{ data: testsData }, { data: classesData }] = await Promise.all([
-    sb.from('tests').select('id, class_id, title, shell_code, test_type, payload, working_duration_minutes, minimum_required_score, is_active, display_order').is('deleted_at', null),
+    sb.from('tests').select('id, class_id, title, shell_code, test_type, payload, working_duration_minutes, minimum_required_score, status, display_order').is('deleted_at', null),
     (meta.classes && meta.classes.length > 0) ? Promise.resolve({ data: meta.classes }) : sb.from('classes').select('id, name, program_id, level_id, institution_id, is_active').is('deleted_at', null)
   ]);
   hideLoading();
@@ -2163,10 +2163,32 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
   // Helper: Find target vocabulary class for this program and level
   const getLevelClass = (lvl) => {
-    return classes.find(c => c.program_id === selectedProgId && (
-      (c.name && c.name.toLowerCase().includes(`${lvl}`) && c.name.toLowerCase().includes('vocab')) ||
-      (c.name && c.name.toLowerCase().includes(toShortLevel(lvl).toLowerCase()) && c.name.toLowerCase().includes('vocab'))
-    )) || classes.find(c => c.program_id === selectedProgId && c.name && c.name.toLowerCase().includes('vocab')) || null;
+    const prog = activeProgs.find(p => p.id === selectedProgId);
+    const progName = (prog?.name || '').toLowerCase();
+    const shortLvl = (typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`).toLowerCase();
+
+    // 1. Best match: Program Name + Level (e.g. "Camp 2nd Vocabulary")
+    let match = classes.find(c => c.program_id === selectedProgId &&
+      c.name && c.name.toLowerCase().includes(progName) &&
+      (c.name.toLowerCase().includes(shortLvl) || c.name.toLowerCase().includes(`${lvl}`)) &&
+      c.name.toLowerCase().includes('vocab')
+    );
+    if (match) return match;
+
+    // 2. Class whose tests actually exist in database
+    const classIdsWithTests = new Set(tests.map(t => t.class_id));
+    match = classes.find(c => c.program_id === selectedProgId &&
+      classIdsWithTests.has(c.id) &&
+      (c.name.toLowerCase().includes(shortLvl) || c.name.toLowerCase().includes(`${lvl}`)) &&
+      c.name.toLowerCase().includes('vocab')
+    );
+    if (match) return match;
+
+    // 3. Fallback to generic level + vocab
+    return classes.find(c => c.program_id === selectedProgId &&
+      (c.name.toLowerCase().includes(shortLvl) || c.name.toLowerCase().includes(`${lvl}`)) &&
+      c.name.toLowerCase().includes('vocab')
+    ) || classes.find(c => c.program_id === selectedProgId && c.name && c.name.toLowerCase().includes('vocab')) || null;
   };
 
   // Helper: Find Task for topic

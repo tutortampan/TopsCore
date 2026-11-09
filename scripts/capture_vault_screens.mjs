@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 import path from 'path';
 
-const ARTIFACTS_DIR = 'C:\\Users\\Top\\.gemini\\antigravity\\brain\\44e7f103-6ced-4fdc-b086-cbe3ff4c6546';
+const ARTIFACTS_DIR = 'C:\\Users\\Top\\.gemini\\antigravity\\brain\\bfa8ad48-9da7-4bea-aa34-d61621f6d7bc';
 const BASE_URL = 'http://127.0.0.1:5500';
 
 async function capture() {
@@ -17,25 +17,41 @@ async function capture() {
     });
     sessionStorage.setItem('topscore_admin_session', session);
     localStorage.setItem('topscore_admin_session', session);
+    // Set default program to Camp (11deb53c-434a-44b0-83ca-1cc9b239cab3)
+    localStorage.setItem('topscore_bp_selected_prog_id', '11deb53c-434a-44b0-83ca-1cc9b239cab3');
   });
 
   const page = await context.newPage();
 
-  // 1. Words Tab
-  console.log('Navigating to Words Tab: ' + BASE_URL + '/admin.html#vocab_vault?tab=vocab');
-  await page.goto(`${BASE_URL}/admin.html#vocab_vault?tab=vocab`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(3000);
-  const wordsImgPath = path.join(ARTIFACTS_DIR, 'vocab_vault_words_tab.png');
-  await page.screenshot({ path: wordsImgPath, fullPage: false });
-  console.log(`✓ Words Tab screenshot saved: ${wordsImgPath}`);
+  // 1. Theme Manager Tab
+  console.log('Navigating to Theme Manager Tab: ' + BASE_URL + '/admin.html#vocab_vault?tab=theme_manager');
+  await page.goto(`${BASE_URL}/admin.html#vocab_vault?tab=theme_manager`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(4000);
+  const themeManagerImgPath = path.join(ARTIFACTS_DIR, 'theme_manager_tab.png');
+  await page.screenshot({ path: themeManagerImgPath, fullPage: false });
+  console.log(`✓ Theme Manager Tab screenshot saved: ${themeManagerImgPath}`);
 
-  // 2. Blueprint Tab
-  console.log('Navigating to Topic Blueprint Tab: ' + BASE_URL + '/admin.html#vocab_vault?tab=blueprint');
+  // 2. Theme Blueprint Tab (Camp)
+  console.log('Navigating to Theme Blueprint Tab: ' + BASE_URL + '/admin.html#vocab_vault?tab=blueprint');
   await page.goto(`${BASE_URL}/admin.html#vocab_vault?tab=blueprint`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(3000);
-  const blueprintImgPath = path.join(ARTIFACTS_DIR, 'vocab_vault_blueprint_tab.png');
+  await page.waitForTimeout(4000);
+  
+  // Select Camp program if available in dropdown
+  const progSelect = await page.$('#bp-program-select');
+  if (progSelect) {
+    const campOpt = await page.$('#bp-program-select option:has-text("Camp")');
+    if (campOpt) {
+      const campVal = await campOpt.getAttribute('value');
+      if (campVal) {
+        await page.selectOption('#bp-program-select', campVal);
+        await page.waitForTimeout(2000);
+      }
+    }
+  }
+
+  const blueprintImgPath = path.join(ARTIFACTS_DIR, 'theme_blueprint_camp_tab.png');
   await page.screenshot({ path: blueprintImgPath, fullPage: false });
-  console.log(`✓ Blueprint Tab screenshot saved: ${blueprintImgPath}`);
+  console.log(`✓ Blueprint Tab (Camp) screenshot saved: ${blueprintImgPath}`);
 
   await browser.close();
   console.log('Screenshots captured successfully!');
