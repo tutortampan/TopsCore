@@ -2,7 +2,7 @@
 // Circuit Breaker for offline / undeployed Edge Functions
 // Known undeployed Edge Functions in Supabase Cloud are pre-registered so that client DB fallback
 // executes immediately without triggering CORS preflight network errors in browser console.
-const KNOWN_UNDEPLOYED_FUNCTIONS = ['start-test', 'submit-test', 'student-login', 'evaluate-test', 'generate-narrative'];
+const KNOWN_UNDEPLOYED_FUNCTIONS = ['start-test', 'submit-test', 'student-login', 'evaluate-test'];
 
 const _offlineEdgeFunctions = new Set(
   (() => {

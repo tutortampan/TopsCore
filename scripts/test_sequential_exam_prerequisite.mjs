@@ -1,24 +1,25 @@
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
-dotenv.config();
+import { getSupabase } from '../js/supabase.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lttewafpysasfblvceie.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dGV3YWZweXNhc2ZibHZjZWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkzNDk1NDIsImV4cCI6MjA1NDkyNTU0Mn0.U_E9V5bU9Y7Zz5G0Nqv9x7tEw_786T-V-pZkW-2x4j0';
+global.window = {
+  location: { hostname: 'cloud' },
+  localStorage: { getItem: () => null }
+};
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = await getSupabase();
 
 async function run() {
   console.log('Testing Sequential Exam Prerequisite Logic against Supabase data...');
 
-  // 1. Fetch Class 3rd Vocabulary
+  // 1. Fetch Class Camp 3rd Vocabulary
   const { data: vocabClass } = await supabase
     .from('classes')
     .select('id, name')
-    .eq('name', '3rd Vocabulary')
+    .or('name.eq.Camp 3rd Vocabulary,name.eq.3rd Vocabulary')
+    .limit(1)
     .single();
 
   if (!vocabClass) {
-    console.log('Class 3rd Vocabulary not found, skipping integration check.');
+    console.log('Class Camp 3rd Vocabulary not found, skipping integration check.');
     process.exit(0);
   }
 
@@ -31,7 +32,8 @@ async function run() {
 
   // Find Test 18 (3B Phrases Exam - Tourism)
   const test18 = classTests.find(t => 
-    /3B/i.test(t.title) && /Phrases/i.test(t.title) && /Exam/i.test(t.title)
+    t.shell_code === '3B-PHRASES-EXAM' ||
+    ((t.title || '').includes('Phrases Exam') && (t.shell_code || '').includes('3B'))
   );
 
   if (!test18) {

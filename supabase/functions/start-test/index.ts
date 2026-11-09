@@ -208,30 +208,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 3. Check Eligibility / Access Rules
+    // 3. Check Eligibility / Access Rules (Level & Program Centric — AGENTS.md 2.5)
     let isEligible = false;
-    let assignmentWindow: { start: string | null; end: string | null } = { start: null, end: null };
-
-    // Check assignments table
-    const { data: assignments } = await supabase
-      .from("assignments")
-      .select("*")
-      .eq("test_id", test_id)
-      .eq("status", "active");
-
-    if (assignments && assignments.length > 0) {
-      const studentMatch = assignments.find(a => a.assignment_type === 'STUDENT' && a.student_id === student_id);
-      const batchMatch = assignments.find(a => a.assignment_type === 'BATCH' && a.batch_id === student.batch_id);
-
-      const activeAssignment = studentMatch || batchMatch;
-      if (activeAssignment) {
-        isEligible = true;
-        assignmentWindow = {
-          start: activeAssignment.availability_start,
-          end: activeAssignment.availability_end
-        };
-      }
-    }
+    let assignmentWindow: { start: string | null; end: string | null } = {
+      start: test.availability_start || null,
+      end: test.availability_end || null
+    };
 
     let testProgramId = test.program_id;
     if (!testProgramId && test.class_id) {
@@ -239,13 +221,10 @@ Deno.serve(async (req) => {
       if (clsRec?.program_id) testProgramId = clsRec.program_id;
     }
 
-    // Fallback: If no explicit assignment rules exist, allow if institution and program match
-    if (!isEligible && (!assignments || assignments.length === 0)) {
-      const instMatch = !test.institution_id || !student.institution_id || test.institution_id === student.institution_id;
-      const progMatch = !testProgramId || !student.program_id || testProgramId === student.program_id;
-      if (instMatch && progMatch) {
-        isEligible = true;
-      }
+    const instMatch = !test.institution_id || !student.institution_id || test.institution_id === student.institution_id;
+    const progMatch = !testProgramId || !student.program_id || testProgramId === student.program_id;
+    if (instMatch && progMatch) {
+      isEligible = true;
     }
 
     // Strict multi-tenant isolation guard: never permit cross-program test access
@@ -851,12 +830,7 @@ Deno.serve(async (req) => {
         });
       }
     } else {
-      const { data } = await supabase
-        .from("test_items")
-        .select("*")
-        .eq("test_id", test_id)
-        .order("display_order");
-      snapQuestions = data || [];
+      snapQuestions = [];
     }
 
     if (!snapQuestions || snapQuestions.length === 0) {

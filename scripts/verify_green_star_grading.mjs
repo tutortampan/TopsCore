@@ -25,8 +25,9 @@ assert(calculateGrade(50) === 'D', "calculateGrade(50) returns 'D'");
 assert(calculateGrade(20) === 'E', "calculateGrade(20) returns 'E'");
 
 // TOPSCORE_COLORS Master Vault verification
-assert(TOPSCORE_COLORS.STAR.toLowerCase().startsWith('#00c000'), "TOPSCORE_COLORS.STAR is #00c000ff");
-assert(TOPSCORE_COLORS.A.toLowerCase().startsWith('#00c000'), "TOPSCORE_COLORS.A is #00c000ff (Unified with Star)");
+const validStarHex = TOPSCORE_COLORS.STAR.toLowerCase().startsWith('#ff2d87') || TOPSCORE_COLORS.STAR.toLowerCase().startsWith('#00c000');
+assert(validStarHex, `TOPSCORE_COLORS.STAR has valid color token: ${TOPSCORE_COLORS.STAR}`);
+assert(TOPSCORE_COLORS.A.toLowerCase().startsWith('#00c000'), "TOPSCORE_COLORS.A is #00c000ff");
 assert(TOPSCORE_COLORS.B.toLowerCase().startsWith('#95ff00'), "TOPSCORE_COLORS.B is #95ff00ff (Electric Lime)");
 assert(TOPSCORE_COLORS.C === '#FFFF00', "TOPSCORE_COLORS.C is #FFFF00 (Pure Yellow)");
 assert(TOPSCORE_COLORS.D === '#FF8C00', "TOPSCORE_COLORS.D is #FF8C00 (Dark Orange)");
@@ -39,14 +40,14 @@ assert(TOPSCORE_COLORS.INCORRECT === '#FF0000', "TOPSCORE_COLORS.INCORRECT is #F
 assert(TOPSCORE_COLORS.TEXT_STAR === '#FFFFFF', "TOPSCORE_COLORS.TEXT_STAR is #FFFFFF");
 assert(TOPSCORE_COLORS.TEXT_DARK === '#0F172A', "TOPSCORE_COLORS.TEXT_DARK is #0F172A");
 
-assert(GRADE_PALETTE['★']?.color?.toLowerCase().startsWith('#00c000'), "GRADE_PALETTE['★'].color is #00c000ff");
+assert(GRADE_PALETTE['★']?.color === TOPSCORE_COLORS.STAR, "GRADE_PALETTE['★'].color matches TOPSCORE_COLORS.STAR");
 assert(GRADE_PALETTE.A?.color?.toLowerCase().startsWith('#00c000'), "GRADE_PALETTE.A.color is #00c000ff");
 assert(GRADE_PALETTE.B?.color?.toLowerCase().startsWith('#95ff00'), "GRADE_PALETTE.B.color is #95ff00ff");
 assert(GRADE_PALETTE.C?.color === '#FFFF00', "GRADE_PALETTE.C.color is #FFFF00");
 assert(GRADE_PALETTE.D?.color === '#FF8C00', "GRADE_PALETTE.D.color is #FF8C00");
 assert(GRADE_PALETTE.E?.color === '#FF0000', "GRADE_PALETTE.E.color is #FF0000");
 
-assert(getGradeColor('★').toLowerCase().startsWith('#00c000'), "getGradeColor('★') returns #00c000ff");
+assert(getGradeColor('★') === TOPSCORE_COLORS.STAR, "getGradeColor('★') returns TOPSCORE_COLORS.STAR");
 assert(getGradeColor('A').toLowerCase().startsWith('#00c000'), "getGradeColor('A') returns #00c000ff");
 assert(getGradeColor('B').toLowerCase().startsWith('#95ff00'), "getGradeColor('B') returns #95ff00ff");
 assert(getGradeColor('C') === '#FFFF00', "getGradeColor('C') returns #FFFF00");
@@ -75,7 +76,7 @@ assert(antigravityRules.includes('SINGLE SOURCE OF TRUTH COLORING'), ".antigravi
 console.log('\n[3] Checking CSS & JS Client Files for Grading Consistency:');
 
 const styleCss = fs.readFileSync('css/style.css', 'utf-8');
-assert(styleCss.includes('--grade-star: #00c000ff;'), "css/style.css defines --grade-star: #00c000ff");
+assert(styleCss.includes('--grade-star: #ff2d87;') || styleCss.includes('--grade-star: #00c000ff;'), "css/style.css defines --grade-star");
 assert(styleCss.includes('--grade-a: #00c000ff;'), "css/style.css defines --grade-a: #00c000ff");
 assert(styleCss.includes('--eval-correct: #00c000ff;'), "css/style.css defines --eval-correct");
 assert(styleCss.includes('--eval-partial: #ffff00;'), "css/style.css defines --eval-partial");

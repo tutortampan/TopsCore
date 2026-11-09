@@ -1,26 +1,41 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-09 15:26 UTC+8
-Current Phase: Phase 384: Tutor's Room Module Import Alignment & API Contract Restoration [COMPLETE]
+Last Updated: 2026-11-09 18:40 UTC+8
+Current Phase: Phase 386: Master Legacy Cleanup & Codebase Rationalization [COMPLETE]
 Status: COMPLETE
 
-## Completed Work:
-1. **API Module Contract Restoration (`js/api.js`)**:
-   - Restored missing exports `fetchThemeProgramAssignments` and `toggleThemeProgramAssignment` in `js/api.js`, resolving `Uncaught SyntaxError: The requested module '../api.js' does not provide an export named 'fetchThemeProgramAssignments'` on Tutor's Room (`admin.html`).
-   - Restored missing exports `extendIndividualAttemptTime` and `reopenStudentAttempt` in `js/api.js` for live test monitoring in `tests-access.js`.
-   - Restored `theme_program_assignments` automatic upsert in `importVaultWords`.
-   - Exposed all restored methods on `window` (`window.fetchThemeProgramAssignments`, `window.toggleThemeProgramAssignment`, `window.extendIndividualAttemptTime`, `window.reopenStudentAttempt`).
+## Completed Work (Phase 386):
+1. **Frontend & Workspace Hygiene**:
+   - Removed 2 orphan JS modules: `js/admin/panel-c-builder.js` (657 lines) & `js/utils/dashboard_guards.js` (70 lines).
+   - Removed 4 dead/unused Edge Functions: `duplicate-test`, `generate-module-template`, `import-students`, `import-questions`.
+   - Purged ghost reference to `generate-narrative` across `js/api.js` and `js/supabase.js`.
+   - Cleaned root workspace: moved 10 test verification screenshots (`.png`) to `docs/screenshots/`, relocated `update_session_log.mjs` to `scripts/`, removed obsolete `setup-storage.sql`.
 
-2. **Automated Verification of 100% JS Module Imports (`scripts/verify_all_api_imports.mjs`)**:
-   - Built automated scanner verifying all 42 JavaScript modules across `js/` against `api.js` exports.
-   - Result: 100% of all 42 modules match `api.js` exports with zero missing symbols.
+2. **Consolidation of `scripts/` Directory**:
+   - Safeguarded 21 active/official testing & diagnostic scripts.
+   - Consolidated 195 legacy scratch/patch scripts into `scripts/archive/`.
+   - Updated `scripts/verify_system_health.mjs` to accurately audit the 13 canonical database tables.
 
-3. **iPhone Safari & Chrome Ghost Abort Elimination (Phases 382–383)**:
-   - Full Ghost Abort decoupling, event listener stripping on abort, auto-commit interim transcript salvage, and AudioSession / WakeLock clean isolation.
+3. **Backend & Edge Functions Fallback Decoupling**:
+   - Cleaned `supabase/functions/evaluate-test/index.ts` to eliminate obsolete inserts into `student_submissions` and `test_results`.
+   - Decoupled `supabase/functions/start-test/index.ts` from deprecated `assignments` and `test_items` queries.
+   - Replaced dead scheduling/assignment functions in `js/api.js` with clean stubs returning empty arrays.
 
-## Verification:
-- `node scripts/verify_all_api_imports.mjs`: PASS (All 42 JS modules match 100%).
-- `node -c js/api.js; node -c js/admin/vocab-vault.js; node -c js/admin/tests-access.js`: PASS (0 syntax errors).
-- `node scripts/test_input_modes_responsiveness.mjs`: PASS (100% assertions passed).
-- `node scripts/test_vocab_7x7_and_leveling_e2e.mjs`: PASS (10/10 consecutive runs, 132/132 assertions, 100%).
-- "No commit" constraint adhered to.
+4. **Database Migration & Safety Protocol**:
+   - Exported historical data backup for `subjects` (6 rows) and `enrollments` (44 rows) to `docs/archive/legacy_data_backup_20261109.json`.
+   - Authored formal migration `supabase/migrations/20261109020000_master_legacy_cleanup.sql` dropping 16 legacy tables, 3 obsolete RPCs, and redundant columns (`tests.prerequisite_id`, `tests.window_start/end`, `progress.level_status/completed_at`).
+
+5. **Complete Test Suite Verification**:
+   - `npm run test:syntax`: 100% PASS (43 JS files verified).
+   - `npm run test:manifest`: 100% PASS (24 cache manifest assets on disk).
+   - `npm run test:imports`: 100% PASS (40 active JS modules verified with 0 defects).
+   - `npm run test:assets`: 100% PASS (all 6 HTML files).
+   - `npm run test:health`: 100% PASS (13 canonical tables healthy).
+   - `npm run test:grading`: 100% PASS (official grading palette & badges).
+   - `npm run test:prereq`: 100% PASS (sequential prerequisite gating).
+   - `npm run test:input`: 100% PASS (4-state machine, watchdog, debounce, salvage).
+   - `npm run test:e2e:vocab`: 100% PASS (10/10 consecutive runs, 1,320 assertions).
+   - `npm test`: 100% PASS.
+
+## Next Exact Action:
+- Ready for regular feature development or deployment.

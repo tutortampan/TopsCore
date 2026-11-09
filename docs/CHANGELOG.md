@@ -1,3 +1,87 @@
+## [2026-11-09 18:40] — Phase 386: Master Legacy Cleanup & Codebase Rationalization
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 386  
+**Status:** PASS  
+
+### Why
+- An exhaustive audit revealed dead baggage across multiple layers of the system:
+  - 16 obsolete/zero-row legacy database tables and 3 defunct RPCs.
+  - 4 unused Edge Functions (`duplicate-test`, `generate-module-template`, `import-students`, `import-questions`) and a ghost reference to `generate-narrative`.
+  - 2 unreferenced orphan JS modules (`panel-c-builder.js`, `dashboard_guards.js`).
+  - 195 ad-hoc scratch scripts cluttering the `scripts/` directory.
+  - Verification screenshots and temporary scripts cluttering the root workspace.
+
+### Changed
+1. **Frontend & Workspace Hygiene**:
+   - Removed orphaned JS files: `js/admin/panel-c-builder.js` and `js/utils/dashboard_guards.js`.
+   - Purged ghost reference to `generate-narrative` from `js/api.js` and `js/supabase.js`.
+   - Removed 4 dead Edge Function folders from `supabase/functions/`.
+   - Relocated 10 root verification screenshots to `docs/screenshots/`, moved `update_session_log.mjs` into `scripts/`, and deleted obsolete `setup-storage.sql`.
+2. **`scripts/` Directory Consolidation**:
+   - Consolidated 195 legacy patch/scratch scripts into `scripts/archive/`.
+   - Preserved 21 official testing, health check, and diagnostic scripts.
+   - Modernized `scripts/verify_system_health.mjs` to focus strictly on the 13 canonical tables.
+3. **Backend & Function Decoupling**:
+   - Stripped obsolete inserts into `student_submissions` and `test_results` from `supabase/functions/evaluate-test/index.ts`.
+   - Decoupled `supabase/functions/start-test/index.ts` from deprecated `assignments` and `test_items`.
+   - Converted legacy scheduling/assignment query functions in `js/api.js` to clean empty array stubs.
+4. **Database Migration & Safety Protocol**:
+   - Backed up data from `subjects` (6 rows) and `enrollments` (44 rows) to `docs/archive/legacy_data_backup_20261109.json`.
+   - Created official migration `supabase/migrations/20261109020000_master_legacy_cleanup.sql` to drop 16 legacy tables, 3 obsolete functions, and redundant columns.
+   - Updated `docs/DATABASE.md` to reflect the 13 canonical core tables.
+
+### Verification
+- `npm run test:syntax`: PASS (43 JS files verified).
+- `npm run test:manifest`: PASS (all 24 cache assets verified).
+- `npm run test:imports`: PASS (40 active JS modules verified with 0 defects).
+- `npm run test:assets`: PASS (all 6 HTML files verified).
+- `npm run test:health`: PASS (13 canonical tables healthy).
+- `npm run test:grading`: PASS (100%).
+- `npm run test:prereq`: PASS (100%).
+- `npm run test:input`: PASS (100%).
+- `npm run test:e2e:vocab`: PASS (10/10 consecutive runs, 1,320 assertions).
+- `npm test`: PASS (100%).
+
+## [2026-11-09 17:18] — Phase 385: Universal Diagnostic Automation & Test Suite Modernization
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 385  
+**Status:** PASS  
+
+### Why
+- The user requested "rerun all check /boost" and "continue" to solidify error checking automation across the repository.
+- Deep investigation revealed outdated references in legacy test scripts (`test_sequential_exam_prerequisite.mjs` and `verify_green_star_grading.mjs`) and missing npm script entries for new diagnostic tools.
+
+### Changed
+1. **NPM Diagnostic Automation Scripts (`package.json`)**:
+   - Added `test:imports`: runs `verify_all_api_imports.mjs` and `verify_all_project_imports.mjs` (auditing 100% of 42 JS modules).
+   - Added `test:assets`: runs `verify_html_assets.mjs` (auditing script/link tags across all 6 HTML files).
+   - Added `test:health`: runs `verify_system_health.mjs` (auditing 14 Supabase database tables).
+   - Added `test:input`: runs `test_input_modes_responsiveness.mjs`.
+   - Added `test:e2e:vocab`: runs `test_vocab_7x7_and_leveling_e2e.mjs`.
+2. **Modernized Sequential Prerequisite Test (`scripts/test_sequential_exam_prerequisite.mjs`)**:
+   - Updated class filter to `'Camp 3rd Vocabulary'` and shell code lookup to `3B-PHRASES-EXAM`.
+   - Updated Supabase client instantiation to `getSupabase()`.
+   - `npm run test:prereq` now passes 100%.
+3. **Synchronized Color Grading Verification (`scripts/verify_green_star_grading.mjs`)**:
+   - Aligned Star token assertion with current Electric Pink (`#ff2d87`) from Phase 341.
+   - `npm run test:grading` now passes 100%.
+
+### Verification
+- `npm run test:imports`: PASS (100% of 42 JS modules verified).
+- `npm run test:assets`: PASS (100% of HTML files verified).
+- `npm run test:grading`: PASS (100%).
+- `npm run test:prereq`: PASS (100%).
+- `npm test`: PASS (100% of 9 sub-suites).
+
+### Files
+- `package.json`
+- `scripts/test_sequential_exam_prerequisite.mjs`
+- `scripts/verify_green_star_grading.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
 ## [2026-11-09 15:26] — Phase 384: Tutor's Room Module Import Alignment & API Contract Restoration
 
 **Agent/Session:** Antigravity  

@@ -2230,37 +2230,8 @@ export async function fetchTests(filters = {}) {
 }
 
 export async function fetchAssignments(filters = {}) {
-  const sb = await getSupabase();
-  try {
-    let query = sb.from('assignments').select('*, tests(*, classes(name), levels(name, level_number))');
-
-    let orConditions = [];
-    if (filters.batch_id) orConditions.push(`batch_id.eq.${filters.batch_id}`);
-    if (filters.student_id) orConditions.push(`student_id.eq.${filters.student_id}`);
-
-    if (orConditions.length > 0) {
-      query = query.or(orConditions.join(','));
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-
-    const validTests = [];
-    for (const a of data || []) {
-      if (a.tests && !a.tests.deleted_at && a.tests.status === 'PUBLISHED') {
-        validTests.push({
-          ...a.tests,
-          assignment_id: a.id,
-          availability_start: a.availability_start,
-          availability_end: a.availability_end
-        });
-      }
-    }
-    return validTests;
-  } catch (err) {
-    console.warn('fetchAssignments failed:', err.message);
-    return [];
-  }
+  // Legacy stub: Test assignment is level-centric & automatic (AGENTS.md 2.5)
+  return [];
 }
 
 // ============================================================
@@ -2642,51 +2613,12 @@ export async function updateTestWithTopics(id, payload, topicIds = []) {
   return updatedTest;
 }
 
-// --- Test instances ---
-export async function fetchTestInstances(filters = {}) {
-  const sb = await getSupabase();
-  let query = sb.from('assignments').select('*, batches(name), students(name), tests(title, test_subtype)');
-  if (filters.test_id) query = query.eq('test_id', filters.test_id);
-  if (filters.batch_id) query = query.eq('batch_id', filters.batch_id);
-  const { data, error } = await query.order('created_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
-}
-
-// --- Class instances (scheduling) ---
-export async function fetchClassInstances(filters = {}) {
-  const sb = await getSupabase();
-  let query = sb.from('class_instances').select('id, batch_id, class_id, start_date, estimated_finish, actual_finish, recurring_schedule, status, created_at, updated_at');
-  if (filters.class_id) query = query.eq('class_id', filters.class_id);
-  if (filters.batch_id) query = query.eq('batch_id', filters.batch_id);
-  const { data, error } = await query.order('created_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
-}
-
-export async function fetchClassInstanceRoster(instanceId) {
-  const sb = await getSupabase();
-  const { data, error } = await sb.from('class_instance_roster').select('*, students(id, name, gender)').eq('class_instance_id', instanceId);
-  if (error) throw error;
-  return data || [];
-}
-
-export async function addAdditionalMember(instanceId, studentId) {
-  const sb = await getSupabase();
-  const { data, error } = await sb.from('class_instance_roster').insert({ class_instance_id: instanceId, student_id: studentId, enrollment_type: 'manual' }).select().single();
-  if (error) throw error;
-  return data;
-}
-
-// --- Additional Admin Functions ---
-export async function fetchClassMeetings(filters = {}) {
-  const sb = await getSupabase();
-  let query = sb.from('class_meetings').select('id, class_instance_id, meeting_number, scheduled_date, actual_date, status, created_at, updated_at');
-  if (filters.class_instance_id) query = query.eq('class_instance_id', filters.class_instance_id);
-  const { data, error } = await query.order('created_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
-}
+// --- Legacy Stubs for Deprecated Scheduling ---
+export async function fetchTestInstances(filters = {}) { return []; }
+export async function fetchClassInstances(filters = {}) { return []; }
+export async function fetchClassInstanceRoster(instanceId) { return []; }
+export async function addAdditionalMember(instanceId, studentId) { return null; }
+export async function fetchClassMeetings(filters = {}) { return []; }
 
 export async function invokeAIEvaluation(payload) {
   return await callEdgeFunction('evaluate-test', payload);
@@ -2704,9 +2636,6 @@ export async function fetchTestResultsFromDB(filters = {}) {
   return data || [];
 }
 
-export async function generateAttemptNarrative(attemptId) {
-  return await callEdgeFunction('generate-narrative', { attempt_id: attemptId });
-}
 // ============================================================
 // VOCABULARY VAULT — Server Time & WITA Sync
 // ============================================================

@@ -85,57 +85,11 @@ Deno.serve(async (req: Request) => {
     const evaluation = await routeEvaluation(payload);
     const finalScore = Math.round(Number(evaluation.final_score ?? 0));
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    
-    let dbRecord = null;
-    const effectiveTestId = payload.testId || null;
-
-    if (supabaseUrl && supabaseKey) {
-      try {
-        const supabaseClient = createClient(supabaseUrl, supabaseKey);
-        
-        const { data: resData, error: dbError } = await supabaseClient
-          .from("test_results")
-          .insert({
-            student_id: payload.studentId,
-            test_id: effectiveTestId,
-            module_type: payload.moduleType,
-            final_score: finalScore,
-            raw_evaluation_json: evaluation,
-            transcript: (evaluation as any).transcript || payload.transcript || payload.studentInput || "",
-          })
-          .select()
-          .single();
-
-        if (!dbError) {
-          dbRecord = resData;
-        }
-
-        if (effectiveTestId) {
-          await supabaseClient
-            .from("student_submissions")
-            .insert({
-              student_id: payload.studentId,
-              test_id: effectiveTestId,
-              status: "EVALUATED",
-              overall_score: finalScore,
-              ai_transcript: (evaluation as any).transcript || payload.transcript || "",
-              ai_feedback: evaluation,
-            })
-            .select()
-            .maybeSingle();
-        }
-      } catch (dbErr: any) {
-        console.warn("Database hook warning:", dbErr.message);
-      }
-    }
-
     return new Response(
       JSON.stringify({
         success: true,
         data: evaluation,
-        dbRecord,
+        finalScore,
       }),
       {
         headers: {
