@@ -1,3 +1,33 @@
+## [2026-11-09 09:16] — Phase 378: Batch 134 Written Words Exam Completion & Official Scoreboard Ratification
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 378  
+**Status:** PASS  
+
+### Why
+- The 120-minute live written exam `2C-WORDS-EXAM - SHOPPING ESSENTIALS` (Test ID: `6705f171-7b17-48d1-9391-e301f663a411`) reached its authoritative server deadline at 09:15:14 WIB (01:15:14 UTC).
+- All active attempts across Batch 134 students auto-submitted, triggered server tolerance evaluation, and recorded final points and official grades.
+
+### Final Official Scoreboard (Batch 134 — 2C-WORDS-EXAM)
+1. **Miss Isnantika Salsabila**: **415.0 PTS / 440** (**94.32%**, **Grade A**) — *Champion, 411 correct answers*
+2. **Miss Alfina Damayanti**: **395.0 PTS / 440** (**89.77%**, **Grade A**) — *Runner-up, 393 correct answers*
+3. **Miss Cinta Laura**: **305.5 PTS / 440** (**69.43%**, **Grade C**) — *Passed KKM*
+4. **Miss Riska Fetrosia**: **298.0 PTS / 440** (**67.73%**, **Grade C**) — *Passed KKM*
+5. **Mr. Lalu Yuda Handika Prawira**: **283.5 PTS / 440** (**64.43%**, **Grade C**) — *Passed KKM*
+6. **Mr. Ayya Sofyandi Mzeth**: **236.5 PTS / 440** (**53.75%**, **Grade D**)
+7. **Miss Adinda Karunia Farela**: **205.5 PTS / 440** (**46.70%**, **Grade D**)
+8. **Miss Havvina Solehah**: **141.5 PTS / 440** (**32.16%**, **Grade D**) — *Highest attempt preserved per Rule 2.7*
+
+### Verification
+- All 8 in-progress attempts transitioned to `auto_submitted` without data loss.
+- Zero duplicate attempts created.
+- Partial credit tolerance engine correctly awarded 0.5 pt for typos and stems.
+- Highest score rule correctly resolved in student profiles.
+
+### Files
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+
 ## [2026-11-09 09:05] — Phase 377: Permanent ServiceWorker Elimination on Tutor Console & Vocab Vault Split Verification
 
 **Agent/Session:** Antigravity  
