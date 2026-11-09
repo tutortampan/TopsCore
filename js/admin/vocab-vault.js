@@ -81,17 +81,22 @@ export async function renderVocabularyVault(area) {
     const phrasesCount = (words || []).filter(w => phraseTypes.includes((w.word_type || '').toLowerCase())).length;
     const topicsCount = (topics || []).length;
 
+    const uniqueThemes = new Set();
+    (topics || []).forEach(t => { if (t.theme) uniqueThemes.add(t.theme.trim().toUpperCase()); });
+    (words || []).forEach(w => { if (w.theme) uniqueThemes.add(w.theme.trim().toUpperCase()); });
+    const themesCount = uniqueThemes.size || (topics || []).length;
+
     let hashTab = null;
     if (window.location.hash && window.location.hash.includes('?')) {
       const match = window.location.hash.match(/[?&]tab=([^&]+)/);
       if (match) hashTab = match[1];
     }
 
-    let activeVaultTab = hashTab || window._activeVaultTab || localStorage.getItem('topscore_admin_vault_tab') || 'theme_manager';
+    let activeVaultTab = hashTab || window._activeVaultTab || localStorage.getItem('topscore_admin_vault_tab_v2') || 'theme_manager';
     if (activeVaultTab === 'topics' || activeVaultTab === 'themes') activeVaultTab = 'theme_manager';
 
     const buildVaultTabs = (activeId) => [
-      { id: 'theme_manager', icon: '🗺️', val: topicsCount, title: 'Theme Manager', label: 'Theme Manager' },
+      { id: 'theme_manager', icon: '🗺️', val: themesCount, title: 'Theme Manager', label: 'Theme Manager' },
       { id: 'blueprint', icon: '⚡', val: topicsCount, title: 'Theme Blueprint', label: 'Theme Blueprint' },
       { id: 'vocab', icon: '📦', val: wordsCount, label: 'Vocabulary Words' },
       { id: 'phrases', icon: '💬', val: phrasesCount, label: 'Phrases & Idioms' }
@@ -129,6 +134,7 @@ export async function renderVocabularyVault(area) {
       window._activeVaultTab = tabId; // persist across re-renders
       try {
         localStorage.setItem('topscore_admin_vault_tab', tabId);
+        localStorage.setItem('topscore_admin_vault_tab_v2', tabId);
         if (window.history && window.history.replaceState) {
           window.history.replaceState(null, '', `#vocab_vault?tab=${tabId}`);
         }

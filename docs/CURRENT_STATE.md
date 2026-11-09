@@ -1,16 +1,22 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-09 07:31 UTC+8
-Current Phase: Phase 371: Words Exam Written Mode Synchronization & Vault Split [COMPLETE]
+Last Updated: 2026-11-09 08:06 UTC+8
+Current Phase: Phase 373: Vocabulary Vault Cache Busters & Tab Count Polish [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Words Exam Written Mode Hotfix (`js/test.js`, `js/api.js`, `supabase/functions/start-test/index.ts`)**:
-   - Diagnosed root cause: `tests.payload.answer_type` contained legacy `'spoken'` on `2C-WORDS-EXAM` and `2D-WORDS-EXAM`, and `startTest` omitted `answer_type` from `.select(...)`.
-   - Updated `js/test.js` to strictly enforce `written` mode for any test with `answer_type === 'written'` or ending with `-WORDS-EXAM`.
-   - Updated all 10 `*-WORDS-EXAM` tests in Supabase to `answer_type = 'written'` and `payload.answer_type = 'written'`.
-   - Updated all 3,520 question snapshots across all 9 in-progress student attempts in `attempt_answers` to `answer_type: 'written'`.
-   - Bumped `test.html` and `sw.js` cache versions to `v171` / `v96`.
+1. **Havvina Auto-Submit Incident Analysis**:
+   - Diagnosed root cause via Supabase `audit_logs`: student on Android Mobile was detected as `Left exam screen for 41.6s` (screen minimized/switched app/lock).
+   - Anti-cheat grace period expired, executing `doSubmit(true)` -> `auto_submitted` at 07:37:07 WIB with 48.5 pts.
+   - Verified that student Havvina immediately resumed via Attempt 3 (`a0a37137-9aef-4947-a075-036700a23e47`), which is currently `in_progress` with 26 questions answered.
+   - Highest score rule (Rule 2.7) guarantees that Attempt 3 will supersede Attempt 1 upon completion if score is higher.
+
+2. **Batch 134 Camp Test Account Setup (`Mr. Test`)**:
+   - Located existing student `Mr. Test` (`0694c6f5-076c-43d1-99ee-0a8800975bcb`) in Batch `134`, Program `Camp`, Institution `CEC`.
+   - Verified PIN: `1234` (SHA-256 matched).
+   - Published all DRAFT task shells in `Camp 2nd Vocabulary` (`2A1`, `2A2`, `2A3`, `2B1`, `2B2`, `2B3`, `2B4`).
+   - Seeded 75 passing attempts (100% score, 40/40, grade ★) across Theme A (`2A1`, `2A2`, `2A3`), Theme B (`2B1`, `2B2`, `2B3`, `2B4`), and Theme C (`2C1`, `2C2`, `2C3`, `2C4`).
+   - Verified prerequisite check for `2C-WORDS-EXAM` (`6705f171-7b17-48d1-9391-e301f663a411`) with 7/7 passes on prerequisite `2C4`. Exam is fully unlocked and ready to test in Written mode.
 
 2. **Vocabulary Vault Topbar Tabs Architecture (`js/admin/vocab-vault.js`)**:
    - Split monolithic `Topic Blueprint` into two distinct tabs:

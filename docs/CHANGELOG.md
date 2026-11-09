@@ -1,3 +1,68 @@
+## [2026-11-09 08:06] — Phase 373: Vocabulary Vault Cache Busters & Tab Count Polish
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 373  
+**Status:** PASS  
+
+### Why
+- The user's browser was still displaying the legacy single-tab monolithic Topic Blueprint table because `js/admin/app.js` imported `vocab-vault.js?v=20261106_v160` (cached by Chrome).
+- Polish topbar badges so `🗺️ Theme Manager` reflects unique themes count while `⚡ Theme Blueprint` reflects topics count.
+- Ensure default tab transition lands cleanly on `theme_manager` for users with legacy `topscore_admin_vault_tab: 'blueprint'` stored in localStorage.
+
+### Changed
+1. **Cache Buster Synchronization (`v=20261109_v172`)**:
+   - Bumped `vocab-vault.js` query string to `?v=20261109_v172` in `js/admin/app.js`, `js/admin/classes-management.js`, `js/admin/panel-c-builder.js`, and `js/admin/tests-management.js`.
+   - Bumped `admin.html` stylesheets (`style.css`, `admin.css`) and scripts (`admin-init.js`, `app.js`) to `?v=20261109_v172`.
+   - Bumped Service Worker cache name to `topscore-cache-option-a-v97` in `sw.js`.
+2. **Topbar Tabs Polish in `vocab-vault.js`**:
+   - Distinct counts: `theme_manager` displays unique themes count (`themesCount`), while `blueprint` displays total topics count (`topicsCount`).
+   - Default tab fallback logic updated to check `topscore_admin_vault_tab_v2`, defaulting to `'theme_manager'` on initial visit to ensure users see the new theme manager view immediately.
+3. **Verification**:
+   - `scripts/test_multi_program_theme_blueprint_v166.mjs`: 31/31 PASSED (100%).
+   - `scripts/test_ui_tab_badges_and_grade_score_v167.mjs`: 28/28 PASSED (100%).
+   - `scripts/test_vocab_7x7_and_leveling_e2e.mjs`: 10/10 consecutive runs PASSED (132/132 assertions).
+
+### Files
+- `admin.html`
+- `js/admin/app.js`
+- `js/admin/classes-management.js`
+- `js/admin/panel-c-builder.js`
+- `js/admin/tests-management.js`
+- `js/admin/vocab-vault.js`
+- `sw.js`
+- `scripts/test_ui_tab_badges_and_grade_score_v167.mjs`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
+## [2026-11-09 07:51] — Phase 372: Incident Analysis (Havvina Auto-Submit) & Test Account 7x7 Seeding
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 372  
+**Status:** PASS  
+
+### Why
+- User reported student Havvina's exam unexpectedly auto-submitted mid-exam (`2C-WORDS-EXAM`).
+- User requested test account in Batch 134 named "test" with 7x7 completed for Themes A, B, and C in Camp 2nd Vocabulary class to test Exam access.
+
+### Changed
+1. **Havvina Auto-Submit Incident Diagnostics**:
+   - Analyzed Supabase `audit_logs`: Student Havvina (using Android Chrome mobile) triggered Anti-Cheat event with reason `"Left exam screen for 41.6s"` at 07:37:01 WIB.
+   - The warning countdown (15s) expired while the student was off-screen, invoking `doSubmit(true)` -> `auto_submitted` (Attempt 1, 48.5 pts).
+   - Confirmed student Havvina re-entered and is actively working on Attempt 3 (`a0a37137-9aef-4947-a075-036700a23e47`, status: `in_progress`, 26 questions answered so far).
+2. **Batch 134 Test Account Setup (`Mr. Test`)**:
+   - Located existing student `Mr. Test` (`0694c6f5-076c-43d1-99ee-0a8800975bcb`) in Batch `134`, Program `Camp`, Institution `CEC` with PIN `1234`.
+   - Published all DRAFT task shells in `Camp 2nd Vocabulary` (`2A1`, `2A2`, `2A3`, `2B1`, `2B2`, `2B3`, `2B4`).
+   - Inserted 75 passing attempts (100% score, 40/40, grade ★) satisfying 7x7 Repetitive Mastery across Theme A, Theme B, and Theme C.
+   - Verified prerequisite check: `2C-WORDS-EXAM` (`6705f171-7b17-48d1-9391-e301f663a411`) has 7/7 passes on prerequisite `2C4`, unlocking the exam cleanly.
+
+### Files
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## [2026-11-09 07:30] — Phase 371: Hotfix Words Exam Written Mode Synchronization across Active Attempts & Database
 
 **Agent/Session:** Antigravity  

@@ -480,7 +480,7 @@ window.openAITestEditor = async (testId) => {
   }
   
   if (asm.test_type && (asm.test_type.includes('VOCAB') || asm.test_type.includes('IDIOM'))) {
-    const { openTestBuilderModal } = await import('./vocab-vault.js?v=20261103_v105');
+    const { openTestBuilderModal } = await import('./vocab-vault.js?v=20261109_v172');
     return openTestBuilderModal(null, { editTest: asm });
   }
   

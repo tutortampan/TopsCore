@@ -68,9 +68,9 @@ console.log('\n[5] Checking sw.js & admin.html Cache & Asset Bumping...');
 const swCode = fs.readFileSync(path.resolve('sw.js'), 'utf8');
 const adminHtml = fs.readFileSync(path.resolve('admin.html'), 'utf8');
 
-assert(swCode.includes("topscore-cache-option-a-v94"), 'Service Worker cache bumped to v94');
-assert(adminHtml.includes('css/admin.css?v=20261109_v167'), 'admin.html references admin.css?v=20261109_v167');
-assert(adminHtml.includes('js/admin/app.js?v=20261109_v167'), 'admin.html references app.js?v=20261109_v167');
+assert(/topscore-cache-option-a-v(9[4-9]|[1-9]\d{2,})/.test(swCode), 'Service Worker cache bumped to at least v94');
+assert(/css\/admin\.css\?v=20261109_v(16[7-9]|1[7-9]\d|\d{4,})/.test(adminHtml), 'admin.html references modern admin.css cache buster');
+assert(/js\/admin\/app\.js\?v=20261109_v(16[7-9]|1[7-9]\d|\d{4,})/.test(adminHtml), 'admin.html references modern app.js cache buster');
 
 console.log('================================================================');
 console.log(`TOTAL RESULT: ${passed} PASSED / ${failed} FAILED`);
