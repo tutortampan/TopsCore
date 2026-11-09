@@ -1,3 +1,14 @@
+# ACTIVE DIRECTIVE: PHASE 373 — VOCABULARY VAULT CACHE BUSTERS & TAB COUNT POLISH [COMPLETE]
+
+- [x] Task 1: Bump `vocab-vault.js` import cache buster across `js/admin/app.js`, `classes-management.js`, `panel-c-builder.js`, and `tests-management.js` to `?v=20261109_v172`.
+- [x] Task 2: Bump `admin.html` stylesheets and scripts to `?v=20261109_v172`, bump `sw.js` cache name to `topscore-cache-option-a-v97`.
+- [x] Task 3: Polish `buildVaultTabs` in `js/admin/vocab-vault.js`: set `themesCount` for `🗺️ Theme Manager` and `topicsCount` for `⚡ Theme Blueprint`.
+- [x] Task 4: Ensure default landing on `theme_manager` on first load via `topscore_admin_vault_tab_v2`.
+- [x] Task 5: Verify all automated test suites (31/31 split test, 28/28 badges test, 132/132 10-run E2E test).
+- [x] Task 6: Commit and push changes to `origin/main`.
+
+---
+
 # ACTIVE DIRECTIVE: PHASE 372 — VOCABULARY VAULT UX SPLIT (THEME MANAGER & BLUEPRINT) & LIVE WORDS EXAM WRITTEN MODE [COMPLETE]
 
 - [x] Task 1: Split monolithic 16+ column Topic Blueprint in `js/admin/vocab-vault.js` into two dedicated tabs: `theme_manager` (🗺️ Theme Manager) and `blueprint` (⚡ Theme Blueprint).
