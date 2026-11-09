@@ -4,6 +4,7 @@ import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLO
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=20261106_v160';
 import { DataGrid } from './datagrid.js?v=20261106_v160';
 import { exportStudentDossier } from './dossier_export.js?v=20261106_v160';
+import { isTutorRole } from '../session.js?v=20261106_v160';
 
 if (typeof window !== 'undefined') {
   window.exportStudentDossier = exportStudentDossier;
@@ -1261,9 +1262,11 @@ export async function renderStudents(area) {
             <button class="btn btn-secondary btn-sm" id="btn-profile-open-dossier" style="display:inline-flex;align-items:center;gap:5px;font-weight:600;" title="Open Official Academic Dossier">
               <span>🖨️</span> Dossier
             </button>
+            ${isTutorRole() ? '' : `
             <button class="btn btn-secondary btn-sm" id="btn-profile-edit-student" style="display:inline-flex;align-items:center;gap:5px;font-weight:600;" title="Edit Student">
               <span>✏️</span> Edit
             </button>
+            `}
             <button class="btn-icon" id="btn-close-profile-modal" style="background:rgba(255,255,255,0.06);border:none;color:var(--clr-text-2);font-size:1.1rem;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">✕</button>
           </div>
         </div>
@@ -1481,6 +1484,10 @@ export async function renderStudents(area) {
         tabBody.querySelectorAll('.btn-modal-toggle-rem, .btn-modal-remedial').forEach(btn => {
           btn.onclick = async (e) => {
             e.stopPropagation();
+            if (isTutorRole()) {
+              showToast('Permission denied: Tutor accounts cannot alter remedial status.', 'warning');
+              return;
+            }
             const attId = btn.dataset.attId;
             const targetRemedial = btn.dataset.setRemedial !== 'false';
             const msg = targetRemedial
@@ -3072,6 +3079,10 @@ function handleGuardClose(modal, onDiscard) {
 }
 
 export async function openStudentFullEdit(student, onSaved) {
+  if (isTutorRole()) {
+    showToast('Permission denied: Tutor accounts cannot edit student data.', 'warning');
+    return;
+  }
   buildFullEditModal();
   const modal   = document.getElementById('modal-student-full-edit');
   const title   = document.getElementById('bfe-title');

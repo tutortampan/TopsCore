@@ -381,7 +381,7 @@ import {
   adminOverridePrerequisitesWithRemedial, autoSyncClassTestsForLevel
 } from '../api.js?v=20261106_v160';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261106_v160';
-import { setAdminSession, getAdminSession, clearAdminSession } from '../session.js?v=20261106_v160';
+import { setAdminSession, getAdminSession, clearAdminSession, isTutorRole, isAdminRole, getAdminRole } from '../session.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261106_v160';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261106_v160';
@@ -579,8 +579,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
         window._activeSettingTab = tab;
         try { localStorage.setItem('topscore_admin_settings_tab', tab); } catch(_) {}
       } else if (targetSec === 'class-hub') {
-        const tab = (rawSec === 'test-access') ? 'test-sessions'
+        let tab = (rawSec === 'test-access') ? 'test-sessions'
           : (subTab || localStorage.getItem('topscore_admin_class_hub_tab') || 'attendance');
+        if (isTutorRole() && tab === 'tests') {
+          tab = 'test-sessions';
+        }
         window._classHubActiveTab = tab;
         try { localStorage.setItem('topscore_admin_class_hub_tab', tab); } catch(_) {}
         if (params && params.class_id) {
@@ -657,28 +660,44 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
       showLoading('Authenticating...');
       try {
-        // 1. Primary Check: Master credentials (admin / admin123) or custom saved password
         const savedCustomPass = localStorage.getItem('topscore_admin_custom_password');
+        const savedTutorPass = localStorage.getItem('topscore_tutor_custom_password');
         const normUser = user.toLowerCase();
-        const isMasterUser = ['admin', 'administrator', 'superadmin', 'mr. top', 'mrtop'].includes(normUser);
-        const isMaster = isMasterUser && (pass === 'admin123' || (savedCustomPass && pass === savedCustomPass));
 
-        if (isMaster) {
-          setAdminSession({ admin_id: 'admin-master', username: user });
+        // 1. Primary Check: Master admin credentials (admin / admin123 or custom saved password)
+        const isAdminUser = ['admin', 'administrator', 'superadmin', 'mr. top', 'mrtop'].includes(normUser);
+        const isMasterAdmin = isAdminUser && (pass === 'admin123' || (savedCustomPass && pass === savedCustomPass));
+
+        if (isMasterAdmin) {
+          setAdminSession({ admin_id: 'admin-master', username: user, role: 'admin' });
           hideLoading();
           showToast('Welcome, Administrator!', 'success');
           showConsole();
           return;
         }
+
+        // 1b. Check Tutor Credentials (tutor / tutor123 or custom saved password)
+        const isTutorUser = ['tutor', 'guru', 'proctor', 'pengawas'].includes(normUser);
+        const isMasterTutor = isTutorUser && (savedTutorPass ? pass === savedTutorPass : pass === 'tutor123');
+
+        if (isMasterTutor) {
+          setAdminSession({ admin_id: 'tutor-proctor', username: user, role: 'tutor' });
+          hideLoading();
+          showToast('Welcome, Tutor! Proctoring Mode Active.', 'success');
+          showConsole();
+          return;
+        }
+
         // 2. Secondary Check: Supabase Auth (if user provided an email address registered in Supabase)
         if (user.includes('@')) {
           try {
             const sb = await getSupabase();
             const { data, error } = await sb.auth.signInWithPassword({ email: user, password: pass });
             if (!error && data?.user) {
-              setAdminSession({ admin_id: data.user.id, username: user });
+              const userRole = data.user.user_metadata?.role === 'tutor' ? 'tutor' : 'admin';
+              setAdminSession({ admin_id: data.user.id, username: user, role: userRole });
               hideLoading();
-              showToast('Welcome, Administrator!', 'success');
+              showToast(userRole === 'tutor' ? 'Welcome, Tutor! Proctoring Mode Active.' : 'Welcome, Administrator!', 'success');
               showConsole();
               return;
             }
@@ -689,7 +708,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
         // Neither matched
         hideLoading();
-        showToast('Invalid admin credentials. Please try again.', 'error');
+        showToast('Invalid credentials. Please enter valid Admin or Tutor username and password.', 'error');
       } catch(e) {
         hideLoading();
         console.error('Login flow error:', e);
@@ -712,6 +731,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
         }
       }
       clearAdminSession();
+      document.body.classList.remove('role-tutor');
       document.getElementById('admin-console').classList.add('hidden');
       document.getElementById('admin-login-screen').classList.remove('hidden');
     });
@@ -719,12 +739,42 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
     async function showConsole() {
       document.getElementById('admin-login-screen').classList.add('hidden');
       document.getElementById('admin-console').classList.remove('hidden');
-      updateAdminKpiBanner();
+
+      const isTutor = isTutorRole();
+      document.body.classList.toggle('role-tutor', isTutor);
+
+      const avatarEl = document.querySelector('.admin-user-chip .user-avatar');
+      const nameEl = document.querySelector('.admin-user-chip .user-name');
+      const roleEl = document.querySelector('.admin-user-chip .user-role');
+      const session = getAdminSession();
+      if (isTutor) {
+        if (avatarEl) avatarEl.textContent = 'T';
+        if (nameEl) nameEl.textContent = session?.username ? (session.username.charAt(0).toUpperCase() + session.username.slice(1)) : 'Tutor';
+        if (roleEl) roleEl.textContent = 'Exam Proctor';
+      } else {
+        if (avatarEl) avatarEl.textContent = 'A';
+        if (nameEl) nameEl.textContent = 'Administrator';
+        if (roleEl) roleEl.textContent = 'Super Admin';
+      }
+
+      if (!isTutor) {
+        updateAdminKpiBanner();
+      }
       if (window.loadSidebarClasses) window.loadSidebarClasses();
-      if (window.loadSidebarPrograms) window.loadSidebarPrograms();
+      if (!isTutor && window.loadSidebarPrograms) window.loadSidebarPrograms();
 
       const rawHash = window.location.hash;
       const parsed = parseHashRoute(rawHash);
+
+      if (isTutor) {
+        // Tutors are strictly locked to class-hub (test-sessions or attendance)
+        const subTab = (parsed.subTab === 'attendance') ? 'attendance' : 'test-sessions';
+        window._classHubActiveTab = subTab;
+        try { localStorage.setItem('topscore_admin_class_hub_tab', subTab); } catch (_) {}
+        await loadSection('class-hub', true);
+        initConnectionBanner();
+        return;
+      }
 
       // 1. If hash is student profile (#profile-studentId)
       if (parsed.section === 'profile-student' && parsed.studentId) {
@@ -763,10 +813,22 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
       const h = window.location.hash.substring(1);
       const parsed = parseHashRoute(h);
       if (parsed.section === 'profile-student' && parsed.studentId) {
+        if (isTutorRole()) {
+          showToast('Restricted: Student profile direct access is limited to Class Hub.', 'warning');
+          return;
+        }
         openStudentProfile(parsed.studentId, [], true);
         return;
       }
-      const targetSec = aliasSectionMap[parsed.section] || parsed.section;
+      let targetSec = aliasSectionMap[parsed.section] || parsed.section;
+      if (isTutorRole() && !['class-hub', 'test-access'].includes(targetSec)) {
+        showToast('Restricted: Tutor access is limited to Class Hub (Test Sessions & Grades).', 'warning');
+        targetSec = 'class-hub';
+        if (window.location.hash !== '#class-hub') {
+          window.location.hash = '#class-hub';
+          return;
+        }
+      }
       if (targetSec && (targetSec !== _currentSection || window._activeSectionAlias !== parsed.section)) {
         applySubRouteState(targetSec, parsed.subTab, parsed.params, parsed.section);
         loadSection(targetSec, true);
@@ -1746,11 +1808,18 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
         const taskTests = classTests.filter(a => a.test_type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || a.test_type === 'VOCAB_TASK' || a.test_type === 'PHRASE_TASK' || (a.test_subtype && a.test_subtype.includes('QUIZ')) || (a.test_subtype && a.test_subtype.includes('TASK')) || /\b(QUIZ|TASK)\b/i.test(a.title || ''));
         const testTests = classTests.filter(a => a.test_type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || a.test_type === 'VOCAB_TEST' || a.test_type === 'PHRASE_TEST' || (a.test_subtype && a.test_subtype.includes('EXAM')) || (a.test_subtype && a.test_subtype.includes('TEST')) || /\b(EXAM|TEST)\b/i.test(a.title || ''));
 
-        const classHubTabs = [
+        let classHubTabs = [
           { id: 'attendance', icon: '📊', val: activeBatchStudents.length, label: 'Students Grade and Score' },
           { id: 'test-sessions', icon: '🔐', val: 4, label: 'Test Sessions' },
           { id: 'tests', icon: '📝', val: classTests.length, label: 'Class Tests' }
         ];
+
+        if (isTutorRole()) {
+          classHubTabs = classHubTabs.filter(t => t.id === 'test-sessions' || t.id === 'attendance');
+          if (window._classHubActiveTab === 'tests') {
+            window._classHubActiveTab = 'test-sessions';
+          }
+        }
 
         if (window.setTopbarTabs) {
           window.setTopbarTabs(classHubTabs, window._classHubActiveTab, 'window._switchClassHubTab');
@@ -2218,6 +2287,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
           };
 
           window.saveRowManualInput = async (studentId, testId, totalQ) => {
+            if (isTutorRole()) {
+              if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot manually modify exam grades.', 'warning');
+              return;
+            }
             const studentDraft = window._manualInputState.drafts[studentId] || {};
             let dirtyTestIds = Object.keys(studentDraft).filter(tId => studentDraft[tId]?.isDirty);
 
@@ -2276,6 +2349,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
           };
 
           window.toggleRowManualInput = async (studentId, testId, totalQ) => {
+            if (isTutorRole()) {
+              if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot manually modify exam grades.', 'warning');
+              return;
+            }
             const isCurrentlyActive = window._manualInputState.activeStudentIds.has(studentId);
 
             if (isCurrentlyActive) {
@@ -2299,6 +2376,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
           };
 
           window.toggleAllManualInputMode = async () => {
+            if (isTutorRole()) {
+              if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot manually modify exam grades.', 'warning');
+              return;
+            }
             const hasActive = window._manualInputState.activeStudentIds.size > 0;
 
             if (hasActive) {
@@ -2469,11 +2550,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
                 });
               });
-              dynamicSuperHeaders.push({
-                label: 'MANUAL INPUT',
-                colSpan: 1,
-                className: 'super-hdr super-hdr-action super-hdr-manual-input'
-              });
+              if (!isTutorRole()) {
+                dynamicSuperHeaders.push({
+                  label: 'MANUAL INPUT',
+                  colSpan: 1,
+                  className: 'super-hdr super-hdr-action super-hdr-manual-input'
+                });
+              }
             } else {
               const asmsInTheme = themeGroups[selectedTheme] || [];
               const examAsms = asmsInTheme.filter(isWeeklyExam);
@@ -2507,11 +2590,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   className: 'super-hdr super-hdr-exam'
                 });
               }
-              dynamicSuperHeaders.push({
-                label: 'MANUAL INPUT',
-                colSpan: 1,
-                className: 'super-hdr super-hdr-action super-hdr-manual-input'
-              });
+              if (!isTutorRole()) {
+                dynamicSuperHeaders.push({
+                  label: 'MANUAL INPUT',
+                  colSpan: 1,
+                  className: 'super-hdr super-hdr-action super-hdr-manual-input'
+                });
+              }
             }
 
             // Build dynamic test and exam columns
@@ -3030,35 +3115,37 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             const currentExamId = currentThemeExam ? currentThemeExam.id : null;
             const currentExamTotalQ = currentThemeExam ? (Number(currentThemeExam.total_questions || getAsmExpectedMax(currentThemeExam)) || 120) : 120;
 
-            dynamicAsmCols.push({
-              key: 'manual_input_action',
-              className: 'col-asm col-action col-manual-input',
-              width: '58px',
-              headerTitle: 'Manual Input (Klik untuk Aktif/Tutup Semua Siswa)',
-              title: 'Manual Input',
-              label: `
-                <div class="asm-hdr-cell" style="cursor:pointer;" onclick="window.toggleAllManualInputMode()" title="Klik untuk Toggle Aktif/Tutup Manual Input Semua Siswa">
-                  <span class="test-subtag" style="font-size:0.56rem; font-weight:800; color:${hasAnyActiveStudent ? '#22c55e' : '#38bdf8'}; background:${hasAnyActiveStudent ? 'rgba(34,197,94,0.18)' : 'rgba(56,189,248,0.12)'}; padding:1px 5px; border-radius:6px; border:1px solid ${hasAnyActiveStudent ? '#22c55e' : 'rgba(56,189,248,0.3)'};">
-                    ${hasAnyActiveStudent ? '🟢 ON' : '⚪ OFF'}
-                  </span>
-                </div>
-              `,
-              sortable: false,
-              align: 'center',
-              render: (val, row) => {
-                const isActive = window.isStudentManualInputActive?.(row.id);
-                return `
-                  <button type="button" class="btn btn-xs btn-manual-input-toggle ${isActive ? 'active' : ''}"
-                          onclick="window.toggleRowManualInput('${row.id}', ${currentExamId ? `'${currentExamId}', ${currentExamTotalQ}` : 'null, null'}); event.stopPropagation();"
-                          title="${isActive ? 'Klik untuk Simpan Nilai & Tutup Manual Input' : 'Klik untuk Input/Edit Nilai Manual'}"
-                          style="${isActive
-                            ? 'background:#22c55e; color:#0f172a; border:1px solid #16a34a; font-weight:800; font-size:0.62rem; padding:2px 6px; border-radius:8px; cursor:pointer; line-height:1.2; box-shadow:0 0 6px rgba(34,197,94,0.5);'
-                            : 'background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-weight:700; font-size:0.62rem; padding:2px 6px; border-radius:8px; cursor:pointer; line-height:1.2;'}">
-                    ${isActive ? '💾 SAVE' : '✏️ EDIT'}
-                  </button>
-                `;
-              }
-            });
+            if (!isTutorRole()) {
+              dynamicAsmCols.push({
+                key: 'manual_input_action',
+                className: 'col-asm col-action col-manual-input',
+                width: '58px',
+                headerTitle: 'Manual Input (Klik untuk Aktif/Tutup Semua Siswa)',
+                title: 'Manual Input',
+                label: `
+                  <div class="asm-hdr-cell" style="cursor:pointer;" onclick="window.toggleAllManualInputMode()" title="Klik untuk Toggle Aktif/Tutup Manual Input Semua Siswa">
+                    <span class="test-subtag" style="font-size:0.56rem; font-weight:800; color:${hasAnyActiveStudent ? '#22c55e' : '#38bdf8'}; background:${hasAnyActiveStudent ? 'rgba(34,197,94,0.18)' : 'rgba(56,189,248,0.12)'}; padding:1px 5px; border-radius:6px; border:1px solid ${hasAnyActiveStudent ? '#22c55e' : 'rgba(56,189,248,0.3)'};">
+                      ${hasAnyActiveStudent ? '🟢 ON' : '⚪ OFF'}
+                    </span>
+                  </div>
+                `,
+                sortable: false,
+                align: 'center',
+                render: (val, row) => {
+                  const isActive = window.isStudentManualInputActive?.(row.id);
+                  return `
+                    <button type="button" class="btn btn-xs btn-manual-input-toggle ${isActive ? 'active' : ''}"
+                            onclick="window.toggleRowManualInput('${row.id}', ${currentExamId ? `'${currentExamId}', ${currentExamTotalQ}` : 'null, null'}); event.stopPropagation();"
+                            title="${isActive ? 'Klik untuk Simpan Nilai & Tutup Manual Input' : 'Klik untuk Input/Edit Nilai Manual'}"
+                            style="${isActive
+                              ? 'background:#22c55e; color:#0f172a; border:1px solid #16a34a; font-weight:800; font-size:0.62rem; padding:2px 6px; border-radius:8px; cursor:pointer; line-height:1.2; box-shadow:0 0 6px rgba(34,197,94,0.5);'
+                              : 'background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-weight:700; font-size:0.62rem; padding:2px 6px; border-radius:8px; cursor:pointer; line-height:1.2;'}">
+                      ${isActive ? '💾 SAVE' : '✏️ EDIT'}
+                    </button>
+                  `;
+                }
+              });
+            }
 
             // Clean destruction of previous instance if any
             const gridContainer = document.getElementById('class-attendance-grid');
@@ -3810,9 +3897,20 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
     var _loadSectionSeq = 0;
     async function loadSection(section, skipHistory = false) {
       if (!section) return;
+      if (isTutorRole()) {
+        const allowedSections = ['class-hub', 'test-access'];
+        if (!allowedSections.includes(section)) {
+          showToast('Restricted: Tutor access is limited to Class Hub (Test Sessions & Grades).', 'warning');
+          section = 'class-hub';
+        }
+      }
       const parsed = parseHashRoute(section);
-      const rawSection = parsed.section || section;
+      let rawSection = parsed.section || section;
       section = aliasSectionMap[rawSection] || rawSection;
+      if (isTutorRole() && !['class-hub', 'test-access'].includes(section)) {
+        section = 'class-hub';
+        rawSection = 'class-hub';
+      }
       applySubRouteState(section, parsed.subTab, parsed.params, rawSection);
 
       const thisSeq = ++_loadSectionSeq;
@@ -4831,6 +4929,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
 // Global edit/delete handlers
 window._editRecord = async (section, id, jsonStr) => {
+  if (isTutorRole()) {
+    showToast('Permission denied: Tutor accounts cannot edit records.', 'warning');
+    return;
+  }
   let record;
   try {
     record = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
@@ -4848,6 +4950,10 @@ let _cascadeBatchIds = [];
 let _cascadeProgramIds = [];
 
 window._deleteRecord = async (section, id, name) => {
+  if (isTutorRole()) {
+    showToast('Permission denied: Tutor accounts cannot delete records.', 'warning');
+    return;
+  }
   _deleteSection = section || window._currentSection || 'batches';
   _deleteId = id;
   _cascadeStudentIds = [];
@@ -5063,7 +5169,14 @@ document.getElementById('delete-confirm-btn')?.addEventListener('click', async (
 ['close-crud-modal','crud-cancel-btn'].forEach(id => document.getElementById(id)?.addEventListener('click', () => document.getElementById('crud-modal')?.classList.add('hidden')));
 ['delete-cancel-btn'].forEach(id => document.getElementById(id)?.addEventListener('click', () => document.getElementById('delete-modal')?.classList.add('hidden')));
 
-window.openCrudModal = openCrudModal;
+const _origOpenCrudModal = openCrudModal;
+window.openCrudModal = async function(...args) {
+  if (isTutorRole()) {
+    showToast('Permission denied: Tutor accounts cannot edit records.', 'warning');
+    return;
+  }
+  return _origOpenCrudModal(...args);
+};
 window.openDuplicateStudentsModal = openDuplicateStudentsModal;
 window.openDuplicateQuestionsModal = openDuplicateQuestionsModal;
 window.loadSection = loadSection;

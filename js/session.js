@@ -9,7 +9,7 @@ const ADMIN_SESSION_KEY = 'topscore_admin_session';
 (function purgeLegacyStorage() {
   try {
     ['localStorage', 'sessionStorage'].forEach(storeType => {
-      const store = window[storeType];
+      const store = typeof window !== 'undefined' ? window[storeType] : (typeof globalThis !== 'undefined' ? globalThis[storeType] : null);
       if (!store) return;
       const keysToRemove = [];
       for (let i = 0; i < store.length; i++) {
@@ -106,11 +106,12 @@ export function requireStudentSession(redirectTo = '/index.html') {
   return session;
 }
 
-// Admin session
+// Admin & Tutor session
 export function setAdminSession(data) {
   const payload = JSON.stringify({
-    admin_id: data.admin_id || 'admin',
-    role: 'admin',
+    admin_id: data.admin_id || (data.role === 'tutor' ? 'tutor' : 'admin'),
+    username: data.username || (data.role === 'tutor' ? 'tutor' : 'admin'),
+    role: data.role || 'admin',
     authenticated_at: new Date().toISOString(),
   });
   try { sessionStorage.setItem(ADMIN_SESSION_KEY, payload); } catch (_) {}
@@ -124,6 +125,19 @@ export function getAdminSession() {
   } catch {
     return null;
   }
+}
+
+export function getAdminRole() {
+  const session = getAdminSession();
+  return session?.role || 'admin';
+}
+
+export function isTutorRole() {
+  return getAdminRole() === 'tutor';
+}
+
+export function isAdminRole() {
+  return getAdminRole() === 'admin';
 }
 
 export function clearAdminSession() {

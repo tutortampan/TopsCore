@@ -1,41 +1,35 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-09 18:40 UTC+8
-Current Phase: Phase 386: Master Legacy Cleanup & Codebase Rationalization [COMPLETE]
+Last Updated: 2026-11-09 19:20 UTC+8
+Current Phase: Phase 387: Tutor Role & Strict Access Control (RBAC) [COMPLETE]
 Status: COMPLETE
 
-## Completed Work (Phase 386):
-1. **Frontend & Workspace Hygiene**:
-   - Removed 2 orphan JS modules: `js/admin/panel-c-builder.js` (657 lines) & `js/utils/dashboard_guards.js` (70 lines).
-   - Removed 4 dead/unused Edge Functions: `duplicate-test`, `generate-module-template`, `import-students`, `import-questions`.
-   - Purged ghost reference to `generate-narrative` across `js/api.js` and `js/supabase.js`.
-   - Cleaned root workspace: moved 10 test verification screenshots (`.png`) to `docs/screenshots/`, relocated `update_session_log.mjs` to `scripts/`, removed obsolete `setup-storage.sql`.
+## Completed Work (Phase 387):
+1. **Unified Session Role Engine (`js/session.js`)**:
+   - Extended `setAdminSession(data)` to store authoritative user roles (`admin` or `tutor`) and usernames.
+   - Added `getAdminRole()`, `isTutorRole()`, and `isAdminRole()` helpers with SSR/Node safe-fallbacks.
 
-2. **Consolidation of `scripts/` Directory**:
-   - Safeguarded 21 active/official testing & diagnostic scripts.
-   - Consolidated 195 legacy scratch/patch scripts into `scripts/archive/`.
-   - Updated `scripts/verify_system_health.mjs` to accurately audit the 13 canonical database tables.
+2. **Dual-Credential Authentication (`js/admin/app.js`)**:
+   - Administrator authentication: Master credentials (`admin` / `admin123` or custom admin password override) or Supabase Auth.
+   - Tutor Proctor authentication: Tutor credentials (`tutor` / `tutor123` or custom tutor password configured by admin; aliases: `tutor`, `guru`, `proctor`, `pengawas`).
+   - Fast-boot CSS tagging via `admin-init.js` ensuring immediate `role-tutor` body class to eliminate layout flashing on page refresh.
 
-3. **Backend & Edge Functions Fallback Decoupling**:
-   - Cleaned `supabase/functions/evaluate-test/index.ts` to eliminate obsolete inserts into `student_submissions` and `test_results`.
-   - Decoupled `supabase/functions/start-test/index.ts` from deprecated `assignments` and `test_items` queries.
-   - Replaced dead scheduling/assignment functions in `js/api.js` with clean stubs returning empty arrays.
+3. **Strict Route & Navigation Guards**:
+   - `loadSection()` & URL hash router strictly restrict tutors to `class-hub` (and `test-access` alias). Direct URL manipulation (e.g. `#tests`, `#settings`, `#students`, `#organization`, `#curriculum`, `#modules`, `#vocab_vault`) triggers a warning toast and auto-redirects to `class-hub`.
+   - Sidebar UI dynamically scopes out Domain A (Admin), Domain B (Board), Domain D (System & Data), and non-permitted items in Domain C (`vocab_vault`, `tests`), leaving strictly the Class selector list for proctoring.
 
-4. **Database Migration & Safety Protocol**:
-   - Exported historical data backup for `subjects` (6 rows) and `enrollments` (44 rows) to `docs/archive/legacy_data_backup_20261109.json`.
-   - Authored formal migration `supabase/migrations/20261109020000_master_legacy_cleanup.sql` dropping 16 legacy tables, 3 obsolete RPCs, and redundant columns (`tests.prerequisite_id`, `tests.window_start/end`, `progress.level_status/completed_at`).
+4. **Class Hub & Proctoring Specialization**:
+   - Class Hub tabs filtered: Tutors strictly access `test-sessions` ("Buka Tutup Ujian", live test taker monitoring, time extensions, late additions) and `attendance` ("Cek Nilai", scorecards, points, percentages). `tests` (Test Builder, Generator, Blueprints) is completely excluded.
+   - Attendance Matrix scoped: Manual grade override super-header, column, and inline edit buttons are removed for tutors.
+   - Backend operation guards: `window._editRecord`, `window._deleteRecord`, `window.openCrudModal`, `window.openStudentFullEdit`, `window.saveRowManualInput`, `window.toggleRowManualInput`, `window.toggleAllManualInputMode`, and `labelAttemptRemedial` block tutor invocation with permission denied notices.
 
-5. **Complete Test Suite Verification**:
-   - `npm run test:syntax`: 100% PASS (43 JS files verified).
-   - `npm run test:manifest`: 100% PASS (24 cache manifest assets on disk).
-   - `npm run test:imports`: 100% PASS (40 active JS modules verified with 0 defects).
-   - `npm run test:assets`: 100% PASS (all 6 HTML files).
-   - `npm run test:health`: 100% PASS (13 canonical tables healthy).
-   - `npm run test:grading`: 100% PASS (official grading palette & badges).
-   - `npm run test:prereq`: 100% PASS (sequential prerequisite gating).
-   - `npm run test:input`: 100% PASS (4-state machine, watchdog, debounce, salvage).
-   - `npm run test:e2e:vocab`: 100% PASS (10/10 consecutive runs, 1,320 assertions).
-   - `npm test`: 100% PASS.
+5. **System Settings Management (`js/admin/desk.js`)**:
+   - Added "Tutor Proctor Credentials" security card in Pilar D allowing master administrators to update or reset the custom tutor password (`topscore_tutor_custom_password`).
+
+6. **Automated Verification Suite**:
+   - Created dedicated automated test suite `scripts/test_tutor_role_rbac.mjs` (`npm run test:rbac`), integrated directly into `npm test`.
+   - Verified 8 distinct RBAC invariants: 100% PASS with 0 defects.
+   - Full suite verified: `npm run test:syntax`, `npm run test:imports`, `npm run test:health`, `npm test` all 100% PASS.
 
 ## Next Exact Action:
-- Ready for regular feature development or deployment.
+- Commit and push changes to `main`.

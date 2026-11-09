@@ -1034,6 +1034,7 @@ export async function renderSettings(area) {
 
   // Local config cache
   const currentCustomPass = localStorage.getItem('topscore_admin_custom_password') || '';
+  const currentTutorPass = localStorage.getItem('topscore_tutor_custom_password') || '';
   const cooldownSecs = settings.ai_cooldown_limit_seconds || localStorage.getItem('ai_cooldown_limit_seconds') || '60';
   const maxAudioSecs = settings.ai_max_audio_duration_seconds || localStorage.getItem('ai_max_audio_duration_seconds') || '180';
 
@@ -1242,6 +1243,37 @@ export async function renderSettings(area) {
 
         <button class="btn btn-secondary btn-sm w-100" id="btn-save-admin-password">
           Update Admin Credentials
+        </button>
+      </div>
+
+      <!-- 4b. Security & Tutor Proctor Credentials Card -->
+      <div class="antigravity-card p-5">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+          <div style="font-size:1.5rem;">🔐</div>
+          <div>
+            <h3 style="font-size:1.1rem;margin:0;color:var(--clr-text-1);font-weight:700;">Tutor Proctor Credentials</h3>
+            <div class="text-xs text-muted">Buka Tutup Ujian &amp; Cek Nilai Access</div>
+          </div>
+        </div>
+        <p class="text-xs text-muted mb-3">Tutor accounts are restricted strictly to opening/closing exam sessions and inspecting student score cards.</p>
+
+        <div class="form-group mb-3">
+          <label class="form-label text-sm">Tutor Username</label>
+          <input class="form-control" value="tutor" disabled style="opacity:0.7;" />
+          <div class="text-xs text-muted mt-1">Supported aliases: tutor, guru, proctor, pengawas</div>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label text-sm">Custom Tutor Password Override</label>
+          <div class="input-password-wrap">
+            <input class="form-control" type="password" id="setting-tutor-password" placeholder="Default: tutor123" value="${escapeHtml(currentTutorPass)}" />
+            <button class="input-password-toggle" type="button" data-target="setting-tutor-password" title="Toggle visibility">&#128065;</button>
+          </div>
+          <div class="text-xs text-muted mt-1">Leave blank to use default 'tutor123' master key.</div>
+        </div>
+
+        <button class="btn btn-secondary btn-sm w-100" id="btn-save-tutor-password">
+          Update Tutor Credentials
         </button>
       </div>
       
@@ -1573,6 +1605,18 @@ export async function renderSettings(area) {
     } else {
       localStorage.removeItem('topscore_admin_custom_password');
       showToast('Custom password cleared. Default (admin123) restored.', 'info');
+    }
+  });
+
+  // Update Custom Tutor Password
+  document.getElementById('btn-save-tutor-password')?.addEventListener('click', () => {
+    const customPass = document.getElementById('setting-tutor-password').value.trim();
+    if (customPass) {
+      localStorage.setItem('topscore_tutor_custom_password', customPass);
+      showToast('Custom tutor password saved.', 'success');
+    } else {
+      localStorage.removeItem('topscore_tutor_custom_password');
+      showToast('Custom tutor password cleared. Default (tutor123) restored.', 'info');
     }
   });
 

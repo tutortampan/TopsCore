@@ -6313,3 +6313,38 @@ tfoot.datagrid-tfoot,
 .live-table-row.row-alarm-highlight:hover {
   background: rgba(239, 68, 68, 0.09);
 }
+
+/* =========================================================
+   TUTOR ROLE RESTRICTIONS & SCOPING (RBAC)
+   ========================================================= */
+body.role-tutor .nav-domain-group[data-domain="admin"],
+body.role-tutor .nav-domain-group[data-domain="board"],
+body.role-tutor .nav-domain-group[data-domain="desk"],
+body.role-tutor .admin-nav-item[data-sub="tests"],
+body.role-tutor .admin-nav-item[data-sub="vocab_vault"],
+body.role-tutor .admin-nav-item[data-sub="classes-hub"],
+body.role-tutor .admin-nav-item[data-sub="organization"],
+body.role-tutor .admin-nav-item[data-sub="dashboard"],
+body.role-tutor .admin-nav-item[data-sub="student-registration"],
+body.role-tutor .admin-nav-item[data-sub="modules"],
+body.role-tutor .admin-nav-item[data-sub="settings"],
+body.role-tutor .admin-only {
+  display: none !important;
+}
+
+body.role-tutor .admin-user-chip .user-avatar {
+  background: linear-gradient(135deg, #0ea5e9, #3b82f6) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+}
+
+body.role-tutor .admin-user-chip .user-role {
+  color: #38bdf8 !important;
+  font-weight: 700 !important;
+}
+
+body.role-tutor .super-hdr-manual-input,
+body.role-tutor .col-manual-input {
+  display: none !important;
+}
+

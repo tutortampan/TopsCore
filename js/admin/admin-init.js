@@ -14,6 +14,12 @@ export function initAuthGate() {
     loginScreen?.classList.remove('hidden');
     adminConsole?.classList.add('hidden');
   } else {
+    try {
+      const sess = JSON.parse(hasSession);
+      if (sess && sess.role === 'tutor') {
+        document.body.classList.add('role-tutor');
+      }
+    } catch (_) {}
     loginScreen?.classList.add('hidden');
     adminConsole?.classList.remove('hidden');
   }

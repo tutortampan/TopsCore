@@ -1,3 +1,52 @@
+## [2026-11-09 19:20] — Phase 387: Tutor Role & Strict Role-Based Access Control (RBAC)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 387  
+**Status:** PASS  
+
+### Why
+- The user requested a restricted `TUTOR` account in addition to the master `ADMIN` account.
+- The tutor must strictly only be allowed to:
+  1. "Buka tutup ujian" (Open/close test sessions, add late students, extend timers in Class Hub `test-sessions` tab).
+  2. "Cek nilai" (Inspect student progress, test scores, attempt cards, and live standings in Class Hub `attendance` tab).
+- The tutor must not have access to any other administrative areas, CRUD operations, test generators, curriculum settings, or system configurations.
+
+### Changed
+1. **Unified Session Role Engine (`js/session.js`)**:
+   - Updated `setAdminSession(data)` to record `role: data.role || 'admin'` and `username`.
+   - Added helper functions `getAdminRole()`, `isTutorRole()`, `isAdminRole()`.
+   - Added SSR/Node environment fallbacks (`globalThis` check) to prevent runtime errors during test execution.
+2. **Dual-Credential Authentication (`js/admin/app.js`, `admin.html`)**:
+   - Master Admin login: `admin` / `admin123` or custom saved password from `localStorage` (`topscore_admin_custom_password`), plus Supabase Auth email fallback.
+   - Tutor Proctor login: `tutor` / `tutor123` or custom tutor password configured in System Settings (`topscore_tutor_custom_password`); supported aliases: `tutor`, `guru`, `proctor`, `pengawas`.
+   - Updated login screen placeholders in `admin.html` to clearly show `Enter username (Admin or Tutor)`.
+3. **Route & Section Guards (`js/admin/app.js`, `js/admin/admin-init.js`)**:
+   - Fast-boot CSS tagging: `admin-init.js` immediately adds `body.role-tutor` on early hydration if the session is tutor.
+   - `loadSection()` and hash change listener strictly block navigation to non-permitted sections (`dashboard`, `organization`, `curriculum`, `students`, `student-registration`, `vocab_vault`, `tests`, `modules`, `settings`, `audit`, etc.) and redirect to `class-hub` with a warning toast.
+   - `showConsole()` sets initial landing section strictly to `class-hub` with `test-sessions` or `attendance` tab.
+4. **UI Scoping & Styling (`css/admin.css`)**:
+   - Added `.role-tutor` styles hiding Domains A, B, D, and non-permitted items in Domain C (`tests` analytics, `vocab_vault`), leaving strictly the Class selector list.
+   - User chip adapts dynamically for tutors: Avatar `T` with cyan/blue gradient, Name `Tutor`, Role `Exam Proctor`.
+5. **Class Hub & Attendance Protection (`js/admin/app.js`, `js/admin/student-management.js`)**:
+   - Class Hub tabs filtered: `tests` tab (Test Builder/Generator/Blueprints) is completely excluded for tutors, showing only `test-sessions` and `attendance`.
+   - Attendance Matrix scoped: Manual grade override super-header, column, and inline edit buttons are removed when `isTutorRole()` is true.
+   - Protected actions: `window.saveRowManualInput`, `window.toggleRowManualInput`, `window.toggleAllManualInputMode`, `window.openCrudModal`, `window._deleteRecord`, `window.openStudentFullEdit`, and `labelAttemptRemedial` block tutor execution with warning notices.
+   - In `showStudentProfileModal`, the Edit Student button is hidden for tutors.
+6. **System Settings Management (`js/admin/desk.js`)**:
+   - Added "Tutor Proctor Credentials" security card in Pilar D allowing master administrators to update or reset the custom tutor password (`topscore_tutor_custom_password`).
+7. **Automated Verification Suite (`scripts/test_tutor_role_rbac.mjs`, `package.json`)**:
+   - Authored automated test suite `scripts/test_tutor_role_rbac.mjs` verifying all 8 RBAC invariants.
+   - Integrated `npm run test:rbac` and included it in the master `npm test` script.
+
+### Verification
+- `npm run test:rbac`: PASS (100% of all 8 tests passed).
+- `npm run test:syntax`: PASS (43 JS files verified).
+- `npm run test:imports`: PASS (40 active JS modules verified with 0 defects).
+- `npm run test:health`: PASS (13 canonical database tables healthy).
+- `npm test`: PASS (100% across all suites).
+
+---
+
 ## [2026-11-09 18:40] — Phase 386: Master Legacy Cleanup & Codebase Rationalization
 
 **Agent/Session:** Antigravity  
