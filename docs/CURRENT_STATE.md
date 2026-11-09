@@ -1,11 +1,15 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-09 09:16 UTC+8
-Current Phase: Phase 378: Batch 134 Written Words Exam Completion & Official Scoreboard Ratification [COMPLETE]
+Last Updated: 2026-11-09 09:25 UTC+8
+Current Phase: Phase 379: Theme Blueprint Schema Column Alignment & 100% Test Readiness Detection [COMPLETE]
 Status: COMPLETE
 
 ## Completed Work:
-1. **Live Written Words Exam Officially Closed & Evaluated (`2C-WORDS-EXAM`)**:
+1. **Vocabulary Vault Split Architecture Verification & Visual Proof (`js/admin/vocab-vault.js`)**:
+   - Tab 1: `🗺️ Theme Manager` (Multi-tenant program distribution, 0 crowded POS columns, clean items chips `40 items (40W · 0P)`, instant program toggle pills `🟢 Active` / `⚪ —`, CRUD rename/delete). Verified visually with screenshot `theme_manager_tab.png`.
+   - Tab 2: `⚡ Theme Blueprint` (Hero Command Bar with Target Program, Curriculum Level, Duration/Pacing chips, `⚡ Auto-Generate All Tests`, and live Test Readiness Matrix).
+   - Fixed schema query column (`status` instead of non-existent `is_active`) and smart class-to-program resolver: Camp now reports **33 / 33 Tasks Ready, 9 / 9 Exams Ready, 100% Readiness**! Verified visually with screenshot `theme_blueprint_camp_tab.png`.
+2. **Live Written Words Exam Officially Closed & Evaluated (`2C-WORDS-EXAM`)**:
    - The 120-minute session closed automatically at 09:15:14 WIB.
    - All 8 student attempts auto-submitted with zero data loss and zero timeout drops.
    - Authoritative results:
@@ -17,14 +21,10 @@ Status: COMPLETE
      - 6️⃣ Mr. Ayya Sofyandi Mzeth: 236.5 PTS / 440 (53.75%, Grade D)
      - 7️⃣ Miss Adinda Karunia Farela: 205.5 PTS / 440 (46.70%, Grade D)
      - 8️⃣ Miss Havvina Solehah: 141.5 PTS / 440 (32.16%, Grade D) (Highest score retained per Rule 2.7)
-2. **Permanent Service Worker Elimination for Tutor Console (`admin.html`, `js/admin/admin-init.js`)**:
+3. **Permanent Service Worker Elimination for Tutor Console (`admin.html`, `js/admin/admin-init.js`)**:
    - Injected unconditional ServiceWorker unregistration and Cache Storage deletion in `<head>` of `admin.html`.
    - Updated `registerServiceWorker()` in `js/admin/admin-init.js` to strictly unregister all service workers and wipe `topscore-cache*` on load.
    - Bumped cache busters across `admin.html`, `sw.js` (to `v99`), and `js/admin/app.js` (to `v173`).
-3. **Vocabulary Vault Split Architecture Verification (`js/admin/vocab-vault.js`)**:
-   - Tab 1: `🗺️ Theme Manager` (Multi-tenant program distribution, 0 crowded POS columns, clean items chips `40 items (30W · 10P)`, instant program toggle pills, CRUD rename/delete).
-   - Tab 2: `⚡ Theme Blueprint` (Auto-Generator command bar, test readiness matrix per topic/theme for Practice Tasks & Milestone Exams, 1-click generator launch).
-   - All 31 assertions in `scripts/test_multi_program_theme_blueprint_v166.mjs` PASSED (100%).
 
 2. **Side Quest 1: Forgive / Dispensasi Nilai KKM Standardization**:
    - Migrated all 87 task attempts of `Mr. Test` (`0694c6f5-076c-43d1-99ee-0a8800975bcb`) from 100% (Grade ★) to KKM 60% (Grade C, 24/40 points).

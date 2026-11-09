@@ -1,3 +1,32 @@
+## [2026-11-09 09:25] — Phase 379: Theme Blueprint Schema Column Alignment & 100% Test Readiness Detection
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 379  
+**Status:** PASS  
+
+### Why
+- In `_renderThemeBlueprintTab` (`js/admin/vocab-vault.js`), querying `tests` included non-existent column `is_active` (which caused Supabase 42703 error `column tests.is_active does not exist` and returned empty test data).
+- `getLevelClass` lacked program-prioritized name matching, causing generic matches against legacy unused class IDs.
+
+### Changed
+1. **Schema Column Alignment (`js/admin/vocab-vault.js`)**:
+   - Replaced invalid `is_active` with authoritative `status` column in `tests` select query.
+2. **Smart Program Class Resolution (`js/admin/vocab-vault.js`)**:
+   - Upgraded `getLevelClass(lvl)` to match `c.name.includes(progName) && c.name.includes(shortLvl) && c.name.includes('vocab')` and prioritize classes with live test shells.
+3. **Verified Live Playwright Visuals**:
+   - `theme_manager_tab.png`: 100% clean, 0 crowded POS columns, clean items chips `40 items (40W · 0P)`, active multi-tenant program distribution pills `🟢 Active` / `⚪ —`.
+   - `theme_blueprint_camp_tab.png`: Hero Command Bar, 33/33 Tasks Ready, 9/9 Exams Ready, 100% Total Readiness!
+
+### Verification
+- `node scripts/test_multi_program_theme_blueprint_v166.mjs`: PASS (31/31 assertions, 100%).
+- `node scripts/capture_vault_screens.mjs`: PASS (Both tabs visually captured and verified).
+
+### Files
+- `js/admin/vocab-vault.js`
+- `scripts/capture_vault_screens.mjs`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+
 ## [2026-11-09 09:16] — Phase 378: Batch 134 Written Words Exam Completion & Official Scoreboard Ratification
 
 **Agent/Session:** Antigravity  
