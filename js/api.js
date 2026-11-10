@@ -1337,12 +1337,12 @@ export async function startTest(studentId, testId) {
   if (prereqId && !isStandaloneTryout) {
     const [prereqAttRes, prereqTestRes] = await Promise.all([
       sb.from('attempts')
-        .select('score, percentage, effective_score, status, is_forgiven')
+        .select('score, percentage, effective_score, status, is_forgiven, is_remedial_unlocked')
         .eq('student_id', studentId)
         .eq('test_id', prereqId)
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']),
       sb.from('tests')
-        .select('id, title, test_type, test_subtype, category, shell_code, minimum_required_score')
+        .select('id, title, test_type, test_subtype, category, shell_code, minimum_required_score, payload')
         .eq('id', prereqId)
         .single()
     ]);
@@ -1352,19 +1352,26 @@ export async function startTest(studentId, testId) {
     const testSettings = await fetchClassTestSettings(asmData.class_id);
     const targetReps = Number(testSettings?.taskRepetitions) || 7;
     const defaultTaskMin = Number(testSettings?.taskMinScore) || 50;
-
-    const reqScore = (asmData.minimum_required_score && parseFloat(asmData.minimum_required_score) > 0)
-      ? parseFloat(asmData.minimum_required_score)
-      : (prereqTest?.minimum_required_score ? parseFloat(prereqTest.minimum_required_score) : defaultTaskMin);
+    const defaultExamMin = Number(testSettings?.examMinScore) || 60;
 
     const isPrereqExam = prereqTest ? isWeeklyExam(prereqTest) : false;
+
+    // Prerequisite passing threshold:
+    // Must evaluate the prerequisite test's threshold (prereqTest), NOT the current test's threshold (asmData).
+    // For exams, the passing threshold is 60% (Grade C KKM).
+    const explicitOverride = asmData.payload?.prerequisite_min_score ? parseFloat(asmData.payload.prerequisite_min_score) : null;
+    const prereqMin = (prereqTest?.minimum_required_score && parseFloat(prereqTest.minimum_required_score) > 0)
+      ? parseFloat(prereqTest.minimum_required_score)
+      : (prereqTest?.payload?.min_score ? parseFloat(prereqTest.payload.min_score) : (isPrereqExam ? defaultExamMin : defaultTaskMin));
+    const reqScore = explicitOverride !== null ? explicitOverride : prereqMin;
+
     let passCount = 0;
     prereqAttempts.forEach(a => {
       if (a.is_forgiven) {
         passCount = Math.max(passCount, targetReps);
       } else {
         const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || a.score || 0);
-        if (pct >= reqScore) {
+        if (pct >= reqScore || (a.is_remedial_unlocked && pct >= 60)) {
           passCount++;
         }
       }
@@ -1372,7 +1379,9 @@ export async function startTest(studentId, testId) {
 
     const requiredPasses = isPrereqExam ? 1 : targetReps;
     if (passCount < requiredPasses) {
-      const pErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${passCount}/${requiredPasses} passes with at least ${reqScore}%) on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`);
+      const pErr = isPrereqExam
+        ? new Error(`Prerequisite not completed. You must pass "${prereqTest?.title || 'the prerequisite exam'}" with at least ${reqScore}% before starting this test.`)
+        : new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${passCount}/${requiredPasses} passes with at least ${reqScore}%) on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`);
       pErr.code = 'PREREQUISITE_NOT_MET';
       pErr.status = 403;
       pErr.prereqTestId = prereqTest?.id;

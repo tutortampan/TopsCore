@@ -1797,7 +1797,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                   const peRawPct = peBest ? parseFloat(peBest.percentage || 0) : null;
                   const peRem = Boolean(peBest && (peBest.is_remedial_unlocked || peBest.is_remedial));
                   const pePct = peRem && peRawPct !== null ? Math.min(peRawPct, 60.0) : peRawPct;
-                  const peMin = pe.minimum_required_score || pe.pass_threshold || 70;
+                  const peMin = pe.minimum_required_score || pe.pass_threshold || 60;
                   const pePassed = Boolean(peBest?.is_forgiven) || (pePct !== null && (pePct >= peMin || (peRem && pePct >= 60)));
                   if (!pePassed) {
                     grpPrereqMet = false;

@@ -267,17 +267,21 @@ Deno.serve(async (req) => {
           .in("status", ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]),
         supabase
           .from("tests")
-          .select("id, payload, test_type, test_subtype, category, shell_code, title")
+          .select("id, payload, test_type, test_subtype, category, shell_code, title, minimum_required_score")
           .eq("id", prereqId)
           .single()
       ]);
       const prereqAttempts = prereqAttRes.data || [];
       const prereqTest = prereqTestRes.data;
 
-      const reqScore = test.prerequisite_min_score || prereqTest?.minimum_required_score || 50;
       const isPrereqExam = (prereqTest?.test_type || '').toLowerCase() === 'exam' ||
                            (prereqTest?.category || '').toUpperCase() === 'EXAM' ||
                            (prereqTest?.shell_code || '').toUpperCase().endsWith('-EXAM');
+      const defaultPrereqMin = isPrereqExam ? 60 : 50;
+      const reqScore = Number(test.payload?.prerequisite_min_score) ||
+                       Number(prereqTest?.minimum_required_score) ||
+                       Number(prereqTest?.payload?.min_score) ||
+                       defaultPrereqMin;
 
       let passCount = 0;
       (prereqAttempts || []).forEach((a: any) => {
@@ -293,8 +297,11 @@ Deno.serve(async (req) => {
 
       const requiredPasses = isPrereqExam ? 1 : 7;
       if (passCount < requiredPasses) {
+        const errorMsg = isPrereqExam
+          ? `Prerequisite not completed. You must pass "${prereqTest?.title || 'the prerequisite exam'}" with at least ${reqScore}% before starting this test.`
+          : `Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${passCount}/${requiredPasses} passes with at least ${reqScore}%) on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`;
         return new Response(JSON.stringify({
-          error: `Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${passCount}/${requiredPasses} passes with at least ${reqScore}%) on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`
+          error: errorMsg
         }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
