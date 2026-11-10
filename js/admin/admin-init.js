@@ -14,10 +14,7 @@ export function initGlobalEditModeToggle() {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const newState = toggleGlobalEditMode();
-      if (typeof window.showToast === 'function') {
-        window.showToast(newState ? '🔓 Global Edit Mode ACTIVE: Editing controls enabled' : '🔒 Global Edit Mode OFF: Safe read-only view', newState ? 'success' : 'info');
-      }
+      toggleGlobalEditMode();
     });
   }
 }

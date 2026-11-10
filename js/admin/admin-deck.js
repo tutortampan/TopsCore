@@ -53,9 +53,9 @@ export async function renderDashboard(container) {
            </h3>
            <div style="display:flex; align-items:center; gap:0.5rem;">
              <span class="badge ${inst.is_active !== false ? 'badge-success' : 'badge-neutral'}">${inst.is_active !== false ? 'Active' : 'Inactive'}</span>
-             <button class="btn btn-ghost btn-xs" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst))})' title="Edit Institution" style="padding:0 0.4rem; height:auto; min-height:0;">✏️ Edit</button>
-             <button class="btn btn-ghost btn-xs text-danger" onclick="window._deleteRecord('institutions', '${inst.id}', '${escHtml(inst.name)}')" title="Delete Institution" style="padding:0 0.4rem; height:auto; min-height:0;">🗑️ Delete</button>
-             <button class="btn btn-ghost btn-xs text-info" onclick="window.openCrudModal('programs', { institution_id: '${inst.id}' })" title="Add Program" style="padding:0 0.4rem; height:auto; min-height:0;">➕ Program</button>
+             <button class="btn btn-ghost btn-xs edit-mode-only" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst))})' title="Edit Institution" style="padding:0 0.4rem; height:auto; min-height:0;">✏️ Edit</button>
+             <button class="btn btn-ghost btn-xs text-danger edit-mode-only" onclick="window._deleteRecord('institutions', '${inst.id}', '${escHtml(inst.name)}')" title="Delete Institution" style="padding:0 0.4rem; height:auto; min-height:0;">🗑️ Delete</button>
+             <button class="btn btn-ghost btn-xs text-info edit-mode-only" onclick="window.openCrudModal('programs', { institution_id: '${inst.id}' })" title="Add Program" style="padding:0 0.4rem; height:auto; min-height:0;">➕ Program</button>
            </div>
         </div>
         
@@ -69,10 +69,10 @@ export async function renderDashboard(container) {
                   <div class="fw-700 text-sm" style="color:var(--clr-accent-1);">${escHtml(p.name)}</div>
                   <div style="display:flex; align-items:center; gap:0.5rem;">
                     <span class="badge ${p.is_active !== false ? 'badge-success' : 'badge-neutral'}">${p.is_active !== false ? 'Active' : 'Inactive'}</span>
-                    <button class="btn btn-ghost btn-xs" onclick='window._editRecord("programs", "${p.id}", ${JSON.stringify(JSON.stringify(p))})' title="Edit Program" style="padding:0 0.4rem; height:auto; min-height:0;">✏️ Edit</button>
-                    <button class="btn btn-ghost btn-xs text-danger" onclick="window._deleteRecord('programs', '${p.id}', '${escHtml(p.name)}')" title="Delete Program" style="padding:0 0.4rem; height:auto; min-height:0;">🗑️ Delete</button>
-                    <button class="btn btn-ghost btn-xs text-success" onclick="window.openCrudModal('classes', { program_id: '${p.id}' })" title="Add Class" style="padding:0 0.4rem; height:auto; min-height:0;">➕ Class</button>
-                    <button class="btn btn-ghost btn-xs text-warning" onclick="window.openCrudModal('batches', { program_id: '${p.id}' })" title="Add Batch" style="padding:0 0.4rem; height:auto; min-height:0;">➕ Batch</button>
+                    <button class="btn btn-ghost btn-xs edit-mode-only" onclick='window._editRecord("programs", "${p.id}", ${JSON.stringify(JSON.stringify(p))})' title="Edit Program" style="padding:0 0.4rem; height:auto; min-height:0;">✏️ Edit</button>
+                    <button class="btn btn-ghost btn-xs text-danger edit-mode-only" onclick="window._deleteRecord('programs', '${p.id}', '${escHtml(p.name)}')" title="Delete Program" style="padding:0 0.4rem; height:auto; min-height:0;">🗑️ Delete</button>
+                    <button class="btn btn-ghost btn-xs text-success edit-mode-only" onclick="window.openCrudModal('classes', { program_id: '${p.id}' })" title="Add Class" style="padding:0 0.4rem; height:auto; min-height:0;">➕ Class</button>
+                    <button class="btn btn-ghost btn-xs text-warning edit-mode-only" onclick="window.openCrudModal('batches', { program_id: '${p.id}' })" title="Add Batch" style="padding:0 0.4rem; height:auto; min-height:0;">➕ Batch</button>
                   </div>
                 </div>
                 
@@ -154,7 +154,7 @@ export async function renderDashboard(container) {
         <div id="board-inst-panels" style="display:flex; flex-direction:column;">
           <div style="display:flex; justify-content:space-between; align-items:center; position: sticky; top: 0; z-index: 10; padding-bottom: 0.5rem; background: var(--fm-bg); margin-bottom: 1rem;">
             <h3 style="margin:0; font-size:1.2rem; font-weight:800;">Organization Hierarchy</h3>
-            <button class="btn btn-primary btn-sm" onclick="window.openCrudModal('institutions', null)">➕ Add Institution</button>
+            <button class="btn btn-primary btn-sm edit-mode-only" onclick="window.openCrudModal('institutions', null)">➕ Add Institution</button>
           </div>
           ${instsHtml || '<p class="text-muted">No institutions available.</p>'}
         </div>

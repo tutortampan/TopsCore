@@ -131,7 +131,7 @@ export async function renderClasses(area) {
         <div id="panel-org-tab" style="flex:1; overflow-y:auto; display:none; flex-direction:column;">
           <div style="padding:0.6rem 0.75rem; border-bottom:1px solid var(--clr-border); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
             <span style="font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--clr-text-muted);">Organization</span>
-            <button class="btn btn-primary btn-sm" id="btn-add-inst-global" style="padding:0.2rem 0.45rem; font-size:0.75rem;" title="Add Institution">+ Inst</button>
+            <button class="btn btn-primary btn-sm edit-mode-only" id="btn-add-inst-global" style="padding:0.2rem 0.45rem; font-size:0.75rem;" title="Add Institution">+ Inst</button>
           </div>
           <div id="org-tree-list" style="flex:1; overflow-y:auto; padding:0.75rem; display:flex; flex-direction:column; gap:2px;">
             <!-- Tree injected here -->
@@ -367,7 +367,7 @@ function renderInstitutionDetail(inst) {
           <h2 style="margin:0; font-size:2rem; font-weight:700;">🏢 ${inst.name}</h2>
           <p class="text-muted" style="margin-top:0.5rem;">Institution Workspace</p>
         </div>
-        <button class="btn btn-primary" id="btn-add-prog">+ Add Program</button>
+        <button class="btn btn-primary edit-mode-only" id="btn-add-prog">+ Add Program</button>
       </div>
       <div class="card" style="padding:1.5rem; background:var(--clr-surface);">
         <h4 style="margin-top:0;">Institution Details</h4>
@@ -399,7 +399,7 @@ function renderProgramDetail(prog, inst) {
           <h2 style="margin:0; font-size:2rem; font-weight:700;">📋 ${prog.name}</h2>
           <p class="text-muted" style="margin-top:0.5rem;">Program under ${inst.name}</p>
         </div>
-        <button class="btn btn-primary" id="btn-add-class">+ Add Class</button>
+        <button class="btn btn-primary edit-mode-only" id="btn-add-class">+ Add Class</button>
       </div>
       <div class="card" style="padding:1.5rem; background:var(--clr-surface);">
         <h4 style="margin-top:0;">Program Details</h4>
@@ -453,7 +453,14 @@ function renderProgramDetail(prog, inst) {
         newSaveBtn.textContent = 'Saving...';
         
         const primary_level_id = checkedLevels[0];
-        const newClass = await adminInsert('classes', { name, program_id: prog.id, level_id: primary_level_id, status: 'active', is_active: true });
+        const newClass = await adminInsert('classes', { 
+          name, 
+          program_id: prog.id, 
+          institution_id: prog.institution_id || null, 
+          level_id: primary_level_id, 
+          status: 'active', 
+          is_active: true 
+        });
         
         if (newClass && newClass.id) {
           const classLevelsPayload = checkedLevels.map(lvlId => ({
@@ -508,22 +515,22 @@ function renderClassDetail(cls) {
         </div>
         <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
            ${isVocab ? `
-             <button class="btn btn-primary btn-sm" id="btn-auto-gen-words" style="background:rgba(59,130,246,0.9); color:#fff; border:1px solid rgba(59,130,246,0.4); font-weight:700;">
+             <button class="btn btn-primary btn-sm edit-mode-only" id="btn-auto-gen-words" style="background:rgba(59,130,246,0.9); color:#fff; border:1px solid rgba(59,130,246,0.4); font-weight:700;">
                &#9889; Sync Words (Vocab Mastery)
              </button>
-             <button class="btn btn-primary btn-sm" id="btn-auto-gen-phrases" style="background:rgba(59,130,246,0.9); color:#fff; border:1px solid rgba(59,130,246,0.4); font-weight:700;">
+             <button class="btn btn-primary btn-sm edit-mode-only" id="btn-auto-gen-phrases" style="background:rgba(59,130,246,0.9); color:#fff; border:1px solid rgba(59,130,246,0.4); font-weight:700;">
                &#9889; Sync Phrases (Dropdown 10)
              </button>
            ` : ''}
-           <button class="btn btn-primary btn-sm" onclick="window.handleAddQuiz('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
+           <button class="btn btn-primary btn-sm edit-mode-only" onclick="window.handleAddQuiz('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
              style="background:rgba(245,158,11,0.9); color:#1a1a1a; border:1px solid rgba(245,158,11,0.4); font-weight:700;">
              &#128221; Add Quiz
            </button>
-           <button class="btn btn-secondary btn-sm" onclick="window.handleAddExam('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
+           <button class="btn btn-secondary btn-sm edit-mode-only" onclick="window.handleAddExam('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
              style="background:rgba(239,68,68,0.9); color:#fff; border:1px solid rgba(239,68,68,0.4); font-weight:700;">
              &#127942; Add Exam
            </button>
-           <button class="btn btn-danger btn-sm" id="btn-del-active-class">Delete</button>
+           <button class="btn btn-danger btn-sm edit-mode-only" id="btn-del-active-class">Delete</button>
         </div>
       </div>
       
@@ -847,11 +854,11 @@ export async function loadClassLearningPath(classId) {
           render: (val, row) => `
             <div class="d-flex gap-1 justify-end align-center">
               <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterTestResults='${row.id}'; window.loadSection('results');">&#128202;</button>
-              <button class="btn ${row.status === 'published' ? 'btn-danger' : 'btn-success'}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._toggleClassTestPublish('${row.id}', '${row.status || 'draft'}')">
+              <button class="btn ${row.status === 'published' ? 'btn-danger' : 'btn-success'} edit-mode-only" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._toggleClassTestPublish('${row.id}', '${row.status || 'draft'}')">
                 ${row.status === 'published' ? 'Unpub' : 'Pub'}
               </button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openTestBuilder('${row.id}')">Edit</button>
-              <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; color: var(--clr-accent-1);" onclick="window._deleteRecord('Tests', '${row.id}', '${escapeHtml(row.title)}')">Del</button>
+              <button class="btn btn-secondary edit-mode-only" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openTestBuilder('${row.id}')">Edit</button>
+              <button class="btn btn-secondary edit-mode-only" style="padding: 2px 6px; font-size: 0.75rem; color: var(--clr-accent-1);" onclick="window._deleteRecord('Tests', '${row.id}', '${escapeHtml(row.title)}')">Del</button>
             </div>
           `
         }

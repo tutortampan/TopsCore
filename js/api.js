@@ -5519,17 +5519,32 @@ export async function removeStudentFromTestSession({ testId, studentId, action =
 }
 
 /**
- * Extend active test session time and update active student attempts
+ * Extend or reduce active test session time and update active student attempts
+ * Supports positive minutes (add time) and negative minutes (reduce time).
  */
-export async function extendTestSessionTime({ testIds = [], additionalMinutes = 10 }) {
+export async function extendTestSessionTime(arg1, arg2) {
   const sb = await getSupabase();
+  let testIds = [];
+  let additionalMinutes = 10;
+
+  if (typeof arg1 === 'object' && !Array.isArray(arg1) && arg1 !== null) {
+    testIds = arg1.testIds || [];
+    additionalMinutes = arg1.additionalMinutes ?? 10;
+  } else if (Array.isArray(arg1)) {
+    testIds = arg1;
+    additionalMinutes = arg2 ?? 10;
+  } else if (typeof arg1 === 'string') {
+    testIds = [arg1];
+    additionalMinutes = arg2 ?? 10;
+  }
+
   const mins = parseInt(additionalMinutes, 10);
-  if (isNaN(mins) || mins <= 0) {
-    throw new Error('Additional minutes must be a positive number.');
+  if (isNaN(mins) || mins === 0) {
+    throw new Error('Jumlah menit penyesuaian tidak valid (tidak boleh 0).');
   }
 
   if (!testIds.length) {
-    throw new Error('No tests specified to extend time.');
+    throw new Error('No tests specified to adjust time.');
   }
 
   const { data: tests, error: fetchErr } = await sb.from('tests')
@@ -5549,14 +5564,22 @@ export async function extendTestSessionTime({ testIds = [], additionalMinutes = 
       ? new Date(currentSession.auto_close_at).getTime()
       : (t.availability_end ? new Date(t.availability_end).getTime() : (now + 30 * 60 * 1000));
 
-    // Extend from existing auto_close_at (or now if already expired)
-    const newCloseMs = Math.max(now, baseCloseTime) + (mins * 60 * 1000);
+    // Calculate new close time: add or subtract
+    let newCloseMs = (mins > 0)
+      ? Math.max(now, baseCloseTime) + (mins * 60 * 1000)
+      : baseCloseTime + (mins * 60 * 1000);
+
+    // Safety guard: ensure the session remains open for at least 1 minute into the future
+    const minSafeCloseMs = now + 60 * 1000;
+    if (newCloseMs < minSafeCloseMs) {
+      newCloseMs = minSafeCloseMs;
+    }
     const newCloseIso = new Date(newCloseMs).toISOString();
 
     const updatedSession = {
       ...currentSession,
       auto_close_at: newCloseIso,
-      allocated_minutes: (currentSession.allocated_minutes || 0) + mins
+      allocated_minutes: Math.max(1, (currentSession.allocated_minutes || 0) + mins)
     };
 
     const updatedPayload = {
@@ -5566,7 +5589,7 @@ export async function extendTestSessionTime({ testIds = [], additionalMinutes = 
 
     await sb.from('tests').update({
       availability_end: newCloseIso,
-      working_duration_minutes: (t.working_duration_minutes || 0) + mins,
+      working_duration_minutes: Math.max(1, (t.working_duration_minutes || 0) + mins),
       payload: updatedPayload
     }).eq('id', t.id);
 
@@ -5575,7 +5598,7 @@ export async function extendTestSessionTime({ testIds = [], additionalMinutes = 
     }
   }
 
-  // Also extend expires_at for all in_progress attempts belonging to these testIds
+  // Also adjust expires_at for all in_progress attempts belonging to these testIds
   if (latestAutoClose) {
     const { data: activeAttempts } = await sb.from('attempts')
       .select('id, expires_at')
@@ -5585,7 +5608,12 @@ export async function extendTestSessionTime({ testIds = [], additionalMinutes = 
     if (activeAttempts && activeAttempts.length > 0) {
       for (const att of activeAttempts) {
         const currentExp = att.expires_at ? new Date(att.expires_at).getTime() : now;
-        const newAttExp = Math.max(now, currentExp) + (mins * 60 * 1000);
+        let newAttExp = (mins > 0)
+          ? Math.max(now, currentExp) + (mins * 60 * 1000)
+          : currentExp + (mins * 60 * 1000);
+        if (newAttExp < now + 60 * 1000) {
+          newAttExp = now + 60 * 1000;
+        }
         await sb.from('attempts').update({
           expires_at: new Date(newAttExp).toISOString(),
           updated_at: new Date().toISOString()
@@ -5594,7 +5622,7 @@ export async function extendTestSessionTime({ testIds = [], additionalMinutes = 
     }
   }
 
-  const remainingMins = latestAutoClose ? Math.max(1, Math.ceil((latestAutoClose - now) / 60000)) : mins;
+  const remainingMins = latestAutoClose ? Math.max(1, Math.ceil((latestAutoClose - now) / 60000)) : Math.max(1, Math.abs(mins));
 
   return {
     success: true,
@@ -5665,11 +5693,12 @@ export async function fetchLiveTestSessionData({ testIds = [], studentIds = [], 
 }
 
 /**
- * Extend exam time for an individual student attempt (e.g. tech glitch recovery)
+ * Extend or reduce exam time for an individual student attempt (e.g. tech glitch recovery or correction)
  */
 export async function extendIndividualAttemptTime(attemptId, additionalMinutes = 10) {
   const sb = await getSupabase();
-  if (!attemptId || !additionalMinutes) throw new Error('attemptId and additionalMinutes required');
+  const mins = parseInt(additionalMinutes, 10);
+  if (!attemptId || isNaN(mins) || mins === 0) throw new Error('attemptId and valid additionalMinutes required');
 
   const { data: att, error: fetchErr } = await sb
     .from('attempts')
@@ -5678,9 +5707,15 @@ export async function extendIndividualAttemptTime(attemptId, additionalMinutes =
     .single();
   if (fetchErr) throw fetchErr;
 
-  const currentExpiry = att.expires_at ? new Date(att.expires_at).getTime() : Date.now();
-  const baseMs = Math.max(Date.now(), currentExpiry);
-  const newExpiry = new Date(baseMs + additionalMinutes * 60000).toISOString();
+  const now = Date.now();
+  const currentExpiry = att.expires_at ? new Date(att.expires_at).getTime() : now;
+  let newExpiryMs = (mins > 0)
+    ? Math.max(now, currentExpiry) + (mins * 60000)
+    : currentExpiry + (mins * 60000);
+  if (newExpiryMs < now + 60000) {
+    newExpiryMs = now + 60000;
+  }
+  const newExpiry = new Date(newExpiryMs).toISOString();
 
   const { error: updErr } = await sb
     .from('attempts')
@@ -5688,7 +5723,7 @@ export async function extendIndividualAttemptTime(attemptId, additionalMinutes =
     .eq('id', attemptId);
   if (updErr) throw updErr;
 
-  return { success: true, newExpiry };
+  return { success: true, newExpiry, addedMinutes: mins };
 }
 
 /**

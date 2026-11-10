@@ -135,10 +135,10 @@ export async function renderRecycleBin(container) {
           </td>
           <td class="text-center text-sm text-muted">${item.deleted_at ? new Date(item.deleted_at).toLocaleString() : '&mdash;'}</td>
           <td class="text-right">
-            <button class="btn btn-secondary btn-xs btn-restore-item" data-table="${item._table}" data-id="${item.id}" data-name="${escapeHtml(item._name)}" title="Restore to active view">
+            <button class="btn btn-secondary btn-xs btn-restore-item edit-mode-only" data-table="${item._table}" data-id="${item.id}" data-name="${escapeHtml(item._name)}" title="Restore to active view">
               &#9851; Restore
             </button>
-            <button class="btn btn-danger btn-xs btn-purge-item" data-table="${item._table}" data-id="${item.id}" data-name="${escapeHtml(item._name)}" title="Permanently delete from database" style="margin-left:4px;">
+            <button class="btn btn-danger btn-xs btn-purge-item edit-mode-only" data-table="${item._table}" data-id="${item.id}" data-name="${escapeHtml(item._name)}" title="Permanently delete from database" style="margin-left:4px;">
               &#128128; Purge
             </button>
           </td>

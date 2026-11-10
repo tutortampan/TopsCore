@@ -3637,8 +3637,15 @@ tr.deleted-row td {
 
 /* Zero-Leakage Hiding Rule: When Global Edit Mode is OFF, hide ALL editing controls across ALL pages */
 body:not(.global-edit-mode-on) .edit-mode-only,
+body:not(.global-edit-mode-on) .col-manual-input,
+body:not(.global-edit-mode-on) .btn-manual-input-toggle,
+body:not(.global-edit-mode-on) .manual-score-input,
 body:not(.global-edit-mode-on) .btn-edit,
 body:not(.global-edit-mode-on) .btn-delete,
+body:not(.global-edit-mode-on) .btn-edit-student,
+body:not(.global-edit-mode-on) .btn-configure-engine,
+body:not(.global-edit-mode-on) .btn-restore-item,
+body:not(.global-edit-mode-on) .btn-purge-item,
 body:not(.global-edit-mode-on) [data-action="edit"],
 body:not(.global-edit-mode-on) [data-action="delete"],
 body:not(.global-edit-mode-on) .row-action-delete,
@@ -3646,7 +3653,6 @@ body:not(.global-edit-mode-on) .row-action-edit,
 body:not(.global-edit-mode-on) .btn-add-record,
 body:not(.global-edit-mode-on) .inline-edit-input,
 body:not(.global-edit-mode-on) .table-edit-actions,
-body:not(.global-edit-mode-on) .manual-score-input,
 body:not(.global-edit-mode-on) .btn-merge-topics,
 body:not(.global-edit-mode-on) .btn-theme-edit-action,
 body:not(.global-edit-mode-on) .btn-topic-edit-action,
@@ -6286,6 +6292,38 @@ tfoot.datagrid-tfoot,
 .btn-wireframe-edit-time:hover {
   filter: brightness(1.08);
   transform: translateY(-1px);
+}
+
+/* Yellow-Themed Time Adjustment Popover Panels */
+.card-add-time-menu,
+#live-modal-add-time-menu {
+  background: #0f172a !important;
+  border: 2px solid #ffe600 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.92), 0 0 18px rgba(255, 230, 0, 0.28) !important;
+}
+
+.btn-card-add-time-opt,
+.btn-add-time-option {
+  transition: all 0.15s ease !important;
+}
+
+.btn-card-add-time-opt:hover,
+.btn-add-time-option:hover {
+  filter: brightness(1.25) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-card-add-time-custom,
+#btn-add-time-custom {
+  transition: all 0.15s ease !important;
+}
+
+.btn-card-add-time-custom:hover,
+#btn-add-time-custom:hover {
+  background: rgba(255, 230, 0, 0.25) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
 }
 
 /* Semantics: Red = Locked / Close Session */

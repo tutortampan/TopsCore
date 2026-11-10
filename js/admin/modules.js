@@ -52,7 +52,7 @@ export async function renderModules(area) {
               ${mod.desc}
             </p>
             
-            <button class="btn-configure-engine" data-id="${mod.id}" data-name="${escapeHtml(mod.name)}" data-directive="${escapeHtml(mod.directive)}"
+            <button class="btn-configure-engine edit-mode-only" data-id="${mod.id}" data-name="${escapeHtml(mod.name)}" data-directive="${escapeHtml(mod.directive)}"
                     style="background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; width: 100%;"
                     onmouseover="this.style.background='#3b82f6'; this.style.borderColor='#3b82f6'; this.style.color='white'"
                     onmouseout="this.style.background='#0f172a'; this.style.borderColor='#334155'; this.style.color='#e2e8f0'">

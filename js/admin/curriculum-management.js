@@ -321,7 +321,7 @@ export async function renderCurriculum(area) {
         area.innerHTML = `
           <div class="empty-state">
             <p>No registered institutions found.</p>
-            <button class="btn btn-primary mt-2" onclick="window.openCrudModal('institutions', null)">+ Add First Institution</button>
+            <button class="btn btn-primary mt-2 edit-mode-only" onclick="window.openCrudModal('institutions', null)">+ Add First Institution</button>
           </div>
         `;
         return;
@@ -444,7 +444,7 @@ export async function renderCurriculum(area) {
             <p style="margin: 0 0 1.25rem 0; font-size: 0.85rem; color: var(--fm-text-muted);">
               ${searchQuery ? 'Try using a different search keyword.' : 'Create a new program to start organizing classes and batches.'}
             </p>
-            ${!searchQuery ? `<button class="btn btn-primary" onclick="window.openCurriculumAddProgram('${activeInst.id}')">+ Create New Program</button>` : ''}
+            ${!searchQuery ? `<button class="btn btn-primary edit-mode-only" onclick="window.openCurriculumAddProgram('${activeInst.id}')">+ Create New Program</button>` : ''}
           </div>
         `;
       } else {
@@ -514,14 +514,14 @@ export async function renderCurriculum(area) {
                     ${periodInfo.statusBadge}
                   </div>
                   <div class="tree-actions-right" style="justify-content: flex-end;">
-                    <label class="toggle-switch" title="Active Toggle">
+                    <label class="toggle-switch edit-mode-only" title="Active Toggle">
                       <input type="checkbox" onchange="window.toggleEntityActive('batches', '${batch.id}', this.checked)" ${batch.is_active ? 'checked' : ''}>
                       <span class="toggle-slider"></span>
                     </label>
-                    <button class="btn btn-secondary btn-sm" style="padding: 3px 8px; font-size: 0.75rem;" onclick="window.openCurriculumEdit('batches', '${batch.id}')" title="Edit Batch">
+                    <button class="btn btn-secondary btn-sm edit-mode-only" style="padding: 3px 8px; font-size: 0.75rem;" onclick="window.openCurriculumEdit('batches', '${batch.id}')" title="Edit Batch">
                       ✏️ Edit
                     </button>
-                    <button class="btn btn-danger btn-sm" style="padding: 3px 7px; font-size: 0.75rem;" onclick="window.deleteCurriculumRecord('batches', '${batch.id}', '${escapeHtml(batch.name)}')" title="Delete Batch">
+                    <button class="btn btn-danger btn-sm edit-mode-only" style="padding: 3px 7px; font-size: 0.75rem;" onclick="window.deleteCurriculumRecord('batches', '${batch.id}', '${escapeHtml(batch.name)}')" title="Delete Batch">
                       🗑️
                     </button>
                   </div>
@@ -547,15 +547,15 @@ export async function renderCurriculum(area) {
                   ${prog.description ? `<div class="text-xs text-muted mt-1 text-truncate" style="max-width: 600px;">${escapeHtml(prog.description)}</div>` : ''}
                 </div>
                 <div class="tree-actions-right" onclick="event.stopPropagation()">
-                  <label class="toggle-switch" title="Toggle Program Active (Cascade)">
+                  <label class="toggle-switch edit-mode-only" title="Toggle Program Active (Cascade)">
                     <input type="checkbox" onchange="window.toggleProgramCascade('${prog.id}', this.checked)" ${prog.is_active ? 'checked' : ''}>
                     <span class="toggle-slider"></span>
                   </label>
-                  <button class="btn btn-primary btn-sm" style="font-size: 0.75rem; padding: 4px 9px; background: var(--clr-success); border-color: var(--clr-success); color: #0F172A; font-weight: 700;" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')" title="Add Batch to Program">+ Add Batch</button>
-                  <button class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 8px;" onclick="window.openCurriculumEdit('programs', '${prog.id}')" title="Edit Program">
+                  <button class="btn btn-primary btn-sm edit-mode-only" style="font-size: 0.75rem; padding: 4px 9px; background: var(--clr-success); border-color: var(--clr-success); color: #0F172A; font-weight: 700;" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')" title="Add Batch to Program">+ Add Batch</button>
+                  <button class="btn btn-secondary btn-sm edit-mode-only" style="font-size: 0.75rem; padding: 4px 8px;" onclick="window.openCurriculumEdit('programs', '${prog.id}')" title="Edit Program">
                     ✏️ Edit
                   </button>
-                  <button class="btn btn-danger btn-sm" style="font-size: 0.75rem; padding: 4px 7px;" onclick="window.deleteCurriculumRecord('programs', '${prog.id}', '${escapeHtml(prog.name)}')" title="Delete Program">
+                  <button class="btn btn-danger btn-sm edit-mode-only" style="font-size: 0.75rem; padding: 4px 7px;" onclick="window.deleteCurriculumRecord('programs', '${prog.id}', '${escapeHtml(prog.name)}')" title="Delete Program">
                     🗑️
                   </button>
                 </div>
@@ -569,7 +569,7 @@ export async function renderCurriculum(area) {
                         <span>👥 Batches</span>
                         <span class="badge-tag" style="font-size: 0.68rem; background: rgba(0, 192, 0, 0.15); color: #00c000ff; border: 1px solid rgba(0, 192, 0, 0.35); font-weight: 700;">${progBatches.length}</span>
                       </div>
-                      <button class="btn btn-ghost btn-sm" style="font-size: 0.72rem; padding: 2px 6px; color: var(--clr-success);" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')">
+                      <button class="btn btn-ghost btn-sm edit-mode-only" style="font-size: 0.72rem; padding: 2px 6px; color: var(--clr-success);" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')">
                         + Add Batch
                       </button>
                     </div>
@@ -608,17 +608,17 @@ export async function renderCurriculum(area) {
 
             <!-- Right-aligned Institution Action Controls -->
             <div class="tree-actions-right">
-              <label class="toggle-switch" title="Toggle Institution Active (Cascade to all programs, classes, batches)">
+              <label class="toggle-switch edit-mode-only" title="Toggle Institution Active (Cascade to all programs, classes, batches)">
                 <input type="checkbox" onchange="window.toggleInstitutionCascade('${activeInst.id}', this.checked)" ${activeInst.is_active ? 'checked' : ''}>
                 <span class="toggle-slider"></span>
               </label>
-              <button class="btn btn-secondary btn-sm" onclick="window.openCurriculumEdit('institutions', '${activeInst.id}')" title="Edit Institution Details (Logo, Address, Contact)">
+              <button class="btn btn-secondary btn-sm edit-mode-only" onclick="window.openCurriculumEdit('institutions', '${activeInst.id}')" title="Edit Institution Details (Logo, Address, Contact)">
                 ✏️ Edit Details
               </button>
-              <button class="btn btn-primary btn-sm" onclick="window.openCurriculumAddProgram('${activeInst.id}')" title="Add New Program to this Institution">
+              <button class="btn btn-primary btn-sm edit-mode-only" onclick="window.openCurriculumAddProgram('${activeInst.id}')" title="Add New Program to this Institution">
                 + Add Program
               </button>
-              <button class="btn btn-danger btn-sm" onclick="window.deleteCurriculumRecord('institutions', '${activeInst.id}', '${escapeHtml(activeInst.name)}')" title="Delete Institution">
+              <button class="btn btn-danger btn-sm edit-mode-only" onclick="window.deleteCurriculumRecord('institutions', '${activeInst.id}', '${escapeHtml(activeInst.name)}')" title="Delete Institution">
                 🗑️
               </button>
             </div>
@@ -634,7 +634,7 @@ export async function renderCurriculum(area) {
               <span class="text-xs text-muted">${instPrograms.length} Programs · ${totalBatches} Batches</span>
               <button class="btn btn-secondary btn-sm" onclick="window.expandAllCurriculum()" style="font-size: 0.75rem; padding: 4px 8px;">Expand All</button>
               <button class="btn btn-secondary btn-sm" onclick="window.collapseAllCurriculum()" style="font-size: 0.75rem; padding: 4px 8px;">Collapse All</button>
-              <button class="btn btn-ghost btn-sm" onclick="window.openCrudModal('institutions', null)" style="font-size: 0.75rem; padding: 4px 8px; color: var(--clr-primary, #6366f1);">+ New Institution</button>
+              <button class="btn btn-ghost btn-sm edit-mode-only" onclick="window.openCrudModal('institutions', null)" style="font-size: 0.75rem; padding: 4px 8px; color: var(--clr-primary, #6366f1);">+ New Institution</button>
             </div>
           </div>
 

@@ -114,6 +114,56 @@ export async function renderStudents(area) {
   const duplicateGroups = Array.from(dupMap.values()).filter(g => g.length > 1);
   const totalDuplicates = duplicateGroups.reduce((acc, g) => acc + (g.length - 1), 0);
   
+  // 1 Program 1 Table: Dynamic Active Programs (Auto-show when active, auto-hide when inactive)
+  const activePrograms = (allPrograms || []).filter(p => p.is_active !== false);
+  activePrograms.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+  // Ensure active batch is selected (from memory or localStorage)
+  if (!window._filterBatchId) {
+    const savedBatchId = localStorage.getItem('topscore_selected_batch_id');
+    const isValidSaved = savedBatchId && (allBatches || []).some(b => b.id === savedBatchId);
+    if (isValidSaved) {
+      window._filterBatchId = savedBatchId;
+    }
+  }
+
+  // If filtered by batch, auto-detect program
+  if (window._filterBatchId && allBatches) {
+    const matchedBatch = allBatches.find(b => b.id === window._filterBatchId);
+    if (matchedBatch && matchedBatch.program_id) {
+      window._filterProgramId = matchedBatch.program_id;
+    }
+  }
+
+  // Ensure current active program is selected (defaults to selected or 1st active program; no "All Programs" tab)
+  let currentProgram = activePrograms.find(p => p.id === window._filterProgramId);
+  if (!currentProgram && activePrograms.length > 0) {
+    const savedProgId = localStorage.getItem('topscore_selected_program_id');
+    currentProgram = activePrograms.find(p => p.id === savedProgId) || activePrograms[0];
+    window._filterProgramId = currentProgram.id;
+  }
+  const currentProgramId = currentProgram ? currentProgram.id : null;
+  window._selectedProgramName = currentProgram ? currentProgram.name : '';
+  if (currentProgramId) {
+    try {
+      localStorage.setItem('topscore_selected_program_id', currentProgramId);
+      localStorage.setItem('topscore_selected_program_name', window._selectedProgramName);
+    } catch(e) {}
+  }
+
+  // If still no batch selected, pick the first active batch of the active program
+  if (!window._filterBatchId && currentProgramId && allBatches) {
+    const firstActiveBatch = allBatches.find(b => b.program_id === currentProgramId && b.is_active !== false && !b.deleted_at);
+    if (firstActiveBatch) {
+      window._filterBatchId = firstActiveBatch.id;
+      window._filterBatchName = firstActiveBatch.name;
+      try {
+        localStorage.setItem('topscore_selected_batch_id', firstActiveBatch.id);
+        localStorage.setItem('topscore_selected_batch_name', firstActiveBatch.name);
+      } catch(_) {}
+    }
+  }
+
   // Format data for DataGrid
   const gridData = (rawData || []).filter(s => {
     if (s.deleted_at) return false;
@@ -357,6 +407,11 @@ export async function renderStudents(area) {
     const perClassFinal = new Map();
 
     classesMap.forEach((cls, cId) => {
+      // Strict Tenant Isolation: Only evaluate classes that belong to student's program and current program
+      if (cls.program_id && s.program_id && cls.program_id !== s.program_id) return;
+      if (currentProgramId && cls.program_id && cls.program_id !== currentProgramId) return;
+      if (cls.institution_id && s.institution_id && cls.institution_id !== s.institution_id) return;
+
       const classAllTests = testsByClass.get(cId) || [];
       if (classAllTests.length === 0) return;
 
@@ -411,6 +466,22 @@ export async function renderStudents(area) {
         }
       });
 
+      // Also map discrete tests for this class (supports classes with custom/small test suites)
+      const testScoresMap = new Map();
+      let hasAnyTestAtt = false;
+      classAllTests.forEach(t => {
+        const best = bestByAsm.get(t.id);
+        if (best && best.score != null) {
+          hasAnyTestAtt = true;
+          const maxQ = Number(best.totalQuestions || t.payload?.total_questions || t.total_questions || 40);
+          testScoresMap.set(t.id, {
+            pts: Math.round(Number(best.score) * 10) / 10,
+            pct: Number(best.percentage != null ? best.percentage : (maxQ > 0 ? (best.score / maxQ) * 100 : 0)),
+            maxQ
+          });
+        }
+      });
+
       // Does the student have any activity or enrollment in this class?
       const hasAttemptsInClass = studentAttempts.some(a => {
         const tObj = testsMap.get(a.test_id);
@@ -419,14 +490,15 @@ export async function renderStudents(area) {
       const hasProgressInClass = (allProgress || []).some(p => p.student_id === s.id && p.class_id === cId);
       const isEnrolledInClass = hasAttemptsInClass || hasProgressInClass;
 
-      if (!isEnrolledInClass && !hasAnyExamAtt) {
+      if (!isEnrolledInClass && !hasAnyExamAtt && !hasAnyTestAtt) {
         return; // Student doesn't belong to this class, leave undefined so table shows '—'
       }
 
       perClassFinal.set(cId, {
         themes: themePoints,
         themeScores: themeScores,
-        totalPts: hasAnyExamAtt ? Math.round(totalExamPts * 10) / 10 : null
+        totalPts: (hasAnyExamAtt || hasAnyTestAtt) ? Math.round(totalExamPts * 10) / 10 : null,
+        testScores: testScoresMap
       });
     });
 
@@ -520,13 +592,19 @@ export async function renderStudents(area) {
       perClassFinal   // Map<classId, {themes, totalPts}>
     };
 
-    // Flatten per-class theme exam metrics so DataGrid can search & sort seamlessly
+    // Flatten per-class metrics so DataGrid can search & sort seamlessly
     perClassFinal.forEach((cs, cId) => {
       rowObj[`_cls_exam1_${cId}`] = cs.themes?.['A'] ?? -1;
       rowObj[`_cls_exam2_${cId}`] = cs.themes?.['B'] ?? -1;
       rowObj[`_cls_exam3_${cId}`] = cs.themes?.['C'] ?? -1;
       rowObj[`_cls_exam4_${cId}`] = cs.themes?.['D'] ?? -1;
       rowObj[`_cls_pts_${cId}`] = cs.totalPts ?? -1;
+      if (cs.testScores) {
+        cs.testScores.forEach((tVal, tId) => {
+          rowObj[`_cls_test_${cId}_${tId}`] = tVal.pts ?? -1;
+          rowObj[`_cls_test_${cId}_${tId}_pct`] = tVal.pct ?? 0;
+        });
+      }
     });
 
     return rowObj;
@@ -534,56 +612,6 @@ export async function renderStudents(area) {
 
   // Hierarchical sort comparator: Active first, then Institution -> Program -> Batch -> Level -> Name (A-Z)
   gridData.sort(compareStudentsHierarchical);
-
-  // 1 Program 1 Table: Dynamic Active Programs (Auto-show when active, auto-hide when inactive)
-  const activePrograms = (allPrograms || []).filter(p => p.is_active !== false);
-  activePrograms.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-  // Ensure active batch is selected (from memory or localStorage)
-  if (!window._filterBatchId) {
-    const savedBatchId = localStorage.getItem('topscore_selected_batch_id');
-    const isValidSaved = savedBatchId && (allBatches || []).some(b => b.id === savedBatchId);
-    if (isValidSaved) {
-      window._filterBatchId = savedBatchId;
-    }
-  }
-
-  // If filtered by batch, auto-detect program
-  if (window._filterBatchId && allBatches) {
-    const matchedBatch = allBatches.find(b => b.id === window._filterBatchId);
-    if (matchedBatch && matchedBatch.program_id) {
-      window._filterProgramId = matchedBatch.program_id;
-    }
-  }
-
-  // Ensure current active program is selected (defaults to selected or 1st active program; no "All Programs" tab)
-  let currentProgram = activePrograms.find(p => p.id === window._filterProgramId);
-  if (!currentProgram && activePrograms.length > 0) {
-    const savedProgId = localStorage.getItem('topscore_selected_program_id');
-    currentProgram = activePrograms.find(p => p.id === savedProgId) || activePrograms[0];
-    window._filterProgramId = currentProgram.id;
-  }
-  const currentProgramId = currentProgram ? currentProgram.id : null;
-  window._selectedProgramName = currentProgram ? currentProgram.name : '';
-  if (currentProgramId) {
-    try {
-      localStorage.setItem('topscore_selected_program_id', currentProgramId);
-      localStorage.setItem('topscore_selected_program_name', window._selectedProgramName);
-    } catch(e) {}
-  }
-
-  // If still no batch selected, pick the first active batch of the active program
-  if (!window._filterBatchId && currentProgramId && allBatches) {
-    const firstActiveBatch = allBatches.find(b => b.program_id === currentProgramId && b.is_active !== false && !b.deleted_at);
-    if (firstActiveBatch) {
-      window._filterBatchId = firstActiveBatch.id;
-      window._filterBatchName = firstActiveBatch.name;
-      try {
-        localStorage.setItem('topscore_selected_batch_id', firstActiveBatch.id);
-        localStorage.setItem('topscore_selected_batch_name', firstActiveBatch.name);
-      } catch(_) {}
-    }
-  }
 
   // Synchronize sidebar active state for program/batch items
   document.querySelectorAll('.sidebar-program-item').forEach(i => {
@@ -722,7 +750,7 @@ export async function renderStudents(area) {
     <div class="d-flex align-center justify-between mb-3 flex-wrap gap-2">
       <div class="d-flex align-center gap-2">
         ${currentBatchStatus !== 'alumni' ? `
-          <button class="btn btn-success btn-sm fw-700" id="btn-promote-all-eligible" style="background:#00c000;border:1px solid #00c000;color:#000;" title="Promote all students who have passed all active level exams with >= 70%">
+          <button class="btn btn-success btn-sm fw-700 edit-mode-only" id="btn-promote-all-eligible" style="background:#00c000;border:1px solid #00c000;color:#000;" title="Promote all students who have passed all active level exams with >= 70%">
             🚀 NEXT (Promote All Eligible)
           </button>
         ` : `
@@ -844,24 +872,24 @@ export async function renderStudents(area) {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
               <span class="badge" style="font-size:0.65rem; background:rgba(255,0,0,0.15); color:#FF0000; border:1px solid #FF0000; padding:2px 6px;" title="Dispensasi Skor F: ${escapeHtml(r.forgiven_reason || 'Mr. Top Exemption')}">55%ᶠ FORGIVEN</span>
-              <button class="btn btn-ghost btn-xs btn-prog-toggle-forgiven" data-att-id="${attId}" style="padding:2px 6px; font-size:0.75rem;" title="Revoke Skor F waiver">↩️</button>
+              <button class="btn btn-ghost btn-xs btn-prog-toggle-forgiven edit-mode-only" data-att-id="${attId}" style="padding:2px 6px; font-size:0.75rem;" title="Revoke Skor F waiver">↩️</button>
             </div>
           `;
         } else if (isRem) {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
               <span class="badge" style="font-size:0.65rem; background:rgba(255,255,0,0.15); color:${TOPSCORE_COLORS.C}; border:1px solid ${TOPSCORE_COLORS.C}; padding:2px 6px;">REMEDIAL</span>
-              <button class="btn btn-ghost btn-xs btn-prog-toggle-rem" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 6px; font-size:0.75rem;" title="Revert remedial status (return to normal)">↩️</button>
+              <button class="btn btn-ghost btn-xs btn-prog-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 6px; font-size:0.75rem;" title="Revert remedial status (return to normal)">↩️</button>
             </div>
           `;
         } else {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
-              <button class="btn btn-warning btn-xs btn-prog-toggle-rem" data-att-id="${attId}" data-set-remedial="true" style="padding:3px 8px; font-size:0.72rem; font-weight:700; background:#f59e0b; color:#000; border-radius:4px;" title="Mark this exam result as Remedial">
+              <button class="btn btn-warning btn-xs btn-prog-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="true" style="padding:3px 8px; font-size:0.72rem; font-weight:700; background:#f59e0b; color:#000; border-radius:4px;" title="Mark this exam result as Remedial">
                 🏷️ Remedial
               </button>
               ${r.isExam ? `
-                <button class="btn btn-danger btn-xs btn-prog-grant-forgiven" data-att-id="${attId}" data-test-id="${r.testId}" data-student-id="${rec.id}" style="padding:3px 8px; font-size:0.72rem; font-weight:700; background:#FF0000; color:#fff; border-radius:4px;" title="Dispensasi Skor F (Admin Mr. Top Prerogative)">
+                <button class="btn btn-danger btn-xs btn-prog-grant-forgiven edit-mode-only" data-att-id="${attId}" data-test-id="${r.testId}" data-student-id="${rec.id}" style="padding:3px 8px; font-size:0.72rem; font-weight:700; background:#FF0000; color:#fff; border-radius:4px;" title="Dispensasi Skor F (Admin Mr. Top Prerogative)">
                   ⚡ Skor F
                 </button>
               ` : ''}
@@ -1263,7 +1291,7 @@ export async function renderStudents(area) {
               <span>🖨️</span> Dossier
             </button>
             ${isTutorRole() ? '' : `
-            <button class="btn btn-secondary btn-sm" id="btn-profile-edit-student" style="display:inline-flex;align-items:center;gap:5px;font-weight:600;" title="Edit Student">
+            <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-profile-edit-student" style="display:inline-flex;align-items:center;gap:5px;font-weight:600;" title="Edit Student">
               <span>✏️</span> Edit
             </button>
             `}
@@ -1403,12 +1431,12 @@ export async function renderStudents(area) {
                       <div class="d-flex align-center gap-2">
                         ${latestAtt ? `
                           ${latestAtt.is_remedial_unlocked ? `
-                            <button class="btn btn-secondary btn-sm btn-modal-toggle-rem" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 8px;font-size:0.75rem;background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#fbbf24;" title="Revert status to Normal">
+                            <button class="btn btn-secondary btn-sm btn-modal-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 8px;font-size:0.75rem;background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#fbbf24;" title="Revert status to Normal">
                               ↩️ Normal
                             </button>
                             <span class="badge badge-success" style="font-size:0.7rem;">🔓 Remedial Authorized</span>
                           ` : `
-                            <button class="btn btn-warning btn-sm btn-modal-toggle-rem" data-att-id="${attId}" data-set-remedial="true" style="padding:2px 8px;font-size:0.75rem;" title="Mark this exam score as Remedial">
+                            <button class="btn btn-warning btn-sm btn-modal-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="true" style="padding:2px 8px;font-size:0.75rem;" title="Mark this exam score as Remedial">
                               🏷️ Remedial
                             </button>
                           `}
@@ -1974,20 +2002,26 @@ export async function renderStudents(area) {
   const gridContainer = area.querySelector('#student-grid-container') || document.getElementById('student-grid-container');
   if (!gridContainer) return;
 
-  // ── Per-Class Column Discovery (Phase 214) ──────────────────────────────────
-  // Collect all active class IDs that appear in the filtered student set,
+  // ── Per-Class Column Discovery (Phase 214 & Phase 237) ──────────────────────
+  // Collect active class IDs belonging strictly to the active program / filtered student set,
   // then build dynamic columns for each.
   const activeClassIdsInGrid = new Set();
   filteredGridData.forEach(row => {
     if (row.perClassFinal) row.perClassFinal.forEach((_, cId) => {
-      if (classesMap.has(cId)) activeClassIdsInGrid.add(cId);
+      const cls = classesMap.get(cId);
+      const matchInst = !cls?.institution_id || !row.institution_id || cls.institution_id === row.institution_id;
+      if (cls && (!currentProgramId || !cls.program_id || cls.program_id === currentProgramId) && matchInst) {
+        activeClassIdsInGrid.add(cId);
+      }
     });
   });
   // Also include classes where any student in the batch has progress (enrolled but no attempts yet)
   (allProgress || []).forEach(p => {
-    if (p.class_id && classesMap.has(p.class_id)) {
+    const cls = classesMap.get(p.class_id);
+    if (cls && (!currentProgramId || !cls.program_id || cls.program_id === currentProgramId)) {
       const studentRow = filteredGridData.find(r => r.id === p.student_id);
-      if (studentRow) activeClassIdsInGrid.add(p.class_id);
+      const matchInst = !cls.institution_id || !studentRow?.institution_id || cls.institution_id === studentRow.institution_id;
+      if (studentRow && matchInst) activeClassIdsInGrid.add(p.class_id);
     }
   });
 
@@ -1997,81 +2031,134 @@ export async function renderStudents(area) {
     .filter(Boolean)
     .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-  // Build dynamic per-class DataGrid column definitions: 4 Exam columns matching each theme's total exam points
-  const perClassColDefs = activeClassColumns.flatMap(cls => [
-    {
-      key: `_cls_exam1_${cls.id}`,
-      label: 'Exam 1',
-      sortable: true,
-      align: 'center',
-      width: '75px',
-      _classId: cls.id,
-      render: (row) => {
-        const cs = row.perClassFinal?.get(cls.id);
-        const pts = cs?.themes?.['A'];
-        if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
-        const pct = cs?.themeScores?.['A'] ?? 0;
-        const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-        const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme A Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
-      }
-    },
-    {
-      key: `_cls_exam2_${cls.id}`,
-      label: 'Exam 2',
-      sortable: true,
-      align: 'center',
-      width: '75px',
-      _classId: cls.id,
-      render: (row) => {
-        const cs = row.perClassFinal?.get(cls.id);
-        const pts = cs?.themes?.['B'];
-        if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
-        const pct = cs?.themeScores?.['B'] ?? 0;
-        const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-        const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme B Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
-      }
-    },
-    {
-      key: `_cls_exam3_${cls.id}`,
-      label: 'Exam 3',
-      sortable: true,
-      align: 'center',
-      width: '75px',
-      _classId: cls.id,
-      render: (row) => {
-        const cs = row.perClassFinal?.get(cls.id);
-        const pts = cs?.themes?.['C'];
-        if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
-        const pct = cs?.themeScores?.['C'] ?? 0;
-        const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-        const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme C Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
-      }
-    },
-    {
-      key: `_cls_exam4_${cls.id}`,
-      label: 'Exam 4',
-      sortable: true,
-      align: 'center',
-      width: '75px',
-      _classId: cls.id,
-      render: (row) => {
-        const cs = row.perClassFinal?.get(cls.id);
-        const pts = cs?.themes?.['D'];
-        if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
-        const pct = cs?.themeScores?.['D'] ?? 0;
-        const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-        const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-        return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme D Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
-      }
-    }
-  ]);
+  // Build dynamic per-class DataGrid column definitions
+  const classColCountMap = new Map();
+  const perClassColDefs = activeClassColumns.flatMap(cls => {
+    const classAllTests = (testsByClass.get(cls.id) || []).slice().sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
+    
+    // Standard multi-theme milestone curriculum (> 6 tests e.g. Camp 2nd / 3rd)
+    if (classAllTests.length > 6) {
+      classColCountMap.set(cls.id, 4);
+      return [
+        {
+          key: `_cls_exam1_${cls.id}`,
+          label: 'Exam 1',
+          sortable: true,
+          align: 'center',
+          width: '75px',
+          _classId: cls.id,
+          render: (row) => {
+            const cs = row.perClassFinal?.get(cls.id);
+            const pts = cs?.themes?.['A'];
+            if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+            const pct = cs?.themeScores?.['A'] ?? 0;
+            const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
+            const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+            return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme A Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
+          }
+        },
+        {
+          key: `_cls_exam2_${cls.id}`,
+          label: 'Exam 2',
+          sortable: true,
+          align: 'center',
+          width: '75px',
+          _classId: cls.id,
+          render: (row) => {
+            const cs = row.perClassFinal?.get(cls.id);
+            const pts = cs?.themes?.['B'];
+            if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+            const pct = cs?.themeScores?.['B'] ?? 0;
+            const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
+            const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+            return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme B Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
+          }
+        },
+        {
+          key: `_cls_exam3_${cls.id}`,
+          label: 'Exam 3',
+          sortable: true,
+          align: 'center',
+          width: '75px',
+          _classId: cls.id,
+          render: (row) => {
+            const cs = row.perClassFinal?.get(cls.id);
+            const pts = cs?.themes?.['C'];
+            if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+            const pct = cs?.themeScores?.['C'] ?? 0;
+            const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
+            const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+            return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme C Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
+          }
+        },
+        {
+          key: `_cls_exam4_${cls.id}`,
+          label: 'Exam 4',
+          sortable: true,
+          align: 'center',
+          width: '75px',
+          _classId: cls.id,
+          render: (row) => {
+            const cs = row.perClassFinal?.get(cls.id);
+            const pts = cs?.themes?.['D'];
+            if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+            const pct = cs?.themeScores?.['D'] ?? 0;
+            const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
+            const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+            return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme D Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
+          }
+        }
+      ];
+    } else {
+      // Dynamic columns for discrete tests (e.g. Evnikom 1st Vocabulary)
+      const targetTests = classAllTests.length > 0 ? classAllTests : [];
+      classColCountMap.set(cls.id, Math.max(1, targetTests.length));
 
-  // Build superHeaders: span class-name across its 4 exam sub-columns (Exam 1 / Exam 2 / Exam 3 / Exam 4)
-  // Plus span blank headers for the fixed columns before (inst/prog/batch/lvl/name/age/gender)
-  // and after (enrolled/status/actions).
+      if (targetTests.length === 0) {
+        return [{
+          key: `_cls_empty_${cls.id}`,
+          label: 'No Tests',
+          align: 'center',
+          width: '90px',
+          _classId: cls.id,
+          render: () => `<span class="text-muted" style="font-size:0.75rem;">—</span>`
+        }];
+      }
+
+      return targetTests.map(t => {
+        const isEx = isWeeklyExam(t);
+        const shell = t.shell_code || '';
+        let shortLabel = shell ? shell.replace('-WORDS-', ' ').replace('-PHRASES-', ' ') : (t.title || 'Test');
+        if (shortLabel.length > 12) {
+          shortLabel = isEx ? `Exam (${t.payload?.theme_code || 'G'})` : `Task (${t.payload?.topic_code || t.display_order})`;
+        }
+
+        const colKey = `_cls_test_${cls.id}_${t.id}`;
+        return {
+          key: colKey,
+          label: shortLabel,
+          sortable: true,
+          align: 'center',
+          width: '85px',
+          _classId: cls.id,
+          render: (row) => {
+            const cs = row.perClassFinal?.get(cls.id);
+            const tScore = cs?.testScores?.get(t.id);
+            const pts = tScore?.pts;
+            if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+            const pct = tScore?.pct ?? 0;
+            const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
+            const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+            return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="${escapeHtml(t.title)}: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
+          }
+        };
+      });
+    }
+  });
+
+  // Build superHeaders: span class-name across its test/exam sub-columns
+  // Plus span blank headers for the fixed columns before (level/name/age/gender)
+  // and after (actions).
   const buildSuperHeaders = () => {
     if (activeClassColumns.length === 0) return null;
     const fixed_before = 4; // level, name, age, gender (checkbox handled automatically by DataGrid)
@@ -2079,9 +2166,10 @@ export async function renderStudents(area) {
     const sh = [];
     sh.push({ label: '', colSpan: fixed_before, style: 'background:var(--clr-bg-2);border:none;' });
     activeClassColumns.forEach(cls => {
+      const colCount = classColCountMap.get(cls.id) || 4;
       sh.push({
         label: escapeHtml(cls.name),
-        colSpan: 4,
+        colSpan: colCount,
         style: `background:rgba(99,102,241,0.1); border-bottom:2px solid #6366f1; color:#a5b4fc; font-weight:800; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; text-align:center;`
       });
     });
@@ -2132,33 +2220,37 @@ export async function renderStudents(area) {
       });
       const genderBreakdown = `${mCount} M · ${fCount} F`;
 
-      // Calculate average points per active class exam
+      // Calculate average points per active class column
       const classExamAverages = {};
       const classExamColors = {};
-      activeClassColumns.forEach(cls => {
-        const themeMap = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' };
-        ['1', '2', '3', '4'].forEach(num => {
-          const tc = themeMap[num];
-          const key = `_cls_exam${num}_${cls.id}`;
-          let sum = 0;
-          let count = 0;
-          let pctSum = 0;
-          filteredData.forEach(r => {
-            const val = r[key];
-            if (val != null && val >= 0) {
-              sum += val;
-              const cs = r.perClassFinal?.get(cls.id);
-              const pct = cs?.themeScores?.[tc];
-              if (pct != null && pct >= 0) {
-                pctSum += pct;
+      perClassColDefs.forEach(col => {
+        const key = col.key;
+        let sum = 0;
+        let count = 0;
+        let pctSum = 0;
+        filteredData.forEach(r => {
+          const val = r[key];
+          if (val != null && val >= 0) {
+            sum += val;
+            count++;
+            const pct = r[`${key}_pct`];
+            if (pct != null && pct >= 0) {
+              pctSum += pct;
+            } else {
+              const match = key.match(/_cls_exam([1-4])_(.+)/);
+              if (match) {
+                const num = match[1];
+                const cid = match[2];
+                const tc = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' }[num];
+                const cs = r.perClassFinal?.get(cid);
+                pctSum += cs?.themeScores?.[tc] ?? 0;
               }
-              count++;
             }
-          });
-          classExamAverages[key] = count > 0 ? (sum / count).toFixed(1) : null;
-          const avgPct = count > 0 ? Math.round(pctSum / count) : 0;
-          classExamColors[key] = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgPct) : '#38bdf8';
+          }
         });
+        classExamAverages[key] = count > 0 ? (sum / count).toFixed(1) : null;
+        const avgPct = count > 0 ? Math.round(pctSum / count) : 0;
+        classExamColors[key] = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgPct) : '#38bdf8';
       });
 
       // Calculate total average points across students with completed exams
@@ -2189,7 +2281,7 @@ export async function renderStudents(area) {
           cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:#94a3b8;font-size:0.75rem;">${avgAgeStr}</td>`;
         } else if (col.key === 'gender') {
           cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;font-size:0.72rem;color:var(--clr-text-2);white-space:nowrap;">${genderBreakdown}</td>`;
-        } else if (col.key && col.key.includes('_cls_exam')) {
+        } else if (col.key && (col.key.includes('_cls_exam') || col.key.includes('_cls_test_'))) {
           const avgVal = classExamAverages[col.key];
           const color = classExamColors[col.key] || 'var(--clr-text-1)';
           cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:${color} !important;font-size:0.8rem;">${avgVal != null ? `${avgVal} <span style="font-size:0.65rem;opacity:0.85;font-weight:normal;color:${color} !important;">pts</span>` : '—'}</td>`;
@@ -2214,8 +2306,8 @@ export async function renderStudents(area) {
         return direction === 'desc' ? nameB.localeCompare(nameA) : nameA.localeCompare(nameB);
       }
 
-      // Column-specific comparison for class exams
-      if (sortKey.includes('_cls_exam') || sortKey.includes('_cls_pts_')) {
+      // Column-specific comparison for class exams & tests
+      if (sortKey.includes('_cls_exam') || sortKey.includes('_cls_pts_') || sortKey.includes('_cls_test_')) {
         const scA = a[sortKey] ?? -1;
         const scB = b[sortKey] ?? -1;
         if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
@@ -2417,11 +2509,8 @@ export async function renderStudents(area) {
       };
     },
     onRowClick: (row) => {
-      if (row.remediationPending && typeof window.showStudentProfileModal === 'function') {
-        window.showStudentProfileModal(row.id);
-        return;
-      }
-      if (typeof window.openStudentFullEdit === 'function') {
+      const isEditActive = typeof window.getGlobalEditMode === 'function' ? window.getGlobalEditMode() : false;
+      if (isEditActive && typeof window.openStudentFullEdit === 'function') {
         window.openStudentFullEdit(row, () => renderStudents(area));
       } else if (typeof window.showStudentProfileModal === 'function') {
         window.showStudentProfileModal(row.id);
@@ -2547,8 +2636,9 @@ export async function renderStudents(area) {
 
           // 1. Lifecycle Action Button: NEXT / HOLD / REPEAT
           const lifeBtn = document.createElement('button');
+          lifeBtn.classList.add('edit-mode-only');
           if (row.isAlumni || row.studentLevelNum === 0 || row.levelName === 'Alumni') {
-            lifeBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn';
+            lifeBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn edit-mode-only';
             lifeBtn.title = '🔁 Repeat Level / Re-enroll (Alumni)';
             lifeBtn.innerHTML = '🔁';
             lifeBtn.onclick = (e) => {
@@ -2556,7 +2646,7 @@ export async function renderStudents(area) {
               if (window.openRepeatLevelModal) window.openRepeatLevelModal(row.id);
             };
           } else if (row.isEligibleNext) {
-            lifeBtn.className = 'btn btn-success btn-icon btn-sm student-action-btn';
+            lifeBtn.className = 'btn btn-success btn-icon btn-sm student-action-btn edit-mode-only';
             lifeBtn.title = '🚀 NEXT: Promote to Next Level (All active exams >= 70%)';
             lifeBtn.style.cssText = 'background:#00c000;border:1px solid #00c000;color:#000;font-weight:700;';
             lifeBtn.innerHTML = '🚀';
@@ -2565,7 +2655,7 @@ export async function renderStudents(area) {
               if (window.promoteStudentNextLevel) window.promoteStudentNextLevel(row);
             };
           } else {
-            lifeBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn';
+            lifeBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn edit-mode-only';
             lifeBtn.title = '🔒 HOLD: All active level exams require >= 70% to unlock NEXT';
             lifeBtn.style.cssText = 'opacity:0.6;';
             lifeBtn.innerHTML = '🔒';
@@ -2579,7 +2669,7 @@ export async function renderStudents(area) {
 
           // 2. Transfer Batch Button
           const transferBtn = document.createElement('button');
-          transferBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn';
+          transferBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn edit-mode-only';
           transferBtn.title = '🔄 Transfer Batch';
           transferBtn.innerHTML = '🔄';
           transferBtn.onclick = (e) => {
@@ -2615,7 +2705,7 @@ export async function renderStudents(area) {
 
           // 5. Edit Button
           const editBtn = document.createElement('button');
-          editBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn';
+          editBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn edit-mode-only';
           editBtn.title = 'Edit Student';
           editBtn.innerHTML = '✏️';
           editBtn.onclick = (e) => {
@@ -2629,7 +2719,7 @@ export async function renderStudents(area) {
           
           // 6. Delete Button
           const delBtn = document.createElement('button');
-          delBtn.className = 'btn btn-danger btn-icon btn-sm student-action-btn';
+          delBtn.className = 'btn btn-danger btn-icon btn-sm student-action-btn edit-mode-only';
           delBtn.title = 'Delete Student';
           delBtn.innerHTML = '&#128465;';
           delBtn.onclick = (e) => {
@@ -3334,14 +3424,15 @@ export async function openStudentFullEdit(student, onSaved) {
         await adminUpdate('students', finalStudentId, payload);
         showToast('Student updated successfully.', 'success');
       } else {
-        // Pre-check for duplicate student in the same program
+        // Pre-check for duplicate student in the same institution and program
         const normNew = normalizeStudentNameForMatch(name);
         let dupQ = sb.from('students').select('id, name').is('deleted_at', null);
+        if (selectedInstitutionId) dupQ = dupQ.eq('institution_id', selectedInstitutionId);
         if (selectedProgramId) dupQ = dupQ.eq('program_id', selectedProgramId);
         const { data: existingRows } = await dupQ;
         const dupMatch = (existingRows || []).find(r => normalizeStudentNameForMatch(r.name) === normNew);
         if (dupMatch) {
-          showToast(`Student "${dupMatch.name}" already exists in this program. Cannot add duplicate.`, 'warning');
+          showToast(`Student "${dupMatch.name}" already exists in this institution & program. Cannot add duplicate.`, 'warning');
           newSaveBtn.disabled = false;
           newSaveBtn.textContent = 'Save Changes';
           return;
@@ -3350,6 +3441,21 @@ export async function openStudentFullEdit(student, onSaved) {
         const created = await adminInsert('students', payload);
         finalStudentId = created.id;
         showToast('Student created successfully.', 'success');
+
+        // Initialize progress for eligible classes
+        if (selectedProgramId && created?.id) {
+          let classQ = sb.from('classes').select('id').eq('is_active', true).eq('program_id', selectedProgramId);
+          if (selectedInstitutionId) classQ = classQ.or(`institution_id.eq.${selectedInstitutionId},institution_id.is.null`);
+          const { data: pClasses } = await classQ;
+          if (pClasses && pClasses.length > 0) {
+            const pPayload = pClasses.map(c => ({
+              student_id: created.id,
+              class_id: c.id,
+              unlocked_level: 1
+            }));
+            await sb.from('progress').upsert(pPayload, { onConflict: 'student_id,class_id', ignoreDuplicates: true });
+          }
+        }
       }
 
       

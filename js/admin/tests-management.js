@@ -1827,7 +1827,7 @@ export async function renderQuestions(area) {
       `;
       const footer = `
         <button class="btn btn-secondary" onclick="closeRecordDrawer()">Close</button>
-        <button class="btn btn-primary" onclick="window.openCrudModal('questions', window._qRecords['${row.id}']); closeRecordDrawer();">Edit Question</button>
+        <button class="btn btn-primary edit-mode-only" onclick="window.openCrudModal('questions', window._qRecords['${row.id}']); closeRecordDrawer();">Edit Question</button>
       `;
       if (window.openRecordDrawer) window.openRecordDrawer('Question Details', body, footer);
     },

@@ -1,45 +1,43 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-10 07:15 UTC+8
-Current Phase: Phase 389: Single-Responsibility Column Principle Overhaul Across All Tables [COMPLETE]
+Last Updated: 2026-11-10 17:35 UTC+8
+Current Phase: Phase 390: Dual-Direction (+ / -) Exam Session Time Adjustment & Yellow Panel Standardization [COMPLETE]
 Status: COMPLETE
 
-## Completed Work (Phase 389):
-1. **Single-Responsibility Column Principle Implementation ("1 Kolom = 1 Jenis Info")**:
-   - Enforced the architectural rule that every table column must contain strictly ONE discrete data metric or status code.
-   - The ONLY permitted exception to have multiple items in a cell is Action Button / Edit Button columns.
+## Completed Work (Phase 390):
+1. **Dual-Direction Time Adjustment (Tambah & Kurangi Waktu)**:
+   - Updated `extendTestSessionTime` and `extendIndividualAttemptTime` in `js/api.js` to accept negative integers (`mins !== 0`), allowing proctors/tutors to reduce session or student attempt duration if excess time was inadvertently granted.
+   - Built an immutable safety floor ensuring adjusted `auto_close_at` and `expires_at` never drop below `now + 60s`, preventing immediate accidental timeout crashes.
+   - Added positive vs negative feedback toasts (`diperpanjang +X menit` vs `dikurangi X menit`).
 
-2. **Vocabulary Vault — Theme Manager (`js/admin/vocab-vault.js`)**:
-   - Split composite `VAULT ITEMS` (`40 items (40W · 0P)`) into 3 dedicated numeric columns:
-     - `TOTAL`: Total item count badge (`40`)
-     - `WORDS`: Discrete word count (`40`)
-     - `PHRASES`: Discrete phrase count (`0`)
-   - Removed inline edit/delete action buttons (✏️ 🗑️) from `Theme Name` and `Topic Name` data cells; consolidated all edit, rename, and delete actions into the dedicated `ACTIONS` column.
+2. **Vibrant Yellow Panel & 3-Color Trio Standardization (`#ffe600`, dark text `#0f172a`)**:
+   - Standardized Row 3 of Live Theme Cards into a crisp 3-color traffic light trio:
+     - Left: `[ 👥 +LATE STUDENT ]` in Green (`#00a82d`)
+     - Center: `[ ⏱️ EDIT TIME ]` in Vibrant Yellow (`#ffe600`) with high-contrast slate text (`#0f172a`, font-weight 900) per AGENTS.md Rule 2.10
+     - Right: `[ 🔒 CLOSE SESSION ]` in Vibrant Red (`#e60000`)
+   - Replaced dark popovers with an authoritative Yellow-themed panel (`border: 2px solid #ffe600; box-shadow: 0 16px 36px rgba(0,0,0,0.92), 0 0 18px rgba(255,230,0,0.28);`):
+     - High-contrast Yellow header: `⏱️ EDIT WAKTU • THEME [X] [SESI]`
+     - Distinct `🟢 TAMBAH WAKTU (+)` grid: `+5 Min`, `+10 Min`, `+15 Min`, `+30 Min`
+     - Distinct `🔴 KURANGI WAKTU (-)` grid: `-5 Min`, `-10 Min`, `-15 Min`, `-30 Min`
+     - Yellow dashed custom adjustment: `⚙️ Kustom Menit (+ / -)...` supporting `-180` to `+180` min.
 
-3. **Vocabulary Vault — Test Blueprint (`js/admin/vocab-vault.js`)**:
-   - Split composite `TEST SETTINGS` (`15m · 70% · 7x7`) into 3 dedicated columns:
-     - `DURATION`: Discrete duration value (`15 min` when OFF, number stepper input when ON)
-     - `PASS SCORE`: Discrete passing score (`70%` when OFF, percentage stepper input when ON)
-     - `FORMAT`: Discrete delivery format badge (`7×7 Spoken`)
-   - Split `VOCAB POOL` into 3 discrete columns: `ITEMS`, `WORDS`, `PHRASES`.
-   - Cleaned `TASK STATUS` and `EXAM STATUS` columns to status-only pills (`✓ Ready` or `▲ Missing`), completely stripping out embedded duration and passing score text.
+3. **Live View Monitor Parity (`js/admin/tests-access.js`, `css/admin.css`)**:
+   - Upgraded `#btn-live-modal-add-time` to vibrant yellow `#ffe600` (`⏱️ Edit Waktu Sesi`).
+   - Upgraded `#live-modal-add-time-menu` with matching yellow border, header, and dual (+ / -) grids.
+   - Updated individual student row action to `±Waktu` and student answer inspection modal to support custom signed time adjustment.
 
-4. **Test Analytics & Pacing Drawer (`js/admin/tests-management.js`)**:
-   - Split composite `Test & Shell Code` into `Test Title` and `Shell Code`.
-   - Split composite `Duration / Limit` into `Avg Duration` (with progress indicator) and `Time Limit`.
-
-5. **Student Roster Grid Fallback (`js/admin/student-management.js`)**:
-   - Split fallback composite `Tests` (`${row.completedTests} / ${row.totalAssigned}`) into `Completed` and `Assigned` columns.
-
-6. **Automated Verification**:
-   - Extended `scripts/test_vocab_vault_and_edit_mode.mjs` with comprehensive invariants asserting single-responsibility headers, absence of composite settings/parenthetical items, and status pill purity.
-   - Full test suite execution (`npm test`) passed 100% with zero regressions.
+4. **Automated Verification & Zero Regressions**:
+   - `npm run test:syntax`: Passed 100% across all 43 files.
+   - `npm run test:rbac`: Passed 100%.
+   - `npm test`: Passed 100% across all regression suites.
+   - Verified visually via Puppeteer screenshot generation (`verified_edit_time_ui.png`).
 
 ## Files Changed:
-- `js/admin/vocab-vault.js`
-- `js/admin/tests-management.js`
-- `js/admin/student-management.js`
-- `scripts/test_vocab_vault_and_edit_mode.mjs`
+- `admin.html`
+- `css/admin.css`
+- `js/admin/app.js`
+- `js/admin/tests-access.js`
+- `js/api.js`
 - `docs/CHANGELOG.md`
 - `docs/CURRENT_STATE.md`
 

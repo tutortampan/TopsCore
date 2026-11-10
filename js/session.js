@@ -192,6 +192,13 @@ export function setGlobalEditMode(active) {
 
   if (typeof window !== 'undefined') {
     window._globalEditMode = bool;
+    if (!bool && window._manualInputState?.activeStudentIds?.size > 0) {
+      window._manualInputState.activeStudentIds.clear();
+      window._manualInputState.drafts = {};
+      if (typeof window.renderAttendanceGridMatrix === 'function') {
+        try { window.renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL'); } catch (_) {}
+      }
+    }
     window.dispatchEvent(new CustomEvent('admin-edit-mode-changed', { detail: { active: bool } }));
   }
   return bool;

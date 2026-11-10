@@ -215,6 +215,9 @@
   <div class="modal-backdrop hidden" id="submit-modal" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
     <div class="modal-box modal-box-hazard" id="submit-modal-box">
       
+      <!-- Top-Right Close Button (X) -->
+      <button type="button" class="hazard-close-btn" id="close-submit-modal-btn" aria-label="Close modal">✕</button>
+
       <!-- INCOMPLETE STATE: 4-TIER BLOCKS AS DESIGNED -->
       <div id="hazard-incomplete-wrap" class="hazard-layout-wrap">
         <!-- BLOCK 1: GIVE UP! ACTION BUTTON (RED) -->
@@ -222,23 +225,28 @@
           GIVE UP!
         </button>
 
-        <!-- BLOCK 2: WARNING!!! (YELLOW - 160px) -->
+        <!-- BLOCK 2: WARNING ICON (YELLOW CARD WITH NEON TRIANGLE) -->
         <div class="hazard-block hazard-block-warning" id="hazard-warning-block">
-          <div class="hazard-warning-heading" id="submit-modal-title">WARNING!!!</div>
-          <p class="hazard-warning-sub">Unanswered questions will receive <strong>0 points</strong>.</p>
+          <svg class="hazard-neon-warning-icon" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 12 L88 78 H12 Z" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" class="triangle-neon-stroke" />
+            <line x1="50" y1="36" x2="50" y2="54" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" class="triangle-neon-stroke" />
+            <circle cx="50" cy="68" r="4.5" fill="#FFFFFF" class="triangle-neon-dot" />
+          </svg>
         </div>
 
-        <!-- BLOCK 3: 0/40 COUNTER (ORANGE) -->
-        <div class="hazard-block hazard-block-counter" id="hazard-counter-block">
-          <div class="hazard-counter-value">
+        <!-- BLOCK 3: 0/40 COUNTER (DARK CARD) -->
+        <div class="hazard-block hazard-block-counter-dark" id="hazard-counter-block">
+          <div class="hazard-counter-value-white">
             <span id="answered-count">0</span>/<span id="total-count">40</span>
           </div>
-          <div class="hazard-counter-label">QUESTIONS ANSWERED</div>
+          <div class="hazard-mini-progress-track">
+            <div class="hazard-mini-progress-fill" id="hazard-mini-progress-bar" style="width: 0%;"></div>
+          </div>
         </div>
 
-        <!-- BLOCK 4: BACK TO TEST ACTION BUTTON (GREEN) -->
-        <button type="button" class="hazard-btn hazard-btn-back" id="cancel-submit-btn">
-          BACK TO TEST
+        <!-- BLOCK 4: BACK TO THE TEST ACTION BUTTON (GREEN) -->
+        <button type="button" class="hazard-btn hazard-btn-back-neon" id="cancel-submit-btn">
+          BACK TO THE TEST
         </button>
       </div>
 
@@ -246,11 +254,11 @@
       <div id="hazard-complete-wrap" class="hazard-layout-wrap hidden">
         <div class="hazard-block hazard-block-ready">
           <div class="hazard-ready-icon">✅</div>
-          <div class="hazard-warning-heading">READY TO SUBMIT</div>
-          <p class="hazard-warning-sub">All <strong id="total-count-ready">40</strong> questions answered!</p>
+          <div class="hazard-ready-heading">READY TO SUBMIT</div>
+          <p class="hazard-ready-sub">All <strong id="total-count-ready">40</strong> questions answered!</p>
         </div>
 
-        <button type="button" class="hazard-btn hazard-btn-back" id="confirm-submit-btn">
+        <button type="button" class="hazard-btn hazard-btn-back-neon" id="confirm-submit-btn">
           SUBMIT TEST 📋
         </button>
 

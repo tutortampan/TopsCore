@@ -388,7 +388,7 @@ import { renderClasses as _renderClassesModule, loadClassLearningPath } from './
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261106_v160';
 import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261106_v160';
 import { renderTests } from './tests-management.js?v=20261106_v160';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261109_v172';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261110_v174';
 import { renderVocabularyVault } from './vocab-vault.js?v=20261109_v173';
 import { renderModules } from './modules.js?v=20261106_v160';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261106_v160';
@@ -2349,6 +2349,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
           };
 
           window.toggleRowManualInput = async (studentId, testId, totalQ) => {
+            if (typeof window.getGlobalEditMode === 'function' && !window.getGlobalEditMode()) {
+              return;
+            }
             if (isTutorRole()) {
               if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot manually modify exam grades.', 'warning');
               return;
@@ -2376,6 +2379,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
           };
 
           window.toggleAllManualInputMode = async () => {
+            if (typeof window.getGlobalEditMode === 'function' && !window.getGlobalEditMode()) {
+              return;
+            }
             if (isTutorRole()) {
               if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot manually modify exam grades.', 'warning');
               return;
@@ -3118,12 +3124,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             if (!isTutorRole()) {
               dynamicAsmCols.push({
                 key: 'manual_input_action',
-                className: 'col-asm col-action col-manual-input',
+                className: 'col-asm col-action col-manual-input edit-mode-only',
                 width: '58px',
                 headerTitle: 'Manual Input (Klik untuk Aktif/Tutup Semua Siswa)',
                 title: 'Manual Input',
                 label: `
-                  <div class="asm-hdr-cell" style="cursor:pointer;" onclick="window.toggleAllManualInputMode()" title="Klik untuk Toggle Aktif/Tutup Manual Input Semua Siswa">
+                  <div class="asm-hdr-cell edit-mode-only" style="cursor:pointer;" onclick="window.toggleAllManualInputMode()" title="Klik untuk Toggle Aktif/Tutup Manual Input Semua Siswa">
                     <span class="test-subtag" style="font-size:0.56rem; font-weight:800; color:${hasAnyActiveStudent ? '#22c55e' : '#38bdf8'}; background:${hasAnyActiveStudent ? 'rgba(34,197,94,0.18)' : 'rgba(56,189,248,0.12)'}; padding:1px 5px; border-radius:6px; border:1px solid ${hasAnyActiveStudent ? '#22c55e' : 'rgba(56,189,248,0.3)'};">
                       ${hasAnyActiveStudent ? '🟢 ON' : '⚪ OFF'}
                     </span>
@@ -3134,7 +3140,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 render: (val, row) => {
                   const isActive = window.isStudentManualInputActive?.(row.id);
                   return `
-                    <button type="button" class="btn btn-xs btn-manual-input-toggle ${isActive ? 'active' : ''}"
+                    <button type="button" class="btn btn-xs btn-manual-input-toggle edit-mode-only ${isActive ? 'active' : ''}"
                             onclick="window.toggleRowManualInput('${row.id}', ${currentExamId ? `'${currentExamId}', ${currentExamTotalQ}` : 'null, null'}); event.stopPropagation();"
                             title="${isActive ? 'Klik untuk Simpan Nilai & Tutup Manual Input' : 'Klik untuk Input/Edit Nilai Manual'}"
                             style="${isActive

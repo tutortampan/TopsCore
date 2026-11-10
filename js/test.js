@@ -2971,6 +2971,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (totalCountEl) totalCountEl.textContent = total;
       if (totalCountReadyEl) totalCountReadyEl.textContent = total;
 
+      const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
+      const miniProgEl = document.getElementById('hazard-mini-progress-bar');
+      if (miniProgEl) miniProgEl.style.width = pct + '%';
+
       const modalBox = document.getElementById('submit-modal-box') || document.querySelector('#submit-modal .modal-box');
       const incompleteWrap = document.getElementById('hazard-incomplete-wrap');
       const completeWrap = document.getElementById('hazard-complete-wrap');
@@ -3079,6 +3083,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     });
 
     document.getElementById('cancel-ready-btn')?.addEventListener('click', () => {
+      document.getElementById('submit-modal')?.classList.add('hidden');
+    });
+
+    document.getElementById('close-submit-modal-btn')?.addEventListener('click', () => {
       document.getElementById('submit-modal')?.classList.add('hidden');
     });
 

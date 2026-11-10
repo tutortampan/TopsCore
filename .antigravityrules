@@ -45,3 +45,13 @@
    - Grade B is Electric Lime (`#95ff00ff`), Grade C is Pure Yellow (`#FFFF00`), Grade D is Dark Orange (`#FF8C00`), Grade E is Pure Red (`#FF0000`).
    - Round grade badges must render white (`#FFFFFF`) for the Star symbol and deep dark slate (`#0F172A`) for letters A, B, C, D, E.
    - Points (PTS) dynamically follow `getGradeColorByScore()`.
+
+12. MANDATORY TASK LIST ON PROCEED:
+   - Immediately create an authoritative tasks.md artifact upon plan approval / proceed.
+   - Maintain real-time checkbox status (- [x]) throughout execution for transparent progress tracking.
+
+13. MANDATORY PROMPT REFINEMENT:
+   - Always refine, fix typos, and structure user requests into clear goals before execution.
+
+14. PLAN NAMING STANDARD:
+   - All plan artifacts must strictly use the format: YYYYMMDD - <Plan Name>.md.

@@ -347,7 +347,7 @@ async function renderBulkImportView(container) {
         // Fetch existing students for duplicate check
         let existingStudents = [];
         try {
-          existingStudents = await adminFetchAll('students', 'id, name, program_id, deleted_at');
+          existingStudents = await adminFetchAll('students', 'id, name, institution_id, program_id, deleted_at');
         } catch (err) {
           console.warn('Duplicate check lookup failed:', err);
         }
@@ -355,8 +355,12 @@ async function renderBulkImportView(container) {
         (existingStudents || []).forEach(s => {
           if (s && !s.deleted_at) {
             const norm = normalizeStudentNameForMatch(s.name);
-            existingMap.set(`${norm}::${s.program_id}`, s);
-            if (!existingMap.has(norm)) existingMap.set(norm, s);
+            if (s.institution_id && s.program_id) {
+              existingMap.set(`${norm}::${s.institution_id}::${s.program_id}`, s);
+            }
+            if (s.program_id) {
+              existingMap.set(`${norm}::${s.program_id}`, s);
+            }
           }
         });
 
@@ -437,18 +441,38 @@ async function renderBulkImportView(container) {
             }
           }
 
+          // Cross-Institution Mismatch Guard
+          let isMismatch = false;
+          let mismatchMsg = '';
+          if (finalInstId && finalProgId) {
+            const progObj = sortedProgs.find(p => p.id === finalProgId);
+            if (progObj && progObj.institution_id && progObj.institution_id !== finalInstId) {
+              isMismatch = true;
+              mismatchMsg = `Program "${progObj.name}" does not belong to Institution "${finalInstName}"`;
+            }
+          }
+
           const normName = normalizeStudentNameForMatch(rawName);
-          const lookupKey = `${normName}::${finalProgId}`;
-          const existingDb = existingMap.get(lookupKey) || (finalProgId ? existingMap.get(normName) : null);
+          const compoundKey = `${normName}::${finalInstId || ''}::${finalProgId || ''}`;
+          const progKey = `${normName}::${finalProgId || ''}`;
+          const existingDb = (finalInstId && finalProgId)
+            ? (existingMap.get(compoundKey) || existingMap.get(progKey))
+            : (finalProgId ? existingMap.get(progKey) : null);
 
           let status = 'valid';
           let statusBadge = '<span class="status-dot-badge"><span class="status-dot dot-success"></span>New</span>';
           let isExisting = false;
           let existingId = null;
 
-          if (!finalProgId) {
+          if (isMismatch) {
+            status = 'error';
+            statusBadge = `<span class="status-dot-badge" title="${escapeHtml(mismatchMsg)}"><span class="status-dot dot-locked"></span>Mismatch</span>`;
+          } else if (!finalProgId) {
             status = 'error';
             statusBadge = '<span class="status-dot-badge"><span class="status-dot dot-locked"></span>No Prog</span>';
+          } else if (!finalInstId) {
+            status = 'error';
+            statusBadge = '<span class="status-dot-badge"><span class="status-dot dot-locked"></span>No Inst</span>';
           } else if (existingDb) {
             status = 'merge';
             statusBadge = '<span class="status-dot-badge"><span class="status-dot dot-warning"></span>Merge</span>';
@@ -474,7 +498,7 @@ async function renderBulkImportView(container) {
             existingId
           };
 
-          rowMap.set(lookupKey, item);
+          rowMap.set(compoundKey, item);
         });
 
         parsedStudents = Array.from(rowMap.values()).map((item, index) => {
@@ -554,7 +578,7 @@ async function renderBulkImportView(container) {
       let updatedCount = 0;
       const batchCache = {};
 
-      const { data: allClasses } = await sb.from('classes').select('id').eq('is_active', true);
+      const { data: allClasses } = await sb.from('classes').select('id, program_id').eq('is_active', true);
       const totalOps = readyList.length;
       let currentOps = 0;
 
@@ -615,12 +639,19 @@ async function renderBulkImportView(container) {
         }
       }
 
-      // Initialize progression Level 1 for active classes
+      // Initialize progression Level 1 strictly for active classes belonging to each student's exact program AND institution
       if (allClasses && allClasses.length > 0) {
         const progressPayload = [];
         for (const s of readyList) {
           if (s.existingId) {
-            for (const cls of allClasses) {
+            const studentProgId = s.progId || s.program_id;
+            const studentInstId = s.instId || s.institution_id;
+            const eligibleClasses = allClasses.filter(c => {
+              const matchProg = c.program_id && c.program_id === studentProgId;
+              const matchInst = !c.institution_id || !studentInstId || c.institution_id === studentInstId;
+              return matchProg && matchInst;
+            });
+            for (const cls of eligibleClasses) {
               progressPayload.push({
                 student_id: s.existingId,
                 class_id: cls.id,
@@ -691,7 +722,7 @@ async function renderIndividualRegView(container) {
         <p class="section-subtitle">Enroll an individual student directly into an institution, program, and batch with instant credentials.</p>
       </div>
       <div class="d-flex gap-2">
-        <button class="btn btn-secondary btn-sm" id="btn-open-modal-add">🗂️ Open Full Edit Modal</button>
+        <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-open-modal-add">🗂️ Open Full Edit Modal</button>
       </div>
     </div>
 
@@ -826,7 +857,7 @@ async function renderIndividualRegView(container) {
                   ${s.created_at ? s.created_at.split('T')[0] : '—'}
                 </td>
                 <td style="text-align: center;">
-                  <button class="btn btn-ghost btn-xs text-primary btn-edit-student" data-id="${s.id}" title="Edit Profile">✏️ Edit</button>
+                  <button class="btn btn-ghost btn-xs text-primary btn-edit-student edit-mode-only" data-id="${s.id}" title="Edit Profile">✏️ Edit</button>
                 </td>
               </tr>
             `).join('')}
@@ -950,8 +981,22 @@ async function renderIndividualRegView(container) {
     const progId = progEl.value;
     const batchId = batchEl.value;
 
+    if (!instId) {
+      showToast('Please select a Target Institution.', 'warning');
+      instEl.focus();
+      return;
+    }
+
     if (!progId) {
       showToast('Please select a Target Program.', 'warning');
+      progEl.focus();
+      return;
+    }
+
+    // Verify program strictly belongs to the selected institution
+    const selectedProg = sortedProgs.find(p => p.id === progId);
+    if (selectedProg && selectedProg.institution_id && selectedProg.institution_id !== instId) {
+      showToast('Selected Program does not belong to the selected Institution.', 'error');
       progEl.focus();
       return;
     }
@@ -975,16 +1020,20 @@ async function renderIndividualRegView(container) {
     try {
       const sb = await getSupabase();
 
-      // Check duplicate student in program
+      // Check duplicate student within the same institution AND program
       const normNew = normalizeStudentNameForMatch(rawName);
-      const { data: existingRows } = await sb.from('students')
+      let dupQuery = sb.from('students')
         .select('id, name')
         .eq('program_id', progId)
         .is('deleted_at', null);
+      if (instId) {
+        dupQuery = dupQuery.eq('institution_id', instId);
+      }
+      const { data: existingRows } = await dupQuery;
 
       const dup = (existingRows || []).find(r => normalizeStudentNameForMatch(r.name) === normNew);
       if (dup) {
-        showToast(`Student "${dup.name}" is already registered in this program.`, 'warning');
+        showToast(`Student "${dup.name}" is already registered in this institution & program.`, 'warning');
         saveBtn.disabled = false;
         saveBtn.textContent = '✓ Register Student';
         return;
@@ -1005,10 +1054,17 @@ async function renderIndividualRegView(container) {
 
       if (insertErr) throw insertErr;
 
-      // Initialize Progress (Level 1) across all active classes
-      const { data: allClasses } = await sb.from('classes').select('id').eq('is_active', true);
-      if (allClasses && allClasses.length > 0 && createdStudent) {
-        const progressRows = allClasses.map(c => ({
+      // Initialize Progress (Level 1) strictly for active classes belonging to student's exact program and institution
+      let classQ = sb.from('classes')
+        .select('id')
+        .eq('is_active', true)
+        .eq('program_id', createdStudent.program_id);
+      if (createdStudent.institution_id) {
+        classQ = classQ.or(`institution_id.eq.${createdStudent.institution_id},institution_id.is.null`);
+      }
+      const { data: progClasses } = await classQ;
+      if (progClasses && progClasses.length > 0 && createdStudent) {
+        const progressRows = progClasses.map(c => ({
           student_id: createdStudent.id,
           class_id: c.id,
           unlocked_level: 1

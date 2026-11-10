@@ -1,3 +1,45 @@
+## [2026-11-10 17:35] — Phase 390: Dual-Direction (+ / -) Exam Session Time Adjustment & Yellow Panel Standardization
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 390  
+**Status:** PASS  
+
+### Why
+- The user requested dual-direction time adjustment for test sessions:
+  *"berikan fitur pada session test untuk bisa kurangi waktu juga, jaditombol edit waktu bisa tambah bisa kurangi juga kalau salah berikan waktu. dan perbaiki warna panelnya, seharusnya kuning."*
+- User attached a screenshot showing the middle button of the live session card rendering dark without clear styling/label, and requesting:
+  1. Ability to subtract / reduce time (`-X min`) as well as add time (`+X min`) in case a tutor mistakenly assigned excess time.
+  2. Standardize the edit time button and popover panel to vibrant Yellow (`#ffe600`), establishing a clean Green-Yellow-Red traffic light trio.
+
+### Changed
+1. **`js/api.js` (`extendTestSessionTime`, `extendIndividualAttemptTime`)**:
+   - Allowed signed/negative `additionalMinutes` (`mins !== 0`).
+   - Added an immutable safety floor ensuring `newCloseMs` and `newAttExp` never fall below `now + 60s` (preventing immediate expiry or crashes).
+2. **`js/admin/tests-access.js` (Theme Cards & Popover Menu)**:
+   - Row 3 middle button explicitly styled with Yellow background `#ffe600`, dark slate text `#0f172a` (font-weight 900), and label `<span>⏱️</span> EDIT TIME`.
+   - Replaced dark popovers with high-contrast Yellow-themed popover panel (`border: 2px solid #ffe600; box-shadow: 0 16px 36px rgba(0,0,0,0.92), 0 0 18px rgba(255,230,0,0.28);`).
+   - Split controls into two clear, distinct grids:
+     - `🟢 TAMBAH WAKTU (+)`: `+5 Min`, `+10 Min`, `+15 Min`, `+30 Min`
+     - `🔴 KURANGI WAKTU (-)`: `-5 Min`, `-10 Min`, `-15 Min`, `-30 Min`
+     - `⚙️ Kustom Menit (+ / -)...`: prompt supporting signed minutes (`-180` to `+180` min).
+   - Added signed minute handling with custom toast notifications (`diperpanjang +X menit` vs `dikurangi X menit`).
+3. **`js/admin/tests-access.js` (Live Monitor Modal & Student Actions)**:
+   - Updated modal topbar button `#btn-live-modal-add-time` to yellow theme (`⏱️ Edit Waktu Sesi`).
+   - Updated modal popover `#live-modal-add-time-menu` with matching yellow border, header, and dual (+ / -) sections.
+   - Updated student row button to `±Waktu` and student answer inspection modal to allow positive or negative custom minute adjustments.
+4. **`css/admin.css`**:
+   - Added authoritative rules for `.card-add-time-menu`, `#live-modal-add-time-menu`, `.btn-wireframe-edit-time`, and hover states.
+5. **Cache Busting**:
+   - Bumped `admin.css?v=20261110_v174`, `app.js?v=20261110_v174`, and `tests-access.js?v=20261110_v174`.
+
+### Verification
+- `npm run test:syntax`: 43/43 JS files passed `node --check`.
+- `npm run test:rbac`: 8/8 RBAC tests passed 100%.
+- `npm test`: All 11 platform regression suites passed 100%.
+- Visual screenshot verification captured via Puppeteer: clean Green (`+LATE STUDENT`), Yellow (`EDIT TIME`), Red (`CLOSE SESSION`) trio and glowing yellow popover panel.
+
+---
+
 ## [2026-11-10 07:15] — Phase 389: Single-Responsibility Column Principle Overhaul Across All Tables
 
 **Agent/Session:** Antigravity  

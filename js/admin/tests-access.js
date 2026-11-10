@@ -436,33 +436,65 @@ export async function renderClassTestSessions(container, context = {}) {
               <span id="live-modal-remaining" style="color:#ffffff; font-weight:800;">--m</span>
             </div>
 
-            <!-- Quick Add Time Dropdown -->
+            <!-- Quick Add/Reduce Time Dropdown (Yellow #ffe600 per Rule 2.10) -->
             <div style="position:relative; display:inline-block;" id="live-modal-add-time-wrapper">
-              <button type="button" class="btn btn-sm" id="btn-live-modal-add-time" style="padding:5px 12px; font-size:0.8rem; font-weight:700; background:linear-gradient(135deg, #00c000, #009900); border:1px solid #00c000; color:#ffffff; border-radius:6px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(0,192,0,0.3); cursor:pointer;">
-                <span>⏱️ + Tambah Waktu</span>
+              <button type="button" class="btn btn-sm" id="btn-live-modal-add-time" style="padding:5px 12px; font-size:0.8rem; font-weight:900; background:#ffe600 !important; border:1px solid #d4c000 !important; color:#0f172a !important; border-radius:6px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(255,230,0,0.35); cursor:pointer;" title="Atur Sisa Waktu Ujian (Tambah / Kurangi)">
+                <span>⏱️ Edit Waktu Sesi</span>
                 <span style="font-size:0.65rem;">▼</span>
               </button>
-              <div id="live-modal-add-time-menu" class="hidden" style="position:absolute; right:0; top:calc(100% + 5px); background:#0f172a; border:1px solid rgba(255,255,255,0.18); border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,0.85); z-index:99999; min-width:190px; padding:6px; display:none; flex-direction:column; gap:4px;">
-                <div style="font-size:0.7rem; font-weight:700; color:#94a3b8; padding:4px 8px; border-bottom:1px solid rgba(255,255,255,0.08);">Perpanjang Sisa Ujian:</div>
-                <button type="button" class="btn-add-time-option" data-mins="5" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:7px 10px; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
-                  <span>⚡ +5 Menit</span>
-                  <span style="font-size:0.7rem; color:#38bdf8;">Quick</span>
-                </button>
-                <button type="button" class="btn-add-time-option" data-mins="10" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:7px 10px; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
-                  <span>⏱️ +10 Menit</span>
-                  <span style="font-size:0.7rem; color:#34d399;">Populer</span>
-                </button>
-                <button type="button" class="btn-add-time-option" data-mins="15" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:7px 10px; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
-                  <span>⏱️ +15 Menit</span>
-                </button>
-                <button type="button" class="btn-add-time-option" data-mins="30" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:7px 10px; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
-                  <span>⏱️ +30 Menit</span>
-                </button>
-                <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:4px; margin-top:2px;">
-                  <button type="button" id="btn-add-time-custom" style="width:100%; text-align:left; background:transparent; border:none; color:#fbbf24; padding:7px 10px; border-radius:6px; font-size:0.8rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:background 0.15s;" onmouseover="this.style.background='rgba(251,191,36,0.15)'" onmouseout="this.style.background='transparent'">
-                    <span>⚙️ Kustom Menit...</span>
-                  </button>
+              <div id="live-modal-add-time-menu" class="hidden" style="position:absolute; right:0; top:calc(100% + 6px); background:#0f172a; border:2px solid #ffe600; border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 18px rgba(255,230,0,0.28); z-index:99999; width:220px; padding:8px; display:none; flex-direction:column; gap:6px;">
+                <!-- Yellow Header Banner -->
+                <div style="background:#ffe600; color:#0f172a; font-weight:900; font-size:0.72rem; padding:5px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; justify-content:space-between;">
+                  <span>⏱️ ATUR WAKTU SESI</span>
+                  <span style="font-size:0.65rem; background:#0f172a; color:#ffe600; padding:1px 5px; border-radius:3px;">LIVE</span>
                 </div>
+
+                <!-- Section 1: Tambah Waktu (+) -->
+                <div>
+                  <div style="font-size:0.65rem; font-weight:800; color:#86efac; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                    <span>🟢</span> TAMBAH WAKTU (+)
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                    <button type="button" class="btn-add-time-option" data-mins="5" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      +5 Min
+                    </button>
+                    <button type="button" class="btn-add-time-option" data-mins="10" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      +10 Min
+                    </button>
+                    <button type="button" class="btn-add-time-option" data-mins="15" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      +15 Min
+                    </button>
+                    <button type="button" class="btn-add-time-option" data-mins="30" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      +30 Min
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Section 2: Kurangi Waktu (-) -->
+                <div>
+                  <div style="font-size:0.65rem; font-weight:800; color:#fca5a5; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                    <span>🔴</span> KURANGI WAKTU (-)
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                    <button type="button" class="btn-add-time-option" data-mins="-5" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      -5 Min
+                    </button>
+                    <button type="button" class="btn-add-time-option" data-mins="-10" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      -10 Min
+                    </button>
+                    <button type="button" class="btn-add-time-option" data-mins="-15" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      -15 Min
+                    </button>
+                    <button type="button" class="btn-add-time-option" data-mins="-30" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      -30 Min
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Section 3: Custom Button -->
+                <button type="button" id="btn-add-time-custom" style="width:100%; text-align:center; background:rgba(255,230,0,0.1); border:1px dashed #ffe600; color:#ffe600; padding:6px 8px; border-radius:6px; font-size:0.74rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; margin-top:2px;">
+                  <span>⚙️</span> Kustom Menit (+ / -)...
+                </button>
               </div>
             </div>
 
@@ -731,27 +763,63 @@ function renderThemeCard(theme, context) {
           <span>👥</span> +LATE STUDENTS
         </button>
 
-        <!-- 2. Edit Time (Yellow with Dropdown Popover) -->
-        <div style="position:relative; flex:1; height:100%;">
-          <button type="button" class="btn btn-wireframe-edit-time btn-card-add-time" data-theme="${code}" style="width:100%;" title="Perpanjang Waktu Ujian">
+        <!-- 2. Edit Time (Yellow #ffe600 with Dropdown Popover) -->
+        <div style="position:relative; flex:1; height:100%; display:flex;">
+          <button type="button" class="btn btn-wireframe-edit-time btn-card-add-time" data-theme="${code}" style="width:100%; height:100%; background:#ffe600 !important; color:#0f172a !important; border:1px solid #d4c000 !important; font-weight:900 !important; font-size:0.78rem !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; gap:5px !important; border-radius:8px !important; box-shadow:0 4px 10px rgba(255,230,0,0.3) !important; cursor:pointer;" title="Edit Waktu Ujian (Tambah / Kurangi)">
             <span>⏱️</span> EDIT TIME
           </button>
-          <div id="card-add-time-menu-${code}" class="card-add-time-menu" style="display:none; position:absolute; left:0; bottom:calc(100% + 6px); background:#0f172a; border:1px solid rgba(255,255,255,0.18); border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,0.85); z-index:99999; min-width:175px; padding:6px; flex-direction:column; gap:3px;">
-            <div style="font-size:0.68rem; font-weight:700; color:#94a3b8; padding:3px 6px; border-bottom:1px solid rgba(255,255,255,0.08);">Perpanjang Ujian Theme ${code}:</div>
-            <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="5" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-              <span>⏱️ +5 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
-            </button>
-            <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="10" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-              <span>⏱️ +10 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
-            </button>
-            <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="15" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-              <span>⏱️ +15 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
-            </button>
-            <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="30" style="text-align:left; background:transparent; border:none; color:#ffffff; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-              <span>⏱️ +30 Menit</span><span style="font-size:0.65rem; color:#38bdf8;">Quick</span>
-            </button>
-            <button type="button" class="btn-card-add-time-custom" data-theme="${code}" style="text-align:left; background:rgba(255,255,255,0.06); border:none; color:#fbbf24; padding:6px 8px; border-radius:4px; font-size:0.75rem; font-weight:700; cursor:pointer; margin-top:2px;">
-              ⚙️ Kustom Menit...
+          <div id="card-add-time-menu-${code}" class="card-add-time-menu" style="display:none; position:absolute; left:50%; transform:translateX(-50%); bottom:calc(100% + 8px); background:#0f172a; border:2px solid #ffe600; border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 18px rgba(255,230,0,0.28); z-index:99999; width:220px; padding:8px; flex-direction:column; gap:6px;">
+            <!-- Yellow Header Banner -->
+            <div style="background:#ffe600; color:#0f172a; font-weight:900; font-size:0.72rem; padding:5px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; justify-content:space-between;">
+              <span>⏱️ EDIT WAKTU &bull; THEME ${code}</span>
+              <span style="font-size:0.65rem; background:#0f172a; color:#ffe600; padding:1px 5px; border-radius:3px;">SESI</span>
+            </div>
+
+            <!-- Section 1: Tambah Waktu (+) -->
+            <div>
+              <div style="font-size:0.65rem; font-weight:800; color:#86efac; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                <span>🟢</span> TAMBAH WAKTU (+)
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="5" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                  +5 Min
+                </button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="10" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                  +10 Min
+                </button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="15" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                  +15 Min
+                </button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="30" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                  +30 Min
+                </button>
+              </div>
+            </div>
+
+            <!-- Section 2: Kurangi Waktu (-) -->
+            <div>
+              <div style="font-size:0.65rem; font-weight:800; color:#fca5a5; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                <span>🔴</span> KURANGI WAKTU (-)
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-5" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                  -5 Min
+                </button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-10" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                  -10 Min
+                </button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-15" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                  -15 Min
+                </button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-30" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                  -30 Min
+                </button>
+              </div>
+            </div>
+
+            <!-- Section 3: Custom Button -->
+            <button type="button" class="btn-card-add-time-custom" data-theme="${code}" style="width:100%; text-align:center; background:rgba(255,230,0,0.1); border:1px dashed #ffe600; color:#ffe600; padding:6px 8px; border-radius:6px; font-size:0.74rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; margin-top:2px;">
+              <span>⚙️</span> Kustom Menit (+ / -)...
             </button>
           </div>
         </div>
@@ -871,19 +939,20 @@ function bindTestSessionsEvents(container, themesData, context) {
     }
   });
 
-  // Quick preset buttons (+5, +10, +15, +30)
+  // Quick preset buttons (+5, +10, +15, +30, -5, -10, -15, -30)
   container.querySelectorAll('.btn-card-add-time-opt').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const themeCode = e.currentTarget.getAttribute('data-theme');
       const mins = parseInt(e.currentTarget.getAttribute('data-mins'), 10);
       const theme = themesData.find(t => t.code === themeCode);
-      if (!theme || isNaN(mins) || mins <= 0) return;
+      if (!theme || isNaN(mins) || mins === 0) return;
 
       // Close menu
       const menu = container.querySelector(`#card-add-time-menu-${themeCode}`);
       if (menu) menu.style.display = 'none';
 
+      const actionText = mins > 0 ? `diperpanjang +${mins} menit` : `dikurangi ${Math.abs(mins)} menit`;
       showLoading();
       try {
         const promises = [];
@@ -891,20 +960,20 @@ function bindTestSessionsEvents(container, themesData, context) {
         if (theme.phrasesTest) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
         await Promise.all(promises);
 
-        showToast(`⏱️ Waktu ujian Theme ${theme.code} berhasil diperpanjang +${mins} menit!`, 'success');
+        showToast(`⏱️ Waktu ujian Theme ${theme.code} berhasil ${actionText}!`, 'success');
         if (window.renderClassHub) {
           window.renderClassHub(document.getElementById('admin-content-area'));
         }
       } catch (err) {
-        console.error('Error extending session time from card:', err);
-        showToast('Gagal menambah waktu ujian: ' + err.message, 'error');
+        console.error('Error adjusting session time from card:', err);
+        showToast('Gagal mengubah waktu ujian: ' + err.message, 'error');
       } finally {
         hideLoading();
       }
     });
   });
 
-  // Custom minute button
+  // Custom minute button (+ / -)
   container.querySelectorAll('.btn-card-add-time-custom').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -916,14 +985,22 @@ function bindTestSessionsEvents(container, themesData, context) {
       const menu = container.querySelector(`#card-add-time-menu-${themeCode}`);
       if (menu) menu.style.display = 'none';
 
-      const input = prompt(`Masukkan jumlah menit tambahan untuk Theme ${theme.code}:`, '15');
+      const input = prompt(
+        `Atur waktu ujian Theme ${theme.code}:\n` +
+        `• Masukkan angka positif untuk menambah (contoh: 15 atau +15)\n` +
+        `• Masukkan angka negatif untuk mengurangi (contoh: -10)\n` +
+        `Rentang yang diizinkan: -180 s/d +180 menit (tidak boleh 0).`,
+        '10'
+      );
       if (input === null) return;
-      const mins = parseInt(input.trim(), 10);
-      if (isNaN(mins) || mins <= 0 || mins > 180) {
-        showToast('Jumlah menit tidak valid (masukkan 1 - 180 menit)', 'warning');
+      const cleanInput = input.trim();
+      const mins = parseInt(cleanInput, 10);
+      if (isNaN(mins) || mins === 0 || mins < -180 || mins > 180) {
+        showToast('Jumlah menit tidak valid (masukkan angka antara -180 s/d +180 dan tidak boleh 0)', 'warning');
         return;
       }
 
+      const actionText = mins > 0 ? `diperpanjang +${mins} menit` : `dikurangi ${Math.abs(mins)} menit`;
       showLoading();
       try {
         const promises = [];
@@ -931,13 +1008,13 @@ function bindTestSessionsEvents(container, themesData, context) {
         if (theme.phrasesTest) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
         await Promise.all(promises);
 
-        showToast(`⏱️ Waktu ujian Theme ${theme.code} berhasil diperpanjang +${mins} menit!`, 'success');
+        showToast(`⏱️ Waktu ujian Theme ${theme.code} berhasil ${actionText}!`, 'success');
         if (window.renderClassHub) {
           window.renderClassHub(document.getElementById('admin-content-area'));
         }
       } catch (err) {
-        console.error('Error extending session time from card:', err);
-        showToast('Gagal menambah waktu ujian: ' + err.message, 'error');
+        console.error('Error adjusting session time from card:', err);
+        showToast('Gagal mengubah waktu ujian: ' + err.message, 'error');
       } finally {
         hideLoading();
       }
@@ -2086,8 +2163,8 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           <td style="text-align:right;">
             <div style="display:inline-flex; align-items:center; gap:5px; justify-content:flex-end;">
               ${item.targetAtt && item.status === 'in_progress' ? `
-                <button type="button" class="btn btn-xs btn-student-add-time" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; font-weight:700; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Beri tambahan waktu khusus siswa ini (+10m)">
-                  <span>⏱️</span> +Waktu
+                <button type="button" class="btn btn-xs btn-student-add-time" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(255,230,0,0.15); border:1px solid #ffe600; color:#ffe600; font-weight:800; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Atur waktu pengerjaan khusus siswa ini (Tambah / Kurangi)">
+                  <span>⏱️</span> ±Waktu
                 </button>
               ` : ''}
 
@@ -2190,17 +2267,32 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         if (found.targetAtt && found.status === 'in_progress') {
           const btnAddTime = document.createElement('button');
           btnAddTime.className = 'btn btn-sm';
-          btnAddTime.style.cssText = 'background:rgba(245,158,11,0.2); border:1px solid #f59e0b; color:#fbbf24; font-weight:700; font-size:0.78rem; padding:6px 12px; border-radius:6px; cursor:pointer;';
-          btnAddTime.innerHTML = '⏱️ +10 Menit Siswa Ini';
+          btnAddTime.style.cssText = 'background:#ffe600; border:1px solid #d4c000; color:#0f172a; font-weight:900; font-size:0.78rem; padding:6px 12px; border-radius:6px; cursor:pointer; box-shadow:0 2px 8px rgba(255,230,0,0.3);';
+          btnAddTime.innerHTML = '⏱️ ± Atur Waktu Siswa Ini';
           btnAddTime.onclick = async () => {
+            const input = prompt(
+              `Atur waktu pengerjaan khusus untuk ${found.student.name}:\n` +
+              `• Masukkan angka positif untuk menambah (contoh: 10 atau +10)\n` +
+              `• Masukkan angka negatif untuk mengurangi (contoh: -5)\n` +
+              `Rentang yang diizinkan: -180 s/d +180 menit (tidak boleh 0).`,
+              '10'
+            );
+            if (input === null) return;
+            const mins = parseInt(input.trim(), 10);
+            if (isNaN(mins) || mins === 0 || mins < -180 || mins > 180) {
+              showToast('Jumlah menit tidak valid (masukkan -180 s/d +180 dan tidak boleh 0)', 'warning');
+              return;
+            }
+
+            const actionText = mins > 0 ? `ditambah +${mins} menit` : `dikurangi ${Math.abs(mins)} menit`;
             showLoading();
             try {
-              await extendIndividualAttemptTime(found.targetAtt.id, 10);
-              showToast(`⏱️ Waktu untuk ${found.student.name} berhasil ditambah +10 menit!`, 'success');
+              await extendIndividualAttemptTime(found.targetAtt.id, mins);
+              showToast(`⏱️ Waktu untuk ${found.student.name} berhasil ${actionText}!`, 'success');
               inspectModal.classList.add('hidden');
               await loadLiveData(true);
             } catch (err) {
-              showToast('Gagal menambah waktu: ' + err.message, 'error');
+              showToast('Gagal mengubah waktu: ' + err.message, 'error');
             } finally {
               hideLoading();
             }
@@ -2238,20 +2330,35 @@ Status akan kembali menjadi 'in_progress' dan sisa waktu pengerjaan diperpanjang
       });
     });
 
-    // Attach Individual +Time listener
+    // Attach Individual ±Time listener
     tableBody.querySelectorAll('.btn-student-add-time').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const attemptId = e.currentTarget.getAttribute('data-attempt-id');
         const studentName = e.currentTarget.getAttribute('data-student-name') || 'Siswa';
         if (!attemptId) return;
 
+        const input = prompt(
+          `Atur sisa waktu pengerjaan untuk ${studentName}:\n` +
+          `• Masukkan angka positif untuk menambah (contoh: 10 atau +10)\n` +
+          `• Masukkan angka negatif untuk mengurangi (contoh: -5)\n` +
+          `Rentang yang diizinkan: -180 s/d +180 menit (tidak boleh 0).`,
+          '10'
+        );
+        if (input === null) return;
+        const mins = parseInt(input.trim(), 10);
+        if (isNaN(mins) || mins === 0 || mins < -180 || mins > 180) {
+          showToast('Jumlah menit tidak valid (masukkan angka antara -180 s/d +180 dan tidak boleh 0)', 'warning');
+          return;
+        }
+
+        const actionText = mins > 0 ? `ditambah +${mins} menit` : `dikurangi ${Math.abs(mins)} menit`;
         showLoading();
         try {
-          await extendIndividualAttemptTime(attemptId, 10);
-          showToast(`⏱️ Waktu untuk ${studentName} berhasil ditambah +10 menit!`, 'success');
+          await extendIndividualAttemptTime(attemptId, mins);
+          showToast(`⏱️ Waktu untuk ${studentName} berhasil ${actionText}!`, 'success');
           await loadLiveData(true);
         } catch (err) {
-          showToast('Gagal menambah waktu: ' + err.message, 'error');
+          showToast('Gagal mengubah waktu siswa: ' + err.message, 'error');
         } finally {
           hideLoading();
         }
@@ -2350,11 +2457,17 @@ Status akan kembali 'in_progress' dan waktu ujian ditambah +30 menit agar siswa 
         e.stopPropagation();
         addTimeMenu.style.display = 'none';
         addTimeMenu.classList.add('hidden');
-        const inputStr = prompt('Masukkan jumlah menit tambahan (contoh: 20):', '20');
+        const inputStr = prompt(
+          `Atur waktu sesi ujian live:\n` +
+          `• Masukkan angka positif untuk menambah (contoh: 15 atau +15)\n` +
+          `• Masukkan angka negatif untuk mengurangi (contoh: -10)\n` +
+          `Rentang yang diizinkan: -180 s/d +180 menit (tidak boleh 0).`,
+          '10'
+        );
         if (!inputStr) return;
         const mins = parseInt(inputStr.trim(), 10);
-        if (isNaN(mins) || mins <= 0) {
-          alert('Jumlah menit harus berupa angka positif.');
+        if (isNaN(mins) || mins === 0 || mins < -180 || mins > 180) {
+          alert('Jumlah menit harus berupa angka antara -180 s/d +180 dan tidak boleh 0.');
           return;
         }
         await doExtendTime(mins);
@@ -2365,25 +2478,29 @@ Status akan kembali 'in_progress' dan waktu ujian ditambah +30 menit agar siswa 
   async function doExtendTime(mins) {
     const testIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
     if (!testIds.length) {
-      showToast('Tidak ada tes yang aktif untuk diperpanjang.', 'error');
+      showToast('Tidak ada tes yang aktif untuk diatur waktunya.', 'error');
       return;
     }
 
+    const actionText = mins > 0 ? `+${mins} menit` : `${mins} menit`;
     try {
-      showToast(`Memperpanjang waktu ujian +${mins} menit...`, 'info', 3000);
+      showToast(`Menyesuaikan waktu ujian (${actionText})...`, 'info', 2500);
       const res = await extendTestSessionTime({ testIds, additionalMinutes: mins });
       if (res.success) {
         theme.remainingMinutes = res.remainingMinutes;
         remainingEl.textContent = `${res.remainingMinutes}m`;
-        showToast(`⏱️ Waktu ujian berhasil diperpanjang +${mins} menit! Sisa waktu sekarang: ${res.remainingMinutes}m`, 'success', 5000);
+        const resultMsg = mins > 0
+          ? `⏱️ Waktu ujian berhasil diperpanjang +${mins} menit! Sisa waktu sekarang: ${res.remainingMinutes}m`
+          : `⏱️ Waktu ujian berhasil dikurangi ${Math.abs(mins)} menit! Sisa waktu sekarang: ${res.remainingMinutes}m`;
+        showToast(resultMsg, 'success', 5000);
         await loadLiveData(true);
         if (window.renderClassHub) {
           // Background sync
         }
       }
     } catch (err) {
-      console.error('Failed to extend test time:', err);
-      showToast('Gagal menambah waktu ujian: ' + err.message, 'error');
+      console.error('Failed to adjust test time:', err);
+      showToast('Gagal mengubah waktu ujian: ' + err.message, 'error');
     }
   }
 

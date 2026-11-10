@@ -480,6 +480,68 @@ Rules:
 - **Absolute Hiding when OFF**: When Edit Mode is OFF, ALL edit buttons, rename pencils, delete trash cans, inline input steppers, "+ Add" creation buttons, manual score overrides, and destructive actions across ALL pages (Domains A, B, C, D) MUST be COMPLETELY HIDDEN (`display: none !important;`). The interface must render as a pristine, distraction-free read-only view.
 - **Global Scope**: Applies universally to Curriculum, Dashboard, Organization, Batches, Students Registration, Class Hub, Vocabulary Vault, Modules, and System Settings.
 
+## 2.25 Mandatory Mockup Design & Current State Screenshot for All UI Proposals (/learn)
+
+Whenever a task involves designing, modifying, restyling, or restructuring any user interface (screens, modals, panels, widgets, or components in `index.html`, `dashboard.html`, `test.html`, `result.html`, or `admin.html`), the agent MUST strictly provide visual artifacts before proceeding with production code changes.
+
+Rules:
+1. **Current State Screenshot (Before)**:
+   - The agent MUST capture, retrieve, or present an accurate visual snapshot/screenshot of the current UI component or screen as it currently renders in the application.
+   - This establishes an unambiguous baseline of the existing layout, dimensions, colors, and behavior.
+2. **Visual Mockup Design (Proposed / After)**:
+   - The agent MUST provide visual mockup designs illustrating the proposed appearance.
+   - For interactive elements, modals, and layouts, the agent SHOULD deliver an interactive HTML mockup widget (via `generative_ui` inline embed or standalone preview suite) or high-fidelity visual mockups so the user can interactively test and preview the proposed layout, typography, colors, and responsive behavior.
+3. **Integration with Planning Mode (`/plan`)**:
+   - In any implementation plan involving UI changes, the plan artifact MUST embed or directly link both the current state visual/screenshot and the proposed visual mockup.
+   - The agent MUST NOT write production UI code or modify production CSS/HTML until the user has reviewed and explicitly approved the visual mockup.
+
+## 2.26 Mandatory Automated Verification & Zero Manual Verification Burden (/learn)
+
+All verification steps across all tasks, plans, and implementations MUST be executed completely automatically by the agent. Manual verification by the user is strictly discouraged and prohibited as an acceptance mechanism.
+
+Rules:
+1. **Automated-First Verification Pipeline**: Every change, fix, database update, or feature implementation MUST be verified programmatically using automated test scripts, Node.js validation scripts, database integrity assertions, or Playwright/Puppeteer headless browser tests.
+2. **Zero Manual Burden on User**: The agent MUST NOT ask the user to manually verify features, click around the UI, test routes, or inspect elements. The burden of proof and verification rests 100% on the agent's automated tools.
+3. **Execution Artifact Proof**: Verification output, pass/fail assertions, and automated run results MUST be documented directly in the walkthrough or verification report before claiming task completion.
+
+## 2.27 Mandatory Task List Artifact & Real-Time Progress Tracking on Proceed (/learn)
+
+Whenever an implementation plan (`/plan`) is approved and the user triggers **Proceed** (or execution commences), the agent MUST immediately create and maintain an authoritative, live task list artifact in the artifact directory (e.g., `tasks.md`).
+
+Rules:
+1. **Immediate Task List Generation on Proceed**:
+   - The agent MUST NOT start modifying code files or running execution scripts until the task list artifact (`tasks.md`) has been created.
+   - The task list MUST decompose the approved plan into clear, sequential, granular checklist tasks (`- [ ] Task Description`).
+2. **Real-Time Dynamic Updates**:
+   - The agent MUST actively update `tasks.md` as work progresses.
+   - As each sub-task is completed and its automated test passes, the agent must check it off (`- [x]`) and reference the corresponding code diff or test artifact.
+3. **Single Source of Progress Truth**:
+   - The task list artifact serves as the persistent, restartable single source of truth for task progress, enabling the user and any returning agent to immediately understand the current state of execution without sifting through chat history.
+
+## 2.28 Mandatory Prompt Refinement & Structured Intent Clarification (/learn)
+
+Whenever the user submits a request, instruction, or prompt—especially one that is multi-faceted, contains typographical errors, or presents complex requirements—the agent MUST actively refine and structure the user's prompt.
+
+Rules:
+1. **Refined Prompt Presentation**: Before proceeding with heavy execution or in the opening section of planning responses, the agent MUST present a clear, polished, and structured version of the prompt (under a designated heading: `### 🎯 Refined Prompt / Rekonstruksi Perintah Terstruktur`).
+2. **Clarity Without Scope Creep**: The refined prompt must faithfully preserve 100% of the user's actual intent, fix typos, eliminate ambiguities, and organize the goals into crisp, actionable bullet points without inferring unauthorized business rules.
+3. **User Confirmation**: This ensures the user can immediately verify that the agent has accurately understood every nuance of the request.
+
+## 2.29 Standard Plan Artifact Naming Convention (`YYYYMMDD - Plan Name.md`) (/learn)
+
+All implementation plan artifacts generated via `/plan` MUST strictly follow the chronological date-prefixed naming convention:
+
+```text
+YYYYMMDD - <Descriptive Plan Name>.md
+```
+
+Rules:
+- `YYYYMMDD`: 8-digit date string representing the current date (e.g. `20261110` for November 10, 2026).
+- Separator: Space-hyphen-space (` - `).
+- `<Descriptive Plan Name>`: Clean, concise, human-readable plan title in title case.
+- Example: `20261110 - Data & Feature Streamlining Plan.md`.
+- Legacy plan names without date prefixes must be avoided for new plans.
+
 ---
 
 # 3. TARGET ARCHITECTURE

@@ -201,9 +201,9 @@ export async function renderClassesHub(area) {
           '<div style="text-align:center;"><span class="badge-tag ' + (cls.is_active ? 'badge-tag-ongoing' : 'badge-tag-completed') + '">' + (cls.is_active ? '🟢 Active' : '⚪ Inactive') + '</span></div>' +
           '<div class="tree-actions-right" style="justify-content:flex-end;">' +
             vocabBtnHtml +
-            '<label class="toggle-switch" title="Toggle Active"><input type="checkbox" onchange="window.toggleClassesHubEntity(\'classes\',\'' + cls.id + '\',this.checked)" ' + (cls.is_active ? 'checked' : '') + '><span class="toggle-slider"></span></label>' +
-            '<button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:0.75rem;" onclick="window.openClassesHubEdit(\'classes\',\'' + cls.id + '\')">✏️ Edit</button>' +
-            '<button class="btn btn-danger btn-sm"    style="padding:3px 7px;font-size:0.75rem;" onclick="window.deleteClassesHubRecord(\'classes\',\'' + cls.id + '\',\'' + escapeHtml(cls.name) + '\')">🗑️</button>' +
+            '<label class="toggle-switch edit-mode-only" title="Toggle Active"><input type="checkbox" onchange="window.toggleClassesHubEntity(\'classes\',\'' + cls.id + '\',this.checked)" ' + (cls.is_active ? 'checked' : '') + '><span class="toggle-slider"></span></label>' +
+            '<button class="btn btn-secondary btn-sm edit-mode-only" style="padding:3px 8px;font-size:0.75rem;" onclick="window.openClassesHubEdit(\'classes\',\'' + cls.id + '\')">✏️ Edit</button>' +
+            '<button class="btn btn-danger btn-sm edit-mode-only"    style="padding:3px 7px;font-size:0.75rem;" onclick="window.deleteClassesHubRecord(\'classes\',\'' + cls.id + '\',\'' + escapeHtml(cls.name) + '\')">🗑️</button>' +
           '</div>' +
         '</div>';
       };
@@ -283,9 +283,9 @@ export async function renderClassesHub(area) {
               '<span class="badge-tag" style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-size:0.72rem;">' + levelClasses.length + ' ' + (levelClasses.length === 1 ? 'Class' : 'Classes') + '</span>' +
             '</div>' +
             '<div class="tree-actions-right" onclick="event.stopPropagation()">' +
-              '<button class="btn btn-primary btn-sm"   style="font-size:0.75rem;padding:4px 9px;" onclick="window.openClassesHubAddClass(\'' + level.id + '\')">+ Add Class</button>' +
-              '<button class="btn btn-secondary btn-sm" style="font-size:0.75rem;padding:4px 8px;" onclick="window.openClassesHubEdit(\'levels\',\'' + level.id + '\')">✏️ Edit</button>' +
-              '<button class="btn btn-danger btn-sm"    style="font-size:0.75rem;padding:4px 7px;" onclick="window.deleteClassesHubRecord(\'levels\',\'' + level.id + '\',\'' + levelLabel + '\')">🗑️</button>' +
+              '<button class="btn btn-primary btn-sm edit-mode-only"   style="font-size:0.75rem;padding:4px 9px;" onclick="window.openClassesHubAddClass(\'' + level.id + '\')">+ Add Class</button>' +
+              '<button class="btn btn-secondary btn-sm edit-mode-only" style="font-size:0.75rem;padding:4px 8px;" onclick="window.openClassesHubEdit(\'levels\',\'' + level.id + '\')">✏️ Edit</button>' +
+              '<button class="btn btn-danger btn-sm edit-mode-only"    style="font-size:0.75rem;padding:4px 7px;" onclick="window.deleteClassesHubRecord(\'levels\',\'' + level.id + '\',\'' + levelLabel + '\')">🗑️</button>' +
             '</div>' +
           '</div>' +
           (isExpanded ? '<div class="classes-hub-level-body">' + bodyHtml + '</div>' : '') +
@@ -317,7 +317,7 @@ export async function renderClassesHub(area) {
               '<span class="badge-tag" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);font-size:0.72rem;">' + unassignedClasses.length + ' ' + (unassignedClasses.length === 1 ? 'Class' : 'Classes') + '</span>' +
             '</div>' +
             '<div class="tree-actions-right" onclick="event.stopPropagation()">' +
-              '<button class="btn btn-secondary btn-sm" style="font-size:0.75rem;padding:4px 9px;" onclick="window.openClassesHubAddClass(null)">+ Add Class</button>' +
+              '<button class="btn btn-secondary btn-sm edit-mode-only" style="font-size:0.75rem;padding:4px 9px;" onclick="window.openClassesHubAddClass(null)">+ Add Class</button>' +
             '</div>' +
           '</div>' +
           (isExpandedUnassigned ? '<div class="classes-hub-level-body">' + unassignedBodyHtml + '</div>' : '') +
@@ -333,12 +333,12 @@ export async function renderClassesHub(area) {
           '<div class="d-flex align-center gap-2">' +
             '<span class="text-xs text-muted">' + filteredClasses.length + ' Classes · ' + activeLevels.length + ' Levels</span>' +
             '<button class="btn btn-secondary btn-sm" onclick="window.openVocabVaultFromClassHub()" style="font-size:0.75rem;padding:4px 9px;" title="Open Topic Blueprint & Vocabulary Vault">📚 Open Vault</button>' +
-            '<button class="btn btn-primary btn-sm" onclick="window.openClassesHubAddLevel()" style="font-size:0.75rem;padding:4px 9px;">+ Add Level</button>' +
+            '<button class="btn btn-primary btn-sm edit-mode-only" onclick="window.openClassesHubAddLevel()" style="font-size:0.75rem;padding:4px 9px;">+ Add Level</button>' +
           '</div>' +
         '</div>' +
         '<div id="classes-hub-container">' +
           (activeLevels.length === 0 && unassignedClasses.length === 0
-            ? '<div class="empty-state"><p>No levels defined yet.</p><button class="btn btn-primary mt-2" onclick="window.openClassesHubAddLevel()">+ Create First Level</button></div>'
+            ? '<div class="empty-state"><p>No levels defined yet.</p><button class="btn btn-primary mt-2 edit-mode-only" onclick="window.openClassesHubAddLevel()">+ Create First Level</button></div>'
             : levelGroupsHtml.trim() === ''
               ? '<div class="empty-state"><p>No classes match your search.</p></div>'
               : levelGroupsHtml) +
