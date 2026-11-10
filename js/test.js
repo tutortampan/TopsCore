@@ -2966,58 +2966,26 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       const answeredCountEl = document.getElementById('answered-count');
       const totalCountEl = document.getElementById('total-count');
+      const totalCountReadyEl = document.getElementById('total-count-ready');
       if (answeredCountEl) answeredCountEl.textContent = answered;
       if (totalCountEl) totalCountEl.textContent = total;
+      if (totalCountReadyEl) totalCountReadyEl.textContent = total;
 
       const modalBox = document.getElementById('submit-modal-box') || document.querySelector('#submit-modal .modal-box');
-      const warningBanner = document.getElementById('unanswered-warning-banner');
-      const warningHeading = document.getElementById('unanswered-warning-heading');
-      const unansweredBadge = document.getElementById('unanswered-count-badge');
-      const modalIcon = document.getElementById('submit-modal-icon');
-      const modalTitle = document.getElementById('submit-modal-title');
-      const jumpIncompleteBtn = document.getElementById('btn-jump-incomplete-action');
-      const dangerSubmitBtn = document.getElementById('danger-submit-btn');
-      const confirmSubmitBtn = document.getElementById('confirm-submit-btn');
+      const incompleteWrap = document.getElementById('hazard-incomplete-wrap');
+      const completeWrap = document.getElementById('hazard-complete-wrap');
 
       if (unanswered > 0) {
-        // Red Emergency Warning State ("PERINGATAN MERAH SEMUA")
+        // Incomplete State (Hazard Yellow & Orange)
         if (modalBox) {
-          modalBox.style.border = '2px solid var(--grade-e, #FF0000)';
-          modalBox.style.boxShadow = '0 0 50px rgba(var(--grade-e-rgb, 255, 0, 0), 0.45), 0 20px 50px rgba(0,0,0,0.9)';
+          modalBox.classList.add('modal-box-hazard');
         }
-        if (modalIcon) modalIcon.textContent = '🚨';
-        if (modalTitle) {
-          modalTitle.textContent = '🚨 INCOMPLETE TEST!';
-          modalTitle.style.color = '#fca5a5';
-        }
-        if (warningBanner) warningBanner.classList.remove('hidden');
-        if (warningHeading) warningHeading.textContent = `🚨 WARNING: ${unanswered} UNANSWERED QUESTION${unanswered > 1 ? 'S' : ''}!`;
-        if (unansweredBadge) unansweredBadge.textContent = unanswered;
-
-        // Show safe jump action & danger submit action; hide normal submit button
-        if (jumpIncompleteBtn) jumpIncompleteBtn.style.display = 'flex';
-        if (dangerSubmitBtn) {
-          dangerSubmitBtn.style.display = 'block';
-          dangerSubmitBtn.textContent = `⚠️ Submit Anyway (${unanswered} Blank = 0 Points)`;
-        }
-        if (confirmSubmitBtn) confirmSubmitBtn.style.display = 'none';
+        if (incompleteWrap) incompleteWrap.classList.remove('hidden');
+        if (completeWrap) completeWrap.classList.add('hidden');
       } else {
-        // All Questions Answered: Success State
-        if (modalBox) {
-          modalBox.style.border = '1px solid rgba(16, 185, 129, 0.5)';
-          modalBox.style.boxShadow = '0 0 35px rgba(16, 185, 129, 0.25), 0 20px 50px rgba(0,0,0,0.85)';
-        }
-        if (modalIcon) modalIcon.textContent = '✅';
-        if (modalTitle) {
-          modalTitle.textContent = 'Submit TEST?';
-          modalTitle.style.color = '#ffffff';
-        }
-        if (warningBanner) warningBanner.classList.add('hidden');
-
-        // Hide incomplete warning buttons; show normal submit button
-        if (jumpIncompleteBtn) jumpIncompleteBtn.style.display = 'none';
-        if (dangerSubmitBtn) dangerSubmitBtn.style.display = 'none';
-        if (confirmSubmitBtn) confirmSubmitBtn.style.display = 'flex';
+        // All Questions Answered: Ready State
+        if (incompleteWrap) incompleteWrap.classList.add('hidden');
+        if (completeWrap) completeWrap.classList.remove('hidden');
       }
 
       document.getElementById('submit-modal')?.classList.remove('hidden');
@@ -3102,6 +3070,15 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     });
 
     document.getElementById('cancel-submit-btn')?.addEventListener('click', () => {
+      document.getElementById('submit-modal')?.classList.add('hidden');
+      const activeMap = window.answeredMap || answeredMap;
+      const unanswered = allAnswerRows.filter(r => !activeMap[r.id] || !activeMap[r.id].trim()).length;
+      if (unanswered > 0) {
+        jumpToNextUnanswered();
+      }
+    });
+
+    document.getElementById('cancel-ready-btn')?.addEventListener('click', () => {
       document.getElementById('submit-modal')?.classList.add('hidden');
     });
 

@@ -211,51 +211,54 @@
     </div>
   </div>
 
-  <!-- Submit confirm modal -->
+  <!-- Submit confirm modal — Hazard Yellow/Orange Theme -->
   <div class="modal-backdrop hidden" id="submit-modal" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
-    <div class="modal-box" id="submit-modal-box">
-      <div id="submit-modal-icon" class="submit-modal-icon">✅</div>
-      <h3 id="submit-modal-title" class="submit-modal-title">Submit TEST?</h3>
+    <div class="modal-box modal-box-hazard" id="submit-modal-box">
       
-      <!-- Incomplete Warning Alert Banner (RED ALERT) -->
-      <div id="unanswered-warning-banner" class="unanswered-warning-banner hidden">
-        <div id="unanswered-warning-heading" class="unanswered-warning-heading">
-          🚨 WARNING: INCOMPLETE TEST!
+      <!-- INCOMPLETE STATE: 4-TIER BLOCKS AS DESIGNED -->
+      <div id="hazard-incomplete-wrap" class="hazard-layout-wrap">
+        <!-- BLOCK 1: GIVE UP! ACTION BUTTON (RED) -->
+        <button type="button" class="hazard-btn hazard-btn-giveup" id="danger-submit-btn">
+          GIVE UP!
+        </button>
+
+        <!-- BLOCK 2: WARNING!!! (YELLOW - 160px) -->
+        <div class="hazard-block hazard-block-warning" id="hazard-warning-block">
+          <div class="hazard-warning-heading" id="submit-modal-title">WARNING!!!</div>
+          <p class="hazard-warning-sub">Unanswered questions will receive <strong>0 points</strong>.</p>
         </div>
-        <div id="unanswered-warning-text" class="unanswered-warning-text">
-          You still have <strong id="unanswered-count-badge" class="unanswered-count-badge">0</strong> unanswered question(s)!
+
+        <!-- BLOCK 3: 0/40 COUNTER (ORANGE) -->
+        <div class="hazard-block hazard-block-counter" id="hazard-counter-block">
+          <div class="hazard-counter-value">
+            <span id="answered-count">0</span>/<span id="total-count">40</span>
+          </div>
+          <div class="hazard-counter-label">QUESTIONS ANSWERED</div>
         </div>
-        <div class="unanswered-warning-note">
-          ⚠️ Any blank question will receive 0 points.
-        </div>
+
+        <!-- BLOCK 4: BACK TO TEST ACTION BUTTON (GREEN) -->
+        <button type="button" class="hazard-btn hazard-btn-back" id="cancel-submit-btn">
+          BACK TO TEST
+        </button>
       </div>
 
-      <p id="submit-modal-message" class="submit-modal-message">
-        You have answered <strong id="answered-count" class="answered-count-val">0</strong> of <strong id="total-count" class="total-count-val">0</strong> questions.
-        <span id="submit-modal-subtext" class="submit-modal-subtext">Once submitted, answers cannot be modified.</span>
-      </p>
+      <!-- COMPLETE STATE (When all questions answered: unanswered === 0) -->
+      <div id="hazard-complete-wrap" class="hazard-layout-wrap hidden">
+        <div class="hazard-block hazard-block-ready">
+          <div class="hazard-ready-icon">✅</div>
+          <div class="hazard-warning-heading">READY TO SUBMIT</div>
+          <p class="hazard-warning-sub">All <strong id="total-count-ready">40</strong> questions answered!</p>
+        </div>
 
-      <div id="submit-modal-actions" class="submit-modal-actions">
-        <!-- 1. Safe Action when Incomplete: Jump & Complete (Shown when unanswered > 0) -->
-        <button type="button" class="btn w-100 btn-jump-incomplete" id="btn-jump-incomplete-action">
-          🔍 Review & Answer Questions ➔
+        <button type="button" class="hazard-btn hazard-btn-back" id="confirm-submit-btn">
+          SUBMIT TEST 📋
         </button>
 
-        <!-- 2. Danger Action when Incomplete: Submit with 0 penalty (Shown when unanswered > 0) -->
-        <button type="button" class="btn w-100 btn-danger-submit" id="danger-submit-btn">
-          ⚠️ Submit Anyway (Blank Questions = 0 Points)
-        </button>
-
-        <!-- 3. Normal Submit Button (Shown ONLY when all questions answered: unanswered === 0) -->
-        <button type="button" class="btn btn-primary w-100 btn-confirm-submit" id="confirm-submit-btn">
-          Submit TEST 📋
-        </button>
-
-        <!-- 4. Keep Reviewing button -->
-        <button type="button" class="btn btn-secondary w-100 btn-cancel-submit" id="cancel-submit-btn">
-          Return to Current Question
+        <button type="button" class="hazard-btn hazard-btn-neutral" id="cancel-ready-btn">
+          BACK TO TEST
         </button>
       </div>
+
     </div>
   </div>
 
