@@ -635,18 +635,18 @@ export async function fetchAllStudentAttempts(studentId) {
     await sb.rpc('auto_close_expired_attempts');
   } catch (_) {}
   const { data, error } = await sb.from('attempts')
-    .select('id, test_id, score, percentage, grade, status, is_best_score, submitted_at, tests(id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name))')
+    .select('id, test_id, score, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, grade, status, is_best_score, submitted_at, tests(id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name))')
     .eq('student_id', studentId)
-    .in('status', ['submitted', 'auto_submitted'])
+    .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED'])
     .order('submitted_at', { ascending: false });
 
   if (!error) return data || [];
 
   // Fallback 2-step jika foreign key cache Supabase belum sinkron
   const { data: attempts, error: attErr } = await sb.from('attempts')
-    .select('id, test_id, score, percentage, grade, status, is_best_score, submitted_at')
+    .select('id, test_id, score, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, grade, status, is_best_score, submitted_at')
     .eq('student_id', studentId)
-    .in('status', ['submitted', 'auto_submitted'])
+    .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED'])
     .order('submitted_at', { ascending: false });
 
   if (attErr || !attempts) return [];
@@ -668,10 +668,10 @@ export async function fetchStudentAttemptsForTest(studentId, testId) {
   if (!studentId || !testId) return [];
   const sb = await getSupabase();
   const { data, error } = await sb.from('attempts')
-    .select('id, status, score, percentage, grade, submitted_at')
+    .select('id, status, score, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, grade, submitted_at')
     .eq('student_id', studentId)
     .eq('test_id', testId)
-    .in('status', ['submitted', 'auto_submitted'])
+    .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED'])
     .order('percentage', { ascending: false });
   if (error) throw error;
   return data || [];
@@ -1337,7 +1337,7 @@ export async function startTest(studentId, testId) {
   if (prereqId && !isStandaloneTryout) {
     const [prereqAttRes, prereqTestRes] = await Promise.all([
       sb.from('attempts')
-        .select('score, percentage, effective_score, status, is_forgiven, is_remedial_unlocked')
+        .select('score, percentage, effective_score, status, is_forgiven, is_remedial_unlocked, is_remedial')
         .eq('student_id', studentId)
         .eq('test_id', prereqId)
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']),
@@ -1371,7 +1371,8 @@ export async function startTest(studentId, testId) {
         passCount = Math.max(passCount, targetReps);
       } else {
         const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || a.score || 0);
-        if (pct >= reqScore || (a.is_remedial_unlocked && pct >= 60)) {
+        const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
+        if (pct >= reqScore || (isRem && pct >= 60)) {
           passCount++;
         }
       }
@@ -1473,7 +1474,7 @@ export async function startTest(studentId, testId) {
     if (matchingPriorExams.length > 0) {
       const priorExamIds = matchingPriorExams.map(t => t.id);
       const { data: priorAttempts } = await sb.from('attempts')
-        .select('test_id, percentage, effective_score, status, is_remedial_unlocked, is_forgiven')
+        .select('test_id, percentage, effective_score, status, is_remedial_unlocked, is_remedial, is_forgiven')
         .eq('student_id', studentId)
         .in('test_id', priorExamIds)
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
@@ -1483,7 +1484,8 @@ export async function startTest(studentId, testId) {
         const pe = matchingPriorExams.find(e => e.id === att.test_id);
         const reqScore = Number(pe?.minimum_required_score) || Number(pe?.payload?.min_score) || 60;
         const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-        if (pct >= reqScore || att.is_remedial_unlocked || att.is_forgiven) {
+        const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+        if (pct >= reqScore || (isRem && pct >= 60) || att.is_forgiven) {
           passedPriorIds.add(att.test_id);
         }
       });
@@ -3806,7 +3808,7 @@ export async function adminOverridePrerequisitesWithRemedial({
           correct_count: remCorrect,
           total_questions: totalQ,
           percentage: fillScore,
-          effective_score: remScore,
+          effective_score: fillScore,
           grade: fillGrade,
           status: 'submitted',
           is_best_score: true,
@@ -3840,7 +3842,7 @@ export async function adminOverridePrerequisitesWithRemedial({
           correct_count: remCorrect,
           total_questions: totalQ,
           percentage: fillScore,
-          effective_score: remScore,
+          effective_score: fillScore,
           grade: fillGrade,
           is_best_score: true,
           is_remedial_unlocked: isRemedial,

@@ -289,7 +289,8 @@ Deno.serve(async (req) => {
           passCount = Math.max(passCount, 7);
         } else {
           const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || 0);
-          if (pct >= reqScore || (a.is_remedial_unlocked && pct >= 60)) {
+          const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
+          if (pct >= reqScore || (isRem && pct >= 60)) {
             passCount++;
           }
         }
@@ -308,7 +309,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 5b. Strict Cross-Theme Prerequisite: Taking ANY test in Theme B, C, or D requires passing prior theme's exams with >= 70%
+    // 5b. Strict Cross-Theme Prerequisite: Taking ANY test in Theme B, C, or D requires passing prior theme's exams with >= 60%
     const currentThemeEdge = String(test.payload?.theme_code || (test.shell_code ? test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
     const themeSeqEdge = ['A', 'B', 'C', 'D'];
     const curThemeIdxEdge = themeSeqEdge.indexOf(currentThemeEdge);
@@ -334,7 +335,7 @@ Deno.serve(async (req) => {
         const priorExamIds = matchingPriorExams.map((t: any) => t.id);
         const { data: priorAttempts } = await supabase
           .from('attempts')
-          .select('test_id, percentage, effective_score, status, is_remedial_unlocked, is_forgiven')
+          .select('test_id, percentage, effective_score, status, is_remedial_unlocked, is_remedial, is_forgiven')
           .eq('student_id', student_id)
           .in('test_id', priorExamIds)
           .in('status', ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
@@ -344,7 +345,8 @@ Deno.serve(async (req) => {
           const pe = matchingPriorExams.find((e: any) => e.id === att.test_id);
           const reqScore = Number(pe?.minimum_required_score) || Number(pe?.payload?.min_score) || 60;
           const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-          if (pct >= reqScore || att.is_remedial_unlocked || att.is_forgiven) {
+          const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+          if (pct >= reqScore || (isRem && pct >= 60) || att.is_forgiven) {
             passedPriorIds.add(att.test_id);
           }
         });

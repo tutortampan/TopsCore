@@ -389,6 +389,7 @@ if (!session) {
 
         const bestMap = {};
         const isForgivenByTest = {};
+        const isRemedialByTest = {};
         (allAtts || []).forEach(a => {
           const aid = a.test_id;
           const p = parseFloat(a.effective_score != null ? a.effective_score : (a.percentage || 0));
@@ -397,6 +398,9 @@ if (!session) {
           }
           if (a.is_forgiven) {
             isForgivenByTest[aid] = true;
+          }
+          if (a.is_remedial_unlocked || a.is_remedial) {
+            isRemedialByTest[aid] = true;
           }
         });
 
@@ -439,13 +443,14 @@ if (!session) {
         (published || []).forEach(t => {
           if (isExam(t)) {
             const score = bestMap[t.id];
-            const req = Number(t.minimum_required_score) || 60;
-            isPassedByTest[t.id] = Boolean((score != null && score >= req) || isForgivenByTest[t.id]);
+            const req = Number(t.minimum_required_score) || Number(t.payload?.min_score) || 60;
+            const isRem = Boolean(isRemedialByTest[t.id]);
+            isPassedByTest[t.id] = Boolean((score != null && (score >= req || (isRem && score >= 60))) || isForgivenByTest[t.id]);
           } else {
             const tMin = Number(t.minimum_required_score) || Number(t.payload?.min_score) || minScore;
             const passes = (allAtts || []).filter(at =>
               at.test_id === t.id &&
-              (at.is_forgiven || parseFloat(at.percentage || 0) >= tMin || parseFloat(at.effective_score || 0) >= tMin)
+              (at.is_forgiven || Boolean(at.is_remedial_unlocked || at.is_remedial) || parseFloat(at.percentage || 0) >= tMin || parseFloat(at.effective_score || 0) >= tMin)
             ).length;
             passCountByTest[t.id] = passes;
             isPassedByTest[t.id] = Boolean(passes >= targetReps || isForgivenByTest[t.id]);

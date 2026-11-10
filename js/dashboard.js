@@ -1034,6 +1034,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const bestMap = {};
       const passCountByTest = {};
       const isForgivenByTest = {};
+      const isRemedialByTest = {};
 
       (attempts || []).forEach(a => {
         const aid = a.test_id || a.Test_id;
@@ -1045,13 +1046,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (a.is_forgiven) {
           isForgivenByTest[aid] = true;
         }
+        if (a.is_remedial_unlocked || a.is_remedial) {
+          isRemedialByTest[aid] = true;
+        }
         const st = (a.status || '').toLowerCase();
         if (st === 'submitted' || st === 'auto_submitted' || st === 'evaluated' || st === 'graded') {
           if (a.is_forgiven) {
             passCountByTest[aid] = Math.max(passCountByTest[aid] || 0, targetReps);
           } else {
             const tMin = Number(allTestsMap[aid]?.minimum_required_score) || Number(allTestsMap[aid]?.payload?.min_score) || minScore;
-            if (pct >= tMin) {
+            if (pct >= tMin || (isRemedialByTest[aid] && pct >= 60)) {
               passCountByTest[aid] = (passCountByTest[aid] || 0) + 1;
             }
           }
@@ -1078,8 +1082,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (isExam(t)) {
           const score = bestMap[t.id];
           if (score == null) return false;
-          const req = t.minimum_required_score || 60;
-          return score >= req;
+          const req = Number(t.minimum_required_score) || Number(t.payload?.min_score) || 60;
+          return score >= req || (isRemedialByTest[t.id] && score >= 60);
         } else {
           // Task: Strictly requires targetReps (7 passes >= minScore)
           return (passCountByTest[t.id] || 0) >= targetReps;
@@ -1655,16 +1659,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const st  = (att.status || '').toLowerCase();
           if (st === 'in_progress') { inProgByTest[eid] = att; continue; }
           if (st === 'submitted' || st === 'auto_submitted' || st === 'evaluated') {
+            const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
             if (att.is_forgiven) {
               passCountByTest[eid] = Math.max(passCountByTest[eid] || 0, targetReps);
             } else {
               const tMin = Number(testsMap[eid]?.minimum_required_score) || Number(testsMap[eid]?.payload?.min_score) || taskMinScore;
-              if (pct >= tMin) {
+              if (pct >= tMin || (isRem && pct >= 60)) {
                 passCountByTest[eid] = (passCountByTest[eid] || 0) + 1;
               }
             }
           }
-          if (!bestByTest[eid] || pct > parseFloat(bestByTest[eid].percentage || 0) || (pct === parseFloat(bestByTest[eid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByTest[eid].submitted_at || 0)) || (att.is_forgiven && !bestByTest[eid])) {
+          const existingBestPct = bestByTest[eid] ? parseFloat(bestByTest[eid].effective_score ?? bestByTest[eid].percentage ?? 0) : -1;
+          if (!bestByTest[eid] || pct > existingBestPct || (pct === existingBestPct && new Date(att.submitted_at || 0) > new Date(bestByTest[eid].submitted_at || 0)) || (att.is_forgiven && !bestByTest[eid])) {
             bestByTest[eid] = att;
           }
         }
@@ -1794,10 +1800,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 const priorExams = lvl.Tests.filter(t => isExam(t) && String(t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase() === priorTheme);
                 for (const pe of priorExams) {
                   const peBest = bestByTest[pe.id];
-                  const peRawPct = peBest ? parseFloat(peBest.percentage || 0) : null;
+                  const peRawPct = peBest ? parseFloat(peBest.effective_score ?? peBest.percentage ?? 0) : null;
                   const peRem = Boolean(peBest && (peBest.is_remedial_unlocked || peBest.is_remedial));
                   const pePct = peRem && peRawPct !== null ? Math.min(peRawPct, 60.0) : peRawPct;
-                  const peMin = pe.minimum_required_score || pe.pass_threshold || 60;
+                  const peMin = Number(pe.minimum_required_score) || Number(pe.pass_threshold) || Number(pe.payload?.min_score) || 60;
                   const pePassed = Boolean(peBest?.is_forgiven) || (pePct !== null && (pePct >= peMin || (peRem && pePct >= 60)));
                   if (!pePassed) {
                     grpPrereqMet = false;
@@ -1990,9 +1996,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 });
               }
               const isRem       = hasThemeRemedial || Boolean(best && (best.is_remedial_unlocked || best.is_remedial));
-              const rawBestPct  = best ? parseFloat(best.percentage || 0) : null;
+              const rawBestPct  = best ? parseFloat(best.effective_score ?? best.percentage ?? 0) : null;
               const bestPct     = isRem && rawBestPct !== null ? Math.min(rawBestPct, 60.0) : rawBestPct;
-              const passed      = bestPct !== null && bestPct >= (Test.minimum_required_score || Test.pass_threshold || 60);
+              const testMinReq  = Number(Test.minimum_required_score) || Number(Test.pass_threshold) || Number(Test.payload?.min_score) || (isExam(Test) ? 60 : 70);
+              const passed      = bestPct !== null && (bestPct >= testMinReq || (isRem && bestPct >= 60));
               const grade       = bestPct !== null ? getGrade(bestPct) : null;
               const gradeColor  = grade ? getGradeColorByScore(bestPct) : null;
 
@@ -2002,10 +2009,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               const prereqId = Test.prerequisite_test_id || Test.prerequisite_id;
               if (prereqId) {
                  const prereqBest = bestByTest[prereqId];
-                 const prereqPct = prereqBest ? parseFloat(prereqBest.percentage || 0) : null;
+                 const prereqPct = prereqBest ? parseFloat(prereqBest.effective_score ?? prereqBest.percentage ?? 0) : null;
                  const pObj = Tests.find(a => a.id === prereqId);
-                 const pMinScore = pObj ? (pObj.minimum_required_score || pObj.pass_threshold || 60) : 60;
-                 prereqMet = Boolean(prereqBest?.is_forgiven) || (prereqPct !== null && prereqPct >= pMinScore);
+                 const isPExam = pObj ? isExam(pObj) : false;
+                 const pMinScore = pObj ? (Number(pObj.minimum_required_score) || Number(pObj.pass_threshold) || Number(pObj.payload?.min_score) || (isPExam ? 60 : 70)) : (isPExam ? 60 : 70);
+                 const isPrereqRem = Boolean(prereqBest && (prereqBest.is_remedial_unlocked || prereqBest.is_remedial));
+                 prereqMet = Boolean(prereqBest?.is_forgiven) || (prereqPct !== null && (prereqPct >= pMinScore || (isPrereqRem && prereqPct >= 60)));
                  prereqTitle = pObj ? (pObj.display_name || pObj.title || pObj.name || 'Prerequisite') : 'Prerequisite Test';
               }
 
@@ -2202,17 +2211,24 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       allAttempts.forEach(att => {
         const aid = att.test_id || att.Test_id;
         if (!aid) return;
-        const pct = parseFloat(att.percentage ?? att.effective_score ?? 0);
+        const pct = parseFloat(att.effective_score ?? att.percentage ?? 0);
         const st = (att.status || '').toUpperCase();
+        const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
         if (st === 'IN_PROGRESS') {
           inProgressByTest[aid] = att;
         } else if (st === 'SUBMITTED' || st === 'AUTO_SUBMITTED' || st === 'EVALUATED') {
-          if (pct >= 70) {
-            passCountByTest[aid] = (passCountByTest[aid] || 0) + 1;
+          if (att.is_forgiven) {
+            passCountByTest[aid] = Math.max(passCountByTest[aid] || 0, 7);
+          } else {
+            const asmMin = Number(tests.find(t => t.id === aid)?.minimum_required_score) || Number(tests.find(t => t.id === aid)?.payload?.min_score) || 70;
+            if (pct >= asmMin || (isRem && pct >= 60)) {
+              passCountByTest[aid] = (passCountByTest[aid] || 0) + 1;
+            }
           }
         }
         // AGENTS.md §2.7: Report card stores strictly HIGHEST score across attempts
-        if (!bestByTest[aid] || pct > parseFloat(bestByTest[aid].percentage || 0) || (pct === parseFloat(bestByTest[aid].percentage || 0) && new Date(att.submitted_at || 0) > new Date(bestByTest[aid].submitted_at || 0))) {
+        const existingBestPct = bestByTest[aid] ? parseFloat(bestByTest[aid].effective_score ?? bestByTest[aid].percentage ?? 0) : -1;
+        if (!bestByTest[aid] || pct > existingBestPct || (pct === existingBestPct && new Date(att.submitted_at || 0) > new Date(bestByTest[aid].submitted_at || 0)) || (att.is_forgiven && !bestByTest[aid])) {
           bestByTest[aid] = att;
         }
       });
@@ -2297,10 +2313,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (priorExams.length > 0) {
               for (const pe of priorExams) {
                 const peBest = bestByTest[pe.id];
-                const peRawPct = peBest ? parseFloat(peBest.percentage || 0) : null;
+                const peRawPct = peBest ? parseFloat(peBest.effective_score ?? peBest.percentage ?? 0) : null;
                 const peRem = Boolean(peBest && (peBest.is_remedial_unlocked || peBest.is_remedial));
                 const pePct = peRem && peRawPct !== null ? Math.min(peRawPct, 60.0) : peRawPct;
-                const peMin = pe.minimum_required_score || pe.pass_threshold || 70;
+                const peMin = Number(pe.minimum_required_score) || Number(pe.pass_threshold) || Number(pe.payload?.min_score) || 60;
                 const pePassed = Boolean(peBest?.is_forgiven) || (pePct !== null && (pePct >= peMin || (peRem && pePct >= 60)));
                 if (!pePassed) {
                   prereqMet = false;
@@ -2338,11 +2354,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             );
             if (siblingWordsExam) {
               const wBest = bestByTest[siblingWordsExam.id];
-              const wRawPct = wBest ? parseFloat(wBest.percentage || 0) : null;
+              const wRawPct = wBest ? parseFloat(wBest.effective_score ?? wBest.percentage ?? 0) : null;
               const wRem = Boolean(wBest && (wBest.is_remedial_unlocked || wBest.is_remedial));
               const wPct = wRem && wRawPct !== null ? Math.min(wRawPct, 60.0) : wRawPct;
-              const wMin = siblingWordsExam.minimum_required_score || siblingWordsExam.pass_threshold || 70;
-              const wPassed = wPct !== null && (wPct >= wMin || (wRem && wPct >= 60));
+              const wMin = Number(siblingWordsExam.minimum_required_score) || Number(siblingWordsExam.pass_threshold) || Number(siblingWordsExam.payload?.min_score) || 60;
+              const wPassed = Boolean(wBest?.is_forgiven) || (wPct !== null && (wPct >= wMin || (wRem && wPct >= 60)));
               if (!wPassed) {
                 prereqMet = false;
                 prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
@@ -2390,8 +2406,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             prereqTitle = pObj ? `${pObj.title || 'Prerequisite'} (7/7 Passes Required)` : 'Prerequisite Task (7/7 Passes Required)';
           } else {
             const prereqBest = bestByTest[pid];
-            const prereqPct = prereqBest ? parseFloat(prereqBest.percentage || 0) : null;
-            prereqMet = Boolean(prereqBest?.is_forgiven) || (prereqPct !== null && prereqPct >= (asm.prerequisite_min_score || 60));
+            const prereqPct = prereqBest ? parseFloat(prereqBest.effective_score ?? prereqBest.percentage ?? 0) : null;
+            const pMin = Number(asm.prerequisite_min_score) || Number(pObj?.minimum_required_score) || Number(pObj?.payload?.min_score) || 60;
+            const isPrereqRem = Boolean(prereqBest && (prereqBest.is_remedial_unlocked || prereqBest.is_remedial));
+            prereqMet = Boolean(prereqBest?.is_forgiven) || (prereqPct !== null && (prereqPct >= pMin || (isPrereqRem && prereqPct >= 60)));
             prereqTitle = pObj ? (pObj.title || pObj.Test_title || 'Prerequisite') : 'Prerequisite Test';
           }
         }
@@ -2569,7 +2587,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const asm = activeAsmMap.get(uniqueKey) || att.tests;
         if (asm?.deleted_at) return;
 
-        const rawPct = parseFloat(att.percentage || 0);
+        const rawPct = parseFloat(att.effective_score != null ? att.effective_score : (att.percentage || 0));
         const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
         const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
         const attTime = new Date(att.submitted_at || att.created_at || 0).getTime();
@@ -2866,7 +2884,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       validAttempts.forEach(att => {
         const tid = att.test_id || att.tests?.id;
         if (!tid) return;
-        const rawPct = parseFloat(att.percentage || 0);
+        const rawPct = parseFloat(att.effective_score != null ? att.effective_score : (att.percentage || 0));
         const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
         const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
         const grade = att.grade || (typeof calculateGrade === 'function' ? calculateGrade(effPct) : 'E');
