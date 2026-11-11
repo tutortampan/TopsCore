@@ -1,8 +1,38 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-11 13:00 UTC+8
-Current Phase: Phase 404: Vocabulary Vault Code Architecture, 19-Column Layout & Bidirectional Real-Time Inline Editing [COMPLETE]
+Last Updated: 2026-11-11 19:15 UTC+8
+Current Phase: Phase 406: Plan Repository Migration & Multi-Device Git Dual-Write Protocol [COMPLETE]
 Status: COMPLETE
+
+## Completed Work (Phase 406):
+1. **Repository Plan Storage (`docs/plans/`)**:
+   - Created dedicated `docs/plans/` directory in the repository to guarantee all implementation plans persist across multi-device Git syncs (`git push` & `git pull`).
+2. **Historical Brain Plan Migration & Complete Archive**:
+   - Migrated and organized all 54 historical documents (including multiple revisions, system audits, learning proposals, and walkthroughs) from local Windows user storage (`C:\Users\ASUS\.gemini\antigravity\brain`) into `docs/plans/`.
+   - Content-hash (SHA-256) deduplication applied: exact bit-identical copies skipped, while distinct revisions preserved with `(rev <n> - <conv>)` suffixes.
+   - All 54 files standardized with the canonical `YYYYMMDD - <Document Title>.md` date-prefixed format (Rule 2.29).
+3. **Repository Dual-Write Protocol Codification (/learn)**:
+   - Codified Rule in `.agents/rules/agent-workflow.md` (Section 3), `AGENTS.md` (Rule 2.29), and `.antigravityrules` (Rule 14 under Domain 4):
+     - Every newly generated plan MUST be dual-written: primary version in `docs/plans/YYYYMMDD - <Plan Name>.md` in repository (guaranteeing cross-device portability via Git push/pull), and active session mirror in `<appDataDir>\brain\<conv-id>\` with `ArtifactMetadata` for interactive chat UI features.
+4. **Automated Verification**:
+   - Executed `scripts/verify_plan_migration.mjs`: 100% PASS across all 55 files, 0 naming exceptions, verified dual-write invariants across `.antigravityrules`, `AGENTS.md`, and `.agents/rules/agent-workflow.md`.
+
+## Completed Work (Phase 405):
+1. **Automatic Topic Merging & Grouping Normalization (`js/admin/vocab-vault.js`)**:
+   - In `_renderThemeManagerTab`, updated the topic grouping key (`tpKey`) to normalize topic codes and topic names:
+     ```javascript
+     const cleanTpCode = rawTpCode.replace(/^[A-Za-z]+/, '').trim() || rawTpCode;
+     const normTopicName = tpName.toLowerCase().trim();
+     const tpKey = `${cleanTpCode}::${normTopicName}`;
+     ```
+   - Topics sharing identical Level, Theme, clean numeric Topic Code (stripping any accidental letter prefixes like `A1` or `G1`), and Topic Name are now merged automatically into a single consolidated row with all word and phrase metric breakdowns aggregated.
+2. **Database Harmonization (`vocabulary_vault`)**:
+   - Harmonized 39 database records in `vocabulary_vault` where `target_level = 1`, `theme_code = 'G'`, `topic = 'Time Name'`, and `topic_code = 'A1'` to uniform `topic_code = '1'`.
+   - Comprehensive audit across all 1,490 active records confirmed 0 remaining split topic code variants across all themes and levels.
+3. **Automated Verification & Zero Regression**:
+   - Full JS syntax validation: all 44 JS files passed `node --check`.
+   - Automated Playwright end-to-end verification (`scripts/verify_merged_theme_topics.mjs`): 100% PASS.
+   - Verified Level 1 Theme G has exactly 2 consolidated rows: `Time Name` (40 words total) and `Family Member` (50 words total).
 
 ## Completed Work (Phase 404):
 1. **Upper Toolbar Purge & Sticky Top Docking**:

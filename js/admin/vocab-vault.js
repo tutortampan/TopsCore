@@ -1588,12 +1588,17 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
 
     const tpName = (w.topic || '').trim();
     if (!tpName) return;
-    const tpCode = (w.topic_code && w.topic_code.trim()) ? w.topic_code.trim() : `${thCode}1`;
-    const tpKey = tpCode + '::' + tpName;
+    const rawTpCode = (w.topic_code && w.topic_code.trim()) ? w.topic_code.trim() : `${thCode}1`;
+    // Clean topic code: strip leading theme letters so 'A1', 'G1', and '1' all normalize to '1'
+    const cleanTpCode = rawTpCode.replace(/^[A-Za-z]+/, '').trim() || rawTpCode;
+    const normTopicName = tpName.toLowerCase().trim();
+
+    // Grouping key: topics sharing level, theme code, clean topic code, and topic name automatically merge
+    const tpKey = `${cleanTpCode}::${normTopicName}`;
 
     if (!thObj.topicsMap.has(tpKey)) {
       thObj.topicsMap.set(tpKey, {
-        topicCode: tpCode,
+        topicCode: cleanTpCode,
         name: tpName,
         themeCode: thCode,
         themeName: thObj.name,

@@ -1,3 +1,46 @@
+## [2026-11-11 19:15] — Phase 406: Plan Repository Migration & Multi-Device Git Dual-Write Protocol
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 406  
+**Status:** PASS  
+
+### Why
+- Plans stored exclusively in local Windows profile directory (`C:\Users\ASUS\.gemini\antigravity\brain\...`) were inaccessible when opening the repository on other laptops or devices.
+- Need a permanent repository-based storage directory (`docs/plans/`) so all plans sync seamlessly via Git (`git push` & `git pull`).
+- Need a Dual-Write protocol so that interactive Antigravity features (chat artifacts, Proceed button) still work locally while files are permanently tracked in Git.
+
+### Changed
+1. **Directory Creation (`docs/plans/`)**:
+   - Created `docs/plans/` in the TopsCore workspace.
+2. **Historical Plan Migration & Full Archive (`scripts/migrate_all_historical_plans.mjs`)**:
+   - Automated extraction, content-hash (SHA-256) analysis, and migration of 54 historical documents (including all plan revisions, system analyses, architectural audits, and major phase walkthroughs) from local brain sessions to `docs/plans/`.
+   - Distinct revisions preserved with `(rev <n> - <conv>)` suffixes; true bit-identical copies skipped.
+   - Applied canonical date-prefixed format `YYYYMMDD - <Document Title>.md` to all 54 files.
+3. **Governance & Workflow Rule Update (/learn)**:
+   - Updated `.antigravityrules` (Rule 14 in Domain 4), `.agents/rules/agent-workflow.md` (Section 3), and `AGENTS.md` (Rule 2.29) to enforce Repository-First Persistence and Dual-Write protocol across all current and future agents.
+4. **Automated Verification (`scripts/verify_plan_migration.mjs`)**:
+   - Verified all 55 files in `docs/plans/`, 100% adherence to `YYYYMMDD - Title.md` pattern, and presence of Dual-Write rules in all 3 governance files.
+
+## [2026-11-11 19:10] — Phase 405: Vocabulary Vault Automatic Merge for Identical Level, Theme, and Topic
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 405  
+**Status:** PASS  
+
+### Why
+- User identified duplicate rows in Theme Manager for the same Level and Theme (e.g. Level 1 Theme G had two separate rows for `Time Name` with codes `1` and `A1`, splitting 1 word and 39 words).
+- Requirement: Automatically merge topics sharing the same Level, Theme, clean Topic Code, and Topic Name into a single consolidated row with aggregated counts.
+
+### Changed
+1. **Frontend Grouping Key Normalization (`js/admin/vocab-vault.js`)**:
+   - In `_renderThemeManagerTab`, updated the topic grouping key (`tpKey`) to use cleaned topic codes (stripping any accidental letter prefixes like `A1` -> `1`) and normalized topic names (`.toLowerCase().trim()`).
+   - Grouping now seamlessly merges identical topics and aggregates word counts (`verbCount`, `nounCount`, `adjCount`, `wordsCount`, `totalCount`, etc.).
+2. **Database Harmonization (`vocabulary_vault`)**:
+   - Harmonized 39 rows where `target_level = 1`, `theme_code = 'G'`, `topic = 'Time Name'`, and `topic_code = 'A1'` to `topic_code = '1'`.
+   - Audited all 1,490 active records: 0 split topic code anomalies remain.
+3. **Automated Verification**:
+   - `node scripts/verify_merged_theme_topics.mjs`: PASSED 100%. Verified Level 1 Theme G renders exactly 2 rows: `Time Name` (WORDS: 40, TOTAL: 40) and `Family Member` (WORDS: 50, TOTAL: 50).
+
 ## [2026-11-11 12:40] — Phase 404: Vocabulary Vault Code Architecture & 19-Column Inline Editing Standardization
 
 **Agent/Session:** Antigravity  
@@ -1443,7 +1486,8 @@
    - Added checkScreenSizeCovered() detecting any display area or directional reduction >= 25%, immediately triggering Screen Area Covered / Split-Screen Detected (X% reduction).
    - Attached to window.resize, isualViewport.resize, isibilitychange, and ocus.
 3. **DOM Layout & Reading Order (js/test.js)**:
-   - Enforced strict DOM appending order in enderQuestion() across all modes (Written, Spoken, MCQ, Chips):
+   - Enforced strict DOM appending order in 
+enderQuestion() across all modes (Written, Spoken, MCQ, Chips):
      Metadata Table (Top, Flex 1) -> Question Box (Flex 3) -> Answer Area (Flex 3 or 6) -> Control Area (Flex 3).
    - Preserves 3:1:3:3 golden ratio verified by automated tests.
 4. **Universal Netlify Badge Blocker (css/test.css, js/test.js)**:
@@ -6897,7 +6941,8 @@ ode scripts/test_bottom_banner_universal.mjs
    - dismissCheatAlert() actively verifies checkTranslationArtifacts(). If translation is still active, it blocks dismissal with an explicit error toast requiring the user to switch back to original English.
 4. **Boot & Render Preemptive Checks**:
    - Translation checked on proceedStartExam() (in case user opened test with "Always translate" enabled).
-   - Translation checked on every enderQuestion() call.
+   - Translation checked on every 
+enderQuestion() call.
    - Added 	ranslate="no" and class 
 otranslate to #test-main, questionBox, metadataTable, and nswerArea.
    - Added <meta http-equiv="Content-Language" content="en" /> to 	est.html.
@@ -6936,12 +6981,14 @@ ode -c "js/test.js"
    - Strike count increments, proctor audio sounds, and the authoritative 60-second countdown runs toward auto-submission.
 2. **Mandatory Fullscreen Re-entry on Alert Dismiss**:
    - #dismiss-cheat-btn updated to "? Resume Fullscreen & Return to TEST".
-   - dismissCheatAlert() now awaits equestFullscreenMode() before restoring test view, ensuring the secure fullscreen container is always re-established.
+   - dismissCheatAlert() now awaits 
+equestFullscreenMode() before restoring test view, ensuring the secure fullscreen container is always re-established.
    - Removed backdrop click dismiss so students cannot accidentally dismiss without re-entering fullscreen.
    - Android back gesture (popstate) now reports 'Back button pressed / Fullscreen exit attempted'.
 3. **Bottom Banner Left-Alignment**:
    - In css/test.css, updated ody.test-page #bottom-ad-banner to justify-content: flex-start !important; text-align: left !important; padding: 0 0 0 clamp(16px, 4vw, 24px) !important;.
-   - Brand text "TopsCore by Mr. Top" is now 100% strictly left-aligned, matching dashboard.html, dmin.html, and esult.html.
+   - Brand text "TopsCore by Mr. Top" is now 100% strictly left-aligned, matching dashboard.html, dmin.html, and 
+esult.html.
 4. Cache-busting bumped to 20261108_v164 on css/test.css and js/test.js.
 
 ### Files

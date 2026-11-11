@@ -11,9 +11,13 @@
 - ALWAYS inspect user prompts for typos and grammatical errors.
 - Present the corrected, polished prompt at the very beginning of the response under `### 🎯 Perbaikan Perintah (Typo Fixed)` before proceeding with any action or execution.
 
-## 3. Standard Plan Artifact Naming Convention
-- All plan artifacts must strictly use the date-prefixed format:
+## 3. Standard Plan Artifact Naming Convention & Repository Dual-Write Protocol
+- **Naming Standard**: All plan artifacts must strictly use the date-prefixed format:
   `YYYYMMDD - <Plan Name>.md` (e.g., `20261111 - Refactor Session Monitor.md`).
+- **Repository-First Persistence (Multi-Device Git Sync)**:
+  To ensure plans are accessible across multiple laptops and machines via Git, every plan artifact MUST be dual-written:
+  1. Primary Repository File: `docs/plans/YYYYMMDD - <Plan Name>.md` in the TopsCore workspace.
+  2. Brain Session Mirror: `<appDataDir>\brain\<conversation-id>\YYYYMMDD - <Plan Name>.md` with `ArtifactMetadata` so interactive Antigravity chat widgets and the "Proceed" button remain fully functional.
 
 ## 4. Mandatory Mockup Design & Visual Pre-Flight Protocol for UI Changes
 - Whenever designing, modifying, or restyling UI components, screens, modals, or tables:

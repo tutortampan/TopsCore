@@ -66,8 +66,9 @@
     - Step Zero Pre-Execution: The moment a plan is approved, immediately create `tasks.md` and launch it in the center editor tab (`& "$env:LOCALAPPDATA\Programs\Antigravity IDE\bin\antigravity-ide.cmd" -r "<path/to/tasks.md>"`) BEFORE any code changes. Render active checklist in chat response. Maintain real-time dynamic updates (`- [x]`).
 13. MANDATORY PROMPT & TYPO CORRECTION:
     - ALWAYS inspect user prompts for typos and grammatical errors. Present corrected prompt at top under `### 🎯 Perbaikan Perintah (Typo Fixed)` before proceeding.
-14. PLAN NAMING STANDARD:
+14. PLAN NAMING STANDARD & REPOSITORY DUAL-WRITE PROTOCOL (/learn):
     - All plan artifacts must strictly use date-prefixed format: `YYYYMMDD - <Plan Name>.md`.
+    - Multi-Device Git Persistence: Every plan artifact must be dual-written: officially saved in `docs/plans/YYYYMMDD - <Plan Name>.md` within the workspace repository (guaranteeing cross-device accessibility via Git push & pull) and mirrored in the active brain artifact directory (`<appDataDir>\brain\<conversation-id>\`) for interactive Antigravity chat features and the Proceed button.
 19. AUTOMATIC MIDDLE-PANEL TAB HYGIENE & POST-PROCESS FILE CLOSURE (/learn):
     - Do not leave arbitrary files lingering in the middle editor tab group. ONLY the authoritative `tasks.md` progress anchor is focused and pinned. Configure editor limits (`workbench.editor.limit.enabled: true`, `max: 3`).
 23. MANDATORY VISUAL PRE-FLIGHT CHECKLIST & SUBAGENT GATING (/learn):

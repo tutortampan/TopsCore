@@ -197,8 +197,8 @@ Step Zero: Create and pin `tasks.md` in center editor tab via `antigravity-ide.c
 ### 2.28 Mandatory Prompt Refinement & Structured Intent Clarification (/learn)
 Inspect user prompt for typos and present `### 🎯 Perbaikan Perintah (Typo Fixed)` before execution.
 
-### 2.29 Standard Plan Artifact Naming Convention (`YYYYMMDD - Plan Name.md`) (/learn)
-All plans use the date-prefixed format `YYYYMMDD - <Plan Name>.md`.
+### 2.29 Standard Plan Artifact Naming Convention & Repository Dual-Write (`docs/plans/`) (/learn)
+All plans use the date-prefixed format `YYYYMMDD - <Plan Name>.md`. To ensure plans persist across multiple laptops and Git clones, plans are dual-written: officially saved in `docs/plans/` in the workspace repository and mirrored in the active brain artifact directory for interactive session control.
 
 ### 2.30 Pure Direct English UI Standard (Sole Exception: Vocab Vault Indonesian Meanings) (/learn)
 All UI text, labels, and system messages use direct English. Sole exception: vocabulary Indonesian meaning.
