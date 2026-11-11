@@ -1,8 +1,55 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-11 06:51 UTC+8
-Current Phase: Phase 402: Tutor's Room Table Engineering, Centered Loading & Typography Harmonization [COMPLETE]
+Last Updated: 2026-11-11 13:00 UTC+8
+Current Phase: Phase 404: Vocabulary Vault Code Architecture, 19-Column Layout & Bidirectional Real-Time Inline Editing [COMPLETE]
 Status: COMPLETE
+
+## Completed Work (Phase 404):
+1. **Upper Toolbar Purge & Sticky Top Docking**:
+   - Eliminated top filter/search bars from both Theme Manager and Vocabulary/Phrases views in `js/admin/vocab-vault.js`.
+   - Table headers now dock flush to the top tab bar without any gap or disorienting vertical displacement.
+2. **Relocation of Controls to 50px Lower Infobar (Rule 2.23 & 2.33)**:
+   - Relocated search inputs (`#vault-topic-search`, `#vault-search`), Level selector pills (`🎯 ALL`, `1st`, `2nd`, `3rd`), Level/Topic/Type dropdown filters, counter chips, and action buttons (`📥 Import`, `📤 Export`, `🔍 Dups`, `⚒️ Merge Topics`) into the 50px `#admin-bottom-infobar`.
+3. **19-Column Standardized Theme Manager Layout**:
+   - Implemented exact 19-column structure:
+     `LVL` | `THEME` | `TH-CD` | `TOPIC` | `TP-CD` | `VERB` | `NOUN` | `ADJ` | `OTH` | `WORDS` | `EXP` | `PRV` | `IDM` | `OTH` | `PHRASES` | `TOTAL` | `ASG-PRG` | `CODE` | `ACT`
+   - Single Words Breakdown (5 columns): `VERB`, `NOUN`, `ADJ`, `OTH`, `WORDS`
+   - Phrases Breakdown (5 columns): `EXP`, `PRV`, `IDM`, `OTH`, `PHRASES`
+   - Summary & Identity: `TOTAL`, `ASG-PRG`, `CODE`
+   - Action column: `ACT` strictly contains `🗑️` delete button, shown only when Master Edit Mode is ON.
+4. **Full Direct Inline Editing & Real-Time Bidirectional Synchronization Engine**:
+   - Resolved the DOM view-span desynchronization defect: `.vault-cell-view` spans now update synchronously upon input modification, ensuring that turning off Edit Mode (`EDIT: OFF`) immediately retains and displays the updated text without requiring page reloads.
+   - Built composite key cascade for themes (`theme_code` + `target_level`), fixing the PostgreSQL 0-row update defect on themes that were previously `NULL` or `'Unassigned'`.
+   - Implemented multi-row sibling synchronization in Theme Manager: editing a theme name or theme code updates all sibling rows for that theme across the table in real time.
+   - Added automatic recalculation of column 18 `CODE` on `LVL`, `TH-CD`, and `TP-CD` edits.
+   - Upgraded `theme_program_assignments` synchronization so theme code changes never orphan assigned programs or classes.
+   - Added empty input guard with auto-revert and warning toast.
+   - Flexible composite code parser: supports `1A1`, `A1`, `1-A-1`, `2B01`, and `1 a 1` with automatic separator stripping.
+   - Synchronized native audio pronunciation buttons (`🔊`) with updated English text.
+   - Added `.save-success` emerald pulse animation and `.save-error` animation in `css/admin.css`.
+5. **Automated Verification & Zero Regression**:
+   - Syntax validation: all 44 JS files passed `node --check`.
+   - Comprehensive Playwright end-to-end integration test (`scripts/test_vocab_vault_inline_editing.mjs`): 100% PASS across all assertions.
+
+## Completed Work (Phase 403):
+1. **Dashboard Transformation (Executive Single-Door Monitor)**:
+   - Eradicated duplicate inline CRUD buttons (`➕ Add Institution`, `➕ Program`, `➕ Class`, `➕ Batch`, `✏️ Edit`, `🗑️ Delete`) from `js/admin/admin-deck.js`.
+   - Transformed Dashboard into a pure read-only executive monitor displaying KPIs, attention radar, and organizational hierarchy directory.
+   - Introduced the **Quick Launchpad** with 4 direct navigation pills:
+     - 🏢 **Manage Cohorts** (`#curriculum`)
+     - 🎓 **Class Directory** (`#classes-hub`)
+     - 👥 **Student Intake** (`#registration`)
+     - 📊 **Student Roster** (`#students`)
+   - Added direct redirection link in the Organization Hierarchy header ("Manage in Curriculum Hub →").
+2. **Eradication of Browser `prompt()` Dialogs**:
+   - Replaced `btn-add-inst-global` raw `prompt()` with native TopsCore modal `openCrudModal('institutions', null)` in `js/admin/classes-management.js`.
+   - Replaced `btn-add-prog` raw `prompt()` with native TopsCore modal `openCrudModal('programs', { institution_id })` in `js/admin/classes-management.js`.
+   - Replaced `levelNumInput` raw `prompt()` in `handleSyncGen` with automated level fallback resolution.
+   - `git grep "prompt(" js/admin/classes-management.js` strictly returns 0 occurrences.
+3. **Automated Verification & Zero Regression**:
+   - Full JS syntax validation: 44 files passed `node --check` cleanly.
+   - Authoritative Playwright test suite `scripts/test_quick_win_streamlining.mjs`: 100% PASS across all assertions.
+   - Comprehensive Global Edit Mode regression test `scripts/test_global_edit_mode_comprehensive.mjs`: 100% PASS across all 5 assertions.
 
 ## Completed Work (Phase 402):
 1. **Ratified Authoritative Table Engineering Blueprint & Governance Rules**:

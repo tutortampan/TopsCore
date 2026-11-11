@@ -1,3 +1,62 @@
+## [2026-11-11 12:40] — Phase 404: Vocabulary Vault Code Architecture & 19-Column Inline Editing Standardization
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 404  
+**Status:** PASS  
+
+### Why
+- Eliminate top filter/search bars from Vocabulary Vault views to enforce strict flush-docking of table headers to top panels (Rule 2.23 & Rule 2.38).
+- Relocate all search bars, Level pills, dropdown filters, metrics, and actions into the 50px lower panel (`#admin-bottom-infobar`).
+- Standardize Theme Manager into an exact 19-column table with Single Words Breakdown, Phrases Breakdown, and Action column strictly holding `🗑️` delete.
+- Enable full direct cell editability for all fields when Master Edit Mode is `EDIT: ON`, backed by cascade DB update helpers in `js/api.js`.
+- Enforce zero-radius flat inputs (`border-radius: 0px !important;`) and white grid borders (`border: 1px solid rgba(255, 255, 255, 0.5) !important;`) across all editable cells.
+
+### Changed
+1. **Cascade DB Updates (`js/api.js`)**:
+   - Added: `updateVaultThemeCascade`, `updateVaultThemeCodeCascade`, `updateVaultTopicCascade`, `updateVaultTopicCodeCascade`, and `updateVaultTopicLevelCascade`.
+2. **CSS White Grid & No-Capsule Invariant (`css/admin.css`)**:
+   - Configured `.vault-cell-view`, `.vault-edit-input`, and `.vault-edit-wrapper` for seamless `EDIT: OFF` / `EDIT: ON` state switching.
+   - Enforced `border-radius: 0px !important;` and `border: 1px solid rgba(255, 255, 255, 0.5) !important;` on `#vault-table` and `#theme-manager-flat-table`.
+3. **Standardized Theme Manager (`js/admin/vocab-vault.js`)**:
+   - Implemented exact 19-column table with two-tier sticky headers: `LVL`, `THEME`, `TH-CD`, `TOPIC`, `TP-CD`, `VERB`, `NOUN`, `ADJ`, `OTH`, `WORDS`, `EXP`, `PRV`, `IDM`, `OTH`, `PHRASES`, `TOTAL`, `ASG-PRG`, `CODE`, `ACT`.
+   - Relocated search, Level tabs, and merge actions to `#admin-bottom-infobar`.
+4. **Standardized Words & Phrases Grid (`js/admin/vocab-vault.js`)**:
+   - Purged upper `.table-toolbar-unified` filter bar.
+   - Relocated search, level filter, topic filter, word type filter, and stats chips into `#admin-bottom-infobar`.
+   - Enabled inline editing across all cells with composite code (`1A1`) formula.
+5. **Automated Verification**:
+   - Full JS syntax validation: 44 files passed `node --check` cleanly.
+   - Automated live Playwright visual validation across all states (`EDIT: OFF` and `EDIT: ON`).
+
+## [2026-11-11 09:00] — Phase 403: Quick-Win Lean Streamlining (Dashboard Executive Monitor & Modal Standardization)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 403  
+**Status:** PASS  
+
+### Why
+- Execute approved Option A ("opi a") from the Data & Feature Streamlining Plan.
+- Eliminate confusing duplicate CRUD controls from executive Dashboard, turning it into a pure monitoring & navigation launchpad.
+- Eradicate archaic `window.prompt()` browser alerts from `classes-management.js` and standardize on native TopsCore modal dialogs.
+
+### Changed
+1. **Dashboard Executive Monitor Transformation (`js/admin/admin-deck.js`)**:
+   - Stripped duplicate inline CRUD buttons (`➕ Add Institution`, `➕ Program`, `➕ Class`, `➕ Batch`, `✏️ Edit`, `🗑️ Delete`) from the Organization Hierarchy view.
+   - Introduced **Quick Launchpad** with 4 direct navigation pills:
+     - 🏢 Manage Cohorts (`#curriculum`)
+     - 🎓 Class Directory (`#classes-hub`)
+     - 👥 Student Intake (`#registration`)
+     - 📊 Student Roster (`#students`)
+   - Added direct redirection header link: "Manage in Curriculum Hub →".
+2. **Eradication of Browser `prompt()` (`js/admin/classes-management.js`)**:
+   - Replaced `btn-add-inst-global` raw `prompt()` with native `openCrudModal('institutions', null)`.
+   - Replaced `btn-add-prog` raw `prompt()` with native `openCrudModal('programs', { institution_id })`.
+   - Replaced `levelNumInput` raw `prompt()` in `handleSyncGen` with automated level fallback resolution.
+3. **Automated Verification & Tooling**:
+   - Created native Node.js static file server `scripts/server.mjs` on port 5500.
+   - Created authoritative automated Playwright test suite `scripts/test_quick_win_streamlining.mjs`: 100% PASS.
+   - Re-verified comprehensive Global Edit Mode suite `scripts/test_global_edit_mode_comprehensive.mjs`: 100% PASS.
+
 ## [2026-11-11 06:52] — Phase 402: Tutor's Room Table Engineering, Centered Loading & Typography Harmonization
 
 **Agent/Session:** Antigravity  

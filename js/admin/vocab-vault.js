@@ -39,7 +39,12 @@ import {
   toShortLevel,
   autoSyncClassTestsForLevel,
   fetchThemeProgramAssignments,
-  toggleThemeProgramAssignment
+  toggleThemeProgramAssignment,
+  updateVaultThemeCascade,
+  updateVaultThemeCodeCascade,
+  updateVaultTopicCascade,
+  updateVaultTopicCodeCascade,
+  updateVaultTopicLevelCascade
 } from '../api.js?v=20261109_v166';
 import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
@@ -180,51 +185,24 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
   area.innerHTML = `
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
-      <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
-
-        <!-- Controls Bar -->
-        <div style="padding: 4px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; flex-shrink: 0;">
-
-          <div class="table-toolbar-unified">
-            <input type="search" id="vault-search" placeholder="🔍 Search Indonesian, English, or Topic..." class="toolbar-input-38" style="width: 220px;" />
-            <select id="vault-level-filter" class="toolbar-input-38" style="width: 125px; cursor: pointer;">
-              <option value="">All Levels</option>
-              ${levelSelectOptions}
-            </select>
-            <select id="vault-topic-filter" class="toolbar-input-38" style="width: 160px; cursor: pointer;">
-              <option value="">All Topics</option>
-              ${topics.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')}
-            </select>
-            <select id="vault-wordtype-filter" class="toolbar-input-38" style="width: 140px; cursor: pointer;">
-              <option value="">All Word Types</option>
-              ${wordTypeOptions}
-            </select>
-            <span style="font-size: 11px; color: #64748b; font-weight: 500; margin-left: 4px;">
-              <span id="vault-count" style="color: #f8fafc; font-weight: 700;">${words.length}</span> ${mode === 'phrases' ? 'phrases' : 'words'}
-            </span>
-          </div>
-        </div>
-
-        <!-- Table Area -->
-        <div class="table-wrap sticky-first" style="flex-grow: 1; overflow-y: auto; min-height: 0;">
-          <table id="vault-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
-            <thead style="background: rgba(15, 23, 42, 0.95); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-              <tr>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 68px; line-height: 1.2;">Institution</th>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 68px; line-height: 1.2;">Program</th>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 75px; line-height: 1.2;">Level</th>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 60px; line-height: 1.2;">Code</th>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">Theme</th>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">Topic</th>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; width: 85px; line-height: 1.2;">Type</th>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">Indonesian</th>
-                <th style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; line-height: 1.2;">English</th>
-                <th class="edit-mode-only" style="padding: 4px 8px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; text-align: right; width: 85px; position: sticky; right: 0; background: rgba(15, 23, 42, 0.95); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 20; line-height: 1.2;">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="vault-tbody"></tbody>
-          </table>
-        </div>
+      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; margin: 0; background: #0f172a;">
+        <table id="vault-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px;">
+          <thead style="background: #1e293b; position: sticky; top: 0; z-index: 20; border-bottom: 2px solid rgba(255, 255, 255, 0.12);">
+            <tr>
+              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 68px; border-right: 1px solid rgba(255,255,255,0.08);" title="Institution">INST</th>
+              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 75px; border-right: 1px solid rgba(255,255,255,0.08);" title="Program">PROG</th>
+              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Level">LVL</th>
+              <th style="padding: 6px 8px; font-weight: 800; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Composite Code (Level + ThemeCode + TopicCode)">CODE</th>
+              <th style="padding: 6px 10px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 140px; border-right: 1px solid rgba(255,255,255,0.08);" title="Theme Name">THEME</th>
+              <th style="padding: 6px 10px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 160px; border-right: 1px solid rgba(255,255,255,0.08);" title="Topic Name">TOPIC</th>
+              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 85px; border-right: 1px solid rgba(255,255,255,0.08);" title="Word Type">TYPE</th>
+              <th style="padding: 6px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08);" title="Indonesian Meaning">INDONESIAN</th>
+              <th style="padding: 6px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08);" title="English Word / Phrase">ENGLISH</th>
+              <th class="edit-mode-only" style="padding: 6px 8px; font-weight: 800; color: #f87171; text-transform: uppercase; font-size: 12px; text-align: center; width: 55px; position: sticky; right: 0; background: #1e293b; border-left: 1px solid rgba(255, 255, 255, 0.1); z-index: 25;" title="Actions">ACT</th>
+            </tr>
+          </thead>
+          <tbody id="vault-tbody"></tbody>
+        </table>
       </div>
     </div>
   `;
@@ -238,28 +216,6 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     return isPhrase;
   });
 
-  setTimeout(() => {
-    // Fire initial render
-    filterAndRender();
-  }, 10);
-
-  const triggerAutoGenerate = async () => {
-    const importedLevels = Array.from(new Set(words.map(w => w.target_level || 1))).sort((a, b) => a - b);
-    if (importedLevels.length === 0) importedLevels.push(1);
-    try {
-      const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261106_v140');
-      await openAutoGenerateModal({
-        availableLevels: importedLevels,
-        preSelectedLevels: importedLevels,
-        explicitClassId: window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || null,
-        onComplete: () => {}
-      });
-    } catch (err) {
-      console.error(err);
-      if (window.showToast) window.showToast('Error opening generator: ' + err.message, 'error');
-    }
-  };
-
   function _syncVaultGridBottomBar(filtered, allModeWords, currentMode) {
     if (!window.setBottomInfobar) return;
 
@@ -267,73 +223,102 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     const totalCount = allModeWords.length;
     const isFiltered = filtered.length !== totalCount;
     const targetSet = isFiltered ? filtered : allModeWords;
+    const qCount = new Set(targetSet.map(w => (w.indonesian || '').toLowerCase().trim())).size;
 
-    let leftHtml = '';
-    if (isWords) {
-      const qCount = new Set(targetSet.map(w => (w.indonesian || '').toLowerCase().trim())).size;
-      const nouns = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'noun').length;
-      const verbs = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'verb').length;
-      const adjs = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'adjective').length;
-      const advs = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'adverb').length;
-      const themes = new Set(targetSet.map(w => w.theme || w.theme_code).filter(Boolean)).size;
+    const searchVal = window._vaultGridSearch || '';
+    const lvlVal = window._vaultGridLevel || '';
+    const topVal = window._vaultGridTopic || '';
+    const typeVal = window._vaultGridType || '';
 
-      if (isFiltered) {
-        leftHtml = `
-          <div class="bottom-info-chip" style="border: 1px solid rgba(56, 189, 248, 0.4);"><span class="chip-label" style="color: #38bdf8;">Showing:</span><span class="chip-val" style="color: #38bdf8;">${filtered.length} / ${totalCount}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Questions:</span><span class="chip-val">${qCount}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Nouns:</span><span class="chip-val">${nouns}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Verbs:</span><span class="chip-val">${verbs}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Adjectives:</span><span class="chip-val">${adjs}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Adverbs:</span><span class="chip-val">${advs}</span></div>
-        `;
-      } else {
-        leftHtml = `
-          <div class="bottom-info-chip"><span class="chip-label">Total Words:</span><span class="chip-val">${totalCount}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Questions:</span><span class="chip-val">${qCount}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Nouns:</span><span class="chip-val">${nouns}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Verbs:</span><span class="chip-val">${verbs}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Adjectives:</span><span class="chip-val">${adjs}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Adverbs:</span><span class="chip-val">${advs}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Themes:</span><span class="chip-val">${themes}</span></div>
-        `;
-      }
-    } else {
-      const qCount = new Set(targetSet.map(w => (w.indonesian || '').toLowerCase().trim())).size;
-      const expressions = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'expression').length;
-      const idioms = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'idiom').length;
-      const proverbs = targetSet.filter(w => (w.word_type || '').toLowerCase() === 'proverb').length;
-      const themes = new Set(targetSet.map(w => w.theme || w.theme_code).filter(Boolean)).size;
+    let leftHtml = `
+      <div style="display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto;">
+        <input type="search" id="vault-search" placeholder="🔍 Search..." value="${escapeHtml(searchVal)}" style="width: 160px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 8px; outline: none;">
 
-      if (isFiltered) {
-        leftHtml = `
-          <div class="bottom-info-chip" style="border: 1px solid rgba(56, 189, 248, 0.4);"><span class="chip-label" style="color: #38bdf8;">Showing:</span><span class="chip-val" style="color: #38bdf8;">${filtered.length} / ${totalCount}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Questions:</span><span class="chip-val">${qCount}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Expressions:</span><span class="chip-val">${expressions}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Idioms:</span><span class="chip-val">${idioms}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Proverbs:</span><span class="chip-val">${proverbs}</span></div>
-        `;
-      } else {
-        leftHtml = `
-          <div class="bottom-info-chip"><span class="chip-label">Total Phrases:</span><span class="chip-val">${totalCount}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Questions:</span><span class="chip-val">${qCount}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Expressions:</span><span class="chip-val">${expressions}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Idioms:</span><span class="chip-val">${idioms}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Proverbs:</span><span class="chip-val">${proverbs}</span></div>
-          <div class="bottom-info-chip"><span class="chip-label">Themes:</span><span class="chip-val">${themes}</span></div>
-        `;
-      }
-    }
+        <select id="vault-level-filter" style="width: 95px; height: 32px; font-size: 11px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
+          <option value="">All Levels</option>
+          ${uniqueLevels.map(lvl => `<option value="${lvl}"${lvlVal === String(lvl) ? ' selected' : ''}>${typeof toShortLevel === 'function' ? toShortLevel(lvl) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : lvl)}</option>`).join('')}
+        </select>
+
+        <select id="vault-topic-filter" style="width: 135px; height: 32px; font-size: 11px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
+          <option value="">All Topics</option>
+          ${topics.map(t => {
+            const tName = typeof t === 'string' ? t : (t.name || t.topic || '');
+            return `<option value="${escapeHtml(tName)}"${topVal === tName ? ' selected' : ''}>${escapeHtml(tName)}</option>`;
+          }).join('')}
+        </select>
+
+        <select id="vault-wordtype-filter" style="width: 110px; height: 32px; font-size: 11px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
+          <option value="">All Types</option>
+          ${mode === 'single_words'
+            ? `
+              <option value="Vocab"${typeVal === 'Vocab' ? ' selected' : ''}>Vocab</option>
+              <option value="Verb"${typeVal === 'Verb' ? ' selected' : ''}>Verb</option>
+              <option value="Noun"${typeVal === 'Noun' ? ' selected' : ''}>Noun</option>
+              <option value="Adjective"${typeVal === 'Adjective' ? ' selected' : ''}>Adjective</option>
+              <option value="Adverb"${typeVal === 'Adverb' ? ' selected' : ''}>Adverb</option>
+            `
+            : `
+              <option value="Expression"${typeVal === 'Expression' ? ' selected' : ''}>Expression</option>
+              <option value="Idiom"${typeVal === 'Idiom' ? ' selected' : ''}>Idiom</option>
+              <option value="Proverb"${typeVal === 'Proverb' ? ' selected' : ''}>Proverb</option>
+            `
+          }
+        </select>
+
+        <div class="bottom-info-chip" style="border: 1px solid rgba(56, 189, 248, 0.4);"><span class="chip-label" style="color: #38bdf8;">Showing:</span><span class="chip-val" style="color: #38bdf8;">${filtered.length} / ${totalCount}</span></div>
+        <div class="bottom-info-chip"><span class="chip-label">Questions:</span><span class="chip-val">${qCount}</span></div>
+      </div>
+    `;
 
     const rightHtml = `
-      <button class="btn btn-secondary btn-sm" id="btn-import-vault" style="height:30px; font-size:11px; padding:0 10px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.12); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">📥 Import Excel</button>
-      <button class="btn btn-secondary btn-sm" id="btn-export-vault" style="height:30px; font-size:11px; padding:0 10px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.12); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">📤 Export Excel</button>
-      <button class="btn btn-secondary btn-sm" id="btn-check-duplicates" style="height:30px; font-size:11px; padding:0 10px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.12); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">🔍 Check Dups</button>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <button class="btn btn-secondary btn-sm" id="btn-import-vault" style="height:32px; font-size:11px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">📥 Import</button>
+        <button class="btn btn-secondary btn-sm" id="btn-export-vault" style="height:32px; font-size:11px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">📤 Export</button>
+        <button class="btn btn-secondary btn-sm" id="btn-check-duplicates" style="height:32px; font-size:11px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#38bdf8; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">🔍 Dups</button>
+      </div>
     `;
+
     window.setBottomInfobar(leftHtml, rightHtml);
     bindVaultGridBottomActions();
   }
 
   function bindVaultGridBottomActions() {
+    const sInput = document.getElementById('vault-search');
+    if (sInput && !sInput.dataset.bound) {
+      sInput.dataset.bound = 'true';
+      sInput.addEventListener('input', (e) => {
+        window._vaultGridSearch = e.target.value;
+        filterAndRender();
+      });
+    }
+
+    const lvlSelect = document.getElementById('vault-level-filter');
+    if (lvlSelect && !lvlSelect.dataset.bound) {
+      lvlSelect.dataset.bound = 'true';
+      lvlSelect.addEventListener('change', (e) => {
+        window._vaultGridLevel = e.target.value;
+        filterAndRender();
+      });
+    }
+
+    const topSelect = document.getElementById('vault-topic-filter');
+    if (topSelect && !topSelect.dataset.bound) {
+      topSelect.dataset.bound = 'true';
+      topSelect.addEventListener('change', (e) => {
+        window._vaultGridTopic = e.target.value;
+        filterAndRender();
+      });
+    }
+
+    const typeSelect = document.getElementById('vault-wordtype-filter');
+    if (typeSelect && !typeSelect.dataset.bound) {
+      typeSelect.dataset.bound = 'true';
+      typeSelect.addEventListener('change', (e) => {
+        window._vaultGridType = e.target.value;
+        filterAndRender();
+      });
+    }
+
     const btnExp = document.getElementById('btn-export-vault');
     if (btnExp && !btnExp.dataset.bound) {
       btnExp.dataset.bound = 'true';
@@ -347,7 +332,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
           btnExp.disabled = false;
         } catch (e) {
           showToast('Export failed: ' + e.message, 'error');
-          btnExp.innerHTML = '📤 Export Excel';
+          btnExp.innerHTML = '📤 Export';
           btnExp.disabled = false;
         }
       });
@@ -377,211 +362,254 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
   function renderRows(filtered) {
     const tbody = document.getElementById('vault-tbody');
     if (!tbody) return;
-    const uniqueIndoCount = new Set(filtered.map(w => w.indonesian.toLowerCase().trim())).size;
-    document.getElementById('vault-count').textContent = `${uniqueIndoCount} questions (${filtered.length} entries)`;
     _syncVaultGridBottomBar(filtered, _allWords, mode);
+
     if (!filtered.length) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="11">
-            <div class="smart-empty-state">
-              <span class="smart-empty-icon">🔍</span>
-              <div class="smart-empty-title">No vocabulary words found</div>
-              <div class="smart-empty-subtext">No words match your search or filter criteria.</div>
-              <button type="button" class="smart-empty-btn" onclick="document.getElementById('vault-search').value=''; document.getElementById('vault-topic-filter').value=''; document.getElementById('vault-wordtype-filter').value=''; document.getElementById('vault-search').dispatchEvent(new Event('input'));">✕ Clear Search & Reset</button>
-            </div>
+          <td colspan="10" style="text-align: center; padding: 30px; color: #64748b; font-size: 12px;">
+            No vocabulary items found matching current filters.
           </td>
         </tr>
       `;
       return;
     }
-    tbody.innerHTML = filtered.map((w, i) => {
-      let typeColor = "#3b82f6"; // default blue
+
+    tbody.innerHTML = filtered.map((w) => {
+      let typeColor = "#3b82f6";
       const wt = (w.word_type || 'Vocab').toLowerCase();
-      if (wt === 'vocab' || wt === 'vocabulary') typeColor = "#00c000ff"; // pure green
-      if (wt === 'idiom') typeColor = "#FF8C00"; // orange
-      if (wt === 'expression') typeColor = "#8b5cf6"; // purple
-      if (wt === 'proverb') typeColor = "#FF0000"; // pure red
+      if (wt === 'vocab' || wt === 'vocabulary') typeColor = "#00c000ff";
+      else if (wt === 'idiom') typeColor = "#FF8C00";
+      else if (wt === 'expression') typeColor = "#8b5cf6";
+      else if (wt === 'proverb') typeColor = "#FF0000";
+
+      const cleanLvl = parseInt(w.target_level, 10) || 1;
+      const cleanThCode = (w.theme_code || 'A').trim().toUpperCase();
+      const rawTpCode = (w.topic_code || '1').trim();
+      const cleanTpCode = rawTpCode.replace(/^[A-Za-z]+/, '') || rawTpCode || '1';
+      const compositeCode = `${cleanLvl}${cleanThCode}${cleanTpCode}`;
+
+      const phraseOpts = `
+        <option value="Expression"${wt === 'expression' ? ' selected' : ''}>Expression</option>
+        <option value="Idiom"${wt === 'idiom' ? ' selected' : ''}>Idiom</option>
+        <option value="Proverb"${wt === 'proverb' ? ' selected' : ''}>Proverb</option>
+        <option value="Phrase"${wt === 'phrase' ? ' selected' : ''}>Phrase</option>
+      `;
+      const vocabOpts = `
+        <option value="Verb"${wt === 'verb' ? ' selected' : ''}>Verb</option>
+        <option value="Noun"${wt === 'noun' ? ' selected' : ''}>Noun</option>
+        <option value="Adjective"${wt === 'adjective' ? ' selected' : ''}>Adjective</option>
+        <option value="Adverb"${wt === 'adverb' ? ' selected' : ''}>Adverb</option>
+        <option value="Vocab"${wt === 'vocab' ? ' selected' : ''}>Vocab</option>
+      `;
+      const typeOptionsHtml = mode === 'phrases' ? phraseOpts : vocabOpts;
 
       return `
-      <tr data-word-id="${escapeHtml(w.id)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-        <td class="cell-institution" style="padding: 6px 8px; font-weight: 600;"><span style="color: #38bdf8; font-size: 11px; font-weight: 700;">${escapeHtml(w.institutions?.code || w.institution_code || w.institutions?.name || 'CEC')}</span></td>
-        <td class="cell-program" style="padding: 6px 8px; font-weight: 600;"><span style="color: #c084fc; font-size: 11px; font-weight: 700;">${escapeHtml(w.programs?.name || w.program_name || 'Camp')}</span></td>
-        <td class="cell-level" style="padding: 6px 8px; font-weight: 600;"><span style="color: #f8fafc; font-size: 11px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(w.target_level) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(w.target_level, true) : (w.target_level || '1st')))}</span></td>
-        <td class="cell-code cell-topic-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#a5b4fc;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.topic_code || '—')}</span></td>
-        <td class="cell-theme" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</td>
-        <td class="cell-topic" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;" title="${escapeHtml(w.topic)}">${escapeHtml(w.topic)}</td>
-        <td class="cell-wordtype" style="padding: 6px 12px;">
-          <span style="font-size:11px; color: ${typeColor}; display: inline-block; text-transform: capitalize; font-weight: 700; border: none;">${escapeHtml(w.word_type || 'Vocab')}</span>
-        </td>
-        <td class="cell-indonesian" style="padding: 6px 12px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.indonesian)}">${escapeHtml(w.indonesian)}</td>
-        <td class="cell-english" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${escapeHtml(w.english)}">
-          <button type="button" class="btn-vault-speak" data-speak="${escapeHtml(w.english)}" style="background:transparent; border:none; cursor:pointer; padding:0 4px; font-size:12px; color:var(--clr-accent-1, #6366f1); opacity:0.85; transition:transform 0.15s ease;" title="Listen Native Pronunciation">🔊</button>
-          ${escapeHtml(w.english)}
-        </td>
-        <td class="edit-mode-only" style="padding: 6px 12px; text-align: right; position: sticky; right: 0; background: var(--fm-bg-panel, #0f172a); border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 5;">
-          <button class="btn btn-xs btn-edit-vault" data-edit-vault="${escapeHtml(w.id)}" style="background: transparent; color: #3b82f6; border: 1px solid #3b82f6; font-size: 10px; padding: 2px 6px;" title="Edit word">&#9998;</button>
-          <button class="btn btn-danger btn-xs" data-del-vault="${escapeHtml(w.id)}" title="Delete word" style="font-size: 10px; padding: 2px 6px;">&#128465;</button>
-        </td>
-      </tr>
-    `}).join('');
+        <tr data-word-id="${escapeHtml(w.id)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+          <td style="padding: 6px 8px; font-weight: 600; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);"><span style="color: #38bdf8; font-weight: 700;">${escapeHtml(w.institutions?.code || w.institution_code || 'CEC')}</span></td>
+          <td style="padding: 6px 8px; font-weight: 600; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);"><span style="color: #c084fc; font-weight: 700;">${escapeHtml(w.programs?.name || w.program_name || 'Camp')}</span></td>
+          <td class="editable-cell col-vault-lvl" style="padding: 6px 8px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">
+            <span class="vault-cell-view" style="color: #f8fafc; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(cleanLvl) : cleanLvl)}</span>
+            <input type="number" min="1" max="6" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="target_level" value="${cleanLvl}" style="text-align:center;">
+          </td>
+          <td class="editable-cell col-vault-composite-code" style="padding: 6px 8px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">
+            <span class="vault-cell-view" style="color:#a5b4fc;font-family:monospace;font-size:12px;font-weight:800;">${escapeHtml(compositeCode)}</span>
+            <input type="text" maxlength="8" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="composite_code" value="${escapeHtml(compositeCode)}" style="text-align:center;font-family:monospace;font-weight:700;text-transform:uppercase;">
+          </td>
+          <td class="editable-cell" style="padding: 6px 10px; color: #ffffff; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+            <span class="vault-cell-view" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</span>
+            <input type="text" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="theme" value="${escapeHtml(w.theme || '')}">
+          </td>
+          <td class="editable-cell" style="padding: 6px 10px; color: #ffffff; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+            <span class="vault-cell-view" title="${escapeHtml(w.topic || '')}">${escapeHtml(w.topic || '')}</span>
+            <input type="text" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="topic" value="${escapeHtml(w.topic || '')}">
+          </td>
+          <td class="editable-cell" style="padding: 6px 8px; border-right: 1px solid rgba(255,255,255,0.08);">
+            <span class="vault-cell-view" style="font-size:12px; color: ${typeColor}; font-weight: 700;">${escapeHtml(w.word_type || 'Vocab')}</span>
+            <select class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="word_type">${typeOptionsHtml}</select>
+          </td>
+          <td class="editable-cell" style="padding: 6px 12px; font-weight: 700; color: #ffffff; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+            <span class="vault-cell-view" title="${escapeHtml(w.indonesian)}">${escapeHtml(w.indonesian)}</span>
+            <input type="text" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="indonesian" value="${escapeHtml(w.indonesian)}">
+          </td>
+          <td class="editable-cell" style="padding: 6px 12px; color: #ffffff; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+            <span class="vault-cell-view" title="${escapeHtml(w.english)}">
+              <button type="button" class="btn-vault-speak" data-speak="${escapeHtml(w.english)}" style="background:transparent; border:none; cursor:pointer; padding:0 4px; font-size:12px; color:var(--clr-accent-1, #6366f1);" title="Listen Native Pronunciation">🔊</button>
+              ${escapeHtml(w.english)}
+            </span>
+            <div class="vault-edit-wrapper" style="align-items:center;gap:4px;width:100%;">
+              <button type="button" class="btn-vault-speak" data-speak="${escapeHtml(w.english)}" style="background:transparent; border:none; cursor:pointer; font-size:12px; color:#38bdf8;" title="Listen Native Pronunciation">🔊</button>
+              <input type="text" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="english" value="${escapeHtml(w.english)}" style="flex:1;">
+            </div>
+          </td>
+          <td class="edit-mode-only" style="padding: 6px 8px; text-align: center; width: 55px; position: sticky; right: 0; background: #0f172a; border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 5;">
+            <button type="button" class="btn-del-mini" data-del-vault="${escapeHtml(w.id)}" title="Delete word" style="background:transparent;border:none;cursor:pointer;color:#f87171;font-size:14px;padding:2px 4px;">🗑️</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
 
     // Native Speech Pronunciation Handler
     tbody.querySelectorAll('.btn-vault-speak').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.onclick = (e) => {
         e.stopPropagation();
         const text = btn.getAttribute('data-speak');
         speakEnglishWord(text);
         btn.style.transform = 'scale(1.25)';
         setTimeout(() => { btn.style.transform = 'scale(1)'; }, 250);
-      });
+      };
     });
 
     // Delete handlers
     tbody.querySelectorAll('[data-del-vault]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('Soft-delete this word from Vault?')) return;
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-del-vault');
+        if (!confirm('Soft-delete this item from Vault?')) return;
         try {
-          await deleteVaultWord(btn.dataset.delVault);
+          await deleteVaultWord(id);
           showToast('Word deleted from Vault.', 'success');
-          _allWords = _allWords.filter(w => w.id !== btn.dataset.delVault);
+          _allWords = _allWords.filter(w => w.id !== id);
           filterAndRender();
         } catch (e) {
           showToast('Delete failed: ' + e.message, 'error');
         }
-      });
+      };
     });
 
-    // Edit handlers
-    tbody.querySelectorAll('.btn-edit-vault').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.editVault;
-        const tr = btn.closest('tr');
-        const isEditing = tr.classList.contains('editing');
-        const word = _allWords.find(w => w.id === id);
+    // Direct Inline Cell Edit Handlers
+    tbody.onchange = async (e) => {
+      const input = e.target;
+      if (!input || !input.classList.contains('vault-edit-input')) return;
+      const wordId = input.dataset.id;
+      const field = input.dataset.field;
+      if (!wordId || !field) return;
 
-        if (isEditing) {
-          // Save
-          const newThemeCode = (tr.querySelector('.edit-theme-code')?.value || '').trim().toUpperCase();
-          const newTheme = (tr.querySelector('.edit-theme')?.value || '').trim();
-          const newTopicCode = (tr.querySelector('.edit-topic-code')?.value || '').trim().toUpperCase();
-          const newTopic = (tr.querySelector('.edit-topic')?.value || '').trim();
-          const newIndo = (tr.querySelector('.edit-indo')?.value || '').trim();
-          const newEng = (tr.querySelector('.edit-eng')?.value || '').trim();
-          const newType = tr.querySelector('.edit-type')?.value || word.word_type || 'Vocab';
-          const newLevel = parseInt(tr.querySelector('.edit-level')?.value || '1', 10);
+      const word = _allWords.find(w => w.id === wordId);
+      if (!word) return;
 
-          if (!newTopic || !newIndo || !newEng) return showToast('Please fill all required fields.', 'error');
+      const cell = input.closest('td');
+      const viewSpan = cell?.querySelector('.vault-cell-view');
+      const tr = input.closest('tr');
+      const newVal = input.value.trim();
 
-          btn.innerHTML = '&#8987;'; // wait
-          btn.disabled = true;
+      // 1. Guard against empty inputs (except theme which can be unassigned)
+      if (!newVal && field !== 'theme') {
+        const fallback = word[field] || '';
+        input.value = fallback;
+        if (viewSpan) viewSpan.textContent = fallback;
+        input.classList.add('save-error');
+        setTimeout(() => input.classList.remove('save-error'), 800);
+        showToast('Field cannot be empty — reverted.', 'warning');
+        return;
+      }
 
-          // Normalize topic_code and theme_code on edit save
-          let finalTopicCode = (newTopicCode || '').trim().toUpperCase();
-          let finalThemeCode = (newThemeCode || '').trim().toUpperCase();
-          if (/^[A-Z][0-9]+$/.test(finalTopicCode)) {
-            if (!finalThemeCode) finalThemeCode = finalTopicCode[0];
-          } else if (/^[0-9]+$/.test(finalTopicCode) && finalThemeCode) {
-            finalTopicCode = `${finalThemeCode}${finalTopicCode}`;
+      let payload = {};
+
+      try {
+        if (field === 'composite_code') {
+          // Flexible composite code parser: clean separators e.g. 1-A-1 -> 1A1
+          const cleanCode = newVal.replace(/[\s\-_/.]+/g, '').toUpperCase();
+          const matchFull = cleanCode.match(/^([1-9])([A-Z]+)(\d+)$/);
+          const matchNoLvl = cleanCode.match(/^([A-Z]+)(\d+)$/);
+
+          if (matchFull) {
+            payload.target_level = parseInt(matchFull[1], 10);
+            payload.theme_code = matchFull[2];
+            payload.topic_code = matchFull[3];
+          } else if (matchNoLvl) {
+            payload.target_level = parseInt(word.target_level, 10) || 1;
+            payload.theme_code = matchNoLvl[1];
+            payload.topic_code = matchNoLvl[2];
+          } else {
+            payload.topic_code = cleanCode;
           }
 
-          updateVaultWord(id, {
-            theme_code: finalThemeCode || null,
-            theme: newTheme || null,
-            topic_code: finalTopicCode || null,
-            topic: newTopic,
-            indonesian: newIndo,
-            english: newEng,
-            word_type: newType,
-            target_level: newLevel
-          }).then(() => {
-            showToast('Word updated successfully.', 'success');
-            word.theme_code = newThemeCode || null;
-            word.theme = newTheme || null;
-            word.topic_code = finalTopicCode || null; word.theme_code = finalThemeCode || word.theme_code;
-            word.topic = newTopic;
-            word.indonesian = newIndo;
-            word.english = newEng;
-            word.word_type = newType; word.target_level = newLevel;
-            filterAndRender();
-          }).catch(e => {
-            showToast('Update failed: ' + e.message, 'error');
-            filterAndRender(); // reset
-          });
+          if (payload.target_level) word.target_level = payload.target_level;
+          if (payload.theme_code) word.theme_code = payload.theme_code;
+          if (payload.topic_code) word.topic_code = payload.topic_code;
+
+          const canonicalCode = `${payload.target_level || word.target_level}${payload.theme_code || word.theme_code || 'A'}${payload.topic_code || '1'}`;
+          input.value = canonicalCode;
+          if (viewSpan) viewSpan.textContent = canonicalCode;
+
+          // Also sync the row's LVL cell if level changed
+          if (payload.target_level && tr) {
+            const lvlInput = tr.querySelector('.col-vault-lvl input');
+            const lvlSpan = tr.querySelector('.col-vault-lvl .vault-cell-view');
+            if (lvlInput) lvlInput.value = payload.target_level;
+            if (lvlSpan) {
+              const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(payload.target_level) : `${payload.target_level}ST`;
+              lvlSpan.textContent = shortLbl;
+            }
+          }
+        } else if (field === 'target_level') {
+          const parsedLvl = parseInt(newVal, 10);
+          if (isNaN(parsedLvl) || parsedLvl < 1 || parsedLvl > 6) {
+            input.value = word.target_level;
+            input.classList.add('save-error');
+            setTimeout(() => input.classList.remove('save-error'), 800);
+            showToast('Level must be between 1 and 6.', 'warning');
+            return;
+          }
+          payload.target_level = parsedLvl;
+          word.target_level = parsedLvl;
+          if (viewSpan) {
+            const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(parsedLvl) : `${parsedLvl}ST`;
+            viewSpan.textContent = shortLbl;
+          }
+
+          // Recalculate composite code in this row
+          const cleanTp = (word.topic_code || '1').replace(/^[A-Za-z]+/, '');
+          const newComp = `${parsedLvl}${word.theme_code || 'A'}${cleanTp}`;
+          const codeInput = tr?.querySelector('.col-vault-composite-code input');
+          const codeSpan = tr?.querySelector('.col-vault-composite-code .vault-cell-view');
+          if (codeInput) codeInput.value = newComp;
+          if (codeSpan) codeSpan.textContent = newComp;
+        } else if (field === 'english') {
+          payload.english = newVal;
+          word.english = newVal;
+          if (viewSpan) {
+            viewSpan.innerHTML = `<button type="button" class="btn-vault-speak" data-speak="${escapeHtml(newVal)}" style="background:transparent; border:none; cursor:pointer; padding:0 4px; font-size:12px; color:var(--clr-accent-1, #6366f1);" title="Listen Native Pronunciation">🔊</button> ${escapeHtml(newVal)}`;
+          }
+          const speakBtn = cell?.querySelector('.btn-vault-speak');
+          if (speakBtn) speakBtn.setAttribute('data-speak', newVal);
+        } else if (field === 'word_type') {
+          payload.word_type = newVal;
+          word.word_type = newVal;
+          if (viewSpan) {
+            viewSpan.textContent = newVal;
+            viewSpan.style.color = getWordTypeColor(newVal);
+          }
         } else {
-          // Enter edit mode
-          tr.classList.add('editing');
-          const cellLevel = tr.querySelector('.cell-level');
-          if (cellLevel) cellLevel.innerHTML = '<input type="number" class="input edit-level" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.target_level || '1') + '">';
-
-          const cellThemeCode = tr.querySelector('.cell-theme-code');
-          if (cellThemeCode) {
-            cellThemeCode.innerHTML = '<input type="text" class="input edit-theme-code" style="width: 100%; padding: 2px 4px; font-size: 0.75rem; font-family: monospace; text-transform: uppercase;" value="' + escapeHtml(word.theme_code || '') + '" placeholder="e.g. T1">';
-          }
-
-          const cellTheme = tr.querySelector('.cell-theme');
-          if (cellTheme) {
-            cellTheme.innerHTML = '<input type="text" class="input edit-theme" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.theme || '') + '" placeholder="Theme name">';
-          }
-
-          const cellTopicCode = tr.querySelector('.cell-topic-code') || tr.querySelector('.cell-code');
-          if (cellTopicCode) {
-            cellTopicCode.innerHTML = '<input type="text" class="input edit-topic-code" style="width: 100%; padding: 2px 4px; font-size: 0.75rem; font-family: monospace; text-transform: uppercase;" value="' + escapeHtml(word.topic_code || '') + '" placeholder="e.g. A1">';
-          }
-
-          const cellTopic = tr.querySelector('.cell-topic');
-          if (cellTopic) {
-            cellTopic.innerHTML = '<input type="text" class="input edit-topic" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.topic) + '" placeholder="Topic name">';
-          }
-
-          const cellEng = tr.querySelector('.cell-english');
-          if (cellEng) {
-            cellEng.innerHTML = '<input type="text" class="input edit-eng" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.english) + '">';
-          }
-
-          const phraseOpts = `
-            <option value="Expression"${word.word_type === 'Expression' ? ' selected' : ''}>Expression</option>
-            <option value="Idiom"${word.word_type === 'Idiom' ? ' selected' : ''}>Idiom</option>
-            <option value="Proverb"${word.word_type === 'Proverb' ? ' selected' : ''}>Proverb</option>
-          `;
-          const vocabOpts = `
-            <option value="Vocab"${word.word_type === 'Vocab' ? ' selected' : ''}>Vocab</option>
-            <option value="Noun"${word.word_type === 'Noun' ? ' selected' : ''}>Noun</option>
-            <option value="Verb"${word.word_type === 'Verb' ? ' selected' : ''}>Verb</option>
-            <option value="Adjective"${word.word_type === 'Adjective' ? ' selected' : ''}>Adjective</option>
-            <option value="Adverb"${word.word_type === 'Adverb' ? ' selected' : ''}>Adverb</option>
-          `;
-          const cellWordType = tr.querySelector('.cell-wordtype');
-          if (cellWordType) {
-            cellWordType.innerHTML = `<select class="input edit-type" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;">
-              <optgroup label="Words">
-                ${vocabOpts}
-              </optgroup>
-              <optgroup label="Phrases">
-                ${phraseOpts}
-              </optgroup>
-            </select>`;
-          }
-
-          const cellIndo = tr.querySelector('.cell-indonesian');
-          if (cellIndo) {
-            cellIndo.innerHTML = '<input type="text" class="input edit-indo" style="width: 100%; padding: 2px 4px; font-size: 0.8rem;" value="' + escapeHtml(word.indonesian) + '">';
-          }
-
-          btn.innerHTML = '&#128190;'; // Save icon
-          btn.title = 'Save';
-          btn.style.color = '#00c000ff';
-          btn.style.borderColor = '#00c000ff';
+          payload[field] = newVal;
+          word[field] = newVal;
+          if (viewSpan) viewSpan.textContent = newVal;
         }
-      });
-    });
+
+        await updateVaultWord(wordId, payload);
+
+        input.classList.add('save-success');
+        setTimeout(() => input.classList.remove('save-success'), 700);
+        showToast('Updated successfully.', 'success');
+      } catch (err) {
+        input.classList.add('save-error');
+        setTimeout(() => input.classList.remove('save-error'), 800);
+        showToast('Update failed: ' + err.message, 'error');
+      }
+    };
+
+    tbody.onkeydown = (e) => {
+      if (e.key === 'Enter' && e.target.classList.contains('vault-edit-input')) {
+        e.target.blur();
+      }
+    };
   }
 
   function filterAndRender() {
-    const search = (document.getElementById('vault-search')?.value || '').toLowerCase().trim();
-    const level = document.getElementById('vault-level-filter')?.value || '';
-    const topic = document.getElementById('vault-topic-filter')?.value || '';
-    const wordType = document.getElementById('vault-wordtype-filter')?.value || '';
+    const search = (window._vaultGridSearch || document.getElementById('vault-search')?.value || '').toLowerCase().trim();
+    const level = window._vaultGridLevel || document.getElementById('vault-level-filter')?.value || '';
+    const topic = window._vaultGridTopic || document.getElementById('vault-topic-filter')?.value || '';
+    const wordType = window._vaultGridType || document.getElementById('vault-wordtype-filter')?.value || '';
     let filtered = _allWords;
     if (level) filtered = filtered.filter(w => String(w.target_level) === level);
     if (topic) filtered = filtered.filter(w => w.topic === topic);
@@ -592,59 +620,17 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       });
     }
     if (search) filtered = filtered.filter(w =>
-      w.indonesian.toLowerCase().includes(search) ||
-      w.english.toLowerCase().includes(search) ||
-      w.topic.toLowerCase().includes(search)
+      (w.indonesian || '').toLowerCase().includes(search) ||
+      (w.english || '').toLowerCase().includes(search) ||
+      (w.topic || '').toLowerCase().includes(search) ||
+      (w.theme || '').toLowerCase().includes(search)
     );
     renderRows(filtered);
   }
 
-  renderRows(_allWords);
-
-  let _vaultSearchDebounce = null;
-  document.getElementById('vault-search')?.addEventListener('input', () => {
-    clearTimeout(_vaultSearchDebounce);
-    _vaultSearchDebounce = setTimeout(filterAndRender, 200);
-  });
-  document.getElementById('vault-level-filter')?.addEventListener('change', filterAndRender);
-  document.getElementById('vault-topic-filter')?.addEventListener('change', filterAndRender);
-  document.getElementById('vault-wordtype-filter')?.addEventListener('change', filterAndRender);
-
-  document.getElementById('btn-export-vault')?.addEventListener('click', async () => {
-    try {
-      const btn = document.getElementById('btn-export-vault');
-      const oldText = btn.innerHTML;
-      btn.innerHTML = '&#8987; Exporting...';
-      btn.disabled = true;
-      await exportVaultWords(mode);
-      btn.innerHTML = oldText;
-      btn.disabled = false;
-    } catch (e) {
-      showToast('Export failed: ' + e.message, 'error');
-      document.getElementById('btn-export-vault').innerHTML = '&#128228; Export Excel';
-      document.getElementById('btn-export-vault').disabled = false;
-    }
-  });
-
-  document.getElementById('btn-import-vault')?.addEventListener('click', () => openImportModal(_allWords, topics, (newWords) => {
-    _allWords = [..._allWords, ...newWords];
+  setTimeout(() => {
     filterAndRender();
-  }, mode));
-
-  document.getElementById('btn-check-duplicates')?.addEventListener('click', () => {
-    openDuplicateCheckerModal(_allWords, (updatedWords) => {
-      _allWords = updatedWords;
-      filterAndRender();
-    });
-  });
-  document.getElementById('btn-manual-auto-generate')?.addEventListener('click', triggerAutoGenerate);
-  document.getElementById('btn-create-vocab-test')?.addEventListener('click', () => {
-    if (mode === 'phrases') {
-      openTestBuilderModal(topics, { testType: 'IDIOM_PROVERB' });
-    } else {
-      openTestBuilderModal(topics, { testType: 'VOCAB_MASTERY' });
-    }
-  });
+  }, 10);
 }
 
 // ─── Import Modal ───────────────────────────────────────────
@@ -806,7 +792,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
 
         const rawInst = normalized.INSTITUTION || normalized['INSTITUTION NAME'] || normalized.INSTITUTE || '';
         if (rawInst && _availableInsts.length > 0) {
-          const m = _availableInsts.find(i => 
+          const m = _availableInsts.find(i =>
             i.id.toLowerCase() === rawInst.toLowerCase() ||
             (i.name && i.name.toLowerCase() === rawInst.toLowerCase()) ||
             (i.code && i.code.toLowerCase() === rawInst.toLowerCase())
@@ -816,7 +802,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
 
         const rawProg = normalized.PROGRAM || normalized['PROGRAM NAME'] || '';
         if (rawProg && _availableProgs.length > 0) {
-          const m = _availableProgs.find(p => 
+          const m = _availableProgs.find(p =>
             p.id.toLowerCase() === rawProg.toLowerCase() ||
             (p.name && p.name.toLowerCase() === rawProg.toLowerCase()) ||
             (p.code && p.code.toLowerCase() === rawProg.toLowerCase())
@@ -1612,17 +1598,38 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
         themeCode: thCode,
         themeName: thObj.name,
         level: lvl,
-        totalWords: 0,
-        totalPhrases: 0,
+        verbCount: 0,
+        nounCount: 0,
+        adjCount: 0,
+        wordsOtherCount: 0,
+        wordsCount: 0,
+        expCount: 0,
+        prvCount: 0,
+        idmCount: 0,
+        phrasesOtherCount: 0,
+        phrasesCount: 0,
         totalCount: 0
       });
     }
     const tpObj = thObj.topicsMap.get(tpKey);
-    const wt = String(w.word_type || '').toLowerCase();
-    const isExpr = phraseTypes.includes(wt);
-    if (isExpr) tpObj.totalPhrases++;
-    else tpObj.totalWords++;
-    tpObj.totalCount = tpObj.totalWords + tpObj.totalPhrases;
+    const wt = String(w.word_type || '').toLowerCase().trim();
+    if (wt === 'verb') {
+      tpObj.verbCount++;
+    } else if (wt === 'noun') {
+      tpObj.nounCount++;
+    } else if (wt === 'adjective' || wt === 'adj') {
+      tpObj.adjCount++;
+    } else if (['expression', 'idiom', 'proverb', 'phrase', 'phrasal verb'].includes(wt)) {
+      if (wt === 'expression') tpObj.expCount++;
+      else if (wt === 'proverb') tpObj.prvCount++;
+      else if (wt === 'idiom') tpObj.idmCount++;
+      else tpObj.phrasesOtherCount++;
+    } else {
+      tpObj.wordsOtherCount++;
+    }
+    tpObj.wordsCount = tpObj.verbCount + tpObj.nounCount + tpObj.adjCount + tpObj.wordsOtherCount;
+    tpObj.phrasesCount = tpObj.expCount + tpObj.prvCount + tpObj.idmCount + tpObj.phrasesOtherCount;
+    tpObj.totalCount = tpObj.wordsCount + tpObj.phrasesCount;
   });
 
   // Count totals
@@ -1699,26 +1706,85 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
       .map(a => `${String(a.theme_code).trim().toUpperCase()}_${parseInt(a.target_level, 10)}_${a.program_id}`)
   );
 
-  // Setup Bottom Infobar for Theme Manager (Rule 2.23 / 2.24 Layout Law)
-  if (window.setBottomInfobar) {
-    const activeLevelLabel = activeLevel === 'ALL' ? 'All (1st, 2nd, 3rd)' : (typeof toShortLevel === 'function' ? toShortLevel(activeLevel) + ' Level' : `Level ${activeLevel}`);
+  // Setup Bottom Infobar for Theme Manager (Rule 2.23 / 2.33 Layout Law)
+  const syncThemeManagerBottomBar = () => {
+    if (!window.setBottomInfobar) return;
     const activeTopicsCount = activeLevel === 'ALL' ? totalTopicsAll : (levelStats[activeLevel]?.topics || 0);
     const activeThemesCount = activeLevel === 'ALL' ? totalThemesAll : (levelStats[activeLevel]?.themes || 0);
 
     const leftHtml = `
-      <div class="bottom-info-chip"><span class="chip-label">View:</span><span class="chip-val" style="color: #38bdf8;">Theme Manager</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Levels:</span><span class="chip-val" style="color: #f8fafc;">${escapeHtml(activeLevelLabel)}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Themes:</span><span class="chip-val">${activeThemesCount}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Topics:</span><span class="chip-val">${activeTopicsCount}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Vault Items:</span><span class="chip-val">${words.length}</span></div>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto;">
+        <input type="search" id="vault-topic-search" placeholder="🔍 Search Theme or Topic..." value="${escapeHtml(window._vaultTopicSearchQuery || '')}" style="width: 200px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
+
+        <div style="display: flex; gap: 3px; align-items: center; background: rgba(255,255,255,0.04); padding: 2px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+          <button type="button" class="btn-theme-curriculum-tab" data-lvl="ALL" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 10px; border-radius: 4px; cursor: pointer; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">🎯 ALL (${totalTopicsAll})</button>
+          ${levels.map(lvl => {
+            const isActive = (String(activeLevel) === String(lvl));
+            const count = levelStats[lvl]?.topics || 0;
+            const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
+            return `<button type="button" class="btn-theme-curriculum-tab" data-lvl="${lvl}" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 10px; border-radius: 4px; cursor: pointer; border: none; ${isActive ? 'background: #3b82f6; color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">${shortLbl} (${count})</button>`;
+          }).join('')}
+        </div>
+
+        <div class="bottom-info-chip"><span class="chip-label">Themes:</span><span class="chip-val">${activeThemesCount}</span></div>
+        <div class="bottom-info-chip"><span class="chip-label">Topics:</span><span class="chip-val">${activeTopicsCount}</span></div>
+        <div class="bottom-info-chip"><span class="chip-label">Vault:</span><span class="chip-val">${words.length}</span></div>
+      </div>
     `;
     const rightHtml = `
-      <button class="btn btn-secondary btn-sm btn-merge-topics edit-mode-only" id="btn-theme-bottom-merge" style="height: 30px; font-size: 11px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.12); color: #f8fafc; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Merge Similar Topics">⚒️ Merge Topics</button>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-theme-bottom-merge" style="height: 32px; font-size: 11.5px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.15); color: #38bdf8; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Merge Similar Topics">⚒️ Merge Topics</button>
+      </div>
     `;
     window.setBottomInfobar(leftHtml, rightHtml);
-  }
+    bindBottomControls();
+  };
 
-  // Modernized Flat Data Table Builder (Zero Rowspans)
+  const bindBottomControls = () => {
+    const searchInput = document.getElementById('vault-topic-search');
+    if (searchInput && !searchInput.dataset.bound) {
+      searchInput.dataset.bound = 'true';
+      searchInput.addEventListener('input', (e) => {
+        window._vaultTopicSearchQuery = e.target.value;
+        const { rowsHtml } = buildTableBodyHtml(window._vaultTopicSearchQuery);
+        const tbody = document.getElementById('theme-manager-tbody');
+        if (tbody) tbody.innerHTML = rowsHtml;
+        bindRowActionHandlers();
+      });
+    }
+
+    document.querySelectorAll('.btn-theme-curriculum-tab').forEach(btn => {
+      if (!btn.dataset.bound) {
+        btn.dataset.bound = 'true';
+        btn.addEventListener('click', (e) => {
+          const targetLvl = e.currentTarget.getAttribute('data-lvl');
+          window._themeManagerSelectedLevel = targetLvl;
+          _renderThemeManagerTab(area, words, topics, meta);
+        });
+      }
+    });
+
+    const btnMergeBottom = document.getElementById('btn-theme-bottom-merge');
+    if (btnMergeBottom && !btnMergeBottom.dataset.bound) {
+      btnMergeBottom.dataset.bound = 'true';
+      btnMergeBottom.onclick = () => {
+        const allTopicList = [];
+        levelGroups.forEach(thMap => {
+          thMap.forEach(th => {
+            th.topicsMap.forEach(tp => allTopicList.push(tp));
+          });
+        });
+        openTopicDuplicateCheckerModal(allTopicList, words, () => {
+          if (typeof renderVocabularyVault === 'function') {
+            const container = document.getElementById('classes-detail-canvas');
+            if (container) renderVocabularyVault(container);
+          }
+        });
+      };
+    }
+  };
+
+  // Modernized Flat Data Table Builder (Zero Rowspans, 19 Columns)
   const buildTableBodyHtml = (searchQuery = '') => {
     const q = (searchQuery || '').toLowerCase().trim();
     const levelsToRender = (activeLevel === 'ALL') ? levels : [Number(activeLevel)];
@@ -1747,47 +1813,81 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
 
         // Assigned programs badge pills
         const assignedPillsHtml = assignedProgs.length > 0
-          ? assignedProgs.map(p => `<span class="badge-prog-pill" style="display:inline-flex;align-items:center;gap:4px;color:#4ade80;font-size:10.5px;font-weight:700;margin-right:6px;">🟢 ${escapeHtml(p.name)}</span>`).join('')
-          : `<span style="color:#64748b;font-size:10.5px;font-style:italic;">None Assigned</span>`;
+          ? assignedProgs.map(p => `<span class="badge-prog-pill" style="display:inline-flex;align-items:center;gap:4px;color:#4ade80;font-size:11px;font-weight:700;margin-right:6px;">🟢 ${escapeHtml(p.name)}</span>`).join('')
+          : `<span style="color:#64748b;font-size:11px;font-style:italic;">None Assigned</span>`;
 
         topics.forEach(tp => {
+          const cleanTopicCode = (tp.topicCode || '1').trim().replace(/^[A-Za-z]+/, '') || (tp.topicCode || '1');
+          const cleanThemeCode = (thCode || 'A').trim().toUpperCase();
+          const compositeCode = `${lvl}${cleanThemeCode}${cleanTopicCode}`;
+
           rowsHtml += `
             <tr class="blueprint-table-row" data-level="${lvl}" data-theme-code="${thCode}" data-topic="${escapeHtml(tp.name)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-              <td style="text-align: center; font-weight: 800; font-size: 11px; color: #38bdf8; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08);">
-                ${escapeHtml(lvlLabel)}
+              <!-- 1. LVL -->
+              <td class="editable-cell" style="text-align: center; font-weight: 800; font-size: 12px; color: #38bdf8; border-right: 1px solid rgba(255,255,255,0.08);">
+                <span class="vault-cell-view">${escapeHtml(lvlLabel)}</span>
+                <input type="number" min="1" max="6" class="vault-edit-input" data-action="edit-level" data-topic="${escapeHtml(tp.name)}" data-old-lvl="${lvl}" data-th-code="${thCode}" value="${lvl}" style="text-align:center;">
               </td>
-              <td style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11px;">
-                ${escapeHtml(tp.topicCode || '—')}
+              <!-- 2. THEME -->
+              <td class="editable-cell" style="color: #ffffff; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+                <span class="vault-cell-view">${escapeHtml(th.name || '—')}</span>
+                <input type="text" class="vault-edit-input" data-action="edit-theme-name" data-old-theme="${escapeHtml(th.name)}" data-lvl="${lvl}" data-th-code="${thCode}" value="${escapeHtml(th.name || '')}">
               </td>
-              <td style="color: #ffffff; font-weight: 700; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px;">
-                <span>${escapeHtml(th.name || '—')}</span>
+              <!-- 3. TH-CD -->
+              <td class="editable-cell" style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+                <span class="vault-cell-view">${escapeHtml(thCode)}</span>
+                <input type="text" maxlength="4" class="vault-edit-input" data-action="edit-theme-code" data-old-th-code="${thCode}" data-lvl="${lvl}" value="${escapeHtml(thCode)}" style="text-align:center; text-transform:uppercase;">
               </td>
-              <td style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px;">
-                <span>${escapeHtml(tp.name)}</span>
+              <!-- 4. TOPIC -->
+              <td class="editable-cell" style="color: #f1f5f9; font-weight: 600; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+                <span class="vault-cell-view">${escapeHtml(tp.name)}</span>
+                <input type="text" class="vault-edit-input" data-action="edit-topic-name" data-old-topic="${escapeHtml(tp.name)}" data-lvl="${lvl}" data-th-code="${thCode}" value="${escapeHtml(tp.name)}">
               </td>
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
-                <span class="bp-count-total" style="color: #38bdf8; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalCount}</span>
+              <!-- 5. TP-CD -->
+              <td class="editable-cell" style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+                <span class="vault-cell-view">${escapeHtml(cleanTopicCode)}</span>
+                <input type="text" maxlength="6" class="vault-edit-input" data-action="edit-topic-code" data-topic="${escapeHtml(tp.name)}" data-old-tp-code="${escapeHtml(cleanTopicCode)}" data-lvl="${lvl}" data-th-code="${thCode}" value="${escapeHtml(cleanTopicCode)}" style="text-align:center;">
               </td>
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
-                <span style="color: #cbd5e1; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalWords}</span>
-              </td>
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.1); white-space: nowrap;">
-                <span style="color: #a78bfa; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalPhrases}</span>
-              </td>
-              <td style="padding: 8px 10px; border-right: 1px solid rgba(255,255,255,0.08);">
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;">
+              <!-- 6. VERB -->
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.verbCount}</td>
+              <!-- 7. NOUN -->
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.nounCount}</td>
+              <!-- 8. ADJ -->
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.adjCount}</td>
+              <!-- 9. OTH (Words) -->
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.wordsOtherCount}</td>
+              <!-- 10. WORDS -->
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #60a5fa; background: rgba(59, 130, 246, 0.08); border-right: 1px solid rgba(255,255,255,0.08);">${tp.wordsCount}</td>
+              <!-- 11. EXP -->
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.expCount}</td>
+              <!-- 12. PRV -->
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.prvCount}</td>
+              <!-- 13. IDM -->
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.idmCount}</td>
+              <!-- 14. OTH (Phrases) -->
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.phrasesOtherCount}</td>
+              <!-- 15. PHRASES -->
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #c084fc; background: rgba(192, 132, 252, 0.08); border-right: 1px solid rgba(255,255,255,0.1);">${tp.phrasesCount}</td>
+              <!-- 16. TOTAL -->
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.1); border-right: 1px solid rgba(255,255,255,0.08);">${tp.totalCount}</td>
+              <!-- 17. ASG-PRG -->
+              <td style="padding: 6px 10px; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
                   <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
                     ${assignedPillsHtml}
                   </div>
-                  <button type="button" class="btn btn-xs btn-assign-pill edit-mode-only" data-theme-code="${thCode}" data-level="${lvl}" data-theme-name="${escapeHtml(th.name)}" style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;" title="Assign to Institutions &amp; Programs">
+                  <button type="button" class="btn btn-xs btn-assign-pill edit-mode-only" data-theme-code="${thCode}" data-level="${lvl}" data-theme-name="${escapeHtml(th.name)}" style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;cursor:pointer;" title="Assign to Institutions &amp; Programs">
                     ⚙️ Assign
                   </button>
                 </div>
               </td>
-              <td class="edit-mode-only" style="padding: 6px 6px; text-align: center; width: 95px; white-space: nowrap;">
-                <button type="button" class="btn-edit-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Rename Topic" style="background:transparent;border:none;cursor:pointer;color:#38bdf8;font-size:12px;padding:2px 3px;">✏️</button>
-                <button type="button" class="btn-edit-theme-mini" data-theme-name="${escapeHtml(th.name)}" data-theme-code="${thCode}" title="Rename Theme (${escapeHtml(th.name)})" style="background:transparent;border:none;cursor:pointer;color:#a5b4fc;font-size:11px;padding:2px 3px;">🏷️</button>
-                <button type="button" class="btn-del-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Delete Topic" style="background:transparent;border:none;cursor:pointer;color:#f87171;font-size:12px;padding:2px 3px;">🗑️</button>
+              <!-- 18. CODE -->
+              <td class="col-theme-composite-code" style="text-align: center; font-family: monospace; font-weight: 800; color: #38bdf8; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+                ${escapeHtml(compositeCode)}
+              </td>
+              <!-- 19. ACT (Delete only when Edit ON) -->
+              <td class="edit-mode-only" style="padding: 4px 6px; text-align: center; width: 45px; border-left: 1px solid rgba(255, 255, 255, 0.1); white-space: nowrap;">
+                <button type="button" class="btn-del-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Delete Topic" style="background:transparent;border:none;cursor:pointer;color:#f87171;font-size:14px;padding:2px 4px;">🗑️</button>
               </td>
             </tr>
           `;
@@ -1798,7 +1898,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     if (visibleTopicsCount === 0) {
       rowsHtml = `
         <tr>
-          <td colspan="9" style="text-align: center; padding: 24px; color: #64748b; font-size: 12px;">
+          <td colspan="19" style="text-align: center; padding: 24px; color: #64748b; font-size: 12px;">
             No matching topics found for the selected filter.
           </td>
         </tr>
@@ -1808,47 +1908,46 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     return { rowsHtml, visibleTopicsCount };
   };
 
-  const initialRender = buildTableBodyHtml('');
+  const initialRender = buildTableBodyHtml(window._vaultTopicSearchQuery || '');
 
   let html = `
-    <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; gap: 8px;">
-      
-      <!-- Top Control Toolbar (Clean & Direct: Search + Level Filters Only) -->
-      <div style="flex-shrink: 0; padding: 2px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
-        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-          <input type="search" id="vault-topic-search" placeholder="🔍 Search Themes or Topics..." style="width: 240px; height: 32px; font-size: 11.5px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
+    <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif;">
 
-          <!-- Curriculum Level Selector Tabs -->
-          <div style="display: flex; gap: 3px; align-items: center; background: rgba(15,23,42,0.7); padding: 3px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1);" title="Filter Curriculum Level">
-            <button type="button" class="btn-theme-curriculum-tab" data-lvl="ALL" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 12px; border-radius: 5px; cursor: pointer; transition: all 0.2s ease; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #ffffff; box-shadow: 0 2px 6px rgba(59,130,246,0.4);' : 'background: transparent; color: #94a3b8;'}">🎯 ALL LEVELS (${totalTopicsAll})</button>
-            ${levels.map(lvl => {
-              const isActive = (String(activeLevel) === String(lvl));
-              const count = levelStats[lvl]?.topics || 0;
-              const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
-              return `<button type="button" class="btn-theme-curriculum-tab" data-lvl="${lvl}" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 12px; border-radius: 5px; cursor: pointer; transition: all 0.2s ease; border: none; ${isActive ? 'background: #3b82f6; color: #ffffff; box-shadow: 0 2px 6px rgba(59,130,246,0.4);' : 'background: transparent; color: #94a3b8;'}">🎯 ${shortLbl} (${count})</button>`;
-            }).join('')}
-          </div>
-        </div>
-
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span style="font-size: 11px; color: #94a3b8;">Showing <strong id="topic-count-display" style="color: #38bdf8;">${initialRender.visibleTopicsCount}</strong> topics</span>
-        </div>
-      </div>
-
-      <!-- Modernized Flat Data Table (ONLY Container With Vertical Scroll) -->
-      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
-        <table id="theme-manager-flat-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 11px;">
-          <thead style="background: #1e293b; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid rgba(255, 255, 255, 0.12);">
+      <!-- Modernized Flat Data Table (Flush to top, only table container scrolls) -->
+      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 0; margin: 0;">
+        <table id="theme-manager-flat-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px;">
+          <thead style="background: #1e293b; position: sticky; top: 0; z-index: 20;">
+            <!-- Super-Headers Grouping -->
             <tr>
-              <th style="padding: 9px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">LEVEL</th>
-              <th style="padding: 9px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">CODE</th>
-              <th style="padding: 9px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 160px; border-right: 1px solid rgba(255,255,255,0.1);">Theme Name</th>
-              <th style="padding: 9px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08);">Topic Name</th>
-              <th style="padding: 9px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 10px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">TOTAL</th>
-              <th style="padding: 9px 6px; font-weight: 800; color: #818cf8; text-transform: uppercase; font-size: 10px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">WORDS</th>
-              <th style="padding: 9px 6px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 10px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">PHRASES</th>
-              <th style="padding: 9px 12px; font-weight: 800; color: #4ade80; text-transform: uppercase; font-size: 10px; min-width: 220px; border-right: 1px solid rgba(255,255,255,0.08);">Assigned Programs</th>
-              <th class="edit-mode-only" style="padding: 9px 8px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 10px; width: 95px; text-align: center;">ACTIONS</th>
+              <th colspan="5" class="super-th" style="background:#0c192e; color:#38bdf8; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">HIERARCHY &amp; IDENTITY</th>
+              <th colspan="5" class="super-th" style="background:#131d36; color:#818cf8; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">WORDS BREAKDOWN</th>
+              <th colspan="5" class="super-th" style="background:#1a1936; color:#c084fc; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">PHRASES BREAKDOWN</th>
+              <th class="super-th" style="background:#0f2922; color:#4ade80; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">SUMMARY</th>
+              <th class="super-th" style="background:#1e293b; color:#fb923c; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">MULTI-TENANT</th>
+              <th class="super-th" style="background:#0f172a; color:#a5b4fc; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">CODE</th>
+              <th class="super-th edit-mode-only" style="background:#3b1116; color:#f87171; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1);">ACTION</th>
+            </tr>
+            <!-- Sub-Headers (Exact 19 Columns) -->
+            <tr>
+              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 45px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);" title="Level">LVL</th>
+              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; max-width: 120px; border-right: 1px solid rgba(255,255,255,0.1);" title="Theme Name">THEME</th>
+              <th style="padding: 6px 4px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Theme Letter Code (e.g. A, B)">TH-CD</th>
+              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; max-width: 130px; border-right: 1px solid rgba(255,255,255,0.08);" title="Topic Name">TOPIC</th>
+              <th style="padding: 6px 4px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Topic Number Code (e.g. 1, 2)">TP-CD</th>
+              <th style="padding: 6px 2px; font-weight: 800; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Verb Count">VERB</th>
+              <th style="padding: 6px 2px; font-weight: 800; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Noun Count">NOUN</th>
+              <th style="padding: 6px 2px; font-weight: 800; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Adjective Count">ADJ</th>
+              <th style="padding: 6px 2px; font-weight: 800; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Words Other (Adverbs, etc.)">OTH</th>
+              <th style="padding: 6px 4px; font-weight: 800; color: #60a5fa; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #1e3a5f;" title="Total Single Words">WORDS</th>
+              <th style="padding: 6px 2px; font-weight: 800; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Expression Count">EXP</th>
+              <th style="padding: 6px 2px; font-weight: 800; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Proverb Count">PRV</th>
+              <th style="padding: 6px 2px; font-weight: 800; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Idiom Count">IDM</th>
+              <th style="padding: 6px 2px; font-weight: 800; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Phrases Other (Phrasal verbs, etc.)">OTH</th>
+              <th style="padding: 6px 4px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 12px; width: 58px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1); background: #2e1e5f;" title="Total Phrases &amp; Idioms">PHRASES</th>
+              <th style="padding: 6px 4px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0f2922;" title="Grand Total">TOTAL</th>
+              <th style="padding: 6px 6px; font-weight: 800; color: #4ade80; text-transform: uppercase; font-size: 12px; width: 105px; border-right: 1px solid rgba(255,255,255,0.08);" title="Assigned Programs">ASG-PRG</th>
+              <th style="padding: 6px 4px; font-weight: 800; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 50px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Composite Code">CODE</th>
+              <th class="edit-mode-only" style="padding: 6px 4px; font-weight: 800; color: #f87171; text-transform: uppercase; font-size: 12px; width: 45px; text-align: center;" title="Action">ACT</th>
             </tr>
           </thead>
           <tbody id="theme-manager-tbody">
@@ -1859,8 +1958,9 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     </div>
   `;
   area.innerHTML = html;
+  syncThemeManagerBottomBar();
 
-  // Bind Row Actions & Assignment Popovers
+  // Bind Row Actions & Inline Cascade Edit Handlers
   const bindRowActionHandlers = () => {
     // Assign Theme to Programs
     area.querySelectorAll('.btn-assign-pill').forEach(btn => {
@@ -1874,74 +1974,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
       };
     });
 
-    // Rename Theme
-    area.querySelectorAll('.btn-edit-theme-mini').forEach(btn => {
-      btn.onclick = async (e) => {
-        const oldName = e.currentTarget.getAttribute('data-theme-name');
-        const thCode = e.currentTarget.getAttribute('data-theme-code');
-        const newName = prompt(`Rename Theme "${oldName}" to:`, oldName);
-        if (!newName || newName.trim() === '' || newName === oldName) return;
-        try {
-          showLoading('Renaming theme...');
-          await renameVaultTheme(oldName, newName.trim());
-          hideLoading();
-          showToast(`Theme renamed to "${newName.trim()}"`, 'success');
-          if (typeof renderVocabularyVault === 'function') {
-            const container = document.getElementById('classes-detail-canvas');
-            if (container) renderVocabularyVault(container);
-          }
-        } catch (err) {
-          hideLoading();
-          showToast('Failed to rename theme: ' + err.message, 'error');
-        }
-      };
-    });
-
-    // Delete Theme
-    area.querySelectorAll('.btn-del-theme-mini').forEach(btn => {
-      btn.onclick = async (e) => {
-        const thName = e.currentTarget.getAttribute('data-theme-name');
-        const thCode = e.currentTarget.getAttribute('data-theme-code');
-        if (!confirm(`Delete theme "${thName}" and all associated items in Vault?`)) return;
-        try {
-          showLoading('Deleting theme...');
-          await deleteVaultTheme(thName);
-          hideLoading();
-          showToast(`Theme "${thName}" deleted.`, 'success');
-          if (typeof renderVocabularyVault === 'function') {
-            const container = document.getElementById('classes-detail-canvas');
-            if (container) renderVocabularyVault(container);
-          }
-        } catch (err) {
-          hideLoading();
-          showToast('Failed to delete theme: ' + err.message, 'error');
-        }
-      };
-    });
-
-    // Rename Topic
-    area.querySelectorAll('.btn-edit-topic-mini').forEach(btn => {
-      btn.onclick = async (e) => {
-        const oldTopic = e.currentTarget.getAttribute('data-topic');
-        const newTopic = prompt(`Rename topic "${oldTopic}" to:`, oldTopic);
-        if (!newTopic || newTopic.trim() === '' || newTopic === oldTopic) return;
-        try {
-          showLoading('Renaming topic...');
-          await renameVaultTopic(oldTopic, newTopic.trim());
-          hideLoading();
-          showToast(`Topic renamed to "${newTopic.trim()}"`, 'success');
-          if (typeof renderVocabularyVault === 'function') {
-            const container = document.getElementById('classes-detail-canvas');
-            if (container) renderVocabularyVault(container);
-          }
-        } catch (err) {
-          hideLoading();
-          showToast(`Failed to rename: ${err.message}`, 'error');
-        }
-      };
-    });
-
-    // Delete Topic
+    // Delete Topic (Delete button only)
     area.querySelectorAll('.btn-del-topic-mini').forEach(btn => {
       btn.onclick = async (e) => {
         const topic = e.currentTarget.getAttribute('data-topic');
@@ -1961,51 +1994,225 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
         }
       };
     });
+
+    // Inline edit cascade handlers on table body change
+    const tbody = document.getElementById('theme-manager-tbody');
+    if (tbody) {
+      tbody.onchange = async (e) => {
+        const input = e.target;
+        if (!input || !input.classList.contains('vault-edit-input')) return;
+        const cell = input.closest('td');
+        const viewSpan = cell?.querySelector('.vault-cell-view');
+        const tr = input.closest('tr');
+        const action = input.dataset.action;
+        const newVal = input.value.trim();
+
+        // 1. Guard against empty / blank inputs
+        if (!newVal) {
+          const fallback = input.dataset.oldTheme || input.dataset.oldThCode || input.dataset.oldTopic || input.dataset.oldTpCode || input.dataset.oldLvl || '';
+          input.value = fallback;
+          if (viewSpan) viewSpan.textContent = fallback;
+          input.classList.add('save-error');
+          setTimeout(() => input.classList.remove('save-error'), 800);
+          showToast('Field cannot be empty — reverted.', 'warning');
+          return;
+        }
+
+        try {
+          if (action === 'edit-theme-name') {
+            const oldTheme = input.dataset.oldTheme;
+            const lvl = parseInt(input.dataset.lvl, 10);
+            const thCode = input.dataset.thCode;
+            if (newVal === oldTheme) return;
+
+            // Cascade DB update targeting composite (theme_code, level)
+            await updateVaultThemeCascade(oldTheme, newVal, lvl, thCode);
+
+            // Synchronize all rows belonging to the same theme and level in the DOM
+            const allThemeRows = tbody.querySelectorAll(`tr[data-theme-code="${thCode}"][data-level="${lvl}"]`);
+            allThemeRows.forEach(row => {
+              const thInput = row.querySelector('[data-action="edit-theme-name"]');
+              const thSpan = thInput?.closest('td')?.querySelector('.vault-cell-view');
+              if (thInput) {
+                thInput.value = newVal;
+                thInput.dataset.oldTheme = newVal;
+                thInput.classList.add('save-success');
+                setTimeout(() => thInput.classList.remove('save-success'), 700);
+              }
+              if (thSpan) thSpan.textContent = newVal;
+            });
+
+            // Update in-memory array
+            words.forEach(w => {
+              if (String(w.theme_code).toUpperCase() === thCode && parseInt(w.target_level, 10) === lvl) {
+                w.theme = newVal;
+              }
+            });
+            showToast(`Theme renamed to "${newVal}" across Level ${lvl}`, 'success');
+
+          } else if (action === 'edit-theme-code') {
+            const oldCode = String(input.dataset.oldThCode || '').trim().toUpperCase();
+            const lvl = parseInt(input.dataset.lvl, 10);
+            const cleanNewCode = newVal.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (!cleanNewCode || cleanNewCode === oldCode) {
+              input.value = oldCode;
+              return;
+            }
+
+            // Collision check: check if code is already used by another theme in this level
+            const existingOtherThemeRow = tbody.querySelector(`tr[data-level="${lvl}"][data-theme-code="${cleanNewCode}"]`);
+            if (existingOtherThemeRow) {
+              const otherThemeName = existingOtherThemeRow.querySelector('[data-action="edit-theme-name"]')?.value || cleanNewCode;
+              if (!confirm(`Theme Code "${cleanNewCode}" is already used by "${otherThemeName}" at Level ${lvl}.\nMerging will combine these topics under one theme. Continue?`)) {
+                input.value = oldCode;
+                return;
+              }
+            }
+
+            await updateVaultThemeCodeCascade(oldCode, cleanNewCode, lvl);
+
+            // Update all rows with old theme code in this level
+            const allCodeRows = tbody.querySelectorAll(`tr[data-theme-code="${oldCode}"][data-level="${lvl}"]`);
+            allCodeRows.forEach(row => {
+              row.setAttribute('data-theme-code', cleanNewCode);
+              const codeInput = row.querySelector('[data-action="edit-theme-code"]');
+              const codeSpan = codeInput?.closest('td')?.querySelector('.vault-cell-view');
+              if (codeInput) {
+                codeInput.value = cleanNewCode;
+                codeInput.dataset.oldThCode = cleanNewCode;
+                codeInput.dataset.thCode = cleanNewCode;
+                codeInput.classList.add('save-success');
+                setTimeout(() => codeInput.classList.remove('save-success'), 700);
+              }
+              if (codeSpan) codeSpan.textContent = cleanNewCode;
+
+              // Recalculate composite code column
+              const tpCodeInput = row.querySelector('[data-action="edit-topic-code"]');
+              const currentTpCode = tpCodeInput ? tpCodeInput.value.trim() : '1';
+              const newComp = `${lvl}${cleanNewCode}${currentTpCode}`;
+              const compTd = row.querySelector('.col-theme-composite-code');
+              if (compTd) compTd.textContent = newComp;
+            });
+
+            // Update in-memory words
+            words.forEach(w => {
+              if (String(w.theme_code).toUpperCase() === oldCode && parseInt(w.target_level, 10) === lvl) {
+                w.theme_code = cleanNewCode;
+              }
+            });
+            showToast(`Theme Code updated to "${cleanNewCode}"`, 'success');
+
+          } else if (action === 'edit-topic-name') {
+            const oldTopic = input.dataset.oldTopic;
+            const lvl = parseInt(input.dataset.lvl, 10);
+            const thCode = input.dataset.thCode;
+            if (newVal === oldTopic) return;
+
+            await updateVaultTopicCascade(oldTopic, newVal, lvl, thCode);
+            input.dataset.oldTopic = newVal;
+            input.dataset.topic = newVal;
+            if (viewSpan) viewSpan.textContent = newVal;
+            if (tr) {
+              tr.setAttribute('data-topic', newVal);
+              const delBtn = tr.querySelector('.btn-del-topic-mini');
+              if (delBtn) delBtn.setAttribute('data-topic', newVal);
+            }
+
+            input.classList.add('save-success');
+            setTimeout(() => input.classList.remove('save-success'), 700);
+
+            // Update in-memory array
+            words.forEach(w => {
+              if (w.topic === oldTopic && parseInt(w.target_level, 10) === lvl) {
+                w.topic = newVal;
+              }
+            });
+            showToast(`Topic renamed to "${newVal}"`, 'success');
+
+          } else if (action === 'edit-topic-code') {
+            const oldCode = input.dataset.oldTpCode;
+            const topic = input.dataset.topic;
+            const lvl = parseInt(input.dataset.lvl, 10);
+            const thCode = input.dataset.thCode;
+            const cleanTp = newVal.replace(/^[A-Za-z]+/, '').trim() || newVal.trim();
+            if (cleanTp === oldCode) return;
+
+            await updateVaultTopicCodeCascade(oldCode, cleanTp, lvl, topic, thCode);
+            input.dataset.oldTpCode = cleanTp;
+            input.value = cleanTp;
+            if (viewSpan) viewSpan.textContent = cleanTp;
+
+            // Recalculate column 18 CODE in this row
+            const newComp = `${lvl}${thCode}${cleanTp}`;
+            const compTd = tr?.querySelector('.col-theme-composite-code');
+            if (compTd) compTd.textContent = newComp;
+
+            input.classList.add('save-success');
+            setTimeout(() => input.classList.remove('save-success'), 700);
+
+            // Update in-memory array
+            words.forEach(w => {
+              if (w.topic === topic && parseInt(w.target_level, 10) === lvl) {
+                w.topic_code = cleanTp;
+              }
+            });
+            showToast(`Topic Code updated to "${cleanTp}"`, 'success');
+
+          } else if (action === 'edit-level') {
+            const oldLvl = parseInt(input.dataset.oldLvl, 10);
+            const newLvl = parseInt(newVal, 10);
+            if (isNaN(newLvl) || newLvl < 1 || newLvl > 6) {
+              input.value = oldLvl;
+              input.classList.add('save-error');
+              setTimeout(() => input.classList.remove('save-error'), 800);
+              showToast('Level must be between 1 and 6.', 'warning');
+              return;
+            }
+            if (newLvl === oldLvl) return;
+
+            const topic = input.dataset.topic;
+            const thCode = input.dataset.thCode;
+            await updateVaultTopicLevelCascade(topic, oldLvl, newLvl, thCode);
+            input.dataset.oldLvl = newLvl;
+            if (tr) tr.setAttribute('data-level', newLvl);
+            if (viewSpan) {
+              const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(newLvl) : `${newLvl}ST`;
+              viewSpan.textContent = shortLbl.toUpperCase();
+            }
+
+            // Recalculate column 18 CODE in this row
+            const currentTpCode = tr?.querySelector('[data-action="edit-topic-code"]')?.value.trim() || '1';
+            const newComp = `${newLvl}${thCode}${currentTpCode}`;
+            const compTd = tr?.querySelector('.col-theme-composite-code');
+            if (compTd) compTd.textContent = newComp;
+
+            input.classList.add('save-success');
+            setTimeout(() => input.classList.remove('save-success'), 700);
+
+            // Update in-memory array
+            words.forEach(w => {
+              if (w.topic === topic && parseInt(w.target_level, 10) === oldLvl) {
+                w.target_level = newLvl;
+              }
+            });
+            showToast(`Topic moved to Level ${newLvl}. Switch Level tab to view.`, 'success');
+          }
+        } catch (err) {
+          input.classList.add('save-error');
+          setTimeout(() => input.classList.remove('save-error'), 800);
+          showToast(`Update failed: ${err.message}`, 'error');
+        }
+      };
+
+      tbody.onkeydown = (e) => {
+        if (e.key === 'Enter' && e.target.classList.contains('vault-edit-input')) {
+          e.target.blur();
+        }
+      };
+    }
   };
 
   bindRowActionHandlers();
-
-  // Curriculum Selector Tabs
-  area.querySelectorAll('.btn-theme-curriculum-tab').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const targetLvl = e.currentTarget.getAttribute('data-lvl');
-      window._themeManagerSelectedLevel = targetLvl;
-      _renderThemeManagerTab(area, words, topics, meta);
-    });
-  });
-
-  // Dynamic Search
-  const searchInput = document.getElementById('vault-topic-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      const q = e.target.value;
-      const { rowsHtml, visibleTopicsCount } = buildTableBodyHtml(q);
-      const tbody = document.getElementById('theme-manager-tbody');
-      if (tbody) tbody.innerHTML = rowsHtml;
-      const countEl = document.getElementById('topic-count-display');
-      if (countEl) countEl.textContent = visibleTopicsCount;
-      bindRowActionHandlers();
-    });
-  }
-
-  // Merge Topics Bottom Handler
-  const btnMergeBottom = document.getElementById('btn-theme-bottom-merge');
-  if (btnMergeBottom) {
-    btnMergeBottom.onclick = () => {
-      const allTopicList = [];
-      levelGroups.forEach(thMap => {
-        thMap.forEach(th => {
-          th.topicsMap.forEach(tp => allTopicList.push(tp));
-        });
-      });
-      openTopicDuplicateCheckerModal(allTopicList, words, () => {
-        if (typeof renderVocabularyVault === 'function') {
-          const container = document.getElementById('classes-detail-canvas');
-          if (container) renderVocabularyVault(container);
-        }
-      });
-    };
-  }
 }
 
 // ─── Theme Institution & Program Assignment Modal ────────────
@@ -2203,7 +2410,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     if (!classId) return null;
     const classTests = tests.filter(t => t.class_id === classId);
     const cleanNum = tpCode.replace(/^[A-Z]+/i, '');
-    return classTests.find(t => (t.test_type === 'quiz' || (t.shell_code && t.shell_code.includes('TASK'))) && 
+    return classTests.find(t => (t.test_type === 'quiz' || (t.shell_code && t.shell_code.includes('TASK'))) &&
       (t.shell_code && (t.shell_code.toUpperCase().includes(`${lvl}${thCode}${cleanNum}-WORDS-TASK`) || t.shell_code.toUpperCase().includes(`${lvl}${thCode}${cleanNum}-PHRASES-TASK`)))) ||
       classTests.find(t => t.title && t.title.toLowerCase().includes(tpName.toLowerCase()));
   };
@@ -2340,7 +2547,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               <td class="col-bp-sep" style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; font-size: 11.5px; min-width: 150px;">
                 ${escapeHtml(tp.name)}
               </td>
-              
+
               <!-- Vocab Pool Split (Single Responsibility) -->
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 55px;">
                 <span class="bp-count-total" style="color: #38bdf8; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalCount}</span>
@@ -2351,7 +2558,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               <td class="col-bp-sep" style="text-align: center; padding: 8px 6px; white-space: nowrap; width: 55px;">
                 <span style="color: #a78bfa; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalPhrases}</span>
               </td>
-              
+
               <!-- Generation Blueprint Split: Duration -->
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
                 <span class="bp-setting-badge" style="font-size: 11px; font-weight: 700; color: #f8fafc; font-variant-numeric: tabular-nums;">${taskDuration} min</span>
@@ -2391,15 +2598,15 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
               <!-- Task Status (Single Responsibility: Status Only) -->
               <td style="text-align: center; padding: 8px 8px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap; width: 95px;">
-                ${taskReady 
-                  ? `<span style="color: #4ade80; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>` 
+                ${taskReady
+                  ? `<span style="color: #4ade80; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>`
                   : `<span style="color: #f87171; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">▲ Missing</span>`}
               </td>
 
               <!-- Exam Status (Single Responsibility: Status Only) -->
               <td style="text-align: center; padding: 8px 8px; white-space: nowrap; width: 95px;">
-                ${examReady 
-                  ? `<span style="color: #c084fc; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>` 
+                ${examReady
+                  ? `<span style="color: #c084fc; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>`
                   : `<span style="color: #f87171; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">▲ Missing</span>`}
               </td>
             </tr>
@@ -2440,16 +2647,16 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               <th style="padding: 7px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">CODE</th>
               <th style="padding: 7px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 130px; border-right: 1px solid rgba(255,255,255,0.08);">Theme Name</th>
               <th class="col-bp-sep" style="padding: 7px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 150px;">Topic Name</th>
-              
+
               <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">ITEMS</th>
               <th style="padding: 7px 6px; font-weight: 800; color: #818cf8; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">WORDS</th>
               <th class="col-bp-sep" style="padding: 7px 6px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center;">PHRASES</th>
-              
+
               <th style="padding: 7px 6px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 10px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">DURATION</th>
               <th style="padding: 7px 6px; font-weight: 800; color: #FFFF00; text-transform: uppercase; font-size: 10px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">PASS SCORE</th>
               <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 10px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">FORMAT</th>
               <th class="col-bp-sep" style="padding: 7px 8px; font-weight: 800; color: #34d399; text-transform: uppercase; font-size: 10px; width: 95px; text-align: center;">ANSWER TYPE</th>
-              
+
               <th style="padding: 7px 10px; font-weight: 800; color: #86efac; text-transform: uppercase; font-size: 10px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">Task Status</th>
               <th style="padding: 7px 10px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 10px; min-width: 95px; text-align: center;">Exam Status</th>
             </tr>

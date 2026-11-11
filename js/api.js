@@ -3023,23 +3023,146 @@ export async function renameVaultTheme(oldTheme, newTheme) {
   return true;
 }
 
-export async function deleteVaultTopic(topic) {
+export async function updateVaultThemeCascade(oldTheme, newTheme, targetLevel = null, themeCode = null) {
   const sb = await getSupabase();
-  const { error } = await sb.from('vocabulary_vault')
-    .update({ deleted_at: new Date().toISOString() })
-    .eq('topic', topic)
+  let query = sb.from('vocabulary_vault')
+    .update({ theme: newTheme, updated_at: new Date().toISOString() })
     .is('deleted_at', null);
+
+  if (themeCode && targetLevel) {
+    // Definitive composite key matching: guarantees update even if old theme was NULL, empty, or 'Unassigned'
+    query = query.eq('theme_code', themeCode).eq('target_level', targetLevel);
+  } else {
+    if (targetLevel) query = query.eq('target_level', targetLevel);
+    if (!oldTheme || oldTheme.trim().toLowerCase() === 'unassigned') {
+      query = query.or('theme.is.null,theme.eq.,theme.eq.Unassigned');
+    } else {
+      query = query.ilike('theme', oldTheme.trim());
+    }
+  }
+
+  const { error } = await query;
   if (error) throw error;
   clearApiCache('vault');
   return true;
 }
 
-export async function deleteVaultTheme(theme) {
+export async function updateVaultThemeCodeCascade(oldCode, newCode, targetLevel = null) {
   const sb = await getSupabase();
-  const { error } = await sb.from('vocabulary_vault')
-    .update({ deleted_at: new Date().toISOString() })
-    .eq('theme', theme)
+  const cleanOld = String(oldCode || '').trim().toUpperCase();
+  const cleanNew = String(newCode || '').trim().toUpperCase();
+
+  // 1. Update vocabulary_vault theme_code
+  let query = sb.from('vocabulary_vault')
+    .update({ theme_code: cleanNew, updated_at: new Date().toISOString() })
+    .eq('theme_code', cleanOld)
     .is('deleted_at', null);
+  if (targetLevel) query = query.eq('target_level', targetLevel);
+  const { error } = await query;
+  if (error) throw error;
+
+  // 2. Cascade to theme_program_assignments so assigned classes/programs are not orphaned
+  try {
+    let assignQuery = sb.from('theme_program_assignments')
+      .update({ theme_code: cleanNew, updated_at: new Date().toISOString() })
+      .eq('theme_code', cleanOld);
+    if (targetLevel) assignQuery = assignQuery.eq('target_level', targetLevel);
+    await assignQuery;
+  } catch (err) {
+    console.warn('[updateVaultThemeCodeCascade] assign cascade notice:', err);
+  }
+
+  // 3. Update any topic_code that was prefixed with oldCode (e.g. A1 -> B1)
+  try {
+    let topicCodeQuery = sb.from('vocabulary_vault')
+      .select('id, topic_code')
+      .eq('theme_code', cleanNew)
+      .is('deleted_at', null);
+    if (targetLevel) topicCodeQuery = topicCodeQuery.eq('target_level', targetLevel);
+    const { data: tpRows } = await topicCodeQuery;
+    if (tpRows && tpRows.length > 0) {
+      for (const row of tpRows) {
+        if (row.topic_code && row.topic_code.startsWith(cleanOld)) {
+          const updatedTpCode = cleanNew + row.topic_code.slice(cleanOld.length);
+          await sb.from('vocabulary_vault').update({ topic_code: updatedTpCode }).eq('id', row.id);
+        }
+      }
+    }
+  } catch (_) {}
+
+  clearApiCache('vault');
+  return true;
+}
+
+export async function updateVaultTopicCascade(oldTopic, newTopic, targetLevel = null, themeCode = null) {
+  const sb = await getSupabase();
+  let query = sb.from('vocabulary_vault')
+    .update({ topic: newTopic, updated_at: new Date().toISOString() })
+    .ilike('topic', String(oldTopic || '').trim())
+    .is('deleted_at', null);
+  if (targetLevel) query = query.eq('target_level', targetLevel);
+  if (themeCode) query = query.eq('theme_code', themeCode);
+  const { error } = await query;
+  if (error) throw error;
+  clearApiCache('vault');
+  return true;
+}
+
+export async function updateVaultTopicCodeCascade(oldCode, newCode, targetLevel = null, topic = null, themeCode = null) {
+  const sb = await getSupabase();
+  let query = sb.from('vocabulary_vault')
+    .update({ topic_code: newCode, updated_at: new Date().toISOString() })
+    .is('deleted_at', null);
+  if (topic) query = query.ilike('topic', String(topic || '').trim());
+  else if (oldCode) query = query.eq('topic_code', oldCode);
+  if (targetLevel) query = query.eq('target_level', targetLevel);
+  if (themeCode) query = query.eq('theme_code', themeCode);
+  const { error } = await query;
+  if (error) throw error;
+  clearApiCache('vault');
+  return true;
+}
+
+export async function updateVaultTopicLevelCascade(topic, oldLevel, newLevel, themeCode = null) {
+  const sb = await getSupabase();
+  let query = sb.from('vocabulary_vault')
+    .update({ target_level: newLevel, updated_at: new Date().toISOString() })
+    .ilike('topic', String(topic || '').trim())
+    .is('deleted_at', null);
+  if (oldLevel) query = query.eq('target_level', oldLevel);
+  if (themeCode) query = query.eq('theme_code', themeCode);
+  const { error } = await query;
+  if (error) throw error;
+  clearApiCache('vault');
+  return true;
+}
+
+export async function deleteVaultTopic(topic, targetLevel = null, themeCode = null) {
+  const sb = await getSupabase();
+  let query = sb.from('vocabulary_vault')
+    .update({ deleted_at: new Date().toISOString() })
+    .ilike('topic', String(topic || '').trim())
+    .is('deleted_at', null);
+  if (targetLevel) query = query.eq('target_level', targetLevel);
+  if (themeCode) query = query.eq('theme_code', themeCode);
+  const { error } = await query;
+  if (error) throw error;
+  clearApiCache('vault');
+  return true;
+}
+
+export async function deleteVaultTheme(theme, targetLevel = null, themeCode = null) {
+  const sb = await getSupabase();
+  let query = sb.from('vocabulary_vault')
+    .update({ deleted_at: new Date().toISOString() })
+    .is('deleted_at', null);
+  if (themeCode && targetLevel) {
+    query = query.eq('theme_code', themeCode).eq('target_level', targetLevel);
+  } else {
+    query = query.ilike('theme', String(theme || '').trim());
+    if (targetLevel) query = query.eq('target_level', targetLevel);
+  }
+  const { error } = await query;
   if (error) throw error;
   clearApiCache('vault');
   return true;

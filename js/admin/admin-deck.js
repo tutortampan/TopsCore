@@ -53,14 +53,12 @@ export async function renderDashboard(container) {
            </h3>
            <div style="display:flex; align-items:center; gap:0.5rem;">
              <span class="badge ${inst.is_active !== false ? 'badge-success' : 'badge-neutral'}">${inst.is_active !== false ? 'Active' : 'Inactive'}</span>
-             <button class="btn btn-ghost btn-xs edit-mode-only" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst))})' title="Edit Institution" style="padding:0 0.4rem; height:auto; min-height:0;">✏️ Edit</button>
-             <button class="btn btn-ghost btn-xs text-danger edit-mode-only" onclick="window._deleteRecord('institutions', '${inst.id}', '${escHtml(inst.name)}')" title="Delete Institution" style="padding:0 0.4rem; height:auto; min-height:0;">🗑️ Delete</button>
-             <button class="btn btn-ghost btn-xs text-info edit-mode-only" onclick="window.openCrudModal('programs', { institution_id: '${inst.id}' })" title="Add Program" style="padding:0 0.4rem; height:auto; min-height:0;">➕ Program</button>
+             <span class="badge badge-neutral" style="font-size:0.75rem;">${instProgs.length} Programs</span>
            </div>
         </div>
         
         <div style="display:flex; flex-direction:column; gap:.5rem;">
-          ${instProgs.length === 0 ? '<div class="text-muted text-sm">No programs.</div>' : instProgs.map(p => {
+          ${instProgs.length === 0 ? '<div class="text-muted text-sm">No programs configured.</div>' : instProgs.map(p => {
              const progBatches = batches.filter(b => b.program_id === p.id).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
              const progClasses = classes.filter(c => c.program_id === p.id).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
              return `
@@ -69,24 +67,20 @@ export async function renderDashboard(container) {
                   <div class="fw-700 text-sm" style="color:var(--clr-accent-1);">${escHtml(p.name)}</div>
                   <div style="display:flex; align-items:center; gap:0.5rem;">
                     <span class="badge ${p.is_active !== false ? 'badge-success' : 'badge-neutral'}">${p.is_active !== false ? 'Active' : 'Inactive'}</span>
-                    <button class="btn btn-ghost btn-xs edit-mode-only" onclick='window._editRecord("programs", "${p.id}", ${JSON.stringify(JSON.stringify(p))})' title="Edit Program" style="padding:0 0.4rem; height:auto; min-height:0;">✏️ Edit</button>
-                    <button class="btn btn-ghost btn-xs text-danger edit-mode-only" onclick="window._deleteRecord('programs', '${p.id}', '${escHtml(p.name)}')" title="Delete Program" style="padding:0 0.4rem; height:auto; min-height:0;">🗑️ Delete</button>
-                    <button class="btn btn-ghost btn-xs text-success edit-mode-only" onclick="window.openCrudModal('classes', { program_id: '${p.id}' })" title="Add Class" style="padding:0 0.4rem; height:auto; min-height:0;">➕ Class</button>
-                    <button class="btn btn-ghost btn-xs text-warning edit-mode-only" onclick="window.openCrudModal('batches', { program_id: '${p.id}' })" title="Add Batch" style="padding:0 0.4rem; height:auto; min-height:0;">➕ Batch</button>
                   </div>
                 </div>
                 
                 <div style="display:flex; gap:1rem; flex-wrap:wrap; font-size:0.8rem;">
                   <div style="flex:1; min-width:150px;">
                     <div style="text-transform:uppercase; font-size:0.7rem; color:var(--fm-text-muted); margin-bottom:0.2rem; font-weight:700;">Classes (${progClasses.length})</div>
-                    <div style="color:var(--clr-text-2);">
-                      ${progClasses.length > 0 ? progClasses.map(c => `<span style="cursor:pointer; text-decoration:underline;" onclick='window.openCrudModal("classes", ${JSON.stringify(c).replace(/'/g, "&#39;")})'>${escHtml(c.name)}</span>`).join(', ') : '<span class="text-muted">None</span>'}
+                    <div style="color:var(--clr-text-2); display:flex; flex-wrap:wrap; gap:4px;">
+                      ${progClasses.length > 0 ? progClasses.map(c => `<span class="badge badge-neutral" style="font-size:0.75rem;">${escHtml(c.name)}</span>`).join('') : '<span class="text-muted">None</span>'}
                     </div>
                   </div>
                   <div style="flex:1; min-width:150px;">
                     <div style="text-transform:uppercase; font-size:0.7rem; color:var(--fm-text-muted); margin-bottom:0.2rem; font-weight:700;">Batches (${progBatches.length})</div>
-                    <div style="color:var(--clr-text-2);">
-                      ${progBatches.length > 0 ? progBatches.map(b => `<span style="cursor:pointer; text-decoration:underline;" onclick='window.openCrudModal("batches", ${JSON.stringify(b).replace(/'/g, "&#39;")})'>${escHtml(b.name)}</span>`).join(', ') : '<span class="text-muted">None</span>'}
+                    <div style="color:var(--clr-text-2); display:flex; flex-wrap:wrap; gap:4px;">
+                      ${progBatches.length > 0 ? progBatches.map(b => `<span class="badge badge-neutral" style="font-size:0.75rem;">${escHtml(b.name)}</span>`).join('') : '<span class="text-muted">None</span>'}
                     </div>
                   </div>
                 </div>
@@ -130,6 +124,30 @@ export async function renderDashboard(container) {
           </div>
         </div>
 
+        <!-- Quick Launchpad (Executive Single-Door Hub) -->
+        <div class="glass-card" style="padding: 1.25rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.75rem;">
+            <h3 style="margin:0; font-size:1rem; font-weight:800; display:flex; align-items:center; gap:8px;">
+              <span>🚀</span> Quick Launchpad
+            </h3>
+            <span class="text-xs text-muted">Direct Single-Door Navigation</span>
+          </div>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size:0.85rem;" onclick="window.loadSection('curriculum')">
+              🏢 <strong>Manage Cohorts</strong><br><span class="text-xs text-muted">Institutions, Programs & Batches</span>
+            </button>
+            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size:0.85rem;" onclick="window.loadSection('classes-hub')">
+              🎓 <strong>Class Directory</strong><br><span class="text-xs text-muted">Subjects, Levels & Tests</span>
+            </button>
+            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size:0.85rem;" onclick="window.loadSection('registration')">
+              👥 <strong>Student Intake</strong><br><span class="text-xs text-muted">New Student Registration</span>
+            </button>
+            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size:0.85rem;" onclick="window.loadSection('students')">
+              📊 <strong>Student Roster</strong><br><span class="text-xs text-muted">Attendance, Scores & Lifecycle</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Attention Radar -->
         <div class="glass-card" style="padding: 1.5rem;">
           <h3 style="margin-top:0;">&#128225; Attention Radar</h3>
@@ -154,7 +172,7 @@ export async function renderDashboard(container) {
         <div id="board-inst-panels" style="display:flex; flex-direction:column;">
           <div style="display:flex; justify-content:space-between; align-items:center; position: sticky; top: 0; z-index: 10; padding-bottom: 0.5rem; background: var(--fm-bg); margin-bottom: 1rem;">
             <h3 style="margin:0; font-size:1.2rem; font-weight:800;">Organization Hierarchy</h3>
-            <button class="btn btn-primary btn-sm edit-mode-only" onclick="window.openCrudModal('institutions', null)">➕ Add Institution</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('curriculum')" style="color:var(--clr-primary); font-weight:700;">Manage in Curriculum Hub →</button>
           </div>
           ${instsHtml || '<p class="text-muted">No institutions available.</p>'}
         </div>

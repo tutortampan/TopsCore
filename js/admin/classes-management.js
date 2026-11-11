@@ -3,6 +3,7 @@ import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { openTestBuilder } from './test-builder.js?v=20261106_v160';
 import { DataGrid } from './datagrid.js?v=20261106_v160';
 import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261109_v172';
+import { openCrudModal } from './crud-modals.js?v=20261106_v160';
 
 // ─────────────────────────────────────────────────────────────
 // SMART CLASS-AWARE QUIZ / EXAM ROUTERS
@@ -333,15 +334,11 @@ export async function renderClasses(area) {
     document.querySelectorAll('.tree-node').forEach(n => n.style.background = 'transparent');
   }
 
-  document.getElementById('btn-add-inst-global')?.addEventListener('click', async () => {
-    const name = prompt("Enter Institution Name (e.g., Top English):");
-    if (!name) return;
-    try {
-      await adminInsert('institutions', { name, is_active: true, status: 'active' });
-      showToast('Institution created successfully!', 'success');
-      renderClasses(currentArea);
-    } catch(e) {
-      showToast('Error creating institution: ' + e.message, 'error');
+  document.getElementById('btn-add-inst-global')?.addEventListener('click', () => {
+    if (typeof openCrudModal === 'function') {
+      openCrudModal('institutions', null);
+    } else if (typeof window.openCrudModal === 'function') {
+      window.openCrudModal('institutions', null);
     }
   });
 
@@ -377,15 +374,11 @@ function renderInstitutionDetail(inst) {
       </div>
     </div>
   `;
-  document.getElementById('btn-add-prog').onclick = async () => {
-    const name = prompt("Enter Program Name (e.g., General English):");
-    if (!name) return;
-    try {
-      await adminInsert('programs', { name, institution_id: inst.id, is_active: true });
-      showToast('Program created successfully!', 'success');
-      renderClasses(currentArea);
-    } catch(e) {
-      showToast('Error creating program: ' + e.message, 'error');
+  document.getElementById('btn-add-prog').onclick = () => {
+    if (typeof openCrudModal === 'function') {
+      openCrudModal('programs', { institution_id: inst.id });
+    } else if (typeof window.openCrudModal === 'function') {
+      window.openCrudModal('programs', { institution_id: inst.id });
     }
   };
 }
@@ -578,15 +571,16 @@ function renderClassDetail(cls) {
   const handleSyncGen = async (type) => {
     let targetLevelId = window._selectedLevelId || (document.querySelector('.level-tab.active') ? document.querySelector('.level-tab.active').dataset.id : null);
     if (!targetLevelId) {
-      const levelNumInput = prompt("Enter Level Number to sync (e.g., 1, 2, 3, or 0 for General):");
-      if (levelNumInput === null) return;
-      const levelNum = parseInt(levelNumInput, 10);
-      const level = allLevels.find(l => l.level_number === levelNum);
-      if (!level) {
-        showToast("Level not found", "error");
+      if (cls.level_id) {
+        targetLevelId = cls.level_id;
+      } else if (cls.class_levels && cls.class_levels.length > 0) {
+        targetLevelId = cls.class_levels[0].level_id;
+      } else if (allLevels && allLevels.length > 0) {
+        targetLevelId = allLevels[0].id;
+      } else {
+        showToast("No active level found to sync", "error");
         return;
       }
-      targetLevelId = level.id;
     }
     
     try {
